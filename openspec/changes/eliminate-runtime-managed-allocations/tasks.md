@@ -470,3 +470,4 @@
 - [x] 7.62 RuntimeCaptureSnapshot 持有不可变 segment 数组和一次组装的事件数组，GetEvents 返回 offset 后缀 span；三个 Editor 消费者迁移到 Length 和下标读取，删除每次读取的 List 重建
 - [x] 7.63 RuntimeLiveStateStore 按 maxChanges 准备私有 recency node 归还池，Clear 后重建优先复用节点并清空旧 key；现有 LRU 顺序、满员替换和状态语义不变
 - [x] 7.64 图状态读取改为调用方 Copy 工作列表，删除 GetGraphStates 返回 List、Tree overlay 的 ToList/OfType LINQ 和 authoring trace 的 LINQ 中转；过滤身份与排序器长期持有，最终 projection 数组仍独立返回，Editor 读取路径不计为 Player 每帧收益
+- [x] 7.65 图节点执行状态读取复用 ViewModel latest 字典和调用方结果 List，删除 GetGraphExecutionStates 每次新建 Dictionary 与返回 List；每次读取先清空 scratch，同 Source 仍取 Position 和 Sequence 最新，invalid instance 返回空列表语义不变

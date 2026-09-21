@@ -176,6 +176,7 @@ namespace BTSMTL.Diagnostics.Editor
     {
         readonly RuntimeDebugSourceMapSnapshot m_SourceMap;
         readonly Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> m_CurrentEvents = new Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>();
+        readonly Dictionary<RuntimeSourceElementKey, RuntimeNodeExecutionObservation> m_LatestGraphExecution = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugSourceMapSnapshot> m_InstanceSourceMaps = new();
         readonly Dictionary<RuntimeInstanceKey, (ulong Parent, ulong Sequence)> m_InvocationParents = new();
         readonly Dictionary<ElementInstanceKey, RuntimeElementDebugState> m_ElementStates = new Dictionary<ElementInstanceKey, RuntimeElementDebugState>();
@@ -420,11 +421,15 @@ namespace BTSMTL.Diagnostics.Editor
             }
         }
 
-        public IReadOnlyList<RuntimeNodeExecutionObservation> GetGraphExecutionStates(string graphAuthoringId, RuntimeInstanceKey instance)
+        public void CopyGraphExecutionStates(
+            string graphAuthoringId,
+            RuntimeInstanceKey instance,
+            List<RuntimeNodeExecutionObservation> destination)
         {
+            destination.Clear();
+            m_LatestGraphExecution.Clear();
             if (!instance.IsValid)
-                return Array.Empty<RuntimeNodeExecutionObservation>();
-            var latest = new Dictionary<RuntimeSourceElementKey, RuntimeNodeExecutionObservation>();
+                return;
             foreach (RuntimeDebugEventView item in m_CurrentEvents.Values)
             {
                 if (item.Source.Kind != RuntimeSourceElementKind.Node ||
@@ -432,12 +437,13 @@ namespace BTSMTL.Diagnostics.Editor
                     !item.Event.RuntimeInstance.Equals(instance) ||
                     !RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation))
                     continue;
-                if (!latest.TryGetValue(item.Source, out RuntimeNodeExecutionObservation previous) ||
+                if (!m_LatestGraphExecution.TryGetValue(item.Source, out RuntimeNodeExecutionObservation previous) ||
                     item.Event.Position > previous.Event.Event.Position ||
                     item.Event.Position == previous.Event.Event.Position && item.Event.Sequence > previous.Event.Event.Sequence)
-                    latest[item.Source] = observation;
+                    m_LatestGraphExecution[item.Source] = observation;
             }
-            return new List<RuntimeNodeExecutionObservation>(latest.Values);
+            foreach (RuntimeNodeExecutionObservation observation in m_LatestGraphExecution.Values)
+                destination.Add(observation);
         }
 
         public bool TryGetState(RuntimeSourceElementKey source, RuntimeInstanceKey instance, out RuntimeElementDebugState state)

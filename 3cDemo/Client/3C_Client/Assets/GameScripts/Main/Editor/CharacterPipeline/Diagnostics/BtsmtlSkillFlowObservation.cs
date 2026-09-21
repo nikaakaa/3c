@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
         readonly List<RuntimeElementDebugState> m_States = new List<RuntimeElementDebugState>();
+        readonly List<RuntimeNodeExecutionObservation> m_ExecutionStates = new List<RuntimeNodeExecutionObservation>();
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeElementDebugState> m_Edges = new(StringComparer.Ordinal);
         readonly HashSet<(string Node, string Port)> m_ValuePortIds;
@@ -223,9 +224,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             m_LatestLogicTick = view.LatestLogicTick;
-            foreach (RuntimeNodeExecutionObservation state in view.GetGraphExecutionStates(m_GraphId, Instance))
+            view.CopyGraphExecutionStates(m_GraphId, Instance, m_ExecutionStates);
+            for (int i = 0; i < m_ExecutionStates.Count; i++)
+            {
+                RuntimeNodeExecutionObservation state = m_ExecutionStates[i];
                 if (m_NodeIds.Contains(state.Event.Source.ElementAuthoringId))
                     m_Nodes[state.Event.Source.ElementAuthoringId] = state;
+            }
             view.CopyGraphStates(m_GraphId, Instance, false, m_States);
             for (int i = 0; i < m_States.Count; i++)
             {

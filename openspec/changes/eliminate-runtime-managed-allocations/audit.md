@@ -98,6 +98,15 @@
 - 技能流观察复用 states 工作列表后按下标消费；共享图 trace 的节点、边、属性边身份集合和 `TraceStateSort` 长期持有，每次刷新只重置身份集合并在 states 工作列表内原地筛选排序。最终 `GraphAuthoringRuntimeTraceProjection[]` 和文本仍独立分配，保证调用方拿到本次 trace 的独立结果。
 - `Payload.Status` 缺失时 `RuntimeElementDebugState.Status` 仍会用 `Kind.ToString()`，采集 store 的 typed 有界存储和显示文本格式化也在 7.1 后续边界处理。作者可在 Live Debug Tree、技能流观察和共享图 runtime trace 面板确认刷新结果仍与选中图和实例一致；本步未做运行采样。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`BTSMTL.TreeDesigner.Editor.csproj` 和 `ThirdPersonClient.Editor.csproj` 同参数编译成功，分别只有既有 `BaseTreeView` CS0108 和 ACL identity CS0649 警告，0 错误。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
+
+## 2026-09-21 图节点执行状态读取复用
+
+对应 tasks.md 的 7.1，新增 7.65 作为独立小步；7.1 保持未勾选。本条只覆盖技能流观察这条 Editor 读取链，不计为 Player 每帧收益。
+
+- `RuntimeDebugViewModel.GetGraphExecutionStates` 原先每次新建 latest `Dictionary<RuntimeSourceElementKey, RuntimeNodeExecutionObservation>`，再由 Dictionary 值新建返回 List。现在 ViewModel 长期持有 latest scratch，唯一调用方 `BtsmtlSkillFlowObservation` 长期持有结果 List；旧返回 List 入口删除。
+- 每次 `CopyGraphExecutionStates` 先清空 latest scratch 和目标 List，再扫描当前事件。同一 Source 仍按 Position 升序、同 Position 按 Sequence 升序保留最新观察；节点过滤、`TryCreate` 语义和 invalid instance 的空结果顺序边界不变。scratch 清空后保留 Dictionary 内部桶容量，消除周期内重建，不跨刷新保留旧 Source。
+- 作者可在 Play 中打开技能流观察确认节点状态仍按最新逻辑帧刷新。本步未改采集 store、payload 字符串和运行采样；这些仍留在 7.1 后续。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonClient.Editor.csproj` 同参数编译成功，只有既有 ACL identity CS0649 警告，0 错误。两次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

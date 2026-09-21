@@ -12,11 +12,13 @@ namespace ThirdPersonSimulation
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
+            Trace = new Float32TraceSink(data, layout);
         }
 
         public Float32GameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public Float32GameplayAbilityExecutionServices Services { get; }
+        internal Float32TraceSink Trace { get; }
     }
 
     public sealed class Float32GameplayAbilityExecutionInstallation

@@ -129,6 +129,7 @@ namespace ThirdPersonSimulation
                 eventSequenceState,
                 gameplayEffectState,
                 equipmentState,
+                execution.Trace,
                 m_Workspace);
 
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(

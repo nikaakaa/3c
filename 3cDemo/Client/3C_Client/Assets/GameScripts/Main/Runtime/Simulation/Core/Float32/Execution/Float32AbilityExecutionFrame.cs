@@ -113,6 +113,7 @@ namespace ThirdPersonSimulation
             IFloat32EventSequenceStatePort eventSequenceState,
             IFloat32GameplayEffectStatePort gameplayEffectState,
             IFloat32EquipmentStatePort equipmentState,
+            Float32TraceSink trace,
             Float32AbilityExecutionWorkspace workspace)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
@@ -135,7 +136,8 @@ namespace ThirdPersonSimulation
             EventSequence = new Float32EventSequence(this);
             Facts = new Float32FactSink(this, EventSequence);
             Presentation = new Float32PresentationSink(this, EventSequence);
-            Trace = new Float32TraceSink(this, new Float32DiagnosticSequence(this));
+            Trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            Trace.Bind(this);
         }
 
         public Float32GameplayAbilityExecutionData Data { get; }
@@ -569,28 +571,38 @@ namespace ThirdPersonSimulation
         readonly GameplayAbilityGraphInvocationLayout m_Invocations;
         readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
-        readonly Float32AbilityExecutionFrame m_Frame;
+        Float32AbilityExecutionFrame m_Frame;
         Float32DiagnosticSequence m_Sequence;
         bool m_Enabled;
 
-        public Float32TraceSink(Float32AbilityExecutionFrame frame, Float32DiagnosticSequence sequence)
+        public Float32TraceSink(
+            Float32GameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout)
         {
-            m_Frame = frame;
-            m_Sequence = sequence;
-            m_Invocations = new GameplayAbilityGraphInvocationLayout(frame.Data.SourceMap, frame.Layout.Operations.Count,
-                owner => frame.Layout.FindOperationStateSlot(owner, ProgramStateSemantic.RunnableActivationGeneration));
-            foreach (ProgramSourceMapEntry source in frame.Data.SourceMap)
+            m_Invocations = new GameplayAbilityGraphInvocationLayout(data.SourceMap, layout.Operations.Count,
+                owner => layout.FindOperationStateSlot(owner, ProgramStateSemantic.RunnableActivationGeneration));
+            foreach (ProgramSourceMapEntry source in data.SourceMap)
             {
                 if (source.TargetKind == ProgramSourceTargetKind.OperationPort && source.ValuePortDirection != ProgramValuePortDirection.None)
                     m_ValuePorts.Add((source.TargetIndex, source.CompiledPortId, source.ValuePortDirection));
                 if (source.TargetKind == ProgramSourceTargetKind.Reference && !string.IsNullOrEmpty(source.EdgeId))
                 {
-                    ProgramControlFlowEdge edge = frame.Data.ControlFlow[source.TargetIndex];
+                    ProgramControlFlowEdge edge = data.ControlFlow[source.TargetIndex];
                     m_EdgeIds.Add(edge.Identity);
                     if (edge.Kind == ProgramControlFlowKind.Value)
                         m_ValueEdges.Add((edge.Target.Value, edge.TargetPort), edge);
                 }
             }
+        }
+
+        internal void Bind(Float32AbilityExecutionFrame frame)
+        {
+            m_Frame = frame;
+            m_Sequence = new Float32DiagnosticSequence(frame);
+            m_Enabled = false;
+            CaptureValues = false;
+            CaptureControlFlow = false;
+            m_ValueSampleCount = 0;
         }
 
         public void Begin(bool enabled, bool captureValues = false, bool captureControlFlow = false)
@@ -630,6 +642,8 @@ namespace ThirdPersonSimulation
             m_Enabled = false;
             CaptureValues = false;
             CaptureControlFlow = false;
+            m_Frame = null;
+            m_Sequence = default;
         }
 
         public void AddValue(SimulationOperation operation, string portId, ProgramValuePortDirection direction, in AbilityStateValue value)

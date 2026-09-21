@@ -60,6 +60,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_ActionRuntimes;
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
+        readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
+        readonly List<AbilityTimelineStopPending> m_TimelineStops = new List<AbilityTimelineStopPending>();
+        readonly FixedAbilityExecutionWorkspace[] m_Workspaces;
         readonly IFixedAbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
         readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
@@ -93,6 +96,14 @@ namespace ThirdPersonSimulation.Fixed
             m_InvocationScratch = new FixedAbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);
+            m_Workspaces = new FixedAbilityExecutionWorkspace[AbilityInstallations.Installations.Count];
+            for (int i = 0; i < m_Workspaces.Length; i++)
+            {
+                m_Workspaces[i] = new FixedAbilityExecutionWorkspace(
+                    m_EffectExecutionScratch,
+                    m_TimelineAdvances,
+                    m_TimelineStops);
+            }
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
                 FixedGameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
@@ -131,6 +142,9 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedAbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
+        internal FixedAbilityExecutionWorkspace[] Workspaces => m_Workspaces;
+        internal List<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
+        internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
         internal IFixedAbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
@@ -145,6 +159,18 @@ namespace ThirdPersonSimulation.Fixed
         internal void ClearActionRuntimes()
         {
             m_ActionRuntimes.Clear();
+        }
+
+        internal void ClearWorkspaces()
+        {
+            for (int i = 0; i < m_Workspaces.Length; i++)
+                m_Workspaces[i].Reset();
+        }
+
+        internal void ClearTimelineTransfers()
+        {
+            m_TimelineAdvances.Clear();
+            m_TimelineStops.Clear();
         }
 
         public CharacterBodyMotionBinding BodyMotionBinding { get; }

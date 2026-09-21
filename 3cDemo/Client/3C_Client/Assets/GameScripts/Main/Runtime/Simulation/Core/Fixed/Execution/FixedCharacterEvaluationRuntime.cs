@@ -45,10 +45,14 @@ namespace ThirdPersonSimulation.Fixed
             actionRuntimes.Clear();
             FixedGameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
             sharedEffectScratch.Reset();
+            FixedAbilityExecutionWorkspace[] workspaces = actor.Workspaces;
+            for (int i = 0; i < workspaces.Length; i++)
+                workspaces[i].Reset();
+            actor.ClearTimelineTransfers();
+            List<AbilityTimelineAdvancePending> timelineAdvances = actor.TimelineAdvances;
+            List<AbilityTimelineStopPending> timelineStops = actor.TimelineStops;
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
             var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
-            var timelineAdvances = new List<AbilityTimelineAdvancePending>();
-            var timelineStops = new List<AbilityTimelineStopPending>();
             FixedCharacterEvaluationOutput evaluationOutput = actor.EvaluationOutput;
             evaluationOutput.Clear();
             List<GameplayFact> facts = evaluationOutput.Facts;
@@ -97,7 +101,7 @@ namespace ThirdPersonSimulation.Fixed
                         tick,
                         abilityInput,
                         bodyFacts,
-                        new FixedAbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
+                        workspaces[i],
                         installation.Control,
                         serviceFactory);
                     invocations[invocationCount++] = invocation;
@@ -224,6 +228,8 @@ namespace ThirdPersonSimulation.Fixed
                     timelineStops.ToArray());
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
+                actor.ClearWorkspaces();
+                actor.ClearTimelineTransfers();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
                 abilityInput.Clear();
@@ -237,6 +243,8 @@ namespace ThirdPersonSimulation.Fixed
                     invocations[i].Dispose();
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
+                actor.ClearWorkspaces();
+                actor.ClearTimelineTransfers();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
                 abilityInput.Clear();

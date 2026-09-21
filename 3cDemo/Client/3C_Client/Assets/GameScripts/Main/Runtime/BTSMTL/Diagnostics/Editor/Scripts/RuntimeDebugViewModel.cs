@@ -815,7 +815,7 @@ namespace BTSMTL.Diagnostics.Editor
                 return Empty;
 
             var entries = new Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry>();
-            var collected = new Dictionary<RuntimeSourceElementKey, List<string>>();
+            var hashCounts = new Dictionary<RuntimeSourceElementKey, int>();
             IReadOnlyList<DebugSourceMapEntry> sourceEntries = sourceMap.Entries;
             for (int i = 0; i < sourceEntries.Count; i++)
             {
@@ -823,17 +823,33 @@ namespace BTSMTL.Diagnostics.Editor
                 entries[entry.Handle] = entry;
                 if (!entry.Source.IsValid)
                     continue;
-                if (!collected.TryGetValue(entry.Source, out List<string> hashes))
-                {
-                    hashes = new List<string>();
-                    collected.Add(entry.Source, hashes);
-                }
-                hashes.Add(entry.ContentHash ?? string.Empty);
+                hashCounts[entry.Source] = hashCounts.TryGetValue(entry.Source, out int hashCount)
+                    ? hashCount + 1
+                    : 1;
+            }
+
+            string[][] hashBuffers = new string[hashCounts.Count][];
+            int[] hashCursors = new int[hashCounts.Count];
+            int hashSlot = 0;
+            foreach (KeyValuePair<RuntimeSourceElementKey, int> count in hashCounts)
+            {
+                hashBuffers[hashSlot] = new string[count.Value];
+                hashCounts[count.Key] = hashSlot;
+                hashSlot++;
+            }
+
+            for (int i = 0; i < sourceEntries.Count; i++)
+            {
+                DebugSourceMapEntry entry = sourceEntries[i];
+                if (!entry.Source.IsValid)
+                    continue;
+                int slot = hashCounts[entry.Source];
+                hashBuffers[slot][hashCursors[slot]++] = entry.ContentHash ?? string.Empty;
             }
 
             var frozen = new Dictionary<RuntimeSourceElementKey, string[]>();
-            foreach (KeyValuePair<RuntimeSourceElementKey, List<string>> pair in collected)
-                frozen.Add(pair.Key, pair.Value.ToArray());
+            foreach (KeyValuePair<RuntimeSourceElementKey, int> pair in hashCounts)
+                frozen.Add(pair.Key, hashBuffers[pair.Value]);
             IReadOnlyList<RuntimeGraphInvocation> sourceInvocations = sourceMap.GraphInvocations;
             RuntimeGraphInvocation[] invocations = sourceInvocations.Count == 0
                 ? Array.Empty<RuntimeGraphInvocation>()

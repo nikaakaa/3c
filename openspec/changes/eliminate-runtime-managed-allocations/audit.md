@@ -300,6 +300,15 @@
 - entries 字典、按 source 收集 hash 的中间 List 和最终 hash 数组仍按原冻结逻辑分配，留待 source map 后续小步处理。源 map 在 Capture 前已经准备完成，本步不改变 attach、freeze 或 revision 缓存时序。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 source map 冻结运行对比或分配采样。
 
+## 2026-09-21 Source map hash 冻结数组化
+
+对应 tasks.md 的 7.1，新增 7.86 作为独立小步；7.1 保持未勾选。本条只覆盖 `RuntimeDebugSourceMapSnapshot.Capture` 的 hash 分组冻结，不计为 Player 每帧收益。
+
+- 原先每个 source 先创建 `List<string>`，逐条加入后调用 `ToArray` 生成最终 hash 数组；source map 里每个 source 都会多一次 List 对象和可能扩容的 backing array，随后被丢弃。
+- 现在第一遍复制 entries 时统计每个 source 的 hash 数量，再为每个 source 准备精确数组；第二遍沿 source entries 原顺序填充。统计字典在填充阶段复用为 source 到 buffer 的下标映射，最终字典仍按首个 source 出现顺序构建。
+- hash 内容、同一 source 的重复 hash、`Match` 线性比较和命中顺序不变。entries 字典继续独立保存 source map 句柄；hash 字符串仍来自已准备 source map 并由快照长期持有。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 source map 匹配运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

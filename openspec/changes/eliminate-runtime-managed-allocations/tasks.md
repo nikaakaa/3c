@@ -411,3 +411,4 @@
 - [x] 7.33 Pose Action command source 按 Inbox 固定容量复用命令工作区，删除每帧命令数组创建；保留读租约、命令顺序、frame identity 和 Commit/Discard 语义
 - [x] 7.34 ACL Pose sampling backend 复用 Presentation 工厂已校验的 Rig，删除 backend 构造阶段重复 Rig schema 遍历；保留 Rig binding、Animator、PlayableGraph 和 Native capacity 校验
 - [x] 7.35 删除全项目无调用者的旧 CharacterMotionMatchingProviderRuntime 及其 Unity meta，统一保留 Pose Graph 的 MotionMatchingPoseSourceRuntime 正式链；不改变当前数据库、选样和 source completion 语义
+- [x] 7.36 Motion Matching Pose handler 复用稳态输出包装对象，删除每帧 `CharacterPoseNativeLocalPoseValue` 创建；保留当前 lineage、Native layout、完成标记和提交页索引语义

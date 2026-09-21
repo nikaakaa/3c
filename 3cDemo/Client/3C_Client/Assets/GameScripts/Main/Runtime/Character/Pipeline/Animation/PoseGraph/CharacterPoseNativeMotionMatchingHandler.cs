@@ -100,7 +100,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? 0
                 : 1 - m_CommittedPageIndex;
             m_SourcePose = null;
-            m_Output = null;
             m_WriteBinding = default;
         }
 
@@ -125,7 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "pose.local")
                 throw new InvalidOperationException(
                     $"Motion Matching '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             if (m_SourcePose == null || !m_SourcePose.Native.IsValid)
@@ -152,7 +152,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 poses[bone] = input.DenseLocalPoses[bone];
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -218,7 +221,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Source.CommitFrame(runtime, in lineage);
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -274,7 +278,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_FrameOpen = false;
             m_SourcePose = null;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

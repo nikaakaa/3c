@@ -2171,6 +2171,15 @@
 - 删除旧 Provider runtime 及 Unity meta，移除其重复的 Rig schema 校验、旧 frame/history 工作区和另一套 provider 生命周期；不触碰当前 Motion Matching payload、selection generation、sample resolve 或 source handoff。
 - 当前完整编译仍需 Unity 重新生成删除文件后的 csproj；没有修改生成项目文件。未新增测试、未操作共享 Unity、未做 Motion Matching 分配采样。
 
+## 2026-09-21 Motion Matching Pose 输出包装复用
+
+对应 tasks.md 的 7.36。
+
+- `CharacterPoseNativeMotionMatchingHandler` 原先在每次 `EvaluateOutput` 都创建新的 `CharacterPoseNativeLocalPoseValue`，但正式链在提交当前 frame 后不会继续读取上一 frame 的包装对象。
+- `CharacterPoseNativeLocalPoseValue.Reuse` 只在 handler 首次产出时创建对象，后续先完成相同的 identity、Native binding、Local space 和 availability 校验，再更新同一对象；旧对象在校验失败时保持不变。
+- handler 不再在 BeginFrame/ClearFrame 丢弃包装对象，以 completion identity 区分当前 frame 输出；source pose、Native 双页、ValidatePending 和 CommitFrame 的事务顺序未改变。
+- 本步只收 Motion Matching Pose handler，不把其他 Pose 节点的输出包装迁移混入同一提交。当前完整编译仍受用户删除文件和 Unity 生成 csproj 未刷新阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

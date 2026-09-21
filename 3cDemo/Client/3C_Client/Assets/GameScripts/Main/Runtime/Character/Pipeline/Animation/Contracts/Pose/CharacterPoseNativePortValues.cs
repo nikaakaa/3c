@@ -100,19 +100,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal abstract class CharacterPoseNativePortValue
     {
+        PoseNodeId m_ProducerNodeId;
+        ulong m_CompletionIdentity;
+
         protected CharacterPoseNativePortValue(
+            PoseNodeId producerNodeId,
+            ulong completionIdentity)
+        {
+            SetIdentity(producerNodeId, completionIdentity);
+        }
+
+        internal PoseNodeId ProducerNodeId => m_ProducerNodeId;
+        internal ulong CompletionIdentity => m_CompletionIdentity;
+        internal bool IsValid => ProducerNodeId.IsValid && CompletionIdentity != 0;
+
+        protected void SetIdentity(
             PoseNodeId producerNodeId,
             ulong completionIdentity)
         {
             if (!producerNodeId.IsValid || completionIdentity == 0)
                 throw new ArgumentException("Pose native port value identity is invalid.");
-            ProducerNodeId = producerNodeId;
-            CompletionIdentity = completionIdentity;
+            m_ProducerNodeId = producerNodeId;
+            m_CompletionIdentity = completionIdentity;
         }
-
-        internal PoseNodeId ProducerNodeId { get; }
-        internal ulong CompletionIdentity { get; }
-        internal bool IsValid => ProducerNodeId.IsValid && CompletionIdentity != 0;
     }
 
     internal sealed class CharacterPoseNativeLocalPoseValue : CharacterPoseNativePortValue
@@ -122,14 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding native)
             : base(producerNodeId, native.CompletionIdentity)
         {
-            if (!native.IsValid ||
-                native.Space != CharacterPoseSpace.Local ||
-                native.Availability[0] == AnimationPoseAvailability.Invalid)
-            {
-                throw new ArgumentException(
-                    "Pose native local value is invalid.",
-                    nameof(native));
-            }
+            ValidateNative(producerNodeId, in native);
             Native = native;
         }
 
@@ -143,8 +146,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Pose = pose;
         }
 
-        internal CharacterPoseNativePoseReadBinding Native { get; }
-        internal AnimationPoseValue Pose { get; }
+        internal CharacterPoseNativePoseReadBinding Native { get; private set; }
+        internal AnimationPoseValue Pose { get; private set; }
+
+        internal static CharacterPoseNativeLocalPoseValue Reuse(
+            CharacterPoseNativeLocalPoseValue value,
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (value == null)
+                return new CharacterPoseNativeLocalPoseValue(producerNodeId, in native);
+            value.Refresh(producerNodeId, in native);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            ValidateNative(producerNodeId, in native);
+            SetIdentity(producerNodeId, native.CompletionIdentity);
+            Native = native;
+            Pose = default;
+        }
+
+        static void ValidateNative(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (!producerNodeId.IsValid || native.CompletionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!native.IsValid ||
+                native.Space != CharacterPoseSpace.Local ||
+                native.Availability[0] == AnimationPoseAvailability.Invalid)
+            {
+                throw new ArgumentException(
+                    "Pose native local value is invalid.",
+                    nameof(native));
+            }
+        }
     }
 
     internal sealed class CharacterPoseNativeComponentPoseValue : CharacterPoseNativePortValue

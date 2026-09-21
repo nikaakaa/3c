@@ -3307,3 +3307,11 @@
 - `RollbackCanonicalInputAssembler.AssembleNext` 原先对每个 Actor 调用 `SimulationInput` 公共构造，把显式输入的 values 和 requests 再复制并排序一遍。现在 Fixed `SimulationInput.RebindSource` 增加显式接收 input source identity 的 owned-array 重绑入口，canonical assembler 复用已排序 payload 数组，只替换 Authoritative TickSource 并绑定 assembler 生命周期的 `m_InputSourceIdentity`。
 - 这个入口不把 schedule 本地 identity 当作 canonical identity；canonical identity 仍由 assembler 构造期校验和持有。原 payload 数组继续由不可变 `SimulationInput` 拥有，显式帧和 canonical 帧共享只读数组，不新增归还、兼容或对象池路径。输入序号、NumericProfile、Tick 归属和 InputHash/GameplayHash 语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback input checkpoint 值记录化
+
+对应 tasks.md 的 5.2，新增 5.142 作为独立小步；5.2 保持未勾选。
+
+- `RollbackInputHistoryEntry` 从 class 改为 readonly struct；`CaptureEntries` 生成的精确 checkpoint 数组直接内联 Tick、predicted bundle 和 canonical bundle，不再为每个历史 Tick 额外创建 entry 堆对象。数组仍由 transaction checkpoint 独立持有。
+- `RestoreEntries` 保持数组/IReadOnlyList 下标扫描，默认值或无 bundle 记录仍抛出原来的恢复参数错误；predicted/canonical 去重、容量、代次释放和 checkpoint 语义不变。5.132 的 `TryGetBundles` 查询路径继续零包装。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

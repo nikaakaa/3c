@@ -402,6 +402,7 @@
 - [x] 5.139 Rollback output disposition 使用 pass 生命周期精确 disposition scratch 并转移给正式 set；删除每次 egress 的 set 数组复制
 - [x] 5.140 Rollback input/gameplay/bundle hash 共用线程生命周期 CanonicalWriter，bundle gameplay hash 改为版本化 canonical 字段；删除每帧 hash writer、字符串数组、Tick 字符化和逐 Actor 插值
 - [x] 5.141 Simulation Input 增加带 input source identity 的零复制重绑入口，Rollback canonical assembler 复用显式输入的已排序 payload 数组；删除每个 canonical Actor 的 values/requests 复制和排序
+- [x] 5.142 Rollback input history checkpoint entry 改为只读值记录，checkpoint 精确数组直接承载 predicted/canonical 引用；恢复空值仍显式失败
 
 ## 6. UI、资源、渲染和生命周期
 

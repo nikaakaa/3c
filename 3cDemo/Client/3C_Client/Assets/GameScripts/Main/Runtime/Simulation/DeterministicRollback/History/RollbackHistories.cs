@@ -11,7 +11,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         Mismatch = 3
     }
 
-    public sealed class RollbackInputHistoryEntry
+    public readonly struct RollbackInputHistoryEntry
     {
         public RollbackInputHistoryEntry(
             SimulationTick tick,
@@ -110,8 +110,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < entries.Count; i++)
             {
                 RollbackInputHistoryEntry entry = entries[i];
-                if (entry == null)
-                    throw new ArgumentException("Rollback input history restore contains a missing entry.", nameof(entries));
+                if (!entry.Tick.IsValid || entry.Predicted == null && entry.Canonical == null)
+                    throw new ArgumentException("Rollback input history restore contains an empty entry.", nameof(entries));
                 if (entry.Predicted != null)
                     Set(entry.Predicted, false);
                 if (entry.Canonical != null)

@@ -16,7 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !IsLoopTimeValid(time) ||
                 time.AnimatorStateSpeed != 0f)
                 throw new ArgumentException("Motion Matching Clip Sample Plan is invalid.");
-            binding.RequireValid();
             SourceClipId = binding.SourceClipId;
             ClipBindingIndex = clipBindingIndex;
             Clip = binding.Clip;
@@ -174,9 +173,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (!selection.IsValid)
                 throw new InvalidOperationException($"Motion Matching Pose Source cannot lower invalid selection '{selection.InvalidReason}'.");
             MotionMatchingSamplePayload sample = m_Database.GetSample(selection.SampleIndex);
-            MotionMatchingClipBindingPayload clip = m_Database.GetClipBinding(sample.ClipBindingIndex);
-            if (clip == null || !clip.IsValid)
-                throw new InvalidOperationException("Motion Matching selected sample has no valid Clip binding.");
+            MotionMatchingClipBindingPayload clip = m_Database.GetClipBinding(sample.ClipBindingIndex) ??
+                throw new InvalidOperationException("Motion Matching selected sample has no Clip binding.");
             if (clip.FootPlacementWeightCurve == null ||
                 !clip.FootPlacementWeightCurve.ParameterId.Equals(FootPlacementWeightParameterId))
                 throw new InvalidOperationException($"Motion Matching Pose Source requires Projection parameter '{FootPlacementWeightParameterName}' for the selected Clip sample.");

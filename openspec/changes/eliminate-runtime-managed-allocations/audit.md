@@ -2096,6 +2096,15 @@
 - 不改变 Blend Stack 的容量、初始 page、source workspace、frame Begin/Prepare/Evaluate/Commit/Discard 或 tuning generation 语义；静态错误仍在正式实例创建前的 payload 准备阶段抛出。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend 实例分配采样。
 
+## 2026-09-21 Motion Matching Clip binding 单次校验
+
+对应 tasks.md 的 7.26。
+
+- `MotionMatchingDatabasePayload` 构造阶段的 `ValidateCanonical` 已遍历所有 Clip binding 并调用一次 `MotionMatchingClipBindingPayload.RequireValid`；`CharacterMotionMatchingRuntimeDatabase` 只持有该 canonical payload。
+- 删除 `MotionMatchingClipSamplePlan` 每次选样对 binding 的第二次完整 `RequireValid`，并让 source resolve 只保留当前 sample 的 Clip binding 存在性检查；selected sample index、时间范围、Loop 连续时间、AnimatorStateSpeed、Foot 参数身份和最终输出 `IsValid` 仍保留。
+- 没有改变数据库、selection generation、sample 选择、pose source 输出或 frame 提交顺序；删除的是不可变 canonical binding 的 per-selection 重复 schema 校验。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Motion Matching 分配采样。
+
 ## 2026-09-21 Pose 运行链枚举反射清理
 
 对应 tasks.md 的 7.23。

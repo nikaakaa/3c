@@ -4069,3 +4069,11 @@
 - `CameraEffectEvaluator` 的请求集合由外层域运行时按 `RequestCapacity` 准备；贡献、待退休、可见状态、完成事件和完成移除 scratch 在求值器构造期按同一容量准备。`Resolve` 先校验新请求数量，`Retire` 校验待退休数量。
 - 生命周期边界保持显式：`Reset` 清空全部工作集合；撤销先进入待退休列表并在下一次 Resolve 应用；自然完成只有在当前请求仍包含同一事件键时进入完成去重；请求不再包含该键时，下一次 Resolve 通过专用 scratch 移除完成记录。`CameraEffectEventKey` 是值类型身份。
 - 早期审计中“状态池和集合容量仍未完成”的结论已由 `2ae352382`、`38f302785`、`cc7d51153` 后的当前代码取代。本节只记录静态复查，未重复编译、未刷新 Unity、未做 Player 分配采样；第三方相机内部仍不属于本任务声明范围。
+
+## 2026-09-22 Fixed 输入源身份缓存
+
+对应 tasks.md 的 4.4.8，新增 4.4.11 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `UnityFixedCharacterInputAdapter.SourceIdentity` 原先每次读取都用 BindingGroup、Action target 输入 ID 和 Provider identity 插值新字符串；每个模拟 tick 的 `BuildInput` 和每次 `CaptureState` 都会分配。这些输入在构造装配后固定，身份文本没有理由随读取重建。
+- 现在在构造完成 Action target 组合检查并建立正式绑定前缓存 `m_SourceIdentity`；`SourceIdentity`、live input、Canonical 状态写入和恢复身份比较复用同一 string。文本格式、Ordinal 比较和恢复拒绝语义不变。
+- `ThirdPersonSimulation.Fixed.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；输出中的 34 个警告均为既有第三方包、其它工程或既有未使用字段警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样；PendingRequest、输入对象和快照 byte[] 的分配仍在后续边界。

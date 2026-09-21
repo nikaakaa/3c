@@ -472,3 +472,4 @@
 - [x] 7.64 图状态读取改为调用方 Copy 工作列表，删除 GetGraphStates 返回 List、Tree overlay 的 ToList/OfType LINQ 和 authoring trace 的 LINQ 中转；过滤身份与排序器长期持有，最终 projection 数组仍独立返回，Editor 读取路径不计为 Player 每帧收益
 - [x] 7.65 图节点执行状态读取复用 ViewModel latest 字典和调用方结果 List，删除 GetGraphExecutionStates 每次新建 Dictionary 与返回 List；每次读取先清空 scratch，同 Source 仍取 Position 和 Sequence 最新，invalid instance 返回空列表语义不变
 - [x] 7.66 执行时间线与历史构建直接接管 SelectEvents 的独立事件 List，删除 BuildCore 的 ordered 复制和 BuildHistory 的 historyEvents 复制；事件排序、边界补充、分组来源和 complete 判定保持不变，Builder 其余临时集合仍未完成
+- [x] 7.67 RuntimeCaptureStore 的 active segment 外层改为 maxSegments+1 环形缓冲，删除淘汰 RemoveAt(0) 前移；归还原池同步扩到 maxSegments+1，覆盖 append 后 trim 的满容量换段峰值，发布顺序、segment 边界、丢弃计数和 Freeze 快照不变

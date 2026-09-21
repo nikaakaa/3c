@@ -440,7 +440,7 @@ namespace BTSMTL.Diagnostics
 
     sealed class RuntimeCaptureStore : IDisposable
     {
-        readonly List<Segment> m_Segments = new List<Segment>();
+        readonly Segment[] m_SegmentBuffer;
         readonly Segment[] m_SegmentPool;
         readonly RuntimeCaptureChange[] m_ChangeBuffer;
         readonly int m_MaxSegments;
@@ -451,6 +451,8 @@ namespace BTSMTL.Diagnostics
         readonly int m_MaxEvents;
         long m_EvictedEvents;
         long m_LastEvictionVersion;
+        int m_SegmentHead;
+        int m_SegmentCount;
         int m_SegmentPoolCount;
         int m_ChangeHead;
         int m_ChangeCount;
@@ -465,14 +467,15 @@ namespace BTSMTL.Diagnostics
             m_Detail = detail;
             m_MaxSegments = maxSegments;
             m_MaxEvents = maxEvents;
-            m_SegmentPool = new Segment[m_MaxSegments];
+            m_SegmentBuffer = new Segment[m_MaxSegments + 1];
+            m_SegmentPool = new Segment[m_MaxSegments + 1];
             m_ChangeBuffer = new RuntimeCaptureChange[m_MaxEvents + 1];
         }
 
         public Guid CaptureId => m_CaptureId;
         public RuntimeDiagnosticsCaptureDetail Detail => m_Detail;
         public long Version => m_Version;
-        public int SegmentCount => m_Segments.Count;
+        public int SegmentCount => m_SegmentCount;
         public int MaxSegments => m_MaxSegments;
 
         public void UpgradeDetail(RuntimeDiagnosticsCaptureDetail detail)
@@ -483,11 +486,11 @@ namespace BTSMTL.Diagnostics
 
         public void Publish(RuntimeTraceEvent traceEvent)
         {
-            Segment segment = m_Segments.Count > 0 ? m_Segments[m_Segments.Count - 1] : null;
+            Segment segment = m_SegmentCount > 0 ? GetSegment(m_SegmentCount - 1) : null;
             if (segment == null || segment.Domain != traceEvent.Domain || segment.Position != traceEvent.Position)
             {
                 segment = AcquireSegment(traceEvent.Domain, traceEvent.Position);
-                m_Segments.Add(segment);
+                AppendSegment(segment);
             }
 
             m_Version++;
@@ -531,12 +534,12 @@ namespace BTSMTL.Diagnostics
         public RuntimeCaptureSnapshot Freeze(RuntimeTraceChannel channels)
         {
             int eventCount = 0;
-            for (int i = 0; i < m_Segments.Count; i++)
-                eventCount += m_Segments[i].Events.Count;
-            var segments = new RuntimeCaptureSegmentSnapshot[m_Segments.Count];
-            for (int i = 0; i < m_Segments.Count; i++)
+            for (int i = 0; i < m_SegmentCount; i++)
+                eventCount += GetSegment(i).Events.Count;
+            var segments = new RuntimeCaptureSegmentSnapshot[m_SegmentCount];
+            for (int i = 0; i < m_SegmentCount; i++)
             {
-                Segment source = m_Segments[i];
+                Segment source = GetSegment(i);
                 var events = new RuntimeTraceEvent[source.Events.Count];
                 for (int j = 0; j < source.Events.Count; j++)
                     events[j] = source.Events[j].TraceEvent;
@@ -547,16 +550,20 @@ namespace BTSMTL.Diagnostics
 
         public void Dispose()
         {
-            m_Segments.Clear();
+            Array.Clear(m_SegmentBuffer, 0, m_SegmentBuffer.Length);
+            m_SegmentHead = 0;
+            m_SegmentCount = 0;
+            Array.Clear(m_SegmentPool, 0, m_SegmentPool.Length);
+            m_SegmentPoolCount = 0;
             ClearChanges();
         }
 
         void TrimToCapacity()
         {
-            while (m_Segments.Count > m_MaxSegments || m_ChangeCount > m_MaxEvents)
+            while (m_SegmentCount > m_MaxSegments || m_ChangeCount > m_MaxEvents)
             {
-                Segment removed = m_Segments[0];
-                m_Segments.RemoveAt(0);
+                Segment removed = GetSegment(0);
+                RemoveFirstSegment();
                 m_EvictedEvents += removed.Events.Count;
                 m_LastEvictionVersion = m_Version;
                 if (removed.Events.Count > 0)
@@ -571,6 +578,23 @@ namespace BTSMTL.Diagnostics
             for (int i = 0; i < m_ChangeCount; i++)
                 changes[i] = GetChange(i);
             return changes;
+        }
+
+        void AppendSegment(Segment segment)
+        {
+            int index = (m_SegmentHead + m_SegmentCount) % m_SegmentBuffer.Length;
+            m_SegmentBuffer[index] = segment;
+            m_SegmentCount++;
+        }
+
+        Segment GetSegment(int index) =>
+            m_SegmentBuffer[(m_SegmentHead + index) % m_SegmentBuffer.Length];
+
+        void RemoveFirstSegment()
+        {
+            m_SegmentBuffer[m_SegmentHead] = null;
+            m_SegmentHead = (m_SegmentHead + 1) % m_SegmentBuffer.Length;
+            m_SegmentCount--;
         }
 
         void AppendChange(RuntimeCaptureChange change)

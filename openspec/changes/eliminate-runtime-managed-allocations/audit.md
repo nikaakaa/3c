@@ -117,6 +117,16 @@
 - `complete` 仍要求没有淘汰事件、排序后事件数量非零、没有 unmapped source、timeline 没有未闭合 span；history complete 仍要求每个 tick 包含 SimulationTick 和 StatePublished 且没有 unmapped source。Builder 的 SelectEvents HashSet、grouping SortedDictionary、open span Dictionary、tick/presentation 子 List 和最终结果对象仍留在后续边界。
 - 作者可在 Runtime Debug 的 execution timeline/history 视图选择同一实例确认时间轴、tick 分组、checkpoint 和 presentation frame 仍一致。本步未做运行采样。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
+
+## 2026-09-21 捕获 segment 外层环形化
+
+对应 tasks.md 的 7.1，新增 7.67 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeCaptureStore` 原先用 `List<Segment>` 保存 active segment，每当事件总数或 segment 数超过容量，都从头部 `RemoveAt(0)`，把全部保留 segment 前移。现在 owner 持有长度 `maxSegments + 1` 的 `Segment[]`，用 head/count 限定有效范围；尾部写入、头部淘汰、Dispose 和 Freeze 都按下标访问。
+- segment 归还池也从 `maxSegments` 扩到 `maxSegments + 1`。原因是正式发布顺序先 append 新 segment，再执行 trim；旧 segment 满事件后在新的 Domain/Position 换段时，active 会瞬时到达 `maxSegments + 1`，旧 segment 归还后才回落到上限。旧池在那个边界会写入第 `maxSegments + 1` 个对象并越界。
+- 发布顺序、Domain/Position 分组、单段 `maxEvents` 满后丢弃、全局 change 环形索引、`m_EvictedEvents`、`m_LastEvictionVersion` 和锁外可见的 Snapshot 内容保持不变。Dispose 现在显式清空 active segment 缓冲、归还池和 change 缓冲，避免 trace payload 被已停止 capture 滞留。
+- Segment 内部事件 List、Freeze 时复制的事件数组、payload 字符串和 RuntimeLiveStateStore 自身容量仍在 7.1 后续边界。作者可在 Runtime Debug 开始捕获、跨多个 Domain/Position 写入并观察 segment count/capacity；本步未做分配采样。
+- `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做捕获运行对比或 Player 分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

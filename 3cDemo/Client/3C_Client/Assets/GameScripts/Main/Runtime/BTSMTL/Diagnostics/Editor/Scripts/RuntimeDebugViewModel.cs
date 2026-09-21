@@ -206,6 +206,7 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<string, long> m_GraphInstanceRevisions = new Dictionary<string, long>(StringComparer.Ordinal);
         readonly Dictionary<RuntimeInstanceKey, ulong> m_GraphInstanceSequences = new Dictionary<RuntimeInstanceKey, ulong>();
         readonly InstanceSequenceOrder m_InstanceSequenceOrder;
+        readonly TimelineInstanceSequenceOrder m_TimelineInstanceSequenceOrder;
         readonly Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder> m_TimelinePlayback = new Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder>();
         readonly Dictionary<RuntimeInstanceKey, Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>> m_PlaybackEvents = new Dictionary<RuntimeInstanceKey, Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>>();
         readonly Dictionary<TimelineSourceKey, HashSet<RuntimeInstanceKey>> m_TimelinePlaybackMembership = new Dictionary<TimelineSourceKey, HashSet<RuntimeInstanceKey>>();
@@ -228,6 +229,7 @@ namespace BTSMTL.Diagnostics.Editor
             m_SourceMap = sourceMap ?? RuntimeDebugSourceMapSnapshot.Empty;
             m_Channels = channels;
             m_InstanceSequenceOrder = new InstanceSequenceOrder(this);
+            m_TimelineInstanceSequenceOrder = new TimelineInstanceSequenceOrder(this);
         }
 
         public static RuntimeDebugViewModel Detached { get; } = new RuntimeDebugViewModel(default, RuntimeDebugSourceMapSnapshot.Empty, RuntimeTraceChannel.None);
@@ -319,21 +321,21 @@ namespace BTSMTL.Diagnostics.Editor
                 : 0;
         }
 
-        public IReadOnlyList<RuntimeInstanceKey> GetTimelineInstances(
+        public void CopyTimelineInstances(
             string timelineAuthoringId,
-            string graphAuthoringId = "")
+            string graphAuthoringId,
+            List<RuntimeInstanceKey> destination)
         {
-            var result = new List<RuntimeInstanceKey>();
+            destination.Clear();
             foreach (KeyValuePair<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder> pair in m_TimelinePlayback)
             {
                 if (MatchesTimeline(
                         pair.Value,
                         timelineAuthoringId,
                         graphAuthoringId))
-                    result.Add(pair.Key);
+                    destination.Add(pair.Key);
             }
-            result.Sort((left, right) => GetTimelineSequence(right).CompareTo(GetTimelineSequence(left)));
-            return result;
+            destination.Sort(m_TimelineInstanceSequenceOrder);
         }
 
         public long GetTimelinePlaybackRevision(
@@ -651,6 +653,16 @@ namespace BTSMTL.Diagnostics.Editor
 
             public int Compare(RuntimeInstanceKey left, RuntimeInstanceKey right) =>
                 m_Owner.m_GraphInstanceSequences[right].CompareTo(m_Owner.m_GraphInstanceSequences[left]);
+        }
+
+        sealed class TimelineInstanceSequenceOrder : IComparer<RuntimeInstanceKey>
+        {
+            readonly RuntimeDebugViewModel m_Owner;
+
+            internal TimelineInstanceSequenceOrder(RuntimeDebugViewModel owner) => m_Owner = owner;
+
+            public int Compare(RuntimeInstanceKey left, RuntimeInstanceKey right) =>
+                m_Owner.GetTimelineSequence(right).CompareTo(m_Owner.GetTimelineSequence(left));
         }
 
         void RegisterTimelinePlayback(

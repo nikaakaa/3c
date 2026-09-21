@@ -202,11 +202,13 @@ namespace BTSMTL.Diagnostics.Editor
         IReadOnlyList<RuntimeInstanceKey> ResolveInstances(RuntimeDebugViewModel view)
         {
             if (Kind != RuntimeDebugViewKind.Graph)
-                return view.GetTimelineInstances(
+                view.CopyTimelineInstances(
                     m_Request.Source.TimelineAuthoringId,
-                    m_Request.Source.GraphAuthoringId);
+                    m_Request.Source.GraphAuthoringId,
+                    m_InstanceScratch);
 
-            view.CopyGraphInstances(m_Request.Source.GraphAuthoringId, m_InstanceScratch);
+            else
+                view.CopyGraphInstances(m_Request.Source.GraphAuthoringId, m_InstanceScratch);
             return m_InstanceScratch;
         }
 

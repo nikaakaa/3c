@@ -309,6 +309,15 @@
 - hash 内容、同一 source 的重复 hash、`Match` 线性比较和命中顺序不变。entries 字典继续独立保存 source map 句柄；hash 字符串仍来自已准备 source map 并由快照长期持有。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 source map 匹配运行对比或分配采样。
 
+## 2026-09-21 Timeline 实例读取复用化
+
+对应 tasks.md 的 7.1，新增 7.87 作为独立小步；7.1 保持未勾选。本条只覆盖 Timeline 实例筛选的 Editor 读取外壳，不计为 Player 每帧收益。
+
+- `RuntimeDebugViewModel.GetTimelineInstances` 原先每次新建结果 List，并用捕获 owner 的 lambda 建立降序比较委托；ViewBinding 每次解析 Timeline 目标都会重复这两份托管分配。图实例读取已在 7.71 改为调用方 Copy 工作列表。
+- 现在新增 `CopyTimelineInstances`，沿用同一 ViewBinding `m_InstanceScratch`，读取前清空并按 `MatchesTimeline` 填充。Timeline 排序键仍是最新的 logic tick 或 presentation frame，比较器改为 ViewModel 长寿命 `TimelineInstanceSequenceOrder`。
+- 全项目搜索确认旧 `GetTimelineInstances` 只有 ViewBinding 一个消费者；已按统一 Copy 模式删除旧返回 List 入口，不保留兼容方法。Graph/Timeline 分支、Follow 多实例判定、Pinned 包含判定和空实例语义不变。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Timeline 实例绑定运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

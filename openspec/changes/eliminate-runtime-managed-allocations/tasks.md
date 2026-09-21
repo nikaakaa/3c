@@ -492,3 +492,4 @@
 - [x] 7.84 RuntimeDebugSession.GetTargetCandidates 按 registry 当前 Count 生成 RuntimeDebugTargetCandidate 精确数组，空集复用 Array.Empty，删除中间 List 壳；registry 顺序、MatchTarget 判定和公开只读列表接口不变。数组是本次候选快照，registry List 不外借
 - [x] 7.85 RuntimeDebugSourceMapSnapshot 的 graph invocations 按源 map Count 生成精确数组，空集复用 Array.Empty，删除 Capture 的 List 复制和 ReadOnlyCollection 包装；path 字典、TryGetInvocation、公开只读列表和 source map 冻结时序不变。entries 与 hash 冻结分配仍在后续小步
 - [x] 7.86 RuntimeDebugSourceMapSnapshot 的 source hash 冻结改为先统计每个 source 数量再填充精确数组，删除每个 source 的中间 List 与扩容数组；hash 顺序、最终字典键顺序、Match 查找和 source map 冻结时序不变。hash 字符串和 entries 字典仍由 source map 快照独立持有
+- [x] 7.87 Timeline 实例读取改为调用方 Copy 工作列表并复用 ViewBinding scratch，删除 GetTimelineInstances 的每次 List、排序闭包和旧返回入口；Timeline/Graph 筛选、最高或最新 sequence 降序、Follow/Pinned 判断不变

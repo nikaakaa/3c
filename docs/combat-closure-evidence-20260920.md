@@ -6,6 +6,8 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- `fbd361747` 跨技能准入归属修复后 Unity Console 0 error；相同录制越过 755 tick，最终在 issued tick 1056 因 Deterministic KCC body left the collision world bounds 退出。错误位置 DeterministicKccWorldSolver.Static.cs:150，边界检查覆盖 X/Z、脚点 Y 及角色高度。已停止回放释放 tick drive。下一步采集该帧前的角色位置、运动增量与碰撞范围，不扩大边界或吞掉异常；尚未完成 1492 帧，也尚未确认用户跑动闪烁/回退的原因。
+
 - 排序修复后，同一录制实际运行至 755/1492 帧，期间读取过 Replaying 231/1492，随后因 Action profile 'Attack' is absent from the Ability catalog 自动退出。堆栈定位跨技能替换准入：用当前技能 Services 查旧动作配置。修复在 ActiveAction 中携带所属 SkillId，通过安装集合按 SkillId 和 ActionId 读取旧动作正式配置；Fixed / Float32 同步，不添加配置别名或运行时临时编译。已停止失败回放释放 tick drive，修复待编译与重跑。
 
 - `94707544f` 补齐本地角色 coordinator，Unity Console 0 error；随后相同录制推进到 149 个 issued ticks，报 Fixed Presentation state channel 'timeline-progress' has no reconciliation order。已停止 replay 释放 tick drive。FixedUnityPresentationOutputAdapter 的正式排序漏列自己生成的 timeline-progress 键；补为先提交 Timeline 进度，再处理动画选择、采样、结束与相机，尚待下一轮运行。

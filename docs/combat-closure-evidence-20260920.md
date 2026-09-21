@@ -25,6 +25,18 @@
 - 在继续时发现 CopyPendingMotionWarps 已被另一任务改动：增加 sourceStart/sourceEnd/sourcePrevious/sourceCurrent 局部采样，窗口起止改用 warpClip。该函数也必须做定点迁移，已向用户询问归属，等待明确答复前不覆盖这一段。此前用户只确认可以与 GC 任务并行，并未指定这个实际重叠函数的归属。
 - 下一步先处理重叠归属，再完成 MotionWarp 的源位置、进度和目标限制数值合同；复查曲线边界、分段循环与零分配。全部 MotionWarp 修复、普通采样和目录初始化仍需在当前程序集加载后取得正式运行证据。
 
+### Corin 运行继续推进
+
+- 用户明确验收目标为 Corin 完整动作闭环，Timeline 是依赖环节，不是收窄后的终点。Goal 已由用户更新为“3C 动作与 corin 正式运行闭环”。
+- `BTSMTL.Timeline.Runtime.csproj` 在并行 EventId 迁移补齐后编译通过，0 error；依要求关闭构建服务器。Unity 已重载当前模块。
+- 空 MotionWarp 目录初始化通过，但下一次真实回放发现实际目录仍用 SourceContentHasher 的 16 位 FNV 哈希。`aa4c1e5bf` 改用公开 StableHash.Compute，并统一空输入身份。Edit 下正式 CharacterTimelineAbilityRuntime 构造使用 Corin 的18条Timeline，成功建立5个MotionWarp，schema/content均64位，Console 0 error。
+- 18条Timeline的实际定点运动采样准备均成功。13个逻辑MotionCurve片段（普攻1～5的Main/End、前后闪避、MovingTurn180）各预热128次，再通过预编译委托调用正式TimelineRuntimeMotionCurve.TrySample 4096次；GC.GetAllocatedBytesForCurrentThread均为0，输出具有非零位移或Yaw。反射、委托构建、曲线准备、结果收集在计量区间外。只证明普通定点曲线采样，不覆盖整帧、MotionWarp或世界位移。
+- 后续回放暴露来源表读取 MotionWarp.Name 时 Clip.Track 未绑定。`90aad0204` 在正式 CharacterTimelineDebugSourceMapFiller 入口调用 Timeline.Init；18份未初始化克隆通过来源表填充，得到148条记录，Console 0 error。
+- 再次相同1492帧回放成功进入运行，工具已发出131个Tick后，技能启动触发“Timeline Clip has no owning Track”：正式Prepare先校验未初始化克隆。`f2584ab41` 将准备快照的Clone/Init放到校验之前，后续发现、树合同和依赖准备读取同一快照。
+- 使用正式角色依赖解析器，安装四份Fixed技能SourceMap及正式Float32表现程序，然后对未初始化克隆调用正式Prepare：17条战斗Timeline均ready=true/errors=[]。CorinMovingTurnRootMotionTimeline仍失败，缺少tree:bd35fa643bea4339ad9a9a7c7d85aeab，预期revision=2e81e05179a66b590d68e7859cf52bd3cb026920605024a03de89f84ada088b9；需核对控制树是否还有另一正式装配来源，不能无条件注册假句柄。
+- f2584ab41之后的1492帧回放已请求并报告开始，但随后并行SLATE改动在CutsceneEditor.cs 815/816行引用已删除的IEmbeddedTimelineBinding.CurrentFrame，编译错误触发PlayModeErrorAutoExit；现为Edit/Idle，无Proof。不能作为完成的动作运行或稳定版本证据。该文件仍在其他任务修改，本任务未覆盖。
+- MotionWarp采样函数重叠归属的用户问题仍未收到明确选择；继续保留其修改。下一步需要完成MotionWarp数值链、处理实际转身依赖，并在可稳定运行的当前版本继续攻击/闪避/Rush及收尾、表现和1492帧证据。
+
 ## 2026-09-20 后续核对与提交
 
 - 用户确定先完成 Timeline 时间迁移，再继续技能位移接入。任务 `01a0bcde-cf76-7162-9fcd-da6283a04b7a` 最近读取仍为 active，未取得依赖完成结论。

@@ -3763,3 +3763,11 @@
 - Authority Client Route 的已发送 checkpoint 改为与发送顺序同一个环形数组位置一起持有，`StoreSent` 入队 sequence 和 checkpoint，超容量出队时统一清空槽位；容量裁剪、未确认 checkpoint 抛错和确认推进顺序不变。
 - 客户端 snapshot acknowledgement 的精确 sequence 查找改为最多遍历当前发送 count 的 ring 扫描；找到后仍设置 acknowledged 身份并移除更旧 checkpoint。
 - `SortedDictionary`、重复 sequence 索引和 tree node 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Authority source output rings 收口
+
+对应 tasks.md 的 5.5，新增 5.198 作为独立小步；5.5 保持未勾选。
+
+- Authority Source 的 reliable event batch 和 full checkpoint 输出从 `Queue` 改为按 policy 容量构造期精确分配的共享 `OutputRing<T>`，用 head/count 记录顺序；出队清空槽位，Dispose 重置 ring 并清空所有 payload 引用。
+- 入队前的容量检查、overflow 文案、先 reliable 后 full checkpoint 的同步 flush 顺序、payload 和 output 对象所有权保持不变。
+- 两个 `Queue` 的内部数组增长壳删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

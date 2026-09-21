@@ -23,10 +23,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             new SortedDictionary<ActorId, ServerAuthoritativeAuthorityClientRoute>();
         readonly Dictionary<ActorId, NetworkCheckpoint> m_LatestCheckpoints =
             new Dictionary<ActorId, NetworkCheckpoint>();
-        readonly Queue<ServerAuthoritativeAuthorityReliableEventBatchOutput> m_ReliableOutput =
-            new Queue<ServerAuthoritativeAuthorityReliableEventBatchOutput>();
-        readonly Queue<ServerAuthoritativeAuthorityFullCheckpointOutput> m_FullCheckpointOutput =
-            new Queue<ServerAuthoritativeAuthorityFullCheckpointOutput>();
+        readonly OutputRing<ServerAuthoritativeAuthorityReliableEventBatchOutput> m_ReliableOutput;
+        readonly OutputRing<ServerAuthoritativeAuthorityFullCheckpointOutput> m_FullCheckpointOutput;
         readonly ThreadLocal<CanonicalWriter> m_PayloadWriter;
         ServerAuthoritativeSessionId m_SessionId;
         ulong m_RosterRevision;
@@ -57,6 +55,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
             m_Data = data ?? throw new ArgumentNullException(nameof(data));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            m_ReliableOutput = new OutputRing<ServerAuthoritativeAuthorityReliableEventBatchOutput>(
+                policy.ReliableOutputQueueCapacity);
+            m_FullCheckpointOutput = new OutputRing<ServerAuthoritativeAuthorityFullCheckpointOutput>(
+                policy.FullCheckpointOutputQueueCapacity);
             m_CheckpointLayout = new NetworkCheckpointLayout(characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime)));
             m_PayloadWriter = new ThreadLocal<CanonicalWriter>(
                 () => new CanonicalWriter(new byte[policy.ModelPolicy.MaxGameplayDatagramBytes]));
@@ -774,6 +776,44 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
             public SimulationPortDescriptor Descriptor { get; }
             public void Commit(Float32SourceEgressRecord record) => m_Runtime.Commit(record);
+        }
+    }
+
+    sealed class OutputRing<T>
+    {
+        readonly T[] m_Items;
+        int m_Head;
+        int m_Count;
+
+        public OutputRing(int capacity)
+        {
+            if (capacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            m_Items = new T[capacity];
+        }
+
+        public int Count => m_Count;
+
+        public void Enqueue(T value)
+        {
+            m_Items[(m_Head + m_Count) % m_Items.Length] = value;
+            m_Count++;
+        }
+
+        public T Dequeue()
+        {
+            T value = m_Items[m_Head];
+            m_Items[m_Head] = default;
+            m_Head = (m_Head + 1) % m_Items.Length;
+            m_Count--;
+            return value;
+        }
+
+        public void Clear()
+        {
+            Array.Clear(m_Items, 0, m_Items.Length);
+            m_Head = 0;
+            m_Count = 0;
         }
     }
 }

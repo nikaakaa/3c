@@ -3075,6 +3075,14 @@
 - 批内用 `ArraySegment<ActorContactCandidate>` 只暴露有效区间，保证 `ActorContactSolver` 读到的 `Count` 不包含旧槽位；排序改为静态 `IComparer<ActorContactCandidate>`，对数组的有效数量区间排序。ActorId 升序、active/observed 混合求解、reconstraint 和 final validation 顺序不变。
 - 不给 observed actor 编造静态上限；容量来源就是当前批 active 与 observed 总数，首次遇到更大数量仍会扩容一次。成功和失败路径 finally 都清零有效区间，避免旧候选残留。`ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 KCC 状态工作数组复用
+
+对应 tasks.md 的 5.1，新增 5.114 作为独立小步；5.1 保持未勾选。
+
+- KCC solver 构造期准备与锁定 roster 数量一致的 `m_KccStates` 数组。`Create` 不再重新分配，PlaceInitial 得到的正式状态直接写回；批求解也不再新建 `states`，每 Actor 结束时覆盖同一下标，然后 `CreateState` 只把值序列化进 solver payload。
+- `WorldSimulationState` 不持有 `DeterministicKccBodyState[]`，只持有编码后的 payload，因此当前 state 快照和下一步状态工作数组没有数组别名。`ActorSolveCandidate` 已按值携带 PreviousState，覆盖当前下标不会改写本批求解输入。bodies 和 results 仍每批独立分配，因为分别由 state 和批结果持有；`Reconstruct` 里 `DeterministicKccStateCodec.Read` 仍返回新数组，恢复路径的分配留给 codec 原位读取小步。
+- `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

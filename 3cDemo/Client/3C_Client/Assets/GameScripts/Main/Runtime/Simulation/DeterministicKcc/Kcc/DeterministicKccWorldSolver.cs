@@ -55,6 +55,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             m_Candidates = new ActorSolveCandidate[m_Bindings.Length];
             m_ActorContacts = new DeterministicActorContactCandidate[m_Bindings.Length];
             m_CandidatePositions = new FixedVector3[m_Bindings.Length];
+            m_KccStates = new DeterministicKccBodyState[m_Bindings.Length];
             m_Motors = new DeterministicKccMotor[m_Bindings.Length];
             m_PredictionMotors = new DeterministicKccMotor[m_Bindings.Length];
             for (int i = 0; i < m_Motors.Length; i++)
@@ -133,7 +134,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
             RequireAlive();
             ValidateBodies(orderedInitialBodies);
             var bodies = new WorldBodyState[m_Bindings.Length];
-            m_KccStates = new DeterministicKccBodyState[m_Bindings.Length];
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 WorldBodyState source = orderedInitialBodies[i];
@@ -320,7 +320,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 true);
 
             var bodies = new WorldBodyState[m_Candidates.Length];
-            var states = new DeterministicKccBodyState[m_Candidates.Length];
             var results = new CharacterWorldSolveResult[m_Candidates.Length];
             DeterministicKccQuerySummary contactQuerySummary = new DeterministicKccQuerySummary(
                 0,
@@ -345,7 +344,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     candidate.Ground.IsStableOnGround,
                     candidate.Collision,
                     tickDelta);
-                states[i] = new DeterministicKccBodyState(
+                m_KccStates[i] = new DeterministicKccBodyState(
                     actorRequest.ActorId,
                     candidate.Ground.FoundAnyGround,
                     candidate.Ground.IsStableOnGround,
@@ -385,8 +384,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     querySummary,
                     candidate.ElapsedStopwatchTicks);
             }
-            m_KccStates = states;
-            m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies, states);
+            m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies, m_KccStates);
             return WorldSolveBatchResult.FromOwnedResults(
                 request,
                 Descriptor.ImplementationId,

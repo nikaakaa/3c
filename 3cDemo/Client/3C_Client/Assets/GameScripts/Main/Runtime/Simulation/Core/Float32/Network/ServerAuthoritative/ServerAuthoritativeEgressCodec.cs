@@ -170,14 +170,22 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 WriteReliableEvent(writer, batch.ReliableEvents[i]);
         }
 
-        public static RemotePresentationBatch ReadRemotePresentation(byte[] bytes)
+        public static RemotePresentationBatch ReadRemotePresentation(ReadOnlyMemory<byte> bytes)
         {
-            return ReadRemotePresentation(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))));
+            CanonicalReader reader = Reader(bytes, RemoteMagic, RemoteVersion, "remote presentation");
+            return ReadRemotePresentation(reader, bytes.Span);
         }
 
         static RemotePresentationBatch ReadRemotePresentation(ArraySegment<byte> bytes)
         {
-            CanonicalReader reader = Reader(bytes, RemoteMagic, RemoteVersion, "remote presentation");
+            var reader = new CanonicalReader(bytes);
+            if (reader.ReadUInt32() != RemoteMagic || reader.ReadInt32() != RemoteVersion)
+                throw new InvalidDataException("ServerAuthoritative remote presentation schema is invalid.");
+            return ReadRemotePresentation(reader, bytes.AsSpan());
+        }
+
+        static RemotePresentationBatch ReadRemotePresentation(CanonicalReader reader, ReadOnlySpan<byte> source)
+        {
             var actorId = new ActorId(reader.ReadString());
             bool resetBodyStream = reader.ReadBoolean();
             int bodyCount = ReadCount(reader, "body sample");
@@ -196,7 +204,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var result = new RemotePresentationBatch(actorId, bodies, samples, events, resetBodyStream);
             using var writer = new CanonicalWriter();
             WriteRemotePresentation(writer, result);
-            RequireCanonical(bytes.AsSpan(), writer, "remote presentation");
+            RequireCanonical(source, writer, "remote presentation");
             return result;
         }
 
@@ -531,6 +539,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         static CanonicalReader Reader(ArraySegment<byte> bytes, uint magic, int version, string label)
+        {
+            var reader = new CanonicalReader(bytes);
+            if (reader.ReadUInt32() != magic || reader.ReadInt32() != version)
+                throw new InvalidDataException($"ServerAuthoritative {label} schema is invalid.");
+            return reader;
+        }
+
+        static CanonicalReader Reader(ReadOnlyMemory<byte> bytes, uint magic, int version, string label)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != magic || reader.ReadInt32() != version)

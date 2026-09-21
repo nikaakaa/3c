@@ -534,7 +534,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     record,
                     ServerAuthoritativeEgressChannels.RemotePresentationSchema,
                     ServerAuthoritativeEgressChannels.RemotePresentationSchemaVersion);
-                RemotePresentationBatch batch = ServerAuthoritativeEgressCodec.ReadRemotePresentation(record.CopyPayload());
+                RemotePresentationBatch batch = ServerAuthoritativeEgressCodec.ReadRemotePresentation(record.Payload);
                 if (batch.ActorId != record.ActorId || batch.ActorId != m_Remote.ActorId)
                     throw new InvalidOperationException("Remote Presentation egress Actor identity does not match its target.");
                 m_Remote.Commit(batch);

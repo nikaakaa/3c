@@ -3378,3 +3378,11 @@
 - `FixedSourceEgressRecord` 增加 `ReadOnlyMemory<byte> Payload` 只读视图。Bridge 提交本地 state hash 时直接把 record 自身的 array-backed payload 交给 `RollbackProtocolCodec.ReadCanonicalPayload`，删除每次 `CopyPayload` 的数组克隆。
 - canonical payload 读取入口从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`，reader 仍要求 array-backed 存储；canonical 比较改为 `bytes.Span`。record 构造期的一次独立复制、PayloadHash 校验和 Bridge 后续 report 所有权不变。
 - `FixedSourceEgressRecord.CopyPayload` 已无消费者，直接删除，不保留旧复制入口。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 远端表现 Egress payload 零复制解码
+
+对应 tasks.md 的 5.4，新增 5.150 作为独立小步；5.4 保持未勾选。
+
+- `Float32SourceEgressRecord` 增加 `ReadOnlyMemory<byte> Payload` 只读视图。`ServerAuthoritativePredictionCommittedOutputPort` 提交 Remote Presentation 时不再 `CopyPayload`，直接借用 record 已独立持有的 canonical payload。
+- `ServerAuthoritativeEgressCodec.ReadRemotePresentation` 公开入口从 `byte[]` 改为 `ReadOnlyMemory<byte>`，内部抽出 reader/span 核心供 authority replication 的嵌套 `ArraySegment` 复用；schema 检查、字段顺序、canonical 重编码比较和返回批次独立所有权不变。
+- 远端可靠事件路径继续先校验 `PayloadLength == Payload.Length`，`byte[]` 隐式转为只读内存后不再复制。Owner input 和 Authority replication 仍有自己的 `CopyPayload` 消费者，本步不改其所有权。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

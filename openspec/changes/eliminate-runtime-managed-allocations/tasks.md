@@ -410,6 +410,7 @@
 - [x] 5.147 Rollback Datagram Endpoint 按发送队列容量租用并归还待发 endpoint 记录；删除每个数据包的远端 IPEndPoint 克隆，发送 buffer 和 payload 归还边界不变
 - [x] 5.148 Rollback protocol envelope 改为只读值记录；接收队列直接承载 Session、Sender、Sequence 和 payload 引用，删除每条完整消息的信封堆对象，payload 所有权不变
 - [x] 5.149 Rollback state hash Egress 只读借用 Fixed Source Egress record payload 进行 canonical 解码，删除 Bridge 每次提交的 payload 克隆和无消费者 CopyPayload 旧入口
+- [x] 5.150 Float32 远端表现 Egress 只读借用 Source record payload 解码，读取入口改为 ReadOnlyMemory；删除 committed output 每次提交的 payload 克隆
 
 ## 6. UI、资源、渲染和生命周期
 

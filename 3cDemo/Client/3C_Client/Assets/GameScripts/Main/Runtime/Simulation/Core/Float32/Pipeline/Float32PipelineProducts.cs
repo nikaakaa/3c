@@ -236,6 +236,7 @@ namespace ThirdPersonSimulation
         public string SchemaId { get; }
         public int SchemaVersion { get; }
         public StableHash PayloadHash { get; }
+        public ReadOnlyMemory<byte> Payload => m_Payload;
         public byte[] CopyPayload() => (byte[])m_Payload.Clone();
     }
 

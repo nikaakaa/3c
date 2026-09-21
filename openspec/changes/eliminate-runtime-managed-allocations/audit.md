@@ -318,6 +318,15 @@
 - 全项目搜索确认旧 `GetTimelineInstances` 只有 ViewBinding 一个消费者；已按统一 Copy 模式删除旧返回 List 入口，不保留兼容方法。Graph/Timeline 分支、Follow 多实例判定、Pinned 包含判定和空实例语义不变。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Timeline 实例绑定运行对比或分配采样。
 
+## 2026-09-21 图元素状态文本固定
+
+对应 tasks.md 的 7.1，新增 7.88 作为独立小步；7.1 保持未勾选。本条只覆盖 `RuntimeElementDebugState.Status` 的空 payload fallback，不计为 Player 每帧收益。
+
+- `RuntimeElementDebugState.Status` 在 `Payload.Status` 为空时直接调用 `Kind.ToString()`。Tree overlay 每次刷新和技能 observation 每次读取都会重复进入枚举格式化，产生托管 string，同一 Kind 的正式名其实固定不变。
+- 现在类型准备期调用一次 `Enum.GetNames(typeof(RuntimeTraceEventKind))` 生成长寿命名字表；正式枚举没有显式数值，成员从 0 连续排列，`Status` 直接按 Kind 下标读取。`Payload.Status` 有值时仍原样返回，正式 Kind 的显示文本与原 `ToString` 相同。
+- Tree overlay、技能 observation 和其他 `RuntimeElementDebugState.Status` 消费者接口不变。发布边界传入的空 payload status 仍会显示 Kind 名；非法位标记不在诊断合同值域内，本步不增加第二层兜底。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree overlay 刷新运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

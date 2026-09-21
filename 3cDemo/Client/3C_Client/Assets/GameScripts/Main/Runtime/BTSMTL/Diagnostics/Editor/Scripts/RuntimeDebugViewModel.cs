@@ -39,6 +39,8 @@ namespace BTSMTL.Diagnostics.Editor
 
     public readonly struct RuntimeElementDebugState
     {
+        static readonly string[] s_EventKindText = Enum.GetNames(typeof(RuntimeTraceEventKind));
+
         public RuntimeElementDebugState(RuntimeDebugEventView eventView)
         {
             Source = eventView.Source;
@@ -59,7 +61,7 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong Position { get; }
         public ulong Sequence { get; }
         public RuntimeTracePayload Payload { get; }
-        public string Status => !string.IsNullOrEmpty(Payload.Status) ? Payload.Status : Kind.ToString();
+        public string Status => !string.IsNullOrEmpty(Payload.Status) ? Payload.Status : s_EventKindText[(int)Kind];
     }
 
     public readonly struct RuntimeTimelinePlaybackDebugSummary

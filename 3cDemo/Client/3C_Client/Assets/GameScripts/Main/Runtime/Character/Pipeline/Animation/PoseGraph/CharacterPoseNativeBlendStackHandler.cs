@@ -292,7 +292,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
-            m_Output = null;
             m_EvaluationPrepared = false;
         }
 
@@ -324,8 +323,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "pose")
                 throw new InvalidOperationException(
                     $"Blend Stack '{NodeId}' has no output '{portId}'.");
-            return m_Output ?? throw new InvalidOperationException(
-                $"Blend Stack '{NodeId}' output is not completed.");
+            return m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity
+                ? m_Output
+                : throw new InvalidOperationException(
+                    $"Blend Stack '{NodeId}' output is not completed.");
         }
 
         public void PrepareEvaluation(
@@ -385,9 +387,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_WriteBinding.CompletedAt[0] != lineage.CompletionIdentity)
                 throw new InvalidOperationException(
                     $"Blend Stack '{NodeId}' Job did not complete the current frame.");
-            m_Output = new CharacterPoseNativeLocalPoseValue(
+            CharacterPoseNativePoseReadBinding output =
+                new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
                 NodeId,
-                new CharacterPoseNativePoseReadBinding(in m_WriteBinding));
+                in output);
         }
 
         public void ValidatePending(
@@ -416,7 +421,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Stack.CommitFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             m_SourceBinding.ResetFrame();
             ClearFrame();
@@ -464,7 +470,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

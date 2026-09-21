@@ -417,3 +417,4 @@
 - [x] 7.39 Blend、Additive、Layered Bone Blend 复用 Local Pose 输出包装对象，删除三个纯 Pose 组合节点的稳态逐帧包装创建；保留连续性、Native 双页和提交状态语义
 - [x] 7.40 Entry Pose 与 Linked Pose 复用 Local Pose 输出包装对象，删除 source 复制节点的稳态逐帧包装创建；保留 source completion、Native 双页和提交状态语义
 - [x] 7.41 Clip Player 与 Blend Space Player 复用 Local Pose 和 discontinuity 输出包装对象，删除两类播放器稳态逐帧包装创建；保留当前 frame identity、Native 双页和提交事务语义
+- [x] 7.42 Blend Stack handler 复用 Local Pose 输出包装对象，删除正式 Blend Stack 稳态逐帧包装创建；保留 stack 完成、source reset、待提交校验和页索引提交语义

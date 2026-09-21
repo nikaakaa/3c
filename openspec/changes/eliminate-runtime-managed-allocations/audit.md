@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Blend Stack 输出包装复用
+
+对应 tasks.md 的 7.42。
+
+- `CharacterPoseNativeBlendStackHandler` 原先在每次 Blend Stack job 完成后创建新的 Local Pose wrapper，并在每个 frame 清空引用。
+- handler 现在复用 `CharacterPoseNativeLocalPoseValue`，EvaluateOutput 只返回匹配当前 completion identity 的对象；更新前保留 Local binding 和可用性校验。
+- 不改变 stack CompleteFrame/CommitFrame、source binding ResetFrame、Native 双页、ValidatePending 或提交页索引；本步只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Clip Player 与 Blend Space Player 输出包装复用
 
 对应 tasks.md 的 7.41。

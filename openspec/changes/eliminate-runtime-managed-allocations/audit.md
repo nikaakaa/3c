@@ -3923,3 +3923,11 @@
 - Fixed 和 Float32 Ability Execution Frame 的 `EventSequence` 与 `FactSink` 从 immutable class 改为 readonly struct；两者只绑定当前 Frame，继续负责 activation generation、event sequence、Gameplay channel 和 fact 添加。
 - `PresentationSink` 仍持有 TreeClip 可变状态，`TraceSink` 仍持有诊断集合索引，本步不改；所有消费者继续使用具体类型，不新增接口或装箱。
 - 每个 invocation assembly 的两个薄 wrapper class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability diagnostic sequence 值存储收口
+
+对应 tasks.md 的 5.5，新增 5.218 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Execution Frame 的 `DiagnosticSequence` 从每次 invocation 新建的 class 改为 struct，并作为 `TraceSink` 的实例字段保存；`Begin` 仍在同一存储槽重置序号，`Next` 继续递增并生成 Trace header。
+- `TraceSink` 的 sequence 字段从 readonly 改为普通字段，避免 mutable struct 方法写入防御副本；Frame、ActorId、tick、generation 解析、诊断开关和记录顺序不变。
+- 每个 invocation 的 Diagnostic Sequence class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 与 readonly 字段残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

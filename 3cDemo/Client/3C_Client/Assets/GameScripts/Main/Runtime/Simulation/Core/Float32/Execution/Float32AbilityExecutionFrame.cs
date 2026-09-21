@@ -499,7 +499,7 @@ namespace ThirdPersonSimulation
 
     }
 
-    internal sealed class Float32DiagnosticSequence
+    internal struct Float32DiagnosticSequence
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         ulong m_Sequence;
@@ -559,7 +559,7 @@ namespace ThirdPersonSimulation
         readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
         readonly Float32AbilityExecutionFrame m_Frame;
-        readonly Float32DiagnosticSequence m_Sequence;
+        Float32DiagnosticSequence m_Sequence;
         bool m_Enabled;
 
         public Float32TraceSink(Float32AbilityExecutionFrame frame, Float32DiagnosticSequence sequence)

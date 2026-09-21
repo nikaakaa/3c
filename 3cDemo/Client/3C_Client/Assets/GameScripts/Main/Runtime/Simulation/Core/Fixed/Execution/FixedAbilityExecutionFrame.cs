@@ -500,7 +500,7 @@ namespace ThirdPersonSimulation.Fixed
 
     }
 
-    internal sealed class FixedDiagnosticSequence
+    internal struct FixedDiagnosticSequence
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         ulong m_Sequence;
@@ -560,7 +560,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
         readonly FixedAbilityExecutionFrame m_Frame;
-        readonly FixedDiagnosticSequence m_Sequence;
+        FixedDiagnosticSequence m_Sequence;
         bool m_Enabled;
 
         public FixedTraceSink(FixedAbilityExecutionFrame frame, FixedDiagnosticSequence sequence)

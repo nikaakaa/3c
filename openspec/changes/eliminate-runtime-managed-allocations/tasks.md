@@ -478,6 +478,7 @@
 - [x] 5.215 两数值域 Character Control Runtime 在准备期持有 State Port；tick 继续传入同一 state transaction 和 schema，删除每次 Control tick 的 port class
 - [x] 5.216 两数值域 Ability State Port 和 Operation State Reset 改为 readonly struct；继续按 invocation Frame 构造并传递具体类型，保留 owner、access policy 和 state slot 校验，删除 assembly 准备期的两个 wrapper class
 - [x] 5.217 两数值域 Ability Event Sequence 和 Fact Sink 改为 readonly struct；继续由 invocation Frame 构造并直接进入 runtime 与 presentation sink，保留 event sequence、Gameplay channel 和 fact 输出顺序，删除两个 immutable wrapper class
+- [x] 5.218 两数值域 Ability Diagnostic Sequence 改为 Trace Sink 内部值存储；字段随 Trace Sink 保存并在 Begin 重置，继续按原始 invocation Frame 生成 Trace header，删除每次 invocation 的 sequence class
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -127,6 +127,16 @@
 - 发布顺序、Domain/Position 分组、单段 `maxEvents` 满后丢弃、全局 change 环形索引、`m_EvictedEvents`、`m_LastEvictionVersion` 和锁外可见的 Snapshot 内容保持不变。Dispose 现在显式清空 active segment 缓冲、归还池和 change 缓冲，避免 trace payload 被已停止 capture 滞留。
 - Segment 内部事件 List、Freeze 时复制的事件数组、payload 字符串和 RuntimeLiveStateStore 自身容量仍在 7.1 后续边界。作者可在 Runtime Debug 开始捕获、跨多个 Domain/Position 写入并观察 segment count/capacity；本步未做分配采样。
 - `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做捕获运行对比或 Player 分配采样。
+
+## 2026-09-21 实时状态容器容量固定
+
+对应 tasks.md 的 7.1，新增 7.68 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeLiveStateStore` 原先的 current 字典、change 队列和 recency node 字典都用默认容量，运行期每个新状态键逐步触发重排；change 队列还会在首窗内按默认容量增长。现在三者都由唯一正式上限 `maxChanges + 1` 在构造期准备。
+- 多留一项的原因与既有有界历史一致：满员替换先淘汰最旧状态再加入新状态；change 队列先 `Enqueue` 新版本、再检查超过 `maxChanges` 并 `Dequeue`。`maxChanges + 1` 覆盖这两个边界，不需要新增淘汰策略，也不允许稳态超出正式窗口。
+- Upsert 的 LRU 顺序、等价状态跳过、淘汰计数和版本推进，Clear 后容量保留，全量读取、增量读取和独立结果数组语义不变。state record、trace payload 字符串和首次节点池填充仍在 7.1 后续边界。
+- 作者可在 Runtime Debug 观察实时状态全量和增量刷新、断开重连或切换 execution branch 后确认状态数量与窗口一致；本步未做分配采样。
+- `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做实时状态运行对比或 Player 分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

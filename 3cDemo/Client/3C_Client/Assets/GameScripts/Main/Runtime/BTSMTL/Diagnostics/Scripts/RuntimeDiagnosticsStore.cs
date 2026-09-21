@@ -194,10 +194,10 @@ namespace BTSMTL.Diagnostics
 
     sealed class RuntimeLiveStateStore
     {
-        readonly Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent> m_Current = new Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent>();
-        readonly Queue<RuntimeLiveStateChange> m_Changes = new();
+        readonly Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent> m_Current;
+        readonly Queue<RuntimeLiveStateChange> m_Changes;
         readonly LinkedList<RuntimeLiveStateKey> m_Recency = new();
-        readonly Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>> m_RecencyNodes = new();
+        readonly Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>> m_RecencyNodes;
         readonly LinkedListNode<RuntimeLiveStateKey>[] m_RecencyNodePool;
         readonly int m_MaxChanges;
         long m_Version;
@@ -210,6 +210,9 @@ namespace BTSMTL.Diagnostics
             if (maxChanges < 64)
                 throw new ArgumentOutOfRangeException(nameof(maxChanges));
             m_MaxChanges = maxChanges;
+            m_Current = new Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent>(maxChanges + 1);
+            m_Changes = new Queue<RuntimeLiveStateChange>(maxChanges + 1);
+            m_RecencyNodes = new Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>>(maxChanges + 1);
             m_RecencyNodePool = new LinkedListNode<RuntimeLiveStateKey>[m_MaxChanges];
         }
 

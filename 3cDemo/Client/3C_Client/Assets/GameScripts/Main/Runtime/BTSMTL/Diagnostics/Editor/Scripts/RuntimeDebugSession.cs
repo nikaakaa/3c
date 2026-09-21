@@ -365,9 +365,11 @@ namespace BTSMTL.Diagnostics.Editor
         public IReadOnlyList<RuntimeDebugTargetCandidate> GetTargetCandidates(RuntimeDebugTargetRequest request)
         {
             IReadOnlyList<RuntimeDiagnosticsTarget> targets = RuntimeDiagnosticsTargetRegistry.Targets;
-            var candidates = new List<RuntimeDebugTargetCandidate>(targets.Count);
+            RuntimeDebugTargetCandidate[] candidates = targets.Count == 0
+                ? Array.Empty<RuntimeDebugTargetCandidate>()
+                : new RuntimeDebugTargetCandidate[targets.Count];
             for (int i = 0; i < targets.Count; i++)
-                candidates.Add(new RuntimeDebugTargetCandidate(new RuntimeDebugTargetInfo(targets[i]), MatchTarget(targets[i], request)));
+                candidates[i] = new RuntimeDebugTargetCandidate(new RuntimeDebugTargetInfo(targets[i]), MatchTarget(targets[i], request));
             return candidates;
         }
 

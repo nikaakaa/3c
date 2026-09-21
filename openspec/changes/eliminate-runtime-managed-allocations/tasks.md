@@ -489,3 +489,4 @@
 - [x] 7.81 execution timeline 与 history 的 spans、ticks、checkpoints、presentation frames 改用 builder 静态结果 List 填充排序，再转换为精确数组交给返回对象；返回接口、排序、未完成 span、checkpoint 去重和 presentation 可用性不变。数组是正式最终结果，scratch 只服务 Editor 同步读取链
 - [x] 7.82 RuntimeDebugChangeSet 直接按 pending HashSet 数量生成 source／instance 精确数组快照，删除中间 List 复制壳；FullSync、空集、遍历顺序、Affects 查找和 ViewModel pending 集合生命周期不变。数组是本次变更集的正式结果，生产者 HashSet 不外借
 - [x] 7.83 RuntimeDebugSession.Targets 按 registry 当前 Count 生成 RuntimeDebugTargetInfo 精确数组，空集复用 Array.Empty，删除中间 List 壳；registry 顺序、目标信息构造和公开只读列表接口不变。数组是本次读取快照，registry List 不外借
+- [x] 7.84 RuntimeDebugSession.GetTargetCandidates 按 registry 当前 Count 生成 RuntimeDebugTargetCandidate 精确数组，空集复用 Array.Empty，删除中间 List 壳；registry 顺序、MatchTarget 判定和公开只读列表接口不变。数组是本次候选快照，registry List 不外借

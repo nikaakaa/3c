@@ -282,6 +282,15 @@
 - 全项目源码搜索确认当前没有 `RuntimeDebugSession.Shared.Targets` 或等价本地变量的外部调用方；本步不删除该公开目标清单入口，只统一其返回结构。目标候选匹配仍走 `GetTargetCandidates`，不在本步范围。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做目标刷新运行对比或分配采样。
 
+## 2026-09-21 调试目标候选数组化
+
+对应 tasks.md 的 7.1，新增 7.84 作为独立小步；7.1 保持未勾选。本条只覆盖目标候选清单的返回集合外壳，不计为 Player 每帧收益。
+
+- `RuntimeDebugSession.GetTargetCandidates` 原先每次为全部 registry 目标新建 `List<RuntimeDebugTargetCandidate>`，即使预留 Count 容量，仍会生成 List 对象和内部数组两层托管分配。候选是 readonly struct，返回后只被 `RuntimeDebugTargetResolution`、Tree 窗口和状态消息消费。
+- 现在空 registry 复用 `RuntimeDebugTargetCandidate[]` 空数组；非空时按当前 Count 新建精确数组并直接按下标填充。每个候选仍调用同一个 `MatchTarget`，registry 顺序、Exact／RevisionMismatch／SourceMissing 判定和公开 `IReadOnlyList` 接口不变。
+- `RuntimeDebugTargetResolution.Candidates` 的默认空集、Tree 窗口下标遍历和候选标签构造不变。registry 在 Editor 同步读取期间不提供并发修改入口，本步不引入第二个候选缓存或固定容量池。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做目标绑定运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

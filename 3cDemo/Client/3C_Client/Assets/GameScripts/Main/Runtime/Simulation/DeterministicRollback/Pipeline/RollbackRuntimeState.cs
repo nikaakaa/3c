@@ -386,16 +386,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (frame == null || frame.Provenance != RollbackInputProvenance.RelayedExplicit)
                 throw new ArgumentException("Rollback Runtime State accepts only relayed explicit input.", nameof(frame));
-            RollbackInputHistoryEntry entry;
-            try
-            {
-                entry = m_Inputs.GetRequired(frame.Tick);
-            }
-            catch (KeyNotFoundException)
-            {
+            if (!m_Inputs.TryGetBundles(frame.Tick, out RollbackCanonicalInputBundle predicted, out _))
                 return;
-            }
-            RollbackCanonicalInputBundle predicted = entry.Predicted;
             if (predicted == null)
                 return;
             bool found = false;
@@ -535,8 +527,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void RecordAppliedInput(SimulationTick tick)
         {
-            RollbackInputHistoryEntry entry = m_Inputs.GetRequired(tick);
-            RollbackCanonicalInputBundle applied = entry.Canonical ?? entry.Predicted ??
+            if (!m_Inputs.TryGetBundles(tick, out RollbackCanonicalInputBundle predicted, out RollbackCanonicalInputBundle canonical))
+                throw new KeyNotFoundException($"Rollback input history has no Tick '{tick}'.");
+            RollbackCanonicalInputBundle applied = canonical ?? predicted ??
                 throw new InvalidOperationException($"Rollback Tick '{tick}' has no applied input bundle.");
             m_AppliedGameplayHashes[tick.Value] = applied.GameplayHash;
             if (tick.Value >= m_LastAppliedInputTick)
@@ -765,13 +758,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return;
             while (true)
             {
-                try
-                {
-                    RollbackInputHistoryEntry entry = m_Inputs.GetRequired(new SimulationTick(next));
-                    if (entry.Canonical == null)
-                        break;
-                }
-                catch (KeyNotFoundException)
+                if (!m_Inputs.TryGetBundles(new SimulationTick(next), out _, out RollbackCanonicalInputBundle canonical) ||
+                    canonical == null)
                 {
                     break;
                 }
@@ -786,20 +774,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong candidate = Math.Min(m_RelayConfirmedTick, m_LastCompletedTick);
             for (ulong tick = checked(m_ConfirmedTick + 1); tick <= candidate; tick++)
             {
-                RollbackInputHistoryEntry entry;
-                try
-                {
-                    entry = m_Inputs.GetRequired(new SimulationTick(tick));
-                }
-                catch (KeyNotFoundException)
+                if (!m_Inputs.TryGetBundles(new SimulationTick(tick), out _, out RollbackCanonicalInputBundle canonical))
                 {
                     candidate = tick - 1;
                     break;
                 }
-                if (entry.Canonical == null ||
+                if (canonical == null ||
                     !m_AppliedGameplayHashes.TryGetValue(tick, out StableHash applied) ||
-                    !applied.Equals(entry.Canonical.GameplayHash) ||
-                    !HasExplicitInputForEveryActor(entry.Canonical))
+                    !applied.Equals(canonical.GameplayHash) ||
+                    !HasExplicitInputForEveryActor(canonical))
                 {
                     candidate = tick - 1;
                     break;

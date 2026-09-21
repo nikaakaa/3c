@@ -3225,3 +3225,11 @@
 - `RollbackOutputCommitter.PublishDiagnostics` 原先在诊断开启时用 `Kind.ToString().ToLowerInvariant()` 生成中间字符串，再插入 `rollback_output_*` code。三种正式 operation 现在直接映射到原有固定 code；非法 kind 保留原异常语义。
 - detail 字符串仍按本次 EventId、target、channel、execution 和 confirmedOnly 格式化；diagnostics sink、字段顺序、生命周期和开关行为不变。`Apply` 已只接受三种正式 operation，diagnostics 的固定映射不新增第二套路径。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback input history 查询去包装
+
+对应 tasks.md 的 5.2，新增 5.132 作为独立小步；5.2 保持未勾选。
+
+- `RollbackInputHistory.GetRequired` 原先每次返回一只 `RollbackInputHistoryEntry`；record relay、applied input、canonical horizon、confirmed horizon 和 schedule 选择都只需要 predicted/canonical bundle 引用。现在删除该入口，新增内部 `TryGetBundles` 直接输出两个引用，正常路径不再创建包装对象或通过异常控制缺失历史。
+- 缺失历史时的 rollback 判定、异常语义和容量校验保持；checkpoint 的 `CaptureEntries` 仍为事务独立持有精确 entry 数组，restore 复用流程不变。全项目源码检索确认没有 rollback 外调用方。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

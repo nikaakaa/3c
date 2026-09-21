@@ -392,6 +392,7 @@
 - [x] 5.129 Rollback schedule 缓存正式 replay clock identity，同一 Source Clock 的多次 rollback 不再重复字符串插值；mapping、step source 和 clock 归属不变
 - [x] 5.130 Rollback projection 恢复借用 state snapshot 拥有的 payload 视图，删除每次 Apply 的 CopyPayload 数组；Core snapshot 仍构造期独立复制和校验
 - [x] 5.131 Rollback output diagnostics code 按三种正式 operation 直接映射固定字符串，删除每次发布诊断的 enum ToString、小写化和 code 插值；detail 与 sink 合同不变
+- [x] 5.132 Rollback input history 查询直接输出 predicted/canonical bundle 引用，删除每次读取的只读 entry 包装和异常控制流；capture checkpoint 仍独立持有精确 entry 数组
 
 ## 6. UI、资源、渲染和生命周期
 

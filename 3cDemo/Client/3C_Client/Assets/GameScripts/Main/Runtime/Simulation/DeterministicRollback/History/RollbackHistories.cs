@@ -72,11 +72,18 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return Set(bundle, true);
         }
 
-        public RollbackInputHistoryEntry GetRequired(SimulationTick tick)
+        internal bool TryGetBundles(
+            SimulationTick tick,
+            out RollbackCanonicalInputBundle predicted,
+            out RollbackCanonicalInputBundle canonical)
         {
+            predicted = null;
+            canonical = null;
             if (!m_Entries.TryGetValue(tick.Value, out MutableEntry entry))
-                throw new KeyNotFoundException($"Rollback input history has no Tick '{tick}'.");
-            return new RollbackInputHistoryEntry(tick, entry.Predicted, entry.Canonical);
+                return false;
+            predicted = entry.Predicted;
+            canonical = entry.Canonical;
+            return true;
         }
 
         public RollbackInputHistoryEntry[] CaptureEntries()

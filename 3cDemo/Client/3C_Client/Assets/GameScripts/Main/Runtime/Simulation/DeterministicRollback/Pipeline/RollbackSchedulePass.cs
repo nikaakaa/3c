@@ -76,20 +76,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (ingress.Predicted.Tick.Value != nextTick)
                 throw new InvalidOperationException("Rollback ingress predicted Tick is not the next Simulation Tick.");
             SimulationActorRosterDescriptor roster = characterRuntime.Runtime.RosterDescriptor;
-            if (context.CurrentCompletedTick == 0 &&
-                m_State.Inputs.GetRequired(ingress.Predicted.Tick).Canonical == null)
+            if (context.CurrentCompletedTick == 0)
             {
-                return new SimulationSessionExecutionPlan<FixedSimulationStep>(
-                    SimulationSessionExecutionPlanStatus.NoStep,
-                    context.Source,
-                    characterRuntime.Runtime.GameplayContentHash,
-                    context.Pipeline.Hash,
-                    roster,
-                    Array.Empty<SimulationPipelineStepSourceMapping>(),
-                    null,
-                    Array.Empty<FixedSimulationStep>(),
-                    SimulationSessionPlanRequirement.WorkingState |
-                    SimulationSessionPlanRequirement.OutputDisposition);
+                if (!m_State.Inputs.TryGetBundles(ingress.Predicted.Tick, out _, out RollbackCanonicalInputBundle firstCanonical))
+                    throw new KeyNotFoundException($"Rollback input history has no Tick '{ingress.Predicted.Tick}'.");
+                if (firstCanonical == null)
+                {
+                    return new SimulationSessionExecutionPlan<FixedSimulationStep>(
+                        SimulationSessionExecutionPlanStatus.NoStep,
+                        context.Source,
+                        characterRuntime.Runtime.GameplayContentHash,
+                        context.Pipeline.Hash,
+                        roster,
+                        Array.Empty<SimulationPipelineStepSourceMapping>(),
+                        null,
+                        Array.Empty<FixedSimulationStep>(),
+                        SimulationSessionPlanRequirement.WorkingState |
+                        SimulationSessionPlanRequirement.OutputDisposition);
+                }
             }
             SimulationRestoreDirective restore = null;
             SimulationTick replayStart = default;
@@ -249,8 +253,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         RollbackCanonicalInputBundle SelectBundle(SimulationTick tick)
         {
-            RollbackInputHistoryEntry entry = m_State.Inputs.GetRequired(tick);
-            return entry.Canonical ?? entry.Predicted ??
+            if (!m_State.Inputs.TryGetBundles(tick, out RollbackCanonicalInputBundle predicted, out RollbackCanonicalInputBundle canonical))
+                throw new KeyNotFoundException($"Rollback input history has no Tick '{tick}'.");
+            return canonical ?? predicted ??
                 throw new InvalidOperationException($"Rollback Tick '{tick}' has neither canonical nor predicted input.");
         }
 

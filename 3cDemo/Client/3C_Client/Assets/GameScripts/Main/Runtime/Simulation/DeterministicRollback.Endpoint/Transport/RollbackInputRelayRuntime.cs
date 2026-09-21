@@ -68,6 +68,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly Dictionary<string, RollbackRosterEntry> m_ExpectedPeers = new Dictionary<string, RollbackRosterEntry>(StringComparer.Ordinal);
         readonly Dictionary<string, PeerState> m_Peers = new Dictionary<string, PeerState>(StringComparer.Ordinal);
         readonly List<RollbackActorInputFrame> m_AcceptedInputFrames;
+        readonly RollbackExplicitInputFrontier[] m_ExplicitInputFrontierScratch;
         RollbackCanonicalInputAssembler m_Assembler;
         ulong m_AssembledCount;
         ulong m_InputBatchCount;
@@ -96,6 +97,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentOutOfRangeException(nameof(inputRedundancyCount));
             m_InputRedundancyCount = inputRedundancyCount;
             m_AcceptedInputFrames = new List<RollbackActorInputFrame>(inputRedundancyCount);
+            m_ExplicitInputFrontierScratch = new RollbackExplicitInputFrontier[roster.Entries.Count];
             m_RelayHandshake = new RollbackHandshake(
                 relayServerPeerId,
                 handshakeTemplate.Model,
@@ -179,11 +181,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_Assembler == null)
                 return Array.Empty<RollbackRelayPeerInputFrontier>();
-            IReadOnlyList<RollbackExplicitInputFrontier> source = m_Assembler.CaptureExplicitInputFrontiers();
-            var result = new RollbackRelayPeerInputFrontier[source.Count];
-            for (int i = 0; i < source.Count; i++)
+            m_Assembler.FillExplicitInputFrontiers(m_ExplicitInputFrontierScratch);
+            var result = new RollbackRelayPeerInputFrontier[m_ExplicitInputFrontierScratch.Length];
+            for (int i = 0; i < result.Length; i++)
             {
-                RollbackExplicitInputFrontier frontier = source[i];
+                RollbackExplicitInputFrontier frontier = m_ExplicitInputFrontierScratch[i];
                 RollbackRosterEntry roster = null;
                 for (int rosterIndex = 0; rosterIndex < m_Roster.Entries.Count; rosterIndex++)
                 {

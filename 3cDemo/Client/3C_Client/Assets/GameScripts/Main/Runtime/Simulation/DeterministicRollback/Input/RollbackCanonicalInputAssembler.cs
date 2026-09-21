@@ -80,9 +80,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
         }
         public int ExplicitInputCount => m_ExplicitCount;
 
-        public IReadOnlyList<RollbackExplicitInputFrontier> CaptureExplicitInputFrontiers()
+        public void FillExplicitInputFrontiers(RollbackExplicitInputFrontier[] values)
         {
-            var result = new RollbackExplicitInputFrontier[m_Roster.Entries.Count];
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+            if (values.Length != m_Roster.Entries.Count)
+                throw new ArgumentException("Rollback explicit-input frontier buffer does not match the locked roster.", nameof(values));
             for (int i = 0; i < m_Roster.Entries.Count; i++)
             {
                 ActorId actorId = m_Roster.Entries[i].ActorId;
@@ -90,9 +93,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 ulong tick = m_HistoryFloor - 1;
                 while (tick < ulong.MaxValue && actor.ContainsKey(tick + 1))
                     tick++;
-                result[i] = new RollbackExplicitInputFrontier(actorId, tick);
+                values[i] = new RollbackExplicitInputFrontier(actorId, tick);
             }
-            return result;
         }
 
         public bool HasExplicitInputForEveryActor(SimulationTick tick)

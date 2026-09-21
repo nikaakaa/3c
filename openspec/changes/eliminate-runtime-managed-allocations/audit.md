@@ -3139,6 +3139,14 @@
 - checkpoint 本身仍每次捕获独立创建并返回给 pipeline checkpoint set，不做池化或跨事务复用；因此旧的 transaction checkpoint、input history 数组和 applied hash 数组不会被下一次捕获覆盖。`Restore` 的一次性语义、重复 Restore 直接返回、Dispose 后抛 `ObjectDisposedException` 和 owner 校验保持不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback Relay frontier scratch 化
+
+对应 tasks.md 的 5.2，新增 5.122 作为独立小步；5.2 保持未勾选。
+
+- `RollbackCanonicalInputAssembler.CaptureExplicitInputFrontiers` 原先每次诊断都按 roster 数量新建数组并退化为 `IReadOnlyList` 返回；唯一消费者 `RollbackInputRelayRuntime.CapturePeerInputFrontiers` 只在同步循环里读取一次。现在删除该返回数组入口，改为 `FillExplicitInputFrontiers(RollbackExplicitInputFrontier[])` 正式填充合同，并要求 buffer 长度精确等于 locked roster。
+- Relay 在构造期用已知 roster 准备 `m_ExplicitInputFrontierScratch`，诊断时先填充 scratch，再转换成外部读取者持有的 `RollbackRelayPeerInputFrontier[]`。scratch 不暴露、不跨调用保留有效值语义依赖（每次完整覆盖），结果数组仍每次新建，不做外部别名复用。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 和 Endpoint 工程使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

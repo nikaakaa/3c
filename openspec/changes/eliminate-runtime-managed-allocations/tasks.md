@@ -386,3 +386,5 @@
 - [x] 7.19 Rollback Endpoint diagnostics 按已锁定 Actor 字典准确创建远端快照数组并原地排序，删除 CaptureDiagnostics 的中间 List 与 ToArray 复制；结果仍保持独立数组
 
 - [x] 7.20 FBBIK Profile 在 authoring/content preparation 统一完成 schema、枚举和值域校验；运行 Solver、Pose Buffer Backend 不再重复校验 Rig/Profile，提交已准备 tuning 不再二次校验；保留 tuning 输入、目标血缘、帧缓冲和求解结果校验，删除 FBBIK 枚举装箱
+
+- [x] 7.21 Pose Graph 在 Prepare 已完成完整拓扑、端口和边界校验后，实例初始化直接消费 PreparedBinding，删除 InitializeGraph 的第二次整图校验；保留端口表构造、handler 绑定和运行帧事务校验

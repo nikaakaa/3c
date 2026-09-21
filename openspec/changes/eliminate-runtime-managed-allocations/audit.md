@@ -2068,3 +2068,12 @@
 - FBBIK Profile 与仍用于 runtime tuning 输入的 ActiveTuning 保留原合法成员和范围，但 smoothing 改为显式连续值域判断，删除 `Enum.IsDefined` 装箱；未改变 ApplyTuning、Prepare/Commit/Discard 顺序或 solver 公式。
 - 保留 `Prepare`／`SolvePrepared` 的 pose page、goal workspace、lineage、重复 effector、非有限输出和 solver residual 检查；这些保护当前事务和外部求解结果，不属于静态配置重复校验。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留 1 条既有 `CharacterInputValueNodes.cs` CS0414 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Player 分配采样。
+
+## 2026-09-21 Pose Graph 准备结果复用
+
+对应 tasks.md 的 7.21。
+
+- `CharacterPoseNativeGraphRuntime.Prepare` 已通过 `CharacterPoseNativeGraphValidator.RequireValid` 产生 `CharacterPoseNativePreparedBinding`；`Create` 后的 `InitializeGraph` 原先又对同一 GraphAsset、Graph 和 Boundary 做完整拓扑/端口/边界遍历。
+- 删除初始化阶段的第二次整图校验，运行实例直接使用准备结果；`BuildPortDefinitions`、handler 创建/身份匹配、Attach/Start 以及每帧 lineage、buffer 和提交事务校验保持。没有把图外数据重新读取成另一条链路。
+- 删除每次 Pose 实例创建的重复图校验遍历及其临时集合分配；authoring/content preparation 仍是静态图合法性的唯一入口。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留 1 条既有 `CharacterInputValueNodes.cs` CS0414 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。

@@ -763,8 +763,6 @@ namespace BTSMTL.Timeline.Runtime
                 return result;
             FixedScalar previousAbsolute = duration * FixedScalar.FromInt64(previousCycle) + previousTime;
             FixedScalar nextAbsolute = duration * FixedScalar.FromInt64(nextCycle) + nextTime;
-            if (nextAbsolute <= previousAbsolute)
-                return result;
             if (loop && nextCycle - previousCycle > TimelineRuntimeEvaluationSegments.MaximumCycleAdvance)
                 throw new InvalidOperationException("Timeline playback crossed more than 4096 cycles in one Advance.");
 
@@ -788,6 +786,8 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeClipBoundaryKind.Exit));
                     continue;
                 }
+                if (nextAbsolute <= previousAbsolute)
+                    continue;
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
                     AddBoundary(

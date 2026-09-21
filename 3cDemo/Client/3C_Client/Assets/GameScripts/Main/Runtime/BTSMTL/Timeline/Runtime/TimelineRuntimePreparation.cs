@@ -1012,20 +1012,21 @@ namespace BTSMTL.Timeline.Runtime
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(
-                request.Timeline,
-                request.ContractCatalog);
-            if (!discovery.IsValid)
-                return TimelineRuntimePreparationResult.Failed(
-                    request.RequestId,
-                    request.ExecutionIdentity,
-                    request.NumericTarget,
-                    discovery.Errors);
-
             try
             {
+                TimelineData sourceTimeline = request.Timeline.Clone();
+                sourceTimeline.Init();
+                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(
+                    sourceTimeline,
+                    request.ContractCatalog);
+                if (!discovery.IsValid)
+                    return TimelineRuntimePreparationResult.Failed(
+                        request.RequestId,
+                        request.ExecutionIdentity,
+                        request.NumericTarget,
+                        discovery.Errors);
                 var errors = new List<string>();
-                TimelineRuntimeEvaluator.ValidateTreeContracts(request.Timeline, discovery.Content, errors);
+                TimelineRuntimeEvaluator.ValidateTreeContracts(sourceTimeline, discovery.Content, errors);
                 if (errors.Count != 0)
                     return TimelineRuntimePreparationResult.Failed(
                         request.RequestId,
@@ -1067,8 +1068,6 @@ namespace BTSMTL.Timeline.Runtime
                         request.ExecutionIdentity,
                         request.NumericTarget,
                         errors);
-                TimelineData sourceTimeline = request.Timeline.Clone();
-                sourceTimeline.Init();
                 return TimelineRuntimePreparationResult.Ready(
                     request,
                     sourceTimeline,

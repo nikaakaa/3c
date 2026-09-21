@@ -143,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LastActionContinuity = m_CommittedActionContinuity;
             m_LastActionWeight = m_CommittedActionWeight;
             m_ActionPose = null;
-            m_Output = null;
             m_WriteBinding = default;
         }
 
@@ -168,7 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "pose")
                 throw new InvalidOperationException(
                     $"Animation Slot '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             if (m_ActionPose == null)
@@ -299,7 +299,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedSourceContinuity = m_LastSourceContinuity;
             m_CommittedActionContinuity = m_LastActionContinuity;
             m_CommittedActionWeight = m_LastActionWeight;
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -438,7 +439,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_WriteBinding.CompletedAt[0] = m_WriteBinding.CompletionIdentity;
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
         }
 
         void CopyPose(
@@ -458,7 +462,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LastSourceContinuity = input.ContinuityIdentity[0];
             m_LastActionContinuity = 0;
             m_LastActionWeight = 0f;
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
         }
 
         void WriteNoPose(in CharacterPoseNativePoseReadBinding input)
@@ -476,7 +483,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_WriteBinding.CompletedAt[0] = m_WriteBinding.CompletionIdentity;
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
         }
 
         void BlendParameters(
@@ -612,7 +622,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_FrameOpen = false;
             m_ActionPose = null;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }
@@ -633,6 +642,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeBlendStackSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        CharacterPoseNativeLocalPoseValue m_Output;
         AnimationScriptPlayable m_Playable;
         AnimationSlotBlendJob m_Job;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -756,9 +766,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_WriteBinding.Availability[0] == AnimationPoseAvailability.Invalid)
                 throw new InvalidOperationException(
                     $"Animation Slot source '{m_Stack.PoseNodeId}' is invalid: {m_WriteBinding.InvalidReason[0]}.");
-            return new CharacterPoseNativeLocalPoseValue(
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
                 m_Stack.PoseNodeId,
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding));
+            return m_Output;
         }
 
         public void CommitFrame(

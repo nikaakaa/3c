@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Animation Slot 输出包装复用
+
+对应 tasks.md 的 7.46。
+
+- Animation Slot handler 原先在 WriteNoPose、CopyPose 和 BlendPoses 三条分支分别创建 Local Pose wrapper；其正式 source 的 `Evaluate` 还会再次创建一个 wrapper。
+- handler 与 `CharacterPoseNativeAnimationSlotSourceBinding` 各自复用 `CharacterPoseNativeLocalPoseValue`，handler 以 completion identity 区分当前输出，source 以当前 binding 校验后更新对象。
+- 不改变 slot source/action 选择、连续性 identity、三种输出分支、Native 双页、source Commit/Discard 或 frame 事务边界；本步只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Selected Pose Player 输出包装复用
 
 对应 tasks.md 的 7.45。

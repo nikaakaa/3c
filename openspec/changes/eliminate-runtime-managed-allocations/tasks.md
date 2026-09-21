@@ -421,3 +421,4 @@
 - [x] 7.43 Parameter Resolve、State Machine、Root Orientation Warp 复用 Local Pose 输出包装对象，删除三个 Pose 节点的稳态逐帧包装创建；保留参数、状态和 warp 提交语义
 - [x] 7.44 Inertialization 与 History Collector 复用 Local Pose/History 输出包装对象，删除两个节点的稳态逐帧包装创建；保留 inertialization 状态交换、history source commit 和 Native 双页语义
 - [x] 7.45 Selected Pose Player 复用 Local Pose 与 discontinuity 输出包装对象，删除 Motion Matching 选择播放器稳态逐帧包装创建；保留 sample、Playable job、source reset 和提交页索引语义
+- [x] 7.46 Animation Slot handler 与 source 复用 Local Pose 输出包装对象，删除 slot 三种输出分支及 source Evaluate 的稳态逐帧包装创建；保留 slot 连续性、source completion 和提交事务语义

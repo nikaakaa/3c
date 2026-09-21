@@ -26,6 +26,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
         readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
+        readonly Float32CharacterInputRuntime m_InputRuntime;
 
         public Float32CharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -109,6 +110,7 @@ namespace ThirdPersonSimulation
             var sortedRequestIds = new List<string>(requestIds);
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
+            m_InputRuntime = new Float32CharacterInputRuntime(m_InputRequestIds);
             var parts = new List<string>
             {
                 "float32-character-runtime/1",
@@ -136,6 +138,7 @@ namespace ThirdPersonSimulation
         public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
+        internal Float32CharacterInputRuntime InputRuntime => m_InputRuntime;
         public StableHash StateSchemaHash { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }

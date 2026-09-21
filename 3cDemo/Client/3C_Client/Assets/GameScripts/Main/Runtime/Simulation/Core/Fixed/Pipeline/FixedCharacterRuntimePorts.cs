@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
         readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
+        readonly FixedCharacterInputRuntime m_InputRuntime;
 
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -110,6 +111,7 @@ namespace ThirdPersonSimulation.Fixed
             var sortedRequestIds = new List<string>(requestIds);
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
+            m_InputRuntime = new FixedCharacterInputRuntime(m_InputRequestIds);
             var parts = new List<string>
             {
                 "fixed-character-runtime/1",
@@ -137,6 +139,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
+        internal FixedCharacterInputRuntime InputRuntime => m_InputRuntime;
         public StableHash StateSchemaHash { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }

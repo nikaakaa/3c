@@ -104,8 +104,8 @@ namespace ThirdPersonSimulation
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 
-                new Float32CharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)
-                    .ApplyRequests(input.Requests);
+                characterRuntime.InputRuntime.Begin(roleState.InputRequests);
+                characterRuntime.InputRuntime.ApplyRequests(input.Requests);
 
                 bool effectAdvanced = false;
                 for (int i = 0; i < invocationCount; i++)

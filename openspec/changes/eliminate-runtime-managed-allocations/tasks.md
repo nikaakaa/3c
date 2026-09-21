@@ -471,6 +471,7 @@
 - [x] 5.208 两数值域 Character Evaluation 的 facts、presentation、trace 和 character trace 聚合外壳改为 Actor Binding 持有；每 tick 与成功/异常边界统一清空，删除四个 List 新建，结果数组合同不变
 - [x] 5.209 两数值域 Character Trace Sink 改为 Actor Binding 常驻实例；每 tick Begin 重绑诊断身份并重置 sequence，删除每 tick sink 新建
 - [x] 5.210 两数值域 Ability Execution Input 改为 Actor Binding 常驻实例；每 tick Begin 重绑 sequence 和 values，成功/异常边界清空引用，删除每 tick wrapper 新建
+- [x] 5.211 两数值域 Character Input Runtime 改为 Character Runtime 常驻实例；每 tick Begin 重绑事务请求端口，请求身份在准备期定序定形，删除每 tick wrapper、中间 List 和只读包装
 
 ## 6. UI、资源、渲染和生命周期
 

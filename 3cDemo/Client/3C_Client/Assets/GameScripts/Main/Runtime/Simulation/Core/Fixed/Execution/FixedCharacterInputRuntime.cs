@@ -1,36 +1,40 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedCharacterInputRuntime
     {
-        readonly IFixedInputRequestStatePort m_InputRequests;
-        readonly ReadOnlyCollection<string> m_RequestIds;
+        IFixedInputRequestStatePort m_InputRequests;
+        readonly string[] m_RequestIds;
 
         public FixedCharacterInputRuntime(
-            IFixedInputRequestStatePort inputRequests,
-            IEnumerable<string> requestIds)
+            IReadOnlyList<string> requestIds)
         {
-            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
-            var values = new List<string>(requestIds ?? Array.Empty<string>());
-            values.Sort(StringComparer.Ordinal);
-            for (int i = 0; i < values.Count; i++)
+            if (requestIds == null)
+                throw new ArgumentNullException(nameof(requestIds));
+            m_RequestIds = new string[requestIds.Count];
+            for (int i = 0; i < requestIds.Count; i++)
+                m_RequestIds[i] = requestIds[i];
+            Array.Sort(m_RequestIds, StringComparer.Ordinal);
+            for (int i = 0; i < m_RequestIds.Length; i++)
             {
-                if (string.IsNullOrEmpty(values[i]) || i > 0 && string.Equals(values[i - 1], values[i], StringComparison.Ordinal))
+                if (string.IsNullOrEmpty(m_RequestIds[i]) ||
+                    i > 0 && string.Equals(m_RequestIds[i - 1], m_RequestIds[i], StringComparison.Ordinal))
                     throw new ArgumentException("Fixed Character Input request identities are invalid or duplicated.", nameof(requestIds));
             }
-            m_RequestIds = values.AsReadOnly();
         }
 
-        public IReadOnlyList<string> RequestIds => m_RequestIds;
+        internal void Begin(IFixedInputRequestStatePort inputRequests)
+        {
+            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
+        }
 
         public void ApplyRequests(IReadOnlyList<SimulationInputRequest> requests)
         {
             requests ??= Array.Empty<SimulationInputRequest>();
-            for (int requestIndex = 0; requestIndex < m_RequestIds.Count; requestIndex++)
+            for (int requestIndex = 0; requestIndex < m_RequestIds.Length; requestIndex++)
             {
                 string requestId = m_RequestIds[requestIndex];
                 SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);

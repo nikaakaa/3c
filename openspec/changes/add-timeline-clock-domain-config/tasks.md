@@ -68,14 +68,16 @@
 
 实施对账：5.1–5.3 已接入原输出链的精确进度、Timeline 被动采样和动画已投影样本消费；已删除 Timeline 自主 delta 推进及把表现动画样本写入 committed history 的路径。已接入 Advance / Correction / Completed / Stopped 原因、终态确认交付和 Pose 帧候选提交／丢弃；正式播放控制、最终分支撤销和图执行事务仍未完整闭合，因此上述条目不提前勾选。具体改动与证据见 implementation.md。
 
+本轮继续收口调用顺序：Animation EventGraph 先提交既有 Action command read lease，随后开启 clock frame，再由 Timeline、Pose 与 Camera 进入同一表现帧；Pose、clock、Timeline、Camera 候选仍沿原 Commit/Discard。动画策略与 Timeline 的最终秒数仍由两条正式投影链分别提供，5.1–5.3 继续保持未勾选。
+
 自由推进、跟随和有界追赶的业务 tradeoff 已列入 design.md。本次不增加尚无使用方与正式参数定义的追赶策略，也不把有限 Action 改为自由播。
 
 ## 6. Presentation Marker 的正式图执行
 
-- [ ] 6.1 沿现有图 compiler / preparation 增加有效域能力约束，拒绝 Presentation 图中的 Gameplay 写入、TreeDecision、结束片段及不支持的节点 / 资源
-- [ ] 6.2 在正式图服务边界绑定表现执行上下文，消费精确图 identity / revision、只读表现事实和 typed 输出能力，删除 CharacterTimelineHost.Present 对临时 m_ActiveTreeClipInvoker 的依赖
-- [ ] 6.3 将 OnEnable 产生的表现候选与事件记账接入原表现帧接受 / 丢弃边界，不调用 Simulation Evaluate / Finalize，不新建影子图 runtime 或私有 Simulation context
-- [ ] 6.4 缺少正式下游 domain 或图执行能力时在准备 / 调用边界明确失败，Camera / 动画继续走原领域输出，不以空实现或 payload 字符串宣称已消费
+- [x] 6.1 沿现有图 compiler / preparation 增加有效域能力约束，拒绝 Presentation 图中的 Gameplay 写入、TreeDecision、结束片段及不支持的节点 / 资源
+- [x] 6.2 在正式图服务边界绑定表现执行上下文，消费精确图 identity / revision、只读表现事实和 typed 输出能力，删除 CharacterTimelineHost.Present 对临时 m_ActiveTreeClipInvoker 的依赖
+- [x] 6.3 将 OnEnable 产生的表现候选与事件记账接入原表现帧接受 / 丢弃边界，不调用 Simulation Evaluate / Finalize，不新建影子图 runtime 或私有 Simulation context
+- [x] 6.4 缺少正式下游 domain 或图执行能力时在准备 / 调用边界明确失败，Camera / 动画继续走原领域输出，不以空实现或 payload 字符串宣称已消费
 
 相机范围：6.3／7.3 的丢弃仅覆盖未接受请求和事件记账；7.4 撤销已接受请求时走原镜头退出规则。相机平滑、碰撞、混合和效果计时不做历史恢复，跨 Pose／Cinemachine 物理回滚不属于本变更。
 
@@ -88,8 +90,8 @@
 
 ## 8. Domain 与作者数据一致性
 
-- [ ] 8.1 在现有 Track Inspector 增加 Domain 编辑、Marker 继承域显示及不兼容内容定位，复用原 Timeline mutation / Undo，一次失败不留下部分域变更
-- [ ] 8.2 域修改同步校验 Track 所有 Clip 与 Marker 图能力，闭包和编译只读取轨道声明；不支持该域的内容明确失败，不把同一 Logic 图执行两次
+- [x] 8.1 在现有 Track Inspector 增加 Domain 编辑、Marker 继承域显示及不兼容内容定位，复用原 Timeline mutation / Undo，一次失败不留下部分域变更
+- [x] 8.2 域修改同步校验 Track 所有 Clip 与 Marker 图能力，闭包和编译只读取轨道声明；不支持该域的内容明确失败，不把同一 Logic 图执行两次
 - [ ] 8.3 在秒制模型上统一拖动反馈、秒输入、逻辑 tick／素材帧／关闭吸附与 CommitSource；逻辑网格自动读取绑定 pipeline 的 SimulationTickRate，展示来源，缺绑定时不可用；配置变化不移动已有内容
 - [ ] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
 - [x] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建

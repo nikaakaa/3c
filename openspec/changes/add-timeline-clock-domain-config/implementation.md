@@ -646,3 +646,18 @@
 - 诊断快照Registry对已有RuntimeInstanceKey复用原快照，Publish返回是否本次创建；ActivePlayback记录CreatedDiagnosticSnapshot，失败清理只删除本次创建的缓存。历史恢复遇到已有诊断快照不会覆盖后再误删，同时减少同身份恢复时重复克隆；正常发布过的诊断历史保留合同没有改变。
 - 本批关闭已创建对象跨Start／Host／适配层登记交接的清理缺口；内容准备与新播放克隆仍会分配，诊断历史的整体寿命及完整0 GC仍需继续处理，未据异常清理完成宣称整个goal完成。
 - 最终Unity编译及域重载完成（1789932085215），Editor idle、控制台零错误，git diff --check通过；未新增测试，未执行Start通知异常注入。后续继续核对回退后重新Start的handle／generation分配是否受未恢复计数影响，不能仅因已有快照可恢复就认定重模拟身份稳定。
+
+## 回填表现图与轨道域已闭合条目
+
+- 对照 `btsmtl-timeline-clock-domain`、`btsmtl-timeline-direct-runtime` 和 `btsmtl-timeline-editor-preview` 当前 spec，确认 6.1–6.4 已由正式代码闭合：图 compiler / preparation 按声明域拒绝 Gameplay 写入、TreeDecision、结束片段、Timeline 驱动和未绑定读取；Presentation Marker 通过已安装的 `Float32PresentationGraphRuntime`，使用精确 graph identity / revision、同帧只读表现事实和 typed Camera 输出，不借用 `m_ActiveTreeClipInvoker`。
+- `CharacterTimelineHost` 的表现候选通过 `PresentationFramePrepared`、`CommitPresentationFrame`、`DiscardPresentationFrame` 进入既有帧事务；Marker 事件记账、Camera 请求候选和丢弃恢复共用该边界。缺表现图、缺 Camera domain、绑定身份或资源不一致时在准备／调用边界失败，不生成空命令或第二执行链。
+- 对照作者域 spec，8.1–8.2 也已闭合：Track Inspector 的 Domain 修改复用原 mutation / Undo；Marker 显示继承域；提交前以 `TimelineContentDiscovery` 和正式图闭包检查全部 Clip / Marker，不兼容时整次修改失败，编译只读取 Track 声明，Logic 图不在 Presentation 重复执行。
+- 因此已在 `tasks.md` 勾选 6.1–6.4、8.1–8.2。该回填不代表 0.2–0.7、5、7 或 8.3–8.6 完成；共享采样最终身份重接、剩余分配和重模拟后新 Start 的 handle / generation 语义仍需继续处理。
+
+## 将共享动作命令事务前移到 Timeline 表现采样之前
+
+- 对应 5.1–5.3 的调用顺序缺口：原 `CharacterPresentationDomainRuntime` 先让 `CharacterTimelineHost.Present` 读取时钟，再在 `RunPoseFrame` 内打开本帧 Action command 与 clock frame，导致当前帧已提交动作命令只能在下一帧进入 Timeline 采样。
+- 现先完成 Animation EventGraph 更新，再打开既有 Pose Action command read lease 和 `IActionPresentationClockCoordinator.BeginFrame`，随后 Timeline、Pose 动画和 Camera 共用该已提交命令上下文；`RunPoseFrame` 只负责同一打开事务的 Pose Evaluate / Validate / Commit，不再重复打开时钟。
+- 异常、动作事实缺失、Pose 评估失败和正常返回都沿原 finally 统一执行 Pose command、clock frame、Timeline、Camera 与桥接候选的 Discard；成功路径仍由原 Pose Commit、Timeline Commit 和表现帧 Commit 分段接受，没有新增时钟或第二队列。
+- 该批只收口调用顺序和事务寿命，动画策略仍由 `CommittedFollowPresentationClockCoordinator.ProjectSample` 按其正式 Action sample history 投影，尚未证明动画、Timeline Marker、Camera 已消费同一份最终秒数结果，因此 5.1–5.3 继续不勾选。
+- `Assembly-CSharp.csproj` 编译通过：146 warnings、0 errors；随后已执行 `dotnet build-server shutdown`。未新增测试，未进行端到端表现验收。

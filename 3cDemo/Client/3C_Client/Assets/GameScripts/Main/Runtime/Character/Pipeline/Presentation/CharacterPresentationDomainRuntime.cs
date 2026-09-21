@@ -415,16 +415,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TimelinePresentationBridge?.BeginFrame();
                 m_TimelineBridge?.BeginFrame();
                 CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
-                if (m_TimelineHost != null)
-                {
-                    Vector3 position = bodyFrame.TargetPosition;
-                    Vector3 velocity = factFrame.Velocity;
-                    var graphFacts = new Float32PresentationGraphFacts(context.RenderFrame,
-                        new Float32Vector3(Float32Scalar.FromSingle(position.x), Float32Scalar.FromSingle(position.y), Float32Scalar.FromSingle(position.z)),
-                        new Float32Vector3(Float32Scalar.FromSingle(velocity.x), Float32Scalar.FromSingle(velocity.y), Float32Scalar.FromSingle(velocity.z)),
-                        new Float32Yaw(Float32Scalar.FromSingle(factFrame.Rotation.eulerAngles.y)), factFrame.Grounded);
-                    m_TimelineHost.Present(context, m_PresentationClockCoordinator, in graphFacts);
-                }
                 CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                     in factFrame,
                     Mathf.Max(0f, context.PresentationDeltaSeconds),
@@ -440,8 +430,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return;
                 }
                 PublishLocomotionDiagnostics();
+                IReadOnlyList<ActionAnimationPlaybackCommand> actionCommands = Array.Empty<ActionAnimationPlaybackCommand>();
+                if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
+                {
+                    m_PoseResourceScope.AdvancePreparation();
+                    m_PoseDomain.BeginFrame(context.RenderFrame);
+                    if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out actionCommands))
+                        throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
+                    m_PresentationClockCoordinator?.BeginFrame(actionCommands);
+                }
+                if (m_TimelineHost != null)
+                {
+                    Vector3 position = bodyFrame.TargetPosition;
+                    Vector3 velocity = factFrame.Velocity;
+                    var graphFacts = new Float32PresentationGraphFacts(context.RenderFrame,
+                        new Float32Vector3(Float32Scalar.FromSingle(position.x), Float32Scalar.FromSingle(position.y), Float32Scalar.FromSingle(position.z)),
+                        new Float32Vector3(Float32Scalar.FromSingle(velocity.x), Float32Scalar.FromSingle(velocity.y), Float32Scalar.FromSingle(velocity.z)),
+                        new Float32Yaw(Float32Scalar.FromSingle(factFrame.Rotation.eulerAngles.y)), factFrame.Grounded);
+                    m_TimelineHost.Present(context, m_PresentationClockCoordinator, in graphFacts);
+                }
                 m_Camera?.ValidateFrame();
-                if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context))
+                if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context, actionCommands))
                     return;
                 m_TimelineHost?.CommitPresentationFrame(context.RenderFrame, m_PresentationClockCoordinator);
                 m_TimelineBridge?.CommitFrame();
@@ -456,6 +465,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TimelineBridge?.DiscardFrame();
                 m_Camera?.DiscardFrame();
                 m_TimelinePresentationBridge?.DiscardFrame();
+                m_PoseDomain?.DiscardFrame();
+                m_PresentationClockCoordinator?.DiscardFrame();
                 m_PresentationClockCoordinator?.DiscardSamplingFrame();
             }
         }
@@ -493,19 +504,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterAnimationVariableFrame eventFrame,
-            GameplayPresentationFrameContext context)
+            GameplayPresentationFrameContext context,
+            IReadOnlyList<ActionAnimationPlaybackCommand> actionCommands)
         {
             if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
                 return m_TimelineHost == null;
             float deltaSeconds = Mathf.Max(0f, context.PresentationDeltaSeconds);
-            m_PoseResourceScope.AdvancePreparation();
             CharacterPoseNativePreparationResult preparation;
             try
             {
-                m_PoseDomain.BeginFrame(context.RenderFrame);
-                if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out var actionCommands))
-                    throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
-                m_PresentationClockCoordinator?.BeginFrame(actionCommands);
                 var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
                     eventFrame,
                     m_PoseParameterIds);

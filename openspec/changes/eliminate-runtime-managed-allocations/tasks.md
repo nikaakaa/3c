@@ -494,6 +494,7 @@
 - [x] 5.231 两数值域 Handle Allocator 改为 readonly struct；删除无业务意义的 OperationModule Access 依赖，继续转发 Next/Capture/Restore 到 state port，删除每次 invocation 的 Allocator class 分配
 - [x] 5.232 两数值域 Input Runtime 改为 readonly struct 并删除 Input Port 接口；Action 和 Value Runtime 直接持有具体绑定，保留 Blackboard 投影、请求有效期/消费和 tick value 读取顺序
 - [x] 5.233 两数值域 Ability Execution Workspace 改为 Actor Binding 常驻；Evaluate 开始 Reset，成功/异常终点统一清空，Float32 value workspace 所有权并入 Actor Binding 并删除 Evaluate 外部数组入口
+- [x] 5.234 两数值域 Character Evaluate 的 Timeline logic motion 和 motion warp scratch 改为 Actor Binding 常驻；成功/异常终点统一清空，删除每角色每 tick 的两个 List 外壳
 
 ## 6. UI、资源、渲染和生命周期
 

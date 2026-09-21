@@ -4052,3 +4052,11 @@
 - Workspace Reset 清空 Facts、Presentation、Trace、value recursion stack、每个 input buffer、Timeline MotionWarp、ActionWindow candidate/key、Timeline Blackboard scope 和 motion contribution；底层集合和已准备 input buffer 保留容量。Evaluate 开始时 Reset，成功产物生成后与异常 Discard 后再次清理。
 - Float32 的 `Float32GraphValueWorkspace` 所有权从 Ability Evaluate Pass 移入 Actor Binding，Evaluate 删除外部 value workspace 数组参数；Pass 不再重复保存按 Actor/Ability 的第二份 owner。Timeline advance/stop 仍在成功 `ToArray` 转移或异常 Discard 后才清空。
 - `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Timeline motion scratch 常驻收口
+
+对应 tasks.md 的 5.5，新增 5.234 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Evaluate 原先每次新建 `AbilityTimelineLogicMotion` 与 `AbilityTimelineLogicMotionWarp` 两个搬运 List。现在两域 Actor Binding 常驻持有这两组 scratch；每次 Timeline advance 消费时仍由 Host 先 Clear 再重填，Ability 过滤和提交顺序不变。
+- Evaluate 成功产物生成后与异常终点都调用 `ClearTimelineMotionScratches`，避免常驻列表跨 tick 保留 warp 里的 action context 字符串；Timeline advances/stops 的 Accept/Discard 转移合同不在本步改变。
+- `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做运行时分配采样。

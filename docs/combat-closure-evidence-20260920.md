@@ -6,6 +6,8 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 代码核查发现 Fixed/Float32 Timeline MotionWarp 初始化后又被旧状态覆盖：Initialize 分支先向 SkillState 写新状态，但局部 storedState 仍为旧值；末尾 storedState.WithProgress 会把 Active/Initialized、起点、目标及 generation 回写为旧值。已改为先更新局部 storedState，完成当帧校正后只提交一次 WithProgress，保持窗口身份和累计进度。该问题独立于尚未完成的 Fixed 曲线取样迁移；未启动 replay。
+
 - 代码核查发现 Pose 状态机子图持久复用，但只同步父图的全局 ResetGeneration，没有状态重入重置；再次进入起步/停步等有限动画会保留上次播放器时间。已增加图级 ResetForStateEntry，复用原 evaluator reset 与缓存清理，不递增父级 reset generation，也不重建图。状态机按上一提交帧的当前状态及过渡目标判断是否重入：过渡目标持续活动时不重置，重新进入已存在的非活动子图才重置。未启动 replay，尚未以运行结果宣称抖动已修复。
 
 - 不启动 replay 的动画资产核对：Walk / Run FootMotionTarget 的 Root.z 曲线循环增量分别约3.60003 / 3.68005米，但当前两个正式 RigBinding 都不绑定名为 Root 的节点，根物理骨路径为字符串空值；不能据此宣称模型重复应用根位移，未盲改这条未绑定曲线。实际 Bip001 水平曲线为零。按实际绑定路径逐一比较旋转首尾，Walk 最大姿态接缝0度，Run最大约1.75475度（发梢）；四元数分量正负翻转不等于姿态翻转。该核对排除了“仅凭Root曲线或四元数分量跳值就修改资产”的假设，仍需查播放器重置及表现位置写入。

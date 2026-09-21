@@ -603,8 +603,7 @@ namespace ThirdPersonSimulation
                     out previousWarpedYaw);
                 previousPositionProgress = Float32Scalar.FromSingle(warp.PreviousPositionProgress);
                 previousYawProgress = Float32Scalar.FromSingle(warp.PreviousYawProgress);
-                m_SkillState.SetMotionWarpState(warp.StateOperation,
-                    new Float32MotionWarpState(
+                storedState = new Float32MotionWarpState(
                         true,
                         true,
                         warp.PlaybackGeneration,
@@ -620,7 +619,7 @@ namespace ThirdPersonSimulation
                         previousWarpedYaw,
                         previousPositionProgress,
                         previousYawProgress,
-                        warp.Source.Operation));
+                        warp.Source.Operation);
             }
             else
             {

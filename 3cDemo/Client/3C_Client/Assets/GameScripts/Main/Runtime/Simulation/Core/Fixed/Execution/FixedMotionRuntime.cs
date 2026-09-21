@@ -604,8 +604,7 @@ namespace ThirdPersonSimulation.Fixed
                     out previousWarpedYaw);
                 previousPositionProgress = FixedScalar.FromSingle(warp.PreviousPositionProgress);
                 previousYawProgress = FixedScalar.FromSingle(warp.PreviousYawProgress);
-                m_SkillState.SetMotionWarpState(warp.StateOperation,
-                    new FixedMotionWarpState(
+                storedState = new FixedMotionWarpState(
                         true,
                         true,
                         warp.PlaybackGeneration,
@@ -621,7 +620,7 @@ namespace ThirdPersonSimulation.Fixed
                         previousWarpedYaw,
                         previousPositionProgress,
                         previousYawProgress,
-                        warp.Source.Operation));
+                        warp.Source.Operation);
             }
             else
             {

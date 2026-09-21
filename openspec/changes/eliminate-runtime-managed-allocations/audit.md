@@ -2448,3 +2448,13 @@
 - `SolveSurfaceCandidate` 的 MoveAlongSurface visited 缓冲改为实例复用，删除每个 Actor 每个 tick 的 `long[]`。
 - 5.1 剩余：KCC 侧求解存储、ActorContactSolver 内部中间存储、输出与快照所有权进一步收口。
 - `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、2 个既有 DotRecast 包 CS8632 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 DotRecast 接触求解 workspace 复用
+
+对应 tasks.md 的 5.1，本步只完成 ActorContactSolver 内部中间存储，整项保持未勾选。
+
+- `ActorContactSolver` 从静态入口改为 DotRecast assembly 内部实例求解器。构造时按正式 `ActorContactSolverConfiguration` 和调用方锁定 roster 准备 8 组 double 中间数组、contacts、positions、Resolve trace 列表和 Validation trace 列表；观察者候选超出初始 roster 时一次性扩容，稳态后复用。
+- `Resolve` 与 `ValidateFinal` 复用上述 workspace，删除每批的 8 组 double 数组、bool 数组、positions 数组、trace List、batch result 对象和 `ReadOnlyCollection` 包装。trace 按 `ISimulationDiagnosticsSink.IsEnabled` 门控收集；诊断关闭时保留原有失败路径但不收集不会发布的 trace。
+- Resolve 与 Validation 使用独立 trace 列表，保持 DotRecast World Solver 先发布接触结果、再发布表面再约束后的终验结果的顺序。数组只在 workspace 内借用；输出 bodies、results、WorldSimulationState 和 Clone 的所有权不变。
+- 5.1 剩余：KCC 侧求解存储核对、DotRecast 输出与快照所有权进一步收口。
+- `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、2 个既有 DotRecast 包 CS8632 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做接触求解运行对比或 Player 分配采样。

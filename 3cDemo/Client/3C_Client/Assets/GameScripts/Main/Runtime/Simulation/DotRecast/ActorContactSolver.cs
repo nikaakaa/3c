@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation.DotRecast
 {
@@ -98,50 +97,94 @@ namespace ThirdPersonSimulation.DotRecast
         public IReadOnlyList<ActorContactTrace> Traces { get; }
     }
 
-    public sealed class ActorContactBatchResult
+    internal readonly struct ActorContactBatchResult
     {
         readonly Float32Vector3[] m_Positions;
         readonly bool[] m_Contacts;
-        readonly ReadOnlyCollection<ActorContactTrace> m_Traces;
+        readonly List<ActorContactTrace> m_Traces;
+        readonly int m_Count;
 
-        internal ActorContactBatchResult(
+        public ActorContactBatchResult(
             Float32Vector3[] positions,
             bool[] contacts,
-            List<ActorContactTrace> traces)
+            List<ActorContactTrace> traces,
+            int count)
         {
+            if (positions == null || contacts == null || traces == null)
+                throw new ArgumentNullException(nameof(positions));
+            if (count <= 0 || count > positions.Length || count > contacts.Length)
+                throw new ArgumentException("Actor contact batch count exceeds its workspace.", nameof(count));
             m_Positions = positions;
             m_Contacts = contacts;
-            m_Traces = traces.AsReadOnly();
+            m_Traces = traces;
+            m_Count = count;
         }
 
-        public int Count => m_Positions.Length;
+        public int Count => m_Count;
         public IReadOnlyList<ActorContactTrace> Traces => m_Traces;
         public Float32Vector3 PositionAt(int index) => m_Positions[index];
         public bool HadContactAt(int index) => m_Contacts[index];
     }
 
-    public static class ActorContactSolver
+    internal sealed class ActorContactSolver
     {
         const double NormalEpsilon = 0.0000001d;
 
-        public static ActorContactBatchResult Resolve(
+        readonly ActorContactSolverConfiguration m_Configuration;
+        readonly List<ActorContactTrace> m_ResolveTraces;
+        readonly List<ActorContactTrace> m_ValidationTraces;
+        double[] m_OriginX;
+        double[] m_OriginZ;
+        double[] m_DisplacementX;
+        double[] m_DisplacementZ;
+        double[] m_CorrectionX;
+        double[] m_CorrectionZ;
+        double[] m_TotalDepenetrationX;
+        double[] m_TotalDepenetrationZ;
+        bool[] m_Contacts;
+        Float32Vector3[] m_Positions;
+
+        internal ActorContactSolver(
+            ActorContactSolverConfiguration configuration,
+            int actorCapacity)
+        {
+            if (actorCapacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(actorCapacity));
+            m_Configuration = configuration;
+            m_OriginX = new double[actorCapacity];
+            m_OriginZ = new double[actorCapacity];
+            m_DisplacementX = new double[actorCapacity];
+            m_DisplacementZ = new double[actorCapacity];
+            m_CorrectionX = new double[actorCapacity];
+            m_CorrectionZ = new double[actorCapacity];
+            m_TotalDepenetrationX = new double[actorCapacity];
+            m_TotalDepenetrationZ = new double[actorCapacity];
+            m_Contacts = new bool[actorCapacity];
+            m_Positions = new Float32Vector3[actorCapacity];
+            int pairCapacity = PairCapacity(actorCapacity);
+            m_ResolveTraces = new List<ActorContactTrace>(ResolveTraceCapacity(pairCapacity));
+            m_ValidationTraces = new List<ActorContactTrace>(pairCapacity);
+        }
+
+        internal ActorContactBatchResult Resolve(
             IReadOnlyList<ActorContactCandidate> candidates,
-            ActorContactSolverConfiguration configuration)
+            bool collectTraces)
         {
             if (candidates == null || candidates.Count == 0)
                 throw new ArgumentException("Actor contact solver requires a candidate roster.", nameof(candidates));
             RequireStableRoster(candidates);
             int count = candidates.Count;
-            var originX = new double[count];
-            var originZ = new double[count];
-            var displacementX = new double[count];
-            var displacementZ = new double[count];
-            var correctionX = new double[count];
-            var correctionZ = new double[count];
-            var totalDepenetrationX = new double[count];
-            var totalDepenetrationZ = new double[count];
-            var contacts = new bool[count];
-            var traces = new List<ActorContactTrace>();
+            EnsureCapacity(count, collectTraces);
+            m_ResolveTraces.Clear();
+            double[] originX = m_OriginX;
+            double[] originZ = m_OriginZ;
+            double[] displacementX = m_DisplacementX;
+            double[] displacementZ = m_DisplacementZ;
+            double[] correctionX = m_CorrectionX;
+            double[] correctionZ = m_CorrectionZ;
+            double[] totalDepenetrationX = m_TotalDepenetrationX;
+            double[] totalDepenetrationZ = m_TotalDepenetrationZ;
+            bool[] contacts = m_Contacts;
             for (int i = 0; i < count; i++)
             {
                 ActorContactCandidate candidate = candidates[i];
@@ -153,7 +196,7 @@ namespace ThirdPersonSimulation.DotRecast
 
             ResolveInitialOverlaps(
                 candidates,
-                configuration,
+                collectTraces,
                 originX,
                 originZ,
                 correctionX,
@@ -161,10 +204,10 @@ namespace ThirdPersonSimulation.DotRecast
                 totalDepenetrationX,
                 totalDepenetrationZ,
                 contacts,
-                traces);
+                m_ResolveTraces);
             ResolveSweeps(
                 candidates,
-                configuration,
+                collectTraces,
                 originX,
                 originZ,
                 displacementX,
@@ -172,9 +215,9 @@ namespace ThirdPersonSimulation.DotRecast
                 correctionX,
                 correctionZ,
                 contacts,
-                traces);
+                m_ResolveTraces);
 
-            var positions = new Float32Vector3[count];
+            Float32Vector3[] positions = m_Positions;
             for (int i = 0; i < count; i++)
             {
                 positions[i] = new Float32Vector3(
@@ -182,26 +225,50 @@ namespace ThirdPersonSimulation.DotRecast
                     candidates[i].CandidatePosition.Y,
                     Float32Scalar.FromDouble(originZ[i] + displacementZ[i]));
             }
-            ValidateFinal(candidates, positions, configuration, traces);
-            return new ActorContactBatchResult(positions, contacts, traces);
+            ValidateFinal(candidates, positions, collectTraces);
+            return new ActorContactBatchResult(positions, contacts, m_ResolveTraces, count);
         }
 
-        public static IReadOnlyList<ActorContactTrace> ValidateFinal(
+        internal IReadOnlyList<ActorContactTrace> ValidateFinal(
             IReadOnlyList<ActorContactCandidate> candidates,
             IReadOnlyList<Float32Vector3> finalPositions,
-            ActorContactSolverConfiguration configuration)
+            bool collectTraces)
         {
             if (candidates == null || candidates.Count == 0)
                 throw new ArgumentException("Actor contact solver requires a candidate roster.", nameof(candidates));
             RequireStableRoster(candidates);
-            var traces = new List<ActorContactTrace>();
-            ValidateFinal(candidates, finalPositions, configuration, traces);
-            return traces.AsReadOnly();
+            EnsureCapacity(candidates.Count, collectTraces);
+            m_ValidationTraces.Clear();
+            ValidateFinal(candidates, finalPositions, collectTraces);
+            return m_ValidationTraces;
         }
 
-        static void ResolveInitialOverlaps(
+        void EnsureCapacity(int actorCount, bool collectTraces)
+        {
+            if (actorCount <= m_OriginX.Length)
+                return;
+            m_OriginX = new double[actorCount];
+            m_OriginZ = new double[actorCount];
+            m_DisplacementX = new double[actorCount];
+            m_DisplacementZ = new double[actorCount];
+            m_CorrectionX = new double[actorCount];
+            m_CorrectionZ = new double[actorCount];
+            m_TotalDepenetrationX = new double[actorCount];
+            m_TotalDepenetrationZ = new double[actorCount];
+            m_Contacts = new bool[actorCount];
+            m_Positions = new Float32Vector3[actorCount];
+            if (!collectTraces)
+                return;
+            int pairCapacity = PairCapacity(actorCount);
+            if (m_ResolveTraces.Capacity < ResolveTraceCapacity(pairCapacity))
+                m_ResolveTraces.Capacity = ResolveTraceCapacity(pairCapacity);
+            if (m_ValidationTraces.Capacity < pairCapacity)
+                m_ValidationTraces.Capacity = pairCapacity;
+        }
+
+        void ResolveInitialOverlaps(
             IReadOnlyList<ActorContactCandidate> candidates,
-            ActorContactSolverConfiguration configuration,
+            bool collectTraces,
             double[] originX,
             double[] originZ,
             double[] correctionX,
@@ -211,12 +278,13 @@ namespace ThirdPersonSimulation.DotRecast
             bool[] contacts,
             List<ActorContactTrace> traces)
         {
-            double tolerance = configuration.ContactTolerance.ToDouble();
-            double maximum = configuration.MaximumDepenetrationDistance.ToDouble();
-            for (int iteration = 0; iteration < configuration.IterationCount; iteration++)
+            double tolerance = m_Configuration.ContactTolerance.ToDouble();
+            double maximum = m_Configuration.MaximumDepenetrationDistance.ToDouble();
+            int actorCount = candidates.Count;
+            for (int iteration = 0; iteration < m_Configuration.IterationCount; iteration++)
             {
-                Array.Clear(correctionX, 0, correctionX.Length);
-                Array.Clear(correctionZ, 0, correctionZ.Length);
+                Array.Clear(correctionX, 0, actorCount);
+                Array.Clear(correctionZ, 0, actorCount);
                 bool corrected = false;
                 for (int a = 0; a < candidates.Count - 1; a++)
                 {
@@ -237,7 +305,7 @@ namespace ThirdPersonSimulation.DotRecast
                             continue;
                         if (penetration > maximum + tolerance)
                         {
-                            traces.Add(BuildTrace(
+                            AddTrace(traces, collectTraces, BuildTrace(
                                 ActorContactTraceKind.Failure,
                                 iteration,
                                 candidates[a].ActorId,
@@ -254,7 +322,7 @@ namespace ThirdPersonSimulation.DotRecast
                                 "initial-overlap-exceeds-maximum"));
                             throw new ActorContactSolveException(
                                 $"Actor contact pair '{candidates[a].ActorId}/{candidates[b].ActorId}' exceeds maximum initial depenetration.",
-                                traces.AsReadOnly());
+                                traces);
                         }
                         Normal(dx, dz, out double nx, out double nz);
                         double shareA = activeA && activeB ? penetration * 0.5d : activeA ? penetration : 0d;
@@ -266,7 +334,7 @@ namespace ThirdPersonSimulation.DotRecast
                         contacts[a] |= activeA;
                         contacts[b] |= activeB;
                         corrected = true;
-                        traces.Add(BuildTrace(
+                        AddTrace(traces, collectTraces, BuildTrace(
                             ActorContactTraceKind.Depenetration,
                             iteration,
                             candidates[a].ActorId,
@@ -294,7 +362,7 @@ namespace ThirdPersonSimulation.DotRecast
                         totalDepenetrationZ[i] * totalDepenetrationZ[i]);
                     if (total > maximum + tolerance)
                     {
-                        traces.Add(BuildTrace(
+                        AddTrace(traces, collectTraces, BuildTrace(
                             ActorContactTraceKind.Failure,
                             iteration,
                             candidates[i].ActorId,
@@ -311,7 +379,7 @@ namespace ThirdPersonSimulation.DotRecast
                             "accumulated-depenetration-exceeds-maximum"));
                         throw new ActorContactSolveException(
                             $"Actor '{candidates[i].ActorId}' exceeds maximum accumulated depenetration.",
-                            traces.AsReadOnly());
+                            traces);
                     }
                     originX[i] += correctionX[i];
                     originZ[i] += correctionZ[i];
@@ -319,9 +387,9 @@ namespace ThirdPersonSimulation.DotRecast
             }
         }
 
-        static void ResolveSweeps(
+        void ResolveSweeps(
             IReadOnlyList<ActorContactCandidate> candidates,
-            ActorContactSolverConfiguration configuration,
+            bool collectTraces,
             double[] originX,
             double[] originZ,
             double[] displacementX,
@@ -331,11 +399,12 @@ namespace ThirdPersonSimulation.DotRecast
             bool[] contacts,
             List<ActorContactTrace> traces)
         {
-            double tolerance = configuration.ContactTolerance.ToDouble();
-            for (int iteration = 0; iteration < configuration.IterationCount; iteration++)
+            double tolerance = m_Configuration.ContactTolerance.ToDouble();
+            int actorCount = candidates.Count;
+            for (int iteration = 0; iteration < m_Configuration.IterationCount; iteration++)
             {
-                Array.Clear(correctionX, 0, correctionX.Length);
-                Array.Clear(correctionZ, 0, correctionZ.Length);
+                Array.Clear(correctionX, 0, actorCount);
+                Array.Clear(correctionZ, 0, actorCount);
                 bool clipped = false;
                 for (int a = 0; a < candidates.Count - 1; a++)
                 {
@@ -396,7 +465,7 @@ namespace ThirdPersonSimulation.DotRecast
                         contacts[a] |= activeA;
                         contacts[b] |= activeB;
                         clipped = true;
-                        traces.Add(BuildTrace(
+                        AddTrace(traces, collectTraces, BuildTrace(
                             ActorContactTraceKind.Sweep,
                             iteration,
                             candidates[a].ActorId,
@@ -411,7 +480,7 @@ namespace ThirdPersonSimulation.DotRecast
                             correctionBX,
                             correctionBZ,
                             "continuous-disk-toi"));
-                        traces.Add(BuildTrace(
+                        AddTrace(traces, collectTraces, BuildTrace(
                             ActorContactTraceKind.NormalClip,
                             iteration,
                             candidates[a].ActorId,
@@ -440,15 +509,15 @@ namespace ThirdPersonSimulation.DotRecast
             }
         }
 
-        static void ValidateFinal(
+        void ValidateFinal(
             IReadOnlyList<ActorContactCandidate> candidates,
             IReadOnlyList<Float32Vector3> positions,
-            ActorContactSolverConfiguration configuration,
+            bool collectTraces,
             List<ActorContactTrace> traces)
         {
             if (positions == null || positions.Count != candidates.Count)
                 throw new ArgumentException("Actor contact final position roster is invalid.", nameof(positions));
-            double tolerance = configuration.ContactTolerance.ToDouble();
+            double tolerance = m_Configuration.ContactTolerance.ToDouble();
             for (int a = 0; a < candidates.Count - 1; a++)
             {
                 for (int b = a + 1; b < candidates.Count; b++)
@@ -466,9 +535,9 @@ namespace ThirdPersonSimulation.DotRecast
                     double separation = Separation(candidates[a], candidates[b]);
                     if (distance + tolerance >= separation)
                     {
-                        traces.Add(BuildTrace(
+                        AddTrace(traces, collectTraces, BuildTrace(
                             ActorContactTraceKind.Validation,
-                            configuration.IterationCount,
+                            m_Configuration.IterationCount,
                             candidates[a].ActorId,
                             candidates[b].ActorId,
                             candidates[a].Mobility,
@@ -483,9 +552,9 @@ namespace ThirdPersonSimulation.DotRecast
                             "minimum-separation-valid"));
                         continue;
                     }
-                    traces.Add(BuildTrace(
+                    AddTrace(traces, collectTraces, BuildTrace(
                         ActorContactTraceKind.Failure,
-                        configuration.IterationCount,
+                        m_Configuration.IterationCount,
                         candidates[a].ActorId,
                         candidates[b].ActorId,
                         candidates[a].Mobility,
@@ -500,7 +569,7 @@ namespace ThirdPersonSimulation.DotRecast
                         "minimum-separation-failed"));
                     throw new ActorContactSolveException(
                         $"Actor contact pair '{candidates[a].ActorId}/{candidates[b].ActorId}' remains penetrated after fixed iterations.",
-                        traces.AsReadOnly());
+                        traces);
                 }
             }
         }
@@ -514,6 +583,24 @@ namespace ThirdPersonSimulation.DotRecast
                 if (i > 0 && candidates[i - 1].ActorId.CompareTo(candidates[i].ActorId) >= 0)
                     throw new ArgumentException("Actor contact candidate roster must be uniquely sorted by ActorId.", nameof(candidates));
             }
+        }
+
+        static int PairCapacity(int actorCount)
+        {
+            long pairCount = (long)actorCount * (actorCount - 1) / 2;
+            return checked((int)pairCount);
+        }
+
+        int ResolveTraceCapacity(int pairCapacity) =>
+            checked(pairCapacity * (m_Configuration.IterationCount * 3 + 1));
+
+        void AddTrace(
+            List<ActorContactTrace> traces,
+            bool collectTraces,
+            ActorContactTrace trace)
+        {
+            if (collectTraces)
+                traces.Add(trace);
         }
 
         static bool TrySweep(

@@ -115,6 +115,7 @@ namespace ThirdPersonSimulation.DotRecast
         readonly DotRecastBodyBindingDescriptor[] m_Bindings;
         readonly ActorContactShape m_ContactShape;
         readonly ActorContactSolverConfiguration m_ContactConfiguration;
+        readonly ActorContactSolver m_ActorContactSolver;
         readonly DtNavMesh m_NavMesh;
         readonly DtNavMeshQuery m_Query;
         readonly DtQueryDefaultFilter m_Filter;
@@ -154,6 +155,7 @@ namespace ThirdPersonSimulation.DotRecast
                     throw new ArgumentException("DotRecast World Solver requires one canonical contact shape for the locked roster.", nameof(bindings));
             }
             m_ContactConfiguration = contactConfiguration;
+            m_ActorContactSolver = new ActorContactSolver(contactConfiguration, m_Bindings.Length);
             using (var stream = new MemoryStream(m_Surface.NavMeshBytes, false))
             using (var reader = new BinaryReader(stream))
                 m_NavMesh = new DtMeshSetReader().Read(reader);
@@ -300,7 +302,7 @@ namespace ThirdPersonSimulation.DotRecast
                 ActorContactBatchResult contactResult;
                 try
                 {
-                    contactResult = ActorContactSolver.Resolve(contactCandidates, m_ContactConfiguration);
+                    contactResult = m_ActorContactSolver.Resolve(contactCandidates, diagnostics.IsEnabled);
                 }
                 catch (ActorContactSolveException exception)
                 {
@@ -328,10 +330,10 @@ namespace ThirdPersonSimulation.DotRecast
                 IReadOnlyList<ActorContactTrace> finalValidationTraces;
                 try
                 {
-                    finalValidationTraces = ActorContactSolver.ValidateFinal(
+                    finalValidationTraces = m_ActorContactSolver.ValidateFinal(
                         contactCandidates,
                         finalPositions,
-                        m_ContactConfiguration);
+                        diagnostics.IsEnabled);
                 }
                 catch (ActorContactSolveException exception)
                 {

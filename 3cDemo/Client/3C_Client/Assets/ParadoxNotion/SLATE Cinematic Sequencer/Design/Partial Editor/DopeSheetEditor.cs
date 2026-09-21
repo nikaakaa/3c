@@ -401,7 +401,8 @@ namespace Slate
                         var lastTime = currentTimes[pickIndex];
                         var newTime = PosToTime(e.mousePosition.x);
                         var snapInterval = CutsceneEditorSurface.CurrentSnapInterval;
-                        newTime = Mathf.Round(newTime / snapInterval) * snapInterval;
+                        if (snapInterval > 0f)
+                            newTime = Mathf.Round(newTime / snapInterval) * snapInterval;
                         newTime = Mathf.Clamp(newTime, startTime, startTime + length);
                         if ( e.shift || Prefs.rippleMode ) {
                             var max = pickIndex > 0 ? currentTimes[pickIndex - 1] + snapInterval : startTime;

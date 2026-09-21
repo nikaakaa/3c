@@ -489,6 +489,9 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
+            string savedView = SessionState.GetString(TimelineViewStateKey(), string.Empty);
+            if (!string.IsNullOrEmpty(savedView))
+                m_SlateProjection.RestoreViewState(JsonUtility.FromJson<BtsmtlSlateTimelineViewState>(savedView));
             TimelineWorkspaceModeBridge.ApplyToWindow(this);
 
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
@@ -632,7 +635,11 @@ namespace BTSMTL.Timeline.Editor
             if (m_Timeline != null)
                 m_Timeline.OnValueChanged -= OnTimelineValueChanged;
             if (m_SlateProjection != null)
+            {
+                if (m_SerializedOwner)
+                    SessionState.SetString(TimelineViewStateKey(), JsonUtility.ToJson(m_SlateProjection.CaptureViewState()));
                 m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
+            }
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
@@ -640,6 +647,9 @@ namespace BTSMTL.Timeline.Editor
             m_WorkspaceModeControls = null;
             m_Timeline = null;
         }
+
+        string TimelineViewStateKey() => "BTSMTL.Timeline.View." +
+            GlobalObjectId.GetGlobalObjectIdSlow(m_SerializedOwner) + ":" + m_SerializedPropertyPath;
 
         void OnAuthoringIssue(string message)
         {

@@ -13,7 +13,10 @@ namespace Slate
         string SnapLabel { get; }
         void ShowSnapSettings(Rect rect);
         float Length { get; }
-        int CurrentFrame { get; set; }
+        float CurrentTime { get; set; }
+        bool DisplayFrames { get; set; }
+        float SnapInterval { get; }
+        float StepInterval { get; }
         float ViewTimeMin { get; set; }
         float ViewTimeMax { get; set; }
         bool IsReadOnly { get; }
@@ -145,8 +148,6 @@ namespace Slate
         string ChannelId { get; }
         string DisplayName { get; }
         AnimationCurve Curve { get; }
-        int StartFrame { get; }
-        int EndFrame { get; }
         float Duration { get; }
         void Replace(AnimationCurve curve);
     }

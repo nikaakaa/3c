@@ -30,7 +30,9 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         string m_EditUndoName;
         string m_EditSourceRevision;
-        int m_CurrentFrame;
+        float m_CurrentTime;
+        bool m_DisplayFrames;
+        const float MinimumViewDuration = 0.001f;
         float m_ViewTimeMin;
         float m_ViewTimeMax;
         Vector2 m_PopupPosition;
@@ -46,7 +48,7 @@ namespace BTSMTL.Timeline.Editor
             m_Timeline = request.Timeline;
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
             m_ViewTimeMin = 0f;
-            m_ViewTimeMax = Mathf.Max(1f / FrameRate, Timeline.Duration);
+            m_ViewTimeMax = Mathf.Max(MinimumViewDuration, Timeline.Duration);
             BuildBindings();
         }
 
@@ -55,23 +57,34 @@ namespace BTSMTL.Timeline.Editor
         public TimelineEditorSessionContext Session => m_Session;
         public int FrameRate => Mathf.Max(1, m_Session.FrameRate);
         public int TickRate => m_Session.TickRate;
+        public bool DisplayFrames
+        {
+            get => m_DisplayFrames;
+            set { m_DisplayFrames = value; RequestRepaint(); }
+        }
+        public float SnapInterval => m_Session.SnapInterval;
+        public float StepInterval => m_Session.SnapMode == TimelineAuthoringSnapMode.None
+            ? DisplayFrames ? 1f / FrameRate : m_Session.SecondsInterval
+            : SnapInterval > 0f ? SnapInterval : throw new InvalidOperationException("当前吸附网格缺少参考 Pipeline 或动画素材。");
         public float SnapTime(float time) => m_Session.SnapTime(
             FixedScalar.FromDouble(Math.Max(0d, time)), m_Session.Selection.Clip).ToSingle();
         public string SnapLabel => m_Session.SnapMode switch
         {
-            TimelineAuthoringSnapMode.LogicTick => $"吸附 {TickRate}Hz",
+            TimelineAuthoringSnapMode.LogicTick => TickRate > 0 ? $"吸附 {TickRate}Hz" : "吸附 缺少 Pipeline",
             TimelineAuthoringSnapMode.SourceFrame => "吸附 素材帧",
+            TimelineAuthoringSnapMode.Seconds => $"吸附 {m_Session.SecondsInterval:0.######} s",
             _ => "吸附 关闭"
         };
         public void ShowSnapSettings(Rect rect) => PopupWindow.Show(rect, new GridSettingsPopup(this));
 
         sealed class GridSettingsPopup : PopupWindowContent
         {
+            static readonly string[] s_SecondsIntervals = { "0.001 s", "0.01 s", "0.1 s" };
             readonly BtsmtlSlateTimelineBinding m_Owner;
             string m_Error;
 
             internal GridSettingsPopup(BtsmtlSlateTimelineBinding owner) => m_Owner = owner;
-            public override Vector2 GetWindowSize() => new Vector2(340f, 205f);
+            public override Vector2 GetWindowSize() => new Vector2(340f, 260f);
             public override void OnGUI(Rect rect)
             {
                 TimelineEditorSessionContext session = m_Owner.Session;
@@ -83,6 +96,15 @@ namespace BTSMTL.Timeline.Editor
                         ? TimelineAuthoringSnapMode.None : session.SnapMode);
                 if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.None, "关闭吸附", EditorStyles.radioButton))
                     session.ConfigureGrid(pipeline, TimelineAuthoringSnapMode.None);
+                if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.Seconds, "秒", EditorStyles.radioButton))
+                    session.ConfigureGrid(pipeline, TimelineAuthoringSnapMode.Seconds);
+                using (new EditorGUI.DisabledScope(session.SnapMode != TimelineAuthoringSnapMode.Seconds))
+                {
+                    int intervalIndex = session.SecondsInterval == 0.001f ? 0 : session.SecondsInterval == 0.01f ? 1 : 2;
+                    int nextIndex = EditorGUILayout.Popup("秒吸附间隔", intervalIndex, s_SecondsIntervals);
+                    if (nextIndex != intervalIndex)
+                        session.ConfigureSecondsInterval(nextIndex == 0 ? 0.001f : nextIndex == 1 ? 0.01f : 0.1f);
+                }
                 using (new EditorGUI.DisabledScope(!pipeline))
                     if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.LogicTick,
                         pipeline ? $"逻辑 tick：{pipeline.SimulationTickRate} Hz" : "逻辑 tick：请先选择 Pipeline", EditorStyles.radioButton))
@@ -108,6 +130,8 @@ namespace BTSMTL.Timeline.Editor
                 EditorGUILayout.LabelField("网格换算前提：正常速率、未暂停。", EditorStyles.miniLabel);
                 if (!string.IsNullOrEmpty(m_Error))
                     EditorGUILayout.HelpBox(m_Error, MessageType.Error);
+                if (GUI.changed)
+                    m_Owner.RequestRepaint();
             }
         }
 
@@ -116,15 +140,15 @@ namespace BTSMTL.Timeline.Editor
         public float Duration => Timeline.Duration;
         public IReadOnlyList<Track> Tracks => Timeline.Tracks;
         public IReadOnlyList<TimelineSection> SourceSections => Timeline.Sections;
-        public int CurrentFrame
+        public float CurrentTime
         {
-            get => m_CurrentFrame;
+            get => m_CurrentTime;
             set
             {
-                int nextFrame = Mathf.Clamp(value, 0, Timeline.MaxFrame);
-                if (m_CurrentFrame == nextFrame)
+                float nextTime = Mathf.Clamp(value, 0f, Length);
+                if (m_CurrentTime == nextTime)
                     return;
-                m_CurrentFrame = nextFrame;
+                m_CurrentTime = nextTime;
                 RequestRepaint();
             }
         }
@@ -133,7 +157,7 @@ namespace BTSMTL.Timeline.Editor
             get => m_ViewTimeMin;
             set
             {
-                float nextValue = Mathf.Min(value, ViewTimeMax - 1f / FrameRate);
+                float nextValue = Mathf.Min(value, ViewTimeMax - MinimumViewDuration);
                 if (Mathf.Approximately(m_ViewTimeMin, nextValue))
                     return;
                 m_ViewTimeMin = nextValue;
@@ -145,7 +169,7 @@ namespace BTSMTL.Timeline.Editor
             get => m_ViewTimeMax;
             set
             {
-                float nextValue = Mathf.Max(value, ViewTimeMin + 1f / FrameRate);
+                float nextValue = Mathf.Max(value, ViewTimeMin + MinimumViewDuration);
                 if (Mathf.Approximately(m_ViewTimeMax, nextValue))
                     return;
                 m_ViewTimeMax = nextValue;
@@ -701,8 +725,8 @@ namespace BTSMTL.Timeline.Editor
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             m_Timeline.Init();
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
-            m_ViewTimeMax = Mathf.Max(1f / FrameRate, m_Timeline.Duration);
-            m_CurrentFrame = Mathf.Clamp(m_CurrentFrame, 0, m_Timeline.MaxFrame);
+            m_ViewTimeMax = Mathf.Max(MinimumViewDuration, m_Timeline.Duration);
+            m_CurrentTime = Mathf.Clamp(m_CurrentTime, 0f, m_Timeline.Duration);
             Rebuild();
             RequestRepaint();
         }
@@ -738,7 +762,7 @@ namespace BTSMTL.Timeline.Editor
 
         void ExpandViewToLength(float previousLength)
         {
-            if (Length > previousLength + 1f / FrameRate)
+            if (Length > previousLength + MinimumViewDuration)
                 m_ViewTimeMax = Mathf.Max(m_ViewTimeMax, Length);
         }
 
@@ -820,7 +844,7 @@ namespace BTSMTL.Timeline.Editor
                 m_SectionsById[source.AuthoringId] = section;
             }
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(Timeline);
-            m_CurrentFrame = Mathf.Clamp(m_CurrentFrame, 0, Timeline.MaxFrame);
+            m_CurrentTime = Mathf.Clamp(m_CurrentTime, 0f, Length);
         }
 
         void ShowTrackCreationPopup(string kind, IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields)
@@ -1527,8 +1551,6 @@ namespace BTSMTL.Timeline.Editor
             public string DisplayName => m_Descriptor.DisplayName;
             public TimelineCurveValueDomain ValueDomain => m_Descriptor.ValueDomain;
             public AnimationCurve Curve => m_Curve;
-            public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
-            public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
             public float Duration => m_Clip.Length;
             public void Replace(AnimationCurve curve) => m_Curve = SnapCurve(curve);
             public void Trim(float min, float max)
@@ -1676,7 +1698,7 @@ namespace BTSMTL.Timeline.Editor
             public string ValueDomainSummary => m_Curve.ValueDomain.Summary;
             public bool Enabled { get; set; } = true;
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
-                m_Clip.Owner.CurrentFrame / (float)m_Clip.Owner.FrameRate - m_Clip.StartTime,
+                m_Clip.Owner.CurrentTime - m_Clip.StartTime,
                 0f,
                 m_Curve.Duration));
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
@@ -1700,8 +1722,7 @@ namespace BTSMTL.Timeline.Editor
                     if (keys[index].time < localTime && (!previous.HasValue || keys[index].time > previous.Value))
                         previous = keys[index].time;
                 if (previous.HasValue)
-                    m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
-                        (m_Clip.StartTime + previous.Value) * m_Clip.Owner.FrameRate);
+                    m_Clip.Owner.CurrentTime = m_Clip.StartTime + previous.Value;
             }
 
             public void SelectNextKey(float localTime)
@@ -1712,8 +1733,7 @@ namespace BTSMTL.Timeline.Editor
                     if (keys[index].time > localTime && (!next.HasValue || keys[index].time < next.Value))
                         next = keys[index].time;
                 if (next.HasValue)
-                    m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
-                        (m_Clip.StartTime + next.Value) * m_Clip.Owner.FrameRate);
+                    m_Clip.Owner.CurrentTime = m_Clip.StartTime + next.Value;
             }
         }
 
@@ -1740,7 +1760,7 @@ namespace BTSMTL.Timeline.Editor
             public string ReferenceLabel { get; }
             public bool Enabled { get => true; set { } }
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
-                m_Clip.Owner.CurrentFrame / (float)m_Clip.Owner.FrameRate - m_Clip.StartTime,
+                m_Clip.Owner.CurrentTime - m_Clip.StartTime,
                 0f,
                 m_Curve.Duration));
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
@@ -1773,8 +1793,6 @@ namespace BTSMTL.Timeline.Editor
             public string ChannelId { get; }
             public string DisplayName { get; }
             public AnimationCurve Curve => m_Curve;
-            public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
-            public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
             public float Duration => m_Clip.Length;
             public void Replace(AnimationCurve curve) { }
             public void Refresh() => m_Curve = m_CreateCurve();

@@ -204,7 +204,8 @@ namespace BTSMTL.Timeline.Editor
     {
         None,
         LogicTick,
-        SourceFrame
+        SourceFrame,
+        Seconds
     }
 
     public sealed class TimelineEditorSessionContext
@@ -228,20 +229,42 @@ namespace BTSMTL.Timeline.Editor
         public int FrameRate => m_Request.PreviewFrameRate;
         public CharacterPipelineDefinition GridPipeline { get; private set; }
         public TimelineAuthoringSnapMode SnapMode { get; private set; }
+        public float SecondsInterval { get; private set; } = 0.01f;
         public int TickRate => GridPipeline ? GridPipeline.SimulationTickRate : 0;
 
         public void ConfigureGrid(CharacterPipelineDefinition pipeline, TimelineAuthoringSnapMode mode)
         {
-            if (mode == TimelineAuthoringSnapMode.LogicTick && !pipeline)
-                throw new InvalidOperationException("逻辑 tick 吸附需要明确选择参考 Pipeline。");
             GridPipeline = pipeline;
             SnapMode = mode;
         }
+
+        public void ConfigureSecondsInterval(float interval)
+        {
+            if (!float.IsFinite(interval) || interval < 0.000001f)
+                throw new ArgumentOutOfRangeException(nameof(interval));
+            SecondsInterval = interval;
+        }
+
+        public float SnapInterval => SnapMode switch
+        {
+            TimelineAuthoringSnapMode.None => 0f,
+            TimelineAuthoringSnapMode.Seconds => SecondsInterval,
+            TimelineAuthoringSnapMode.LogicTick => GridPipeline ? 1f / TickRate : 0f,
+            TimelineAuthoringSnapMode.SourceFrame => Selection.Clip is AnimationClip animation && animation.Clip
+                ? 1f / animation.Clip.frameRate : 0f,
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
         public FixedScalar SnapTime(FixedScalar time, Clip clip = null, bool duration = false)
         {
             if (SnapMode == TimelineAuthoringSnapMode.None)
                 return time;
+            if (SnapMode == TimelineAuthoringSnapMode.Seconds)
+            {
+                decimal intervalRaw = (decimal)SecondsInterval * FixedScalar.OneRaw;
+                decimal index = decimal.Round(time.Raw / intervalRaw, 0, MidpointRounding.ToEven);
+                return FixedScalar.FromRaw(checked((long)decimal.Round(index * intervalRaw, 0, MidpointRounding.ToEven)));
+            }
             if (SnapMode == TimelineAuthoringSnapMode.LogicTick)
             {
                 if (!GridPipeline)

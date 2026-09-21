@@ -290,8 +290,8 @@ namespace Slate
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
         [System.NonSerialized] private System.Func<float> embeddedLength;
-        [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
-        [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
+        [System.NonSerialized] private System.Func<float> embeddedCurrentTimeGetter;
+        [System.NonSerialized] private System.Action<float> embeddedSetCurrentTime;
         [System.NonSerialized] private System.Func<float> embeddedViewTimeMin;
         [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMin;
         [System.NonSerialized] private System.Func<float> embeddedViewTimeMax;
@@ -533,30 +533,25 @@ namespace Slate
         //Round time to nearest working snap interval
         float SnapTime(float time) {
             //holding control for precision (ignore snap intervals)
-            if ( Event.current.control ) { return time; }
             if ( embeddedTimeline != null ) {
                 return embeddedTimeline.SnapTime(time);
             }
-            if ( embeddedSurface ) {
-                var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
-                return Mathf.Round(time * frameRate) / frameRate;
-            }
+            if ( Event.current.control ) { return time; }
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
         }
 
         internal float EmbeddedCurrentTime()
         {
-            if (embeddedCurrentFrame != null)
-                return embeddedCurrentFrame() / (float)Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
+            if (embeddedCurrentTimeGetter != null)
+                return embeddedCurrentTimeGetter();
             return cutscene.currentTime;
         }
 
         internal void SetEmbeddedCurrentTime(float time)
         {
-            if (embeddedSetCurrentFrame != null)
+            if (embeddedSetCurrentTime != null)
             {
-                int frame = Mathf.RoundToInt(Mathf.Max(0f, time) * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-                embeddedSetCurrentFrame(frame);
+                embeddedSetCurrentTime(Mathf.Clamp(time, 0f, length));
                 return;
             }
             cutscene.currentTime = time;
@@ -596,8 +591,8 @@ namespace Slate
         public static float CurrentSnapInterval {
             get
             {
-                if ( current != null && current.embeddedSurface )
-                    return 1f / Mathf.Max(1, current.embeddedFrameRate != null ? current.embeddedFrameRate() : Prefs.frameRate);
+                if (current != null && current.embeddedTimeline != null)
+                    return current.embeddedTimeline.SnapInterval;
                 return Prefs.snapInterval;
             }
         }
@@ -774,8 +769,8 @@ namespace Slate
             System.Func<int> frameRate,
             System.Action addTrack,
             System.Action<ActionClip> copyClip,
-            System.Func<int> currentFrame = null,
-            System.Action<int> setCurrentFrame = null,
+            System.Func<float> currentTime = null,
+            System.Action<float> setCurrentTime = null,
             System.Func<float> timelineLength = null,
             System.Func<float> viewMin = null,
             System.Action<float> setViewMin = null,
@@ -786,8 +781,8 @@ namespace Slate
             embeddedRepaint = repaint;
             embeddedFrameRate = frameRate;
             embeddedLength = timelineLength;
-            embeddedCurrentFrame = currentFrame;
-            embeddedSetCurrentFrame = setCurrentFrame;
+            embeddedCurrentTimeGetter = currentTime;
+            embeddedSetCurrentTime = setCurrentTime;
             embeddedViewTimeMin = viewMin;
             embeddedSetViewTimeMin = setViewMin;
             embeddedViewTimeMax = viewMax;
@@ -812,8 +807,8 @@ namespace Slate
             embeddedRepaint = repaint;
             embeddedFrameRate = () => binding.FrameRate;
             embeddedLength = () => binding.Length;
-            embeddedCurrentFrame = () => binding.CurrentFrame;
-            embeddedSetCurrentFrame = value => binding.CurrentFrame = value;
+            embeddedCurrentTimeGetter = () => binding.CurrentTime;
+            embeddedSetCurrentTime = value => binding.CurrentTime = value;
             embeddedViewTimeMin = () => binding.ViewTimeMin;
             embeddedSetViewTimeMin = value => binding.ViewTimeMin = value;
             embeddedViewTimeMax = () => binding.ViewTimeMax;
@@ -974,8 +969,8 @@ namespace Slate
             endWindows = null;
             embeddedFrameRate = null;
             embeddedLength = null;
-            embeddedCurrentFrame = null;
-            embeddedSetCurrentFrame = null;
+            embeddedCurrentTimeGetter = null;
+            embeddedSetCurrentTime = null;
             embeddedViewTimeMin = null;
             embeddedSetViewTimeMin = null;
             embeddedViewTimeMax = null;
@@ -1294,8 +1289,8 @@ namespace Slate
         ///<summary>Steps time forward to the next key time</summary>
         void StepForward() {
             if ( embeddedSurface ) {
-                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
-                    embeddedSetCurrentFrame(embeddedCurrentFrame() + 1);
+                if ( embeddedCurrentTimeGetter != null && embeddedSetCurrentTime != null ) {
+                    SetEmbeddedCurrentTime(embeddedCurrentTimeGetter() + (embeddedTimeline != null ? embeddedTimeline.StepInterval : Prefs.snapInterval));
                     return;
                 }
                 cutscene.currentTime = Mathf.Min(cutscene.length, cutscene.currentTime + 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
@@ -1317,8 +1312,8 @@ namespace Slate
         ///<summary>Steps time backwards to the previous key time</summary>
         void StepBackward() {
             if ( embeddedSurface ) {
-                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
-                    embeddedSetCurrentFrame(embeddedCurrentFrame() - 1);
+                if ( embeddedCurrentTimeGetter != null && embeddedSetCurrentTime != null ) {
+                    SetEmbeddedCurrentTime(embeddedCurrentTimeGetter() - (embeddedTimeline != null ? embeddedTimeline.StepInterval : Prefs.snapInterval));
                     return;
                 }
                 cutscene.currentTime = Mathf.Max(0f, cutscene.currentTime - 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
@@ -1740,27 +1735,27 @@ namespace Slate
                 StepBackward();
             if (GUILayout.Button("›", EditorStyles.toolbarButton, GUILayout.Width(24)))
                 StepForward();
+            if (embeddedTimeline != null && GUILayout.Button(embeddedTimeline.DisplayFrames ? "帧" : "秒", EditorStyles.toolbarDropDown, GUILayout.Width(36)))
+            {
+                var menu = new GenericMenu();
+                menu.AddItem(new GUIContent("秒"), !embeddedTimeline.DisplayFrames, () => embeddedTimeline.DisplayFrames = false);
+                menu.AddItem(new GUIContent("帧"), embeddedTimeline.DisplayFrames, () => embeddedTimeline.DisplayFrames = true);
+                menu.DropDown(GUILayoutUtility.GetLastRect());
+            }
             if (GUILayout.Button("Fit", EditorStyles.toolbarButton, GUILayout.Width(36)))
             {
                 viewTimeMin = 0f;
-                viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+                viewTimeMax = Mathf.Max(length, 0.001f);
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
-            int authoringFrame = embeddedCurrentFrame != null
-                ? embeddedCurrentFrame()
-                : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-            if (embeddedCurrentFrame != null && embeddedSetCurrentFrame != null)
-            {
-                GUILayout.Label("Edit", EditorStyles.miniLabel);
-                int requestedFrame = EditorGUILayout.IntField(authoringFrame, GUILayout.Width(52));
-                if (requestedFrame != authoringFrame)
-                    embeddedSetCurrentFrame(requestedFrame);
-                GUILayout.Label("F", EditorStyles.miniLabel);
-            }
-            else
-                GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
-            if (embeddedTimeline != null && GUILayout.Button(embeddedTimeline.SnapLabel, EditorStyles.toolbarDropDown, GUILayout.Width(90)))
+            GUILayout.Label("时间", EditorStyles.miniLabel);
+            float authoringTime = EmbeddedCurrentTime();
+            float requestedTime = EditorGUILayout.FloatField(authoringTime, GUILayout.Width(66));
+            if (float.IsFinite(requestedTime) && requestedTime != authoringTime)
+                SetEmbeddedCurrentTime(requestedTime);
+            GUILayout.Label("s", EditorStyles.miniLabel, GUILayout.Width(10));
+            if (embeddedTimeline != null && GUILayout.Button(embeddedTimeline.SnapLabel, EditorStyles.toolbarDropDown, GUILayout.MinWidth(70)))
                 embeddedTimeline.ShowSnapSettings(GUILayoutUtility.GetLastRect());
             GUILayout.EndHorizontal();
             GUI.EndGroup();
@@ -2296,6 +2291,9 @@ namespace Slate
 
 
         //top mid - viewTime selection and time info
+        static readonly int[] frameRulerIntervals = { 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 3000, 6000 };
+        static readonly float[] secondsRulerIntervals = { 0.000001f, 0.00001f, 0.0001f, 0.001f, 0.01f, 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 };
+
         void ShowTimeInfo(Rect topMiddleRect) {
 
             GUI.color = Color.white.WithAlpha(0.2f);
@@ -2306,11 +2304,11 @@ namespace Slate
 
             timeInfoInterval = 1000000f;
             timeInfoHighMod = timeInfoInterval;
-            var lowMod = 0.01f;
-            var doFrames = embeddedSurface || Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
+            var lowMod = secondsRulerIntervals[0];
+            var doFrames = embeddedTimeline != null ? embeddedTimeline.DisplayFrames : Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
             var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
-            if ( embeddedSurface ) {
-                var frameIntervals = new[] { 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 3000, 6000 };
+            if (doFrames) {
+                var frameIntervals = frameRulerIntervals;
                 var selectedInterval = frameIntervals[frameIntervals.Length - 1];
                 var selectedHighInterval = selectedInterval;
                 for ( var i = 0; i < frameIntervals.Length; i++ ) {
@@ -2326,7 +2324,7 @@ namespace Slate
                 lowMod = 1f / frameRate;
             }
             else {
-                var modulos = new float[] { 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 }; //... O.o
+                var modulos = secondsRulerIntervals;
                 for ( var i = 0; i < modulos.Length; i++ ) {
                     var count = viewTime / modulos[i];
                     if ( centerRect.width / count > 50 ) { //50 is approx width of label
@@ -2340,15 +2338,13 @@ namespace Slate
 
             var timeStep = doFrames ? ( 1f / frameRate ) : lowMod;
 
-            if ( embeddedSurface ) {
+            if (doFrames) {
                 timeInfoStart = Mathf.Floor(viewTimeMin * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
                 timeInfoEnd = Mathf.Ceil(viewTimeMax * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
             }
             else {
                 timeInfoStart = (float)Mathf.FloorToInt(viewTimeMin / timeInfoInterval) * timeInfoInterval;
                 timeInfoEnd = (float)Mathf.CeilToInt(viewTimeMax / timeInfoInterval) * timeInfoInterval;
-                timeInfoStart = Mathf.Round(timeInfoStart * 10) / 10;
-                timeInfoEnd = Mathf.Round(timeInfoEnd * 10) / 10;
             }
 
             GUI.BeginGroup(topMiddleRect);
@@ -2384,7 +2380,7 @@ namespace Slate
                 for ( var i = timeInfoStart; i <= timeInfoEnd; i += timeInfoInterval ) {
 
                     var posX = TimeToPos(i);
-                    var rounded = embeddedSurface ? Mathf.Round(i * frameRate) / frameRate : Mathf.Round(i * 10) / 10;
+                    var rounded = doFrames ? Mathf.Round(i * frameRate) / frameRate : Mathf.Round(i / timeInfoInterval) * timeInfoInterval;
 
                     GUI.color = isProSkin ? Color.white : Color.black;
                     var markRect = Rect.MinMaxRect(posX - 2, TOP_MARGIN - 3, posX + 2, TOP_MARGIN - 1);
@@ -2393,7 +2389,7 @@ namespace Slate
 
                     var text = doFrames
                         ? Mathf.RoundToInt(rounded * frameRate).ToString("0") + "F"
-                        : rounded.ToString("0.00");
+                        : rounded.ToString("0.######") + " s";
                     var size = GUI.skin.GetStyle("label").CalcSize(new GUIContent(text));
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y + 2);
@@ -2410,7 +2406,7 @@ namespace Slate
                 if ( embeddedCurrentTime > 0 ) {
                     var label = doFrames
                         ? Mathf.RoundToInt(embeddedCurrentTime * frameRate).ToString("0") + "F"
-                        : embeddedCurrentTime.ToString("0.00");
+                        : embeddedCurrentTime.ToString("0.######") + " s";
                     var text = "<b><size=17>" + label + "</size></b>";
                     var size = Styles.headerBoxStyle.CalcSize(new GUIContent(text));
                     var posX = TimeToPos(embeddedCurrentTime);
@@ -3148,7 +3144,7 @@ namespace Slate
             {
                 float guideTime = frameRate > 0
                     ? Mathf.Round(time * frameRate) / frameRate
-                    : Mathf.Round(time * 10f) / 10f;
+                    : Mathf.Round(time / timeInfoInterval) * timeInfoInterval;
                 DrawGuideLine(guideTime, Color.black.WithAlpha(0.05f));
             }
         }
@@ -3688,7 +3684,7 @@ namespace Slate
                 : null;
             if (!string.IsNullOrEmpty(runtimeStatus))
             {
-                GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
+                DrawClippedClipLabel(new Rect(clipRect.x, clipRect.yMax - 14f, clipRect.width, 14f), runtimeStatus, Styles.centerLabel);
                 if (runtimeStatus == "open" && embeddedRuntimeTime != null)
                 {
                     float? growTime = embeddedRuntimeTime();
@@ -3709,17 +3705,26 @@ namespace Slate
             wrapper.editorBinding.DrawClipGUIExternal(
                 Rect.MinMaxRect(previousPosX, clipRect.yMin, clipRect.xMin, clipRect.yMax),
                 Rect.MinMaxRect(clipRect.xMax, clipRect.yMin, nextPosX, clipRect.yMax));
-            if (clipRect.width <= 20)
-                GUI.Label(
+            if (clipRect.width <= 20 && nextPosX > clipRect.xMax + 4f)
+                DrawClippedClipLabel(
                     Rect.MinMaxRect(clipRect.xMax, clipRect.yMin, nextPosX, clipRect.yMax).ExpandBy(-1),
-                    string.Format("<size=10>{0}</size>", wrapper.editorBinding.Info));
+                    wrapper.editorBinding.Info, EditorStyles.miniLabel);
             GUI.color = Color.white;
+        }
+
+        static void DrawClippedClipLabel(Rect rect, string text, GUIStyle style)
+        {
+            if (rect.width <= 0f || rect.height <= 0f)
+                return;
+            GUI.BeginGroup(rect);
+            GUI.Label(new Rect(0f, 0f, rect.width, rect.height), new GUIContent(text, text), style);
+            GUI.EndGroup();
         }
 
         void ShowTimeLines(Rect centerRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
-            DrawTimelineBackground(centerRect, embeddedTimeline.FrameRate);
+            DrawTimelineBackground(centerRect, embeddedTimeline.DisplayFrames ? embeddedTimeline.FrameRate : 0);
 
             GUI.BeginGroup(centerRect);
             float nextY = FIRST_GROUP_TOP_MARGIN;
@@ -3921,7 +3926,7 @@ namespace Slate
                     if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
                     {
                         GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Move to Current Frame"), false, () =>
+                        menu.AddItem(new GUIContent("Move to Current Time"), false, () =>
                         {
                             BeginEmbeddedEdit("Move Timeline Section");
                             embeddedTimeline.ConfigureSection(section, section.Name, EmbeddedCurrentTime());
@@ -4555,9 +4560,9 @@ namespace Slate
                     var r = new Rect(1, 1, rect.width - 2, rect.height - 2);
                     if ( overlapIn > 0 ) { r.xMin = blendInPosX; }
                     if ( overlapOut > 0 ) { r.xMax = blendOutPosX; }
-                    var label = string.Format("<size=10>{0}</size>", editorBinding.Info);
+                    r.height = Mathf.Min(r.height, 16f);
                     GUI.color = Color.black;
-                    GUI.Label(r, label);
+                    DrawClippedClipLabel(r, editorBinding.Info, EditorStyles.miniLabel);
                     GUI.color = Color.white;
                 }
             }

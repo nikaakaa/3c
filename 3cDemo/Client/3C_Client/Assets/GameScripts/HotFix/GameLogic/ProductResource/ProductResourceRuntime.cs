@@ -11,11 +11,6 @@ namespace GameLogic.ProductResource
 {
     public sealed class ProductResourceRuntime : IDisposable, IResourceRuntimeSnapshotSource
     {
-        private sealed class InFlightLoad
-        {
-            public readonly UniTaskCompletionSource<Object> Completion = new UniTaskCompletionSource<Object>();
-        }
-
         private sealed class LeaseRecord
         {
             public ResourceScope Scope;
@@ -38,7 +33,7 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceScopeId, ResourceScope> _scopes = new Dictionary<ResourceScopeId, ResourceScope>();
         private readonly Dictionary<long, LeaseRecord> _leases = new Dictionary<long, LeaseRecord>();
         private readonly Dictionary<long, InstanceRecord> _instances = new Dictionary<long, InstanceRecord>();
-        private readonly Dictionary<ResourceIdentity, InFlightLoad> _inFlight = new Dictionary<ResourceIdentity, InFlightLoad>();
+        private readonly Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>> _inFlight = new Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>>();
         private readonly HashSet<ResourceIdentity> _knownPhysicalAssets = new HashSet<ResourceIdentity>();
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
@@ -435,22 +430,22 @@ namespace GameLogic.ProductResource
                 return UniTask.FromResult<Object>(null);
             }
 
-            if (_inFlight.TryGetValue(identity, out InFlightLoad existing))
+            if (_inFlight.TryGetValue(identity, out UniTaskCompletionSource<Object> existing))
             {
                 _inFlightJoinCount++;
                 PublishSnapshot();
-                return existing.Completion.Task;
+                return existing.Task;
             }
 
-            var created = new InFlightLoad();
+            var created = new UniTaskCompletionSource<Object>();
             _inFlight.Add(identity, created);
             _physicalLoadCount++;
             PublishSnapshot();
             LoadPhysicalAssetAsync(identity, created).Forget();
-            return created.Completion.Task;
+            return created.Task;
         }
 
-        private async UniTaskVoid LoadPhysicalAssetAsync(ResourceIdentity identity, InFlightLoad inFlight)
+        private async UniTaskVoid LoadPhysicalAssetAsync(ResourceIdentity identity, UniTaskCompletionSource<Object> completion)
         {
             try
             {
@@ -462,11 +457,11 @@ namespace GameLogic.ProductResource
 
                 _knownPhysicalAssets.Add(identity);
                 _resourceModule.UnloadAsset(asset);
-                inFlight.Completion.TrySetResult(asset);
+                completion.TrySetResult(asset);
             }
             catch (Exception exception)
             {
-                inFlight.Completion.TrySetException(exception);
+                completion.TrySetException(exception);
             }
             finally
             {

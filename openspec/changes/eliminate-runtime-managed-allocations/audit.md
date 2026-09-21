@@ -2691,3 +2691,11 @@
 - `ProductResourceRuntime` 每次 acquire 或 instantiate 都新建 `LeaseRecord`／`InstanceRecord`，release 后把对象丢给 GC。现在 runtime 持有两条内部 free stack，acquire 成功注册前租用记录，release 从字典摘除、卸载或销毁正式资源、清空 scope／identity／asset 后归还。池容量自然等于历史最高并发记录数。
 - 只池化 runtime 内部所有权记录；`ResourceLease` 和 `ResourceInstanceLease` 仍独立分配，避免外部保存的旧 lease 别名在复用后指向新 leaseId。`InFlightLoad`、linked `CancellationTokenSource`、异步状态机、TEngine 加载和 GameObject 实例分配也不在本步范围。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 删除物理加载等待包装
+
+对应 tasks.md 的 6.2，新增 6.10 作为独立小步；6.2 保持未勾选。
+
+- 首次加载共享物理资源时，`InFlightLoad` 只包住一只 `UniTaskCompletionSource<Object>`，每个首载都多创建一个 wrapper。现在 `_inFlight` 直接保存 completion source，首载、并发 join 复用同一 Task、异常传播、finally 移除和快照计数不变。
+- completion source 本体、异步状态机、linked cancellation source、公共 lease 对象和 TEngine 资源生命周期不在本步范围，等待对象不提前复用。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

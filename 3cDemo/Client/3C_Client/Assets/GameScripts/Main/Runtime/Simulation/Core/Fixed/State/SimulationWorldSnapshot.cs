@@ -169,6 +169,10 @@ namespace ThirdPersonSimulation.Fixed
 
         public WorldSimulationState DecodeWorldState() =>
             WorldSimulationStateCodec.Read(m_WorldStateBytes, NumericProfile, SolverId, SolverVersion, WorldRevision);
+
+        public StableHash ComputeSolverStatePayloadHash() =>
+            SimulationCanonicalPayloadHash.Compute(
+                WorldSimulationStateCodec.ReadSolverStatePayloadSegment(m_WorldStateBytes).AsSpan());
     }
 
     public static class SimulationWorldSnapshotFactory

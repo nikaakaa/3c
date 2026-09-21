@@ -248,6 +248,36 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
+        public static ArraySegment<byte> ReadSolverStatePayloadSegment(byte[] bytes)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
+                throw new InvalidDataException("World state header is invalid.");
+            SimulationNumericProfileCodec.Skip(reader);
+            reader.SkipString();
+            reader.SkipString();
+            reader.SkipString();
+            ReadPersistenceMode(reader.ReadByte());
+            int count = reader.ReadInt32();
+            if (count < 0 || count > 1000000)
+                throw new InvalidDataException($"World body count '{count}' is invalid.");
+            for (int i = 0; i < count; i++)
+            {
+                ArraySegment<byte> actorId = reader.ReadUtf8Segment();
+                if (actorId.Count == 0)
+                    throw new InvalidDataException("World state Actor identity is invalid.");
+                reader.ReadVector3();
+                reader.ReadYaw();
+                reader.ReadVector3();
+                reader.ReadScalar();
+                reader.ReadBoolean();
+                reader.ReadUInt32();
+            }
+            ArraySegment<byte> payload = reader.ReadBytesSegment();
+            reader.RequireComplete();
+            return payload;
+        }
+
         static WorldStatePersistenceMode ReadPersistenceMode(byte value)
         {
             if ((WorldStatePersistenceMode)value is not (WorldStatePersistenceMode.Reconstruct or WorldStatePersistenceMode.Snapshot))

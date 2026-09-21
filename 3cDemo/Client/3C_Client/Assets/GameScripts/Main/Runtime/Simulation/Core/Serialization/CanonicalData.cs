@@ -289,6 +289,13 @@ namespace ThirdPersonSimulation
             return value;
         }
 
+        public void SkipString()
+        {
+            int length = ReadLength();
+            Require(length);
+            m_Offset += length;
+        }
+
         public ArraySegment<byte> ReadUtf8Segment()
         {
             int length = ReadLength();

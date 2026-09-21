@@ -3147,6 +3147,14 @@
 - Relay 在构造期用已知 roster 准备 `m_ExplicitInputFrontierScratch`，诊断时先填充 scratch，再转换成外部读取者持有的 `RollbackRelayPeerInputFrontier[]`。scratch 不暴露、不跨调用保留有效值语义依赖（每次完整覆盖），结果数组仍每次新建，不做外部别名复用。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 和 Endpoint 工程使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback solver payload 哈希零复制定位
+
+对应 tasks.md 的 5.2，新增 5.123 作为独立小步；5.2 保持未勾选。
+
+- Rollback Hash Egress 原先为了计算 solver payload 哈希，调用 `SimulationWorldSnapshot.DecodeWorldState()`；这会完整解析 world state、创建 body 数组和 `WorldSimulationState`，并复制一份 solver payload。现在 `WorldSimulationStateCodec` 增加正式 `ReadSolverStatePayloadSegment`，按 canonical 布局校验 header、numeric profile、persistence mode、body count、body 字段和尾部后，直接返回 world state bytes 内的 payload 区间。
+- `CanonicalReader` 增加零复制 `SkipString`，numeric profile codec 增加对应跳读入口；`SimulationWorldSnapshot.ComputeSolverStatePayloadHash` 直接哈希借用区间。Hash Egress 调用该入口，不再构造完整 `WorldSimulationState`。同一 snapshot 可以重复计算，借用段不逃逸出 hash 计算，owner 仍是 snapshot 的 world state bytes。
+- 完整 `DecodeWorldState` 保留给真正需要 body 和完整 world state 的消费者；solver payload 定位入口不做 identity binding 的重复比较，snapshot 构造和完整恢复路径仍保留这些正式校验。`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

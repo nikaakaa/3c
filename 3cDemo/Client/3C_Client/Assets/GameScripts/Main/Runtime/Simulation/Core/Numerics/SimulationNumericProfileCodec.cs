@@ -32,6 +32,20 @@ namespace ThirdPersonSimulation
                 reader.ReadBoolean());
         }
 
+        public static void Skip(CanonicalReader reader)
+        {
+            if (reader == null)
+                throw new ArgumentNullException(nameof(reader));
+            ArraySegment<byte> identity = reader.ReadUtf8Segment();
+            if (identity.Count == 0)
+                throw new InvalidDataException("Simulation numeric profile identity is invalid.");
+            new TargetAbiVersion(reader.ReadInt32());
+            reader.ReadInt32();
+            ReadRounding(reader.ReadByte());
+            ReadOverflow(reader.ReadByte());
+            reader.ReadBoolean();
+        }
+
         static SimulationNumericRoundingMode ReadRounding(byte value)
         {
             var candidate = (SimulationNumericRoundingMode)value;

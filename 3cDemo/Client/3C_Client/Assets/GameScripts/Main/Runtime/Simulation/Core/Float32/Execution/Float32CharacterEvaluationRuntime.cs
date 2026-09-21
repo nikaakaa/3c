@@ -59,7 +59,8 @@ namespace ThirdPersonSimulation
             {
                 IFloat32AbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
                 IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
-                var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
+                Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
+                abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -224,6 +225,7 @@ namespace ThirdPersonSimulation
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
+                abilityInput.Clear();
                 return result;
             }
             catch
@@ -236,6 +238,7 @@ namespace ThirdPersonSimulation
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
+                abilityInput.Clear();
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();

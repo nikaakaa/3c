@@ -3859,3 +3859,11 @@
 - Fixed 和 Float32 Character Trace Sink 改为 Actor Binding 构造期创建，并直接绑定 Evaluation Output 的 character trace 列表；每个 Actor tick 用 `Begin` 重绑 numeric profile、content hash、ActorId、tick 和诊断开关。
 - `Begin` 将 trace sequence 重置为零，header、EventId、activation、severity 和输出顺序不变；诊断关闭时仍不写记录。
 - 每 Actor tick 的 Trace Sink 对象和 GameplayContentHash 包装分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability execution input lifetime 收口
+
+对应 tasks.md 的 5.5，新增 5.210 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Execution Input 从每 tick 构造的 wrapper 改为 Actor Binding 常驻对象；Evaluation 开始用 `Begin` 校验并重绑 input sequence 和 values 引用，body facts 仍保持 readonly struct。
+- 正式 result 构造完成和异常返回前调用 `Clear`，清空对上一 tick values 的引用；ability invocation、control motion 和 trace 的消费顺序不变。
+- 每 Actor tick 的 input wrapper 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

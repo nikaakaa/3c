@@ -59,7 +59,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 IFixedAbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
                 IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
-                var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
+                FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
+                abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -224,6 +225,7 @@ namespace ThirdPersonSimulation.Fixed
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
+                abilityInput.Clear();
                 return result;
             }
             catch
@@ -236,6 +238,7 @@ namespace ThirdPersonSimulation.Fixed
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
+                abilityInput.Clear();
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();

@@ -18,7 +18,14 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityExecutionInput
     {
-        public Float32AbilityExecutionInput(
+        public ulong Sequence { get; private set; }
+        public IReadOnlyList<SimulationInputValue> Values { get; private set; }
+
+        public Float32AbilityExecutionInput()
+        {
+        }
+
+        public void Begin(
             ulong sequence,
             IReadOnlyList<SimulationInputValue> values)
         {
@@ -28,8 +35,11 @@ namespace ThirdPersonSimulation
             Values = values ?? throw new ArgumentNullException(nameof(values));
         }
 
-        public ulong Sequence { get; }
-        public IReadOnlyList<SimulationInputValue> Values { get; }
+        public void Clear()
+        {
+            Sequence = 0;
+            Values = null;
+        }
     }
 
     internal readonly struct Float32AbilityBodyFacts

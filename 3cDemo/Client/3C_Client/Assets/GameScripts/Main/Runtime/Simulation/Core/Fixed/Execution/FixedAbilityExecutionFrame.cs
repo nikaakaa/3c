@@ -19,7 +19,14 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionInput
     {
-        public FixedAbilityExecutionInput(
+        public ulong Sequence { get; private set; }
+        public IReadOnlyList<SimulationInputValue> Values { get; private set; }
+
+        public FixedAbilityExecutionInput()
+        {
+        }
+
+        public void Begin(
             ulong sequence,
             IReadOnlyList<SimulationInputValue> values)
         {
@@ -29,8 +36,11 @@ namespace ThirdPersonSimulation.Fixed
             Values = values ?? throw new ArgumentNullException(nameof(values));
         }
 
-        public ulong Sequence { get; }
-        public IReadOnlyList<SimulationInputValue> Values { get; }
+        public void Clear()
+        {
+            Sequence = 0;
+            Values = null;
+        }
     }
 
     internal readonly struct FixedAbilityBodyFacts

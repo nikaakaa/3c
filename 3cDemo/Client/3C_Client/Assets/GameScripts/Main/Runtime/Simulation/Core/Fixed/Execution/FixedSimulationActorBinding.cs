@@ -64,6 +64,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
         readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
         readonly FixedCharacterTraceSink m_CharacterTraceSink;
+        readonly FixedAbilityExecutionInput m_AbilityExecutionInput = new FixedAbilityExecutionInput();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -134,6 +135,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
         internal FixedCharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
+        internal FixedAbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
 
         internal void ClearInvocationScratch(int count)
         {

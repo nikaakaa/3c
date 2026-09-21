@@ -63,6 +63,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
         readonly Float32CharacterEvaluationOutput m_EvaluationOutput = new Float32CharacterEvaluationOutput();
         readonly Float32CharacterTraceSink m_CharacterTraceSink;
+        readonly Float32AbilityExecutionInput m_AbilityExecutionInput = new Float32AbilityExecutionInput();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -131,6 +132,7 @@ namespace ThirdPersonSimulation
         internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
         internal Float32CharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
+        internal Float32AbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
 
         internal void ClearInvocationScratch(int count)
         {

@@ -5,6 +5,16 @@ using System.IO;
 
 namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 {
+    internal interface IServerAuthoritativeDatagramIdentityResolver
+    {
+        bool TryResolveIdentity(
+            ReadOnlySpan<byte> room,
+            ReadOnlySpan<byte> session,
+            ReadOnlySpan<byte> player,
+            ReadOnlySpan<byte> actor,
+            out ServerAuthoritativeDatagramIdentity identity);
+    }
+
     public enum ServerAuthoritativeDatagramKind : byte
     {
         DataPlaneHello = 1,
@@ -171,7 +181,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ArraySegment<byte> bytes,
             int maximumBytes,
             ServerAuthoritativeDatagramPacket packet,
-            byte[] payloadBuffer)
+            byte[] payloadBuffer,
+            IServerAuthoritativeDatagramIdentityResolver identityResolver)
         {
             if (bytes.Count == 0 || bytes.Count > maximumBytes)
                 throw new InvalidDataException("Gameplay datagram length is invalid.");
@@ -179,6 +190,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentNullException(nameof(packet));
             if (payloadBuffer == null || payloadBuffer.Length < maximumBytes)
                 throw new ArgumentException("Gameplay datagram payload buffer is invalid.", nameof(payloadBuffer));
+            if (identityResolver == null)
+                throw new ArgumentNullException(nameof(identityResolver));
             packet.Reset(default, payloadBuffer, 0);
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic)
@@ -189,11 +202,19 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             var kind = (ServerAuthoritativeDatagramKind)reader.ReadByte();
             if (!IsSupportedKind(kind))
                 throw new InvalidDataException($"Gameplay datagram kind '{kind}' is unsupported.");
-            var identity = new ServerAuthoritativeDatagramIdentity(
-                new ServerAuthoritativeRoomId(reader.ReadString()),
-                new ServerAuthoritativeSessionId(reader.ReadString()),
-                new ServerAuthoritativePlayerId(reader.ReadString()),
-                new ActorId(reader.ReadString()));
+            ArraySegment<byte> room = reader.ReadUtf8Segment();
+            ArraySegment<byte> session = reader.ReadUtf8Segment();
+            ArraySegment<byte> player = reader.ReadUtf8Segment();
+            ArraySegment<byte> actor = reader.ReadUtf8Segment();
+            if (!identityResolver.TryResolveIdentity(
+                    room.AsSpan(), session.AsSpan(), player.AsSpan(), actor.AsSpan(), out ServerAuthoritativeDatagramIdentity identity))
+            {
+                identity = new ServerAuthoritativeDatagramIdentity(
+                    new ServerAuthoritativeRoomId(Encoding.UTF8.GetString(room.Array, room.Offset, room.Count)),
+                    new ServerAuthoritativeSessionId(Encoding.UTF8.GetString(session.Array, session.Offset, session.Count)),
+                    new ServerAuthoritativePlayerId(Encoding.UTF8.GetString(player.Array, player.Offset, player.Count)),
+                    new ActorId(Encoding.UTF8.GetString(actor.Array, actor.Offset, actor.Count)));
+            }
             ulong packetSequence = reader.ReadUInt64();
             ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();

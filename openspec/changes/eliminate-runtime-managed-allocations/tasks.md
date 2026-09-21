@@ -428,6 +428,7 @@
 - [x] 5.165 Float32 Datagram Endpoint 池化接收 packet 和最大 MTU payload buffer；坏包、溢出、消费完成和 Dispose 清队显式归还，snapshot payload 仍独立复制
 - [x] 5.166 Float32 接收 payload 池化补齐 wire 到租用 buffer 的原位拷贝，修复 5.165 只切换所有权未复制内容的问题
 - [x] 5.167 Float32 接收 packet 校验前先绑定租用 payload buffer；坏包失败路径也能成对归还 packet 和 buffer
+- [x] 5.168 Float32 Datagram route 保存 canonical identity 与 UTF8 片段，接收读取按 bytes 匹配并复用已知身份；未绑定 Hello 仍分配身份后进入正式 BindRemote
 
 ## 6. UI、资源、渲染和生命周期
 

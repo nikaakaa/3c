@@ -3522,3 +3522,11 @@
 - Codec 读取入口在 canonical 解析前先用默认 header 和零长度把租用 packet 绑定到 payload buffer；随后读取成功时再重建正式 header 和实际长度。这样 magic、版本、identity 或 payload 校验失败时，endpoint 仍能通过既有 `ReturnReceivedPacket` 成对归还 packet 和 buffer。
 - wire payload 只在完整校验后复制，失败包不会发布；池容量、异常类型和队列语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 已知 route 身份复用
+
+对应 tasks.md 的 5.5，新增 5.168 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeGameplayDatagramCodec.Read` 不再用 `ReadString` 无条件解码四个身份字符串；先读取 UTF8 片段，交给 endpoint 的 identity resolver 按已知 route bytes 匹配，命中后直接复用 route 中的 canonical `ServerAuthoritativeDatagramIdentity`。
+- Endpoint 的 `BindRemote` 在正式绑定 route 时缓存 Room、Session、Player、Actor 四段 UTF8 bytes；`RevokeRemote` 继续删除整条 route。首个未绑定 Hello 仍按原身份构造逻辑分配字符串，并在校验后进入 `BindRemote`，后续同一 route 的稳态接收不再分配身份字符串。
+- wire 中的身份必须与 canonical 身份的 UTF8 bytes 完全一致才会命中；未知身份的解码、ID 合法性校验、route 查找、endpoint 比较和坏包归还边界不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

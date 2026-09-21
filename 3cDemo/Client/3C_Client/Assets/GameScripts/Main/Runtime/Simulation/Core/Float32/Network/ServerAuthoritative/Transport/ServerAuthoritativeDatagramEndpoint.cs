@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Text;
 
 namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 {
@@ -81,8 +82,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly ConcurrentStack<IPEndPoint> m_SendEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
         readonly ThreadLocal<CanonicalWriter> m_SendWriter;
-        readonly Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint> m_Routes =
-            new Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint>();
+        readonly Dictionary<ServerAuthoritativeDatagramIdentity, Route> m_Routes =
+            new Dictionary<ServerAuthoritativeDatagramIdentity, Route>();
         readonly object m_RouteLock = new object();
         readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_QueueCapacity;
@@ -154,13 +155,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             lock (m_RouteLock)
             {
-                if (m_Routes.TryGetValue(identity, out IPEndPoint current))
+                if (m_Routes.TryGetValue(identity, out Route current))
                 {
-                    if (!EndPointEquals(current, remoteEndPoint))
+                    if (!EndPointEquals(current.RemoteEndPoint, remoteEndPoint))
                         throw new InvalidOperationException($"Gameplay data endpoint for '{identity}' cannot change while active.");
                     return;
                 }
-                m_Routes.Add(identity, Clone(remoteEndPoint));
+                m_Routes.Add(identity, new Route(identity, Clone(remoteEndPoint)));
             }
         }
 
@@ -178,8 +179,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             IPEndPoint remote;
             lock (m_RouteLock)
             {
-                if (!m_Routes.TryGetValue(packet.Header.Identity, out remote))
+                if (!m_Routes.TryGetValue(packet.Header.Identity, out Route route))
                     throw new InvalidOperationException($"Gameplay data route '{packet.Header.Identity}' is not bound.");
+                remote = route.RemoteEndPoint;
             }
             CanonicalWriter writer = m_SendWriter.Value;
             int length = ServerAuthoritativeGameplayDatagramCodec.Write(packet, writer, m_MaximumDatagramBytes);
@@ -283,7 +285,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                             new ArraySegment<byte>(buffer, 0, received),
                             m_MaximumDatagramBytes,
                             packet,
-                            payloadBuffer);
+                            payloadBuffer,
+                            this);
                     }
                     catch (Exception exception) when (exception is InvalidDataException || exception is ArgumentException)
                     {
@@ -293,9 +296,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     }
                     lock (m_RouteLock)
                     {
-                        if (m_Routes.TryGetValue(packet.Header.Identity, out IPEndPoint expected))
+                        if (m_Routes.TryGetValue(packet.Header.Identity, out Route route))
                         {
-                            if (!EndPointEquals(expected, (IPEndPoint)remote))
+                            if (!EndPointEquals(route.RemoteEndPoint, (IPEndPoint)remote))
                             {
                                 Interlocked.Increment(ref m_EndpointMismatchDrops);
                                 Fail(new InvalidOperationException($"Gameplay data endpoint changed for '{packet.Header.Identity}'."));
@@ -380,6 +383,32 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         static IPEndPoint Clone(IPEndPoint value) => new IPEndPoint(value.Address, value.Port);
 
+        bool IServerAuthoritativeDatagramIdentityResolver.TryResolveIdentity(
+            ReadOnlySpan<byte> room,
+            ReadOnlySpan<byte> session,
+            ReadOnlySpan<byte> player,
+            ReadOnlySpan<byte> actor,
+            out ServerAuthoritativeDatagramIdentity identity)
+        {
+            lock (m_RouteLock)
+            {
+                foreach (KeyValuePair<ServerAuthoritativeDatagramIdentity, Route> pair in m_Routes)
+                {
+                    Route route = pair.Value;
+                    if (room.SequenceEqual(route.RoomUtf8) &&
+                        session.SequenceEqual(route.SessionUtf8) &&
+                        player.SequenceEqual(route.PlayerUtf8) &&
+                        actor.SequenceEqual(route.ActorUtf8))
+                    {
+                        identity = route.Identity;
+                        return true;
+                    }
+                }
+            }
+            identity = default;
+            return false;
+        }
+
         IPEndPoint RentReceiveEndPoint(IPEndPoint value)
         {
             if (!m_ReceiveEndPoints.TryPop(out IPEndPoint endpoint))
@@ -446,6 +475,26 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             public byte[] Bytes { get; }
             public int Length { get; }
             public IPEndPoint RemoteEndPoint { get; }
+        }
+
+        readonly struct Route
+        {
+            public Route(ServerAuthoritativeDatagramIdentity identity, IPEndPoint remoteEndPoint)
+            {
+                Identity = identity;
+                RemoteEndPoint = remoteEndPoint;
+                RoomUtf8 = Encoding.UTF8.GetBytes(identity.RoomId.Value);
+                SessionUtf8 = Encoding.UTF8.GetBytes(identity.SessionId.Value);
+                PlayerUtf8 = Encoding.UTF8.GetBytes(identity.PlayerId.Value);
+                ActorUtf8 = Encoding.UTF8.GetBytes(identity.ActorId.Value);
+            }
+
+            public ServerAuthoritativeDatagramIdentity Identity { get; }
+            public IPEndPoint RemoteEndPoint { get; }
+            public byte[] RoomUtf8 { get; }
+            public byte[] SessionUtf8 { get; }
+            public byte[] PlayerUtf8 { get; }
+            public byte[] ActorUtf8 { get; }
         }
     }
 }

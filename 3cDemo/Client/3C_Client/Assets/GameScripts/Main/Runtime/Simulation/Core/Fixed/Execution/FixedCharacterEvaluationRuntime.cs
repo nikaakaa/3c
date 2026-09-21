@@ -41,7 +41,8 @@ namespace ThirdPersonSimulation.Fixed
                 effectCatalog);
             FixedAbilityInvocationRuntime[] invocations = actor.InvocationScratch;
             int invocationCount = 0;
-            var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
+            Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
+            actionRuntimes.Clear();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
             var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
@@ -217,6 +218,7 @@ namespace ThirdPersonSimulation.Fixed
                     timelineAdvances.ToArray(),
                     timelineStops.ToArray());
                 actor.ClearInvocationScratch(invocationCount);
+                actor.ClearActionRuntimes();
                 return result;
             }
             catch
@@ -226,6 +228,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < invocationCount; i++)
                     invocations[i].Dispose();
                 actor.ClearInvocationScratch(invocationCount);
+                actor.ClearActionRuntimes();
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();

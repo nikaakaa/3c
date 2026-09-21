@@ -30,7 +30,7 @@ namespace ThirdPersonSimulation.Fixed
         internal ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId abilityId, string actionId);
     }
 
-    internal sealed class FixedAbilityExecutionAssembly
+    internal readonly struct FixedAbilityExecutionAssembly
     {
         public FixedAbilityExecutionAssembly(
             FixedInputRuntime input,

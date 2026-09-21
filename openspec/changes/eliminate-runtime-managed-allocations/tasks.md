@@ -398,3 +398,5 @@
 - [x] 7.25 Blend Stack 在准备 payload 时完成 policy、curve、profile、transition 的静态校验；运行实例删除已准备内容的 Rig、catalog entry 和 transition 重复校验，保留 final buffer layout 与 owner/provider 绑定
 
 - [x] 7.26 Motion Matching DatabasePayload 已在内容准备阶段校验全部 Clip binding 后，选样解析不再重复调用 binding.RequireValid；保留 sample/index、时间、Loop、Foot 参数和输出有效性校验
+
+- [x] 7.27 Timeline NumericTarget 只在 PrepareRequest 边界校验，PlaybackRequestFactory 不再对同一 composition 配置重复 Enum.IsDefined；保留动态 PlaybackMode、generation、handle 和 capture/restore 事务校验

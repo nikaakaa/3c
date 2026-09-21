@@ -59,8 +59,6 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineRuntimeCallBindingSource callBindingSource)
         {
             m_ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
-            if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
-                throw new ArgumentOutOfRangeException(nameof(numericTarget));
             m_NumericTarget = numericTarget;
             m_DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
             m_DependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
@@ -856,30 +854,6 @@ namespace BTSMTL.Timeline.Runtime
             return result;
         }
 
-        public TimelineRuntimeAdvanceResult Step(
-            TimelinePlaybackHandle handle,
-            ulong logicTick,
-            FixedScalar elapsedSeconds)
-        {
-            EnsureAvailable();
-            if (elapsedSeconds < FixedScalar.Zero)
-                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
-            TimelineRuntimePlayback playback = Require(handle);
-            var request = new TimelineRuntimeAdvanceRequest(
-                logicTick,
-                playback.CursorTime,
-                FixedScalar.FromRaw(checked(playback.CursorTime.Raw + (playback.Control.IsPaused ? 0L :
-                    (long)decimal.Round((decimal)elapsedSeconds.Raw * playback.Control.Rate.Raw / FixedScalar.OneRaw, 0, MidpointRounding.ToEven)))),
-                playback.TimeCarry,
-                playback.Control);
-            TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
-                playback,
-                request,
-                m_StepConsumer);
-            Publish(playback);
-            return result;
-        }
-
         static TimelineRuntimeAdvanceRequest CreateAdvanceRequest(TimelineRuntimePlayback playback, ulong logicTick, int tickCount, AbilityTimelinePlaybackControl control)
         {
             if (tickCount <= 0)
@@ -1157,4 +1131,3 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
-

@@ -2105,6 +2105,14 @@
 - 没有改变数据库、selection generation、sample 选择、pose source 输出或 frame 提交顺序；删除的是不可变 canonical binding 的 per-selection 重复 schema 校验。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Motion Matching 分配采样。
 
+## 2026-09-21 Timeline NumericTarget 校验边界
+
+对应 tasks.md 的 7.27。
+
+- Timeline composition 创建时的 NumericTarget 是固定配置，`TimelineRuntimePlaybackRequestFactory` 原先又对它调用一次 `Enum.IsDefined`；正式 Prepare 链随后由 `TimelineRuntimePrepareRequest` 对进入准备边界的 NumericTarget 和动态 PlaybackMode 做一次校验。
+- 删除 request factory 的重复 NumericTarget 反射校验，保留 PrepareRequest 的唯一请求边界校验；没有触碰 Timeline snapshot 的 managed reference clone、Capture/Restore、handle/generation、event ordering 或 pending/committed 事务。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Timeline 分配采样。
+
 ## 2026-09-21 Pose 运行链枚举反射清理
 
 对应 tasks.md 的 7.23。

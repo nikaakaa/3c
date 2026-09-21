@@ -454,7 +454,7 @@ namespace GameLogic.ProductResource
             {
                 scopeSnapshots[scopeIndex++] = new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount);
             }
-            Array.Sort(scopeSnapshots, (left, right) => left.Id.Value.CompareTo(right.Id.Value));
+            Array.Sort(scopeSnapshots, ScopeSnapshotSort.Instance);
 
             var tags = new string[_preparedTags.Count];
             _preparedTags.CopyTo(tags);
@@ -528,6 +528,16 @@ namespace GameLogic.ProductResource
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(ProductResourceRuntime));
+            }
+        }
+
+        private sealed class ScopeSnapshotSort : IComparer<ResourceScopeSnapshot>
+        {
+            internal static readonly ScopeSnapshotSort Instance = new ScopeSnapshotSort();
+
+            public int Compare(ResourceScopeSnapshot left, ResourceScopeSnapshot right)
+            {
+                return left.Id.Value.CompareTo(right.Id.Value);
             }
         }
     }

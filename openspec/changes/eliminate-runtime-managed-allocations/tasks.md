@@ -387,6 +387,7 @@
 - [x] 6.14 BlockImpact VFX 与 ScreenSpaceDot 控制器在实例构造期创建 MaterialPropertyBlock，删除首次触发的懒加载分配和空检查；RendererFeature/RenderPass 既有 pass、material、CommandBuffer、workspace、GPU buffer 与 RTHandle 复用释放链保持不变
 - [x] 6.15 删除无调用方的 ResourceInstanceLease、InstantiateAsync 入口、scope instance 注册表和 runtime instance 记录池；资源快照与 Product Shell 不再暴露恒为零的 instance 诊断
 - [x] 6.16 删除无消费者的 ResourceLease 外壳和 PreloadPlanResult，AcquireAsync 改为 UniTask 并由 scope 唯一持有资产租约；barrier 保持并发等待和失败传播
+- [x] 6.17 资源快照 scope 排序器在类型准备期固定，删除每次 PublishSnapshot 的捕获 lambda 和比较委托；scope 与 tags 快照数组继续保持独立寿命
 
 ## 7. 诊断与正式性能交付
 

@@ -2740,6 +2740,14 @@
 - `LeaseRecord` 仍由 runtime 池化，负责 owned reference、scope 归属和卸载资产；scope 关闭时的复制后释放顺序不变。TEngine 加载、异步状态机、linked cancellation source 和内部 lease id 分配仍在 6.2 后续处理。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。生成工程缓存了两个已删除文件名，验证时临时用空文件满足旧 include，构建后立即删除。未新增测试、未操作共享 Unity、未做资源加载或 Player 分配采样。
 
+## 2026-09-21 资源快照排序器固定
+
+对应 tasks.md 的 6.2，新增 6.17 作为独立小步；6.2 保持未勾选。
+
+- `PublishSnapshot` 在 pending acquire、物理首载、join、lease commit、scope 变化和维护完成后都会发布快照；原先每次都用捕获 `left`／`right` 的 lambda 排序 scope 快照，运行期反复创建闭包和 `Comparison<T>` 委托。现在 scope id 升序比较器改为私有 `ScopeSnapshotSort`，唯一实例在类型准备期创建，`Array.Sort` 直接消费固定比较器。
+- `scopeSnapshots` 和 `tags` 仍按当前集合数量新建并复制；它们会进入有界历史、Current 和外部 Changed 消费者，不能提前复用。排序规则仍是 `ResourceScopeId.Value` 升序，tags 仍用既有 `StringComparer.Ordinal`，发布时序、数据内容和快照独立性不变。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。生成工程仍缓存已删除的 lease include，验证时临时用空文件满足旧 include，构建后立即删除。未新增测试、未操作共享 Unity、未做资源事件运行对比或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

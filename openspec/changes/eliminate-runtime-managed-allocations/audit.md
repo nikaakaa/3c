@@ -264,6 +264,15 @@
 - `RuntimeExecutionTimeline` 和 `RuntimeExecutionHistory` 内部字段改为数组，公开 `IReadOnlyList` 接口不变；span 排序、未完成 span 输出、checkpoint 去重和 presentation 可用性判断不变。数组是本次结果的正式所有权，scratch 只服务 Editor 同步读取链。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露 history 数组的三处 `Count` 读取，改为 `Length` 后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做结果集合运行对比或分配采样。
 
+## 2026-09-21 诊断变更集数组化
+
+对应 tasks.md 的 7.1，新增 7.82 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor ViewModel 的变更集快照，不计为 Player 每帧收益。
+
+- `RuntimeDebugChangeSet` 原先接收 `m_PendingSources` 和 `m_PendingInstances` 两个 HashSet 后，再分别 `new List<T>(ICollection)` 复制一次；这些 List 只用于公开只读枚举和 `AffectsSource`／`AffectsGraph`／`AffectsTimeline` 的线性查找。
+- 现在构造时按 `Count` 分配精确 `RuntimeSourceElementKey[]` 和 `RuntimeInstanceKey[]`，按 HashSet 当前枚举顺序填充。null 和 Count 0 统一使用 `Array.Empty<T>`，保持 `Empty` 与无变更路径不分配内容数组。
+- 公开的 `Sources`／`Instances` 仍返回 `IReadOnlyCollection<T>`；数组是本次变更集的正式结果，ViewModel 的 pending HashSet 仍由 ViewModel 持有并在发布后清空。FullSync、空集、变更顺序和查找结果不变。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做变更集运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

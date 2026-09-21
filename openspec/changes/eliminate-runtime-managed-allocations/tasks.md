@@ -487,3 +487,4 @@
 - [x] 7.79 history 会话边界补充的 sequence 与 branch HashSet 改为 builder 静态工作集合，调用前清空；基线 checkpoint 查找、边界范围、去重和插入顺序不变。该阶段仍同步复用 selection List，未做跨线程或重入假设
 - [x] 7.80 history 分组删除每个 tick／presentation frame 的 List：EventGroup 先按排序后的连续 key 统计数量，再分配精确 RuntimeTraceEvent 数组并在第二遍填充；TickRecord 和 PresentationFrame 直接持有最终数组，全局 Position/Branch/Sequence 排序覆盖原 group 内排序，外层分组 scratch 调用后清空。返回结果集合在 7.81 数组化
 - [x] 7.81 execution timeline 与 history 的 spans、ticks、checkpoints、presentation frames 改用 builder 静态结果 List 填充排序，再转换为精确数组交给返回对象；返回接口、排序、未完成 span、checkpoint 去重和 presentation 可用性不变。数组是正式最终结果，scratch 只服务 Editor 同步读取链
+- [x] 7.82 RuntimeDebugChangeSet 直接按 pending HashSet 数量生成 source／instance 精确数组快照，删除中间 List 复制壳；FullSync、空集、遍历顺序、Affects 查找和 ViewModel pending 集合生命周期不变。数组是本次变更集的正式结果，生产者 HashSet 不外借

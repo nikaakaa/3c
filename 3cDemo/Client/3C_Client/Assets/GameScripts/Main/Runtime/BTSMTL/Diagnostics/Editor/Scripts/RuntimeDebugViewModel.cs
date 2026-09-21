@@ -106,16 +106,37 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeDebugChangeSet
     {
-        readonly IReadOnlyCollection<RuntimeSourceElementKey> m_Sources;
-        readonly IReadOnlyCollection<RuntimeInstanceKey> m_Instances;
+        readonly RuntimeSourceElementKey[] m_Sources;
+        readonly RuntimeInstanceKey[] m_Instances;
 
         internal RuntimeDebugChangeSet(long revision, bool fullSync, ICollection<RuntimeSourceElementKey> sources, ICollection<RuntimeInstanceKey> instances, long captureVersion = 0)
         {
             Revision = revision;
             FullSync = fullSync;
             CaptureVersion = captureVersion;
-            m_Sources = sources == null ? Array.Empty<RuntimeSourceElementKey>() : new List<RuntimeSourceElementKey>(sources);
-            m_Instances = instances == null ? Array.Empty<RuntimeInstanceKey>() : new List<RuntimeInstanceKey>(instances);
+            if (sources == null || sources.Count == 0)
+            {
+                m_Sources = Array.Empty<RuntimeSourceElementKey>();
+            }
+            else
+            {
+                m_Sources = new RuntimeSourceElementKey[sources.Count];
+                int index = 0;
+                foreach (RuntimeSourceElementKey source in sources)
+                    m_Sources[index++] = source;
+            }
+
+            if (instances == null || instances.Count == 0)
+            {
+                m_Instances = Array.Empty<RuntimeInstanceKey>();
+            }
+            else
+            {
+                m_Instances = new RuntimeInstanceKey[instances.Count];
+                int index = 0;
+                foreach (RuntimeInstanceKey instance in instances)
+                    m_Instances[index++] = instance;
+            }
         }
 
         public static RuntimeDebugChangeSet Empty { get; } = new RuntimeDebugChangeSet(0, false, null, null);

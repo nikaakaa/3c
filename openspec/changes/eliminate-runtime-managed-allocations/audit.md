@@ -2163,6 +2163,14 @@
 - 删除 `CharacterAclPoseSamplingBackend` 构造器的第二次 `rig.RequireValid`；保留 `rigBinding.RequireValid(rig)` 的绑定关系、Animator 归属、PlayableGraph、source/clip/parameter capacity 和 Native 资源形状校验。
 - 不改变 ACL source 注册、frame journal、deferred release 或 backend Commit/Discard；本步只删除静态 Rig 重复遍历。当前完整编译仍受工作区生成 csproj 未刷新阻断。未新增测试、未操作共享 Unity、未做 ACL 分配采样。
 
+## 2026-09-21 删除旧 Motion Matching Provider runtime
+
+对应 tasks.md 的 7.35。
+
+- `CharacterMotionMatchingProviderRuntime` 在项目全部 Assets 中只有自身定义，没有构造、字段、接口或反射调用者；当前 Pose Graph 通过 `MotionMatchingPoseSourceRuntime` 和 `CharacterMotionMatchingSelectionRuntime` 承接正式数据库、选样和 source completion 链。
+- 删除旧 Provider runtime 及 Unity meta，移除其重复的 Rig schema 校验、旧 frame/history 工作区和另一套 provider 生命周期；不触碰当前 Motion Matching payload、selection generation、sample resolve 或 source handoff。
+- 当前完整编译仍需 Unity 重新生成删除文件后的 csproj；没有修改生成项目文件。未新增测试、未操作共享 Unity、未做 Motion Matching 分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

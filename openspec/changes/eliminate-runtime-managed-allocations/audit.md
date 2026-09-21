@@ -3257,3 +3257,12 @@
 - `RollbackSchedulePassRuntime.BuildPlan` 原先每个可执行计划都新建 `FixedSimulationStep[]`。现在 schedule pass 按步骤数量保留精确长度 scratch；forward 计划稳定使用一个槽位，rollback replay 不同深度按实际需要的长度建立独立槽位。
 - 每个计划构造前完整覆盖数组元素。数组仍通过 `FromOwnedArrays` 交给 ExecutionPlan，`FixedSimulationStep` 对象本身和 OuterTransaction 产品寿命不变，不引入对象池或归还回调。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback step owned inputs 转移
+
+对应 tasks.md 的 5.2，新增 5.136 作为独立小步；5.2 保持未勾选。
+
+- `TargetSimulationPipelineStep` 的公共构造原先把传入 input 数组再 clone，并用 `CollectActors` 新建 ActorId 数组；因此 5.134 的 schedule scratch 仍会在 Step 构造时复制。现在通用基类提供 protected owned inputs/actors 构造，公共 IEnumerable 构造继续克隆和排序，外部调用语义不变。
+- `FixedSimulationStep.FromOwnedInputs` 只接受 schedule 生命周期准备好的 actor input 和 ActorId 精确长度数组；基类排序输入并填充/校验 actor 槽位。Rollback schedule 按 step 槽位复用这两只 scratch，每个 step 构造前完整覆盖。
+- 原数组仍进入 `FixedSimulationStep` 和 ExecutionPlan，消费寿命继续限定 OuterTransaction；`FixedSimulationStep` 对象池化、Ingress List 分配和 Float32 对应改造不在本步展开。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

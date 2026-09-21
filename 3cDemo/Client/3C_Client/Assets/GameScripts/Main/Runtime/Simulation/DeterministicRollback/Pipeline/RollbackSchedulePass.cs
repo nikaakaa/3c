@@ -49,6 +49,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new SimulationPipelineStepSourceMapping[3][];
         readonly List<SimulationPipelineActorInput<FixedStepInput>[]> m_ActorInputScratches =
             new List<SimulationPipelineActorInput<FixedStepInput>[]>();
+        readonly List<ActorId[]> m_ActorIdScratches = new List<ActorId[]>();
         readonly Dictionary<int, FixedSimulationStep[]> m_StepScratches = new();
         string m_ReplaySourceClockId;
         string m_ReplayClockId;
@@ -176,12 +177,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     RollbackCanonicalInputBundle bundle = SelectBundle(new SimulationTick(tick));
                     var source = new SimulationTickSourceIdentity(SimulationTickSourceKind.Replay, replayClock, tick);
                     var actorInputs = RentActorInputScratch(stepIndex, bundle.Actors.Count);
+                    var actorIds = RentActorIdScratch(stepIndex, bundle.Actors.Count);
                     steps[stepIndex++] = BuildStep(
                         bundle,
                         source,
                         SimulationPipelineStepExecutionKind.Replay,
                         planSequence++,
                         actorInputs,
+                        actorIds,
                         Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>());
                 }
             }
@@ -189,6 +192,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 RollbackCanonicalInputBundle current = SelectBundle(new SimulationTick(nextTick));
                 var actorInputs = RentActorInputScratch(stepIndex, current.Actors.Count);
+                var actorIds = RentActorIdScratch(stepIndex, current.Actors.Count);
                 mappings[mappingIndex] = new SimulationPipelineStepSourceMapping(
                     context.Source.ClockId,
                     context.Source.ClockId,
@@ -199,6 +203,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     restore == null ? SimulationPipelineStepExecutionKind.Forward : SimulationPipelineStepExecutionKind.Current,
                     planSequence,
                     actorInputs,
+                    actorIds,
                     ingress.TypedIngress.Ingress);
             }
             return SimulationSessionExecutionPlan<FixedSimulationStep>.FromOwnedArrays(
@@ -275,6 +280,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return scratch;
         }
 
+        ActorId[] RentActorIdScratch(int stepIndex, int actorCount)
+        {
+            while (m_ActorIdScratches.Count <= stepIndex)
+                m_ActorIdScratches.Add(null);
+            ActorId[] scratch = m_ActorIdScratches[stepIndex];
+            if (scratch == null || scratch.Length != actorCount)
+            {
+                scratch = new ActorId[actorCount];
+                m_ActorIdScratches[stepIndex] = scratch;
+            }
+            return scratch;
+        }
+
         static SimulationRestoreDirective BuildRestoreDirective(
             SimulationTick restoreTick,
             FixedSimulationSessionSnapshot snapshot,
@@ -305,6 +323,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationPipelineStepExecutionKind kind,
             ulong planSequence,
             SimulationPipelineActorInput<FixedStepInput>[] inputs,
+            ActorId[] actors,
             IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> typedIngress)
         {
             for (int i = 0; i < bundle.Actors.Count; i++)
@@ -322,10 +341,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     input.Sequence,
                     new FixedStepInput(input));
             }
-            return new FixedSimulationStep(
+            return FixedSimulationStep.FromOwnedInputs(
                 bundle.Tick,
                 new SimulationPipelineStepProvenance(kind, source, planSequence, bundle.GameplayHash.Value),
                 inputs,
+                actors,
                 typedIngress);
         }
     }

@@ -396,6 +396,7 @@
 - [x] 5.133 Rollback schedule 按长度复用 execution plan 的 step-source mapping scratch，删除每个外层 tick 的 1/2 元素数组；mapping 内容按本次计划完整覆盖，可见寿命仍限定 OuterTransaction
 - [x] 5.134 Rollback schedule 按 plan step 槽位复用 actor input scratch，删除每次 forward/replay 构造步骤的 roster 数组；FixedSimulationStep 对象和 OuterTransaction 所有权不变
 - [x] 5.135 Rollback schedule 按步骤数量复用 execution plan 的 step 数组，删除每个可执行计划的 steps 数组分配；FixedSimulationStep 对象和 OuterTransaction 所有权不变
+- [x] 5.136 Fixed Simulation Step 增加正式 owned inputs/actors 构造，Rollback schedule 填充槽位 scratch 后直接转移；删除 Target Step 的 input clone 和 ActorId 收集数组
 
 ## 6. UI、资源、渲染和生命周期
 

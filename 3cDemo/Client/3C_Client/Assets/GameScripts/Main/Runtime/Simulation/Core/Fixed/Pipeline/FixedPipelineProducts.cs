@@ -99,6 +99,26 @@ namespace ThirdPersonSimulation.Fixed
             : base(tick, provenance, inputs, ingress)
         {
         }
+
+        public static FixedSimulationStep FromOwnedInputs(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            SimulationPipelineActorInput<FixedStepInput>[] inputs,
+            ActorId[] actors,
+            IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
+        {
+            return new FixedSimulationStep(tick, provenance, inputs, actors, ingress);
+        }
+
+        FixedSimulationStep(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            SimulationPipelineActorInput<FixedStepInput>[] inputs,
+            ActorId[] actors,
+            IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
+            : base(tick, provenance, inputs, actors, ingress)
+        {
+        }
     }
 
     public sealed class FixedCharacterEvaluationResultBatch

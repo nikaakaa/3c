@@ -251,18 +251,20 @@ namespace ThirdPersonSimulation
             SimulationPipelineStepProvenance provenance,
             IEnumerable<SimulationPipelineActorInput<TInput>> inputs,
             IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
-            : this(tick, provenance, MaterializeInputs(inputs), ingress)
+            : this(tick, provenance, MaterializeInputs(inputs), null, ingress)
         {
         }
 
-        TargetSimulationPipelineStep(
+        protected TargetSimulationPipelineStep(
             SimulationTick tick,
             SimulationPipelineStepProvenance provenance,
-            IReadOnlyList<SimulationPipelineActorInput<TInput>> inputValues,
+            SimulationPipelineActorInput<TInput>[] inputValues,
+            ActorId[] ownedActors,
             IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
-            : base(tick, provenance, CollectActors(inputValues))
+            : base(tick, provenance, ownedActors == null ? CollectActors(inputValues) : FillActors(inputValues, ownedActors))
         {
-            for (int i = 1; i < inputValues.Count; i++)
+            Array.Sort(inputValues, CompareInputs);
+            for (int i = 1; i < inputValues.Length; i++)
             {
                 if (inputValues[i - 1].ActorId.Equals(inputValues[i].ActorId))
                     throw new ArgumentException("Pipeline Step contains duplicate Actor input.", nameof(inputValues));
@@ -304,7 +306,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationPipelineActorInput<TInput>> Inputs => m_Inputs;
         public IReadOnlyList<SimulationPipelineTypedIngress<TIngress>> Ingress => m_Ingress;
 
-        static IReadOnlyList<SimulationPipelineActorInput<TInput>> MaterializeInputs(
+        static SimulationPipelineActorInput<TInput>[] MaterializeInputs(
             IEnumerable<SimulationPipelineActorInput<TInput>> inputs)
         {
             if (inputs == null)
@@ -312,12 +314,29 @@ namespace ThirdPersonSimulation
             if (inputs is SimulationPipelineActorInput<TInput>[] source)
             {
                 var values = (SimulationPipelineActorInput<TInput>[])source.Clone();
-                Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
                 return values;
             }
-            var list = new List<SimulationPipelineActorInput<TInput>>(inputs);
-            list.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            return list;
+            if (inputs is List<SimulationPipelineActorInput<TInput>> sourceList)
+                return sourceList.ToArray();
+            return new List<SimulationPipelineActorInput<TInput>>(inputs).ToArray();
+        }
+
+        static ActorId[] FillActors(
+            SimulationPipelineActorInput<TInput>[] inputs,
+            ActorId[] actors)
+        {
+            if (actors.Length != inputs.Length)
+                throw new ArgumentException("Pipeline Step actor workspace length does not match input count.", nameof(actors));
+            for (int i = 0; i < inputs.Length; i++)
+                actors[i] = inputs[i].ActorId;
+            return actors;
+        }
+
+        static int CompareInputs(
+            SimulationPipelineActorInput<TInput> left,
+            SimulationPipelineActorInput<TInput> right)
+        {
+            return left.ActorId.CompareTo(right.ActorId);
         }
 
         static ActorId[] CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)

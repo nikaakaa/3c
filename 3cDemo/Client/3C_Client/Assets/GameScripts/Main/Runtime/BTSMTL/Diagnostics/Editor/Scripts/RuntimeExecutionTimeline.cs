@@ -122,20 +122,20 @@ namespace BTSMTL.Diagnostics.Editor
     public sealed class RuntimeExecutionTickRecord
     {
         readonly IReadOnlyList<RuntimeTraceEvent> m_Events;
-        readonly IReadOnlyList<RuntimeTraceEvent> m_ExternalResults;
-        readonly IReadOnlyList<Guid> m_SessionIds;
-        readonly IReadOnlyList<Guid> m_ExecutionBranchIds;
-        readonly IReadOnlyList<RuntimeContentRevision> m_ContentRevisions;
-        readonly IReadOnlyList<ulong> m_RuntimeEpochs;
-        readonly IReadOnlyList<RuntimeExecutionSourceClock> m_SourceClocks;
-        readonly IReadOnlyList<Guid> m_CharacterRuntimeIds;
-        readonly IReadOnlyList<RuntimeInstanceKey> m_RuntimeInstances;
-        readonly IReadOnlyList<string> m_SkillIds;
-        readonly IReadOnlyList<ulong> m_ActionInstanceIds;
-        readonly IReadOnlyList<string> m_CallSiteIds;
-        readonly IReadOnlyList<ulong> m_InputSequences;
-        readonly IReadOnlyList<string> m_CharacterStateHashes;
-        readonly IReadOnlyList<string> m_WorldHashes;
+        readonly RuntimeTraceEvent[] m_ExternalResults;
+        readonly Guid[] m_SessionIds;
+        readonly Guid[] m_ExecutionBranchIds;
+        readonly RuntimeContentRevision[] m_ContentRevisions;
+        readonly ulong[] m_RuntimeEpochs;
+        readonly RuntimeExecutionSourceClock[] m_SourceClocks;
+        readonly Guid[] m_CharacterRuntimeIds;
+        readonly RuntimeInstanceKey[] m_RuntimeInstances;
+        readonly string[] m_SkillIds;
+        readonly ulong[] m_ActionInstanceIds;
+        readonly string[] m_CallSiteIds;
+        readonly ulong[] m_InputSequences;
+        readonly string[] m_CharacterStateHashes;
+        readonly string[] m_WorldHashes;
 
         internal RuntimeExecutionTickRecord(
             ulong tick,
@@ -145,80 +145,72 @@ namespace BTSMTL.Diagnostics.Editor
             Tick = tick;
             ExecutionBranchId = executionBranchId;
             m_Events = events;
-            var externalResults = new List<RuntimeTraceEvent>();
-            var sessionIds = new List<Guid>();
-            var executionBranchIds = new List<Guid>();
-            var contentRevisions = new List<RuntimeContentRevision>();
-            var runtimeEpochs = new List<ulong>();
-            var sourceClocks = new List<RuntimeExecutionSourceClock>();
-            var characterRuntimeIds = new List<Guid>();
-            var runtimeInstances = new List<RuntimeInstanceKey>();
-            var skillIds = new List<string>();
-            var actionInstanceIds = new List<ulong>();
-            var callSiteIds = new List<string>();
-            var inputSequences = new List<ulong>();
-            var characterStateHashes = new List<string>();
-            var worldHashes = new List<string>();
+            Collector<RuntimeTraceEvent> externalResults = default;
+            Collector<Guid> sessionIds = default;
+            Collector<Guid> executionBranchIds = default;
+            Collector<RuntimeContentRevision> contentRevisions = default;
+            Collector<ulong> runtimeEpochs = default;
+            Collector<RuntimeExecutionSourceClock> sourceClocks = default;
+            Collector<Guid> characterRuntimeIds = default;
+            Collector<RuntimeInstanceKey> runtimeInstances = default;
+            Collector<string> skillIds = default;
+            Collector<ulong> actionInstanceIds = default;
+            Collector<string> callSiteIds = default;
+            Collector<ulong> inputSequences = default;
+            Collector<string> characterStateHashes = default;
+            Collector<string> worldHashes = default;
             for (int i = 0; i < m_Events.Count; i++)
             {
                 RuntimeTraceEvent traceEvent = m_Events[i];
                 if (traceEvent.Kind == RuntimeTraceEventKind.SimulationNetworkModel)
                     externalResults.Add(traceEvent);
-                if (traceEvent.SessionId != Guid.Empty && !sessionIds.Contains(traceEvent.SessionId))
-                    sessionIds.Add(traceEvent.SessionId);
-                if (traceEvent.ExecutionBranchId != Guid.Empty && !executionBranchIds.Contains(traceEvent.ExecutionBranchId))
-                    executionBranchIds.Add(traceEvent.ExecutionBranchId);
-                if (traceEvent.ContentRevision.IsValid && !contentRevisions.Contains(traceEvent.ContentRevision))
-                    contentRevisions.Add(traceEvent.ContentRevision);
-                if (traceEvent.RuntimeEpoch != 0 && !runtimeEpochs.Contains(traceEvent.RuntimeEpoch))
-                    runtimeEpochs.Add(traceEvent.RuntimeEpoch);
+                if (traceEvent.SessionId != Guid.Empty)
+                    sessionIds.AddDistinct(traceEvent.SessionId);
+                if (traceEvent.ExecutionBranchId != Guid.Empty)
+                    executionBranchIds.AddDistinct(traceEvent.ExecutionBranchId);
+                if (traceEvent.ContentRevision.IsValid)
+                    contentRevisions.AddDistinct(traceEvent.ContentRevision);
+                if (traceEvent.RuntimeEpoch != 0)
+                    runtimeEpochs.AddDistinct(traceEvent.RuntimeEpoch);
                 if (!string.IsNullOrEmpty(traceEvent.Payload.SourceClockId) &&
                     !string.IsNullOrEmpty(traceEvent.Payload.SourceTickKind))
                 {
                     var sourceClock = new RuntimeExecutionSourceClock(
                         traceEvent.Payload.SourceClockId,
                         traceEvent.Payload.SourceTickKind);
-                    if (!sourceClocks.Contains(sourceClock))
-                        sourceClocks.Add(sourceClock);
+                    sourceClocks.AddDistinct(sourceClock);
                 }
-                if (traceEvent.RuntimeInstance.CharacterRuntimeId != Guid.Empty &&
-                    !characterRuntimeIds.Contains(traceEvent.RuntimeInstance.CharacterRuntimeId))
-                    characterRuntimeIds.Add(traceEvent.RuntimeInstance.CharacterRuntimeId);
-                if (traceEvent.RuntimeInstance.IsValid && !runtimeInstances.Contains(traceEvent.RuntimeInstance))
-                    runtimeInstances.Add(traceEvent.RuntimeInstance);
-                if (!string.IsNullOrEmpty(traceEvent.Payload.SkillId) &&
-                    !ContainsString(skillIds, traceEvent.Payload.SkillId))
-                    skillIds.Add(traceEvent.Payload.SkillId);
-                if (traceEvent.Payload.ActionInstanceId != 0 &&
-                    !actionInstanceIds.Contains(traceEvent.Payload.ActionInstanceId))
-                    actionInstanceIds.Add(traceEvent.Payload.ActionInstanceId);
-                if (!string.IsNullOrEmpty(traceEvent.Payload.CallSiteId) &&
-                    !ContainsString(callSiteIds, traceEvent.Payload.CallSiteId))
-                    callSiteIds.Add(traceEvent.Payload.CallSiteId);
-                if (traceEvent.Payload.InputSequence != 0 &&
-                    !inputSequences.Contains(traceEvent.Payload.InputSequence))
-                    inputSequences.Add(traceEvent.Payload.InputSequence);
-                if (!string.IsNullOrEmpty(traceEvent.Payload.CharacterStateHash) &&
-                    !ContainsString(characterStateHashes, traceEvent.Payload.CharacterStateHash))
-                    characterStateHashes.Add(traceEvent.Payload.CharacterStateHash);
-                if (!string.IsNullOrEmpty(traceEvent.Payload.WorldHash) &&
-                    !ContainsString(worldHashes, traceEvent.Payload.WorldHash))
-                    worldHashes.Add(traceEvent.Payload.WorldHash);
+                if (traceEvent.RuntimeInstance.CharacterRuntimeId != Guid.Empty)
+                    characterRuntimeIds.AddDistinct(traceEvent.RuntimeInstance.CharacterRuntimeId);
+                if (traceEvent.RuntimeInstance.IsValid)
+                    runtimeInstances.AddDistinct(traceEvent.RuntimeInstance);
+                if (!string.IsNullOrEmpty(traceEvent.Payload.SkillId))
+                    skillIds.AddDistinct(traceEvent.Payload.SkillId);
+                if (traceEvent.Payload.ActionInstanceId != 0)
+                    actionInstanceIds.AddDistinct(traceEvent.Payload.ActionInstanceId);
+                if (!string.IsNullOrEmpty(traceEvent.Payload.CallSiteId))
+                    callSiteIds.AddDistinct(traceEvent.Payload.CallSiteId);
+                if (traceEvent.Payload.InputSequence != 0)
+                    inputSequences.AddDistinct(traceEvent.Payload.InputSequence);
+                if (!string.IsNullOrEmpty(traceEvent.Payload.CharacterStateHash))
+                    characterStateHashes.AddDistinct(traceEvent.Payload.CharacterStateHash);
+                if (!string.IsNullOrEmpty(traceEvent.Payload.WorldHash))
+                    worldHashes.AddDistinct(traceEvent.Payload.WorldHash);
             }
-            m_ExternalResults = externalResults.AsReadOnly();
-            m_SessionIds = sessionIds.AsReadOnly();
-            m_ExecutionBranchIds = executionBranchIds.AsReadOnly();
-            m_ContentRevisions = contentRevisions.AsReadOnly();
-            m_RuntimeEpochs = runtimeEpochs.AsReadOnly();
-            m_SourceClocks = sourceClocks.AsReadOnly();
-            m_CharacterRuntimeIds = characterRuntimeIds.AsReadOnly();
-            m_RuntimeInstances = runtimeInstances.AsReadOnly();
-            m_SkillIds = skillIds.AsReadOnly();
-            m_ActionInstanceIds = actionInstanceIds.AsReadOnly();
-            m_CallSiteIds = callSiteIds.AsReadOnly();
-            m_InputSequences = inputSequences.AsReadOnly();
-            m_CharacterStateHashes = characterStateHashes.AsReadOnly();
-            m_WorldHashes = worldHashes.AsReadOnly();
+            m_ExternalResults = externalResults.ToArray();
+            m_SessionIds = sessionIds.ToArray();
+            m_ExecutionBranchIds = executionBranchIds.ToArray();
+            m_ContentRevisions = contentRevisions.ToArray();
+            m_RuntimeEpochs = runtimeEpochs.ToArray();
+            m_SourceClocks = sourceClocks.ToArray();
+            m_CharacterRuntimeIds = characterRuntimeIds.ToArray();
+            m_RuntimeInstances = runtimeInstances.ToArray();
+            m_SkillIds = skillIds.ToArray();
+            m_ActionInstanceIds = actionInstanceIds.ToArray();
+            m_CallSiteIds = callSiteIds.ToArray();
+            m_InputSequences = inputSequences.ToArray();
+            m_CharacterStateHashes = characterStateHashes.ToArray();
+            m_WorldHashes = worldHashes.ToArray();
         }
 
         public ulong Tick { get; }
@@ -240,14 +232,43 @@ namespace BTSMTL.Diagnostics.Editor
         public IReadOnlyList<string> WorldHashes => m_WorldHashes;
         public bool HasSimulationTick => Contains(RuntimeTraceEventKind.SimulationTick);
         public bool HasStatePublished => Contains(RuntimeTraceEventKind.SimulationStatePublished);
-        public bool HasExternalResult => m_ExternalResults.Count != 0;
+        public bool HasExternalResult => m_ExternalResults.Length != 0;
 
-        static bool ContainsString(List<string> values, string value)
+        struct Collector<T>
         {
-            for (int i = 0; i < values.Count; i++)
-                if (string.Equals(values[i], value, StringComparison.Ordinal))
-                    return true;
-            return false;
+            T[] m_Values;
+            int m_Count;
+
+            public void Add(T value)
+            {
+                if (m_Count == (m_Values?.Length ?? 0))
+                    Array.Resize(ref m_Values, m_Count == 0 ? 4 : m_Count * 2);
+                m_Values[m_Count++] = value;
+            }
+
+            public void AddDistinct(T value)
+            {
+                for (int i = 0; i < m_Count; i++)
+                    if (EqualityComparer<T>.Default.Equals(m_Values[i], value))
+                        return;
+                Add(value);
+            }
+
+            public T[] ToArray()
+            {
+                if (m_Count == 0)
+                    return Array.Empty<T>();
+                if (m_Count == m_Values.Length)
+                {
+                    T[] exact = m_Values;
+                    m_Values = null;
+                    return exact;
+                }
+                var result = new T[m_Count];
+                Array.Copy(m_Values, result, m_Count);
+                m_Values = null;
+                return result;
+            }
         }
 
         bool Contains(RuntimeTraceEventKind kind)

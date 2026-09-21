@@ -147,6 +147,16 @@
 - 旧构造函数里的 `?? Array.Empty` 属于 internal 调用方永远不会进入的 null fallback，本次随直接接管合同删除。类型与容量来源不改变，builder 内部的 List 本身、tick record 里的 14 个 identity List 和最终结果对象仍在 7.1 后续边界处理。
 - 作者可在 Runtime Debug execution history 中确认 tick、checkpoint、presentation frame 和外部结果计数仍一致。本步未做运行采样。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
+
+## 2026-09-21 执行 tick 摘要数组化
+
+对应 tasks.md 的 7.1，新增 7.70 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution tick 的摘要收集，不计为 Player 每帧收益。
+
+- `RuntimeExecutionTickRecord` 原先每次构造都创建 14 个 `List<T>`：一个外部结果和 13 类身份摘要；最后每个 List 再调用 `AsReadOnly`，每个 tick 产生 28 个集合/包装对象。现在用私有 `Collector<T>` 只持有值数组和数量，`ToArray` 在正好用满时转移内部数组，否则复制成精确长度；公开属性类型仍保持 `IReadOnlyList<T>`。
+- 外部结果调用 `Add`，保留当前 tick 内多条 `SimulationNetworkModel` 的重复事实。其余 session、branch、revision、epoch、source clock、runtime instance、skill、action、call site、input sequence 和哈希摘要调用 `AddDistinct`，仍按首次出现顺序保留。
+- 原来的 `List<T>.Contains` 和字符串 helper 都使用 `EqualityComparer<T>.Default` 的语义；`Collector.AddDistinct` 改成显式调用同一个 comparer，因此 Guid、revision、instance、source clock 和 Ordinal 字符串的比较合同不变。空结果统一复用 `Array.Empty<T>`。
+- payload 里的字符串本身、trace 事件对象、builder 的 HashSet/SortedDictionary 和 14 次 `AddDistinct` 的线性扫描仍在后续边界处理。作者可在 execution history 中核对每个 tick 的 identity 摘要和外部结果计数；本步未做运行采样。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

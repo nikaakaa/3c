@@ -475,3 +475,4 @@
 - [x] 7.67 RuntimeCaptureStore 的 active segment 外层改为 maxSegments+1 环形缓冲，删除淘汰 RemoveAt(0) 前移；归还原池同步扩到 maxSegments+1，覆盖 append 后 trim 的满容量换段峰值，发布顺序、segment 边界、丢弃计数和 Freeze 快照不变
 - [x] 7.68 RuntimeLiveStateStore 的 current、changes 和 recency node 映射按 maxChanges+1 在构造期准备容量；覆盖 active 上限和先入队后出队的瞬时峰值，LRU、淘汰计数、全量同步和读取结果不变
 - [x] 7.69 执行 history 的 tick/frame 事件 List 和 ticks/checkpoints/frames 结果 List 改为 internal 构造直接接管，删除 AsReadOnly 包装和旧 null Array fallback；公开只读接口、排序、checkpoint 去重和 presentation 可用性判断不变
+- [x] 7.70 RuntimeExecutionTickRecord 的外部结果和 13 类身份摘要改用 Collector 产出最终数组，删除每次 tick 的 List 对象和 AsReadOnly 包装；外部结果重复保留，身份去重顺序和 EqualityComparer 比较合同不变，payload 字符串仍在后续边界

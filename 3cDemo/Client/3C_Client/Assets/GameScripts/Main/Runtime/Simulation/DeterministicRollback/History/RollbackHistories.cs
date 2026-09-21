@@ -122,6 +122,25 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return false;
         }
 
+        internal bool TryFindEarliestAppliedMismatch(
+            IReadOnlyDictionary<ulong, StableHash> appliedGameplayHashes,
+            out SimulationTick tick)
+        {
+            foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
+            {
+                if (pair.Value.Canonical == null ||
+                    !appliedGameplayHashes.TryGetValue(pair.Key, out StableHash applied) ||
+                    applied.Equals(pair.Value.Canonical.GameplayHash))
+                {
+                    continue;
+                }
+                tick = new SimulationTick(pair.Key);
+                return true;
+            }
+            tick = default;
+            return false;
+        }
+
         public void DiscardThrough(ulong confirmedTick)
         {
             RemoveThrough(m_Entries, confirmedTick);

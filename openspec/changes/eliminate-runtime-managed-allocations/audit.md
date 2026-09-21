@@ -2458,3 +2458,12 @@
 - Resolve 与 Validation 使用独立 trace 列表，保持 DotRecast World Solver 先发布接触结果、再发布表面再约束后的终验结果的顺序。数组只在 workspace 内借用；输出 bodies、results、WorldSimulationState 和 Clone 的所有权不变。
 - 5.1 剩余：KCC 侧求解存储核对、DotRecast 输出与快照所有权进一步收口。
 - `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、2 个既有 DotRecast 包 CS8632 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做接触求解运行对比或 Player 分配采样。
+
+## 2026-09-21 回滚最早失配扫描去复制
+
+对应 tasks.md 的 5.2，本步只处理 runtime state 的失配查询，整项保持未勾选。
+
+- `RollbackRuntimeState.TryFindEarliestMismatch` 原先调用 `RollbackInputHistory.CaptureEntries`，每次为整个输入历史新建结果数组，并为每条记录创建只读 entry 包装；实际只读取 Tick、Canonical hash 和 applied hash 三个事实。
+- `RollbackInputHistory` 新增内部 applied-mismatch 扫描，直接遍历现有排序历史并与调用方已有的 applied hash 字典比较；记录顺序保持 SortedDictionary 升序，`EarliestExplicitAffectedTick` 优先级和返回结果不变。
+- 该查询不再依赖输入历史快照，因此不引入与事务恢复有关的别名；checkpoint 捕获和恢复路径未改。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

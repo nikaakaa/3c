@@ -499,21 +499,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 tick = new SimulationTick(m_EarliestExplicitAffectedTick);
                 return true;
             }
-            IReadOnlyList<RollbackInputHistoryEntry> entries = m_Inputs.CaptureEntries();
-            for (int i = 0; i < entries.Count; i++)
-            {
-                RollbackInputHistoryEntry entry = entries[i];
-                if (entry.Canonical == null ||
-                    !m_AppliedGameplayHashes.TryGetValue(entry.Tick.Value, out StableHash applied) ||
-                    applied.Equals(entry.Canonical.GameplayHash))
-                {
-                    continue;
-                }
-                tick = entry.Tick;
-                return true;
-            }
-            tick = default;
-            return false;
+            return m_Inputs.TryFindEarliestAppliedMismatch(m_AppliedGameplayHashes, out tick);
         }
 
         public void BeginRollback(SimulationTick firstAffectedTick, ulong currentCompletedTick)

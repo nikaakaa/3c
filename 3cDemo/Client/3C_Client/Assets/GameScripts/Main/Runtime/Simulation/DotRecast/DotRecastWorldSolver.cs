@@ -118,6 +118,12 @@ namespace ThirdPersonSimulation.DotRecast
         readonly DtNavMesh m_NavMesh;
         readonly DtNavMeshQuery m_Query;
         readonly DtQueryDefaultFilter m_Filter;
+        readonly SurfaceCandidate[] m_SurfaceCandidates;
+        readonly SurfaceReconstraint[] m_Reconstraints;
+        readonly int[] m_ActiveContactIndexes;
+        readonly List<ActorContactCandidate> m_ContactCandidates;
+        readonly long[] m_VisitedScratch;
+        Float32Vector3[] m_FinalPositions;
         WorldSimulationState m_Current;
         bool m_Disposed;
 
@@ -159,6 +165,12 @@ namespace ThirdPersonSimulation.DotRecast
                 m_Surface.QueryProfile.IncludeFlags,
                 m_Surface.QueryProfile.ExcludeFlags,
                 areaCosts);
+            m_SurfaceCandidates = new SurfaceCandidate[m_Bindings.Length];
+            m_Reconstraints = new SurfaceReconstraint[m_Bindings.Length];
+            m_ActiveContactIndexes = new int[m_Bindings.Length];
+            m_ContactCandidates = new List<ActorContactCandidate>(m_Bindings.Length);
+            m_FinalPositions = new Float32Vector3[m_Bindings.Length];
+            m_VisitedScratch = new long[m_Surface.QueryProfile.MaximumVisitedPolygons];
             Descriptor = s_Descriptor;
         }
 
@@ -248,109 +260,118 @@ namespace ThirdPersonSimulation.DotRecast
                     Descriptor.ImplementationId,
                     Descriptor.Version));
             }
-            var surfaceCandidates = new SurfaceCandidate[request.Requests.Count];
-            var contactCandidates = new List<ActorContactCandidate>(
-                request.Requests.Count + request.ObservedWorldConstraints.Constraints.Count);
-            for (int i = 0; i < request.Requests.Count; i++)
+            try
             {
-                CharacterWorldSolveRequest actorRequest = request.Requests[i];
-                if (actorRequest.ActorId != m_Bindings[i].ActorId || !BodyEquals(actorRequest.BeforeBody, m_Current.Bodies[i]))
-                    throw new InvalidOperationException("DotRecast Actor request does not match its locked binding and before-body state.");
-                surfaceCandidates[i] = SolveSurfaceCandidate(actorRequest, diagnostics);
-                contactCandidates.Add(new ActorContactCandidate(
-                    actorRequest.ActorId,
-                    actorRequest.BeforeBody.Position,
-                    surfaceCandidates[i].Position,
-                    m_Bindings[i].ContactShape,
-                    ActorContactMobility.ActiveSimulated));
-            }
-            for (int i = 0; i < request.ObservedWorldConstraints.Constraints.Count; i++)
-            {
-                ObservedWorldConstraint observed = request.ObservedWorldConstraints.Constraints[i];
-                if (observed.TargetTick != request.Tick ||
-                    observed.ContactShapeConfigurationHash != m_ContactShape.ConfigurationHash)
+                SurfaceCandidate[] surfaceCandidates = m_SurfaceCandidates;
+                SurfaceReconstraint[] reconstraints = m_Reconstraints;
+                int[] activeContactIndexes = m_ActiveContactIndexes;
+                List<ActorContactCandidate> contactCandidates = m_ContactCandidates;
+                for (int i = 0; i < request.Requests.Count; i++)
                 {
-                    throw new InvalidOperationException(
-                        $"Observed Actor '{observed.ActorId}' does not match the DotRecast batch Tick or canonical contact shape.");
+                    CharacterWorldSolveRequest actorRequest = request.Requests[i];
+                    if (actorRequest.ActorId != m_Bindings[i].ActorId || !BodyEquals(actorRequest.BeforeBody, m_Current.Bodies[i]))
+                        throw new InvalidOperationException("DotRecast Actor request does not match its locked binding and before-body state.");
+                    surfaceCandidates[i] = SolveSurfaceCandidate(actorRequest, diagnostics);
+                    contactCandidates.Add(new ActorContactCandidate(
+                        actorRequest.ActorId,
+                        actorRequest.BeforeBody.Position,
+                        surfaceCandidates[i].Position,
+                        m_Bindings[i].ContactShape,
+                        ActorContactMobility.ActiveSimulated));
                 }
-                contactCandidates.Add(new ActorContactCandidate(
-                    observed.ActorId,
-                    observed.BeforeBody.Position,
-                    observed.FinalBody.Position,
-                    m_ContactShape,
-                    ActorContactMobility.ObservedKinematic));
-            }
-            contactCandidates.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+                for (int i = 0; i < request.ObservedWorldConstraints.Constraints.Count; i++)
+                {
+                    ObservedWorldConstraint observed = request.ObservedWorldConstraints.Constraints[i];
+                    if (observed.TargetTick != request.Tick ||
+                        observed.ContactShapeConfigurationHash != m_ContactShape.ConfigurationHash)
+                    {
+                        throw new InvalidOperationException(
+                            $"Observed Actor '{observed.ActorId}' does not match the DotRecast batch Tick or canonical contact shape.");
+                    }
+                    contactCandidates.Add(new ActorContactCandidate(
+                        observed.ActorId,
+                        observed.BeforeBody.Position,
+                        observed.FinalBody.Position,
+                        m_ContactShape,
+                        ActorContactMobility.ObservedKinematic));
+                }
+                contactCandidates.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
 
-            ActorContactBatchResult contactResult;
-            try
-            {
-                contactResult = ActorContactSolver.Resolve(contactCandidates, m_ContactConfiguration);
-            }
-            catch (ActorContactSolveException exception)
-            {
-                PublishContactTraces(request, exception.Traces, diagnostics, false);
-                throw;
-            }
+                ActorContactBatchResult contactResult;
+                try
+                {
+                    contactResult = ActorContactSolver.Resolve(contactCandidates, m_ContactConfiguration);
+                }
+                catch (ActorContactSolveException exception)
+                {
+                    PublishContactTraces(request, exception.Traces, diagnostics, false);
+                    throw;
+                }
 
-            var finalPositions = new Float32Vector3[contactCandidates.Count];
-            for (int i = 0; i < finalPositions.Length; i++)
-                finalPositions[i] = contactResult.PositionAt(i);
-            var reconstraints = new SurfaceReconstraint[request.Requests.Count];
-            var activeContactIndexes = new int[request.Requests.Count];
-            for (int i = 0; i < request.Requests.Count; i++)
-            {
-                int contactIndex = FindContactCandidate(contactCandidates, request.Requests[i].ActorId);
-                activeContactIndexes[i] = contactIndex;
-                reconstraints[i] = ReconstraintToSurface(
-                    request.Requests[i].ActorId,
-                    contactResult.PositionAt(contactIndex),
-                    request.Requests[i].Tick,
-                    diagnostics);
-                finalPositions[contactIndex] = reconstraints[i].Position;
-            }
-            IReadOnlyList<ActorContactTrace> finalValidationTraces;
-            try
-            {
-                finalValidationTraces = ActorContactSolver.ValidateFinal(
-                    contactCandidates,
-                    finalPositions,
-                    m_ContactConfiguration);
-            }
-            catch (ActorContactSolveException exception)
-            {
-                PublishContactTraces(request, exception.Traces, diagnostics, false);
-                throw;
-            }
-            PublishContactTraces(request, contactResult.Traces, diagnostics, true);
-            PublishContactTraces(request, finalValidationTraces, diagnostics, true);
+                if (m_FinalPositions.Length < contactCandidates.Count)
+                    m_FinalPositions = new Float32Vector3[contactCandidates.Count];
+                Float32Vector3[] finalPositions = m_FinalPositions;
+                for (int i = 0; i < contactCandidates.Count; i++)
+                    finalPositions[i] = contactResult.PositionAt(i);
+                for (int i = 0; i < request.Requests.Count; i++)
+                {
+                    int contactIndex = FindContactCandidate(contactCandidates, request.Requests[i].ActorId);
+                    activeContactIndexes[i] = contactIndex;
+                    reconstraints[i] = ReconstraintToSurface(
+                        request.Requests[i].ActorId,
+                        contactResult.PositionAt(contactIndex),
+                        request.Requests[i].Tick,
+                        diagnostics);
+                    finalPositions[contactIndex] = reconstraints[i].Position;
+                }
 
-            var bodies = new WorldBodyState[request.Requests.Count];
-            var results = new CharacterWorldSolveResult[request.Requests.Count];
-            for (int i = 0; i < request.Requests.Count; i++)
-            {
-                BuildFinalResult(
-                    surfaceCandidates[i],
-                    reconstraints[i],
-                    contactResult.HadContactAt(activeContactIndexes[i]),
-                    diagnostics,
-                    out bodies[i],
-                    out results[i]);
+                IReadOnlyList<ActorContactTrace> finalValidationTraces;
+                try
+                {
+                    finalValidationTraces = ActorContactSolver.ValidateFinal(
+                        contactCandidates,
+                        finalPositions,
+                        m_ContactConfiguration);
+                }
+                catch (ActorContactSolveException exception)
+                {
+                    PublishContactTraces(request, exception.Traces, diagnostics, false);
+                    throw;
+                }
+                PublishContactTraces(request, contactResult.Traces, diagnostics, true);
+                PublishContactTraces(request, finalValidationTraces, diagnostics, true);
+
+                var bodies = new WorldBodyState[request.Requests.Count];
+                var results = new CharacterWorldSolveResult[request.Requests.Count];
+                for (int i = 0; i < request.Requests.Count; i++)
+                {
+                    BuildFinalResult(
+                        surfaceCandidates[i],
+                        reconstraints[i],
+                        contactResult.HadContactAt(activeContactIndexes[i]),
+                        diagnostics,
+                        out bodies[i],
+                        out results[i]);
+                }
+                m_Current = WorldSimulationState.FromOwnedState(
+                    Descriptor.NumericProfile,
+                    Descriptor.ImplementationId,
+                    Descriptor.Version,
+                    request.BeforeWorldState.WorldRevision,
+                    WorldStatePersistenceMode.Reconstruct,
+                    bodies,
+                    Array.Empty<byte>());
+                return WorldSolveBatchResult.FromOwnedResults(
+                    request,
+                    Descriptor.ImplementationId,
+                    Descriptor.Version,
+                    m_Current.Clone(),
+                    results);
             }
-            m_Current = WorldSimulationState.FromOwnedState(
-                Descriptor.NumericProfile,
-                Descriptor.ImplementationId,
-                Descriptor.Version,
-                request.BeforeWorldState.WorldRevision,
-                WorldStatePersistenceMode.Reconstruct,
-                bodies,
-                Array.Empty<byte>());
-            return WorldSolveBatchResult.FromOwnedResults(
-                request,
-                Descriptor.ImplementationId,
-                Descriptor.Version,
-                m_Current.Clone(),
-                results);
+            finally
+            {
+                m_ContactCandidates.Clear();
+            }
         }
 
         static int FindContactCandidate(IReadOnlyList<ActorContactCandidate> candidates, ActorId actorId)
@@ -398,7 +419,7 @@ namespace ThirdPersonSimulation.DotRecast
                 beforePosition.X + requested.X.ToSingle(),
                 beforePosition.Y + requested.Y.ToSingle(),
                 beforePosition.Z + requested.Z.ToSingle());
-            var visited = new long[m_Surface.QueryProfile.MaximumVisitedPolygons];
+            long[] visited = m_VisitedScratch;
             DtStatus moveStatus = m_Query.MoveAlongSurface(
                 startPolygon,
                 nearestPoint,

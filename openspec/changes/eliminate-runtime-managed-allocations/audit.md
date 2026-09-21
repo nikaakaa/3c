@@ -2438,3 +2438,13 @@
 - `CharacterFixedInputTraceWorkflow` 导出 trace 时复用一只 Editor scratch writer，逐帧 Reset 后编码再转 Base64；该路径为离线诊断，正确性不变。
 - 边界：`ComputeInputHash`/`ComputeGameplayInputHash` 仍发生在 `RollbackActorInputFrame` 构造内，随帧装配所有权迁移（2.1–2.3）一并处理；状态快照 codec 归属 2.4/5.2 的状态事务范围。本项只覆盖回滚协议与输入 codec 的写入路径。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 编译成功 0 警告 0 错误；`ThirdPersonClient.Editor.csproj` 编译成功 0 错误、33 个既有 CS0649 警告（ACL 身份结构体与采集代理，与本次无关）。均使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 DotRecast 批求解 scratch 复用
+
+对应 tasks.md 的 5.1，本步只完成 DotRecast World Solver 一侧，整项保持未勾选。
+
+- Solver 构造时按锁定 roster 与 QueryProfile 一次准备 scratch：SurfaceCandidate、SurfaceReconstraint、ActiveContactIndex 数组按 roster 精确容量，MoveAlongSurface visited 缓冲按 MaximumVisitedPolygons 准备，接触候选 List 按 roster 起步容量。
+- `ResolveBatch` 复用上述 scratch：候选构建、排序、接触求解、位置回填、表面再约束与终验在同一批内使用实例存储；接触候选 List 在 finally 清空。FinalPositions 在观察者接触数量增长时按实际数量一次性扩容，稳态后不再分配。输出 bodies/results 与 WorldSimulationState、Clone 仍按结果所有权独立分配，不进入 scratch。
+- `SolveSurfaceCandidate` 的 MoveAlongSurface visited 缓冲改为实例复用，删除每个 Actor 每个 tick 的 `long[]`。
+- 5.1 剩余：KCC 侧求解存储、ActorContactSolver 内部中间存储、输出与快照所有权进一步收口。
+- `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、2 个既有 DotRecast 包 CS8632 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

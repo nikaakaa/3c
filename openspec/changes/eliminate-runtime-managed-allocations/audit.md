@@ -291,6 +291,15 @@
 - `RuntimeDebugTargetResolution.Candidates` 的默认空集、Tree 窗口下标遍历和候选标签构造不变。registry 在 Editor 同步读取期间不提供并发修改入口，本步不引入第二个候选缓存或固定容量池。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做目标绑定运行对比或分配采样。
 
+## 2026-09-21 Source map 调用快照数组化
+
+对应 tasks.md 的 7.1，新增 7.85 作为独立小步；7.1 保持未勾选。本条只覆盖 source map 冻结中的 graph invocation 集合，不计为 Player 每帧收益。
+
+- `RuntimeDebugSourceMapSnapshot.Capture` 原先把 `IDebugSourceMap.GraphInvocations` 复制进新 List，再调用 `AsReadOnly` 生成包装；冻结结果会长期持有 List、ReadOnlyCollection 和 backing array 三层对象。该快照构造后不再修改。
+- 现在按源 map 当前 Count 新建精确 `RuntimeGraphInvocation[]`，空集复用 `Array.Empty`，并按下标保持原顺序。字段直接持有数组，公开 `GraphInvocations` 仍是 `IReadOnlyList`，`TryGetInvocation` 的 path 字典和查询结果不变。
+- entries 字典、按 source 收集 hash 的中间 List 和最终 hash 数组仍按原冻结逻辑分配，留待 source map 后续小步处理。源 map 在 Capture 前已经准备完成，本步不改变 attach、freeze 或 revision 缓存时序。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 source map 冻结运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

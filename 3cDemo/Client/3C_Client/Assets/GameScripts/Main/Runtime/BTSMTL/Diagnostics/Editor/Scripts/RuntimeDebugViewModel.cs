@@ -787,13 +787,13 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> m_Entries;
         readonly Dictionary<RuntimeSourceElementKey, string[]> m_Hashes;
         readonly Dictionary<string, RuntimeGraphInvocation> m_Invocations = new(StringComparer.Ordinal);
-        readonly IReadOnlyList<RuntimeGraphInvocation> m_GraphInvocations;
+        readonly RuntimeGraphInvocation[] m_GraphInvocations;
 
         RuntimeDebugSourceMapSnapshot(
             RuntimeContentRevision revision,
             Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries,
             Dictionary<RuntimeSourceElementKey, string[]> hashes,
-            IReadOnlyList<RuntimeGraphInvocation> invocations = null)
+            RuntimeGraphInvocation[] invocations = null)
         {
             Revision = revision;
             m_Entries = entries ?? new Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry>();
@@ -834,11 +834,17 @@ namespace BTSMTL.Diagnostics.Editor
             var frozen = new Dictionary<RuntimeSourceElementKey, string[]>();
             foreach (KeyValuePair<RuntimeSourceElementKey, List<string>> pair in collected)
                 frozen.Add(pair.Key, pair.Value.ToArray());
+            IReadOnlyList<RuntimeGraphInvocation> sourceInvocations = sourceMap.GraphInvocations;
+            RuntimeGraphInvocation[] invocations = sourceInvocations.Count == 0
+                ? Array.Empty<RuntimeGraphInvocation>()
+                : new RuntimeGraphInvocation[sourceInvocations.Count];
+            for (int i = 0; i < sourceInvocations.Count; i++)
+                invocations[i] = sourceInvocations[i];
             return new RuntimeDebugSourceMapSnapshot(
                 sourceMap.Revision,
                 entries,
                 frozen,
-                new List<RuntimeGraphInvocation>(sourceMap.GraphInvocations).AsReadOnly());
+                invocations);
         }
 
         public bool TryResolve(RuntimeSourceElementHandle handle, out RuntimeSourceElementKey source, out string sourceName)

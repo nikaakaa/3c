@@ -162,7 +162,8 @@ namespace ThirdPersonSimulation
     internal interface IActionAdmissionReadPort
     {
         IEnumerable<string> OwnedGameplayTags { get; }
-        IEnumerable<ActionAdmissionActiveAction> ActiveActions { get; }
+        int ActionCount { get; }
+        bool TryReadActiveAction(int index, out ActionAdmissionActiveAction action);
         ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId skillId, string actionId);
         bool TryGetGameplayTagParent(string tag, out string parentTag);
     }
@@ -360,8 +361,10 @@ namespace ThirdPersonSimulation
                 int activeTargetCount = 0;
                 ActionAdmissionActiveAction replacementSource = default;
                 bool hasReplacementSource = false;
-                foreach (ActionAdmissionActiveAction active in m_Port.ActiveActions)
+                for (int index = 0; index < m_Port.ActionCount; index++)
                 {
+                    if (!m_Port.TryReadActiveAction(index, out ActionAdmissionActiveAction active))
+                        continue;
                     if (string.Equals(active.ActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
                         activeTargetCount++;
                     if (request.ReplacementActionInstanceId == active.InstanceId)

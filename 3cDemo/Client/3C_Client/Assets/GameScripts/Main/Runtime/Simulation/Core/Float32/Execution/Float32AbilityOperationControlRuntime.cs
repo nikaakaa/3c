@@ -612,20 +612,18 @@ namespace ThirdPersonSimulation
             OperationHandle exitingState,
             OperationHandle targetState)
         {
-            m_Actions.AdvanceSegmentGeneration();
-            foreach (ActionAdmissionActiveAction action in ((IActionAdmissionReadPort)m_Actions).ActiveActions)
-            {
-                SimulationOperation operation = m_Access.Operation(machine.Handle);
-                SimulationEventHeader header = m_Presentation.Next(operation);
-                m_Presentation.Add(new PresentationCommand(
-                    header,
-                    PresentationCommandKind.DomainEvent,
-                    "domain/action-segment-changed",
-                    Float32Scalar.Zero,
-                    Float32Scalar.Zero,
-                    sourceActionInstanceId: action.InstanceId,
-                    domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
-            }
+            if (!m_Actions.TryAdvanceSegmentGeneration(out ulong actionInstanceId))
+                return;
+            SimulationOperation operation = m_Access.Operation(machine.Handle);
+            SimulationEventHeader header = m_Presentation.Next(operation);
+            m_Presentation.Add(new PresentationCommand(
+                header,
+                PresentationCommandKind.DomainEvent,
+                "domain/action-segment-changed",
+                Float32Scalar.Zero,
+                Float32Scalar.Zero,
+                sourceActionInstanceId: actionInstanceId,
+                domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
         }
     }
     internal readonly struct Float32CameraProgramConstantReader : ICameraProgramConstantReader

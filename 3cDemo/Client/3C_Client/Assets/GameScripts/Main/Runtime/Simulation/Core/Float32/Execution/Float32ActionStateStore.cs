@@ -412,14 +412,7 @@ namespace ThirdPersonSimulation
 			return result.AsReadOnly();
 		}
 
-		public IEnumerable<Float32ActionInstanceState> EnumerateActiveActions()
-		{
-			foreach (Float32ActionInstanceState action in m_Frame.ActionState.GetActionInstances())
-			{
-				if (action.IsActive)
-					yield return action;
-			}
-		}
+		public IReadOnlyList<Float32ActionInstanceState> ActionInstances => m_Frame.ActionState.GetActionInstances();
 
 		public Float32ActionInstanceState BindSkillExecution(
 			Float32ActionInstanceState action,

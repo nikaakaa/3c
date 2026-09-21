@@ -275,7 +275,7 @@ namespace ThirdPersonSimulation.Fixed
 		IEnumerable<string> IActionAdmissionReadPort.OwnedGameplayTags =>
             m_GameplayTags == null ? Array.Empty<string>() : m_GameplayTags.OwnedTags;
 
-        IEnumerable<ActionAdmissionActiveAction> IActionAdmissionReadPort.ActiveActions => EnumerateActiveActions();
+        int IActionAdmissionReadPort.ActionCount => m_Actions.ActionInstances.Count;
 
         public bool IsActionInstanceStopComplete(ulong actionInstanceId)
         {
@@ -456,13 +456,15 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        public ulong AdvanceSegmentGeneration()
+        public bool TryAdvanceSegmentGeneration(out ulong actionInstanceId)
         {
+            actionInstanceId = 0;
             if (!m_Actions.TryGetCurrentSkillExecution(out FixedActionInstanceState action))
-                return 0;
+                return false;
             ulong next = checked(action.SegmentGeneration + 1);
             m_Actions.WriteState(action.WithSegmentGeneration(next));
-            return next;
+            actionInstanceId = action.InstanceId;
+            return true;
         }
 
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>.SetActionTags(
@@ -669,12 +671,13 @@ namespace ThirdPersonSimulation.Fixed
                 reason,
                 SourceGeneration(source));
 
-        IEnumerable<ActionAdmissionActiveAction> EnumerateActiveActions()
+        bool IActionAdmissionReadPort.TryReadActiveAction(int index, out ActionAdmissionActiveAction value)
         {
-            foreach (FixedActionInstanceState action in m_Actions.EnumerateActiveActions())
-            {
-                yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId, action.SkillId);
-            }
+            FixedActionInstanceState action = m_Actions.ActionInstances[index];
+            value = action.IsActive
+                ? new ActionAdmissionActiveAction(action.ActionId, action.InstanceId, action.SkillId)
+                : default;
+            return action.IsActive;
         }
 
         SimulationActionTargetSnapshot ReadActionTargetSnapshot<TTarget>(

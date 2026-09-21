@@ -413,14 +413,7 @@ namespace ThirdPersonSimulation.Fixed
             return result.AsReadOnly();
         }
 
-        public IEnumerable<FixedActionInstanceState> EnumerateActiveActions()
-        {
-            foreach (FixedActionInstanceState action in m_Frame.ActionState.GetActionInstances())
-            {
-                if (action.IsActive)
-                    yield return action;
-            }
-        }
+        public IReadOnlyList<FixedActionInstanceState> ActionInstances => m_Frame.ActionState.GetActionInstances();
 
         public FixedActionInstanceState BindSkillExecution(
             FixedActionInstanceState action,

@@ -292,9 +292,10 @@ namespace ThirdPersonSimulation.Fixed
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
 		bool IEquipmentRuntimePort.HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId)
 		{
-			foreach (FixedActionInstanceState active in m_Actions.EnumerateActiveActions())
+			for (int index = 0; index < m_Actions.ActionInstances.Count; index++)
 			{
-				if (active.InstanceId != sourceActionInstanceId && active.EquipmentContext.IsValid &&
+				FixedActionInstanceState active = m_Actions.ActionInstances[index];
+				if (active.IsActive && active.InstanceId != sourceActionInstanceId && active.EquipmentContext.IsValid &&
 					active.EquipmentContext.SlotId == slot.SlotId && active.EquipmentContext.EquipmentRevision == slot.Revision)
 					return true;
 			}

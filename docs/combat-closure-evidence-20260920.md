@@ -6,6 +6,9 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 准入热路径删除 Fixed/Float32 两层 yield 活动动作枚举，改为读取现有动作列表的 Count/索引并保持 IsActive 过滤；装备冲突检查同步迁移，未增加动作列表副本。另发现 NotifyStateTransition 只更新当前动作 SegmentGeneration，却向全部活动动作发出 action-segment-changed；改为 TryAdvanceSegmentGeneration 返回当前实例ID，只向该实例提交一次事件，无当前动作时不广播。该修复针对事件归属，不把它直接认定为全部动画抖动根因。
+- 5个攻击MotionWarp的参数核对：源均为Action/Local/Override，WeightCurve恒为1；校正窗口在源淡出之前；TranslationMode均为Disabled、RotationMode为FaceTarget。未发现这5个窗口因为淡出权重而重复扣减原始位移，未改这些正确参数。
+
 - 用户明确指定本任务接手 CopyPendingMotionWarps。保留既有收集、ActionContext、状态操作映射及模式配置，统一迁移源位置/偏航与累计进度为 FixedScalar 合同。Timeline准备阶段创建源曲线及按模式启用的进度曲线，缓存窗口起止采样；evaluation按定点前后时刻采样，Host不再逐帧查作者Clip或调用AnimationCurve.Evaluate。Fixed求解直接消费定点值，Float32在自身边界转回Float32；作者配置常量仍按原合同转换，未宣称Float32位级不变。
 - Edit模式读取当前18条Timeline，5个真实MotionWarp窗口全部完成Fixed准备；预热128次后，每个窗口执行4096次真实SampleWarp，线程分配均为0字节，窗口末端位置/偏航进度均为1。该证据仅覆盖准备后的采样函数，不覆盖初始化、整个角色Tick或渲染链。
 - 同步修正恒定角速度初始化取样：EvaluateDirectPose显式接受本次sampleTime，前一姿态用PreviousTime、当前姿态用CurrentTime，避免两次都用CurrentTime而吞掉首帧角增量。本轮无replay。

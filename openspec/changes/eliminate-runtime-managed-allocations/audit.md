@@ -3275,3 +3275,11 @@
 - `FixedSimulationStep.FromOwnedInputs` 接收精确长度 `SimulationPipelineTypedIngress<SimulationIngress>[]`。Rollback schedule 按 plan step 槽位持有 typed ingress scratch，current step 构造前从 `FixedTypedIngressBatch.Ingress` 完整复制；空 ingress 直接使用 `Array.Empty`。replay step 继续为空。
 - ingress scratch 仍进入 Step 和 ExecutionPlan，消费寿命限定 OuterTransaction；`FixedTypedIngressBatch` 所有权不变，不引入通用池或归还回调。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback input source 零复制重绑
+
+对应 tasks.md 的 5.2，新增 5.138 作为独立小步；5.2 保持未勾选。
+
+- `RollbackSchedulePassRuntime.BuildStep` 原先为每个 actor 调用 `SimulationInput` 公共构造；即使 canonical 输入已经排序，也会再复制 `SimulationInputValue[]` 和 `SimulationInputRequest[]` 并重新排序。现在 `SimulationInput.RebindSource` 用私有 owned-array 构造保留原只读数组，只替换 TickSource。
+- NumericProfile、InputSourceIdentity、Sequence 和 payload 数组语义保持；payload 已在 canonical 输入构造时排序并校验。rebound input 仍是一只新 class 对象并进入 Step/OuterTransaction，本步不引入对象池、reset 合同或跨事务别名。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -398,6 +398,7 @@
 - [x] 5.135 Rollback schedule 按步骤数量复用 execution plan 的 step 数组，删除每个可执行计划的 steps 数组分配；FixedSimulationStep 对象和 OuterTransaction 所有权不变
 - [x] 5.136 Fixed Simulation Step 增加正式 owned inputs/actors 构造，Rollback schedule 填充槽位 scratch 后直接转移；删除 Target Step 的 input clone 和 ActorId 收集数组
 - [x] 5.137 Fixed Simulation Step 的 owned 构造扩展到 typed ingress，Rollback schedule 按 step 槽位复用精确数组；删除 current step 的 List 复制和排序闭包
+- [x] 5.138 Simulation Input 增加正式 source rebind 零复制入口，Rollback schedule 保留 canonical 输入数组；删除每个 replay/forward actor 的 values/requests 复制和排序
 
 ## 6. UI、资源、渲染和生命周期
 

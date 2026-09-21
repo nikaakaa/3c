@@ -103,6 +103,18 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<SimulationInputValue> Values => m_Values;
         public IReadOnlyList<SimulationInputRequest> Requests => m_Requests;
 
+        public SimulationInput RebindSource(SimulationTickSourceIdentity tickSource)
+        {
+            return new SimulationInput(
+                NumericProfile,
+                tickSource,
+                InputSourceIdentity,
+                Sequence,
+                m_Values,
+                m_Requests,
+                true);
+        }
+
         static SimulationInputValue[] SortValues(IEnumerable<SimulationInputValue> values)
         {
             SimulationInputValue[] result = Copy(values);
@@ -129,6 +141,25 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException($"Duplicate simulation input request sequence '{result[i].Sequence}'.", nameof(requests));
             }
             return result;
+        }
+
+        SimulationInput(
+            SimulationNumericProfile numericProfile,
+            SimulationTickSourceIdentity tickSource,
+            string inputSourceIdentity,
+            ulong sequence,
+            SimulationInputValue[] values,
+            SimulationInputRequest[] requests,
+            bool _)
+        {
+            if (!numericProfile.IsValid || sequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+            NumericProfile = numericProfile;
+            TickSource = tickSource;
+            InputSourceIdentity = SimulationIdentity.Require(inputSourceIdentity, nameof(inputSourceIdentity));
+            Sequence = sequence;
+            m_Values = values ?? Array.Empty<SimulationInputValue>();
+            m_Requests = requests ?? Array.Empty<SimulationInputRequest>();
         }
 
         static T[] Copy<T>(IEnumerable<T> source)

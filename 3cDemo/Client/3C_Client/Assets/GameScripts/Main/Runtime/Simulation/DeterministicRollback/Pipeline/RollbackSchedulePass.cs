@@ -349,13 +349,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < bundle.Actors.Count; i++)
             {
                 RollbackActorInputFrame actor = bundle.Actors[i];
-                var input = new SimulationInput(
-                    FixedSimulationNumericProfile.Value,
-                    source,
-                    actor.Input.InputSourceIdentity,
-                    actor.Input.Sequence,
-                    actor.Input.Values,
-                    actor.Input.Requests);
+                var input = actor.Input.RebindSource(source);
                 inputs[i] = new SimulationPipelineActorInput<FixedStepInput>(
                     actor.ActorId,
                     input.Sequence,

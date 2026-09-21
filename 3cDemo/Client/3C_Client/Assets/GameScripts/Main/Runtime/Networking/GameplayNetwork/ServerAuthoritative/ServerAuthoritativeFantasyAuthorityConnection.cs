@@ -296,6 +296,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         void IServerAuthoritativeAuthorityDataTransport.PumpSend() => Datagram.PumpSend();
         bool IServerAuthoritativeAuthorityDataTransport.TryReceive(out ServerAuthoritativeReceivedDatagram datagram) => Datagram.TryReceive(out datagram);
         void IServerAuthoritativeAuthorityDataTransport.ReturnReceiveEndPoint(IPEndPoint remoteEndPoint) => Datagram.ReturnReceiveEndPoint(remoteEndPoint);
+        void IServerAuthoritativeAuthorityDataTransport.ReturnReceivedPacket(ServerAuthoritativeDatagramPacket packet) => Datagram.ReturnReceivedPacket(packet);
         void IServerAuthoritativeAuthorityDataTransport.ThrowIfUnavailable() => Datagram.ThrowIfUnavailable();
 
         void Enqueue<T>(Queue<T> queue, T value)

@@ -3498,3 +3498,11 @@
 - `ServerAuthoritativeDatagramEndpoint` 按接收队列容量维护来源 `IPEndPoint` 池。接收线程先用 `ReceiveFrom` scratch 做路由和 endpoint 比较，校验通过后才租用独立记录入队；队列溢出时同步归还，删除每包 `Clone`。
 - 数据 transport 接口新增显式 `ReturnReceiveEndPoint`。Authority Source 在每次 `ReceiveDatagram` 后 finally 归还；客户端 Channel 在 `PumpPrediction` 每包 finally 归还；Hello 绑定 route 仍由 `BindRemote` 独立 clone，Dispose 清队同步归还，消费方不持有可复用记录。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 接收 packet 与 payload 池化
+
+对应 tasks.md 的 5.5，新增 5.165 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramPacket` 增加接收侧可 reset/Release 的内部生命周期，Codec 读取入口改为原位填充租用 packet 和最大 MTU payload buffer。endpoint 按接收队列容量池化 packet 与 buffer；坏包、接收溢出、消费完成和 Dispose 清队都显式归还。
+- 数据 transport 接口新增 `ReturnReceivedPacket`；Authority Source 和客户端 Channel 都在每包 finally 中归还。`SnapshotDatagram` 解码仍复制 delta payload 到独立事件对象，Command 和 Hello 解码结果也不借用接收 payload，没有复用对象逃逸。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

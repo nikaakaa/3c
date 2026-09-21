@@ -425,6 +425,7 @@
 - [x] 5.162 Float32 Datagram Endpoint 复用发送线程有界 writer 和容量内发送 buffer；删除每个数据包的 CanonicalWriter 扩容、完整 wire byte[] 分配和无消费者 RequireFits 旧入口
 - [x] 5.163 Float32 gameplay payload codec 显式填充 owner 线程 writer；Authority Source 与客户端 Channel 复用有界 payload writer，删除每包 writer 和内部缓冲分配
 - [x] 5.164 Float32 Datagram Endpoint 按接收队列容量租用并归还来源 endpoint 记录；路由校验直接使用 ReceiveFrom scratch，消费边界显式归还
+- [x] 5.165 Float32 Datagram Endpoint 池化接收 packet 和最大 MTU payload buffer；坏包、溢出、消费完成和 Dispose 清队显式归还，snapshot payload 仍独立复制
 
 ## 6. UI、资源、渲染和生命周期
 

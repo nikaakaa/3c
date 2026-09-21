@@ -186,6 +186,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 }
                 finally
                 {
+                    m_Endpoint.ReturnReceivedPacket(received.Packet);
                     m_Endpoint.ReturnReceiveEndPoint(received.RemoteEndPoint);
                 }
             }

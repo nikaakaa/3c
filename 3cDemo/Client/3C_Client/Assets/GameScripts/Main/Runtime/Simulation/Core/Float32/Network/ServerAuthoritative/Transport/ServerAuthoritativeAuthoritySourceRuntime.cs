@@ -134,6 +134,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
                 finally
                 {
+                    m_Data.ReturnReceivedPacket(received.Packet);
                     m_Data.ReturnReceiveEndPoint(received.RemoteEndPoint);
                 }
             }

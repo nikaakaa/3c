@@ -3611,3 +3611,11 @@
 - `AuthorityReplicationBatch` 的 acks、baselines 和 remote presentation 改为直接持有精确 owned arrays，类型化静态排序替代 `FreezeByActor` 的 List 复制、lambda 排序和 `ReadOnlyCollection` 包装。Actor 去重、排序和 Tick 匹配校验保留。
 - Authority replication egress 按 completed result 的 actor 数量填充精确 acks 和 remote arrays；full baseline 请求时按同一数量分配 baselines，否则复用空数组。异常路径 finally 继续释放 scratch 引用，codec 解码的精确数组直接转交。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 remote presentation arrays 收口
+
+对应 tasks.md 的 5.5，新增 5.179 作为独立小步；5.5 保持未勾选。
+
+- `RemotePresentationBatch` 的 bodies、sample commands 和 reliable events 改为直接持有精确 owned arrays。构造器排序后原地去重 sample，body tick 排序使用类型化静态比较；Actor 归属、命令类型、sample lineage、事件去重和 canonical 排序语义不变。
+- Authority replication 每个 Actor 先按 policy 统计 stream 和 reliable 数量，再填充精确数组并直接转交，删除每 Actor 的 List、共享 body scratch 和构造期复制。Evidence drain、Observation ingress 和 Remote presentation egress 需要从既有产品合并时生成独立精确数组；codec 和 compact checkpoint 的解码数组直接转交。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

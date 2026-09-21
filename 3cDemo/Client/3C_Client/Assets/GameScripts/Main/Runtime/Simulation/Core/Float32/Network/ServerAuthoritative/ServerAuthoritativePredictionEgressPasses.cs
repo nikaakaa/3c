@@ -496,9 +496,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidOperationException("Remote Presentation event and selected body products target different Actors.");
             var batch = new RemotePresentationBatch(
                 events.ActorId,
-                selected.BodySamples,
-                events.SampleCommands,
-                events.ReliableEvents,
+                ServerAuthoritativeProductOrder.CopyToArray(selected.BodySamples),
+                ServerAuthoritativeProductOrder.CopyToArray(events.SampleCommands),
+                ServerAuthoritativeProductOrder.CopyToArray(events.ReliableEvents),
                 selected.ResetStream);
             if (!batch.ResetBodyStream && batch.BodySamples.Count == 0 && batch.SampleCommands.Count == 0 && batch.ReliableEvents.Count == 0)
                 return;

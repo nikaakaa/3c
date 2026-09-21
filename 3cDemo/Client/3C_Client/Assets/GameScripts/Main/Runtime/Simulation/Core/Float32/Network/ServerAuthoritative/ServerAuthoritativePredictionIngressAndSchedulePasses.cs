@@ -152,8 +152,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writePorts.RemotePresentation.Write(new RemotePresentationBatch(
                 remote.ActorId,
                 Array.Empty<CharacterBodySample>(),
-                remote.SampleCommands,
-                remote.ReliableEvents,
+                ServerAuthoritativeProductOrder.CopyToArray(remote.SampleCommands),
+                ServerAuthoritativeProductOrder.CopyToArray(remote.ReliableEvents),
                 false));
         }
     }

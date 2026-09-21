@@ -439,6 +439,7 @@
 - [x] 5.176 Float32 Simulation Step 新增与 Fixed 一致的 owned inputs 入口；Authority tick schedule 使用精确 Actor input/Actor 数组，删除 List 中转和 Step 构造复制
 - [x] 5.177 Float32 Authority held input 改为可更新工作对象；同一 Actor 的更新 sequence 直接复用 holder，删除每条新输入的对象替换分配
 - [x] 5.178 Float32 Authority replication batch 直接持有精确 owned arrays；Authority 生产端按 actor 数量填充，删除顶层 List 复制和 ReadOnlyCollection 包装
+- [x] 5.179 Float32 RemotePresentationBatch 改为 owned array 合同；Authority 过滤结果先计数后填充，接收和合并消费者生成精确数组，删除 IEnumerable 复制与 ReadOnlyCollection 包装
 
 ## 6. UI、资源、渲染和生命周期
 

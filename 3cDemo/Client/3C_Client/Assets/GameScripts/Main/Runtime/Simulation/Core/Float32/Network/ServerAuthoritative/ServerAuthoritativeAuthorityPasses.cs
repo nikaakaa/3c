@@ -486,9 +486,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         AuthoritativeInputAck[] m_Acks = Array.Empty<AuthoritativeInputAck>();
         RemotePresentationBatch[] m_Remote = Array.Empty<RemotePresentationBatch>();
         readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
-        readonly List<PresentationCommand> m_SampleCommands = new List<PresentationCommand>();
-        readonly List<ServerAuthoritativeReliableEvent> m_ReliableEvents = new List<ServerAuthoritativeReliableEvent>();
-        readonly CharacterBodySample[] m_BodySample = new CharacterBodySample[1];
 
         public AuthorityReplicationEgressPassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -545,34 +542,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 {
                     SimulationActorTickResult actor = completed.Result.Actors[i];
                     Float32CharacterRuntime characterRuntime = readPorts.CharacterRuntime.Runtime;
-                    m_SampleCommands.Clear();
-                    m_ReliableEvents.Clear();
-                    for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
-                    {
-                        GameplayFact fact = actor.GameplayFacts[eventIndex];
-                        if (m_ReplicationPolicy.ShouldReplicateReliably(fact))
-                            m_ReliableEvents.Add(new ServerAuthoritativeReliableEvent(fact));
-                        m_Dispositions.Add(new SimulationOutputDisposition(
-                            fact.Header.EventId,
-                            actor.ActorId,
-                            SimulationOutputDispositionKind.Suppress));
-                        AdvanceHorizon(actor.ActorId, fact.Header);
-                    }
-                    for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
-                    {
-                        PresentationCommand command = actor.PresentationCommands[eventIndex];
-                        if (m_ReplicationPolicy.ShouldStream(command, characterRuntime))
-                            m_SampleCommands.Add(command);
-                        if (m_ReplicationPolicy.ShouldReplicateReliably(command, characterRuntime))
-                            m_ReliableEvents.Add(new ServerAuthoritativeReliableEvent(command));
-                        m_Dispositions.Add(new SimulationOutputDisposition(
-                            command.Header.EventId,
-                            actor.ActorId,
-                            SimulationOutputDispositionKind.Suppress));
-                        AdvanceHorizon(actor.ActorId, command.Header);
-                    }
-                    m_BodySample[0] = actor.BodySample;
-                    m_Remote.Add(new RemotePresentationBatch(actor.ActorId, m_BodySample, m_SampleCommands, m_ReliableEvents, false));
+                    m_Remote[i] = BuildRemote(actor, characterRuntime);
                     int acceptedIndex = FindAcceptedInput(accepted, actor.ActorId);
                     ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon currentHorizon)
                         ? currentHorizon
@@ -631,9 +601,55 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             m_Acks = Array.Empty<AuthoritativeInputAck>();
             m_Remote = Array.Empty<RemotePresentationBatch>();
             m_Dispositions.Clear();
-            m_SampleCommands.Clear();
-            m_ReliableEvents.Clear();
-            m_BodySample[0] = default;
+        }
+
+        RemotePresentationBatch BuildRemote(SimulationActorTickResult actor, Float32CharacterRuntime runtime)
+        {
+            int sampleCapacity = 0;
+            int reliableCapacity = 0;
+            for (int i = 0; i < actor.GameplayFacts.Count; i++)
+            {
+                if (m_ReplicationPolicy.ShouldReplicateReliably(actor.GameplayFacts[i]))
+                    reliableCapacity++;
+            }
+            for (int i = 0; i < actor.PresentationCommands.Count; i++)
+            {
+                PresentationCommand command = actor.PresentationCommands[i];
+                if (m_ReplicationPolicy.ShouldStream(command, runtime))
+                    sampleCapacity++;
+                if (m_ReplicationPolicy.ShouldReplicateReliably(command, runtime))
+                    reliableCapacity++;
+            }
+
+            var samples = new PresentationCommand[sampleCapacity];
+            var reliable = new ServerAuthoritativeReliableEvent[reliableCapacity];
+            int sampleIndex = 0;
+            int reliableIndex = 0;
+            for (int i = 0; i < actor.GameplayFacts.Count; i++)
+            {
+                GameplayFact fact = actor.GameplayFacts[i];
+                if (m_ReplicationPolicy.ShouldReplicateReliably(fact))
+                    reliable[reliableIndex++] = new ServerAuthoritativeReliableEvent(fact);
+                m_Dispositions.Add(new SimulationOutputDisposition(
+                    fact.Header.EventId,
+                    actor.ActorId,
+                    SimulationOutputDispositionKind.Suppress));
+                AdvanceHorizon(actor.ActorId, fact.Header);
+            }
+            for (int i = 0; i < actor.PresentationCommands.Count; i++)
+            {
+                PresentationCommand command = actor.PresentationCommands[i];
+                if (m_ReplicationPolicy.ShouldStream(command, runtime))
+                    samples[sampleIndex++] = command;
+                if (m_ReplicationPolicy.ShouldReplicateReliably(command, runtime))
+                    reliable[reliableIndex++] = new ServerAuthoritativeReliableEvent(command);
+                m_Dispositions.Add(new SimulationOutputDisposition(
+                    command.Header.EventId,
+                    actor.ActorId,
+                    SimulationOutputDispositionKind.Suppress));
+                AdvanceHorizon(actor.ActorId, command.Header);
+            }
+            return new RemotePresentationBatch(actor.ActorId, new[] { actor.BodySample }, samples, reliable, false);
         }
 
         AuthoritativeActorBaseline BuildBaseline(

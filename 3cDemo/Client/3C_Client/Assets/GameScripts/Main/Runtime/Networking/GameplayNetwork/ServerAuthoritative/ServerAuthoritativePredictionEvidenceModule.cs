@@ -218,9 +218,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     m_DrainBaselines,
                     new[] { new RemotePresentationBatch(
                         remoteActor,
-                        m_DrainBodies,
-                        m_DrainSamples,
-                        m_DrainEvents,
+                        m_DrainBodies.ToArray(),
+                        m_DrainSamples.ToArray(),
+                        m_DrainEvents.ToArray(),
                         false) });
                 return new ServerAuthoritativePredictionObservationResult(
                     batchResult,

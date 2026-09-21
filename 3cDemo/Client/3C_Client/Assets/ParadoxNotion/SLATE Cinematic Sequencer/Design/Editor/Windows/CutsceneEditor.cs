@@ -3236,9 +3236,9 @@ namespace Slate
                     continue;
                 Rect clipRect = new Rect(
                     TimeToPos(binding.StartTime),
-                    y,
+                    y + binding.FormalClip.LaneIndex * binding.FormalClip.Track.ClipHeight,
                     Mathf.Max(binding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f),
-                    height);
+                    binding.FormalClip.Track.ClipHeight);
                 if (!clipRect.Contains(e.mousePosition))
                     continue;
                 embeddedTimeline.Select(binding.FormalClip);
@@ -3542,11 +3542,18 @@ namespace Slate
                 wrapper.editorBinding = currentBinding;
             }
 
+            bool parallelClips = currentBinding.FormalClip != null && currentBinding.FormalClip.Track.AllowsParallelClips;
+            if (parallelClips)
+            {
+                previousBinding = null;
+                nextBinding = null;
+            }
             wrapper.SetNeighbors(previousBinding, nextBinding);
             Rect clipRect = wrapper.rect;
-            clipRect.y = y;
+            clipRect.y = currentBinding.FormalClip != null
+                ? y + currentBinding.FormalClip.LaneIndex * currentBinding.FormalClip.Track.ClipHeight : y;
             clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
-            clipRect.height = trackDefaultHeight;
+            clipRect.height = currentBinding.FormalClip != null ? currentBinding.FormalClip.Track.ClipHeight : trackDefaultHeight;
 
             float xTime = wrapper.editorBinding.StartTime;
             float xPos = clipRect.x;
@@ -3556,7 +3563,7 @@ namespace Slate
                 float lastTime = xTime;
                 xTime = PosToTime(xPos + leftRect.width);
                 if ( wrapper.editorBinding.IsTimeQuantized ) { xTime = SnapTime(xTime); }
-                xTime = Mathf.Clamp(xTime, 0f, maxTime - 0.1f);
+                xTime = currentBinding.FormalClip != null ? Mathf.Max(0f, xTime) : Mathf.Clamp(xTime, 0f, maxTime - 0.1f);
 
                 if (multiSelection != null && multiSelection.Count > 1)
                 {
@@ -3575,10 +3582,10 @@ namespace Slate
                 if (multiSelection == null || multiSelection.Count < 1)
                 {
                     float cursorTime = wrapper.editorBinding.IsTimeQuantized ? SnapTime(PosToTime(mousePosition.x)) : PosToTime(mousePosition.x);
-                    IClipEditorBinding preCursorBinding = trackBindings
+                    IClipEditorBinding preCursorBinding = parallelClips ? null : trackBindings
                         .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.StartTime < cursorTime)
                         .LastOrDefault();
-                    IClipEditorBinding postCursorBinding = trackBindings
+                    IClipEditorBinding postCursorBinding = parallelClips ? null : trackBindings
                         .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.EndTime > cursorTime)
                         .FirstOrDefault();
                     if (e.shift || Prefs.rippleMode)

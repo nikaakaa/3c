@@ -74,6 +74,8 @@ namespace Slate
         float StartTime { get; }
         float EndTime { get; }
         float DefaultHeight { get; }
+        float ClipHeight { get; }
+        bool AllowsParallelClips { get; }
         float FinalHeight { get; }
         float GetFinalHeight(string inspectedParameterId);
         IReadOnlyList<IEmbeddedTimelineClipBinding> Clips { get; }
@@ -95,6 +97,7 @@ namespace Slate
     {
         IEmbeddedTimelineTrackBinding Track { get; }
         string Info { get; }
+        int LaneIndex { get; }
         bool IsActive { get; }
         bool IsTimeQuantized { get; }
         bool IsValid { get; }

@@ -833,6 +833,7 @@ namespace BTSMTL.Timeline.Editor
                     track.AddClip(clip);
                     m_Clips[sourceClip.AuthoringId] = clip;
                 }
+                track.ArrangeClipLanes();
             }
             for (int sectionIndex = 0; sectionIndex < Timeline.Sections.Count; sectionIndex++)
             {
@@ -1182,6 +1183,7 @@ namespace BTSMTL.Timeline.Editor
 
         sealed class BtsmtlTimelineTrackBinding : IEmbeddedTimelineTrackBinding, IEmbeddedTimelineMarkerTrackBinding
         {
+            int m_LaneCount = 1;
             readonly List<IEmbeddedTimelineClipBinding> m_Clips = new List<IEmbeddedTimelineClipBinding>();
             readonly List<IEmbeddedTimelineMarkerBinding> m_Markers = new List<IEmbeddedTimelineMarkerBinding>();
             float m_CustomHeight;
@@ -1211,7 +1213,9 @@ namespace BTSMTL.Timeline.Editor
             public Color Color => Source.Color();
             public float StartTime => 0f;
             public float EndTime => Owner.Length;
-            public float DefaultHeight => 32f;
+            public float ClipHeight => 32f;
+            public bool AllowsParallelClips => Owner.ContractCatalog.RequireTrack(Source.ContractKind).OverlapPolicy == TimelineTrackOverlapPolicy.Parallel;
+            public float DefaultHeight => ClipHeight * m_LaneCount;
             public float FinalHeight => GetFinalHeight(string.Empty);
             public float GetFinalHeight(string inspectedParameterId)
             {
@@ -1249,6 +1253,31 @@ namespace BTSMTL.Timeline.Editor
                     ? selected
                     : null;
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
+
+            public void ArrangeClipLanes()
+            {
+                if (!AllowsParallelClips)
+                    return;
+                m_Clips.Sort((left, right) =>
+                {
+                    int order = left.StartTime.CompareTo(right.StartTime);
+                    return order != 0 ? order : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
+                });
+                var laneEnds = new List<float>(m_Clips.Count);
+                for (int i = 0; i < m_Clips.Count; i++)
+                {
+                    var clip = (BtsmtlTimelineClipBinding)m_Clips[i];
+                    int lane = 0;
+                    while (lane < laneEnds.Count && laneEnds[lane] > clip.StartTime)
+                        lane++;
+                    if (lane == laneEnds.Count)
+                        laneEnds.Add(clip.EndTime);
+                    else
+                        laneEnds[lane] = clip.EndTime;
+                    clip.LaneIndex = lane;
+                }
+                m_LaneCount = Mathf.Max(1, laneEnds.Count);
+            }
             public IReadOnlyList<IEmbeddedTimelineMarkerBinding> Markers => m_Markers;
             public void AddMarker(BtsmtlTimelineMarkerBinding marker) => m_Markers.Add(marker);
         }
@@ -1345,6 +1374,7 @@ namespace BTSMTL.Timeline.Editor
             public Clip Source { get; }
             internal BtsmtlSlateTimelineBinding Owner => m_Owner;
             public BtsmtlTimelineTrackBinding Track => m_Track;
+            public int LaneIndex { get; set; }
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => m_Track;
             public bool IsTimeQuantized => false;
             public string AuthoringId => Source.AuthoringId;

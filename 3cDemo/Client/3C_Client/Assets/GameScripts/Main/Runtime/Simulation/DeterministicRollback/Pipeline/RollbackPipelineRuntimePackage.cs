@@ -44,7 +44,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 new FixedAbilityFinalizePassRuntimeFactory(),
                 new RollbackHistoryPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.History), state),
                 new RollbackHashEgressPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.HashEgress), policy, state),
-                new RollbackOutputDispositionPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.OutputDisposition))
+                new RollbackOutputDispositionPassRuntimeFactory(
+                    ResolveFactory(passFactoryCatalog, passes.OutputDisposition),
+                    policy.MaximumOutputRecords)
             });
             FixedPipelineProductRuntimeCatalog productFactories =
                 FixedPassExecutionBackend.CreateProductRuntimeCatalog(new[]

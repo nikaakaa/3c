@@ -3091,6 +3091,14 @@
 - solver 构造期准备两只精确数组：`m_KccStates` 是正式当前状态，`m_KccStateScratch` 是恢复事务目标。`Reconstruct` 先把 payload 读入 scratch，再通过既有 roster 校验，最后交换两只数组并把不可变 state 设为当前；读入或校验失败时不改写当前状态和 `m_Current`。
 - 交换后旧当前数组成为下一次恢复 scratch，稳定 roster 下恢复不再分配状态数组。`ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 Rollback 输出处置容量准备
+
+对应 tasks.md 的 5.2，新增 5.116 作为独立小步；5.2 保持未勾选。
+
+- `RollbackOutputDispositionPassRuntime` 的 `m_Dispositions` 原先用默认容量创建，首个超过四条的 egress 批会触发 List 底层存储扩容，随后依赖 `Clear` 保留容量。现在 runtime factory 从 `DeterministicRollbackModelPolicy.MaximumOutputRecords` 读取正式上限并传给 pass；构造期直接设置容量，不新增配置或 fallback。
+- 每条 GameplayFact/PresentationCommand 生成一条 disposition，OutputCommitter 已用同一 `MaximumOutputRecords` 约束正式输出记录，因此容量来源一致。收集顺序、Defer/Publish 判定、事务 identity、exclusive 写入和 finally 清空不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

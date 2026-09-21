@@ -7,10 +7,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public sealed class RollbackOutputDispositionPassRuntimeFactory : IFixedPipelinePassRuntimeFactory
     {
         readonly SimulationPipelinePassFactoryDescriptor m_Descriptor;
+        readonly int m_MaximumOutputRecords;
 
-        public RollbackOutputDispositionPassRuntimeFactory(SimulationPipelinePassFactoryDescriptor descriptor)
+        public RollbackOutputDispositionPassRuntimeFactory(
+            SimulationPipelinePassFactoryDescriptor descriptor,
+            int maximumOutputRecords)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+            if (maximumOutputRecords <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maximumOutputRecords));
+            m_MaximumOutputRecords = maximumOutputRecords;
         }
 
         public SimulationPipelinePassFactoryDescriptor Descriptor => m_Descriptor;
@@ -25,7 +31,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var writes = new RollbackOutputDispositionWritePorts(
                 context.Products.BindExclusiveWriter<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet));
             return new FixedEgressPassRuntimeAdapter<RollbackOutputDispositionReadPorts, RollbackOutputDispositionWritePorts>(
-                new RollbackOutputDispositionPassRuntime(context.Pass.Descriptor),
+                new RollbackOutputDispositionPassRuntime(context.Pass.Descriptor, m_MaximumOutputRecords),
                 reads,
                 writes);
         }
@@ -37,7 +43,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
 
-        public RollbackOutputDispositionPassRuntime(SimulationPipelinePassDescriptor descriptor) : base(descriptor) { }
+        public RollbackOutputDispositionPassRuntime(
+            SimulationPipelinePassDescriptor descriptor,
+            int maximumOutputRecords)
+            : base(descriptor)
+        {
+            if (maximumOutputRecords <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maximumOutputRecords));
+            m_Dispositions.Capacity = maximumOutputRecords;
+        }
 
         public void Execute(
             SimulationPipelineEgressContext context,

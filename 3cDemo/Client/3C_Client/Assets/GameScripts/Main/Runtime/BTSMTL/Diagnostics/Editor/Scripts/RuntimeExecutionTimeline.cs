@@ -412,15 +412,14 @@ namespace BTSMTL.Diagnostics.Editor
 
             ReadOnlySpan<RuntimeTraceEvent> events = capture.GetEvents(historyOffset);
             List<RuntimeTraceEvent> selected = SelectEvents(events, instance);
-            var ordered = new List<RuntimeTraceEvent>(selected);
-            ordered.Sort(CompareEvents);
+            selected.Sort(CompareEvents);
 
             var open = new Dictionary<SpanKey, PendingSpan>();
             var spans = new List<RuntimeExecutionSpan>();
             int unmappedEventCount = 0;
-            for (int i = 0; i < ordered.Count; i++)
+            for (int i = 0; i < selected.Count; i++)
             {
-                RuntimeTraceEvent value = ordered[i];
+                RuntimeTraceEvent value = selected[i];
                 RuntimeSourceElementHandle handle = value.Source;
                 RuntimeSourceElementKey source = default;
                 RuntimeDebugSourceMapSnapshot eventSourceMap = null;
@@ -518,7 +517,7 @@ namespace BTSMTL.Diagnostics.Editor
 
             spans.Sort(CompareSpans);
             bool complete = capture.EvictedEvents == 0 &&
-                            ordered.Count != 0 &&
+                            selected.Count != 0 &&
                             unmappedEventCount == 0 &&
                             open.Count == 0;
             return new RuntimeExecutionTimeline(
@@ -554,20 +553,19 @@ namespace BTSMTL.Diagnostics.Editor
 
             ReadOnlySpan<RuntimeTraceEvent> allEvents = capture.GetEvents(historyOffset);
             List<RuntimeTraceEvent> selectedEvents = SelectEvents(allEvents, instance);
-            var historyEvents = new List<RuntimeTraceEvent>(selectedEvents);
             if (instance.IsValid && selectedEvents.Count > 0)
                 AddSessionBoundaryEvents(
                     allEvents,
                     selectedEvents,
-                    historyEvents);
+                    selectedEvents);
 
             var grouped = new SortedDictionary<TickKey, List<RuntimeTraceEvent>>();
             var presentation = new SortedDictionary<PresentationFrameKey, List<RuntimeTraceEvent>>();
             int unmappedEventCount = 0;
             bool checkSourceCoverage = sourceMap != null || sourceMaps != null;
-            for (int i = 0; i < historyEvents.Count; i++)
+            for (int i = 0; i < selectedEvents.Count; i++)
             {
-                RuntimeTraceEvent value = historyEvents[i];
+                RuntimeTraceEvent value = selectedEvents[i];
                 if (checkSourceCoverage && value.Source.IsValid)
                 {
                     RuntimeDebugSourceMapSnapshot resolvedMap = sourceMap;

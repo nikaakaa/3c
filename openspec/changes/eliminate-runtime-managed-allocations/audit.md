@@ -107,6 +107,16 @@
 - 每次 `CopyGraphExecutionStates` 先清空 latest scratch 和目标 List，再扫描当前事件。同一 Source 仍按 Position 升序、同 Position 按 Sequence 升序保留最新观察；节点过滤、`TryCreate` 语义和 invalid instance 的空结果顺序边界不变。scratch 清空后保留 Dictionary 内部桶容量，消除周期内重建，不跨刷新保留旧 Source。
 - 作者可在 Play 中打开技能流观察确认节点状态仍按最新逻辑帧刷新。本步未改采集 store、payload 字符串和运行采样；这些仍留在 7.1 后续。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonClient.Editor.csproj` 同参数编译成功，只有既有 ACL identity CS0649 警告，0 错误。两次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
+
+## 2026-09-21 执行时间线构建复制删除
+
+对应 tasks.md 的 7.1，新增 7.66 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor timeline/history builder 的第一层事件列表，不计为 Player 每帧收益。
+
+- `RuntimeExecutionTimelineBuilder.BuildCore` 原先让 `SelectEvents` 返回独立 selected List，再复制成 ordered List 后排序。现在 selected 已由 builder 独占，直接原地按 Position 和 Sequence 排序并消费；删除每次 timeline 构建的第二份事件 List。
+- `BuildHistory` 原先同样把 selectedEvents 复制成 historyEvents 后再补充 session boundary。现在把 selectedEvents 同时作为边界补充目标；`AddSessionBoundaryEvents` 先完整读取原 selected 集合推导首尾 Position，并建立 sequence 和 branch 集合，之后才追加边界事件，所以源集合不会被边遍历边修改。分组前可见事件集合和顺序保持不变。
+- `complete` 仍要求没有淘汰事件、排序后事件数量非零、没有 unmapped source、timeline 没有未闭合 span；history complete 仍要求每个 tick 包含 SimulationTick 和 StatePublished 且没有 unmapped source。Builder 的 SelectEvents HashSet、grouping SortedDictionary、open span Dictionary、tick/presentation 子 List 和最终结果对象仍留在后续边界。
+- 作者可在 Runtime Debug 的 execution timeline/history 视图选择同一实例确认时间轴、tick 分组、checkpoint 和 presentation frame 仍一致。本步未做运行采样。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

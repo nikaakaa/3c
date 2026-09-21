@@ -2530,3 +2530,12 @@
 - 表现命令和可靠事件的发布委托固定为 Target 生命周期字段，删除每帧两个 lambda；发布顺序保持先表现命令、后可靠事件，重复 reliable sequence 过滤和 Camera producer 检查不变。
 - 诊断统计和 Dispose 清理改为直接遍历 SortedDictionary KeyValuePair，删除 Count 与 Clear 的 Values 包装。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、34 个既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 远端观测 Drain workspace 复用
+
+对应 tasks.md 的 5.4，本步处理 Prediction Evidence 的观测批次组装，整项保持未勾选。
+
+- Evidence Module 现在长寿命持有 baseline、body sample、presentation sample 和 reliable event 四只 drain workspace；每次 Drain 先清空，吞并队列后填充，不再按调用创建四只 List。
+- `RemotePresentationBatch` 和 `AuthoritativeObservationBatch` 仍通过公开构造独立复制、排序并校验输入；workspace 在结果构造后 finally 清空，不存在跨批次别名。
+- Drain 的 baseline 升序检查、remote body 计数、latest tick、receive sequence 和诊断报告输入保持不变。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、34 个既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

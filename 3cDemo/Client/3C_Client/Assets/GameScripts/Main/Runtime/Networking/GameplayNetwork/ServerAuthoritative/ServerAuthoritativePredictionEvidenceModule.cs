@@ -68,6 +68,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly Queue<AuthoritativeActorBaseline> m_Baselines = new Queue<AuthoritativeActorBaseline>();
         readonly Queue<RemotePresentationBatch> m_Remote = new Queue<RemotePresentationBatch>();
         readonly Queue<RemotePresentationBatch> m_Reliable = new Queue<RemotePresentationBatch>();
+        readonly List<AuthoritativeActorBaseline> m_DrainBaselines = new List<AuthoritativeActorBaseline>(1);
+        readonly List<CharacterBodySample> m_DrainBodies = new List<CharacterBodySample>();
+        readonly List<PresentationCommand> m_DrainSamples = new List<PresentationCommand>();
+        readonly List<ServerAuthoritativeReliableEvent> m_DrainEvents = new List<ServerAuthoritativeReliableEvent>();
         AuthoritativeInputAck m_LatestAck;
         ulong m_ReceiveSequence;
         ulong m_CommittedEventHorizon;
@@ -177,7 +181,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativePredictionDatagramMetrics datagram,
             ServerAuthoritativeCheckpointMetrics checkpoint)
         {
-            var baselines = new List<AuthoritativeActorBaseline>(1);
+            m_DrainBaselines.Clear();
+            m_DrainBodies.Clear();
+            m_DrainSamples.Clear();
+            m_DrainEvents.Clear();
             AuthoritativeActorBaseline latestBaseline = null;
             while (m_Baselines.Count > 0)
             {
@@ -187,33 +194,51 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 latestBaseline = candidate;
             }
             if (latestBaseline != null)
-                baselines.Add(latestBaseline);
-            var bodies = new List<CharacterBodySample>();
-            var samples = new List<PresentationCommand>();
-            var events = new List<ServerAuthoritativeReliableEvent>();
+                m_DrainBaselines.Add(latestBaseline);
             while (m_Remote.Count > 0)
             {
                 RemotePresentationBatch batch = m_Remote.Dequeue();
-                bodies.AddRange(batch.BodySamples);
-                samples.AddRange(batch.SampleCommands);
+                m_DrainBodies.AddRange(batch.BodySamples);
+                m_DrainSamples.AddRange(batch.SampleCommands);
             }
             while (m_Reliable.Count > 0)
-                events.AddRange(m_Reliable.Dequeue().ReliableEvents);
-            if (bodies.Count > 0)
+                m_DrainEvents.AddRange(m_Reliable.Dequeue().ReliableEvents);
+            if (m_DrainBodies.Count > 0)
             {
-                m_RemoteBodyCount = checked(m_RemoteBodyCount + (ulong)bodies.Count);
-                m_LastRemoteBodyTick = bodies[bodies.Count - 1].Tick.Value;
+                m_RemoteBodyCount = checked(m_RemoteBodyCount + (ulong)m_DrainBodies.Count);
+                m_LastRemoteBodyTick = m_DrainBodies[m_DrainBodies.Count - 1].Tick.Value;
             }
             ulong authorityEstimate = EstimateAuthorityTick(ClockMicros());
-            var batchResult = new AuthoritativeObservationBatch(
-                ++m_ReceiveSequence,
-                authorityEstimate,
-                m_LatestAck,
-                baselines,
-                new[] { new RemotePresentationBatch(remoteActor, bodies, samples, events, false) });
-            return new ServerAuthoritativePredictionObservationResult(
-                batchResult,
-                BuildReport(source.SourceTick, authorityEstimate, remoteActor, bodies.Count, datagram, checkpoint));
+            try
+            {
+                var batchResult = new AuthoritativeObservationBatch(
+                    ++m_ReceiveSequence,
+                    authorityEstimate,
+                    m_LatestAck,
+                    m_DrainBaselines,
+                    new[] { new RemotePresentationBatch(
+                        remoteActor,
+                        m_DrainBodies,
+                        m_DrainSamples,
+                        m_DrainEvents,
+                        false) });
+                return new ServerAuthoritativePredictionObservationResult(
+                    batchResult,
+                    BuildReport(
+                        source.SourceTick,
+                        authorityEstimate,
+                        remoteActor,
+                        m_DrainBodies.Count,
+                        datagram,
+                        checkpoint));
+            }
+            finally
+            {
+                m_DrainBaselines.Clear();
+                m_DrainBodies.Clear();
+                m_DrainSamples.Clear();
+                m_DrainEvents.Clear();
+            }
         }
 
         public void AcknowledgeRemoteEvents(ulong eventHorizon)

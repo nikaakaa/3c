@@ -450,6 +450,7 @@
 - [x] 5.187 Float32 Prediction pipeline 合并先统计保留 participants，再填充精确数组并追加三个 prediction states；删除合并 List 和扩容
 - [x] 5.188 Float32 Remote presentation TickQueue 用常驻 due tick 数组记录已发布 tick，删除 ulong List 和扩容壳；发布完成后再移除和归还 tick 分组
 - [x] 5.189 Float32 Remote presentation body stream 用私有 array-backed scratch 生成 intervals，保留 IReadOnlyList 边界；删除 List 收集和扩容壳
+- [x] 5.190 两数值域 Ability Evaluate 的 per-Actor ingress 改为常驻数组和显式 count；Evaluation 内部分发改为 array/count 边界，删除 List 外壳和 Clear 临时集合
 
 ## 6. UI、资源、渲染和生命周期
 

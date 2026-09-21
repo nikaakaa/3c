@@ -12,7 +12,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedCharacterRuntimeState sourceState,
             SimulationTick tick,
             SimulationInput input,
-            IReadOnlyList<SimulationIngress> ingress,
+            SimulationIngress[] ingress,
+            int ingressCount,
             WorldBodyState beforeBody,
             bool diagnosticsEnabled,
             bool captureValues,
@@ -103,10 +104,10 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < invocations.Count; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
-                    ApplyIngress(invocation, ingress, sourceState);
+                    ApplyIngress(invocation, ingress, ingressCount, sourceState);
                     if (!effectAdvanced && invocation.HasGameplayEffects)
                     {
-                        ApplyGameplayEffectIngress(invocation, ingress);
+                        ApplyGameplayEffectIngress(invocation, ingress, ingressCount);
                         invocation.AdvanceGameplayEffects();
                         effectAdvanced = true;
                     }
@@ -114,7 +115,7 @@ namespace ThirdPersonSimulation.Fixed
                 }
 
                 if (!effectAdvanced)
-                    RequireNoGameplayEffectIngress(ingress);
+                    RequireNoGameplayEffectIngress(ingress, ingressCount);
 
                 var control = new FixedCharacterControlRuntime(
                     characterRuntime.ControlModules,
@@ -250,10 +251,11 @@ namespace ThirdPersonSimulation.Fixed
 
         static void ApplyIngress(
             FixedAbilityInvocationRuntime invocation,
-            IReadOnlyList<SimulationIngress> ingress,
+            SimulationIngress[] ingress,
+            int ingressCount,
             FixedCharacterRuntimeState sourceState)
         {
-            for (int i = 0; i < (ingress?.Count ?? 0); i++)
+            for (int i = 0; i < ingressCount; i++)
             {
                 SimulationIngress value = ingress[i];
                 if (value.Header.Kind != SimulationIngressKind.ActionLifecycle ||
@@ -265,16 +267,17 @@ namespace ThirdPersonSimulation.Fixed
 
         static void ApplyGameplayEffectIngress(
             FixedAbilityInvocationRuntime invocation,
-            IReadOnlyList<SimulationIngress> ingress)
+            SimulationIngress[] ingress,
+            int ingressCount)
         {
-            for (int i = 0; i < (ingress?.Count ?? 0); i++)
+            for (int i = 0; i < ingressCount; i++)
                 if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
                     invocation.ApplyGameplayEffectIngress(ingress[i]);
         }
 
-        static void RequireNoGameplayEffectIngress(IReadOnlyList<SimulationIngress> ingress)
+        static void RequireNoGameplayEffectIngress(SimulationIngress[] ingress, int ingressCount)
         {
-            for (int i = 0; i < (ingress?.Count ?? 0); i++)
+            for (int i = 0; i < ingressCount; i++)
                 if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
                     throw new InvalidOperationException(
                         "Fixed Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");

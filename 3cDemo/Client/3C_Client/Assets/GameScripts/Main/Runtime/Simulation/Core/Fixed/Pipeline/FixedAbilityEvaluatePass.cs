@@ -36,7 +36,8 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedCharacterEvaluationResult[] m_Evaluations;
         readonly CharacterWorldSolveRequest[] m_Requests;
-        readonly List<SimulationIngress>[] m_Ingress;
+        readonly SimulationIngress[][] m_Ingress;
+        readonly int[] m_IngressCounts;
         readonly FixedCharacterEvaluationResultBatch m_EvaluationBatch;
         readonly WorldSolveBatchRequest m_WorldBatch;
 
@@ -49,11 +50,12 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentOutOfRangeException(nameof(actorCount));
             m_Evaluations = new FixedCharacterEvaluationResult[actorCount];
             m_Requests = new CharacterWorldSolveRequest[actorCount];
-            m_Ingress = new List<SimulationIngress>[actorCount];
+            m_Ingress = new SimulationIngress[actorCount][];
+            m_IngressCounts = new int[actorCount];
             m_EvaluationBatch = new FixedCharacterEvaluationResultBatch(actorCount);
             m_WorldBatch = new WorldSolveBatchRequest(actorCount);
             for (int i = 0; i < actorCount; i++)
-                m_Ingress[i] = new List<SimulationIngress>();
+                m_Ingress[i] = Array.Empty<SimulationIngress>();
         }
 
         public void Execute(
@@ -89,6 +91,7 @@ namespace ThirdPersonSimulation.Fixed
                         step.Tick,
                         input,
                         m_Ingress[i],
+                        m_IngressCounts[i],
                         state.WorldState.Bodies[i],
                         readPorts.Diagnostics.Sink.IsEnabled,
                         readPorts.Diagnostics.Sink is ISimulationValueTraceInterest valueInterest &&
@@ -113,7 +116,8 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     m_Evaluations[i] = null;
                     m_Requests[i] = default;
-                    m_Ingress[i].Clear();
+                    Array.Clear(m_Ingress[i], 0, m_IngressCounts[i]);
+                    m_IngressCounts[i] = 0;
                 }
             }
         }
@@ -121,9 +125,22 @@ namespace ThirdPersonSimulation.Fixed
         void PrepareIngress(FixedSimulationStep step, IFixedCharacterRuntimePort runtime)
         {
             for (int i = 0; i < m_Ingress.Length; i++)
-                m_Ingress[i].Clear();
+            {
+                Array.Clear(m_Ingress[i], 0, m_IngressCounts[i]);
+                m_IngressCounts[i] = 0;
+            }
             for (int i = 0; i < step.Ingress.Count; i++)
-                m_Ingress[runtime.Runtime.GetActorIndex(step.Ingress[i].ActorId)].Add(step.Ingress[i].Value);
+            {
+                int actorIndex = runtime.Runtime.GetActorIndex(step.Ingress[i].ActorId);
+                if (m_IngressCounts[actorIndex] == m_Ingress[actorIndex].Length)
+                {
+                    int capacity = Math.Max(4, m_Ingress[actorIndex].Length * 2);
+                    var values = new SimulationIngress[capacity];
+                    Array.Copy(m_Ingress[actorIndex], values, m_IngressCounts[actorIndex]);
+                    m_Ingress[actorIndex] = values;
+                }
+                m_Ingress[actorIndex][m_IngressCounts[actorIndex]++] = step.Ingress[i].Value;
+            }
         }
     }
 

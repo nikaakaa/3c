@@ -3699,3 +3699,11 @@
 - Remote Presentation 的 body stream transaction 用私有 array-backed `BodyIntervalScratch` 生成和清理 intervals。wrapper 只暴露 `IReadOnlyList` 的 Count 和下标，容量不足时倍增；Capture 前后统一清空使用区间。Reset/Append、最新 tick 和 Capture 事务语义不变。
 - 该 target 的 body interval `List`、内部数组扩容壳删除；`CaptureBodyStream` 正式接口不变，消费端仍按 Count 和下标读取。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 两数值域 ability ingress scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.190 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Evaluate 的 per-Actor ingress 从 `List` 改为常驻可增长 `SimulationIngress[]` 加显式 count。Prepare 先清空上一 tick 使用区间，再按 locked roster actor index 分组填充；action、gameplay result、effect lifecycle 和 attribute value 的分发顺序不变。
+- 两域 Character Evaluation 的内部边界改为 `SimulationIngress[] + ingressCount`，Apply、Effect 校验和 no-effect 检查都按 count 遍历。异常路径仍统一清空 scratch，成功路径保留 evaluation batch 和 world request 语义。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

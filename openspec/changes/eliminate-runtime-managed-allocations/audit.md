@@ -3394,3 +3394,11 @@
 - `ServerAuthoritativeEgressCodec.ReadOwnerInput` 和 `ReadAuthorityReplication` 从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`。Fantasy prediction endpoint 和 Authority Source runtime 分别直接传递 committed record 的只读 `Payload`，删除每条 owner input 和 authority replication 提交时的 payload 克隆。
 - canonical 比较改用 `bytes.Span`；reader 仍要求 array-backed 存储，schema、字段顺序、重编码比较和返回批次所有权不变。`Float32SourceEgressRecord` 构造期的一次独立复制和 `PayloadHash` 保持。
 - 最后一个 `Float32SourceEgressRecord.CopyPayload` 消费者迁移后直接删除旧入口；Datagram packet 自身的 `CopyPayload` 属于不同所有权，不在本步改动。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 gameplay datagram payload 零复制解码
+
+对应 tasks.md 的 5.4／5.5，新增 5.152 作为独立小步；父项保持未勾选。
+
+- `ServerAuthoritativeDatagramPacket.Payload` 改为 `ReadOnlyMemory<byte>`，编码时再展开 span；四个 payload 读取入口 `ReadHello`、`ReadHelloAck`、`ReadCommand` 和 `ReadSnapshot` 从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`。
+- prediction 和 authority 收包路径直接借用 packet 自有 payload，删除 hello ack、snapshot、command 和 hello 的 `CopyPayload` 中转。这些 packet 当前不被提前归还或复用；snapshot 结果自身复制 delta payload，command/hello 解码结果不依赖原始 bytes。
+- 无消费者的 `ServerAuthoritativeDatagramPacket.CopyPayload` 删除。payload schema、kind 校验、指标统计、packet 独立所有权和返回对象所有权不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

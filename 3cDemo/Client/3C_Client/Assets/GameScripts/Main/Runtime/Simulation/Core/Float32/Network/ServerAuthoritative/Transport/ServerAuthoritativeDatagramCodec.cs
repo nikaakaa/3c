@@ -83,8 +83,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         }
 
         public ServerAuthoritativeDatagramHeader Header { get; }
-        public ReadOnlySpan<byte> Payload => m_Payload;
-        public byte[] CopyPayload() => (byte[])m_Payload.Clone();
+        public ReadOnlyMemory<byte> Payload => m_Payload;
     }
 
     public static class ServerAuthoritativeGameplayDatagramCodec
@@ -125,7 +124,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             writer.WriteString(packet.Header.Identity.PlayerId.Value);
             writer.WriteString(packet.Header.Identity.ActorId.Value);
             writer.WriteUInt64(packet.Header.PacketSequence);
-            writer.WriteBytes(packet.Payload);
+            writer.WriteBytes(packet.Payload.Span);
             if (writer.Length > maximumBytes)
                 throw new InvalidDataException($"Gameplay datagram size '{writer.Length}' exceeds budget '{maximumBytes}'.");
         }
@@ -301,7 +300,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return writer.ToArray();
         }
 
-        public static DataPlaneHello ReadHello(byte[] bytes)
+        public static DataPlaneHello ReadHello(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, ServerAuthoritativeDatagramKind.DataPlaneHello);
             var value = new DataPlaneHello(reader.ReadString(), reader.ReadString(), reader.ReadInt64());
@@ -318,7 +317,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return writer.ToArray();
         }
 
-        public static DataPlaneHelloAck ReadHelloAck(byte[] bytes)
+        public static DataPlaneHelloAck ReadHelloAck(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, ServerAuthoritativeDatagramKind.DataPlaneHelloAck);
             var value = new DataPlaneHelloAck(reader.ReadUInt64(), reader.ReadInt64(), reader.ReadInt64());
@@ -344,7 +343,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return writer.ToArray();
         }
 
-        public static CommandDatagram ReadCommand(byte[] bytes)
+        public static CommandDatagram ReadCommand(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, ServerAuthoritativeDatagramKind.Command);
             ulong latestSnapshot = reader.ReadUInt64();
@@ -378,7 +377,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return writer.ToArray();
         }
 
-        public static SnapshotDatagram ReadSnapshot(byte[] bytes)
+        public static SnapshotDatagram ReadSnapshot(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, ServerAuthoritativeDatagramKind.Snapshot);
             var value = new SnapshotDatagram(
@@ -400,9 +399,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return writer;
         }
 
-        static CanonicalReader Reader(byte[] bytes, ServerAuthoritativeDatagramKind expectedKind)
+        static CanonicalReader Reader(ReadOnlyMemory<byte> bytes, ServerAuthoritativeDatagramKind expectedKind)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             int version = reader.ReadInt32();
             if (version != SchemaVersion)
                 throw new InvalidDataException($"Datagram payload schema version '{version}' is unsupported.");

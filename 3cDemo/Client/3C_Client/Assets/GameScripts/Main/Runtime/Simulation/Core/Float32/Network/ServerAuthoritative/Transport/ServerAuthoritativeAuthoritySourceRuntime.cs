@@ -298,9 +298,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 return;
             if (packet.Header.Kind != ServerAuthoritativeDatagramKind.Command)
                 Fail("authority_datagram_kind_invalid", $"Authority received unexpected gameplay datagram '{packet.Header.Kind}'.");
-            byte[] payload = packet.CopyPayload();
-            CommandDatagram command = ServerAuthoritativeDatagramPayloadCodec.ReadCommand(payload);
-            route.RecordCommand(payload.Length, command.SourceTick);
+            CommandDatagram command = ServerAuthoritativeDatagramPayloadCodec.ReadCommand(packet.Payload);
+            route.RecordCommand(packet.Payload.Length, command.SourceTick);
             ReceiveCommand(route, command);
         }
 
@@ -313,7 +312,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 Fail("authority_data_hello_without_ticket", "Authority received Hello without a live ticket.");
             }
-            DataPlaneHello hello = ServerAuthoritativeDatagramPayloadCodec.ReadHello(received.Packet.CopyPayload());
+            DataPlaneHello hello = ServerAuthoritativeDatagramPayloadCodec.ReadHello(received.Packet.Payload);
             if (!string.Equals(hello.TicketId, route.Ticket.TicketId, StringComparison.Ordinal) ||
                 !string.Equals(hello.Nonce, route.Ticket.Nonce, StringComparison.Ordinal))
             {

@@ -150,7 +150,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 {
                     case ServerAuthoritativeDatagramKind.DataPlaneHelloAck:
                     {
-                        DataPlaneHelloAck ack = ServerAuthoritativeDatagramPayloadCodec.ReadHelloAck(packet.CopyPayload());
+                        DataPlaneHelloAck ack = ServerAuthoritativeDatagramPayloadCodec.ReadHelloAck(packet.Payload);
                         if (m_PredictionTicket == null)
                             throw new InvalidOperationException("Prediction received data-plane acknowledgement before its ticket.");
                         if (m_PredictionReady)
@@ -164,10 +164,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     }
                     case ServerAuthoritativeDatagramKind.Snapshot:
                     {
-                        byte[] payload = packet.CopyPayload();
                         m_SnapshotPacketCount++;
-                        m_SnapshotPayloadBytes = checked(m_SnapshotPayloadBytes + (ulong)payload.Length);
-                        SnapshotDatagram snapshot = ServerAuthoritativeDatagramPayloadCodec.ReadSnapshot(payload);
+                        m_SnapshotPayloadBytes = checked(m_SnapshotPayloadBytes + (ulong)packet.Payload.Length);
+                        SnapshotDatagram snapshot = ServerAuthoritativeDatagramPayloadCodec.ReadSnapshot(packet.Payload);
                         m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
                             ServerAuthoritativePredictionDatagramEventKind.Snapshot,
                             snapshot.AuthorityTick,

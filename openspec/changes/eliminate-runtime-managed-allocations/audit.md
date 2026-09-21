@@ -2503,3 +2503,12 @@
 - `FixedCharacterRuntime` 已在装配阶段把排序后的 roster 复制成不可变 `SimulationActorRosterDescriptor` 并计算 roster hash；Rollback Schedule 原先每个 outer tick 再复制 ActorId、排序、创建 descriptor 和重算同一 hash。
 - Schedule 现在直接把 `characterRuntime.Runtime.RosterDescriptor` 写入 ExecutionPlan，删除每 tick 的 actor 数组和 descriptor 分配。Plan 共享长寿命不可变 descriptor，不改 actor 集合、排序和 plan 所需生命周期。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚历史边界枚举去包装
+
+对应 tasks.md 的 5.2，本步处理输入、快照和 state-hash 历史的边界查询与裁剪，整项保持未勾选。
+
+- `RollbackInputHistory` 与 `RollbackSnapshotHistory` 的 FloorTick／CeilingTick 原先遍历 `SortedDictionary.Keys`，每次访问都会新建 KeyCollection；现在直接遍历具体 KeyValuePair，利用 struct enumerator 读取排序后的首尾 Tick。
+- 通用 `RemoveThrough` 找最小 Tick 时同样直接遍历 KeyValuePair，不再创建 Keys 包装。输入、快照和 applied hash 的确认裁剪顺序与边界不变。
+- `RollbackStateHashHistory.DiscardThrough` 改为遍历 peer 字典 KeyValuePair，删除每次清理的 Values 包装；每个 peer 的移除数量和总计数更新保持不变。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

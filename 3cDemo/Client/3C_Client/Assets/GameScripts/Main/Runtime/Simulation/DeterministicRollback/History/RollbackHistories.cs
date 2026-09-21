@@ -196,16 +196,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         ulong FirstTick()
         {
-            foreach (ulong tick in m_Entries.Keys)
-                return tick;
+            foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
+                return pair.Key;
             return 0;
         }
 
         ulong LastTick()
         {
             ulong result = 0;
-            foreach (ulong tick in m_Entries.Keys)
-                result = tick;
+            foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
+                result = pair.Key;
             return result;
         }
 
@@ -214,9 +214,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             while (values.Count != 0)
             {
                 ulong candidate = 0;
-                foreach (ulong value in values.Keys)
+                foreach (KeyValuePair<ulong, T> value in values)
                 {
-                    candidate = value;
+                    candidate = value.Key;
                     break;
                 }
                 if (candidate > tick)
@@ -286,16 +286,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         ulong FirstTick()
         {
-            foreach (ulong tick in m_Entries.Keys)
-                return tick;
+            foreach (KeyValuePair<ulong, FixedSimulationSessionSnapshot> pair in m_Entries)
+                return pair.Key;
             return 0;
         }
 
         ulong LastTick()
         {
             ulong result = 0;
-            foreach (ulong tick in m_Entries.Keys)
-                result = tick;
+            foreach (KeyValuePair<ulong, FixedSimulationSessionSnapshot> pair in m_Entries)
+                result = pair.Key;
             return result;
         }
     }
@@ -347,8 +347,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void DiscardThrough(ulong confirmedTick)
         {
-            foreach (SortedDictionary<ulong, RollbackStateHashReport> entries in m_Peers.Values)
+            foreach (KeyValuePair<string, SortedDictionary<ulong, RollbackStateHashReport>> pair in m_Peers)
             {
+                SortedDictionary<ulong, RollbackStateHashReport> entries = pair.Value;
                 int before = entries.Count;
                 RollbackInputHistory.RemoveThrough(entries, confirmedTick);
                 m_Count -= before - entries.Count;

@@ -5,6 +5,7 @@
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed",
         "ThirdPersonSimulation.Float32",
+        "ThirdPersonCharacter.Pipeline.RootMotion",
         "ThirdPersonCharacter.Control.Rules",
         "ThirdPersonSimulation.Unity",
         "ThirdPersonSimulation.DeterministicKcc",

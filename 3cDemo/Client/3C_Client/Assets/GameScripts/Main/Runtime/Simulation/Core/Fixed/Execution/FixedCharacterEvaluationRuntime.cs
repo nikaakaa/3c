@@ -143,23 +143,28 @@ namespace ThirdPersonSimulation.Fixed
                 }
 
                 for (int i = 0; i < timelineAdvances.Count; i++)
+                {
                     actor.TimelineMotionReader.CopyPendingMotion(
                         timelineAdvances[i].RuntimeHandle,
                         timelineLogicMotion);
-                AppendTimelineMotion(motionContributions, timelineLogicMotion);
-                for (int i = 0; i < timelineAdvances.Count; i++)
-                    actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
-                        timelineAdvances[i].RuntimeHandle,
-                        timelineLogicMotionWarps);
+                    AppendTimelineMotion(motionContributions, timelineLogicMotion);
+                }
                 for (int i = 0; i < invocations.Count; i++)
+                    invocations[i].ClearTimelineMotionWarps();
+                for (int advanceIndex = 0; advanceIndex < timelineAdvances.Count; advanceIndex++)
                 {
-                    FixedAbilityInvocationRuntime invocation = invocations[i];
-                    invocation.ClearTimelineMotionWarps();
-                    for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
+                    actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
+                        timelineAdvances[advanceIndex].RuntimeHandle,
+                        timelineLogicMotionWarps);
+                    for (int i = 0; i < invocations.Count; i++)
                     {
-                        if (timelineLogicMotionWarps[warpIndex].AbilityId != invocation.AbilityId)
-                            continue;
-                        invocation.AddTimelineMotionWarp(timelineLogicMotionWarps[warpIndex]);
+                        FixedAbilityInvocationRuntime invocation = invocations[i];
+                        for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
+                        {
+                            if (timelineLogicMotionWarps[warpIndex].AbilityId != invocation.AbilityId)
+                                continue;
+                            invocation.AddTimelineMotionWarp(timelineLogicMotionWarps[warpIndex]);
+                        }
                     }
                 }
 

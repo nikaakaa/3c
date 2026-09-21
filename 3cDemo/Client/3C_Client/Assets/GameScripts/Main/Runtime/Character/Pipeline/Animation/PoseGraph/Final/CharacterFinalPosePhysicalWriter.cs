@@ -32,8 +32,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RootHierarchy = rootHierarchy
                 ? rootHierarchy
                 : throw new ArgumentNullException(nameof(rootHierarchy));
-            m_RootHierarchy.RequireValid();
-            binding.RequireValid(rig);
             m_Bones = binding.PhysicalBones;
             m_ComponentRoot = binding.Animator.transform;
             if (m_ComponentRoot != m_RootHierarchy.PoseRoot)

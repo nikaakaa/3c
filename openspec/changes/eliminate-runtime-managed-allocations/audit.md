@@ -2240,6 +2240,14 @@
 - 保留 `m_LaunchPlan == null` 作为 Active Session 生命周期事实检查；失败文本、Tick Source 身份、世界版本和经过 Tick 数不变。
 - Center compile 仍因主验收 Editor 占用返回 `WorkspaceEditorInUse`；当前已知本地编译基线失败来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
 
+## 2026-09-21 Final Pose 物理写入绑定校验边界
+
+对应 tasks.md 的 7.53。
+
+- `CharacterPresentationDomainRuntimeFactory.Create` 创建 Pose Domain 前已经执行 `rootHierarchy.RequireValid()` 和 `animationRigBinding.RequireValid(animationRig)`；`CharacterFinalPosePhysicalWriter` 构造器删除第二次同样遍历。
+- 保留 binding/root null 检查、Animator 与 PoseRoot 归属检查、root reference pose 检查、骨骼页 binding 检查和每帧 native header/availability/committed 结果检查。
+- Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

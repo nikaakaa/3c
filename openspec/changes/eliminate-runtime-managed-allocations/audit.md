@@ -2428,6 +2428,15 @@
 - 5.3 剩余：`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 远端表现到期队列复用
+
+对应 tasks.md 的 5.4，本步只处理 Remote Presentation Target 的 batch 和到期集合，整项保持未勾选。
+
+- Target 现持有 body interval workspace：每次 Commit 先清空，按本批 sample 数填充，交给 Presentation 捕获后清空引用；删除每批新建 `CharacterPresentationBodyInterval` List。
+- commands 与 reliable events 改用按 Tick 组织的 `TickQueue<T>`：新 Tick 需要 values list 时先复用已释放列表；到期发布直接使用队列内部的 due tick workspace，发布后归还 values list。排序 Tick 顺序、突破 authority horizon 停止、重复序列忽略和 diagnostics 计数保持不变。
+- Target Dispose 仍先退出版表现并销毁角色对象，再清空两个队列；队列复用只存在于单个 target 生命周期内，不跨 target 或跨 payload 生命周期共享。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、34 个既有包/工程警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 回滚历史容器对象复用
 
 对应 tasks.md 的 5.2，本步处理输入 MutableEntry 与快照包装，整项保持未勾选。

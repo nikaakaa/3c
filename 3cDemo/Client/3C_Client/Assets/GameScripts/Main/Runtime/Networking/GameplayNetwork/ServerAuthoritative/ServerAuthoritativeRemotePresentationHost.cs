@@ -274,10 +274,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly ServerAuthoritativeRemotePresentationFrameTarget m_PresentationTarget;
         readonly Action<ServerAuthoritativeRemotePresentationTarget> m_Release;
-        readonly SortedDictionary<ulong, List<PresentationCommand>> m_Commands =
-            new SortedDictionary<ulong, List<PresentationCommand>>();
-        readonly SortedDictionary<ulong, List<ServerAuthoritativeReliableEvent>> m_Reliable =
-            new SortedDictionary<ulong, List<ServerAuthoritativeReliableEvent>>();
+        readonly TickQueue<PresentationCommand> m_Commands = new TickQueue<PresentationCommand>();
+        readonly TickQueue<ServerAuthoritativeReliableEvent> m_Reliable = new TickQueue<ServerAuthoritativeReliableEvent>();
+        readonly List<CharacterPresentationBodyInterval> m_BodyIntervals = new List<CharacterPresentationBodyInterval>();
 
         ulong m_LastReliableSequence;
         EventId m_LastReliableEventId;
@@ -349,11 +348,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Gameplay.BeginTick();
             CharacterPresentationBodyState finalBody = default;
             bool hasFinalBody = false;
-            var intervals = new List<CharacterPresentationBodyInterval>(batch.BodySamples.Count);
+            m_BodyIntervals.Clear();
             for (int i = 0; i < batch.BodySamples.Count; i++)
             {
                 CharacterBodySample sample = batch.BodySamples[i];
-                intervals.Add(CharacterPresentationBodyInterval.FromFloat32(
+                m_BodyIntervals.Add(CharacterPresentationBodyInterval.FromFloat32(
                     sample,
                     m_TickRate,
                     batch.ResetBodyStream && i == 0
@@ -363,8 +362,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 hasFinalBody = true;
                 m_SelectedTick = sample.Tick.Value;
             }
-            if (intervals.Count != 0)
-                m_Runtime.CaptureBodyStream(intervals);
+            if (m_BodyIntervals.Count != 0)
+                m_Runtime.CaptureBodyStream(m_BodyIntervals);
+            m_BodyIntervals.Clear();
             for (int i = 0; i < batch.SampleCommands.Count; i++)
                 Enqueue(m_Commands, batch.SampleCommands[i].Header.Tick.Value, batch.SampleCommands[i]);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)
@@ -442,7 +442,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             PublishDue(m_Reliable, reliableTick, Publish);
         }
 
-        static void PublishDue<T>(SortedDictionary<ulong, List<T>> queue, ulong authorityTick, Action<T> publish)
+        static void PublishDue<T>(TickQueue<T> queue, ulong authorityTick, Action<T> publish)
         {
             var due = new List<ulong>();
             foreach (KeyValuePair<ulong, List<T>> pair in queue)
@@ -457,17 +457,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 queue.Remove(due[i]);
         }
 
-        static void Enqueue<T>(SortedDictionary<ulong, List<T>> queue, ulong tick, T value)
-        {
-            if (tick == 0)
-                throw new InvalidOperationException("Remote presentation output has no authority Tick.");
-            if (!queue.TryGetValue(tick, out List<T> values))
-            {
-                values = new List<T>();
-                queue.Add(tick, values);
-            }
-            values.Add(value);
-        }
+        static void Enqueue<T>(TickQueue<T> queue, ulong tick, T value) => queue.Enqueue(tick, value);
 
         void PublishPresentationHorizonDiagnostics()
         {
@@ -489,12 +479,66 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 Count(m_Commands) + Count(m_Reliable)));
         }
 
-        static int Count<T>(SortedDictionary<ulong, List<T>> queue)
+        static int Count<T>(TickQueue<T> queue) => queue.Count;
+
+        sealed class TickQueue<T>
         {
-            int count = 0;
-            foreach (List<T> values in queue.Values)
-                count = checked(count + values.Count);
-            return count;
+            readonly SortedDictionary<ulong, List<T>> m_Entries = new SortedDictionary<ulong, List<T>>();
+            readonly Stack<List<T>> m_FreeValues = new Stack<List<T>>();
+            readonly List<ulong> m_DueTicks = new List<ulong>();
+
+            public int Count
+            {
+                get
+                {
+                    int count = 0;
+                    foreach (List<T> values in m_Entries.Values)
+                        count = checked(count + values.Count);
+                    return count;
+                }
+            }
+
+            public void Enqueue(ulong tick, T value)
+            {
+                if (tick == 0)
+                    throw new InvalidOperationException("Remote presentation output has no authority Tick.");
+                if (!m_Entries.TryGetValue(tick, out List<T> values))
+                {
+                    values = m_FreeValues.Count == 0 ? new List<T>() : m_FreeValues.Pop();
+                    m_Entries.Add(tick, values);
+                }
+                values.Add(value);
+            }
+
+            public void PublishDue(ulong authorityTick, Action<T> publish)
+            {
+                m_DueTicks.Clear();
+                foreach (KeyValuePair<ulong, List<T>> pair in m_Entries)
+                {
+                    if (pair.Key > authorityTick)
+                        break;
+                    for (int i = 0; i < pair.Value.Count; i++)
+                        publish(pair.Value[i]);
+                    m_DueTicks.Add(pair.Key);
+                }
+                for (int i = 0; i < m_DueTicks.Count; i++)
+                {
+                    m_Entries.Remove(m_DueTicks[i], out List<T> values);
+                    values.Clear();
+                    m_FreeValues.Push(values);
+                }
+            }
+
+            public void Clear()
+            {
+                foreach (List<T> values in m_Entries.Values)
+                {
+                    values.Clear();
+                    m_FreeValues.Push(values);
+                }
+                m_Entries.Clear();
+                m_DueTicks.Clear();
+            }
         }
 
         void RequireAlive()

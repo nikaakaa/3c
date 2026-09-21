@@ -2605,3 +2605,12 @@
 - Channel 现在按“单分片预算×最大分片数”准备一只组装 buffer，`CopyComplete` 写入有效前缀并返回实际长度。重组 wrapper 在复制完成后才释放；Protocol envelope、输入帧、bundle、快照响应等 payload 对象继续独立分配。
 - `RollbackProtocolCodec.Read` 删除 `byte[]` 参数入口，改为 ArraySegment 限定有效范围；wire 读取、canonical 重编码比较和异常语义不变。重置 wrapper 时也会校验 peer 声明的 fragment count 不超过 Channel 正式最大分片数。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚不可靠发送 packet 复用
+
+对应 tasks.md 的 5.4，本步处理 Datagram Channel 的不可靠单包发送，整项保持未勾选。
+
+- 不可靠消息原先每次新建 `RollbackDatagramPacket`，packet 构造还会把 payload 复制成独立 `byte[]`；Endpoint 同步编码后该 packet 和 payload 都失去消费者。
+- Channel 现在持有一只不可靠 packet 和一只按单分片预算准备的 payload buffer。发送前 Reset 身份、序号和元数据，把 envelope 有效字节复制进 buffer，再交给 Endpoint 编码；不可靠消息仍强制只有一个分片。
+- 复用只发生在同一 Channel 的同步发送路径，Endpoint 在入队前已把内容复制进发送缓冲。可靠消息继续使用 reliable pending 的独立槽位，接收 packet 和 payload 不在本步范围。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

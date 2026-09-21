@@ -281,7 +281,7 @@ namespace ThirdPersonSimulation.Fixed
         public string SchemaId { get; }
         public int SchemaVersion { get; }
         public StableHash PayloadHash { get; }
-        public byte[] CopyPayload() => (byte[])m_Payload.Clone();
+        public ReadOnlyMemory<byte> Payload => m_Payload;
     }
 
     public sealed class FixedSimulationSessionSnapshot

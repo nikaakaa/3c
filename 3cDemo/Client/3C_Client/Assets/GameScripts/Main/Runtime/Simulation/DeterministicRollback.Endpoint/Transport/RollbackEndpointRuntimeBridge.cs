@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 throw new InvalidOperationException($"Rollback Source Egress channel '{record.ChannelId}' is unsupported.");
             }
-            if (RollbackProtocolCodec.ReadCanonicalPayload(m_CanonicalScratch, record.CopyPayload()) is not RollbackStateHashReport report ||
+            if (RollbackProtocolCodec.ReadCanonicalPayload(m_CanonicalScratch, record.Payload) is not RollbackStateHashReport report ||
                 !string.Equals(report.PeerId, m_Peer.LocalPeerId, StringComparison.Ordinal) ||
                 report.Tick != record.Tick ||
                 !report.RosterHash.Equals(m_State.RosterHash))

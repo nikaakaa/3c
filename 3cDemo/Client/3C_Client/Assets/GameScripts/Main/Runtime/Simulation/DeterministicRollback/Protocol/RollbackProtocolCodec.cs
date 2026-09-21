@@ -120,18 +120,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
             WriteStateHashCore(writer, peerId, tick, worldHash, rosterHash, kccHash, new SnapshotStateHashActors(world));
         }
 
-        public static IRollbackProtocolPayload ReadCanonicalPayload(CanonicalWriter canonicalScratch, byte[] bytes)
+        public static IRollbackProtocolPayload ReadCanonicalPayload(
+            CanonicalWriter canonicalScratch,
+            ReadOnlyMemory<byte> bytes)
         {
             if (canonicalScratch == null)
                 throw new ArgumentNullException(nameof(canonicalScratch));
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != PayloadMagic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback canonical payload header is invalid.");
             IRollbackProtocolPayload payload = ReadPayload(reader, ReadKind(reader.ReadByte()), canonicalScratch);
             reader.RequireComplete();
             canonicalScratch.Reset();
             WriteCanonicalPayload(canonicalScratch, payload);
-            if (!canonicalScratch.ContentEquals(bytes))
+            if (!canonicalScratch.ContentEquals(bytes.Span))
                 throw new InvalidDataException("Rollback protocol payload is not canonical.");
             return payload;
         }

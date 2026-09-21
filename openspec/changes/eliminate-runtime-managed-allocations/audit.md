@@ -3370,3 +3370,11 @@
 - `RollbackProtocolEnvelope` 从 class 改为 readonly struct。协议读取和 canonical 校验完成后，Session、Sender、Sequence 和 payload 引用直接以值记录进入 Channel 接收队列，删除每条完整消息的信封堆分配。
 - 信封仍是不可变协议边界，payload 仍由 Handshake、输入批、快照响应等正式消息对象独立持有；Peer 和 Relay 消费函数继续读取 `Payload`，不新增归还或跨帧复用合同。空队列返回默认值，仅表示无结果，不是有效 envelope。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback state hash Egress payload 零复制解码
+
+对应 tasks.md 的 5.4，新增 5.149 作为独立小步；5.4 保持未勾选。
+
+- `FixedSourceEgressRecord` 增加 `ReadOnlyMemory<byte> Payload` 只读视图。Bridge 提交本地 state hash 时直接把 record 自身的 array-backed payload 交给 `RollbackProtocolCodec.ReadCanonicalPayload`，删除每次 `CopyPayload` 的数组克隆。
+- canonical payload 读取入口从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`，reader 仍要求 array-backed 存储；canonical 比较改为 `bytes.Span`。record 构造期的一次独立复制、PayloadHash 校验和 Bridge 后续 report 所有权不变。
+- `FixedSourceEgressRecord.CopyPayload` 已无消费者，直接删除，不保留旧复制入口。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

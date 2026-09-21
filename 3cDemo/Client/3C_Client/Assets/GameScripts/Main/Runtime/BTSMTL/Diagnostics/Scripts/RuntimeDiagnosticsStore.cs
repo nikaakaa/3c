@@ -198,16 +198,19 @@ namespace BTSMTL.Diagnostics
         readonly Queue<RuntimeLiveStateChange> m_Changes = new();
         readonly LinkedList<RuntimeLiveStateKey> m_Recency = new();
         readonly Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>> m_RecencyNodes = new();
+        readonly LinkedListNode<RuntimeLiveStateKey>[] m_RecencyNodePool;
         readonly int m_MaxChanges;
         long m_Version;
         long m_LastEvictionVersion;
         long m_EvictedStates;
+        int m_RecencyNodePoolCount;
 
         public RuntimeLiveStateStore(int maxChanges = 4096)
         {
             if (maxChanges < 64)
                 throw new ArgumentOutOfRangeException(nameof(maxChanges));
             m_MaxChanges = maxChanges;
+            m_RecencyNodePool = new LinkedListNode<RuntimeLiveStateKey>[m_MaxChanges];
         }
 
         public long Version => m_Version;
@@ -240,7 +243,8 @@ namespace BTSMTL.Diagnostics
                 }
                 else
                 {
-                    recent = m_Recency.AddLast(key);
+                    recent = AcquireRecencyNode(key);
+                    m_Recency.AddLast(recent);
                 }
                 m_RecencyNodes.Add(key, recent);
             }
@@ -282,11 +286,31 @@ namespace BTSMTL.Diagnostics
         {
             m_Current.Clear();
             m_Changes.Clear();
-            m_Recency.Clear();
+            while (m_Recency.Count > 0)
+            {
+                LinkedListNode<RuntimeLiveStateKey> node = m_Recency.First;
+                m_Recency.RemoveFirst();
+                ReturnRecencyNode(node);
+            }
             m_RecencyNodes.Clear();
             m_EvictedStates = 0;
             m_Version++;
             m_LastEvictionVersion = m_Version;
+        }
+
+        LinkedListNode<RuntimeLiveStateKey> AcquireRecencyNode(RuntimeLiveStateKey key)
+        {
+            LinkedListNode<RuntimeLiveStateKey> node = m_RecencyNodePoolCount > 0
+                ? m_RecencyNodePool[--m_RecencyNodePoolCount]
+                : new LinkedListNode<RuntimeLiveStateKey>(key);
+            node.Value = key;
+            return node;
+        }
+
+        void ReturnRecencyNode(LinkedListNode<RuntimeLiveStateKey> node)
+        {
+            node.Value = default;
+            m_RecencyNodePool[m_RecencyNodePoolCount++] = node;
         }
 
         static bool StateEquivalent(in RuntimeTraceEvent left, in RuntimeTraceEvent right)

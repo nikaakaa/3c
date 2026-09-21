@@ -2713,6 +2713,15 @@
 - 全项目搜索确认 `RuntimeCaptureSegmentSnapshot`、`RuntimeCaptureSnapshot` 和 `GetEvents` 的消费者只在 Diagnostics runtime 与 Editor 内；没有外部构造或 `Segments` 列表消费者依赖旧包装。
 - `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 分别使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获读取运行对比或 Player 分配采样。
 
+## 2026-09-21 实时状态节点 Clear 复用
+
+对应 tasks.md 的 7.1，新增 7.63 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeLiveStateStore` 已在满员替换时复用链表节点，但 `Clear` 直接丢掉全部 recency node；`SetExecutionBranch` 和 `AdoptRuntime` 都会触发 Clear，之后每个新 key 重新分配 `LinkedListNode`。现在 store 构造期准备长度 `maxChanges` 的私有节点归还数组，Clear 把所有活跃节点移入归还池；未满员新增时先从池取节点，池为空才新建。
+- 归还节点时把 `Value` 清成 default，取用时重新绑定新 key，避免旧 RuntimeInstance、StateId、CallSiteId 等 trace 身份被节点滞留。活跃节点加空闲节点不超过 `maxChanges`，归还池不需要扩容或第二份容量配置。
+- 既有 key 的 LRU 移动、满员时最旧节点替换、淘汰计数、版本推进、变化队列和读取独立数组语义不变。节点池只属于当前 `RuntimeLiveStateStore`，不是全局池；字典和变化队列自身容量、首次填充和事件 payload 仍在后续边界处理。
+- `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做分支切换或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

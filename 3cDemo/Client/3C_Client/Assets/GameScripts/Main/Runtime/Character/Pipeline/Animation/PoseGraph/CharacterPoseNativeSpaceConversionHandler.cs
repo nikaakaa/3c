@@ -172,7 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
-            m_Output = null;
             m_WriteBinding = default;
         }
 
@@ -195,7 +194,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != outputPort)
                 throw new InvalidOperationException(
                     $"Pose space conversion '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             string inputPort = m_Kind == CharacterPoseNodeKind.LocalToComponentPose
@@ -224,9 +224,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativePoseReadBinding(
                     in m_WriteBinding,
                     m_OutputSpace);
-            m_Output = m_OutputSpace == CharacterPoseSpace.Local
-                ? new CharacterPoseNativeLocalPoseValue(NodeId, in output)
-                : new CharacterPoseNativeComponentPoseValue(NodeId, in output);
+            if (m_OutputSpace == CharacterPoseSpace.Local)
+            {
+                m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                    m_Output as CharacterPoseNativeLocalPoseValue,
+                    NodeId,
+                    in output);
+            }
+            else
+            {
+                m_Output = CharacterPoseNativeComponentPoseValue.Reuse(
+                    m_Output as CharacterPoseNativeComponentPoseValue,
+                    NodeId,
+                    in output);
+            }
             return m_Output;
         }
 
@@ -256,7 +267,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage)
         {
             RequireAlive();
-            if (m_Output == null)
+            if (m_Output == null ||
+                m_Output.CompletionIdentity != lineage.CompletionIdentity)
                 return;
             if (m_Output.CompletionIdentity != lineage.CompletionIdentity ||
                 m_OutputSpace == CharacterPoseSpace.Local &&
@@ -276,7 +288,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -385,7 +398,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_FrameOpen = false;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

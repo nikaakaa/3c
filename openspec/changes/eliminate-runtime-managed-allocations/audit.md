@@ -2189,6 +2189,15 @@
 - handler 以 completion identity 判断当前输出，保留 Bone scratch、Native 双页、ValidatePending、Commit/Discard 和提交页索引语义；BeginFrame/ClearFrame 不再丢弃包装对象。
 - 本步只收 Modify Bone，不改变其它 Component Pose 节点。当前完整编译仍受生成 csproj 的删除文件引用阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Space Conversion Pose 输出包装复用
+
+对应 tasks.md 的 7.38。
+
+- `CharacterPoseNativeSpaceConversionHandler` 的输出空间由 handler kind 固定，原先每次 `EvaluateOutput` 都创建新的 Local 或 Component Pose 包装对象。
+- 按固定输出空间调用对应 `Reuse`，只在首次输出时创建包装对象，后续以当前 completion identity 识别输出；Local/Component 类型约束仍在 `ValidatePending` 保留。
+- 不改变 Local/Component 转换计算、Native 双页、输入读取、ValidatePending、Commit/Discard 或提交页索引；本步只删除稳态托管包装分配。
+- 当前完整编译仍受生成 csproj 的删除文件引用阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

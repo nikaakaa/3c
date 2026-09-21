@@ -413,3 +413,4 @@
 - [x] 7.35 删除全项目无调用者的旧 CharacterMotionMatchingProviderRuntime 及其 Unity meta，统一保留 Pose Graph 的 MotionMatchingPoseSourceRuntime 正式链；不改变当前数据库、选样和 source completion 语义
 - [x] 7.36 Motion Matching Pose handler 复用稳态输出包装对象，删除每帧 `CharacterPoseNativeLocalPoseValue` 创建；保留当前 lineage、Native layout、完成标记和提交页索引语义
 - [x] 7.37 Modify Bone 复用稳态 Component Pose 输出包装对象，删除每帧 `CharacterPoseNativeComponentPoseValue` 创建；保留当前 lineage、Component layout、完成标记和提交页索引语义
+- [x] 7.38 Space Conversion 按固定输出空间复用 Local/Component Pose 包装对象，删除每帧输出包装创建；保留空间转换、Native 双页和提交事务语义

@@ -147,7 +147,7 @@ namespace ThirdPersonSimulation
             Float32MotionAccumulator motion = new Float32MotionAccumulator(
                 access,
                 frame,
-                workspace.MotionContributions,
+                workspace,
                 workspace.TimelineMotionWarps,
                 actionStore);
             Float32LocomotionRuntime locomotion = new Float32LocomotionRuntime(

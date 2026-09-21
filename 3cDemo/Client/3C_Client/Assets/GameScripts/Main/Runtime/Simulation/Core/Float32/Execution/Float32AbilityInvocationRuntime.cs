@@ -150,8 +150,13 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterSkillId AbilityId { get; }
-        public IReadOnlyList<SimulationMotionContribution> MotionContributions => m_Workspace.MotionContributions;
         public IReadOnlyList<AbilityTimelineLogicMotionWarp> TimelineMotionWarps => m_Workspace.TimelineMotionWarps;
+
+        public void CopyMotionContributionsTo(List<SimulationMotionContribution> contributions)
+        {
+            m_Workspace.CopyMotionContributionsTo(contributions);
+            m_Workspace.ClearMotionContributions();
+        }
 
         public void ClearTimelineMotionWarps()
         {

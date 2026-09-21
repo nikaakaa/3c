@@ -150,7 +150,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedMotionAccumulator motion = new FixedMotionAccumulator(
                 access,
                 frame,
-                workspace.MotionContributions,
+                workspace,
                 workspace.TimelineMotionWarps,
                 actionStore);
             FixedLocomotionRuntime locomotion = new FixedLocomotionRuntime(

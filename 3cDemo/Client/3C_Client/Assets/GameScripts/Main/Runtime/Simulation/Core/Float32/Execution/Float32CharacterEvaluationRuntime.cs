@@ -140,7 +140,7 @@ namespace ThirdPersonSimulation
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
                     invocation.Tick();
-                    motionContributions.AddRange(invocation.MotionContributions);
+                    invocation.CopyMotionContributionsTo(motionContributions);
                 }
 
                 for (int i = 0; i < timelineAdvances.Count; i++)

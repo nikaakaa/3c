@@ -446,20 +446,20 @@ namespace ThirdPersonSimulation
         IFloat32MotionContributionSink
     {
         readonly Float32AbilityExecutionFrame m_Frame;
-        readonly List<SimulationMotionContribution> m_Contributions;
+        readonly Float32AbilityExecutionWorkspace m_Workspace;
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineMotionWarps;
         readonly Float32MotionWarpTarget m_MotionWarp;
 
         public Float32MotionAccumulator(
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
-            List<SimulationMotionContribution> contributions,
+            Float32AbilityExecutionWorkspace workspace,
             List<AbilityTimelineLogicMotionWarp> timelineMotionWarps,
             Float32ActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_Contributions = contributions ?? throw new ArgumentNullException(nameof(contributions));
+            m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_TimelineMotionWarps = timelineMotionWarps ?? throw new ArgumentNullException(nameof(timelineMotionWarps));
             m_MotionWarp = new Float32MotionWarpTarget(access, frame, actions);
         }
@@ -468,7 +468,7 @@ namespace ThirdPersonSimulation
         {
             if (!contribution.CanResolve)
                 return;
-            m_Contributions.Add(contribution);
+            m_Workspace.SubmitMotionContribution(contribution);
             if (m_Frame.Trace.Enabled)
             {
                 m_Frame.Trace.Add(

@@ -3795,3 +3795,11 @@
 - Fixed 和 Float32 的 Character Control Motion runtime 改由 Actor Binding 构造时创建并长期持有；每个 Actor tick 用 `Begin` 清空上一轮使用区间后重绑 input、body、tick 和 tick rate，异常路径统一清空 contributions。
 - Control contributions 从 `List` 改为可增长 `SimulationMotionContribution[]` 加显式 count；静态提交入口直接写数组区间并倍增容量，删除 `Action<SimulationMotionContribution>` 委托。
 - Character Evaluation 继续把 control contributions 复制进当次 motion contributions List；这个外层聚合 List 属后续独立小步，不在本步扩大范围。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability invocation motion scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.202 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Execution Workspace 的 motion contributions 从 `List` 改为 `SimulationMotionContribution[]` 加显式 count；容量不足时倍增，`MotionAccumulator` 直接提交到 workspace，不再接收和持有 `List`。
+- Invocation 边界从 `IReadOnlyList` 改为显式 `CopyMotionContributionsTo`；Character Evaluation 聚合后立刻清空 workspace 使用区间，保留 contribution 排列和 Resolve 语义。
+- 每 invocation motion collection 的 `List`、内部扩容壳和只读集合边界删除；workspace 本体仍随当前 invocation 生命周期创建，长期归属留给后续 ability cycle 独立小步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -446,20 +446,20 @@ namespace ThirdPersonSimulation.Fixed
         IFixedMotionContributionSink
     {
         readonly FixedAbilityExecutionFrame m_Frame;
-        readonly List<SimulationMotionContribution> m_Contributions;
+        readonly FixedAbilityExecutionWorkspace m_Workspace;
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineMotionWarps;
         readonly FixedMotionWarpTarget m_MotionWarp;
 
         public FixedMotionAccumulator(
             FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
-            List<SimulationMotionContribution> contributions,
+            FixedAbilityExecutionWorkspace workspace,
             List<AbilityTimelineLogicMotionWarp> timelineMotionWarps,
             FixedActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_Contributions = contributions ?? throw new ArgumentNullException(nameof(contributions));
+            m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_TimelineMotionWarps = timelineMotionWarps ?? throw new ArgumentNullException(nameof(timelineMotionWarps));
             m_MotionWarp = new FixedMotionWarpTarget(access, frame, actions);
         }
@@ -468,7 +468,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!contribution.CanResolve)
                 return;
-            m_Contributions.Add(contribution);
+            m_Workspace.SubmitMotionContribution(contribution);
             if (m_Frame.Trace.Enabled)
             {
                 m_Frame.Trace.Add(

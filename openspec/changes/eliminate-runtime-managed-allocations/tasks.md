@@ -413,6 +413,7 @@
 - [x] 5.150 Float32 远端表现 Egress 只读借用 Source record payload 解码，读取入口改为 ReadOnlyMemory；删除 committed output 每次提交的 payload 克隆
 - [x] 5.151 Float32 owner input 与 authority replication Egress 只读借用 Source record payload 解码，迁移最后两个消费者并删除 CopyPayload 旧入口
 - [x] 5.152 Float32 gameplay datagram payload codec 只读借用 packet 自有 payload，hello／ack／command／snapshot 全部删除 CopyPayload 中转
+- [x] 5.153 Float32 received datagram 改为只读值记录，接收队列直接承载 packet 与来源 endpoint 引用；删除每条收包的信封堆对象，packet 和 endpoint 所有权不变
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public long EndpointMismatchDrops { get; }
     }
 
-    public sealed class ServerAuthoritativeReceivedDatagram
+    public readonly struct ServerAuthoritativeReceivedDatagram
     {
         public ServerAuthoritativeReceivedDatagram(ServerAuthoritativeDatagramPacket packet, IPEndPoint remoteEndPoint)
         {

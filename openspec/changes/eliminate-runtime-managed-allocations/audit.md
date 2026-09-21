@@ -3402,3 +3402,11 @@
 - `ServerAuthoritativeDatagramPacket.Payload` 改为 `ReadOnlyMemory<byte>`，编码时再展开 span；四个 payload 读取入口 `ReadHello`、`ReadHelloAck`、`ReadCommand` 和 `ReadSnapshot` 从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`。
 - prediction 和 authority 收包路径直接借用 packet 自有 payload，删除 hello ack、snapshot、command 和 hello 的 `CopyPayload` 中转。这些 packet 当前不被提前归还或复用；snapshot 结果自身复制 delta payload，command/hello 解码结果不依赖原始 bytes。
 - 无消费者的 `ServerAuthoritativeDatagramPacket.CopyPayload` 删除。payload schema、kind 校验、指标统计、packet 独立所有权和返回对象所有权不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 received datagram 值记录化
+
+对应 tasks.md 的 5.5，新增 5.153 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeReceivedDatagram` 从 class 改为 readonly struct。接收线程校验路由后，packet 和真实来源 endpoint 引用直接以值记录进入 `ConcurrentQueue`，删除每条收包的信封堆分配。
+- 空队列返回默认值，仅表示无结果，不是有效 datagram。prediction、authority 和 Fantasy transport 适配层继续通过 `TryReceive` 读取 `Packet`／`RemoteEndPoint`；packet、endpoint 和队列消费所有权不变，不引入池化或提前归还。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

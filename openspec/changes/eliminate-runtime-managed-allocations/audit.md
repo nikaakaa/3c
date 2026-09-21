@@ -3691,3 +3691,11 @@
 - Remote Presentation 的 TickQueue 用常驻 `ulong[]` 和显式 count 记录本次已到期的 tick；容量不足时倍增，移除完成后清空使用区间。命令和可靠事件仍按 tick 升序发布，成功后统一移除分组并归还 List 池，事务顺序不变。
 - `List<ulong>`、`Add` 内部扩容和 Clear 临时壳删除；SortedDictionary 的 value List 池保持不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 remote presentation body intervals 收口
+
+对应 tasks.md 的 5.5，新增 5.189 作为独立小步；5.5 保持未勾选。
+
+- Remote Presentation 的 body stream transaction 用私有 array-backed `BodyIntervalScratch` 生成和清理 intervals。wrapper 只暴露 `IReadOnlyList` 的 Count 和下标，容量不足时倍增；Capture 前后统一清空使用区间。Reset/Append、最新 tick 和 Capture 事务语义不变。
+- 该 target 的 body interval `List`、内部数组扩容壳删除；`CaptureBodyStream` 正式接口不变，消费端仍按 Count 和下标读取。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

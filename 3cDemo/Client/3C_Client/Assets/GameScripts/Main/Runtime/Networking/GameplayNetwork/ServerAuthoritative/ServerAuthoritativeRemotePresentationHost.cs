@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
@@ -276,7 +277,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly Action<ServerAuthoritativeRemotePresentationTarget> m_Release;
         readonly TickQueue<PresentationCommand> m_Commands = new TickQueue<PresentationCommand>();
         readonly TickQueue<ServerAuthoritativeReliableEvent> m_Reliable = new TickQueue<ServerAuthoritativeReliableEvent>();
-        readonly List<CharacterPresentationBodyInterval> m_BodyIntervals = new List<CharacterPresentationBodyInterval>();
+        readonly BodyIntervalScratch m_BodyIntervals = new BodyIntervalScratch();
         readonly Action<PresentationCommand> m_PublishCommand;
         readonly Action<ServerAuthoritativeReliableEvent> m_PublishReliable;
 
@@ -549,6 +550,41 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(ServerAuthoritativeRemotePresentationTarget));
+        }
+
+        sealed class BodyIntervalScratch : IReadOnlyList<CharacterPresentationBodyInterval>
+        {
+            CharacterPresentationBodyInterval[] m_Items = Array.Empty<CharacterPresentationBodyInterval>();
+
+            public int Count { get; private set; }
+
+            public CharacterPresentationBodyInterval this[int index] => m_Items[index];
+
+            public void Add(CharacterPresentationBodyInterval interval)
+            {
+                if (Count == m_Items.Length)
+                {
+                    int capacity = Math.Max(4, m_Items.Length * 2);
+                    var values = new CharacterPresentationBodyInterval[capacity];
+                    Array.Copy(m_Items, values, Count);
+                    m_Items = values;
+                }
+                m_Items[Count++] = interval;
+            }
+
+            public void Clear()
+            {
+                Array.Clear(m_Items, 0, Count);
+                Count = 0;
+            }
+
+            public IEnumerator<CharacterPresentationBodyInterval> GetEnumerator()
+            {
+                for (int i = 0; i < Count; i++)
+                    yield return m_Items[i];
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 

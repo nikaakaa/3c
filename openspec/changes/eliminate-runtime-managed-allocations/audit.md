@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 State Machine source 输出包装复用
+
+对应 tasks.md 的 7.48。
+
+- `CharacterPoseNativeStateMachineSource` 原先每次合成 active child state 的 Native 输出后创建新的 Local Pose wrapper，并在 Commit/Discard/Reset 清空引用。
+- source 现在复用 `CharacterPoseNativeLocalPoseValue`，更新前仍通过 Native Local binding 校验；对象生命周期不再制造稳态逐帧分配。
+- 不改变 active state 收集、子图 Begin/Prepare/Evaluate/Commit/Discard、transition 状态迁移、Native 双页或 completion identity；本步只删除结果包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 约束节点输出包装复用
 
 对应 tasks.md 的 7.47。

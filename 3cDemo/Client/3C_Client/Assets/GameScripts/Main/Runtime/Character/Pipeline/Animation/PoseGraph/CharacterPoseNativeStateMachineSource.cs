@@ -242,7 +242,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Lineage = lineage;
             m_FrameOpen = true;
             m_EvaluationPrepared = false;
-            m_Output = null;
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
@@ -421,7 +420,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ? m_OutputBuffer
                         : m_SecondaryOutputBuffer).RequireWriteBinding(
                             lineage.CompletionIdentity));
-            m_Output = new CharacterPoseNativeLocalPoseValue(m_NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                m_NodeId,
+                in output);
             return m_Output;
         }
 
@@ -448,7 +450,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearChildFrames();
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
-            m_Output = null;
         }
 
         public void DiscardFrame(
@@ -463,7 +464,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CopyCommittedState();
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
-            m_Output = null;
         }
 
         public void ResetFrame()
@@ -486,7 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingInitialized = false;
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
-            m_Output = null;
         }
 
         public void Dispose()

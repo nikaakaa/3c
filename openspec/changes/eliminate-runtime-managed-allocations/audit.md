@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Graph Evaluator 输入值对象复用
+
+对应 tasks.md 的 7.49。
+
+- Graph Evaluator 的 Program Parameter 与 Action Playback builtin handler 原先每次读取输出都会创建新的 Parameter/Action wrapper，且同一 frame 的 stage cache 会持有这些对象。
+- 两个 handler 现在各自复用值对象，更新前保持 producer/completion identity、参数类型和值、Action command 有效性校验；同一 frame 的 Prepare/Evaluate 读取仍返回等价值。
+- 不改变参数读取、Action channel 倒序选择、Graph output cache、节点 handler 生命周期和 frame identity；本步只删除正式运行链的值对象分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 State Machine source 输出包装复用
 
 对应 tasks.md 的 7.48。

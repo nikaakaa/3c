@@ -269,8 +269,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Value = value;
         }
 
-        internal PoseParameterId ParameterId { get; }
-        internal EventGraphValue Value { get; }
+        internal PoseParameterId ParameterId { get; private set; }
+        internal EventGraphValue Value { get; private set; }
+
+        internal static CharacterPoseNativeParameterValue Reuse(
+            CharacterPoseNativeParameterValue value,
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            PoseParameterId parameterId,
+            EventGraphValue parameterValue)
+        {
+            if (value == null)
+                return new CharacterPoseNativeParameterValue(
+                    producerNodeId,
+                    completionIdentity,
+                    parameterId,
+                    parameterValue);
+            value.Refresh(
+                producerNodeId,
+                completionIdentity,
+                parameterId,
+                parameterValue);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            PoseParameterId parameterId,
+            EventGraphValue parameterValue)
+        {
+            if (!producerNodeId.IsValid || completionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!parameterId.IsValid ||
+                parameterValue.Kind != EventGraphValueKind.Bool &&
+                parameterValue.Kind != EventGraphValueKind.Int32 &&
+                parameterValue.Kind != EventGraphValueKind.Float32)
+            {
+                throw new ArgumentException("Pose native parameter value is invalid.");
+            }
+            SetIdentity(producerNodeId, completionIdentity);
+            ParameterId = parameterId;
+            Value = parameterValue;
+        }
     }
 
     internal sealed class CharacterPoseNativeDiscontinuityValue : CharacterPoseNativePortValue
@@ -346,7 +387,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Command = command;
         }
 
-        internal ActionAnimationPlaybackCommand Command { get; }
+        internal ActionAnimationPlaybackCommand Command { get; private set; }
+
+        internal static CharacterPoseNativeActionPlaybackValue Reuse(
+            CharacterPoseNativeActionPlaybackValue value,
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            ActionAnimationPlaybackCommand command)
+        {
+            if (value == null)
+                return new CharacterPoseNativeActionPlaybackValue(
+                    producerNodeId,
+                    completionIdentity,
+                    command);
+            value.Refresh(producerNodeId, completionIdentity, command);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            ActionAnimationPlaybackCommand command)
+        {
+            if (!producerNodeId.IsValid || completionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!command.IsValid)
+                throw new ArgumentException("Pose native action playback value is invalid.");
+            SetIdentity(producerNodeId, completionIdentity);
+            Command = command;
+        }
     }
 
     internal sealed class CharacterPoseNativeFullBodyIkGoalsValue : CharacterPoseNativePortValue

@@ -424,3 +424,4 @@
 - [x] 7.46 Animation Slot handler 与 source 复用 Local Pose 输出包装对象，删除 slot 三种输出分支及 source Evaluate 的稳态逐帧包装创建；保留 slot 连续性、source completion 和提交事务语义
 - [x] 7.47 Foot Placement、Pose Bone IK、Goal Assembler、Full Body IK 复用约束输出包装对象，删除四类约束节点稳态逐帧 wrapper 创建；保留约束结果、Native 双页和提交事务语义
 - [x] 7.48 State Machine source 复用 Local Pose 输出包装对象，删除子状态图合成结果的稳态逐帧包装创建；保留子图事务、状态迁移和 source completion 语义
+- [x] 7.49 Graph Evaluator 的 Program Parameter 与 Action Playback 输入复用值对象，删除正式 Pose 输出读取中的逐次托管对象创建；保留输入值、channel 命令和 frame identity 语义

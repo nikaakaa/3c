@@ -458,6 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         sealed class ParameterInputHandler : ICharacterPoseNativeNodeHandler
         {
             PoseParameterValueType m_ValueType;
+            CharacterPoseNativeParameterValue m_Output;
             bool m_Initialized;
 
             internal ParameterInputHandler(PoseNodeId nodeId) => NodeId = nodeId;
@@ -525,11 +526,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose parameter '{node.ParameterId}' EventGraph value type does not match its declaration.");
                 }
-                return new CharacterPoseNativeParameterValue(
+                m_Output = CharacterPoseNativeParameterValue.Reuse(
+                    m_Output,
                     node.NodeId,
                     runtime.CurrentLineage.CompletionIdentity,
                     node.ParameterId,
                     value);
+                return m_Output;
             }
 
             public void EvaluateFrame(
@@ -565,6 +568,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         sealed class ActionPlaybackInputHandler : ICharacterPoseNativeNodeHandler
         {
+            CharacterPoseNativeActionPlaybackValue m_Output;
+
             internal ActionPlaybackInputHandler(PoseNodeId nodeId) => NodeId = nodeId;
 
             public PoseNodeId NodeId { get; }
@@ -601,10 +606,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         runtime.CurrentInput.ActionCommands[i];
                     if (command.AnimationChannelId != node.AnimationChannelId)
                         continue;
-                    return new CharacterPoseNativeActionPlaybackValue(
+                    m_Output = CharacterPoseNativeActionPlaybackValue.Reuse(
+                        m_Output,
                         node.NodeId,
                         runtime.CurrentLineage.CompletionIdentity,
                         command);
+                    return m_Output;
                 }
                 throw new InvalidOperationException(
                     $"Pose action input node '{node.NodeId}' has no command for channel '{node.AnimationChannelId}'.");

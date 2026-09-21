@@ -703,7 +703,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 writer.WriteString(pair.Key.Value);
                 writer.WriteUInt64(pair.Value.Sequence);
-                writer.WriteString(pair.Value.EventId.ToString());
+                writer.WriteEventId(pair.Value.EventId);
             }
             return writer.ToArray();
         }
@@ -721,7 +721,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 var actorId = new ActorId(reader.ReadString());
                 ulong sequence = reader.ReadUInt64();
-                var eventId = new EventId(new StableHash(reader.ReadString()));
+                var eventId = reader.ReadEventId();
                 m_Horizons.Add(actorId, new ServerAuthoritativeEventHorizon(sequence, eventId));
             }
             reader.RequireComplete();

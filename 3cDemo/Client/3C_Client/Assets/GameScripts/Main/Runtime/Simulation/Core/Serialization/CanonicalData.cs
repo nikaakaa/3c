@@ -125,6 +125,19 @@ namespace ThirdPersonSimulation
             WriteRaw(bytes);
         }
 
+        public void WriteEventId(EventId value)
+        {
+            WriteInt32(value.IsValid ? 64 : 0);
+            if (!value.IsValid)
+                return;
+            Span<char> characters = stackalloc char[64];
+            Span<byte> bytes = stackalloc byte[64];
+            value.Format(characters);
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = (byte)characters[i];
+            WriteRaw(bytes);
+        }
+
         public void WriteBytes(ReadOnlySpan<byte> value)
         {
             WriteInt32(value.Length);
@@ -272,6 +285,22 @@ namespace ThirdPersonSimulation
             int length = ReadLength();
             Require(length);
             var value = new ArraySegment<byte>(m_Bytes, m_Offset, length);
+            m_Offset += length;
+            return value;
+        }
+
+        public EventId ReadEventId()
+        {
+            int length = ReadLength();
+            if (length == 0)
+                return default;
+            if (length != 64)
+                throw new InvalidDataException("Canonical event identity must contain 64 hexadecimal characters.");
+            Require(length);
+            Span<char> characters = stackalloc char[64];
+            for (int i = 0; i < characters.Length; i++)
+                characters[i] = (char)m_Bytes[m_Offset + i];
+            EventId value = EventId.Parse(characters);
             m_Offset += length;
             return value;
         }

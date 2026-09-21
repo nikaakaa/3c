@@ -547,7 +547,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteBoolean(changed);
             writer.WriteUInt64(target.Sequence);
             if (changed && !target.IsEmpty)
-                WriteHash(writer, target.EventId.Value);
+            {
+                Span<byte> bytes = stackalloc byte[32];
+                target.EventId.CopyTo(bytes);
+                writer.WriteRawBytes(bytes);
+            }
         }
 
         static ServerAuthoritativeEventHorizon ReadDeltaHorizon(
@@ -567,34 +571,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidDataException("Network Checkpoint event horizon delta regressed.");
             if (sequence == 0)
                 return ServerAuthoritativeEventHorizon.Empty;
-            return new ServerAuthoritativeEventHorizon(sequence, new EventId(ReadHash(reader)));
-        }
-
-        static void WriteHash(CanonicalWriter writer, StableHash hash)
-        {
-            string value = hash.IsValid ? hash.Value : throw new InvalidDataException("Stable hash is invalid.");
-            Span<byte> bytes = stackalloc byte[32];
-            for (int i = 0; i < bytes.Length; i++)
-                bytes[i] = (byte)((Hex(value[i * 2]) << 4) | Hex(value[i * 2 + 1]));
-            writer.WriteRawBytes(bytes);
-        }
-
-        static StableHash ReadHash(CanonicalReader reader)
-        {
             ArraySegment<byte> bytes = reader.ReadRawBytesSegment(32);
-            return new StableHash(string.Create(64, bytes, static (chars, source) =>
-            {
-                const string hex = "0123456789abcdef";
-                for (int i = 0; i < source.Count; i++)
-                {
-                    byte value = source.Array[source.Offset + i];
-                    chars[i * 2] = hex[value >> 4];
-                    chars[i * 2 + 1] = hex[value & 15];
-                }
-            }));
+            return new ServerAuthoritativeEventHorizon(sequence, EventId.FromBytes(bytes.AsSpan()));
         }
-
-        static int Hex(char value) => value >= '0' && value <= '9' ? value - '0' : value - 'a' + 10;
 
         static void WriteBody(CanonicalWriter writer, WorldBodyState body)
         {
@@ -625,14 +604,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static void WriteHorizon(CanonicalWriter writer, ServerAuthoritativeEventHorizon horizon)
         {
             writer.WriteUInt64(horizon.Sequence);
-            writer.WriteString(horizon.EventId.IsValid ? horizon.EventId.ToString() : string.Empty);
+            writer.WriteEventId(horizon.EventId);
         }
 
         static ServerAuthoritativeEventHorizon ReadHorizon(CanonicalReader reader)
         {
             ulong sequence = reader.ReadUInt64();
-            string eventHash = reader.ReadString();
-            EventId eventId = string.IsNullOrEmpty(eventHash) ? default : new EventId(new StableHash(eventHash));
+            EventId eventId = reader.ReadEventId();
             return new ServerAuthoritativeEventHorizon(sequence, eventId);
         }
 

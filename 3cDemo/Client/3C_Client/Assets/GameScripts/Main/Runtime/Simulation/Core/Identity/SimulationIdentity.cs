@@ -477,24 +477,6 @@ namespace ThirdPersonSimulation
         public override string ToString() => $"{ActorId}/{Tick}/{Sequence}";
     }
 
-    public readonly struct EventId : IEquatable<EventId>, IComparable<EventId>
-    {
-        public EventId(StableHash value) { Value = value; }
-        public StableHash Value { get; }
-        public bool IsValid => Value.IsValid;
-        public int CompareTo(EventId other) => Value.CompareTo(other.Value);
-        public bool Equals(EventId other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is EventId other && Equals(other);
-        public override int GetHashCode() => Value.GetHashCode();
-        public override string ToString() => Value.ToString();
-        public static EventId Create(GameplayContentHash sourceContent, ActorId actor, ActivationId activation, SimulationTick tick, ulong sequence, string channel)
-        {
-            if (!sourceContent.IsValid || !actor.IsValid || !activation.IsValid || !tick.IsValid || sequence == 0)
-                throw new ArgumentException("Event identity is incomplete.");
-            return new EventId(StableHash.Compute(sourceContent.ToString(), actor.ToString(), activation.ToString(), tick.ToString(), sequence.ToString(CultureInfo.InvariantCulture), channel ?? string.Empty));
-        }
-    }
-
     public readonly struct CharacterStateHash : IEquatable<CharacterStateHash>
     {
         public CharacterStateHash(StableHash value) { Value = value; }

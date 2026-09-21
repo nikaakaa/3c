@@ -1254,11 +1254,20 @@ namespace BTSMTL.Timeline.Runtime
             TraversalIndex = traversalIndex;
             Time = time;
             Cycle = cycle;
-            Identity = $"{PlaybackHandle.Value}:{Generation}:{MarkerAuthoringId}:{TraversalIndex}";
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append("btsmtl-timeline-presentation-marker");
+            builder.Append(PlaybackHandle.Value);
+            builder.Append(":", false);
+            builder.Append(Generation, false);
+            builder.Append(":", false);
+            builder.Append(MarkerAuthoringId, false);
+            builder.Append(":", false);
+            builder.Append(TraversalIndex, false);
+            EventId = builder.Build();
         }
 
-        public string Identity { get; }
-        public EventId EventId => new(StableHash.Compute("btsmtl-timeline-presentation-marker", Identity));
+        public EventId EventId { get; }
         public TimelineRuntimePlaybackHandle PlaybackHandle { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public ulong Generation { get; }

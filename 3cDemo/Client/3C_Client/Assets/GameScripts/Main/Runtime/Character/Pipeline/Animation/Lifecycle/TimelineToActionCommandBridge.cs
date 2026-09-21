@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonCamera;
@@ -12,81 +11,66 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     internal sealed class TimelineToActionCommandBridge : IDisposable
     {
-        sealed class ProducerState
+        readonly struct ProducerState
         {
-            internal ProducerState(
-                AnimationPlaybackId playbackId,
-                ulong actionInstanceId,
-                AnimationChannelId animationChannelId,
-                string programProducerId)
+            internal ProducerState(ulong handle, AnimationPlaybackId playbackId, ulong actionInstanceId,
+                AnimationChannelId animationChannelId, string programProducerId)
             {
+                Handle = handle;
                 PlaybackId = playbackId;
                 ActionInstanceId = actionInstanceId;
                 AnimationChannelId = animationChannelId;
                 ProgramProducerId = programProducerId;
             }
 
-            internal AnimationPlaybackId PlaybackId { get; }
-            internal ulong ActionInstanceId { get; }
-            internal AnimationChannelId AnimationChannelId { get; }
-            internal string ProgramProducerId { get; }
+            internal readonly ulong Handle;
+            internal readonly AnimationPlaybackId PlaybackId;
+            internal readonly ulong ActionInstanceId;
+            internal readonly AnimationChannelId AnimationChannelId;
+            internal readonly string ProgramProducerId;
         }
 
-        sealed class PlaybackState
-        {
-            internal PlaybackState(ulong generation, ulong logicTick, ulong presentationFrame)
-            {
-                Generation = generation;
-                LogicTick = logicTick;
-                PresentationFrame = presentationFrame;
-            }
-
-            internal ulong Generation { get; }
-            internal ulong LogicTick { get; set; }
-            internal ulong PresentationFrame { get; set; }
-            internal readonly Dictionary<AnimationProducerId, ProducerState> Producers = new();
-        }
-
-        struct FramePlaybackSnapshot
+        struct PlaybackState
         {
             internal ulong Handle;
-            internal PlaybackState State;
+            internal ulong Generation;
             internal ulong LogicTick;
             internal ulong PresentationFrame;
-            internal int ProducerOffset;
-            internal int ProducerCount;
         }
 
-        readonly FramePlaybackSnapshot[] m_FramePlaybacks;
-        readonly KeyValuePair<AnimationProducerId, ProducerState>[] m_FrameProducers;
-        int m_FramePlaybackCount;
-        int m_FrameProducerCount;
+        readonly CharacterTimelineHost m_TimelineHost;
+        readonly ActionPlaybackCommandInbox m_Inbox;
+        readonly PlaybackState[] m_Playbacks;
+        readonly ProducerState[] m_Producers;
+        readonly PlaybackState[] m_FramePlaybacks;
+        readonly ProducerState[] m_FrameProducers;
+        readonly Dictionary<AnimationProducerId, TimelineAnimationContribution> m_Samples;
+        readonly List<AnimationProducerId> m_SampleOrder;
         ulong m_FramePublicationSequence;
         bool m_FrameActive;
+        bool m_Disposed;
+
+        internal TimelineToActionCommandBridge(CharacterTimelineHost timelineHost, ActionPlaybackCommandInbox inbox)
+        {
+            m_TimelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
+            m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
+            int capacity = inbox.Capacity;
+            m_Playbacks = new PlaybackState[capacity];
+            m_Producers = new ProducerState[capacity];
+            m_FramePlaybacks = new PlaybackState[capacity];
+            m_FrameProducers = new ProducerState[capacity];
+            m_Samples = new Dictionary<AnimationProducerId, TimelineAnimationContribution>(capacity);
+            m_SampleOrder = new List<AnimationProducerId>(capacity);
+            m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
+            m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
+        }
 
         internal void BeginFrame()
         {
             if (m_FrameActive)
                 throw new InvalidOperationException("Timeline animation command frame is already open.");
-            int producerCount = 0;
-            foreach (PlaybackState state in m_Playbacks.Values)
-                producerCount += state.Producers.Count;
-            if (m_Playbacks.Count > m_FramePlaybacks.Length || producerCount > m_FrameProducers.Length)
-                throw new InvalidOperationException("Timeline animation frame exceeds its prepared command capacity.");
-            m_FramePlaybackCount = 0;
-            m_FrameProducerCount = 0;
-            foreach (var pair in m_Playbacks)
-            {
-                PlaybackState state = pair.Value;
-                m_FramePlaybacks[m_FramePlaybackCount++] = new FramePlaybackSnapshot
-                {
-                    Handle = pair.Key, State = state, LogicTick = state.LogicTick,
-                    PresentationFrame = state.PresentationFrame,
-                    ProducerOffset = m_FrameProducerCount, ProducerCount = state.Producers.Count
-                };
-                foreach (var producer in state.Producers)
-                    m_FrameProducers[m_FrameProducerCount++] = producer;
-            }
+            Array.Copy(m_Playbacks, m_FramePlaybacks, m_Playbacks.Length);
+            Array.Copy(m_Producers, m_FrameProducers, m_Producers.Length);
             m_FramePublicationSequence = m_Inbox.PublicationSequence;
             m_FrameActive = true;
         }
@@ -102,113 +86,110 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!m_FrameActive)
                 return;
             m_Inbox.DiscardPublicationsAfter(m_FramePublicationSequence);
-            m_Playbacks.Clear();
-            for (int i = 0; i < m_FramePlaybackCount; i++)
-            {
-                FramePlaybackSnapshot snapshot = m_FramePlaybacks[i];
-                PlaybackState state = snapshot.State;
-                state.LogicTick = snapshot.LogicTick;
-                state.PresentationFrame = snapshot.PresentationFrame;
-                state.Producers.Clear();
-                for (int j = 0; j < snapshot.ProducerCount; j++)
-                {
-                    var producer = m_FrameProducers[snapshot.ProducerOffset + j];
-                    state.Producers.Add(producer.Key, producer.Value);
-                }
-                m_Playbacks.Add(snapshot.Handle, state);
-            }
+            Array.Copy(m_FramePlaybacks, m_Playbacks, m_Playbacks.Length);
+            Array.Copy(m_FrameProducers, m_Producers, m_Producers.Length);
             m_FrameActive = false;
             ClearFrameSnapshot();
         }
 
         void ClearFrameSnapshot()
         {
-            Array.Clear(m_FramePlaybacks, 0, m_FramePlaybackCount);
-            Array.Clear(m_FrameProducers, 0, m_FrameProducerCount);
-            m_FramePlaybackCount = 0;
-            m_FrameProducerCount = 0;
-        }
-
-        readonly CharacterTimelineHost m_TimelineHost;
-        readonly ActionPlaybackCommandInbox m_Inbox;
-        readonly Dictionary<ulong, PlaybackState> m_Playbacks = new();
-        readonly Dictionary<AnimationProducerId, TimelineAnimationContribution> m_Samples = new();
-        readonly List<AnimationProducerId> m_SampleOrder = new();
-        readonly List<AnimationProducerId> m_Releases = new();
-        bool m_Disposed;
-
-        internal TimelineToActionCommandBridge(
-            CharacterTimelineHost timelineHost,
-            ActionPlaybackCommandInbox inbox)
-        {
-            m_TimelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
-            m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
-            m_FramePlaybacks = new FramePlaybackSnapshot[inbox.Capacity];
-            m_FrameProducers = new KeyValuePair<AnimationProducerId, ProducerState>[inbox.Capacity];
-            m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
-            m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
+            Array.Clear(m_FramePlaybacks, 0, m_FramePlaybacks.Length);
+            Array.Clear(m_FrameProducers, 0, m_FrameProducers.Length);
         }
 
         void OnPresentationFrame(TimelineRuntimePresentationFrame frame)
         {
             if (!m_TimelineHost.TryGetPlaybackActionContext(frame.Handle, out TimelinePlaybackActionContext actionContext))
                 throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has no Action context.");
-            ulong logicTick = frame.LogicTick != 0
-                ? frame.LogicTick
-                : actionContext.StartLocalLogicTick;
+            ulong logicTick = frame.LogicTick != 0 ? frame.LogicTick : actionContext.StartLocalLogicTick;
             if (logicTick == 0)
                 throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has no Logic tick for presentation output.");
-
-            if (!m_Playbacks.TryGetValue(frame.Handle.Value, out PlaybackState playback))
+            int playbackIndex = FindPlayback(frame.Handle.Value);
+            if (playbackIndex < 0)
             {
-                playback = new PlaybackState(frame.Generation, logicTick, frame.PresentationFrame);
-                m_Playbacks.Add(frame.Handle.Value, playback);
+                for (int i = 0; i < m_Playbacks.Length; i++)
+                    if (m_Playbacks[i].Handle == 0)
+                    {
+                        playbackIndex = i;
+                        break;
+                    }
+                if (playbackIndex < 0)
+                    throw new InvalidOperationException("Timeline animation playback capacity was exceeded.");
             }
-            else if (playback.Generation != frame.Generation)
+            ref PlaybackState playback = ref m_Playbacks[playbackIndex];
+            if (playback.Handle != 0 && playback.Generation != frame.Generation)
+                ReleaseAll(frame.Handle.Value, logicTick, frame.PresentationFrame, "generation-replaced", true);
+            playback = new PlaybackState
             {
-                ReleaseAll(playback, frame.Handle.Value, logicTick, frame.PresentationFrame, "generation-replaced", true);
-                playback = new PlaybackState(frame.Generation, logicTick, frame.PresentationFrame);
-                m_Playbacks[frame.Handle.Value] = playback;
-            }
-            else
-            {
-                playback.LogicTick = logicTick;
-                playback.PresentationFrame = frame.PresentationFrame;
-            }
+                Handle = frame.Handle.Value, Generation = frame.Generation,
+                LogicTick = logicTick, PresentationFrame = frame.PresentationFrame
+            };
 
             CollectSamples(frame.Operations.AnimationContributions);
-            ReleaseInactive(playback, frame.Handle.Value, logicTick, frame.PresentationFrame, frame.Reason == TimelinePresentationSampleReason.Correction);
+            for (int i = 0; i < m_Producers.Length; i++)
+            {
+                ProducerState producer = m_Producers[i];
+                if (producer.Handle != frame.Handle.Value || m_Samples.ContainsKey(producer.PlaybackId.ProducerId))
+                    continue;
+                PublishRelease(producer, logicTick, frame.PresentationFrame, "clip-ended",
+                    frame.Reason == TimelinePresentationSampleReason.Correction);
+                m_Producers[i] = default;
+            }
             for (int index = 0; index < m_SampleOrder.Count; index++)
             {
                 AnimationProducerId producerId = m_SampleOrder[index];
                 TimelineAnimationContribution contribution = m_Samples[producerId];
-                if (!playback.Producers.TryGetValue(producerId, out ProducerState producer))
+                int producerIndex = FindProducer(frame.Handle.Value, producerId);
+                if (producerIndex < 0)
                 {
-                    producer = CreateProducer(frame, actionContext, producerId, contribution);
-                    playback.Producers.Add(producerId, producer);
-                    PublishSelect(producer, frame.Handle.Value, logicTick, frame.PresentationFrame);
+                    for (int i = 0; i < m_Producers.Length; i++)
+                        if (m_Producers[i].Handle == 0)
+                        {
+                            producerIndex = i;
+                            break;
+                        }
+                    if (producerIndex < 0)
+                        throw new InvalidOperationException("Timeline animation producer capacity was exceeded.");
+                    m_Producers[producerIndex] = new ProducerState(frame.Handle.Value,
+                        new AnimationPlaybackId(producerId, frame.Generation), actionContext.ActionInstanceId,
+                        contribution.AnimationChannelId, m_TimelineHost.RequireAnimationProducerIdentity(producerId));
+                    PublishSelect(m_Producers[producerIndex], logicTick, frame.PresentationFrame);
                 }
-                else if (producer.ActionInstanceId != actionContext.ActionInstanceId ||
-                         !producer.AnimationChannelId.Equals(contribution.AnimationChannelId))
-                {
-                    throw new InvalidOperationException(
-                        $"Timeline Animation producer '{producerId}' changed ownership within one playback generation.");
-                }
+                ProducerState producer = m_Producers[producerIndex];
+                if (producer.ActionInstanceId != actionContext.ActionInstanceId ||
+                    !producer.AnimationChannelId.Equals(contribution.AnimationChannelId))
+                    throw new InvalidOperationException($"Timeline Animation producer '{producerId}' changed ownership within one playback generation.");
                 PublishSample(producer, contribution, logicTick, frame.PresentationFrame);
             }
         }
 
-        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason, bool retainForCorrection)
+        int FindPlayback(ulong handle)
         {
-            if (!m_Playbacks.TryGetValue(handle.Value, out PlaybackState playback) || playback.Generation != generation)
+            for (int i = 0; i < m_Playbacks.Length; i++)
+                if (m_Playbacks[i].Handle == handle)
+                    return i;
+            return -1;
+        }
+
+        int FindProducer(ulong handle, AnimationProducerId producerId)
+        {
+            for (int i = 0; i < m_Producers.Length; i++)
+                if (m_Producers[i].Handle == handle && m_Producers[i].PlaybackId.ProducerId.Equals(producerId))
+                    return i;
+            return -1;
+        }
+
+        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation,
+            TimelinePresentationSampleReason reason, bool retainForCorrection)
+        {
+            int index = FindPlayback(handle.Value);
+            if (index < 0 || m_Playbacks[index].Generation != generation)
                 return;
-            ReleaseAll(
-                playback,
-                handle.Value,
-                playback.LogicTick,
-                playback.PresentationFrame,
-                "playback-ended", reason == TimelinePresentationSampleReason.Withdrawn);
-            m_Playbacks.Remove(handle.Value);
+            PlaybackState playback = m_Playbacks[index];
+            ReleaseAll(handle.Value, playback.LogicTick, playback.PresentationFrame, "playback-ended",
+                reason == TimelinePresentationSampleReason.Withdrawn);
+            m_Playbacks[index] = default;
         }
 
         void CollectSamples(TimelineRuntimeSampleView<TimelineAnimationContribution> contributions)
@@ -218,135 +199,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int index = 0; index < contributions.Count; index++)
             {
                 TimelineAnimationContribution contribution = contributions[index];
-                var producerId = new AnimationProducerId(
-                    contribution.TimelineAuthoringId,
-                    contribution.TrackAuthoringId);
+                var producerId = new AnimationProducerId(contribution.TimelineAuthoringId, contribution.TrackAuthoringId);
                 if (!producerId.IsValid || !contribution.AnimationChannelId.IsValid)
                     throw new InvalidOperationException("Timeline Animation contribution has no stable producer identity.");
                 if (!m_Samples.TryGetValue(producerId, out TimelineAnimationContribution current))
                 {
+                    if (m_SampleOrder.Count == m_Producers.Length)
+                        throw new InvalidOperationException("Timeline animation sample capacity was exceeded.");
                     m_Samples.Add(producerId, contribution);
                     m_SampleOrder.Add(producerId);
-                    continue;
                 }
-                if (contribution.Weight > current.Weight ||
-                    contribution.Weight == current.Weight &&
+                else if (contribution.Weight > current.Weight || contribution.Weight == current.Weight &&
                     string.CompareOrdinal(contribution.ClipAuthoringId, current.ClipAuthoringId) < 0)
-                {
                     m_Samples[producerId] = contribution;
-                }
             }
         }
 
-        void ReleaseInactive(
-            PlaybackState playback,
-            ulong handle,
-            ulong logicTick,
-            ulong presentationFrame,
-            bool withdrawn)
+        void ReleaseAll(ulong handle, ulong logicTick, ulong presentationFrame, string reason, bool withdrawn = false)
         {
-            m_Releases.Clear();
-            foreach (KeyValuePair<AnimationProducerId, ProducerState> pair in playback.Producers)
+            for (int i = 0; i < m_Producers.Length; i++)
             {
-                if (!m_Samples.ContainsKey(pair.Key))
-                    m_Releases.Add(pair.Key);
-            }
-            for (int index = 0; index < m_Releases.Count; index++)
-            {
-                AnimationProducerId producerId = m_Releases[index];
-                PublishRelease(
-                    playback.Producers[producerId],
-                    handle,
-                    logicTick,
-                    presentationFrame,
-                    "clip-ended", withdrawn);
-                playback.Producers.Remove(producerId);
+                if (m_Producers[i].Handle != handle)
+                    continue;
+                PublishRelease(m_Producers[i], logicTick, presentationFrame, reason, withdrawn);
+                m_Producers[i] = default;
             }
         }
 
-        void ReleaseAll(
-            PlaybackState playback,
-            ulong handle,
-            ulong logicTick,
-            ulong presentationFrame,
-            string reason,
-            bool withdrawn = false)
-        {
-            m_Releases.Clear();
-            foreach (AnimationProducerId producerId in playback.Producers.Keys)
-                m_Releases.Add(producerId);
-            for (int index = 0; index < m_Releases.Count; index++)
-            {
-                AnimationProducerId producerId = m_Releases[index];
-                PublishRelease(
-                    playback.Producers[producerId],
-                    handle,
-                    logicTick,
-                    presentationFrame,
-                    reason,
-                    withdrawn);
-            }
-            playback.Producers.Clear();
-        }
-
-        static ProducerState CreateProducer(
-            TimelineRuntimePresentationFrame frame,
-            TimelinePlaybackActionContext actionContext,
-            AnimationProducerId producerId,
-            TimelineAnimationContribution contribution)
-        {
-            var playbackId = new AnimationPlaybackId(producerId, frame.Generation);
-            return new ProducerState(
-                playbackId,
-                actionContext.ActionInstanceId,
-                contribution.AnimationChannelId,
-                producerId.ProgramProducerIdentity);
-        }
-
-        void PublishSelect(
-            ProducerState producer,
-            ulong handle,
-            ulong logicTick,
-            ulong presentationFrame)
+        void PublishSelect(ProducerState producer, ulong logicTick, ulong presentationFrame)
         {
             m_Inbox.Publish(ActionAnimationPlaybackCommand.Select(
-                CreateEventId("select", producer, handle, presentationFrame, string.Empty),
-                logicTick,
-                producer.PlaybackId,
-                producer.ActionInstanceId,
-                producer.AnimationChannelId,
-                producer.ProgramProducerId));
+                CreateEventId("select", producer, presentationFrame, string.Empty), logicTick,
+                producer.PlaybackId, producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId));
         }
 
-        void PublishSample(
-            ProducerState producer,
-            TimelineAnimationContribution contribution,
-            ulong logicTick,
-            ulong presentationFrame)
+        void PublishSample(ProducerState producer, TimelineAnimationContribution contribution, ulong logicTick, ulong presentationFrame)
         {
-            var sample = new ActionProjectedSample(
-                logicTick,
-                presentationFrame,
+            var sample = new ActionProjectedSample(logicTick, presentationFrame,
                 new PresentationPoseSampleTime(contribution.ClipTime, contribution.ContinuousClipTime,
-                    contribution.Cycle, contribution.IsLooping, 1f),
-                contribution.Weight);
-            m_Inbox.Publish(ActionAnimationPlaybackCommand.PresentSample(
-                producer.PlaybackId,
-                producer.ActionInstanceId,
-                producer.AnimationChannelId,
-                producer.ProgramProducerId,
-                in sample));
+                    contribution.Cycle, contribution.IsLooping, 1f), contribution.Weight);
+            m_Inbox.Publish(ActionAnimationPlaybackCommand.PresentSample(producer.PlaybackId,
+                producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId, in sample));
         }
 
-        void PublishRelease(
-            ProducerState producer,
-            ulong handle,
-            ulong logicTick,
-            ulong presentationFrame,
-            string reason,
-            bool withdrawn = false)
+        void PublishRelease(ProducerState producer, ulong logicTick, ulong presentationFrame, string reason, bool withdrawn)
         {
-            EventId eventId = CreateEventId(withdrawn ? "withdraw" : "release", producer, handle, presentationFrame, reason);
+            EventId eventId = CreateEventId(withdrawn ? "withdraw" : "release", producer, presentationFrame, reason);
             m_Inbox.Publish(withdrawn
                 ? ActionAnimationPlaybackCommand.Withdraw(eventId, logicTick, producer.PlaybackId,
                     producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId)
@@ -354,22 +252,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId));
         }
 
-        static EventId CreateEventId(
-            string kind,
-            ProducerState producer,
-            ulong handle,
-            ulong presentationFrame,
-            string detail)
+        static EventId CreateEventId(string kind, ProducerState producer, ulong presentationFrame, string detail)
         {
-            return new EventId(StableHash.Compute(
-                "timeline-presentation-animation",
-                kind,
-                handle.ToString(CultureInfo.InvariantCulture),
-                producer.PlaybackId.Generation.ToString(CultureInfo.InvariantCulture),
-                producer.PlaybackId.ProducerId.TimelineAuthoringId,
-                producer.PlaybackId.ProducerId.TrackAuthoringId,
-                presentationFrame.ToString(CultureInfo.InvariantCulture),
-                detail ?? string.Empty));
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append("timeline-presentation-animation");
+            builder.Append(kind);
+            builder.Append(producer.Handle);
+            builder.Append(producer.PlaybackId.Generation);
+            builder.Append(producer.PlaybackId.ProducerId.TimelineAuthoringId);
+            builder.Append(producer.PlaybackId.ProducerId.TrackAuthoringId);
+            builder.Append(presentationFrame);
+            builder.Append(detail);
+            return builder.Build();
         }
 
         public void Dispose()
@@ -377,16 +272,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            foreach (KeyValuePair<ulong, PlaybackState> pair in m_Playbacks)
+            for (int i = 0; i < m_Playbacks.Length; i++)
             {
-                ReleaseAll(
-                    pair.Value,
-                    pair.Key,
-                    pair.Value.LogicTick,
-                    pair.Value.PresentationFrame,
-                    "bridge-disposed");
+                PlaybackState playback = m_Playbacks[i];
+                if (playback.Handle != 0)
+                    ReleaseAll(playback.Handle, playback.LogicTick, playback.PresentationFrame, "bridge-disposed");
             }
-            m_Playbacks.Clear();
+            Array.Clear(m_Playbacks, 0, m_Playbacks.Length);
             m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
             m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
         }
@@ -654,14 +546,22 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         bool existing = m_Events.TryGetValue(key, out CameraEventState previous);
         if (!existing && m_Events.Count == m_RequestCapacity)
             throw new InvalidOperationException($"Timeline Camera event capacity {m_RequestCapacity} is exhausted.");
-        EventId eventId = existing ? previous.Activation.Header.EventId : new(StableHash.Compute(
-            "timeline-presentation-camera",
-            frame.ExecutionIdentity.OwnerIdentity,
-            key.Track,
-            key.Producer,
-            key.Cycle.ToString(CultureInfo.InvariantCulture),
-            key.Handle.ToString(CultureInfo.InvariantCulture),
-            key.Generation.ToString(CultureInfo.InvariantCulture)));
+        EventId eventId;
+        if (existing)
+            eventId = previous.Activation.Header.EventId;
+        else
+        {
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append("timeline-presentation-camera");
+            builder.Append(frame.ExecutionIdentity.OwnerIdentity);
+            builder.Append(key.Track);
+            builder.Append(key.Producer);
+            builder.Append(checked((ulong)key.Cycle));
+            builder.Append(key.Handle);
+            builder.Append(key.Generation);
+            eventId = builder.Build();
+        }
         var activationHeader = new CharacterPresentationEventHeader(
             eventId,
             m_ActorId,

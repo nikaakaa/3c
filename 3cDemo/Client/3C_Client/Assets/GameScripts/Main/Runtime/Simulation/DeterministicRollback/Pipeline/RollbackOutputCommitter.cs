@@ -609,13 +609,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public EventId CreateRetirementEventId()
         {
-            return new EventId(StableHash.Compute(
-                "deterministic-rollback-output-retire/1",
-                Slot.ActorId.ToString(),
-                Slot.Tick.ToString(),
-                Slot.Sequence.ToString(),
-                Slot.Channel,
-                EventId.ToString()));
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append("deterministic-rollback-output-retire/1");
+            builder.Append(Slot.ActorId.Value);
+            builder.Append(Slot.Tick.Value);
+            builder.Append(Slot.Sequence);
+            builder.Append(Slot.Channel);
+            builder.Append(EventId);
+            return builder.Build();
         }
     }
 

@@ -22,9 +22,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteInt32(CorrectionVersion);
             writer.WriteUInt64(checkpoint.ConfirmedInputSequence);
             writer.WriteUInt64(checkpoint.ConfirmedEventHorizon.Sequence);
-            writer.WriteString(checkpoint.ConfirmedEventHorizon.IsEmpty
-                ? string.Empty
-                : checkpoint.ConfirmedEventHorizon.EventId.ToString());
+            writer.WriteEventId(checkpoint.ConfirmedEventHorizon.EventId);
             writer.WriteUInt64(checkpoint.LastAuthorityAckTick);
             writer.WriteUInt64(checkpoint.LastBaselineTick);
             writer.WriteUInt64(checkpoint.LastAuthorityClockEstimate);
@@ -49,10 +47,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             RequireHeader(reader, CorrectionMagic, CorrectionVersion);
             ulong confirmedInputSequence = reader.ReadUInt64();
             ulong horizonSequence = reader.ReadUInt64();
-            string eventId = reader.ReadString();
+            EventId eventId = reader.ReadEventId();
             ServerAuthoritativeEventHorizon horizon = horizonSequence == 0
                 ? ServerAuthoritativeEventHorizon.Empty
-                : new ServerAuthoritativeEventHorizon(horizonSequence, new EventId(new StableHash(eventId)));
+                : new ServerAuthoritativeEventHorizon(horizonSequence, eventId);
             ulong lastAuthorityAckTick = reader.ReadUInt64();
             ulong lastBaselineTick = reader.ReadUInt64();
             ulong lastAuthorityClockEstimate = reader.ReadUInt64();
@@ -175,7 +173,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < checkpoint.Entries.Count; i++)
             {
                 KeyValuePair<EventId, ServerAuthoritativeJournalEntry> pair = checkpoint.Entries[i];
-                writer.WriteString(pair.Key.ToString());
+                writer.WriteEventId(pair.Key);
                 writer.WriteUInt64(pair.Value.Tick.Value);
                 writer.WriteUInt64(pair.Value.Sequence);
                 writer.WriteByte((byte)pair.Value.Disposition);
@@ -194,7 +192,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var entries = new SortedDictionary<EventId, ServerAuthoritativeJournalEntry>();
             for (int i = 0; i < count; i++)
             {
-                var eventId = new EventId(new StableHash(reader.ReadString()));
+                var eventId = reader.ReadEventId();
                 var tick = new SimulationTick(reader.ReadUInt64());
                 ulong sequence = reader.ReadUInt64();
                 var disposition = (ServerAuthoritativeEventDisposition)reader.ReadByte();

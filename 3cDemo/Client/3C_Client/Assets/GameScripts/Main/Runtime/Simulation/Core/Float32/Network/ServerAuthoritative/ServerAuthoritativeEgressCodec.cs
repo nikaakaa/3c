@@ -117,9 +117,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteUInt64(ack.AuthorityTick.Value);
             writer.WriteUInt64(ack.ConfirmedInputSequence);
             writer.WriteUInt64(ack.ConfirmedEventHorizon.Sequence);
-            writer.WriteString(ack.ConfirmedEventHorizon.IsEmpty
-                ? string.Empty
-                : ack.ConfirmedEventHorizon.EventId.ToString());
+            writer.WriteEventId(ack.ConfirmedEventHorizon.EventId);
         }
 
         static AuthoritativeInputAck ReadAck(CanonicalReader reader)
@@ -128,12 +126,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var tick = new SimulationTick(reader.ReadUInt64());
             ulong inputSequence = reader.ReadUInt64();
             ulong eventSequence = reader.ReadUInt64();
-            string eventId = reader.ReadString();
-            if ((eventSequence == 0) != string.IsNullOrEmpty(eventId))
+            EventId eventId = reader.ReadEventId();
+            if ((eventSequence == 0) != !eventId.IsValid)
                 throw new InvalidDataException("Authority input ack Event horizon is invalid.");
             ServerAuthoritativeEventHorizon horizon = eventSequence == 0
                 ? ServerAuthoritativeEventHorizon.Empty
-                : new ServerAuthoritativeEventHorizon(eventSequence, new EventId(new StableHash(eventId)));
+                : new ServerAuthoritativeEventHorizon(eventSequence, eventId);
             return new AuthoritativeInputAck(actorId, tick, inputSequence, horizon);
         }
 
@@ -325,7 +323,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static void WriteHeader(CanonicalWriter writer, SimulationEventHeader header)
         {
             SimulationNumericProfileCodec.Write(writer, header.NumericProfile);
-            writer.WriteString(header.EventId.ToString());
+            writer.WriteEventId(header.EventId);
             writer.WriteString(header.ActorId.Value);
             writer.WriteUInt64(header.Tick.Value);
             SimulationExecutionSourceCodec.Write(writer, header.Activation.Source);
@@ -336,7 +334,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static SimulationEventHeader ReadHeader(CanonicalReader reader) => new SimulationEventHeader(
             SimulationNumericProfileCodec.Read(reader),
-            new EventId(new StableHash(reader.ReadString())),
+            reader.ReadEventId(),
             new ActorId(reader.ReadString()),
             new SimulationTick(reader.ReadUInt64()),
             new ActivationId(SimulationExecutionSourceCodec.Read(reader), reader.ReadUInt64()),

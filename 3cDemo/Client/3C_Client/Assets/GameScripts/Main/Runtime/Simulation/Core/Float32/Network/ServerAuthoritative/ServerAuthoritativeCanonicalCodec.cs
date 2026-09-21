@@ -125,9 +125,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(baseline.BodyHash.ToString());
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
             writer.WriteUInt64(baseline.ConfirmedEventHorizon.Sequence);
-            writer.WriteString(baseline.ConfirmedEventHorizon.EventId.IsValid
-                ? baseline.ConfirmedEventHorizon.EventId.ToString()
-                : string.Empty);
+            writer.WriteEventId(baseline.ConfirmedEventHorizon.EventId);
         }
 
         public static AuthoritativeActorBaseline ReadBaseline(ArraySegment<byte> bytes)
@@ -150,14 +148,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var encodedBodyHash = new StableHash(reader.ReadString());
             ulong confirmedInputSequence = reader.ReadUInt64();
             ulong eventSequence = reader.ReadUInt64();
-            string eventHash = reader.ReadString();
+            EventId eventId = reader.ReadEventId();
             reader.RequireComplete();
             if (body.ActorId != actorId)
                 throw new InvalidDataException("Authoritative baseline body ActorId does not match the baseline.");
             StableHash actualBodyHash = ComputeBodyHash(body);
             if (!actualBodyHash.Equals(encodedBodyHash))
                 throw new InvalidDataException("Authoritative baseline body hash does not match its canonical body.");
-            EventId eventId = string.IsNullOrEmpty(eventHash) ? default : new EventId(new StableHash(eventHash));
             var result = new AuthoritativeActorBaseline(
                 actorId,
                 tick,

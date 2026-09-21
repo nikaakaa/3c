@@ -462,6 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
         readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason, bool RetainForCorrection)> m_PresentationEndCandidates = new(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
+        readonly Dictionary<AnimationProducerId, string> m_AnimationProducerIdentities = new();
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         static long s_NextPendingSequence;
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
@@ -687,6 +688,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (snapshots == null || snapshots.Count == 0)
                 throw new ArgumentException("Timeline content snapshots are required.", nameof(snapshots));
             m_TimelineContent.Clear();
+            m_AnimationProducerIdentities.Clear();
             for (int i = 0; i < snapshots.Count; i++)
             {
                 CharacterTimelineContentSnapshot snapshot = snapshots[i];
@@ -695,12 +697,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException("Timeline content snapshot is invalid.");
                 if (!m_TimelineContent.TryAdd(timeline.AuthoringId, timeline))
                     throw new InvalidOperationException($"Timeline content identity '{timeline.AuthoringId}' is duplicated.");
+                PrepareAnimationProducerIdentities(timeline);
             }
             AuthoringContentRevision = authoringRevision ?? string.Empty;
             m_DependencyResolver.InstallContent(m_TimelineContent.Values, m_NumericTarget);
             ContentRevision = contentRevision ?? string.Empty;
             m_ContentGeneration = checked(m_ContentGeneration + 1);
         }
+
+        void PrepareAnimationProducerIdentities(TimelineData timeline)
+        {
+            for (int i = 0; i < timeline.Tracks.Count; i++)
+            {
+                if (timeline.Tracks[i] is not AnimationTrack track)
+                    continue;
+                var producerId = new AnimationProducerId(timeline.AuthoringId, track.AuthoringId);
+                m_AnimationProducerIdentities.Add(producerId, producerId.ProgramProducerIdentity);
+            }
+        }
+
+        internal string RequireAnimationProducerIdentity(AnimationProducerId producerId) =>
+            m_AnimationProducerIdentities.TryGetValue(producerId, out string identity)
+                ? identity : throw new InvalidOperationException($"Timeline animation producer '{producerId}' is not prepared.");
 
         public bool TryExportContent(
             out CharacterTimelineContentExport export,

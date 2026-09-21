@@ -3915,3 +3915,11 @@
 - Fixed 和 Float32 Ability Execution 的 `StatePort` 与 `OperationStateReset` 从 immutable class 改为 readonly struct；每次 invocation 仍由 Frame 构造并交给 execution target、control 或 blackboard。
 - state access 的 owner、policy、slot 边界检查、跨 transaction 读写和 operation reset 顺序不变；消费方继续持有具体类型，不引入接口装箱、缓存或兼容路径。
 - 每个 invocation assembly 的两个 wrapper class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability event fact wrapper struct 收口
+
+对应 tasks.md 的 5.5，新增 5.217 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Execution Frame 的 `EventSequence` 与 `FactSink` 从 immutable class 改为 readonly struct；两者只绑定当前 Frame，继续负责 activation generation、event sequence、Gameplay channel 和 fact 添加。
+- `PresentationSink` 仍持有 TreeClip 可变状态，`TraceSink` 仍持有诊断集合索引，本步不改；所有消费者继续使用具体类型，不新增接口或装箱。
+- 每个 invocation assembly 的两个薄 wrapper class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

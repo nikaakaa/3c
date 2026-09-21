@@ -381,7 +381,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedEventSequence
+    internal readonly struct FixedEventSequence
     {
         readonly FixedAbilityExecutionFrame m_Frame;
 
@@ -437,7 +437,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedFactSink
+    internal readonly struct FixedFactSink
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedEventSequence m_Sequence;

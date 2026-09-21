@@ -380,7 +380,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32EventSequence
+    internal readonly struct Float32EventSequence
     {
         readonly Float32AbilityExecutionFrame m_Frame;
 
@@ -436,7 +436,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32FactSink
+    internal readonly struct Float32FactSink
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32EventSequence m_Sequence;

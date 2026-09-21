@@ -147,7 +147,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 position.Y < bounds.Minimum.Y || position.Y + m_Configuration.Height > bounds.Maximum.Y ||
                 position.Z < bounds.Minimum.Z || position.Z > bounds.Maximum.Z)
             {
-                throw new InvalidOperationException("Deterministic KCC body left the collision world bounds.");
+                throw new InvalidOperationException(
+                    $"Deterministic KCC body left the collision world bounds. " +
+                    $"Position=({position.X.ToDouble():R},{position.Y.ToDouble():R},{position.Z.ToDouble():R}), " +
+                    $"Height={m_Configuration.Height.ToDouble():R}, " +
+                    $"Minimum=({bounds.Minimum.X.ToDouble():R},{bounds.Minimum.Y.ToDouble():R},{bounds.Minimum.Z.ToDouble():R}), " +
+                    $"Maximum=({bounds.Maximum.X.ToDouble():R},{bounds.Maximum.Y.ToDouble():R},{bounds.Maximum.Z.ToDouble():R}).");
             }
         }
 

@@ -6,6 +6,9 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 越界复跑仍在 1056 tick，完善后的原异常给出 Position=(62.141949604731053,-22.366700786864385,8.9084531820844859)，Height=1.8000000000465661，Bounds=(-150,-22,-105)..(250,38,135)。确定是脚点 Y 掉出下界，X/Z 未越界；该诊断只在已有异常路径格式化字符串。
+- 现有 diagnostic_replay_start 因未编译 character-foot-ik 能力拒绝，未启用旁路。只读比对发现当前场景坡道 AABB 高度为 -3.104..1.042，旧碰撞图元为 -0.113..4.207（顶面 0..4.32）。正式 Baker.Build 的当前哈希 ff6a3f3f4dca27fea3138f7d7141d5c126d302bac4721e2f32f44e82f6d829a2 与已发布 a1b92282048c2067eacb08639ac828b2f7d95e8bdd92b7e193de82bae77699d5 不同，图元均为799。已通过正式 Bake 更新碰撞资产，未改世界范围；重跑请求仍待 Editor 重载恢复，不能视为已修复掉落。
+
 - `fbd361747` 跨技能准入归属修复后 Unity Console 0 error；相同录制越过 755 tick，最终在 issued tick 1056 因 Deterministic KCC body left the collision world bounds 退出。错误位置 DeterministicKccWorldSolver.Static.cs:150，边界检查覆盖 X/Z、脚点 Y 及角色高度。已停止回放释放 tick drive。下一步采集该帧前的角色位置、运动增量与碰撞范围，不扩大边界或吞掉异常；尚未完成 1492 帧，也尚未确认用户跑动闪烁/回退的原因。
 
 - 排序修复后，同一录制实际运行至 755/1492 帧，期间读取过 Replaying 231/1492，随后因 Action profile 'Attack' is absent from the Ability catalog 自动退出。堆栈定位跨技能替换准入：用当前技能 Services 查旧动作配置。修复在 ActiveAction 中携带所属 SkillId，通过安装集合按 SkillId 和 ActionId 读取旧动作正式配置；Fixed / Float32 同步，不添加配置别名或运行时临时编译。已停止失败回放释放 tick drive，修复待编译与重跑。

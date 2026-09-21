@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
@@ -102,6 +103,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
             writer.WriteInt32(Version);
             writer.WriteByte((byte)payload.Kind);
             WritePayload(writer, payload);
+        }
+
+        public static void WriteCanonicalStateHashPayload(
+            CanonicalWriter writer,
+            string peerId,
+            SimulationTick tick,
+            StableHash worldHash,
+            StableHash rosterHash,
+            StableHash kccHash,
+            SimulationWorldSnapshot world)
+        {
+            writer.WriteUInt32(PayloadMagic);
+            writer.WriteInt32(Version);
+            writer.WriteByte((byte)RollbackProtocolMessageKind.StateHash);
+            WriteStateHashCore(writer, peerId, tick, worldHash, rosterHash, kccHash, new SnapshotStateHashActors(world));
         }
 
         public static IRollbackProtocolPayload ReadCanonicalPayload(CanonicalWriter canonicalScratch, byte[] bytes)
@@ -301,18 +317,30 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static void WriteStateHash(CanonicalWriter writer, RollbackStateHashReport value)
         {
-            writer.WriteString(value.PeerId);
-            writer.WriteUInt64(value.Tick.Value);
-            writer.WriteString(value.WorldHash.Value);
-            writer.WriteString(value.RosterHash.Value);
-            writer.WriteString(value.KccHash.Value);
-            writer.WriteInt32(value.Actors.Count);
-            for (int i = 0; i < value.Actors.Count; i++)
+            WriteStateHashCore(writer, value.PeerId, value.Tick, value.WorldHash, value.RosterHash, value.KccHash, new ReportStateHashActors(value));
+        }
+
+        static void WriteStateHashCore<TActors>(
+            CanonicalWriter writer,
+            string peerId,
+            SimulationTick tick,
+            StableHash worldHash,
+            StableHash rosterHash,
+            StableHash kccHash,
+            TActors actors)
+            where TActors : struct, IRollbackStateHashActors
+        {
+            writer.WriteString(peerId);
+            writer.WriteUInt64(tick.Value);
+            writer.WriteString(worldHash.Value);
+            writer.WriteString(rosterHash.Value);
+            writer.WriteString(kccHash.Value);
+            writer.WriteInt32(actors.Count);
+            for (int i = 0; i < actors.Count; i++)
             {
-                RollbackActorHash actor = value.Actors[i];
-                writer.WriteString(actor.ActorId.Value);
-                writer.WriteString(actor.GameplayContentHash.ToString());
-                writer.WriteString(actor.CharacterStateHash.ToString());
+                writer.WriteString(actors.ActorId(i).Value);
+                writer.WriteString(actors.GameplayContentHash(i).ToString());
+                writer.WriteString(actors.CharacterStateHash(i).ToString());
             }
         }
 
@@ -384,6 +412,44 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (value < 0 || value > 1000000)
                 throw new InvalidDataException($"Rollback protocol count '{value}' is invalid.");
             return value;
+        }
+
+        interface IRollbackStateHashActors
+        {
+            int Count { get; }
+            ActorId ActorId(int index);
+            GameplayContentHash GameplayContentHash(int index);
+            CharacterStateHash CharacterStateHash(int index);
+        }
+
+        readonly struct ReportStateHashActors : IRollbackStateHashActors
+        {
+            readonly RollbackStateHashReport m_Report;
+
+            public ReportStateHashActors(RollbackStateHashReport report)
+            {
+                m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            }
+
+            public int Count => m_Report.Actors.Count;
+            public ActorId ActorId(int index) => m_Report.Actors[index].ActorId;
+            public GameplayContentHash GameplayContentHash(int index) => m_Report.Actors[index].GameplayContentHash;
+            public CharacterStateHash CharacterStateHash(int index) => m_Report.Actors[index].CharacterStateHash;
+        }
+
+        readonly struct SnapshotStateHashActors : IRollbackStateHashActors
+        {
+            readonly SimulationWorldSnapshot m_World;
+
+            public SnapshotStateHashActors(SimulationWorldSnapshot world)
+            {
+                m_World = world ?? throw new ArgumentNullException(nameof(world));
+            }
+
+            public int Count => m_World.Actors.Count;
+            public ActorId ActorId(int index) => m_World.Actors[index].ActorId;
+            public GameplayContentHash GameplayContentHash(int index) => m_World.Actors[index].GameplayContentHash;
+            public CharacterStateHash CharacterStateHash(int index) => m_World.Actors[index].StateHash;
         }
     }
 }

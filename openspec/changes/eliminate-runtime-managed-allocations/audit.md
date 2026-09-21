@@ -3155,6 +3155,14 @@
 - `CanonicalReader` 增加零复制 `SkipString`，numeric profile codec 增加对应跳读入口；`SimulationWorldSnapshot.ComputeSolverStatePayloadHash` 直接哈希借用区间。Hash Egress 调用该入口，不再构造完整 `WorldSimulationState`。同一 snapshot 可以重复计算，借用段不逃逸出 hash 计算，owner 仍是 snapshot 的 world state bytes。
 - 完整 `DecodeWorldState` 保留给真正需要 body 和完整 world state 的消费者；solver payload 定位入口不做 identity binding 的重复比较，snapshot 构造和完整恢复路径仍保留这些正式校验。`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback 本地 StateHash 去报告对象
+
+对应 tasks.md 的 5.2，新增 5.124 作为独立小步；5.2 保持未勾选。
+
+- `RollbackHashEgressPassRuntime` 原先每条本地 state hash 都把 snapshot Actor 复制成 `RollbackActorHash[]`，再构造一只 `RollbackStateHashReport`，但这个 report 只用于同步 `WriteCanonicalPayload`，编码后立即丢弃。现在新增正式 `WriteCanonicalStateHashPayload` 入口，直接以 `SimulationWorldSnapshot`、local peer、roster hash 和 solver payload hash 编码 canonical StateHash。
+- codec 内部把字段写法收敛到 `WriteStateHashCore`；report 和 snapshot 分别提供 readonly struct source adapter，泛型 struct 约束不装箱、不复制 Actor。本地 snapshot Actor 已在 snapshot 构造期排序并做重复校验，字段顺序与原 report 编码完全一致。`RollbackStateHashReport` 继续用于网络解码、Endpoint 历史和报告发送，class 所有权不变。
+- 本步删除的是本地 egress 编码前临时对象和 Actor 数组；payload `byte[]` 仍由 `FixedSourceEgressRecord` 正式持有，不改 egress 产品寿命。`ThirdPersonSimulation.DeterministicRollback.csproj` 和 Endpoint 工程使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

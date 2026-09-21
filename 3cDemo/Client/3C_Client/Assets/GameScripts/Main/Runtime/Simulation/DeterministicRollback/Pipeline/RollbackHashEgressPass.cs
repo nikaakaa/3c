@@ -70,10 +70,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             while (m_State.TryReserveNextHashTick(m_Policy.HashCadenceTicks, out SimulationTick tick))
             {
                 SimulationWorldSnapshot world = GetWorldSnapshot(tick, readPorts.CompletedSteps.Steps);
-                RollbackStateHashReport report = BuildReport(world, m_State.LocalPeerId, m_State.RosterHash);
                 ActorId owner = world.Actors[0].ActorId;
                 m_PayloadScratch.Reset();
-                RollbackProtocolCodec.WriteCanonicalPayload(m_PayloadScratch, report);
+                RollbackProtocolCodec.WriteCanonicalStateHashPayload(
+                    m_PayloadScratch,
+                    m_State.LocalPeerId,
+                    world.Tick,
+                    world.WorldHash.Value,
+                    m_State.RosterHash,
+                    world.ComputeSolverStatePayloadHash(),
+                    world);
                 writePorts.Egress.Append(
                     new SimulationPipelineAppendEntryIdentity(owner, tick, tick.Value, context.Source),
                     new FixedSourceEgressRecord(
@@ -99,29 +105,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return m_State.Snapshots.GetRequired(tick).World;
         }
 
-        static RollbackStateHashReport BuildReport(
-            SimulationWorldSnapshot world,
-            string localPeerId,
-            StableHash rosterHash)
-        {
-            StableHash kccHash = world.ComputeSolverStatePayloadHash();
-            var actors = new RollbackActorHash[world.Actors.Count];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                SimulationActorSnapshot actor = world.Actors[i];
-                actors[i] = new RollbackActorHash(
-                    actor.ActorId,
-                    actor.GameplayContentHash,
-                    actor.StateHash);
-            }
-            return RollbackStateHashReport.FromOwnedActors(
-                localPeerId,
-                world.Tick,
-                world.WorldHash.Value,
-                rosterHash,
-                kccHash,
-                actors);
-        }
     }
 
     public sealed class RollbackHashEgressReadPorts : ISimulationPipelineReadPortSet

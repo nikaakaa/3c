@@ -30,11 +30,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             WritePayload(writer, envelope.Payload);
         }
 
-        public static RollbackProtocolEnvelope Read(CanonicalWriter canonicalScratch, byte[] bytes)
+        public static RollbackProtocolEnvelope Read(CanonicalWriter canonicalScratch, ArraySegment<byte> bytes)
         {
             if (canonicalScratch == null)
                 throw new ArgumentNullException(nameof(canonicalScratch));
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback protocol envelope header is invalid.");
             string sessionId = reader.ReadString();
@@ -46,7 +46,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var envelope = new RollbackProtocolEnvelope(sessionId, senderPeerId, sequence, payload);
             canonicalScratch.Reset();
             WriteEnvelope(canonicalScratch, envelope);
-            if (!canonicalScratch.ContentEquals(bytes))
+            if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback protocol envelope is not canonical.");
             return envelope;
         }

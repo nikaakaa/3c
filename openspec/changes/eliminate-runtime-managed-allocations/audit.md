@@ -2596,3 +2596,12 @@
 - Channel 现在按正式 `MaximumQueuedMessages` 持有 reassembly 池。每个 wrapper 固定持有 `MaximumFragmentsPerMessage` 个槽位，实际 fragment count、payload 总长、已收数量和字节数单独维护；首次租用创建，完成后清空 packet 引用并回池。
 - 只有 Channel 内部的重组包装和槽位数组被复用。完整消息仍先复制到独立 `byte[]` 再返回 wrapper；接收 packet、packet payload、协议 envelope 和 payload 对象继续独立分配，不提前复用。重组中途抛错时 wrapper 仍留在现有 reassembly 表中，不进入池。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚组装 buffer 复用
+
+对应 tasks.md 的 5.4，本步处理 Datagram Channel 的完整协议消息临时字节和 Protocol Read 入口，整项保持未勾选。
+
+- `FragmentAssembly.Complete` 原先每次重组完成都新建 `byte[]`；该数组只交给 `RollbackProtocolCodec.Read` 同步解码和 canonical 比较，解码结果已经独立持有 payload。
+- Channel 现在按“单分片预算×最大分片数”准备一只组装 buffer，`CopyComplete` 写入有效前缀并返回实际长度。重组 wrapper 在复制完成后才释放；Protocol envelope、输入帧、bundle、快照响应等 payload 对象继续独立分配。
+- `RollbackProtocolCodec.Read` 删除 `byte[]` 参数入口，改为 ArraySegment 限定有效范围；wire 读取、canonical 重编码比较和异常语义不变。重置 wrapper 时也会校验 peer 声明的 fragment count 不超过 Channel 正式最大分片数。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

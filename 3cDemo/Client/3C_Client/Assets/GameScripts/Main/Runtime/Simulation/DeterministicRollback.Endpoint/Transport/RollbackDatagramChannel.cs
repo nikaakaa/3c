@@ -55,6 +55,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             public void Reset(RollbackDatagramPacket packet)
             {
+                if (packet.FragmentCount > Fragments.Length)
+                    throw new InvalidDataException("Rollback message fragments exceed the bounded fragment capacity.");
                 Reliable = packet.Reliable;
                 TotalPayloadBytes = packet.TotalPayloadBytes;
                 FragmentCount = packet.FragmentCount;
@@ -76,19 +78,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     throw new InvalidDataException("Rollback message fragments exceed the declared payload size.");
             }
 
-            public byte[] Complete()
+            public int CopyComplete(Span<byte> destination)
             {
                 if (!IsComplete || m_ReceivedBytes != TotalPayloadBytes)
                     throw new InvalidOperationException("Rollback message reassembly is incomplete.");
-                var result = new byte[TotalPayloadBytes];
+                if (destination.Length < TotalPayloadBytes)
+                    throw new InvalidOperationException("Rollback assembled payload buffer is too small.");
                 int offset = 0;
                 for (int i = 0; i < FragmentCount; i++)
                 {
                     ReadOnlySpan<byte> payload = Fragments[i].Payload;
-                    payload.CopyTo(result.AsSpan(offset));
+                    payload.CopyTo(destination.Slice(offset));
                     offset += payload.Length;
                 }
-                return result;
+                return TotalPayloadBytes;
             }
 
             public void Release()
@@ -119,6 +122,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly int m_MaximumFragmentPayloadBytes;
         readonly CanonicalWriter m_EncodeWriter;
         readonly CanonicalWriter m_DecodeScratch;
+        readonly byte[] m_AssembledPayload;
         RollbackDatagramPacket m_Acknowledgement;
         ulong m_NextDatagramSequence = 1;
         ulong m_NextMessageSequence = 1;
@@ -146,6 +150,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_MaximumFragmentPayloadBytes * m_Definition.MaximumFragmentsPerMessage);
             m_EncodeWriter = new CanonicalWriter(new byte[encodeBufferCapacity]);
             m_DecodeScratch = new CanonicalWriter(new byte[encodeBufferCapacity]);
+            m_AssembledPayload = new byte[encodeBufferCapacity];
             int messageCapacity = m_Definition.MaximumQueuedMessages;
             m_CompletedHistoryCapacity = checked(messageCapacity * 2);
             int completedStorageCapacity = checked(m_CompletedHistoryCapacity + 1);
@@ -283,9 +288,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return;
             m_Reassembly.Remove(packet.MessageSequence);
             bool reliable = assembly.Reliable;
-            byte[] assembledBytes = assembly.Complete();
+            int assembledBytes = assembly.CopyComplete(m_AssembledPayload);
             ReturnReassembly(assembly);
-            RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(m_DecodeScratch, assembledBytes);
+            RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(
+                m_DecodeScratch,
+                new ArraySegment<byte>(m_AssembledPayload, 0, assembledBytes));
             if (!string.Equals(envelope.SessionId, m_Definition.SessionId, StringComparison.Ordinal) ||
                 !string.Equals(envelope.SenderPeerId, m_RemotePeerId, StringComparison.Ordinal) ||
                 envelope.Sequence != packet.MessageSequence)

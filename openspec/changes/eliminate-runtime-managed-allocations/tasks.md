@@ -360,6 +360,7 @@
 - [x] 5.97 Rollback Datagram Channel 复用 Channel 生命周期的零 payload ACK packet，同步编码后更新身份；接收 packet、reassembly 和 Endpoint clone 仍在后续小步
 - [x] 5.98 Rollback Datagram Endpoint 复用 UDP ReceiveFrom endpoint scratch，删除每个轮询周期的 IPEndPoint；实际入队接收记录继续独立 clone
 - [x] 5.99 Rollback Datagram Channel 按正式消息容量池化 reassembly wrapper 和最大分片槽位，完整消息复制到独立 byte[] 后释放 wrapper；接收 packet、payload 和协议结果继续独立分配
+- [x] 5.100 Rollback Datagram Channel 复用按最大消息容量准备的组装 buffer，Protocol Read 接收 ArraySegment 并删除 byte[] 入口；协议 envelope 和 payload 结果继续独立分配
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -3675,3 +3675,11 @@
 - Evidence `Drain` 的 bodies、samples 和 events 改为常驻可增长 scratch 加显式 count；多个 remote presentation 和 reliable batch 用类型化 Append 方法合并，最新 body tick、总数、事件顺序和异常路径清空语义不变。
 - 合并完成后按 count 生成三份精确最终 arrays 并直接交给 `RemotePresentationBatch`，删除三个 `List`、`AddRange` 内部扩容和 `ToArray` 复制。开头与 finally 统一清空 scratch 当前使用区间，避免旧引用跨 tick 保留。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 pipeline participants 数组收口
+
+对应 tasks.md 的 5.5，新增 5.187 作为独立小步；5.5 保持未勾选。
+
+- Prediction pipeline 合并先统计需要保留的非 prediction participants，再分配精确数组；第一遍过滤，第二遍按原顺序填充，最后追加 correction、history 和 journal 三个 prediction states。过滤规则、participant 顺序和 pipeline snapshot 语义不变。
+- 每次 pipeline 合并的 List、内部扩容和 Add 中转删除，替换为一个精确 participant array。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -220,31 +220,38 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] historyState,
             byte[] journalState)
         {
-            var participants = new List<SimulationPipelinePassStateSnapshot>();
+            int participantCount = 0;
+            for (int i = 0; i < projection.Participants.Count; i++)
+            {
+                if (!ServerAuthoritativePredictionPassIds.IsPredictionStatePass(projection.Participants[i].PassId))
+                    participantCount++;
+            }
+            var participants = new SimulationPipelinePassStateSnapshot[participantCount + 3];
+            int participantIndex = 0;
             for (int i = 0; i < projection.Participants.Count; i++)
             {
                 SimulationPipelinePassStateSnapshot participant = projection.Participants[i];
                 if (!ServerAuthoritativePredictionPassIds.IsPredictionStatePass(participant.PassId))
-                    participants.Add(participant);
+                    participants[participantIndex++] = participant;
             }
-            participants.Add(ServerAuthoritativePredictionStateSnapshot.Create(
+            participants[participantIndex++] = ServerAuthoritativePredictionStateSnapshot.Create(
                 ServerAuthoritativePredictionPassIds.CorrectionSchedule,
                 ServerAuthoritativePredictionPassIds.CorrectionStateOwner,
                 ServerAuthoritativePredictionPassIds.CorrectionStateSchema,
                 correctionState,
-                3));
-            participants.Add(ServerAuthoritativePredictionStateSnapshot.Create(
+                3);
+            participants[participantIndex++] = ServerAuthoritativePredictionStateSnapshot.Create(
                 ServerAuthoritativePredictionPassIds.HistoryEgress,
                 ServerAuthoritativePredictionPassIds.HistoryStateOwner,
                 ServerAuthoritativePredictionPassIds.HistoryStateSchema,
                 historyState,
-                ServerAuthoritativePredictionPassIds.HistoryStateSchemaVersion));
-            participants.Add(ServerAuthoritativePredictionStateSnapshot.Create(
+                ServerAuthoritativePredictionPassIds.HistoryStateSchemaVersion);
+            participants[participantIndex++] = ServerAuthoritativePredictionStateSnapshot.Create(
                 ServerAuthoritativePredictionPassIds.OutputDisposition,
                 ServerAuthoritativePredictionPassIds.JournalStateOwner,
                 ServerAuthoritativePredictionPassIds.JournalStateSchema,
                 journalState,
-                ServerAuthoritativePredictionPassIds.JournalStateSchemaVersion));
+                ServerAuthoritativePredictionPassIds.JournalStateSchemaVersion);
             return new SimulationPipelineStateSnapshot(pipeline, projection.Backend, tick, participants);
         }
 

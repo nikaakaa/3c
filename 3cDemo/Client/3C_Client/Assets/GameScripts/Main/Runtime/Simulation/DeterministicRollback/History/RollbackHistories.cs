@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new RollbackInputHistoryEntry(tick, entry.Predicted, entry.Canonical);
         }
 
-        public IReadOnlyList<RollbackInputHistoryEntry> CaptureEntries()
+        public RollbackInputHistoryEntry[] CaptureEntries()
         {
             var result = new RollbackInputHistoryEntry[m_Entries.Count];
             int index = 0;
@@ -93,15 +93,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return result;
         }
 
-        public void RestoreEntries(IEnumerable<RollbackInputHistoryEntry> entries)
+        public void RestoreEntries(IReadOnlyList<RollbackInputHistoryEntry> entries)
         {
             foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
                 Release(pair.Value);
             m_Entries.Clear();
             if (entries == null)
                 return;
-            foreach (RollbackInputHistoryEntry entry in entries)
+            for (int i = 0; i < entries.Count; i++)
             {
+                RollbackInputHistoryEntry entry = entries[i];
                 if (entry == null)
                     throw new ArgumentException("Rollback input history restore contains a missing entry.", nameof(entries));
                 if (entry.Predicted != null)

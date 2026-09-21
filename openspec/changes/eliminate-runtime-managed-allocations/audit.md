@@ -3123,6 +3123,14 @@
 - `RestoreSimulationProjection` 原先每次新建临时 `SortedDictionary<ulong, StableHash>`，读完后再复制到当前 applied hashes。现在复用 Runtime State 私有 scratch：先清空并读入 payload，经过 identity、数量上限、重复 Tick、`RequireComplete` 和 confirmed horizon 校验后，才清空并替换当前 applied hashes。任一校验失败都不会污染当前状态。
 - 成功或失败后 scratch 中可能保留本次读入值，但每次 restore 入口先清空，且不暴露给外部；string 身份和 StableHash 都是不可变值内容，不会形成可变别名。`ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback input checkpoint 遍历去装箱枚举
+
+对应 tasks.md 的 5.2，新增 5.120 作为独立小步；5.2 保持未勾选。
+
+- `RollbackInputHistory.CaptureEntries` 已经返回精确 `RollbackInputHistoryEntry[]`，但公开合同退化为 `IReadOnlyList`；checkpoint 也按 `IReadOnlyList` 持有。`RestoreEntries` 原先接受 `IEnumerable`，每次恢复 checkpoint 都会通过接口枚举器遍历正式数组。现在 capture 合同改为精确数组，checkpoint 直接持有数组，restore 改为 `IReadOnlyList` 并按 `Count` 索引遍历。
+- 项目内没有第二个调用方；旧 `IEnumerable` 入口直接删除，不保留兼容重载。restore 前释放旧 entry、清空 SortedDictionary、null entry 异常、predicted/canonical 重建和容量校验不变。checkpoint 数组仍每次独立构造，由 `CaptureCheckpoint` 或 restore transaction 持有，不跨事务复用。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

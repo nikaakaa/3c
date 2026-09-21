@@ -181,7 +181,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             internal TransactionCheckpoint(
                 RollbackRuntimeState owner,
-                IReadOnlyList<RollbackInputHistoryEntry> inputs,
+                RollbackInputHistoryEntry[] inputs,
                 KeyValuePair<ulong, StableHash>[] appliedGameplayHashes,
                 IRollbackInputSourceCheckpoint inputSourceCheckpoint)
             {
@@ -217,7 +217,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
 
             internal RollbackRuntimeState Owner { get; }
-            internal IReadOnlyList<RollbackInputHistoryEntry> Inputs { get; }
+            internal RollbackInputHistoryEntry[] Inputs { get; }
             internal KeyValuePair<ulong, StableHash>[] AppliedGameplayHashes { get; }
             internal IRollbackInputSourceCheckpoint InputSourceCheckpoint { get; }
             internal ulong LastCanonicalContiguousTick { get; }

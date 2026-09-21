@@ -8,7 +8,7 @@
 - [x] 0.2 将 Timeline 起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标迁移为秒，更新正式字段名与作者 API，删除整数作者帧双写和兼容读取
 - [x] 0.3 将旧资产和生成 authoring 代码按正式旧时间 / 素材映射一次性迁移，保留内容身份和引用；同步闭包、指纹及正式派生产品格式，不生成 tick 版作者内容
 - [x] 0.4 将精确动作进度、倍率、暂停与换算余数归入既有逻辑播放管理者，Timeline 接收前后秒数／经过／原因被动遍历；播放状态与求值状态在同一 Step 和 Capture / Restore 链提交恢复，保留循环、Decision 与边界截停规则
-- [ ] 0.5 将 TreeClip 正式节点输出的位置和运行消费者迁移为秒，节点保留 LogicTick、cycle、TreeGraph／Node identity 与 branch revision；Timeline 不再定义 ActionCue 事件或以素材 LocalFrame 推进
+- [x] 0.5 将 TreeClip 正式节点输出的位置和运行消费者迁移为秒，节点保留 LogicTick、cycle、TreeGraph／Node identity 与 branch revision；Timeline 不再定义 ActionCue 事件或以素材 LocalFrame 推进
 - [ ] 0.6 迁移 Slate、Inspector、Session、mutation / Undo 和 C# 导出重建的时间读写，帧只作显示与可选吸附，删除 StartFrame 等旧正式存储入口
 - [ ] 0.7 将逻辑和表现 Timeline 调用入口统一为被动区间求值，删除自主 delta 累加；沿既有预分配存储传递推进与候选结果，运行热路径保持 0 GC
 

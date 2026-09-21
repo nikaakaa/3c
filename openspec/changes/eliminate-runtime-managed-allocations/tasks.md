@@ -420,6 +420,7 @@
 - [x] 5.157 Float32 authority reliable event 使用单事件 Egress codec 直接编码，删除每条事件的 RemotePresentationBatch、空集合、单元素数组和只读包装
 - [x] 5.158 Float32 authority reliable event batch output 直接持有按事件数量构造的最终数组；删除 IEnumerable 复制、List 和 ReadOnlyCollection，路由校验与事件顺序不变
 - [x] 5.159 Float32 authority reliable event 与 full checkpoint output 改为 owned payload 合同，删除 codec 产出后的完整数组 clone
+- [x] 5.160 Float32 authority gameplay datagram packet 使用 owned payload 构造直接接管 codec 数组，删除发送 packet 的中间 payload clone
 
 ## 6. UI、资源、渲染和生命周期
 

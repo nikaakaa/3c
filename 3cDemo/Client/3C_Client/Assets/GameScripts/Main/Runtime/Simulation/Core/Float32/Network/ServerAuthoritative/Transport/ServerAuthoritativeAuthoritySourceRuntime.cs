@@ -522,7 +522,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 kind,
                 route.NextSendPacketSequence(),
                 payload.Length);
-            return new ServerAuthoritativeDatagramPacket(header, payload);
+            return ServerAuthoritativeDatagramPacket.FromOwnedPayload(header, payload);
         }
 
         bool HasPendingCheckpointRequest()

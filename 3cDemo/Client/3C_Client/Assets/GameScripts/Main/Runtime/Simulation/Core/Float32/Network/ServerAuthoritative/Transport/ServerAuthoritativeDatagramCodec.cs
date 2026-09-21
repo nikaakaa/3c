@@ -82,6 +82,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             Header = header;
         }
 
+        internal static ServerAuthoritativeDatagramPacket FromOwnedPayload(
+            ServerAuthoritativeDatagramHeader header,
+            byte[] payload)
+        {
+            return new ServerAuthoritativeDatagramPacket(header, payload, true);
+        }
+
+        ServerAuthoritativeDatagramPacket(
+            ServerAuthoritativeDatagramHeader header,
+            byte[] payload,
+            bool ownedPayload)
+        {
+            m_Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            if (header.PayloadLength != m_Payload.Length)
+                throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payload));
+            Header = header;
+        }
+
         public ServerAuthoritativeDatagramHeader Header { get; }
         public ReadOnlyMemory<byte> Payload => m_Payload;
     }

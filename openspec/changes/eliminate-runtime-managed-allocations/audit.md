@@ -3458,3 +3458,11 @@
 - `ServerAuthoritativeAuthorityReliableEventOutput` 和 `ServerAuthoritativeAuthorityFullCheckpointOutput` 的 payload 构造合同改为 owned 数组。唯一生产方分别在 single-event codec 和 full checkpoint codec 后直接转交方法内新建数组，删除入队前的完整 clone。
 - 两个 output 仍不可变，Fantasy transport 只读取 payload；producer 不保留原数组引用，检查点、事件内容和发送长度语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority gameplay packet payload 零复制
+
+对应 tasks.md 的 5.5，新增 5.160 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramPacket` 增加同 assembly 的 `FromOwnedPayload` 构造，payload 数组原样持有并继续校验 header 长度。Authority Source 生成 hello ack 和 snapshot packet 时直接转交 payload codec 新建数组，删除发送 packet 内部的 `ToArray` payload clone。
+- endpoint 最终 wire byte[] 编码和所有权不变；跨 assembly 的 Fantasy channel 继续使用现有公开复制构造，不在本步扩大归属边界。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

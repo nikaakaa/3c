@@ -2694,6 +2694,15 @@
 - segment 分组、每个 segment 的 `maxEvents` 满后丢弃、`m_EvictedEvents`、`m_LastEvictionVersion`、`Freeze` 独立复制和 store 锁边界不变。本步只治理全局索引存储；Segment 对象、segment event List、冻结快照、采集 payload 和字符串构造仍由 7.1 后续处理。
 - `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获运行对比或 Player 分配采样。
 
+## 2026-09-21 捕获 segment 归还池
+
+对应 tasks.md 的 7.1，新增 7.61 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeCaptureStore.Publish` 每遇到新的 Domain/Position 组合都新建 `Segment`，其内部 `List<RuntimeCaptureChange>` 再从默认容量逐步扩容；capture 超过 `maxSegments` 后，旧段裁剪和新段创建持续把对象交给 GC。现在 store 在构造期准备长度 `maxSegments` 的私有归还栈，需要新段时优先重置旧段，裁剪旧段时清空事件引用后归还。
+- 归还池只属于当前 `RuntimeCaptureStore`，没有全局对象池，也没有跨 capture 复用。活跃段数加归还段数不超过 `maxSegments`，所以归还时不需要扩大存储或检查溢出。`Freeze` 先复制事件数组，随后归还或 Dispose 都不会改写已返回快照。
+- Domain/Position 分组、新事件追加位置、单段 `maxEvents` 满后丢弃、全局环形索引淘汰、`m_EvictedEvents`、`m_LastEvictionVersion` 和 store 锁边界不变。`Freeze` 快照、payload、trace event 字符串和 Editor `GetEvents` 重建仍在后续小步处理。
+- `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获运行对比或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

@@ -463,3 +463,4 @@
 - [x] 7.58 OperationExecutionDescriptor 构造按 GameplayAbilityOperationSet 校验 OperationCode，删除 Enum.IsDefined 反射；保留 ArgumentOutOfRangeException，错误文案改为当前 OperationSet 不支持
 - [x] 7.59 Semantic IR Codec 的 literal、document 和 constant input byte 枚举改为连续正式值域直接校验；保留 payload 边界和原异常类型，删除该 codec 全部 Enum 反射
 - [x] 7.60 RuntimeCaptureStore 的全局 capture change 索引改为 maxEvents+1 环形数组，淘汰旧 segment 时前进 head 并清空槽位；发布顺序、segment 边界、丢弃计数、全量同步和读取独立结果保持不变
+- [x] 7.61 RuntimeCaptureStore 按 maxSegments 准备私有 segment 归还池，裁剪后的段和事件列表在同一 capture 内重置复用；Domain/Position 分组、满段丢弃和 Freeze 独立快照不变

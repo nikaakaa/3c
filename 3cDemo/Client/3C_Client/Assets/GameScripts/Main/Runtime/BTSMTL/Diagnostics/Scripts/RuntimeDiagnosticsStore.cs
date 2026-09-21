@@ -407,6 +407,7 @@ namespace BTSMTL.Diagnostics
     sealed class RuntimeCaptureStore : IDisposable
     {
         readonly List<Segment> m_Segments = new List<Segment>();
+        readonly Segment[] m_SegmentPool;
         readonly RuntimeCaptureChange[] m_ChangeBuffer;
         readonly int m_MaxSegments;
         readonly Guid m_CaptureId;
@@ -416,6 +417,7 @@ namespace BTSMTL.Diagnostics
         readonly int m_MaxEvents;
         long m_EvictedEvents;
         long m_LastEvictionVersion;
+        int m_SegmentPoolCount;
         int m_ChangeHead;
         int m_ChangeCount;
 
@@ -429,6 +431,7 @@ namespace BTSMTL.Diagnostics
             m_Detail = detail;
             m_MaxSegments = maxSegments;
             m_MaxEvents = maxEvents;
+            m_SegmentPool = new Segment[m_MaxSegments];
             m_ChangeBuffer = new RuntimeCaptureChange[m_MaxEvents + 1];
         }
 
@@ -449,7 +452,7 @@ namespace BTSMTL.Diagnostics
             Segment segment = m_Segments.Count > 0 ? m_Segments[m_Segments.Count - 1] : null;
             if (segment == null || segment.Domain != traceEvent.Domain || segment.Position != traceEvent.Position)
             {
-                segment = new Segment(traceEvent.Domain, traceEvent.Position);
+                segment = AcquireSegment(traceEvent.Domain, traceEvent.Position);
                 m_Segments.Add(segment);
             }
 
@@ -521,6 +524,7 @@ namespace BTSMTL.Diagnostics
                 m_LastEvictionVersion = m_Version;
                 if (removed.Events.Count > 0)
                     RemoveFirstChanges(removed.Events.Count);
+                ReturnSegment(removed);
             }
         }
 
@@ -559,17 +563,30 @@ namespace BTSMTL.Diagnostics
             m_ChangeCount = 0;
         }
 
+        Segment AcquireSegment(RuntimeTraceDomain domain, ulong position)
+        {
+            Segment segment = m_SegmentPoolCount > 0 ? m_SegmentPool[--m_SegmentPoolCount] : new Segment();
+            segment.Reset(domain, position);
+            return segment;
+        }
+
+        void ReturnSegment(Segment segment)
+        {
+            segment.Events.Clear();
+            m_SegmentPool[m_SegmentPoolCount++] = segment;
+        }
+
         sealed class Segment
         {
-            public Segment(RuntimeTraceDomain domain, ulong position)
+            public RuntimeTraceDomain Domain { get; private set; }
+            public ulong Position { get; private set; }
+            public List<RuntimeCaptureChange> Events { get; } = new List<RuntimeCaptureChange>();
+
+            public void Reset(RuntimeTraceDomain domain, ulong position)
             {
                 Domain = domain;
                 Position = position;
             }
-
-            public RuntimeTraceDomain Domain { get; }
-            public ulong Position { get; }
-            public List<RuntimeCaptureChange> Events { get; } = new List<RuntimeCaptureChange>();
         }
     }
 

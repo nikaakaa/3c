@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly SortedDictionary<ulong, CanonicalInputSample> m_Inputs = new SortedDictionary<ulong, CanonicalInputSample>();
         readonly SortedDictionary<ulong, NetworkCheckpoint> m_Sent = new SortedDictionary<ulong, NetworkCheckpoint>();
         readonly List<ulong> m_ExpiredInputSequences;
+        readonly Queue<ulong> m_SentSequenceOrder;
         CanonicalInputSample m_Held;
         ulong m_HeldAcceptedTick;
         ulong m_LastEnqueuedInputSequence;
@@ -29,6 +30,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             Roster = roster;
             m_Capacity = capacity;
             m_ExpiredInputSequences = new List<ulong>(capacity);
+            m_SentSequenceOrder = new Queue<ulong>(capacity + 1);
         }
 
         public ServerAuthoritativeRosterEntry Roster { get; }
@@ -169,26 +171,21 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 return;
             AcknowledgedSnapshotSequence = latestSnapshot;
             AcknowledgedCheckpoint = checkpoint;
-            var remove = new List<ulong>();
-            foreach (ulong sequence in m_Sent.Keys)
-            {
-                if (sequence < latestSnapshot)
-                    remove.Add(sequence);
-            }
-            for (int i = 0; i < remove.Count; i++)
-                m_Sent.Remove(remove[i]);
+            while (m_SentSequenceOrder.Peek() < latestSnapshot)
+                m_Sent.Remove(m_SentSequenceOrder.Dequeue());
         }
 
         public void StoreSent(ulong sequence, NetworkCheckpoint checkpoint)
         {
             m_Sent[sequence] = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
+            m_SentSequenceOrder.Enqueue(sequence);
             while (m_Sent.Count > m_Capacity)
             {
-                using IEnumerator<ulong> iterator = m_Sent.Keys.GetEnumerator();
-                iterator.MoveNext();
-                if (iterator.Current >= AcknowledgedSnapshotSequence && AcknowledgedSnapshotSequence != 0)
+                ulong sequence = m_SentSequenceOrder.Peek();
+                if (sequence >= AcknowledgedSnapshotSequence && AcknowledgedSnapshotSequence != 0)
                     throw new InvalidOperationException("Authority snapshot baseline capacity cannot discard an unconfirmed checkpoint.");
-                m_Sent.Remove(iterator.Current);
+                m_SentSequenceOrder.Dequeue();
+                m_Sent.Remove(sequence);
             }
         }
 

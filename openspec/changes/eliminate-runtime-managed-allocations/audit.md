@@ -3538,3 +3538,11 @@
 - `CommandDatagram` 的 sample 存储从 `ReadOnlyCollection` 改为正式 owned 精确数组。公开构造接收 `IReadOnlyList`，把客户端既有 command history 复制一次后持有；新增加程序内部 `FromOwnedSamples`，canonical 解码完成后的精确数组直接转交，不再二次复制。
 - 构造期继续拒绝 null、空、超过四个、无效 sample 和乱序；`Samples` 消费端仍通过 `IReadOnlyList` 按下标读取，wire 字段顺序不变。每条发送命令删除临时 `List` 和 wrapper，每条接收命令删除第二份 sample 数组复制。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority snapshot 淘汰顺序复用
+
+对应 tasks.md 的 5.5，新增 5.170 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityClientRoute` 在构造期按 snapshot 历史容量准备 `sequence order queue`，与 `SortedDictionary` 一起构成正式已发 snapshot 存储。`StoreSent` 记录新 sequence 后满员时直接检查并淘汰队首，`AcknowledgeSnapshot` 命中已存储 snapshot 后按队首清理更旧项。
+- 删除每次确认新建的过期 sequence `List` 和每次满员裁剪使用的 `SortedDictionary` 枚举器。未存储 snapshot 的 ack 仍先直接返回，基线不能淘汰的容量错误、确认顺序和已确认 checkpoint 语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -3546,3 +3546,11 @@
 - `ServerAuthoritativeAuthorityClientRoute` 在构造期按 snapshot 历史容量准备 `sequence order queue`，与 `SortedDictionary` 一起构成正式已发 snapshot 存储。`StoreSent` 记录新 sequence 后满员时直接检查并淘汰队首，`AcknowledgeSnapshot` 命中已存储 snapshot 后按队首清理更旧项。
 - 删除每次确认新建的过期 sequence `List` 和每次满员裁剪使用的 `SortedDictionary` 枚举器。未存储 snapshot 的 ack 仍先直接返回，基线不能淘汰的容量错误、确认顺序和已确认 checkpoint 语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 correction pending requests 数组收口
+
+对应 tasks.md 的 5.5，新增 5.171 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativePredictionCorrectionCheckpoint` 的 pending request 存储改为 owned 精确数组；新增 `FromPendingRequests` 工厂按 `SortedDictionary` 的 `KeyValuePair` 直接填充。ScheduleRequests、PrepareAck、PrepareBaseline、Capture 和 correction 解码统一改用直接数组合同。
+- 删除每个 correction checkpoint 的 `Values` 视图、临时 `List` 和 `ReadOnlyCollection` 包装。Restore 仍从只读 checkpoint 重建 `SortedDictionary`，request 顺序、容量校验、重复 sequence 拒绝和 wire 字段顺序不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

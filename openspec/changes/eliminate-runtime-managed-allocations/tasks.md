@@ -431,6 +431,7 @@
 - [x] 5.168 Float32 Datagram route 保存 canonical identity 与 UTF8 片段，接收读取按 bytes 匹配并复用已知身份；未绑定 Hello 仍分配身份后进入正式 BindRemote
 - [x] 5.169 Float32 CommandDatagram 改为 owned sample 数组合同，发送侧从 command history 复制一次，接收侧直接接管解码数组；删除每次命令包的 List 外壳、ReadOnlyCollection 和二次复制
 - [x] 5.170 Float32 Authority route 用正式 sequence order queue 维护已发 snapshot 淘汰顺序；确认和满员裁剪直接消费队首，删除每次 ack 的临时 List 和每次裁剪的字典枚举器
+- [x] 5.171 Float32 prediction pending request 输出与 correction checkpoint 直接持有精确数组；schedule、ack、baseline、capture 和恢复解码不再经过 Values 视图、List 与 ReadOnlyCollection
 
 ## 6. UI、资源、渲染和生命周期
 

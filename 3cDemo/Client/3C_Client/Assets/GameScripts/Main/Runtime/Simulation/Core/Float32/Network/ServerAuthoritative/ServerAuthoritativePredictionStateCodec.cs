@@ -69,13 +69,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 pending.Add(request.Sequence, request);
             }
             reader.RequireComplete();
-            return new ServerAuthoritativePredictionCorrectionCheckpoint(
+            return ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
                 confirmedInputSequence,
                 horizon,
                 lastAuthorityAckTick,
                 lastBaselineTick,
                 lastAuthorityClockEstimate,
-                pending.Values);
+                pending);
         }
 
         public static byte[] WriteHistory(ServerAuthoritativePredictionHistoryCheckpoint checkpoint)

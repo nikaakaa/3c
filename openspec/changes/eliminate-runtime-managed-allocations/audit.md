@@ -3779,3 +3779,11 @@
 - Prediction disposition journal 的 prune scratch 从按容量准备的 `List<EventId>` 改为同容量 `EventId[]` 加显式 count；Record、PrepareConfirmation、PreparePrune 和直接 Prune 共用同一 scratch，调用链显式传递 count。
 - 顺序遍历、待删除 EventId 的删除顺序、journal capacity 检查和 checkpoint 生成语义不变；每次 prune 结束重置 count。
 - `List`、`Add` 扩容和 `Clear` 临时壳删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Authority source evidence metrics scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.200 作为独立小步；5.5 保持未勾选。
+
+- Authority Source 的 evidence route metrics 从每次发布的 `List<string>` 改为常驻可增长 `string[]` 加显式 count；按当前 route 顺序填充，`string.Join` 使用精确 count 区间，发布后清空使用区间。
+- 诊断开关、5 秒触发间隔、elapsed 计算、route 顺序、metrics 文本和 trace 字段不变；格式化字符串本身仍属诊断产物。
+- 每次 evidence 发布的 List、内部扩容壳和发布后持有的旧字符串引用删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

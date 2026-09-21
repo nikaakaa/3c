@@ -26,6 +26,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly OutputRing<ServerAuthoritativeAuthorityReliableEventBatchOutput> m_ReliableOutput;
         readonly OutputRing<ServerAuthoritativeAuthorityFullCheckpointOutput> m_FullCheckpointOutput;
         readonly ThreadLocal<CanonicalWriter> m_PayloadWriter;
+        string[] m_EvidenceRouteMetrics = Array.Empty<string>();
+        int m_EvidenceRouteMetricCount;
         ServerAuthoritativeSessionId m_SessionId;
         ulong m_RosterRevision;
         ulong m_LatestAuthorityTick;
@@ -586,19 +588,28 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 ? Math.Max(1f, batch.AuthorityTick.Value / (float)m_Policy.ModelPolicy.SimulationTickRate)
                 : (batch.AuthorityTick.Value - m_LastEvidenceAuthorityTick) / (float)m_Policy.ModelPolicy.SimulationTickRate;
             m_LastEvidenceAuthorityTick = batch.AuthorityTick.Value;
-            var routes = new List<string>(m_Routes.Count);
+            m_EvidenceRouteMetricCount = 0;
             foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
-                routes.Add(route.DescribeMetrics(elapsedSeconds));
+            {
+                if (m_EvidenceRouteMetricCount == m_EvidenceRouteMetrics.Length)
+                {
+                    int capacity = Math.Max(4, m_EvidenceRouteMetrics.Length * 2);
+                    Array.Resize(ref m_EvidenceRouteMetrics, capacity);
+                }
+                m_EvidenceRouteMetrics[m_EvidenceRouteMetricCount++] = route.DescribeMetrics(elapsedSeconds);
+            }
             Publish(
                 SimulationModelTraceKind.Transport,
                 "server_authoritative_authority_stream_metrics",
-                $"tick={batch.AuthorityTick.Value};routes={string.Join("|", routes)}",
+                $"tick={batch.AuthorityTick.Value};routes={string.Join("|", m_EvidenceRouteMetrics, 0, m_EvidenceRouteMetricCount)}",
                 default,
                 batch.AuthorityTick.Value,
                 0,
                 m_LastHeartbeatAckSequence,
                 m_Data.ReceiveQueueDepth + m_Data.SendQueueDepth,
                 true);
+            Array.Clear(m_EvidenceRouteMetrics, 0, m_EvidenceRouteMetricCount);
+            m_EvidenceRouteMetricCount = 0;
         }
 
         void RequireAuthoritySource(SimulationTickSourceIdentity source)

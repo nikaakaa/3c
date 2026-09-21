@@ -41,8 +41,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedPublishedActorResultObserver m_ResultObserver;
         readonly Dictionary<EventId, SimulationOutputDisposition> m_DispositionsByEvent =
             new Dictionary<EventId, SimulationOutputDisposition>();
-        readonly List<SimulationOutputDisposition> m_StepDispositions =
-            new List<SimulationOutputDisposition>();
+        SimulationOutputDisposition[] m_StepDispositions = Array.Empty<SimulationOutputDisposition>();
+        int m_StepDispositionCount;
 
         public FixedSimulationCommitterAdapter(
             SimulationComponentIdentity identity,
@@ -75,14 +75,16 @@ namespace ThirdPersonSimulation.Fixed
                 for (int stepIndex = 0; stepIndex < batch.Steps.Count; stepIndex++)
                 {
                     SimulationTickResult result = batch.Steps[stepIndex].Result;
-                    m_StepDispositions.Clear();
+                    Array.Clear(m_StepDispositions, 0, m_StepDispositionCount);
+                    m_StepDispositionCount = 0;
+                    EnsureStepDispositionCapacity(result.OutputEvents.Count);
                     for (int i = 0; i < result.OutputEvents.Count; i++)
                     {
                         if (!m_DispositionsByEvent.TryGetValue(result.OutputEvents[i], out SimulationOutputDisposition disposition))
                             throw new InvalidOperationException($"Commit batch has no disposition for EventId '{result.OutputEvents[i]}'.");
-                        m_StepDispositions.Add(disposition);
+                        m_StepDispositions[m_StepDispositionCount++] = disposition;
                     }
-                    m_CharacterCommitter.Commit(result, m_StepDispositions);
+                    m_CharacterCommitter.Commit(result, m_StepDispositions, m_StepDispositionCount);
                     for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
                         m_ResultObserver.ObservePublished(result.Actors[actorIndex]);
                 }
@@ -91,9 +93,19 @@ namespace ThirdPersonSimulation.Fixed
             }
             finally
             {
-                m_StepDispositions.Clear();
+                Array.Clear(m_StepDispositions, 0, m_StepDispositionCount);
+                m_StepDispositionCount = 0;
                 m_DispositionsByEvent.Clear();
             }
+        }
+
+        void EnsureStepDispositionCapacity(int count)
+        {
+            if (m_StepDispositions.Length >= count)
+                return;
+            var values = new SimulationOutputDisposition[Math.Max(4, count)];
+            Array.Copy(m_StepDispositions, values, m_StepDispositionCount);
+            m_StepDispositions = values;
         }
     }
 }

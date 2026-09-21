@@ -46,14 +46,15 @@ namespace ThirdPersonSimulation
 
         public void Commit(
             SimulationTickResult result,
-            IReadOnlyList<SimulationOutputDisposition> dispositions)
+            SimulationOutputDisposition[] dispositions,
+            int dispositionCount)
         {
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
-            if (dispositions == null || dispositions.Count != result.OutputEvents.Count)
+            if (dispositions == null || dispositionCount != result.OutputEvents.Count)
                 throw new ArgumentException("Simulation Committer received mismatched output dispositions.", nameof(dispositions));
 
-            IndexDispositions(dispositions);
+            IndexDispositions(dispositions, dispositionCount);
             for (int actor = 0; actor < result.Actors.Count; actor++)
             {
                 SimulationActorTickResult actorResult = result.Actors[actor];
@@ -142,10 +143,10 @@ namespace ThirdPersonSimulation
             }
         }
 
-        void IndexDispositions(IReadOnlyList<SimulationOutputDisposition> dispositions)
+        void IndexDispositions(SimulationOutputDisposition[] dispositions, int dispositionCount)
         {
             m_Dispositions.Clear();
-            for (int i = 0; i < dispositions.Count; i++)
+            for (int i = 0; i < dispositionCount; i++)
             {
                 SimulationOutputDisposition disposition = dispositions[i];
                 if (!m_Dispositions.TryAdd(disposition.SourceEventId, disposition))

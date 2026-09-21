@@ -3723,3 +3723,11 @@
 - Fixed Local Immediate Output 先统计所有 Actor 的 GameplayFact 和 PresentationCommand 数量，再填充精确 `SimulationOutputDisposition[]`，用 Float32 已有的 `FromOwnedDispositions` 正式入口转交。事务身份、Publish 顺序、owned array 排序和 Egress 消费语义不变。
 - 每 tick 的 disposition `List`、`Add` 扩容、`Clear` 临时壳和构造期二次复制删除；finally 继续清空本地 owned array 引用。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 两数值域 step disposition scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.193 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Pipeline Committer 的 step dispositions 改为常驻可增长 `SimulationOutputDisposition[]` 加显式 count；容量按当前 step 的 OutputEvents 数量增长，处理下一个 step 和异常返回前清空使用区间。
+- 两域 `SimulationCommitter.Commit` 的 disposition 边界改为 `SimulationOutputDisposition[] + dispositionCount`，索引和校验都按 count 执行；batch disposition 查找缺失、OutputEvents 数量不匹配、输出提交和 source egress 顺序不变。
+- 每 step 的 disposition `List`、`Add` 扩容和 `Clear` 临时壳删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

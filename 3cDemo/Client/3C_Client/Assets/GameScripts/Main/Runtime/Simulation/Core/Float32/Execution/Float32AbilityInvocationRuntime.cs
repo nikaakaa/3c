@@ -29,7 +29,7 @@ namespace ThirdPersonSimulation
         internal ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId abilityId, string actionId);
     }
 
-    internal sealed class Float32AbilityExecutionAssembly
+    internal readonly struct Float32AbilityExecutionAssembly
     {
         public Float32AbilityExecutionAssembly(
             Float32InputRuntime input,

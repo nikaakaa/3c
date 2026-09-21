@@ -3043,6 +3043,14 @@
 - 现在把新建 `m_Current` 直接转移给 `WorldSolveBatchResult`，不再复制 state。bodies、states 和 results 数组仍按本批正式结果独立持有，不做跨批复用；碰撞收敛、排序、诊断发布和提交顺序不变。捕获、恢复、Create 返回克隆和真实跨批工作数组治理仍在 5.1 后续小步。
 - `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 DotRecast 生命周期快照转移
+
+对应 tasks.md 的 5.1，新增 5.110 作为独立小步；5.1 保持未勾选。
+
+- DotRecast 的 `Create` 在 `CreateState` 后返回 `m_Current.Clone()`，`Reconstruct` 在完整身份、schema 和 localized 校验后把外部 state 再复制成 `m_Current`，`Capture` 又复制当前 state。`WorldSimulationState` 构造期接管并排序 bodies、复制 payload，之后没有修改入口；同一对象同时作为当前状态和外部快照不会产生可变别名。
+- 现在三个边界直接转移或返回不可变 state，删除 lifecycle 复制；请求 roster、WorldRevision、 localized body、Restore 委托 Reconstruct 和失败不建立新当前状态的语义不变。批求解已在 5.108 转移，KCC lifecycle 仍在后续小步。
+- `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

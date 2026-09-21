@@ -211,7 +211,7 @@ namespace ThirdPersonSimulation.DotRecast
                 RequireLocalized(orderedInitialBodies[i], "initial");
             }
             m_Current = CreateState(worldRevision, orderedInitialBodies);
-            return m_Current.Clone();
+            return m_Current;
         }
 
         public void Reconstruct(WorldSimulationState state)
@@ -220,7 +220,7 @@ namespace ThirdPersonSimulation.DotRecast
             ValidateState(state);
             for (int i = 0; i < state.Bodies.Count; i++)
                 RequireLocalized(state.Bodies[i], "reconstruct");
-            m_Current = state.Clone();
+            m_Current = state;
         }
 
         public WorldSimulationState Capture(WorldRevision worldRevision)
@@ -229,7 +229,7 @@ namespace ThirdPersonSimulation.DotRecast
             RequireCurrent();
             if (!worldRevision.Equals(m_Current.WorldRevision))
                 throw new InvalidOperationException("DotRecast World Solver cannot capture another WorldRevision.");
-            return m_Current.Clone();
+            return m_Current;
         }
 
         public void Restore(WorldSimulationState state)

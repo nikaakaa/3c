@@ -370,6 +370,7 @@
 - [x] 5.107 Datagram Endpoint 构造期接收 Session 和正式 sender 清单，Datagram header 命中预期身份时复用 canonical string；错配仍解码后交给 Channel 异常校验
 - [x] 5.108 DotRecast 批求解直接把新建的正式 WorldSimulationState 转交给 WorldSolveBatchResult，删除返回前的 bodies 克隆；state 自身不可变，后续批只会替换 m_Current 引用。results 数组仍为正式结果，KCC 和捕获/恢复边界仍在后续小步
 - [x] 5.109 KCC 批求解直接把新建的正式 WorldSimulationState 转交给 WorldSolveBatchResult，删除返回前的 bodies 和 solver payload 克隆；state 自身不可变，m_KccStates 每批替换精确数组引用。results 数组仍为正式结果，捕获/恢复边界仍在后续小步
+- [x] 5.110 DotRecast 的 Create 返回、Reconstruct 当前 state 和 Capture 快照直接转移不可变 WorldSimulationState，删除三个 lifecycle 边界的 bodies/payload 克隆；保留 roster、revision、localized 和事务校验，Restore 仍走 Reconstruct
 
 ## 6. UI、资源、渲染和生命周期
 

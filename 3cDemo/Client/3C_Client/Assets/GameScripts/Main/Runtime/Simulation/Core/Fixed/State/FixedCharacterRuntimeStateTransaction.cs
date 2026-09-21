@@ -42,7 +42,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
         readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
         readonly FixedCharacterEquipmentRuntimeState m_EquipmentState;
-        readonly object m_AbilityBindingIdentity = new object();
         CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_Disposed;
 
@@ -93,7 +92,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
             if (!m_AbilityStates.TryGetValue(identity.AbilityId, out FixedAbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{identity.AbilityId}' is not part of the Character runtime state.");
-            return new FixedSkillExecutionState(m_AbilityBindingIdentity, identity, layout, ability, state);
+            return new FixedSkillExecutionState(this, identity, layout, ability, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -116,7 +115,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             if (!(skillState is FixedSkillExecutionState ability) ||
-                !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
+                !ReferenceEquals(ability.BindingIdentity, this))
             {
                 throw new InvalidOperationException("Fixed Ability transaction belongs to another Character runtime transaction.");
             }

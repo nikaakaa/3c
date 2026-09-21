@@ -3883,3 +3883,11 @@
 - `CharacterControlStateSchema` 完全由 immutable `CharacterControlModuleContract` 推导，现在在 contract 构造末尾准备一次并通过正式 `StateSchema` 暴露；schema 的只读字段、索引、kind 表和 hash 生命周期跟随 contract。
 - Fixed 和 Float32 Character Control Runtime 直接消费 contract schema，不再每个 Control tick 重建 schema、state field 只读包装和两个查询字典；`RequireBinding` 与 `BindControl` 的输入不变。
 - `CharacterControlRuntimeState.CreateInitial` 和 `RequireContract` 改用同一 contract schema，只按 `SchemaHash` 校验，删除校验期重复 schema。运行期字段索引、kind 检查、默认值和错误语义不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、schema 构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability binding identity 收口
+
+对应 tasks.md 的 5.5，新增 5.213 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Runtime State Transaction 原先每次 tick 新建 `object` 作为 Ability 绑定身份；该字段只用于 `ReferenceEquals` 校验，现在直接使用 transaction 自身引用。
+- `BindAbility` 仍把同一身份交给 Skill Execution State，`AcceptAbility` 仍拒绝其他事务的 skill state；跨事务隔离、savepoint 边界和提交顺序不变。
+- 每个 Actor tick 的事务身份 object 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧字段残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -42,7 +42,6 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState;
         readonly Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState;
         readonly Float32CharacterEquipmentRuntimeState m_EquipmentState;
-        readonly object m_AbilityBindingIdentity = new object();
         CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_Disposed;
 
@@ -93,7 +92,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Ability execution data does not match its identity.", nameof(ability));
             if (!m_AbilityStates.TryGetValue(identity.AbilityId, out Float32AbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{identity.AbilityId}' is not part of the Character runtime state.");
-            return new Float32SkillExecutionState(m_AbilityBindingIdentity, identity, layout, ability, state);
+            return new Float32SkillExecutionState(this, identity, layout, ability, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -116,7 +115,7 @@ namespace ThirdPersonSimulation
         {
             RequireActive();
             if (!(skillState is Float32SkillExecutionState ability) ||
-                !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
+                !ReferenceEquals(ability.BindingIdentity, this))
             {
                 throw new InvalidOperationException("Float32 Ability transaction belongs to another Character runtime transaction.");
             }

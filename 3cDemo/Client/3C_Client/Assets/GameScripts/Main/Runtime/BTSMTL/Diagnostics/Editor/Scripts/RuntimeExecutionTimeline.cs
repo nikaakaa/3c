@@ -401,6 +401,7 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly Comparison<RuntimeTraceEvent> CompareEventsComparer = CompareEvents;
         static readonly Comparison<RuntimeTraceEvent> CompareGroupedEventsComparer = CompareGroupedEvents;
         static readonly Comparison<RuntimeExecutionSpan> CompareSpansComparer = CompareSpans;
+        static readonly SelectionScratch Selection = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -764,18 +765,23 @@ namespace BTSMTL.Diagnostics.Editor
             ReadOnlySpan<RuntimeTraceEvent> events,
             RuntimeInstanceKey instance)
         {
+            List<RuntimeTraceEvent> selected = Selection.Events;
+            selected.Clear();
             if (!instance.IsValid)
             {
-                var unfiltered = new List<RuntimeTraceEvent>(events.Length);
+                if (selected.Capacity < events.Length)
+                    selected.Capacity = events.Length;
                 for (int i = 0; i < events.Length; i++)
-                    unfiltered.Add(events[i]);
-                return unfiltered;
+                    selected.Add(events[i]);
+                return selected;
             }
 
-            var selected = new List<RuntimeTraceEvent>();
-            var selectedSequences = new HashSet<ulong>();
-            var relatedGraphs = new HashSet<GraphBranchKey>();
-            var selectedPresentationFrames = new HashSet<PresentationFrameKey>();
+            HashSet<ulong> selectedSequences = Selection.Sequences;
+            HashSet<GraphBranchKey> relatedGraphs = Selection.RelatedGraphs;
+            HashSet<PresentationFrameKey> selectedPresentationFrames = Selection.PresentationFrames;
+            selectedSequences.Clear();
+            relatedGraphs.Clear();
+            selectedPresentationFrames.Clear();
             Guid selectedBranch = ResolveSelectionBranch(events, instance);
             for (int i = 0; i < events.Length; i++)
             {
@@ -858,6 +864,14 @@ namespace BTSMTL.Diagnostics.Editor
             }
 
             return selected;
+        }
+
+        sealed class SelectionScratch
+        {
+            internal readonly List<RuntimeTraceEvent> Events = new();
+            internal readonly HashSet<ulong> Sequences = new();
+            internal readonly HashSet<GraphBranchKey> RelatedGraphs = new();
+            internal readonly HashSet<PresentationFrameKey> PresentationFrames = new();
         }
 
         static Guid ResolveSelectionBranch(

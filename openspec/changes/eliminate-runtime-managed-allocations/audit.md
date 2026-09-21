@@ -207,6 +207,16 @@
 - Tree 诊断链继续保留的字符串构造是 edge Detail 拼接、invalid condition Detail 和 state transition OwnerId 拼接；7.74 已完成节点停止 Cause 和状态退出 Cause。
 - `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
 
+## 2026-09-21 执行 selection 工作集合复用
+
+对应 tasks.md 的 7.1，新增 7.76 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution builder 的 selection 阶段，不计为 Player 每帧收益。
+
+- `SelectEvents` 原先每次调用新建一个结果 List；filtered 路径再新建 sequence、related graph 和 presentation frame 三个 HashSet。historyOffset 变化、UI 刷新和 instance 切换会重复产生这些容器与扩容分配。
+- 现在四个集合由 builder 的 `SelectionScratch` 长期持有，每次 selection 前清空；无过滤路径也直接复用结果 List，并在容量不足时预设到当前事件数。两个 HashSet key 都是 readonly struct，保持原有去重语义。
+- selection 仍是两遍扫描：先收敛 selected branch、action、timeline、related graph 和 presentation frame，再补 presentation 与 related graph 事件；sequence 去重和输出顺序不变。返回 List 只在 `BuildCore` / `BuildHistory` 局部消费，历史边界补充仍在同一局部 List 上进行。
+- 静态 builder 的既定边界是 Editor 同步读取链；`BuildCore` 的 `open` Dictionary 和 `spans` List、history 的 grouped/输出集合仍在后续边界。未做跨线程或重入能力声明。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露该程序集没有 `List<T>.EnsureCapacity`，改为预设 `Capacity` 后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution selection 运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

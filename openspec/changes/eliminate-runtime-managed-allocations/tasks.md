@@ -402,3 +402,5 @@
 - [x] 7.27 Timeline NumericTarget 只在 PrepareRequest 边界校验，PlaybackRequestFactory 不再对同一 composition 配置重复 Enum.IsDefined；保留动态 PlaybackMode、generation、handle 和 capture/restore 事务校验
 
 - [x] 7.28 Pose Source/Foot/Managed resource catalog 直接消费外层已校验 Rig，删除三处重复 Rig schema 遍历；保留资源 identity、plan/descriptor、calibration、bone index 和 Native shape 校验
+
+- [x] 7.29 删除 SourceCatalog 未使用的 Plans/Resources ToArray 接口，统一只通过已建索引 RequirePlan/RequireDescriptor 读取，消除死 API 和临时数组分配

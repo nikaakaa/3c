@@ -2122,6 +2122,14 @@
 - SourceCatalog 仍只在 ServiceFactory 创建阶段准备一次，Foot/Managed resource 仍按原顺序创建和释放；没有改变资源租约、handler 组合、约束求解或帧事务。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 资源分配采样。
 
+## 2026-09-21 SourceCatalog 死接口清理
+
+对应 tasks.md 的 7.29。
+
+- SourceCatalog 的 `Plans` 与 `Resources` 属性只把内部 Dictionary.Values 转成新数组，当前正式链路没有调用者；Source/Foot 创建已改为按 index 读取。
+- 删除两个死接口，保留 `RequirePlan`、`RequireDescriptor` 作为唯一索引访问入口，不改变资源注册、source readiness、lease 或采样顺序。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 资源分配采样。
+
 ## 2026-09-21 Pose 运行链枚举反射清理
 
 对应 tasks.md 的 7.23。

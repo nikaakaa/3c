@@ -47,9 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal IReadOnlyList<CharacterPresentationPoseSourcePlan> Plans => m_Plans.Values.ToArray();
-        internal IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> Resources => m_Descriptors.Values.ToArray();
-
         internal CharacterPresentationPoseSourcePlan RequirePlan(PresentationPoseSourceIndex sourceIndex)
         {
             if (!sourceIndex.IsValid || !m_Plans.TryGetValue(sourceIndex.Value, out CharacterPresentationPoseSourcePlan plan))

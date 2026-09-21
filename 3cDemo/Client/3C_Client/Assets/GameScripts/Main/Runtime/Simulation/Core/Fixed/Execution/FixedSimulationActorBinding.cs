@@ -43,6 +43,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedMotionContributionScratch m_MotionContributions = new FixedMotionContributionScratch();
         readonly FixedAbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_ActionRuntimes;
+        readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -106,6 +107,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedMotionContributionScratch MotionContributions => m_MotionContributions;
         internal FixedAbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
+        internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
 
         internal void ClearInvocationScratch(int count)
         {

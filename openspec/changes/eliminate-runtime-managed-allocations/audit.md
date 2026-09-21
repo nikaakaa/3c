@@ -3827,3 +3827,11 @@
 - Fixed 和 Float32 Character Evaluation 的 action runtime lookup 从每 tick 新建 `Dictionary` 改为 Actor Binding 构造期按 ability installation 容量准备的常驻 Dictionary；每个 tick 先清空，再按同一安装顺序重填 ability id 和 control port。
 - Character Control 仍通过 `IReadOnlyDictionary` 消费查询表，重复 ability id、查表语义和 control tick 行为不变；正式 result 构造完成后清空，异常路径也统一清空引用。
 - 每 Actor tick 的 Dictionary 构造和初始 bucket 分配删除；长期持有的 Dictionary 在首轮扩容后复用。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Shared effect execution scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.206 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Evaluation 的 shared gameplay effect execution scratch 从每 tick 新建改为 Actor Binding 构造期持有的常驻对象；Evaluation 开始调用正式 `Reset`，同一 scratch 仍按原设计共享给全部 ability invocation。
+- 正式 result 构造完成和异常返回前都再次 `Reset`，清除 changes、causes、attribute、tag、prediction key 等 workspace 引用；多个 invocation 的共享顺序、effect ingress 和 advance 行为不变。
+- 每 Actor tick 的 scratch 外壳和内部集合容器重建删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

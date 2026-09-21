@@ -43,7 +43,8 @@ namespace ThirdPersonSimulation
             int invocationCount = 0;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
             actionRuntimes.Clear();
-            var sharedEffectScratch = new Float32GameplayEffectExecutionScratch();
+            Float32GameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
+            sharedEffectScratch.Reset();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
             var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
@@ -219,6 +220,7 @@ namespace ThirdPersonSimulation
                     timelineStops.ToArray());
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
+                sharedEffectScratch.Reset();
                 return result;
             }
             catch
@@ -229,6 +231,7 @@ namespace ThirdPersonSimulation
                     invocations[i].Dispose();
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
+                sharedEffectScratch.Reset();
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();

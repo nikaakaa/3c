@@ -42,6 +42,7 @@ namespace ThirdPersonSimulation
         readonly Float32MotionContributionScratch m_MotionContributions = new Float32MotionContributionScratch();
         readonly Float32AbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_ActionRuntimes;
+        readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -103,6 +104,7 @@ namespace ThirdPersonSimulation
         internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
         internal Float32AbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
+        internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
 
         internal void ClearInvocationScratch(int count)
         {

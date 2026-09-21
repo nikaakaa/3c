@@ -367,7 +367,7 @@ namespace ThirdPersonSimulation.DotRecast
                     request,
                     Descriptor.ImplementationId,
                     Descriptor.Version,
-                    m_Current.Clone(),
+                    m_Current,
                     results);
             }
             finally

@@ -3027,6 +3027,14 @@
 - 该 store 保留跨线程 `Current` 读取、代数校验、发布锁和事件顺序；不引入只读包装、缓存快照或第二个历史视图。6.1 此前记录的 Product startup store 是 HotFix 内的无锁历史，和本条 Main 启动引导 store 不是同一条链路。
 - `ThirdPerson.ProductStartup.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；`ProductBootstrapView` 暴露 7 个既有 CS0649 警告，不在本步改动文件。`GameLogic.csproj` 同参数编译成功，0 警告 0 错误。两次构建后均执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 DotRecast 批结果快照转移
+
+对应 tasks.md 的 5.1，新增 5.108 作为独立小步；5.1 保持未勾选。
+
+- `DotRecastWorldSolver.ResolveBatch` 原先用新建 bodies 数组构造 `m_Current`，又立即调用 `m_Current.Clone()` 交给批结果；每批多复制一份 World body 数组。`WorldSimulationState` 构造后只持有不可变数组引用，后续批求解只替换 `m_Current` 指向，因此直接转移当前 state 不会让外部结果被覆盖。
+- 本步不把 bodies/results 工作数组改成跨批复用，因为 `FromOwnedState` 明确接管 bodies，且批 results 由外部消费者持有；这里只删除明确的第二份 state 复制。接触候选排序、contact 求解、reconstraint、final validation、`m_Current` 赋值和结果数组所有权保持不变。KCC 的 bodies、states、solver payload 和捕获/恢复返回克隆仍在 5.1 后续小步。
+- `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

@@ -385,6 +385,7 @@
 - [x] 5.122 Rollback Relay diagnostics 的 explicit frontier 使用 Relay 生命周期精确 roster scratch，Assembler 删除返回数组入口并改为正式填充合同；diagnostics 的 RelayPeerInputFrontier 数组仍由外部读取者独立持有
 - [x] 5.123 World state codec 增加正式 solver payload 零复制定位入口，Rollback Hash Egress 直接计算 snapshot 内 solver payload 哈希；删除每条 hash report 的完整 WorldSimulationState 解码、body 数组和 payload 复制，header、profile、body 与尾部校验保留
 - [x] 5.124 Rollback Hash Egress 直接把本地 snapshot 编码为 canonical StateHash payload，删除只为编码创建的 RollbackStateHashReport 和 RollbackActorHash 数组；网络报告对象、canonical 校验、字段顺序和接收侧所有权不变，report/snapshot 编码共用同一 core
+- [x] 5.125 Rollback Output Committer 的生命周期统计和 Actor/tick 已存在槽位扫描直接枚举 Dictionary KeyValuePair，删除每次读取的 Values／Keys 视图对象；扫描顺序、排序和事务结果不变
 
 ## 6. UI、资源、渲染和生命周期
 

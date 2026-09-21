@@ -89,9 +89,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public RollbackOutputLifecycleSnapshot CaptureLifecycleSnapshot()
         {
             int pending = 0;
-            foreach (RollbackOutputRecord record in m_Records.Values)
+            foreach (KeyValuePair<RollbackOutputSlot, RollbackOutputRecord> pair in m_Records)
             {
-                if (record.ConfirmedOnly)
+                if (pair.Value.ConfirmedOnly)
                     pending++;
             }
             return new RollbackOutputLifecycleSnapshot(
@@ -236,10 +236,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_SeenSlots.Clear();
             try
             {
-                foreach (RollbackOutputSlot slot in records.Keys)
+                foreach (KeyValuePair<RollbackOutputSlot, RollbackOutputRecord> pair in records)
                 {
-                    if (slot.ActorId == actor.ActorId && slot.Tick == actor.Tick)
-                        m_ExistingSlots.Add(slot);
+                    if (pair.Key.ActorId == actor.ActorId && pair.Key.Tick == actor.Tick)
+                        m_ExistingSlots.Add(pair.Key);
                 }
                 m_ExistingSlots.Sort();
 

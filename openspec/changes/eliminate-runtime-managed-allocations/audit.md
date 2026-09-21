@@ -3170,3 +3170,11 @@
 - `RemoveUnownedPhysicalKnowledge` 原先用 `HashSet.RemoveWhere(lambda)`，lambda 捕获 owned-reference 和 pending-acquire 两只字典，每次低内存维护都创建闭包和委托。现在 runtime 持有 `ResourceIdentity` scratch 列表，先枚举正式物理知识集合并收集既无 owned 引用也无 pending acquire 的身份，再统一从集合移除，最后清空 scratch 引用。
 - 移入 scratch 后统一删除，不在枚举 `HashSet` 时修改它；集合内容、维护触发时机和 `PublishSnapshot` 时机不变。scratch 容量按历史最高无主身份数增长，属 runtime 生命周期。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback output 字典视图枚举删除
+
+对应 tasks.md 的 5.2，新增 5.125 作为独立小步；5.2 保持未勾选。
+
+- `RollbackOutputCommitter.CaptureLifecycleSnapshot` 原先遍历 `m_Records.Values`，每次诊断读取都会创建一只 `ValueCollection`。现在直接枚举 `KeyValuePair`，只读取 `ConfirmedOnly`；记录总数、pending 判定和快照字段不变。
+- `ResolveActorTick` 原先遍历 `records.Keys` 收集同一 Actor 和 Tick 的已存在槽位，每个 Actor/tick 都会创建一只 `KeyCollection`。现在同样直接枚举 `KeyValuePair`，只使用命中的 key；收集顺序、后续排序、替换/保留/撤销判定和事务边界不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。

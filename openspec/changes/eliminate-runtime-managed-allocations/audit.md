@@ -2256,6 +2256,14 @@
 - `ProgramConstantInputBinding` 只消费 Semantic IR 和 Target Compiler 已验证的 typed value，构造器删除第二次 `Enum.IsDefined`；目标操作、端口、常量下标校验不变。
 - Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
 
+## 2026-09-21 Ability 执行数据枚举反射清理
+
+对应 tasks.md 的 7.55。
+
+- Fixed 和 Float32 `GameplayAbilityExecutionDataCodec` 的 Numeric Profile、Source Map 和 Constant byte 枚举改为六类 typed 读取：rounding、overflow、source target、value port direction、invocation caller 和 constant kind；`ProgramSourceTargetKind` 显式保留 9 号缺口拒绝。
+- payload 边界仍拒绝未知成员，异常仍为 `InvalidDataException`，文本保留原枚举名和数值；删除这些入口的 `Enum.ToObject` 和 `Enum.IsDefined` 装箱。`SimulationOperationCode` 的 int 读取属于下一处独立边界，本步不改。
+- Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

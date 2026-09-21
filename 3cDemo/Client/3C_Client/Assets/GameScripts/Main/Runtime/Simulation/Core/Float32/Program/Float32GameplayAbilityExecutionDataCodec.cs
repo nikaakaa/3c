@@ -345,17 +345,25 @@ namespace ThirdPersonSimulation
                     new NumericProfileId(reader.ReadString()),
                     new TargetAbiVersion(reader.ReadInt32()),
                     reader.ReadInt32(),
-                    ReadEnum<SimulationNumericRoundingMode>(reader.ReadByte()),
-                    ReadEnum<SimulationNumericOverflowMode>(reader.ReadByte()),
+                    ReadRoundingMode(reader.ReadByte()),
+                    ReadOverflowMode(reader.ReadByte()),
                     reader.ReadBoolean());
             }
 
-            static T ReadEnum<T>(byte value) where T : struct, Enum
+            static SimulationNumericRoundingMode ReadRoundingMode(byte value)
             {
-                object candidate = Enum.ToObject(typeof(T), value);
-                if (!Enum.IsDefined(typeof(T), candidate))
-                    throw new InvalidDataException($"Enum value '{value}' is invalid for '{typeof(T).Name}'.");
-                return (T)candidate;
+                if (value < (byte)SimulationNumericRoundingMode.Ieee754NearestEven ||
+                    value > (byte)SimulationNumericRoundingMode.FixedNearestEven)
+                    throw new InvalidDataException($"Enum value '{value}' is invalid for 'SimulationNumericRoundingMode'.");
+                return (SimulationNumericRoundingMode)value;
+            }
+
+            static SimulationNumericOverflowMode ReadOverflowMode(byte value)
+            {
+                if (value < (byte)SimulationNumericOverflowMode.RejectNonFinite ||
+                    value > (byte)SimulationNumericOverflowMode.RejectOverflow)
+                    throw new InvalidDataException($"Enum value '{value}' is invalid for 'SimulationNumericOverflowMode'.");
+                return (SimulationNumericOverflowMode)value;
             }
         }
 
@@ -517,7 +525,7 @@ namespace ThirdPersonSimulation
             var entries = new ProgramSourceMapEntry[entryCount];
             for (int i = 0; i < entryCount; i++)
             {
-                ProgramSourceTargetKind targetKind = ReadEnum<ProgramSourceTargetKind>(reader.ReadByte());
+                ProgramSourceTargetKind targetKind = ReadSourceTargetKind(reader.ReadByte());
                 int targetIndex = reader.ReadInt32();
                 string sourceType = ReadSourceMapString(reader, strings);
                 string graphId = ReadSourceMapString(reader, strings);
@@ -531,10 +539,10 @@ namespace ThirdPersonSimulation
                 string contentHash = ReadSourceMapString(reader, strings);
                 string graphInvocationPath = ReadSourceMapString(reader, strings);
                 string compiledPortId = ReadSourceMapString(reader, strings);
-                ProgramValuePortDirection valuePortDirection = ReadEnum<ProgramValuePortDirection>(reader.ReadByte());
+                ProgramValuePortDirection valuePortDirection = ReadValuePortDirection(reader.ReadByte());
                 string sourceInvocationPath = ReadSourceMapString(reader, strings);
                 string parentInvocationPath = ReadSourceMapString(reader, strings);
-                ProgramInvocationCallerKind callerKind = ReadEnum<ProgramInvocationCallerKind>(reader.ReadByte());
+                ProgramInvocationCallerKind callerKind = ReadInvocationCallerKind(reader.ReadByte());
                 string callerId = ReadSourceMapString(reader, strings);
                 string callerClipId = ReadSourceMapString(reader, strings);
                 int segmentCount = ReadCount(reader);
@@ -604,7 +612,7 @@ namespace ThirdPersonSimulation
         {
             int index = reader.ReadInt32();
             string identity = reader.ReadString();
-            ProgramConstantKind kind = ReadEnum<ProgramConstantKind>(reader.ReadByte());
+            ProgramConstantKind kind = ReadConstantKind(reader.ReadByte());
             switch (kind)
             {
                 case ProgramConstantKind.Boolean: return ProgramConstant.FromBoolean(index, identity, reader.ReadBoolean());
@@ -618,6 +626,47 @@ namespace ThirdPersonSimulation
                 case ProgramConstantKind.Bytes: return ProgramConstant.FromBytes(index, identity, reader.ReadBytes());
                 default: throw new InvalidDataException($"Unsupported constant kind '{kind}'.");
             }
+        }
+
+        static ProgramSourceTargetKind ReadSourceTargetKind(byte value)
+        {
+            return value switch
+            {
+                1 => ProgramSourceTargetKind.Operation,
+                2 => ProgramSourceTargetKind.Constant,
+                3 => ProgramSourceTargetKind.StateSlot,
+                4 => ProgramSourceTargetKind.Reference,
+                5 => ProgramSourceTargetKind.Producer,
+                6 => ProgramSourceTargetKind.CatalogEntry,
+                7 => ProgramSourceTargetKind.BodyMotion,
+                8 => ProgramSourceTargetKind.ControlModule,
+                10 => ProgramSourceTargetKind.ControlTransition,
+                11 => ProgramSourceTargetKind.OperationPort,
+                12 => ProgramSourceTargetKind.GraphInvocation,
+                13 => ProgramSourceTargetKind.OptimizedAway,
+                _ => throw new InvalidDataException($"Enum value '{value}' is invalid for 'ProgramSourceTargetKind'.")
+            };
+        }
+
+        static ProgramValuePortDirection ReadValuePortDirection(byte value)
+        {
+            if (value > (byte)ProgramValuePortDirection.Output)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for 'ProgramValuePortDirection'.");
+            return (ProgramValuePortDirection)value;
+        }
+
+        static ProgramInvocationCallerKind ReadInvocationCallerKind(byte value)
+        {
+            if (value > (byte)ProgramInvocationCallerKind.PresentationMarker)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for 'ProgramInvocationCallerKind'.");
+            return (ProgramInvocationCallerKind)value;
+        }
+
+        static ProgramConstantKind ReadConstantKind(byte value)
+        {
+            if (value < (byte)ProgramConstantKind.Boolean || value > (byte)ProgramConstantKind.Bytes)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for 'ProgramConstantKind'.");
+            return (ProgramConstantKind)value;
         }
 
         static void WriteOperationDefinition(CanonicalWriter writer, SimulationOperationDefinition value)

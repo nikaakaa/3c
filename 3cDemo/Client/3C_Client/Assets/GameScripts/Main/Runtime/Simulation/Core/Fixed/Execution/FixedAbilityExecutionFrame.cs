@@ -96,6 +96,9 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
         OperationHandle m_ActionTraceEntryOperation = OperationHandle.Invalid;
+        AbilityTreeClipInvocation m_TreeClipInvocation;
+        bool m_HasTreeClipInvocation;
+        ulong m_TreeClipActionInstanceId;
 
         public FixedAbilityExecutionFrame(
             FixedGameplayAbilityExecutionData data,
@@ -159,6 +162,34 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }
         internal FixedTraceSink Trace { get; }
+
+        internal bool HasTreeClipInvocation => m_HasTreeClipInvocation;
+
+        internal ulong TreeClipActionInstanceId => m_HasTreeClipInvocation ? m_TreeClipActionInstanceId : 0;
+
+        internal AbilityTreeClipInvocation TreeClipInvocation => m_HasTreeClipInvocation
+            ? m_TreeClipInvocation
+            : throw new InvalidOperationException("Camera presentation requires an active TreeClip invocation.");
+
+        internal void BeginTreeClipInvocation(in AbilityTreeClipInvocation invocation, ulong actionInstanceId)
+        {
+            if (m_HasTreeClipInvocation)
+                throw new InvalidOperationException("Presentation sink already has an active TreeClip invocation.");
+            if (actionInstanceId == 0)
+                throw new InvalidOperationException("TreeClip invocation requires an Action instance.");
+            m_TreeClipInvocation = invocation;
+            m_TreeClipActionInstanceId = actionInstanceId;
+            m_HasTreeClipInvocation = true;
+        }
+
+        internal void EndTreeClipInvocation()
+        {
+            if (!m_HasTreeClipInvocation)
+                throw new InvalidOperationException("Presentation sink has no active TreeClip invocation.");
+            m_TreeClipInvocation = default;
+            m_TreeClipActionInstanceId = 0;
+            m_HasTreeClipInvocation = false;
+        }
 
         internal FixedStatePort CreateStatePort(string owner, FixedStateAccessPolicy policy) =>
             new FixedStatePort(this, owner, policy);
@@ -453,13 +484,10 @@ namespace ThirdPersonSimulation.Fixed
         public void Add(GameplayFact value) => m_Frame.AddFact(value);
     }
 
-    internal sealed class FixedPresentationSink
+    internal readonly struct FixedPresentationSink
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedEventSequence m_Sequence;
-        AbilityTreeClipInvocation m_TreeClipInvocation;
-        bool m_HasTreeClipInvocation;
-        ulong m_TreeClipActionInstanceId;
 
         public FixedPresentationSink(FixedAbilityExecutionFrame frame, FixedEventSequence sequence)
         {
@@ -472,32 +500,15 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1) => m_Sequence.Next(source, generation, "Presentation");
         public void Add(PresentationCommand value) => m_Frame.AddPresentation(value);
 
-        internal bool HasTreeClipInvocation => m_HasTreeClipInvocation;
-        internal ulong TreeClipActionInstanceId => m_HasTreeClipInvocation ? m_TreeClipActionInstanceId : 0;
-        internal AbilityTreeClipInvocation TreeClipInvocation => m_HasTreeClipInvocation
-            ? m_TreeClipInvocation
-            : throw new InvalidOperationException("Camera presentation requires an active TreeClip invocation.");
+        internal bool HasTreeClipInvocation => m_Frame.HasTreeClipInvocation;
+        internal ulong TreeClipActionInstanceId => m_Frame.TreeClipActionInstanceId;
+        internal AbilityTreeClipInvocation TreeClipInvocation => m_Frame.TreeClipInvocation;
 
         internal void BeginTreeClipInvocation(in AbilityTreeClipInvocation invocation, ulong actionInstanceId)
-        {
-            if (m_HasTreeClipInvocation)
-                throw new InvalidOperationException("Presentation sink already has an active TreeClip invocation.");
-            if (actionInstanceId == 0)
-                throw new InvalidOperationException("TreeClip invocation requires an Action instance.");
-            m_TreeClipInvocation = invocation;
-            m_TreeClipActionInstanceId = actionInstanceId;
-            m_HasTreeClipInvocation = true;
-        }
+            => m_Frame.BeginTreeClipInvocation(invocation, actionInstanceId);
 
         internal void EndTreeClipInvocation()
-        {
-            if (!m_HasTreeClipInvocation)
-                throw new InvalidOperationException("Presentation sink has no active TreeClip invocation.");
-            m_TreeClipInvocation = default;
-            m_TreeClipActionInstanceId = 0;
-            m_HasTreeClipInvocation = false;
-        }
-
+            => m_Frame.EndTreeClipInvocation();
     }
 
     internal struct FixedDiagnosticSequence

@@ -485,6 +485,7 @@
 - [x] 5.222 两数值域 Action State Store 按 Skill execution Stack 深度复用 Skill Execution Scope；push 取归还实例并重绑 owner/reference/trace，pop 后归还并清空引用，保留嵌套、unbalanced 和重复 Dispose 保护
 - [x] 5.223 两数值域 Equipment Runtime 按 mutation 深度复用 Mutation Scope 和 values scratch；Begin 仍创建 savepoint/output savepoint，Complete/Dispose 后归还并清空 values，保留 savepoint 栈、restore 顺序和重复结束保护
 - [x] 5.224 两数值域 State Transaction 按 savepoint 弹出顺序复用 Ability Execution Savepoint；归还前清空 depth、aggregate、allocator 和 event 引用，Dispose 只清空未结束 savepoint，保留栈顶校验、Restore/Release 顺序和异常时不归还
+- [x] 5.225 两数值域 Ability Execution Frame 接管 TreeClip 状态并把 Presentation Sink 改为 readonly struct；调用继续按具体 struct 传递，保留 active TreeClip 校验、Begin/End 顺序和 presentation event 通道
 
 ## 6. UI、资源、渲染和生命周期
 

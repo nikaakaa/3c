@@ -3,12 +3,11 @@ using System;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedHandleAllocator : FixedOperationModule
+    internal readonly struct FixedHandleAllocator
     {
         readonly FixedAbilityExecutionFrame m_Frame;
 
-        public FixedHandleAllocator(FixedGameplayAbilityExecutionAccess access, FixedAbilityExecutionFrame frame)
-            : base(access)
+        public FixedHandleAllocator(FixedAbilityExecutionFrame frame)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }

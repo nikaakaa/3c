@@ -5,13 +5,6 @@ using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal interface IFixedAbilityExecutionServices
-    {
-        FixedAbilityExecutionTarget Target { get; }
-        void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
-        void EndEvaluation();
-    }
-
     internal sealed class FixedTreeClipInvokerLink
     {
         public IAbilityTreeClipInvoker Invoker;
@@ -24,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly OperationExecutionTopology m_Topology;
         readonly int m_MaxExecutionCount;
         readonly FixedTreeClipInvokerLink m_TreeClipLink = new FixedTreeClipInvokerLink();
-        IFixedAbilityExecutionServices m_Services;
+        FixedAbilityExecutionServiceSet m_Services;
         OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
 
         public FixedAbilityOperationControlRuntime(
@@ -40,9 +33,9 @@ namespace ThirdPersonSimulation.Fixed
 
         internal FixedTreeClipInvokerLink TreeClipLink => m_TreeClipLink;
 
-        internal void Bind(IFixedAbilityExecutionServices services)
+        internal void Bind(in FixedAbilityExecutionServiceSet services)
         {
-            m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_Services = services;
             m_TreeClipLink.Invoker = this;
             if (m_Runtime == null)
             {
@@ -65,7 +58,7 @@ namespace ThirdPersonSimulation.Fixed
         internal void EndEvaluation()
         {
             m_Services.EndEvaluation();
-            m_Services = null;
+            m_Services = default;
         }
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 

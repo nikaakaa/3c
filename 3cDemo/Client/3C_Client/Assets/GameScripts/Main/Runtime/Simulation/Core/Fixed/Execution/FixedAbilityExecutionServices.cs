@@ -4,7 +4,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedAbilityExecutionServiceSet : IFixedAbilityExecutionServices
+    internal readonly struct FixedAbilityExecutionServiceSet
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedActionStateStore m_ActionStore;

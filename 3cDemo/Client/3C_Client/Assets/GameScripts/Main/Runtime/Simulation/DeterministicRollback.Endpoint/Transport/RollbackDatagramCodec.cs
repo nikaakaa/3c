@@ -92,8 +92,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return this;
         }
 
-        internal void Release()
+        internal byte[] Release()
         {
+            byte[] payload = m_Payload;
             Kind = default;
             SessionId = null;
             SenderPeerId = null;
@@ -105,6 +106,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             TotalPayloadBytes = 0;
             m_Payload = null;
             m_PayloadLength = 0;
+            return payload;
         }
 
         public RollbackDatagramKind Kind { get; private set; }
@@ -206,10 +208,18 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return length;
         }
 
-        public static RollbackDatagramPacket Read(ArraySegment<byte> bytes, int maximumDatagramBytes)
+        internal static RollbackDatagramPacket Read(
+            ArraySegment<byte> bytes,
+            int maximumDatagramBytes,
+            RollbackDatagramPacket packet,
+            byte[] payloadBuffer)
         {
             if (bytes.Count == 0 || bytes.Count > maximumDatagramBytes)
                 throw new InvalidDataException("Rollback datagram size is invalid.");
+            if (packet == null)
+                throw new ArgumentNullException(nameof(packet));
+            if (payloadBuffer == null)
+                throw new ArgumentNullException(nameof(payloadBuffer));
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback datagram header is invalid.");
@@ -224,7 +234,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int totalPayloadBytes = reader.ReadInt32();
             ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
-            return new RollbackDatagramPacket(
+            if (payload.Count > payloadBuffer.Length)
+                throw new InvalidDataException("Rollback datagram payload exceeds its receive buffer.");
+            packet.Reset(
                 kind,
                 sessionId,
                 senderPeerId,
@@ -234,7 +246,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 fragmentIndex,
                 fragmentCount,
                 totalPayloadBytes,
-                payload.AsSpan());
+                payloadBuffer,
+                payload.Count);
+            payload.AsSpan().CopyTo(payloadBuffer);
+            return packet;
         }
 
         static void WriteHeader(

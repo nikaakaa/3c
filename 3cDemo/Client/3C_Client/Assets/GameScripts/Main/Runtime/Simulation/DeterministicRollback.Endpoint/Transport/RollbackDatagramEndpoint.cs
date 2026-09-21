@@ -27,6 +27,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
         readonly ConcurrentStack<IPEndPoint> m_ReceiveEndPoints = new ConcurrentStack<IPEndPoint>();
+        readonly ConcurrentStack<RollbackDatagramPacket> m_ReceivePackets = new ConcurrentStack<RollbackDatagramPacket>();
+        readonly ConcurrentStack<byte[]> m_ReceivePayloads = new ConcurrentStack<byte[]>();
         readonly ThreadLocal<CanonicalWriter> m_SendWriter;
         readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_MaximumDatagramBytes;
@@ -161,13 +163,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     int received = m_Socket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref remote);
                     if (received <= 0 || received > m_MaximumDatagramBytes)
                         continue;
-                    RollbackDatagramPacket packet;
+                    RollbackDatagramPacket packet = RentReceivePacket();
+                    byte[] payloadBuffer = RentReceivePayload();
                     try
                     {
-                        packet = RollbackDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes);
+                        packet = RollbackDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes, packet, payloadBuffer);
                     }
                     catch (Exception exception) when (exception is InvalidDataException || exception is ArgumentException)
                     {
+                        ReturnReceivedPacket(packet);
                         continue;
                     }
                     int receiveDepth = Interlocked.Increment(ref m_ReceiveCount);
@@ -176,6 +180,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     {
                         Interlocked.Decrement(ref m_ReceiveCount);
                         Interlocked.Increment(ref m_DroppedReceivedDatagrams);
+                        ReturnReceivedPacket(packet);
                         continue;
                     }
                     m_ReceiveQueue.Enqueue(new RollbackReceivedDatagram(packet, RentReceiveEndPoint((IPEndPoint)remote)));
@@ -220,6 +225,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ReceiveThread.Join(1000);
             while (m_ReceiveQueue.TryDequeue(out RollbackReceivedDatagram datagram))
             {
+                ReturnReceivedPacket(datagram.Packet);
                 ReturnReceiveEndPoint(datagram.RemoteEndPoint);
             }
             while (m_SendQueue.TryDequeue(out PendingSend pending))
@@ -247,6 +253,29 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_ReceiveEndPoints.Count < m_QueueCapacity)
                 m_ReceiveEndPoints.Push(value);
+        }
+
+        RollbackDatagramPacket RentReceivePacket()
+        {
+            if (m_ReceivePackets.TryPop(out RollbackDatagramPacket packet))
+                return packet;
+            return new RollbackDatagramPacket();
+        }
+
+        byte[] RentReceivePayload()
+        {
+            if (m_ReceivePayloads.TryPop(out byte[] payload))
+                return payload;
+            return new byte[m_MaximumDatagramBytes];
+        }
+
+        internal void ReturnReceivedPacket(RollbackDatagramPacket packet)
+        {
+            byte[] payload = packet.Release();
+            if (m_ReceivePackets.Count < m_QueueCapacity)
+                m_ReceivePackets.Push(packet);
+            if (m_ReceivePayloads.Count < m_QueueCapacity)
+                m_ReceivePayloads.Push(payload);
         }
 
         byte[] RentSendBuffer()

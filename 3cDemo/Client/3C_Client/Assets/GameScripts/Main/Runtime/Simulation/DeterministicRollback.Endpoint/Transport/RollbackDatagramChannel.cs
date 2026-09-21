@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             public RollbackDatagramPacket[] Fragments { get; }
             public bool Reliable { get; private set; }
             public int TotalPayloadBytes { get; private set; }
-            int FragmentCount { get; set; }
+            internal int FragmentCount { get; private set; }
             int m_ReceivedCount;
             int m_ReceivedBytes;
 
@@ -288,12 +288,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     m_PendingReliable.Remove(packet.MessageSequence);
                     ReturnPending(pending);
                 }
+                m_Endpoint.ReturnReceivedPacket(packet);
                 return;
             }
             if (m_CompletedSequences.Contains(packet.MessageSequence))
             {
                 if (packet.Reliable)
                     SendAcknowledgement(packet.MessageSequence);
+                m_Endpoint.ReturnReceivedPacket(packet);
                 return;
             }
             if (!m_Reassembly.TryGetValue(packet.MessageSequence, out FragmentAssembly assembly))
@@ -310,6 +312,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_Reassembly.Remove(packet.MessageSequence);
             bool reliable = assembly.Reliable;
             int assembledBytes = assembly.CopyComplete(m_AssembledPayload);
+            for (int i = 0; i < assembly.FragmentCount; i++)
+            {
+                if (assembly.Fragments[i] != null)
+                    m_Endpoint.ReturnReceivedPacket(assembly.Fragments[i]);
+            }
             ReturnReassembly(assembly);
             RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(
                 m_DecodeScratch,

@@ -365,6 +365,7 @@
 - [x] 5.102 Rollback Datagram Channel 发送路径直接用既有身份、消息序号和 payload 编码协议 header，删除一次性发送 envelope；接收 envelope 和独立 payload 所有权不变
 - [x] 5.103 Rollback received datagram 改为 assembly 内只读引用记录，接收队列不再为每条收包创建 wrapper 对象；接收 packet、payload 和真实 UDP endpoint clone 继续独立持有
 - [x] 5.104 Rollback Datagram Endpoint 按接收队列容量复用真实来源 endpoint 记录，消费完成后显式归还；Peer 和 Relay 异常路径同步归还，新建 Channel 仍独立 clone
+- [x] 5.105 Rollback Datagram Endpoint 池化接收 packet 和 payload buffer，Codec 直接重置租用对象；完整重组、ACK 和重复完成后显式归还，incomplete 分片继续由 reassembly 持有
 
 ## 6. UI、资源、渲染和生命周期
 

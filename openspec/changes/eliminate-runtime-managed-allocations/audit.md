@@ -2641,3 +2641,12 @@
 - `RollbackPeerEndpoint` 和 `RollbackInputRelayRuntime` 是仅有的两个出队消费者，处理成功或抛错都在 `finally` 归还。Relay 首次为来源创建 Channel 时继续把 endpoint 交给 Channel 做长寿命独立 clone，之后任何所有者都不保留该记录引用。
 - Dispose 清空接收队列时同步归还 endpoint。接收 packet、payload、发送 endpoint clone 和 `ConcurrentQueue` 自身存储不在本步范围。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚接收 packet 与 payload 复用
+
+对应 tasks.md 的 5.4，本步处理 Datagram Endpoint 租出的接收 packet 本体和 payload buffer，整项保持未勾选。
+
+- 有效收包原先由 `RollbackDatagramCodec.Read` 构造新 packet，并把 payload 复制成独立数组；ACK、重复完成和完整重组消费后这些对象失去消费者。现在 Endpoint 按接收队列容量持有 packet 和 payload 两只归还栈，Codec 删除原构造入口，改为校验后直接 Reset 租用对象并复制到固定容量 buffer。
+- Endpoint 在无效包和队列溢出时归还租用对象，Dispose 清空接收队列时同步归还。Channel 只在明确终点归还：ACK 处理完成、重复 message 已完成、完整重组复制到组装 buffer 后逐片归还；incomplete 分片继续由 `FragmentAssembly` 持有，不提前复用。
+- `FragmentAssembly.FragmentCount` 只放宽为 assembly 内读取，供外层完成路径枚举 packet。identity string 仍每次解码分配；发送 reliable pending 的自有 packet 不进入接收池。
+- Endpoint 工程完整依赖构建当前被并行 Timeline 的 `TimelineControlContracts.cs` CS0050 阻断，该文件未修改。`ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 改用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

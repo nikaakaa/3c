@@ -132,9 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPoseNativeDomainInstance poseDomain = null;
             CharacterAnimationResourceScope resourceScope = null;
             IActionPresentationClockCoordinator presentationClockCoordinator =
-                presentationRole == CharacterPresentationRole.SimulatedActor
-                    ? new CommittedFollowPresentationClockCoordinator()
-                    : null;
+                new CommittedFollowPresentationClockCoordinator();
             IActionPresentationClockPolicy locomotionClockPolicy =
                 locomotionBinding.ClockMode == CharacterLocomotionClockMode.CommittedMovement
                     ? new CommittedMovementPresentationClockPolicy()
@@ -175,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         physicsScene,
                         node => node.IsLocomotionParticipant
                             ? locomotionClockPolicy
-                            : presentationClockCoordinator != null && node.AnimationChannelId.IsValid
+                            : presentationRole == CharacterPresentationRole.SimulatedActor && node.AnimationChannelId.IsValid
                                 ? presentationClockCoordinator.CreatePolicy()
                                 : FreeRunPresentationClockPolicy.Shared);
                     var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(

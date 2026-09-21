@@ -6,6 +6,9 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 纠正此前“回放被重编译打断”的单一判断：Editor.log 中三次存在 Timeline progress requires an installed Action presentation clock，随后 PlayModeErrorAutoExit 退出；因此重载只是部分现象，实际已触发运行错误。堆栈为 FixedUnityPresentationOutputAdapter.CompleteCommit → CharacterPresentationDomainRuntime.Publish。工厂仅给 SimulatedActor 创建 coordinator，本地玩家为 null；现改为两种角色均装配同一 coordinator，并保留原有按角色选择动作播放策略和移动时钟策略。尚待 Unity 编译及重跑。
+- 用户另报告跑动动画闪烁、移动一段后回退；已纳入闭环，尚未获得对应逐帧证据，不把缺时钟异常直接认定为这两个现象的全部原因。
+
 - 后续重载恢复后 Console 0 error；DodgeBack 正式 generate_assets 返回 saved=true / diagnostics=[]。测试轨道、Marker、孤立子图的三个身份已从资产消失。此前失败的清理曾导致私有子资产重建，Definition 第 7 个 Timeline 引用失效；已通过 SetControlMotionTimelines 正式配置 API 精确重绑 DodgeBack，重新发布后变更仅落在 DodgeBack 两份运行数据和该 Definition 引用。已重新请求同一 1492 帧回放，尚待完成证据。
 
 - `d2fe3fd79` 将实际 MovingTurn 控制运动接入准备好的 Fixed 曲线。实际链为控制模块 SourceCurve 请求 → ControlMotionBindings → FixedCharacterControlMotionRuntime；并不执行独立 MovingTurn Timeline 的 TreeClip，因此独立 Prepare 的缺树结果不是该转身链的运行阻塞。真实绑定 28 帧增量之和与整段采样 raw 值一致，yaw 为 180 度；预热后 4096 次 EvaluateDelta 分配为 0，仅覆盖该采样函数。

@@ -2198,6 +2198,15 @@
 - 不改变 Local/Component 转换计算、Native 双页、输入读取、ValidatePending、Commit/Discard 或提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译仍受生成 csproj 的删除文件引用阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 纯 Pose 组合节点输出包装复用
+
+对应 tasks.md 的 7.39。
+
+- `CharacterPoseNativeBlendPoseHandler`、`CharacterPoseNativeAdditivePoseHandler` 和 `CharacterPoseNativeLayeredBoneBlendHandler` 原先每次计算结果都会创建新的 Local Pose 包装对象。
+- 三个 handler 现在复用 `CharacterPoseNativeLocalPoseValue`；以当前 completion identity 区分本 frame 输出，更新前仍检查 Local space、Pose availability 和 CompletedAt，失败时不覆盖上一结果。
+- 不改变各自的 Pose 混合/叠加计算、连续性 identity、Native 双页、ValidatePending、Commit/Discard 和提交页索引；只删除稳态托管包装分配。
+- 当前完整编译仍受生成 csproj 的删除文件引用及依赖 DLL 文件锁影响；未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

@@ -414,3 +414,4 @@
 - [x] 7.36 Motion Matching Pose handler 复用稳态输出包装对象，删除每帧 `CharacterPoseNativeLocalPoseValue` 创建；保留当前 lineage、Native layout、完成标记和提交页索引语义
 - [x] 7.37 Modify Bone 复用稳态 Component Pose 输出包装对象，删除每帧 `CharacterPoseNativeComponentPoseValue` 创建；保留当前 lineage、Component layout、完成标记和提交页索引语义
 - [x] 7.38 Space Conversion 按固定输出空间复用 Local/Component Pose 包装对象，删除每帧输出包装创建；保留空间转换、Native 双页和提交事务语义
+- [x] 7.39 Blend、Additive、Layered Bone Blend 复用 Local Pose 输出包装对象，删除三个纯 Pose 组合节点的稳态逐帧包装创建；保留连续性、Native 双页和提交状态语义

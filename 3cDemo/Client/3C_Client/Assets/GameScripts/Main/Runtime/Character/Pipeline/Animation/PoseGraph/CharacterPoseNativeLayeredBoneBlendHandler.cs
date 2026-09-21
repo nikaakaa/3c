@@ -110,7 +110,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LastBaseContinuity = m_CommittedBaseContinuity;
             m_LastOverlayContinuity = m_CommittedOverlayContinuity;
             m_LastWeight = m_CommittedWeight;
-            m_Output = null;
         }
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
@@ -129,7 +128,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "result")
                 throw new InvalidOperationException(
                     $"Layered Bone Blend '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue basePose =
@@ -158,7 +158,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 weight);
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -188,7 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage)
         {
             RequireAlive();
-            if (m_Output == null)
+            if (m_Output == null ||
+                m_Output.CompletionIdentity != lineage.CompletionIdentity)
                 return;
             if (m_Output.Native.CompletionIdentity != lineage.CompletionIdentity ||
                 m_Output.Native.Space != CharacterPoseSpace.Local ||
@@ -207,7 +211,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
             {
                 m_CommittedPageIndex = m_PageIndex;
                 m_CommittedContinuityIdentity = m_ContinuityIdentity;
@@ -522,7 +527,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_FrameOpen = false;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

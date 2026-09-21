@@ -355,7 +355,7 @@ namespace ThirdPersonSimulation
         public static AbilityTimelineMotionWarpCatalog Empty { get; } = new(
             Array.Empty<AbilityTimelineMotionWarpStateIdentity>(),
             SimulationIdentity.Hash("ability-timeline-motion-warp-state-schema/1", "0"),
-            SimulationIdentity.Hash("ability-timeline-motion-warp-content/1", "empty"));
+            SimulationIdentity.Hash("ability-timeline-motion-warp-content/1"));
 
         readonly Dictionary<(string TimelineId, string ClipId), OperationHandle> m_Operations;
 

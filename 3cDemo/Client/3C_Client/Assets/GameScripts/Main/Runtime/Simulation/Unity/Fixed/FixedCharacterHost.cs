@@ -615,10 +615,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 int result = string.CompareOrdinal(left.TimelineId, right.TimelineId);
                 return result != 0 ? result : string.CompareOrdinal(left.ClipAuthoringId, right.ClipAuthoringId);
             });
-            string schema = SourceContentHasher.Hash(
+            string schema = StableHash.Compute(
                 "ability-timeline-motion-warp-state-schema/1",
-                identities.Count.ToString(CultureInfo.InvariantCulture));
-            string content = SourceContentHasher.Hash(contentParts.ToArray());
+                identities.Count.ToString(CultureInfo.InvariantCulture)).Value;
+            string content = StableHash.Compute(contentParts.ToArray()).Value;
             return new AbilityTimelineMotionWarpCatalog(identities, schema, content);
         }
 

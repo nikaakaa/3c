@@ -330,7 +330,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 m_State);
             writePorts.Decision.Write(decision);
             SimulationSessionExecutionPlan<Float32SimulationStep> plan;
-            IReadOnlyList<CharacterBodySample> selectedRemoteBodies;
+            CharacterBodySample[] selectedRemoteBodies;
             try
             {
                 plan = BuildPlan(
@@ -531,7 +531,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ulong lastPredictedInputSequence,
             bool observedContactEnabled,
             StableHash contactShapeConfigurationHash,
-            out IReadOnlyList<CharacterBodySample> selectedRemoteBodies)
+            out CharacterBodySample[] selectedRemoteBodies)
         {
             if (characterRuntime.Runtime.Roster.Count != 1 || characterRuntime.Runtime.Roster[0].ActorId != current.ActorId)
                 throw new InvalidOperationException("Prediction Schedule owner does not match the Character roster.");
@@ -540,7 +540,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var steps = new Float32SimulationStep[replay.Count + currentStepCount];
             var mappings = new SimulationPipelineStepSourceMapping[
                 (currentStepCount > 0 ? 1 : 0) + (replay.Count > 0 ? 1 : 0)];
-            var selectedBodies = new List<CharacterBodySample>();
+            CharacterBodySample[] selectedBodies = currentStepCount == 0
+                ? Array.Empty<CharacterBodySample>()
+                : null;
+            int selectedBodyCount = 0;
             string replayClock = $"{context.Source.ClockId}.replay";
             ulong planSequence = 1;
             ulong nextTick = restore?.Tick.Value ?? context.CurrentCompletedTick;
@@ -582,6 +585,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     i == 0);
                 var tick = new SimulationTick(tickValue);
                 ServerAuthoritativeRemoteBodySelectionFrame selection = m_State.SelectRemoteBodyFrame(tick);
+                CharacterBodySample[] samples = selection.ToBodySamples();
+                if (selectedBodies == null)
+                    selectedBodies = new CharacterBodySample[currentStepCount * samples.Length];
+                Array.Copy(samples, 0, selectedBodies, selectedBodyCount, samples.Length);
+                selectedBodyCount += samples.Length;
                 ObservedWorldConstraintFrame observed = observedContactEnabled
                     ? selection.ToObservedWorldConstraints(contactShapeConfigurationHash)
                     : ObservedWorldConstraintFrame.Empty(tick);
@@ -592,7 +600,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     planSequence++,
                     rebound,
                     observed);
-                selectedBodies.AddRange(selection.ToBodySamples());
             }
             if (replay.Count > 0)
             {
@@ -608,7 +615,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                   SimulationSessionPlanRequirement.OutputDisposition |
                   SimulationSessionPlanRequirement.StateHash |
                   SimulationSessionPlanRequirement.Snapshot;
-            selectedRemoteBodies = selectedBodies.AsReadOnly();
+            selectedRemoteBodies = selectedBodies;
             return SimulationSessionExecutionPlan<Float32SimulationStep>.FromOwnedArrays(
                 steps.Length == 0
                     ? SimulationSessionExecutionPlanStatus.NoStep

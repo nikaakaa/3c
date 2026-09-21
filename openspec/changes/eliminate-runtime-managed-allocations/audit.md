@@ -3619,3 +3619,11 @@
 - `RemotePresentationBatch` 的 bodies、sample commands 和 reliable events 改为直接持有精确 owned arrays。构造器排序后原地去重 sample，body tick 排序使用类型化静态比较；Actor 归属、命令类型、sample lineage、事件去重和 canonical 排序语义不变。
 - Authority replication 每个 Actor 先按 policy 统计 stream 和 reliable 数量，再填充精确数组并直接转交，删除每 Actor 的 List、共享 body scratch 和构造期复制。Evidence drain、Observation ingress 和 Remote presentation egress 需要从既有产品合并时生成独立精确数组；codec 和 compact checkpoint 的解码数组直接转交。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 selected remote bodies 数组收口
+
+对应 tasks.md 的 5.5，新增 5.180 作为独立小步；5.5 保持未勾选。
+
+- `SelectedRemoteBodyBatch` 直接持有精确 `CharacterBodySample[]`，使用类型化静态 tick 比较；Actor 归属、tick 排序和重复校验不变。
+- Prediction schedule 的 current selections 按 first selection 的 body 数量和 current step 数量一次性分配最终数组，后续 selection 直接复制到对应区间；HardRecovery 的 `ToBodySamples` 精确数组直接转交。删除 BuildPlan 的 body List、`AddRange`、`AsReadOnly` 和构造期二次复制。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

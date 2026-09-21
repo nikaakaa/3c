@@ -441,29 +441,29 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class SelectedRemoteBodyBatch
     {
-        readonly ReadOnlyCollection<CharacterBodySample> m_BodySamples;
+        static readonly Comparison<CharacterBodySample> s_CompareByTick =
+            (left, right) => left.Tick.CompareTo(right.Tick);
+
+        readonly CharacterBodySample[] m_BodySamples;
 
         public SelectedRemoteBodyBatch(
             ActorId actorId,
             SimulationTick tick,
-            IEnumerable<CharacterBodySample> bodySamples,
+            CharacterBodySample[] bodySamples,
             bool resetStream)
         {
-            if (!actorId.IsValid || !tick.IsValid)
+            if (!actorId.IsValid || !tick.IsValid || bodySamples == null)
                 throw new ArgumentException("Selected remote body ActorId is invalid.", nameof(actorId));
             ActorId = actorId;
             Tick = tick;
             ResetStream = resetStream;
-            var values = bodySamples == null
-                ? throw new ArgumentNullException(nameof(bodySamples))
-                : new List<CharacterBodySample>(bodySamples);
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
-            for (int i = 0; i < values.Count; i++)
+            m_BodySamples = bodySamples;
+            Array.Sort(m_BodySamples, s_CompareByTick);
+            for (int i = 0; i < m_BodySamples.Length; i++)
             {
-                if (values[i].ActorId != actorId || i > 0 && values[i - 1].Tick == values[i].Tick)
+                if (m_BodySamples[i].ActorId != actorId || i > 0 && m_BodySamples[i - 1].Tick == m_BodySamples[i].Tick)
                     throw new ArgumentException("Selected remote body stream is invalid.", nameof(bodySamples));
             }
-            m_BodySamples = values.AsReadOnly();
         }
 
         public ActorId ActorId { get; }

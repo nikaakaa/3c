@@ -3835,3 +3835,11 @@
 - Fixed 和 Float32 Character Evaluation 的 shared gameplay effect execution scratch 从每 tick 新建改为 Actor Binding 构造期持有的常驻对象；Evaluation 开始调用正式 `Reset`，同一 scratch 仍按原设计共享给全部 ability invocation。
 - 正式 result 构造完成和异常返回前都再次 `Reset`，清除 changes、causes、attribute、tag、prediction key 等 workspace 引用；多个 invocation 的共享顺序、effect ingress 和 advance 行为不变。
 - 每 Actor tick 的 scratch 外壳和内部集合容器重建删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability execution factory lifetime 收口
+
+对应 tasks.md 的 5.5，新增 5.207 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Evaluation 的 ability execution service factory 改为 Actor Binding 构造期创建，继续绑定同一个 Timeline runtime；stateless domain runtime factory 也改由同一 Actor Binding 持有。
+- Evaluation 直接从 Actor Binding 取工厂接口，不再每个 Actor tick 新建两个 factory 对象；`Create` 仍接收当前 frame、workspace 和状态端口，ability 运行期对象的生命周期不变。
+- 工厂仅提供无状态创建入口，不携带跨 tick 执行状态，因此无需额外清理边界。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

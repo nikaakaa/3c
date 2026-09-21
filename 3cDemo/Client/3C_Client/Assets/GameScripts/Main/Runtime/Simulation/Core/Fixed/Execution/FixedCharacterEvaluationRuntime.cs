@@ -55,8 +55,8 @@ namespace ThirdPersonSimulation.Fixed
             var characterTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new FixedAbilityExecutionServiceFactory(actor.TimelineRuntime);
-                var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
+                IFixedAbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
+                IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;

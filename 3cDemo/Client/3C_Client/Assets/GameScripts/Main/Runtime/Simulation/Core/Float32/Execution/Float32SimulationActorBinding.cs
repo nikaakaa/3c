@@ -43,6 +43,8 @@ namespace ThirdPersonSimulation
         readonly Float32AbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_ActionRuntimes;
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
+        readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
+        readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -79,6 +81,7 @@ namespace ThirdPersonSimulation
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
+            m_ServiceFactory = new Float32AbilityExecutionServiceFactory(timelineRuntime);
             TimelineMotionReader = GetMotionReader(timelineRuntime);
             TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
@@ -105,6 +108,8 @@ namespace ThirdPersonSimulation
         internal Float32AbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
+        internal IFloat32AbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
+        internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
 
         internal void ClearInvocationScratch(int count)
         {

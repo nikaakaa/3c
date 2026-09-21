@@ -44,6 +44,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_ActionRuntimes;
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
+        readonly IFixedAbilityExecutionServiceFactory m_ServiceFactory;
+        readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -81,6 +83,7 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
+            m_ServiceFactory = new FixedAbilityExecutionServiceFactory(timelineRuntime);
             TimelineMotionReader = GetMotionReader(timelineRuntime);
             TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
@@ -108,6 +111,8 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedAbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
+        internal IFixedAbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
+        internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
 
         internal void ClearInvocationScratch(int count)
         {

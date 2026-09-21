@@ -55,8 +55,8 @@ namespace ThirdPersonSimulation
             var characterTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new Float32AbilityExecutionServiceFactory(actor.TimelineRuntime);
-                var domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
+                IFloat32AbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
+                IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;

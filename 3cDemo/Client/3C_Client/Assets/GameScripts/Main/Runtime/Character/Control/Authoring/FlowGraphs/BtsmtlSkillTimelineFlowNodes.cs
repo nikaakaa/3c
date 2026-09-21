@@ -108,14 +108,14 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("片段停用"), Category("BTSMTL/Timeline"), DoNotList]
-    [BtsmtlSkillNodeKind("@timelineDisable")]
+    [BtsmtlSkillNodeKind("@timelineDisable", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillTimelineDisableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDisable;
     }
 
     [Name("片段销毁"), Category("BTSMTL/Timeline"), DoNotList]
-    [BtsmtlSkillNodeKind("@timelineDestroy")]
+    [BtsmtlSkillNodeKind("@timelineDestroy", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillTimelineDestroyFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDestroy;

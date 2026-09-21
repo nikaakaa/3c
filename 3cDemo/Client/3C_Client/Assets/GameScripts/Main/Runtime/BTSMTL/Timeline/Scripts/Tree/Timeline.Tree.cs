@@ -116,8 +116,6 @@ namespace BTSMTL.Timeline
         {
             if (builder == null)
                 throw new ArgumentNullException(nameof(builder));
-            if (!TimelineClipExecutionPolicy.FromDomain(ExecutionDomain).IsLogic)
-                return;
             if (m_AssetTree is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
             {
                 builder.AddError("timeline_tree_missing", AuthoringId, "TreeClip没有绑定正式的Timeline节点图资产。");
@@ -206,7 +204,7 @@ namespace BTSMTL.Timeline
                     true,
                     TimelineExecutionDomain.Logic,
                     TimelineOutputKind.GameplayFact,
-                    TimelineExecutionDomainMask.Logic,
+                    TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation,
                     ValidateClip)
             });
 
@@ -227,7 +225,12 @@ namespace BTSMTL.Timeline
                         errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' must use TreeDecision exit.");
                     break;
                 case TimelineExecutionDomain.Presentation:
-                    errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' cannot execute a TimelineBody graph in Presentation; use a Timeline Marker with a TimelineTrigger graph.");
+                    if (!hasGraph)
+                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
+                    if (treeClip.ClipExitSource != TimelineClipExitSource.FrameBoundary)
+                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' must use FrameBoundary exit.");
+                    if (treeClip.ExecutionPhase != TimelineTreeExecutionPhase.Commit)
+                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' must use Commit phase.");
                     break;
                 default:
                     errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' has an invalid execution domain.");

@@ -86,6 +86,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         }
                     for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     {
+                        if (track.ExecutionDomain == TimelineExecutionDomain.Presentation && track.Clips[clipIndex] is TreeClip tree &&
+                            (tree.AssetTree is not ITimelineTreeGraphAsset treeGraph || !m_PresentationGraphs.Contains("tree:" + treeGraph.AuthoringId)))
+                            throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' TreeClip '{tree.AuthoringId}' has no installed Presentation graph.");
                         if (track.Clips[clipIndex] is not MotionCurveClip motion)
                             continue;
                         if (!motion.SourceCurve || !motion.SourceCurve.TryValidate(out string error))
@@ -432,7 +435,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ActivationId Activation { get; }
     }
 
-    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
+    internal readonly struct TimelinePresentationGraphCameraOutput
+    {
+        internal TimelinePresentationGraphCameraOutput(TimelineRuntimePresentationFrame frame, string callerId,
+            bool marker, int cycle, long time, string producer, PresentationCameraRequest activation,
+            PresentationCameraRequest retirement, bool retiring)
+        {
+            Frame = frame;
+            CallerId = callerId;
+            Marker = marker;
+            Cycle = cycle;
+            Time = time;
+            Producer = producer;
+            Activation = activation;
+            Retirement = retirement;
+            Retiring = retiring;
+        }
+        internal readonly TimelineRuntimePresentationFrame Frame;
+        internal readonly string CallerId;
+        internal readonly bool Marker;
+        internal readonly int Cycle;
+        internal readonly long Time;
+        internal readonly string Producer;
+        internal readonly PresentationCameraRequest Activation;
+        internal readonly PresentationCameraRequest Retirement;
+        internal readonly bool Retiring;
+    }
+
+    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable, IFloat32PresentationGraphOutput
     {
         struct ActivePlayback
         {
@@ -512,14 +542,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 bool hasMarkers = false;
                 for (int index = 0; index < data.SourceMap.Count; index++)
                     hasMarkers |= data.SourceMap[index].TargetKind == ProgramSourceTargetKind.GraphInvocation &&
-                        data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker;
+                        (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                         data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip);
                 if (!hasMarkers)
                     continue;
                 var runtime = new Float32PresentationGraphRuntime(data);
                 m_DependencyResolver.InstallGraphSources(data.SourceMap);
                 m_PresentationGraphs.Add(runtime);
                 for (int index = 0; index < data.SourceMap.Count; index++)
-                    if (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker)
+                    if (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                        data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip)
                         m_DependencyResolver.InstallPresentationGraph(data.SourceMap[index].GraphId);
             }
         }
@@ -530,6 +562,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public string ContentRevision { get; private set; } = string.Empty;
         public ulong ContentGeneration => m_ContentGeneration;
         internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
+        internal event Action<TimelinePresentationGraphCameraOutput> PresentationGraphCameraPrepared;
+        internal event Action<TimelineRuntimePresentationFrame> PresentationGraphFramePreparing;
+        TimelineRuntimePresentationFrame m_GraphFrame;
+        string m_GraphCaller;
+        bool m_GraphMarker;
+        int m_GraphCycle;
+        long m_GraphTime;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
         internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason, bool> PresentationPlaybackEndPrepared;
         public event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEnded;
@@ -2047,7 +2086,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 bool locallyStopped = !active.CoreDriven && status != TimelinePlaybackStatus.Requested &&
                     status != TimelinePlaybackStatus.Running && status != TimelinePlaybackStatus.Succeeded;
                 TimelineRuntimePresentationFrame frame = default;
-                bool presented = hasSample && !locallyStopped && m_Host.TryPresent(
+                if (locallyStopped && hasSample)
+                    sample = new TimelineRuntimePresentationSample(sample.Generation, sample.LogicTick, sample.ContentRevision,
+                        sample.Time, sample.Cycle, TimelinePresentationSampleReason.Stopped, false);
+                bool presented = hasSample && m_Host.TryPresent(
                         active.Handle,
                         in sample,
                         context.RenderFrame,
@@ -2057,6 +2099,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (presented)
                 {
                     m_PresentationCandidates.Add(frame);
+                    PresentationGraphFramePreparing?.Invoke(frame);
+                    ExecutePresentationGraphs(active, frame);
                     PresentationFramePrepared?.Invoke(frame);
                 }
                 bool ended = active.CoreDriven
@@ -2071,6 +2115,77 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason, retainForCorrection);
                 }
             }
+        }
+
+        void ExecutePresentationGraphs(in ActivePlayback active, in TimelineRuntimePresentationFrame frame)
+        {
+            m_GraphFrame = frame;
+            try
+            {
+                for (int index = 0; index < frame.Operations.TreeClips.Count; index++)
+                {
+                    TimelineRuntimeTreeClipRequest request = frame.Operations.TreeClips[index];
+                    m_GraphCaller = request.ClipAuthoringId;
+                    m_GraphMarker = false;
+                    m_GraphCycle = request.Cycle;
+                    m_GraphTime = request.Time.Raw;
+                    AbilityTreeClipHook hook = request.EventKind switch
+                    {
+                        TimelineRuntimeTreeClipEventKind.Enter => AbilityTreeClipHook.OnEnable,
+                        TimelineRuntimeTreeClipEventKind.Update => AbilityTreeClipHook.Root,
+                        TimelineRuntimeTreeClipEventKind.Exit => AbilityTreeClipHook.OnDisable,
+                        TimelineRuntimeTreeClipEventKind.Destroy => AbilityTreeClipHook.OnDestroy,
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
+                    ExecutePresentationGraph(active, request.TreeGraphId, request.TreeGraphRevision,
+                        ProgramInvocationCallerKind.PresentationTreeClip, hook);
+                }
+                for (int index = 0; index < frame.Events.Count; index++)
+                {
+                    TimelineRuntimePresentationEvent marker = frame.Events[index];
+                    m_GraphCaller = marker.MarkerAuthoringId;
+                    m_GraphMarker = true;
+                    m_GraphCycle = marker.Cycle;
+                    m_GraphTime = marker.Time.Raw;
+                    ExecutePresentationGraph(active, marker.GraphId, marker.GraphRevision,
+                        ProgramInvocationCallerKind.PresentationMarker, AbilityTreeClipHook.OnEnable);
+                }
+            }
+            finally
+            {
+                m_GraphFrame = default;
+                m_GraphCaller = null;
+            }
+        }
+
+        void ExecutePresentationGraph(in ActivePlayback active, string graphId, string revision,
+            ProgramInvocationCallerKind kind, AbilityTreeClipHook hook)
+        {
+            Float32PresentationGraphRuntime matched = null;
+            int binding = -1;
+            for (int index = 0; index < m_PresentationGraphs.Count; index++)
+            {
+                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index];
+                if (!runtime.TryBind(active.Provenance.SourceInvocationPath, active.Provenance.SourceNodeAuthoringId,
+                    m_GraphCaller, graphId, revision, kind, hook, out int candidate))
+                    continue;
+                if (matched != null)
+                    throw new InvalidOperationException("Timeline Presentation graph invocation is ambiguous.");
+                matched = runtime;
+                binding = candidate;
+            }
+            if (matched == null)
+                throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry.");
+            matched.Evaluate(binding, m_PresentationFacts, this);
+        }
+
+        void IFloat32PresentationGraphOutput.SubmitCamera(string producer, in PresentationCameraRequest activation,
+            in PresentationCameraRequest retirement, bool retiring)
+        {
+            if (PresentationGraphCameraPrepared == null)
+                throw new InvalidOperationException("Timeline Presentation graph has no composed Camera consumer.");
+            PresentationGraphCameraPrepared(new TimelinePresentationGraphCameraOutput(m_GraphFrame, m_GraphCaller,
+                m_GraphMarker, m_GraphCycle, m_GraphTime, producer, activation, retirement, retiring));
         }
 
         internal void CommitPresentationFrame(ulong frame, IActionPresentationClockCoordinator clock)

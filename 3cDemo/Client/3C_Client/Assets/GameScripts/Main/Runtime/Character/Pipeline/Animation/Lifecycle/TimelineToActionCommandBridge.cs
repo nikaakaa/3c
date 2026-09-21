@@ -298,8 +298,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             Cycle = cycle;
         }
 
-        internal static CameraEventKey ForMarker(ulong handle, ulong generation, string marker, string producer) =>
-            new(handle, generation, marker, string.Empty, producer, 0);
+        internal static CameraEventKey ForMarker(ulong handle, ulong generation, string marker, string producer, int cycle) =>
+            new(handle, generation, marker, string.Empty, producer, cycle);
         internal static CameraEventKey ForClip(ulong handle, ulong generation, string track, string clip, int cycle) =>
             new(handle, generation, null, track, clip, cycle);
         internal readonly ulong Handle;
@@ -379,6 +379,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         m_Alive = new HashSet<CameraEventKey>(requestCapacity);
         m_Retired = new List<CameraEventKey>(requestCapacity);
         m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
+        m_TimelineHost.PresentationGraphCameraPrepared += OnGraphCamera;
+        m_TimelineHost.PresentationGraphFramePreparing += OnGraphFramePreparing;
         m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
     }
 
@@ -412,6 +414,12 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     void OnPresentationFrame(TimelineRuntimePresentationFrame frame)
     {
         m_Alive.Clear();
+        if (frame.Reason == TimelinePresentationSampleReason.Stopped || frame.Reason == TimelinePresentationSampleReason.Withdrawn)
+        {
+            RetireInactive(m_Alive, frame.Handle.Value, frame.Reason == TimelinePresentationSampleReason.Withdrawn,
+                frame.Generation, true);
+            return;
+        }
         if (frame.Operations.CameraStates.Count != 0 ||
             frame.Operations.CameraResponses.Count != 0 || frame.Operations.CameraResources.Count != 0)
         {
@@ -423,6 +431,17 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             if (entry.Key.Marker != null && entry.Key.Handle == frame.Handle.Value && entry.Key.Generation == frame.Generation &&
                 (entry.Value.MarkerCycle < frame.Cycle || entry.Value.MarkerCycle == frame.Cycle && entry.Value.MarkerTime <= frame.Time.Raw))
                 m_Alive.Add(entry.Key);
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
+        {
+            if (entry.Key.Marker != null || entry.Key.Handle != frame.Handle.Value || entry.Key.Generation != frame.Generation)
+                continue;
+            for (int index = 0; index < frame.Operations.ActiveTreeClips.Count; index++)
+            {
+                TimelineRuntimeTreeClipRequest tree = frame.Operations.ActiveTreeClips[index];
+                if (entry.Key.Track == tree.ClipAuthoringId && entry.Key.Cycle == tree.Cycle)
+                    m_Alive.Add(entry.Key);
+            }
+        }
         foreach (CameraEventKey key in m_Alive)
         {
             CameraEventState state = m_Events[key];
@@ -433,6 +452,49 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         }
         RetireInactive(m_Alive, frame.Handle.Value, frame.Reason == TimelinePresentationSampleReason.Correction,
             retainForCorrection: true);
+    }
+
+    void OnGraphFramePreparing(TimelineRuntimePresentationFrame frame)
+    {
+        m_Retired.Clear();
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
+        {
+            if (entry.Key.Marker != null || entry.Key.Handle != frame.Handle.Value || entry.Key.Generation != frame.Generation)
+                continue;
+            for (int index = 0; index < frame.Operations.TreeClips.Count; index++)
+            {
+                TimelineRuntimeTreeClipRequest tree = frame.Operations.TreeClips[index];
+                if ((tree.EventKind == TimelineRuntimeTreeClipEventKind.Exit || tree.EventKind == TimelineRuntimeTreeClipEventKind.Destroy) &&
+                    entry.Key.Track == tree.ClipAuthoringId && entry.Key.Cycle == tree.Cycle)
+                {
+                    m_Runtime.Retire(tree.EventKind == TimelineRuntimeTreeClipEventKind.Destroy ? entry.Value.Activation : entry.Value.Retirement);
+                    m_Retired.Add(entry.Key);
+                    break;
+                }
+            }
+        }
+        for (int index = 0; index < m_Retired.Count; index++)
+            m_Events.Remove(m_Retired[index]);
+    }
+
+    void OnGraphCamera(TimelinePresentationGraphCameraOutput output)
+    {
+        TimelineRuntimePresentationFrame frame = output.Frame;
+        CameraEventKey key = output.Marker
+            ? CameraEventKey.ForMarker(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer, output.Cycle)
+            : CameraEventKey.ForClip(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer, output.Cycle);
+        if (output.Retiring)
+        {
+            if (m_Events.TryGetValue(key, out CameraEventState previous))
+            {
+                m_Runtime.Retire(previous.Retirement);
+                m_Events.Remove(key);
+            }
+            return;
+        }
+        if (!m_TimelineHost.TryGetPresentationExecutionContext(frame.Handle, out TimelinePresentationExecutionContext context))
+            throw new InvalidOperationException("Presentation graph Camera output has no execution identity.");
+        PublishCamera(key, frame, context, output.Activation, output.Retirement, output.Producer, output.Time, output.Cycle);
     }
 
     void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason, bool retainForCorrection)
@@ -539,7 +601,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         TimelineRuntimePresentationFrame frame,
         in TimelinePresentationExecutionContext context,
         PresentationCameraRequest activationRequest,
-        PresentationCameraRequest retirementRequest)
+        PresentationCameraRequest retirementRequest,
+        string graphProducer = null, long markerTime = 0, int markerCycle = 0)
     {
         if (m_RequestCapacity == 0)
             throw new InvalidOperationException("Timeline Camera outputs require a composed Camera domain.");
@@ -556,6 +619,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             builder.Append("timeline-presentation-camera");
             builder.Append(frame.ExecutionIdentity.OwnerIdentity);
             builder.Append(key.Track);
+            builder.Append(key.Marker ?? string.Empty);
             builder.Append(key.Producer);
             builder.Append(checked((ulong)key.Cycle));
             builder.Append(key.Handle);
@@ -577,7 +641,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             frame.PresentationFrame + 1,
             "timeline.camera");
         string producerId = existing ? previous.Activation.ProducerId
-            : $"timeline-camera:{key.Handle}:{key.Generation}:{key.Track}:{key.Producer}:{key.Cycle}";
+            : graphProducer ?? $"timeline-camera:{key.Handle}:{key.Generation}:{key.Track}:{key.Producer}:{key.Cycle}";
         var activation = new CharacterPresentationCommand(
             activationHeader,
             CharacterPresentationCommandKind.Camera,
@@ -602,7 +666,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             1f,
             null,
             retirementRequest);
-        var state = new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation);
+        var state = new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation, markerTime, markerCycle);
         m_Events[key] = state;
         m_Runtime.Publish(activation);
     }
@@ -667,6 +731,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         Reset();
         m_Disposed = true;
         m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
+        m_TimelineHost.PresentationGraphCameraPrepared -= OnGraphCamera;
+        m_TimelineHost.PresentationGraphFramePreparing -= OnGraphFramePreparing;
         m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
     }
 }

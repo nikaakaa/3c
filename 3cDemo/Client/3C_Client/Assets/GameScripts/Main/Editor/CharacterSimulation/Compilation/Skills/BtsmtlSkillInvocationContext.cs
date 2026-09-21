@@ -28,7 +28,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             new(default, domain == TimelineExecutionDomain.Presentation
                 ? ProgramInvocationCallerKind.PresentationMarker : ProgramInvocationCallerKind.TimelineClip,
                 nodeId, markerId, true);
-        public static BtsmtlSkillInvocationContext TreeClip(string nodeId, string clipId, bool useEnable) =>
-            new(default, ProgramInvocationCallerKind.TimelineClip, nodeId, clipId, useEnable);
+        public static BtsmtlSkillInvocationContext TreeClip(string nodeId, string clipId, TimelineExecutionDomain domain) =>
+            new(default, domain == TimelineExecutionDomain.Presentation
+                ? ProgramInvocationCallerKind.PresentationTreeClip : ProgramInvocationCallerKind.TimelineClip,
+                nodeId, clipId, false);
     }
 }

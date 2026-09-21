@@ -605,7 +605,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static ProgramInvocationCallerKind ReadInvocationCallerKind(byte value)
         {
-            if (value > (byte)ProgramInvocationCallerKind.PresentationMarker)
+            if (value > (byte)ProgramInvocationCallerKind.PresentationTreeClip)
                 throw new InvalidDataException($"Enum value '{value}' is invalid for 'ProgramInvocationCallerKind'.");
             return (ProgramInvocationCallerKind)value;
         }

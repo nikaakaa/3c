@@ -1112,7 +1112,8 @@ namespace ThirdPersonSimulation
         Node,
         Edge,
         TimelineClip,
-        PresentationMarker
+        PresentationMarker,
+        PresentationTreeClip
     }
 
 	public sealed class ProgramSourceMapEntry
@@ -1233,7 +1234,8 @@ namespace ThirdPersonSimulation
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.ParentInvocationPath) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.InvocationCallerId) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip ||
-                             entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
+                             entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                             entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
                             throw new InvalidDataException("Program graph invocation source is incomplete.");
                         if (!invocationSources.TryGetValue(entry.SourceInvocationPath, out List<ProgramSourceMapEntry> sourceInvocations))
                         {

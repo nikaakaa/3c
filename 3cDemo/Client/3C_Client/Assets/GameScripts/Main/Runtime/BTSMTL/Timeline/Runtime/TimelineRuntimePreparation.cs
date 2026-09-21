@@ -1218,7 +1218,8 @@ namespace BTSMTL.Timeline.Runtime
     {
         Enter = 1,
         Update = 2,
-        Exit = 3
+        Exit = 3,
+        Destroy = 4
     }
 
     public readonly struct TimelineRuntimePresentationEvent
@@ -1660,7 +1661,7 @@ namespace BTSMTL.Timeline.Runtime
     {
         public TimelineRuntimePresentationBuffer(TimelineRuntimePlayback playback)
         {
-            int animations = 0, states = 0, responses = 0, resources = 0, scene = 0, markers = 0;
+            int animations = 0, states = 0, responses = 0, resources = 0, scene = 0, markers = 0, trees = 0;
             TimelineData timeline = playback.SourceTimeline;
             for (int index = 0; index < timeline.Tracks.Count; index++)
             {
@@ -1670,6 +1671,7 @@ namespace BTSMTL.Timeline.Runtime
                 int count = track.Clips.Count;
                 switch (track)
                 {
+                    case TreeTrack: trees = checked(trees + count); break;
                     case AnimationTrack: animations = checked(animations + count); break;
                     case CameraStateTrack: states = checked(states + count); break;
                     case CameraResponseTrack: responses = checked(responses + count); break;
@@ -1691,6 +1693,8 @@ namespace BTSMTL.Timeline.Runtime
             CameraResources = new(resources);
             ScenePresentation = new(scene);
             Events = new(checked(markers * traversals));
+            TreeClips = new(checked(trees * (traversals * 3 + 2)));
+            ActiveTreeClips = new(trees);
         }
 
         public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> Animations;
@@ -1699,6 +1703,8 @@ namespace BTSMTL.Timeline.Runtime
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> CameraResources;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> ScenePresentation;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimePresentationEvent> Events;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> TreeClips;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> ActiveTreeClips;
 
         public void Clear()
         {
@@ -1708,6 +1714,8 @@ namespace BTSMTL.Timeline.Runtime
             CameraResources.Clear();
             ScenePresentation.Clear();
             Events.Clear();
+            TreeClips.Clear();
+            ActiveTreeClips.Clear();
         }
     }
 
@@ -1720,8 +1728,12 @@ namespace BTSMTL.Timeline.Runtime
             CameraResponses = buffer.CameraResponses.View;
             CameraResources = buffer.CameraResources.View;
             ScenePresentation = buffer.ScenePresentation.View;
+            TreeClips = buffer.TreeClips.View;
+            ActiveTreeClips = buffer.ActiveTreeClips.View;
         }
 
+        public TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> ActiveTreeClips { get; }
         public TimelineRuntimeSampleView<TimelineAnimationContribution> AnimationContributions { get; }
         public TimelineRuntimeSampleView<TimelineCameraStateSample> CameraStates { get; }
         public TimelineRuntimeSampleView<TimelineCameraResponseSample> CameraResponses { get; }

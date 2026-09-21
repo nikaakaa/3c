@@ -89,7 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
                     : entry;
                 if ((context.CallerKind == ProgramInvocationCallerKind.TimelineClip ||
-                     context.CallerKind == ProgramInvocationCallerKind.PresentationMarker) && !string.IsNullOrEmpty(context.ClipId))
+                     context.CallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                     context.CallerKind == ProgramInvocationCallerKind.PresentationTreeClip) && !string.IsNullOrEmpty(context.ClipId))
                 {
                     if (context.UseTimelineEnable)
                     {
@@ -111,7 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 operations.Node(hook.UID),
                                 invocationSource,
                                 context.CallerKind,
-                                hook.Hook.ToString(),
+                                context.CallerKind == ProgramInvocationCallerKind.PresentationTreeClip
+                                    ? context.CallerId + "/" + hook.Hook : hook.Hook.ToString(),
                                 context.ClipId);
                         }
 
@@ -119,7 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             entry,
                             invocationSource,
                             context.CallerKind,
-                            "Root",
+                            context.CallerKind == ProgramInvocationCallerKind.PresentationTreeClip
+                                ? context.CallerId + "/Root" : "Root",
                             context.ClipId);
                     }
                 }
@@ -130,10 +133,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
                 foreach (BtsmtlSkillTimelineOccurrence timelineOccurrence in graph.Timelines)
                 {
-                    foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> tree in timelineOccurrence.Trees)
-                        Compile(tree.Value, stateOwner,
-                            BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, tree.Key, false));
-                    foreach (KeyValuePair<string, BtsmtlSkillTimelineMarkerOccurrence> marker in timelineOccurrence.MarkerTrees)
+                    foreach (KeyValuePair<string, BtsmtlSkillTimelineGraphOccurrence> tree in timelineOccurrence.Trees)
+                        Compile(tree.Value.Graph, stateOwner,
+                            BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, tree.Key, tree.Value.Domain));
+                    foreach (KeyValuePair<string, BtsmtlSkillTimelineGraphOccurrence> marker in timelineOccurrence.MarkerTrees)
                         Compile(marker.Value.Graph, stateOwner,
                             BtsmtlSkillInvocationContext.Marker(timelineOccurrence.Node.UID, marker.Key, marker.Value.Domain));
                 }

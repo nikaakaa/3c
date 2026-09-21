@@ -346,11 +346,6 @@ namespace BTSMTL.Timeline.Runtime
                 m_Playbacks.Remove(handle.Value);
                 hasState = false;
             }
-            if (sample.Reason == TimelinePresentationSampleReason.Stopped || sample.Reason == TimelinePresentationSampleReason.Withdrawn)
-            {
-                frame = default;
-                return false;
-            }
             if (!hasState)
             {
                 state = new PresentationPlaybackState(playback);
@@ -375,7 +370,7 @@ namespace BTSMTL.Timeline.Runtime
                     throw new InvalidOperationException("Timeline presentation frame moved backward without a generation reset.");
             }
 
-            if (state.Finished && sample.Time == state.CursorTime && sample.Cycle == state.Cycle)
+            if (state.Finished && sample.EndsPlayback && sample.Time == state.CursorTime && sample.Cycle == state.Cycle)
             {
                 frame = default;
                 return false;
@@ -396,7 +391,9 @@ namespace BTSMTL.Timeline.Runtime
                 previousTime = currentTime;
                 previousCycle = currentCycle;
             }
-            TimelineRuntimePresentationOperations operations = TimelineRuntimePresentationEvaluator.Evaluate(
+            bool stopped = sample.Reason == TimelinePresentationSampleReason.Stopped || sample.Reason == TimelinePresentationSampleReason.Withdrawn;
+            if (!stopped)
+                TimelineRuntimePresentationEvaluator.Evaluate(
                 playback,
                 previousTime,
                 previousCycle,
@@ -416,9 +413,11 @@ namespace BTSMTL.Timeline.Runtime
                 loop,
                 !state.InitialBoundaryConsumed,
                 events);
+            AppendTreeClips(playback, state, sample, allowTraversal);
+            var operations = new TimelineRuntimePresentationOperations(state.Candidate);
             state.PendingTime = currentTime;
             state.PendingCycle = currentCycle;
-            state.PendingFinished = sample.Reason == TimelinePresentationSampleReason.Completed;
+            state.PendingFinished = sample.EndsPlayback;
             state.PendingInitialBoundaryConsumed = state.InitialBoundaryConsumed || allowTraversal ||
                 sample.Reason == TimelinePresentationSampleReason.Correction;
             frame = new TimelineRuntimePresentationFrame(
@@ -445,6 +444,7 @@ namespace BTSMTL.Timeline.Runtime
                 if (!state.HasPendingFrame || state.PendingFrame.PresentationFrame != presentationFrame)
                     continue;
                 Array.Copy(state.PendingMarkerLastTraversal, state.MarkerLastTraversal, state.MarkerLastTraversal.Length);
+                Array.Copy(state.PendingTreeCycles, state.TreeCycles, state.TreeCycles.Length);
                 state.CursorTime = state.PendingTime;
                 state.Cycle = state.PendingCycle;
                 state.Finished = state.PendingFinished;
@@ -564,6 +564,74 @@ namespace BTSMTL.Timeline.Runtime
             }
         }
 
+        readonly struct PresentationTree
+        {
+            public PresentationTree(TreeClip clip, string graphId, string revision)
+            {
+                Clip = clip;
+                GraphId = graphId;
+                Revision = revision;
+            }
+            public readonly TreeClip Clip;
+            public readonly string GraphId;
+            public readonly string Revision;
+            public TimelineRuntimeTreeClipRequest Request(TimelineRuntimeTreeClipEventKind kind, FixedScalar time, int cycle, ulong generation) =>
+                new(Clip.AuthoringId, Clip.Track.AuthoringId, GraphId, Revision, TimelineTreeExecutionPhase.Commit,
+                    kind, time, cycle, ((time - Clip.StartTime) / (Clip.EndTime - Clip.StartTime)).ToSingle(), generation);
+        }
+
+        static void AppendTreeClips(TimelineRuntimePlayback playback, PresentationPlaybackState state,
+            in TimelineRuntimePresentationSample sample, bool traverse)
+        {
+            if (sample.Cycle - state.Cycle > TimelineRuntimeEvaluationSegments.MaximumCycleAdvance)
+                throw new InvalidOperationException("Timeline presentation exceeded its prepared cycle capacity.");
+            bool stopped = sample.Reason == TimelinePresentationSampleReason.Stopped || sample.Reason == TimelinePresentationSampleReason.Withdrawn;
+            bool correction = sample.Reason == TimelinePresentationSampleReason.Correction ||
+                sample.Reason == TimelinePresentationSampleReason.Advance && !traverse;
+            var output = state.Candidate.TreeClips;
+            for (int index = 0; index < state.Trees.Length; index++)
+            {
+                PresentationTree tree = state.Trees[index];
+                int activeCycle = state.TreeCycles[index];
+                if ((stopped || correction) && activeCycle >= 0)
+                {
+                    output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Destroy, state.CursorTime, activeCycle, playback.Generation));
+                    activeCycle = -1;
+                }
+                if (!stopped)
+                {
+                    int firstCycle = traverse ? state.Cycle : sample.Cycle;
+                    for (int cycle = firstCycle; cycle <= sample.Cycle; cycle++)
+                    {
+                        FixedScalar from = cycle == state.Cycle && traverse ? state.CursorTime : FixedScalar.Zero;
+                        FixedScalar to = cycle == sample.Cycle ? sample.Time : playback.Content.Duration;
+                        bool crossesStart = tree.Clip.StartTime > from ||
+                            tree.Clip.StartTime == from && (!state.InitialBoundaryConsumed || cycle > state.Cycle);
+                        bool align = !traverse && cycle == sample.Cycle &&
+                            to >= tree.Clip.StartTime && to < tree.Clip.EndTime;
+                        if (activeCycle < 0 && to >= tree.Clip.StartTime && (crossesStart && traverse || align))
+                        {
+                            activeCycle = cycle;
+                            output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Enter, tree.Clip.StartTime, cycle, playback.Generation));
+                        }
+                        if (activeCycle >= 0 && (activeCycle < cycle || to >= tree.Clip.EndTime || sample.EndsPlayback && cycle == sample.Cycle))
+                        {
+                            output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Exit, tree.Clip.EndTime, activeCycle, playback.Generation));
+                            activeCycle = -1;
+                        }
+                    }
+                    if (activeCycle >= 0)
+                    {
+                        var update = tree.Request(TimelineRuntimeTreeClipEventKind.Update, sample.Time, activeCycle, playback.Generation);
+                        if (sample.Reason != TimelinePresentationSampleReason.Paused)
+                            output.Add(update);
+                        state.Candidate.ActiveTreeClips.Add(update);
+                    }
+                }
+                state.PendingTreeCycles[index] = activeCycle;
+            }
+        }
+
         sealed class PresentationPlaybackState
         {
             public PresentationPlaybackState(TimelineRuntimePlayback playback)
@@ -574,8 +642,27 @@ namespace BTSMTL.Timeline.Runtime
                 Accepted = new TimelineRuntimePresentationBuffer(playback);
                 MarkerLastTraversal = new ulong[markerCount];
                 PendingMarkerLastTraversal = new ulong[markerCount];
+                var trees = new List<PresentationTree>();
+                for (int index = 0; index < playback.Content.Clips.Count; index++)
+                {
+                    TimelineContentClip clip = playback.Content.Clips[index];
+                    if (!clip.ExecutionPolicy.IsPresentation || clip.TrackMuted ||
+                        !TimelineRuntimeEvaluator.TryResolveTreeClip(playback.SourceTimeline, clip.AuthoringId, out TreeClip tree))
+                        continue;
+                    if (!TimelineRuntimeEvaluator.TryGetTreeContract(playback.Content, tree, out string graphId, out string revision))
+                        throw new InvalidOperationException("Presentation TreeClip has no prepared graph dependency.");
+                    trees.Add(new PresentationTree(tree, graphId, revision));
+                }
+                Trees = trees.ToArray();
+                TreeCycles = new int[Trees.Length];
+                PendingTreeCycles = new int[Trees.Length];
+                Array.Fill(TreeCycles, -1);
+                Array.Fill(PendingTreeCycles, -1);
             }
 
+            public readonly PresentationTree[] Trees;
+            public readonly int[] TreeCycles;
+            public readonly int[] PendingTreeCycles;
             public TimelineRuntimePresentationBuffer Candidate;
             public TimelineRuntimePresentationBuffer Accepted;
             public readonly ulong[] MarkerLastTraversal;
@@ -610,6 +697,8 @@ namespace BTSMTL.Timeline.Runtime
             {
                 Candidate.Clear();
                 Accepted.Clear();
+                Array.Fill(TreeCycles, -1);
+                Array.Fill(PendingTreeCycles, -1);
             }
 
         }

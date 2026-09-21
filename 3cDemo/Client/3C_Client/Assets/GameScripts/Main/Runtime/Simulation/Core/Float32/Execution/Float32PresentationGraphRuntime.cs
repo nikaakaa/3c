@@ -34,6 +34,12 @@ namespace ThirdPersonSimulation
         };
     }
 
+    public interface IFloat32PresentationGraphOutput
+    {
+        void SubmitCamera(string producer, in PresentationCameraRequest activation,
+            in PresentationCameraRequest retirement, bool retiring);
+    }
+
     public sealed class Float32PresentationGraphRuntime
     {
         readonly Float32GameplayAbilityExecutionData m_Data;
@@ -47,6 +53,13 @@ namespace ThirdPersonSimulation
         readonly OperationControlRuntime<Target> m_Control;
         Float32PresentationGraphFacts m_Facts;
         bool m_Executing;
+        IFloat32PresentationGraphOutput m_Output;
+        bool m_Retiring;
+        readonly string[] m_Callers;
+        readonly AbilityTreeClipHook[] m_Hooks;
+        readonly string[] m_Producers;
+        readonly PresentationCameraRequest[] m_Activations;
+        readonly PresentationCameraRequest[] m_Retirements;
 
         public Float32PresentationGraphRuntime(Float32GameplayAbilityExecutionData data)
         {
@@ -55,12 +68,18 @@ namespace ThirdPersonSimulation
             var entries = new List<ProgramSourceMapEntry>();
             foreach (ProgramSourceMapEntry source in data.SourceMap)
                 if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation &&
-                    source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker)
+                    (source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                     source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip))
                     entries.Add(source);
             if (entries.Count == 0)
-                throw new InvalidOperationException("The program contains no Presentation Marker entry.");
+                throw new InvalidOperationException("The program contains no Presentation graph entry.");
             m_Entries = entries.ToArray();
             m_GraphIds = new string[m_Entries.Length];
+            m_Callers = new string[m_Entries.Length];
+            m_Hooks = new AbilityTreeClipHook[m_Entries.Length];
+            m_Producers = new string[data.Operations.Count];
+            m_Activations = new PresentationCameraRequest[data.Operations.Count];
+            m_Retirements = new PresentationCameraRequest[data.Operations.Count];
             m_Defaults = new AbilityStateValue[data.StateSlots.Count];
             m_State = new AbilityStateValue[data.StateSlots.Count];
             m_Parameters = new bool[data.StateSlots.Count];
@@ -78,8 +97,15 @@ namespace ThirdPersonSimulation
             {
                 ProgramSourceMapEntry entry = m_Entries[index];
                 SimulationOperation entryOperation = m_Layout.Operation(new OperationHandle(entry.TargetIndex));
-                if (entryOperation.Code != SimulationOperationCode.TimelineEnter || entryOperation.Integer0 != (int)AbilityTreeClipHook.OnEnable)
-                    throw new InvalidOperationException("Presentation Marker binding must target its compiled OnEnable operation.");
+                m_Hooks[index] = entryOperation.Code == SimulationOperationCode.Root
+                    ? AbilityTreeClipHook.Root : entryOperation.Code == SimulationOperationCode.TimelineEnter
+                        ? (AbilityTreeClipHook)entryOperation.Integer0
+                        : throw new InvalidOperationException("Presentation graph binding must target a lifecycle entry.");
+                bool marker = entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker;
+                if (marker && m_Hooks[index] != AbilityTreeClipHook.OnEnable)
+                    throw new InvalidOperationException("Presentation Marker requires OnEnable.");
+                m_Callers[index] = marker ? entry.InvocationCallerId
+                    : entry.InvocationCallerId.Substring(0, entry.InvocationCallerId.LastIndexOf('/'));
                 m_GraphIds[index] = "tree:" + entry.GraphId;
                 capacity = Math.Max(capacity, PrepareOperation(new OperationHandle(entry.TargetIndex), visited, capacities));
             }
@@ -89,13 +115,15 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterSkillId AbilityId => m_Data.AbilityId;
-        public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision, out int binding)
+        public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision,
+            ProgramInvocationCallerKind callerKind, AbilityTreeClipHook hook, out int binding)
         {
             int match = -1;
             for (int index = 0; index < m_Entries.Length; index++)
             {
                 ProgramSourceMapEntry entry = m_Entries[index];
-                if (entry.ParentInvocationPath != parentInvocationPath || entry.InvocationCallerId != timelineNodeId ||
+                if (entry.ParentInvocationPath != parentInvocationPath || m_Callers[index] != timelineNodeId ||
+                    entry.InvocationCallerKind != callerKind || m_Hooks[index] != hook ||
                     entry.InvocationCallerClipId != markerId || m_GraphIds[index] != graphId || entry.ContentHash != revision)
                     continue;
                 if (match >= 0)
@@ -106,7 +134,7 @@ namespace ThirdPersonSimulation
             return match >= 0;
         }
 
-        public void Evaluate(int binding, in Float32PresentationGraphFacts facts)
+        public void Evaluate(int binding, in Float32PresentationGraphFacts facts, IFloat32PresentationGraphOutput output)
         {
             if (m_Executing)
                 throw new InvalidOperationException("Presentation graph evaluation is already active.");
@@ -114,6 +142,8 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Presentation Marker requires its current read-only fact frame.");
             ProgramSourceMapEntry entry = m_Entries[binding];
             m_Facts = facts;
+            m_Output = output;
+            m_Retiring = m_Hooks[binding] == AbilityTreeClipHook.OnDisable || m_Hooks[binding] == AbilityTreeClipHook.OnDestroy;
             m_Executing = true;
             Array.Copy(m_Defaults, m_State, m_State.Length);
             try
@@ -121,12 +151,13 @@ namespace ThirdPersonSimulation
                 m_Values.BeginEvaluation();
                 m_Control.BeginEvaluation();
                 OperationExecutionResult result = m_Control.Tick(new OperationHandle(entry.TargetIndex));
-                if (result != OperationExecutionResult.Success)
+                if (result != OperationExecutionResult.Success && result != OperationExecutionResult.Failure)
                     throw new InvalidOperationException($"Presentation Marker '{entry.InvocationCallerClipId}' did not complete its OnEnable graph: {result}.");
                 return;
             }
             finally
             {
+                m_Output = null;
                 m_Facts = default;
                 m_Executing = false;
             }
@@ -167,8 +198,19 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.Constant:
                     break;
                 case SimulationOperationCode.TimelineEnter:
-                    if (operation.Integer0 != (int)AbilityTreeClipHook.OnEnable)
-                        throw new InvalidOperationException("Presentation Marker only supports the OnEnable hook.");
+                    break;
+                case SimulationOperationCode.CameraStateRequest:
+                case SimulationOperationCode.CameraEffectRequest:
+                case SimulationOperationCode.CameraResponse:
+                case SimulationOperationCode.CameraTarget:
+                    ProgramReference producer = m_Layout.Topology.FirstReference(handle, ProgramReferenceKind.Producer);
+                    if (producer == null || string.IsNullOrWhiteSpace(producer.ExternalIdentity))
+                        throw new InvalidOperationException("Presentation Camera operation requires its compiled producer identity.");
+                    m_Producers[handle.Value] = producer.ExternalIdentity;
+                    m_Activations[handle.Value] = CameraProgramRequestFactory.Build(operation.Code, operation.Integer1,
+                        operation.Flags, PresentationCameraRequestLifecycle.Activate, new Float32CameraProgramConstantReader(m_Layout, handle));
+                    m_Retirements[handle.Value] = CameraProgramRequestFactory.Build(operation.Code, operation.Integer1,
+                        operation.Flags, PresentationCameraRequestLifecycle.Retire, new Float32CameraProgramConstantReader(m_Layout, handle));
                     break;
                 case SimulationOperationCode.CharacterStateRead:
                     if (!CharacterStateProviderFields.IsValid(operation.Text0))
@@ -179,7 +221,7 @@ namespace ThirdPersonSimulation
                     ParameterSlot(operation);
                     break;
                 default:
-                    throw new InvalidOperationException($"Operation '{m_Layout.SourcePath(handle)}' ({operation.Code}) cannot execute in a Presentation Marker.");
+                    throw new InvalidOperationException($"Operation '{m_Layout.SourcePath(handle)}' ({operation.Code}) cannot execute in a Presentation graph.");
             }
             foreach (int slot in operation.StateSlots)
                 m_Defaults[slot] = InitialValue(m_Data.StateSlots[slot]);
@@ -282,6 +324,15 @@ namespace ThirdPersonSimulation
                 SimulationOperation operation = m_Owner.m_Layout.Operation(descriptor.Handle);
                 switch (operation.Code)
                 {
+                    case SimulationOperationCode.CameraStateRequest:
+                    case SimulationOperationCode.CameraEffectRequest:
+                    case SimulationOperationCode.CameraResponse:
+                    case SimulationOperationCode.CameraTarget:
+                        if (m_Owner.m_Output == null)
+                            throw new InvalidOperationException("Presentation graph has no Camera output consumer.");
+                        m_Owner.m_Output.SubmitCamera(m_Owner.m_Producers[operation.Handle.Value],
+                            m_Owner.m_Activations[operation.Handle.Value], m_Owner.m_Retirements[operation.Handle.Value], m_Owner.m_Retiring);
+                        return OperationExecutionResult.Success;
                     case SimulationOperationCode.BlackboardSet:
                         m_Owner.m_Values.WriteParameter(cursor, operation);
                         return OperationExecutionResult.Success;

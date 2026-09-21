@@ -2683,3 +2683,11 @@
 - 下载进度不再触发 resource、network、memory 等无关分区重写；Fault Lab 事件只更新自己的结果文本，资源或内存状态变化仍由对应 snapshot 事件发布并刷新。`FormatBytes` 不再为每个字段生成中间字符串，直接向 builder 写整数和定点小数。
 - UI 只消费 Current 和 Changed，不读取四类 History；`History` 继续返回 owner 的 bounded 只读视图。Unity `Text.text` 最终展示串仍会分配，属于 tasks.md 7.1 的字符串构造边界；本步没有引入 fallback、兼容路径或新控制面。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 资源内部记录池化
+
+对应 tasks.md 的 6.2，新增 6.9 作为独立小步；6.2 保持未勾选。
+
+- `ProductResourceRuntime` 每次 acquire 或 instantiate 都新建 `LeaseRecord`／`InstanceRecord`，release 后把对象丢给 GC。现在 runtime 持有两条内部 free stack，acquire 成功注册前租用记录，release 从字典摘除、卸载或销毁正式资源、清空 scope／identity／asset 后归还。池容量自然等于历史最高并发记录数。
+- 只池化 runtime 内部所有权记录；`ResourceLease` 和 `ResourceInstanceLease` 仍独立分配，避免外部保存的旧 lease 别名在复用后指向新 leaseId。`InFlightLoad`、linked `CancellationTokenSource`、异步状态机、TEngine 加载和 GameObject 实例分配也不在本步范围。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

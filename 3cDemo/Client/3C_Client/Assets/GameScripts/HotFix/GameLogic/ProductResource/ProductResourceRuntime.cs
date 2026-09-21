@@ -43,6 +43,8 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
+        private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
+        private readonly Stack<InstanceRecord> _instanceRecordPool = new Stack<InstanceRecord>();
         private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
@@ -130,12 +132,11 @@ namespace GameLogic.ProductResource
                         throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before lease commit.", linked.Token);
                     }
 
-                    _leases.Add(leaseId, new LeaseRecord
-                    {
-                        Scope = scope,
-                        Identity = identity,
-                        Asset = asset
-                    });
+                    LeaseRecord leaseRecord = RentLeaseRecord();
+                    leaseRecord.Scope = scope;
+                    leaseRecord.Identity = identity;
+                    leaseRecord.Asset = asset;
+                    _leases.Add(leaseId, leaseRecord);
                     AddOwnedReference(identity);
                     var lease = new ResourceLease(this, leaseId, scope.Id, identity, asset);
                     PublishSnapshot();
@@ -185,12 +186,11 @@ namespace GameLogic.ProductResource
                         throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before instance commit.", linked.Token);
                     }
 
-                    _instances.Add(instanceId, new InstanceRecord
-                    {
-                        Scope = scope,
-                        Identity = identity,
-                        Instance = instance
-                    });
+                    InstanceRecord instanceRecord = RentInstanceRecord();
+                    instanceRecord.Scope = scope;
+                    instanceRecord.Identity = identity;
+                    instanceRecord.Instance = instance;
+                    _instances.Add(instanceId, instanceRecord);
                     AddOwnedReference(identity);
                     var lease = new ResourceInstanceLease(this, instanceId, scope.Id, identity, instance);
                     PublishSnapshot();
@@ -318,6 +318,7 @@ namespace GameLogic.ProductResource
             record.Scope.RemoveLease(leaseId);
             RemoveOwnedReference(record.Identity);
             _resourceModule.UnloadAsset(record.Asset);
+            ReturnLeaseRecord(record);
             if (!_disposed)
             {
                 PublishSnapshot();
@@ -342,6 +343,7 @@ namespace GameLogic.ProductResource
                 Object.Destroy(record.Instance);
             }
 
+            ReturnInstanceRecord(record);
             if (!_disposed)
             {
                 PublishSnapshot();
@@ -380,6 +382,32 @@ namespace GameLogic.ProductResource
             var scope = new ResourceScope(this, new ResourceScopeId(++_nextScopeId), kind, name);
             _scopes.Add(scope.Id, scope);
             return scope;
+        }
+
+        private LeaseRecord RentLeaseRecord()
+        {
+            return _leaseRecordPool.Count > 0 ? _leaseRecordPool.Pop() : new LeaseRecord();
+        }
+
+        private void ReturnLeaseRecord(LeaseRecord record)
+        {
+            record.Scope = null;
+            record.Identity = default;
+            record.Asset = null;
+            _leaseRecordPool.Push(record);
+        }
+
+        private InstanceRecord RentInstanceRecord()
+        {
+            return _instanceRecordPool.Count > 0 ? _instanceRecordPool.Pop() : new InstanceRecord();
+        }
+
+        private void ReturnInstanceRecord(InstanceRecord record)
+        {
+            record.Scope = null;
+            record.Identity = default;
+            record.Instance = null;
+            _instanceRecordPool.Push(record);
         }
 
         private void ValidateActiveScope(ResourceScope scope)

@@ -2147,6 +2147,14 @@
 - 将三只集合改为构造阶段按 `SourceCapacity` 预分配，删除首个运行帧因动态增长产生的托管数组分配；每帧仍只清空并复用集合，不改变 Timeline／Motion Matching source 去重、request 顺序、source preparation 或 ResetFrame。
 - `ThirdPersonClient.Runtime.csproj` 当前完整编译受用户现有删除的 `Timeline.ActionCue.cs` 阻断，生成 csproj 仍引用该文件并产生 `CS2001`；本步未触碰该文件，待工作区现有删除收口后再执行完整编译确认。未新增测试、未操作共享 Unity、未做 Blend source 分配采样。
 
+## 2026-09-21 Pose Action command 工作区复用
+
+对应 tasks.md 的 7.33。
+
+- `CharacterPoseNativeActionCommandSource` 原先在每次 `BeginFrame` 按 Inbox 当前数量新建命令数组；Inbox 已有固定容量和读租约，改为实例创建时建立同容量 `FixedCapacityFrameBuffer`。
+- 每帧只清空、按原 Inbox 顺序填入命令，失效 frame 仍返回空数组；Commit、Discard、lease identity 和命令读取结果保持不变，删除 steady-state 命令数组分配。
+- `ThirdPersonClient.Runtime.csproj` 当前完整编译仍受用户现有删除的 `Timeline.ActionCue.cs` 阻断，生成 csproj 产生 `CS2001`；本步未修改 Inbox 或 Timeline 文件。未新增测试、未操作共享 Unity、未做命令分配采样。
+
 ## 2026-09-21 SourceCatalog 死接口清理
 
 对应 tasks.md 的 7.29。

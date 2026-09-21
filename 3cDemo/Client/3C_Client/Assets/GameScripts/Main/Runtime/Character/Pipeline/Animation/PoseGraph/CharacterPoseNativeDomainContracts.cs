@@ -24,8 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly ActionPlaybackCommandInbox m_Inbox;
         readonly ActorId m_ActorId;
+        readonly FixedCapacityFrameBuffer<ActionAnimationPlaybackCommand> m_Commands;
         ActionPlaybackInboxReadLease m_Lease;
-        IReadOnlyList<ActionAnimationPlaybackCommand> m_Commands = Array.Empty<ActionAnimationPlaybackCommand>();
         ulong m_FrameIdentity;
 
         internal CharacterPoseNativeActionCommandSource(
@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Pose Action command Actor identity is invalid.", nameof(actorId));
             m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
             m_ActorId = actorId;
+            m_Commands = new FixedCapacityFrameBuffer<ActionAnimationPlaybackCommand>(inbox.Capacity);
         }
 
         public void BeginFrame(ulong frameIdentity)
@@ -45,10 +46,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Lease.IsValid)
                 throw new InvalidOperationException("Pose Action command frame is already open.");
             m_Lease = m_Inbox.BeginRead();
-            var commands = new ActionAnimationPlaybackCommand[m_Inbox.Count];
+            m_Commands.Clear();
             for (int i = 0; i < m_Inbox.Count; i++)
-                commands[i] = m_Inbox[i].Command;
-            m_Commands = commands;
+            {
+                ActionAnimationPlaybackCommand command = m_Inbox[i].Command;
+                m_Commands.Add(in command);
+            }
             m_FrameIdentity = frameIdentity;
         }
 
@@ -91,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_Lease = default;
-            m_Commands = Array.Empty<ActionAnimationPlaybackCommand>();
+            m_Commands.Clear();
             m_FrameIdentity = 0;
         }
     }

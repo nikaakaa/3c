@@ -10,23 +10,6 @@ namespace ThirdPersonSimulation.Fixed
         void StopFromControl(CharacterControlAbilityStopRequest request);
     }
 
-    internal sealed class FixedAbilityInvocationResult
-    {
-        public FixedAbilityInvocationResult(
-            IReadOnlyList<GameplayFact> gameplayFacts,
-            IReadOnlyList<PresentationCommand> presentationCommands,
-            IReadOnlyList<SimulationTraceRecord> traceRecords)
-        {
-            GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
-            PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
-            TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
-        }
-
-        public IReadOnlyList<GameplayFact> GameplayFacts { get; }
-        public IReadOnlyList<PresentationCommand> PresentationCommands { get; }
-        public IReadOnlyList<SimulationTraceRecord> TraceRecords { get; }
-    }
-
     internal interface IFixedAbilityExecutionServiceFactory
     {
         FixedAbilityExecutionAssembly Create(
@@ -234,19 +217,26 @@ namespace ThirdPersonSimulation.Fixed
             m_Domain.Tick();
         }
 
-        public FixedAbilityInvocationResult Complete()
+        public void Complete(
+            List<GameplayFact> gameplayFacts,
+            List<PresentationCommand> presentationCommands,
+            List<SimulationTraceRecord> traceRecords)
         {
             RequireEvaluation();
             if (m_Completed)
                 throw new InvalidOperationException("Fixed Ability invocation has already completed.");
+            if (gameplayFacts == null)
+                throw new ArgumentNullException(nameof(gameplayFacts));
+            if (presentationCommands == null)
+                throw new ArgumentNullException(nameof(presentationCommands));
+            if (traceRecords == null)
+                throw new ArgumentNullException(nameof(traceRecords));
             m_Control.EndEvaluation();
-            var result = new FixedAbilityInvocationResult(
-                new List<GameplayFact>(m_Workspace.Facts),
-                new List<PresentationCommand>(m_Workspace.Presentation),
-                new List<SimulationTraceRecord>(m_Workspace.Trace));
+            gameplayFacts.AddRange(m_Workspace.Facts);
+            presentationCommands.AddRange(m_Workspace.Presentation);
+            traceRecords.AddRange(m_Workspace.Trace);
             m_Frame.End();
             m_Completed = true;
-            return result;
         }
 
         public void Accept(Action<IFixedSkillExecutionState> acceptAbility)

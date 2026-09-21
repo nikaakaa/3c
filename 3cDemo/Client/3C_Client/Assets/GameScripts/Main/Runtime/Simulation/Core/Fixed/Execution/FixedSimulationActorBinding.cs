@@ -35,6 +35,9 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
+            TimelineMotionReader = timelineRuntime is IAbilityTimelineLogicMotionReader motionReader
+                ? motionReader
+                : throw new ArgumentException("Fixed Timeline runtime must expose pending logic motion.", nameof(timelineRuntime));
             StateSchemaHash = ComputeStateSchemaHash(
                 controlRuntimeBinding,
                 gameplayEffectRuntimeBinding,
@@ -55,6 +58,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public IAbilityTimelineRuntime TimelineRuntime { get; }
+        public IAbilityTimelineLogicMotionReader TimelineMotionReader { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash StateSchemaHash { get; }
         public StableHash GameplayContentHash { get; }

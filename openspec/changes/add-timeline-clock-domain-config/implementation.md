@@ -703,3 +703,10 @@
 - 闭包使用 Clip / Section 的 `FixedScalar` 时间和 Marker 的 `Time.Raw` 计算内容 hash；authoring fingerprint 序列化 raw 秒 `TimelineData`。`CharacterTimelineContentExport` 只携带 TimelineData 克隆、authoring revision 和 content revision，没有 tick 版作者内容。因此 0.3 勾选。
 - 对应 0.4：`TimelineRuntimeService.CreateAdvanceRequest` 用播放控制的 `Rate` / `Paused`、当前 `CursorTime`、`TimeCarry` 和 tick 数计算目标 raw 秒与舍入余数；暂停时保持游标和余数不变。`TimelineRuntimePlayback.Advance` 只写候选，Commit 才替换 cursor、cycle、control、Section、活动片段和求值缓冲。
 - `AbilityTimelineProgress` 携带前后秒、cycle、generation、logic tick、内容和终态；Fixed / Float 的 `CharacterEvaluationResult.Consume` 在同一事务里提交 Timeline pending、Capture 成 `AbilityTimelineRuntimeSnapshot` 并替换候选角色状态，Discard 则不提交。循环按绝对秒推进 cycle，未退出的 Decision TreeClip 会阻止自然完成，边界由预分配 `CollectBoundaries` 生成。因此 0.4 勾选。
+
+## Timeline Motion输出接入原Simulation Motion域
+
+- 对应 0.5：Timeline pending advance 中的秒制 `MotionContributions` 不再丢失。Core 新增中立的 `AbilityTimelineLogicMotion` 合同，携带 source、AbilityId、位移分量、yaw、weight、priority、space、channel、blend和lower-channel消费标记；`CharacterTimelineHost.CopyPendingTimelineMotion` 在 pending 仍可接受时复制结果，并显式拒绝 Timeline locomotion 通道进入 Ability motion 域。
+- Fixed / Float Actor binding 暴露同一个 motion reader。Character evaluation 在 invocation Tick 后、`ResolveMotion` 前读取 pending Timeline motion，转换成原有 `SimulationMotionContribution`；后续 motion 合成、facts、presentation、trace、Accept、Commit / Discard仍走原事务。不新建第二 motion resolver，也不提前提交 Timeline私有状态。
+- Runtime 的 `TimelineRuntimeMotionWarpRequest` 与 `TimelineRuntimeScenePresentationSample` 从 `Frame` 改为 `FixedScalar Time`；Logic / Presentation采样直接传当前秒制位置，删除采样前按 60 作者帧量化。调用方没有读取旧 `Frame` 的残留。
+- `ThirdPersonClient.Runtime.csproj` 编译通过：17 warnings、0 errors；已执行 `dotnet build-server shutdown`。0.5仍不勾选，因为 `MotionWarps` 还未接入原 Motion / Warp owner，旧 Program `TimelineMotionCurve / TimelineMotionWarp` 合同和帧字段链也尚未删除。

@@ -47,8 +47,7 @@ namespace ThirdPersonSimulation
         CompleteProducer = 3,
         ReleaseProducer = 4,
         Camera = 5,
-        Cue = 6,
-        ForceProducer = 7
+        ForceProducer = 6
     }
 
     public enum TimelineTraceSeverity : byte
@@ -105,6 +104,80 @@ namespace ThirdPersonSimulation
             SkillExecutionGeneration == other.SkillExecutionGeneration;
 
         public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey, SkillId, SkillEntryOperation, SkillExecutionGeneration);
+    }
+
+    public enum AbilityTimelineMotionChannel : byte
+    {
+        Action = 1,
+        GameplayResult = 2
+    }
+
+    public enum AbilityTimelineMotionSpace : byte
+    {
+        ActorLocal = 0,
+        World = 1
+    }
+
+    public enum AbilityTimelineMotionBlendMode : byte
+    {
+        Additive = 0,
+        WeightedBlend = 1,
+        Override = 2
+    }
+
+    public readonly struct AbilityTimelineLogicMotion
+    {
+        public AbilityTimelineLogicMotion(
+            SimulationExecutionSource source,
+            CharacterSkillId abilityId,
+            FixedScalar displacementX,
+            FixedScalar displacementY,
+            FixedScalar displacementZ,
+            FixedScalar yawDegrees,
+            FixedScalar weight,
+            int priority,
+            AbilityTimelineMotionSpace space,
+            AbilityTimelineMotionChannel channel,
+            AbilityTimelineMotionBlendMode blendMode,
+            bool consumeLowerChannels)
+        {
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline motion requires a valid source.", nameof(source));
+            if (!abilityId.IsValid)
+                throw new ArgumentException("Timeline motion requires an Ability identity.", nameof(abilityId));
+            if (weight < FixedScalar.Zero || weight > FixedScalar.One)
+                throw new ArgumentOutOfRangeException(nameof(weight));
+            Source = source;
+            AbilityId = abilityId;
+            DisplacementX = displacementX;
+            DisplacementY = displacementY;
+            DisplacementZ = displacementZ;
+            YawDegrees = yawDegrees;
+            Weight = weight;
+            Priority = priority;
+            Space = space;
+            Channel = channel;
+            BlendMode = blendMode;
+            ConsumeLowerChannels = consumeLowerChannels;
+        }
+
+        public SimulationExecutionSource Source { get; }
+        public CharacterSkillId AbilityId { get; }
+        public FixedScalar DisplacementX { get; }
+        public FixedScalar DisplacementY { get; }
+        public FixedScalar DisplacementZ { get; }
+        public FixedScalar YawDegrees { get; }
+        public FixedScalar Weight { get; }
+        public int Priority { get; }
+        public AbilityTimelineMotionSpace Space { get; }
+        public AbilityTimelineMotionChannel Channel { get; }
+        public AbilityTimelineMotionBlendMode BlendMode { get; }
+        public bool ConsumeLowerChannels { get; }
+    }
+
+    public interface IAbilityTimelineLogicMotionReader
+    {
+        void CopyPendingMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results);
     }
 
     public readonly struct AbilityTimelineInvocationSource
@@ -386,43 +459,7 @@ namespace ThirdPersonSimulation
             kind == TimelinePresentationOutputKind.CompleteProducer ||
             kind == TimelinePresentationOutputKind.ReleaseProducer ||
             kind == TimelinePresentationOutputKind.Camera ||
-            kind == TimelinePresentationOutputKind.Cue ||
             kind == TimelinePresentationOutputKind.ForceProducer;
-    }
-
-    public readonly struct TimelineCueOutput<TTime>
-        where TTime : struct
-    {
-        public TimelineCueOutput(
-            OperationHandle operation,
-            SimulationExecutionSource source,
-            TTime sampleTime,
-            int cycle,
-            ulong producerGeneration,
-            ulong sourceActionInstanceId)
-        {
-            if (!operation.IsValid)
-                throw new ArgumentException("Timeline cue output requires a valid operation.", nameof(operation));
-            if (!source.IsValid)
-                throw new ArgumentException("Timeline cue output source is invalid.", nameof(source));
-            if (producerGeneration == 0)
-                throw new ArgumentOutOfRangeException(nameof(producerGeneration));
-            if (cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(cycle));
-            Operation = operation;
-            Source = source;
-            SampleTime = sampleTime;
-            Cycle = cycle;
-            ProducerGeneration = producerGeneration;
-            SourceActionInstanceId = sourceActionInstanceId;
-        }
-
-        public OperationHandle Operation { get; }
-        public SimulationExecutionSource Source { get; }
-        public TTime SampleTime { get; }
-        public int Cycle { get; }
-        public ulong ProducerGeneration { get; }
-        public ulong SourceActionInstanceId { get; }
     }
 
     public readonly struct TimelineTraceOutput
@@ -926,4 +963,3 @@ namespace ThirdPersonSimulation
 
 
 }
-

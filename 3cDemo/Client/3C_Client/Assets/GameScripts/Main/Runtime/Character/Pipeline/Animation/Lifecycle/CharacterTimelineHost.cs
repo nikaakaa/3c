@@ -1140,6 +1140,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
 
+        internal void CopyPendingTimelineMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results)
+        {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            results.Clear();
+            if (!m_PendingAdvances.TryGetValue((ulong)runtimeHandle, out CharacterTimelinePendingAdvance pending) ||
+                !pending.Result.IsValid)
+                return;
+            ActivePlayback active = default;
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                if (m_ActivePlaybacks[index].Handle.Value == pending.Handle.Value)
+                {
+                    active = m_ActivePlaybacks[index];
+                    break;
+                }
+            }
+            if (active.Handle.Value != pending.Handle.Value || !active.Provenance.HasProgramInvocation)
+                throw new InvalidOperationException($"Timeline motion '{pending.Handle.Value}' has no Ability invocation provenance.");
+            var source = SimulationExecutionSource.FromSkillOperation(
+                new OperationHandle(active.Provenance.SourceOperationIndex),
+                active.Provenance.SourceInvocationPath);
+            TimelineRuntimeSampleView<TimelineMotionCurveContribution> contributions =
+                pending.Result.Evaluation.MotionContributions;
+            for (int index = 0; index < contributions.Count; index++)
+            {
+                TimelineMotionCurveContribution contribution = contributions[index];
+                results.Add(new AbilityTimelineLogicMotion(
+                    source,
+                    new CharacterSkillId(active.ActionContext.ActionId),
+                    FixedScalar.FromSingle(contribution.Displacement.x),
+                    FixedScalar.FromSingle(contribution.Displacement.y),
+                    FixedScalar.FromSingle(contribution.Displacement.z),
+                    FixedScalar.FromSingle(contribution.YawDegrees),
+                    FixedScalar.FromSingle(contribution.Weight),
+                    contribution.Priority,
+                    MapMotionSpace(contribution.Space),
+                    MapMotionChannel(contribution.Channel),
+                    MapMotionBlendMode(contribution.BlendMode),
+                    contribution.ConsumeLowerChannels));
+            }
+        }
+
+        static AbilityTimelineMotionChannel MapMotionChannel(TimelineMotionChannel channel)
+        {
+            return channel switch
+            {
+                TimelineMotionChannel.Action => AbilityTimelineMotionChannel.Action,
+                TimelineMotionChannel.GameplayResult => AbilityTimelineMotionChannel.GameplayResult,
+                _ => throw new InvalidOperationException($"Timeline locomotion output cannot enter the Ability motion domain: {channel}.")
+            };
+        }
+
+        static AbilityTimelineMotionSpace MapMotionSpace(TimelineMotionContributionSpace space)
+        {
+            return space switch
+            {
+                TimelineMotionContributionSpace.Local => AbilityTimelineMotionSpace.ActorLocal,
+                TimelineMotionContributionSpace.World => AbilityTimelineMotionSpace.World,
+                _ => throw new InvalidOperationException($"Timeline motion space '{space}' is not supported.")
+            };
+        }
+
+        static AbilityTimelineMotionBlendMode MapMotionBlendMode(TimelineMotionBlendMode mode) =>
+            (AbilityTimelineMotionBlendMode)mode;
+
         internal bool IsAbilityRuntimePlayback(TimelineRuntimePlaybackHandle handle)
         {
             for (int i = 0; i < m_ActivePlaybacks.Count; i++)

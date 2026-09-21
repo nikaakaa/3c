@@ -42,6 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
+            var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
             var timelineStops = new List<AbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
@@ -140,15 +141,18 @@ namespace ThirdPersonSimulation.Fixed
                     motionContributions.AddRange(invocation.MotionContributions);
                 }
 
+                for (int i = 0; i < timelineAdvances.Count; i++)
+                    actor.TimelineMotionReader.CopyPendingMotion(
+                        timelineAdvances[i].RuntimeHandle,
+                        timelineLogicMotion);
+                AppendTimelineMotion(motionContributions, timelineLogicMotion);
+
                 ResolvedGameplayMotion gameplayMotion = ResolveMotion(
                     motionContributions, beforeBody.Yaw, invocations, characterTraceSink);
                 for (int i = 0; i < invocations.Count; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
-                    FixedAbilityInvocationResult result = invocation.Complete();
-                    facts.AddRange(result.GameplayFacts);
-                    presentation.AddRange(result.PresentationCommands);
-                    trace.AddRange(result.TraceRecords);
+                    invocation.Complete(facts, presentation, trace);
                     invocation.Accept(roleState.AcceptAbility);
                 }
                 trace.AddRange(characterTrace);
@@ -322,6 +326,30 @@ namespace ThirdPersonSimulation.Fixed
                     $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FixedCharacterMotionResolver.FormatMovementClock(motion.MovementPlaybackClock)}",
                     MotionSourceGeneration(source, invocations));
             return motion;
+        }
+
+        static void AppendTimelineMotion(
+            List<SimulationMotionContribution> contributions,
+            IReadOnlyList<AbilityTimelineLogicMotion> timelineMotion)
+        {
+            for (int i = 0; i < timelineMotion.Count; i++)
+            {
+                AbilityTimelineLogicMotion value = timelineMotion[i];
+                contributions.Add(new SimulationMotionContribution(
+                    value.Source,
+                    value.AbilityId,
+                    new FixedVector3(value.DisplacementX, value.DisplacementY, value.DisplacementZ),
+                    value.YawDegrees,
+                    FixedVector2.Zero,
+                    (SimulationMotionContributionSpace)value.Space,
+                    value.Weight,
+                    value.Priority,
+                    (SimulationMotionChannel)value.Channel,
+                    (SimulationMotionBlendMode)value.BlendMode,
+                    value.ConsumeLowerChannels,
+                    default,
+                    default));
+            }
         }
 
         static void TraceMotionChannel(

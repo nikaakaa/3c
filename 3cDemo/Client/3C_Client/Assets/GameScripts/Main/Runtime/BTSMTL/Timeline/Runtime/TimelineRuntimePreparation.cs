@@ -1307,7 +1307,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineBindingValueKind valueKind,
             float value,
             float normalizedTime,
-            int frame,
+            FixedScalar time,
             int cycle,
             TimelineExecutionIdentity executionIdentity,
             ulong generation)
@@ -1318,7 +1318,7 @@ namespace BTSMTL.Timeline.Runtime
             ValueKind = valueKind;
             Value = value;
             NormalizedTime = Mathf.Clamp01(normalizedTime);
-            Frame = frame;
+            Time = time;
             Cycle = cycle;
             ExecutionIdentity = executionIdentity;
             Generation = generation;
@@ -1330,7 +1330,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineBindingValueKind ValueKind { get; }
         public float Value { get; }
         public float NormalizedTime { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public int Cycle { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public ulong Generation { get; }
@@ -1341,7 +1341,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeMotionWarpRequest(
             string clipAuthoringId,
             string sourceMotionClipId,
-            int frame,
+            FixedScalar time,
             int cycle,
             float previousNormalizedTime,
             float normalizedTime,
@@ -1358,7 +1358,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             ClipAuthoringId = clipAuthoringId ?? string.Empty;
             SourceMotionClipId = sourceMotionClipId ?? string.Empty;
-            Frame = frame;
+            Time = time;
             Cycle = cycle;
             PreviousNormalizedTime = Mathf.Clamp01(previousNormalizedTime);
             NormalizedTime = Mathf.Clamp01(normalizedTime);
@@ -1376,7 +1376,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public string ClipAuthoringId { get; }
         public string SourceMotionClipId { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public int Cycle { get; }
         public float PreviousNormalizedTime { get; }
         public float NormalizedTime { get; }
@@ -1456,10 +1456,8 @@ namespace BTSMTL.Timeline.Runtime
             AnimationContributions = storage.AnimationContributions.View;
             MotionContributions = storage.MotionContributions.View;
             CameraStates = storage.CameraStates.View;
-            CameraCues = storage.CameraCues.View;
             CameraResponses = storage.CameraResponses.View;
             CameraResources = storage.CameraResources.View;
-            ActionCues = storage.ActionCues.View;
             TreeClips = storage.TreeClips.View;
             Markers = storage.Markers.View;
             ScenePresentation = storage.ScenePresentation.View;
@@ -1471,10 +1469,8 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeSampleView<TimelineAnimationContribution> AnimationContributions { get; }
         public TimelineRuntimeSampleView<TimelineMotionCurveContribution> MotionContributions { get; }
         public TimelineRuntimeSampleView<TimelineCameraStateSample> CameraStates { get; }
-        public TimelineRuntimeSampleView<TimelineCameraCueSample> CameraCues { get; }
         public TimelineRuntimeSampleView<TimelineCameraResponseSample> CameraResponses { get; }
         public TimelineRuntimeSampleView<TimelineCameraResourceSample> CameraResources { get; }
-        public TimelineRuntimeSampleView<TimelineActionCueSample> ActionCues { get; }
         public TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> TreeClips { get; }
         public TimelineRuntimeSampleView<TimelineRuntimeMarkerRequest> Markers { get; }
         public TimelineRuntimeSampleView<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
@@ -1487,8 +1483,8 @@ namespace BTSMTL.Timeline.Runtime
     {
         public TimelineRuntimeEvaluationStorage(TimelineRuntimePlayback playback)
         {
-            int animations = 0, motions = 0, cameraStates = 0, cameraCues = 0;
-            int cameraResponses = 0, cameraResources = 0, actionCues = 0, treeClips = 0;
+            int animations = 0, motions = 0, cameraStates = 0;
+            int cameraResponses = 0, cameraResources = 0, treeClips = 0;
             int markers = 0, scenePresentation = 0, motionWarps = 0, clips = 0;
             TimelineData timeline = playback.SourceTimeline;
             for (int index = 0; index < timeline.Tracks.Count; index++)
@@ -1503,10 +1499,8 @@ namespace BTSMTL.Timeline.Runtime
                     case AnimationTrack: animations = checked(animations + count); break;
                     case MotionCurveTrack: motions = checked(motions + count); break;
                     case CameraStateTrack: cameraStates = checked(cameraStates + count); break;
-                    case CameraCueTrack: cameraCues = checked(cameraCues + count); break;
                     case CameraResponseTrack: cameraResponses = checked(cameraResponses + count); break;
                     case CameraEffectTrack: cameraResources = checked(cameraResources + count); break;
-                    case ActionCueTrack: actionCues = checked(actionCues + count); break;
                     case TreeTrack: treeClips = checked(treeClips + count); break;
                     case ScenePresentationParameterTrack: scenePresentation = checked(scenePresentation + count); break;
                     case MotionWarpTrack: motionWarps = checked(motionWarps + count); break;
@@ -1526,10 +1520,8 @@ namespace BTSMTL.Timeline.Runtime
             AnimationContributions = new(checked(animations * traversals));
             MotionContributions = new(checked(motions * traversals));
             CameraStates = new(checked(cameraStates));
-            CameraCues = new(checked(cameraCues * traversals));
             CameraResponses = new(checked(cameraResponses));
             CameraResources = new(checked(cameraResources));
-            ActionCues = new(checked(actionCues * traversals));
             TreeClips = new(checked(treeClips * lifecycleSamples));
             Markers = new(checked(markers * traversals));
             ScenePresentation = new(checked(scenePresentation));
@@ -1543,10 +1535,8 @@ namespace BTSMTL.Timeline.Runtime
         public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> AnimationContributions;
         public readonly TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> MotionContributions;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraStateSample> CameraStates;
-        public readonly TimelineRuntimeSampleBuffer<TimelineCameraCueSample> CameraCues;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> CameraResponses;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> CameraResources;
-        public readonly TimelineRuntimeSampleBuffer<TimelineActionCueSample> ActionCues;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> TreeClips;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeMarkerRequest> Markers;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> ScenePresentation;
@@ -1561,10 +1551,8 @@ namespace BTSMTL.Timeline.Runtime
             AnimationContributions.Clear();
             MotionContributions.Clear();
             CameraStates.Clear();
-            CameraCues.Clear();
             CameraResponses.Clear();
             CameraResources.Clear();
-            ActionCues.Clear();
             TreeClips.Clear();
             Markers.Clear();
             ScenePresentation.Clear();
@@ -1657,7 +1645,7 @@ namespace BTSMTL.Timeline.Runtime
     {
         public TimelineRuntimePresentationBuffer(TimelineRuntimePlayback playback)
         {
-            int animations = 0, states = 0, cues = 0, responses = 0, resources = 0, scene = 0, markers = 0;
+            int animations = 0, states = 0, responses = 0, resources = 0, scene = 0, markers = 0;
             TimelineData timeline = playback.SourceTimeline;
             for (int index = 0; index < timeline.Tracks.Count; index++)
             {
@@ -1669,7 +1657,6 @@ namespace BTSMTL.Timeline.Runtime
                 {
                     case AnimationTrack: animations = checked(animations + count); break;
                     case CameraStateTrack: states = checked(states + count); break;
-                    case CameraCueTrack: cues = checked(cues + count); break;
                     case CameraResponseTrack: responses = checked(responses + count); break;
                     case CameraEffectTrack: resources = checked(resources + count); break;
                     case ScenePresentationParameterTrack: scene = checked(scene + count); break;
@@ -1685,7 +1672,6 @@ namespace BTSMTL.Timeline.Runtime
                 ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
             Animations = new(animations);
             CameraStates = new(states);
-            CameraCues = new(checked(cues * traversals));
             CameraResponses = new(responses);
             CameraResources = new(resources);
             ScenePresentation = new(scene);
@@ -1694,7 +1680,6 @@ namespace BTSMTL.Timeline.Runtime
 
         public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> Animations;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraStateSample> CameraStates;
-        public readonly TimelineRuntimeSampleBuffer<TimelineCameraCueSample> CameraCues;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> CameraResponses;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> CameraResources;
         public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> ScenePresentation;
@@ -1704,7 +1689,6 @@ namespace BTSMTL.Timeline.Runtime
         {
             Animations.Clear();
             CameraStates.Clear();
-            CameraCues.Clear();
             CameraResponses.Clear();
             CameraResources.Clear();
             ScenePresentation.Clear();
@@ -1718,7 +1702,6 @@ namespace BTSMTL.Timeline.Runtime
         {
             AnimationContributions = buffer.Animations.View;
             CameraStates = buffer.CameraStates.View;
-            CameraCues = buffer.CameraCues.View;
             CameraResponses = buffer.CameraResponses.View;
             CameraResources = buffer.CameraResources.View;
             ScenePresentation = buffer.ScenePresentation.View;
@@ -1726,7 +1709,6 @@ namespace BTSMTL.Timeline.Runtime
 
         public TimelineRuntimeSampleView<TimelineAnimationContribution> AnimationContributions { get; }
         public TimelineRuntimeSampleView<TimelineCameraStateSample> CameraStates { get; }
-        public TimelineRuntimeSampleView<TimelineCameraCueSample> CameraCues { get; }
         public TimelineRuntimeSampleView<TimelineCameraResponseSample> CameraResponses { get; }
         public TimelineRuntimeSampleView<TimelineCameraResourceSample> CameraResources { get; }
         public TimelineRuntimeSampleView<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
@@ -1874,14 +1856,11 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(timeline));
             if (content == null)
                 throw new ArgumentNullException(nameof(content));
-            int frameRate = Math.Max(1, content.FrameRate);
             TimelineRuntimeSampleBuffer<TimelineAnimationContribution> animations = storage.AnimationContributions;
             TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> motions = storage.MotionContributions;
             TimelineRuntimeSampleBuffer<TimelineCameraStateSample> cameraStates = storage.CameraStates;
-            TimelineRuntimeSampleBuffer<TimelineCameraCueSample> cameraCues = storage.CameraCues;
             TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> cameraResponses = storage.CameraResponses;
             TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> cameraResources = storage.CameraResources;
-            TimelineRuntimeSampleBuffer<TimelineActionCueSample> actionCues = storage.ActionCues;
             TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> treeClips = storage.TreeClips;
             TimelineRuntimeSampleBuffer<TimelineRuntimeMarkerRequest> markers = storage.Markers;
             TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> scenePresentation = storage.ScenePresentation;
@@ -1934,27 +1913,6 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.Name,
                             motions);
                     }
-                    else if (track is CameraCueTrack cameraCueTrack)
-                    {
-                        cameraCueTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
-                            timeline.AuthoringId,
-                            timeline.Name,
-                            cameraCues,
-                            segment.Cycle,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0);
-                    }
-                    else if (track is ActionCueTrack actionCueTrack)
-                    {
-                        actionCueTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
-                            timeline.AuthoringId,
-                            timeline.Name,
-                            actionCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0);
-                    }
                     else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
                     {
                         for (int clipIndex = 0; clipIndex < motionWarpTrack.Clips.Count; clipIndex++)
@@ -1972,7 +1930,7 @@ namespace BTSMTL.Timeline.Runtime
                             motionWarps.Add(new TimelineRuntimeMotionWarpRequest(
                                 motionWarpClip.AuthoringId,
                                 motionWarpClip.SourceMotionClipId,
-                                TimelineTimeGrid.NearestIndex(segment.CurrentTime, frameRate),
+                                segment.CurrentTime,
                                 segment.Cycle,
                                 previousNormalized,
                                 normalized,
@@ -2071,7 +2029,7 @@ namespace BTSMTL.Timeline.Runtime
                         clip.ParameterValueKind,
                         clip.ValueCurve.Evaluate(local),
                         local,
-                        TimelineTimeGrid.NearestIndex(currentPosition, frameRate),
+                        currentTime,
                         currentCycle,
                         executionIdentity,
                         generation));
@@ -2365,11 +2323,9 @@ namespace BTSMTL.Timeline.Runtime
             if (playback == null)
                 throw new ArgumentNullException(nameof(playback));
             TimelineData timeline = playback.SourceTimeline;
-            int frameRate = Math.Max(1, playback.Content.FrameRate);
             FixedScalar contentDuration = playback.Content.Duration;
             var animations = buffer.Animations;
             var cameraStates = buffer.CameraStates;
-            var cameraCues = buffer.CameraCues;
             var cameraResponses = buffer.CameraResponses;
             var cameraResources = buffer.CameraResources;
             var scenePresentation = buffer.ScenePresentation;
@@ -2388,21 +2344,9 @@ namespace BTSMTL.Timeline.Runtime
                     Track track = timeline.Tracks[trackIndex];
                     if (track == null || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Presentation)
                         continue;
-                    if (track is CameraCueTrack cameraCueTrack)
-                    {
-                        cameraCueTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
-                            timeline.AuthoringId,
-                            timeline.Name,
-                            cameraCues,
-                            segment.Cycle,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0);
-                    }
                 }
             }
             FixedScalar currentTime = currentPosition;
-            int sampledFrame = TimelineTimeGrid.NearestIndex(currentPosition, frameRate);
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
@@ -2455,7 +2399,7 @@ namespace BTSMTL.Timeline.Runtime
                             clip.ParameterValueKind,
                             clip.ValueCurve.Evaluate(local),
                             local,
-                            sampledFrame,
+                            currentTime,
                             currentCycle,
                             playback.ExecutionIdentity,
                             playback.Generation));

@@ -164,11 +164,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             DisposeRegistration();
         }
 
-        void Update()
-        {
-            m_TimelineHost?.Update(Time.deltaTime);
-        }
-
         public CharacterTimelineHost TimelineHost => m_TimelineHost;
 
         void EnsureRegistration()
@@ -492,7 +487,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 
-    public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime, IAbilityTreeClipInvokerHost
+    public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime, IAbilityTreeClipInvokerHost,
+        IAbilityTimelineLogicMotionReader
     {
         readonly CharacterTimelineHost m_Host;
         readonly IReadOnlyList<TimelineAsset> m_TimelineAssets;
@@ -552,6 +548,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Host.DiscardTimelinePlayback(pending);
         }
+
+        public void CopyPendingMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results) =>
+            m_Host.CopyPendingTimelineMotion(runtimeHandle, results);
+
         public void PushTreeClipInvoker(IAbilityTreeClipInvoker invoker) =>
             m_Host.PushTreeClipInvoker(invoker);
 
@@ -695,5 +695,3 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 }
-
-

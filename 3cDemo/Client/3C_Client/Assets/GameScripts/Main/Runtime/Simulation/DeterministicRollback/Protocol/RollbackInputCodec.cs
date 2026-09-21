@@ -11,15 +11,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
         const uint BundleMagic = 0x42524244;
         const int Version = 3;
 
-        public static byte[] WriteInput(RollbackActorInputFrame frame)
-        {
-            if (frame == null)
-                throw new ArgumentNullException(nameof(frame));
-            using var writer = new CanonicalWriter();
-            WriteInput(writer, frame);
-            return writer.ToArray();
-        }
-
         public static RollbackActorInputFrame ReadInput(byte[] bytes)
         {
             return ReadInput(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))));
@@ -36,22 +27,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (canonicalScratch == null)
                 throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes);
-            RollbackActorInputFrame frame = ReadInput(reader);
+            RollbackActorInputFrame frame = ReadInputPayload(reader);
             reader.RequireComplete();
             canonicalScratch.Reset();
             WriteInput(canonicalScratch, frame);
             if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback Actor input is not canonical.");
             return frame;
-        }
-
-        public static byte[] WriteBundle(RollbackCanonicalInputBundle bundle)
-        {
-            if (bundle == null)
-                throw new ArgumentNullException(nameof(bundle));
-            using var writer = new CanonicalWriter();
-            WriteBundle(writer, bundle);
-            return writer.ToArray();
         }
 
         static void WriteBundle(CanonicalWriter writer, RollbackCanonicalInputBundle bundle)
@@ -106,7 +88,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int count = ReadCount(reader);
             var actors = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
-                actors[i] = ReadInput(reader);
+                actors[i] = ReadInputPayload(reader);
             reader.RequireComplete();
             RollbackCanonicalInputBundle bundle = RollbackCanonicalInputBundle.FromOwnedActors(tick, sequence, actors);
             canonicalScratch.Reset();
@@ -184,7 +166,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return StableHash.Compute(values);
         }
 
-        static void WriteInput(CanonicalWriter writer, RollbackActorInputFrame frame)
+        public static void WriteInput(CanonicalWriter writer, RollbackActorInputFrame frame)
         {
             writer.WriteUInt32(InputMagic);
             writer.WriteInt32(Version);
@@ -234,7 +216,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        static RollbackActorInputFrame ReadInput(CanonicalReader reader)
+        static RollbackActorInputFrame ReadInputPayload(CanonicalReader reader)
         {
             if (reader.ReadUInt32() != InputMagic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback Actor input header is invalid.");

@@ -2427,3 +2427,14 @@
 - `RollbackDatagramChannel` 增加与发送 scratch 同容量（单分片预算×最大分片数）的解码 scratch：合法消息的重编码长度不超过原消息长度，因此容量恒够；非 canonical 消息仍按原异常拒绝。`RollbackEndpointRuntimeBridge` 持有一只自增复用 scratch 供状态哈希 egress 校验使用，达到稳态后不再分配；该路径 payload 大小无形式上限声明，容量按实际内容增长。
 - 5.3 剩余：`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚旧 byte[] 编码入口删除
+
+对应 tasks.md 的 5.3，本步删除剩余旧入口后勾选该项。
+
+- 删除 `RollbackInputCodec` 返回 `byte[]` 的 `WriteInput` 与无消费者的 `WriteBundle`；`WriteInput(writer, frame)` 转为正式公开入口。
+- 删除 `RollbackProtocolCodec` 返回 `byte[]` 的 `WriteCanonicalPayload`；写入 writer 的入口转为正式公开入口。
+- `RollbackHashEgressPassRuntime` 持有复用 payload scratch：每个哈希 tick `Reset` 后写入 canonical payload，再 `ToArray` 一次交给 `FixedSourceEgressRecord` 拥有；删除每次 writer、MemoryStream 与中间数组，记录自身的 payload 数组保持唯一。
+- `CharacterFixedInputTraceWorkflow` 导出 trace 时复用一只 Editor scratch writer，逐帧 Reset 后编码再转 Base64；该路径为离线诊断，正确性不变。
+- 边界：`ComputeInputHash`/`ComputeGameplayInputHash` 仍发生在 `RollbackActorInputFrame` 构造内，随帧装配所有权迁移（2.1–2.3）一并处理；状态快照 codec 归属 2.4/5.2 的状态事务范围。本项只覆盖回滚协议与输入 codec 的写入路径。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 编译成功 0 警告 0 错误；`ThirdPersonClient.Editor.csproj` 编译成功 0 错误、33 个既有 CS0649 警告（ACL 身份结构体与采集代理，与本次无关）。均使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

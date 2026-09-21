@@ -1500,6 +1500,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : 0f,
                 frames = new TraceFrameDocument[trace.Frames.Count]
             };
+            using var payloadWriter = new CanonicalWriter();
             for (int i = 0; i < trace.Frames.Count; i++)
             {
                 FixedCharacterInputTraceFrame frame = trace.Frames[i];
@@ -1509,11 +1510,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.Input.Sequence,
                     frame.Input,
                     RollbackInputProvenance.LocalExplicit);
+                payloadWriter.Reset();
+                RollbackInputCodec.WriteInput(payloadWriter, rollback);
                 document.frames[i] = new TraceFrameDocument
                 {
                     simulation_tick = frame.Tick.Value,
-                    input_payload_base64 = Convert.ToBase64String(
-                        RollbackInputCodec.WriteInput(rollback))
+                    input_payload_base64 = Convert.ToBase64String(payloadWriter.ToArray())
                 };
             }
             document.content_hash = ComputeContentHash(document);

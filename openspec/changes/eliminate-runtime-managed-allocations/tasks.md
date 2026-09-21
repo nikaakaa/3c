@@ -217,7 +217,7 @@
 
 - [ ] 5.1 迁移DotRecast/KCC正式批求解的接触、路径、结果及solver快照存储，保持碰撞排序和同事务提交
 - [ ] 5.2 迁移Rollback调度、输出修正字典和历史保留容器，容量覆盖配置的重放窗口与单帧多步
-- [ ] 5.3 将正式热点codec改为写入有界buffer并迁移全部调用者，保留canonical校验与协议bytes，删除重复编码数组及旧返回新数组入口
+- [x] 5.3 将正式热点codec改为写入有界buffer并迁移全部调用者，保留canonical校验与协议bytes，删除重复编码数组及旧返回新数组入口；帧构造内的 InputHash/GameplayHash 计算与状态快照 codec 归属帧生命周期与状态事务任务（2.x），不在本项内
 - [ ] 5.4 迁移客户端远端表现批和到期集合、可靠队列、重传与发送存储，沿完成回调归还，不提前复用payload
 - [ ] 5.5 将服务端Scene/Room tick和可靠事件转发改为正式有界存储与Fantasy生命周期，迁移消息及payload拥有关系，保留共享portable源码唯一实现
 - [x] 5.6 CanonicalWriter 的 Span 字节写入直接进入原 MemoryStream，删除中转数组租借和复制，保留长度前缀及输出寿命；流扩容、最终数组和网络／回滚结果租用仍未完成

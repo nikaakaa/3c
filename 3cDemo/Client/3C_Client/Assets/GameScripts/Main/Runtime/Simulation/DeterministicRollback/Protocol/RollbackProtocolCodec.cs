@@ -51,16 +51,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return envelope;
         }
 
-        public static byte[] WriteCanonicalPayload(IRollbackProtocolPayload payload)
-        {
-            if (payload == null)
-                throw new ArgumentNullException(nameof(payload));
-            using var writer = new CanonicalWriter();
-            WriteCanonicalPayload(writer, payload);
-            return writer.ToArray();
-        }
-
-        static void WriteCanonicalPayload(CanonicalWriter writer, IRollbackProtocolPayload payload)
+        public static void WriteCanonicalPayload(CanonicalWriter writer, IRollbackProtocolPayload payload)
         {
             writer.WriteUInt32(PayloadMagic);
             writer.WriteInt32(Version);

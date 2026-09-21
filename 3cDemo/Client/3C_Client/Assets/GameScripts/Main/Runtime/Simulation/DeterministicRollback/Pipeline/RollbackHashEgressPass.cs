@@ -50,6 +50,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         readonly DeterministicRollbackModelPolicy m_Policy;
         readonly RollbackRuntimeState m_State;
+        readonly CanonicalWriter m_PayloadScratch = new CanonicalWriter();
 
         public RollbackHashEgressPassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -71,6 +72,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 FixedSimulationSessionSnapshot snapshot = GetSnapshot(tick, readPorts.CompletedSteps.Steps);
                 RollbackStateHashReport report = BuildReport(snapshot, m_State.LocalPeerId, m_State.RosterHash);
                 ActorId owner = snapshot.World.Actors[0].ActorId;
+                m_PayloadScratch.Reset();
+                RollbackProtocolCodec.WriteCanonicalPayload(m_PayloadScratch, report);
                 writePorts.Egress.Append(
                     new SimulationPipelineAppendEntryIdentity(owner, tick, tick.Value, context.Source),
                     new FixedSourceEgressRecord(
@@ -79,7 +82,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         RollbackSourceEgressChannels.StateHash,
                         RollbackSourceEgressChannels.StateHashSchema,
                         RollbackSourceEgressChannels.StateHashSchemaVersion,
-                        RollbackProtocolCodec.WriteCanonicalPayload(report)));
+                        m_PayloadScratch.ToArray()));
             }
         }
 

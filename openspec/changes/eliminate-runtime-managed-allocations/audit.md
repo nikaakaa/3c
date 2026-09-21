@@ -168,6 +168,16 @@
 - `BTSMTL.Diagnostics.Editor.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；前者只剩 Unity Test Framework 两个既有 CS0649 警告，后者只剩 Input System 既有 CS0649 和 `BaseTreeView` CS0108 警告。
 - `ThirdPersonClient.Editor.csproj` 首次同参数编译暴露 `instances.Length` 残留引用；改为复用列表的 `Count` 后重编成功，0 错误，只剩 32 个 ACL identity 既有 CS0649 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
 
+## 2026-09-21 执行 history 分组列表化
+
+对应 tasks.md 的 7.1，新增 7.72 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution history builder 的分组索引层，不计为 Player 每帧收益。
+
+- `BuildHistory` 原先为 tick 和 presentation 各建一个 `SortedDictionary`；每个新 tick、branch 或 presentation frame 都创建排序树节点，value 又是一个事件 List。现在 selected events 先按 Position、ExecutionBranchId、Sequence 排序，再写入两个连续 `EventGroup<TKey>` 列表，同一 key 的事件落在同一组。
+- 新排序键把 branch 提前到 sequence 之前，保证同 Position 多 branch 不会把同一 key 拆成多段；group 内仍调用原 `CompareEvents`，所以 tick record 内部顺序、presentation frame 内部顺序和 `SortedDictionary` 的 key 升序输出保持不变。
+- checkpoint 第二次遍历改走同一 group 列表，仍按 first-seen key 去重并把 checkpoint 归属到原 tick 和 branch。record 的 events List 仍由 internal 构造直接接管；`SelectEvents` 结果 List、BuildCore 的 open Dictionary 和 spans List、checkpointKeys HashSet 留给后续边界。
+- 事件、span 和新增分组排序的 `Comparison<T>` 改为静态长期持有，删除每次调用 List.Sort 可能生成的方法组委托。静态 builder 只在 Editor 同步读取链使用，没有跨帧持有 selected 事件。
+- `BTSMTL.Diagnostics.Editor.csproj` 首次编译暴露 checkpoint 构造里的 `pair` 残留引用；改为 `group.Key` 后重编成功，0 警告 0 错误。构建使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

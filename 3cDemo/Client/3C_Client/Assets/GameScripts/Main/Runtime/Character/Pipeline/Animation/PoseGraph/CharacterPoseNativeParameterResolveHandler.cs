@@ -67,7 +67,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
-            m_Output = null;
         }
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
@@ -86,7 +85,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "pose")
                 throw new InvalidOperationException(
                     $"Parameter Resolve '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue basePose =
@@ -115,7 +115,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in sourceBinding);
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -164,7 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -351,7 +355,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_FrameOpen = false;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

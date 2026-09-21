@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Parameter Resolve、State Machine、Root Orientation Warp 输出包装复用
+
+对应 tasks.md 的 7.43。
+
+- 三个节点原先在各自 Native 双页结果完成后创建新的 Local Pose wrapper，并在 frame 清理时丢弃引用。
+- 三个 handler 现在复用 `CharacterPoseNativeLocalPoseValue`，按当前 completion identity 读取，更新前保持原有 Local binding、availability 和 CompletedAt 校验。
+- 不改变 Parameter Resolve 的参数合成、State Machine 的 source commit、Root Orientation Warp 的 pending/committed state 或任何提交页索引；本步只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Blend Stack 输出包装复用
 
 对应 tasks.md 的 7.42。

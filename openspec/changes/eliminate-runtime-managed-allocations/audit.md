@@ -3283,3 +3283,11 @@
 - `RollbackSchedulePassRuntime.BuildStep` 原先为每个 actor 调用 `SimulationInput` 公共构造；即使 canonical 输入已经排序，也会再复制 `SimulationInputValue[]` 和 `SimulationInputRequest[]` 并重新排序。现在 `SimulationInput.RebindSource` 用私有 owned-array 构造保留原只读数组，只替换 TickSource。
 - NumericProfile、InputSourceIdentity、Sequence 和 payload 数组语义保持；payload 已在 canonical 输入构造时排序并校验。rebound input 仍是一只新 class 对象并进入 Step/OuterTransaction，本步不引入对象池、reset 合同或跨事务别名。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback disposition 数组转移
+
+对应 tasks.md 的 5.2，新增 5.139 作为独立小步；5.2 保持未勾选。
+
+- `RollbackOutputDispositionPassRuntime` 原先把复用 List 交给 `SimulationPipelineOutputDispositionSet` 公共构造，set 每次再复制到新数组并排序。现在 egress 先只读扫描得到精确 count，再从 pass 生命周期按 count 复用精确 scratch，填充后通过 `FromOwnedDispositions` 直接转移数组。
+- owned set 保留 EventId 排序、重复 EventId 校验和事务身份校验；count 超过 Rollback `MaximumOutputRecords` 仍显式失败。公共 List 构造继续复制隔离，Float32 set 不在本步扩散。
+- disposition scratch 和 set 一样限定 OuterTransaction 消费寿命；不引入可变 set、租约回调或全局池。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

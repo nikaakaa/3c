@@ -399,6 +399,7 @@
 - [x] 5.136 Fixed Simulation Step 增加正式 owned inputs/actors 构造，Rollback schedule 填充槽位 scratch 后直接转移；删除 Target Step 的 input clone 和 ActorId 收集数组
 - [x] 5.137 Fixed Simulation Step 的 owned 构造扩展到 typed ingress，Rollback schedule 按 step 槽位复用精确数组；删除 current step 的 List 复制和排序闭包
 - [x] 5.138 Simulation Input 增加正式 source rebind 零复制入口，Rollback schedule 保留 canonical 输入数组；删除每个 replay/forward actor 的 values/requests 复制和排序
+- [x] 5.139 Rollback output disposition 使用 pass 生命周期精确 disposition scratch 并转移给正式 set；删除每次 egress 的 set 数组复制
 
 ## 6. UI、资源、渲染和生命周期
 

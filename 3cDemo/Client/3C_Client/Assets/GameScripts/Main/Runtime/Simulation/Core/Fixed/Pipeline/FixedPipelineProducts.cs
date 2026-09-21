@@ -217,8 +217,39 @@ namespace ThirdPersonSimulation.Fixed
             m_Dispositions = values;
         }
 
+        public static SimulationPipelineOutputDispositionSet FromOwnedDispositions(
+            StableHash transactionIdentity,
+            SimulationOutputDisposition[] dispositions)
+        {
+            if (!transactionIdentity.IsValid)
+                throw new ArgumentException("Output disposition transaction identity is invalid.", nameof(transactionIdentity));
+            SimulationOutputDisposition[] values = dispositions ?? Array.Empty<SimulationOutputDisposition>();
+            Array.Sort(values, CompareDispositions);
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (values[i - 1].SourceEventId.Equals(values[i].SourceEventId))
+                    throw new ArgumentException("Output disposition set contains duplicate EventId ownership.", nameof(dispositions));
+            }
+            return new SimulationPipelineOutputDispositionSet(transactionIdentity, values);
+        }
+
+        SimulationPipelineOutputDispositionSet(
+            StableHash transactionIdentity,
+            SimulationOutputDisposition[] dispositions)
+        {
+            TransactionIdentity = transactionIdentity;
+            m_Dispositions = dispositions;
+        }
+
         public StableHash TransactionIdentity { get; }
         public IReadOnlyList<SimulationOutputDisposition> Dispositions => m_Dispositions;
+
+        static int CompareDispositions(
+            SimulationOutputDisposition left,
+            SimulationOutputDisposition right)
+        {
+            return left.SourceEventId.CompareTo(right.SourceEventId);
+        }
     }
 
     public sealed class FixedSourceEgressRecord

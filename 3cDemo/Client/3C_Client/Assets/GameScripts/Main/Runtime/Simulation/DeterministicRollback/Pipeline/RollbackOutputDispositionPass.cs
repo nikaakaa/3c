@@ -41,7 +41,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         FixedPipelinePassRuntimeBase,
         ISimulationEgressPassRuntime<RollbackOutputDispositionReadPorts, RollbackOutputDispositionWritePorts>
     {
-        readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
+        readonly int m_MaximumOutputRecords;
+        readonly Dictionary<int, SimulationOutputDisposition[]> m_DispositionScratches =
+            new Dictionary<int, SimulationOutputDisposition[]>();
 
         public RollbackOutputDispositionPassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -50,7 +52,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (maximumOutputRecords <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumOutputRecords));
-            m_Dispositions.Capacity = maximumOutputRecords;
+            m_MaximumOutputRecords = maximumOutputRecords;
         }
 
         public void Execute(
@@ -59,40 +61,72 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackOutputDispositionWritePorts writePorts)
         {
             RequireExecution();
-            m_Dispositions.Clear();
-            try
+            int count = CountDispositions(readPorts.CompletedSteps);
+            if (count > m_MaximumOutputRecords)
+                throw new InvalidOperationException(
+                    $"Rollback output disposition capacity '{m_MaximumOutputRecords}' is exhausted by '{count}' records.");
+            SimulationOutputDisposition[] dispositions = RentDispositions(count);
+            FillDispositions(readPorts.CompletedSteps, dispositions);
+            writePorts.Dispositions.Write(SimulationPipelineOutputDispositionSet.FromOwnedDispositions(
+                context.TransactionIdentity,
+                dispositions));
+        }
+
+        static int CountDispositions(IFixedCompletedStepReadPort completedSteps)
+        {
+            int count = 0;
+            for (int stepIndex = 0; stepIndex < completedSteps.Steps.Count; stepIndex++)
             {
-                for (int stepIndex = 0; stepIndex < readPorts.CompletedSteps.Steps.Count; stepIndex++)
+                FixedCompletedSimulationStep step = completedSteps.Steps[stepIndex];
+                for (int actorIndex = 0; actorIndex < step.Result.Actors.Count; actorIndex++)
                 {
-                    FixedCompletedSimulationStep step = readPorts.CompletedSteps.Steps[stepIndex];
-                    for (int actorIndex = 0; actorIndex < step.Result.Actors.Count; actorIndex++)
-                    {
-                        SimulationActorTickResult actor = step.Result.Actors[actorIndex];
-                        for (int i = 0; i < actor.GameplayFacts.Count; i++)
-                            Add(m_Dispositions, actor.GameplayFacts[i]);
-                        for (int i = 0; i < actor.PresentationCommands.Count; i++)
-                            Add(m_Dispositions, actor.PresentationCommands[i]);
-                    }
+                    SimulationActorTickResult actor = step.Result.Actors[actorIndex];
+                    count += actor.GameplayFacts.Count + actor.PresentationCommands.Count;
                 }
-                writePorts.Dispositions.Write(new SimulationPipelineOutputDispositionSet(
-                    context.TransactionIdentity,
-                    m_Dispositions));
             }
-            finally
+            return count;
+        }
+
+        SimulationOutputDisposition[] RentDispositions(int count)
+        {
+            if (count == 0)
+                return Array.Empty<SimulationOutputDisposition>();
+            if (!m_DispositionScratches.TryGetValue(count, out SimulationOutputDisposition[] scratch))
             {
-                m_Dispositions.Clear();
+                scratch = new SimulationOutputDisposition[count];
+                m_DispositionScratches.Add(count, scratch);
+            }
+            return scratch;
+        }
+
+        static void FillDispositions(
+            IFixedCompletedStepReadPort completedSteps,
+            SimulationOutputDisposition[] dispositions)
+        {
+            int index = 0;
+            for (int stepIndex = 0; stepIndex < completedSteps.Steps.Count; stepIndex++)
+            {
+                FixedCompletedSimulationStep step = completedSteps.Steps[stepIndex];
+                for (int actorIndex = 0; actorIndex < step.Result.Actors.Count; actorIndex++)
+                {
+                    SimulationActorTickResult actor = step.Result.Actors[actorIndex];
+                    for (int i = 0; i < actor.GameplayFacts.Count; i++)
+                        dispositions[index++] = Create(actor.GameplayFacts[i]);
+                    for (int i = 0; i < actor.PresentationCommands.Count; i++)
+                        dispositions[index++] = Create(actor.PresentationCommands[i]);
+                }
             }
         }
 
-        static void Add(ICollection<SimulationOutputDisposition> dispositions, GameplayFact fact)
+        static SimulationOutputDisposition Create(GameplayFact fact)
         {
             SimulationOutputDispositionKind kind = fact.Kind == GameplayFactKind.Cue
                 ? SimulationOutputDispositionKind.Defer
                 : SimulationOutputDispositionKind.Publish;
-            dispositions.Add(new SimulationOutputDisposition(fact.Header.EventId, fact.Header.ActorId, kind));
+            return new SimulationOutputDisposition(fact.Header.EventId, fact.Header.ActorId, kind);
         }
 
-        static void Add(ICollection<SimulationOutputDisposition> dispositions, PresentationCommand command)
+        static SimulationOutputDisposition Create(PresentationCommand command)
         {
             SimulationOutputDispositionKind kind = command.Kind == PresentationCommandKind.Cue ||
                                                    command.Kind == PresentationCommandKind.Vfx ||
@@ -102,7 +136,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                                                    command.Kind == PresentationCommandKind.ForceProducer
                 ? SimulationOutputDispositionKind.Defer
                 : SimulationOutputDispositionKind.Publish;
-            dispositions.Add(new SimulationOutputDisposition(command.Header.EventId, command.Header.ActorId, kind));
+            return new SimulationOutputDisposition(command.Header.EventId, command.Header.ActorId, kind);
         }
     }
 

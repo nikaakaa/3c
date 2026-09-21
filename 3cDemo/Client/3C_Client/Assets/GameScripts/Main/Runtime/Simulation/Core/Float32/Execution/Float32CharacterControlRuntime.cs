@@ -512,6 +512,7 @@ namespace ThirdPersonSimulation
         readonly CharacterControlStateSchema m_Schema;
         readonly Float32CharacterControlReadPort m_Read;
         readonly Float32CharacterControlOutputPort m_Output;
+        readonly Float32CharacterControlStatePort m_StatePort;
         readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
@@ -563,6 +564,7 @@ namespace ThirdPersonSimulation
                 motion,
                 actions,
                 trace);
+            m_StatePort = new Float32CharacterControlStatePort(m_State, m_Schema);
         }
 
         public CharacterControlRuntimeStateTransaction State => m_State;
@@ -571,7 +573,7 @@ namespace ThirdPersonSimulation
         {
             var context = new CharacterControlTickContext(m_ActorId, m_Tick, m_TickRate);
             m_State.BaseState.RequireBinding(m_Binding);
-            m_Control.Tick(in context, m_Read, new Float32CharacterControlStatePort(m_State, m_Schema), m_Output);
+            m_Control.Tick(in context, m_Read, m_StatePort, m_Output);
         }
 
         static bool IsAbilityActive(IFloat32ActionRuntimeStatePort state, CharacterSkillId abilityId)

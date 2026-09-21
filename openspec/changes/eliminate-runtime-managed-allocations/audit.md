@@ -3899,3 +3899,11 @@
 - Fixed 和 Float32 Ability Execution Frame 的 `ActionTraceContextScope` 从每次进入 Skill execution 新建的 class 改为 Frame 内 readonly struct；仍保存 owner 和上一轮 trace context，`Dispose` 恢复 instance id、skill id 和 entry operation。
 - `EnterSkillExecution` 里的 Trace 与 Skill execution scope 直接持有具体 context struct，不再经过 `IDisposable` 参数或字段装箱；外层 scope 自身的 class 生命周期保持不变。
 - 进入和退出顺序、重复 Dispose 保护、Skill execution stack 校验和 trace 记录身份不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧接口路径残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Character control state port 收口
+
+对应 tasks.md 的 5.5，新增 5.215 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Control Runtime 的 State Port 从每次 Control tick 新建改为 runtime 构造期创建并长期持有；port 继续绑定同一个 state transaction 和 schema。
+- `CharacterControlTickContext` 保持 readonly struct 局部变量，属于栈传递，不新增托管分配；control module 的 tick 参数顺序、状态读写 kind 校验和 output 路由不变。
+- 每个 Control tick 的 port class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

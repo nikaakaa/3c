@@ -102,6 +102,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly int m_MaximumFragmentPayloadBytes;
         readonly CanonicalWriter m_EncodeWriter;
         readonly CanonicalWriter m_DecodeScratch;
+        RollbackDatagramPacket m_Acknowledgement;
         ulong m_NextDatagramSequence = 1;
         ulong m_NextMessageSequence = 1;
 
@@ -350,8 +351,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         void SendAcknowledgement(ulong messageSequence)
         {
+            m_Acknowledgement ??= new RollbackDatagramPacket();
             m_Endpoint.EnqueueSend(
-                new RollbackDatagramPacket(
+                m_Acknowledgement.Reset(
                     RollbackDatagramKind.Acknowledgement,
                     m_Definition.SessionId,
                     m_LocalPeerId,
@@ -361,7 +363,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     0,
                     0,
                     0,
-                    Array.Empty<byte>()),
+                    Array.Empty<byte>(),
+                    0),
                 m_RemoteEndPoint);
         }
 

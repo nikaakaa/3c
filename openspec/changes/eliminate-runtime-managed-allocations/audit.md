@@ -2569,3 +2569,12 @@
 - Endpoint 按线程持有 `MaximumDatagramBytes` 容量的 writer，发送缓冲用 `ConcurrentStack` 在正式 `queueCapacity` 内复用。编码结果复制到租用缓冲，`PendingSend` 记录实际长度；socket 同步发送、容量失败和 Dispose 清队后都归还缓冲。
 - 稳态同线程发送不再分配 writer 本体和最终 `byte[]`。首次触达线程、首次补齐缓冲、`ConcurrentQueue` 内部分段和 `IPEndPoint.Clone` 仍在；接收路径 packet 不属于本步。
 - Endpoint 工程完整构建仍受并行 Timeline 的 `FixedVector3` 缺失阻断。`dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚 ACK packet 复用
+
+对应 tasks.md 的 5.4，本步只处理 Datagram Channel 发出的 acknowledgement packet，整项保持未勾选。
+
+- Channel 原先每条重复可靠消息或每个完成可靠消息都新建零 payload 的 `RollbackDatagramPacket`；该对象只用于同步入队编码，Endpoint 不保留引用。
+- Channel 现在持有一只生命周期等同自身的 ACK packet，每次 `SendAcknowledgement` 先 Reset 身份和序号，再交给 Endpoint 编码。ACK 仍使用 `Array.Empty<byte>`，实际 payload 长度为零，wire 格式不变。
+- 复用只发生在同一 Channel 的同步 ACK 路径；Endpoint 先把 writer 内容复制进发送缓冲后才可能 Pump 发送队列，不会在异步队列中别名 ACK packet。接收 packet、reassembly 和 `IPEndPoint.Clone` 不在本步范围。
+- Endpoint 工程在本轮修改后已用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
@@ -30,7 +29,7 @@ namespace ThirdPersonSimulation
         Float32PipelinePassRuntimeBase,
         ISimulationEgressPassRuntime<LocalImmediateOutputReadPorts, LocalImmediateOutputWritePorts>
     {
-        readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
+        SimulationOutputDisposition[] m_Dispositions = Array.Empty<SimulationOutputDisposition>();
 
         public LocalImmediateOutputPassRuntime(SimulationPipelinePassDescriptor descriptor)
             : base(descriptor)
@@ -43,50 +42,43 @@ namespace ThirdPersonSimulation
             LocalImmediateOutputWritePorts writePorts)
         {
             RequireExecution();
-            writePorts.Dispositions.Write(Float32ImmediateOutputDispositionBuilder.Build(
-                context.TransactionIdentity,
-                readPorts.Results,
-                m_Dispositions));
-        }
-    }
-
-    public static class Float32ImmediateOutputDispositionBuilder
-    {
-        public static SimulationPipelineOutputDispositionSet Build(
-            StableHash transactionIdentity,
-            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results,
-            List<SimulationOutputDisposition> dispositions)
-        {
-            if (results == null)
-                throw new ArgumentNullException(nameof(results));
-            if (dispositions == null)
-                throw new ArgumentNullException(nameof(dispositions));
-            dispositions.Clear();
             try
             {
-                for (int i = 0; i < results.Count; i++)
+                int dispositionCount = 0;
+                for (int i = 0; i < readPorts.Results.Count; i++)
                 {
-                    SimulationActorTickResult result = results.Get(i).Value;
+                    SimulationActorTickResult result = readPorts.Results.Get(i).Value;
+                    dispositionCount += result.GameplayFacts.Count + result.PresentationCommands.Count;
+                }
+
+                m_Dispositions = new SimulationOutputDisposition[dispositionCount];
+                int dispositionIndex = 0;
+                for (int i = 0; i < readPorts.Results.Count; i++)
+                {
+                    SimulationActorTickResult result = readPorts.Results.Get(i).Value;
                     for (int eventIndex = 0; eventIndex < result.GameplayFacts.Count; eventIndex++)
                     {
-                        dispositions.Add(new SimulationOutputDisposition(
+                        m_Dispositions[dispositionIndex++] = new SimulationOutputDisposition(
                             result.GameplayFacts[eventIndex].Header.EventId,
                             result.GameplayFacts[eventIndex].Header.ActorId,
-                            SimulationOutputDispositionKind.Publish));
+                            SimulationOutputDispositionKind.Publish);
                     }
                     for (int eventIndex = 0; eventIndex < result.PresentationCommands.Count; eventIndex++)
                     {
-                        dispositions.Add(new SimulationOutputDisposition(
+                        m_Dispositions[dispositionIndex++] = new SimulationOutputDisposition(
                             result.PresentationCommands[eventIndex].Header.EventId,
                             result.PresentationCommands[eventIndex].Header.ActorId,
-                            SimulationOutputDispositionKind.Publish));
+                            SimulationOutputDispositionKind.Publish);
                     }
                 }
-                return new SimulationPipelineOutputDispositionSet(transactionIdentity, dispositions);
+
+                writePorts.Dispositions.Write(SimulationPipelineOutputDispositionSet.FromOwnedDispositions(
+                    context.TransactionIdentity,
+                    m_Dispositions));
             }
             finally
             {
-                dispositions.Clear();
+                m_Dispositions = Array.Empty<SimulationOutputDisposition>();
             }
         }
     }

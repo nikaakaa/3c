@@ -3635,3 +3635,11 @@
 - `AuthoritativeObservationBatch` 的 baselines 和 remote presentation 改为直接持有精确 owned arrays；类型化静态 Actor 排序替代 `FreezeByActor` 的 List 复制、lambda 排序和 `ReadOnlyCollection` 包装。baseline 与 remote presentation 的 Actor 归属、去重和排序校验不变。
 - Evidence drain 不再维护 baseline List；队列收敛后无 baseline 使用 `Array.Empty`，有 baseline 只生成一条记录的精确数组。remote presentation 仍合并当期 bodies、samples 和 events 后生成一个精确 outer 数组。无消费者的 `FreezeByActor` 删除。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 output dispositions owned 数组收口
+
+对应 tasks.md 的 5.5，新增 5.182 作为独立小步；5.5 保持未勾选。
+
+- `SimulationPipelineOutputDispositionSet` 的 Float32 版本补齐与 Fixed 一致的 `FromOwnedDispositions`：private 构造直接接管精确数组，类型化静态排序替代 lambda，EventId 去重和事务身份校验不变。
+- Float32 Local Immediate 先统计 GameplayFact 和 PresentationCommand 数量，再填充精确 disposition 数组并直接转交。删除一次性 builder、List 收集、构造期数组复制和清理临时壳；排序会改变最终 owned array，但公开只读接口和排序结果不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

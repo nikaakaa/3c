@@ -81,7 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native Inertialization prepared binding is invalid.",
                     nameof(preparedBinding));
             m_Rig = preparedBinding.Rig;
-            m_Rig.RequireValid();
             if (policy == null)
                 throw new ArgumentNullException(nameof(policy));
             if (preparedBinding.Profile.RigDefinition == null)

@@ -2077,3 +2077,12 @@
 - 删除初始化阶段的第二次整图校验，运行实例直接使用准备结果；`BuildPortDefinitions`、handler 创建/身份匹配、Attach/Start 以及每帧 lineage、buffer 和提交事务校验保持。没有把图外数据重新读取成另一条链路。
 - 删除每次 Pose 实例创建的重复图校验遍历及其临时集合分配；authoring/content preparation 仍是静态图合法性的唯一入口。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留 1 条既有 `CharacterInputValueNodes.cs` CS0414 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。
+
+## 2026-09-21 Pose handler Rig 校验边界
+
+对应 tasks.md 的 7.22。
+
+- 正式入口先由 `CharacterAnimationRigBinding.RequireValid(animationRig)` 校验 Projection Rig，随后 `CharacterPoseNativeGraphPrepareRequest` 通过 `Rig.RequireValid` 形成 PreparedBinding；handler factory 只从该准备结果创建 Additive、Inertialization、Layered Bone Blend、Modify Bone、Root Orientation Warp 和 Space Conversion handler。
+- 删除上述六类 handler 构造器及 `CharacterPoseNativeInstanceContext` 的第二次 Rig schema 遍历；保留 Rig 与场景 binding 的身份比对、节点配置/资源类型、骨骼索引、buffer 形状、曲线和输入变量等正式链路约束。
+- 没有改变 handler 创建顺序、资源释放、Attach/Start、帧 Begin/Prepare/Evaluate/Commit/Discard 或 publication 事务；删除的是同一份静态 Rig 配置在运行构造链的重复读取和校验。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。

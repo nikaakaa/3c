@@ -67,7 +67,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native Root Orientation Warp prepared binding is invalid.",
                     nameof(preparedBinding));
             m_Rig = preparedBinding.Rig;
-            m_Rig.RequireValid();
             m_YawCurve = yawCurve ? yawCurve :
                 throw new ArgumentNullException(nameof(yawCurve));
             if (!m_YawCurve.TryValidate(out string curveError))

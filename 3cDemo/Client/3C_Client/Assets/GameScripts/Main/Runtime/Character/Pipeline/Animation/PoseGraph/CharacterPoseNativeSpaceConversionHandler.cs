@@ -121,7 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native space conversion binding is invalid.");
             }
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Rig.RequireValid();
             m_NodeId = nodeId;
             m_Kind = kind;
             m_InputSpace = kind == CharacterPoseNodeKind.LocalToComponentPose

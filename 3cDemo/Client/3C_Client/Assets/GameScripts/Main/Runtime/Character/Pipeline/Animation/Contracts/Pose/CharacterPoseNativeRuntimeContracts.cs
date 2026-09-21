@@ -277,7 +277,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!actorId.IsValid || !animancer || rig == null || !rigBinding ||
                 !rootHierarchy)
                 throw new ArgumentException("Pose native instance context is incomplete.");
-            rig.RequireValid();
             if (!string.Equals(rig.RigId, rigBinding.RigId, StringComparison.Ordinal) ||
                 !string.Equals(rig.RigRevision, rigBinding.RigRevision, StringComparison.Ordinal))
             {

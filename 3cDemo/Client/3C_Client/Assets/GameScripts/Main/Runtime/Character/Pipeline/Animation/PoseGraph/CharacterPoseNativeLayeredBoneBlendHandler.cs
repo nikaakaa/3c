@@ -42,7 +42,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native Layered Bone Blend handler identity is invalid.",
                     nameof(nodeId));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Rig.RequireValid();
             if (boneMask == null || boneMask.Count != m_Rig.PoseBoneCount)
                 throw new ArgumentException(
                     "Pose native Layered Bone Blend mask does not match the Rig.",

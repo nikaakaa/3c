@@ -34,7 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     nameof(nodeId));
             m_NodeId = nodeId;
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Rig.RequireValid();
             m_OutputBuffer = outputBuffer ??
                 throw new ArgumentNullException(nameof(outputBuffer));
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();

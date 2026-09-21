@@ -40,7 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native Additive Pose handler identity is invalid.",
                     nameof(nodeId));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Rig.RequireValid();
             m_NodeId = nodeId;
             m_OutputBuffer = outputBuffer ??
                 throw new ArgumentNullException(nameof(outputBuffer));

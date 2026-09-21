@@ -69,9 +69,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             RequireCaptureOrRestore();
             RollbackRuntimeState.TransactionCheckpoint before = m_State.CaptureTransactionCheckpoint();
-            return new SimulationPipelinePassStateCheckpoint(
-                StateIdentity,
-                () => m_State.RestoreTransactionCheckpoint(before));
+            return new RollbackStateCheckpoint(StateIdentity, m_State, before);
         }
 
         public SimulationPipelinePassStateSnapshot CaptureState()
@@ -185,6 +183,41 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_Completed)
                 throw new ObjectDisposedException(nameof(RollbackPipelineStateRestoreTransaction));
+        }
+    }
+
+    sealed class RollbackStateCheckpoint : ISimulationPipelinePassStateCheckpoint
+    {
+        readonly RollbackRuntimeState m_State;
+        readonly RollbackRuntimeState.TransactionCheckpoint m_Before;
+        bool m_Restored;
+        bool m_Disposed;
+
+        public RollbackStateCheckpoint(
+            SimulationPipelineStateParticipantIdentity participant,
+            RollbackRuntimeState state,
+            RollbackRuntimeState.TransactionCheckpoint before)
+        {
+            Participant = participant;
+            m_State = state ?? throw new ArgumentNullException(nameof(state));
+            m_Before = before ?? throw new ArgumentNullException(nameof(before));
+        }
+
+        public SimulationPipelineStateParticipantIdentity Participant { get; }
+
+        public void Restore()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(RollbackStateCheckpoint));
+            if (m_Restored)
+                return;
+            m_State.RestoreTransactionCheckpoint(m_Before);
+            m_Restored = true;
+        }
+
+        public void Dispose()
+        {
+            m_Disposed = true;
         }
     }
 }

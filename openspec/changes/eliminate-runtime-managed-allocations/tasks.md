@@ -381,6 +381,7 @@
 - [x] 5.118 Rollback Hash Egress 直接把 completed step 或 snapshot history 的 SimulationWorldSnapshot 交给 world hash 构建，删除只为读取 World 新建的 FixedSimulationSessionSnapshot 及其 SnapshotHash 计算；payload 和 report 的正式所有权不变
 - [x] 5.119 Rollback simulation projection 复用 Runtime State 生命周期的 CanonicalWriter 和 restore scratch SortedDictionary；identity、数量、重复 Tick、尾部和 confirmed horizon 全部校验后才替换当前 applied hashes，返回 payload 仍由外部快照独立持有
 - [x] 5.120 Rollback input history checkpoint 合同收紧为精确数组和 IReadOnlyList 恢复，删除 restore 时的 IEnumerable 接口枚举分配；checkpoint 数组仍每次独立构造并由事务持有，释放和 conflict 校验不变
+- [x] 5.121 Rollback History Pass checkpoint 使用私有 ISimulationPipelinePassStateCheckpoint 实现直接持有 Runtime checkpoint，删除 lambda 闭包和通用 delegate 包装；恢复一次、Dispose 后报错和每次 checkpoint 独立所有权不变
 
 ## 6. UI、资源、渲染和生命周期
 

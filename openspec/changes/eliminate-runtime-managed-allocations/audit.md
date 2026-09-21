@@ -3131,6 +3131,14 @@
 - 项目内没有第二个调用方；旧 `IEnumerable` 入口直接删除，不保留兼容重载。restore 前释放旧 entry、清空 SortedDictionary、null entry 异常、predicted/canonical 重建和容量校验不变。checkpoint 数组仍每次独立构造，由 `CaptureCheckpoint` 或 restore transaction 持有，不跨事务复用。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback History checkpoint 去闭包
+
+对应 tasks.md 的 5.2，新增 5.121 作为独立小步；5.2 保持未勾选。
+
+- `RollbackHistoryPassRuntime.CaptureCheckpoint` 原先先捕获 `RollbackRuntimeState.TransactionCheckpoint`，再用 lambda 包装 `RestoreTransactionCheckpoint` 调用；每次捕获都会创建闭包和 `Action` 委托，再交给通用 `SimulationPipelinePassStateCheckpoint`。现在新增私有 `RollbackStateCheckpoint` 直接实现 `ISimulationPipelinePassStateCheckpoint`，持有 participant、Runtime State 和 transaction checkpoint。
+- checkpoint 本身仍每次捕获独立创建并返回给 pipeline checkpoint set，不做池化或跨事务复用；因此旧的 transaction checkpoint、input history 数组和 applied hash 数组不会被下一次捕获覆盖。`Restore` 的一次性语义、重复 Restore 直接返回、Dispose 后抛 `ObjectDisposedException` 和 owner 校验保持不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

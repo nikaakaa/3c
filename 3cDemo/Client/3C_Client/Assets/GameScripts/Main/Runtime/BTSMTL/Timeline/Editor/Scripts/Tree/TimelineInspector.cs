@@ -121,12 +121,14 @@ namespace BTSMTL.Timeline.Editor
             double startSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Start (Seconds)", startTime.ToDouble()));
             if (EditorGUI.EndChangeCheck())
                 startTime = FixedScalar.FromDouble(startSeconds);
-            if (isDynamicTreeClip)
+            bool dynamicLogicTreeClip = isDynamicTreeClip && clip.ExecutionDomain == TimelineExecutionDomain.Logic;
+            if (dynamicLogicTreeClip)
                 EditorGUILayout.LabelField("End (Seconds)", $"Timeline End ({endTime})");
             else
             {
                 EditorGUI.BeginChangeCheck();
-                double endSeconds = EditorGUILayout.DoubleField("End (Seconds)", endTime.ToDouble());
+                string endLabel = isDynamicTreeClip ? "Layout End (Seconds)" : "End (Seconds)";
+                double endSeconds = EditorGUILayout.DoubleField(endLabel, endTime.ToDouble());
                 if (EditorGUI.EndChangeCheck())
                     endTime = FixedScalar.FromDouble(endSeconds);
             }

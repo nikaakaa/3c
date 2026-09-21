@@ -20,6 +20,7 @@ namespace BTSMTL.Timeline.Editor
         public FixedScalar StartTime;
         public FixedScalar EndTime;
         public FixedScalar DefaultEndTime;
+        public FixedScalar TimelineEndTime;
         public UnityEngine.Object Resource;
         public RootMotionCurveAsset SourceCurve;
         public float SourceStartTime;
@@ -77,8 +78,16 @@ namespace BTSMTL.Timeline.Editor
         {
             EditorGUILayout.LabelField("Add Clip", EditorStyles.boldLabel);
             m_Request.StartTime = DrawTime("Start (Seconds)", m_Request.StartTime);
-            if (IsTreeClip && m_Request.ExecutionDomain == TimelineExecutionDomain.Logic)
+            bool dynamicTreeClip = IsTreeClip && m_Request.TreeExitSource == TimelineClipExitSource.TreeDecision;
+            if (dynamicTreeClip && m_Request.ExecutionDomain == TimelineExecutionDomain.Presentation &&
+                m_Request.EndTime == m_Request.DefaultEndTime)
+                m_Request.EndTime = FixedScalar.Max(
+                    m_Request.StartTime + FixedScalar.FromRaw(1),
+                    m_Request.TimelineEndTime);
+            if (dynamicTreeClip && m_Request.ExecutionDomain == TimelineExecutionDomain.Logic)
                 EditorGUILayout.LabelField("End (Seconds)", $"Timeline End ({m_Request.EndTime})");
+            else if (dynamicTreeClip && m_Request.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                m_Request.EndTime = DrawTime("Layout End (Seconds)", m_Request.EndTime);
             else
                 m_Request.EndTime = DrawTime("End (Seconds)", m_Request.EndTime);
 

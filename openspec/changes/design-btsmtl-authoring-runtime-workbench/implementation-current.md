@@ -12,6 +12,8 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 运行观察按执行域分别使用 LogicCycle/LogicTime 和 VisualCycle/VisualTime。未退出片段跟随对应已提交游标，已退出片段使用实际退出事实；History 不读取未来退出事件，作者资产不被运行长度改写。动态长度按 playback、generation、cycle 和 clip identity 隔离。
 
+作者入口中，Logic TreeDecision 的 End 跟随 Timeline 终点；Presentation TreeDecision 的 End 可编辑但只代表布局上界。表现域实际退出仍来自 TreeDecision 图请求，FrameBoundary 才使用作者 End 作为固定边界。
+
 相关入口：`TimelineRuntimePresentationDriver.RequestTreeClipExit`、`CharacterTimelineHost.ExecutePresentationGraphs`、`RuntimeTimelinePlaybackProjection.UpdateOpenClipEnds`。表现图只读取只读角色事实并提交已有 Camera owner，不新增播放器或时钟。
 
 | 任务 | 输入与处理 | 作者可见结果 |

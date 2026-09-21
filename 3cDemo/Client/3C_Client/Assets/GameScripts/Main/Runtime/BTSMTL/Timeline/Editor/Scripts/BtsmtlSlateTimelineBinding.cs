@@ -934,6 +934,7 @@ namespace BTSMTL.Timeline.Editor
                 StartTime = startTime,
                 EndTime = defaultEndTime,
                 DefaultEndTime = defaultEndTime,
+                TimelineEndTime = Timeline.DurationTime,
             };
             if (isTreeClip)
                 request.NewTreeGraphName = "Timeline Tree";
@@ -972,9 +973,7 @@ namespace BTSMTL.Timeline.Editor
                 return "Add Clip 的目标 Track 已锁定。";
             }
             bool isTreeClip = request.Kind == TimelineContractKinds.TreeClip;
-            bool terminalTreeClip = isTreeClip &&
-                (track.Source.ExecutionDomain == TimelineExecutionDomain.Logic ||
-                 request.TreeExitSource == TimelineClipExitSource.TreeDecision);
+            bool terminalLogicTreeClip = isTreeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
             FixedScalar terminalTime = FixedScalar.Max(request.StartTime + FixedScalar.FromRaw(1), Timeline.DurationTime);
             try
             {
@@ -999,7 +998,7 @@ namespace BTSMTL.Timeline.Editor
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartTime);
                     if (added is TreeClip treeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation)
                         treeClip.SetExitSource(request.TreeExitSource);
-                    added.ConfigureTimeRange(added.StartTime, terminalTreeClip ? terminalTime : request.EndTime);
+                    added.ConfigureTimeRange(added.StartTime, terminalLogicTreeClip ? terminalTime : request.EndTime);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))

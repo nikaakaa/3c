@@ -98,7 +98,7 @@ Timeline MUST 使用秒制编辑游标和时间输入，保留独立的秒／帧
 
 ### Requirement: 动态 TreeClip 长度必须来自对应执行域的实例事实
 
-Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源，图内“结束片段”只结束当前调用实例。Presentation 的 FrameBoundary MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
+Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源，图内“结束片段”只结束当前调用实例。Presentation 的 FrameBoundary MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；Presentation 的作者 End 只作为可编辑布局上界，Logic 的作者 End 跟随 Timeline 终点；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
 
 #### Scenario: 动态片段仍在执行
 

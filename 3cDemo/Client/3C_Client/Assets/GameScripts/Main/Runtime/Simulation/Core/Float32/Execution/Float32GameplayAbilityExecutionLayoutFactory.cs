@@ -4,7 +4,9 @@ namespace ThirdPersonSimulation
 {
     internal static class Float32GameplayAbilityExecutionLayoutFactory
     {
-        public static GameplayAbilityExecutionLayout Create(Float32GameplayAbilityExecutionData data)
+        public static GameplayAbilityExecutionLayout Create(
+            Float32GameplayAbilityExecutionData data,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -20,11 +22,11 @@ namespace ThirdPersonSimulation
                 data.StateSlots,
                 data.Scopes,
                 data.CatalogEntries,
-                data.MotionModifiers,
                 data.SourceMap,
                 data.Producers,
                 data.CatalogIndex,
-                data.Topology);
+                data.Topology,
+                timelineMotionWarpCatalog);
         }
     }
 }

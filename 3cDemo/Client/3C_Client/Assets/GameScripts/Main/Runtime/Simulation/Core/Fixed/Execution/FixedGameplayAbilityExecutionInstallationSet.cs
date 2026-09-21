@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayAbilityExecutionInstallationSet(
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> data,
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -48,7 +49,8 @@ namespace ThirdPersonSimulation.Fixed
                 var installation = new FixedGameplayAbilityExecutionInstallation(
                     ability,
                     gameplayEffectCatalog,
-                    equipmentLayout);
+                    equipmentLayout,
+                    timelineMotionWarpCatalog);
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

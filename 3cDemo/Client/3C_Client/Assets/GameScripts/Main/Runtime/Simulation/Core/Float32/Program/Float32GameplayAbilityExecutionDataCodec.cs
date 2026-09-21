@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation
     {
         const uint ArtifactMagic = 0x46414244;
         const int ArtifactVersion = 3;
-        const int PayloadVersion = 3;
+        const int PayloadVersion = 4;
 
         public static byte[] WriteArtifact(Float32GameplayAbilityExecutionData data)
         {
@@ -175,7 +175,6 @@ namespace ThirdPersonSimulation
             WriteTable(writer, data.Scopes, WriteScope);
             WriteTable(writer, data.OutputChannels, WriteOutputChannel);
             WriteTable(writer, data.CatalogEntries, WriteCatalogEntry);
-            WriteTable(writer, data.MotionModifiers, WriteMotionModifier);
             WriteSourceMapTable(writer, data.SourceMap);
             WriteTable(writer, data.Producers, WriteProducer);
             return writer.ToArray();
@@ -213,7 +212,6 @@ namespace ThirdPersonSimulation
             ProgramScopeLayout[] scopes = ReadTable(reader, ReadScope);
             ProgramOutputChannelLayout[] outputChannels = ReadTable(reader, ReadOutputChannel);
             ProgramCatalogEntry[] catalogEntries = ReadTable(reader, ReadCatalogEntry);
-            ProgramMotionModifierDescriptor[] motionModifiers = ReadTable(reader, ReadMotionModifier);
             ProgramSourceMapEntry[] sourceMap = ReadSourceMapTable(reader);
             ProgramProducer[] producers = ReadTable(reader, ReadProducer);
             reader.RequireComplete();
@@ -247,7 +245,6 @@ namespace ThirdPersonSimulation
                 scopes,
                 outputChannels,
                 catalogEntries,
-                motionModifiers,
                 sourceMap,
                 producers);
             if (!data.ContentHash.Equals(contentHash))
@@ -373,55 +370,6 @@ namespace ThirdPersonSimulation
             writer.WriteString(binding.TargetPort);
             writer.WriteInt32(binding.ConstantIndex);
             writer.WriteByte((byte)binding.ResolvedValueKind);
-        }
-
-        static void WriteMotionModifier(CanonicalWriter writer, ProgramMotionModifierDescriptor value)
-        {
-            writer.WriteInt32(value.Index);
-            writer.WriteByte((byte)value.Kind);
-            writer.WriteByte((byte)value.Channel);
-            writer.WriteInt32(value.Operation.Value);
-            writer.WriteInt32(value.SourceMotionOperation.Value);
-            writer.WriteInt32(value.TimelineOwnerOperation.Value);
-            writer.WriteString(value.ActionContextIdentity);
-            writer.WriteInt32(value.CatalogEntryIndex);
-            writer.WriteByte((byte)value.TranslationMode);
-            writer.WriteByte((byte)value.TargetOffsetSpace);
-            writer.WriteByte((byte)value.RotationMode);
-            writer.WriteByte((byte)value.RotationMethod);
-            writer.WriteInt32(value.TargetPlanarOffsetConstantIndex);
-            writer.WriteInt32(value.TargetYawOffsetConstantIndex);
-            writer.WriteInt32(value.MaximumPositionCorrectionConstantIndex);
-            writer.WriteInt32(value.MaximumYawCorrectionConstantIndex);
-            writer.WriteInt32(value.MaximumYawRateConstantIndex);
-            writer.WriteByte((byte)value.LimitPolicy);
-            writer.WriteInt32(value.PositionProgressCurveConstantIndex);
-            writer.WriteInt32(value.YawProgressCurveConstantIndex);
-        }
-
-        static ProgramMotionModifierDescriptor ReadMotionModifier(CanonicalReader reader)
-        {
-            return new ProgramMotionModifierDescriptor(
-                reader.ReadInt32(),
-                (ProgramMotionModifierKind)reader.ReadByte(),
-                (ProgramMotionModifierChannel)reader.ReadByte(),
-                new OperationHandle(reader.ReadInt32()),
-                new OperationHandle(reader.ReadInt32()),
-                new OperationHandle(reader.ReadInt32()),
-                reader.ReadString(),
-                reader.ReadInt32(),
-                (ProgramMotionWarpTranslationMode)reader.ReadByte(),
-                (ProgramMotionWarpTargetOffsetSpace)reader.ReadByte(),
-                (ProgramMotionWarpRotationMode)reader.ReadByte(),
-                (ProgramMotionWarpRotationMethod)reader.ReadByte(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                (ProgramMotionWarpLimitPolicy)reader.ReadByte(),
-                reader.ReadInt32(),
-                reader.ReadInt32());
         }
 
         static ProgramConstantInputBinding ReadConstantInputBinding(CanonicalReader reader)

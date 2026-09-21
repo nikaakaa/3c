@@ -180,6 +180,246 @@ namespace ThirdPersonSimulation
         void CopyPendingMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results);
     }
 
+    public readonly struct AbilityTimelineLogicMotionWarp
+    {
+        public AbilityTimelineLogicMotionWarp(
+            SimulationExecutionSource source,
+            CharacterSkillId abilityId,
+            string actionContextIdentity,
+            OperationHandle stateOperation,
+            ulong playbackGeneration,
+            int cycle,
+            FixedScalar startTime,
+            FixedScalar endTime,
+            FixedScalar previousTime,
+            FixedScalar currentTime,
+            float sourceStartPositionX,
+            float sourceStartPositionY,
+            float sourceStartPositionZ,
+            float sourceStartYawDegrees,
+            float sourceEndPositionX,
+            float sourceEndPositionY,
+            float sourceEndPositionZ,
+            float sourceEndYawDegrees,
+            float previousPositionX,
+            float previousPositionY,
+            float previousPositionZ,
+            float previousYawDegrees,
+            float currentPositionX,
+            float currentPositionY,
+            float currentPositionZ,
+            float currentYawDegrees,
+            float previousPositionProgress,
+            float previousYawProgress,
+            float currentPositionProgress,
+            float currentYawProgress,
+            ProgramMotionWarpTranslationMode translationMode,
+            ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
+            ProgramMotionWarpRotationMode rotationMode,
+            ProgramMotionWarpRotationMethod rotationMethod,
+            float targetPlanarOffsetX,
+            float targetPlanarOffsetY,
+            float targetYawOffsetDegrees,
+            float maximumPositionCorrection,
+            float maximumYawCorrectionDegrees,
+            float maximumYawRateDegreesPerSecond,
+            ProgramMotionWarpLimitPolicy limitPolicy)
+        {
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline motion warp requires a valid source.", nameof(source));
+            if (!abilityId.IsValid)
+                throw new ArgumentException("Timeline motion warp requires an Ability identity.", nameof(abilityId));
+            if (!stateOperation.IsValid)
+                throw new ArgumentException("Timeline motion warp requires a stable state identity.", nameof(stateOperation));
+            if (playbackGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            if (string.IsNullOrEmpty(actionContextIdentity))
+                throw new ArgumentException("Timeline motion warp requires an Action Context identity.", nameof(actionContextIdentity));
+            if (endTime <= startTime || previousTime < startTime || currentTime > endTime || previousTime > currentTime)
+                throw new ArgumentOutOfRangeException(nameof(previousTime), "Timeline motion warp window is invalid.");
+            if (float.IsNaN(sourceStartPositionX) || float.IsNaN(sourceStartPositionY) || float.IsNaN(sourceStartPositionZ) ||
+                float.IsNaN(sourceStartYawDegrees) || float.IsNaN(sourceEndPositionX) || float.IsNaN(sourceEndPositionY) ||
+                float.IsNaN(sourceEndPositionZ) || float.IsNaN(sourceEndYawDegrees) || float.IsNaN(previousPositionX) ||
+                float.IsNaN(previousPositionY) || float.IsNaN(previousPositionZ) || float.IsNaN(previousYawDegrees) ||
+                float.IsNaN(currentPositionX) || float.IsNaN(currentPositionY) || float.IsNaN(currentPositionZ) ||
+                float.IsNaN(currentYawDegrees))
+                throw new ArgumentOutOfRangeException(nameof(sourceStartPositionX), "Timeline motion warp source samples must be finite.");
+            if (translationMode == ProgramMotionWarpTranslationMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
+                throw new ArgumentException("Timeline motion warp cannot disable both position and rotation.");
+
+            Source = source;
+            AbilityId = abilityId;
+            ActionContextIdentity = actionContextIdentity;
+            StateOperation = stateOperation;
+            PlaybackGeneration = playbackGeneration;
+            Cycle = cycle;
+            StartTime = startTime;
+            EndTime = endTime;
+            PreviousTime = previousTime;
+            CurrentTime = currentTime;
+            SourceStartPositionX = sourceStartPositionX;
+            SourceStartPositionY = sourceStartPositionY;
+            SourceStartPositionZ = sourceStartPositionZ;
+            SourceStartYawDegrees = sourceStartYawDegrees;
+            SourceEndPositionX = sourceEndPositionX;
+            SourceEndPositionY = sourceEndPositionY;
+            SourceEndPositionZ = sourceEndPositionZ;
+            SourceEndYawDegrees = sourceEndYawDegrees;
+            PreviousPositionX = previousPositionX;
+            PreviousPositionY = previousPositionY;
+            PreviousPositionZ = previousPositionZ;
+            PreviousYawDegrees = previousYawDegrees;
+            CurrentPositionX = currentPositionX;
+            CurrentPositionY = currentPositionY;
+            CurrentPositionZ = currentPositionZ;
+            CurrentYawDegrees = currentYawDegrees;
+            PreviousPositionProgress = Math.Clamp(previousPositionProgress, 0f, 1f);
+            PreviousYawProgress = Math.Clamp(previousYawProgress, 0f, 1f);
+            CurrentPositionProgress = Math.Clamp(currentPositionProgress, 0f, 1f);
+            CurrentYawProgress = Math.Clamp(currentYawProgress, 0f, 1f);
+            TranslationMode = translationMode;
+            TargetOffsetSpace = targetOffsetSpace;
+            RotationMode = rotationMode;
+            RotationMethod = rotationMethod;
+            TargetPlanarOffsetX = targetPlanarOffsetX;
+            TargetPlanarOffsetY = targetPlanarOffsetY;
+            TargetYawOffsetDegrees = targetYawOffsetDegrees;
+            MaximumPositionCorrection = Math.Max(0f, maximumPositionCorrection);
+            MaximumYawCorrectionDegrees = Math.Max(0f, maximumYawCorrectionDegrees);
+            MaximumYawRateDegreesPerSecond = Math.Max(0f, maximumYawRateDegreesPerSecond);
+            LimitPolicy = limitPolicy;
+        }
+
+        public SimulationExecutionSource Source { get; }
+        public CharacterSkillId AbilityId { get; }
+        public string ActionContextIdentity { get; }
+        public OperationHandle StateOperation { get; }
+        public ulong PlaybackGeneration { get; }
+        public int Cycle { get; }
+        public FixedScalar StartTime { get; }
+        public FixedScalar EndTime { get; }
+        public FixedScalar PreviousTime { get; }
+        public FixedScalar CurrentTime { get; }
+        public float SourceStartPositionX { get; }
+        public float SourceStartPositionY { get; }
+        public float SourceStartPositionZ { get; }
+        public float SourceStartYawDegrees { get; }
+        public float SourceEndPositionX { get; }
+        public float SourceEndPositionY { get; }
+        public float SourceEndPositionZ { get; }
+        public float SourceEndYawDegrees { get; }
+        public float PreviousPositionX { get; }
+        public float PreviousPositionY { get; }
+        public float PreviousPositionZ { get; }
+        public float PreviousYawDegrees { get; }
+        public float CurrentPositionX { get; }
+        public float CurrentPositionY { get; }
+        public float CurrentPositionZ { get; }
+        public float CurrentYawDegrees { get; }
+        public float PreviousPositionProgress { get; }
+        public float PreviousYawProgress { get; }
+        public float CurrentPositionProgress { get; }
+        public float CurrentYawProgress { get; }
+        public ProgramMotionWarpTranslationMode TranslationMode { get; }
+        public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
+        public ProgramMotionWarpRotationMode RotationMode { get; }
+        public ProgramMotionWarpRotationMethod RotationMethod { get; }
+        public float TargetPlanarOffsetX { get; }
+        public float TargetPlanarOffsetY { get; }
+        public float TargetYawOffsetDegrees { get; }
+        public float MaximumPositionCorrection { get; }
+        public float MaximumYawCorrectionDegrees { get; }
+        public float MaximumYawRateDegreesPerSecond { get; }
+        public ProgramMotionWarpLimitPolicy LimitPolicy { get; }
+        public bool UsesPositionProgress => TranslationMode is ProgramMotionWarpTranslationMode.SkewToTarget or ProgramMotionWarpTranslationMode.LinearToTarget;
+        public bool UsesYawProgress => RotationMode != ProgramMotionWarpRotationMode.Disabled &&
+                                       RotationMethod == ProgramMotionWarpRotationMethod.ProgressCurve;
+        public bool UsesYawRate => RotationMode != ProgramMotionWarpRotationMode.Disabled &&
+                                   RotationMethod == ProgramMotionWarpRotationMethod.ConstantRate;
+    }
+
+    public interface IAbilityTimelineLogicMotionWarpReader
+    {
+        void CopyPendingMotionWarps(int runtimeHandle, List<AbilityTimelineLogicMotionWarp> results);
+    }
+
+    public interface IAbilityTimelineMotionWarpCatalogProvider
+    {
+        AbilityTimelineMotionWarpCatalog MotionWarpCatalog { get; }
+    }
+
+    public sealed class AbilityTimelineMotionWarpCatalog
+    {
+        public const int DirectStateOperationBase = 0x30000000;
+
+        public static AbilityTimelineMotionWarpCatalog Empty { get; } = new(
+            Array.Empty<AbilityTimelineMotionWarpStateIdentity>(),
+            "empty",
+            "empty");
+
+        readonly Dictionary<string, OperationHandle> m_Operations;
+
+        public AbilityTimelineMotionWarpCatalog(
+            IReadOnlyList<AbilityTimelineMotionWarpStateIdentity> identities,
+            string schemaHash,
+            string contentHash)
+        {
+            if (identities == null)
+                throw new ArgumentNullException(nameof(identities));
+            Identities = new AbilityTimelineMotionWarpStateIdentity[identities.Count];
+            m_Operations = new Dictionary<string, OperationHandle>(identities.Count, StringComparer.Ordinal);
+            for (int index = 0; index < identities.Count; index++)
+            {
+                AbilityTimelineMotionWarpStateIdentity identity = identities[index];
+                if (!identity.IsValid)
+                    throw new ArgumentException("Timeline MotionWarp catalog contains an invalid identity.", nameof(identities));
+                OperationHandle operation = new OperationHandle(DirectStateOperationBase + index);
+                Identities[index] = new AbilityTimelineMotionWarpStateIdentity(
+                    identity.TimelineId,
+                    identity.ClipAuthoringId,
+                    operation);
+                if (!m_Operations.TryAdd(IdentityKey(identity.TimelineId, identity.ClipAuthoringId), operation))
+                    throw new ArgumentException("Timeline MotionWarp catalog contains duplicate clip identities.", nameof(identities));
+            }
+            SchemaHash = new StableHash(SimulationIdentity.Require(schemaHash, nameof(schemaHash)));
+            ContentHash = new StableHash(SimulationIdentity.Require(contentHash, nameof(contentHash)));
+        }
+
+        public AbilityTimelineMotionWarpStateIdentity[] Identities { get; }
+        public StableHash SchemaHash { get; }
+        public StableHash ContentHash { get; }
+        public bool HasOperation(OperationHandle operation) =>
+            operation.IsValid &&
+            operation.Value >= DirectStateOperationBase &&
+            operation.Value < DirectStateOperationBase + Identities.Length;
+
+        public bool TryGetOperation(string timelineId, string clipAuthoringId, out OperationHandle operation) =>
+            m_Operations.TryGetValue(IdentityKey(timelineId, clipAuthoringId), out operation);
+
+        static string IdentityKey(string timelineId, string clipAuthoringId) =>
+            string.Concat(timelineId, "/", clipAuthoringId);
+    }
+
+    public readonly struct AbilityTimelineMotionWarpStateIdentity
+    {
+        public AbilityTimelineMotionWarpStateIdentity(
+            string timelineId,
+            string clipAuthoringId,
+            OperationHandle operation)
+        {
+            TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
+            Operation = operation;
+        }
+
+        public string TimelineId { get; }
+        public string ClipAuthoringId { get; }
+        public OperationHandle Operation { get; }
+        public bool IsValid => !string.IsNullOrEmpty(TimelineId) &&
+                               !string.IsNullOrEmpty(ClipAuthoringId) &&
+                               Operation.IsValid;
+    }
+
     public readonly struct AbilityTimelineInvocationSource
     {
         public AbilityTimelineInvocationSource(
@@ -212,60 +452,46 @@ namespace ThirdPersonSimulation
                                InvocationGeneration != 0;
     }
 
-    public readonly struct TimelineSegment<TTime>
-        where TTime : struct
+    internal interface IAbilityTimelineMotionWarpTarget<TChannel> where TChannel : struct
     {
-        public TimelineSegment(TTime previous, TTime current, int cycle, bool startsCycle)
-        {
-            if (cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(cycle));
-            Previous = previous;
-            Current = current;
-            Cycle = cycle;
-            StartsCycle = startsCycle;
-        }
-
-        public TTime Previous { get; }
-        public TTime Current { get; }
-        public int Cycle { get; }
-        public bool StartsCycle { get; }
+        void ApplyTimelineMotionWarp(AbilityTimelineLogicMotionWarp warp, ref TChannel channel);
+        void FailTimelineMotionWarp(OperationHandle operation, string code, string detail);
     }
 
-    internal readonly struct MotionWarpSample<TTime, TAction>
-        where TTime : struct
-        where TAction : struct
-    {
-        public MotionWarpSample(
-            OperationHandle operation,
-            TimelineSegment<TTime> segment,
-            ulong playbackGeneration,
-            TimelineActionContextIdentity actionContext,
-            TAction action)
-        {
-            if (!operation.IsValid)
-                throw new ArgumentException("MotionWarp sample requires a valid operation.", nameof(operation));
-            if (playbackGeneration == 0)
-                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
-            if (!actionContext.IsValid)
-                throw new ArgumentException("MotionWarp sample requires a valid Action Context.", nameof(actionContext));
-            Operation = operation;
-            Segment = segment;
-            PlaybackGeneration = playbackGeneration;
-            ActionContext = actionContext;
-            Action = action;
-        }
-
-        public OperationHandle Operation { get; }
-        public TimelineSegment<TTime> Segment { get; }
-        public ulong PlaybackGeneration { get; }
-        public TimelineActionContextIdentity ActionContext { get; }
-        public TAction Action { get; }
-    }
-
-    internal enum MotionWarpLifecycleDecision : byte
+    public enum MotionWarpLifecycleDecision : byte
     {
         Initialize = 1,
         Continue = 2
+    }
+
+    internal static class AbilityTimelineMotionWarpRuntime
+    {
+        public static void ApplyDirect<TChannel, TTarget>(
+            AbilityTimelineMotionWarpCatalog catalog,
+            IReadOnlyList<AbilityTimelineLogicMotionWarp> warps,
+            OperationHandle resolvedOwner,
+            ref TChannel channel,
+            TTarget target)
+            where TChannel : struct
+            where TTarget : IAbilityTimelineMotionWarpTarget<TChannel>
+        {
+            int selected = -1;
+            for (int index = 0; index < warps.Count; index++)
+            {
+                AbilityTimelineLogicMotionWarp warp = warps[index];
+                if (!catalog.HasOperation(warp.StateOperation) || !warp.Source.Operation.Equals(resolvedOwner))
+                    continue;
+                if (selected >= 0)
+                {
+                    target.FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.AmbiguousModifier,
+                        $"Action channel owner '{resolvedOwner}' has multiple eligible Timeline MotionWarps.");
+                    return;
+                }
+                selected = index;
+            }
+            if (selected >= 0)
+                target.ApplyTimelineMotionWarp(warps[selected], ref channel);
+        }
     }
 
     internal static class MotionModifierDiagnosticCode
@@ -285,7 +511,7 @@ namespace ThirdPersonSimulation
         public const string PreservedByLimitPolicy = "motion_warp_preserved_by_limit_policy";
     }
 
-    internal static class MotionWarpRuntimeSemantics
+    public static class MotionWarpRuntimeSemantics
     {
         public static ulong ComposePlaybackGeneration(ulong activationGeneration, int cycle)
         {
@@ -319,94 +545,6 @@ namespace ThirdPersonSimulation
             if (!storedAction.Equals(currentAction))
                 throw new InvalidOperationException($"{MotionModifierDiagnosticCode.InvalidState}: restored Action instance does not match the active Action Context.");
             return MotionWarpLifecycleDecision.Continue;
-        }
-    }
-
-    internal interface IMotionModifierTarget<TTime, TAction, TChannel>
-        where TTime : struct
-        where TAction : struct
-        where TChannel : struct
-    {
-        void Reset(ProgramMotionModifierDescriptor descriptor);
-        void TraceSourceNotResolved(ProgramMotionModifierDescriptor descriptor, OperationHandle resolvedOwner);
-        void ApplyMotionWarp(
-            ProgramMotionModifierDescriptor descriptor,
-            MotionWarpSample<TTime, TAction> sample,
-            ref TChannel channel);
-        void Fail(string code, ProgramMotionModifierDescriptor descriptor, string detail);
-    }
-
-    internal static class ProgramMotionModifierRuntime
-    {
-        public static void ApplyActionWarp<TTime, TAction, TChannel, TTarget>(
-            ReadOnlySpan<ProgramMotionModifierDescriptor> descriptors,
-            IReadOnlyList<MotionWarpSample<TTime, TAction>> samples,
-            OperationHandle resolvedOwner,
-            ref TChannel channel,
-            TTarget target)
-            where TTime : struct
-            where TAction : struct
-            where TChannel : struct
-            where TTarget : IMotionModifierTarget<TTime, TAction, TChannel>
-        {
-            int selectedDescriptor = -1;
-            int selectedSample = -1;
-            for (int descriptorIndex = 0; descriptorIndex < descriptors.Length; descriptorIndex++)
-            {
-                ProgramMotionModifierDescriptor descriptor = descriptors[descriptorIndex];
-                int sampleIndex = FindOnlySample<TTime, TAction, TChannel, TTarget>(samples, descriptor.Operation, target, descriptor);
-                if (sampleIndex < 0)
-                {
-                    target.Reset(descriptor);
-                    continue;
-                }
-                if (!descriptor.SourceMotionOperation.Equals(resolvedOwner))
-                {
-                    target.Reset(descriptor);
-                    target.TraceSourceNotResolved(descriptor, resolvedOwner);
-                    continue;
-                }
-                if (selectedDescriptor >= 0)
-                {
-                    target.Fail(
-                        MotionModifierDiagnosticCode.AmbiguousModifier,
-                        descriptor,
-                        $"Action channel owner '{resolvedOwner}' has multiple active MotionWarp modifiers.");
-                    return;
-                }
-                selectedDescriptor = descriptorIndex;
-                selectedSample = sampleIndex;
-            }
-            if (selectedDescriptor >= 0)
-                target.ApplyMotionWarp(descriptors[selectedDescriptor], samples[selectedSample], ref channel);
-        }
-
-        static int FindOnlySample<TTime, TAction, TChannel, TTarget>(
-            IReadOnlyList<MotionWarpSample<TTime, TAction>> samples,
-            OperationHandle operation,
-            TTarget target,
-            ProgramMotionModifierDescriptor descriptor)
-            where TTime : struct
-            where TAction : struct
-            where TChannel : struct
-            where TTarget : IMotionModifierTarget<TTime, TAction, TChannel>
-        {
-            int found = -1;
-            for (int i = 0; i < samples.Count; i++)
-            {
-                if (!samples[i].Operation.Equals(operation))
-                    continue;
-                if (found >= 0)
-                {
-                    target.Fail(
-                        MotionModifierDiagnosticCode.AmbiguousModifier,
-                        descriptor,
-                        $"MotionWarp operation '{operation}' produced multiple active samples in one logic Tick.");
-                    return -1;
-                }
-                found = i;
-            }
-            return found;
         }
     }
 

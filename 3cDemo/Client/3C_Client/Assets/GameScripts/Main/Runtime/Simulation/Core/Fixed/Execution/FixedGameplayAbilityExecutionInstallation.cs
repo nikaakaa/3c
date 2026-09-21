@@ -28,7 +28,8 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayAbilityExecutionInstallation(
             FixedGameplayAbilityExecutionData data,
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
-            EquipmentProgramLayout equipmentLayout)
+            EquipmentProgramLayout equipmentLayout,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             data = data ?? throw new ArgumentNullException(nameof(data));
             bool requiresGameplayEffects = data.Capabilities.HasGameplayCapability("GameplayEffect");
@@ -37,7 +38,9 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(gameplayEffectCatalog));
             if (requiresEquipment && equipmentLayout == null)
                 throw new ArgumentNullException(nameof(equipmentLayout));
-            GameplayAbilityExecutionLayout layout = FixedGameplayAbilityExecutionLayoutFactory.Create(data);
+            GameplayAbilityExecutionLayout layout = FixedGameplayAbilityExecutionLayoutFactory.Create(
+                data,
+                timelineMotionWarpCatalog);
             FixedGameplayEffectRuntimeCatalog executionGameplayEffectCatalog = requiresGameplayEffects
                 ? gameplayEffectCatalog
                 : null;

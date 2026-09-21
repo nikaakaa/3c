@@ -292,10 +292,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.StateAny:
                 case SimulationOperationCode.StateExit:
                 case SimulationOperationCode.TimelineAnimation:
-                case SimulationOperationCode.TimelineMotionCurve:
-                    case SimulationOperationCode.TimelineCue:
                 case SimulationOperationCode.TimelineCameraState:
-                case SimulationOperationCode.TimelineCameraCue:
                 case SimulationOperationCode.TimelineCameraResponse:
                     throw new InvalidOperationException(
                         $"Timeline content operation '{descriptor.Code}' cannot execute as an Ability leaf.");

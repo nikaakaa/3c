@@ -112,25 +112,24 @@ Timeline Runtime MUST为每个TreeClip候选携带`TreeGraphId`和`TreeGraphRevi
 - **THEN** Timeline MUST把同一`TreeGraphId`和`TreeGraphRevision`传给TreeClip service
 - **AND** Timeline MUST NOT在服务外解析或执行图，服务结果 MUST回到同一Step提交边界
 
-### Requirement: ActionCue必须只发布committed领域事件
+### Requirement: TreeClip节点必须直接提交正式领域输出
 
-`ActionCueTrack` MUST 只把 Logic 执行域的跨点转成 committed 领域事件；`EventName` MUST 使用作者配置的 `CueType`，业务键 MUST 使用 `CueId`。事件 MUST 在 SimulationTick Advance 被接受后通过 `CharacterTimelineHost.ActionCueCommitted` 发布，payload MUST 包含稳定 `EventId`、playback handle、generation、`LogicTick`、frame/cycle、execution identity、content revision、source/track/clip authoring id、`EventName` 和 `CueId`。Timeline runtime MUST NOT 在 ActionCue 内解析领域 payload、直接驱动 Camera/VFX/Audio、写 Gameplay fact 或改由 PresentationFrame 重发。
+Timeline MUST NOT 定义或运行 `ActionCueTrack`、`ActionCueClip`、`ActionCueCommitted` 或同义的 Timeline 触发事件链。一次性 Gameplay、Camera、VFX 和 Audio 行为 MUST 在 Logic TreeClip 内由对应正式节点表达，并通过该节点所属的 domain emitter 在同一个 SimulationTick 事务中提交。节点输出 MUST 携带稳定 EventId、playback handle、generation、LogicTick、秒制内容位置、cycle、Action Context、TreeGraphId、TreeGraphRevision、NodeAuthoringId、execution identity 和 content revision。Timeline MUST 只负责 TreeClip 的时间边界、精确图身份和候选 Commit/Discard，不解析领域 payload，也不得由 PresentationFrame 重发 Logic 输出。
 
-#### Scenario: Corin攻击属性cue被提交
+#### Scenario: Corin攻击属性节点被提交
 
-- **WHEN** Logic Timeline 跨过 `CueType=AttackProperty` 的 ActionCue
-- **THEN** runtime MUST 只发布事件名为 `AttackProperty` 的 committed ActionCue
-- **AND** `CueId` MUST 保留原始 `Corin_Attack_*_AttackProperty_*` key，MUST NOT被 Timeline 重命名、截断或重编码
-- **AND** Ability/Attack 领域 MUST 按该 `CueId` 解析正式 GameplayEffect Profile / Ability 执行域内容
+- **WHEN** Logic TreeClip 执行作者配置的攻击属性节点
+- **THEN** 正式 Gameplay domain MUST 直接收到该节点的 typed output，携带秒制位置、实际 LogicTick 和完整图／节点身份
+- **AND** 原始业务 key MUST 由节点所属的 Gameplay domain 保留并解析，MUST NOT 再经过 Timeline Cue 包装或重命名
 
 #### Scenario: 攻击属性payload到达领域
 
-- **WHEN** `AttackProperty` ActionCue 被提交
-- **THEN** Timeline payload MUST只包含播放、内容、身份和 `CueId` 字段
-- **AND** 命中效果编号、碰撞形状、属性数值和目标语义 MUST由 GameplayEffect Profile / Ability 执行域消费，MUST NOT由 Timeline runtime 解释
+- **WHEN** TreeClip Gameplay 节点在接受的 SimulationTick 中提交
+- **THEN** Timeline MUST 不解析命中效果编号、碰撞形状、属性数值和目标语义
+- **AND** 这些字段 MUST 由 GameplayEffect / Ability domain 的正式节点输出和执行事务消费
 
-#### Scenario: 领域消费方未装配
+#### Scenario: 领域节点未装配
 
-- **WHEN** 某个 `CueType` 没有领域订阅者
-- **THEN** Timeline MUST 保持事件为已提交事实和 trace
-- **AND** MUST NOT伪造 Camera、VFX、Audio 或 Gameplay 结果，也不得宣称事件已被业务消费
+- **WHEN** TreeClip 内容声明的正式节点 emitter、binding 或 domain 缺失
+- **THEN** Prepare 或调用边界 MUST 返回精确失败
+- **AND** MUST NOT 创建空事件、旧 ActionCue 事件、Camera/VFX/Audio 假输出或兼容路径

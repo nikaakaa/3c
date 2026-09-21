@@ -710,3 +710,26 @@
 - Fixed / Float Actor binding 暴露同一个 motion reader。Character evaluation 在 invocation Tick 后、`ResolveMotion` 前读取 pending Timeline motion，转换成原有 `SimulationMotionContribution`；后续 motion 合成、facts、presentation、trace、Accept、Commit / Discard仍走原事务。不新建第二 motion resolver，也不提前提交 Timeline私有状态。
 - Runtime 的 `TimelineRuntimeMotionWarpRequest` 与 `TimelineRuntimeScenePresentationSample` 从 `Frame` 改为 `FixedScalar Time`；Logic / Presentation采样直接传当前秒制位置，删除采样前按 60 作者帧量化。调用方没有读取旧 `Frame` 的残留。
 - `ThirdPersonClient.Runtime.csproj` 编译通过：17 warnings、0 errors；已执行 `dotnet build-server shutdown`。0.5仍不勾选，因为 `MotionWarps` 还未接入原 Motion / Warp owner，旧 Program `TimelineMotionCurve / TimelineMotionWarp` 合同和帧字段链也尚未删除。
+
+## Timeline Direct Warp接回原Motion owner并统一Fixed/Float输入
+
+- Fixed / Float `MotionAccumulator` 现在把 `workspace.TimelineMotionWarps` 作为构造输入，不再从 execution frame 反向查找 workspace；Timeline direct warp 与普通 motion contributions、action warp samples 使用同一注入边界，最终都应用到原 `ResolvedMotionChannel`。
+- Float target 改用 Float 的 action 查找和 `SkillId` 合同，删除 Fixed API 误用；direct warp 秒数仍以 Core 的 `FixedScalar` 为唯一合同，进入 Float 计算时显式转换成 Float 标量。
+- `ThirdPersonSimulation.Float32.csproj` 编译通过：0 warnings、0 errors；`ThirdPersonClient.Runtime.csproj` 编译通过：34 warnings、0 errors。两次构建都禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
+- 0.5 仍未勾选：旧 Program `TimelineMotionCurve / TimelineMotionWarp` operation、capability、modifier compiler、运行时残段和帧目录字段还需删除；canonical ability data 也必须用正式链重建。
+
+## 删除旧Timeline Motion Program合同
+
+- `SimulationOperationCode.TimelineMotionCurve` 与 `TimelineMotionWarp` 从正式 operation set 删除，版本升到 `character-gameplay-operations/19`；`MotionSourceOperation` 引用种类同步删除。
+- Semantic IR 的 Motion source 校验、`ProgramMotionModifierCompiler`、Fixed / Float target compiler 的 `TimelineMotionCurve` / `TimelineMotionWarp` capability、Ability leaf 的旧 Timeline Motion case、execution layout 的旧 warp operation 收集均已删除。
+- Fixed / Float Actor binding 现在把 direct warp catalog 写入 `TimelineMotionWarpCatalog`，并纳入 state schema 与 gameplay content hash；Fixed target 补齐 Float 已有的 action 查找和 `SkillId` 身份判断。
+- `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 warnings、0 errors；`ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors。所有构建禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
+- 0.5 仍未勾选：旧 `ProgramMotionModifierDescriptor` 数据表、codec、layout 注入、sample runtime 和帧目录字段还在；canonical ability data 仍需按 `/19` 用正式链重建，当前 `/18` 资产会在版本检查处失败。
+
+## 删除旧Motion Modifier运行残段
+
+- Timeline MotionWarp 只保留 direct runtime：`MotionWarpSample`、`IMotionModifierTarget`、`ProgramMotionModifierRuntime`、`ProgramMotionModifierDescriptor`、Program 数据表、layout 通道注入、Fixed／Float sample sink 和 workspace 采样表全部删除。运行入口改为 `ApplyTimelineMotionWarps`，只消费 Timeline pending 里的秒制 direct warp。
+- Program catalog 删除已无消费者的 `StartFrame`、`EndFrame`、`CurveEndFrame`、`EaseInFrame`、`EaseOutFrame` 和 `FrameRate` 字段；Timeline 编辑器显示用的 `TimelineData.MaxFrame` 保留。执行 payload 版本升到 4，避免旧 canonical 内容被继续读取。
+- 全工程 `.cs` 搜索 `MotionWarpSample`、`ProgramMotionModifierDescriptor`、`IMotionModifierTarget`、`ProgramMotionModifierRuntime`、`ApplyMotionModifiers`、`BuildMotionModifierRanges`、`ProgramMotionModifierKind/Channel` 均无结果；旧帧字段在 Simulation catalog 中也无消费者。
+- `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 warnings、0 errors；`ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors。所有构建禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
+- 0.5 仍未勾选：canonical ability data 必须按 `/19` 和 payload 4 用正式生成链重建；重建后还要对账 TreeClip 输出、ActionCue 残留和旧帧入口，才能判断本任务是否完整闭合。

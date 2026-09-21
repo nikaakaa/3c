@@ -31,7 +31,6 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<ProgramScopeLayout> scopes,
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
-            IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
             IEnumerable<ProgramProducer> producers)
         {
@@ -69,7 +68,6 @@ namespace ThirdPersonSimulation.Fixed
             Scopes = Copy(scopes);
             OutputChannels = Copy(outputChannels);
             CatalogEntries = Copy(catalogEntries);
-            MotionModifiers = Copy(motionModifiers);
             SourceMap = Copy(sourceMap);
             Producers = Copy(producers);
             CatalogIndex = new ProgramCatalogRuntimeIndex(Operations.Count, References, CatalogEntries);
@@ -108,7 +106,6 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramScopeLayout> Scopes { get; }
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels { get; }
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries { get; }
-        public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers { get; }
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap { get; }
         public IReadOnlyList<ProgramProducer> Producers { get; }
         public ProgramCatalogRuntimeIndex CatalogIndex { get; }
@@ -140,7 +137,6 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<ProgramScopeLayout> scopes,
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
-            IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
             IEnumerable<ProgramProducer> producers)
         {
@@ -171,7 +167,6 @@ namespace ThirdPersonSimulation.Fixed
                 scopes,
                 outputChannels,
                 catalogEntries,
-                motionModifiers,
                 sourceMap,
                 producers);
         }

@@ -5,7 +5,9 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal static class FixedGameplayAbilityExecutionLayoutFactory
     {
-        public static GameplayAbilityExecutionLayout Create(FixedGameplayAbilityExecutionData data)
+        public static GameplayAbilityExecutionLayout Create(
+            FixedGameplayAbilityExecutionData data,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -21,11 +23,11 @@ namespace ThirdPersonSimulation.Fixed
                 data.StateSlots,
                 data.Scopes,
                 data.CatalogEntries,
-                data.MotionModifiers,
                 data.SourceMap,
                 data.Producers,
                 data.CatalogIndex,
-                data.Topology);
+                data.Topology,
+                timelineMotionWarpCatalog);
         }
     }
 }

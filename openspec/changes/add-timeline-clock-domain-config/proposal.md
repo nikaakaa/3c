@@ -27,7 +27,7 @@ Timeline 当前仍以固定 60 作者帧记录内容，只能换算不同 Simula
 
 ### Modified Capabilities
 
-- btsmtl-timeline-direct-runtime：双域直读同一内容、每个播放实例的时间所有权、停止与表现收尾边界，保留状态本地 ActionCue 合同。
+- btsmtl-timeline-direct-runtime：双域直读同一内容、每个播放实例的时间所有权、停止与表现收尾边界，TreeClip 节点直接提交正式领域输出。
 - btsmtl-runnable-timeline-node：移除 Scale 模型描述，限定 Logic TimelineBody 与表现安全 Marker 图的执行能力。
 - character-animation-pipeline：同一动作的表现采样一致、同级 Marker、表现事务与 Gameplay 状态隔离。
 - btsmtl-timeline-editor-preview：以秒保存作者时间，帧仅负责显示与吸附，Slate mutation 和 Undo 使用同一正式秒制模型。
@@ -36,7 +36,7 @@ Timeline 当前仍以固定 60 作者帧记录内容，只能换算不同 Simula
 
 - 运行链涉及 TimelineRuntimePresentationDriver、CharacterTimelineHost、既有 Action 表现时钟策略、Action sample history / projector、Pose Player 消费与 Camera bridge。只复用正式 owner，不新增全局时间服务。
 - 作者链涉及 TimelineData 及类型字段、资产和生成代码、内容闭包与指纹、Slate binding、Track Inspector、正式 Timeline mutation 及既有 C# authoring 导出 / 重建。私有 Marker 图仍随正式 owner 闭包管理。
-- 本轮只更新本 change 的 proposal、design、五份 delta spec 与 tasks，不修改代码和资产，不归档，不把待实施合同写成已完成事实。
+- 本轮先同步本 change 的 proposal、design、delta spec、tasks 与现行 project/spec 边界，不修改代码和资产，不归档，不把待实施合同写成已完成事实。
 
 ### 与现行 spec 的对账
 
@@ -48,6 +48,6 @@ Timeline 当前仍以固定 60 作者帧记录内容，只能换算不同 Simula
 | character-presentation-interpolation：locomotion plan / prepared binding 与 Body correction 独立 | 保持；不把所有 Pose Player 合并成一个动作时钟，不恢复单 Clip 的策略配置 |
 | character-animation-pipeline：旧条款仍描述 Clip 下的 Presentation Marker | 通过本 change 的同名 MODIFIED requirement 改为 Track 下的同级 Marker |
 | btsmtl-runnable-timeline-node：数据模型仍列出 scale | 通过本 change 的 MODIFIED requirement 删除已废弃字段描述 |
-| btsmtl-timeline-direct-runtime：Timeline 唯一时间 owner 管理帧/秒/Tick，ActionCue payload 包含 frame/cycle | 旧 owner 表述与被动边界冲突；delta 明确播放管理者决定进度，Timeline 管内容映射和求值状态，同事务提交；统一秒制事件位置，保留 tick、cycle 和来源身份 |
+| btsmtl-timeline-direct-runtime：Timeline 唯一时间 owner 管理帧/秒/Tick，ActionCue payload 包含 frame/cycle | 旧 owner 与旧 Timeline Cue 事件路径都与现行 TreeClip 节点边界冲突；delta 明确播放管理者决定进度，Timeline 管内容映射和求值状态，TreeClip 节点经正式 domain emitter 在同事务提交 |
 
-旧文档中的“本轮保留固定 60 作者帧、不迁移秒存储”“独立表现时钟已否决”“普通表现一律自由播放”“不同域不得共享采样来源”不再作为决策。秒制及 Q32.32 数值合同已经确定；共享采样具体 owner 和表现图接入仍需沿代码落实，见 [design.md](design.md)。实现清单见 [tasks.md](tasks.md)。主 specs 仍描述现行系统，本次 delta 尚未归档，不代表代码已采用目标合同。
+旧文档中的“本轮保留固定 60 作者帧、不迁移秒存储”“独立表现时钟已否决”“普通表现一律自由播放”“不同域不得共享采样来源”不再作为决策。秒制及 Q32.32 数值合同已经确定；共享采样具体 owner 和表现图接入仍需沿代码落实，见 [design.md](design.md)。实现清单见 [tasks.md](tasks.md)。主 specs 已同步为 TreeClip 节点边界；本次 delta 尚未归档，不代表代码已采用目标合同。

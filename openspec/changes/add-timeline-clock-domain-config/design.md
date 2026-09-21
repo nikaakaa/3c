@@ -199,8 +199,8 @@ Marker 的私有图归正式 owner 闭包；复制、删除、导出与 generate
 - character-presentation-interpolation 对有限 Action、locomotion 与 Body correction 已有不同合同；本设计服从它们。将自由推进普遍用于有限 Action 或因 Body 修正重置 Player 都超出当前方案。
 - btsmtl-timeline-direct-runtime 的“Timeline 唯一时间 owner”旧表述与被动求值边界不一致。本 change 明确外部既有播放管理者拥有进度／速率，Timeline 拥有内容映射及求值状态；在同一 Step 和快照链提交恢复，不新建第二 Runtime。
 - character-animation-pipeline 的 Clip 子 Marker 表述通过 delta 改成同级 Marker，保留原 requirement 名字以便准确归档。
-- btsmtl-runnable-timeline-node 的 scale 描述通过 delta 删除。direct-runtime 的 ActionCue frame/cycle 改为秒制时间与 cycle；StateId / LocalFrame / BranchId 中的原始 LocalFrame 仅保留来源身份，不再构成独立调度位置。状态本地 ActionCue 在当前主 spec 中无同名 requirement，列为 ADDED。
-- 本轮不改 openspec/project.md 与主 specs；待实现合同仍属于当前 change，不以文档更新宣称已经归档或完成。
+- btsmtl-runnable-timeline-node 的 scale 描述通过 delta 删除。direct-runtime 删除旧 Timeline ActionCue frame/cycle 合同，改由 TreeClip 节点输出秒制时间、cycle、图／节点身份与 branch revision；素材 LocalFrame 不再构成独立调度位置。状态本地行为由对应 TreeClip 分支节点表达。
+- 本轮已将 openspec/project.md 与主 specs 同步到 TreeClip 节点边界；待实现代码仍属于当前 change，不以文档更新宣称已经归档或完成。
 
 ## 实施前仍需明确
 
@@ -216,7 +216,7 @@ Marker 的私有图归正式 owner 闭包；复制、删除、导出与 generate
 以下保留本 change 已有成果，不以它们证明新的表现 Marker 链已完成：
 
 - Timeline 顶栏由 TimelineEditorBindingState、TimelineEditorToolbarView 与 TimelineEditorWindow 分别拥有只读模型、视图和控制；Slate 是唯一 Timeline 编辑面，FlowCanvas 负责正式图可视化。
-- Corin AttackProperty 由 Ability / Attack 领域转换并解释；ActionCue 只在 Logic commit 后发布原始 CueType / CueId、播放身份与事件身份，碰撞、属性和命中效果 payload 留在 GameplayEffect / Ability。既有记录包含 108 个效果 key 与 uint 编号收口；没有领域订阅者时，trace 不等于业务已消费。
+- Corin AttackProperty 由 TreeClip 内正式 Gameplay 节点提交并由 Ability / Attack 领域解释；Timeline 不再提供 ActionCue 轨道或 committed 事件包装，碰撞、属性和命中效果 payload 留在 GameplayEffect / Ability。既有记录包含 108 个效果 key 与 uint 编号收口；节点 domain 未装配时在准备／调用边界精确失败。
 - Attack3 的 Attack_Normal_03_Explode 使用 CorinAttack3Timeline 中起点 frame=75 的独立 Section，源本地 frame=1 对应全局 frame=75，事件携带 StateId / LocalFrame。
 - Attack5 在 frame=47 通过 Attack5EndBoundary 决策进入 End 或 End_2；两个状态分别绑定 CorinAttack5EndTimeline / CorinAttack5End2Timeline，后者播放 Corin_Attack_Normal_05_B。End_2 的源本地帧 1、10、12、14、16、18、20、22、24、26、28、30、32、34、36 共 15 个 cue 映射至从 0 开始的 Timeline，BranchId=End_2。
-- StateId / LocalFrame / BranchId 已进入 ActionCue sample、committed event 与稳定 EventId；Attack5 frame=64 多余 _01_02 cue 已清理。旧记录中的 1121 帧回放结果只对应当时内容改动，不作为本轮共享表现采样或图执行的证据。Branch / Rush 内容不在本次设计扩展范围。
+- Attack5 frame=64 多余 `_01_02` 节点输出已清理；状态与分支身份改由正式 TreeClip 图／节点身份和 branch revision 表达。旧记录中的 1121 帧回放结果只对应当时内容改动，不作为本轮共享表现采样或图执行的证据。Branch / Rush 内容不在本次设计扩展范围。

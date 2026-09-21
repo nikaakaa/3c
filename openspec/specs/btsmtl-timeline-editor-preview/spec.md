@@ -366,12 +366,12 @@ Surface MUST释放选择、回调、GUI capture和临时资源，不删除正式
 - **THEN** 正式identity、资源和时间范围 MUST保持且旧临时状态已释放
 - **AND** MUST无新增序列化、GUI或生命周期错误
 
-### Requirement: Corin AttackProperty必须经正式转换后消费
+### Requirement: Corin AttackProperty必须经TreeClip正式节点消费
 
-外部AttackProperty MUST不得成为Timeline Runtime直接输入。主控必须把已确认事件时间转换为正式ActionCue或Ability打击帧，把碰撞与属性payload归入GameplayEffect／Ability owner。Timeline只发布携带原始CueId的committed ActionCue；UI只观察正式playback／trace，不解析Dump或建立第二时钟。
+外部AttackProperty MUST不得成为Timeline Runtime直接输入。主控必须把已确认事件时间转换为TreeClip内的正式Gameplay节点，由节点所属的GameplayEffect／Ability owner提交碰撞与属性payload。Timeline只观察正式TreeClip／节点输出及playback／trace，不定义ActionCue轨道、不包装第二套事件，也不解析Dump或建立第二时钟。
 
 #### Scenario: 使用攻击属性配置打击帧
 
-- **WHEN** 作者把AttackProperty时间点转换为Marker或Ability打击帧
+- **WHEN** 作者把AttackProperty时间点转换为TreeClip内的Gameplay节点或正式Ability打击帧
 - **THEN** Timeline MUST按声明的Logic／Presentation执行域消费正式内容
 - **AND** UI MUST不从原始Dump重算运行结果

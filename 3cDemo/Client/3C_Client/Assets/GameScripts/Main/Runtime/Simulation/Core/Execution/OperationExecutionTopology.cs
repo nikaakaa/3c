@@ -12,15 +12,9 @@ namespace ThirdPersonSimulation
         BlendMode = 3,
         Channel = 4,
         ConsumeLowerChannels = 5,
-        CueId = 6,
-        CueType = 7,
         CurveEndFrame = 8,
         EaseInCurve = 9,
-        EaseInFrame = 10,
         EaseOutCurve = 11,
-        EaseOutFrame = 12,
-        EndFrame = 13,
-        FrameRate = 14,
         Intensity = 15,
         MaxFrame = 16,
         Muted = 17,
@@ -31,7 +25,6 @@ namespace ThirdPersonSimulation
         Priority = 22,
         Projection = 23,
         Space = 24,
-        StartFrame = 25,
         Timeline = 26,
         Track = 27,
         WeightCurve = 28,
@@ -469,8 +462,7 @@ namespace ThirdPersonSimulation
                     ?? throw new ArgumentException($"Program reference contains null at index {i}.", nameof(references));
                 if (reference.HasSourceOperation && reference.SourceOperation.Value >= operationCount)
                     throw new ArgumentException($"Program reference '{reference.Identity}' has an invalid source operation.", nameof(references));
-                if ((reference.Kind == ProgramReferenceKind.Operation ||
-                     reference.Kind == ProgramReferenceKind.MotionSourceOperation) &&
+                if (reference.Kind == ProgramReferenceKind.Operation &&
                     reference.TargetIndex >= operationCount)
                     throw new ArgumentException($"Program reference '{reference.Identity}' has an invalid target operation.", nameof(references));
             }

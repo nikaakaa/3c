@@ -51,7 +51,7 @@ namespace ThirdPersonSimulation
         public Float32PresentationGraphRuntime(Float32GameplayAbilityExecutionData data)
         {
             m_Data = data ?? throw new ArgumentNullException(nameof(data));
-            m_Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(data);
+            m_Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(data, AbilityTimelineMotionWarpCatalog.Empty);
             var entries = new List<ProgramSourceMapEntry>();
             foreach (ProgramSourceMapEntry source in data.SourceMap)
                 if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation &&

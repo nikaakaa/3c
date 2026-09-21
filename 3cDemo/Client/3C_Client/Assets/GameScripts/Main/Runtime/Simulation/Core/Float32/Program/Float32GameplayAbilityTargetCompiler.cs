@@ -31,8 +31,6 @@ namespace ThirdPersonSimulation
             "RunnableTree",
             "StateMachine",
             "Timeline",
-            "TimelineMotionCurve",
-            "TimelineMotionWarp",
             "TimelineScenePresentationParameter"
         };
 
@@ -195,7 +193,6 @@ namespace ThirdPersonSimulation
                 semanticIr.Scopes,
                 semanticIr.OutputChannels,
                 semanticIr.CatalogEntries,
-                ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
                 semanticIr.Producers);
             return new Float32GameplayAbilityExecutionCompilationResult(data, conversions);

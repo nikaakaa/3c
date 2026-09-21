@@ -27,7 +27,8 @@ namespace ThirdPersonSimulation
         internal Float32GameplayAbilityExecutionInstallation(
             Float32GameplayAbilityExecutionData data,
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
-            EquipmentProgramLayout equipmentLayout)
+            EquipmentProgramLayout equipmentLayout,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             data = data ?? throw new ArgumentNullException(nameof(data));
             bool requiresGameplayEffects = data.Capabilities.HasGameplayCapability("GameplayEffect");
@@ -36,7 +37,9 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(gameplayEffectCatalog));
             if (requiresEquipment && equipmentLayout == null)
                 throw new ArgumentNullException(nameof(equipmentLayout));
-            GameplayAbilityExecutionLayout layout = Float32GameplayAbilityExecutionLayoutFactory.Create(data);
+            GameplayAbilityExecutionLayout layout = Float32GameplayAbilityExecutionLayoutFactory.Create(
+                data,
+                timelineMotionWarpCatalog);
             Float32GameplayEffectRuntimeCatalog executionGameplayEffectCatalog = requiresGameplayEffects
                 ? gameplayEffectCatalog
                 : null;

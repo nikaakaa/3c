@@ -23,11 +23,6 @@ namespace ThirdPersonSimulation
         void Submit(SimulationMotionContribution contribution);
     }
 
-    internal interface IFloat32MotionModifierSampleSink
-    {
-        void Submit(MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample);
-    }
-
     internal interface IFloat32ActionContextReader
     {
         bool IsContextActive(string contextId);

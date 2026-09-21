@@ -101,7 +101,9 @@ namespace ThirdPersonSimulation.Fixed
             var requestIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < m_Abilities.Count; i++)
             {
-                GameplayAbilityExecutionLayout layout = FixedGameplayAbilityExecutionLayoutFactory.Create(m_Abilities[i]);
+                GameplayAbilityExecutionLayout layout = FixedGameplayAbilityExecutionLayoutFactory.Create(
+                    m_Abilities[i],
+                    AbilityTimelineMotionWarpCatalog.Empty);
                 for (int requestIndex = 0; requestIndex < layout.InputRequestIds.Count; requestIndex++)
                     requestIds.Add(layout.InputRequestIds[requestIndex]);
             }

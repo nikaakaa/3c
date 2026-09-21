@@ -113,8 +113,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
-        readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
-        readonly OperationValueInputRange[] m_MotionModifierRanges;
         readonly string[] m_OperationSourcePaths;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
 
@@ -130,11 +128,11 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramScopeLayout> scopes,
             IReadOnlyList<ProgramCatalogEntry> catalogEntries,
-            IReadOnlyList<ProgramMotionModifierDescriptor> motionModifiers,
             IReadOnlyList<ProgramSourceMapEntry> sourceMap,
             IReadOnlyList<ProgramProducer> producers,
             ProgramCatalogRuntimeIndex catalogIndex,
-            OperationExecutionTopology topology)
+            OperationExecutionTopology topology,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog = null)
         {
             if (!abilityId.IsValid)
                 throw new ArgumentException("Ability identity is invalid.", nameof(abilityId));
@@ -185,13 +183,21 @@ namespace ThirdPersonSimulation.Fixed
                 out m_ActionCapacities,
                 out m_MotionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
+            timelineMotionWarpCatalog ??= AbilityTimelineMotionWarpCatalog.Empty;
+            if (m_Operations.Count > AbilityTimelineMotionWarpCatalog.DirectStateOperationBase)
+                throw new InvalidDataException("Program operations enter the reserved Timeline MotionWarp state range.");
+            for (int index = 0; index < timelineMotionWarpCatalog.Identities.Length; index++)
+            {
+                if (!m_MotionWarpOperations.Add(timelineMotionWarpCatalog.Identities[index].Operation.Value))
+                    throw new InvalidDataException("Timeline MotionWarp state operation identities are duplicated.");
+            }
+            TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
             m_InputRequestIds = SortedStrings(m_InputRequests);
             m_MotionWarpOperationIds = SortedIndexes(m_MotionWarpOperations);
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(
                 m_Operations,
                 m_Constants,
                 actionTargetSnapshots);
-            BuildMotionModifierRanges(motionModifiers, out m_MotionModifiers, out m_MotionModifierRanges);
             m_BlackboardInputBindings = BuildBlackboardInputBindings(
                 m_Constants,
                 m_StateSlots,
@@ -224,6 +230,7 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public IReadOnlyList<int> MotionWarpOperationIds => m_MotionWarpOperationIds;
+        public AbilityTimelineMotionWarpCatalog TimelineMotionWarpCatalog { get; }
 
         public SimulationOperation Operation(OperationHandle operation)
         {
@@ -308,15 +315,6 @@ namespace ThirdPersonSimulation.Fixed
             RequireOperation(operation);
             address = m_ActionTargetSnapshotByOperation[operation.Value];
             return address.IsValid;
-        }
-
-        public ReadOnlySpan<ProgramMotionModifierDescriptor> MotionModifiers(ProgramMotionModifierChannel channel)
-        {
-            int index = (int)channel;
-            if (index < 0 || index >= m_MotionModifierRanges.Length)
-                throw new ArgumentOutOfRangeException(nameof(channel));
-            OperationValueInputRange range = m_MotionModifierRanges[index];
-            return new ReadOnlySpan<ProgramMotionModifierDescriptor>(m_MotionModifiers, range.Offset, range.Count);
         }
 
         public IReadOnlyList<OperationHandle> TimelineAnimationRepresentatives(OperationHandle timeline) =>
@@ -636,11 +634,6 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidDataException($"Action '{actionId}' is duplicated.");
                 }
             }
-            for (int i = 0; i < operations.Count; i++)
-            {
-                if (operations[i].Code == SimulationOperationCode.TimelineMotionWarp)
-                    motionWarp.Add(i);
-            }
             for (int i = 0; i < stateSlots.Count; i++)
             {
                 ProgramStateSlot slot = stateSlots[i];
@@ -783,28 +776,6 @@ namespace ThirdPersonSimulation.Fixed
                 return constant.Text;
             }
             return string.Empty;
-        }
-
-        static void BuildMotionModifierRanges(
-            IReadOnlyList<ProgramMotionModifierDescriptor> source,
-            out ProgramMotionModifierDescriptor[] descriptors,
-            out OperationValueInputRange[] ranges)
-        {
-            int channelCount = EnumValueCount(typeof(ProgramMotionModifierChannel));
-            ranges = new OperationValueInputRange[channelCount];
-            var flattened = new List<ProgramMotionModifierDescriptor>(source?.Count ?? 0);
-            for (int channel = 0; channel < channelCount; channel++)
-            {
-                int offset = flattened.Count;
-                for (int i = 0; i < (source?.Count ?? 0); i++)
-                {
-                    ProgramMotionModifierDescriptor descriptor = source[i];
-                    if ((int)descriptor.Channel == channel)
-                        flattened.Add(descriptor);
-                }
-                ranges[channel] = new OperationValueInputRange(offset, flattened.Count - offset);
-            }
-            descriptors = flattened.ToArray();
         }
 
         static HashSet<int> BuildSkillExecutionStateSlots(

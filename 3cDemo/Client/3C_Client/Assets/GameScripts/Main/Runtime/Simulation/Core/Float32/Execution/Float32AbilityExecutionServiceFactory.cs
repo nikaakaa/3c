@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation
                 access,
                 frame,
                 workspace.MotionContributions,
-                workspace.MotionWarpSamples,
+                workspace.TimelineMotionWarps,
                 actionStore);
             Float32LocomotionRuntime locomotion = new Float32LocomotionRuntime(
                 access,

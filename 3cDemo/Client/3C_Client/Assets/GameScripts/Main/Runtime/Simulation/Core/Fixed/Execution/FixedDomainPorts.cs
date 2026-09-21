@@ -24,11 +24,6 @@ namespace ThirdPersonSimulation.Fixed
         void Submit(SimulationMotionContribution contribution);
     }
 
-    internal interface IFixedMotionModifierSampleSink
-    {
-        void Submit(MotionWarpSample<FixedScalar, FixedActionInstanceState> sample);
-    }
-
     internal interface IFixedActionContextReader
     {
         bool IsContextActive(string contextId);

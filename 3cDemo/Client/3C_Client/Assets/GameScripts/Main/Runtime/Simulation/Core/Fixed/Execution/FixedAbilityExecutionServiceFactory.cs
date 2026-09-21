@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation.Fixed
                 access,
                 frame,
                 workspace.MotionContributions,
-                workspace.MotionWarpSamples,
+                workspace.TimelineMotionWarps,
                 actionStore);
             FixedLocomotionRuntime locomotion = new FixedLocomotionRuntime(
                 access,

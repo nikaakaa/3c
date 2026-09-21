@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog = GetMotionWarpCatalog(timelineRuntime);
             ActorId = actorId;
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
@@ -24,7 +25,8 @@ namespace ThirdPersonSimulation
             AbilityInstallations = new Float32GameplayAbilityExecutionInstallationSet(
                 abilityData ?? throw new ArgumentNullException(nameof(abilityData)),
                 gameplayEffectRuntimeBinding,
-                equipmentRuntimeBinding);
+                equipmentRuntimeBinding,
+                timelineMotionWarpCatalog);
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
                 Float32GameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
@@ -34,20 +36,22 @@ namespace ThirdPersonSimulation
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
-            TimelineMotionReader = timelineRuntime is IAbilityTimelineLogicMotionReader motionReader
-                ? motionReader
-                : throw new ArgumentException("Float32 Timeline runtime must expose pending logic motion.", nameof(timelineRuntime));
+            TimelineMotionReader = GetMotionReader(timelineRuntime);
+            TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
+            TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
             StateSchemaHash = ComputeStateSchemaHash(
                 controlRuntimeBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                AbilityInstallations);
+                AbilityInstallations,
+                timelineMotionWarpCatalog);
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                AbilityInstallations);
+                AbilityInstallations,
+                timelineMotionWarpCatalog);
         }
 
         public ActorId ActorId { get; }
@@ -58,6 +62,8 @@ namespace ThirdPersonSimulation
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public IAbilityTimelineRuntime TimelineRuntime { get; }
         public IAbilityTimelineLogicMotionReader TimelineMotionReader { get; }
+        public IAbilityTimelineLogicMotionWarpReader TimelineMotionWarpReader { get; }
+        public AbilityTimelineMotionWarpCatalog TimelineMotionWarpCatalog { get; }
         public Float32GameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash StateSchemaHash { get; }
         public StableHash GameplayContentHash { get; }
@@ -66,12 +72,14 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeBinding control,
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
-            Float32GameplayAbilityExecutionInstallationSet abilities)
+            Float32GameplayAbilityExecutionInstallationSet abilities,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             var parts = new List<string>
             {
                 "float32-character-state-schema/1",
                 control.BindingHash.ToString(),
+                timelineMotionWarpCatalog.SchemaHash.ToString(),
                 abilities.GameplayEffectCatalog != null ? gameplayEffects.BindingHash.ToString() : string.Empty,
                 abilities.RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
@@ -91,13 +99,15 @@ namespace ThirdPersonSimulation
             CharacterBodyMotionBinding bodyMotion,
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
-            Float32GameplayAbilityExecutionInstallationSet abilities)
+            Float32GameplayAbilityExecutionInstallationSet abilities,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             var parts = new List<string>
             {
                 "float32-simulation-actor-content/1",
                 control.BindingHash.ToString(),
                 bodyMotion.BindingHash.ToString(),
+                timelineMotionWarpCatalog.ContentHash.ToString(),
                 abilities.GameplayEffectCatalog != null ? gameplayEffects.BindingHash.ToString() : string.Empty,
                 abilities.RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
@@ -110,6 +120,33 @@ namespace ThirdPersonSimulation
                 parts.Add(data.ExecutionIdentity);
             }
             return StableHash.Compute(parts.ToArray());
+        }
+
+        static IAbilityTimelineLogicMotionReader GetMotionReader(IAbilityTimelineRuntime timelineRuntime)
+        {
+            if (timelineRuntime == null)
+                return null;
+            return timelineRuntime is IAbilityTimelineLogicMotionReader motionReader
+                ? motionReader
+                : throw new ArgumentException("Float32 Timeline runtime must expose pending logic motion.", nameof(timelineRuntime));
+        }
+
+        static IAbilityTimelineLogicMotionWarpReader GetMotionWarpReader(IAbilityTimelineRuntime timelineRuntime)
+        {
+            if (timelineRuntime == null)
+                return null;
+            return timelineRuntime is IAbilityTimelineLogicMotionWarpReader motionWarpReader
+                ? motionWarpReader
+                : throw new ArgumentException("Float32 Timeline runtime must expose pending logic motion warps.", nameof(timelineRuntime));
+        }
+
+        static AbilityTimelineMotionWarpCatalog GetMotionWarpCatalog(IAbilityTimelineRuntime timelineRuntime)
+        {
+            if (timelineRuntime == null)
+                return AbilityTimelineMotionWarpCatalog.Empty;
+            return timelineRuntime is IAbilityTimelineMotionWarpCatalogProvider catalogProvider
+                ? catalogProvider.MotionWarpCatalog
+                : throw new ArgumentException("Float32 Timeline runtime must expose its MotionWarp state catalog.", nameof(timelineRuntime));
         }
     }
 }

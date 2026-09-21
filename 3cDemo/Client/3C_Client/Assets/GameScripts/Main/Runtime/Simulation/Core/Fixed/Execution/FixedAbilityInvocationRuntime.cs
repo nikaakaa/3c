@@ -151,11 +151,26 @@ namespace ThirdPersonSimulation.Fixed
 
         public CharacterSkillId AbilityId { get; }
         public IReadOnlyList<SimulationMotionContribution> MotionContributions => m_Workspace.MotionContributions;
+        public IReadOnlyList<AbilityTimelineLogicMotionWarp> TimelineMotionWarps => m_Workspace.TimelineMotionWarps;
 
-        public void ApplyMotionModifiers(ref ResolvedMotionChannel action)
+        public void ClearTimelineMotionWarps()
         {
             RequireEvaluation();
-            m_Motion.ApplyModifiers(ref action);
+            m_Workspace.TimelineMotionWarps.Clear();
+        }
+
+        public void AddTimelineMotionWarp(AbilityTimelineLogicMotionWarp warp)
+        {
+            RequireEvaluation();
+            if (warp.AbilityId != AbilityId)
+                throw new InvalidOperationException("Timeline MotionWarp belongs to a different Ability invocation.");
+            m_Workspace.TimelineMotionWarps.Add(warp);
+        }
+
+        public void ApplyTimelineMotionWarps(ref ResolvedMotionChannel action)
+        {
+            RequireEvaluation();
+            m_Motion.ApplyTimelineMotionWarps(ref action);
         }
 
         public ulong MotionSourceGeneration(SimulationExecutionSource source) => m_Motion.SourceGeneration(source);

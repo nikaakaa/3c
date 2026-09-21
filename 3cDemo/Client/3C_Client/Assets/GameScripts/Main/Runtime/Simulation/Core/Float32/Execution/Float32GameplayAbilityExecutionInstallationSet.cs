@@ -12,7 +12,8 @@ namespace ThirdPersonSimulation
         public Float32GameplayAbilityExecutionInstallationSet(
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> data,
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
+            AbilityTimelineMotionWarpCatalog timelineMotionWarpCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -47,7 +48,8 @@ namespace ThirdPersonSimulation
                 var installation = new Float32GameplayAbilityExecutionInstallation(
                     ability,
                     gameplayEffectCatalog,
-                    equipmentLayout);
+                    equipmentLayout,
+                    timelineMotionWarpCatalog);
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

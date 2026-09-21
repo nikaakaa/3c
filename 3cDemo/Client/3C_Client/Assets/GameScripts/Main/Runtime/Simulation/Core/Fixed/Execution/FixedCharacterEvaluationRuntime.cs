@@ -43,6 +43,7 @@ namespace ThirdPersonSimulation.Fixed
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
+            var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
             var timelineStops = new List<AbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
@@ -146,6 +147,21 @@ namespace ThirdPersonSimulation.Fixed
                         timelineAdvances[i].RuntimeHandle,
                         timelineLogicMotion);
                 AppendTimelineMotion(motionContributions, timelineLogicMotion);
+                for (int i = 0; i < timelineAdvances.Count; i++)
+                    actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
+                        timelineAdvances[i].RuntimeHandle,
+                        timelineLogicMotionWarps);
+                for (int i = 0; i < invocations.Count; i++)
+                {
+                    FixedAbilityInvocationRuntime invocation = invocations[i];
+                    invocation.ClearTimelineMotionWarps();
+                    for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
+                    {
+                        if (timelineLogicMotionWarps[warpIndex].AbilityId != invocation.AbilityId)
+                            continue;
+                        invocation.AddTimelineMotionWarp(timelineLogicMotionWarps[warpIndex]);
+                    }
+                }
 
                 ResolvedGameplayMotion gameplayMotion = ResolveMotion(
                     motionContributions, beforeBody.Yaw, invocations, characterTraceSink);
@@ -314,7 +330,7 @@ namespace ThirdPersonSimulation.Fixed
             ResolvedMotionChannel action = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.Action);
             ResolvedMotionChannel gameplayResult = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.GameplayResult);
             for (int i = 0; i < invocations.Count; i++)
-                invocations[i].ApplyMotionModifiers(ref action);
+                invocations[i].ApplyTimelineMotionWarps(ref action);
             TraceMotionChannel(locomotion, invocations, trace);
             TraceMotionChannel(action, invocations, trace);
             TraceMotionChannel(gameplayResult, invocations, trace);

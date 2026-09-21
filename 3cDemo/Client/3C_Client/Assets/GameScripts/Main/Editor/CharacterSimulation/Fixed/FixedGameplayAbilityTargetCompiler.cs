@@ -32,8 +32,6 @@ namespace ThirdPersonSimulation.Fixed
             "RunnableTree",
             "StateMachine",
             "Timeline",
-            "TimelineMotionCurve",
-            "TimelineMotionWarp",
             "TimelineScenePresentationParameter"
         };
 
@@ -210,7 +208,6 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.Scopes,
                 semanticIr.OutputChannels,
                 semanticIr.CatalogEntries,
-                ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
                 semanticIr.Producers);
             return new FixedGameplayAbilityExecutionCompilationResult(data, conversions);

@@ -35,18 +35,6 @@ namespace ThirdPersonSimulation
         ActionTargetSnapshot = 6
     }
 
-    public enum ProgramMotionModifierKind : byte
-    {
-        MotionWarp = 1
-    }
-
-    public enum ProgramMotionModifierChannel : byte
-    {
-        Locomotion = 0,
-        Action = 1,
-        GameplayResult = 2
-    }
-
     public enum LocomotionInputMotionExecutionMode : byte
     {
         Once = 0,
@@ -110,113 +98,6 @@ namespace ThirdPersonSimulation
         PreservedByLimitPolicy = 2
     }
 
-    public sealed class ProgramMotionModifierDescriptor
-    {
-        public ProgramMotionModifierDescriptor(
-            int index,
-            ProgramMotionModifierKind kind,
-            ProgramMotionModifierChannel channel,
-            OperationHandle operation,
-            OperationHandle sourceMotionOperation,
-            OperationHandle timelineOwnerOperation,
-            string actionContextIdentity,
-            int catalogEntryIndex,
-            ProgramMotionWarpTranslationMode translationMode,
-            ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
-            ProgramMotionWarpRotationMode rotationMode,
-            ProgramMotionWarpRotationMethod rotationMethod,
-            int targetPlanarOffsetConstantIndex,
-            int targetYawOffsetConstantIndex,
-            int maximumPositionCorrectionConstantIndex,
-            int maximumYawCorrectionConstantIndex,
-            int maximumYawRateConstantIndex,
-            ProgramMotionWarpLimitPolicy limitPolicy,
-            int positionProgressCurveConstantIndex,
-            int yawProgressCurveConstantIndex)
-        {
-            if (index < 0 || !operation.IsValid || !sourceMotionOperation.IsValid || !timelineOwnerOperation.IsValid ||
-                catalogEntryIndex < 0 ||
-                targetPlanarOffsetConstantIndex < -1 || targetYawOffsetConstantIndex < -1 ||
-                maximumPositionCorrectionConstantIndex < -1 || maximumYawCorrectionConstantIndex < -1 ||
-                maximumYawRateConstantIndex < -1 || positionProgressCurveConstantIndex < -1 || yawProgressCurveConstantIndex < -1)
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-            if (!Enum.IsDefined(typeof(ProgramMotionModifierKind), kind) ||
-                !Enum.IsDefined(typeof(ProgramMotionModifierChannel), channel) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpTranslationMode), translationMode) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpTargetOffsetSpace), targetOffsetSpace) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpRotationMode), rotationMode) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpRotationMethod), rotationMethod) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpLimitPolicy), limitPolicy))
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-            bool hasTranslation = translationMode != ProgramMotionWarpTranslationMode.Disabled;
-            bool hasRotation = rotationMode != ProgramMotionWarpRotationMode.Disabled;
-            bool usesPositionProgress = translationMode is ProgramMotionWarpTranslationMode.SkewToTarget or ProgramMotionWarpTranslationMode.LinearToTarget;
-            bool usesYawProgress = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ProgressCurve;
-            bool usesYawRate = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ConstantRate;
-            if (kind != ProgramMotionModifierKind.MotionWarp || channel != ProgramMotionModifierChannel.Action ||
-                !hasTranslation && !hasRotation ||
-                hasTranslation &&
-                    (targetPlanarOffsetConstantIndex < 0 || maximumPositionCorrectionConstantIndex < 0) ||
-                !hasTranslation &&
-                    (targetPlanarOffsetConstantIndex >= 0 || maximumPositionCorrectionConstantIndex >= 0 || positionProgressCurveConstantIndex >= 0) ||
-                usesPositionProgress != (positionProgressCurveConstantIndex >= 0) ||
-                hasRotation &&
-                    (targetYawOffsetConstantIndex < 0 || maximumYawCorrectionConstantIndex < 0) ||
-                !hasRotation &&
-                    (targetYawOffsetConstantIndex >= 0 || maximumYawCorrectionConstantIndex >= 0 || maximumYawRateConstantIndex >= 0 || yawProgressCurveConstantIndex >= 0) ||
-                usesYawProgress != (yawProgressCurveConstantIndex >= 0) ||
-                usesYawRate != (maximumYawRateConstantIndex >= 0))
-            {
-                throw new ArgumentException("Motion modifier descriptor is inconsistent.");
-            }
-            Index = index;
-            Kind = kind;
-            Channel = channel;
-            Operation = operation;
-            SourceMotionOperation = sourceMotionOperation;
-            TimelineOwnerOperation = timelineOwnerOperation;
-            ActionContextIdentity = SimulationIdentity.Require(actionContextIdentity, nameof(actionContextIdentity));
-            CatalogEntryIndex = catalogEntryIndex;
-            TranslationMode = translationMode;
-            TargetOffsetSpace = targetOffsetSpace;
-            RotationMode = rotationMode;
-            RotationMethod = rotationMethod;
-            TargetPlanarOffsetConstantIndex = targetPlanarOffsetConstantIndex;
-            TargetYawOffsetConstantIndex = targetYawOffsetConstantIndex;
-            MaximumPositionCorrectionConstantIndex = maximumPositionCorrectionConstantIndex;
-            MaximumYawCorrectionConstantIndex = maximumYawCorrectionConstantIndex;
-            MaximumYawRateConstantIndex = maximumYawRateConstantIndex;
-            LimitPolicy = limitPolicy;
-            PositionProgressCurveConstantIndex = positionProgressCurveConstantIndex;
-            YawProgressCurveConstantIndex = yawProgressCurveConstantIndex;
-        }
-
-        public int Index { get; }
-        public ProgramMotionModifierKind Kind { get; }
-        public ProgramMotionModifierChannel Channel { get; }
-        public OperationHandle Operation { get; }
-        public OperationHandle SourceMotionOperation { get; }
-        public OperationHandle TimelineOwnerOperation { get; }
-        public string ActionContextIdentity { get; }
-        public int CatalogEntryIndex { get; }
-        public ProgramMotionWarpTranslationMode TranslationMode { get; }
-        public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
-        public ProgramMotionWarpRotationMode RotationMode { get; }
-        public ProgramMotionWarpRotationMethod RotationMethod { get; }
-        public int TargetPlanarOffsetConstantIndex { get; }
-        public int TargetYawOffsetConstantIndex { get; }
-        public int MaximumPositionCorrectionConstantIndex { get; }
-        public int MaximumYawCorrectionConstantIndex { get; }
-        public int MaximumYawRateConstantIndex { get; }
-        public ProgramMotionWarpLimitPolicy LimitPolicy { get; }
-        public int PositionProgressCurveConstantIndex { get; }
-        public int YawProgressCurveConstantIndex { get; }
-    }
-
     public enum SimulationOperationCode : ushort
     {
         Root = 1,
@@ -238,12 +119,8 @@ namespace ThirdPersonSimulation
         Timeline = 40,
         TimelineEnter = 41,
         TimelineAnimation = 42,
-        TimelineMotionCurve = 43,
-        TimelineCue = 45,
-        TimelineCameraState = 46,
-        TimelineCameraCue = 47,
-        TimelineCameraResponse = 48,
-        TimelineMotionWarp = 49,
+        TimelineCameraState = 45,
+        TimelineCameraResponse = 46,
         TimelineScenePresentationParameter = 50,
         TimelineClipExitRequest = 51,
         BlackboardGet = 60,
@@ -288,7 +165,7 @@ namespace ThirdPersonSimulation
     public static class GameplayAbilityOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/17");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/19");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -312,12 +189,8 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.Timeline,
                 SimulationOperationCode.TimelineEnter,
                 SimulationOperationCode.TimelineAnimation,
-                SimulationOperationCode.TimelineMotionCurve,
-                SimulationOperationCode.TimelineCue,
                 SimulationOperationCode.TimelineCameraState,
-                SimulationOperationCode.TimelineCameraCue,
                 SimulationOperationCode.TimelineCameraResponse,
-                SimulationOperationCode.TimelineMotionWarp,
                 SimulationOperationCode.TimelineClipExitRequest,
                 SimulationOperationCode.BlackboardGet,
                 SimulationOperationCode.BlackboardSet,
@@ -734,8 +607,7 @@ namespace ThirdPersonSimulation
         Scope = 4,
         OutputChannel = 6,
         Producer = 7,
-        CatalogEntry = 8,
-        MotionSourceOperation = 9
+        CatalogEntry = 8
     }
 
     public sealed class ProgramReference

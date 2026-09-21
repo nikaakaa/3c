@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Animancer;
 using BTSMTL.Timeline;
 using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
@@ -488,10 +489,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     }
 
     public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime, IAbilityTreeClipInvokerHost,
-        IAbilityTimelineLogicMotionReader
+        IAbilityTimelineLogicMotionReader, IAbilityTimelineLogicMotionWarpReader, IAbilityTimelineMotionWarpCatalogProvider
     {
         readonly CharacterTimelineHost m_Host;
         readonly IReadOnlyList<TimelineAsset> m_TimelineAssets;
+        readonly AbilityTimelineMotionWarpCatalog m_MotionWarpCatalog;
         bool m_ContentInstalled;
         readonly Dictionary<int, AbilityTimelineStartRequest> m_Requests =
             new Dictionary<int, AbilityTimelineStartRequest>();
@@ -502,6 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Host = host ?? throw new ArgumentNullException(nameof(host));
             m_TimelineAssets = timelineAssets ?? throw new ArgumentNullException(nameof(timelineAssets));
+            m_MotionWarpCatalog = BuildMotionWarpCatalog(timelineAssets);
         }
 
         public int Start(in AbilityTimelineStartRequest request)
@@ -551,6 +554,95 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void CopyPendingMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results) =>
             m_Host.CopyPendingTimelineMotion(runtimeHandle, results);
+
+        public void CopyPendingMotionWarps(int runtimeHandle, List<AbilityTimelineLogicMotionWarp> results) =>
+            m_Host.CopyPendingMotionWarps(runtimeHandle, m_MotionWarpCatalog, results);
+
+        public AbilityTimelineMotionWarpCatalog MotionWarpCatalog => m_MotionWarpCatalog;
+
+        static AbilityTimelineMotionWarpCatalog BuildMotionWarpCatalog(IReadOnlyList<TimelineAsset> timelineAssets)
+        {
+            var identities = new List<AbilityTimelineMotionWarpStateIdentity>();
+            var contentParts = new List<string> { "ability-timeline-motion-warp-content/1" };
+            for (int assetIndex = 0; assetIndex < timelineAssets.Count; assetIndex++)
+            {
+                TimelineAsset timelineAsset = timelineAssets[assetIndex]
+                    ?? throw new ArgumentException("Control Motion Timeline contains a null asset.", nameof(timelineAssets));
+                TimelineData timeline = timelineAsset.Data
+                    ?? throw new InvalidOperationException($"Control Motion Timeline '{timelineAsset.name}' has no TimelineData.");
+                string timelineId = timeline.AuthoringId;
+                if (!AuthoringIdentity.IsValid(timelineId))
+                    throw new InvalidOperationException($"Control Motion Timeline '{timelineAsset.name}' has an invalid authoring identity.");
+                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                {
+                    Track track = timeline.Tracks[trackIndex];
+                    if (track == null)
+                        throw new InvalidOperationException($"Control Motion Timeline '{timelineId}' contains a null track.");
+                    for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    {
+                        if (track.Clips[clipIndex] is not MotionWarpClip warp)
+                            continue;
+                        if (!AuthoringIdentity.IsValid(warp.AuthoringId))
+                            throw new InvalidOperationException($"MotionWarpClip in Timeline '{timelineId}' has an invalid authoring identity.");
+                        if (!MotionWarpAuthoring.TryResolveSource(timeline, warp.SourceMotionClipId, out MotionCurveClip source))
+                            throw new InvalidOperationException(
+                                $"MotionWarpClip '{warp.AuthoringId}' in Timeline '{timelineId}' has no source MotionCurve.");
+                        identities.Add(new AbilityTimelineMotionWarpStateIdentity(timelineId, warp.AuthoringId, default));
+                        contentParts.Add(timelineId);
+                        contentParts.Add(warp.AuthoringId);
+                        contentParts.Add(source.AuthoringId);
+                        contentParts.Add(SourceContentHasher.Hash(JsonUtility.ToJson(source.SourceCurve)));
+                        contentParts.Add(warp.StartTime.Raw.ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.EndTime.Raw.ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(((byte)warp.TranslationMode).ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(((byte)warp.TargetOffsetSpace).ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(((byte)warp.RotationMode).ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(((byte)warp.RotationMethod).ToString(CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.TargetPlanarOffset.x.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.TargetPlanarOffset.y.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.TargetYawOffsetDegrees.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.MaxTotalPositionCorrection.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.MaxTotalYawCorrectionDegrees.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(warp.MaximumYawRateDegreesPerSecond.ToString("R", CultureInfo.InvariantCulture));
+                        contentParts.Add(((byte)warp.LimitPolicy).ToString(CultureInfo.InvariantCulture));
+                        AddCurveContent(contentParts, warp.UsesPositionProgress ? warp.PositionProgressCurve : null);
+                        AddCurveContent(contentParts, warp.UsesYawProgress ? warp.YawProgressCurve : null);
+                    }
+                }
+            }
+            identities.Sort((left, right) =>
+            {
+                int result = string.CompareOrdinal(left.TimelineId, right.TimelineId);
+                return result != 0 ? result : string.CompareOrdinal(left.ClipAuthoringId, right.ClipAuthoringId);
+            });
+            string schema = SourceContentHasher.Hash(
+                "ability-timeline-motion-warp-state-schema/1",
+                identities.Count.ToString(CultureInfo.InvariantCulture));
+            string content = SourceContentHasher.Hash(contentParts.ToArray());
+            return new AbilityTimelineMotionWarpCatalog(identities, schema, content);
+        }
+
+        static void AddCurveContent(List<string> parts, AnimationCurve curve)
+        {
+            if (curve == null)
+            {
+                parts.Add("disabled");
+                return;
+            }
+            Keyframe[] keys = curve.keys;
+            parts.Add(keys.Length.ToString(CultureInfo.InvariantCulture));
+            for (int index = 0; index < keys.Length; index++)
+            {
+                Keyframe key = keys[index];
+                parts.Add(key.time.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(key.value.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(key.inTangent.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(key.outTangent.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(key.inWeight.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(key.outWeight.ToString("R", CultureInfo.InvariantCulture));
+                parts.Add(((int)key.weightedMode).ToString(CultureInfo.InvariantCulture));
+            }
+        }
 
         public void PushTreeClipInvoker(IAbilityTreeClipInvoker invoker) =>
             m_Host.PushTreeClipInvoker(invoker);

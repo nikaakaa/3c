@@ -37,11 +37,11 @@
 - 每个领域只保存自己的正式状态。角色和世界状态只在同一 Step 的事务中从 Evaluate 延续到 Finalize，再执行一次 Commit；表现、网络和诊断只消费已提交事实。
 - Float32 与 Fixed 分别拥有必要的数值状态、codec 和运行数据。Local、DeterministicRollback 和 ServerAuthoritative 的差异由各自 Variant、Session Source、Pipeline 与 Network Model 装配，不能由节点、作者 UI 或隐式 fallback 推断。
 
-### Timeline ActionCue Boundary
+### Timeline TreeClip Node Boundary
 
-- Timeline `ActionCueTrack` 只发布 Logic commit 后的领域事件；`CueType` 是事件名，`CueId` 是业务键并保留原始 `Corin_Attack_*_AttackProperty_*` key。
-- Corin 的攻击碰撞和攻击属性 payload 由主控录入 GameplayEffect Profile / Ability 执行域；Timeline 只携带播放身份与 `CueId`，不解析命中效果、碰撞形状或属性数值。
-- Camera、VFX 和 Audio 各自由正式领域拥有。Timeline 不解析领域语义，也不代发表现命令。
+- Timeline 不拥有 `ActionCueTrack`、`ActionCueClip` 或 `ActionCueCommitted` 事件链。一次性 Gameplay、Camera、VFX 和 Audio 行为都在对应 TreeClip 内由正式节点表达，并经节点所属的正式 domain emitter 输出。
+- Corin 的攻击碰撞和攻击属性由 TreeClip 内的 Gameplay 节点提交给 GameplayEffect / Ability 执行域；Timeline 只拥有 TreeClip 的内容身份、时间和求值边界，不解析命中效果、碰撞形状或属性数值。
+- TreeClip 节点输出必须携带正式 Action Context、播放身份、图／节点身份和提交事务身份。Timeline 不把节点输出重新包装成另一套 Cue 事件，也不在 PresentationFrame 重发 Logic 输出。
 - Timeline 的旧 TreeDesigner 自制 UI 已删除；唯一 Timeline 编辑面是嵌入 Slate，FlowCanvas 只负责 TreeClip / Marker 触发图等正式图的可视化与作者入口。
 
 ### Presentation

@@ -21,13 +21,11 @@ namespace ThirdPersonSimulation
         public List<GameplayFact> Facts { get; } = new List<GameplayFact>();
         public List<PresentationCommand> Presentation { get; } = new List<PresentationCommand>();
         public List<SimulationTraceRecord> Trace { get; } = new List<SimulationTraceRecord>();
-        public NestedExecutionWorkspaceBuffer<TimelineSegment<Float32Scalar>> TimelineSegments { get; } =
-            new NestedExecutionWorkspaceBuffer<TimelineSegment<Float32Scalar>>();
         public Float32GameplayEffectExecutionScratch GameplayEffects { get; }
         public Float32GraphValueWorkspace Values { get; }
         public List<SimulationMotionContribution> MotionContributions { get; } = new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> MotionWarpSamples { get; } =
-            new List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>>();
+        public List<AbilityTimelineLogicMotionWarp> TimelineMotionWarps { get; } =
+            new List<AbilityTimelineLogicMotionWarp>();
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);

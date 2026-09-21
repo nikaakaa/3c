@@ -70,46 +70,46 @@ Timeline MUST提供 Float32/Fixed 分型 Capture/Restore，保存已接受求值
 - **THEN** Restore MUST在安装前拒绝，不得猜测旧内容或读取兼容包
 - **AND** 失败 MUST保持已提交状态，成功恢复 MUST不重发已提交副作用或推进 Pose 图
 
-### Requirement: ActionCue必须只发布committed领域事件
+### Requirement: TreeClip节点必须直接提交正式领域输出
 
-`ActionCueTrack` MUST 只把 Logic 执行域的跨点转成 committed 领域事件；`EventName` MUST 使用作者配置的 `CueType`，业务键 MUST 使用 `CueId`。事件 MUST 在 SimulationTick Advance 被接受后通过 `CharacterTimelineHost.ActionCueCommitted` 发布，payload MUST 包含稳定 `EventId`、playback handle、generation、`LogicTick`、秒制内容位置、cycle、execution identity、content revision、source/track/clip authoring id、`EventName` 和 `CueId`。MUST删除原调度 frame 字段，保留的素材帧身份 MUST不承担时间推进。Timeline runtime MUST NOT 在 ActionCue 内解析领域 payload、直接驱动 Camera/VFX/Audio、写 Gameplay fact 或改由 PresentationFrame 重发。
+Timeline MUST NOT 定义或运行 `ActionCueTrack`、`ActionCueClip`、`ActionCueCommitted` 或同义的 Timeline 触发事件链。一次性 Gameplay、Camera、VFX 和 Audio 行为 MUST 在 Logic TreeClip 内由对应正式节点表达，并通过该节点所属的 domain emitter 在同一个 SimulationTick 事务中提交。节点输出 MUST 携带稳定 EventId、playback handle、generation、LogicTick、秒制内容位置、cycle、Action Context、TreeGraphId、TreeGraphRevision、NodeAuthoringId、execution identity 和 content revision。Timeline MUST 只负责 TreeClip 的时间边界、精确图身份和候选 Commit/Discard，不解析领域 payload，也不得由 PresentationFrame 重发 Logic 输出。
 
-#### Scenario: Corin攻击属性cue被提交
+#### Scenario: Corin攻击属性节点被提交
 
-- **WHEN** Logic Timeline 跨过 `CueType=AttackProperty` 的 ActionCue
-- **THEN** runtime MUST 发布事件名为 `AttackProperty` 的 committed ActionCue，携带秒制位置及实际 LogicTick
-- **AND** CueId MUST保留原始 key，Ability/Attack 领域 MUST按该 key 解析正式 GameplayEffect Profile / Ability 执行域内容
+- **WHEN** Logic TreeClip 执行作者配置的攻击属性节点
+- **THEN** 正式 Gameplay domain MUST 直接收到该节点的 typed output，携带秒制位置、实际 LogicTick 和完整图／节点身份
+- **AND** 原始业务 key MUST 由节点所属的 Gameplay domain 保留并解析，MUST NOT 再经过 Timeline Cue 包装或重命名
 
 #### Scenario: 攻击属性payload到达领域
 
-- **WHEN** `AttackProperty` ActionCue 被提交
-- **THEN** Timeline payload MUST只包含播放、内容、身份和 CueId 字段
-- **AND** 命中效果编号、碰撞形状、属性数值和目标语义 MUST由 GameplayEffect Profile / Ability 执行域消费
+- **WHEN** TreeClip Gameplay 节点在接受的 SimulationTick 中提交
+- **THEN** Timeline MUST 不解析命中效果编号、碰撞形状、属性数值和目标语义
+- **AND** 这些字段 MUST 由 GameplayEffect / Ability domain 的正式节点输出和执行事务消费
 
-#### Scenario: 领域消费方未装配
+#### Scenario: 领域节点未装配
 
-- **WHEN** 某个 CueType 没有领域订阅者
-- **THEN** Timeline MUST保持事件为已提交事实和 trace
-- **AND** MUST NOT伪造 Camera、VFX、Audio 或 Gameplay 结果，也不得宣称事件已被业务消费
+- **WHEN** TreeClip 内容声明的正式节点 emitter、binding 或 domain 缺失
+- **THEN** Prepare 或调用边界 MUST 返回精确失败
+- **AND** MUST NOT 创建空事件、旧 ActionCue 事件、Camera/VFX/Audio 假输出或兼容路径
 
 ## ADDED Requirements
 
-### Requirement: 状态本地ActionCue必须绑定状态分段和分支
+### Requirement: TreeClip节点必须绑定状态分段和分支
 
-`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局位置。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。事件 MUST保留原始 CueId、状态 id 与原始素材 LocalFrame 来源身份；Attack5 分支还 MUST携带分支身份。稳定 EventId MUST包含状态 id、来源 LocalFrame 和分支身份，避免同一 CueId 互相覆盖。唯一运行位置 MUST为正式映射后的秒数，LocalFrame MUST NOT成为第二份可写调度时间。攻击碰撞与属性 payload MUST留在 GameplayEffect / Ability 执行域。
+`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 Gameplay 节点 MUST 位于各自 TreeClip 状态分段或独立 Timeline 对应的正式图中；MUST NOT 把状态本地节点压平成无状态全局触发。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧节点 MUST NOT同时执行。节点输出的稳定 EventId MUST包含 TreeGraphId、TreeGraphRevision、NodeAuthoringId、playback generation 和最终 branch revision，避免不同状态或分支互相覆盖。唯一运行位置 MUST为正式 Timeline 秒制位置，素材 LocalFrame 不得成为第二份可写调度时间。攻击碰撞与属性 payload MUST留在 GameplayEffect / Ability 执行域。
 
-#### Scenario: Attack3 Explode cue
+#### Scenario: Attack3 Explode节点
 
-- **WHEN** `Attack_Normal_03_Explode` 的 frame=1 cue 被收口
-- **THEN** 事件 MUST携带 `StateId=Attack_Normal_03_Explode`、`LocalFrame=1`
-- **AND** 唯一秒制位置 MUST由正式状态源映射得到，MUST NOT把一基 LocalFrame=1 直接解释为 1/60 秒偏移
+- **WHEN** `Attack_Normal_03_Explode` 的攻击属性节点被收口
+- **THEN** 节点输出 MUST携带完整 TreeClip 图／节点身份及最终秒制位置
+- **AND** MUST NOT把素材 LocalFrame 直接解释为 1/60 秒偏移
 
 #### Scenario: Attack5 End与End2分支
 
 - **WHEN** `Attack_Normal_05` 到达由旧作者 frame=47 换算得到的秒制分支点
 - **THEN** playback MUST只进入 End 或 End_2 其中一个正式 Timeline / 状态分段
-- **AND** End_2 的 15 个状态本地 cue MUST只在 End_2 分支发布
-- **AND** End_2 事件 MUST携带 `StateId=Attack_Normal_05_End_2`、`BranchId=End_2` 和状态本地帧
+- **AND** End_2 的 15 个状态本地节点 MUST只在 End_2 分支执行
+- **AND** End_2 输出 MUST携带 End_2 图／节点身份和最终 branch revision
 
 ### Requirement: 表现修正不得把采样重算当成新的事件经过
 

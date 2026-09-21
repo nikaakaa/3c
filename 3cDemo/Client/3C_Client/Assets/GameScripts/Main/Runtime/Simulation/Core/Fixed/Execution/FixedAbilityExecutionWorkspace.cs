@@ -19,14 +19,12 @@ namespace ThirdPersonSimulation.Fixed
         public List<GameplayFact> Facts { get; } = new List<GameplayFact>();
         public List<PresentationCommand> Presentation { get; } = new List<PresentationCommand>();
         public List<SimulationTraceRecord> Trace { get; } = new List<SimulationTraceRecord>();
-        public NestedExecutionWorkspaceBuffer<TimelineSegment<FixedScalar>> TimelineSegments { get; } =
-            new NestedExecutionWorkspaceBuffer<TimelineSegment<FixedScalar>>();
         public FixedGameplayEffectExecutionScratch GameplayEffects { get; }
         public HashSet<FixedValueEvaluationKey> ValueStack { get; } = new HashSet<FixedValueEvaluationKey>();
         public List<FixedValueInputBuffer> ValueBuffers { get; } = new List<FixedValueInputBuffer>();
         public List<SimulationMotionContribution> MotionContributions { get; } = new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> MotionWarpSamples { get; } =
-            new List<MotionWarpSample<FixedScalar, FixedActionInstanceState>>();
+        public List<AbilityTimelineLogicMotionWarp> TimelineMotionWarps { get; } =
+            new List<AbilityTimelineLogicMotionWarp>();
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using BTSMTL.Timeline.Runtime;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
@@ -108,7 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseActionPublisher == null)
                 throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
             m_TimelineHost = timelineHost;
-            timelineHost.ValidatePresentationGraphResources(ValidateTimelineCameraResource);
+            timelineHost.PresentationFramePrepared += OnTimelinePresentationFramePrepared;
             timelineHost.Initialize(numericTarget, tickRate);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
                 timelineHost, m_PoseActionPublisher.Inbox));
@@ -119,16 +120,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera != null ? m_Camera.RequestCapacity : 0);
         }
 
-        void ValidateTimelineCameraResource(PresentationCameraRequest request)
-        {
-            if (m_Camera == null)
-                throw new InvalidOperationException("Presentation Marker requires a composed Camera domain.");
-            m_Camera.ValidateRequest(request);
-        }
-
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
         {
             m_TimelineBridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        }
+
+        void OnTimelinePresentationFramePrepared(TimelineRuntimePresentationFrame frame)
+        {
+            m_PresentationClockCoordinator?.AcceptTimelinePresentationFrame(in frame);
         }
 
         internal void BindPoseActionPublisher(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher publisher)
@@ -600,6 +599,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
             m_TimelineBridge?.Dispose();
             m_TimelinePresentationBridge?.Dispose();
+            if (m_TimelineHost != null)
+                m_TimelineHost.PresentationFramePrepared -= OnTimelinePresentationFramePrepared;
             m_TimelineHost = null;
             m_PoseDomain?.Dispose();
             m_PoseResourceScope?.Dispose();

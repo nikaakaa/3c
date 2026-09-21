@@ -432,72 +432,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ActivationId Activation { get; }
     }
 
-    public readonly struct TimelineActionCueEvent
-    {
-        public TimelineActionCueEvent(
-            EventId eventId,
-            string eventName,
-            string cueId,
-            string stateId,
-            int localFrame,
-            string branchId,
-            TimelineRuntimePlaybackHandle handle,
-            ulong generation,
-            ulong logicTick,
-            int frame,
-            int cycle,
-            TimelineExecutionIdentity executionIdentity,
-            string contentRevision,
-            string sourceId,
-            string trackAuthoringId,
-            string clipAuthoringId)
-        {
-            if (!eventId.IsValid || string.IsNullOrWhiteSpace(eventName) || string.IsNullOrWhiteSpace(cueId) ||
-                !handle.IsValid || generation == 0 || logicTick == 0 || frame < 0 || cycle < 0 ||
-                localFrame < 0 ||
-                !executionIdentity.IsValid || string.IsNullOrWhiteSpace(contentRevision) ||
-                string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(trackAuthoringId) ||
-                string.IsNullOrWhiteSpace(clipAuthoringId))
-            {
-                throw new ArgumentException("Timeline ActionCue event is incomplete.");
-            }
-
-            EventId = eventId;
-            EventName = eventName.Trim();
-            CueId = cueId.Trim();
-            StateId = stateId?.Trim() ?? string.Empty;
-            LocalFrame = localFrame;
-            BranchId = branchId?.Trim() ?? string.Empty;
-            Handle = handle;
-            Generation = generation;
-            LogicTick = logicTick;
-            Frame = frame;
-            Cycle = cycle;
-            ExecutionIdentity = executionIdentity;
-            ContentRevision = contentRevision.Trim();
-            SourceId = sourceId.Trim();
-            TrackAuthoringId = trackAuthoringId.Trim();
-            ClipAuthoringId = clipAuthoringId.Trim();
-        }
-
-        public EventId EventId { get; }
-        public string EventName { get; }
-        public string CueId { get; }
-        public string StateId { get; }
-        public int LocalFrame { get; }
-        public string BranchId { get; }
-        public TimelineRuntimePlaybackHandle Handle { get; }
-        public ulong Generation { get; }
-        public ulong LogicTick { get; }
-        public int Frame { get; }
-        public int Cycle { get; }
-        public TimelineExecutionIdentity ExecutionIdentity { get; }
-        public string ContentRevision { get; }
-        public string SourceId { get; }
-        public string TrackAuthoringId { get; }
-        public string ClipAuthoringId { get; }
-    }
-
     public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
     {
         struct ActivePlayback
@@ -525,7 +459,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         TimelineRuntimeCompositionHost m_Host;
         CharacterTimelineTreeClipService m_TreeClipService;
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
-        readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
         readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason, bool RetainForCorrection)> m_PresentationEndCandidates = new(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
@@ -539,7 +472,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<Float32PresentationGraphRuntime> m_PresentationGraphs = new();
         Float32PresentationGraphFacts m_PresentationFacts;
         readonly CharacterTimelineDependencyResolver m_DependencyResolver = new();
-        ulong m_TickCounter;
         TimelineRuntimeNumericTarget m_NumericTarget;
         TimelineAsset[] m_AuthoringTimelineContent = Array.Empty<TimelineAsset>();
         internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
@@ -591,36 +523,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        internal void ValidatePresentationGraphResources(Action<PresentationCameraRequest> validate)
-        {
-            for (int index = 0; index < m_PresentationGraphs.Count; index++)
-                m_PresentationGraphs[index].ValidateCameraResources(validate);
-        }
-
-        internal ReadOnlySpan<PresentationGraphCameraOutput> EvaluatePresentationMarker(in TimelineRuntimePresentationEvent marker, ulong renderFrame)
-        {
-            if (renderFrame == 0 || m_PresentationFacts.RenderFrame != renderFrame)
-                throw new InvalidOperationException("Presentation Marker facts do not belong to its candidate frame.");
-            if (!TryGetActivePlayback(marker.PlaybackHandle, out ActivePlayback active) || active.Generation != marker.Generation)
-                throw new InvalidOperationException("Presentation Marker targets an inactive playback generation.");
-            Float32PresentationGraphRuntime selected = null;
-            int binding = -1;
-            for (int index = 0; index < m_PresentationGraphs.Count; index++)
-            {
-                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index];
-                if (!runtime.TryBind(active.Provenance.SourceInvocationPath, active.Provenance.SourceNodeAuthoringId,
-                        marker.MarkerAuthoringId, marker.GraphId, marker.GraphRevision, out int candidate))
-                    continue;
-                if (selected != null)
-                    throw new InvalidOperationException("Presentation Marker matches multiple installed programs.");
-                selected = runtime;
-                binding = candidate;
-            }
-            if (selected == null)
-                throw new InvalidOperationException($"Presentation Marker '{marker.MarkerAuthoringId}' has no exact graph invocation or revision binding.");
-            return selected.Evaluate(binding, in m_PresentationFacts);
-        }
-
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
         public string AuthoringContentRevision { get; private set; } = string.Empty;
@@ -630,7 +532,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
         internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason, bool> PresentationPlaybackEndPrepared;
         public event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEnded;
-        public event Action<TimelineActionCueEvent> ActionCueCommitted;
 
         public void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
         {
@@ -1753,7 +1654,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 evaluation.Cycle);
             PublishActiveTimelineElements(active, evaluation, time);
             PublishTreeClipEvents(active, evaluation, time);
-            PublishActionCueEvents(active, evaluation, time);
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(
                 new TimelinePlaybackHandle(evaluation.Handle.Value));
             if (status == TimelinePlaybackStatus.Succeeded)
@@ -1769,62 +1669,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RuntimeTraceEventKind.TimelineStopped,
                 "Stopped",
                 request.Reason.Cause.ToString());
-        }
-
-        void PublishActionCueEvents(
-            ActivePlayback active,
-            TimelineRuntimeCommittedEvaluation evaluation,
-            float time)
-        {
-            TimelineRuntimeSampleView<TimelineActionCueSample> cues = evaluation.Evaluation.ActionCues;
-            for (int index = 0; index < cues.Count; index++)
-            {
-                TimelineActionCueSample cue = cues[index];
-                if (ActionCueCommitted != null)
-                {
-                    var committed = new TimelineActionCueEvent(
-                        new EventId(StableHash.Compute(
-                            "timeline.action-cue.committed",
-                            evaluation.Handle.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            evaluation.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            evaluation.LogicTick.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            evaluation.Cycle.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            index.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            cue.ClipAuthoringId,
-                            cue.CueId,
-                            cue.CueType,
-                            cue.StateId,
-                            cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            cue.BranchId)),
-                        cue.CueType,
-                        cue.CueId,
-                        cue.StateId,
-                        cue.LocalFrame,
-                        cue.BranchId,
-                        evaluation.Handle,
-                        evaluation.Generation,
-                        evaluation.LogicTick,
-                        TimelineTimeGrid.NearestIndex(evaluation.Time, TimelineUtility.FrameRate),
-                        evaluation.Cycle,
-                        evaluation.ExecutionIdentity,
-                        evaluation.ContentRevision,
-                        cue.SourceId,
-                        cue.TrackName,
-                        cue.ClipAuthoringId);
-                    ActionCueCommitted.Invoke(committed);
-                }
-                PublishTimelineEvent(
-                    active,
-                    RuntimeTraceDomain.Logic,
-                    RuntimeTraceEventKind.ActionCueSubmitted,
-                    RuntimeSourceElementKey.Timeline(cue.SourceId),
-                    cue.CueType,
-                    cue.TrackName,
-                    time,
-                    evaluation.Cycle,
-                    default,
-                    cue.CueId);
-            }
         }
 
         void PublishActiveTimelineElements(
@@ -2086,28 +1930,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 clipTime = contribution.ClipTime;
                 normalizedTime = contribution.NormalizedTime;
                 clipAuthoringId = contribution.ClipAuthoringId;
-            }
-        }
-
-        public void Update(float deltaTime)
-        {
-            if (!float.IsFinite(deltaTime) || deltaTime < 0f)
-                throw new ArgumentOutOfRangeException(nameof(deltaTime));
-            if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
-                return;
-            m_TickCounter++;
-            FixedScalar elapsedSeconds = FixedScalar.FromDouble(deltaTime);
-            m_PlaybackScan.Clear();
-            m_PlaybackScan.AddRange(m_ActivePlaybacks);
-            for (int i = 0; i < m_PlaybackScan.Count; i++)
-            {
-                ActivePlayback active = m_PlaybackScan[i];
-                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
-                if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                    continue;
-                if (active.CoreDriven)
-                    continue;
-                m_Host.Service.Step(active.Handle, m_TickCounter, elapsedSeconds);
             }
         }
 

@@ -34,22 +34,6 @@ namespace ThirdPersonSimulation
         };
     }
 
-    public readonly struct PresentationGraphCameraOutput
-    {
-        public PresentationGraphCameraOutput(OperationHandle operation, string producer, PresentationCameraRequest request, PresentationCameraRequest retirement)
-        {
-            Operation = operation;
-            Producer = producer;
-            Request = request;
-            Retirement = retirement;
-        }
-
-        public OperationHandle Operation { get; }
-        public string Producer { get; }
-        public PresentationCameraRequest Request { get; }
-        public PresentationCameraRequest Retirement { get; }
-    }
-
     public sealed class Float32PresentationGraphRuntime
     {
         readonly Float32GameplayAbilityExecutionData m_Data;
@@ -59,12 +43,9 @@ namespace ThirdPersonSimulation
         readonly AbilityStateValue[] m_Defaults;
         readonly AbilityStateValue[] m_State;
         readonly bool[] m_Parameters;
-        readonly PresentationGraphCameraOutput[] m_CameraOperations;
-        readonly PresentationGraphCameraOutput[] m_Outputs;
         readonly Values m_Values;
         readonly OperationControlRuntime<Target> m_Control;
         Float32PresentationGraphFacts m_Facts;
-        int m_OutputCount;
         bool m_Executing;
 
         public Float32PresentationGraphRuntime(Float32GameplayAbilityExecutionData data)
@@ -83,7 +64,6 @@ namespace ThirdPersonSimulation
             m_Defaults = new AbilityStateValue[data.StateSlots.Count];
             m_State = new AbilityStateValue[data.StateSlots.Count];
             m_Parameters = new bool[data.StateSlots.Count];
-            m_CameraOperations = new PresentationGraphCameraOutput[data.Operations.Count];
             foreach (ProgramGraphCallFrame frame in data.GraphCallFrames)
             {
                 foreach (ProgramGraphParameterBinding parameter in frame.Inputs)
@@ -103,22 +83,12 @@ namespace ThirdPersonSimulation
                 m_GraphIds[index] = "tree:" + entry.GraphId;
                 capacity = Math.Max(capacity, PrepareOperation(new OperationHandle(entry.TargetIndex), visited, capacities));
             }
-            m_Outputs = new PresentationGraphCameraOutput[capacity];
             m_Values = new Values(this, new Float32GraphValueWorkspace(data, m_Layout));
             m_Control = new OperationControlRuntime<Target>(data.Topology, new Target(this),
                 checked(Math.Max(1024, data.Operations.Count * 128)));
         }
 
         public CharacterSkillId AbilityId => m_Data.AbilityId;
-        public int CameraOutputCapacity => m_Outputs.Length;
-
-        public void ValidateCameraResources(Action<PresentationCameraRequest> validate)
-        {
-            for (int index = 0; index < m_CameraOperations.Length; index++)
-                if (m_CameraOperations[index].Producer != null)
-                    validate(m_CameraOperations[index].Request);
-        }
-
         public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision, out int binding)
         {
             int match = -1;
@@ -136,7 +106,7 @@ namespace ThirdPersonSimulation
             return match >= 0;
         }
 
-        public ReadOnlySpan<PresentationGraphCameraOutput> Evaluate(int binding, in Float32PresentationGraphFacts facts)
+        public void Evaluate(int binding, in Float32PresentationGraphFacts facts)
         {
             if (m_Executing)
                 throw new InvalidOperationException("Presentation graph evaluation is already active.");
@@ -145,7 +115,6 @@ namespace ThirdPersonSimulation
             ProgramSourceMapEntry entry = m_Entries[binding];
             m_Facts = facts;
             m_Executing = true;
-            m_OutputCount = 0;
             Array.Copy(m_Defaults, m_State, m_State.Length);
             try
             {
@@ -154,12 +123,7 @@ namespace ThirdPersonSimulation
                 OperationExecutionResult result = m_Control.Tick(new OperationHandle(entry.TargetIndex));
                 if (result != OperationExecutionResult.Success)
                     throw new InvalidOperationException($"Presentation Marker '{entry.InvocationCallerClipId}' did not complete its OnEnable graph: {result}.");
-                return new ReadOnlySpan<PresentationGraphCameraOutput>(m_Outputs, 0, m_OutputCount);
-            }
-            catch
-            {
-                m_OutputCount = 0;
-                throw;
+                return;
             }
             finally
             {
@@ -213,20 +177,6 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.BlackboardGet:
                 case SimulationOperationCode.BlackboardSet:
                     ParameterSlot(operation);
-                    break;
-                case SimulationOperationCode.CameraStateRequest:
-                case SimulationOperationCode.CameraEffectRequest:
-                case SimulationOperationCode.CameraResponse:
-                case SimulationOperationCode.CameraTarget:
-                    IReadOnlyList<ProgramReference> producers = m_Layout.References(handle, ProgramReferenceKind.Producer);
-                    if (producers.Count != 1 || string.IsNullOrWhiteSpace(producers[0].ExternalIdentity))
-                        throw new InvalidOperationException($"Presentation Camera operation '{m_Layout.SourcePath(handle)}' requires one producer.");
-                    m_CameraOperations[handle.Value] = new PresentationGraphCameraOutput(handle, producers[0].ExternalIdentity,
-                        CameraProgramRequestFactory.Build(operation.Code, operation.Integer1, operation.Flags,
-                            PresentationCameraRequestLifecycle.Activate, new Float32CameraProgramConstantReader(m_Layout, handle)),
-                        CameraProgramRequestFactory.Build(operation.Code, operation.Integer1, operation.Flags,
-                            PresentationCameraRequestLifecycle.Retire, new Float32CameraProgramConstantReader(m_Layout, handle)));
-                    capacity = 1;
                     break;
                 default:
                     throw new InvalidOperationException($"Operation '{m_Layout.SourcePath(handle)}' ({operation.Code}) cannot execute in a Presentation Marker.");
@@ -332,14 +282,6 @@ namespace ThirdPersonSimulation
                 SimulationOperation operation = m_Owner.m_Layout.Operation(descriptor.Handle);
                 switch (operation.Code)
                 {
-                    case SimulationOperationCode.CameraStateRequest:
-                    case SimulationOperationCode.CameraEffectRequest:
-                    case SimulationOperationCode.CameraResponse:
-                    case SimulationOperationCode.CameraTarget:
-                        if (m_Owner.m_OutputCount == m_Owner.m_Outputs.Length)
-                            throw new InvalidOperationException("Presentation graph exceeded its prepared Camera output bound.");
-                        m_Owner.m_Outputs[m_Owner.m_OutputCount++] = m_Owner.m_CameraOperations[operation.Handle.Value];
-                        return OperationExecutionResult.Success;
                     case SimulationOperationCode.BlackboardSet:
                         m_Owner.m_Values.WriteParameter(cursor, operation);
                         return OperationExecutionResult.Success;

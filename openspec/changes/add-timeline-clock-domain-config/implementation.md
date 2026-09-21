@@ -687,3 +687,9 @@
 - `CameraCueKind` 已无源码消费者，且正式相机效果已有 `CameraEffectKind`；零使用枚举删除。
 - `camera/cue-lifecycle` 与 `camera/cue-routing` 诊断计划、注册和实现删除。后者读取的 `PresentationCommandKind.Cue = 6` 现在属于 GameplayEffect 的 Gameplay Cue，不是相机命令；正式相机命令继续用 `CharacterPresentationCommandKind.Camera`，避免诊断把两个领域混在一起。
 - `character-presentation-replication-core.current.json` 与 full 计划通过 JSON 反序列化校验。`ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors；已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。
+
+## 删除Presentation Marker Camera旁路
+
+- 按当前口径，绑定动作实例的一次性相机触发只能由 TreeClip 内正式相机 Node 提交；持续效果窗口仍由唯一效果轨道采样。生成资产核对未发现 Presentation Marker Camera 节点实例，因此无需迁移内容。
+- 删除 `PresentationGraphCameraOutput`、Marker 图 Camera 输出准备与执行、Host 精确绑定求值和 Camera 资源验证、表现域 Marker Camera 资源验证，以及 Camera bridge 的 `AddMarkerCamera` 消费。Presentation 图遇到 Camera State / Effect / Response / Target 节点时在准备边界明确失败，不产生空命令或第二触发链。
+- `ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors；已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。

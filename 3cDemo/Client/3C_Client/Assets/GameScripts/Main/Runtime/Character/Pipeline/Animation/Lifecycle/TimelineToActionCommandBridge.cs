@@ -520,20 +520,12 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     void OnPresentationFrame(TimelineRuntimePresentationFrame frame)
     {
         m_Alive.Clear();
-        if (frame.Operations.CameraStates.Count != 0 || frame.Operations.CameraCues.Count != 0 ||
-            frame.Operations.CameraResponses.Count != 0 || frame.Operations.CameraResources.Count != 0 || frame.Events.Count != 0)
+        if (frame.Operations.CameraStates.Count != 0 ||
+            frame.Operations.CameraResponses.Count != 0 || frame.Operations.CameraResources.Count != 0)
         {
             if (!m_TimelineHost.TryGetPresentationExecutionContext(frame.Handle, out TimelinePresentationExecutionContext context))
                 throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has no Presentation execution identity.");
             CollectCameraEvents(frame, context, m_Alive);
-            for (int index = 0; index < frame.Events.Count; index++)
-            {
-                TimelineRuntimePresentationEvent marker = frame.Events[index];
-                ReadOnlySpan<PresentationGraphCameraOutput> outputs = m_TimelineHost.EvaluatePresentationMarker(in marker, frame.PresentationFrame);
-                EventId eventId = marker.EventId;
-                for (int outputIndex = 0; outputIndex < outputs.Length; outputIndex++)
-                    AddMarkerCamera(frame, context, marker, eventId, outputs[outputIndex]);
-            }
         }
         foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
             if (entry.Key.Marker != null && entry.Key.Handle == frame.Handle.Value && entry.Key.Generation == frame.Generation &&
@@ -555,30 +547,6 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         m_Alive.Clear();
         RetireInactive(m_Alive, handle.Value, reason == TimelinePresentationSampleReason.Withdrawn, generation, retainForCorrection);
-    }
-
-    void AddMarkerCamera(TimelineRuntimePresentationFrame frame, in TimelinePresentationExecutionContext context,
-        in TimelineRuntimePresentationEvent marker, EventId eventId, in PresentationGraphCameraOutput output)
-    {
-        var key = CameraEventKey.ForMarker(frame.Handle.Value, frame.Generation, marker.MarkerAuthoringId, output.Producer);
-        if (m_Events.TryGetValue(key, out CameraEventState previous))
-        {
-            if (!previous.Suspended)
-                m_Runtime.Retire(previous.Activation);
-            m_Events.Remove(key);
-        }
-        if (m_RequestCapacity == 0 || m_Events.Count == m_RequestCapacity)
-            throw new InvalidOperationException("Presentation Marker Camera output exceeds the composed domain capacity.");
-        var header = new CharacterPresentationEventHeader(eventId, m_ActorId, new SimulationTick(frame.LogicTick),
-            context.Activation, marker.TraversalIndex, "timeline.marker.camera");
-        var activation = new CharacterPresentationCommand(header, CharacterPresentationCommandKind.Camera,
-            output.Producer, marker.Time.ToSingle(), output.Request.Weight, context.Activation.Generation,
-            marker.Cycle, context.ActionInstanceId, 1f, cameraRequest: output.Request);
-        var retirement = new CharacterPresentationCommand(header, CharacterPresentationCommandKind.Camera,
-            output.Producer, marker.Time.ToSingle(), output.Retirement.Weight, context.Activation.Generation,
-            marker.Cycle, context.ActionInstanceId, 1f, cameraRequest: output.Retirement);
-        m_Runtime.Publish(activation);
-        m_Events.Add(key, new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation, marker.Time.Raw, marker.Cycle));
     }
 
     void CollectCameraEvents(
@@ -614,36 +582,6 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
                 sample.TargetKey,
                 context.Activation.Source.Identity);
             PublishCamera(key, frame, context, activation, retirement);
-
-            alive.Add(key);
-        }
-
-        for (int index = 0; index < frame.Operations.CameraCues.Count; index++)
-        {
-            TimelineCameraCueSample sample = frame.Operations.CameraCues[index];
-            CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
-                sample.TrackAuthoringId, sample.ClipAuthoringId, sample.Cycle);
-            if (!m_Events.ContainsKey(key))
-            {
-                string requestId = sample.ClipAuthoringId;
-                PresentationCameraRequest activation = PresentationCameraRequest.Effect(
-                    PresentationCameraRequestLifecycle.Activate,
-                    requestId,
-                    (int)RequireCueEffectKind(sample.CueKind),
-                    sample.ResourceId,
-                    sample.Priority,
-                    Mathf.Clamp01(sample.Intensity),
-                    context.Activation.Source.Identity);
-                PresentationCameraRequest retirement = PresentationCameraRequest.Effect(
-                    PresentationCameraRequestLifecycle.Retire,
-                    requestId,
-                    (int)RequireCueEffectKind(sample.CueKind),
-                    sample.ResourceId,
-                    sample.Priority,
-                    Mathf.Clamp01(sample.Intensity),
-                    context.Activation.Source.Identity);
-                PublishCamera(key, frame, context, activation, retirement);
-            }
 
             alive.Add(key);
         }
@@ -807,20 +745,6 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (string.IsNullOrWhiteSpace(value))
             throw new InvalidOperationException("Timeline camera state has no SequenceId.");
         return value.Trim();
-    }
-
-    static CameraEffectKind RequireCueEffectKind(TimelineCameraCueKind kind)
-    {
-        return kind switch
-        {
-            TimelineCameraCueKind.Shake => CameraEffectKind.Shake,
-            TimelineCameraCueKind.FovKick => CameraEffectKind.Zoom,
-            TimelineCameraCueKind.Recoil => CameraEffectKind.Shake,
-            TimelineCameraCueKind.Override => CameraEffectKind.Override,
-            TimelineCameraCueKind.Shot => CameraEffectKind.Shot,
-            _ => throw new InvalidOperationException(
-                $"Timeline camera cue '{kind}' has no formal Camera domain effect mapping.")
-        };
     }
 
     static CameraEffectKind RequireResourceEffectKind(TimelineCameraResourceKind kind)

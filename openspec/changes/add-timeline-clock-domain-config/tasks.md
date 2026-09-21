@@ -1,6 +1,6 @@
 # Tasks
 
-用户已确定秒制作者时间和 Timeline 被动求值，当前在主目录实施。播放管理者负责进度与倍率，Timeline 接收区间和原因处理内容；编辑器 tick 吸附跟随正式配置。第 1–4 节仅记录已有实现，不代表旧时间所有权继续作为目标；停止、修正和变速随共享采样一起接入。本清单不含测试或手动验证任务。
+用户已确定秒制作者时间和 Timeline 被动求值，当前在主目录实施。播放管理者负责进度与倍率，Timeline 接收区间和原因处理内容；编辑器 tick 吸附跟随正式配置。一次性 Gameplay / Camera / VFX / Audio 行为由 TreeClip 内正式节点表达，Timeline 不再拥有 ActionCue 轨道或事件包装。第 1–4 节仅记录已有实现，不代表旧时间所有权继续作为目标；停止、修正和变速随共享采样一起接入。本清单不含测试或手动验证任务。
 
 ## 0. 秒制作者时间与全链路迁移
 
@@ -8,7 +8,7 @@
 - [ ] 0.2 将 Timeline 起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标迁移为秒，更新正式字段名与作者 API，删除整数作者帧双写和兼容读取
 - [ ] 0.3 将旧资产和生成 authoring 代码按正式旧时间 / 素材映射一次性迁移，保留内容身份和引用；同步闭包、指纹及正式派生产品格式，不生成 tick 版作者内容
 - [ ] 0.4 将精确动作进度、倍率、暂停与换算余数归入既有逻辑播放管理者，Timeline 接收前后秒数／经过／原因被动遍历；播放状态与求值状态在同一 Step 和 Capture / Restore 链提交恢复，保留循环、Decision 与边界截停规则
-- [ ] 0.5 将正式事件位置和运行消费者迁移为秒，ActionCue 保留 LogicTick、cycle 和素材来源身份；原 LocalFrame 不再参与第二套时间推进
+- [ ] 0.5 将 TreeClip 正式节点输出的位置和运行消费者迁移为秒，节点保留 LogicTick、cycle、TreeGraph／Node identity 与 branch revision；Timeline 不再定义 ActionCue 事件或以素材 LocalFrame 推进
 - [ ] 0.6 迁移 Slate、Inspector、Session、mutation / Undo 和 C# 导出重建的时间读写，帧只作显示与可选吸附，删除 StartFrame 等旧正式存储入口
 - [ ] 0.7 将逻辑和表现 Timeline 调用入口统一为被动区间求值，删除自主 delta 累加；沿既有预分配存储传递推进与候选结果，运行热路径保持 0 GC
 
@@ -41,20 +41,20 @@
 - [x] 3.6 建立 TimelineTrigger 图角色、仅 OnEnable 入口、MarkerTrees 编译闭包与 Logic Marker 的 Advance / Commit 调用链
 - [x] 3.7 Slate 接入 Marker 创建、绘制、选中、拖动、图编辑与正式 Undo；修正拖动坐标重复扣除左栏导致落到第 0 帧的问题
 - [x] 3.8 C# authoring 增加 EnsureMarker / PruneTimelineMarkers 及 Marker 字段导出；完整私有图重建边界由第 8 节补齐
-- [x] 3.9 Camera State / Cue / Response / Resource 通过既有 Camera bridge 交给正式 domain，动画继续使用 ActionPlaybackCommandInbox
+- [x] 3.9 Camera State / Response / Effect 通过既有 Camera bridge 交给正式 domain；一次性 Camera Cue 已删除，不得恢复 Timeline 触发型 Cue 或 Presentation Marker Camera 旁路
 
 ## 4. 已有编辑器与内容合同
 
 - [x] 4.1 Timeline 顶栏拆为 TimelineEditorBindingState、TimelineEditorToolbarView 与 TimelineEditorWindow，保留 Slate 单一编辑入口
-- [x] 4.2 AttackProperty 由 Ability / Attack 领域转换和消费，Timeline 不引入原始 dump 解析器或第二运行链
-- [x] 4.3 ActionCue 只在 Logic commit 发布 CueType / CueId 与正式事件身份，不代行 Camera / VFX / Audio 领域逻辑
+- [ ] 4.2 AttackProperty 由 TreeClip 内正式 Gameplay 节点提交，Ability / Attack 领域转换和消费；Timeline 不引入原始 dump 解析器、ActionCue 轨道或第二运行链
+- [ ] 4.3 TreeClip 节点只在 Logic commit 发布 typed domain output 与正式事件身份，不代行其它领域逻辑，不再经过 ActionCue 包装
 - [x] 4.4 同步 Corin AttackProperty 效果 key 与 uint 编号合同，payload 留在 GameplayEffect / Ability，保留旧 TreeDesigner Timeline UI 删除结果
 - [x] 4.5 登记 Normal Attack End / Explode 内容边界，Branch / Rush 不并入现有五段 Timeline
-- [x] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，本地 frame=1 cue 映射为全局 frame=75
+- [ ] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，并在对应 TreeClip 中建立攻击属性节点，不把素材本地帧当作第二时间轴
 - [x] 4.7 Attack5 在 frame=47 建 Attack5EndBoundary 及 End / End_2 正式状态转移
-- [x] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 携带 BranchId 与 15 个状态本地 cue
-- [x] 4.9 删除 Attack5 frame=64 多余 _01_02 cue 并重建对应 Ability 定义
-- [x] 4.10 StateId / LocalFrame / BranchId 进入 ActionCue sample、committed event 与稳定 EventId
+- [ ] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 在对应 TreeClip 中携带分支身份与 15 个状态本地节点
+- [ ] 4.9 删除 Attack5 frame=64 多余 `_01_02` 节点并重建对应 Ability 定义
+- [ ] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
 
 ## 5. 同一动作的共享表现采样
 

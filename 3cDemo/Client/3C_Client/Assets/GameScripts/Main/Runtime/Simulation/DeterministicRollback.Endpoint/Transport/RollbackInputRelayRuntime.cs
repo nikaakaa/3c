@@ -71,6 +71,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly RollbackExplicitInputFrontier[] m_ExplicitInputFrontierScratch;
         readonly Dictionary<int, RollbackCanonicalInputBundle[]> m_CanonicalConfirmationScratches =
             new Dictionary<int, RollbackCanonicalInputBundle[]>();
+        readonly Dictionary<int, RollbackActorInputFrame[]> m_RelayedInputScratches =
+            new Dictionary<int, RollbackActorInputFrame[]>();
         RollbackCanonicalInputAssembler m_Assembler;
         ulong m_AssembledCount;
         ulong m_InputBatchCount;
@@ -343,24 +345,42 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     m_DeduplicatedInputCount + (ulong)(input.Frames.Count - m_AcceptedInputFrames.Count));
                 if (m_AcceptedInputFrames.Count == 0)
                     return;
-                var relayed = new RollbackActorInputFrame[m_AcceptedInputFrames.Count];
-                for (int i = 0; i < m_AcceptedInputFrames.Count; i++)
+                RollbackActorInputFrame[] relayed = RentRelayedInputScratch(m_AcceptedInputFrames.Count);
+                try
                 {
-                    RollbackActorInputFrame source = m_AcceptedInputFrames[i];
-                    relayed[i] = new RollbackActorInputFrame(
-                        source.ActorId,
-                        source.Tick,
-                        source.InputSequence,
-                        source.Input,
-                        RollbackInputProvenance.RelayedExplicit);
+                    for (int i = 0; i < m_AcceptedInputFrames.Count; i++)
+                    {
+                        RollbackActorInputFrame source = m_AcceptedInputFrames[i];
+                        relayed[i] = new RollbackActorInputFrame(
+                            source.ActorId,
+                            source.Tick,
+                            source.InputSequence,
+                            source.Input,
+                            RollbackInputProvenance.RelayedExplicit);
+                    }
+                    Broadcast(RollbackRelayedExplicitInputBatch.FromOwnedFrames(relayed), true, peer.Roster.PeerId);
+                    m_ExplicitRelayBroadcastCount = checked(
+                        m_ExplicitRelayBroadcastCount + (ulong)relayed.Length);
                 }
-                Broadcast(RollbackRelayedExplicitInputBatch.FromOwnedFrames(relayed), true, peer.Roster.PeerId);
-                m_ExplicitRelayBroadcastCount = checked(m_ExplicitRelayBroadcastCount + (ulong)relayed.Length);
+                finally
+                {
+                    Array.Clear(relayed, 0, relayed.Length);
+                }
             }
             finally
             {
                 m_AcceptedInputFrames.Clear();
             }
+        }
+
+        RollbackActorInputFrame[] RentRelayedInputScratch(int count)
+        {
+            if (!m_RelayedInputScratches.TryGetValue(count, out RollbackActorInputFrame[] scratch))
+            {
+                scratch = new RollbackActorInputFrame[count];
+                m_RelayedInputScratches.Add(count, scratch);
+            }
+            return scratch;
         }
 
         void FlushCanonicalConfirmation()

@@ -3331,3 +3331,11 @@
 - `RollbackCanonicalInputAssembler` 删除返回新数组的 `CaptureCanonicalRange`，改为 `FillCanonicalRange` 显式填充调用方精确长度数组；确认范围、历史下限、缺失 canonical Tick 和 buffer 长度校验保持。
 - `RollbackInputRelayRuntime` 按确认区间长度保留 bundle scratch。每次广播前完整填充，`RollbackCanonicalConfirmation.FromOwnedBundles` 原地排序校验后由 Datagram Channel 同步编码；可靠重发只保留 packet bytes。广播完成后 finally 清空 scratch 元素，payload 不再跨 Pump 保留 bundle 引用。
 - 长度变化的确认区间分别保留精确 scratch，稳定长度不再分配数组；广播失败不推进确认游标，下一次 Pump 会重新完整覆盖同一 scratch。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback relayed input 数组复用
+
+对应 tasks.md 的 5.2，新增 5.145 作为独立小步；5.2 保持未勾选。
+
+- `RollbackInputRelayRuntime.ReceiveInput` 原先每次有去重后接受的输入都新建 relayed frame 数组。现在 Relay 按批次长度保留精确 frame scratch，填充 provenance 后交给 `RollbackRelayedExplicitInputBatch.FromOwnedFrames`，由 Datagram Channel 同步编码；可靠重发只保留 packet bytes。
+- 广播完成后 finally 清空 scratch 元素，避免 ephemeral batch 或失败路径继续保留 `RollbackActorInputFrame` 引用。同一稳定批长不再分配数组；去重计数、广播计数、输入所有权和 provenance 校验不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

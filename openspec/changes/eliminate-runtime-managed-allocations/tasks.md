@@ -405,6 +405,7 @@
 - [x] 5.142 Rollback input history checkpoint entry 改为只读值记录，checkpoint 精确数组直接承载 predicted/canonical 引用；恢复空值仍显式失败
 - [x] 5.143 Rollback runtime transaction checkpoint 改为只读值记录，历史恢复和 checkpoint 字段直接承载捕获值；Owner 归属仍显式校验
 - [x] 5.144 Rollback relay canonical confirmation 使用按区间长度保留的 bundle scratch 并同步编码后清空引用；删除每次确认广播的区间数组分配
+- [x] 5.145 Rollback relay relayed explicit input 使用按批次长度保留的 frame scratch 并同步编码后清空引用；删除每次转发的 frame 数组分配
 
 ## 6. UI、资源、渲染和生命周期
 

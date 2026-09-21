@@ -4019,3 +4019,11 @@
 - Fixed 和 Float32 `AbilityExecutionAssembly` 从 sealed class 改为 readonly struct；Service Factory 仍按原构造参数校验 Input、Action、Blackboard、Motion、Control 和 Domain，再把 Gameplay Effect、Equipment 等引用一次性交给 Invocation Runtime。
 - Assembly 只是工厂到 Invocation Runtime 的交接外壳，栈上传给本地变量后立即拆到 readonly 字段；Input、Action、Gameplay Effect、Equipment、Blackboard、Motion、Control 和 Domain 的生命周期不变。每次 Ability invocation 的装配外壳 class 分配删除。
 - 按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability trace sink 生命周期收口
+
+对应 tasks.md 的 5.5，新增 5.230 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Trace Sink 从每次 Frame 构造新建改为 Ability Execution Context 常驻实例；Sink 构造期只按 immutable ability data 和 layout 准备 value ports、edge ids、invocation layout 和 value edges 索引，这些索引不再随 invocation 重建。
+- Frame 构造时通过 `Bind` 重绑当前 Frame 并重建 Diagnostic Sequence；`Begin` 继续重置诊断开关、value 采样上限计数和 sequence，`End` 关闭诊断后清空 Frame 和 sequence 引用，避免常驻 Sink 跨 invocation 持有旧 Ability 状态。
+- 每次 Ability invocation 的 Trace Sink class 分配和 Source Map 索引重建删除；诊断记录类型、顺序、开关、采样上限和 Timeline trace 输出契约不变。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

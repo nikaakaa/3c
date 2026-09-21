@@ -490,6 +490,7 @@
 - [x] 5.227 两数值域 Ability Installation 常驻 Operation Control Runtime 和 TreeClip Link；每次 invocation 只重绑 execution target，保留 transient state 校验、Begin/End evaluation、操作计数上限和 TreeClip invoker push/pop
 - [x] 5.228 两数值域 Ability Execution ServiceSet 改为 readonly struct 并删除 services 接口；Operation Control Runtime 直接持有具体 ServiceSet，EndEvaluation 后用 default 清理，保留 Begin/End 顺序、可选 Gameplay Effect/Equipment 服务和 Timeline 只读列表边界
 - [x] 5.229 两数值域 Ability Execution Assembly 改为 readonly struct；继续按工厂构造校验和一次性交接 runtime 引用，删除每次 Ability invocation 的临时装配外壳 class 分配
+- [x] 5.230 两数值域 Ability Trace Sink 改为 Execution Context 常驻索引；Frame 构造时重绑 invocation 和诊断 sequence，Begin 重置开关与采样计数，End 清空 frame 引用，删除每次 invocation 的 Sink 新建和 Source Map 索引重建
 
 ## 6. UI、资源、渲染和生命周期
 

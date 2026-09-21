@@ -370,7 +370,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_ControlMessages.Clear();
             m_RelayedExplicitInputs.Clear();
             m_InputRedundancy.Clear();
-            m_InputBatchFrames.Clear();
+            m_InputBatchScratches.Clear();
         }
     }
 }

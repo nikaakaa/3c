@@ -349,6 +349,7 @@
 
 - [x] 5.87 Rollback output disposition pass 跨 Execute 复用 disposition 组装列表并在 finally 清空，统一 Fixed／Float32 本地 pass 的现有模式，删除每 outer tick 的 List 对象及稳定容量后的增长存储；最终 set 继续独立复制排序
 - [x] 5.88 RollbackOutputCommitter 按正式 registry 容量池化 GameplayFact／PresentationCommand 输出 record，替换、取消、确认释放后回池；提交失败只回收本批新建对象，旧正式 record 保持事务原子性
+- [x] 5.89 Rollback schedule 直接消费 Fixed Character Runtime 已排序的 roster descriptor，删除每 outer tick 的 actor 数组复制、descriptor 重建和 roster hash 重算
 
 ## 6. UI、资源、渲染和生命周期
 

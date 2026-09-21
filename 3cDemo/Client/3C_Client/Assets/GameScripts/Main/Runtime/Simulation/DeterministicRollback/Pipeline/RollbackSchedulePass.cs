@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong nextTick = checked(context.CurrentCompletedTick + 1);
             if (ingress.Predicted.Tick.Value != nextTick)
                 throw new InvalidOperationException("Rollback ingress predicted Tick is not the next Simulation Tick.");
-            var roster = new SimulationActorRosterDescriptor(CollectActors(characterRuntime.Runtime.Roster));
+            SimulationActorRosterDescriptor roster = characterRuntime.Runtime.RosterDescriptor;
             if (context.CurrentCompletedTick == 0 &&
                 m_State.Inputs.GetRequired(ingress.Predicted.Tick).Canonical == null)
             {
@@ -270,14 +270,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 new SimulationPipelineStepProvenance(kind, source, planSequence, bundle.GameplayHash.Value),
                 inputs,
                 typedIngress);
-        }
-
-        static ActorId[] CollectActors(IReadOnlyList<SimulationActorBinding> roster)
-        {
-            var actors = new ActorId[roster.Count];
-            for (int i = 0; i < roster.Count; i++)
-                actors[i] = roster[i].ActorId;
-            return actors;
         }
     }
 

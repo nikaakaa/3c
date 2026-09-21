@@ -2495,3 +2495,11 @@
 - Commit 失败时回收本批新建 record，但清空 retired 列表且不交换正式 registry；旧 record 继续归属原事务状态，失败不会造成旧输出被复用。
 - 池容量继续受正式 `maximumRecords` 限制；超过容量的对象只是不回池，不扩大 registry 窗口。输出发布顺序、slot 排序、keep／replace／cancel 计数和 capacity 校验保持不变。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚调度 roster descriptor 复用
+
+对应 tasks.md 的 5.2，本步只处理 Rollback Schedule 的 roster 构造，整项保持未勾选。
+
+- `FixedCharacterRuntime` 已在装配阶段把排序后的 roster 复制成不可变 `SimulationActorRosterDescriptor` 并计算 roster hash；Rollback Schedule 原先每个 outer tick 再复制 ActorId、排序、创建 descriptor 和重算同一 hash。
+- Schedule 现在直接把 `characterRuntime.Runtime.RosterDescriptor` 写入 ExecutionPlan，删除每 tick 的 actor 数组和 descriptor 分配。Plan 共享长寿命不可变 descriptor，不改 actor 集合、排序和 plan 所需生命周期。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

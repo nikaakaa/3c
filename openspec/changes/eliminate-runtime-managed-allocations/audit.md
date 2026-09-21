@@ -3514,3 +3514,11 @@
 - 静态复核发现 5.165 的 Codec 只把租用 payload buffer 和长度交给 packet，没有把 wire buffer 中的 payload 字节复制过去。现在读取完成并校验 canonical 完整后，先将实际 payload span 原位复制到租用 buffer，再建立 packet header。
 - 接收线程的 wire buffer 仍跨包复用；payload buffer 只在接收队列生命周期内被 packet 持有，消费完成后释放。header、canonical 完整校验、队列容量和归还边界不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 接收池失败路径归还修复
+
+对应 tasks.md 的 5.5，新增 5.167 作为独立修复小步；5.5 保持未勾选。
+
+- Codec 读取入口在 canonical 解析前先用默认 header 和零长度把租用 packet 绑定到 payload buffer；随后读取成功时再重建正式 header 和实际长度。这样 magic、版本、identity 或 payload 校验失败时，endpoint 仍能通过既有 `ReturnReceivedPacket` 成对归还 packet 和 buffer。
+- wire payload 只在完整校验后复制，失败包不会发布；池容量、异常类型和队列语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

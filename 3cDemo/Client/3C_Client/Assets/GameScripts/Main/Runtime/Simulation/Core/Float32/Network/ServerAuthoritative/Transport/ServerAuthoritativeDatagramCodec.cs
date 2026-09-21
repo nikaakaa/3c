@@ -179,6 +179,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentNullException(nameof(packet));
             if (payloadBuffer == null || payloadBuffer.Length < maximumBytes)
                 throw new ArgumentException("Gameplay datagram payload buffer is invalid.", nameof(payloadBuffer));
+            packet.Reset(default, payloadBuffer, 0);
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic)
                 throw new InvalidDataException("Gameplay datagram magic is invalid.");

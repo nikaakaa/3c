@@ -3362,3 +3362,11 @@
 - `RollbackDatagramEndpoint.EnqueueSend` 原先每个数据包都 `Clone` 远端 `IPEndPoint`。现在 endpoint 按发送队列容量维护 `ConcurrentStack`，入队前租用独立记录，发送或 Dispose 清队后归还；并发入队仍各持有一条记录，接收线程发送期间不会被调用方复用。
 - 发送失败和队列清空都在既有 buffer 归还边界同步归还 endpoint。`RollbackDatagramChannel` 继续持有不可变 bound endpoint，发送字节、packet payload 和 reliable pending 所有权不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback protocol envelope 值记录化
+
+对应 tasks.md 的 5.4，新增 5.148 作为独立小步；5.4 保持未勾选。
+
+- `RollbackProtocolEnvelope` 从 class 改为 readonly struct。协议读取和 canonical 校验完成后，Session、Sender、Sequence 和 payload 引用直接以值记录进入 Channel 接收队列，删除每条完整消息的信封堆分配。
+- 信封仍是不可变协议边界，payload 仍由 Handshake、输入批、快照响应等正式消息对象独立持有；Peer 和 Relay 消费函数继续读取 `Payload`，不新增归还或跨帧复用合同。空队列返回默认值，仅表示无结果，不是有效 envelope。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

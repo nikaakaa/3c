@@ -342,7 +342,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_Received.Count == 0)
             {
-                envelope = null;
+                envelope = default;
                 return false;
             }
             envelope = m_Received.Dequeue();

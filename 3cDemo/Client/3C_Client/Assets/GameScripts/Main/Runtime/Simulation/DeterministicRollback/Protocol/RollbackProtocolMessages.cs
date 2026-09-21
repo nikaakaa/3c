@@ -292,7 +292,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string Reason { get; }
     }
 
-    public sealed class RollbackProtocolEnvelope
+    public readonly struct RollbackProtocolEnvelope
     {
         public RollbackProtocolEnvelope(string sessionId, string senderPeerId, ulong sequence, IRollbackProtocolPayload payload)
         {

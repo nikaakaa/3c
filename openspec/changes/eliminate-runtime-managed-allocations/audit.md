@@ -3643,3 +3643,11 @@
 - `SimulationPipelineOutputDispositionSet` 的 Float32 版本补齐与 Fixed 一致的 `FromOwnedDispositions`：private 构造直接接管精确数组，类型化静态排序替代 lambda，EventId 去重和事务身份校验不变。
 - Float32 Local Immediate 先统计 GameplayFact 和 PresentationCommand 数量，再填充精确 disposition 数组并直接转交。删除一次性 builder、List 收集、构造期数组复制和清理临时壳；排序会改变最终 owned array，但公开只读接口和排序结果不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority disposition arrays 收口
+
+对应 tasks.md 的 5.5，新增 5.183 作为独立小步；5.5 保持未勾选。
+
+- Authority Replication Egress 先按每个 Actor 的 GameplayFact 和 PresentationCommand 数量统计 disposition 总量，再填充精确数组并交给 `FromOwnedDispositions`。BuildRemote 在构造 reliable payload 的同时写入 disposition 数组，事件顺序、Suppress 语义、horizon 前进和 EventId 去重校验不变。
+- 每 tick 的 disposition List、构造期复制和 List 清理壳删除；异常路径继续释放 scratch 引用。诊断中的 disposition 数量改读 owned array 长度，输出事实不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

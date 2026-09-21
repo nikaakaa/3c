@@ -443,6 +443,7 @@
 - [x] 5.180 Float32 SelectedRemoteBodyBatch 改为 owned array 合同；prediction schedule 按 current selection 容量一次分配 bodies，删除 List 收集、lambda 排序和只读包装
 - [x] 5.181 Float32 AuthoritativeObservationBatch 改为 owned array 合同；Evidence drain 只生成最新 baseline 精确数组，删除 drain baseline List、IEnumerable 复制、lambda 排序和只读包装
 - [x] 5.182 Float32 OutputDispositionSet 补齐 owned array 入口；Local Immediate 先计数后填充精确 dispositions，删除 builder List 收集、构造复制、lambda 排序和只读包装
+- [x] 5.183 Float32 Authority replication disposition 先按 Actor 输出数量填充精确数组，再直接进入 owned disposition set；删除每 tick 的 List 收集、构造复制和临时清理壳
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -3315,3 +3315,11 @@
 - `RollbackInputHistoryEntry` 从 class 改为 readonly struct；`CaptureEntries` 生成的精确 checkpoint 数组直接内联 Tick、predicted bundle 和 canonical bundle，不再为每个历史 Tick 额外创建 entry 堆对象。数组仍由 transaction checkpoint 独立持有。
 - `RestoreEntries` 保持数组/IReadOnlyList 下标扫描，默认值或无 bundle 记录仍抛出原来的恢复参数错误；predicted/canonical 去重、容量、代次释放和 checkpoint 语义不变。5.132 的 `TryGetBundles` 查询路径继续零包装。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback runtime checkpoint 值记录化
+
+对应 tasks.md 的 5.2，新增 5.143 作为独立小步；5.2 保持未勾选。
+
+- `RollbackRuntimeState.TransactionCheckpoint` 从 class 改为 readonly struct；每次 rollback restore 或 checkpoint 捕获不再额外分配 checkpoint 外壳。构造时仍一次性复制 Runtime 的 horizon、诊断、recovery 和 output 字段，原 input history 数组、applied hash 数组和 input source checkpoint 继续独立持有。
+- `RestoreTransactionCheckpoint` 和 `RollbackStateCheckpoint` 不再用 null 判断 class 实例，改为显式校验 `Owner` 引用归属；跨 Runtime 恢复仍抛参数错误。readonly checkpoint 不暴露可变状态，不引入归还回调或全局池。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

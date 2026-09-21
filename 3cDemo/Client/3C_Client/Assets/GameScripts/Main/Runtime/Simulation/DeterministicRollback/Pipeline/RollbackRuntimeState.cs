@@ -177,7 +177,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackRuntimeState
     {
-        internal sealed class TransactionCheckpoint
+        internal readonly struct TransactionCheckpoint
         {
             internal TransactionCheckpoint(
                 RollbackRuntimeState owner,
@@ -185,6 +185,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 KeyValuePair<ulong, StableHash>[] appliedGameplayHashes,
                 IRollbackInputSourceCheckpoint inputSourceCheckpoint)
             {
+                if (owner == null)
+                    throw new ArgumentNullException(nameof(owner));
                 Owner = owner;
                 Inputs = inputs;
                 AppliedGameplayHashes = appliedGameplayHashes;
@@ -642,7 +644,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         internal void RestoreTransactionCheckpoint(TransactionCheckpoint checkpoint)
         {
-            if (checkpoint == null || !ReferenceEquals(checkpoint.Owner, this))
+            if (checkpoint.Owner == null || !ReferenceEquals(checkpoint.Owner, this))
                 throw new ArgumentException("Rollback transaction checkpoint belongs to another runtime.", nameof(checkpoint));
             if (checkpoint.LastCanonicalContiguousTick < checkpoint.RelayConfirmedTick ||
                 checkpoint.RelayConfirmedTick < checkpoint.ConfirmedTick ||

@@ -200,7 +200,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             Participant = participant;
             m_State = state ?? throw new ArgumentNullException(nameof(state));
-            m_Before = before ?? throw new ArgumentNullException(nameof(before));
+            if (before.Owner == null || !ReferenceEquals(before.Owner, state))
+                throw new ArgumentException("Rollback state checkpoint belongs to another runtime.", nameof(before));
+            m_Before = before;
         }
 
         public SimulationPipelineStateParticipantIdentity Participant { get; }

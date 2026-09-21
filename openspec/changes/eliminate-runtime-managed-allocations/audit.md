@@ -4043,3 +4043,12 @@
 - Fixed 和 Float32 Input Runtime 从 `OperationModule` 子类改为 readonly struct，直接绑定当前 Frame 和 Input Request State；删除 `IFixedInputPort` 和 `IFloat32InputPort` 中间接口，Action Runtime 和 Value Runtime 改为持有具体 Input Runtime。
 - `ApplyBlackboardInputBindings` 仍按 layout 顺序投影 tick value，`HasRequest` 仍检查有效期和消费状态，`ClearRequest` 仍消费同一 request，`ReadValue` 仍按 identity 和 kind 严格匹配；输入结果和错误语义不变。
 - 每次 Ability invocation 的 Input Runtime class 分配和 Action/Value 侧接口存储删除。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧接口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability execution workspace 常驻收口
+
+对应 tasks.md 的 5.5，新增 5.233 作为独立小步；5.5 保持未勾选。
+
+- 两数值域 Actor Binding 现在按 Ability installation 数量持有 Ability Execution Workspace，并在构造期绑定同一 shared Gameplay Effect scratch、共享 Timeline advance/stop 列表和各自 value workspace。Character Evaluate 不再为每个 invocation 新建 workspace。
+- Workspace Reset 清空 Facts、Presentation、Trace、value recursion stack、每个 input buffer、Timeline MotionWarp、ActionWindow candidate/key、Timeline Blackboard scope 和 motion contribution；底层集合和已准备 input buffer 保留容量。Evaluate 开始时 Reset，成功产物生成后与异常 Discard 后再次清理。
+- Float32 的 `Float32GraphValueWorkspace` 所有权从 Ability Evaluate Pass 移入 Actor Binding，Evaluate 删除外部 value workspace 数组参数；Pass 不再重复保存按 Actor/Ability 的第二份 owner。Timeline advance/stop 仍在成功 `ToArray` 转移或异常 Discard 后才清空。
+- `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做运行时分配采样。

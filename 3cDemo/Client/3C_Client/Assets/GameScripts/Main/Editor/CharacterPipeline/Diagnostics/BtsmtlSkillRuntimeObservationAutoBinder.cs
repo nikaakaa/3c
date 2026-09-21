@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline.Editor;
@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_Opening;
         static FlowGraph s_Graph;
         static RuntimeDebugTargetRequest s_Request;
+        static readonly List<RuntimeInstanceKey> s_Instances = new List<RuntimeInstanceKey>();
 
         static BtsmtlSkillRuntimeObservationAutoBinder()
         {
@@ -108,19 +109,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!definition)
                 return;
 
-            RuntimeInstanceKey[] instances = session.ViewModel
-                .GetGraphInstances(authoring.AuthoringId)
-                .Where(instance => instance.Kind == RuntimeInstanceKind.SkillExecution &&
-                    instance.CharacterRuntimeId == target.CharacterRuntimeId)
-                .ToArray();
-            if (instances.Length != 1)
+            RuntimeDebugViewModel view = session.ViewModel;
+            view.CopyGraphInstances(authoring.AuthoringId, s_Instances);
+            RuntimeInstanceKey instance = default;
+            int matchCount = 0;
+            for (int i = 0; i < s_Instances.Count; i++)
+            {
+                RuntimeInstanceKey candidate = s_Instances[i];
+                if (candidate.Kind != RuntimeInstanceKind.SkillExecution ||
+                    candidate.CharacterRuntimeId != target.CharacterRuntimeId)
+                    continue;
+
+                instance = candidate;
+                matchCount++;
+            }
+
+            if (matchCount != 1)
                 return;
 
             s_Opening = true;
             try
             {
                 ReleaseInterest();
-                BtsmtlSkillObservationSession.Open(definition, graph, session, instances[0]);
+                BtsmtlSkillObservationSession.Open(definition, graph, session, instance);
             }
             finally
             {

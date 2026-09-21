@@ -429,6 +429,8 @@ namespace TreeDesigner.Editor
         [NonSerialized]
         List<RuntimeElementDebugState> m_GraphStates = new List<RuntimeElementDebugState>();
         [NonSerialized]
+        List<RuntimeInstanceKey> m_InstanceScratch = new List<RuntimeInstanceKey>();
+        [NonSerialized]
         RuntimeInstanceKey m_LastInstance;
         [NonSerialized]
         string m_LastGraphAuthoringId = string.Empty;
@@ -785,12 +787,12 @@ namespace TreeDesigner.Editor
                 }
 
                 m_InstanceMenu.menu.MenuItems().Clear();
-                IReadOnlyList<RuntimeInstanceKey> instances = view.Attached
-                    ? view.GetGraphInstances(tree.GraphAuthoringId)
-                    : Array.Empty<RuntimeInstanceKey>();
-                for (int i = 0; i < instances.Count; i++)
+                m_InstanceScratch.Clear();
+                if (view.Attached)
+                    view.CopyGraphInstances(tree.GraphAuthoringId, m_InstanceScratch);
+                for (int i = 0; i < m_InstanceScratch.Count; i++)
                 {
-                    RuntimeInstanceKey instance = instances[i];
+                    RuntimeInstanceKey instance = m_InstanceScratch[i];
                     m_InstanceMenu.menu.AppendAction(ShortInstance(instance), _ =>
                     {
                         if (binding.Pin(instance))

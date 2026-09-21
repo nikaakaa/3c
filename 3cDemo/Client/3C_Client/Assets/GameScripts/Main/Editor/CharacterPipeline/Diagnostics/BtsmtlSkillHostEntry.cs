@@ -13,6 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     internal static class BtsmtlSkillHostEntry
     {
+        static readonly List<RuntimeInstanceKey> s_Instances = new List<RuntimeInstanceKey>();
+
         internal static CharacterPipelineDefinition ResolveDefinition(UnityEngine.Object host)
         {
             if (host is FixedCharacterHost fixedHost)
@@ -67,11 +69,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 menu.AddDisabledItem(new GUIContent(prefix + "当前诊断目标与此角色不一致，请从Host重新选择"));
                 return;
             }
-            RuntimeInstanceKey[] instances = view.GetGraphInstances(graphId)
-                .Where(value => value.Kind == RuntimeInstanceKind.SkillExecution && value.CharacterRuntimeId == actor)
-                .OrderByDescending(view.InvocationSequence).ToArray();
+            view.CopyGraphInstances(graphId, s_Instances);
+            int matchCount = 0;
+            for (int i = 0; i < s_Instances.Count; i++)
+            {
+                RuntimeInstanceKey value = s_Instances[i];
+                if (value.Kind == RuntimeInstanceKind.SkillExecution && value.CharacterRuntimeId == actor)
+                    s_Instances[matchCount++] = value;
+            }
+            s_Instances.RemoveRange(matchCount, s_Instances.Count - matchCount);
+            SortByInvocationSequence(s_Instances, view);
             Guid sessionId = view.Target.SessionId;
-            foreach (RuntimeInstanceKey instance in instances)
+            foreach (RuntimeInstanceKey instance in s_Instances)
             {
                 string label = $"{prefix}释放 {instance.ActionInstanceId} · 代次 {instance.ActivationGeneration} · 调用 {instance.InvocationGeneration} · {Label(instance.CallSiteId)}";
                 menu.AddItem(new GUIContent(label), instance.Equals(selected), () =>
@@ -81,10 +90,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RuntimeDebugSourceNavigator.Open(definition, RuntimeSourceElementKey.Graph(graphId), instance);
                 });
             }
-            if (instances.Length == 0)
+            if (s_Instances.Count == 0)
                 menu.AddDisabledItem(new GUIContent(prefix + "尚无已采集的技能执行记录"));
         }
 
         static string Label(string value) => (value ?? string.Empty).Replace('/', '→');
+
+        static void SortByInvocationSequence(List<RuntimeInstanceKey> instances, RuntimeDebugViewModel view)
+        {
+            for (int i = 1; i < instances.Count; i++)
+            {
+                RuntimeInstanceKey current = instances[i];
+                ulong sequence = view.InvocationSequence(current);
+                int j = i - 1;
+                while (j >= 0 && view.InvocationSequence(instances[j]) < sequence)
+                {
+                    instances[j + 1] = instances[j];
+                    j--;
+                }
+                instances[j + 1] = current;
+            }
+        }
     }
 }

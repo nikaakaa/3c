@@ -38,6 +38,7 @@ namespace BTSMTL.Diagnostics.Editor
         RuntimeDebugTargetResolution m_Resolution;
         RuntimeDebugViewBindingStatus m_Status;
         Guid m_BoundCharacterRuntimeId;
+        readonly List<RuntimeInstanceKey> m_InstanceScratch = new List<RuntimeInstanceKey>();
 
         public RuntimeDebugViewBinding(RuntimeDebugViewKind kind)
         {
@@ -169,7 +170,7 @@ namespace BTSMTL.Diagnostics.Editor
                 m_SelectedInstance = default;
             }
 
-            IReadOnlyList<RuntimeInstanceKey> instances = GetInstances(view);
+            IReadOnlyList<RuntimeInstanceKey> instances = ResolveInstances(view);
             if (m_Mode == RuntimeDebugViewBindingMode.Following)
             {
                 if (instances.Count > 1)
@@ -198,13 +199,15 @@ namespace BTSMTL.Diagnostics.Editor
             return m_Resolution;
         }
 
-        IReadOnlyList<RuntimeInstanceKey> GetInstances(RuntimeDebugViewModel view)
+        IReadOnlyList<RuntimeInstanceKey> ResolveInstances(RuntimeDebugViewModel view)
         {
-            return Kind == RuntimeDebugViewKind.Graph
-                ? view.GetGraphInstances(m_Request.Source.GraphAuthoringId)
-                : view.GetTimelineInstances(
+            if (Kind != RuntimeDebugViewKind.Graph)
+                return view.GetTimelineInstances(
                     m_Request.Source.TimelineAuthoringId,
                     m_Request.Source.GraphAuthoringId);
+
+            view.CopyGraphInstances(m_Request.Source.GraphAuthoringId, m_InstanceScratch);
+            return m_InstanceScratch;
         }
 
         static bool Contains(IReadOnlyList<RuntimeInstanceKey> instances, RuntimeInstanceKey value)

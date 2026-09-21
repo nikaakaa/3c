@@ -26,6 +26,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
         sealed class Scope
         {
+            static readonly List<RuntimeInstanceKey> s_Instances = new List<RuntimeInstanceKey>();
+
             internal Scope(RuntimeInstanceKey root, IEnumerable<string> calls)
             {
                 Root = root;
@@ -46,8 +48,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         return default;
                     RuntimeInstanceKey next = default;
                     ulong latest = 0;
-                    foreach (RuntimeInstanceKey candidate in view.GetGraphInstances(invocation.GraphId))
+                    s_Instances.Clear();
+                    view.CopyGraphInstances(invocation.GraphId, s_Instances);
+                    for (int i = 0; i < s_Instances.Count; i++)
                     {
+                        RuntimeInstanceKey candidate = s_Instances[i];
                         if (!SameRelease(candidate, Root) || candidate.CallSiteId != path ||
                             !view.TryGetParentGeneration(candidate, out ulong parent) || parent != current.InvocationGeneration)
                             continue;

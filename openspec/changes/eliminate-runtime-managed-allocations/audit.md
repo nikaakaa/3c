@@ -157,6 +157,17 @@
 - 原来的 `List<T>.Contains` 和字符串 helper 都使用 `EqualityComparer<T>.Default` 的语义；`Collector.AddDistinct` 改成显式调用同一个 comparer，因此 Guid、revision、instance、source clock 和 Ordinal 字符串的比较合同不变。空结果统一复用 `Array.Empty<T>`。
 - payload 里的字符串本身、trace 事件对象、builder 的 HashSet/SortedDictionary 和 14 次 `AddDistinct` 的线性扫描仍在后续边界处理。作者可在 execution history 中核对每个 tick 的 identity 摘要和外部结果计数；本步未做运行采样。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
+## 2026-09-21 图实例读取工作列表复用
+
+对应 tasks.md 的 7.1，新增 7.71 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor 图实例读取，不计为 Player 每帧收益。
+
+- `RuntimeDebugViewModel.GetInstances` 和 `GetGraphInstances` 每次读取都新建结果 List；`GetInstances` 还捕获 instances 创建排序闭包，`GetGraphInstances` 经 `CollectInstances` 新建 sequence Dictionary、结果 List、闭包和委托。现在唯一公开入口是 `CopyGraphInstances`，由调用方长期持有结果 List，ViewModel 长期持有 sequence scratch 和 `InstanceSequenceOrder`。
+- 每次复制先清空 scratch 和结果，再按图 ID 扫描正式实例来源；同一 runtime instance 仍保留最高 sequence，随后按 sequence 降序输出。不估算容量，List 内部容量由各调用方生命周期自然覆盖，不跨 ViewModel 保存本次结果。
+- Runtime Debug view binding、技能观察递归解析、自动绑定、Host 实例菜单和 Tree Live Debug 菜单全部迁移。Host 菜单先在复用列表上原地筛选 SkillExecution 与角色，再用稳定插入排序按 InvocationSequence 降序排列，保留原 LINQ 过滤和排序语义；菜单项、标签和选中状态不变。
+- `GetInstances(RuntimeSourceElementKey)` 全项目无消费者，随旧入口直接删除。Timeline 实例、playback 摘要和 current events 仍存在每次分配，留给 Timeline 并行任务后的后续边界。
+- `BTSMTL.Diagnostics.Editor.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；前者只剩 Unity Test Framework 两个既有 CS0649 警告，后者只剩 Input System 既有 CS0649 和 `BaseTreeView` CS0108 警告。
+- `ThirdPersonClient.Editor.csproj` 首次同参数编译暴露 `instances.Length` 残留引用；改为复用列表的 `Count` 后重编成功，0 错误，只剩 32 个 ACL identity 既有 CS0649 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

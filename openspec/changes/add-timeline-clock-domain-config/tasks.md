@@ -46,15 +46,15 @@
 ## 4. 已有编辑器与内容合同
 
 - [x] 4.1 Timeline 顶栏拆为 TimelineEditorBindingState、TimelineEditorToolbarView 与 TimelineEditorWindow，保留 Slate 单一编辑入口
-- [ ] 4.2 AttackProperty 由 TreeClip 内正式 Gameplay 节点提交，Ability / Attack 领域转换和消费；Timeline 不引入原始 dump 解析器、ActionCue 轨道或第二运行链
-- [ ] 4.3 TreeClip 节点只在 Logic commit 发布 typed domain output 与正式事件身份，不代行其它领域逻辑，不再经过 ActionCue 包装
+- [x] 4.2 AttackProperty 由 TreeClip 内正式 Gameplay 节点提交，Ability / Attack 领域转换和消费；Timeline 不引入原始 dump 解析器、ActionCue 轨道或第二运行链
+- [x] 4.3 TreeClip 节点只在 Logic commit 发布 typed domain output 与正式事件身份，不代行其它领域逻辑，不再经过 ActionCue 包装
 - [x] 4.4 同步 Corin AttackProperty 效果 key 与 uint 编号合同，payload 留在 GameplayEffect / Ability，保留旧 TreeDesigner Timeline UI 删除结果
 - [x] 4.5 登记 Normal Attack End / Explode 内容边界，Branch / Rush 不并入现有五段 Timeline
-- [ ] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，并在对应 TreeClip 中建立攻击属性节点，不把素材本地帧当作第二时间轴
+- [x] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，并在对应 TreeClip 中建立攻击属性节点，不把素材本地帧当作第二时间轴
 - [x] 4.7 Attack5 在 frame=47 建 Attack5EndBoundary 及 End / End_2 正式状态转移
 - [ ] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 在对应 TreeClip 中携带分支身份与 15 个状态本地节点
-- [ ] 4.9 删除 Attack5 frame=64 多余 `_01_02` 节点并重建对应 Ability 定义
-- [ ] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
+- [x] 4.9 删除 Attack5 frame=64 多余 `_01_02` 节点并重建对应 Ability 定义
+- [x] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
 
 ## 5. 同一动作的共享表现采样
 

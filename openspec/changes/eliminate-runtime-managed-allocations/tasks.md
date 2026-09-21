@@ -354,6 +354,7 @@
 - [x] 5.91 RollbackOutputCommitter 的工作集合与正式／tentative 输出修正表按 MaximumOutputRecords 一次准备，删除重放窗口内的集合底层存储扩容
 - [x] 5.92 远端表现 Target 直接复用 TickQueue 到期 workspace，发布委托固定在 target 生命周期，删除每帧 due List／闭包和诊断 Values 包装
 - [x] 5.93 Prediction Evidence Drain 按 Module 生命周期复用 baseline／body／sample／event workspace，最终 Observation Batch 继续独立复制排序
+- [x] 5.94 Rollback reliable pending 按 Channel 生命周期池化 wrapper 和最大分片槽位数组，ACK 后清空回池；不可靠路径、packet 本体、payload 和 Endpoint 发送字节仍在后续小步处理
 
 ## 6. UI、资源、渲染和生命周期
 

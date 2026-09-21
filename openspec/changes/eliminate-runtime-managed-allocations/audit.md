@@ -2539,3 +2539,13 @@
 - `RemotePresentationBatch` 和 `AuthoritativeObservationBatch` 仍通过公开构造独立复制、排序并校验输入；workspace 在结果构造后 finally 清空，不存在跨批次别名。
 - Drain 的 baseline 升序检查、remote body 计数、latest tick、receive sequence 和诊断报告输入保持不变。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、34 个既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚可靠重传 pending 池化
+
+对应 tasks.md 的 5.4，本步只处理 Datagram Channel 的可靠 pending wrapper 和重传槽数组，整项保持未勾选。
+
+- `RollbackDatagramChannel` 每条可靠消息原先新建 `PendingReliableMessage` 和 `RollbackDatagramPacket[]`；ACK 到达后直接移除，重发窗口内每次发送都要重复分配。
+- Channel 现在按正式 `MaximumQueuedMessages` 持有 pending 池。租借的 wrapper 固定持有 `MaximumFragmentsPerMessage` 个槽位，实际分片数单独记录；首次租用创建，后续 ACK 后清空引用并回池，不新增第二份容量配置。
+- 重发继续复用同一组 packet 引用。Endpoint 入队时同步编码成独立 `byte[]`，入队返回后不保留 packet 引用，所以复用只发生在同一 pending 生命周期内。发送中途失败时在 finally 清空并归还 wrapper，endpoint 已进入失败态，不会继续消费这些槽位。
+- 不可靠消息改为逐包直接入队，不再创建只为一次性发送服务的 packet 数组；packet 本体、packet payload 和 Endpoint 发送字节的分配仍在后续小步处理。
+- Endpoint 工程受并行 Timeline 改动阻断：`ThirdPersonSimulation.Core.csproj` 中 `TimelineControlContracts.cs` 当前报 `FixedVector3` 缺失，完整 Endpoint 构建未通过；该并行文件未修改。另用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 基于已有依赖 DLL 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

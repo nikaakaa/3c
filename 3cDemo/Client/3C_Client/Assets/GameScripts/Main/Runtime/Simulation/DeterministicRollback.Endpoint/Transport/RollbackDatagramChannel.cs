@@ -10,14 +10,26 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         sealed class PendingReliableMessage
         {
-            public PendingReliableMessage(RollbackDatagramPacket[] packets, long nextSendTimestamp)
+            public PendingReliableMessage(int maximumPacketCount)
             {
-                Packets = packets;
-                NextSendTimestamp = nextSendTimestamp;
+                Packets = new RollbackDatagramPacket[maximumPacketCount];
             }
 
             public RollbackDatagramPacket[] Packets { get; }
+            public int PacketCount { get; private set; }
             public long NextSendTimestamp { get; set; }
+
+            public void Reset(int packetCount, long nextSendTimestamp)
+            {
+                PacketCount = packetCount;
+                NextSendTimestamp = nextSendTimestamp;
+            }
+
+            public void Release()
+            {
+                Array.Clear(Packets, 0, PacketCount);
+                PacketCount = 0;
+            }
         }
 
         sealed class FragmentAssembly
@@ -75,6 +87,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly string m_RemotePeerId;
         readonly IPEndPoint m_RemoteEndPoint;
         readonly Dictionary<ulong, PendingReliableMessage> m_PendingReliable;
+        readonly List<PendingReliableMessage> m_PendingReliablePool;
         readonly Dictionary<ulong, FragmentAssembly> m_Reassembly;
         readonly Queue<RollbackProtocolEnvelope> m_Received;
         readonly HashSet<ulong> m_CompletedSequences;
@@ -114,6 +127,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_CompletedHistoryCapacity = checked(messageCapacity * 2);
             int completedStorageCapacity = checked(m_CompletedHistoryCapacity + 1);
             m_PendingReliable = new Dictionary<ulong, PendingReliableMessage>(messageCapacity);
+            m_PendingReliablePool = new List<PendingReliableMessage>(messageCapacity);
             m_Reassembly = new Dictionary<ulong, FragmentAssembly>(messageCapacity);
             m_Received = new Queue<RollbackProtocolEnvelope>(messageCapacity);
             m_CompletedSequences = new HashSet<ulong>(completedStorageCapacity);
@@ -161,29 +175,37 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new InvalidOperationException("Rollback unreliable payload exceeds one datagram.");
             if (fragmentCount > m_Definition.MaximumFragmentsPerMessage)
                 throw new InvalidOperationException("Rollback payload exceeds the bounded fragment capacity.");
-            var packets = new RollbackDatagramPacket[fragmentCount];
-            for (int i = 0; i < fragmentCount; i++)
+            if (!reliable)
             {
-                int offset = i * fragmentBytes;
-                int length = Math.Min(fragmentBytes, bytes.Length - offset);
-                packets[i] = new RollbackDatagramPacket(
-                    RollbackDatagramKind.Payload,
-                    m_Definition.SessionId,
-                    m_LocalPeerId,
-                    NextDatagramSequence(),
-                    messageSequence,
-                    reliable,
-                    i,
-                    fragmentCount,
-                    totalBytes,
-                    bytes.Slice(offset, length));
+                for (int i = 0; i < fragmentCount; i++)
+                    EnqueuePacket(messageSequence, false, i, fragmentCount, totalBytes, bytes, offset: i * fragmentBytes);
+                return messageSequence;
             }
-            Enqueue(packets);
-            if (reliable)
+
+            PendingReliableMessage pending = RentPending();
+            bool stored = false;
+            try
             {
-                m_PendingReliable.Add(
-                    messageSequence,
-                    new PendingReliableMessage(packets, checked(Stopwatch.GetTimestamp() + m_ResendInterval)));
+                for (int i = 0; i < fragmentCount; i++)
+                {
+                    pending.Packets[i] = CreatePacket(
+                        messageSequence,
+                        true,
+                        i,
+                        fragmentCount,
+                        totalBytes,
+                        bytes,
+                        i * fragmentBytes);
+                }
+                pending.Reset(fragmentCount, checked(Stopwatch.GetTimestamp() + m_ResendInterval));
+                EnqueuePending(pending);
+                m_PendingReliable.Add(messageSequence, pending);
+                stored = true;
+            }
+            finally
+            {
+                if (!stored)
+                    ReturnPending(pending);
             }
             return messageSequence;
         }
@@ -202,7 +224,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             if (packet.Kind == RollbackDatagramKind.Acknowledgement)
             {
-                m_PendingReliable.Remove(packet.MessageSequence);
+                if (m_PendingReliable.TryGetValue(packet.MessageSequence, out PendingReliableMessage pending))
+                {
+                    m_PendingReliable.Remove(packet.MessageSequence);
+                    ReturnPending(pending);
+                }
                 return;
             }
             if (m_CompletedSequences.Contains(packet.MessageSequence))
@@ -256,9 +282,69 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 PendingReliableMessage pending = pair.Value;
                 if (now < pending.NextSendTimestamp)
                     continue;
-                Enqueue(pending.Packets);
+                EnqueuePending(pending);
                 pending.NextSendTimestamp = checked(now + m_ResendInterval);
             }
+        }
+
+        PendingReliableMessage RentPending()
+        {
+            int last = m_PendingReliablePool.Count - 1;
+            if (last < 0)
+                return new PendingReliableMessage(m_Definition.MaximumFragmentsPerMessage);
+            PendingReliableMessage pending = m_PendingReliablePool[last];
+            m_PendingReliablePool.RemoveAt(last);
+            return pending;
+        }
+
+        void ReturnPending(PendingReliableMessage pending)
+        {
+            pending.Release();
+            if (m_PendingReliablePool.Count < m_Definition.MaximumQueuedMessages)
+                m_PendingReliablePool.Add(pending);
+        }
+
+        RollbackDatagramPacket CreatePacket(
+            ulong messageSequence,
+            bool reliable,
+            int fragmentIndex,
+            int fragmentCount,
+            int totalBytes,
+            ReadOnlySpan<byte> bytes,
+            int offset)
+        {
+            int length = Math.Min(m_MaximumFragmentPayloadBytes, bytes.Length - offset);
+            return new RollbackDatagramPacket(
+                RollbackDatagramKind.Payload,
+                m_Definition.SessionId,
+                m_LocalPeerId,
+                NextDatagramSequence(),
+                messageSequence,
+                reliable,
+                fragmentIndex,
+                fragmentCount,
+                totalBytes,
+                bytes.Slice(offset, length));
+        }
+
+        void EnqueuePacket(
+            ulong messageSequence,
+            bool reliable,
+            int fragmentIndex,
+            int fragmentCount,
+            int totalBytes,
+            ReadOnlySpan<byte> bytes,
+            int offset)
+        {
+            m_Endpoint.EnqueueSend(
+                CreatePacket(messageSequence, reliable, fragmentIndex, fragmentCount, totalBytes, bytes, offset),
+                m_RemoteEndPoint);
+        }
+
+        void EnqueuePending(PendingReliableMessage pending)
+        {
+            for (int i = 0; i < pending.PacketCount; i++)
+                m_Endpoint.EnqueueSend(pending.Packets[i], m_RemoteEndPoint);
         }
 
         void SendAcknowledgement(ulong messageSequence)
@@ -276,12 +362,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     0,
                     Array.Empty<byte>()),
                 m_RemoteEndPoint);
-        }
-
-        void Enqueue(IReadOnlyList<RollbackDatagramPacket> packets)
-        {
-            for (int i = 0; i < packets.Count; i++)
-                m_Endpoint.EnqueueSend(packets[i], m_RemoteEndPoint);
         }
 
         void RememberCompleted(ulong sequence)

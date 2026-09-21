@@ -2684,6 +2684,16 @@
 - UI 只消费 Current 和 Changed，不读取四类 History；`History` 继续返回 owner 的 bounded 只读视图。Unity `Text.text` 最终展示串仍会分配，属于 tasks.md 7.1 的字符串构造边界；本步没有引入 fallback、兼容路径或新控制面。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 捕获变化索引环形化
+
+对应 tasks.md 的 7.1，新增 7.60 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeCaptureStore` 原先用 `List<RuntimeCaptureChange>` 保存全局变化索引，`TrimToCapacity` 每淘汰一个旧 segment 都执行 `RemoveAt(0)` 或 `RemoveRange(0, N)`，把保留项整体前移。现在该索引改为 owner 持有的 `RuntimeCaptureChange[m_MaxEvents + 1]`，用 head 和 count 限定有效范围，尾部写入、头部淘汰都只移动下标。
+- 容量多留一项是因为发布路径保持原顺序：先把新 change 加进全局索引，再执行裁剪。当同一 Domain/Position 从满 segment 切到新 segment 时，变化数可能在裁剪前短暂到达 `maxEvents + 1`。不再把该瞬时峰值挤进 List 扩容，也不用任何运行期 fallback。
+- 全量读取和增量读取仍返回独立数组。全量分支直接按环形顺序复制当前 count；增量分支保留最早可读版本、淘汰版本、二分定位和原递增 revision 顺序，按实际后缀数量填数组，不再使用 `GetRange`。缓冲淘汰时显式清空槽位，Dispose 清空整个缓冲，避免 trace event 里的字符串引用被数组滞留。
+- segment 分组、每个 segment 的 `maxEvents` 满后丢弃、`m_EvictedEvents`、`m_LastEvictionVersion`、`Freeze` 独立复制和 store 锁边界不变。本步只治理全局索引存储；Segment 对象、segment event List、冻结快照、采集 payload 和字符串构造仍由 7.1 后续处理。
+- `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获运行对比或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

@@ -407,7 +407,7 @@ namespace BTSMTL.Diagnostics
     sealed class RuntimeCaptureStore : IDisposable
     {
         readonly List<Segment> m_Segments = new List<Segment>();
-        readonly List<RuntimeCaptureChange> m_Changes = new List<RuntimeCaptureChange>();
+        readonly RuntimeCaptureChange[] m_ChangeBuffer;
         readonly int m_MaxSegments;
         readonly Guid m_CaptureId;
         RuntimeDiagnosticsCaptureDetail m_Detail;
@@ -416,6 +416,8 @@ namespace BTSMTL.Diagnostics
         readonly int m_MaxEvents;
         long m_EvictedEvents;
         long m_LastEvictionVersion;
+        int m_ChangeHead;
+        int m_ChangeCount;
 
         public RuntimeCaptureStore(Guid captureId, RuntimeDiagnosticsCaptureDetail detail, int maxSegments = 512, int maxEvents = 32768)
         {
@@ -427,6 +429,7 @@ namespace BTSMTL.Diagnostics
             m_Detail = detail;
             m_MaxSegments = maxSegments;
             m_MaxEvents = maxEvents;
+            m_ChangeBuffer = new RuntimeCaptureChange[m_MaxEvents + 1];
         }
 
         public Guid CaptureId => m_CaptureId;
@@ -459,7 +462,7 @@ namespace BTSMTL.Diagnostics
                 return;
             }
             segment.Events.Add(change);
-            m_Changes.Add(change);
+            AppendChange(change);
             TrimToCapacity();
         }
 
@@ -468,21 +471,23 @@ namespace BTSMTL.Diagnostics
             if (cursor >= m_Version)
                 return new RuntimeCaptureRead(m_Version, false, Array.Empty<RuntimeCaptureChange>());
 
-            long earliestAvailable = m_Changes.Count > 0 ? m_Changes[0].Revision : m_Version + 1;
+            long earliestAvailable = m_ChangeCount > 0 ? GetChange(0).Revision : m_Version + 1;
             if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
-                return new RuntimeCaptureRead(m_Version, true, CollectAllChanges());
+                return new RuntimeCaptureRead(m_Version, true, CopyAllChanges());
 
             int first = 0;
-            int end = m_Changes.Count;
+            int end = m_ChangeCount;
             while (first < end)
             {
                 int middle = first + (end - first) / 2;
-                if (m_Changes[middle].Revision <= cursor)
+                if (GetChange(middle).Revision <= cursor)
                     first = middle + 1;
                 else
                     end = middle;
             }
-            List<RuntimeCaptureChange> changes = m_Changes.GetRange(first, m_Changes.Count - first);
+            var changes = new RuntimeCaptureChange[m_ChangeCount - first];
+            for (int i = first; i < m_ChangeCount; i++)
+                changes[i - first] = GetChange(i);
             return new RuntimeCaptureRead(m_Version, false, changes);
         }
 
@@ -503,28 +508,55 @@ namespace BTSMTL.Diagnostics
         public void Dispose()
         {
             m_Segments.Clear();
-            m_Changes.Clear();
+            ClearChanges();
         }
 
         void TrimToCapacity()
         {
-            while (m_Segments.Count > m_MaxSegments || m_Changes.Count > m_MaxEvents)
+            while (m_Segments.Count > m_MaxSegments || m_ChangeCount > m_MaxEvents)
             {
                 Segment removed = m_Segments[0];
                 m_Segments.RemoveAt(0);
                 m_EvictedEvents += removed.Events.Count;
                 m_LastEvictionVersion = m_Version;
                 if (removed.Events.Count > 0)
-                    m_Changes.RemoveRange(0, Math.Min(removed.Events.Count, m_Changes.Count));
+                    RemoveFirstChanges(removed.Events.Count);
             }
         }
 
-        List<RuntimeCaptureChange> CollectAllChanges()
+        RuntimeCaptureChange[] CopyAllChanges()
         {
-            var changes = new List<RuntimeCaptureChange>(m_Changes.Count);
-            for (int i = 0; i < m_Segments.Count; i++)
-                changes.AddRange(m_Segments[i].Events);
+            var changes = new RuntimeCaptureChange[m_ChangeCount];
+            for (int i = 0; i < m_ChangeCount; i++)
+                changes[i] = GetChange(i);
             return changes;
+        }
+
+        void AppendChange(RuntimeCaptureChange change)
+        {
+            int index = (m_ChangeHead + m_ChangeCount) % m_ChangeBuffer.Length;
+            m_ChangeBuffer[index] = change;
+            m_ChangeCount++;
+        }
+
+        RuntimeCaptureChange GetChange(int index) =>
+            m_ChangeBuffer[(m_ChangeHead + index) % m_ChangeBuffer.Length];
+
+        void RemoveFirstChanges(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                m_ChangeBuffer[m_ChangeHead] = default;
+                m_ChangeHead = (m_ChangeHead + 1) % m_ChangeBuffer.Length;
+                m_ChangeCount--;
+            }
+        }
+
+        void ClearChanges()
+        {
+            Array.Clear(m_ChangeBuffer, 0, m_ChangeBuffer.Length);
+            m_ChangeHead = 0;
+            m_ChangeCount = 0;
         }
 
         sealed class Segment

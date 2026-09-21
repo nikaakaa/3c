@@ -313,6 +313,13 @@ namespace ThirdPersonSimulation
             return count;
         }
 
+        internal static SimulationOperationCode ReadOperationCode(int value)
+        {
+            if (value < 0 || value > ushort.MaxValue || !GameplayAbilityOperationSet.IsOperation((SimulationOperationCode)value))
+                throw new InvalidDataException($"Enum value '{value}' is invalid for 'SimulationOperationCode'.");
+            return (SimulationOperationCode)value;
+        }
+
         internal static T ReadEnum<T>(int value) where T : struct
         {
             object candidate = Enum.ToObject(typeof(T), value);

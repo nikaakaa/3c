@@ -669,13 +669,6 @@ namespace ThirdPersonSimulation.Fixed
             return (ProgramConstantKind)value;
         }
 
-        static SimulationOperationCode ReadOperationCode(int value)
-        {
-            if (value < 0 || value > ushort.MaxValue || !GameplayAbilityOperationSet.IsOperation((SimulationOperationCode)value))
-                throw new InvalidDataException($"Enum value '{value}' is invalid for 'SimulationOperationCode'.");
-            return (SimulationOperationCode)value;
-        }
-
         static void WriteOperationDefinition(CanonicalWriter writer, SimulationOperationDefinition value)
         {
             writer.WriteInt32(value.Index);
@@ -695,7 +688,7 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationOperationDefinition(
                 reader.ReadInt32(),
                 reader.ReadString(),
-                ReadOperationCode(reader.ReadInt32()),
+                GameplayAbilitySemanticsCodec.ReadOperationCode(reader.ReadInt32()),
                 ReadIntArray(reader),
                 reader.ReadInt32(),
                 reader.ReadInt32(),

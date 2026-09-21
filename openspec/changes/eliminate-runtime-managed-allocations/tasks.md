@@ -432,3 +432,4 @@
 - [x] 7.54 Fixed 和 Float32 Ability Execution Data Codec 按 SemanticValueKind 连续正式值域直接校验 payload；ProgramConstantInputBinding 删除已验证输入的重复 Enum.IsDefined
 - [x] 7.55 Fixed 和 Float32 Ability Execution Data Codec 的 Numeric Profile、Source Map 和 Constant byte 枚举改为正式成员显式匹配；保留 payload 边界和 InvalidDataException，删除 Enum.ToObject/IsDefined 装箱
 - [x] 7.56 Fixed 和 Float32 Ability Execution Data Codec 的 SimulationOperationCode int payload 按 GameplayAbilityOperationSet 显式成员校验；保留数值范围和 InvalidDataException，删除 ReadEnum 反射读取
+- [x] 7.57 Semantic IR 和两数值域执行数据的 SimulationOperationCode 解码统一走 GameplayAbilitySemanticsCodec 的 typed 入口；保留当前 OperationSet 成员、ushort 范围和 Semantic IR 版本校验

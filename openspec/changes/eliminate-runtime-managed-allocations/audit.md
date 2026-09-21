@@ -2273,6 +2273,15 @@
 - `GameplayAbilityOperationSet.RequireOperation` 复用同一个 `IsOperation`，保留原 `InvalidOperationException`、版本身份和端口校验；没有增加第二套操作目录、兼容读取路径或 fallback。
 - `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
 
+## 2026-09-21 Semantic IR OperationCode 解码归一
+
+对应 tasks.md 的 7.57。
+
+- `GameplayAbilitySemanticIrCodec.ReadOperation` 原先用 `GameplayAbilitySemanticsCodec.ReadEnum<SimulationOperationCode>` 反射转换；Fixed 和 Float32 执行数据 codec 在 7.56 后又各自保留了一份相同的 typed 读取函数。同一 OperationCode 内容合同因此有三个判断入口。
+- 现在 `GameplayAbilitySemanticsCodec.ReadOperationCode` 是唯一 typed wire 解码入口：先拒绝负数和超过 ushort 的值，再按 `GameplayAbilityOperationSet.IsOperation` 只接受当前正式成员。Semantic IR、Fixed 和 Float32 的 `ReadOperation` 都调用它，两个执行数据 codec 的重复 helper 已删除。
+- 不把该 helper 当作配置校验的替代：Semantic IR artifact 的 magic、artifact version、payload version、header/payload 一致性继续先校验；`GameplayAbilitySemanticIr` 构造后仍执行当前 `RequireVersion` 和每个 operation 的 `RequireOperation`。payload 解码提前拒绝非成员只是把同一正式集合应用到 wire 边界。
+- `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

@@ -508,7 +508,7 @@ namespace ThirdPersonSimulation
             return new SemanticOperation(
                 new OperationHandle(reader.ReadInt32()),
                 reader.ReadString(),
-                GameplayAbilitySemanticsCodec.ReadEnum<SimulationOperationCode>(reader.ReadInt32()),
+                GameplayAbilitySemanticsCodec.ReadOperationCode(reader.ReadInt32()),
                 GameplayAbilitySemanticsCodec.ReadIntArray(reader),
                 GameplayAbilitySemanticsCodec.ReadIntArray(reader),
                 GameplayAbilitySemanticsCodec.ReadIntArray(reader),

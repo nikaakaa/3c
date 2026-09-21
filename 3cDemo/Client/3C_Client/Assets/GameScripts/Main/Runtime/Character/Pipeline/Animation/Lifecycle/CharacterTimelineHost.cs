@@ -1848,7 +1848,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeCommittedEvaluation evaluation,
             float time)
         {
-            TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> requests = evaluation.Evaluation.TreeClips;
+            PublishTreeClipEvents(active, evaluation.Evaluation.TreeClips, RuntimeTraceDomain.Logic, time);
+        }
+
+        void PublishTreeClipEvents(ActivePlayback active, TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> requests,
+            RuntimeTraceDomain domain, float time)
+        {
             for (int index = 0; index < requests.Count; index++)
             {
                 TimelineRuntimeTreeClipRequest request = requests[index];
@@ -1857,6 +1862,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     TimelineRuntimeTreeClipEventKind.Enter => RuntimeTraceEventKind.TreeClipEntered,
                     TimelineRuntimeTreeClipEventKind.Update => RuntimeTraceEventKind.TreeClipUpdated,
                     TimelineRuntimeTreeClipEventKind.Exit => RuntimeTraceEventKind.TreeClipExited,
+                    TimelineRuntimeTreeClipEventKind.Destroy => RuntimeTraceEventKind.TreeClipDestroyed,
                     _ => throw new ArgumentOutOfRangeException()
                 };
                 if (m_Diagnostics == null || !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
@@ -1870,7 +1876,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     active.ActionInstanceId);
                 PublishTimelineEvent(
                     active,
-                    RuntimeTraceDomain.Logic,
+                    domain,
                     kind,
                     RuntimeSourceElementKey.Clip(
                         active.Timeline.AuthoringId,
@@ -1882,6 +1888,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         TimelineRuntimeTreeClipEventKind.Enter => "Enter",
                         TimelineRuntimeTreeClipEventKind.Update => "Update",
                         TimelineRuntimeTreeClipEventKind.Exit => "Exit",
+                        TimelineRuntimeTreeClipEventKind.Destroy => "Destroy",
                         _ => throw new ArgumentOutOfRangeException()
                     },
                     string.Empty,
@@ -2195,7 +2202,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 TimelineRuntimePresentationFrame candidate = m_PresentationCandidates[i];
                 PresentationFrameProduced?.Invoke(candidate);
                 if (TryGetActivePlayback(candidate.Handle, out ActivePlayback active))
+                {
                     PublishTimelineVisualTime(active, candidate);
+                    PublishTreeClipEvents(active, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
+                }
             }
             m_Host?.CommitPresentationFrame(frame);
             for (int i = 0; i < m_PresentationCandidates.Count; i++)

@@ -2549,3 +2549,13 @@
 - 重发继续复用同一组 packet 引用。Endpoint 入队时同步编码成独立 `byte[]`，入队返回后不保留 packet 引用，所以复用只发生在同一 pending 生命周期内。发送中途失败时在 finally 清空并归还 wrapper，endpoint 已进入失败态，不会继续消费这些槽位。
 - 不可靠消息改为逐包直接入队，不再创建只为一次性发送服务的 packet 数组；packet 本体、packet payload 和 Endpoint 发送字节的分配仍在后续小步处理。
 - Endpoint 工程受并行 Timeline 改动阻断：`ThirdPersonSimulation.Core.csproj` 中 `TimelineControlContracts.cs` 当前报 `FixedVector3` 缺失，完整 Endpoint 构建未通过；该并行文件未修改。另用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 基于已有依赖 DLL 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚可靠 packet 与 payload 复用
+
+对应 tasks.md 的 5.4，本步处理可靠 pending 的 packet 本体和 payload 缓冲，整项保持未勾选。
+
+- 上一轮 pending wrapper 和槽数组回池后，每次可靠发送仍新建 `RollbackDatagramPacket` 并让 packet 复制出独立 payload 数组；重发窗口内这些对象重复分配。
+- `RollbackDatagramPacket` 现在提供 assembly 内 `Reset`/`Release`，公共校验统一复用同一静态入口。payload 改为显式记录实际长度，`Payload` 只暴露有效区间，因此固定容量缓冲不会把旧尾部写进 datagram。
+- Reliable pending wrapper 持有自己的 packet 对象和按单分片预算准备的 payload 缓冲。首次发送补建 packet，后续重发只更新身份、元数据和有效 payload；ACK 后释放 packet 引用并回池。Endpoint 入队仍在同步路径复制出独立发送 `byte[]`，不会在队列里别名 pending payload。
+- 接收 `Read` 生成的 packet、重组持有 packet、不可靠消息和 ACK packet 继续独立分配；本步不改变 wire 格式、校验错误、ACK 顺序或重发时间。
+- Endpoint 工程完整构建仍受并行 Timeline 的 `FixedVector3` 缺失阻断。`dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

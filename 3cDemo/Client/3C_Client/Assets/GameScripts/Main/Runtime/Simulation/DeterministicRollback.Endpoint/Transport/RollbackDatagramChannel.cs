@@ -10,12 +10,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         sealed class PendingReliableMessage
         {
-            public PendingReliableMessage(int maximumPacketCount)
+            public PendingReliableMessage(int maximumPacketCount, int maximumPayloadBytes)
             {
                 Packets = new RollbackDatagramPacket[maximumPacketCount];
+                PayloadBuffers = new byte[maximumPacketCount][];
+                for (int i = 0; i < maximumPacketCount; i++)
+                    PayloadBuffers[i] = new byte[maximumPayloadBytes];
             }
 
             public RollbackDatagramPacket[] Packets { get; }
+            public byte[][] PayloadBuffers { get; }
             public int PacketCount { get; private set; }
             public long NextSendTimestamp { get; set; }
 
@@ -27,7 +31,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             public void Release()
             {
-                Array.Clear(Packets, 0, PacketCount);
+                for (int i = 0; i < Packets.Length; i++)
+                    Packets[i]?.Release();
                 PacketCount = 0;
             }
         }
@@ -188,14 +193,23 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 for (int i = 0; i < fragmentCount; i++)
                 {
-                    pending.Packets[i] = CreatePacket(
+                    int offset = i * fragmentBytes;
+                    int length = Math.Min(fragmentBytes, bytes.Length - offset);
+                    if (pending.Packets[i] == null)
+                        pending.Packets[i] = new RollbackDatagramPacket();
+                    pending.Packets[i].Reset(
+                        RollbackDatagramKind.Payload,
+                        m_Definition.SessionId,
+                        m_LocalPeerId,
+                        NextDatagramSequence(),
                         messageSequence,
                         true,
                         i,
                         fragmentCount,
                         totalBytes,
-                        bytes,
-                        i * fragmentBytes);
+                        pending.PayloadBuffers[i],
+                        length);
+                    bytes.Slice(offset, length).CopyTo(pending.PayloadBuffers[i]);
                 }
                 pending.Reset(fragmentCount, checked(Stopwatch.GetTimestamp() + m_ResendInterval));
                 EnqueuePending(pending);
@@ -291,7 +305,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             int last = m_PendingReliablePool.Count - 1;
             if (last < 0)
-                return new PendingReliableMessage(m_Definition.MaximumFragmentsPerMessage);
+                return new PendingReliableMessage(m_Definition.MaximumFragmentsPerMessage, m_MaximumFragmentPayloadBytes);
             PendingReliableMessage pending = m_PendingReliablePool[last];
             m_PendingReliablePool.RemoveAt(last);
             return pending;
@@ -304,29 +318,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_PendingReliablePool.Add(pending);
         }
 
-        RollbackDatagramPacket CreatePacket(
-            ulong messageSequence,
-            bool reliable,
-            int fragmentIndex,
-            int fragmentCount,
-            int totalBytes,
-            ReadOnlySpan<byte> bytes,
-            int offset)
-        {
-            int length = Math.Min(m_MaximumFragmentPayloadBytes, bytes.Length - offset);
-            return new RollbackDatagramPacket(
-                RollbackDatagramKind.Payload,
-                m_Definition.SessionId,
-                m_LocalPeerId,
-                NextDatagramSequence(),
-                messageSequence,
-                reliable,
-                fragmentIndex,
-                fragmentCount,
-                totalBytes,
-                bytes.Slice(offset, length));
-        }
-
         void EnqueuePacket(
             ulong messageSequence,
             bool reliable,
@@ -337,7 +328,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int offset)
         {
             m_Endpoint.EnqueueSend(
-                CreatePacket(messageSequence, reliable, fragmentIndex, fragmentCount, totalBytes, bytes, offset),
+                new RollbackDatagramPacket(
+                    RollbackDatagramKind.Payload,
+                    m_Definition.SessionId,
+                    m_LocalPeerId,
+                    NextDatagramSequence(),
+                    messageSequence,
+                    reliable,
+                    fragmentIndex,
+                    fragmentCount,
+                    totalBytes,
+                    bytes.Slice(offset, Math.Min(m_MaximumFragmentPayloadBytes, bytes.Length - offset))),
                 m_RemoteEndPoint);
         }
 

@@ -11,7 +11,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackDatagramPacket
     {
-        readonly byte[] m_Payload;
+        byte[] m_Payload;
+        int m_PayloadLength;
 
         public RollbackDatagramPacket(
             RollbackDatagramKind kind,
@@ -25,23 +26,22 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int totalPayloadBytes,
             ReadOnlySpan<byte> payload)
         {
-            if ((kind != RollbackDatagramKind.Payload && kind != RollbackDatagramKind.Acknowledgement) || datagramSequence == 0 || messageSequence == 0)
-                throw new ArgumentException("Rollback datagram identity is invalid.");
-            SessionId = RollbackEndpointIdentity.Require(sessionId, nameof(sessionId));
-            SenderPeerId = RollbackEndpointIdentity.Require(senderPeerId, nameof(senderPeerId));
-            if (kind == RollbackDatagramKind.Acknowledgement)
-            {
-                if (!reliable || fragmentIndex != 0 || fragmentCount != 0 || totalPayloadBytes != 0 || payload.Length != 0)
-                    throw new ArgumentException("Rollback acknowledgement datagram is invalid.");
-            }
-            else if (fragmentCount <= 0 || fragmentIndex < 0 || fragmentIndex >= fragmentCount ||
-                     totalPayloadBytes <= 0 || payload.Length <= 0 || payload.Length > totalPayloadBytes ||
-                     !reliable && fragmentCount != 1)
-            {
-                throw new ArgumentException("Rollback payload datagram is invalid.");
-            }
+            Validate(
+                kind,
+                sessionId,
+                senderPeerId,
+                datagramSequence,
+                messageSequence,
+                reliable,
+                fragmentIndex,
+                fragmentCount,
+                totalPayloadBytes,
+                payload.Length);
             m_Payload = payload.ToArray();
+            m_PayloadLength = payload.Length;
             Kind = kind;
+            SessionId = sessionId;
+            SenderPeerId = senderPeerId;
             DatagramSequence = datagramSequence;
             MessageSequence = messageSequence;
             Reliable = reliable;
@@ -50,16 +50,102 @@ namespace ThirdPersonSimulation.DeterministicRollback
             TotalPayloadBytes = totalPayloadBytes;
         }
 
-        public RollbackDatagramKind Kind { get; }
-        public string SessionId { get; }
-        public string SenderPeerId { get; }
-        public ulong DatagramSequence { get; }
-        public ulong MessageSequence { get; }
-        public bool Reliable { get; }
-        public int FragmentIndex { get; }
-        public int FragmentCount { get; }
-        public int TotalPayloadBytes { get; }
-        public ReadOnlySpan<byte> Payload => m_Payload;
+        internal RollbackDatagramPacket()
+        {
+        }
+
+        internal RollbackDatagramPacket Reset(
+            RollbackDatagramKind kind,
+            string sessionId,
+            string senderPeerId,
+            ulong datagramSequence,
+            ulong messageSequence,
+            bool reliable,
+            int fragmentIndex,
+            int fragmentCount,
+            int totalPayloadBytes,
+            byte[] payload,
+            int payloadLength)
+        {
+            Validate(
+                kind,
+                sessionId,
+                senderPeerId,
+                datagramSequence,
+                messageSequence,
+                reliable,
+                fragmentIndex,
+                fragmentCount,
+                totalPayloadBytes,
+                payloadLength);
+            Kind = kind;
+            SessionId = sessionId;
+            SenderPeerId = senderPeerId;
+            DatagramSequence = datagramSequence;
+            MessageSequence = messageSequence;
+            Reliable = reliable;
+            FragmentIndex = fragmentIndex;
+            FragmentCount = fragmentCount;
+            TotalPayloadBytes = totalPayloadBytes;
+            m_Payload = payload;
+            m_PayloadLength = payloadLength;
+            return this;
+        }
+
+        internal void Release()
+        {
+            Kind = default;
+            SessionId = null;
+            SenderPeerId = null;
+            DatagramSequence = 0;
+            MessageSequence = 0;
+            Reliable = false;
+            FragmentIndex = 0;
+            FragmentCount = 0;
+            TotalPayloadBytes = 0;
+            m_Payload = null;
+            m_PayloadLength = 0;
+        }
+
+        public RollbackDatagramKind Kind { get; private set; }
+        public string SessionId { get; private set; }
+        public string SenderPeerId { get; private set; }
+        public ulong DatagramSequence { get; private set; }
+        public ulong MessageSequence { get; private set; }
+        public bool Reliable { get; private set; }
+        public int FragmentIndex { get; private set; }
+        public int FragmentCount { get; private set; }
+        public int TotalPayloadBytes { get; private set; }
+        public ReadOnlySpan<byte> Payload => m_Payload.AsSpan(0, m_PayloadLength);
+
+        static void Validate(
+            RollbackDatagramKind kind,
+            string sessionId,
+            string senderPeerId,
+            ulong datagramSequence,
+            ulong messageSequence,
+            bool reliable,
+            int fragmentIndex,
+            int fragmentCount,
+            int totalPayloadBytes,
+            int payloadLength)
+        {
+            if ((kind != RollbackDatagramKind.Payload && kind != RollbackDatagramKind.Acknowledgement) || datagramSequence == 0 || messageSequence == 0)
+                throw new ArgumentException("Rollback datagram identity is invalid.");
+            RollbackEndpointIdentity.Require(sessionId, nameof(sessionId));
+            RollbackEndpointIdentity.Require(senderPeerId, nameof(senderPeerId));
+            if (kind == RollbackDatagramKind.Acknowledgement)
+            {
+                if (!reliable || fragmentIndex != 0 || fragmentCount != 0 || totalPayloadBytes != 0 || payloadLength != 0)
+                    throw new ArgumentException("Rollback acknowledgement datagram is invalid.");
+            }
+            else if (fragmentCount <= 0 || fragmentIndex < 0 || fragmentIndex >= fragmentCount ||
+                     totalPayloadBytes <= 0 || payloadLength <= 0 || payloadLength > totalPayloadBytes ||
+                     !reliable && fragmentCount != 1)
+            {
+                throw new ArgumentException("Rollback payload datagram is invalid.");
+            }
+        }
     }
 
     public static class RollbackDatagramCodec

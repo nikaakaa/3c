@@ -4011,3 +4011,11 @@
 - Fixed 和 Float32 `AbilityExecutionServiceSet` 从 immutable class 改为 readonly struct；Operation Control Runtime 直接持有具体 ServiceSet，`Bind` 使用 `in` 参数重绑 Target，删除 `IFixedAbilityExecutionServices` 和 `IFloat32AbilityExecutionServices` 两条中间接口。
 - `BeginEvaluation` 和 `EndEvaluation` 的顺序、Gameplay Effect 与 Equipment 可选服务、诊断开关和 Timeline 只读列表边界保持不变；`EndEvaluation` 后把 ServiceSet 置为 `default`，不再把上一 invocation 的 Frame、Target、Action Store、Values、Blackboard 和 Timeline list 引用留在常驻 runtime。
 - 每次 Ability installation 的 ServiceSet class 分配删除。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧接口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability execution assembly 值化收口
+
+对应 tasks.md 的 5.5，新增 5.229 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 `AbilityExecutionAssembly` 从 sealed class 改为 readonly struct；Service Factory 仍按原构造参数校验 Input、Action、Blackboard、Motion、Control 和 Domain，再把 Gameplay Effect、Equipment 等引用一次性交给 Invocation Runtime。
+- Assembly 只是工厂到 Invocation Runtime 的交接外壳，栈上传给本地变量后立即拆到 readonly 字段；Input、Action、Gameplay Effect、Equipment、Blackboard、Motion、Control 和 Domain 的生命周期不变。每次 Ability invocation 的装配外壳 class 分配删除。
+- 按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

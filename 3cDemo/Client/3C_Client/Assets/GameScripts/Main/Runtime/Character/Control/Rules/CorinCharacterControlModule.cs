@@ -166,8 +166,8 @@ namespace ThirdPersonCharacter.Control.Rules
                 "WalkStoppingToWalkStart" => MoveAbove(m_Read),
                 "RunStoppingToRunLoop" => MoveAbove(m_Read),
                 "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveBelow(m_Read),
-                "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
-                "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
+                "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),

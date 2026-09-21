@@ -3,9 +3,43 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    internal sealed class Float32MotionContributionScratch
+    {
+        SimulationMotionContribution[] m_Values = Array.Empty<SimulationMotionContribution>();
+
+        public SimulationMotionContribution[] Values => m_Values;
+        public int Count { get; private set; }
+
+        public void Begin()
+        {
+            Array.Clear(m_Values, 0, Count);
+            Count = 0;
+        }
+
+        public void Append(in SimulationMotionContribution value)
+        {
+            if (Count == m_Values.Length)
+            {
+                int capacity = Math.Max(4, m_Values.Length * 2);
+                var values = new SimulationMotionContribution[capacity];
+                Array.Copy(m_Values, values, Count);
+                m_Values = values;
+            }
+
+            m_Values[Count++] = value;
+        }
+
+        public void Clear()
+        {
+            Array.Clear(m_Values, 0, Count);
+            Count = 0;
+        }
+    }
+
     public sealed class SimulationActorBinding
     {
         readonly Float32CharacterControlMotionRuntime m_ControlMotion;
+        readonly Float32MotionContributionScratch m_MotionContributions = new Float32MotionContributionScratch();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -61,6 +95,7 @@ namespace ThirdPersonSimulation
         public string WorldBodyBindingId { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         internal Float32CharacterControlMotionRuntime ControlMotion => m_ControlMotion;
+        internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }

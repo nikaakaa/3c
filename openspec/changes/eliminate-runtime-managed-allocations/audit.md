@@ -3803,3 +3803,11 @@
 - Fixed 和 Float32 Ability Execution Workspace 的 motion contributions 从 `List` 改为 `SimulationMotionContribution[]` 加显式 count；容量不足时倍增，`MotionAccumulator` 直接提交到 workspace，不再接收和持有 `List`。
 - Invocation 边界从 `IReadOnlyList` 改为显式 `CopyMotionContributionsTo`；Character Evaluation 聚合后立刻清空 workspace 使用区间，保留 contribution 排列和 Resolve 语义。
 - 每 invocation motion collection 的 `List`、内部扩容壳和只读集合边界删除；workspace 本体仍随当前 invocation 生命周期创建，长期归属留给后续 ability cycle 独立小步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Character evaluation motion aggregation 收口
+
+对应 tasks.md 的 5.5，新增 5.203 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Evaluation 的当次 motion contribution 聚合从每 Actor tick 新建的 `List` 改为 Actor Binding 构造期持有的 `MotionContributionScratch`；每个 tick `Begin` 清空使用区间，异常路径统一 `Clear`。
+- Character Control、Ability invocation 和 Timeline pending motion 都直接写入同一数组 + count scratch；删除 Evaluation 内的 `List<SimulationMotionContribution>` 外壳、`AddRange`/`Add` 扩容路径和只读集合边界。
+- `CharacterMotionResolver.ResolveChannel` 改为按 contribution 数组和精确 count 遍历，三个 channel 求值顺序、override 选择、additive/weighted 累计和 trace 指纹不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

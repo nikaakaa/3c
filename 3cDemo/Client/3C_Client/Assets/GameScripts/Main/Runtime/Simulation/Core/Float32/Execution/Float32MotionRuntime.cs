@@ -280,7 +280,8 @@ namespace ThirdPersonSimulation
                 : "none";
 
         public static ResolvedMotionChannel ResolveChannel(
-            IReadOnlyList<SimulationMotionContribution> contributions,
+            SimulationMotionContribution[] contributions,
+            int contributionCount,
             Float32Yaw bodyYaw,
             SimulationMotionChannel channel)
         {
@@ -300,7 +301,7 @@ namespace ThirdPersonSimulation
             bool hasAdditive = false;
             bool hasWeighted = false;
             bool hasOverride = false;
-            for (int i = 0; i < contributions.Count; i++)
+            for (int i = 0; i < contributionCount; i++)
             {
                 SimulationMotionContribution contribution = contributions[i];
                 if (contribution.Channel != channel || !contribution.CanResolve)

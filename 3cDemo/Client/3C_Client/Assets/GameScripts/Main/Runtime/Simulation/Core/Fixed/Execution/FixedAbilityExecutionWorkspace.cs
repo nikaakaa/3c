@@ -48,10 +48,10 @@ namespace ThirdPersonSimulation.Fixed
             m_MotionContributions[m_MotionContributionCount++] = contribution;
         }
 
-        public void CopyMotionContributionsTo(List<SimulationMotionContribution> contributions)
+        public void CopyMotionContributionsTo(FixedMotionContributionScratch contributions)
         {
             for (int i = 0; i < m_MotionContributionCount; i++)
-                contributions.Add(m_MotionContributions[i]);
+                contributions.Append(m_MotionContributions[i]);
         }
 
         public void ClearMotionContributions()

@@ -42,7 +42,6 @@ namespace ThirdPersonSimulation.Fixed
             var invocations = new List<FixedAbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
             var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
-            var motionContributions = new List<SimulationMotionContribution>();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
             var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
@@ -57,6 +56,8 @@ namespace ThirdPersonSimulation.Fixed
                 var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
+                FixedMotionContributionScratch motionContributions = actor.MotionContributions;
+                motionContributions.Begin();
                 FixedCharacterControlMotionRuntime controlMotion = actor.ControlMotion;
                 controlMotion.Begin(
                     abilityInput,
@@ -170,7 +171,11 @@ namespace ThirdPersonSimulation.Fixed
                 }
 
                 ResolvedGameplayMotion gameplayMotion = ResolveMotion(
-                    motionContributions, beforeBody.Yaw, invocations, characterTraceSink);
+                    motionContributions.Values,
+                    motionContributions.Count,
+                    beforeBody.Yaw,
+                    invocations,
+                    characterTraceSink);
                 for (int i = 0; i < invocations.Count; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
@@ -217,6 +222,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
                 actor.ControlMotion.ClearContributions();
+                actor.MotionContributions.Clear();
                 roleState.Dispose();
                 throw;
             }
@@ -330,14 +336,27 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static ResolvedGameplayMotion ResolveMotion(
-            IReadOnlyList<SimulationMotionContribution> contributions,
+            SimulationMotionContribution[] contributions,
+            int contributionCount,
             FixedYaw bodyYaw,
             IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
             FixedCharacterTraceSink trace)
         {
-            ResolvedMotionChannel locomotion = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.Locomotion);
-            ResolvedMotionChannel action = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.Action);
-            ResolvedMotionChannel gameplayResult = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.GameplayResult);
+            ResolvedMotionChannel locomotion = FixedCharacterMotionResolver.ResolveChannel(
+                contributions,
+                contributionCount,
+                bodyYaw,
+                SimulationMotionChannel.Locomotion);
+            ResolvedMotionChannel action = FixedCharacterMotionResolver.ResolveChannel(
+                contributions,
+                contributionCount,
+                bodyYaw,
+                SimulationMotionChannel.Action);
+            ResolvedMotionChannel gameplayResult = FixedCharacterMotionResolver.ResolveChannel(
+                contributions,
+                contributionCount,
+                bodyYaw,
+                SimulationMotionChannel.GameplayResult);
             for (int i = 0; i < invocations.Count; i++)
                 invocations[i].ApplyTimelineMotionWarps(ref action);
             TraceMotionChannel(locomotion, trace);
@@ -354,13 +373,13 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void AppendTimelineMotion(
-            List<SimulationMotionContribution> contributions,
+            FixedMotionContributionScratch contributions,
             IReadOnlyList<AbilityTimelineLogicMotion> timelineMotion)
         {
             for (int i = 0; i < timelineMotion.Count; i++)
             {
                 AbilityTimelineLogicMotion value = timelineMotion[i];
-                contributions.Add(new SimulationMotionContribution(
+                contributions.Append(new SimulationMotionContribution(
                     value.Source,
                     value.AbilityId,
                     value.SourceGeneration,

@@ -38,10 +38,10 @@ namespace ThirdPersonSimulation.Fixed
             m_TickRate = tickRate;
         }
 
-        internal void CopyContributionsTo(List<SimulationMotionContribution> contributions)
+        internal void CopyContributionsTo(FixedMotionContributionScratch contributions)
         {
             for (int i = 0; i < m_ContributionCount; i++)
-                contributions.Add(m_Contributions[i]);
+                contributions.Append(m_Contributions[i]);
         }
 
         internal void ClearContributions()

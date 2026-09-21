@@ -153,7 +153,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterSkillId AbilityId { get; }
         public IReadOnlyList<AbilityTimelineLogicMotionWarp> TimelineMotionWarps => m_Workspace.TimelineMotionWarps;
 
-        public void CopyMotionContributionsTo(List<SimulationMotionContribution> contributions)
+        public void CopyMotionContributionsTo(FixedMotionContributionScratch contributions)
         {
             m_Workspace.CopyMotionContributionsTo(contributions);
             m_Workspace.ClearMotionContributions();

@@ -196,6 +196,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ulong packetSequence = reader.ReadUInt64();
             ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
+            payload.AsSpan().CopyTo(payloadBuffer);
             packet.Reset(
                 new ServerAuthoritativeDatagramHeader(identity, kind, packetSequence, payload.Count),
                 payloadBuffer,

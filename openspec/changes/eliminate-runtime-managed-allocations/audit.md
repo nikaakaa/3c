@@ -3418,3 +3418,11 @@
 - `ServerAuthoritativeDatagramEndpoint` 构造期按绑定 socket 的地址族准备一只 `ReceiveFrom` endpoint scratch；接收线程每个轮询周期复用同一模板，不再新建 `IPEndPoint`。该 scratch 只由 receive thread 使用。
 - 成功收到并校验路由后，仍用 `Clone` 生成独立 `IPEndPoint` 进入 `ServerAuthoritativeReceivedDatagram`；超时、坏包、路由不匹配和队列溢出的处理不变，不存在 scratch 提前逃逸。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Authority input 过期 key scratch 复用
+
+对应 tasks.md 的 5.5，新增 5.155 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityClientRoute.Select` 原先每个 Actor 每个逻辑 tick 新建一只过期输入 key List。现在 route 按现有 `CommandQueueCapacity` 在构造期准备精确 scratch，扫描过期 key 后原地从 `SortedDictionary` 移除，最后清空引用。
+- 过期 key 仍按 `SortedDictionary` 升序枚举和移除，选中 held input、neutral/held/exact/late 统计和异常语义不变；本步只治理移除工作存储，不池化 `AcceptedAuthorityInput`，不复制新的兼容入口。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

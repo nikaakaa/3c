@@ -415,6 +415,7 @@
 - [x] 5.152 Float32 gameplay datagram payload codec 只读借用 packet 自有 payload，hello／ack／command／snapshot 全部删除 CopyPayload 中转
 - [x] 5.153 Float32 received datagram 改为只读值记录，接收队列直接承载 packet 与来源 endpoint 引用；删除每条收包的信封堆对象，packet 和 endpoint 所有权不变
 - [x] 5.154 Float32 Datagram Endpoint 复用接收线程的 ReceiveFrom endpoint scratch；每个轮询周期不再新建 IPEndPoint，入队来源仍独立 clone
+- [x] 5.155 Float32 Authority Client Route 复用按命令队列上限准备的过期输入 key scratch；Select 每次只做原地移除，不改既有输入选择顺序
 
 ## 6. UI、资源、渲染和生命周期
 

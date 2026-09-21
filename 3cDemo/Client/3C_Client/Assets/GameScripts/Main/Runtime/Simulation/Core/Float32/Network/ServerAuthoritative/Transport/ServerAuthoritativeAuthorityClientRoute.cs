@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly int m_Capacity;
         readonly SortedDictionary<ulong, CanonicalInputSample> m_Inputs = new SortedDictionary<ulong, CanonicalInputSample>();
         readonly SortedDictionary<ulong, NetworkCheckpoint> m_Sent = new SortedDictionary<ulong, NetworkCheckpoint>();
+        readonly List<ulong> m_ExpiredInputSequences;
         CanonicalInputSample m_Held;
         ulong m_HeldAcceptedTick;
         ulong m_LastEnqueuedInputSequence;
@@ -27,6 +28,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             Roster = roster;
             m_Capacity = capacity;
+            m_ExpiredInputSequences = new List<ulong>(capacity);
         }
 
         public ServerAuthoritativeRosterEntry Roster { get; }
@@ -87,16 +89,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public AcceptedAuthorityInput Select(ulong authorityTick, int holdTicks)
         {
             CanonicalInputSample selected = null;
-            var remove = new List<ulong>();
+            m_ExpiredInputSequences.Clear();
             foreach (KeyValuePair<ulong, CanonicalInputSample> pair in m_Inputs)
             {
                 if (pair.Key > authorityTick)
                     break;
                 selected = pair.Value;
-                remove.Add(pair.Key);
+                m_ExpiredInputSequences.Add(pair.Key);
             }
-            for (int i = 0; i < remove.Count; i++)
-                m_Inputs.Remove(remove[i]);
+            for (int i = 0; i < m_ExpiredInputSequences.Count; i++)
+                m_Inputs.Remove(m_ExpiredInputSequences[i]);
+            m_ExpiredInputSequences.Clear();
             if (selected != null)
             {
                 if (selected.TargetAuthorityTick == authorityTick)

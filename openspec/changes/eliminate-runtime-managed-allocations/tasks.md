@@ -373,6 +373,7 @@
 - [x] 5.110 DotRecast 的 Create 返回、Reconstruct 当前 state 和 Capture 快照直接转移不可变 WorldSimulationState，删除三个 lifecycle 边界的 bodies/payload 克隆；保留 roster、revision、localized 和事务校验，Restore 仍走 Reconstruct
 - [x] 5.111 KCC 的 Create 返回、Reconstruct 当前 state 和 Capture 快照直接转移不可变 WorldSimulationState，删除三个 lifecycle 边界的 bodies/payload 克隆；保留 body、payload、roster 和 revision 校验，Reconstruct 读取 payload 的中间复制仍在后续小步
 - [x] 5.112 CanonicalReader 增加正式 ReadOnlyMemory 入口并要求 array backed segment，KCC state codec 及唯一 Reconstruct 调用直接读取 SolverStatePayload，删除 ToArray 中转；payload 校验、顺序和异常语义不变
+- [x] 5.113 DotRecast 接触候选从 List 改为 solver 生命周期 ActorContactCandidate 数组 scratch，批内用 ArraySegment 暴露 active+observed 有效区间；候选排序改固定比较器，按真实数量复用或扩展存储，稳定 roster 下不再新建 List/扩容/排序闭包。contact solver 和碰撞顺序不变
 
 ## 6. UI、资源、渲染和生命周期
 

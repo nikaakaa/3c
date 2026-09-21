@@ -3067,6 +3067,14 @@
 - `DeterministicKccStateCodec.Read` 改为 `ReadOnlyMemory<byte>` 输入，全项目唯一调用方 `DeterministicKccWorldSolver.Reconstruct` 直接传 `SolverStatePayload`。读取偏移、canonical 校验、collision/configuration identity、Actor 顺序和异常类型保持不变。这是正式 serialization 入口扩展，不保留 byte[] 双入口。
 - `ThirdPersonSimulation.Core.csproj` 和 `ThirdPersonSimulation.DeterministicKcc.csproj` 都使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 DotRecast 接触候选 scratch 化
+
+对应 tasks.md 的 5.1，新增 5.113 作为独立小步；5.1 保持未勾选。
+
+- `DotRecastWorldSolver` 原先跨批持有 `List<ActorContactCandidate>`，每批 `Clear` 后重新填充；初始容量只等于 active roster，observed actor 数量增加时会触发 List 和底层存储扩容。现在改为 solver 生命周期数组 scratch，先按 active 加 observed 真实数量准备容量，不足时精确扩展；稳定 roster 和稳定 observed 数量下批内不再新建 List 或扩容。
+- 批内用 `ArraySegment<ActorContactCandidate>` 只暴露有效区间，保证 `ActorContactSolver` 读到的 `Count` 不包含旧槽位；排序改为静态 `IComparer<ActorContactCandidate>`，对数组的有效数量区间排序。ActorId 升序、active/observed 混合求解、reconstraint 和 final validation 顺序不变。
+- 不给 observed actor 编造静态上限；容量来源就是当前批 active 与 observed 总数，首次遇到更大数量仍会扩容一次。成功和失败路径 finally 都清零有效区间，避免旧候选残留。`ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

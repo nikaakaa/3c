@@ -110,6 +110,7 @@ namespace ThirdPersonSimulation.DotRecast
             WorldFeature.ActorCollision |
             WorldFeature.NavigationSurface |
             WorldFeature.ObservedKinematicActorContact);
+        static readonly ActorContactCandidateSort s_ContactCandidateSort = new ActorContactCandidateSort();
         readonly int m_TickRate;
         readonly NavigationSurfaceArtifact m_Surface;
         readonly DotRecastBodyBindingDescriptor[] m_Bindings;
@@ -122,7 +123,7 @@ namespace ThirdPersonSimulation.DotRecast
         readonly SurfaceCandidate[] m_SurfaceCandidates;
         readonly SurfaceReconstraint[] m_Reconstraints;
         readonly int[] m_ActiveContactIndexes;
-        readonly List<ActorContactCandidate> m_ContactCandidates;
+        ActorContactCandidate[] m_ContactCandidates;
         readonly long[] m_VisitedScratch;
         Float32Vector3[] m_FinalPositions;
         WorldSimulationState m_Current;
@@ -170,7 +171,7 @@ namespace ThirdPersonSimulation.DotRecast
             m_SurfaceCandidates = new SurfaceCandidate[m_Bindings.Length];
             m_Reconstraints = new SurfaceReconstraint[m_Bindings.Length];
             m_ActiveContactIndexes = new int[m_Bindings.Length];
-            m_ContactCandidates = new List<ActorContactCandidate>(m_Bindings.Length);
+            m_ContactCandidates = new ActorContactCandidate[m_Bindings.Length];
             m_FinalPositions = new Float32Vector3[m_Bindings.Length];
             m_VisitedScratch = new long[m_Surface.QueryProfile.MaximumVisitedPolygons];
             Descriptor = s_Descriptor;
@@ -262,24 +263,34 @@ namespace ThirdPersonSimulation.DotRecast
                     Descriptor.ImplementationId,
                     Descriptor.Version));
             }
+            ActorContactCandidate[] contactCandidateStorage = m_ContactCandidates;
+            int contactCandidateCount = request.Requests.Count + request.ObservedWorldConstraints.Constraints.Count;
+            if (contactCandidateStorage.Length < contactCandidateCount)
+            {
+                contactCandidateStorage = new ActorContactCandidate[contactCandidateCount];
+                m_ContactCandidates = contactCandidateStorage;
+            }
+            ArraySegment<ActorContactCandidate> contactCandidates = new ArraySegment<ActorContactCandidate>(
+                contactCandidateStorage,
+                0,
+                contactCandidateCount);
             try
             {
                 SurfaceCandidate[] surfaceCandidates = m_SurfaceCandidates;
                 SurfaceReconstraint[] reconstraints = m_Reconstraints;
                 int[] activeContactIndexes = m_ActiveContactIndexes;
-                List<ActorContactCandidate> contactCandidates = m_ContactCandidates;
                 for (int i = 0; i < request.Requests.Count; i++)
                 {
                     CharacterWorldSolveRequest actorRequest = request.Requests[i];
                     if (actorRequest.ActorId != m_Bindings[i].ActorId || !BodyEquals(actorRequest.BeforeBody, m_Current.Bodies[i]))
                         throw new InvalidOperationException("DotRecast Actor request does not match its locked binding and before-body state.");
                     surfaceCandidates[i] = SolveSurfaceCandidate(actorRequest, diagnostics);
-                    contactCandidates.Add(new ActorContactCandidate(
+                    contactCandidates[i] = new ActorContactCandidate(
                         actorRequest.ActorId,
                         actorRequest.BeforeBody.Position,
                         surfaceCandidates[i].Position,
                         m_Bindings[i].ContactShape,
-                        ActorContactMobility.ActiveSimulated));
+                        ActorContactMobility.ActiveSimulated);
                 }
                 for (int i = 0; i < request.ObservedWorldConstraints.Constraints.Count; i++)
                 {
@@ -290,14 +301,14 @@ namespace ThirdPersonSimulation.DotRecast
                         throw new InvalidOperationException(
                             $"Observed Actor '{observed.ActorId}' does not match the DotRecast batch Tick or canonical contact shape.");
                     }
-                    contactCandidates.Add(new ActorContactCandidate(
+                    contactCandidates[request.Requests.Count + i] = new ActorContactCandidate(
                         observed.ActorId,
                         observed.BeforeBody.Position,
                         observed.FinalBody.Position,
                         m_ContactShape,
-                        ActorContactMobility.ObservedKinematic));
+                        ActorContactMobility.ObservedKinematic);
                 }
-                contactCandidates.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+                Array.Sort(contactCandidateStorage, 0, contactCandidateCount, s_ContactCandidateSort);
 
                 ActorContactBatchResult contactResult;
                 try
@@ -310,14 +321,14 @@ namespace ThirdPersonSimulation.DotRecast
                     throw;
                 }
 
-                if (m_FinalPositions.Length < contactCandidates.Count)
-                    m_FinalPositions = new Float32Vector3[contactCandidates.Count];
+                if (m_FinalPositions.Length < contactCandidateCount)
+                    m_FinalPositions = new Float32Vector3[contactCandidateCount];
                 Float32Vector3[] finalPositions = m_FinalPositions;
-                for (int i = 0; i < contactCandidates.Count; i++)
+                for (int i = 0; i < contactCandidateCount; i++)
                     finalPositions[i] = contactResult.PositionAt(i);
                 for (int i = 0; i < request.Requests.Count; i++)
                 {
-                    int contactIndex = FindContactCandidate(contactCandidates, request.Requests[i].ActorId);
+                    int contactIndex = FindContactCandidate(contactCandidateStorage, contactCandidateCount, request.Requests[i].ActorId);
                     activeContactIndexes[i] = contactIndex;
                     reconstraints[i] = ReconstraintToSurface(
                         request.Requests[i].ActorId,
@@ -372,18 +383,24 @@ namespace ThirdPersonSimulation.DotRecast
             }
             finally
             {
-                m_ContactCandidates.Clear();
+                Array.Clear(contactCandidateStorage, 0, contactCandidateCount);
             }
         }
 
-        static int FindContactCandidate(IReadOnlyList<ActorContactCandidate> candidates, ActorId actorId)
+        static int FindContactCandidate(ActorContactCandidate[] candidates, int count, ActorId actorId)
         {
-            for (int i = 0; i < candidates.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 if (candidates[i].ActorId == actorId)
                     return i;
             }
             throw new InvalidOperationException($"Actor contact candidate '{actorId}' is missing from the stable roster.");
+        }
+
+        sealed class ActorContactCandidateSort : IComparer<ActorContactCandidate>
+        {
+            public int Compare(ActorContactCandidate left, ActorContactCandidate right) =>
+                left.ActorId.CompareTo(right.ActorId);
         }
 
         SurfaceCandidate SolveSurfaceCandidate(

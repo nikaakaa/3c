@@ -13,11 +13,13 @@ namespace ThirdPersonSimulation.Fixed
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
+            Trace = new FixedTraceSink(data, layout);
         }
 
         public FixedGameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public FixedGameplayAbilityExecutionServices Services { get; }
+        internal FixedTraceSink Trace { get; }
     }
 
     public sealed class FixedGameplayAbilityExecutionInstallation

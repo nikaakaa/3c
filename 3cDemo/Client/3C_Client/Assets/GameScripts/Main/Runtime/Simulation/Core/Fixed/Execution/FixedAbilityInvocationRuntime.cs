@@ -130,6 +130,7 @@ namespace ThirdPersonSimulation.Fixed
                 eventSequenceState,
                 gameplayEffectState,
                 equipmentState,
+                execution.Trace,
                 m_Workspace);
 
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(

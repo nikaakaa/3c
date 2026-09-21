@@ -52,7 +52,7 @@
 - [x] 4.5 登记 Normal Attack End / Explode 内容边界，Branch / Rush 不并入现有五段 Timeline
 - [x] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，并在对应 TreeClip 中建立攻击属性节点，不把素材本地帧当作第二时间轴
 - [x] 4.7 Attack5 在 frame=47 建 Attack5EndBoundary 及 End / End_2 正式状态转移
-- [ ] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 在对应 TreeClip 中携带分支身份与 15 个状态本地节点
+- [x] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 在对应 TreeClip 中携带分支身份与 15 个状态本地节点
 - [x] 4.9 删除 Attack5 frame=64 多余 `_01_02` 节点并重建对应 Ability 定义
 - [x] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
 

@@ -173,7 +173,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Motion.ApplyTimelineMotionWarps(ref action);
         }
 
-        public ulong MotionSourceGeneration(SimulationExecutionSource source) => m_Motion.SourceGeneration(source);
 
         public IFixedAbilityActionControlPort Actions => m_Actions;
         public bool HasGameplayEffects => m_GameplayEffects != null;

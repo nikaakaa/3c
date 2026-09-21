@@ -1188,6 +1188,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 results.Add(new AbilityTimelineLogicMotion(
                     source,
                     new CharacterSkillId(active.ActionContext.ActionId),
+                    active.Provenance.SourceActivationGeneration,
                     contribution.DisplacementX,
                     contribution.DisplacementY,
                     contribution.DisplacementZ,

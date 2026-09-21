@@ -126,6 +126,7 @@ namespace ThirdPersonSimulation
             submit(new SimulationMotionContribution(
                 request.Source,
                 default,
+                request.PlaybackGeneration,
                 displacement,
                 yaw,
                 descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve

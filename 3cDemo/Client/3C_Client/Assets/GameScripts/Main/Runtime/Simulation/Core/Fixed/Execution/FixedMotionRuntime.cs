@@ -61,6 +61,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationMotionContribution(
             SimulationExecutionSource source,
             CharacterSkillId abilityId,
+            ulong sourceGeneration,
             FixedVector3 displacement,
             FixedScalar yawDegrees,
             FixedVector2 planarBasis,
@@ -77,6 +78,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Motion contribution source is invalid.", nameof(source));
             Source = source;
             AbilityId = abilityId;
+            SourceGeneration = sourceGeneration;
             Displacement = displacement;
             YawDegrees = yawDegrees;
             PlanarBasis = planarBasis;
@@ -103,6 +105,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationExecutionSource Source { get; }
         public CharacterSkillId AbilityId { get; }
+        public ulong SourceGeneration { get; }
         public string SourceIdentity => Source.Identity;
         public FixedVector3 Displacement { get; }
         public FixedScalar YawDegrees { get; }
@@ -140,6 +143,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar resolvedOwnerYawDegrees,
             SimulationExecutionSource traceSource,
             CharacterSkillId traceAbilityId,
+            ulong traceSourceGeneration,
             int participatingSourceCount,
             ulong participatingSourceFingerprint)
         {
@@ -157,6 +161,7 @@ namespace ThirdPersonSimulation.Fixed
             ResolvedOwnerYawDegrees = resolvedOwnerYawDegrees;
             TraceSource = traceSource;
             TraceAbilityId = traceAbilityId;
+            TraceSourceGeneration = traceSourceGeneration;
             ParticipatingSourceCount = participatingSourceCount;
             ParticipatingSourceFingerprint = participatingSourceFingerprint;
         }
@@ -176,6 +181,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedScalar ResolvedOwnerYawDegrees { get; }
         public SimulationExecutionSource TraceSource { get; }
         public CharacterSkillId TraceAbilityId { get; }
+        public ulong TraceSourceGeneration { get; }
         public int ParticipatingSourceCount { get; }
         public ulong ParticipatingSourceFingerprint { get; }
         public bool HasDelta => Displacement != FixedVector3.Zero || YawDegrees != FixedScalar.Zero;
@@ -288,6 +294,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar overrideYaw = FixedScalar.Zero;
             SimulationExecutionSource traceSource = default;
             CharacterSkillId traceAbilityId = default;
+            ulong traceSourceGeneration = 0;
             int sourceCount = 0;
             ulong sourceFingerprint = 1469598103934665603UL;
             bool hasAdditive = false;
@@ -302,6 +309,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     traceSource = contribution.Source;
                     traceAbilityId = contribution.AbilityId;
+                    traceSourceGeneration = contribution.SourceGeneration;
                 }
                 sourceCount++;
                 sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
@@ -336,7 +344,7 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
             if (!hasAdditive && !hasWeighted && !hasOverride)
-                return new ResolvedMotionChannel(channel, FixedVector3.Zero, FixedScalar.Zero, FixedVector2.Zero, false, false, default, default, default, default, FixedVector3.Zero, FixedScalar.Zero, default, default, 0, 0);
+                return new ResolvedMotionChannel(channel, FixedVector3.Zero, FixedScalar.Zero, FixedVector2.Zero, false, false, default, default, default, default, FixedVector3.Zero, FixedScalar.Zero, default, default, 0, 0, 0);
 
             FixedVector3 channelDisplacement = additiveDisplacement;
             FixedScalar channelYaw = additiveYaw;
@@ -376,6 +384,7 @@ namespace ThirdPersonSimulation.Fixed
                 hasOverride ? overrideYaw : FixedScalar.Zero,
                 hasOverride ? overrideWinner.Source : traceSource,
                 hasOverride ? overrideWinner.AbilityId : traceAbilityId,
+                hasOverride ? overrideWinner.SourceGeneration : traceSourceGeneration,
                 sourceCount,
                 sourceFingerprint);
             return result;
@@ -467,7 +476,7 @@ namespace ThirdPersonSimulation.Fixed
                     "motion_contribution",
                     SimulationTraceSeverity.Detail,
                     $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={FixedCharacterMotionResolver.FormatMovementClock(contribution.MovementPlaybackClock)}",
-                    SourceGeneration(contribution.Source));
+                    contribution.SourceGeneration);
             }
         }
 
@@ -485,16 +494,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_MotionWarp);
         }
 
-        public ulong SourceGeneration(SimulationExecutionSource source)
-        {
-            if (!source.IsSkillOperation)
-                return 1;
-            int slot = m_Frame.Layout.FindOperationStateSlot(
-                source.Operation,
-                ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = slot < 0 ? 1UL : m_Frame.ReadState(slot).UInt64;
-            return generation == 0 ? 1UL : generation;
-        }
     }
 
     internal sealed class FixedMotionWarpTarget : FixedOperationModule,
@@ -1010,6 +1009,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Motion.Submit(new SimulationMotionContribution(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
                 m_Ability.AbilityId,
+                generation,
                 displacement,
                 yaw,
                 move,

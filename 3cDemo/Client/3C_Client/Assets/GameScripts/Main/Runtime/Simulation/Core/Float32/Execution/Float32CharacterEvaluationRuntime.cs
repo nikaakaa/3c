@@ -336,16 +336,16 @@ namespace ThirdPersonSimulation
             ResolvedMotionChannel gameplayResult = Float32CharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.GameplayResult);
             for (int i = 0; i < invocations.Count; i++)
                 invocations[i].ApplyTimelineMotionWarps(ref action);
-            TraceMotionChannel(locomotion, invocations, trace);
-            TraceMotionChannel(action, invocations, trace);
-            TraceMotionChannel(gameplayResult, invocations, trace);
+            TraceMotionChannel(locomotion, trace);
+            TraceMotionChannel(action, trace);
+            TraceMotionChannel(gameplayResult, trace);
             ResolvedGameplayMotion motion = Float32CharacterMotionResolver.Compose(locomotion, action, gameplayResult);
             ResolvedMotionChannel source = gameplayResult.TraceSource.IsValid ? gameplayResult :
                 action.TraceSource.IsValid ? action : locomotion;
             if (source.TraceSource.IsValid)
                 trace.Add("Character.Motion", source.TraceSource, "resolved_gameplay_motion", SimulationTraceSeverity.Information,
                     $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={Float32CharacterMotionResolver.FormatMovementClock(motion.MovementPlaybackClock)}",
-                    MotionSourceGeneration(source, invocations));
+                    source.TraceSourceGeneration);
             return motion;
         }
 
@@ -359,6 +359,7 @@ namespace ThirdPersonSimulation
                 contributions.Add(new SimulationMotionContribution(
                     value.Source,
                     value.AbilityId,
+                    value.SourceGeneration,
                     new Float32Vector3(
                         Float32Scalar.FromSingle(value.DisplacementX.ToSingle()),
                         Float32Scalar.FromSingle(value.DisplacementY.ToSingle()),
@@ -378,27 +379,15 @@ namespace ThirdPersonSimulation
 
         static void TraceMotionChannel(
             ResolvedMotionChannel channel,
-            IReadOnlyList<Float32AbilityInvocationRuntime> invocations,
             Float32CharacterTraceSink trace)
         {
             if (!channel.TraceSource.IsValid)
                 return;
             trace.Add("Character.Motion", channel.TraceSource, "motion_channel_resolved", SimulationTraceSeverity.Detail,
                 $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={Float32CharacterMotionResolver.FormatMovementClock(channel.MovementPlaybackClock)}",
-                MotionSourceGeneration(channel, invocations));
+                channel.TraceSourceGeneration);
         }
 
-        static ulong MotionSourceGeneration(
-            ResolvedMotionChannel channel,
-            IReadOnlyList<Float32AbilityInvocationRuntime> invocations)
-        {
-            if (!channel.TraceAbilityId.IsValid)
-                return 1;
-            for (int i = 0; i < invocations.Count; i++)
-                if (invocations[i].AbilityId == channel.TraceAbilityId)
-                    return invocations[i].MotionSourceGeneration(channel.TraceSource);
-            throw new InvalidOperationException("Motion trace source has no owning Ability invocation.");
-        }
 
 }
 }

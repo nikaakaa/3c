@@ -130,6 +130,7 @@ namespace ThirdPersonSimulation
         public AbilityTimelineLogicMotion(
             SimulationExecutionSource source,
             CharacterSkillId abilityId,
+            ulong sourceGeneration,
             FixedScalar displacementX,
             FixedScalar displacementY,
             FixedScalar displacementZ,
@@ -149,6 +150,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(weight));
             Source = source;
             AbilityId = abilityId;
+            SourceGeneration = sourceGeneration;
             DisplacementX = displacementX;
             DisplacementY = displacementY;
             DisplacementZ = displacementZ;
@@ -163,6 +165,7 @@ namespace ThirdPersonSimulation
 
         public SimulationExecutionSource Source { get; }
         public CharacterSkillId AbilityId { get; }
+        public ulong SourceGeneration { get; }
         public FixedScalar DisplacementX { get; }
         public FixedScalar DisplacementY { get; }
         public FixedScalar DisplacementZ { get; }

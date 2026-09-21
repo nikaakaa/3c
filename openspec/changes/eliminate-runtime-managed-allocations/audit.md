@@ -2485,3 +2485,13 @@
 - `RollbackInputHistory` 新增内部 applied-mismatch 扫描，直接遍历现有排序历史并与调用方已有的 applied hash 字典比较；记录顺序保持 SortedDictionary 升序，`EarliestExplicitAffectedTick` 优先级和返回结果不变。
 - 该查询不再依赖输入历史快照，因此不引入与事务恢复有关的别名；checkpoint 捕获和恢复路径未改。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚输出 record 池化
+
+对应 tasks.md 的 5.2，本步处理 `RollbackOutputCommitter` 的 GameplayFact／PresentationCommand record 生命周期，整项保持未勾选。
+
+- Committer 构造时按正式 `maximumRecords` 准备 record 池和本批追踪列表；租借时通过 `ResetGameplay` 或 `ResetPresentation` 填充原有事实、表现命令、执行类型、confirmed-only 状态和 semantic slot。
+- 替换、同 slot 重写、取消和确认释放的旧 record 先进入 retired 列表；`BeginCommit` 到 `CompleteCommit` 全部成功后才 reset 并回池，避免发布、诊断或 abort 过程中提前复用。
+- Commit 失败时回收本批新建 record，但清空 retired 列表且不交换正式 registry；旧 record 继续归属原事务状态，失败不会造成旧输出被复用。
+- 池容量继续受正式 `maximumRecords` 限制；超过容量的对象只是不回池，不扩大 registry 窗口。输出发布顺序、slot 排序、keep／replace／cancel 计数和 capacity 校验保持不变。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

@@ -48,6 +48,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
         Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_RecordWorkspace =
             new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
+        readonly List<RollbackOutputRecord> m_RecordPool;
+        readonly List<RollbackOutputRecord> m_CommitRecords;
+        readonly List<RollbackOutputRecord> m_RetiredRecords;
         ulong m_KeepCount;
         ulong m_ReplaceCount;
         ulong m_CancelCount;
@@ -71,6 +74,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_Output = output ?? throw new ArgumentNullException(nameof(output));
             m_SourceEgress = sourceEgress ?? throw new ArgumentNullException(nameof(sourceEgress));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            m_RecordPool = new List<RollbackOutputRecord>(maximumRecords);
+            m_CommitRecords = new List<RollbackOutputRecord>(maximumRecords);
+            m_RetiredRecords = new List<RollbackOutputRecord>(maximumRecords);
         }
 
         public SimulationComponentIdentity Identity { get; }
@@ -98,9 +104,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentNullException(nameof(batch));
             m_DispositionIndex.Clear();
             m_Operations.Clear();
+            m_CommitRecords.Clear();
+            m_RetiredRecords.Clear();
             try
             {
                 CommitPrepared(batch);
+                ReleaseRetiredRecords();
+                m_CommitRecords.Clear();
+                m_RetiredRecords.Clear();
+            }
+            catch
+            {
+                ReleaseCommitRecords();
+                m_RetiredRecords.Clear();
+                throw;
             }
             finally
             {
@@ -260,6 +277,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         }
                         else
                             keeps++;
+                        RetireRecord(previous);
                         records[value.Slot] = value;
                         continue;
                     }
@@ -278,6 +296,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     {
                         operations.Add(RollbackOutputOperation.Publish(value, executionKind));
                     }
+                    RetireRecord(previous);
                     records[value.Slot] = value;
                 }
 
@@ -292,6 +311,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
                         cancellations++;
                     }
+                    RetireRecord(previous);
                     records.Remove(slot);
                 }
             }
@@ -303,7 +323,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        static void BuildCurrent(
+        void BuildCurrent(
             SimulationActorTickResult actor,
             SimulationPipelineStepExecutionKind executionKind,
             IReadOnlyDictionary<EventId, SimulationOutputDisposition> dispositions,
@@ -313,7 +333,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 GameplayFact fact = actor.GameplayFacts[i];
                 SimulationOutputDisposition disposition = GetRequiredDisposition(fact.Header, dispositions);
-                values.Add(new RollbackOutputRecord(
+                values.Add(RentGameplayRecord(
                     fact,
                     executionKind,
                     disposition.Kind == SimulationOutputDispositionKind.Defer));
@@ -322,12 +342,63 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 PresentationCommand command = actor.PresentationCommands[i];
                 SimulationOutputDisposition disposition = GetRequiredDisposition(command.Header, dispositions);
-                values.Add(new RollbackOutputRecord(
+                values.Add(RentPresentationRecord(
                     command,
                     executionKind,
                     disposition.Kind == SimulationOutputDispositionKind.Defer));
             }
-            values.Sort((left, right) => left.Slot.CompareTo(right.Slot));
+            values.Sort();
+        }
+
+        RollbackOutputRecord RentGameplayRecord(
+            GameplayFact gameplay,
+            SimulationPipelineStepExecutionKind executionKind,
+            bool confirmedOnly)
+        {
+            RollbackOutputRecord record = RentRecord().ResetGameplay(gameplay, executionKind, confirmedOnly);
+            m_CommitRecords.Add(record);
+            return record;
+        }
+
+        RollbackOutputRecord RentPresentationRecord(
+            PresentationCommand presentation,
+            SimulationPipelineStepExecutionKind executionKind,
+            bool confirmedOnly)
+        {
+            RollbackOutputRecord record = RentRecord().ResetPresentation(presentation, executionKind, confirmedOnly);
+            m_CommitRecords.Add(record);
+            return record;
+        }
+
+        RollbackOutputRecord RentRecord()
+        {
+            int last = m_RecordPool.Count - 1;
+            if (last < 0)
+                return new RollbackOutputRecord();
+            RollbackOutputRecord record = m_RecordPool[last];
+            m_RecordPool.RemoveAt(last);
+            return record;
+        }
+
+        void RetireRecord(RollbackOutputRecord record) => m_RetiredRecords.Add(record);
+
+        void ReleaseRetiredRecords()
+        {
+            for (int i = 0; i < m_RetiredRecords.Count; i++)
+                ReleaseRecord(m_RetiredRecords[i]);
+        }
+
+        void ReleaseCommitRecords()
+        {
+            for (int i = 0; i < m_CommitRecords.Count; i++)
+                ReleaseRecord(m_CommitRecords[i]);
+        }
+
+        void ReleaseRecord(RollbackOutputRecord record)
+        {
+            record.Reset();
+            if (m_RecordPool.Count < m_MaximumRecords)
+                m_RecordPool.Add(record);
         }
 
         static bool SamePresentationCommand(
@@ -381,6 +452,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         operations.Add(RollbackOutputOperation.Publish(pair.Value, pair.Value.ExecutionKind));
                         confirmations++;
                     }
+                    RetireRecord(pair.Value);
                     m_ReleaseSlots.Add(pair.Key);
                 }
                 m_ReleaseSlots.Sort();
@@ -479,9 +551,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public override string ToString() => $"{ActorId}/{Tick}/{(Gameplay ? "gameplay" : "presentation")}/{Channel}/{Sequence}";
     }
 
-    sealed class RollbackOutputRecord
+    sealed class RollbackOutputRecord : IComparable<RollbackOutputRecord>
     {
-        public RollbackOutputRecord(
+        internal RollbackOutputRecord() { }
+
+        public RollbackOutputRecord ResetGameplay(
             GameplayFact gameplay,
             SimulationPipelineStepExecutionKind executionKind,
             bool confirmedOnly)
@@ -492,9 +566,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ExecutionKind = executionKind;
             ConfirmedOnly = confirmedOnly;
             Slot = new RollbackOutputSlot(gameplay.Header, true);
+            return this;
         }
 
-        public RollbackOutputRecord(
+        public RollbackOutputRecord ResetPresentation(
             PresentationCommand presentation,
             SimulationPipelineStepExecutionKind executionKind,
             bool confirmedOnly)
@@ -505,14 +580,25 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ExecutionKind = executionKind;
             ConfirmedOnly = confirmedOnly;
             Slot = new RollbackOutputSlot(presentation.Header, false);
+            return this;
         }
 
-        public RollbackOutputSlot Slot { get; }
-        public GameplayFact Gameplay { get; }
-        public PresentationCommand Presentation { get; }
-        public bool IsGameplay { get; }
-        public bool ConfirmedOnly { get; }
-        public SimulationPipelineStepExecutionKind ExecutionKind { get; }
+        public void Reset()
+        {
+            Gameplay = default;
+            Presentation = default;
+            ExecutionKind = default;
+            ConfirmedOnly = false;
+            Slot = default;
+        }
+
+        public RollbackOutputSlot Slot { get; private set; }
+        public GameplayFact Gameplay { get; private set; }
+        public PresentationCommand Presentation { get; private set; }
+        public bool IsGameplay { get; private set; }
+        public bool ConfirmedOnly { get; private set; }
+        public SimulationPipelineStepExecutionKind ExecutionKind { get; private set; }
+        public int CompareTo(RollbackOutputRecord other) => Slot.CompareTo(other.Slot);
         public EventId EventId => IsGameplay ? Gameplay.Header.EventId : Presentation.Header.EventId;
         public SimulationEventHeader Header => IsGameplay ? Gameplay.Header : Presentation.Header;
 

@@ -55,12 +55,7 @@ namespace TreeDesigner
                 {
                     Name = node.ResolvedDisplayName,
                     Status = status,
-                    Cause = kind == RuntimeTraceEventKind.NodeStopRequested ||
-                            kind == RuntimeTraceEventKind.NodeStopping ||
-                            kind == RuntimeTraceEventKind.NodeStopped ||
-                            kind == RuntimeTraceEventKind.NodeForceStopped
-                        ? stopContext.OriginCause.ToString()
-                        : string.Empty,
+                    Cause = IsNodeStop(kind) ? CauseText(stopContext.OriginCause) : string.Empty,
                     RelatedElementId = stopContext.ReplacementNodeGuid,
                     Detail = stopContext.SourceNodeGuid
                 });
@@ -86,6 +81,40 @@ namespace TreeDesigner
                 NodeStopStatus.Completed => "Completed",
                 NodeStopStatus.Failed => "Failed",
                 _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Node stop status has no diagnostics status.")
+            };
+        }
+
+        static bool IsNodeStop(RuntimeTraceEventKind kind)
+        {
+            return kind == RuntimeTraceEventKind.NodeStopRequested ||
+                   kind == RuntimeTraceEventKind.NodeStopping ||
+                   kind == RuntimeTraceEventKind.NodeStopped ||
+                   kind == RuntimeTraceEventKind.NodeForceStopped;
+        }
+
+        static string CauseText(NodeStopOriginCause cause)
+        {
+            return cause switch
+            {
+                NodeStopOriginCause.SelfAbort => "SelfAbort",
+                NodeStopOriginCause.LowerPriorityAbort => "LowerPriorityAbort",
+                NodeStopOriginCause.ExplicitParentStop => "ExplicitParentStop",
+                NodeStopOriginCause.StateTransition => "StateTransition",
+                NodeStopOriginCause.Reset => "Reset",
+                NodeStopOriginCause.Shutdown => "Shutdown",
+                _ => throw new ArgumentOutOfRangeException(nameof(cause), cause, "Node stop cause has no diagnostics text.")
+            };
+        }
+
+        static string CauseText(StateExitCause cause)
+        {
+            return cause switch
+            {
+                StateExitCause.StateTransition => "StateTransition",
+                StateExitCause.TreeSelfAbort => "TreeSelfAbort",
+                StateExitCause.TreeLowerPriorityAbort => "TreeLowerPriorityAbort",
+                StateExitCause.TreeParentStop => "TreeParentStop",
+                _ => throw new ArgumentOutOfRangeException(nameof(cause), cause, "State exit cause has no diagnostics text.")
             };
         }
 
@@ -140,6 +169,32 @@ namespace TreeDesigner
         }
 
         public static void PublishState(
+            BaseGraph graph,
+            Guid graphRuntimeId,
+            string stateId,
+            ulong generation,
+            RuntimeTraceEventKind kind,
+            string relatedStateId,
+            NodeStopOriginCause cause,
+            string status)
+        {
+            PublishState(graph, graphRuntimeId, stateId, generation, kind, relatedStateId, CauseText(cause), status);
+        }
+
+        public static void PublishState(
+            BaseGraph graph,
+            Guid graphRuntimeId,
+            string stateId,
+            ulong generation,
+            RuntimeTraceEventKind kind,
+            string relatedStateId,
+            StateExitCause cause,
+            string status)
+        {
+            PublishState(graph, graphRuntimeId, stateId, generation, kind, relatedStateId, CauseText(cause), status);
+        }
+
+        static void PublishState(
             BaseGraph graph,
             Guid graphRuntimeId,
             string stateId,

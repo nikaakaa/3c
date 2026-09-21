@@ -232,7 +232,7 @@ namespace TreeDesigner
                 m_ExitingScope.ActivationGeneration,
                 RuntimeTraceEventKind.StateExitStarted,
                 targetState?.GUID,
-                exitContext.Cause.ToString(),
+                exitContext.Cause,
                 "Exiting");
         }
 
@@ -262,7 +262,7 @@ namespace TreeDesigner
                     m_ExitingScope.ActivationGeneration,
                     RuntimeTraceEventKind.StateExitWaiting,
                     m_PendingTargetState?.GUID,
-                    m_PendingExitContext.Cause.ToString(),
+                    m_PendingExitContext.Cause,
                     "Waiting");
                 return true;
             }
@@ -284,7 +284,7 @@ namespace TreeDesigner
             NotifyStateExited(
                 sourceScope,
                 m_PendingTargetState?.GUID,
-                m_PendingExitContext.Cause.ToString());
+                m_PendingExitContext.Cause);
 
             if (externalStop)
             {
@@ -415,14 +415,32 @@ namespace TreeDesigner
                     m_RuntimeId,
                     scope.StateId,
                     scope.ActivationGeneration,
-                    RuntimeTraceEventKind.StateScopeEntered,
-                    sourceStateId,
-                    NodeStopOriginCause.StateTransition.ToString(),
-                    "Active");
+                RuntimeTraceEventKind.StateScopeEntered,
+                sourceStateId,
+                NodeStopOriginCause.StateTransition,
+                "Active");
             }
         }
 
-        void NotifyStateExited(StateMachineExecutionScope scope, string targetStateId, string cause)
+        void NotifyStateExited(StateMachineExecutionScope scope, string targetStateId, NodeStopOriginCause cause)
+        {
+            if (scope.IsValid && m_Graph.User is IPipelineBlackboardRuntimeAccess blackboardRuntime)
+                blackboardRuntime.NotifyPipelineBlackboardStateExited(scope);
+            if (scope.IsValid)
+            {
+                TreeRuntimeDiagnostics.PublishState(
+                    m_Graph,
+                    m_RuntimeId,
+                    scope.StateId,
+                    scope.ActivationGeneration,
+                    RuntimeTraceEventKind.StateScopeExited,
+                    targetStateId,
+                    cause,
+                    "Released");
+            }
+        }
+
+        void NotifyStateExited(StateMachineExecutionScope scope, string targetStateId, StateExitCause cause)
         {
             if (scope.IsValid && m_Graph.User is IPipelineBlackboardRuntimeAccess blackboardRuntime)
                 blackboardRuntime.NotifyPipelineBlackboardStateExited(scope);
@@ -518,13 +536,13 @@ namespace TreeDesigner
             if (exitingState != null)
             {
                 ForceStopStateInScope(exitingState, exitingScope, context);
-                NotifyStateExited(exitingScope, context.ReplacementNodeGuid, context.OriginCause.ToString());
+                NotifyStateExited(exitingScope, context.ReplacementNodeGuid, context.OriginCause);
             }
 
             if (activeState != null && !ReferenceEquals(activeState, exitingState))
             {
                 ForceStopStateInScope(activeState, activeScope, context);
-                NotifyStateExited(activeScope, context.ReplacementNodeGuid, context.OriginCause.ToString());
+                NotifyStateExited(activeScope, context.ReplacementNodeGuid, context.OriginCause);
             }
 
             m_ActiveState = null;

@@ -188,6 +188,16 @@
 - `PublishNode` 的停止原因仍调用 `NodeStopOriginCause.ToString()`，edge detail 仍拼接 GUID，graph 状态仍调用 kind `ToString()`，state transition owner 仍拼接 state 和代次。这些是 Tree 采样字符串的后续边界。
 - `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
 
+## 2026-09-21 Tree 停止 Cause typed 化
+
+对应 tasks.md 的 7.1，新增 7.74 作为独立小步；7.1 保持未勾选。
+
+- `TreeRuntimeDiagnostics.PublishNode` 原先在 stop 事件里调用 `stopContext.OriginCause.ToString()`；`StateMachineGraphRuntime` 在状态进入、退出开始、退出等待和状态释放链里调用 `NodeStopOriginCause.ToString()` 或 `StateExitCause.ToString()`。这些调用都发生在诊断 interest 判定之后，但采样开启时会为每个事件构造临时状态文本。
+- `PublishNode` 现在在正式发布边界用 switch 把六种 `NodeStopOriginCause` 映射回原文本；`PublishState` 分成 `NodeStopOriginCause` 和 `StateExitCause` 两个正式入口，内部共同走 private string 边界。未知枚举直接抛 `ArgumentOutOfRangeException`。
+- `NotifyStateExited` 同步分成两个 typed 入口：状态机内部退出继续表达 `StateExitCause`，外部树停止透传继续表达 `NodeStopOriginCause`。两条链保留原诊断文本，不把状态机内部语义强行合并成另一个枚举。
+- 全 Tree Designer 范围搜索确认诊断链内已无 `OriginCause.ToString`、`Cause.ToString`。edge Detail 的 GUID 拼接、graph kind 文本、state transition OwnerId 拼接和 invalid condition Detail 仍在后续边界。
+- `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

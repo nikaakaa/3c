@@ -2248,6 +2248,14 @@
 - 保留 binding/root null 检查、Animator 与 PoseRoot 归属检查、root reference pose 检查、骨骼页 binding 检查和每帧 native header/availability/committed 结果检查。
 - Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
 
+## 2026-09-21 Ability 执行数据值类型校验边界
+
+对应 tasks.md 的 7.54。
+
+- Fixed 和 Float32 `ReadConstantInputBinding` 先把 byte 转成 `SemanticValueKind`，再按 `Boolean` 到 `Identity` 的连续正式值域直接比较；未知 payload 仍抛原 `InvalidDataException` 和原文案。
+- `ProgramConstantInputBinding` 只消费 Semantic IR 和 Target Compiler 已验证的 typed value，构造器删除第二次 `Enum.IsDefined`；目标操作、端口、常量下标校验不变。
+- Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

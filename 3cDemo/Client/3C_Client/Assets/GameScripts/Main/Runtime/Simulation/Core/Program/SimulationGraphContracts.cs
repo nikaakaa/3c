@@ -706,8 +706,6 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Target operation is invalid.", nameof(targetOperation));
             if (constantIndex < 0)
                 throw new ArgumentOutOfRangeException(nameof(constantIndex));
-            if (!Enum.IsDefined(typeof(SemanticValueKind), resolvedValueKind))
-                throw new ArgumentOutOfRangeException(nameof(resolvedValueKind));
             TargetOperation = targetOperation;
             TargetPort = SimulationIdentity.Require(targetPort, nameof(targetPort));
             ConstantIndex = constantIndex;

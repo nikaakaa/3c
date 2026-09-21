@@ -422,9 +422,10 @@ namespace ThirdPersonSimulation.Fixed
             string port = reader.ReadString();
             int constant = reader.ReadInt32();
             byte kindValue = reader.ReadByte();
-            if (!Enum.IsDefined(typeof(SemanticValueKind), kindValue))
+            var kind = (SemanticValueKind)kindValue;
+            if (kind < SemanticValueKind.Boolean || kind > SemanticValueKind.Identity)
                 throw new InvalidDataException($"Program constant input contains unknown value kind '{kindValue}'.");
-            return new ProgramConstantInputBinding(operation, port, constant, (SemanticValueKind)kindValue);
+            return new ProgramConstantInputBinding(operation, port, constant, kind);
         }
 
         static void WriteSourceMapTable(CanonicalWriter writer, IReadOnlyList<ProgramSourceMapEntry> values)

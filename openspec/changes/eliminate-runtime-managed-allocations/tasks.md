@@ -429,3 +429,4 @@
 - [x] 7.51 Presentation Runtime 装配入口按 LocalOwner 和 SimulatedActor 直接校验角色表现角色，删除 CharacterPresentationRole 的 Enum.IsDefined 反射装箱；保留原装配边界和参数错误语义
 - [x] 7.52 Session Host 活跃逻辑 tick 只保留 LaunchPlan 生命周期检查，OuterTickKind 由 SimulationSessionPreparedRuntime 准备边界校验一次；删除运行期重复 Enum.IsDefined
 - [x] 7.53 Final Pose Physical Writer 复用 Presentation 工厂已验证的 RootHierarchy 与 RigBinding，删除构造器第二次整遍绑定 schema 校验；保留 PoseRoot 归属、引用姿态和运行帧事务检查
+- [x] 7.54 Fixed 和 Float32 Ability Execution Data Codec 按 SemanticValueKind 连续正式值域直接校验 payload；ProgramConstantInputBinding 删除已验证输入的重复 Enum.IsDefined

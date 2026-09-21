@@ -40,6 +40,7 @@ namespace GameLogic.ProductResource
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
         private readonly Stack<InstanceRecord> _instanceRecordPool = new Stack<InstanceRecord>();
+        private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
         private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
@@ -504,9 +505,21 @@ namespace GameLogic.ProductResource
 
         private void RemoveUnownedPhysicalKnowledge()
         {
-            _knownPhysicalAssets.RemoveWhere(identity =>
-                !_ownedReferenceCounts.ContainsKey(identity) &&
-                !_pendingAcquireCounts.ContainsKey(identity));
+            _unownedIdentityScratch.Clear();
+            foreach (ResourceIdentity identity in _knownPhysicalAssets)
+            {
+                if (!_ownedReferenceCounts.ContainsKey(identity) && !_pendingAcquireCounts.ContainsKey(identity))
+                {
+                    _unownedIdentityScratch.Add(identity);
+                }
+            }
+
+            for (int index = 0; index < _unownedIdentityScratch.Count; index++)
+            {
+                _knownPhysicalAssets.Remove(_unownedIdentityScratch[index]);
+            }
+
+            _unownedIdentityScratch.Clear();
         }
 
         private void AddPendingAcquire(ResourceIdentity identity)

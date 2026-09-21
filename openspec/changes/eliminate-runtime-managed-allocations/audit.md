@@ -2715,3 +2715,11 @@
 - `ProductStartupSnapshotStore` 是跨线程快照源，`History` 每次读取都持有 `m_Sync` 复制 64 条快照。若改成返回 owner 活列表，枚举会和发布竞争；若继续复制则分配仍在。全项目搜索确认没有 `.History` 读取者，Product Shell 只消费 `Current` 和 `SnapshotChanged`，因此删除 History 合同、固定容量 64、Queue 和入队裁剪。
 - 该 store 保留跨线程 `Current` 读取、代数校验、发布锁和事件顺序；不引入只读包装、缓存快照或第二个历史视图。6.1 此前记录的 Product startup store 是 HotFix 内的无锁历史，和本条 Main 启动引导 store 不是同一条链路。
 - `ThirdPerson.ProductStartup.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；`ProductBootstrapView` 暴露 7 个既有 CS0649 警告，不在本步改动文件。`GameLogic.csproj` 同参数编译成功，0 警告 0 错误。两次构建后均执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 资源维护身份收集复用
+
+对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。
+
+- `RemoveUnownedPhysicalKnowledge` 原先用 `HashSet.RemoveWhere(lambda)`，lambda 捕获 owned-reference 和 pending-acquire 两只字典，每次低内存维护都创建闭包和委托。现在 runtime 持有 `ResourceIdentity` scratch 列表，先枚举正式物理知识集合并收集既无 owned 引用也无 pending acquire 的身份，再统一从集合移除，最后清空 scratch 引用。
+- 移入 scratch 后统一删除，不在枚举 `HashSet` 时修改它；集合内容、维护触发时机和 `PublishSnapshot` 时机不变。scratch 容量按历史最高无主身份数增长，属 runtime 生命周期。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

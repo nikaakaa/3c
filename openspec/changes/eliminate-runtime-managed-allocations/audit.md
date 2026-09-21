@@ -3426,3 +3426,11 @@
 - `ServerAuthoritativeAuthorityClientRoute.Select` 原先每个 Actor 每个逻辑 tick 新建一只过期输入 key List。现在 route 按现有 `CommandQueueCapacity` 在构造期准备精确 scratch，扫描过期 key 后原地从 `SortedDictionary` 移除，最后清空引用。
 - 过期 key 仍按 `SortedDictionary` 升序枚举和移除，选中 held input、neutral/held/exact/late 统计和异常语义不变；本步只治理移除工作存储，不池化 `AcceptedAuthorityInput`，不复制新的兼容入口。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 accepted authority input batch 数组收口
+
+对应 tasks.md 的 5.5，新增 5.156 作为独立小步；5.5 保持未勾选。
+
+- `ReadAcceptedInputs` 原先每个逻辑 tick 新建临时 `List<AcceptedAuthorityInput>`，`AcceptedAuthorityInputBatch` 再通过 `IEnumerable` 复制成第二只 List、排序、包装 `ReadOnlyCollection`，排序闭包也在每次构造时分配。现在 runtime 直接填充按正式 roster 数量准备的最终数组，batch 构造期原地排序并校验空值、无效和重复 Actor。
+- batch 是不可变正式结果，最终数组继续独立分配并归 batch 持有；消费者仍通过 `IReadOnlyList` 按下标读取，选择顺序和异常语义保持。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

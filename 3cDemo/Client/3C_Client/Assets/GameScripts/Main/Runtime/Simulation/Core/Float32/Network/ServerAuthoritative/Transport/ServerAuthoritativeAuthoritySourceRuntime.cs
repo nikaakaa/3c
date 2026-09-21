@@ -143,9 +143,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
             }
             ulong authorityTick = checked(m_LatestAuthorityTick + 1);
-            var values = new List<AcceptedAuthorityInput>(m_Routes.Count);
+            var values = new AcceptedAuthorityInput[m_Routes.Count];
+            int valueIndex = 0;
             foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
-                values.Add(route.Select(authorityTick, m_Policy.ModelPolicy.MaximumInputLagTicks));
+                values[valueIndex++] = route.Select(authorityTick, m_Policy.ModelPolicy.MaximumInputLagTicks);
             return new AcceptedAuthorityInputBatch(new SimulationTick(authorityTick), values);
         }
 

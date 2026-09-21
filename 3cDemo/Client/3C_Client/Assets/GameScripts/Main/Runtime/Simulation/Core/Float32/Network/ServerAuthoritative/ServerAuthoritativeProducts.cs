@@ -309,20 +309,34 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class AcceptedAuthorityInputBatch
     {
-        readonly ReadOnlyCollection<AcceptedAuthorityInput> m_Inputs;
+        readonly AcceptedAuthorityInput[] m_Inputs;
 
-        public AcceptedAuthorityInputBatch(SimulationTick authorityTick, IEnumerable<AcceptedAuthorityInput> inputs)
+        public AcceptedAuthorityInputBatch(SimulationTick authorityTick, AcceptedAuthorityInput[] inputs)
         {
             if (!authorityTick.IsValid)
                 throw new ArgumentException("Authority input Tick is invalid.", nameof(authorityTick));
-            AuthorityTick = authorityTick;
-            m_Inputs = ServerAuthoritativeProductOrder.FreezeByActor(inputs, value => value.ActorId, nameof(inputs));
-            if (m_Inputs.Count == 0)
+            if (inputs == null || inputs.Length == 0)
                 throw new ArgumentException("Authority input batch cannot be empty.", nameof(inputs));
+            AuthorityTick = authorityTick;
+            for (int i = 0; i < inputs.Length; i++)
+            {
+                if (inputs[i] == null || !inputs[i].ActorId.IsValid)
+                    throw new ArgumentException("Authority input batch contains a missing or invalid ActorId.", nameof(inputs));
+            }
+            Array.Sort(inputs, CompareByActor);
+            for (int i = 1; i < inputs.Length; i++)
+            {
+                if (inputs[i - 1].ActorId == inputs[i].ActorId)
+                    throw new ArgumentException("Authority input batch contains a duplicate ActorId.", nameof(inputs));
+            }
+            m_Inputs = inputs;
         }
 
         public SimulationTick AuthorityTick { get; }
         public IReadOnlyList<AcceptedAuthorityInput> Inputs => m_Inputs;
+
+        static int CompareByActor(AcceptedAuthorityInput left, AcceptedAuthorityInput right) =>
+            left.ActorId.CompareTo(right.ActorId);
     }
 
     public readonly struct ServerAuthoritativeReliableEvent

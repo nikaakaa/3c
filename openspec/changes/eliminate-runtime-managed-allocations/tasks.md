@@ -362,6 +362,7 @@
 - [x] 5.99 Rollback Datagram Channel 按正式消息容量池化 reassembly wrapper 和最大分片槽位，完整消息复制到独立 byte[] 后释放 wrapper；接收 packet、payload 和协议结果继续独立分配
 - [x] 5.100 Rollback Datagram Channel 复用按最大消息容量准备的组装 buffer，Protocol Read 接收 ArraySegment 并删除 byte[] 入口；协议 envelope 和 payload 结果继续独立分配
 - [x] 5.101 Rollback Datagram Channel 复用不可靠发送 packet 和单分片 payload buffer，同步编码后更新身份；接收 packet 和 reliable pending 所有权不变
+- [x] 5.102 Rollback Datagram Channel 发送路径直接用既有身份、消息序号和 payload 编码协议 header，删除一次性发送 envelope；接收 envelope 和独立 payload 所有权不变
 
 ## 6. UI、资源、渲染和生命周期
 

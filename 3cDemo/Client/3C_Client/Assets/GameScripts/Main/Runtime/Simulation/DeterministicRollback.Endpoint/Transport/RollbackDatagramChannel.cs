@@ -182,7 +182,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_EncodeWriter.Reset();
             RollbackProtocolCodec.Write(
                 m_EncodeWriter,
-                new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, m_NextMessageSequence, payload));
+                m_Definition.SessionId,
+                m_LocalPeerId,
+                m_NextMessageSequence,
+                payload);
             encodedPayloadBytes = checked((int)m_EncodeWriter.Length);
             maximumPayloadBytes = m_MaximumFragmentPayloadBytes;
             return encodedPayloadBytes <= maximumPayloadBytes;
@@ -198,7 +201,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_EncodeWriter.Reset();
             RollbackProtocolCodec.Write(
                 m_EncodeWriter,
-                new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, messageSequence, payload));
+                m_Definition.SessionId,
+                m_LocalPeerId,
+                messageSequence,
+                payload);
             int totalBytes = checked((int)m_EncodeWriter.Length);
             ReadOnlySpan<byte> bytes = m_EncodeWriter.WrittenSpan;
             int fragmentBytes = m_MaximumFragmentPayloadBytes;

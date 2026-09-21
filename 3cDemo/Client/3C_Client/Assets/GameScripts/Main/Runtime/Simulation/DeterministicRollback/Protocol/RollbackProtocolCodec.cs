@@ -16,18 +16,46 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentNullException(nameof(writer));
             if (envelope == null)
                 throw new ArgumentNullException(nameof(envelope));
-            WriteEnvelope(writer, envelope);
+            WriteEnvelope(
+                writer,
+                envelope.SessionId,
+                envelope.SenderPeerId,
+                envelope.Sequence,
+                envelope.Payload);
         }
 
-        static void WriteEnvelope(CanonicalWriter writer, RollbackProtocolEnvelope envelope)
+        public static void Write(
+            CanonicalWriter writer,
+            string sessionId,
+            string senderPeerId,
+            ulong sequence,
+            IRollbackProtocolPayload payload)
+        {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+            SimulationIdentity.Require(sessionId, nameof(sessionId));
+            SimulationIdentity.Require(senderPeerId, nameof(senderPeerId));
+            if (sequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+            if (payload == null)
+                throw new ArgumentNullException(nameof(payload));
+            WriteEnvelope(writer, sessionId, senderPeerId, sequence, payload);
+        }
+
+        static void WriteEnvelope(
+            CanonicalWriter writer,
+            string sessionId,
+            string senderPeerId,
+            ulong sequence,
+            IRollbackProtocolPayload payload)
         {
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
-            writer.WriteString(envelope.SessionId);
-            writer.WriteString(envelope.SenderPeerId);
-            writer.WriteUInt64(envelope.Sequence);
-            writer.WriteByte((byte)envelope.Payload.Kind);
-            WritePayload(writer, envelope.Payload);
+            writer.WriteString(sessionId);
+            writer.WriteString(senderPeerId);
+            writer.WriteUInt64(sequence);
+            writer.WriteByte((byte)payload.Kind);
+            WritePayload(writer, payload);
         }
 
         public static RollbackProtocolEnvelope Read(CanonicalWriter canonicalScratch, ArraySegment<byte> bytes)
@@ -45,7 +73,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
             reader.RequireComplete();
             var envelope = new RollbackProtocolEnvelope(sessionId, senderPeerId, sequence, payload);
             canonicalScratch.Reset();
-            WriteEnvelope(canonicalScratch, envelope);
+            WriteEnvelope(
+                canonicalScratch,
+                envelope.SessionId,
+                envelope.SenderPeerId,
+                envelope.Sequence,
+                envelope.Payload);
             if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback protocol envelope is not canonical.");
             return envelope;

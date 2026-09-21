@@ -391,7 +391,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 request,
                 Descriptor.ImplementationId,
                 Descriptor.Version,
-                m_Current.Clone(),
+                m_Current,
                 results);
         }
 

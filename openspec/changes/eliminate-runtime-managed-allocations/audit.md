@@ -3035,6 +3035,14 @@
 - 本步不把 bodies/results 工作数组改成跨批复用，因为 `FromOwnedState` 明确接管 bodies，且批 results 由外部消费者持有；这里只删除明确的第二份 state 复制。接触候选排序、contact 求解、reconstraint、final validation、`m_Current` 赋值和结果数组所有权保持不变。KCC 的 bodies、states、solver payload 和捕获/恢复返回克隆仍在 5.1 后续小步。
 - `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 KCC 批结果快照转移
+
+对应 tasks.md 的 5.1，新增 5.109 作为独立小步；5.1 保持未勾选。
+
+- `DeterministicKccWorldSolver.ResolveBatch` 每批先由 `CreateState` 写出正式 solver payload 并接管 bodies，再调用 `m_Current.Clone()` 给批结果；这是每批 bodies 和 payload 的第二份复制。`WorldSimulationState` 不可变，批后只替换 `m_Current` 引用；`m_KccStates` 也直接换成新建精确数组，原数组不会被回写。
+- 现在把新建 `m_Current` 直接转移给 `WorldSolveBatchResult`，不再复制 state。bodies、states 和 results 数组仍按本批正式结果独立持有，不做跨批复用；碰撞收敛、排序、诊断发布和提交顺序不变。捕获、恢复、Create 返回克隆和真实跨批工作数组治理仍在 5.1 后续小步。
+- `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

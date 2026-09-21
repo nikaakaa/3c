@@ -63,6 +63,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedAbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
         readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
+        readonly FixedCharacterTraceSink m_CharacterTraceSink;
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -101,6 +102,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
             m_ServiceFactory = new FixedAbilityExecutionServiceFactory(timelineRuntime);
+            m_CharacterTraceSink = new FixedCharacterTraceSink(m_EvaluationOutput.CharacterTrace);
             TimelineMotionReader = GetMotionReader(timelineRuntime);
             TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
@@ -131,6 +133,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedAbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
+        internal FixedCharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
 
         internal void ClearInvocationScratch(int count)
         {

@@ -188,22 +188,26 @@ namespace ThirdPersonSimulation
     internal sealed class Float32CharacterTraceSink
     {
         readonly List<SimulationTraceRecord> m_Records;
-        readonly SimulationNumericProfile m_NumericProfile;
-        readonly GameplayContentHash m_ContentHash;
-        readonly ActorId m_ActorId;
-        readonly SimulationTick m_Tick;
+        SimulationNumericProfile m_NumericProfile;
+        GameplayContentHash m_ContentHash;
+        ActorId m_ActorId;
+        SimulationTick m_Tick;
         ulong m_Sequence;
-        readonly bool m_Enabled;
+        bool m_Enabled;
 
         public Float32CharacterTraceSink(
-            List<SimulationTraceRecord> records,
+            List<SimulationTraceRecord> records)
+        {
+            m_Records = records ?? throw new ArgumentNullException(nameof(records));
+        }
+
+        internal void Begin(
             SimulationNumericProfile numericProfile,
             StableHash contentHash,
             ActorId actorId,
             SimulationTick tick,
             bool enabled)
         {
-            m_Records = records ?? throw new ArgumentNullException(nameof(records));
             if (!numericProfile.IsValid || !contentHash.IsValid || !actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character Control trace identity is incomplete.");
             m_NumericProfile = numericProfile;
@@ -211,6 +215,7 @@ namespace ThirdPersonSimulation
             m_ActorId = actorId;
             m_Tick = tick;
             m_Enabled = enabled;
+            m_Sequence = 0;
         }
 
         public void Add(

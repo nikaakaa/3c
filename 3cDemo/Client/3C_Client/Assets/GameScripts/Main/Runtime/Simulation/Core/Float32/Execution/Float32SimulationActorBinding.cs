@@ -62,6 +62,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
         readonly Float32CharacterEvaluationOutput m_EvaluationOutput = new Float32CharacterEvaluationOutput();
+        readonly Float32CharacterTraceSink m_CharacterTraceSink;
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -99,6 +100,7 @@ namespace ThirdPersonSimulation
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
             m_ServiceFactory = new Float32AbilityExecutionServiceFactory(timelineRuntime);
+            m_CharacterTraceSink = new Float32CharacterTraceSink(m_EvaluationOutput.CharacterTrace);
             TimelineMotionReader = GetMotionReader(timelineRuntime);
             TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
@@ -128,6 +130,7 @@ namespace ThirdPersonSimulation
         internal IFloat32AbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
+        internal Float32CharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
 
         internal void ClearInvocationScratch(int count)
         {

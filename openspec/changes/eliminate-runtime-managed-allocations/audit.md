@@ -3851,3 +3851,11 @@
 - Fixed 和 Float32 Character Evaluation 的 GameplayFact、PresentationCommand 和 SimulationTraceRecord 聚合外壳改为 Actor Binding 构造期持有的 Evaluation Output；character trace 先单独聚合，再按原顺序并入总 trace。
 - 每个 Actor tick 开始清空四组输出；ability invocation 仍通过 `Complete` 追加 workspace 输出，正式 result 构造完成或异常返回前再次清空引用。facts、presentation、trace 的顺序、去重、诊断开关和最终数组合同不变。
 - 每 Actor tick 的四个 `List` 构造删除；result 的 owned array 复制仍属 2.5 后续结果生命周期小步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Character trace sink lifetime 收口
+
+对应 tasks.md 的 5.5，新增 5.209 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Character Trace Sink 改为 Actor Binding 构造期创建，并直接绑定 Evaluation Output 的 character trace 列表；每个 Actor tick 用 `Begin` 重绑 numeric profile、content hash、ActorId、tick 和诊断开关。
+- `Begin` 将 trace sequence 重置为零，header、EventId、activation、severity 和输出顺序不变；诊断关闭时仍不写记录。
+- 每 Actor tick 的 Trace Sink 对象和 GameplayContentHash 包装分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

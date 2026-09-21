@@ -69,8 +69,8 @@ namespace ThirdPersonSimulation.Fixed
                     bodyFacts,
                     tick,
                     characterRuntime.TickRate);
-                var characterTraceSink = new FixedCharacterTraceSink(
-                    characterTrace,
+                FixedCharacterTraceSink characterTraceSink = actor.CharacterTraceSink;
+                characterTraceSink.Begin(
                     characterRuntime.NumericProfile,
                     actor.GameplayContentHash,
                     actor.ActorId,

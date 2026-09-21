@@ -197,7 +197,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         ISimulationPipelineStateParticipant
     {
         readonly ServerAuthoritativePredictionState m_State;
-        readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
+        SimulationOutputDisposition[] m_Dispositions = Array.Empty<SimulationOutputDisposition>();
 
         public PredictionOutputDispositionPassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -230,18 +230,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             PredictionOutputDispositionWrites writePorts)
         {
             RequireExecution();
-            m_Dispositions.Clear();
+            m_Dispositions = Array.Empty<SimulationOutputDisposition>();
             try
             {
                 PredictionCorrectionDecision decision = readPorts.Decision.Read();
                 int actorResultCount = 0;
-                int publishedCount = 0;
-                int duplicateCount = 0;
+                int dispositionCount = 0;
                 SimulationTick currentTick = default;
                 for (int stepIndex = 0; stepIndex < readPorts.Completed.Steps.Count; stepIndex++)
                 {
                     Float32CompletedSimulationStep completed = readPorts.Completed.Steps[stepIndex];
-                    bool replay = completed.Step.ExecutionKind == SimulationPipelineStepExecutionKind.Replay;
                     if (completed.Step.ExecutionKind == SimulationPipelineStepExecutionKind.Current)
                     {
                         if (currentTick.IsValid && completed.Step.Tick.Value != currentTick.Value + 1)
@@ -252,22 +250,40 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     for (int actorIndex = 0; actorIndex < completed.Result.Actors.Count; actorIndex++)
                     {
                         SimulationActorTickResult actor = completed.Result.Actors[actorIndex];
-                        Add(actor.GameplayFacts, value => value.Header, actor.ActorId, replay, m_Dispositions, ref publishedCount, ref duplicateCount);
-                        Add(actor.PresentationCommands, value => value.Header, actor.ActorId, replay, m_Dispositions, ref publishedCount, ref duplicateCount);
+                        dispositionCount += actor.GameplayFacts.Count + actor.PresentationCommands.Count;
                     }
                 }
                 if (actorResultCount != readPorts.Results.Count)
                     throw new InvalidOperationException("Prediction finalized result count does not match completed Steps.");
+
+                m_Dispositions = new SimulationOutputDisposition[dispositionCount];
+                int dispositionIndex = 0;
+                int publishedCount = 0;
+                int duplicateCount = 0;
+                for (int stepIndex = 0; stepIndex < readPorts.Completed.Steps.Count; stepIndex++)
+                {
+                    Float32CompletedSimulationStep completed = readPorts.Completed.Steps[stepIndex];
+                    bool replay = completed.Step.ExecutionKind == SimulationPipelineStepExecutionKind.Replay;
+                    for (int actorIndex = 0; actorIndex < completed.Result.Actors.Count; actorIndex++)
+                    {
+                        SimulationActorTickResult actor = completed.Result.Actors[actorIndex];
+                        AddGameplayFacts(actor.GameplayFacts, actor.ActorId, replay, m_Dispositions, ref dispositionIndex, ref publishedCount, ref duplicateCount);
+                        AddPresentationCommands(actor.PresentationCommands, actor.ActorId, replay, m_Dispositions, ref dispositionIndex, ref publishedCount, ref duplicateCount);
+                    }
+                }
                 if (currentTick.IsValid)
                     m_State.SealHistoryJournalCursor(currentTick);
-                writePorts.Dispositions.Write(new SimulationPipelineOutputDispositionSet(context.TransactionIdentity, m_Dispositions));
+                ActorId diagnosticActorId = m_Dispositions.Length == 0 ? default : m_Dispositions[0].ActorId;
+                writePorts.Dispositions.Write(SimulationPipelineOutputDispositionSet.FromOwnedDispositions(
+                    context.TransactionIdentity,
+                    m_Dispositions));
                 if (readPorts.Diagnostics.Sink.IsEnabled)
                 {
                     readPorts.Diagnostics.Sink.PublishModel(new SimulationModelTraceRecord(
                         SimulationModelTraceKind.OutputDisposition,
                         "prediction_output_disposition",
                         $"decision={decision.Kind};published={publishedCount};suppressedDuplicate={duplicateCount};predictedRejected={m_State.LastRejectedCount};journal={m_State.JournalCount};cursor={m_State.JournalCursor}",
-                        m_Dispositions.Count == 0 ? default : m_Dispositions[0].ActorId,
+                        diagnosticActorId,
                         context.Source.SourceTick,
                         decision.BaselineTick.Value,
                         0,
@@ -278,38 +294,64 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             finally
             {
-                m_Dispositions.Clear();
+                m_Dispositions = Array.Empty<SimulationOutputDisposition>();
             }
         }
 
-        void Add<T>(
-            IReadOnlyList<T> values,
-            Func<T, SimulationEventHeader> header,
+        void AddGameplayFacts(
+            IReadOnlyList<GameplayFact> values,
             ActorId actorId,
             bool replay,
-            List<SimulationOutputDisposition> destination,
+            SimulationOutputDisposition[] destination,
+            ref int dispositionIndex,
             ref int publishedCount,
             ref int duplicateCount)
         {
             for (int i = 0; i < values.Count; i++)
             {
-                SimulationEventHeader eventHeader = header(values[i]);
-                EventId eventId = eventHeader.EventId;
-                bool duplicate = replay && m_State.WasCommitted(eventId);
-                if (duplicate)
-                    duplicateCount++;
-                else
-                    publishedCount++;
-                destination.Add(new SimulationOutputDisposition(
-                    eventId,
-                    actorId,
-                    duplicate ? SimulationOutputDispositionKind.Suppress : SimulationOutputDispositionKind.Publish));
-                m_State.Record(
-                    eventHeader,
-                    duplicate
-                        ? ServerAuthoritativeEventDisposition.SuppressedDuplicate
-                        : ServerAuthoritativeEventDisposition.PredictedCommitted);
+                AddDisposition(values[i].Header, actorId, replay, destination, ref dispositionIndex, ref publishedCount, ref duplicateCount);
             }
+        }
+
+        void AddPresentationCommands(
+            IReadOnlyList<PresentationCommand> values,
+            ActorId actorId,
+            bool replay,
+            SimulationOutputDisposition[] destination,
+            ref int dispositionIndex,
+            ref int publishedCount,
+            ref int duplicateCount)
+        {
+            for (int i = 0; i < values.Count; i++)
+            {
+                AddDisposition(values[i].Header, actorId, replay, destination, ref dispositionIndex, ref publishedCount, ref duplicateCount);
+            }
+        }
+
+        void AddDisposition(
+            SimulationEventHeader eventHeader,
+            ActorId actorId,
+            bool replay,
+            SimulationOutputDisposition[] destination,
+            ref int dispositionIndex,
+            ref int publishedCount,
+            ref int duplicateCount)
+        {
+            EventId eventId = eventHeader.EventId;
+            bool duplicate = replay && m_State.WasCommitted(eventId);
+            if (duplicate)
+                duplicateCount++;
+            else
+                publishedCount++;
+            destination[dispositionIndex++] = new SimulationOutputDisposition(
+                eventId,
+                actorId,
+                duplicate ? SimulationOutputDispositionKind.Suppress : SimulationOutputDispositionKind.Publish);
+            m_State.Record(
+                eventHeader,
+                duplicate
+                    ? ServerAuthoritativeEventDisposition.SuppressedDuplicate
+                    : ServerAuthoritativeEventDisposition.PredictedCommitted);
         }
 
         public SimulationPipelinePassStateSnapshot CaptureState()

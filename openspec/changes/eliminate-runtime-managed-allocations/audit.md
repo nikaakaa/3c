@@ -3651,3 +3651,11 @@
 - Authority Replication Egress 先按每个 Actor 的 GameplayFact 和 PresentationCommand 数量统计 disposition 总量，再填充精确数组并交给 `FromOwnedDispositions`。BuildRemote 在构造 reliable payload 的同时写入 disposition 数组，事件顺序、Suppress 语义、horizon 前进和 EventId 去重校验不变。
 - 每 tick 的 disposition List、构造期复制和 List 清理壳删除；异常路径继续释放 scratch 引用。诊断中的 disposition 数量改读 owned array 长度，输出事实不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 prediction disposition arrays 收口
+
+对应 tasks.md 的 5.5，新增 5.184 作为独立小步；5.5 保持未勾选。
+
+- Prediction Output Disposition 第一遍校验 Current Step 连续性和 finalized result 数量，并统计 GameplayFact 与 PresentationCommand 的 disposition 总量；第二遍用 GameplayFact、PresentationCommand 和 header 的专用类型入口记录 journal、判断 replay duplicate 并填充精确数组。成功路径的 record、seal、排序和发布语义不变，失败路径提前于 journal 写入退出。
+- 每个 tick 的 disposition List、`Add<T>` lambda 中转、构造期数组和 List 清理壳删除；诊断的首个 Actor 在 owned array 排序前捕获，保持原诊断归属。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

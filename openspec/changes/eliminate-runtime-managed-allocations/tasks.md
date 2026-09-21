@@ -426,3 +426,4 @@
 - [x] 7.48 State Machine source 复用 Local Pose 输出包装对象，删除子状态图合成结果的稳态逐帧包装创建；保留子图事务、状态迁移和 source completion 语义
 - [x] 7.49 Graph Evaluator 的 Program Parameter 与 Action Playback 输入复用值对象，删除正式 Pose 输出读取中的逐次托管对象创建；保留输入值、channel 命令和 frame identity 语义
 - [x] 7.50 Clip Player 删除已由 SourceCatalog 准备边界完成的 source schema/foot feature 重复校验，Blend Space Player 删除已准备 plan 的重复完整校验；保留 descriptor identity、参数绑定和运行时 solver/page 事实
+- [x] 7.51 Presentation Runtime 装配入口按 LocalOwner 和 SimulatedActor 直接校验角色表现角色，删除 CharacterPresentationRole 的 Enum.IsDefined 反射装箱；保留原装配边界和参数错误语义

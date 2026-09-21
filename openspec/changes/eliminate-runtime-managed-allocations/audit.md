@@ -2224,6 +2224,14 @@
 - 删除 `AnimationClipPlayerRuntime` 的 source/foot feature `RequireValid`，删除 `AnimationBlendSpacePlayerRuntime` 的 `m_Plan.RequireValid`；保留 source/descriptor identity、Rig revision、初始时间、参数索引、solver/page 和 foot analysis 运行绑定事实。
 - 不改变 player 创建顺序、采样、时钟、source lease、Playable job 或 frame 事务；当前完整编译上一轮已通过。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Presentation 装配角色枚举校验
+
+对应 tasks.md 的 7.51。
+
+- `CharacterPresentationDomainRuntimeFactory.Create` 原先用 `Enum.IsDefined(typeof(CharacterPresentationRole), presentationRole)` 反射装箱检查装配输入；现在直接匹配 `LocalOwner` 和 `SimulatedActor`，非法值仍抛 `ArgumentOutOfRangeException`。
+- 只删除装配入口的一次反射装箱，不改装配顺序、正式角色分支、错误类型或其它内容校验。
+- Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；本地 `ThirdPersonClient.Runtime.csproj` 使用规定参数后失败在当前工作区已删除的 `CharacterPoseHistoryReadView` 与 `CharacterMotionMatchingTrajectoryReadView` 相关旧上下文，8 个错误均不属于本步改动。本步不能宣称统一编译通过。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

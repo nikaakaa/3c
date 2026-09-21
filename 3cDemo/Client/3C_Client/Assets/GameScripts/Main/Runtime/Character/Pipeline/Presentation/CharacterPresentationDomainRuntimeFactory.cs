@@ -65,7 +65,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(sessionHost));
             if (diagnostics == null)
                 throw new ArgumentNullException(nameof(diagnostics));
-            if (!Enum.IsDefined(typeof(CharacterPresentationRole), presentationRole))
+            if (presentationRole != CharacterPresentationRole.LocalOwner &&
+                presentationRole != CharacterPresentationRole.SimulatedActor)
                 throw new ArgumentOutOfRangeException(nameof(presentationRole));
             locomotionBinding.RequireValid();
             CharacterBodyPresentationProfile bodyPresentationProfile = locomotionBinding.BodyProfile;

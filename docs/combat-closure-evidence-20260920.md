@@ -6,6 +6,8 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 不启动 replay 的动画资产核对：Walk / Run FootMotionTarget 的 Root.z 曲线循环增量分别约3.60003 / 3.68005米，但当前两个正式 RigBinding 都不绑定名为 Root 的节点，根物理骨路径为字符串空值；不能据此宣称模型重复应用根位移，未盲改这条未绑定曲线。实际 Bip001 水平曲线为零。按实际绑定路径逐一比较旋转首尾，Walk 最大姿态接缝0度，Run最大约1.75475度（发梢）；四元数分量正负翻转不等于姿态翻转。该核对排除了“仅凭Root曲线或四元数分量跳值就修改资产”的假设，仍需查播放器重置及表现位置写入。
+
 - 用户要求停止反复回放，先集中改代码。已停止回放并退出 Play；从日志确认 Shutdown 路径为 FixedCharacterHost.DisposeRegistration → CharacterTimelineHost.Dispose → RuntimeService.Dispose → TreeClip ConsumeStop，此时技能会话已经释放，不能执行依赖当帧 invoker 的逻辑回调。ConsumeStop 对明确 Shutdown 原因只进入正常资源释放，其他停止原因保留 OnDestroy 与 invoker 要求。
 - 本地有限动作此前仍走 FreeRun，而 Timeline 已提供正式提交采样；工厂改为所有带动作通道的非 locomotion 节点使用同一 coordinator policy，locomotion 继续只使用 prepared binding 的原策略。本轮只编译，不用新的回放掩盖尚未分析完的运动/动画问题；跑动闪烁与回退尚未声明修复。
 

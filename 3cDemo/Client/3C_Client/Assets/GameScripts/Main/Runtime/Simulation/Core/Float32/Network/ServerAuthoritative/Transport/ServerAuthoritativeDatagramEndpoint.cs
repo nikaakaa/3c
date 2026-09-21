@@ -76,6 +76,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint> m_Routes =
             new Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint>();
         readonly object m_RouteLock = new object();
+        readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_QueueCapacity;
         readonly int m_MaximumDatagramBytes;
         int m_ReceiveCount;
@@ -111,6 +112,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             };
             m_Socket.Bind(localEndPoint);
             LocalEndPoint = (IPEndPoint)m_Socket.LocalEndPoint;
+            m_ReceiveFromEndPoint = LocalEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                ? new IPEndPoint(IPAddress.IPv6Any, 0)
+                : new IPEndPoint(IPAddress.Any, 0);
             m_ReceiveThread = new Thread(ReceiveLoop)
             {
                 IsBackground = true,
@@ -224,9 +228,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             var buffer = new byte[m_MaximumDatagramBytes + 1];
             while (Volatile.Read(ref m_Disposed) == 0 && Volatile.Read(ref m_Failure) == null)
             {
-                EndPoint remote = LocalEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                    ? new IPEndPoint(IPAddress.IPv6Any, 0)
-                    : new IPEndPoint(IPAddress.Any, 0);
+                EndPoint remote = m_ReceiveFromEndPoint;
                 try
                 {
                     int received = m_Socket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref remote);

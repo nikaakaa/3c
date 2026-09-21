@@ -3410,3 +3410,11 @@
 - `ServerAuthoritativeReceivedDatagram` 从 class 改为 readonly struct。接收线程校验路由后，packet 和真实来源 endpoint 引用直接以值记录进入 `ConcurrentQueue`，删除每条收包的信封堆分配。
 - 空队列返回默认值，仅表示无结果，不是有效 datagram。prediction、authority 和 Fantasy transport 适配层继续通过 `TryReceive` 读取 `Packet`／`RemoteEndPoint`；packet、endpoint 和队列消费所有权不变，不引入池化或提前归还。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 ReceiveFrom endpoint scratch 复用
+
+对应 tasks.md 的 5.5，新增 5.154 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramEndpoint` 构造期按绑定 socket 的地址族准备一只 `ReceiveFrom` endpoint scratch；接收线程每个轮询周期复用同一模板，不再新建 `IPEndPoint`。该 scratch 只由 receive thread 使用。
+- 成功收到并校验路由后，仍用 `Clone` 生成独立 `IPEndPoint` 进入 `ServerAuthoritativeReceivedDatagram`；超时、坏包、路由不匹配和队列溢出的处理不变，不存在 scratch 提前逃逸。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

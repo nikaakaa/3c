@@ -2087,6 +2087,15 @@
 - 没有改变 handler 创建顺序、资源释放、Attach/Start、帧 Begin/Prepare/Evaluate/Commit/Discard 或 publication 事务；删除的是同一份静态 Rig 配置在运行构造链的重复读取和校验。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。
 
+## 2026-09-21 Blend Stack 准备 payload 复用
+
+对应 tasks.md 的 7.25。
+
+- `CharacterPoseNativeDomainServiceFactory.CreateBlendStack` 已在创建 `AnimationBlendStackPolicyPayload`、曲线 catalog 和 profile payload 时完成对应配置、曲线和值域校验；profile 额外在此处完成 Rig identity、revision 和 dense bone shape 对齐，transition 在 curve/profile index 已生成后完成一次完整校验。
+- 删除 `AnimationBlendStackRuntime` 对同一 Rig、stack policy、curve catalog、profile catalog 和 transition 的第二次完整遍历，避免 catalog 校验中的 HashSet/Dictionary 及枚举反射重复分配；运行实例仍保留 slot/node、owner/provider、catalog 非空和 final buffer layout 约束。
+- 不改变 Blend Stack 的容量、初始 page、source workspace、frame Begin/Prepare/Evaluate/Commit/Discard 或 tuning generation 语义；静态错误仍在正式实例创建前的 payload 准备阶段抛出。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend 实例分配采样。
+
 ## 2026-09-21 Pose 运行链枚举反射清理
 
 对应 tasks.md 的 7.23。

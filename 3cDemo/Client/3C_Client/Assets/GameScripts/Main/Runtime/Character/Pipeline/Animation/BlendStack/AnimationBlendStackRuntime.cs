@@ -435,24 +435,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new ArgumentException("Animation Blend Stack assembly is invalid.");
             }
 
-            rig.RequireValid();
-            slot.StackPolicy.RequireValid();
             m_MaxBlendInTimeToReplaceNewest =
                 slot.StackPolicy.MaxBlendInTimeToReplaceNewest;
             m_DepthBlendTimeMultiplier =
                 slot.StackPolicy.DepthBlendTimeMultiplier;
-            for (int i = 0; i < curveCatalog.Entries.Count; i++)
-                curveCatalog.Require(i).RequireValid();
-            for (int i = 0; i < profileCatalog.Entries.Count; i++)
-                profileCatalog.Require(i).RequireValid(rig.PoseBoneCount, rig.RigId, rig.RigRevision);
-            for (int i = 0; i < slot.Transitions.Count; i++)
-            {
-                AnimationBlendTransitionPayload transition = slot.Transitions[i] ??
-                    throw new InvalidOperationException($"Animation Blend transition #{i} is missing.");
-                transition.RequireValid(curveCatalog.Entries.Count, profileCatalog.Entries.Count);
-                curveCatalog.Require(transition.CurveIndex);
-                profileCatalog.Require(transition.BlendProfileIndex);
-            }
 
             int capacity = slot.StackPolicy.MaxActiveSourceEntries;
             int boneCount = rig.PoseBoneCount;

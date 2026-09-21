@@ -466,8 +466,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int curveIndex = RequireOrAddCurve(curveEntries, curvePayload);
             var profilePayload = new AnimationBlendProfilePayload(
                 rule.BlendProfile, m_Profile.RigDefinition);
+            if (!string.Equals(profilePayload.RigId, m_Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(profilePayload.RigRevision, m_Rig.RigRevision, StringComparison.Ordinal) ||
+                profilePayload.DenseDurationMultipliers.Count != m_Rig.PoseBoneCount)
+            {
+                throw new InvalidOperationException(
+                    $"Animation Blend Profile '{profilePayload.ProfileId}' does not match the runtime Rig.");
+            }
             int profileIndex = RequireOrAddProfile(profileEntries, profilePayload);
-            transitions.Add(new AnimationBlendTransitionPayload(
+            var transition = new AnimationBlendTransitionPayload(
                 index,
                 AnimationBlendTransitionEndpointKind.SourceOwner,
                 $"owner/{index}",
@@ -477,7 +484,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rule.BlendLogic,
                 rule.DurationSeconds,
                 curveIndex,
-                profileIndex));
+                profileIndex);
+            transition.RequireValid(curveEntries.Count, profileEntries.Count);
+            transitions.Add(transition);
         }
 
         static int RequireOrAddCurve(

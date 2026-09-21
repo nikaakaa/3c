@@ -68,9 +68,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly Queue<AuthoritativeActorBaseline> m_Baselines = new Queue<AuthoritativeActorBaseline>();
         readonly Queue<RemotePresentationBatch> m_Remote = new Queue<RemotePresentationBatch>();
         readonly Queue<RemotePresentationBatch> m_Reliable = new Queue<RemotePresentationBatch>();
-        readonly List<CharacterBodySample> m_DrainBodies = new List<CharacterBodySample>();
-        readonly List<PresentationCommand> m_DrainSamples = new List<PresentationCommand>();
-        readonly List<ServerAuthoritativeReliableEvent> m_DrainEvents = new List<ServerAuthoritativeReliableEvent>();
+        CharacterBodySample[] m_DrainBodies = Array.Empty<CharacterBodySample>();
+        PresentationCommand[] m_DrainSamples = Array.Empty<PresentationCommand>();
+        ServerAuthoritativeReliableEvent[] m_DrainEvents = Array.Empty<ServerAuthoritativeReliableEvent>();
+        int m_DrainBodyCount;
+        int m_DrainSampleCount;
+        int m_DrainEventCount;
         AuthoritativeInputAck m_LatestAck;
         ulong m_ReceiveSequence;
         ulong m_CommittedEventHorizon;
@@ -180,9 +183,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativePredictionDatagramMetrics datagram,
             ServerAuthoritativeCheckpointMetrics checkpoint)
         {
-            m_DrainBodies.Clear();
-            m_DrainSamples.Clear();
-            m_DrainEvents.Clear();
+            ClearDrainScratch();
             AuthoritativeActorBaseline latestBaseline = null;
             while (m_Baselines.Count > 0)
             {
@@ -197,17 +198,23 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             while (m_Remote.Count > 0)
             {
                 RemotePresentationBatch batch = m_Remote.Dequeue();
-                m_DrainBodies.AddRange(batch.BodySamples);
-                m_DrainSamples.AddRange(batch.SampleCommands);
+                AppendBodySamples(batch.BodySamples);
+                AppendSampleCommands(batch.SampleCommands);
             }
             while (m_Reliable.Count > 0)
-                m_DrainEvents.AddRange(m_Reliable.Dequeue().ReliableEvents);
-            if (m_DrainBodies.Count > 0)
+                AppendReliableEvents(m_Reliable.Dequeue().ReliableEvents);
+            if (m_DrainBodyCount > 0)
             {
-                m_RemoteBodyCount = checked(m_RemoteBodyCount + (ulong)m_DrainBodies.Count);
-                m_LastRemoteBodyTick = m_DrainBodies[m_DrainBodies.Count - 1].Tick.Value;
+                m_RemoteBodyCount = checked(m_RemoteBodyCount + (ulong)m_DrainBodyCount);
+                m_LastRemoteBodyTick = m_DrainBodies[m_DrainBodyCount - 1].Tick.Value;
             }
             ulong authorityEstimate = EstimateAuthorityTick(ClockMicros());
+            var bodySamples = new CharacterBodySample[m_DrainBodyCount];
+            var sampleCommands = new PresentationCommand[m_DrainSampleCount];
+            var reliableEvents = new ServerAuthoritativeReliableEvent[m_DrainEventCount];
+            Array.Copy(m_DrainBodies, bodySamples, m_DrainBodyCount);
+            Array.Copy(m_DrainSamples, sampleCommands, m_DrainSampleCount);
+            Array.Copy(m_DrainEvents, reliableEvents, m_DrainEventCount);
             try
             {
                 var batchResult = new AuthoritativeObservationBatch(
@@ -217,9 +224,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     baselines,
                     new[] { new RemotePresentationBatch(
                         remoteActor,
-                        m_DrainBodies.ToArray(),
-                        m_DrainSamples.ToArray(),
-                        m_DrainEvents.ToArray(),
+                        bodySamples,
+                        sampleCommands,
+                        reliableEvents,
                         false) });
                 return new ServerAuthoritativePredictionObservationResult(
                     batchResult,
@@ -227,16 +234,55 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                         source.SourceTick,
                         authorityEstimate,
                         remoteActor,
-                        m_DrainBodies.Count,
+                        m_DrainBodyCount,
                         datagram,
                         checkpoint));
             }
             finally
             {
-                m_DrainBodies.Clear();
-                m_DrainSamples.Clear();
-                m_DrainEvents.Clear();
+                ClearDrainScratch();
             }
+        }
+
+        void ClearDrainScratch()
+        {
+            Array.Clear(m_DrainBodies, 0, m_DrainBodyCount);
+            Array.Clear(m_DrainSamples, 0, m_DrainSampleCount);
+            Array.Clear(m_DrainEvents, 0, m_DrainEventCount);
+            m_DrainBodyCount = 0;
+            m_DrainSampleCount = 0;
+            m_DrainEventCount = 0;
+        }
+
+        void AppendBodySamples(IReadOnlyList<CharacterBodySample> values)
+        {
+            EnsureCapacity(ref m_DrainBodies, m_DrainBodyCount + values.Count);
+            for (int i = 0; i < values.Count; i++)
+                m_DrainBodies[m_DrainBodyCount++] = values[i];
+        }
+
+        void AppendSampleCommands(IReadOnlyList<PresentationCommand> values)
+        {
+            EnsureCapacity(ref m_DrainSamples, m_DrainSampleCount + values.Count);
+            for (int i = 0; i < values.Count; i++)
+                m_DrainSamples[m_DrainSampleCount++] = values[i];
+        }
+
+        void AppendReliableEvents(IReadOnlyList<ServerAuthoritativeReliableEvent> values)
+        {
+            EnsureCapacity(ref m_DrainEvents, m_DrainEventCount + values.Count);
+            for (int i = 0; i < values.Count; i++)
+                m_DrainEvents[m_DrainEventCount++] = values[i];
+        }
+
+        static void EnsureCapacity<T>(ref T[] values, int required)
+        {
+            if (required <= values.Length)
+                return;
+            int capacity = Math.Max(required, Math.Max(8, values.Length * 2));
+            var grown = new T[capacity];
+            Array.Copy(values, grown, values.Length);
+            values = grown;
         }
 
         public void AcknowledgeRemoteEvents(ulong eventHorizon)

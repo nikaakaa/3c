@@ -3667,3 +3667,11 @@
 - Prediction command history 改为固定 4 槽 newest-first 数组和显式 count；淘汰、插入和满员裁剪用同数组移动并清空尾部引用，序列回退、按 authority tick 淘汰和最多保留四条语义不变。
 - 发送端按当前 history 数量选择 1–4 槽的常驻 scratch，复制 samples 后调用 `CommandDatagram.FromOwnedSamples` 直接转交；每次发包的 List、PrepareSamples 复制和 RemoveAt/Insert 删除。`FromOwnedSamples` 改为正式 public ownership 入口，解码校验和 wire 字段顺序不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 evidence drain scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.186 作为独立小步；5.5 保持未勾选。
+
+- Evidence `Drain` 的 bodies、samples 和 events 改为常驻可增长 scratch 加显式 count；多个 remote presentation 和 reliable batch 用类型化 Append 方法合并，最新 body tick、总数、事件顺序和异常路径清空语义不变。
+- 合并完成后按 count 生成三份精确最终 arrays 并直接交给 `RemotePresentationBatch`，删除三个 `List`、`AddRange` 内部扩容和 `ToArray` 复制。开头与 finally 统一清空 scratch 当前使用区间，避免旧引用跨 tick 保留。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

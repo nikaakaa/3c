@@ -435,6 +435,7 @@
 - [x] 5.172 Float32 prediction disposition journal checkpoint 直接持有精确 pair 数组；确认遍历和过期裁剪使用 owner scratch，删除 Values 视图与每次裁剪的临时 key List
 - [x] 5.173 Float32 prediction history checkpoint 直接持有精确 record pair 数组；记录扫描和 replay 输出不再经过 Values 视图或临时 List
 - [x] 5.174 Float32 remote body selection、actor checkpoint 和 timeline checkpoint 改为 owned array 合同；capture、select、restore 解码删除中间 List、Values 视图和只读包装
+- [x] 5.175 Float32 Authority tick schedule 直接消费 Character Runtime 的 locked roster descriptor，删除 Pending 和 Executable 计划每次重建 ActorId 数组与 roster descriptor 的分配
 
 ## 6. UI、资源、渲染和生命周期
 

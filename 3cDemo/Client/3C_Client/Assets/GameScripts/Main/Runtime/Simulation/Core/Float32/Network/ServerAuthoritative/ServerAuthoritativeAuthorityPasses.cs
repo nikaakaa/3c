@@ -184,7 +184,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Source,
                 readPorts.CharacterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
-                Roster(readPorts.CharacterRuntime),
+                readPorts.CharacterRuntime.Runtime.RosterDescriptor,
                 new[]
                 {
                     new SimulationPipelineStepSourceMapping(
@@ -285,19 +285,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Source,
                 runtime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
-                Roster(runtime),
+                runtime.Runtime.RosterDescriptor,
                 Array.Empty<SimulationPipelineStepSourceMapping>(),
                 null,
                 Array.Empty<Float32SimulationStep>(),
                 SimulationSessionPlanRequirement.None);
-
-        static SimulationActorRosterDescriptor Roster(IFloat32CharacterRuntimePort runtime)
-        {
-            var actors = new ActorId[runtime.Runtime.Roster.Count];
-            for (int i = 0; i < actors.Length; i++)
-                actors[i] = runtime.Runtime.Roster[i].ActorId;
-            return new SimulationActorRosterDescriptor(actors);
-        }
 
         public SimulationPipelinePassStateSnapshot CaptureState()
         {

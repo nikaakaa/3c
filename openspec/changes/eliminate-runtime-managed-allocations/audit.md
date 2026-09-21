@@ -3578,3 +3578,11 @@
 - Remote body selection frame、timeline checkpoint 和 actor checkpoint 改为 owned array 存储。Select 直接转交本次精确 selections；Capture 按每个 Actor 的 `SortedDictionary` KeyValuePair 填充精确 samples；history 解码继续转交已有精确 actor／sample 数组。
 - 排序逻辑统一为静态类型化 comparison；actor、sample、selection 的重复、归属、tick 和 tick 匹配校验保留。`ToBodySamples` 直接返回精确数组，删除 `Array.AsReadOnly` 包装。采样选择、restore 长期字典重建、容量和 canonical 校验不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Authority roster descriptor 复用
+
+对应 tasks.md 的 5.5，新增 5.175 作为独立小步；5.5 保持未勾选。
+
+- `AuthorityTickSchedulePassRuntime` 的 Pending 和 Executable ExecutionPlan 改为直接使用 `Float32CharacterRuntime.RosterDescriptor`。该 descriptor 在 Character Runtime 构造期从同一排序 roster 生成并完成合法性校验，Schedule 不再每 tick 复制 `ActorId[]`、排序、计算 roster hash 和新建 descriptor。
+- Pending 与 Executable 的 roster 身份、Step Actor 输入校验和 ExecutionPlan 绑定语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

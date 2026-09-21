@@ -283,14 +283,16 @@ namespace GameLogic.ProductResource
                 return;
             }
 
-            foreach (long instanceId in scope.CopyInstanceIds())
+            scope.CopyInstanceIdsForDispose(out int instanceCount);
+            for (int index = 0; index < instanceCount; index++)
             {
-                ReleaseInstance(instanceId);
+                ReleaseInstance(scope.PeekInstanceId(index));
             }
 
-            foreach (long leaseId in scope.CopyLeaseIds())
+            scope.CopyLeaseIdsForDispose(out int leaseCount);
+            for (int index = 0; index < leaseCount; index++)
             {
-                ReleaseLease(leaseId);
+                ReleaseLease(scope.PeekLeaseId(index));
             }
 
             _scopes.Remove(scope.Id);

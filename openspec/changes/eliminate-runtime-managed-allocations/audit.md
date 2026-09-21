@@ -2699,3 +2699,11 @@
 - 首次加载共享物理资源时，`InFlightLoad` 只包住一只 `UniTaskCompletionSource<Object>`，每个首载都多创建一个 wrapper。现在 `_inFlight` 直接保存 completion source，首载、并发 join 复用同一 Task、异常传播、finally 移除和快照计数不变。
 - completion source 本体、异步状态机、linked cancellation source、公共 lease 对象和 TEngine 资源生命周期不在本步范围，等待对象不提前复用。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 资源 scope 退出缓冲复用
+
+对应 tasks.md 的 6.2，新增 6.11 作为独立小步；6.2 保持未勾选。
+
+- scope dispose 原先为 instance id 和 lease id 各新建 `long[]`，scope 生命周期内最多只使用两次。现在 scope 私有持有一只 dispose buffer，先按 instance 数量准备并复制，释放完成后再次按 lease 数量按需扩容复用；`TryBeginClosing` 已进入 Closing 并取消，随后复制期间不会有新 id 注册。
+- 仍保持先复制全部 id、再逐个释放的顺序，避免释放时修改集合导致漏释放。scope 关闭后随 runtime 丢弃，不新增跨 scope 共享状态。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

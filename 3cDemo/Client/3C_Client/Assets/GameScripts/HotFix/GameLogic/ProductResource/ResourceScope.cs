@@ -10,6 +10,7 @@ namespace GameLogic.ProductResource
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly HashSet<long> _leaseIds = new HashSet<long>();
         private readonly HashSet<long> _instanceIds = new HashSet<long>();
+        private long[] _disposeBuffer;
 
         internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name)
         {
@@ -83,18 +84,29 @@ namespace GameLogic.ProductResource
             _instanceIds.Remove(instanceId);
         }
 
-        internal long[] CopyLeaseIds()
+        internal void CopyLeaseIdsForDispose(out int count)
         {
-            var result = new long[_leaseIds.Count];
-            _leaseIds.CopyTo(result);
-            return result;
+            CopyIds(_leaseIds, ref _disposeBuffer, out count);
         }
 
-        internal long[] CopyInstanceIds()
+        internal void CopyInstanceIdsForDispose(out int count)
         {
-            var result = new long[_instanceIds.Count];
-            _instanceIds.CopyTo(result);
-            return result;
+            CopyIds(_instanceIds, ref _disposeBuffer, out count);
+        }
+
+        internal long PeekLeaseId(int index) => _disposeBuffer[index];
+
+        internal long PeekInstanceId(int index) => _disposeBuffer[index];
+
+        private static void CopyIds(HashSet<long> ids, ref long[] buffer, out int count)
+        {
+            count = ids.Count;
+            if (buffer == null || buffer.Length < count)
+            {
+                buffer = new long[count];
+            }
+
+            ids.CopyTo(buffer, 0);
         }
     }
 }

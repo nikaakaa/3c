@@ -381,6 +381,7 @@
 - [x] 6.8 Product startup／checkpoint／fault／resource History 使用 owner 长寿命 bounded 只读视图，删除四次 getter ToArray；发布和超窗淘汰顺序保持不变
 - [x] 6.9 资源租约与实例的内部所有权记录按 runtime 生命周期池化，acquire/instantiate 租用，release 清空身份并归还；公共 lease 对象、加载等待、链接取消源和外部 payload 仍保持独立
 - [x] 6.10 删除共享物理资源加载的 InFlightLoad 包装，Dictionary 直接持有 UniTaskCompletionSource；首载、并发 join、异常传播和移除时机不变
+- [x] 6.11 资源 scope 持有私有 dispose id buffer，closing 后按当前 lease/instance 数量扩容并跨两次复制复用；先复制后释放的顺序和 closing 阻止新注册保持不变
 
 ## 7. 诊断与正式性能交付
 

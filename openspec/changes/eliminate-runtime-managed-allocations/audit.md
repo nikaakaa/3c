@@ -2623,3 +2623,12 @@
 - Protocol Codec 新增显式发送 header 入口，Channel 直接复用构造期持有的 Session、Peer、当前序号和调用方 payload 写入原格式。身份、零序号和 null payload 仍在正式边界校验，wire 字段顺序不变。
 - 不把接收 envelope 改成可变复用对象：完整消息解码后仍构造独立 envelope，payload 及其输入帧、bundle、快照响应等继续独立持有，队列消费者寿命不变。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚接收 datagram wrapper 去 class 化
+
+对应 tasks.md 的 5.4，本步只处理接收队列里的 `RollbackReceivedDatagram` 外壳对象，整项保持未勾选。
+
+- 该类型只包含 packet 和 remote endpoint 两个引用，且全部当前消费者都在 Endpoint assembly 内；现在改为 internal readonly struct，`ConcurrentQueue` 直接保存引用记录，不再每条有效收包创建一个 class wrapper。
+- `Channel.Process` 和 `Endpoint.TryReceive` 只从 public 收窄为 assembly 内合同，不影响同一 assembly 的 Peer Channel 和 Input Relay 调用链；处理顺序、队列深度、丢包计数和 Dispose 清队不变。
+- 接收 packet、packet payload 和真实来源 endpoint 的 `Clone` 继续独立分配与持有，本步不改变跨线程队列所有权。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

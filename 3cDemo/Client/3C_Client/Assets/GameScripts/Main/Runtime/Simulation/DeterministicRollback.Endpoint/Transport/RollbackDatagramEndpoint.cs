@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
-    public sealed class RollbackReceivedDatagram
+    internal readonly struct RollbackReceivedDatagram
     {
         public RollbackReceivedDatagram(RollbackDatagramPacket packet, IPEndPoint remoteEndPoint)
         {
@@ -131,7 +131,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        public bool TryReceive(out RollbackReceivedDatagram datagram)
+        internal bool TryReceive(out RollbackReceivedDatagram datagram)
         {
             ThrowIfUnavailable();
             if (!m_ReceiveQueue.TryDequeue(out datagram))

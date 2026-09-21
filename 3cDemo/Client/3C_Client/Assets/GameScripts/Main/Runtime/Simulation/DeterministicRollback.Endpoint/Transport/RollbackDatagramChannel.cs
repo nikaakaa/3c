@@ -271,10 +271,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return messageSequence;
         }
 
-        public void Process(RollbackReceivedDatagram received)
+        internal void Process(RollbackReceivedDatagram received)
         {
-            if (received == null)
-                throw new ArgumentNullException(nameof(received));
             if (!EndPointEquals(received.RemoteEndPoint, m_RemoteEndPoint))
                 throw new InvalidOperationException($"Rollback peer '{m_RemotePeerId}' changed its UDP endpoint while active.");
             RollbackDatagramPacket packet = received.Packet;

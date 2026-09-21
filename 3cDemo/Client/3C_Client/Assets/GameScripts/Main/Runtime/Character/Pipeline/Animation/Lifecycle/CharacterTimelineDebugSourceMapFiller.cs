@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new ArgumentNullException(nameof(sourceMap));
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
+            timeline.Init();
             string contentHash = TimelineAuthoringFingerprint.Compute(timeline);
             RuntimeSourceElementHandle timelineHandle = sourceMap.Add(
                 RuntimeSourceElementKey.Timeline(timeline.AuthoringId),

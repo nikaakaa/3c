@@ -368,9 +368,17 @@ namespace ThirdPersonSimulation
 
         public static void RequireOperation(SimulationOperationCode code)
         {
-            if (!s_Operations.Contains(code))
+            if (!IsOperation(code))
                 throw new InvalidOperationException($"Operation code '{(ushort)code}' is not supported by '{Version.Value}'.");
             GameplayAbilityValuePortContracts.Require(code);
+        }
+
+        public static bool IsOperation(SimulationOperationCode code)
+        {
+            for (int i = 0; i < s_Operations.Count; i++)
+                if (s_Operations[i] == code)
+                    return true;
+            return false;
         }
 
         public static void RequireCompleteBackend(

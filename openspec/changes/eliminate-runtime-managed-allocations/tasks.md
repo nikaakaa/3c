@@ -431,3 +431,4 @@
 - [x] 7.53 Final Pose Physical Writer 复用 Presentation 工厂已验证的 RootHierarchy 与 RigBinding，删除构造器第二次整遍绑定 schema 校验；保留 PoseRoot 归属、引用姿态和运行帧事务检查
 - [x] 7.54 Fixed 和 Float32 Ability Execution Data Codec 按 SemanticValueKind 连续正式值域直接校验 payload；ProgramConstantInputBinding 删除已验证输入的重复 Enum.IsDefined
 - [x] 7.55 Fixed 和 Float32 Ability Execution Data Codec 的 Numeric Profile、Source Map 和 Constant byte 枚举改为正式成员显式匹配；保留 payload 边界和 InvalidDataException，删除 Enum.ToObject/IsDefined 装箱
+- [x] 7.56 Fixed 和 Float32 Ability Execution Data Codec 的 SimulationOperationCode int payload 按 GameplayAbilityOperationSet 显式成员校验；保留数值范围和 InvalidDataException，删除 ReadEnum 反射读取

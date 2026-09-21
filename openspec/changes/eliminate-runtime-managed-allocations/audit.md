@@ -2264,6 +2264,15 @@
 - payload 边界仍拒绝未知成员，异常仍为 `InvalidDataException`，文本保留原枚举名和数值；删除这些入口的 `Enum.ToObject` 和 `Enum.IsDefined` 装箱。`SimulationOperationCode` 的 int 读取属于下一处独立边界，本步不改。
 - Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；已知本地编译基线失败仍来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
 
+## 2026-09-21 Ability 执行数据 OperationSet 校验收口
+
+对应 tasks.md 的 7.56。
+
+- Fixed 和 Float32 `ReadOperationDefinition` 原先通过 `ReadEnum<SimulationOperationCode>` 反射转换并调用 `Enum.IsDefined`；只要旧枚举声明里定义过该 int，即使不属于当前正式 OperationSet 也会进入运行数据。
+- 两数值域现在先拒绝负数和超过 ushort 范围，再通过 `GameplayAbilityOperationSet.IsOperation` 只接受当前 OperationSet 显式成员；未知 payload 仍抛 `InvalidDataException`，错误文案保留枚举名和数值。这是从“枚举声明合法”收紧到“当前正式操作合法”的边界合同。
+- `GameplayAbilityOperationSet.RequireOperation` 复用同一个 `IsOperation`，保留原 `InvalidOperationException`、版本身份和端口校验；没有增加第二套操作目录、兼容读取路径或 fallback。
+- `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

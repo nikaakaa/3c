@@ -476,6 +476,7 @@
 - [x] 5.213 两数值域 Character Runtime State Transaction 以自身引用作为 Ability 绑定身份，保留同事务校验和拒绝语义，删除每 tick 身份 object
 - [x] 5.214 两数值域 Action Trace Context 改为 Frame 内 readonly struct 作用域，外层 execution scope 持有具体类型；保留 push/pop 嵌套语义，删除每次进入 Skill execution 的 trace context class 和接口装箱
 - [x] 5.215 两数值域 Character Control Runtime 在准备期持有 State Port；tick 继续传入同一 state transaction 和 schema，删除每次 Control tick 的 port class
+- [x] 5.216 两数值域 Ability State Port 和 Operation State Reset 改为 readonly struct；继续按 invocation Frame 构造并传递具体类型，保留 owner、access policy 和 state slot 校验，删除 assembly 准备期的两个 wrapper class
 
 ## 6. UI、资源、渲染和生命周期
 

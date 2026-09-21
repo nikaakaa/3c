@@ -301,7 +301,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32OperationStateReset
+    internal readonly struct Float32OperationStateReset
     {
         readonly Float32AbilityExecutionFrame m_Frame;
 
@@ -327,7 +327,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32StatePort
+    internal readonly struct Float32StatePort
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32StateAccessPolicy m_Policy;

@@ -302,7 +302,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedOperationStateReset
+    internal readonly struct FixedOperationStateReset
     {
         readonly FixedAbilityExecutionFrame m_Frame;
 
@@ -328,7 +328,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedStatePort
+    internal readonly struct FixedStatePort
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedStateAccessPolicy m_Policy;

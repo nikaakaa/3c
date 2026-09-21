@@ -3907,3 +3907,11 @@
 - Fixed 和 Float32 Character Control Runtime 的 State Port 从每次 Control tick 新建改为 runtime 构造期创建并长期持有；port 继续绑定同一个 state transaction 和 schema。
 - `CharacterControlTickContext` 保持 readonly struct 局部变量，属于栈传递，不新增托管分配；control module 的 tick 参数顺序、状态读写 kind 校验和 output 路由不变。
 - 每个 Control tick 的 port class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability state wrapper struct 收口
+
+对应 tasks.md 的 5.5，新增 5.216 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Execution 的 `StatePort` 与 `OperationStateReset` 从 immutable class 改为 readonly struct；每次 invocation 仍由 Frame 构造并交给 execution target、control 或 blackboard。
+- state access 的 owner、policy、slot 边界检查、跨 transaction 读写和 operation reset 顺序不变；消费方继续持有具体类型，不引入接口装箱、缓存或兼容路径。
+- 每个 invocation assembly 的两个 wrapper class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

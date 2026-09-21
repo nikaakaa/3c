@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal sealed class Float32AbilityExecutionServiceSet : IFloat32AbilityExecutionServices
+    internal readonly struct Float32AbilityExecutionServiceSet
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32ActionStateStore m_ActionStore;

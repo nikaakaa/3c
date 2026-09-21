@@ -5,15 +5,6 @@ using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
-    internal interface IFloat32AbilityExecutionServices
-    {
-        Float32AbilityExecutionTarget Target { get; }
-        void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
-        IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances { get; }
-        IReadOnlyList<AbilityTimelineStopPending> TimelineStops { get; }
-        void EndEvaluation();
-    }
-
     internal sealed class Float32TreeClipInvokerLink
     {
         public IAbilityTreeClipInvoker Invoker;
@@ -26,7 +17,7 @@ namespace ThirdPersonSimulation
         readonly OperationExecutionTopology m_Topology;
         readonly int m_MaxExecutionCount;
         readonly Float32TreeClipInvokerLink m_TreeClipLink = new Float32TreeClipInvokerLink();
-        IFloat32AbilityExecutionServices m_Services;
+        Float32AbilityExecutionServiceSet m_Services;
         OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
 
         public Float32AbilityOperationControlRuntime(
@@ -42,9 +33,9 @@ namespace ThirdPersonSimulation
 
         internal Float32TreeClipInvokerLink TreeClipLink => m_TreeClipLink;
 
-        internal void Bind(IFloat32AbilityExecutionServices services)
+        internal void Bind(in Float32AbilityExecutionServiceSet services)
         {
-            m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_Services = services;
             m_TreeClipLink.Invoker = this;
             if (m_Runtime == null)
             {
@@ -68,7 +59,7 @@ namespace ThirdPersonSimulation
         internal void EndEvaluation()
         {
             m_Services.EndEvaluation();
-            m_Services = null;
+            m_Services = default;
         }
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
         {

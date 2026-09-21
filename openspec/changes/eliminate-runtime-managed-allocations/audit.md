@@ -3747,3 +3747,11 @@
 - Authority Client Route 的 checkpoint 发送顺序从 `Queue<ulong>` 改为构造期按 `checkpoint capacity + 1` 准备的环形 `ulong[]`，用 head/count 显式进出队。容量覆盖先入队再裁剪的瞬时峰值；旧槽出队后清零。
 - AcknowledgeSnapshot 的顺序确认、StoreSent 的入队、超容量裁剪、未确认 checkpoint 保护和 SortedDictionary 移除顺序不变。
 - 按 `Queue` 的内部数组外壳和运行进出队临时路径删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Authority route command queue 收口
+
+对应 tasks.md 的 5.5，新增 5.196 作为独立小步；5.5 保持未勾选。
+
+- Authority Client Route 的命令队列从 `SortedDictionary<ulong, CanonicalInputSample>` 改为构造期按容量准备的有序 `CanonicalInputSample[] + ulong[]` 加显式 count。入队按 target tick 二分定位，同 tick 保留更高 input sequence，新 tick 用数组移动插入；队列满时继续抛 overflow。
+- Select 用有序前缀一次识别全部过期输入，随后前移保留输入并清空尾部引用；最后一次有效输入、held 输入、exact/late/neutral 计数和异常语义不变。
+- 每个 input tick 的 SortedDictionary 树节点和 5.194 引入的过期 key 中转删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

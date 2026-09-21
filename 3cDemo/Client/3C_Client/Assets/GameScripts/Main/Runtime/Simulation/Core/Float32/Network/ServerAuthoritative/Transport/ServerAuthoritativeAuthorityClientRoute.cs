@@ -8,10 +8,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
     sealed class ServerAuthoritativeAuthorityClientRoute
     {
         readonly int m_Capacity;
-        readonly SortedDictionary<ulong, CanonicalInputSample> m_Inputs = new SortedDictionary<ulong, CanonicalInputSample>();
+        readonly CanonicalInputSample[] m_Inputs;
+        readonly ulong[] m_InputTargetTicks;
+        int m_InputCount;
         readonly SortedDictionary<ulong, NetworkCheckpoint> m_Sent = new SortedDictionary<ulong, NetworkCheckpoint>();
-        readonly ulong[] m_ExpiredInputSequences;
-        int m_ExpiredInputSequenceCount;
         readonly ulong[] m_SentSequenceOrder;
         int m_SentSequenceHead;
         int m_SentSequenceCount;
@@ -32,7 +32,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             Roster = roster;
             m_Capacity = capacity;
-            m_ExpiredInputSequences = new ulong[capacity];
+            m_Inputs = new CanonicalInputSample[capacity];
+            m_InputTargetTicks = new ulong[capacity];
             m_SentSequenceOrder = new ulong[capacity + 1];
         }
 
@@ -49,7 +50,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong FullCheckpointCount { get; private set; }
         public ulong DeltaMtuExceededCount { get; private set; }
         public int LastDeltaPayloadBytes { get; private set; }
-        public bool HasInput => m_Held != null || m_Inputs.Count > 0;
+        public bool HasInput => m_Held != null || m_InputCount > 0;
         public ulong CommandPacketCount { get; private set; }
         public ulong CommandPayloadBytes { get; private set; }
         public ulong PacketSequenceGaps { get; private set; }
@@ -79,32 +80,41 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             if (sample.InputSequence <= m_LastEnqueuedInputSequence)
                 return;
             m_LastEnqueuedInputSequence = sample.InputSequence;
-            if (m_Inputs.Count >= m_Capacity)
+            if (m_InputCount >= m_Capacity)
                 throw new InvalidOperationException($"Authority command queue for Actor '{Roster.ActorId}' overflowed.");
-            if (m_Inputs.TryGetValue(sample.TargetAuthorityTick, out CanonicalInputSample current))
+
+            int index = FindInputIndex(sample.TargetAuthorityTick);
+            if (index >= 0)
             {
-                if (sample.InputSequence <= current.InputSequence)
+                if (sample.InputSequence <= m_Inputs[index].InputSequence)
                     return;
-                m_Inputs[sample.TargetAuthorityTick] = sample;
+                m_Inputs[index] = sample;
                 return;
             }
-            m_Inputs.Add(sample.TargetAuthorityTick, sample);
+
+            InsertInput(~index, sample);
         }
 
         public AcceptedAuthorityInput Select(ulong authorityTick, int holdTicks)
         {
             CanonicalInputSample selected = null;
-            m_ExpiredInputSequenceCount = 0;
-            foreach (KeyValuePair<ulong, CanonicalInputSample> pair in m_Inputs)
+            int expiredCount = 0;
+            while (expiredCount < m_InputCount && m_InputTargetTicks[expiredCount] <= authorityTick)
             {
-                if (pair.Key > authorityTick)
-                    break;
-                selected = pair.Value;
-                m_ExpiredInputSequences[m_ExpiredInputSequenceCount++] = pair.Key;
+                selected = m_Inputs[expiredCount];
+                expiredCount++;
             }
-            for (int i = 0; i < m_ExpiredInputSequenceCount; i++)
-                m_Inputs.Remove(m_ExpiredInputSequences[i]);
-            m_ExpiredInputSequenceCount = 0;
+
+            if (expiredCount > 0)
+            {
+                int remaining = m_InputCount - expiredCount;
+                Array.Copy(m_Inputs, expiredCount, m_Inputs, 0, remaining);
+                Array.Copy(m_InputTargetTicks, expiredCount, m_InputTargetTicks, 0, remaining);
+                Array.Clear(m_Inputs, remaining, expiredCount);
+                Array.Clear(m_InputTargetTicks, remaining, expiredCount);
+                m_InputCount = remaining;
+            }
+
             if (selected != null)
             {
                 if (selected.TargetAuthorityTick == authorityTick)
@@ -274,6 +284,32 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_SentSequenceHead = (m_SentSequenceHead + 1) % m_SentSequenceOrder.Length;
             m_SentSequenceCount--;
             return sequence;
+        }
+
+        int FindInputIndex(ulong targetTick)
+        {
+            int low = 0;
+            int high = m_InputCount - 1;
+            while (low <= high)
+            {
+                int middle = low + (high - low) / 2;
+                if (m_InputTargetTicks[middle] == targetTick)
+                    return middle;
+                if (m_InputTargetTicks[middle] < targetTick)
+                    low = middle + 1;
+                else
+                    high = middle - 1;
+            }
+            return ~low;
+        }
+
+        void InsertInput(int index, CanonicalInputSample sample)
+        {
+            Array.Copy(m_Inputs, index, m_Inputs, index + 1, m_InputCount - index);
+            Array.Copy(m_InputTargetTicks, index, m_InputTargetTicks, index + 1, m_InputCount - index);
+            m_Inputs[index] = sample;
+            m_InputTargetTicks[index] = sample.TargetAuthorityTick;
+            m_InputCount++;
         }
     }
 }

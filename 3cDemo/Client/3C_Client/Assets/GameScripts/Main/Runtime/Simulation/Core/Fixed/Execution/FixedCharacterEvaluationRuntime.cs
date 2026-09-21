@@ -57,12 +57,12 @@ namespace ThirdPersonSimulation.Fixed
                 var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
-                var controlMotion = new FixedCharacterControlMotionRuntime(
+                FixedCharacterControlMotionRuntime controlMotion = actor.ControlMotion;
+                controlMotion.Begin(
                     abilityInput,
                     bodyFacts,
                     tick,
-                    characterRuntime.TickRate,
-                    actor.ControlMotionBindings);
+                    characterRuntime.TickRate);
                 var characterTraceSink = new FixedCharacterTraceSink(
                     characterTrace,
                     characterRuntime.NumericProfile,
@@ -134,7 +134,7 @@ namespace ThirdPersonSimulation.Fixed
                     (skill, window) => IsActionWindowActive(invocations, skill, window),
                     route => ReadEquipmentActionContext(invocations, route));
                 control.Tick();
-                motionContributions.AddRange(controlMotion.Contributions);
+                controlMotion.CopyContributionsTo(motionContributions);
 
                 for (int i = 0; i < invocations.Count; i++)
                 {
@@ -216,6 +216,7 @@ namespace ThirdPersonSimulation.Fixed
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
+                actor.ControlMotion.ClearContributions();
                 roleState.Dispose();
                 throw;
             }

@@ -5,33 +5,49 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32CharacterControlMotionRuntime
     {
-        readonly Float32AbilityExecutionInput m_Input;
-        readonly Float32AbilityBodyFacts m_Body;
-        readonly SimulationTick m_Tick;
-        readonly int m_TickRate;
+        Float32AbilityExecutionInput m_Input;
+        Float32AbilityBodyFacts m_Body;
+        SimulationTick m_Tick;
+        int m_TickRate;
         readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
-        readonly List<SimulationMotionContribution> m_Contributions =
-            new List<SimulationMotionContribution>();
+        SimulationMotionContribution[] m_Contributions = Array.Empty<SimulationMotionContribution>();
+        int m_ContributionCount;
 
         public Float32CharacterControlMotionRuntime(
+            CharacterControlMotionBindingCatalog controlMotionBindings)
+        {
+            m_ControlMotionBindings = controlMotionBindings;
+        }
+
+        internal void Begin(
             Float32AbilityExecutionInput input,
             Float32AbilityBodyFacts body,
             SimulationTick tick,
-            int tickRate,
-            CharacterControlMotionBindingCatalog controlMotionBindings)
+            int tickRate)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             if (!body.IsValid)
                 throw new ArgumentException("Float32 Character Control motion requires Body Facts.", nameof(body));
             if (!tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character Control motion identity is incomplete.");
+            Array.Clear(m_Contributions, 0, m_ContributionCount);
+            m_ContributionCount = 0;
             m_Body = body;
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_ControlMotionBindings = controlMotionBindings;
         }
 
-        public IReadOnlyList<SimulationMotionContribution> Contributions => m_Contributions;
+        internal void CopyContributionsTo(List<SimulationMotionContribution> contributions)
+        {
+            for (int i = 0; i < m_ContributionCount; i++)
+                contributions.Add(m_Contributions[i]);
+        }
+
+        internal void ClearContributions()
+        {
+            Array.Clear(m_Contributions, 0, m_ContributionCount);
+            m_ContributionCount = 0;
+        }
 
         public void SubmitControl(
             CharacterControlMotionRequest request,
@@ -46,7 +62,8 @@ namespace ThirdPersonSimulation
                 m_ControlMotionBindings,
                 request,
                 descriptor,
-                m_Contributions.Add);
+                ref m_Contributions,
+                ref m_ContributionCount);
         }
 
         internal static void SubmitControl(
@@ -57,7 +74,8 @@ namespace ThirdPersonSimulation
             CharacterControlMotionBindingCatalog controlMotionBindings,
             CharacterControlMotionRequest request,
             CharacterControlMotionDescriptor descriptor,
-            Action<SimulationMotionContribution> submit)
+            ref SimulationMotionContribution[] contributions,
+            ref int contributionCount)
         {
             if (!body.IsValid || !tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character Control motion identity is incomplete.");
@@ -123,7 +141,15 @@ namespace ThirdPersonSimulation
                 string.Empty,
                 0f,
                 0f);
-            submit(new SimulationMotionContribution(
+            if (contributionCount == contributions.Length)
+            {
+                int capacity = Math.Max(4, contributions.Length * 2);
+                var values = new SimulationMotionContribution[capacity];
+                Array.Copy(contributions, values, contributionCount);
+                contributions = values;
+            }
+
+            contributions[contributionCount++] = new SimulationMotionContribution(
                 request.Source,
                 default,
                 request.PlaybackGeneration,
@@ -141,7 +167,7 @@ namespace ThirdPersonSimulation
                 SimulationMotionBlendMode.Override,
                 descriptor.ConsumeLowerChannels,
                 movementPlaybackClock,
-                locomotionTimeline));
+                locomotionTimeline);
         }
 
         SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

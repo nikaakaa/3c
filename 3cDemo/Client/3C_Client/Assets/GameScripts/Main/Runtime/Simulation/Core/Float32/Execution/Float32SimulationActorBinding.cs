@@ -5,6 +5,8 @@ namespace ThirdPersonSimulation
 {
     public sealed class SimulationActorBinding
     {
+        readonly Float32CharacterControlMotionRuntime m_ControlMotion;
+
         public SimulationActorBinding(
             ActorId actorId,
             string worldBodyBindingId,
@@ -21,6 +23,7 @@ namespace ThirdPersonSimulation
             ActorId = actorId;
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
+            m_ControlMotion = new Float32CharacterControlMotionRuntime(controlRuntimeBinding.MotionBindings);
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityInstallations = new Float32GameplayAbilityExecutionInstallationSet(
                 abilityData ?? throw new ArgumentNullException(nameof(abilityData)),
@@ -57,6 +60,7 @@ namespace ThirdPersonSimulation
         public ActorId ActorId { get; }
         public string WorldBodyBindingId { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
+        internal Float32CharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }

@@ -6,6 +6,8 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class SimulationActorBinding
     {
+        readonly FixedCharacterControlMotionRuntime m_ControlMotion;
+
         public SimulationActorBinding(
             ActorId actorId,
             string worldBodyBindingId,
@@ -23,6 +25,7 @@ namespace ThirdPersonSimulation.Fixed
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             ControlMotionBindings = new FixedCharacterControlMotionBindingCatalog(controlRuntimeBinding.MotionBindings);
+            m_ControlMotion = new FixedCharacterControlMotionRuntime(ControlMotionBindings);
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
                 abilityData ?? throw new ArgumentNullException(nameof(abilityData)),
@@ -60,6 +63,7 @@ namespace ThirdPersonSimulation.Fixed
         public string WorldBodyBindingId { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         internal FixedCharacterControlMotionBindingCatalog ControlMotionBindings { get; }
+        internal FixedCharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }

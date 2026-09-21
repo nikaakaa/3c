@@ -57,12 +57,12 @@ namespace ThirdPersonSimulation
                 var domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
-                var controlMotion = new Float32CharacterControlMotionRuntime(
+                Float32CharacterControlMotionRuntime controlMotion = actor.ControlMotion;
+                controlMotion.Begin(
                     abilityInput,
                     bodyFacts,
                     tick,
-                    characterRuntime.TickRate,
-                    actor.ControlRuntimeBinding.MotionBindings);
+                    characterRuntime.TickRate);
                 var characterTraceSink = new Float32CharacterTraceSink(
                     characterTrace,
                     characterRuntime.NumericProfile,
@@ -134,7 +134,7 @@ namespace ThirdPersonSimulation
                     (skill, window) => IsActionWindowActive(invocations, skill, window),
                     route => ReadEquipmentActionContext(invocations, route));
                 control.Tick();
-                motionContributions.AddRange(controlMotion.Contributions);
+                controlMotion.CopyContributionsTo(motionContributions);
 
                 for (int i = 0; i < invocations.Count; i++)
                 {
@@ -216,6 +216,7 @@ namespace ThirdPersonSimulation
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
+                actor.ControlMotion.ClearContributions();
                 roleState.Dispose();
                 throw;
             }

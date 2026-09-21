@@ -461,6 +461,7 @@
 - [x] 5.198 Authority source 的 reliable event 和 full checkpoint 输出改为按 policy 容量构造的共享有界环形存储；保留 overflow、发送顺序和同步 flush 语义
 - [x] 5.199 Prediction disposition journal 的 prune scratch 改为按 journal 容量准备的 EventId 数组和显式 count；删除 List、Add 和 Clear 临时壳
 - [x] 5.200 Authority source 的 evidence route metrics 改为常驻 string scratch 和显式 count；发布后清空引用，保留路由顺序和诊断文本
+- [x] 5.201 两数值域 Character Control Motion 的 per-Actor contributions 由稳定 Actor Binding 持有；每 tick Begin 清空并重绑，scratch 改为数组加显式 count，异常路径统一清理，删除每 tick runtime 新建、List 外壳和 Action 提交委托
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -3787,3 +3787,11 @@
 - Authority Source 的 evidence route metrics 从每次发布的 `List<string>` 改为常驻可增长 `string[]` 加显式 count；按当前 route 顺序填充，`string.Join` 使用精确 count 区间，发布后清空使用区间。
 - 诊断开关、5 秒触发间隔、elapsed 计算、route 顺序、metrics 文本和 trace 字段不变；格式化字符串本身仍属诊断产物。
 - 每次 evidence 发布的 List、内部扩容壳和发布后持有的旧字符串引用删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Character control motion scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.201 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 的 Character Control Motion runtime 改由 Actor Binding 构造时创建并长期持有；每个 Actor tick 用 `Begin` 清空上一轮使用区间后重绑 input、body、tick 和 tick rate，异常路径统一清空 contributions。
+- Control contributions 从 `List` 改为可增长 `SimulationMotionContribution[]` 加显式 count；静态提交入口直接写数组区间并倍增容量，删除 `Action<SimulationMotionContribution>` 委托。
+- Character Evaluation 继续把 control contributions 复制进当次 motion contributions List；这个外层聚合 List 属后续独立小步，不在本步扩大范围。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

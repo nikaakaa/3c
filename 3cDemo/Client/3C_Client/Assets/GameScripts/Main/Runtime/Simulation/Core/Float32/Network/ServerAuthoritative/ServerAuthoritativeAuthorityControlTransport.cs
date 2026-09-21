@@ -178,7 +178,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             RequestSequence = requestSequence;
             SnapshotSequence = snapshotSequence;
             Checkpoint = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
-            Payload = payload == null ? throw new ArgumentNullException(nameof(payload)) : (byte[])payload.Clone();
+            Payload = payload ?? throw new ArgumentNullException(nameof(payload));
         }
 
         public ServerAuthoritativePlayerId PlayerId { get; }
@@ -202,7 +202,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             RecipientActorId = recipientActorId;
             SourceActorId = sourceActorId;
             Value = value;
-            Payload = payload == null ? throw new ArgumentNullException(nameof(payload)) : (byte[])payload.Clone();
+            Payload = payload ?? throw new ArgumentNullException(nameof(payload));
         }
 
         public ActorId RecipientActorId { get; }

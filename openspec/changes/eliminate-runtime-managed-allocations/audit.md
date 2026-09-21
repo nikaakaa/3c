@@ -3450,3 +3450,11 @@
 - `ServerAuthoritativeAuthorityReliableEventBatchOutput` 从 `IEnumerable` 构造收紧为 owned 精确数组合同。Authority Source 本来就按 `ReliableEvents.Count` 构造最终 output 数组，现在 batch 直接持有该数组，删除每批的 List 复制和 `ReadOnlyCollection` 包装。
 - 构造期仍拒绝空批次、空 output、无效路由和不属于同一 recipient/source 的事件；Fantasy transport 继续按下标读取，事件顺序和每条 payload 的独立复制所有权不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority output payload 所有权收口
+
+对应 tasks.md 的 5.5，新增 5.159 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityReliableEventOutput` 和 `ServerAuthoritativeAuthorityFullCheckpointOutput` 的 payload 构造合同改为 owned 数组。唯一生产方分别在 single-event codec 和 full checkpoint codec 后直接转交方法内新建数组，删除入队前的完整 clone。
+- 两个 output 仍不可变，Fantasy transport 只读取 payload；producer 不保留原数组引用，检查点、事件内容和发送长度语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

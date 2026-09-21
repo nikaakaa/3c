@@ -261,8 +261,8 @@ namespace ThirdPersonSimulation
         {
             if (!handle.IsValid)
                 throw new ArgumentException("Operation handle is invalid.", nameof(handle));
-            if (!Enum.IsDefined(typeof(SimulationOperationCode), code))
-                throw new ArgumentOutOfRangeException(nameof(code), $"Operation code '{(ushort)code}' is undefined.");
+            if (!GameplayAbilityOperationSet.IsOperation(code))
+                throw new ArgumentOutOfRangeException(nameof(code), $"Operation code '{(ushort)code}' is not supported by the current operation set.");
             Handle = handle;
             Code = code;
             Integer0 = integer0;

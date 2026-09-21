@@ -2282,6 +2282,15 @@
 - 不把该 helper 当作配置校验的替代：Semantic IR artifact 的 magic、artifact version、payload version、header/payload 一致性继续先校验；`GameplayAbilitySemanticIr` 构造后仍执行当前 `RequireVersion` 和每个 operation 的 `RequireOperation`。payload 解码提前拒绝非成员只是把同一正式集合应用到 wire 边界。
 - `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
 
+## 2026-09-21 运行描述符 OperationSet 校验
+
+对应 tasks.md 的 7.58。
+
+- `OperationExecutionDescriptor` 构造原先用 `Enum.IsDefined(typeof(SimulationOperationCode), code)` 反射装箱。它当前只由 Fixed 和 Float32 `GameplayAbilityExecutionData` 从已验证的 `SimulationOperation` 装配，Semantic IR 和 payload 边界也已经按当前 OperationSet 拒绝非成员。
+- 构造器现在调用 `GameplayAbilityOperationSet.IsOperation`，仍拒绝当前集合外的旧枚举位型；`ArgumentOutOfRangeException` 和抛出位置保留，错误文案从 `undefined` 改为 `not supported by the current operation set`，避免把“声明过但不在当前集合”的成员误报成未定义。
+- 这次不删除描述符构造检查，因为它是运行装配边界的最后一道 typed 合同；只删除反射实现，不新增兼容路径或第二份操作清单。
+- `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

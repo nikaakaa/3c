@@ -382,6 +382,7 @@
 - [x] 6.9 资源租约与实例的内部所有权记录按 runtime 生命周期池化，acquire/instantiate 租用，release 清空身份并归还；公共 lease 对象、加载等待、链接取消源和外部 payload 仍保持独立
 - [x] 6.10 删除共享物理资源加载的 InFlightLoad 包装，Dictionary 直接持有 UniTaskCompletionSource；首载、并发 join、异常传播和移除时机不变
 - [x] 6.11 资源 scope 持有私有 dispose id buffer，closing 后按当前 lease/instance 数量扩容并跨两次复制复用；先复制后释放的顺序和 closing 阻止新注册保持不变
+- [x] 6.12 删除无消费者的 Main startup History 合同、队列和容量常量，跨线程源只保留 Current 与 SnapshotChanged，避免加锁枚举活历史或每次读取生成快照数组
 
 ## 7. 诊断与正式性能交付
 

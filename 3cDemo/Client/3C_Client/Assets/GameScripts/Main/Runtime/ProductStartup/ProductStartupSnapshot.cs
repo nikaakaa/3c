@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace ThirdPerson.ProductStartup
 {
@@ -152,7 +151,6 @@ namespace ThirdPerson.ProductStartup
     public interface IProductStartupSnapshotSource
     {
         ProductStartupSnapshot Current { get; }
-        IReadOnlyList<ProductStartupSnapshot> History { get; }
         event Action<ProductStartupSnapshot> SnapshotChanged;
     }
 
@@ -165,9 +163,7 @@ namespace ThirdPerson.ProductStartup
 
     public sealed class ProductStartupSnapshotStore : IProductStartupSnapshotSource
     {
-        const int HistoryCapacity = 64;
         readonly object m_Sync = new object();
-        readonly Queue<ProductStartupSnapshot> m_History = new Queue<ProductStartupSnapshot>(HistoryCapacity);
         ProductStartupSnapshot m_Current;
         int m_Generation;
 
@@ -178,17 +174,6 @@ namespace ThirdPerson.ProductStartup
                 lock (m_Sync)
                 {
                     return m_Current;
-                }
-            }
-        }
-
-        public IReadOnlyList<ProductStartupSnapshot> History
-        {
-            get
-            {
-                lock (m_Sync)
-                {
-                    return m_History.ToArray();
                 }
             }
         }
@@ -239,11 +224,6 @@ namespace ThirdPerson.ProductStartup
             lock (m_Sync)
             {
                 m_Current = snapshot;
-                m_History.Enqueue(snapshot);
-                while (m_History.Count > HistoryCapacity)
-                {
-                    m_History.Dequeue();
-                }
             }
 
             SnapshotChanged?.Invoke(snapshot);

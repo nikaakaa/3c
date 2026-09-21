@@ -2707,3 +2707,11 @@
 - scope dispose 原先为 instance id 和 lease id 各新建 `long[]`，scope 生命周期内最多只使用两次。现在 scope 私有持有一只 dispose buffer，先按 instance 数量准备并复制，释放完成后再次按 lease 数量按需扩容复用；`TryBeginClosing` 已进入 Closing 并取消，随后复制期间不会有新 id 注册。
 - 仍保持先复制全部 id、再逐个释放的顺序，避免释放时修改集合导致漏释放。scope 关闭后随 runtime 丢弃，不新增跨 scope 共享状态。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 删除无消费者的 startup 历史
+
+对应 tasks.md 的 6.1 遗漏清理，新增 6.12 记录独立小步。
+
+- `ProductStartupSnapshotStore` 是跨线程快照源，`History` 每次读取都持有 `m_Sync` 复制 64 条快照。若改成返回 owner 活列表，枚举会和发布竞争；若继续复制则分配仍在。全项目搜索确认没有 `.History` 读取者，Product Shell 只消费 `Current` 和 `SnapshotChanged`，因此删除 History 合同、固定容量 64、Queue 和入队裁剪。
+- 该 store 保留跨线程 `Current` 读取、代数校验、发布锁和事件顺序；不引入只读包装、缓存快照或第二个历史视图。6.1 此前记录的 Product startup store 是 HotFix 内的无锁历史，和本条 Main 启动引导 store 不是同一条链路。
+- `ThirdPerson.ProductStartup.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；`ProductBootstrapView` 暴露 7 个既有 CS0649 警告，不在本步改动文件。`GameLogic.csproj` 同参数编译成功，0 警告 0 错误。两次构建后均执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

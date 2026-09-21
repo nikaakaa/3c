@@ -111,11 +111,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
         }
 
         public static DeterministicKccBodyState[] Read(
-            byte[] bytes,
+            ReadOnlyMemory<byte> bytes,
             StableHash expectedCollisionWorldHash,
             StableHash expectedConfigurationHash)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Deterministic KCC state header is invalid.");
             var collisionWorldHash = new StableHash(reader.ReadString());

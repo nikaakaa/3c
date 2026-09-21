@@ -3059,6 +3059,14 @@
 - 三个 lifecycle 边界现在直接转移或返回 `m_Current`／外部 state，删除 bodies 和 solver payload 的重复复制。校验顺序、失败不替换当前状态和 `Restore => Reconstruct` 不变。`Reconstruct` 中 `SolverStatePayload.ToArray()` 是 codec 读取入口的独立复制，留给 5.1 后续小步处理。
 - `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 KCC 状态载荷去复制
+
+对应 tasks.md 的 5.1，新增 5.112 作为独立小步；5.1 保持未勾选。
+
+- KCC `Reconstruct` 原先调用 `state.SolverStatePayload.ToArray()`，把 state 已经持有的正式 payload 再复制一次才交给 state codec。`CanonicalReader` 增加正式 `ReadOnlyMemory<byte>` 构造，用 `TryGetArray` 绑定原数组区间；非 array backed memory 显式 `ArgumentException`，不做复制或普通 fallback。
+- `DeterministicKccStateCodec.Read` 改为 `ReadOnlyMemory<byte>` 输入，全项目唯一调用方 `DeterministicKccWorldSolver.Reconstruct` 直接传 `SolverStatePayload`。读取偏移、canonical 校验、collision/configuration identity、Actor 顺序和异常类型保持不变。这是正式 serialization 入口扩展，不保留 byte[] 双入口。
+- `ThirdPersonSimulation.Core.csproj` 和 `ThirdPersonSimulation.DeterministicKcc.csproj` 都使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

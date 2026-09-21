@@ -372,6 +372,7 @@
 - [x] 5.109 KCC 批求解直接把新建的正式 WorldSimulationState 转交给 WorldSolveBatchResult，删除返回前的 bodies 和 solver payload 克隆；state 自身不可变，m_KccStates 每批替换精确数组引用。results 数组仍为正式结果，捕获/恢复边界仍在后续小步
 - [x] 5.110 DotRecast 的 Create 返回、Reconstruct 当前 state 和 Capture 快照直接转移不可变 WorldSimulationState，删除三个 lifecycle 边界的 bodies/payload 克隆；保留 roster、revision、localized 和事务校验，Restore 仍走 Reconstruct
 - [x] 5.111 KCC 的 Create 返回、Reconstruct 当前 state 和 Capture 快照直接转移不可变 WorldSimulationState，删除三个 lifecycle 边界的 bodies/payload 克隆；保留 body、payload、roster 和 revision 校验，Reconstruct 读取 payload 的中间复制仍在后续小步
+- [x] 5.112 CanonicalReader 增加正式 ReadOnlyMemory 入口并要求 array backed segment，KCC state codec 及唯一 Reconstruct 调用直接读取 SolverStatePayload，删除 ToArray 中转；payload 校验、顺序和异常语义不变
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ThirdPersonSimulation
@@ -244,6 +245,14 @@ namespace ThirdPersonSimulation
             m_Bytes = bytes.Array ?? throw new ArgumentNullException(nameof(bytes));
             m_Offset = bytes.Offset;
             m_End = bytes.Offset + bytes.Count;
+        }
+
+        public CanonicalReader(ReadOnlyMemory<byte> bytes)
+            : this(
+                MemoryMarshal.TryGetArray(bytes, out ArraySegment<byte> segment)
+                    ? segment
+                    : throw new ArgumentException("Canonical reader payload must be array backed.", nameof(bytes)))
+        {
         }
 
         public int Remaining => m_End - m_Offset;

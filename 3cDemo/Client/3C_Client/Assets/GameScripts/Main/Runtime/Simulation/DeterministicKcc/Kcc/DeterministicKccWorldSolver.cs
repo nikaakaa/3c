@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             RequireAlive();
             ValidateState(state);
             m_KccStates = DeterministicKccStateCodec.Read(
-                state.SolverStatePayload.ToArray(),
+                state.SolverStatePayload,
                 m_CollisionWorld.ContentHash,
                 m_Configuration.ConfigurationHash);
             RequireKccRoster(m_KccStates);

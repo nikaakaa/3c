@@ -37,6 +37,10 @@ namespace ThirdPersonSimulation
         public List<string> OwnedTags { get; } = new List<string>();
         public List<string> CanonicalTags { get; } = new List<string>();
 
+        Float32GameplayEffectTarget m_Target;
+
+        internal Float32GameplayEffectTarget Target => m_Target ??= new Float32GameplayEffectTarget(this);
+
         public void Reset()
         {
             Changes.Clear();

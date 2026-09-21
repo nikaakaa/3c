@@ -16,16 +16,16 @@ namespace ThirdPersonSimulation
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly IFloat32AbilityExecutionSavepointPort m_SavepointPort;
-        readonly IFloat32GameplayEffectStatePort m_EffectState;
-        readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
-        readonly GameplayEffectStateAggregate m_CommittedState;
-        readonly ActorId m_ActorId;
-        readonly SimulationTick m_Tick;
-        readonly int m_TickRate;
-        readonly Func<ulong> m_AllocateHandle;
-        readonly Func<ulong> m_CaptureAllocator;
-        readonly Action<ulong> m_RestoreAllocator;
+        IFloat32AbilityExecutionSavepointPort m_SavepointPort;
+        IFloat32GameplayEffectStatePort m_EffectState;
+        Float32GameplayEffectRuntimeCatalog m_Catalog;
+        GameplayEffectStateAggregate m_CommittedState;
+        ActorId m_ActorId;
+        SimulationTick m_Tick;
+        int m_TickRate;
+        Func<ulong> m_AllocateHandle;
+        Func<ulong> m_CaptureAllocator;
+        Action<ulong> m_RestoreAllocator;
         readonly List<PortableEffectRuntimeChange> m_Changes;
         readonly Dictionary<ulong, PortableEffectCause> m_Causes;
         readonly Float32GameplayEffectExecutionScratch m_Scratch;
@@ -43,35 +43,13 @@ namespace ThirdPersonSimulation
         SimulationGameplayEffectState m_State;
         PortablePredictionRecord m_CurrentPrediction;
 
-        public Float32GameplayEffectTarget(
-            IFloat32AbilityExecutionSavepointPort savepointPort,
-            IFloat32GameplayEffectStatePort effectState,
-            Float32GameplayEffectRuntimeCatalog catalog,
-            ActorId actorId,
-            SimulationTick tick,
-            Func<ulong> allocateHandle,
-            Func<ulong> captureAllocator,
-            Action<ulong> restoreAllocator,
-            Float32GameplayEffectExecutionScratch scratch)
+        Float32GameplayEffectTarget(Float32GameplayEffectExecutionScratch scratch)
         {
-            m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
-            m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
-            m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            m_CommittedState = effectState.GetGameplayEffectAggregate();
-            m_ActorId = actorId;
-            m_Tick = tick;
-            m_TickRate = effectState.TickRate;
-            m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
-            m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
-            m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));
             if (scratch == null)
                 throw new ArgumentNullException(nameof(scratch));
             m_Scratch = scratch;
             m_Changes = scratch.Changes;
             m_Causes = scratch.Causes;
-            m_CommittedState.CollectActiveEffectIdentities(m_Scratch.ActiveIdentities);
-            foreach (GameplayEffectActiveIdentity active in m_Scratch.ActiveIdentities)
-                m_Causes[active.Handle] = new PortableEffectCause(active.Definition, active.InstanceId, active.Context);
             m_Control = new GameplayEffectControlRuntime<
                 SimulationGameplayEffectApplication,
                 PortableEffectSpecState,
@@ -83,6 +61,53 @@ namespace ThirdPersonSimulation
                 SimulationGameplayEffectApplication,
                 PortableEffectSpecState,
                 Float32Scalar>(this, m_Scratch.SuppliedSourceAttributes);
+        }
+
+        internal Float32GameplayEffectTarget Begin(
+            IFloat32AbilityExecutionSavepointPort savepointPort,
+            IFloat32GameplayEffectStatePort effectState,
+            Float32GameplayEffectRuntimeCatalog catalog,
+            ActorId actorId,
+            SimulationTick tick,
+            Func<ulong> allocateHandle,
+            Func<ulong> captureAllocator,
+            Action<ulong> restoreAllocator)
+        {
+            m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
+            m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
+            m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            m_CommittedState = effectState.GetGameplayEffectAggregate();
+            m_ActorId = actorId;
+            m_Tick = tick;
+            m_TickRate = effectState.TickRate;
+            m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
+            m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
+            m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));
+            m_State = null;
+            m_CurrentPrediction = null;
+            m_Changes.Clear();
+            m_Causes.Clear();
+            m_CommittedState.CollectActiveEffectIdentities(m_Scratch.ActiveIdentities);
+            foreach (GameplayEffectActiveIdentity active in m_Scratch.ActiveIdentities)
+                m_Causes[active.Handle] = new PortableEffectCause(active.Definition, active.InstanceId, active.Context);
+            return this;
+        }
+
+        internal void End()
+        {
+            m_Control.Reset();
+            m_State = null;
+            m_CurrentPrediction = null;
+            m_CommittedState = null;
+            m_SavepointPort = null;
+            m_EffectState = null;
+            m_Catalog = null;
+            m_AllocateHandle = null;
+            m_CaptureAllocator = null;
+            m_RestoreAllocator = null;
+            m_Changes.Clear();
+            m_Causes.Clear();
+            m_Scratch.ActiveIdentities.Clear();
         }
 
         public IReadOnlyList<string> OwnedTags => m_State != null ? m_State.CopyOwnedTags() : m_CommittedState.CopyOwnedTags();

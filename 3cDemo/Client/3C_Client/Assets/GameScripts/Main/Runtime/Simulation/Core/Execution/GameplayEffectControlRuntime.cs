@@ -23,6 +23,12 @@ namespace ThirdPersonSimulation
             m_Port = port ?? throw new ArgumentNullException(nameof(port));
         }
 
+        internal void Reset()
+        {
+            m_PendingAdditional.Clear();
+            CancelPrediction();
+        }
+
         public GameplayEffectApplyResult Apply(TApplication application)
         {
             TSavepoint savepoint = m_Port.CreateSavepoint();

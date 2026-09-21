@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
 		{
 			if (m_GameplayEffects != null)
 				throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
-			m_GameplayEffects = new Float32GameplayEffectTarget(
+			m_GameplayEffects = m_Scratch.Target.Begin(
 				m_SavepointPort,
                 m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
@@ -57,6 +57,7 @@ namespace ThirdPersonSimulation
 
 		public void EndEvaluation()
 		{
+            m_GameplayEffects.End();
 			m_GameplayEffects = null;
 		}
 

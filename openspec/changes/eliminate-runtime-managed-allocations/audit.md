@@ -3987,3 +3987,11 @@
 - Fixed 和 Float32 Ability Execution Frame 直接持有 TreeClip invocation、active 标记和 Action Instance 状态；Frame 保留 active 查询、Begin/End 校验和清空规则，Presentation Sink 只转发这些调用。
 - `PresentationSink` 改为 readonly struct，Operation Control、Gameplay Effect 和 Frame 之间继续使用具体类型传值，不新增接口或装箱；presentation event 通道和输出顺序不变。
 - 每个 Ability invocation 的 Presentation Sink class 分配删除；Frame 本体和 workspace 生命周期不在本步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 声明残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Gameplay effect target 生命周期收口
+
+对应 tasks.md 的 5.5，新增 5.226 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Gameplay Effect Execution Scratch 常驻一个 Target；每次 operation evaluation 用 Begin 重绑 savepoint 端口、Effect state、catalog、Actor/tick 和 Handle allocator 委托，再从 committed aggregate 重建 causes。
+- Target 的通用 Control Runtime 和 Admission Runtime 只在 Target 构造时建立，继续绑定同一 Target；`End` 清理 working state、当前 prediction、pending additional、changes、causes、active identity 和事务绑定，Evaluation 成功或异常后仍由 shared scratch 统一 Reset。
+- 每个 Ability invocation 的 Target、generic Control Runtime 和 Admission Runtime 分配删除；shared Effect scratch 的生命周期和 Timeline pending 数据不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

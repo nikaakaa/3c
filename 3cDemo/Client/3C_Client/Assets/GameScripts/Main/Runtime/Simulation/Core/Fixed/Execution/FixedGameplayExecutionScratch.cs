@@ -38,6 +38,10 @@ namespace ThirdPersonSimulation.Fixed
         public List<string> OwnedTags { get; } = new List<string>();
         public List<string> CanonicalTags { get; } = new List<string>();
 
+        FixedGameplayEffectTarget m_Target;
+
+        internal FixedGameplayEffectTarget Target => m_Target ??= new FixedGameplayEffectTarget(this);
+
         public void Reset()
         {
             Changes.Clear();

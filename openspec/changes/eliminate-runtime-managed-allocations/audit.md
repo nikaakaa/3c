@@ -3299,3 +3299,11 @@
 - `ComputeInputHash`、`ComputeBundleHash` 和 `ComputeGameplayInputHash` 原先各自新建 `CanonicalWriter`；`RollbackActorInputFrame` 每次构造因此为 InputHash 和 GameplayHash 创建两只 writer。现在 codec 持有线程生命周期 hash writer，每次入口先 Reset，payload 编码顺序和校验不变。
 - `ComputeGameplayBundleHash` 原先创建字符串数组，将 Tick 字符化，并逐 Actor 生成 `ActorId:GameplayHash` 插值字符串后再交给通用 `StableHash.Compute`。现在直接写入版本标签、Tick、Actor 数量和各 Actor 身份/hash 字段后计算 canonical payload hash。版本从 `/2` 提升到 `/3`；GameplayHash 不写入 canonical bundle wire bytes，同一运行链路内的 schedule provenance、state projection、history 和确认比较同步使用新值。
 - 静态线程 writer 只保留容量，不跨入口保留字段序列；输入、bundle 和 gameplay hash 都在方法内顺序使用，不重叠。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback canonical input identity 零复制重绑
+
+对应 tasks.md 的 5.2，新增 5.141 作为独立小步；5.2 保持未勾选。
+
+- `RollbackCanonicalInputAssembler.AssembleNext` 原先对每个 Actor 调用 `SimulationInput` 公共构造，把显式输入的 values 和 requests 再复制并排序一遍。现在 Fixed `SimulationInput.RebindSource` 增加显式接收 input source identity 的 owned-array 重绑入口，canonical assembler 复用已排序 payload 数组，只替换 Authoritative TickSource 并绑定 assembler 生命周期的 `m_InputSourceIdentity`。
+- 这个入口不把 schedule 本地 identity 当作 canonical identity；canonical identity 仍由 assembler 构造期校验和持有。原 payload 数组继续由不可变 `SimulationInput` 拥有，显式帧和 canonical 帧共享只读数组，不新增归还、兼容或对象池路径。输入序号、NumericProfile、Tick 归属和 InputHash/GameplayHash 语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

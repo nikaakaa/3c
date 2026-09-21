@@ -104,16 +104,17 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<SimulationInputRequest> Requests => m_Requests;
 
         public SimulationInput RebindSource(SimulationTickSourceIdentity tickSource)
-        {
-            return new SimulationInput(
+            => RebindSource(tickSource, InputSourceIdentity);
+
+        public SimulationInput RebindSource(SimulationTickSourceIdentity tickSource, string inputSourceIdentity)
+            => new SimulationInput(
                 NumericProfile,
                 tickSource,
-                InputSourceIdentity,
+                inputSourceIdentity,
                 Sequence,
                 m_Values,
                 m_Requests,
                 true);
-        }
 
         static SimulationInputValue[] SortValues(IEnumerable<SimulationInputValue> values)
         {

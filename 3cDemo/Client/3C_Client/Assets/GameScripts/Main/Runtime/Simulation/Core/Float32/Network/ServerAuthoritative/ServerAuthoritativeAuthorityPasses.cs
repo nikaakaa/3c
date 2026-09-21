@@ -482,9 +482,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly ServerAuthoritativeReplicationPolicy m_ReplicationPolicy;
         readonly SortedDictionary<ActorId, ServerAuthoritativeEventHorizon> m_Horizons =
             new SortedDictionary<ActorId, ServerAuthoritativeEventHorizon>();
-        readonly List<AuthoritativeActorBaseline> m_Baselines = new List<AuthoritativeActorBaseline>();
-        readonly List<AuthoritativeInputAck> m_Acks = new List<AuthoritativeInputAck>();
-        readonly List<RemotePresentationBatch> m_Remote = new List<RemotePresentationBatch>();
+        AuthoritativeActorBaseline[] m_Baselines = Array.Empty<AuthoritativeActorBaseline>();
+        AuthoritativeInputAck[] m_Acks = Array.Empty<AuthoritativeInputAck>();
+        RemotePresentationBatch[] m_Remote = Array.Empty<RemotePresentationBatch>();
         readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
         readonly List<PresentationCommand> m_SampleCommands = new List<PresentationCommand>();
         readonly List<ServerAuthoritativeReliableEvent> m_ReliableEvents = new List<ServerAuthoritativeReliableEvent>();
@@ -537,6 +537,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 bool emitBaseline = completed.Step.Tick.Value == 1 ||
                     completed.Step.Tick.Value % snapshotInterval == 0 ||
                     readPorts.FullBaselineRequest.IsRequested;
+                int actorCount = completed.Result.Actors.Count;
+                m_Acks = new AuthoritativeInputAck[actorCount];
+                m_Remote = new RemotePresentationBatch[actorCount];
+                m_Baselines = emitBaseline ? new AuthoritativeActorBaseline[actorCount] : Array.Empty<AuthoritativeActorBaseline>();
                 for (int i = 0; i < completed.Result.Actors.Count; i++)
                 {
                     SimulationActorTickResult actor = completed.Result.Actors[i];
@@ -573,13 +577,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon currentHorizon)
                         ? currentHorizon
                         : ServerAuthoritativeEventHorizon.Empty;
-                    m_Acks.Add(new AuthoritativeInputAck(
+                    m_Acks[i] = new AuthoritativeInputAck(
                         actor.ActorId,
                         completed.Step.Tick,
                         accepted.Inputs[acceptedIndex].InputSequence,
-                        horizon));
+                        horizon);
                     if (emitBaseline)
-                        m_Baselines.Add(BuildBaseline(actor, completed, readPorts));
+                        m_Baselines[i] = BuildBaseline(actor, completed, readPorts);
                 }
                 var replication = new AuthorityReplicationBatch(completed.Step.Tick, m_Acks, m_Baselines, m_Remote);
                 writePorts.Replication.Write(replication);
@@ -623,9 +627,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         void ClearScratch()
         {
-            m_Baselines.Clear();
-            m_Acks.Clear();
-            m_Remote.Clear();
+            m_Baselines = Array.Empty<AuthoritativeActorBaseline>();
+            m_Acks = Array.Empty<AuthoritativeInputAck>();
+            m_Remote = Array.Empty<RemotePresentationBatch>();
             m_Dispositions.Clear();
             m_SampleCommands.Clear();
             m_ReliableEvents.Clear();

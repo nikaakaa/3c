@@ -3603,3 +3603,11 @@
 - `HeldAuthorityInput` 的 ActorId、sequence、input、accepted tick 和 consumed tick 改为正式可更新状态，构造和更新统一走 `Reset`。`Accept` 收到同一 Actor 更新 sequence 时复用现有 holder，只在首次出现时新建；旧输入、旧 sequence 和旧消费状态被一次替换。
 - checkpoint capture 读取当前字段，restore 仍按 canonical 数据新建 holder；过期 sequence 继续跳过，BuildInput、fresh/reuse 判断和 MarkConsumed 语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Authority replication arrays 收口
+
+对应 tasks.md 的 5.5，新增 5.178 作为独立小步；5.5 保持未勾选。
+
+- `AuthorityReplicationBatch` 的 acks、baselines 和 remote presentation 改为直接持有精确 owned arrays，类型化静态排序替代 `FreezeByActor` 的 List 复制、lambda 排序和 `ReadOnlyCollection` 包装。Actor 去重、排序和 Tick 匹配校验保留。
+- Authority replication egress 按 completed result 的 actor 数量填充精确 acks 和 remote arrays；full baseline 请求时按同一数量分配 baselines，否则复用空数组。异常路径 finally 继续释放 scratch 引用，codec 解码的精确数组直接转交。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

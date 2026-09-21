@@ -603,6 +603,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 return channel switch
                 {
+                    "timeline-progress" => -1,
                     "animation-selection" => 0,
                     "animation-sample" => 1,
                     "animation-terminal" => 2,

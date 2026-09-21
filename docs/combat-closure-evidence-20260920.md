@@ -6,6 +6,8 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- `94707544f` 补齐本地角色 coordinator，Unity Console 0 error；随后相同录制推进到 149 个 issued ticks，报 Fixed Presentation state channel 'timeline-progress' has no reconciliation order。已停止 replay 释放 tick drive。FixedUnityPresentationOutputAdapter 的正式排序漏列自己生成的 timeline-progress 键；补为先提交 Timeline 进度，再处理动画选择、采样、结束与相机，尚待下一轮运行。
+
 - 纠正此前“回放被重编译打断”的单一判断：Editor.log 中三次存在 Timeline progress requires an installed Action presentation clock，随后 PlayModeErrorAutoExit 退出；因此重载只是部分现象，实际已触发运行错误。堆栈为 FixedUnityPresentationOutputAdapter.CompleteCommit → CharacterPresentationDomainRuntime.Publish。工厂仅给 SimulatedActor 创建 coordinator，本地玩家为 null；现改为两种角色均装配同一 coordinator，并保留原有按角色选择动作播放策略和移动时钟策略。尚待 Unity 编译及重跑。
 - 用户另报告跑动动画闪烁、移动一段后回退；已纳入闭环，尚未获得对应逐帧证据，不把缺时钟异常直接认定为这两个现象的全部原因。
 

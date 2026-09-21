@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Collections.Generic;
-using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
@@ -21,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterAnimationInputContract m_InputContract;
         readonly CharacterPoseNativeDomainResourceSet m_Resources;
+        readonly CharacterPoseNativeSourceResourceCatalog m_SourceCatalog;
         readonly CharacterAnimationResourceScope m_ResourceScope;
         readonly ICharacterPoseNativeActionCommandSource m_ActionCommandSource;
         readonly ICharacterPoseNativeEventFrameSource m_EventFrameSource;
@@ -61,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceIndexBySlot = BuildSourceIndexes();
             m_IndexByNode = BuildNodeIndexes();
             resources.RequireSourceCatalogComplete(profile);
+            m_SourceCatalog = resources.CreateSourceCatalog(m_Rig, m_ResourceScope);
         }
 
         internal CharacterAnimationResourceScope ResourceScope => m_ResourceScope;
@@ -81,7 +82,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var owned = new List<IDisposable>();
             try
             {
-            CharacterPoseNativeSourceResourceCatalog sourceCatalog = m_Resources.CreateSourceCatalog(m_Rig, m_ResourceScope);
             CharacterPoseNativeConstraintResourceCatalog constraintCatalog = m_Resources.CreateConstraintCatalog(m_Rig);
             owned.Add(constraintCatalog);
             CharacterPoseNativeManagedSourceResourceCatalog managedCatalog = m_Resources.CreateManagedCatalog(m_Profile, m_Rig);
@@ -193,8 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Pose Clip Player '{node.NodeId}' has an invalid payload.");
             if (!m_SourceIndexBySlot.TryGetValue(payload.SourceSlot, out int sourceIndex))
                 throw new InvalidOperationException($"Pose Clip Player '{node.NodeId}' has no source binding.");
-            var plan = m_Resources.CreateSourceCatalog(m_Rig, m_ResourceScope)
-                .RequirePlan(new PresentationPoseSourceIndex(sourceIndex));
+            var plan = m_SourceCatalog.RequirePlan(new PresentationPoseSourceIndex(sourceIndex));
             var descriptor = new CharacterPresentationClipPlayerDescriptor(
                 m_IndexByNode[node.NodeId],
                 node.NodeId,
@@ -212,11 +211,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseSourceContribution contribution,
             ClipSamplePlan clipSample)
         {
-            CharacterPresentationPoseSourcePlan plan = m_Resources.CreateSourceCatalog(m_Rig, m_ResourceScope)
-                .Plans.FirstOrDefault(value =>
-                    value.SourceIndex.Value == contribution.SourceId.PresentationPoseSourceIndex.Value) ??
-                throw new InvalidOperationException(
-                    $"Pose Foot Motion source '{contribution.SourceId}' has no plan.");
+            CharacterPresentationPoseSourcePlan plan =
+                m_SourceCatalog.RequirePlan(contribution.SourceId.PresentationPoseSourceIndex);
             return new CharacterPoseFootMotionSource(
                 plan.DisplayName,
                 (ulong)plan.ContentRevision.GetHashCode(),

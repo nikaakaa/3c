@@ -2095,3 +2095,12 @@
 - handler registry 的 kind 来自正式注册表常量，evaluator 的 kind 来自正式 handler 实现，并在初始化阶段再次比较 graph node kind；删除两处 `CharacterPoseNodeKind` 反射检查，保留 sealed、builtin、creator、重复 NodeId、handler identity 和 dispose 语义。
 - Modify Bone 的 reference space 已由 authoring node definition 校验，运行 handler 仍保留节点类型、BoneId、操作掩码和 Rig 骨骼索引检查；删除 `Enum.IsDefined`，不改变 Local/Mesh 的求解分支。
 - 这些修改只移除静态枚举反射/装箱，不改变节点创建顺序、source 准备、handler 生命周期和每帧事务。`ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。
+
+## 2026-09-21 Pose SourceCatalog 单次准备
+
+对应 tasks.md 的 7.24。
+
+- `CharacterPoseNativeDomainServiceFactory` 原先在 `Create`、每个 Clip Player 工厂和 Foot Motion 解析中重复创建 `CharacterPoseNativeSourceResourceCatalog`；每次都会重建 source/resource 字典、重复执行 plan/descriptor/Rig 校验，并重复向 resource scope 注册 ACL descriptor。
+- 将 SourceCatalog 固定为 ServiceFactory 创建阶段的唯一准备结果；Clip Player 直接按 source index 读取，Foot Motion 直接按 `PresentationPoseSourceIndex` 读取，删除 `FirstOrDefault` 和 `Plans.ToArray` 路径。SourceCatalog 的索引、Rig identity、ACL binding 与 descriptor 校验仍执行一次。
+- 没有改变 source module 创建、resource lease、handler factory、Clip/Foot 运行顺序，也没有改变资源 scope 的唯一注册结果；运行期只保留按索引查找，不再创建中间集合。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。

@@ -392,3 +392,5 @@
 - [x] 7.22 Pose handler 与 InstanceContext 直接消费已由正式入口校验的 Rig，删除构造阶段重复 Rig schema 校验；保留 binding 身份、节点配置、资源形状和运行帧事务校验
 
 - [x] 7.23 Pose Animation Slot、handler registry/evaluator、Modify Bone 已由 authoring/content preparation 定型的枚举不再在正式运行链调用 Enum.IsDefined；保留来源一致性、节点身份、重复注册和骨骼索引校验
+
+- [x] 7.24 Pose Domain ServiceFactory 只在创建阶段准备一次 SourceCatalog；Clip Player 与 Foot Motion 通过已建索引按 SourceIndex 读取，删除重复字典、数组、资源注册和 LINQ 查找分配

@@ -3178,3 +3178,10 @@
 - `RollbackOutputCommitter.CaptureLifecycleSnapshot` 原先遍历 `m_Records.Values`，每次诊断读取都会创建一只 `ValueCollection`。现在直接枚举 `KeyValuePair`，只读取 `ConfirmedOnly`；记录总数、pending 判定和快照字段不变。
 - `ResolveActorTick` 原先遍历 `records.Keys` 收集同一 Actor 和 Tick 的已存在槽位，每个 Actor/tick 都会创建一只 `KeyCollection`。现在同样直接枚举 `KeyValuePair`，只使用命中的 key；收集顺序、后续排序、替换/保留/撤销判定和事务边界不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
+## 2026-09-22 Rollback canonical 裁剪键视图删除
+
+对应 tasks.md 的 5.2，新增 5.126 作为独立小步；5.2 保持未勾选。
+
+- `RollbackCanonicalInputAssembler.FirstCanonicalTick` 原先遍历 `m_Canonical.Keys`，每淘汰一个 canonical Tick 都会创建一只 `KeyCollection`。现在直接枚举 `SortedDictionary` 的 `KeyValuePair` 并返回首项 key；SortedDictionary 的升序、容量裁剪、explicit 计数清理和 history floor 推进不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。

@@ -231,8 +231,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         ulong FirstCanonicalTick()
         {
-            foreach (ulong tick in m_Canonical.Keys)
-                return tick;
+            foreach (KeyValuePair<ulong, RollbackCanonicalInputBundle> pair in m_Canonical)
+                return pair.Key;
             throw new InvalidOperationException("Rollback canonical history is empty.");
         }
     }

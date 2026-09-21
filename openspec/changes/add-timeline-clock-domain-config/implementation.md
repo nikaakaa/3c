@@ -733,3 +733,10 @@
 - 全工程 `.cs` 搜索 `MotionWarpSample`、`ProgramMotionModifierDescriptor`、`IMotionModifierTarget`、`ProgramMotionModifierRuntime`、`ApplyMotionModifiers`、`BuildMotionModifierRanges`、`ProgramMotionModifierKind/Channel` 均无结果；旧帧字段在 Simulation catalog 中也无消费者。
 - `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 warnings、0 errors；`ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors。所有构建禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
 - 0.5 仍未勾选：canonical ability data 必须按 `/19` 和 payload 4 用正式生成链重建；重建后还要对账 TreeClip 输出、ActionCue 残留和旧帧入口，才能判断本任务是否完整闭合。
+
+## 压实ProgramCatalogFieldId并重建canonical资产
+
+- `ProgramCatalogFieldId` 原有 7 个删除旧字段造成的编号空洞（6、7、10、12–14、25），已按剩余 27 个有效值从 0 连续重编为 0–26；`FieldCount` 从 34 降到 27。序列化按字段名匹配，数值仅作运行时数组下标，不改变数据内容格式。
+- 用正式 `btsmtl.generate_assets` 重建 4 个 Corin Ability 根：Attack（含 1458 行旧 Timeline Motion 数据删除）、DodgeForward、DodgeBack、RushAttack；同步生成 Attack / DodgeForward 的 FixedData 与 Float32Data 子资产。全部返回 `saved=true`、`diagnostics=[]`。
+- 生成后资产中搜索 `TimelineMotionCurve`、`TimelineMotionWarp`、`MotionWarpSample`、`ProgramMotionModifier`、`StartFrame`、`EndFrame`、`CueId`、`CueType` 均无结果。
+- `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 警告、0 错误；所有构建禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。

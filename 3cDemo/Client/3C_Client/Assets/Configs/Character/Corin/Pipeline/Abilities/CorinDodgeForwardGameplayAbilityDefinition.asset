@@ -93,7 +93,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: 9080e5fb-1e6c-414a-bd9f-94cab1cf7c5c
         m_StartTimeRaw: 429496730
-        m_EndTimeRaw: 10594252663
+        m_EndTimeRaw: 10594253278
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -107,7 +107,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: 913539bd-df57-4f13-b965-feafda823f36
         m_StartTimeRaw: 3292808260
-        m_EndTimeRaw: 10594252663
+        m_EndTimeRaw: 10594253278
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -133,7 +133,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: e9d429f1-595e-475a-b647-444a6e069c92
         m_StartTimeRaw: 501079518
-        m_EndTimeRaw: 10594252663
+        m_EndTimeRaw: 10594253278
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -422,7 +422,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: -60, y: 234}
+    _translation: {x: 87, y: 67}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}

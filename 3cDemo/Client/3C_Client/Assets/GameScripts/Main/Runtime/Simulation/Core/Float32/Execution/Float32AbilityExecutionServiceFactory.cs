@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
                 executionServices.ControlPolicy);
             Float32ActionStateStore actionStore = new Float32ActionStateStore(access, frame);
             Float32InputRuntime input = new Float32InputRuntime(access, frame, inputRequests);
-            Float32HandleAllocator handles = new Float32HandleAllocator(access, frame);
+            Float32HandleAllocator handles = new Float32HandleAllocator(frame);
             Float32BlackboardRuntime blackboard = new Float32BlackboardRuntime(
                 access,
                 frame.CreateStatePort("Blackboard", executionServices.BlackboardPolicy),

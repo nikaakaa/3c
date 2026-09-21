@@ -2,12 +2,11 @@ using System;
 
 namespace ThirdPersonSimulation
 {
-    internal sealed class Float32HandleAllocator : Float32OperationModule
+    internal readonly struct Float32HandleAllocator
     {
         readonly Float32AbilityExecutionFrame m_Frame;
 
-        public Float32HandleAllocator(Float32GameplayAbilityExecutionAccess access, Float32AbilityExecutionFrame frame)
-            : base(access)
+        public Float32HandleAllocator(Float32AbilityExecutionFrame frame)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }

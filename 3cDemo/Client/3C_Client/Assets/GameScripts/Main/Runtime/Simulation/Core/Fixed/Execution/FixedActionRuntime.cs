@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly IFixedAbilityActionBindingProvider m_ActionBindings;
-        readonly IFixedInputPort m_InputRuntime;
+        readonly FixedInputRuntime m_InputRuntime;
         readonly FixedActionStateStore m_Actions;
         readonly IFixedBlackboardPort m_Blackboard;
         readonly IFixedGameplayTagQuery m_GameplayTags;
@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionAccess access,
             IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
-            IFixedInputPort inputRuntime,
+            FixedInputRuntime inputRuntime,
             FixedActionStateStore actions,
             IFixedBlackboardPort blackboard,
             IFixedGameplayTagQuery gameplayTags,
@@ -42,7 +42,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_ActionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
+            m_InputRuntime = inputRuntime;
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_GameplayTags = gameplayTags;

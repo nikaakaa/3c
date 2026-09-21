@@ -4,16 +4,14 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedInputRuntime : FixedOperationModule, IFixedInputPort
+    internal readonly struct FixedInputRuntime
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly IFixedInputRequestStatePort m_InputRequests;
 
         public FixedInputRuntime(
-            FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
             IFixedInputRequestStatePort inputRequests)
-            : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
@@ -23,16 +21,16 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (blackboard == null)
                 throw new ArgumentNullException(nameof(blackboard));
-            for (int i = 0; i < m_Layout.BlackboardInputBindings.Count; i++)
+            for (int i = 0; i < m_Frame.Layout.BlackboardInputBindings.Count; i++)
             {
-                BlackboardInputStateBinding binding = m_Layout.BlackboardInputBindings[i];
+                BlackboardInputStateBinding binding = m_Frame.Layout.BlackboardInputBindings[i];
                 blackboard.ProjectBlackboardInput(binding, ReadValue(binding.InputId, (SimulationInputValueKind)binding.InputKind));
             }
         }
 
         public bool HasRequest(string requestId, out SimulationInputRequestState state)
         {
-            if (!m_Layout.HasInputRequest(requestId))
+            if (!m_Frame.Layout.HasInputRequest(requestId))
             {
                 state = default;
                 return false;
@@ -43,7 +41,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public void ClearRequest(string requestId)
         {
-            if (!m_Layout.HasInputRequest(requestId))
+            if (!m_Frame.Layout.HasInputRequest(requestId))
                 return;
             SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)

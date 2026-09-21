@@ -42,7 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityOperationControlRuntime control,
             FixedAbilityDomainRuntime domain)
         {
-            Input = input ?? throw new ArgumentNullException(nameof(input));
+            Input = input;
             ActionRuntime = actions ?? throw new ArgumentNullException(nameof(actions));
             GameplayEffects = gameplayEffects;
             Equipment = equipment;
@@ -111,8 +111,6 @@ namespace ThirdPersonSimulation.Fixed
             inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
             control = control ?? throw new ArgumentNullException(nameof(control));
             m_SkillState = skillState;
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));

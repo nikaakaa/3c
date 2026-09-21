@@ -4,13 +4,6 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal interface IFixedInputPort
-    {
-        bool HasRequest(string requestId, out SimulationInputRequestState state);
-        void ClearRequest(string requestId);
-        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind);
-    }
-
     internal interface IFixedValueInputReader
     {
         FixedValueInputLease ReadInputs<TTarget>(

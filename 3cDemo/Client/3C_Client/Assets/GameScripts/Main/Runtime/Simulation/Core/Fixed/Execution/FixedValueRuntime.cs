@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedValueRuntime : FixedOperationModule, IFixedValueInputReader
     {
-        readonly IFixedInputPort m_Input;
+        readonly FixedInputRuntime m_Input;
         readonly IFixedActionContextReader m_Actions;
         readonly IFixedActionAdmissionQuery m_ActionAdmission;
         readonly IFixedGameplayTagQuery m_GameplayTags;
@@ -83,7 +83,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedValueRuntime(
             FixedGameplayAbilityExecutionAccess access,
-            IFixedInputPort input,
+            FixedInputRuntime input,
             IFixedActionContextReader actions,
             IFixedActionAdmissionQuery actionAdmission,
             IFixedGameplayTagQuery gameplayTags,
@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionWorkspace workspace)
             : base(access)
         {
-            m_Input = input ?? throw new ArgumentNullException(nameof(input));
+            m_Input = input;
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionAdmission = actionAdmission ?? throw new ArgumentNullException(nameof(actionAdmission));
             m_GameplayTags = gameplayTags;

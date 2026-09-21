@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation.Fixed
                 "Control",
                 executionServices.ControlPolicy);
             FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
-            FixedInputRuntime input = new FixedInputRuntime(access, frame, inputRequests);
+            FixedInputRuntime input = new FixedInputRuntime(frame, inputRequests);
             FixedHandleAllocator handles = new FixedHandleAllocator(frame);
             FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
                 access,

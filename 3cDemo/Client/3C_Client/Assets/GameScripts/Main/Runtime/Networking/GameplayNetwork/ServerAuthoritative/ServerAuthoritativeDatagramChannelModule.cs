@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Fantasy;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.ServerAuthoritative;
@@ -63,6 +64,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     internal sealed class ServerAuthoritativeDatagramChannelModule
     {
         readonly ServerAuthoritativeDatagramEndpoint m_Endpoint;
+        readonly ThreadLocal<CanonicalWriter> m_PayloadWriter;
+        readonly int m_MaximumDatagramBytes;
         readonly Queue<ServerAuthoritativePredictionDatagramEvent> m_PredictionEvents =
             new Queue<ServerAuthoritativePredictionDatagramEvent>();
         readonly List<CanonicalInputSample> m_CommandHistory = new List<CanonicalInputSample>(4);
@@ -87,6 +90,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             int queueCapacity,
             int maxDatagramBytes)
         {
+            m_MaximumDatagramBytes = maxDatagramBytes;
+            m_PayloadWriter = new ThreadLocal<CanonicalWriter>(() => new CanonicalWriter(new byte[maxDatagramBytes]));
             m_Endpoint = new ServerAuthoritativeDatagramEndpoint(
                 launch.BindEndPoint,
                 queueCapacity,
@@ -208,7 +213,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (input.SourceTick != 1 && input.SourceTick % interval != 0)
                 return;
             var command = new CommandDatagram(m_LatestSnapshotSequence, m_LatestSnapshotSequence, m_CommandHistory);
-            byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(command);
+            byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(command, m_PayloadWriter.Value);
             SendPacket(ServerAuthoritativeDatagramKind.Command, payload);
             m_CommandPacketCount++;
             m_CommandPayloadBytes = checked(m_CommandPayloadBytes + (ulong)payload.Length);
@@ -252,10 +257,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 return;
             SendPacket(
                 ServerAuthoritativeDatagramKind.DataPlaneHello,
-                ServerAuthoritativeDatagramPayloadCodec.Write(new DataPlaneHello(
-                    m_PredictionTicket.TicketId,
-                    m_PredictionTicket.Nonce,
-                    clockMicros)));
+                ServerAuthoritativeDatagramPayloadCodec.Write(
+                    new DataPlaneHello(
+                        m_PredictionTicket.TicketId,
+                        m_PredictionTicket.Nonce,
+                        clockMicros),
+                    m_PayloadWriter.Value));
             m_Endpoint.PumpSend();
         }
 
@@ -277,6 +284,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_PredictionEvents.Clear();
             m_CommandHistory.Clear();
             m_PredictionTicket = null;
+            m_PayloadWriter.Dispose();
             m_Endpoint.Dispose();
         }
     }

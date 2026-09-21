@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Threading;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.ServerAuthoritative.Transport
@@ -26,6 +27,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             new Queue<ServerAuthoritativeAuthorityReliableEventBatchOutput>();
         readonly Queue<ServerAuthoritativeAuthorityFullCheckpointOutput> m_FullCheckpointOutput =
             new Queue<ServerAuthoritativeAuthorityFullCheckpointOutput>();
+        readonly ThreadLocal<CanonicalWriter> m_PayloadWriter;
         ServerAuthoritativeSessionId m_SessionId;
         ulong m_RosterRevision;
         ulong m_LatestAuthorityTick;
@@ -56,6 +58,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_Data = data ?? throw new ArgumentNullException(nameof(data));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             m_CheckpointLayout = new NetworkCheckpointLayout(characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime)));
+            m_PayloadWriter = new ThreadLocal<CanonicalWriter>(
+                () => new CanonicalWriter(new byte[policy.ModelPolicy.MaxGameplayDatagramBytes]));
             var actors = expectedActors == null
                 ? new List<ActorId>()
                 : new List<ActorId>(expectedActors);
@@ -323,7 +327,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             route.DataPlaneReady = true;
             route.AcceptHelloSequence(received.Packet.Header.PacketSequence);
             byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(
-                new DataPlaneHelloAck(m_LatestAuthorityTick, hello.ClientClockMicros, ClockMicros()));
+                new DataPlaneHelloAck(m_LatestAuthorityTick, hello.ClientClockMicros, ClockMicros()),
+                m_PayloadWriter.Value);
             SendPacket(route, ServerAuthoritativeDatagramKind.DataPlaneHelloAck, payload);
             if (!route.TicketConsumptionReported)
             {
@@ -391,7 +396,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     FindAck(batch, route.Roster.ActorId).ConfirmedInputSequence,
                     target.Baseline.ConfirmedEventHorizon.Sequence,
                     delta);
-                byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(snapshot);
+                byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(snapshot, m_PayloadWriter.Value);
                 ServerAuthoritativeDatagramPacket packet = Packet(route, ServerAuthoritativeDatagramKind.Snapshot, payload);
                 try
                 {
@@ -680,6 +685,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             }
             m_ReliableOutput.Clear();
             m_FullCheckpointOutput.Clear();
+            try
+            {
+                m_PayloadWriter.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
             m_Routes.Clear();
             m_Roster.Clear();
             m_LatestCheckpoints.Clear();

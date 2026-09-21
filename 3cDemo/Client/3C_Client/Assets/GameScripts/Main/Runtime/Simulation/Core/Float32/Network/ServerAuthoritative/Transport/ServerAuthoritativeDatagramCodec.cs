@@ -313,9 +313,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
     {
         const int SchemaVersion = 1;
 
-        public static byte[] Write(DataPlaneHello value)
+        public static byte[] Write(DataPlaneHello value, CanonicalWriter writer)
         {
-            using var writer = Writer(ServerAuthoritativeDatagramKind.DataPlaneHello);
+            Writer(writer, ServerAuthoritativeDatagramKind.DataPlaneHello);
             writer.WriteString(value.TicketId);
             writer.WriteString(value.Nonce);
             writer.WriteInt64(value.ClientClockMicros);
@@ -330,9 +330,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return value;
         }
 
-        public static byte[] Write(DataPlaneHelloAck value)
+        public static byte[] Write(DataPlaneHelloAck value, CanonicalWriter writer)
         {
-            using var writer = Writer(ServerAuthoritativeDatagramKind.DataPlaneHelloAck);
+            Writer(writer, ServerAuthoritativeDatagramKind.DataPlaneHelloAck);
             writer.WriteUInt64(value.AuthorityTick);
             writer.WriteInt64(value.EchoedClientClockMicros);
             writer.WriteInt64(value.AuthorityClockMicros);
@@ -347,11 +347,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return value;
         }
 
-        public static byte[] Write(CommandDatagram value)
+        public static byte[] Write(CommandDatagram value, CanonicalWriter writer)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
-            using var writer = Writer(ServerAuthoritativeDatagramKind.Command);
+            Writer(writer, ServerAuthoritativeDatagramKind.Command);
             writer.WriteUInt64(value.LatestSnapshotSequence);
             writer.WriteUInt64(value.LatestBaseSnapshotSequence);
             writer.WriteInt32(value.Samples.Count);
@@ -385,11 +385,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return new CommandDatagram(latestSnapshot, latestBase, samples);
         }
 
-        public static byte[] Write(SnapshotDatagram value)
+        public static byte[] Write(SnapshotDatagram value, CanonicalWriter writer)
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
-            using var writer = Writer(ServerAuthoritativeDatagramKind.Snapshot);
+            Writer(writer, ServerAuthoritativeDatagramKind.Snapshot);
             writer.WriteUInt64(value.SnapshotSequence);
             writer.WriteUInt64(value.BaseSnapshotSequence);
             writer.WriteUInt64(value.AuthorityTick);
@@ -413,12 +413,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return value;
         }
 
-        static CanonicalWriter Writer(ServerAuthoritativeDatagramKind kind)
+        static void Writer(CanonicalWriter writer, ServerAuthoritativeDatagramKind kind)
         {
-            var writer = new CanonicalWriter();
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+            writer.Reset();
             writer.WriteInt32(SchemaVersion);
             writer.WriteByte((byte)kind);
-            return writer;
         }
 
         static CanonicalReader Reader(ReadOnlyMemory<byte> bytes, ServerAuthoritativeDatagramKind expectedKind)

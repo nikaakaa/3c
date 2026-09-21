@@ -187,6 +187,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         planSequence++,
                         actorInputs,
                         actorIds,
+                        Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>(),
                         Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>());
                 }
             }

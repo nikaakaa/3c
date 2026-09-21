@@ -86,7 +86,7 @@ namespace GameLogic.ProductResource
             return scope;
         }
 
-        public async UniTask<ResourceLease> AcquireAsync(ResourceScope scope, string location, Type assetType, CancellationToken cancellationToken = default)
+        public async UniTask AcquireAsync(ResourceScope scope, string location, Type assetType, CancellationToken cancellationToken = default)
         {
             ThrowIfDisposed();
             ValidateActiveScope(scope);
@@ -124,9 +124,7 @@ namespace GameLogic.ProductResource
                     leaseRecord.Asset = asset;
                     _leases.Add(leaseId, leaseRecord);
                     AddOwnedReference(identity);
-                    var lease = new ResourceLease(this, leaseId, scope.Id, identity, asset);
                     PublishSnapshot();
-                    return lease;
                 }
             }
             finally
@@ -135,7 +133,7 @@ namespace GameLogic.ProductResource
             }
         }
 
-        public UniTask<ResourceLease> AcquireAsync<T>(ResourceScope scope, string location, CancellationToken cancellationToken = default) where T : Object
+        public UniTask AcquireAsync<T>(ResourceScope scope, string location, CancellationToken cancellationToken = default) where T : Object
         {
             return AcquireAsync(scope, location, typeof(T), cancellationToken);
         }

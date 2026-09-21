@@ -131,20 +131,6 @@ namespace GameLogic.ProductResource
         }
     }
 
-    public sealed class PreloadPlanResult
-    {
-        public PreloadPlanResult(string planName, IReadOnlyList<string> committedBarriers, IReadOnlyList<ResourceLease> leases)
-        {
-            PlanName = planName;
-            CommittedBarriers = committedBarriers;
-            Leases = leases;
-        }
-
-        public string PlanName { get; }
-        public IReadOnlyList<string> CommittedBarriers { get; }
-        public IReadOnlyList<ResourceLease> Leases { get; }
-    }
-
     public sealed class PreloadPlanExecutor
     {
         private readonly ProductResourceRuntime _resources;
@@ -154,38 +140,26 @@ namespace GameLogic.ProductResource
             _resources = resources ?? throw new ArgumentNullException(nameof(resources));
         }
 
-        public async UniTask<PreloadPlanResult> ExecuteAsync(PreloadPlan plan, ResourceScope scope, CancellationToken cancellationToken = default)
+        public async UniTask ExecuteAsync(PreloadPlan plan, ResourceScope scope, CancellationToken cancellationToken = default)
         {
             if (plan == null)
             {
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var committed = new List<string>(plan.Barriers.Count);
-            var leases = new List<ResourceLease>();
             foreach (PreloadBarrier barrier in plan.Barriers)
             {
-                var tasks = new UniTask<ResourceLease>[barrier.Items.Count];
+                var tasks = new UniTask[barrier.Items.Count];
                 for (int index = 0; index < barrier.Items.Count; index++)
                 {
                     tasks[index] = ExecuteItemAsync(barrier.Items[index], scope, cancellationToken);
                 }
 
-                ResourceLease[] barrierLeases = await UniTask.WhenAll(tasks);
-                foreach (ResourceLease lease in barrierLeases)
-                {
-                    if (lease != null)
-                    {
-                        leases.Add(lease);
-                    }
-                }
-                committed.Add(barrier.Name);
+                await UniTask.WhenAll(tasks);
             }
-
-            return new PreloadPlanResult(plan.Name, committed.ToArray(), leases.ToArray());
         }
 
-        private async UniTask<ResourceLease> ExecuteItemAsync(PreloadItem item, ResourceScope scope, CancellationToken cancellationToken)
+        private async UniTask ExecuteItemAsync(PreloadItem item, ResourceScope scope, CancellationToken cancellationToken)
         {
             if (item.Kind == PreloadItemKind.SceneLocation)
             {
@@ -195,10 +169,10 @@ namespace GameLogic.ProductResource
                     throw new InvalidOperationException($"Scene location '{item.Location}' is not valid in the active package.");
                 }
 
-                return null;
+                return;
             }
 
-            return await _resources.AcquireAsync(scope, item.Location, item.ExpectedType, cancellationToken);
+            await _resources.AcquireAsync(scope, item.Location, item.ExpectedType, cancellationToken);
         }
     }
 }

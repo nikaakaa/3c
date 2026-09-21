@@ -2731,6 +2731,15 @@
 - `PreloadItem.Prefab` 仍走 `AcquireAsync` 加载 GameObject 资产并交给 scope 持有，这是资产租约，不是实例租约；TEngine 的 GameObject 加载接口属于第三方正式 API，不在本轮删除范围。Asset lease、加载异步状态机、linked cancellation source 和 TEngine 生命周期仍在 6.2 后续处理。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。生成工程仍缓存已删除文件名，为不修改 Unity 生成工程或刷新 Editor，验证时临时放一只空源文件满足旧 include，构建后立即删除；业务代码和产物不依赖该占位。未新增测试、未操作共享 Unity、未做资源加载或 Player 分配采样。
 
+## 2026-09-21 删除无消费者资产 lease 外壳
+
+对应 tasks.md 的 6.2，新增 6.16 作为独立小步；6.2 保持未勾选。
+
+- 全项目只有 `PreloadPlanExecutor.ExecuteItemAsync` 和 `ProductFaultLab.ConcurrentAcquireTwentyAsync` 调用 `AcquireAsync`，二者都不消费返回的 `ResourceLease`；唯一实际消费者 `PreloadPlanResult.Leases` 也无外部读取。现在 acquire 成功后只把 lease id 写入 scope 和 runtime 内部 `LeaseRecord`，返回 `UniTask`，由 scope 正式退出释放。删除 public lease class 后，不存在外部保存旧 handle 的别名问题。
+- `PreloadPlanResult` 整类删除；执行器不再为被丢弃的 committed barrier 名称、lease 列表和最终结果数组分配内存。每个 barrier 仍准备任务数组并发启动，统一 `UniTask.WhenAll` 等待，任何一个加载失败都会沿原异步链传播，后续 barrier 不执行。Fault Lab 的并发任务数组改为无返回值的 `UniTask`，异常和 finally scope 释放不变。
+- `LeaseRecord` 仍由 runtime 池化，负责 owned reference、scope 归属和卸载资产；scope 关闭时的复制后释放顺序不变。TEngine 加载、异步状态机、linked cancellation source 和内部 lease id 分配仍在 6.2 后续处理。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。生成工程缓存了两个已删除文件名，验证时临时用空文件满足旧 include，构建后立即删除。未新增测试、未操作共享 Unity、未做资源加载或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

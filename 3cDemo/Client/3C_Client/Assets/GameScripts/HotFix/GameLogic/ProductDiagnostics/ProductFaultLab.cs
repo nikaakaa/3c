@@ -167,7 +167,7 @@ namespace GameLogic.ProductDiagnostics
             ResourceScope scope = _resources.CreateTransientScope("FaultLab.ConcurrentAcquireTwenty");
             try
             {
-                var tasks = new UniTask<ResourceLease>[ConcurrentRequestCount];
+                var tasks = new UniTask[ConcurrentRequestCount];
                 for (int index = 0; index < tasks.Length; index++)
                 {
                     tasks[index] = _resources.AcquireAsync(scope, location, assetType, cancellationToken);

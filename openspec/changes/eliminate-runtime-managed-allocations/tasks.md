@@ -418,6 +418,7 @@
 - [x] 5.155 Float32 Authority Client Route 复用按命令队列上限准备的过期输入 key scratch；Select 每次只做原地移除，不改既有输入选择顺序
 - [x] 5.156 Float32 accepted authority input batch 直接持有按 roster 数量构造并原地排序的最终数组；删除 IEnumerable 复制、List、ReadOnlyCollection 和排序闭包
 - [x] 5.157 Float32 authority reliable event 使用单事件 Egress codec 直接编码，删除每条事件的 RemotePresentationBatch、空集合、单元素数组和只读包装
+- [x] 5.158 Float32 authority reliable event batch output 直接持有按事件数量构造的最终数组；删除 IEnumerable 复制、List 和 ReadOnlyCollection，路由校验与事件顺序不变
 
 ## 6. UI、资源、渲染和生命周期
 

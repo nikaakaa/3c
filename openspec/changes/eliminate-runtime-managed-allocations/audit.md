@@ -3442,3 +3442,11 @@
 - `QueueReliableEvents` 原先为了复用 batch codec，把每条 reliable event 包成只含单元素事件的 `RemotePresentationBatch`，每次额外构造空 body／sample 集合、排序 List、单元素数组和只读包装。现在 `ServerAuthoritativeEgressCodec.WriteRemoteReliableEvent` 按既有 Remote schema 直接写 sender、reset=false、0 body、0 sample、1 event，runtime 直接调用。
 - 新入口校验 actor 有效且事件 header 属于同一 actor；wire 版本、字段顺序、事件内容和 canonical 解码结果不变。`RemotePresentationBatch` 保留给真实 body／sample／event 批次，不做重复兼容入口。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority reliable event batch 数组收口
+
+对应 tasks.md 的 5.5，新增 5.158 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityReliableEventBatchOutput` 从 `IEnumerable` 构造收紧为 owned 精确数组合同。Authority Source 本来就按 `ReliableEvents.Count` 构造最终 output 数组，现在 batch 直接持有该数组，删除每批的 List 复制和 `ReadOnlyCollection` 包装。
+- 构造期仍拒绝空批次、空 output、无效路由和不属于同一 recipient/source 的事件；Fantasy transport 继续按下标读取，事件顺序和每条 payload 的独立复制所有权不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

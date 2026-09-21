@@ -213,31 +213,28 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class ServerAuthoritativeAuthorityReliableEventBatchOutput
     {
-        readonly ReadOnlyCollection<ServerAuthoritativeAuthorityReliableEventOutput> m_Events;
+        readonly ServerAuthoritativeAuthorityReliableEventOutput[] m_Events;
 
         public ServerAuthoritativeAuthorityReliableEventBatchOutput(
             ActorId recipientActorId,
             ActorId sourceActorId,
-            IEnumerable<ServerAuthoritativeAuthorityReliableEventOutput> events)
+            ServerAuthoritativeAuthorityReliableEventOutput[] events)
         {
             if (!recipientActorId.IsValid || !sourceActorId.IsValid || recipientActorId == sourceActorId)
                 throw new ArgumentException("Reliable event batch route is invalid.");
-            var values = events == null
-                ? new List<ServerAuthoritativeAuthorityReliableEventOutput>()
-                : new List<ServerAuthoritativeAuthorityReliableEventOutput>(events);
-            if (values.Count == 0)
+            if (events == null || events.Length == 0)
                 throw new ArgumentException("Reliable event batch is empty.", nameof(events));
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < events.Length; i++)
             {
-                if (values[i] == null || values[i].RecipientActorId != recipientActorId ||
-                    values[i].SourceActorId != sourceActorId)
+                if (events[i] == null || events[i].RecipientActorId != recipientActorId ||
+                    events[i].SourceActorId != sourceActorId)
                 {
                     throw new ArgumentException("Reliable event batch contains another route.", nameof(events));
                 }
             }
             RecipientActorId = recipientActorId;
             SourceActorId = sourceActorId;
-            m_Events = values.AsReadOnly();
+            m_Events = events;
         }
 
         public ActorId RecipientActorId { get; }

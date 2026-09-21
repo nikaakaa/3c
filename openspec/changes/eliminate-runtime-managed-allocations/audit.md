@@ -3434,3 +3434,11 @@
 - `ReadAcceptedInputs` 原先每个逻辑 tick 新建临时 `List<AcceptedAuthorityInput>`，`AcceptedAuthorityInputBatch` 再通过 `IEnumerable` 复制成第二只 List、排序、包装 `ReadOnlyCollection`，排序闭包也在每次构造时分配。现在 runtime 直接填充按正式 roster 数量准备的最终数组，batch 构造期原地排序并校验空值、无效和重复 Actor。
 - batch 是不可变正式结果，最终数组继续独立分配并归 batch 持有；消费者仍通过 `IReadOnlyList` 按下标读取，选择顺序和异常语义保持。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 authority reliable event 单事件编码
+
+对应 tasks.md 的 5.5，新增 5.157 作为独立小步；5.5 保持未勾选。
+
+- `QueueReliableEvents` 原先为了复用 batch codec，把每条 reliable event 包成只含单元素事件的 `RemotePresentationBatch`，每次额外构造空 body／sample 集合、排序 List、单元素数组和只读包装。现在 `ServerAuthoritativeEgressCodec.WriteRemoteReliableEvent` 按既有 Remote schema 直接写 sender、reset=false、0 body、0 sample、1 event，runtime 直接调用。
+- 新入口校验 actor 有效且事件 header 属于同一 actor；wire 版本、字段顺序、事件内容和 canonical 解码结果不变。`RemotePresentationBatch` 保留给真实 body／sample／event 批次，不做重复兼容入口。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -144,6 +144,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return writer.ToArray();
         }
 
+        public static byte[] WriteRemoteReliableEvent(ActorId actorId, ServerAuthoritativeReliableEvent value)
+        {
+            if (!actorId.IsValid)
+                throw new ArgumentException("Remote reliable event ActorId is invalid.", nameof(actorId));
+            if (value.Header.ActorId != actorId)
+                throw new ArgumentException("Remote reliable event belongs to another Actor.", nameof(value));
+            using var writer = new CanonicalWriter();
+            writer.WriteUInt32(RemoteMagic);
+            writer.WriteInt32(RemoteVersion);
+            writer.WriteString(actorId.Value);
+            writer.WriteBoolean(false);
+            writer.WriteInt32(0);
+            writer.WriteInt32(0);
+            writer.WriteInt32(1);
+            WriteReliableEvent(writer, value);
+            return writer.ToArray();
+        }
+
         static void WriteLengthPrefixedRemotePresentation(CanonicalWriter writer, RemotePresentationBatch batch)
         {
             if (batch == null)

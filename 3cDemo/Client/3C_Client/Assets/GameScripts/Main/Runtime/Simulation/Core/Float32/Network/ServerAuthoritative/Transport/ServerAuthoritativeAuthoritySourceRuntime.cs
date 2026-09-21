@@ -482,12 +482,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 for (int i = 0; i < events.Length; i++)
                 {
                     ServerAuthoritativeReliableEvent reliable = source.ReliableEvents[i];
-                    byte[] payload = ServerAuthoritativeEgressCodec.WriteRemotePresentation(new RemotePresentationBatch(
-                        source.ActorId,
-                        Array.Empty<CharacterBodySample>(),
-                        Array.Empty<PresentationCommand>(),
-                        new[] { reliable },
-                        false));
+                    byte[] payload = ServerAuthoritativeEgressCodec.WriteRemoteReliableEvent(source.ActorId, reliable);
                     events[i] = new ServerAuthoritativeAuthorityReliableEventOutput(
                         recipient.Roster.ActorId,
                         source.ActorId,

@@ -407,6 +407,7 @@
 - [x] 5.144 Rollback relay canonical confirmation 使用按区间长度保留的 bundle scratch 并同步编码后清空引用；删除每次确认广播的区间数组分配
 - [x] 5.145 Rollback relay relayed explicit input 使用按批次长度保留的 frame scratch 并同步编码后清空引用；删除每次转发的 frame 数组分配
 - [x] 5.146 Rollback peer input batch 按冗余批长保留 frame scratch，MTU 裁剪后同步编码并清空引用；删除临时 batch List 和公共构造复制
+- [x] 5.147 Rollback Datagram Endpoint 按发送队列容量租用并归还待发 endpoint 记录；删除每个数据包的远端 IPEndPoint 克隆，发送 buffer 和 payload 归还边界不变
 
 ## 6. UI、资源、渲染和生命周期
 

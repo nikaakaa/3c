@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly ConcurrentQueue<RollbackReceivedDatagram> m_ReceiveQueue = new ConcurrentQueue<RollbackReceivedDatagram>();
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
+        readonly ConcurrentStack<IPEndPoint> m_SendEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentStack<IPEndPoint> m_ReceiveEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentStack<RollbackDatagramPacket> m_ReceivePackets = new ConcurrentStack<RollbackDatagramPacket>();
         readonly ConcurrentStack<byte[]> m_ReceivePayloads = new ConcurrentStack<byte[]>();
@@ -110,7 +111,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 Fail(new InvalidOperationException("Rollback datagram send queue capacity is exhausted."));
                 ThrowIfUnavailable();
             }
-            m_SendQueue.Enqueue(new PendingSend(bytes, length, Clone(remoteEndPoint)));
+            IPEndPoint queuedEndPoint = RentSendEndPoint(remoteEndPoint);
+            m_SendQueue.Enqueue(new PendingSend(bytes, length, queuedEndPoint));
         }
 
         public void PumpSend()
@@ -119,6 +121,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
                 Interlocked.Decrement(ref m_SendCount);
+                IPEndPoint sendEndPoint = pending.RemoteEndPoint;
                 try
                 {
                     int sent;
@@ -129,6 +132,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     finally
                     {
                         ReturnSendBuffer(pending.Bytes);
+                        ReturnSendEndPoint(sendEndPoint);
                     }
                     if (sent != pending.Length)
                         throw new IOException($"Rollback datagram wrote '{sent}' of '{pending.Length}' bytes.");
@@ -239,6 +243,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
                 ReturnSendBuffer(pending.Bytes);
+                ReturnSendEndPoint(pending.RemoteEndPoint);
             }
             m_SendWriter.Dispose();
             Interlocked.Exchange(ref m_ReceiveCount, 0);
@@ -261,6 +266,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_ReceiveEndPoints.Count < m_QueueCapacity)
                 m_ReceiveEndPoints.Push(value);
+        }
+
+        IPEndPoint RentSendEndPoint(IPEndPoint value)
+        {
+            if (!m_SendEndPoints.TryPop(out IPEndPoint endpoint))
+                endpoint = new IPEndPoint(value.Address, value.Port);
+            endpoint.Address = value.Address;
+            endpoint.Port = value.Port;
+            return endpoint;
+        }
+
+        void ReturnSendEndPoint(IPEndPoint value)
+        {
+            if (m_SendEndPoints.Count < m_QueueCapacity)
+                m_SendEndPoints.Push(value);
         }
 
         RollbackDatagramPacket RentReceivePacket()

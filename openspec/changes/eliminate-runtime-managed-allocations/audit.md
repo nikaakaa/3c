@@ -2232,6 +2232,14 @@
 - 只删除装配入口的一次反射装箱，不改装配顺序、正式角色分支、错误类型或其它内容校验。
 - Center compile 因主验收 Editor 占用返回 `WorkspaceEditorInUse`；本地 `ThirdPersonClient.Runtime.csproj` 使用规定参数后失败在当前工作区已删除的 `CharacterPoseHistoryReadView` 与 `CharacterMotionMatchingTrajectoryReadView` 相关旧上下文，8 个错误均不属于本步改动。本步不能宣称统一编译通过。
 
+## 2026-09-21 Session 外层 Tick 映射校验边界
+
+对应 tasks.md 的 7.52。
+
+- `SimulationSessionPreparedRuntime` 构造时已经校验 `OuterTickKind`，Fixed 和 Float32 preparation 都把这个准备结果交给 Session Host；`BuildRuntimeContext` 不再在每个活跃逻辑 tick 重复 `Enum.IsDefined`。
+- 保留 `m_LaunchPlan == null` 作为 Active Session 生命周期事实检查；失败文本、Tick Source 身份、世界版本和经过 Tick 数不变。
+- Center compile 仍因主验收 Editor 占用返回 `WorkspaceEditorInUse`；当前已知本地编译基线失败来自其它任务删除的 Motion Matching 上下文，本步不能宣称统一编译通过。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

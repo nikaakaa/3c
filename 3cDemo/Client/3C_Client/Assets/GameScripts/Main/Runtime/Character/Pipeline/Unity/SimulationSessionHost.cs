@@ -870,7 +870,7 @@ namespace ThirdPersonCharacter.Pipeline
             GameplayLogicTickContext context,
             SimulationSourceClockId sourceClock)
         {
-            if (m_LaunchPlan == null || !Enum.IsDefined(typeof(SimulationTickSourceKind), m_OuterTickKind))
+            if (m_LaunchPlan == null)
                 throw new InvalidOperationException("Active Session has no formal outer Tick mapping.");
             return new SimulationSessionLogicTickContext(
                 new SimulationTickSourceIdentity(m_OuterTickKind, sourceClock.Value, context.LocalLogicTick),

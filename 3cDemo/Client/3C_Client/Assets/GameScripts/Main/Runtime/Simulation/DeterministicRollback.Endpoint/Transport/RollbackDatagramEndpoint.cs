@@ -26,6 +26,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly ConcurrentQueue<RollbackReceivedDatagram> m_ReceiveQueue = new ConcurrentQueue<RollbackReceivedDatagram>();
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
+        readonly ConcurrentStack<IPEndPoint> m_ReceiveEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ThreadLocal<CanonicalWriter> m_SendWriter;
         readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_MaximumDatagramBytes;
@@ -177,7 +178,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         Interlocked.Increment(ref m_DroppedReceivedDatagrams);
                         continue;
                     }
-                    m_ReceiveQueue.Enqueue(new RollbackReceivedDatagram(packet, Clone((IPEndPoint)remote)));
+                    m_ReceiveQueue.Enqueue(new RollbackReceivedDatagram(packet, RentReceiveEndPoint((IPEndPoint)remote)));
                     Interlocked.Increment(ref m_TotalReceivedDatagrams);
                 }
                 catch (SocketException exception) when (
@@ -217,8 +218,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             if (m_ReceiveThread.IsAlive)
                 m_ReceiveThread.Join(1000);
-            while (m_ReceiveQueue.TryDequeue(out _))
+            while (m_ReceiveQueue.TryDequeue(out RollbackReceivedDatagram datagram))
             {
+                ReturnReceiveEndPoint(datagram.RemoteEndPoint);
             }
             while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
@@ -231,6 +233,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
         }
 
         static IPEndPoint Clone(IPEndPoint value) => new IPEndPoint(value.Address, value.Port);
+
+        IPEndPoint RentReceiveEndPoint(IPEndPoint value)
+        {
+            if (!m_ReceiveEndPoints.TryPop(out IPEndPoint endpoint))
+                endpoint = new IPEndPoint(value.Address, value.Port);
+            endpoint.Address = value.Address;
+            endpoint.Port = value.Port;
+            return endpoint;
+        }
+
+        internal void ReturnReceiveEndPoint(IPEndPoint value)
+        {
+            if (m_ReceiveEndPoints.Count < m_QueueCapacity)
+                m_ReceiveEndPoints.Push(value);
+        }
 
         byte[] RentSendBuffer()
         {

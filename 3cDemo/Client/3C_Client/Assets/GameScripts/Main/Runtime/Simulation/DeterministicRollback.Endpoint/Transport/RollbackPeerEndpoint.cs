@@ -86,7 +86,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!m_Started)
                 throw new InvalidOperationException("Rollback peer Endpoint is not started.");
             while (m_Endpoint.TryReceive(out RollbackReceivedDatagram received))
-                m_Channel.Process(received);
+            {
+                try
+                {
+                    m_Channel.Process(received);
+                }
+                finally
+                {
+                    m_Endpoint.ReturnReceiveEndPoint(received.RemoteEndPoint);
+                }
+            }
             while (m_Channel.TryReceive(out RollbackProtocolEnvelope envelope))
                 Process(envelope.Payload);
             m_Channel.Pump();

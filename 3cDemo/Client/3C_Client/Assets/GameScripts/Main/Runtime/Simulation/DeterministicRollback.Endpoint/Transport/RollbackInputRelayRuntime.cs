@@ -200,26 +200,33 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ThrowIfDisposed();
             while (m_Endpoint.TryReceive(out RollbackReceivedDatagram received))
             {
-                RollbackDatagramPacket packet = received.Packet;
-                if (!string.Equals(packet.SessionId, m_Definition.SessionId, StringComparison.Ordinal) ||
-                    !m_ExpectedPeers.TryGetValue(packet.SenderPeerId, out RollbackRosterEntry rosterEntry))
+                try
                 {
-                    m_InvalidInputCount = checked(m_InvalidInputCount + 1);
-                    throw new InvalidOperationException("Rollback Relay received a datagram for an unknown Session or Peer.");
+                    RollbackDatagramPacket packet = received.Packet;
+                    if (!string.Equals(packet.SessionId, m_Definition.SessionId, StringComparison.Ordinal) ||
+                        !m_ExpectedPeers.TryGetValue(packet.SenderPeerId, out RollbackRosterEntry rosterEntry))
+                    {
+                        m_InvalidInputCount = checked(m_InvalidInputCount + 1);
+                        throw new InvalidOperationException("Rollback Relay received a datagram for an unknown Session or Peer.");
+                    }
+                    if (!m_Peers.TryGetValue(packet.SenderPeerId, out PeerState peer))
+                    {
+                        peer = new PeerState(
+                            rosterEntry,
+                            new RollbackDatagramChannel(
+                                m_Endpoint,
+                                m_Definition,
+                                m_RelayHandshake.PeerId,
+                                packet.SenderPeerId,
+                                received.RemoteEndPoint));
+                        m_Peers.Add(packet.SenderPeerId, peer);
+                    }
+                    peer.Channel.Process(received);
                 }
-                if (!m_Peers.TryGetValue(packet.SenderPeerId, out PeerState peer))
+                finally
                 {
-                    peer = new PeerState(
-                        rosterEntry,
-                        new RollbackDatagramChannel(
-                            m_Endpoint,
-                            m_Definition,
-                            m_RelayHandshake.PeerId,
-                            packet.SenderPeerId,
-                            received.RemoteEndPoint));
-                    m_Peers.Add(packet.SenderPeerId, peer);
+                    m_Endpoint.ReturnReceiveEndPoint(received.RemoteEndPoint);
                 }
-                peer.Channel.Process(received);
             }
             foreach (PeerState peer in m_Peers.Values)
             {

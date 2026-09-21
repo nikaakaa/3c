@@ -2632,3 +2632,12 @@
 - `Channel.Process` 和 `Endpoint.TryReceive` 只从 public 收窄为 assembly 内合同，不影响同一 assembly 的 Peer Channel 和 Input Relay 调用链；处理顺序、队列深度、丢包计数和 Dispose 清队不变。
 - 接收 packet、packet payload 和真实来源 endpoint 的 `Clone` 继续独立分配与持有，本步不改变跨线程队列所有权。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚接收 endpoint 记录复用
+
+对应 tasks.md 的 5.4，本步只处理真实来源 `IPEndPoint` 的跨线程队列寿命，整项保持未勾选。
+
+- 有效收包原先每次 `Clone` 一个 `IPEndPoint`，处理结束后立即失去消费者；现在 Endpoint 按 `queueCapacity` 持有归还栈。接收线程租用并写入来源 Address 和 Port，队列容量溢出时仍不分配 endpoint。
+- `RollbackPeerEndpoint` 和 `RollbackInputRelayRuntime` 是仅有的两个出队消费者，处理成功或抛错都在 `finally` 归还。Relay 首次为来源创建 Channel 时继续把 endpoint 交给 Channel 做长寿命独立 clone，之后任何所有者都不保留该记录引用。
+- Dispose 清空接收队列时同步归还 endpoint。接收 packet、payload、发送 endpoint clone 和 `ConcurrentQueue` 自身存储不在本步范围。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

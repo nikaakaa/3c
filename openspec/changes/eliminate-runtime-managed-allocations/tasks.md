@@ -351,6 +351,7 @@
 - [x] 5.88 RollbackOutputCommitter 按正式 registry 容量池化 GameplayFact／PresentationCommand 输出 record，替换、取消、确认释放后回池；提交失败只回收本批新建对象，旧正式 record 保持事务原子性
 - [x] 5.89 Rollback schedule 直接消费 Fixed Character Runtime 已排序的 roster descriptor，删除每 outer tick 的 actor 数组复制、descriptor 重建和 roster hash 重算
 - [x] 5.90 Rollback input／snapshot／state-hash 历史边界与确认裁剪直接使用具体 KeyValuePair enumerator，删除 SortedDictionary Keys／Values 包装集合
+- [x] 5.91 RollbackOutputCommitter 的工作集合与正式／tentative 输出修正表按 MaximumOutputRecords 一次准备，删除重放窗口内的集合底层存储扩容
 
 ## 6. UI、资源、渲染和生命周期
 

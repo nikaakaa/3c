@@ -37,17 +37,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IFixedSimulationResultOutputPort m_Output;
         readonly IFixedSourceEgressOutputPort m_SourceEgress;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
-        readonly List<RollbackOutputSlot> m_ExistingSlots = new List<RollbackOutputSlot>();
-        readonly List<RollbackOutputRecord> m_CurrentRecords = new List<RollbackOutputRecord>();
-        readonly HashSet<RollbackOutputSlot> m_SeenSlots = new HashSet<RollbackOutputSlot>();
-        readonly List<RollbackOutputSlot> m_ReleaseSlots = new List<RollbackOutputSlot>();
-        readonly Dictionary<EventId, SimulationOutputDisposition> m_DispositionIndex =
-            new Dictionary<EventId, SimulationOutputDisposition>();
-        readonly List<RollbackOutputOperation> m_Operations = new List<RollbackOutputOperation>();
-        Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records =
-            new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
-        Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_RecordWorkspace =
-            new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
+        readonly List<RollbackOutputSlot> m_ExistingSlots;
+        readonly List<RollbackOutputRecord> m_CurrentRecords;
+        readonly HashSet<RollbackOutputSlot> m_SeenSlots;
+        readonly List<RollbackOutputSlot> m_ReleaseSlots;
+        readonly Dictionary<EventId, SimulationOutputDisposition> m_DispositionIndex;
+        readonly List<RollbackOutputOperation> m_Operations;
+        Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records;
+        Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_RecordWorkspace;
         readonly List<RollbackOutputRecord> m_RecordPool;
         readonly List<RollbackOutputRecord> m_CommitRecords;
         readonly List<RollbackOutputRecord> m_RetiredRecords;
@@ -74,6 +71,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_Output = output ?? throw new ArgumentNullException(nameof(output));
             m_SourceEgress = sourceEgress ?? throw new ArgumentNullException(nameof(sourceEgress));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            m_ExistingSlots = new List<RollbackOutputSlot>(maximumRecords);
+            m_CurrentRecords = new List<RollbackOutputRecord>(maximumRecords);
+            m_SeenSlots = new HashSet<RollbackOutputSlot>(maximumRecords);
+            m_ReleaseSlots = new List<RollbackOutputSlot>(maximumRecords);
+            m_DispositionIndex = new Dictionary<EventId, SimulationOutputDisposition>(maximumRecords);
+            m_Operations = new List<RollbackOutputOperation>(maximumRecords);
+            m_Records = new Dictionary<RollbackOutputSlot, RollbackOutputRecord>(maximumRecords);
+            m_RecordWorkspace = new Dictionary<RollbackOutputSlot, RollbackOutputRecord>(maximumRecords);
             m_RecordPool = new List<RollbackOutputRecord>(maximumRecords);
             m_CommitRecords = new List<RollbackOutputRecord>(maximumRecords);
             m_RetiredRecords = new List<RollbackOutputRecord>(maximumRecords);

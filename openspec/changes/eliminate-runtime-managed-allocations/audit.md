@@ -2512,3 +2512,12 @@
 - 通用 `RemoveThrough` 找最小 Tick 时同样直接遍历 KeyValuePair，不再创建 Keys 包装。输入、快照和 applied hash 的确认裁剪顺序与边界不变。
 - `RollbackStateHashHistory.DiscardThrough` 改为遍历 peer 字典 KeyValuePair，删除每次清理的 Values 包装；每个 peer 的移除数量和总计数更新保持不变。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚输出修正表容量准备
+
+对应 tasks.md 的 5.2，本步处理 Output Committer 的集合底层存储，整项保持未勾选。
+
+- `RollbackOutputCommitter` 的 existing slots、current records、seen slots、confirmed release、disposition index、output operations 和正式／tentative 两张输出修正表都改为构造时按正式 `MaximumOutputRecords` 预留容量。
+- 该容量继续是 registry 的唯一上限和校验来源；工作集合与修正表不引入第二份配置。重放窗口内同一容量到达后只会在既有的 capacity 校验点报错，不在热点路径上经历字典和列表扩容。
+- 正式与 tentative Dictionary 保留成功提交后的引用交换语义，因此不声明 readonly；交换前清空、交换后清理的原子边界不变。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

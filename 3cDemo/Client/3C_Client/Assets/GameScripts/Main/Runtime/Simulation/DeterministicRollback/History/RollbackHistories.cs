@@ -48,12 +48,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         readonly int m_Capacity;
         readonly SortedDictionary<ulong, MutableEntry> m_Entries = new SortedDictionary<ulong, MutableEntry>();
+        readonly Stack<MutableEntry> m_FreeEntries;
 
         public RollbackInputHistory(int capacity)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             m_Capacity = capacity;
+            m_FreeEntries = new Stack<MutableEntry>(capacity);
         }
 
         public int Count => m_Entries.Count;
@@ -93,6 +95,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void RestoreEntries(IEnumerable<RollbackInputHistoryEntry> entries)
         {
+            foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
+                Release(pair.Value);
             m_Entries.Clear();
             if (entries == null)
                 return;
@@ -143,7 +147,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void DiscardThrough(ulong confirmedTick)
         {
-            RemoveThrough(m_Entries, confirmedTick);
+            while (m_Entries.Count != 0)
+            {
+                ulong candidate = 0;
+                foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
+                {
+                    candidate = pair.Key;
+                    break;
+                }
+                if (candidate > confirmedTick)
+                    break;
+                m_Entries.Remove(candidate, out MutableEntry entry);
+                Release(entry);
+            }
         }
 
         bool Set(RollbackCanonicalInputBundle bundle, bool canonical)
@@ -154,7 +170,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 if (m_Entries.Count >= m_Capacity)
                     throw new InvalidOperationException("Rollback input history capacity is exhausted before confirmed-horizon release.");
-                entry = new MutableEntry();
+                entry = m_FreeEntries.Count == 0 ? new MutableEntry() : m_FreeEntries.Pop();
                 m_Entries.Add(bundle.Tick.Value, entry);
             }
             RollbackCanonicalInputBundle current = canonical ? entry.Canonical : entry.Predicted;
@@ -208,22 +224,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 values.Remove(candidate);
             }
         }
+
+        void Release(MutableEntry entry)
+        {
+            entry.Predicted = null;
+            entry.Canonical = null;
+            m_FreeEntries.Push(entry);
+        }
     }
 
     public sealed class RollbackSnapshotHistory
     {
-        sealed class Entry
-        {
-            public Entry(FixedSimulationSessionSnapshot snapshot)
-            {
-                Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-            }
-
-            public FixedSimulationSessionSnapshot Snapshot { get; }
-        }
-
         readonly int m_Capacity;
-        readonly SortedDictionary<ulong, Entry> m_Entries = new SortedDictionary<ulong, Entry>();
+        readonly SortedDictionary<ulong, FixedSimulationSessionSnapshot> m_Entries =
+            new SortedDictionary<ulong, FixedSimulationSessionSnapshot>();
 
         public RollbackSnapshotHistory(int capacity)
         {
@@ -240,25 +254,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            if (m_Entries.TryGetValue(snapshot.Tick.Value, out Entry current))
+            if (m_Entries.TryGetValue(snapshot.Tick.Value, out FixedSimulationSessionSnapshot current))
             {
-                if (current.Snapshot.SnapshotHash.Equals(snapshot.SnapshotHash))
+                if (current.SnapshotHash.Equals(snapshot.SnapshotHash))
                     return;
                 if (!replaceExisting)
                     throw new InvalidOperationException($"Rollback snapshot Tick '{snapshot.Tick}' changed outside replay.");
-                m_Entries[snapshot.Tick.Value] = new Entry(snapshot);
+                m_Entries[snapshot.Tick.Value] = snapshot;
                 return;
             }
             if (m_Entries.Count >= m_Capacity)
                 throw new InvalidOperationException("Rollback snapshot history capacity is exhausted before confirmed-horizon release.");
-            m_Entries.Add(snapshot.Tick.Value, new Entry(snapshot));
+            m_Entries.Add(snapshot.Tick.Value, snapshot);
         }
 
         public FixedSimulationSessionSnapshot GetRequired(SimulationTick tick)
         {
-            if (!m_Entries.TryGetValue(tick.Value, out Entry entry))
+            if (!m_Entries.TryGetValue(tick.Value, out FixedSimulationSessionSnapshot snapshot))
                 throw new KeyNotFoundException($"Rollback snapshot history has no Tick '{tick}'.");
-            FixedSimulationSessionSnapshot snapshot = entry.Snapshot;
             if (snapshot.Tick != tick)
                 throw new InvalidOperationException($"Rollback snapshot history Tick '{tick}' failed canonical hash verification.");
             return snapshot;

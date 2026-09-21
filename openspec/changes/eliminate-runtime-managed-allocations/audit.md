@@ -2428,6 +2428,15 @@
 - 5.3 剩余：`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 回滚历史容器对象复用
+
+对应 tasks.md 的 5.2，本步处理输入 MutableEntry 与快照包装，整项保持未勾选。
+
+- `RollbackInputHistory` 构造时按正式 `HistoryLengthTicks` 准备释放列表。最早输入超过确认边界时把 `MutableEntry` 清空后归还；新 Tick 到来时优先复用，历史初次填满后滑动窗口不再逐 tick 分配 entry。恢复前先归还当前 entry，再重建历史，避免恢复路径绕过容量内的释放列表。
+- `RollbackSnapshotHistory` 删除只包装 snapshot 的 `Entry` 类，SortedDictionary 直接按 Tick 持有正式 snapshot；捕获、替换、读取和容量校验语义不变。
+- 保留输入、快照和 applied hash 的独立所有权与确认释放顺序；`RemoveThrough` 仍只用于无复用需求的 ulong 到 StableHash 表。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 回滚旧 byte[] 编码入口删除
 
 对应 tasks.md 的 5.3，本步删除剩余旧入口后勾选该项。

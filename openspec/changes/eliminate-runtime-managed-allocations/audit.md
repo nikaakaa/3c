@@ -3051,6 +3051,14 @@
 - 现在三个边界直接转移或返回不可变 state，删除 lifecycle 复制；请求 roster、WorldRevision、 localized body、Restore 委托 Reconstruct 和失败不建立新当前状态的语义不变。批求解已在 5.108 转移，KCC lifecycle 仍在后续小步。
 - `ThirdPersonSimulation.DotRecast.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 KCC 生命周期快照转移
+
+对应 tasks.md 的 5.1，新增 5.111 作为独立小步；5.1 保持未勾选。
+
+- KCC 的 `Create` 在正式 body 和 solver state 建立后返回 `m_Current.Clone()`；`Reconstruct` 已完成 state、payload、roster 校验后再复制外部 state；`Capture` 又复制当前 state。`WorldSimulationState` 不可变，当前状态和外部快照共享同一对象不会互相改写。
+- 三个 lifecycle 边界现在直接转移或返回 `m_Current`／外部 state，删除 bodies 和 solver payload 的重复复制。校验顺序、失败不替换当前状态和 `Restore => Reconstruct` 不变。`Reconstruct` 中 `SolverStatePayload.ToArray()` 是 codec 读取入口的独立复制，留给 5.1 后续小步处理。
+- `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

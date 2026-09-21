@@ -4035,3 +4035,11 @@
 - Fixed 和 Float32 Handle Allocator 从 `OperationModule` 子类改为 readonly struct；Allocator 只消费 Frame 上的 Handle Allocator State，原先要求的 Access 只是为了满足基类，不是业务输入，所以直接删除。
 - `Next`、`Capture` 和 `Restore` 继续按原顺序转发到同一个 state port；Action、Gameplay Effect、Equipment 和 State Transaction 消费的 handle 序列、存档捕获和恢复语义不变。
 - 每次 Ability invocation 的 Handle Allocator class 分配删除。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Input runtime 值化收口
+
+对应 tasks.md 的 5.5，新增 5.232 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Input Runtime 从 `OperationModule` 子类改为 readonly struct，直接绑定当前 Frame 和 Input Request State；删除 `IFixedInputPort` 和 `IFloat32InputPort` 中间接口，Action Runtime 和 Value Runtime 改为持有具体 Input Runtime。
+- `ApplyBlackboardInputBindings` 仍按 layout 顺序投影 tick value，`HasRequest` 仍检查有效期和消费状态，`ClearRequest` 仍消费同一 request，`ReadValue` 仍按 identity 和 kind 严格匹配；输入结果和错误语义不变。
+- 每次 Ability invocation 的 Input Runtime class 分配和 Action/Value 侧接口存储删除。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧接口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

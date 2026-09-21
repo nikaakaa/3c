@@ -166,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     throw new InvalidOperationException($"Rollback Endpoint '{name}' contains a missing Peer profile.");
                 entries[i] = profile.BuildRosterEntry();
             }
-            return new RollbackRoster(1, entries);
+            return RollbackRoster.FromOwnedEntries(1, entries);
         }
 
         static RollbackPeerRunManifest ReadRunManifest()

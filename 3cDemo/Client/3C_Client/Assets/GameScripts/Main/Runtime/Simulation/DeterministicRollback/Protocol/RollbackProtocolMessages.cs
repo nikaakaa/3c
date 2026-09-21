@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
@@ -92,30 +91,37 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackRoster : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackRosterEntry> m_Entries;
+        readonly IReadOnlyList<RollbackRosterEntry> m_Entries;
 
-        public RollbackRoster(ulong revision, IEnumerable<RollbackRosterEntry> entries)
+        public RollbackRoster(ulong revision, IReadOnlyList<RollbackRosterEntry> entries)
+            : this(revision, RollbackProtocolArray.Copy(entries), true)
+        {
+        }
+
+        RollbackRoster(ulong revision, RollbackRosterEntry[] entries, bool _)
         {
             if (revision == 0)
                 throw new ArgumentOutOfRangeException(nameof(revision));
-            var values = new List<RollbackRosterEntry>(entries ?? throw new ArgumentNullException(nameof(entries)));
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (values.Count == 0)
+            Array.Sort(entries, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (entries.Length == 0)
                 throw new ArgumentException("Rollback roster is empty.", nameof(entries));
             var peers = new HashSet<string>(StringComparer.Ordinal);
             var players = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < entries.Length; i++)
             {
-                if (values[i] == null || !peers.Add(values[i].PeerId) || !players.Add(values[i].PlayerId) ||
-                    i > 0 && values[i - 1].ActorId.Equals(values[i].ActorId))
+                if (entries[i] == null || !peers.Add(entries[i].PeerId) || !players.Add(entries[i].PlayerId) ||
+                    i > 0 && entries[i - 1].ActorId.Equals(entries[i].ActorId))
                 {
                     throw new ArgumentException("Rollback roster identity is duplicated.", nameof(entries));
                 }
             }
             Revision = revision;
-            m_Entries = values.AsReadOnly();
-            RosterHash = ComputeHash(values);
+            m_Entries = entries;
+            RosterHash = ComputeHash(entries);
         }
+
+        public static RollbackRoster FromOwnedEntries(ulong revision, RollbackRosterEntry[] entries) =>
+            new RollbackRoster(revision, entries ?? throw new ArgumentNullException(nameof(entries)), true);
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.Roster;
         public ulong Revision { get; }

@@ -121,7 +121,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 entries[i] = new RollbackRosterEntry(peer.peerId, peer.playerId, new ActorId(peer.actorId));
                 previous = peer.peerId;
             }
-            return new RollbackRoster(1, entries);
+            return RollbackRoster.FromOwnedEntries(1, entries);
         }
 
         public RollbackHandshake BuildHandshake() => new RollbackHandshake(

@@ -262,7 +262,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var entries = new RollbackRosterEntry[count];
             for (int i = 0; i < count; i++)
                 entries[i] = new RollbackRosterEntry(reader.ReadString(), reader.ReadString(), new ActorId(reader.ReadString()));
-            return new RollbackRoster(revision, entries);
+            return RollbackRoster.FromOwnedEntries(revision, entries);
         }
 
         static void WriteStateHash(CanonicalWriter writer, RollbackStateHashReport value)

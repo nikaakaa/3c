@@ -10,7 +10,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly int m_Capacity;
         readonly SortedDictionary<ulong, CanonicalInputSample> m_Inputs = new SortedDictionary<ulong, CanonicalInputSample>();
         readonly SortedDictionary<ulong, NetworkCheckpoint> m_Sent = new SortedDictionary<ulong, NetworkCheckpoint>();
-        readonly List<ulong> m_ExpiredInputSequences;
+        readonly ulong[] m_ExpiredInputSequences;
+        int m_ExpiredInputSequenceCount;
         readonly Queue<ulong> m_SentSequenceOrder;
         CanonicalInputSample m_Held;
         ulong m_HeldAcceptedTick;
@@ -29,7 +30,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             Roster = roster;
             m_Capacity = capacity;
-            m_ExpiredInputSequences = new List<ulong>(capacity);
+            m_ExpiredInputSequences = new ulong[capacity];
             m_SentSequenceOrder = new Queue<ulong>(capacity + 1);
         }
 
@@ -91,17 +92,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public AcceptedAuthorityInput Select(ulong authorityTick, int holdTicks)
         {
             CanonicalInputSample selected = null;
-            m_ExpiredInputSequences.Clear();
+            m_ExpiredInputSequenceCount = 0;
             foreach (KeyValuePair<ulong, CanonicalInputSample> pair in m_Inputs)
             {
                 if (pair.Key > authorityTick)
                     break;
                 selected = pair.Value;
-                m_ExpiredInputSequences.Add(pair.Key);
+                m_ExpiredInputSequences[m_ExpiredInputSequenceCount++] = pair.Key;
             }
-            for (int i = 0; i < m_ExpiredInputSequences.Count; i++)
+            for (int i = 0; i < m_ExpiredInputSequenceCount; i++)
                 m_Inputs.Remove(m_ExpiredInputSequences[i]);
-            m_ExpiredInputSequences.Clear();
+            m_ExpiredInputSequenceCount = 0;
             if (selected != null)
             {
                 if (selected.TargetAuthorityTick == authorityTick)

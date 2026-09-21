@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Selected Pose Player 输出包装复用
+
+对应 tasks.md 的 7.45。
+
+- `CharacterPoseNativeSelectedPosePlayerHandler` 原先每次选样 job 完成后创建 Local Pose 和 discontinuity 两个 wrapper。
+- handler 现在复用两类输出对象，并用当前 completion identity 阻止上一 frame 的 wrapper 被读取；更新前保持 Native binding、Pose availability 和 CompletedAt 校验。
+- 不改变 Motion Matching sample resolve、Playable job、source binding Prepare/Reset、Player Complete/Commit/Discard、Native 双页或提交页索引；本步只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Inertialization 与 History Collector 输出包装复用
 
 对应 tasks.md 的 7.44。

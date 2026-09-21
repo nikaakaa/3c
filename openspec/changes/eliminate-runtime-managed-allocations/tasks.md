@@ -420,3 +420,4 @@
 - [x] 7.42 Blend Stack handler 复用 Local Pose 输出包装对象，删除正式 Blend Stack 稳态逐帧包装创建；保留 stack 完成、source reset、待提交校验和页索引提交语义
 - [x] 7.43 Parameter Resolve、State Machine、Root Orientation Warp 复用 Local Pose 输出包装对象，删除三个 Pose 节点的稳态逐帧包装创建；保留参数、状态和 warp 提交语义
 - [x] 7.44 Inertialization 与 History Collector 复用 Local Pose/History 输出包装对象，删除两个节点的稳态逐帧包装创建；保留 inertialization 状态交换、history source commit 和 Native 双页语义
+- [x] 7.45 Selected Pose Player 复用 Local Pose 与 discontinuity 输出包装对象，删除 Motion Matching 选择播放器稳态逐帧包装创建；保留 sample、Playable job、source reset 和提交页索引语义

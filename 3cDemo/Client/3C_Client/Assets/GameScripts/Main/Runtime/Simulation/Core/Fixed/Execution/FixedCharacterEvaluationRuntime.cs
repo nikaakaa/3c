@@ -51,8 +51,8 @@ namespace ThirdPersonSimulation.Fixed
             actor.ClearTimelineTransfers();
             List<AbilityTimelineAdvancePending> timelineAdvances = actor.TimelineAdvances;
             List<AbilityTimelineStopPending> timelineStops = actor.TimelineStops;
-            var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
-            var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
+            List<AbilityTimelineLogicMotion> timelineLogicMotion = actor.TimelineLogicMotion;
+            List<AbilityTimelineLogicMotionWarp> timelineLogicMotionWarps = actor.TimelineLogicMotionWarps;
             FixedCharacterEvaluationOutput evaluationOutput = actor.EvaluationOutput;
             evaluationOutput.Clear();
             List<GameplayFact> facts = evaluationOutput.Facts;
@@ -230,6 +230,7 @@ namespace ThirdPersonSimulation.Fixed
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
+                actor.ClearTimelineMotionScratches();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
                 abilityInput.Clear();
@@ -245,6 +246,7 @@ namespace ThirdPersonSimulation.Fixed
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
+                actor.ClearTimelineMotionScratches();
                 sharedEffectScratch.Reset();
                 evaluationOutput.Clear();
                 abilityInput.Clear();

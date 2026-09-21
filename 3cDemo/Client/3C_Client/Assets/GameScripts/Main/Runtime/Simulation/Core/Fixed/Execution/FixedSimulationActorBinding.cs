@@ -62,6 +62,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
         readonly List<AbilityTimelineStopPending> m_TimelineStops = new List<AbilityTimelineStopPending>();
+        readonly List<AbilityTimelineLogicMotion> m_TimelineLogicMotion = new List<AbilityTimelineLogicMotion>();
+        readonly List<AbilityTimelineLogicMotionWarp> m_TimelineLogicMotionWarps =
+            new List<AbilityTimelineLogicMotionWarp>();
         readonly FixedAbilityExecutionWorkspace[] m_Workspaces;
         readonly IFixedAbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
@@ -145,6 +148,8 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedAbilityExecutionWorkspace[] Workspaces => m_Workspaces;
         internal List<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
         internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
+        internal List<AbilityTimelineLogicMotion> TimelineLogicMotion => m_TimelineLogicMotion;
+        internal List<AbilityTimelineLogicMotionWarp> TimelineLogicMotionWarps => m_TimelineLogicMotionWarps;
         internal IFixedAbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
@@ -171,6 +176,12 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_TimelineAdvances.Clear();
             m_TimelineStops.Clear();
+        }
+
+        internal void ClearTimelineMotionScratches()
+        {
+            m_TimelineLogicMotion.Clear();
+            m_TimelineLogicMotionWarps.Clear();
         }
 
         public CharacterBodyMotionBinding BodyMotionBinding { get; }

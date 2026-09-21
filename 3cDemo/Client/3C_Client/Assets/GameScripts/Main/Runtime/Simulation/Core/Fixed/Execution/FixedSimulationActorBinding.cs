@@ -22,6 +22,7 @@ namespace ThirdPersonSimulation.Fixed
             ActorId = actorId;
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
+            ControlMotionBindings = new FixedCharacterControlMotionBindingCatalog(controlRuntimeBinding.MotionBindings);
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
                 abilityData ?? throw new ArgumentNullException(nameof(abilityData)),
@@ -58,6 +59,7 @@ namespace ThirdPersonSimulation.Fixed
         public ActorId ActorId { get; }
         public string WorldBodyBindingId { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
+        internal FixedCharacterControlMotionBindingCatalog ControlMotionBindings { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }

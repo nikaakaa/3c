@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.Fixed
                     bodyFacts,
                     tick,
                     characterRuntime.TickRate,
-                    actor.ControlRuntimeBinding.MotionBindings);
+                    actor.ControlMotionBindings);
                 var characterTraceSink = new FixedCharacterTraceSink(
                     characterTrace,
                     characterRuntime.NumericProfile,

@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityBodyFacts m_Body;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
-        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
+        readonly FixedCharacterControlMotionBindingCatalog m_ControlMotionBindings;
         readonly List<SimulationMotionContribution> m_Contributions =
             new List<SimulationMotionContribution>();
 
@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityBodyFacts body,
             SimulationTick tick,
             int tickRate,
-            CharacterControlMotionBindingCatalog controlMotionBindings)
+            FixedCharacterControlMotionBindingCatalog controlMotionBindings)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             if (!body.IsValid)
@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityBodyFacts body,
             SimulationTick tick,
             int tickRate,
-            CharacterControlMotionBindingCatalog controlMotionBindings,
+            FixedCharacterControlMotionBindingCatalog controlMotionBindings,
             CharacterControlMotionRequest request,
             CharacterControlMotionDescriptor descriptor,
             Action<SimulationMotionContribution> submit)
@@ -74,17 +74,14 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar yaw;
             if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
             {
-                CharacterControlMotionBinding source = controlMotionBindings == null
+                FixedCharacterControlMotionBinding source = controlMotionBindings == null
                     ? throw new InvalidOperationException("Fixed Control motion bindings are not installed.")
                     : controlMotionBindings.Require(descriptor.SourceMotionIdentity);
-                CharacterControlMotionDelta curveDelta = source.EvaluateDelta(
-                    request.ContinuousTicks / (double)tickRate,
-                    (request.ContinuousTicks + 1) / (double)tickRate);
-                displacement = new FixedVector3(
-                    FixedScalar.FromDouble(curveDelta.X),
-                    FixedScalar.FromDouble(curveDelta.Y),
-                    FixedScalar.FromDouble(curveDelta.Z));
-                yaw = FixedScalar.FromDouble(curveDelta.Yaw);
+                source.EvaluateDelta(
+                    FixedScalar.FromRatio(request.ContinuousTicks, tickRate),
+                    FixedScalar.FromRatio(request.ContinuousTicks + 1, tickRate),
+                    out displacement,
+                    out yaw);
             }
             else
             {

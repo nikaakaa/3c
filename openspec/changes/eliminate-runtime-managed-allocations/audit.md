@@ -3466,3 +3466,11 @@
 - `ServerAuthoritativeDatagramPacket` 增加同 assembly 的 `FromOwnedPayload` 构造，payload 数组原样持有并继续校验 header 长度。Authority Source 生成 hello ack 和 snapshot packet 时直接转交 payload codec 新建数组，删除发送 packet 内部的 `ToArray` payload clone。
 - endpoint 最终 wire byte[] 编码和所有权不变；跨 assembly 的 Fantasy channel 继续使用现有公开复制构造，不在本步扩大归属边界。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Datagram Endpoint 发送 endpoint 记录复用
+
+对应 tasks.md 的 5.5，新增 5.161 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramEndpoint.EnqueueSend` 原先每个数据包都从 route `Clone` 一只远端 `IPEndPoint`。现在 endpoint 按发送队列容量维护 `ConcurrentStack`，入队前租用独立记录并在发送或 Dispose 清队后归还；route 表中的 endpoint 仍长期持有，入队记录不会被调用方复用。
+- 发送失败、短写异常和 Dispose 清队都在既有发送边界同步归还 endpoint；发送队列容量检查、失败语义和 wire 内容不变。本步只治理 endpoint 记录，wire byte[] 复用仍在后续小步。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

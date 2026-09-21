@@ -73,6 +73,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly Thread m_ReceiveThread;
         readonly ConcurrentQueue<ServerAuthoritativeReceivedDatagram> m_ReceiveQueue = new ConcurrentQueue<ServerAuthoritativeReceivedDatagram>();
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
+        readonly ConcurrentStack<IPEndPoint> m_SendEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint> m_Routes =
             new Dictionary<ServerAuthoritativeDatagramIdentity, IPEndPoint>();
         readonly object m_RouteLock = new object();
@@ -171,7 +172,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 if (!m_Routes.TryGetValue(packet.Header.Identity, out remote))
                     throw new InvalidOperationException($"Gameplay data route '{packet.Header.Identity}' is not bound.");
-                remote = Clone(remote);
             }
             byte[] bytes = ServerAuthoritativeGameplayDatagramCodec.Write(packet, m_MaximumDatagramBytes);
             if (Interlocked.Increment(ref m_SendCount) > m_QueueCapacity)
@@ -180,7 +180,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 Fail(new InvalidOperationException("Gameplay datagram send queue overflow."));
                 ThrowIfUnavailable();
             }
-            m_SendQueue.Enqueue(new PendingSend(bytes, remote));
+            m_SendQueue.Enqueue(new PendingSend(bytes, RentSendEndPoint(remote)));
         }
 
         public void PumpSend()
@@ -189,13 +189,21 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
                 Interlocked.Decrement(ref m_SendCount);
+                IPEndPoint sendEndPoint = pending.RemoteEndPoint;
                 try
                 {
-                    int sent = m_Socket.SendTo(pending.Bytes, pending.RemoteEndPoint);
-                    if (sent != pending.Bytes.Length)
-                        throw new IOException($"Gameplay datagram send wrote '{sent}' of '{pending.Bytes.Length}' bytes.");
-                    Interlocked.Increment(ref m_SentPackets);
-                    Interlocked.Add(ref m_SentBytes, sent);
+                    try
+                    {
+                        int sent = m_Socket.SendTo(pending.Bytes, sendEndPoint);
+                        if (sent != pending.Bytes.Length)
+                            throw new IOException($"Gameplay datagram send wrote '{sent}' of '{pending.Bytes.Length}' bytes.");
+                        Interlocked.Increment(ref m_SentPackets);
+                        Interlocked.Add(ref m_SentBytes, sent);
+                    }
+                    finally
+                    {
+                        ReturnSendEndPoint(sendEndPoint);
+                    }
                 }
                 catch (Exception exception) when (exception is SocketException || exception is ObjectDisposedException || exception is IOException)
                 {
@@ -317,9 +325,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             while (m_ReceiveQueue.TryDequeue(out _))
             {
             }
-            while (m_SendQueue.TryDequeue(out _))
-            {
-            }
+            while (m_SendQueue.TryDequeue(out PendingSend pending))
+                ReturnSendEndPoint(pending.RemoteEndPoint);
             Interlocked.Exchange(ref m_ReceiveCount, 0);
             Interlocked.Exchange(ref m_SendCount, 0);
             lock (m_RouteLock)
@@ -331,6 +338,21 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         static bool EndPointEquals(IPEndPoint left, IPEndPoint right) =>
             left.Port == right.Port && left.Address.Equals(right.Address);
+
+        IPEndPoint RentSendEndPoint(IPEndPoint value)
+        {
+            if (!m_SendEndPoints.TryPop(out IPEndPoint endpoint))
+                endpoint = new IPEndPoint(value.Address, value.Port);
+            endpoint.Address = value.Address;
+            endpoint.Port = value.Port;
+            return endpoint;
+        }
+
+        void ReturnSendEndPoint(IPEndPoint value)
+        {
+            if (m_SendEndPoints.Count < m_QueueCapacity)
+                m_SendEndPoints.Push(value);
+        }
 
         readonly struct PendingSend
         {

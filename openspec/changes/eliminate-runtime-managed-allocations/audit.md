@@ -198,6 +198,15 @@
 - 全 Tree Designer 范围搜索确认诊断链内已无 `OriginCause.ToString`、`Cause.ToString`。edge Detail 的 GUID 拼接、graph kind 文本、state transition OwnerId 拼接和 invalid condition Detail 仍在后续边界。
 - `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
 
+## 2026-09-21 Tree graph 状态文本固定化
+
+对应 tasks.md 的 7.1，新增 7.75 作为独立小步；7.1 保持未勾选。
+
+- `PublishGraph` 原先在 interest 判定通过后调用 `kind.ToString()`。全项目调用只有 `BaseGraph` 的 `GraphCreated` 和 `GraphDestroyed`，通用事件枚举扩大了该入口的无效输入面。
+- 现在发布边界只映射这两个 graph lifecycle 状态为原固定文本；其他 `RuntimeTraceEventKind` 进入 `PublishGraph` 直接抛 `ArgumentOutOfRangeException`。这保留原状态显示，同时把非法事件归类为正式入口错误。
+- Tree 诊断链继续保留的字符串构造是 edge Detail 拼接、invalid condition Detail 和 state transition OwnerId 拼接；7.74 已完成节点停止 Cause 和状态退出 Cause。
+- `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

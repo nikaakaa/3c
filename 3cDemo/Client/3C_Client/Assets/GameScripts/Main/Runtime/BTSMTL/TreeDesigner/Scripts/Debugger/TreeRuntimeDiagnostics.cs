@@ -15,7 +15,7 @@ namespace TreeDesigner
                 kind,
                 RuntimeSourceElementKey.Graph(graph.GraphAuthoringId),
                 RuntimeInstanceKey.Graph(diagnostics.CharacterRuntimeId, graph.RuntimeId),
-                new RuntimeTracePayload { Name = graph.name, Status = kind.ToString() });
+                new RuntimeTracePayload { Name = graph.name, Status = GraphStatusText(kind) });
         }
 
         public static void PublishNode(
@@ -115,6 +115,16 @@ namespace TreeDesigner
                 StateExitCause.TreeLowerPriorityAbort => "TreeLowerPriorityAbort",
                 StateExitCause.TreeParentStop => "TreeParentStop",
                 _ => throw new ArgumentOutOfRangeException(nameof(cause), cause, "State exit cause has no diagnostics text.")
+            };
+        }
+
+        static string GraphStatusText(RuntimeTraceEventKind kind)
+        {
+            return kind switch
+            {
+                RuntimeTraceEventKind.GraphCreated => "GraphCreated",
+                RuntimeTraceEventKind.GraphDestroyed => "GraphDestroyed",
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph lifecycle has no diagnostics status.")
             };
         }
 

@@ -480,3 +480,4 @@
 - [x] 7.72 执行 history 分组改用按 Position/Branch/Sequence 预排序的连续 EventGroup 列表，删除 tick 与 presentation 两个 SortedDictionary 和每个 key 的排序树节点；group 内仍按 Position/Sequence 排序，builder 的事件与 span 比较委托改为静态缓存，输出组顺序、checkpoint 去重和 record 归属不变，SelectEvents/open/spans/checkpoint 集合仍在后续边界
 - [x] 7.73 Tree 节点诊断状态改传 State／NodeStopStatus 枚举，入口用固定常量映射原文本并删除旧 string 状态入口；RunnableNode 全部调用方不再在采样判断前 ToString，未知枚举显式抛错，节点停止 Cause、边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
 - [x] 7.74 Tree 节点停止与状态退出 Cause 改传 NodeStopOriginCause／StateExitCause 枚举，诊断发布边界用固定常量映射原文本并删除诊断链内全部 Cause ToString；状态机内部退出和外部树停止保留两条正式 cause 入口，未知枚举显式抛错，边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
+- [x] 7.75 Tree graph 生命周期状态改在发布边界用固定文本映射 GraphCreated／GraphDestroyed，删除 PublishGraph 的 kind ToString；其他 RuntimeTraceEventKind 进入 graph 生命周期入口显式抛错，节点停止 Cause 已由 7.74 处理，边 Detail 和 OwnerId 字符串仍在后续边界

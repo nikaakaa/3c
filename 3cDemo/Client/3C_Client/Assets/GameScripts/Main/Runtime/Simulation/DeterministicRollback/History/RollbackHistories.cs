@@ -79,13 +79,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public IReadOnlyList<RollbackInputHistoryEntry> CaptureEntries()
         {
-            var result = new List<RollbackInputHistoryEntry>(m_Entries.Count);
+            var result = new RollbackInputHistoryEntry[m_Entries.Count];
+            int index = 0;
             foreach (KeyValuePair<ulong, MutableEntry> pair in m_Entries)
             {
-                result.Add(new RollbackInputHistoryEntry(
+                result[index++] = new RollbackInputHistoryEntry(
                     new SimulationTick(pair.Key),
                     pair.Value.Predicted,
-                    pair.Value.Canonical));
+                    pair.Value.Canonical);
             }
             return result;
         }

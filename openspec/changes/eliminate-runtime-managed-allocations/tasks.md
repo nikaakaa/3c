@@ -388,6 +388,7 @@
 - [x] 5.125 Rollback Output Committer 的生命周期统计和 Actor/tick 已存在槽位扫描直接枚举 Dictionary KeyValuePair，删除每次读取的 Values／Keys 视图对象；扫描顺序、排序和事务结果不变
 - [x] 5.126 Rollback canonical input history 裁剪直接枚举 SortedDictionary KeyValuePair 取最旧 Tick，删除每次淘汰的 Keys 视图对象；保留容量、淘汰顺序和 explicit 计数清理
 - [x] 5.127 删除无消费者的 RollbackStateHashHistory 旧报告保留容器，state hash 保留链路统一为 snapshot history 和 canonical payload egress；input/snapshot history 裁剪合同不变
+- [x] 5.128 Rollback projection 恢复校验复用 Runtime State 生命周期 CanonicalWriter 直接计算哈希，删除校验用完整 payload 数组；Capture 仍返回快照独立持有 payload
 
 ## 6. UI、资源、渲染和生命周期
 

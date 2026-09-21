@@ -152,7 +152,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public void ValidateApplied()
         {
             RequireOpen();
-            if (!m_Applied || !SimulationCanonicalPayloadHash.Compute(m_State.CaptureSimulationProjection()).Equals(m_Snapshot.StateHash))
+            if (!m_Applied || !m_State.CaptureSimulationProjectionHash().Equals(m_Snapshot.StateHash))
                 throw new InvalidOperationException("Rollback Pipeline state restore hash does not match the requested snapshot.");
         }
 

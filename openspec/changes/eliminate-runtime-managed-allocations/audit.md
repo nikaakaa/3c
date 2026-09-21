@@ -3193,3 +3193,11 @@
 - 全项目源码检索确认 `RollbackStateHashHistory` 已无构造或引用；它是本地 StateHash 改为直接编码 canonical payload 后留下的旧 per-peer report 保留容器。现在删除该类，不为其补 roster 容量、reset 或 lease 合同。
 - 仍被正式链路使用的 `RollbackInputHistory` 和 `RollbackSnapshotHistory` 保留；`RollbackInputHistory.RemoveThrough` 继续服务这两条 bounded history。网络解码后的 `RollbackStateHashReport` 也不受影响。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
+## 2026-09-22 Rollback projection 校验去临时 payload
+
+对应 tasks.md 的 5.2，新增 5.128 作为独立小步；5.2 保持未勾选。
+
+- `RollbackPipelineStateRestoreTransaction.ValidateApplied` 原先调用 `CaptureSimulationProjection()`，只为计算哈希就生成一份完整 projection payload。现在 Runtime State 增加正式 `CaptureSimulationProjectionHash()`，复用生命周期内 `CanonicalWriter` 写入同一字段序列后直接 `ComputeHash`；validate 路径不再持有临时 `byte[]`。
+- projection 写入收敛到私有 `WriteSimulationProjection`，`CaptureSimulationProjection()` 仍先执行同一路径后 `ToArray`；magic、identity、completed tick、applied hash 数量、字段顺序和容量校验不变。capture 返回的 payload 仍由 state snapshot 独立持有。
+- 用户要求闭环运行期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -696,11 +696,29 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public byte[] CaptureSimulationProjection()
         {
+            RequireProjectionCapacity();
+            WriteSimulationProjection();
+            return m_ProjectionWriter.ToArray();
+        }
+
+        public StableHash CaptureSimulationProjectionHash()
+        {
+            RequireProjectionCapacity();
+            WriteSimulationProjection();
+            return m_ProjectionWriter.ComputeHash();
+        }
+
+        void RequireProjectionCapacity()
+        {
             if (m_AppliedGameplayHashes.Count > m_Policy.HistoryLengthTicks)
             {
                 throw new InvalidOperationException(
                     $"Rollback applied-input history count '{m_AppliedGameplayHashes.Count}' exceeds configured capacity '{m_Policy.HistoryLengthTicks}' before snapshot capture.");
             }
+        }
+
+        void WriteSimulationProjection()
+        {
             m_ProjectionWriter.Reset();
             m_ProjectionWriter.WriteUInt32(0x50524244);
             m_ProjectionWriter.WriteInt32(1);
@@ -713,7 +731,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ProjectionWriter.WriteUInt64(pair.Key);
                 m_ProjectionWriter.WriteString(pair.Value.Value);
             }
-            return m_ProjectionWriter.ToArray();
         }
 
         public void RestoreSimulationProjection(byte[] payload)

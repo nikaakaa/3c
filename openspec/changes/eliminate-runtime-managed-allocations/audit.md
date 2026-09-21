@@ -2049,3 +2049,12 @@
 - 两域 CharacterEvaluationResult 增加一次性 TakeOutputs：只允许 Consume 成功标记 committed 后调用，取走三只数组后把内部引用置为 Array.Empty，再次取走或 discard 路径调用会失败。未使用的直接集合 getter 删除，输出所有权只有这一条正式链路。
 - 两域 SimulationActorTickResult 增加 internal FromOwnedOutputs，在接管数组上执行原 header 数值域／Actor／tick 校验；公开构造继续复制一般 IReadOnlyList。Finalize 先计算状态哈希，再取走数组并进入 owned 构造。
 - 每个 Actor completed tick 删除三只与输出数量等长的数组复制，最终数组及所有事件对象仍按 ActorTickResult 寿命存在。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 finalize Player 分配采样。
+
+## 2026-09-21 CompleteStep 结果数组所有权
+
+对应 tasks.md 的 2.96。
+
+- Fixed／Float32 CompleteStep 原先把 Finalize Product 的每 Actor 结果加入 `workspace.ActorResults` List，排序和 Roster 校验后，再由 `SimulationTickResult` 复制成长期数组。该 workspace List 只有两域 CompleteStep 使用，外层事务其它阶段不读取。
+- 两域现按 `finalizedCount` 直接创建最终 `SimulationActorTickResult[]`，填充后原地排序并执行原 Roster 校验；`SimulationTickResult.FromOwnedActors` 接管该数组并继续生成 OutputEvent 数组。公开 `SimulationTickResult` 构造仍复制一般 `IReadOnlyList`，输入隔离没有放宽。
+- 删除每个 session workspace 的 ActorResult List、底层容量和一轮 List 到最终数组的元素复制；最终 Actor 数组和事件数组仍是跨 completed step 必须保留的结果。workspace 的 ActorState／Egress／CompletedStep 存储及提交寿命不变。
+- 同步收窄 `SessionExecutionWorkspace` 类型参数和 PipelineTransaction 接口／Coordinator，未保留无消费者的 ActorResult 泛型入口。Fixed、Float32、DeterministicRollback、ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭；未新增测试、未操作共享 Unity、未做 completed step Player 分配采样。

@@ -189,13 +189,13 @@ namespace ThirdPersonSimulation
             TStep step,
             int finalizedStart,
             TWorkingState workingState,
-            SessionExecutionWorkspace<TCompletedStep, TActorResult, TActorState, TEgressRecord> workspace);
+            SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> workspace);
         SimulationPipelineStateSnapshot GetPipelineProjection(TCompletedStep completedStep);
         void ApplyCompletedStep(TWorkingState workingState, TCompletedStep completedStep);
         TCommitBatch FreezeCommitBatch(
             StableHash transactionIdentity,
             IReadOnlyList<TCompletedStep> completedSteps,
-            SessionExecutionWorkspace<TCompletedStep, TActorResult, TActorState, TEgressRecord> workspace);
+            SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> workspace);
         void PublishWorkingState(TWorkingState workingState);
         void CompleteStatePublish(TWorkingState workingState);
         void RestoreSolverBaseline();

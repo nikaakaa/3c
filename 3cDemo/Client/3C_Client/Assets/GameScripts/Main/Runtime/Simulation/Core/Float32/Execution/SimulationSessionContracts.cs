@@ -48,7 +48,43 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SimulationActorTickResult> actors,
             WorldSolveBatchSummary worldSummary,
             SimulationWorldSnapshot candidateSnapshot)
+            : this(
+                numericProfile,
+                gameplayContentHash,
+                tick,
+                Copy(actors),
+                worldSummary,
+                candidateSnapshot,
+                true)
         {
+        }
+
+        internal static SimulationTickResult FromOwnedActors(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            SimulationTick tick,
+            SimulationActorTickResult[] actors,
+            WorldSolveBatchSummary worldSummary,
+            SimulationWorldSnapshot candidateSnapshot) =>
+            new SimulationTickResult(
+                numericProfile,
+                gameplayContentHash,
+                tick,
+                actors ?? throw new ArgumentNullException(nameof(actors)),
+                worldSummary,
+                candidateSnapshot,
+                true);
+
+        SimulationTickResult(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            SimulationTick tick,
+            SimulationActorTickResult[] actors,
+            WorldSolveBatchSummary worldSummary,
+            SimulationWorldSnapshot candidateSnapshot,
+            bool _)
+        {
+            SimulationActorTickResult[] values = actors;
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !tick.IsValid)
                 throw new ArgumentException("Simulation result identity is incomplete.");
             NumericProfile = numericProfile;
@@ -60,7 +96,6 @@ namespace ThirdPersonSimulation
                  candidateSnapshot.NumericProfile != numericProfile ||
                  !candidateSnapshot.GameplayContentHash.Equals(gameplayContentHash)))
                 throw new ArgumentException("Candidate snapshot identity does not match result identity.", nameof(candidateSnapshot));
-            SimulationActorTickResult[] values = Copy(actors);
             Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Length == 0 || values.Length != worldSummary.ActorCount)
                 throw new ArgumentException("Simulation result Actor count does not match world summary.", nameof(actors));

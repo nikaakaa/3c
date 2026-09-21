@@ -336,7 +336,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedPipelineWorkingState workingState,
             SessionExecutionWorkspace<
                 FixedCompletedSimulationStep,
-                SimulationActorTickResult,
                 SimulationActorState,
                 FixedSourceEgressRecord> workspace)
         {
@@ -345,18 +344,16 @@ namespace ThirdPersonSimulation.Fixed
             int finalizedCount = finalized.UnsealedCount - finalizedStart;
             if (finalizedCount != m_Roster.Count)
                 throw Failure("finalized_actor_count_mismatch", "Ability Finalize Pass did not produce exactly one result per Actor.", SimulationSessionFailureStage.Step);
-            List<SimulationActorTickResult> actorResults = workspace.ActorResults.Values;
-            actorResults.Clear();
-            workspace.ActorResults.EnsureCapacity(finalizedCount);
+            SimulationActorTickResult[] actorResults = new SimulationActorTickResult[finalizedCount];
             for (int i = finalizedStart; i < finalized.UnsealedCount; i++)
             {
                 SimulationActorTickResult result = finalized.GetUnsealed(i).Value;
                 if (result.Tick != step.Tick)
                     throw Failure("finalized_actor_tick_mismatch", "Ability Finalize Pass produced a result for another Tick.", SimulationSessionFailureStage.Step);
-                actorResults.Add(result);
+                actorResults[i - finalizedStart] = result;
             }
-            actorResults.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 0; i < actorResults.Count; i++)
+            Array.Sort(actorResults, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 0; i < actorResults.Length; i++)
             {
                 if (!actorResults[i].ActorId.Equals(m_Roster[i].ActorId))
                     throw Failure("finalized_actor_roster_mismatch", "Ability Finalize Pass result roster does not match the locked roster.", SimulationSessionFailureStage.Step);
@@ -368,8 +365,8 @@ namespace ThirdPersonSimulation.Fixed
             ValidateWorldResult(worldResult, step.Tick);
             ExecutionWorkspaceBuffer<SimulationActorState> nextActors = workspace.ActorStates;
             nextActors.Clear();
-            nextActors.EnsureCapacity(actorResults.Count);
-            for (int i = 0; i < actorResults.Count; i++)
+            nextActors.EnsureCapacity(actorResults.Length);
+            for (int i = 0; i < actorResults.Length; i++)
                 nextActors.Add(new SimulationActorState(actorResults[i].ActorId, actorResults[i].State));
             var candidateState = new SimulationWorldStateSet(step.Tick.Value, nextActors, worldResult.NextWorldState);
             bool capture = (executionPlan.Requirements &
@@ -391,7 +388,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationStepSnapshot stepSnapshot = capture
                 ? new FixedSimulationStepSnapshot(m_Services.Descriptor.Identity, worldSnapshot, pipelineSnapshot)
                 : null;
-            var tickResult = new SimulationTickResult(
+            var tickResult = SimulationTickResult.FromOwnedActors(
                 m_CharacterRuntime.NumericProfile,
                 m_CharacterRuntime.GameplayContentHash,
                 step.Tick,
@@ -418,7 +415,6 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<FixedCompletedSimulationStep> completedSteps,
             SessionExecutionWorkspace<
                 FixedCompletedSimulationStep,
-                SimulationActorTickResult,
                 SimulationActorState,
                 FixedSourceEgressRecord> workspace)
         {

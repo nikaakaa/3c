@@ -30,8 +30,8 @@ namespace ThirdPersonSimulation
             TActorState,
             TEgressRecord,
             TCommitBatch> m_Target;
-        readonly SessionExecutionWorkspace<TCompletedStep, TActorResult, TActorState, TEgressRecord> m_Workspace =
-            new SessionExecutionWorkspace<TCompletedStep, TActorResult, TActorState, TEgressRecord>();
+        readonly SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> m_Workspace =
+            new SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord>();
         readonly Dictionary<SimulationPipelinePassId, PassProductTrace> m_PassProductTraces =
             new Dictionary<SimulationPipelinePassId, PassProductTrace>();
 

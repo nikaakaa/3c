@@ -217,6 +217,16 @@
 - 静态 builder 的既定边界是 Editor 同步读取链；`BuildCore` 的 `open` Dictionary 和 `spans` List、history 的 grouped/输出集合仍在后续边界。未做跨线程或重入能力声明。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露该程序集没有 `List<T>.EnsureCapacity`，改为预设 `Capacity` 后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution selection 运行对比或分配采样。
 
+## 2026-09-21 执行 open 配对复用
+
+对应 tasks.md 的 7.1，新增 7.77 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution builder 的 open 配对阶段，不计为 Player 每帧收益。
+
+- `BuildCore` 原先每次新建 `open` Dictionary；`PendingSpan` 是 class，每个等待、节点、timeline、track、clip 等 span start 都创建一个包装对象。这些对象只在配对期间被字典和局部变量读取，不会进入返回结果。
+- `PendingSpan` 现在是值类型。`Last` 是唯一可变字段，四个更新点在 `TryGetValue` 修改副本后显式写回 `open`，避免 struct 字典值更新丢失；`Close` 仍输出原来的 `RuntimeExecutionSpan`。
+- `open` 字典由 builder 静态外壳长期持有，每次 `BuildCore` 前清空并保留现有容量。静态 builder 仍只服务 Editor 同步读取链，未引入跨线程或重入合同。
+- span key、start/end 判定、timeline requested 到 started 的合并、未完成 span 的 completed=false 输出和 span 排序不变。`spans` List 会随 `RuntimeExecutionTimeline` 被外部持有，不能简单静态复用；history 分组输出集合和 checkpoint HashSet 仍在后续边界。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution span 运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

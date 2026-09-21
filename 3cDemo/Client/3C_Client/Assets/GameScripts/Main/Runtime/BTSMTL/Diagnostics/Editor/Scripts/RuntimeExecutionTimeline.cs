@@ -402,6 +402,7 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly Comparison<RuntimeTraceEvent> CompareGroupedEventsComparer = CompareGroupedEvents;
         static readonly Comparison<RuntimeExecutionSpan> CompareSpansComparer = CompareSpans;
         static readonly SelectionScratch Selection = new();
+        static readonly Dictionary<SpanKey, PendingSpan> Open = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -440,7 +441,8 @@ namespace BTSMTL.Diagnostics.Editor
             List<RuntimeTraceEvent> selected = SelectEvents(events, instance);
             selected.Sort(CompareEventsComparer);
 
-            var open = new Dictionary<SpanKey, PendingSpan>();
+            Dictionary<SpanKey, PendingSpan> open = Open;
+            open.Clear();
             var spans = new List<RuntimeExecutionSpan>();
             int unmappedEventCount = 0;
             for (int i = 0; i < selected.Count; i++)
@@ -470,6 +472,7 @@ namespace BTSMTL.Diagnostics.Editor
                     if (open.TryGetValue(key, out PendingSpan waiting))
                     {
                         waiting.Last = value;
+                        open[key] = waiting;
                     }
                     else
                     {
@@ -484,7 +487,10 @@ namespace BTSMTL.Diagnostics.Editor
                         value.RuntimeEpoch,
                         value.ContentRevision);
                     if (open.TryGetValue(nodeKey, out PendingSpan node))
+                    {
                         node.Last = value;
+                        open[nodeKey] = node;
+                    }
                     continue;
                 }
                 SpanKey waitKey = new SpanKey(
@@ -502,7 +508,10 @@ namespace BTSMTL.Diagnostics.Editor
                 if (IsPoint(value.Kind, kind))
                 {
                     if (open.TryGetValue(key, out PendingSpan activePoint))
+                    {
                         activePoint.Last = value;
+                        open[key] = activePoint;
+                    }
                     spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, true));
                     continue;
                 }
@@ -516,6 +525,7 @@ namespace BTSMTL.Diagnostics.Editor
                             value.Kind == RuntimeTraceEventKind.TimelineStarted)
                         {
                             previous.Last = value;
+                            open[key] = previous;
                             continue;
                         }
                         spans.Add(previous.Close(previous.Last));
@@ -1213,7 +1223,7 @@ namespace BTSMTL.Diagnostics.Editor
             }
         }
 
-        sealed class PendingSpan
+        struct PendingSpan
         {
             public PendingSpan(RuntimeExecutionSpanKind kind, RuntimeTraceEvent start, RuntimeSourceElementHandle handle, RuntimeSourceElementKey source, bool hasSource)
             {

@@ -477,8 +477,9 @@
 - [x] 7.69 执行 history 的 tick/frame 事件 List 和 ticks/checkpoints/frames 结果 List 改为 internal 构造直接接管，删除 AsReadOnly 包装和旧 null Array fallback；公开只读接口、排序、checkpoint 去重和 presentation 可用性判断不变
 - [x] 7.70 RuntimeExecutionTickRecord 的外部结果和 13 类身份摘要改用 Collector 产出最终数组，删除每次 tick 的 List 对象和 AsReadOnly 包装；外部结果重复保留，身份去重顺序和 EqualityComparer 比较合同不变，payload 字符串仍在后续边界
 - [x] 7.71 图实例读取改为调用方持有结果 List，ViewModel 复用 sequence scratch 和固定排序器，删除 GetInstances、GetGraphInstances 与 CollectInstances 的每次 List、Dictionary、闭包和委托；技能执行筛选、图 ID 匹配、最高 sequence 去重和降序排序不变，Timeline 实例读取仍在后续边界
-- [x] 7.72 执行 history 分组改用按 Position/Branch/Sequence 预排序的连续 EventGroup 列表，删除 tick 与 presentation 两个 SortedDictionary 和每个 key 的排序树节点；group 内仍按 Position/Sequence 排序，builder 的事件与 span 比较委托改为静态缓存，输出组顺序、checkpoint 去重和 record 归属不变，open/spans/checkpoint 集合仍在后续边界
+- [x] 7.72 执行 history 分组改用按 Position/Branch/Sequence 预排序的连续 EventGroup 列表，删除 tick 与 presentation 两个 SortedDictionary 和每个 key 的排序树节点；group 内仍按 Position/Sequence 排序，builder 的事件与 span 比较委托改为静态缓存，输出组顺序、checkpoint 去重和 record 归属不变，spans/checkpoint 集合仍在后续边界
 - [x] 7.73 Tree 节点诊断状态改传 State／NodeStopStatus 枚举，入口用固定常量映射原文本并删除旧 string 状态入口；RunnableNode 全部调用方不再在采样判断前 ToString，未知枚举显式抛错，节点停止 Cause、边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
 - [x] 7.74 Tree 节点停止与状态退出 Cause 改传 NodeStopOriginCause／StateExitCause 枚举，诊断发布边界用固定常量映射原文本并删除诊断链内全部 Cause ToString；状态机内部退出和外部树停止保留两条正式 cause 入口，未知枚举显式抛错，边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
 - [x] 7.75 Tree graph 生命周期状态改在发布边界用固定文本映射 GraphCreated／GraphDestroyed，删除 PublishGraph 的 kind ToString；其他 RuntimeTraceEventKind 进入 graph 生命周期入口显式抛错，节点停止 Cause 已由 7.74 处理，边 Detail 和 OwnerId 字符串仍在后续边界
-- [x] 7.76 执行 selection 的结果 List、sequence 去重、related graph 和 presentation frame 集合改为 builder 静态工作集合，调用前清空并保留容量；无过滤路径不再新建完整事件 List，两遍扫描、branch 收敛、去重和输出顺序不变。该 scratch 只用于 Editor 同步读取链，BuildCore 的 open/spans 与 history 分组输出集合仍在后续边界
+- [x] 7.76 执行 selection 的结果 List、sequence 去重、related graph 和 presentation frame 集合改为 builder 静态工作集合，调用前清空并保留容量；无过滤路径不再新建完整事件 List，两遍扫描、branch 收敛、去重和输出顺序不变。该 scratch 只用于 Editor 同步读取链，BuildCore 的 spans 与 history 分组输出集合仍在后续边界
+- [x] 7.77 BuildCore 的 PendingSpan 从 class 改为值类型，四个 Last 更新点显式写回 open 字典；open Dictionary 复用 builder 静态外壳并调用前清空，保留既有桶容量。span 配对键、配对结果和未完成 span 语义不变；结果 spans List 会随 RuntimeExecutionTimeline 被外部持有，仍在后续边界

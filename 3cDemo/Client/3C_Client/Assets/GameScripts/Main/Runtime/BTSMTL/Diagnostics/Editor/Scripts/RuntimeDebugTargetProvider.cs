@@ -148,8 +148,8 @@ namespace BTSMTL.Diagnostics.Editor
             var view = new RuntimeDebugViewModel(m_LiveModel.Target, m_SourceMap, snapshot.Channels);
             view.BeginUpdate(true);
             view.SetCoverage(0, snapshot.EvictedEvents != 0);
-            IReadOnlyList<RuntimeTraceEvent> events = snapshot.GetEvents(historyOffset);
-            for (int i = 0; i < events.Count; i++)
+            ReadOnlySpan<RuntimeTraceEvent> events = snapshot.GetEvents(historyOffset);
+            for (int i = 0; i < events.Length; i++)
             {
                 RuntimeTraceEvent traceEvent = events[i];
                 var key = new RuntimeLiveStateKey(traceEvent.Channel, traceEvent.Source, traceEvent.RuntimeInstance, traceEvent.Kind);

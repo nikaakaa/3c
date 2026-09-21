@@ -134,28 +134,42 @@ namespace BTSMTL.Diagnostics
 
     public sealed class RuntimeCaptureSegmentSnapshot
     {
-        public RuntimeCaptureSegmentSnapshot(RuntimeTraceDomain domain, ulong position, IReadOnlyList<RuntimeTraceEvent> events)
+        readonly RuntimeTraceEvent[] m_Events;
+
+        public RuntimeCaptureSegmentSnapshot(RuntimeTraceDomain domain, ulong position, RuntimeTraceEvent[] events)
         {
             Domain = domain;
             Position = position;
-            Events = events ?? Array.Empty<RuntimeTraceEvent>();
+            m_Events = events ?? Array.Empty<RuntimeTraceEvent>();
         }
 
         public RuntimeTraceDomain Domain { get; }
         public ulong Position { get; }
-        public IReadOnlyList<RuntimeTraceEvent> Events { get; }
+        public ReadOnlySpan<RuntimeTraceEvent> Events => m_Events;
     }
 
     public sealed class RuntimeCaptureSnapshot
     {
-        readonly IReadOnlyList<RuntimeCaptureSegmentSnapshot> m_Segments;
+        readonly RuntimeCaptureSegmentSnapshot[] m_Segments;
+        readonly RuntimeTraceEvent[] m_Events;
 
-        public RuntimeCaptureSnapshot(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, IReadOnlyList<RuntimeCaptureSegmentSnapshot> segments, long version, long evictedEvents = 0)
+        public RuntimeCaptureSnapshot(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, RuntimeCaptureSegmentSnapshot[] segments, long version, long evictedEvents = 0)
         {
             CaptureId = captureId;
             Channels = channels & RuntimeTraceChannel.All;
             Detail = detail;
             m_Segments = segments ?? Array.Empty<RuntimeCaptureSegmentSnapshot>();
+            int eventCount = 0;
+            for (int i = 0; i < m_Segments.Length; i++)
+                eventCount += m_Segments[i].Events.Length;
+            m_Events = new RuntimeTraceEvent[eventCount];
+            int eventIndex = 0;
+            for (int i = 0; i < m_Segments.Length; i++)
+            {
+                ReadOnlySpan<RuntimeTraceEvent> segmentEvents = m_Segments[i].Events;
+                segmentEvents.CopyTo(m_Events.AsSpan(eventIndex));
+                eventIndex += segmentEvents.Length;
+            }
             Version = version;
             EvictedEvents = evictedEvents;
         }
@@ -164,21 +178,17 @@ namespace BTSMTL.Diagnostics
         public RuntimeTraceChannel Channels { get; }
         public RuntimeDiagnosticsCaptureDetail Detail { get; }
         public long Version { get; }
-        public IReadOnlyList<RuntimeCaptureSegmentSnapshot> Segments => m_Segments;
+        public ReadOnlySpan<RuntimeCaptureSegmentSnapshot> Segments => m_Segments;
         public long EvictedEvents { get; }
-        public int SegmentCount => m_Segments.Count;
+        public int SegmentCount => m_Segments.Length;
 
-        public IReadOnlyList<RuntimeTraceEvent> GetEvents(int historyOffset)
+        public ReadOnlySpan<RuntimeTraceEvent> GetEvents(int historyOffset)
         {
-            int visibleSegments = Math.Max(0, m_Segments.Count - Math.Max(0, historyOffset));
-            var events = new List<RuntimeTraceEvent>();
-            for (int i = 0; i < visibleSegments; i++)
-            {
-                IReadOnlyList<RuntimeTraceEvent> segmentEvents = m_Segments[i].Events;
-                for (int j = 0; j < segmentEvents.Count; j++)
-                    events.Add(segmentEvents[j]);
-            }
-            return events;
+            int visibleSegments = Math.Max(0, m_Segments.Length - Math.Max(0, historyOffset));
+            int omittedEvents = 0;
+            for (int i = 0; i < m_Segments.Length - visibleSegments; i++)
+                omittedEvents += m_Segments[i].Events.Length;
+            return m_Events.AsSpan(omittedEvents);
         }
     }
 
@@ -496,14 +506,17 @@ namespace BTSMTL.Diagnostics
 
         public RuntimeCaptureSnapshot Freeze(RuntimeTraceChannel channels)
         {
-            var segments = new List<RuntimeCaptureSegmentSnapshot>(m_Segments.Count);
+            int eventCount = 0;
+            for (int i = 0; i < m_Segments.Count; i++)
+                eventCount += m_Segments[i].Events.Count;
+            var segments = new RuntimeCaptureSegmentSnapshot[m_Segments.Count];
             for (int i = 0; i < m_Segments.Count; i++)
             {
                 Segment source = m_Segments[i];
                 var events = new RuntimeTraceEvent[source.Events.Count];
                 for (int j = 0; j < source.Events.Count; j++)
                     events[j] = source.Events[j].TraceEvent;
-                segments.Add(new RuntimeCaptureSegmentSnapshot(source.Domain, source.Position, events));
+                segments[i] = new RuntimeCaptureSegmentSnapshot(source.Domain, source.Position, events);
             }
             return new RuntimeCaptureSnapshot(m_CaptureId, channels, m_Detail, segments, m_Version, m_EvictedEvents);
         }

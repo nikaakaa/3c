@@ -410,8 +410,8 @@ namespace BTSMTL.Diagnostics.Editor
             if (historyOffset < 0)
                 throw new ArgumentOutOfRangeException(nameof(historyOffset));
 
-            IReadOnlyList<RuntimeTraceEvent> events = capture.GetEvents(historyOffset);
-            IReadOnlyList<RuntimeTraceEvent> selected = SelectEvents(events, instance);
+            ReadOnlySpan<RuntimeTraceEvent> events = capture.GetEvents(historyOffset);
+            List<RuntimeTraceEvent> selected = SelectEvents(events, instance);
             var ordered = new List<RuntimeTraceEvent>(selected);
             ordered.Sort(CompareEvents);
 
@@ -552,8 +552,8 @@ namespace BTSMTL.Diagnostics.Editor
             if (historyOffset < 0)
                 throw new ArgumentOutOfRangeException(nameof(historyOffset));
 
-            IReadOnlyList<RuntimeTraceEvent> allEvents = capture.GetEvents(historyOffset);
-            IReadOnlyList<RuntimeTraceEvent> selectedEvents = SelectEvents(allEvents, instance);
+            ReadOnlySpan<RuntimeTraceEvent> allEvents = capture.GetEvents(historyOffset);
+            List<RuntimeTraceEvent> selectedEvents = SelectEvents(allEvents, instance);
             var historyEvents = new List<RuntimeTraceEvent>(selectedEvents);
             if (instance.IsValid && selectedEvents.Count > 0)
                 AddSessionBoundaryEvents(
@@ -658,7 +658,7 @@ namespace BTSMTL.Diagnostics.Editor
         }
 
         static void AddSessionBoundaryEvents(
-            IReadOnlyList<RuntimeTraceEvent> allEvents,
+            ReadOnlySpan<RuntimeTraceEvent> allEvents,
             IReadOnlyList<RuntimeTraceEvent> selectedEvents,
             List<RuntimeTraceEvent> historyEvents)
         {
@@ -684,7 +684,7 @@ namespace BTSMTL.Diagnostics.Editor
             }
             bool hasBaselineCheckpoint = false;
             ulong baselineCheckpointTick = 0;
-            for (int i = 0; i < allEvents.Count; i++)
+            for (int i = 0; i < allEvents.Length; i++)
             {
                 RuntimeTraceEvent value = allEvents[i];
                 if (value.Kind != RuntimeTraceEventKind.SimulationCheckpointCaptured ||
@@ -697,7 +697,7 @@ namespace BTSMTL.Diagnostics.Editor
             }
             if (hasBaselineCheckpoint)
                 first = baselineCheckpointTick;
-            for (int i = 0; i < allEvents.Count; i++)
+            for (int i = 0; i < allEvents.Length; i++)
             {
                 RuntimeTraceEvent value = allEvents[i];
                 if (value.Position < first || value.Position > last ||
@@ -721,19 +721,24 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeTraceEventKind.SimulationCheckpointCaptured;
         }
 
-        static IReadOnlyList<RuntimeTraceEvent> SelectEvents(
-            IReadOnlyList<RuntimeTraceEvent> events,
+        static List<RuntimeTraceEvent> SelectEvents(
+            ReadOnlySpan<RuntimeTraceEvent> events,
             RuntimeInstanceKey instance)
         {
             if (!instance.IsValid)
-                return events;
+            {
+                var unfiltered = new List<RuntimeTraceEvent>(events.Length);
+                for (int i = 0; i < events.Length; i++)
+                    unfiltered.Add(events[i]);
+                return unfiltered;
+            }
 
             var selected = new List<RuntimeTraceEvent>();
             var selectedSequences = new HashSet<ulong>();
             var relatedGraphs = new HashSet<GraphBranchKey>();
             var selectedPresentationFrames = new HashSet<PresentationFrameKey>();
             Guid selectedBranch = ResolveSelectionBranch(events, instance);
-            for (int i = 0; i < events.Count; i++)
+            for (int i = 0; i < events.Length; i++)
             {
                 RuntimeTraceEvent value = events[i];
                 if (selectedBranch != Guid.Empty && value.ExecutionBranchId != selectedBranch)
@@ -781,7 +786,7 @@ namespace BTSMTL.Diagnostics.Editor
                     selected.Add(value);
             }
 
-            for (int i = 0; i < events.Count; i++)
+            for (int i = 0; i < events.Length; i++)
             {
                 RuntimeTraceEvent value = events[i];
                 RuntimeInstanceKey candidate = value.RuntimeInstance;
@@ -817,12 +822,12 @@ namespace BTSMTL.Diagnostics.Editor
         }
 
         static Guid ResolveSelectionBranch(
-            IReadOnlyList<RuntimeTraceEvent> events,
+            ReadOnlySpan<RuntimeTraceEvent> events,
             RuntimeInstanceKey instance)
         {
             Guid branch = Guid.Empty;
             ulong latestSequence = 0;
-            for (int i = 0; i < events.Count; i++)
+            for (int i = 0; i < events.Length; i++)
             {
                 RuntimeTraceEvent value = events[i];
                 bool matchesInstance = value.RuntimeInstance.Equals(instance) || MatchesAction(instance, value);

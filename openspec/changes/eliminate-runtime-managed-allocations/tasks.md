@@ -464,3 +464,4 @@
 - [x] 7.59 Semantic IR Codec 的 literal、document 和 constant input byte 枚举改为连续正式值域直接校验；保留 payload 边界和原异常类型，删除该 codec 全部 Enum 反射
 - [x] 7.60 RuntimeCaptureStore 的全局 capture change 索引改为 maxEvents+1 环形数组，淘汰旧 segment 时前进 head 并清空槽位；发布顺序、segment 边界、丢弃计数、全量同步和读取独立结果保持不变
 - [x] 7.61 RuntimeCaptureStore 按 maxSegments 准备私有 segment 归还池，裁剪后的段和事件列表在同一 capture 内重置复用；Domain/Position 分组、满段丢弃和 Freeze 独立快照不变
+- [x] 7.62 RuntimeCaptureSnapshot 持有不可变 segment 数组和一次组装的事件数组，GetEvents 返回 offset 后缀 span；三个 Editor 消费者迁移到 Length 和下标读取，删除每次读取的 List 重建

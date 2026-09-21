@@ -2703,6 +2703,16 @@
 - Domain/Position 分组、新事件追加位置、单段 `maxEvents` 满后丢弃、全局环形索引淘汰、`m_EvictedEvents`、`m_LastEvictionVersion` 和 store 锁边界不变。`Freeze` 快照、payload、trace event 字符串和 Editor `GetEvents` 重建仍在后续小步处理。
 - `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获运行对比或 Player 分配采样。
 
+## 2026-09-21 捕获快照读取视图化
+
+对应 tasks.md 的 7.1，新增 7.62 作为独立小步；7.1 保持未勾选。
+
+- `RuntimeCaptureSnapshot.GetEvents` 原先每次都从可见 segment 逐条复制到新 `List<RuntimeTraceEvent>`；同一个不可变快照被 Editor 面板或 Timeline builder 重复读取时，会重复做索引重建、列表扩容和事件复制。现在 `RuntimeCaptureSegmentSnapshot` 和外层快照直接持有正式数组，快照构造一次按原 segment 顺序组装完整事件数组，`GetEvents(historyOffset)` 只计算被省略 segment 的事件数并返回原数组后缀 `ReadOnlySpan`。
+- 三个消费者全部迁移：`RuntimeDebugTargetProvider.BuildCaptureView` 用 `Length` 和下标遍历；`RuntimeExecutionTimeline` 的两个 Builder 接收 `ReadOnlySpan`，`SelectEvents` 和 `ResolveSelectionBranch` 不再经 `IReadOnlyList` 装箱。无效 instance 分支按 span 长度准备列表，删除中转 `ToArray`。选择结果仍保持原扫描顺序、去重、分支过滤和边界事件补充规则。
+- 所有者合同改为不可变快照数组：`Freeze` 先按每个 segment 的现有事件数量复制段数组，再由外层快照一次组装完整数组。新的完整数组换来读取端不再重建；`Freeze` 阶段复制和 payload 字符串仍保留。historyOffset 的“从最旧 segment 开始跳过”语义、segment 顺序、丢弃计数和版本号不变。
+- 全项目搜索确认 `RuntimeCaptureSegmentSnapshot`、`RuntimeCaptureSnapshot` 和 `GetEvents` 的消费者只在 Diagnostics runtime 与 Editor 内；没有外部构造或 `Segments` 列表消费者依赖旧包装。
+- `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 分别使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做捕获读取运行对比或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

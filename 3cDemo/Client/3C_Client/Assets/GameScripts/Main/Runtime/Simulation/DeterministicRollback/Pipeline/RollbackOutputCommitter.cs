@@ -501,9 +501,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationEventHeader header = output.Header;
             if (!header.Activation.Source.IsSkillOperation)
                 throw new InvalidOperationException("Rollback output diagnostics requires a Skill operation execution source.");
+            string code;
+            switch (operation.Kind)
+            {
+                case RollbackOutputOperationKind.Publish:
+                    code = "rollback_output_publish";
+                    break;
+                case RollbackOutputOperationKind.Replace:
+                    code = "rollback_output_replace";
+                    break;
+                case RollbackOutputOperationKind.Retire:
+                    code = "rollback_output_retire";
+                    break;
+                default:
+                    throw new InvalidOperationException($"Rollback output operation '{operation.Kind}' is invalid.");
+            }
             m_Diagnostics.PublishModel(new SimulationModelTraceRecord(
                 SimulationModelTraceKind.OutputDisposition,
-                $"rollback_output_{operation.Kind.ToString().ToLowerInvariant()}",
+                code,
                 $"event={output.EventId};target={operation.TargetEventId};channel={output.Slot.Channel};execution={operation.ExecutionKind};confirmedOnly={output.ConfirmedOnly}",
                 output.Slot.ActorId,
                 output.Slot.Tick.Value,

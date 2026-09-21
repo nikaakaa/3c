@@ -3217,3 +3217,11 @@
 - `SimulationPipelinePassStateSnapshot` 构造期已经复制并 canonical 校验 payload；新增正式 `Payload` 视图后，`RollbackPipelineStateRestoreTransaction.Apply` 不再调用 `CopyPayload()` 为一次性解码复制数组。snapshot 是不可变 owner，restore transaction 生命周期覆盖同步恢复调用。
 - `RollbackRuntimeState.RestoreSimulationProjection` 从 `byte[]` 收紧为 `ReadOnlyMemory<byte>`，直接使用 array-backed reader；全项目源码检索确认唯一调用方已迁移。空 payload 保持显式失败，canonical identity、数量、尾部和 confirmed horizon 校验不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback output diagnostics code 固定化
+
+对应 tasks.md 的 5.2，新增 5.131 作为独立小步；5.2 保持未勾选。
+
+- `RollbackOutputCommitter.PublishDiagnostics` 原先在诊断开启时用 `Kind.ToString().ToLowerInvariant()` 生成中间字符串，再插入 `rollback_output_*` code。三种正式 operation 现在直接映射到原有固定 code；非法 kind 保留原异常语义。
+- detail 字符串仍按本次 EventId、target、channel、execution 和 confirmedOnly 格式化；diagnostics sink、字段顺序、生命周期和开关行为不变。`Apply` 已只接受三种正式 operation，diagnostics 的固定映射不新增第二套路径。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -391,6 +391,7 @@
 - [x] 5.128 Rollback projection 恢复校验复用 Runtime State 生命周期 CanonicalWriter 直接计算哈希，删除校验用完整 payload 数组；Capture 仍返回快照独立持有 payload
 - [x] 5.129 Rollback schedule 缓存正式 replay clock identity，同一 Source Clock 的多次 rollback 不再重复字符串插值；mapping、step source 和 clock 归属不变
 - [x] 5.130 Rollback projection 恢复借用 state snapshot 拥有的 payload 视图，删除每次 Apply 的 CopyPayload 数组；Core snapshot 仍构造期独立复制和校验
+- [x] 5.131 Rollback output diagnostics code 按三种正式 operation 直接映射固定字符串，删除每次发布诊断的 enum ToString、小写化和 code 插值；detail 与 sink 合同不变
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -3291,3 +3291,11 @@
 - `RollbackOutputDispositionPassRuntime` 原先把复用 List 交给 `SimulationPipelineOutputDispositionSet` 公共构造，set 每次再复制到新数组并排序。现在 egress 先只读扫描得到精确 count，再从 pass 生命周期按 count 复用精确 scratch，填充后通过 `FromOwnedDispositions` 直接转移数组。
 - owned set 保留 EventId 排序、重复 EventId 校验和事务身份校验；count 超过 Rollback `MaximumOutputRecords` 仍显式失败。公共 List 构造继续复制隔离，Float32 set 不在本步扩散。
 - disposition scratch 和 set 一样限定 OuterTransaction 消费寿命；不引入可变 set、租约回调或全局池。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback hash writer 共用与 bundle gameplay hash canonical 化
+
+对应 tasks.md 的 5.2，新增 5.140 作为独立小步；5.2 保持未勾选。
+
+- `ComputeInputHash`、`ComputeBundleHash` 和 `ComputeGameplayInputHash` 原先各自新建 `CanonicalWriter`；`RollbackActorInputFrame` 每次构造因此为 InputHash 和 GameplayHash 创建两只 writer。现在 codec 持有线程生命周期 hash writer，每次入口先 Reset，payload 编码顺序和校验不变。
+- `ComputeGameplayBundleHash` 原先创建字符串数组，将 Tick 字符化，并逐 Actor 生成 `ActorId:GameplayHash` 插值字符串后再交给通用 `StableHash.Compute`。现在直接写入版本标签、Tick、Actor 数量和各 Actor 身份/hash 字段后计算 canonical payload hash。版本从 `/2` 提升到 `/3`；GameplayHash 不写入 canonical bundle wire bytes，同一运行链路内的 schedule provenance、state projection、history 和确认比较同步使用新值。
+- 静态线程 writer 只保留容量，不跨入口保留字段序列；输入、bundle 和 gameplay hash 都在方法内顺序使用，不重叠。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

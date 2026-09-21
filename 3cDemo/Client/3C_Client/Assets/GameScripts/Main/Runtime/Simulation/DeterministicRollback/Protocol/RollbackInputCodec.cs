@@ -10,6 +10,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         const uint InputMagic = 0x49524244;
         const uint BundleMagic = 0x42524244;
         const int Version = 3;
+        const string GameplayBundleHashVersion = "deterministic-rollback-gameplay-input-bundle/3";
+
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
 
         public static RollbackActorInputFrame ReadInput(byte[] bytes)
         {
@@ -100,7 +103,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public static StableHash ComputeInputHash(ActorId actorId, SimulationTick tick, SimulationInput input)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = HashWriter();
             WriteInputPayload(writer, actorId, tick, input);
             return writer.ComputeHash();
         }
@@ -109,7 +112,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (bundle == null)
                 throw new ArgumentNullException(nameof(bundle));
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = HashWriter();
             WriteBundle(writer, bundle);
             return writer.ComputeHash();
         }
@@ -121,7 +124,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (!actorId.IsValid || !tick.IsValid || input == null)
                 throw new ArgumentException("Rollback Gameplay input identity is incomplete.");
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = HashWriter();
             writer.WriteString(actorId.Value);
             writer.WriteUInt64(tick.Value);
             writer.WriteInt32(input.Values.Count);
@@ -158,12 +161,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (bundle == null)
                 throw new ArgumentNullException(nameof(bundle));
-            var values = new string[bundle.Actors.Count + 2];
-            values[0] = "deterministic-rollback-gameplay-input-bundle/2";
-            values[1] = bundle.Tick.Value.ToString();
+            CanonicalWriter writer = HashWriter();
+            writer.WriteString(GameplayBundleHashVersion);
+            writer.WriteUInt64(bundle.Tick.Value);
+            writer.WriteInt32(bundle.Actors.Count);
             for (int i = 0; i < bundle.Actors.Count; i++)
-                values[i + 2] = $"{bundle.Actors[i].ActorId.Value}:{bundle.Actors[i].GameplayHash.Value}";
-            return StableHash.Compute(values);
+            {
+                writer.WriteString(bundle.Actors[i].ActorId.Value);
+                writer.WriteString(bundle.Actors[i].GameplayHash.Value);
+            }
+            return writer.ComputeHash();
         }
 
         public static void WriteInput(CanonicalWriter writer, RollbackActorInputFrame frame)
@@ -316,6 +323,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 value != (byte)SimulationTickSourceKind.Replay)
                 throw new InvalidDataException($"Rollback Tick source kind '{value}' is invalid.");
             return (SimulationTickSourceKind)value;
+        }
+
+        static CanonicalWriter HashWriter()
+        {
+            s_HashWriter ??= new CanonicalWriter();
+            s_HashWriter.Reset();
+            return s_HashWriter;
         }
 
     }

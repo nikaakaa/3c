@@ -400,6 +400,7 @@
 - [x] 5.137 Fixed Simulation Step 的 owned 构造扩展到 typed ingress，Rollback schedule 按 step 槽位复用精确数组；删除 current step 的 List 复制和排序闭包
 - [x] 5.138 Simulation Input 增加正式 source rebind 零复制入口，Rollback schedule 保留 canonical 输入数组；删除每个 replay/forward actor 的 values/requests 复制和排序
 - [x] 5.139 Rollback output disposition 使用 pass 生命周期精确 disposition scratch 并转移给正式 set；删除每次 egress 的 set 数组复制
+- [x] 5.140 Rollback input/gameplay/bundle hash 共用线程生命周期 CanonicalWriter，bundle gameplay hash 改为版本化 canonical 字段；删除每帧 hash writer、字符串数组、Tick 字符化和逐 Actor 插值
 
 ## 6. UI、资源、渲染和生命周期
 

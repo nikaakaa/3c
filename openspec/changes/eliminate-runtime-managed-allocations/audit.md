@@ -3554,3 +3554,11 @@
 - `ServerAuthoritativePredictionCorrectionCheckpoint` 的 pending request 存储改为 owned 精确数组；新增 `FromPendingRequests` 工厂按 `SortedDictionary` 的 `KeyValuePair` 直接填充。ScheduleRequests、PrepareAck、PrepareBaseline、Capture 和 correction 解码统一改用直接数组合同。
 - 删除每个 correction checkpoint 的 `Values` 视图、临时 `List` 和 `ReadOnlyCollection` 包装。Restore 仍从只读 checkpoint 重建 `SortedDictionary`，request 顺序、容量校验、重复 sequence 拒绝和 wire 字段顺序不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 disposition journal scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.172 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativePredictionDispositionJournal` 在构造期按正式 journal 容量准备过期 key scratch；`Prune`、记录事务和确认事务共用同一 scratch，收集后原地移除并在结束边界清空。`PrepareConfirmation` 改为遍历 `KeyValuePair`，删除 `Values` 视图。
+- `ServerAuthoritativePredictionJournalCheckpoint` 改为直接持有精确 `KeyValuePair` 数组，capture、confirm、record 和 prune 的复制边界不再构造 `List`。checkpoint 到 `SortedDictionary` 的恢复复制、event 排序、cursor、rejected 计数、容量上限和 wire 字段顺序不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

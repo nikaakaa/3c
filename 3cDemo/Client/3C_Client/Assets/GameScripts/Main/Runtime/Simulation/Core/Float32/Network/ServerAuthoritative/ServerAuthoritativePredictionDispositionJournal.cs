@@ -7,6 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     internal sealed class ServerAuthoritativePredictionDispositionJournal
     {
         readonly int m_Capacity;
+        readonly List<EventId> m_PruneScratch;
         SortedDictionary<EventId, ServerAuthoritativeJournalEntry> m_Entries =
             new SortedDictionary<EventId, ServerAuthoritativeJournalEntry>();
 
@@ -15,6 +16,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (historyCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(historyCapacity));
             m_Capacity = checked(historyCapacity * 64);
+            m_PruneScratch = new List<EventId>(m_Capacity);
         }
 
         public ulong Cursor { get; private set; }
@@ -38,8 +40,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var entries = CopyEntries(m_Entries);
             ulong cursor = Cursor;
             int rejectedCount = 0;
-            foreach (ServerAuthoritativeJournalEntry entry in m_Entries.Values)
+            foreach (KeyValuePair<EventId, ServerAuthoritativeJournalEntry> pair in m_Entries)
             {
+                ServerAuthoritativeJournalEntry entry = pair.Value;
                 if (entry.Tick.Value > authorityTick.Value ||
                     entry.Disposition == ServerAuthoritativeEventDisposition.AuthorityConfirmed ||
                     entry.Disposition == ServerAuthoritativeEventDisposition.PredictedRejected)
@@ -62,7 +65,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                             ? ServerAuthoritativeEventDisposition.AuthorityConfirmed
                             : ServerAuthoritativeEventDisposition.PredictedRejected),
                     firstRetainedHistoryTick,
-                    m_Capacity);
+                    m_Capacity,
+                    m_PruneScratch);
             }
             if (!horizon.IsEmpty && !entries.ContainsKey(horizon.EventId))
             {
@@ -75,7 +79,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                         horizon.Sequence,
                         ServerAuthoritativeEventDisposition.AuthorityConfirmed),
                     firstRetainedHistoryTick,
-                    m_Capacity);
+                    m_Capacity,
+                    m_PruneScratch);
             }
             return new ServerAuthoritativePredictionJournalCheckpoint(entries, cursor, rejectedCount);
         }
@@ -87,7 +92,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (checkpoint == null)
                 throw new ArgumentNullException(nameof(checkpoint));
             var entries = CopyEntries(checkpoint.Entries);
-            Prune(entries, firstRetainedHistoryTick);
+            Prune(entries, firstRetainedHistoryTick, m_PruneScratch);
             return new ServerAuthoritativePredictionJournalCheckpoint(
                 entries,
                 checkpoint.Cursor,
@@ -96,7 +101,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public void Prune(ulong firstRetainedHistoryTick)
         {
-            Prune(m_Entries, firstRetainedHistoryTick);
+            Prune(m_Entries, firstRetainedHistoryTick, m_PruneScratch);
         }
 
         public ServerAuthoritativePredictionJournalCheckpoint Capture() =>
@@ -117,7 +122,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             var entries = CopyEntries(m_Entries);
             ulong cursor = Cursor;
-            Record(entries, ref cursor, entry, firstRetainedHistoryTick, m_Capacity);
+            Record(entries, ref cursor, entry, firstRetainedHistoryTick, m_Capacity, m_PruneScratch);
             return new ServerAuthoritativePredictionJournalCheckpoint(entries, cursor, LastRejectedCount);
         }
 
@@ -126,7 +131,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ref ulong cursor,
             ServerAuthoritativeJournalEntry entry,
             ulong firstRetainedHistoryTick,
-            int capacity)
+            int capacity,
+            List<EventId> pruneScratch)
         {
             if (entries.TryGetValue(entry.EventId, out ServerAuthoritativeJournalEntry existing))
             {
@@ -138,7 +144,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             else
             {
-                Prune(entries, firstRetainedHistoryTick);
+                Prune(entries, firstRetainedHistoryTick, pruneScratch);
                 if (entries.Count >= capacity)
                     throw new InvalidOperationException("Prediction disposition journal capacity is exhausted by live predicted events.");
             }
@@ -148,9 +154,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static void Prune(
             SortedDictionary<EventId, ServerAuthoritativeJournalEntry> entries,
-            ulong firstRetainedHistoryTick)
+            ulong firstRetainedHistoryTick,
+            List<EventId> remove)
         {
-            var remove = new List<EventId>();
+            remove.Clear();
             foreach (KeyValuePair<EventId, ServerAuthoritativeJournalEntry> pair in entries)
             {
                 if (pair.Value.Tick.Value >= firstRetainedHistoryTick ||
@@ -163,6 +170,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             for (int i = 0; i < remove.Count; i++)
                 entries.Remove(remove[i]);
+            remove.Clear();
         }
 
         static SortedDictionary<EventId, ServerAuthoritativeJournalEntry> CopyEntries(
@@ -177,17 +185,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     internal sealed class ServerAuthoritativePredictionJournalCheckpoint
     {
+        readonly KeyValuePair<EventId, ServerAuthoritativeJournalEntry>[] m_Entries;
+
         public ServerAuthoritativePredictionJournalCheckpoint(
-            IEnumerable<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>> entries,
+            SortedDictionary<EventId, ServerAuthoritativeJournalEntry> entries,
             ulong cursor,
             int lastRejectedCount)
         {
-            Entries = new List<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>>(entries);
+            if (entries == null)
+                throw new ArgumentNullException(nameof(entries));
+            m_Entries = new KeyValuePair<EventId, ServerAuthoritativeJournalEntry>[entries.Count];
+            int index = 0;
+            foreach (KeyValuePair<EventId, ServerAuthoritativeJournalEntry> pair in entries)
+                m_Entries[index++] = pair;
             Cursor = cursor;
             LastRejectedCount = lastRejectedCount;
         }
 
-        public IReadOnlyList<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>> Entries { get; }
+        public IReadOnlyList<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>> Entries => m_Entries;
         public ulong Cursor { get; }
         public int LastRejectedCount { get; }
     }

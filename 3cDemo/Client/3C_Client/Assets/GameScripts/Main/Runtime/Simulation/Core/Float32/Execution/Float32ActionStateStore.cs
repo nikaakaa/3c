@@ -817,13 +817,13 @@ namespace ThirdPersonSimulation
 		{
 			readonly Float32ActionStateStore m_Owner;
 			readonly Float32ActionInstanceReference m_Expected;
-			readonly IDisposable m_TraceScope;
+			readonly Float32AbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
 			bool m_Disposed;
 
 			public SkillExecutionScope(
 				Float32ActionStateStore owner,
 				Float32ActionInstanceReference expected,
-				IDisposable traceScope)
+				Float32AbilityExecutionFrame.ActionTraceContextScope traceScope)
 			{
 				m_Owner = owner;
 				m_Expected = expected;
@@ -843,10 +843,10 @@ namespace ThirdPersonSimulation
 		sealed class TraceExecutionScope : IDisposable
 		{
 			readonly IDisposable m_Execution;
-			readonly IDisposable m_Trace;
+			readonly Float32AbilityExecutionFrame.ActionTraceContextScope m_Trace;
 			bool m_Disposed;
 
-			public TraceExecutionScope(IDisposable execution, IDisposable trace)
+			public TraceExecutionScope(IDisposable execution, Float32AbilityExecutionFrame.ActionTraceContextScope trace)
 			{
 				m_Execution = execution;
 				m_Trace = trace;

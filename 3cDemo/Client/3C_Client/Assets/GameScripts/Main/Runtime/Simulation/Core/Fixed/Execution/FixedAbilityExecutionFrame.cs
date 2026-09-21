@@ -181,7 +181,7 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        internal IDisposable PushActionTraceContext(
+        internal ActionTraceContextScope PushActionTraceContext(
             ulong actionInstanceId,
             CharacterSkillId skillId,
             OperationHandle entryOperation)
@@ -270,7 +270,7 @@ namespace ThirdPersonSimulation.Fixed
         internal void AddPresentation(PresentationCommand value) => m_Presentation.Add(value);
         internal void AddTrace(SimulationTraceRecord value) => m_Trace.Add(value);
 
-        sealed class ActionTraceContextScope : IDisposable
+        internal readonly struct ActionTraceContextScope : IDisposable
         {
             readonly FixedAbilityExecutionFrame m_Owner;
             readonly ulong m_PreviousInstanceId;

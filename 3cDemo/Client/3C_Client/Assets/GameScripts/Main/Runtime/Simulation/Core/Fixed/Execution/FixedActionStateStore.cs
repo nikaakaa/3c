@@ -818,13 +818,13 @@ namespace ThirdPersonSimulation.Fixed
         {
             readonly FixedActionStateStore m_Owner;
             readonly FixedActionInstanceReference m_Expected;
-            readonly IDisposable m_TraceScope;
+            readonly FixedAbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
             bool m_Disposed;
 
             public SkillExecutionScope(
                 FixedActionStateStore owner,
                 FixedActionInstanceReference expected,
-                IDisposable traceScope)
+                FixedAbilityExecutionFrame.ActionTraceContextScope traceScope)
             {
                 m_Owner = owner;
                 m_Expected = expected;
@@ -844,10 +844,10 @@ namespace ThirdPersonSimulation.Fixed
         sealed class TraceExecutionScope : IDisposable
         {
             readonly IDisposable m_Execution;
-            readonly IDisposable m_Trace;
+            readonly FixedAbilityExecutionFrame.ActionTraceContextScope m_Trace;
             bool m_Disposed;
 
-            public TraceExecutionScope(IDisposable execution, IDisposable trace)
+            public TraceExecutionScope(IDisposable execution, FixedAbilityExecutionFrame.ActionTraceContextScope trace)
             {
                 m_Execution = execution;
                 m_Trace = trace;

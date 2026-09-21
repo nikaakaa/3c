@@ -474,6 +474,7 @@
 - [x] 5.211 两数值域 Character Input Runtime 改为 Character Runtime 常驻实例；每 tick Begin 重绑事务请求端口，请求身份在准备期定序定形，删除每 tick wrapper、中间 List 和只读包装
 - [x] 5.212 Character Control State Schema 由 immutable Module Contract 准备期生成并共用；两数值域 Control Runtime、初始状态和合同校验消费同一 schema，删除每 tick schema 与字典重建
 - [x] 5.213 两数值域 Character Runtime State Transaction 以自身引用作为 Ability 绑定身份，保留同事务校验和拒绝语义，删除每 tick 身份 object
+- [x] 5.214 两数值域 Action Trace Context 改为 Frame 内 readonly struct 作用域，外层 execution scope 持有具体类型；保留 push/pop 嵌套语义，删除每次进入 Skill execution 的 trace context class 和接口装箱
 
 ## 6. UI、资源、渲染和生命周期
 

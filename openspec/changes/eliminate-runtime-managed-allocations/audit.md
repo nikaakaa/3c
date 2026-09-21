@@ -3249,3 +3249,11 @@
 - `RollbackSchedulePassRuntime.BuildStep` 原先每个 replay 或 forward step 都新建 `SimulationPipelineActorInput<FixedStepInput>[]`。现在 schedule pass 按 plan 内 step 槽位持有 scratch；同一槽位在稳定 roster 下跨 OuterTransaction 复用，roster 数量变化时替换精确长度数组。
 - 每个 step 构造前完整覆盖 scratch 内容，不同 step 仍持有各自槽位数组。`FixedSimulationStep` 对象、`FromOwnedArrays` 和 ExecutionPlan 的 OuterTransaction 合同不变，不改 step 对象、输入值或执行顺序。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback step 数组复用
+
+对应 tasks.md 的 5.2，新增 5.135 作为独立小步；5.2 保持未勾选。
+
+- `RollbackSchedulePassRuntime.BuildPlan` 原先每个可执行计划都新建 `FixedSimulationStep[]`。现在 schedule pass 按步骤数量保留精确长度 scratch；forward 计划稳定使用一个槽位，rollback replay 不同深度按实际需要的长度建立独立槽位。
+- 每个计划构造前完整覆盖数组元素。数组仍通过 `FromOwnedArrays` 交给 ExecutionPlan，`FixedSimulationStep` 对象本身和 OuterTransaction 产品寿命不变，不引入对象池或归还回调。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

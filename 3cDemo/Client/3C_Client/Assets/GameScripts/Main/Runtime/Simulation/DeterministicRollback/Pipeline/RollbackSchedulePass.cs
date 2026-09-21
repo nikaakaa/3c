@@ -49,6 +49,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new SimulationPipelineStepSourceMapping[3][];
         readonly List<SimulationPipelineActorInput<FixedStepInput>[]> m_ActorInputScratches =
             new List<SimulationPipelineActorInput<FixedStepInput>[]>();
+        readonly Dictionary<int, FixedSimulationStep[]> m_StepScratches = new();
         string m_ReplaySourceClockId;
         string m_ReplayClockId;
 
@@ -157,7 +158,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
             }
             bool includeCurrentStep = canAdvancePrediction || replayStepCount == 0;
-            var steps = new FixedSimulationStep[replayStepCount + (includeCurrentStep ? 1 : 0)];
+            var steps = RentStepScratch(replayStepCount + (includeCurrentStep ? 1 : 0));
             var mappings = RentMappingScratch(
                 (replayStepCount > 0 ? 1 : 0) + (includeCurrentStep ? 1 : 0));
             int stepIndex = 0;
@@ -248,6 +249,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ref SimulationPipelineStepSourceMapping[] scratch = ref m_MappingScratches[count];
             if (scratch == null)
                 scratch = new SimulationPipelineStepSourceMapping[count];
+            return scratch;
+        }
+
+        FixedSimulationStep[] RentStepScratch(int count)
+        {
+            if (!m_StepScratches.TryGetValue(count, out FixedSimulationStep[] scratch))
+            {
+                scratch = new FixedSimulationStep[count];
+                m_StepScratches.Add(count, scratch);
+            }
             return scratch;
         }
 

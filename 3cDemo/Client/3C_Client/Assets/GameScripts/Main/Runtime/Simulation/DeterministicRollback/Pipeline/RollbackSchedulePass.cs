@@ -50,6 +50,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly List<SimulationPipelineActorInput<FixedStepInput>[]> m_ActorInputScratches =
             new List<SimulationPipelineActorInput<FixedStepInput>[]>();
         readonly List<ActorId[]> m_ActorIdScratches = new List<ActorId[]>();
+        readonly List<SimulationPipelineTypedIngress<SimulationIngress>[]> m_TypedIngressScratches =
+            new List<SimulationPipelineTypedIngress<SimulationIngress>[]>();
         readonly Dictionary<int, FixedSimulationStep[]> m_StepScratches = new();
         string m_ReplaySourceClockId;
         string m_ReplayClockId;
@@ -193,6 +195,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 RollbackCanonicalInputBundle current = SelectBundle(new SimulationTick(nextTick));
                 var actorInputs = RentActorInputScratch(stepIndex, current.Actors.Count);
                 var actorIds = RentActorIdScratch(stepIndex, current.Actors.Count);
+                var typedIngress = RentTypedIngressScratch(stepIndex, ingress.TypedIngress.Ingress.Count);
                 mappings[mappingIndex] = new SimulationPipelineStepSourceMapping(
                     context.Source.ClockId,
                     context.Source.ClockId,
@@ -204,7 +207,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     planSequence,
                     actorInputs,
                     actorIds,
-                    ingress.TypedIngress.Ingress);
+                    ingress.TypedIngress.Ingress,
+                    typedIngress);
             }
             return SimulationSessionExecutionPlan<FixedSimulationStep>.FromOwnedArrays(
                 SimulationSessionExecutionPlanStatus.Executable,
@@ -293,6 +297,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return scratch;
         }
 
+        SimulationPipelineTypedIngress<SimulationIngress>[] RentTypedIngressScratch(int stepIndex, int count)
+        {
+            if (count == 0)
+                return Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
+            while (m_TypedIngressScratches.Count <= stepIndex)
+                m_TypedIngressScratches.Add(null);
+            SimulationPipelineTypedIngress<SimulationIngress>[] scratch = m_TypedIngressScratches[stepIndex];
+            if (scratch == null || scratch.Length != count)
+            {
+                scratch = new SimulationPipelineTypedIngress<SimulationIngress>[count];
+                m_TypedIngressScratches[stepIndex] = scratch;
+            }
+            return scratch;
+        }
+
         static SimulationRestoreDirective BuildRestoreDirective(
             SimulationTick restoreTick,
             FixedSimulationSessionSnapshot snapshot,
@@ -324,7 +343,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong planSequence,
             SimulationPipelineActorInput<FixedStepInput>[] inputs,
             ActorId[] actors,
-            IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> typedIngress)
+            IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> sourceIngress,
+            SimulationPipelineTypedIngress<SimulationIngress>[] typedIngress)
         {
             for (int i = 0; i < bundle.Actors.Count; i++)
             {
@@ -341,6 +361,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     input.Sequence,
                     new FixedStepInput(input));
             }
+            for (int i = 0; i < sourceIngress.Count; i++)
+                typedIngress[i] = sourceIngress[i];
             return FixedSimulationStep.FromOwnedInputs(
                 bundle.Tick,
                 new SimulationPipelineStepProvenance(kind, source, planSequence, bundle.GameplayHash.Value),

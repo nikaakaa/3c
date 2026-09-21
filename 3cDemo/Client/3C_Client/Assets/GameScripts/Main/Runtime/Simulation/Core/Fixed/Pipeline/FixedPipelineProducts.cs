@@ -105,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationPipelineStepProvenance provenance,
             SimulationPipelineActorInput<FixedStepInput>[] inputs,
             ActorId[] actors,
-            IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
+            SimulationPipelineTypedIngress<SimulationIngress>[] ingress)
         {
             return new FixedSimulationStep(tick, provenance, inputs, actors, ingress);
         }
@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationPipelineStepProvenance provenance,
             SimulationPipelineActorInput<FixedStepInput>[] inputs,
             ActorId[] actors,
-            IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
+            SimulationPipelineTypedIngress<SimulationIngress>[] ingress)
             : base(tick, provenance, inputs, actors, ingress)
         {
         }

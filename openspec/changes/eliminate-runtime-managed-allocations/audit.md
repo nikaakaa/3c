@@ -3266,3 +3266,12 @@
 - `FixedSimulationStep.FromOwnedInputs` 只接受 schedule 生命周期准备好的 actor input 和 ActorId 精确长度数组；基类排序输入并填充/校验 actor 槽位。Rollback schedule 按 step 槽位复用这两只 scratch，每个 step 构造前完整覆盖。
 - 原数组仍进入 `FixedSimulationStep` 和 ExecutionPlan，消费寿命继续限定 OuterTransaction；`FixedSimulationStep` 对象池化、Ingress List 分配和 Float32 对应改造不在本步展开。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback typed ingress 数组转移
+
+对应 tasks.md 的 5.2，新增 5.137 作为独立小步；5.2 保持未勾选。
+
+- `TargetSimulationPipelineStep` 的 owned 构造从 only inputs/actors 扩展到 typed ingress。公共 `IEnumerable` 构造先 `MaterializeIngress` 复制隔离，protected 构造统一排序、Actor 归属和重复校验；比较函数从每次构造的闭包改为静态方法。
+- `FixedSimulationStep.FromOwnedInputs` 接收精确长度 `SimulationPipelineTypedIngress<SimulationIngress>[]`。Rollback schedule 按 plan step 槽位持有 typed ingress scratch，current step 构造前从 `FixedTypedIngressBatch.Ingress` 完整复制；空 ingress 直接使用 `Array.Empty`。replay step 继续为空。
+- ingress scratch 仍进入 Step 和 ExecutionPlan，消费寿命限定 OuterTransaction；`FixedTypedIngressBatch` 所有权不变，不引入通用池或归还回调。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

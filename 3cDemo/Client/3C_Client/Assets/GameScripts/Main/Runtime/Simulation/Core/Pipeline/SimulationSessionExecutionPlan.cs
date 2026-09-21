@@ -251,7 +251,7 @@ namespace ThirdPersonSimulation
             SimulationPipelineStepProvenance provenance,
             IEnumerable<SimulationPipelineActorInput<TInput>> inputs,
             IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
-            : this(tick, provenance, MaterializeInputs(inputs), null, ingress)
+            : this(tick, provenance, MaterializeInputs(inputs), null, MaterializeIngress(ingress))
         {
         }
 
@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation
             SimulationPipelineStepProvenance provenance,
             SimulationPipelineActorInput<TInput>[] inputValues,
             ActorId[] ownedActors,
-            IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
+            SimulationPipelineTypedIngress<TIngress>[] ingress)
             : base(tick, provenance, ownedActors == null ? CollectActors(inputValues) : FillActors(inputValues, ownedActors))
         {
             Array.Sort(inputValues, CompareInputs);
@@ -270,37 +270,25 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Pipeline Step contains duplicate Actor input.", nameof(inputValues));
             }
             m_Inputs = inputValues;
-            if (ingress == null ||
-                ingress is IReadOnlyCollection<SimulationPipelineTypedIngress<TIngress>> collection && collection.Count == 0)
+            if (ingress == null || ingress.Length == 0)
             {
                 m_Ingress = Array.Empty<SimulationPipelineTypedIngress<TIngress>>();
                 return;
             }
-            var ingressValues = new List<SimulationPipelineTypedIngress<TIngress>>(ingress);
-            ingressValues.Sort((left, right) =>
+            Array.Sort(ingress, CompareIngress);
+            for (int i = 0; i < ingress.Length; i++)
             {
-                int actor = left.ActorId.CompareTo(right.ActorId);
-                if (actor != 0)
-                    return actor;
-                int sourceTick = left.Source.SourceTick.CompareTo(right.Source.SourceTick);
-                if (sourceTick != 0)
-                    return sourceTick;
-                int sequence = left.Sequence.CompareTo(right.Sequence);
-                return sequence != 0 ? sequence : string.CompareOrdinal(left.FactIdentity, right.FactIdentity);
-            });
-            for (int i = 0; i < ingressValues.Count; i++)
-            {
-                if (!SimulationActorLookup.ContainsSorted(Actors, ingressValues[i].ActorId))
-                    throw new ArgumentException($"Typed ingress targets Actor '{ingressValues[i].ActorId}' without Step input.", nameof(ingress));
-                if (i > 0 && ingressValues[i - 1].ActorId.Equals(ingressValues[i].ActorId) &&
-                    ingressValues[i - 1].Source.Equals(ingressValues[i].Source) &&
-                    ingressValues[i - 1].Sequence == ingressValues[i].Sequence &&
-                    string.Equals(ingressValues[i - 1].FactIdentity, ingressValues[i].FactIdentity, StringComparison.Ordinal))
+                if (!SimulationActorLookup.ContainsSorted(Actors, ingress[i].ActorId))
+                    throw new ArgumentException($"Typed ingress targets Actor '{ingress[i].ActorId}' without Step input.", nameof(ingress));
+                if (i > 0 && ingress[i - 1].ActorId.Equals(ingress[i].ActorId) &&
+                    ingress[i - 1].Source.Equals(ingress[i].Source) &&
+                    ingress[i - 1].Sequence == ingress[i].Sequence &&
+                    string.Equals(ingress[i - 1].FactIdentity, ingress[i].FactIdentity, StringComparison.Ordinal))
                 {
                     throw new ArgumentException("Pipeline Step contains duplicate typed ingress.", nameof(ingress));
                 }
             }
-            m_Ingress = ingressValues;
+            m_Ingress = ingress;
         }
 
         public IReadOnlyList<SimulationPipelineActorInput<TInput>> Inputs => m_Inputs;
@@ -337,6 +325,32 @@ namespace ThirdPersonSimulation
             SimulationPipelineActorInput<TInput> right)
         {
             return left.ActorId.CompareTo(right.ActorId);
+        }
+
+        static SimulationPipelineTypedIngress<TIngress>[] MaterializeIngress(
+            IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
+        {
+            if (ingress == null)
+                return Array.Empty<SimulationPipelineTypedIngress<TIngress>>();
+            if (ingress is SimulationPipelineTypedIngress<TIngress>[] source)
+                return (SimulationPipelineTypedIngress<TIngress>[])source.Clone();
+            if (ingress is List<SimulationPipelineTypedIngress<TIngress>> sourceList)
+                return sourceList.ToArray();
+            return new List<SimulationPipelineTypedIngress<TIngress>>(ingress).ToArray();
+        }
+
+        static int CompareIngress(
+            SimulationPipelineTypedIngress<TIngress> left,
+            SimulationPipelineTypedIngress<TIngress> right)
+        {
+            int actor = left.ActorId.CompareTo(right.ActorId);
+            if (actor != 0)
+                return actor;
+            int sourceTick = left.Source.SourceTick.CompareTo(right.Source.SourceTick);
+            if (sourceTick != 0)
+                return sourceTick;
+            int sequence = left.Sequence.CompareTo(right.Sequence);
+            return sequence != 0 ? sequence : string.CompareOrdinal(left.FactIdentity, right.FactIdentity);
         }
 
         static ActorId[] CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)

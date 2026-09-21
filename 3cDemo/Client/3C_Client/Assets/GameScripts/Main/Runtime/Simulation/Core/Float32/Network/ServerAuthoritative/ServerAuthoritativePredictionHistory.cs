@@ -45,8 +45,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong GetLastPredictedInputSequence(ulong confirmedInputSequence)
         {
             ulong sequence = confirmedInputSequence;
-            foreach (ServerAuthoritativePredictionHistoryRecord record in m_Records.Values)
-                sequence = Math.Max(sequence, record.Input.InputSequence);
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+                sequence = Math.Max(sequence, pair.Value.Input.InputSequence);
             return sequence;
         }
 
@@ -58,18 +58,25 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativePredictionHistoryRecord LastRecord()
         {
             ServerAuthoritativePredictionHistoryRecord last = null;
-            foreach (ServerAuthoritativePredictionHistoryRecord record in m_Records.Values)
-                last = record;
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+                last = pair.Value;
             return last ?? throw new InvalidOperationException("Hard recovery has no local Pipeline frame to reconstruct model-owned state.");
         }
 
         public IReadOnlyList<ServerAuthoritativePredictionHistoryRecord> GetReplayAfter(ulong confirmedInputSequence)
         {
-            var values = new List<ServerAuthoritativePredictionHistoryRecord>();
-            foreach (ServerAuthoritativePredictionHistoryRecord record in m_Records.Values)
+            int count = 0;
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
             {
-                if (record.Input.InputSequence > confirmedInputSequence)
-                    values.Add(record);
+                if (pair.Value.Input.InputSequence > confirmedInputSequence)
+                    count++;
+            }
+            var values = new ServerAuthoritativePredictionHistoryRecord[count];
+            int index = 0;
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+            {
+                if (pair.Value.Input.InputSequence > confirmedInputSequence)
+                    values[index++] = pair.Value;
             }
             return values;
         }
@@ -120,9 +127,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         public ServerAuthoritativePredictionHistoryCheckpoint PrepareClear() =>
-            new ServerAuthoritativePredictionHistoryCheckpoint(
-                Array.Empty<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>>(),
-                m_RemoteBodies.Capture());
+            ServerAuthoritativePredictionHistoryCheckpoint.Empty(m_RemoteBodies.Capture());
 
         public ServerAuthoritativePredictionHistoryCheckpoint Capture() =>
             new ServerAuthoritativePredictionHistoryCheckpoint(m_Records, m_RemoteBodies.Capture());
@@ -178,15 +183,36 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     internal sealed class ServerAuthoritativePredictionHistoryCheckpoint
     {
+        readonly KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[] m_Records;
+
         public ServerAuthoritativePredictionHistoryCheckpoint(
-            IEnumerable<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>> records,
+            SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord> records,
             ServerAuthoritativeRemoteBodyTimelineCheckpoint remoteBodies)
         {
-            Records = new List<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>>(records).AsReadOnly();
+            if (records == null)
+                throw new ArgumentNullException(nameof(records));
+            m_Records = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[records.Count];
+            int index = 0;
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in records)
+                m_Records[index++] = pair;
             RemoteBodies = remoteBodies ?? throw new ArgumentNullException(nameof(remoteBodies));
         }
 
-        public IReadOnlyList<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>> Records { get; }
+        ServerAuthoritativePredictionHistoryCheckpoint(
+            KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[] records,
+            ServerAuthoritativeRemoteBodyTimelineCheckpoint remoteBodies)
+        {
+            m_Records = records;
+            RemoteBodies = remoteBodies ?? throw new ArgumentNullException(nameof(remoteBodies));
+        }
+
+        public static ServerAuthoritativePredictionHistoryCheckpoint Empty(
+            ServerAuthoritativeRemoteBodyTimelineCheckpoint remoteBodies) =>
+            new ServerAuthoritativePredictionHistoryCheckpoint(
+                Array.Empty<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>>(),
+                remoteBodies);
+
+        public IReadOnlyList<KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>> Records => m_Records;
         public ServerAuthoritativeRemoteBodyTimelineCheckpoint RemoteBodies { get; }
         public ulong FirstRetainedTick => Records.Count == 0 ? ulong.MaxValue : Records[0].Key;
     }

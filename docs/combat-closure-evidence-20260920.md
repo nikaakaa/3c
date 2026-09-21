@@ -18,6 +18,13 @@
 
 代码入口：TimelineControlContracts.cs 的 AbilityTimelineMotionWarpCatalog；CharacterTimelineHost.cs 的 CopyPendingTimelineMotion/CopyPendingMotionWarps；Timeline.MotionCurve.cs 的采样；TimelineRuntimePreparation.cs 的分段求值；Fixed/Float32CharacterEvaluationRuntime.cs 的贡献合成。下一阶段应复用正式曲线数值实现并在内容准备时构建数据，不在逐帧读取时转换曲线或增加旁路。
 
+### 普通位移定点采样迁移
+
+- `ac49eb93a` 将普通 MotionCurve 的逻辑采样从作者轨道移至 TimelineRuntimeMotionSampling。准备阶段构建数值曲线，Fixed 使用现有 FixedGameplayAbilityCurve，Float32 使用复制的 AnimationCurve；TimelineRuntimePreparationResult 持有数据，播放实例复用。推进按现有跨循环分段传入定点时间；位移、Yaw、权重以 FixedScalar 传给 Host，删除 Fixed 逻辑先 float 采样再转定点的普通位移路径。MotionWarp 尚未迁移。
+- 未新增测试。执行 `dotnet build BTSMTL.Timeline.Runtime.csproj --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false -v:q`，结束后已执行 `dotnet build-server shutdown`。模块编译报告一个错误：TimelineRuntimePreparation.cs 的 Marker EventId 仍调用并行迁移已删除的单参数构造。新采样模块无编译诊断，但整体编译未通过，不能视为运行验证。
+- 在继续时发现 CopyPendingMotionWarps 已被另一任务改动：增加 sourceStart/sourceEnd/sourcePrevious/sourceCurrent 局部采样，窗口起止改用 warpClip。该函数也必须做定点迁移，已向用户询问归属，等待明确答复前不覆盖这一段。此前用户只确认可以与 GC 任务并行，并未指定这个实际重叠函数的归属。
+- 下一步先处理重叠归属，再完成 MotionWarp 的源位置、进度和目标限制数值合同；复查曲线边界、分段循环与零分配。全部 MotionWarp 修复、普通采样和目录初始化仍需在当前程序集加载后取得正式运行证据。
+
 ## 2026-09-20 后续核对与提交
 
 - 用户确定先完成 Timeline 时间迁移，再继续技能位移接入。任务 `01a0bcde-cf76-7162-9fcd-da6283a04b7a` 最近读取仍为 active，未取得依赖完成结论。

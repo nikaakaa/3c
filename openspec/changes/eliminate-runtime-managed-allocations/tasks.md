@@ -377,6 +377,7 @@
 - [x] 5.114 KCC 构造期准备精确 m_KccStates 工作数组，Create 和批求解写回同一数组并只把值序列化进 solver payload，删除每批 states 数组；bodies/results 仍由 state/result 独立持有，Reconstruct codec 返回新数组的分配仍在后续小步
 - [x] 5.115 KCC state codec 删除返回数组入口，改为正式原位填充精确 roster 数组；Reconstruct 读入 scratch 并在校验通过后交换当前/scratch 数组，恢复失败不改写当前状态。canonical、identity、数量和 Actor 校验语义保持
 - [x] 5.116 Rollback Output Disposition Pass 的正式 disposition List 按模型 MaximumOutputRecords 在构造期准备容量，Runtime factory 从同一 Rollback policy 传入上限；收集顺序、事务写入和 finally 清理不变，稳定负载下删除 List 底层存储扩容
+- [x] 5.117 Rollback relayed explicit 输入先扫描当前 predicted roster 判定 gameplay 是否变化，只在变化时分配 replacement Actor 数组；未变化的 provenance promotion 不再创建临时数组，缺失 Actor、冲突判定和 bundle 所有权不变
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -395,20 +395,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackCanonicalInputBundle predicted = entry.Predicted;
             if (predicted == null)
                 return;
-            var actors = new RollbackActorInputFrame[predicted.Actors.Count];
             bool found = false;
             bool gameplayChanged = false;
-            for (int i = 0; i < actors.Length; i++)
+            int matchedActorIndex = -1;
+            for (int i = 0; i < predicted.Actors.Count; i++)
             {
                 RollbackActorInputFrame current = predicted.Actors[i];
                 if (!current.ActorId.Equals(frame.ActorId))
-                {
-                    actors[i] = current;
                     continue;
-                }
                 found = true;
                 gameplayChanged = !current.GameplayHash.Equals(frame.GameplayHash);
-                actors[i] = frame;
+                matchedActorIndex = i;
             }
             if (!found)
                 throw new InvalidOperationException($"Rollback relayed Actor '{frame.ActorId}' is absent from predicted Tick '{frame.Tick}'.");
@@ -417,6 +414,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ProvenancePromotionCount = checked(m_ProvenancePromotionCount + 1);
                 return;
             }
+            var actors = new RollbackActorInputFrame[predicted.Actors.Count];
+            for (int i = 0; i < actors.Length; i++)
+                actors[i] = i == matchedActorIndex ? frame : predicted.Actors[i];
             RollbackCanonicalInputBundle replacement = RollbackCanonicalInputBundle.FromOwnedActors(
                 frame.Tick,
                 checked(predicted.BundleSequence + 1),

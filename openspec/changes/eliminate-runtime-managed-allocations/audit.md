@@ -3099,6 +3099,14 @@
 - 每条 GameplayFact/PresentationCommand 生成一条 disposition，OutputCommitter 已用同一 `MaximumOutputRecords` 约束正式输出记录，因此容量来源一致。收集顺序、Defer/Publish 判定、事务 identity、exclusive 写入和 finally 清空不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-22 Rollback 显式输入 promotion 去临时数组
+
+对应 tasks.md 的 5.2，新增 5.117 作为独立小步；5.2 保持未勾选。
+
+- `RollbackRuntimeState.RecordRelayedExplicit` 原先扫描 predicted Actor 前就新建完整 replacement 数组；当 relayed explicit 输入的 gameplay hash 和当前输入相同时，只递增 provenance promotion 计数，数组立即变成垃圾。现在先扫描确认 Actor 存在并判定 gameplay 是否变化，未变化直接返回；确认变化后才分配数组并构造 replacement bundle。
+- 缺失 Actor 的异常、多个匹配时取最后一个匹配、bundle sequence、`RecordPredicted`、applied hash 判定和 rollback 触发语义保持不变。gameplay 变化时的 replacement Actor 数组仍由 `RollbackCanonicalInputBundle.FromOwnedActors` 和 input history 持有，不跨事务复用。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

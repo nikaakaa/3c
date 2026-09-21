@@ -1,4 +1,4 @@
-# Tasks
+﻿# Tasks
 
 用户已确定秒制作者时间和 Timeline 被动求值，当前在主目录实施。播放管理者负责进度与倍率，Timeline 接收区间和原因处理内容；编辑器 tick 吸附跟随正式配置。一次性 Gameplay / Camera / VFX / Audio 行为由 TreeClip 内正式节点表达，Timeline 不再拥有 ActionCue 轨道或事件包装。第 1–4 节仅记录已有实现，不代表旧时间所有权继续作为目标；停止、修正和变速随共享采样一起接入。本清单不含测试或手动验证任务。
 
@@ -92,7 +92,7 @@
 
 - [x] 8.1 在现有 Track Inspector 增加 Domain 编辑、Marker 继承域显示及不兼容内容定位，复用原 Timeline mutation / Undo，一次失败不留下部分域变更
 - [x] 8.2 域修改同步校验 Track 所有 Clip 与 Marker 图能力，闭包和编译只读取轨道声明；不支持该域的内容明确失败，不把同一 Logic 图执行两次
-- [ ] 8.3 在秒制模型上统一拖动反馈、秒输入、逻辑 tick／素材帧／关闭吸附与 CommitSource；逻辑网格自动读取绑定 pipeline 的 SimulationTickRate，展示来源，缺绑定时不可用；配置变化不移动已有内容
-- [ ] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
+- [x] 8.3 在秒制模型上统一拖动反馈、秒输入、逻辑 tick／素材帧／关闭吸附与 CommitSource；逻辑网格自动读取绑定 pipeline 的 SimulationTickRate，展示来源，缺绑定时不可用；配置变化不移动已有内容
+- [x] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
 - [x] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建
-- [ ] 8.6 将“按当前网格重新对齐”作为显式作者操作接入原 mutation，仅处理选中范围并支持一次完整 Undo，统一网格到正式秒制精度的舍入规则
+- [x] 8.6 将“按当前网格重新对齐”作为显式作者操作接入原 mutation，仅处理选中范围并支持一次完整 Undo，统一网格到正式秒制精度的舍入规则

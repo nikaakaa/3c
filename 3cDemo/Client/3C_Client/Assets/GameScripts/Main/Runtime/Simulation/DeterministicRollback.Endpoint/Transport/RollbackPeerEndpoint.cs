@@ -19,7 +19,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new Queue<RollbackRelayedExplicitInputBatch>();
         readonly SortedList<ulong, RollbackActorInputFrame> m_InputRedundancy;
         readonly IList<RollbackActorInputFrame> m_InputRedundancyValues;
-        readonly List<RollbackActorInputFrame> m_InputBatchFrames;
+        readonly Dictionary<int, RollbackActorInputFrame[]> m_InputBatchScratches =
+            new Dictionary<int, RollbackActorInputFrame[]>();
         readonly int m_InputRedundancyCount;
         bool m_Started;
         bool m_RemoteHandshakeAccepted;
@@ -42,7 +43,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_InputRedundancyCount = inputRedundancyCount;
             m_InputRedundancy = new SortedList<ulong, RollbackActorInputFrame>(checked(inputRedundancyCount + 1));
             m_InputRedundancyValues = m_InputRedundancy.Values;
-            m_InputBatchFrames = new List<RollbackActorInputFrame>(inputRedundancyCount);
             m_Endpoint = new RollbackDatagramEndpoint(
                 localEndPoint,
                 definition.SessionId,
@@ -128,32 +128,46 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         void SendInputBatchWithinDatagram()
         {
-            m_InputBatchFrames.Clear();
-            try
+            int candidateCount = m_InputRedundancyValues.Count;
+            int encodedBytes = 0;
+            int maximumBytes = 0;
+            while (candidateCount > 0)
             {
-                for (int i = 0; i < m_InputRedundancyValues.Count; i++)
-                    m_InputBatchFrames.Add(m_InputRedundancyValues[i]);
-                while (m_InputBatchFrames.Count > 0)
+                RollbackActorInputFrame[] frames = RentInputBatchScratch(candidateCount);
+                try
                 {
-                    var batch = new RollbackActorInputBatch(m_InputBatchFrames);
-                    if (m_Channel.FitsSingleDatagram(batch, out int encodedBytes, out int maximumBytes))
+                    int sourceIndex = m_InputRedundancyValues.Count - candidateCount;
+                    for (int i = 0; i < candidateCount; i++)
+                        frames[i] = m_InputRedundancyValues[sourceIndex + i];
+                    var batch = RollbackActorInputBatch.FromOwnedFrames(frames);
+                    if (m_Channel.FitsSingleDatagram(batch, out encodedBytes, out maximumBytes))
                     {
                         m_Channel.Send(batch, false);
                         return;
                     }
-                    if (m_InputBatchFrames.Count == 1)
-                    {
-                        throw new InvalidOperationException(
-                            $"Rollback current input frame requires {encodedBytes} bytes but the unreliable payload budget is {maximumBytes} bytes.");
-                    }
-                    m_InputBatchFrames.RemoveAt(0);
                 }
-                throw new InvalidOperationException("Rollback input redundancy history is empty.");
+                finally
+                {
+                    Array.Clear(frames, 0, frames.Length);
+                }
+                if (candidateCount == 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Rollback current input frame requires {encodedBytes} bytes but the unreliable payload budget is {maximumBytes} bytes.");
+                }
+                candidateCount--;
             }
-            finally
+            throw new InvalidOperationException("Rollback input redundancy history is empty.");
+        }
+
+        RollbackActorInputFrame[] RentInputBatchScratch(int count)
+        {
+            if (!m_InputBatchScratches.TryGetValue(count, out RollbackActorInputFrame[] scratch))
             {
-                m_InputBatchFrames.Clear();
+                scratch = new RollbackActorInputFrame[count];
+                m_InputBatchScratches.Add(count, scratch);
             }
+            return scratch;
         }
 
         public void SendStateHash(RollbackStateHashReport report)

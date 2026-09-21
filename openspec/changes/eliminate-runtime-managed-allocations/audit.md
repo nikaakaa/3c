@@ -3340,6 +3340,14 @@
 - 广播完成后 finally 清空 scratch 元素，避免 ephemeral batch 或失败路径继续保留 `RollbackActorInputFrame` 引用。同一稳定批长不再分配数组；去重计数、广播计数、输入所有权和 provenance 校验不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
 
+## 2026-09-22 Rollback peer input batch 数组复用
+
+对应 tasks.md 的 5.4，新增 5.146 作为独立小步；5.4 保持未勾选。
+
+- `RollbackPeerEndpoint.SendInputBatchWithinDatagram` 原先把冗余历史复制进临时 `List`，再调用 `RollbackActorInputBatch` 公共构造复制第二份数组。现在 peer 按 1～`InputRedundancyCount` 的候选批长保留 frame scratch，从 `SortedList.Values` 填充后走 `FromOwnedFrames`，删除 List 外壳和公共构造复制。
+- MTU 检查仍从完整冗余开始；放不进单包时继续裁掉最旧帧，只剩一帧超限仍抛出原字节预算错误。unreliable `Channel.Send` 同步编码并复制到复用 packet，发送完成后 finally 清空 scratch 引用，不跨 Pump 保留 batch payload。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
 ## 2026-09-22 Rollback 5.2 源码收口
 
 - Rollback schedule 的 source mappings、steps、actor inputs、ActorId 和 typed ingress 均已迁移到 pass 生命周期 scratch；forward、rollback replay 和深恢复的多步槽位按实际深度准备，OuterTransaction 只读消费。5.129、5.133～5.138 和 d3bb156da 已覆盖 mapping、step、payload 和 ingress 链路。

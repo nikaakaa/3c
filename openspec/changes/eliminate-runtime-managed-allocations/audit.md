@@ -2578,3 +2578,12 @@
 - Channel 现在持有一只生命周期等同自身的 ACK packet，每次 `SendAcknowledgement` 先 Reset 身份和序号，再交给 Endpoint 编码。ACK 仍使用 `Array.Empty<byte>`，实际 payload 长度为零，wire 格式不变。
 - 复用只发生在同一 Channel 的同步 ACK 路径；Endpoint 先把 writer 内容复制进发送缓冲后才可能 Pump 发送队列，不会在异步队列中别名 ACK packet。接收 packet、reassembly 和 `IPEndPoint.Clone` 不在本步范围。
 - Endpoint 工程在本轮修改后已用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚 UDP endpoint scratch 复用
+
+对应 tasks.md 的 5.4，本步只处理 Datagram Endpoint 接收线程调用 Socket 使用的 endpoint scratch，整项保持未勾选。
+
+- `ReceiveLoop` 原先每次轮询都按地址族新建 `IPEndPoint`，超时等待也会重复分配；该对象只作为 `ReceiveFrom` 的可变输出 scratch。
+- Endpoint 现在按绑定地址族准备一只长寿命 scratch，接收线程每轮复用；真实来源地址仍在有效 packet 入队前 `Clone`，`RollbackReceivedDatagram` 的所有权边界不变。
+- 每条实际接收记录的 endpoint clone、packet、payload、reassembly 和接收队列对象仍独立分配。无效包或超时轮询不产生新的 endpoint scratch。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 完整依赖构建已恢复，使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

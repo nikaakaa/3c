@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
         readonly ThreadLocal<CanonicalWriter> m_SendWriter;
+        readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_MaximumDatagramBytes;
         readonly int m_QueueCapacity;
         int m_ReceiveCount;
@@ -50,6 +51,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_MaximumDatagramBytes = maximumDatagramBytes;
             m_QueueCapacity = queueCapacity;
             m_SendWriter = new ThreadLocal<CanonicalWriter>(() => new CanonicalWriter(new byte[m_MaximumDatagramBytes]));
+            m_ReceiveFromEndPoint = LocalEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                ? new IPEndPoint(IPAddress.IPv6Any, 0)
+                : new IPEndPoint(IPAddress.Any, 0);
             m_Socket = new Socket(localEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp)
             {
                 ReceiveTimeout = 250,
@@ -150,9 +154,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var buffer = new byte[m_MaximumDatagramBytes + 1];
             while (Volatile.Read(ref m_Disposed) == 0 && Volatile.Read(ref m_Failure) == null)
             {
-                EndPoint remote = LocalEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                    ? new IPEndPoint(IPAddress.IPv6Any, 0)
-                    : new IPEndPoint(IPAddress.Any, 0);
+                EndPoint remote = m_ReceiveFromEndPoint;
                 try
                 {
                     int received = m_Socket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref remote);

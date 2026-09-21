@@ -422,3 +422,4 @@
 - [x] 7.44 Inertialization 与 History Collector 复用 Local Pose/History 输出包装对象，删除两个节点的稳态逐帧包装创建；保留 inertialization 状态交换、history source commit 和 Native 双页语义
 - [x] 7.45 Selected Pose Player 复用 Local Pose 与 discontinuity 输出包装对象，删除 Motion Matching 选择播放器稳态逐帧包装创建；保留 sample、Playable job、source reset 和提交页索引语义
 - [x] 7.46 Animation Slot handler 与 source 复用 Local Pose 输出包装对象，删除 slot 三种输出分支及 source Evaluate 的稳态逐帧包装创建；保留 slot 连续性、source completion 和提交事务语义
+- [x] 7.47 Foot Placement、Pose Bone IK、Goal Assembler、Full Body IK 复用约束输出包装对象，删除四类约束节点稳态逐帧 wrapper 创建；保留约束结果、Native 双页和提交事务语义

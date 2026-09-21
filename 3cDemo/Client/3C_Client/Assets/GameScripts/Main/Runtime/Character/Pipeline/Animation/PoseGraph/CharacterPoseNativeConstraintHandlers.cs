@@ -324,7 +324,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "contribution")
                 throw new InvalidOperationException(
                     $"Foot Placement '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
@@ -374,7 +375,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 result.Contribution;
             NativeSlice<CharacterFullBodyIkGoal> goals =
                 m_Service.RequireContributionGoals(in header);
-            m_Output = new CharacterPoseNativeGoalContributionValue(
+            m_Output = CharacterPoseNativeGoalContributionValue.Reuse(
+                m_Output,
                 NodeId,
                 header,
                 goals);
@@ -398,7 +400,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override void ClearFrame()
         {
             base.ClearFrame();
-            m_Output = null;
         }
     }
 
@@ -431,7 +432,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "contribution")
                 throw new InvalidOperationException(
                     $"Pose Bone IK Goals '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
@@ -459,7 +461,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose Bone IK Goals '{NodeId}' returned an invalid Constraint result.");
             CharacterFullBodyIkGoalContributionHeader header =
                 result.Contribution;
-            m_Output = new CharacterPoseNativeGoalContributionValue(
+            m_Output = CharacterPoseNativeGoalContributionValue.Reuse(
+                m_Output,
                 NodeId,
                 header,
                 m_Service.RequireContributionGoals(in header));
@@ -483,7 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override void ClearFrame()
         {
             base.ClearFrame();
-            m_Output = null;
         }
     }
 
@@ -516,7 +518,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "goals")
                 throw new InvalidOperationException(
                     $"Full Body IK Goal Assembler '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeFrameInput frame = runtime.CurrentInput;
@@ -534,7 +537,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFullBodyIkGoalSetHeader resultGoalSet = result.GoalSet;
             CharacterFullBodyIkGoalSet goalSet =
                 m_Service.RequireGoalSet(in resultGoalSet);
-            m_Output = new CharacterPoseNativeFullBodyIkGoalsValue(
+            m_Output = CharacterPoseNativeFullBodyIkGoalsValue.Reuse(
+                m_Output,
                 NodeId,
                 goalSet);
             return m_Output;
@@ -557,7 +561,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override void ClearFrame()
         {
             base.ClearFrame();
-            m_Output = null;
         }
     }
 
@@ -594,7 +597,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
-            m_Output = null;
         }
 
         public override void Reset(
@@ -615,7 +617,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "result")
                 throw new InvalidOperationException(
                     $"Full Body IK '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
@@ -692,7 +695,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativePoseReadBinding(
                     in m_WriteBinding,
                     CharacterPoseSpace.Component);
-            m_Output = new CharacterPoseNativeComponentPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeComponentPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -718,7 +724,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage,
             CharacterPoseNativePortValue output)
         {
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -734,7 +741,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             base.ClearFrame();
             m_PageIndex = -1;
             m_WriteBinding = default;
-            m_Output = null;
         }
 
         protected override void OnDispose()

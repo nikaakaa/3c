@@ -361,7 +361,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Value = value;
         }
 
-        internal CharacterFullBodyIkGoalSet Value { get; }
+        internal CharacterFullBodyIkGoalSet Value { get; private set; }
+
+        internal static CharacterPoseNativeFullBodyIkGoalsValue Reuse(
+            CharacterPoseNativeFullBodyIkGoalsValue value,
+            PoseNodeId producerNodeId,
+            CharacterFullBodyIkGoalSet goalSet)
+        {
+            if (value == null)
+                return new CharacterPoseNativeFullBodyIkGoalsValue(
+                    producerNodeId,
+                    goalSet);
+            value.Refresh(producerNodeId, goalSet);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            CharacterFullBodyIkGoalSet goalSet)
+        {
+            if (!producerNodeId.IsValid || goalSet.Header.CompletionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!goalSet.IsValid)
+                throw new ArgumentException("Pose native Full Body IK goals value is invalid.");
+            SetIdentity(producerNodeId, goalSet.Header.CompletionIdentity);
+            Value = goalSet;
+        }
     }
 
     internal sealed class CharacterPoseNativeGoalContributionValue : CharacterPoseNativePortValue
@@ -378,8 +403,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Goals = goals;
         }
 
-        internal CharacterFullBodyIkGoalContributionHeader Header { get; }
-        internal NativeSlice<CharacterFullBodyIkGoal> Goals { get; }
+        internal CharacterFullBodyIkGoalContributionHeader Header { get; private set; }
+        internal NativeSlice<CharacterFullBodyIkGoal> Goals { get; private set; }
+
+        internal static CharacterPoseNativeGoalContributionValue Reuse(
+            CharacterPoseNativeGoalContributionValue value,
+            PoseNodeId producerNodeId,
+            CharacterFullBodyIkGoalContributionHeader header,
+            NativeSlice<CharacterFullBodyIkGoal> goals)
+        {
+            if (value == null)
+                return new CharacterPoseNativeGoalContributionValue(
+                    producerNodeId,
+                    header,
+                    goals);
+            value.Refresh(producerNodeId, header, goals);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            CharacterFullBodyIkGoalContributionHeader header,
+            NativeSlice<CharacterFullBodyIkGoal> goals)
+        {
+            if (!producerNodeId.IsValid || header.CompletionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!header.IsValid || goals.Length != header.GoalCount)
+                throw new ArgumentException("Pose native goal contribution value is invalid.");
+            SetIdentity(producerNodeId, header.CompletionIdentity);
+            Header = header;
+            Goals = goals;
+        }
     }
 
     internal sealed class CharacterPoseNativeHistoryValue : CharacterPoseNativePortValue

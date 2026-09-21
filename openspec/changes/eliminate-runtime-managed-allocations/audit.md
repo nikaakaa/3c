@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 约束节点输出包装复用
+
+对应 tasks.md 的 7.47。
+
+- Foot Placement 与 Pose Bone IK 原先每帧创建 Goal Contribution wrapper；Goal Assembler 创建 Goal Set wrapper；Full Body IK 创建 Component Pose wrapper。
+- 四类 handler 现在分别复用 `CharacterPoseNativeGoalContributionValue`、`CharacterPoseNativeFullBodyIkGoalsValue` 和 `CharacterPoseNativeComponentPoseValue`，读取时按当前 completion identity 区分本帧输出。
+- 更新前保留 header/goal 数量、Goal Set、Component binding、availability、CompletedAt、约束结果和提交页索引校验；不改变 service 调用、Native 双页、Commit/Discard 或事务边界。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Animation Slot 输出包装复用
 
 对应 tasks.md 的 7.46。

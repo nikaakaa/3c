@@ -156,9 +156,11 @@ namespace BTSMTL.Diagnostics.Editor
             get
             {
                 IReadOnlyList<RuntimeDiagnosticsTarget> targets = RuntimeDiagnosticsTargetRegistry.Targets;
-                var result = new List<RuntimeDebugTargetInfo>(targets.Count);
+                RuntimeDebugTargetInfo[] result = targets.Count == 0
+                    ? Array.Empty<RuntimeDebugTargetInfo>()
+                    : new RuntimeDebugTargetInfo[targets.Count];
                 for (int i = 0; i < targets.Count; i++)
-                    result.Add(new RuntimeDebugTargetInfo(targets[i]));
+                    result[i] = new RuntimeDebugTargetInfo(targets[i]);
                 return result;
             }
         }

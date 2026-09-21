@@ -28,7 +28,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string timelineId = BtsmtlRushStableIdentity($"corin.rush.timeline:{stateId}");
             string sectionId = BtsmtlRushStableIdentity($"corin.rush.section:{stateId}");
             string animationTrackId = BtsmtlRushStableIdentity($"corin.rush.track.animation:{stateId}");
-            string treeTrackId = BtsmtlRushStableIdentity($"corin.rush.track.decision:{stateId}");
             string animationClipId = BtsmtlRushStableIdentity($"corin.rush.clip.animation:{stateId}");
             var animation = context.ResolveExternalAsset<UnityAnimationClip>(animationPath, 7400000L);
             var timeline = BtsmtlSkillAuthoringCode.EnsureTimelineRoot(context, timelineId, $"Corin{stateId}Timeline");
@@ -40,19 +39,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             ((AnimationTrack)animationTrack).SetAnimationChannelId(new AnimationChannelId("FullBodyAction"));
             ((AnimationTrack)animationTrack).SetAnimationSlotId("corin.full-body-action");
             TimelineAuthoringPropertyContract.Apply(timeline.Data, animationClip, new[] { new TimelineAuthoringPropertyValue("blendProfileId", TimelineAuthoringPropertyKind.Text, "corin.animation-rig.action-blend-profile") });
-            var treeTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(TreeTrack), treeTrackId, "StateBoundary", TimelineExecutionDomain.Logic);
+            var trackIds = new List<string> { animationTrackId };
             var treeClipIds = new List<string>();
             foreach (var boundary in boundaries)
             {
                 string graphId = BtsmtlRushStableIdentity($"corin.rush.decision.graph:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.SourceFrame}");
                 string graphName = $"Boundary {stateId} {boundary.Target} {boundary.Condition} @{boundary.SourceFrame}";
                 string treeClipId = BtsmtlRushStableIdentity($"corin.rush.decision.clip:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.SourceFrame}");
+                string treeTrackId = BtsmtlRushStableIdentity($"corin.rush.track.decision:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.SourceFrame}");
+                var treeTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(TreeTrack), treeTrackId,
+                    $"{boundary.Target} / {boundary.Condition}", TimelineExecutionDomain.Logic);
+                trackIds.Add(treeTrackId);
                 var graph = BtsmtlSkillAuthoringCode.EnsureTimelineGraph(timeline, graphId, graphName);
                 var treeClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, treeTrack, treeClipId, (boundary.SourceFrame - 1) / (decimal)TimelineUtility.FrameRate, graph);
                 TimelineAuthoringPropertyContract.Apply(timeline.Data, treeClip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, graph) });
                 treeClipIds.Add(treeClipId);
             }
-            var trackIds = new[] { animationTrackId, treeTrackId };
             var clipIds = new List<string> { animationClipId };
             clipIds.AddRange(treeClipIds);
             BtsmtlSkillAuthoringCode.PruneTimeline(timeline.Data, trackIds, clipIds, new[] { sectionId }, Array.Empty<string>());

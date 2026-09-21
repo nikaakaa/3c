@@ -397,6 +397,21 @@ namespace BTSMTL.Timeline
             Init();
             return clip;
         }
+        public void MoveClip(TimelineContractCatalog catalog, Clip clip, Track destination)
+        {
+            Track source = clip.Track;
+            if (source == destination)
+                return;
+            if (!m_Tracks.Contains(source) || !m_Tracks.Contains(destination) || source.ExecutionDomain != destination.ExecutionDomain)
+                throw new InvalidOperationException("移动片段必须使用同一Timeline内、执行域相同的轨道。");
+            catalog.RequireClipPlacement(destination, clip);
+            source.RemoveClip(clip);
+            destination.Clips.Add(clip);
+            clip.Init(destination);
+            destination.UpdateMix();
+            Init();
+        }
+
         public void RemoveClip(Clip clip)
         {
             clip.Track.RemoveClip(clip);

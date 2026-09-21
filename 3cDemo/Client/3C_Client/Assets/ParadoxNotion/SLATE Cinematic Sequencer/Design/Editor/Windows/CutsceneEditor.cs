@@ -3236,9 +3236,9 @@ namespace Slate
                     continue;
                 Rect clipRect = new Rect(
                     TimeToPos(binding.StartTime),
-                    y + binding.FormalClip.LaneIndex * binding.FormalClip.Track.ClipHeight,
+                    y,
                     Mathf.Max(binding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f),
-                    binding.FormalClip.Track.ClipHeight);
+                    height);
                 if (!clipRect.Contains(e.mousePosition))
                     continue;
                 embeddedTimeline.Select(binding.FormalClip);
@@ -3542,18 +3542,11 @@ namespace Slate
                 wrapper.editorBinding = currentBinding;
             }
 
-            bool parallelClips = currentBinding.FormalClip != null && currentBinding.FormalClip.Track.AllowsParallelClips;
-            if (parallelClips)
-            {
-                previousBinding = null;
-                nextBinding = null;
-            }
             wrapper.SetNeighbors(previousBinding, nextBinding);
             Rect clipRect = wrapper.rect;
-            clipRect.y = currentBinding.FormalClip != null
-                ? y + currentBinding.FormalClip.LaneIndex * currentBinding.FormalClip.Track.ClipHeight : y;
+            clipRect.y = y;
             clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
-            clipRect.height = currentBinding.FormalClip != null ? currentBinding.FormalClip.Track.ClipHeight : trackDefaultHeight;
+            clipRect.height = trackDefaultHeight;
 
             float xTime = wrapper.editorBinding.StartTime;
             float xPos = clipRect.x;
@@ -3582,10 +3575,10 @@ namespace Slate
                 if (multiSelection == null || multiSelection.Count < 1)
                 {
                     float cursorTime = wrapper.editorBinding.IsTimeQuantized ? SnapTime(PosToTime(mousePosition.x)) : PosToTime(mousePosition.x);
-                    IClipEditorBinding preCursorBinding = parallelClips ? null : trackBindings
+                    IClipEditorBinding preCursorBinding = trackBindings
                         .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.StartTime < cursorTime)
                         .LastOrDefault();
-                    IClipEditorBinding postCursorBinding = parallelClips ? null : trackBindings
+                    IClipEditorBinding postCursorBinding = trackBindings
                         .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.EndTime > cursorTime)
                         .FirstOrDefault();
                     if (e.shift || Prefs.rippleMode)

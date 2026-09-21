@@ -575,9 +575,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             decimal startSeconds,
             UnityEngine.Object referenceObject)
         {
-            Clip existing = track.Clips.SingleOrDefault(value => value != null && value.AuthoringId == identity);
+            Clip existing = timeline.Tracks.SelectMany(value => value.Clips)
+                .SingleOrDefault(value => value != null && value.AuthoringId == identity);
             if (existing != null)
             {
+                if (existing.Track != track)
+                {
+                    PrepareTimelineMutation(timeline);
+                    timeline.ApplyModify(() => timeline.MoveClip(catalog, existing, track), "移动Timeline片段到目标轨道");
+                }
                 ConfigureClipSegment(existing, startSeconds, TimelineAuthoringPropertyContract.DefaultEndTime(existing, FixedScalar.FromDecimal(startSeconds), referenceObject).Raw / (decimal)FixedScalar.OneRaw, 0, 0, 0);
                 ConfigureClipExecution(track, existing);
                 return existing;

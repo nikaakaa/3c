@@ -26,7 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             if (resourceScope == null)
                 throw new ArgumentNullException(nameof(resourceScope));
-            m_Rig.RequireValid();
             m_Plans = BuildIndex(sourcePlans, value => value.SourceIndex.Value);
             m_Descriptors = BuildIndex(resourceDescriptors, value => value.ResourceIndex);
             foreach (CharacterPresentationPoseSourcePlan plan in m_Plans.Values)
@@ -116,7 +115,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (string.IsNullOrWhiteSpace(posePlanHash))
                 throw new ArgumentException("Pose Plan identity is missing.", nameof(posePlanHash));
-            rig.RequireValid();
             PosePlanHash = posePlanHash.Trim();
             var poseRig = new CharacterFootPlacementPoseRig(
                 m_Calibration,
@@ -231,7 +229,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyList<RootMotionCurveAsset> rootOrientationCurves)
         {
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Rig.RequireValid();
             m_LinkedPoseImplementations = BuildIndex(
                 linkedPoseImplementations,
                 value => value.GroupId.Value);

@@ -400,3 +400,5 @@
 - [x] 7.26 Motion Matching DatabasePayload 已在内容准备阶段校验全部 Clip binding 后，选样解析不再重复调用 binding.RequireValid；保留 sample/index、时间、Loop、Foot 参数和输出有效性校验
 
 - [x] 7.27 Timeline NumericTarget 只在 PrepareRequest 边界校验，PlaybackRequestFactory 不再对同一 composition 配置重复 Enum.IsDefined；保留动态 PlaybackMode、generation、handle 和 capture/restore 事务校验
+
+- [x] 7.28 Pose Source/Foot/Managed resource catalog 直接消费外层已校验 Rig，删除三处重复 Rig schema 遍历；保留资源 identity、plan/descriptor、calibration、bone index 和 Native shape 校验

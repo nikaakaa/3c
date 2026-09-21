@@ -2113,6 +2113,15 @@
 - 删除 request factory 的重复 NumericTarget 反射校验，保留 PrepareRequest 的唯一请求边界校验；没有触碰 Timeline snapshot 的 managed reference clone、Capture/Restore、handle/generation、event ordering 或 pending/committed 事务。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Timeline 分配采样。
 
+## 2026-09-21 Pose ResourceCatalog Rig 校验边界
+
+对应 tasks.md 的 7.28。
+
+- Presentation Domain 外层先通过 `CharacterAnimationRigBinding.RequireValid(animationRig)`，Pose graph preparation 又在 `CharacterPoseNativeGraphPrepareRequest` 形成 PreparedBinding 时校验 Rig；Source Catalog、Foot Placement Module 和 Managed Source Catalog 原先各自再次完整执行 `Rig.RequireValid`。
+- 删除这三处重复 Rig schema 遍历；保留 source plan/descriptor 合法性、Rig identity/revision 对齐、ACL resource registration、Foot profile/calibration、linked implementation、bone index、capacity 和 Native shape 校验。
+- SourceCatalog 仍只在 ServiceFactory 创建阶段准备一次，Foot/Managed resource 仍按原顺序创建和释放；没有改变资源租约、handler 组合、约束求解或帧事务。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 资源分配采样。
+
 ## 2026-09-21 Pose 运行链枚举反射清理
 
 对应 tasks.md 的 7.23。

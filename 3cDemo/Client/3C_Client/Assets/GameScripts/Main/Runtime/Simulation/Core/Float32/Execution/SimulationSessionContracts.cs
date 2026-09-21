@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
@@ -39,14 +38,14 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationTickResult
     {
-        readonly ReadOnlyCollection<SimulationActorTickResult> m_Actors;
-        readonly ReadOnlyCollection<EventId> m_OutputEvents;
+        readonly IReadOnlyList<SimulationActorTickResult> m_Actors;
+        readonly IReadOnlyList<EventId> m_OutputEvents;
 
         public SimulationTickResult(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             SimulationTick tick,
-            IEnumerable<SimulationActorTickResult> actors,
+            IReadOnlyList<SimulationActorTickResult> actors,
             WorldSolveBatchSummary worldSummary,
             SimulationWorldSnapshot candidateSnapshot)
         {
@@ -61,14 +60,14 @@ namespace ThirdPersonSimulation
                  candidateSnapshot.NumericProfile != numericProfile ||
                  !candidateSnapshot.GameplayContentHash.Equals(gameplayContentHash)))
                 throw new ArgumentException("Candidate snapshot identity does not match result identity.", nameof(candidateSnapshot));
-            var values = actors == null ? new List<SimulationActorTickResult>() : new List<SimulationActorTickResult>(actors);
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (values.Count == 0 || values.Count != worldSummary.ActorCount)
+            SimulationActorTickResult[] values = Copy(actors);
+            Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (values.Length == 0 || values.Length != worldSummary.ActorCount)
                 throw new ArgumentException("Simulation result Actor count does not match world summary.", nameof(actors));
-            if (candidateSnapshot != null && candidateSnapshot.Actors.Count != values.Count)
+            if (candidateSnapshot != null && candidateSnapshot.Actors.Count != values.Length)
                 throw new ArgumentException("Simulation result Actor count does not match candidate snapshot.", nameof(candidateSnapshot));
-            var events = new List<EventId>();
-            for (int i = 0; i < values.Count; i++)
+            int eventCount = 0;
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || values[i].Tick != tick || i > 0 && values[i - 1].ActorId == values[i].ActorId)
                     throw new ArgumentException("Simulation result Actor ordering is invalid.", nameof(actors));
@@ -82,20 +81,36 @@ namespace ThirdPersonSimulation
                         !actorSnapshot.StateHash.Equals(values[i].StateHash))
                         throw new ArgumentException("Simulation result Actor state does not match candidate snapshot.", nameof(candidateSnapshot));
                 }
-                for (int fact = 0; fact < values[i].GameplayFacts.Count; fact++)
-                    events.Add(values[i].GameplayFacts[fact].Header.EventId);
-                for (int command = 0; command < values[i].PresentationCommands.Count; command++)
-                    events.Add(values[i].PresentationCommands[command].Header.EventId);
+                eventCount = checked(eventCount + values[i].GameplayFacts.Count + values[i].PresentationCommands.Count);
             }
-            events.Sort();
-            for (int i = 1; i < events.Count; i++)
+            EventId[] events = eventCount == 0 ? Array.Empty<EventId>() : new EventId[eventCount];
+            int eventIndex = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                for (int fact = 0; fact < values[i].GameplayFacts.Count; fact++)
+                    events[eventIndex++] = values[i].GameplayFacts[fact].Header.EventId;
+                for (int command = 0; command < values[i].PresentationCommands.Count; command++)
+                    events[eventIndex++] = values[i].PresentationCommands[command].Header.EventId;
+            }
+            Array.Sort(events);
+            for (int i = 1; i < events.Length; i++)
             {
                 if (events[i - 1].Equals(events[i]))
                     throw new ArgumentException($"Simulation result contains duplicate EventId '{events[i]}'.", nameof(actors));
             }
-            m_Actors = values.AsReadOnly();
-            m_OutputEvents = events.AsReadOnly();
+            m_Actors = values;
+            m_OutputEvents = events;
             WorldSummary = worldSummary;
+        }
+
+        static SimulationActorTickResult[] Copy(IReadOnlyList<SimulationActorTickResult> actors)
+        {
+            if (actors == null || actors.Count == 0)
+                return Array.Empty<SimulationActorTickResult>();
+            var result = new SimulationActorTickResult[actors.Count];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = actors[i];
+            return result;
         }
 
         public SimulationNumericProfile NumericProfile { get; }

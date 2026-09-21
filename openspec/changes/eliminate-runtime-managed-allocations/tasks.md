@@ -445,6 +445,7 @@
 - [x] 5.182 Float32 OutputDispositionSet 补齐 owned array 入口；Local Immediate 先计数后填充精确 dispositions，删除 builder List 收集、构造复制、lambda 排序和只读包装
 - [x] 5.183 Float32 Authority replication disposition 先按 Actor 输出数量填充精确数组，再直接进入 owned disposition set；删除每 tick 的 List 收集、构造复制和临时清理壳
 - [x] 5.184 Float32 Prediction disposition 先校验多 step 容量，再填充精确数组；Add 的 GameplayFact/PresentationCommand 分支改为专用类型入口，删除 List、lambda 和构造复制
+- [x] 5.185 Float32 Prediction command history 改为固定 newest-first 数组和按 1–4 容量准备的发送 scratch；命令包直接转移 owned samples，删除 List 插入删除和每次发包复制
 
 ## 6. UI、资源、渲染和生命周期
 

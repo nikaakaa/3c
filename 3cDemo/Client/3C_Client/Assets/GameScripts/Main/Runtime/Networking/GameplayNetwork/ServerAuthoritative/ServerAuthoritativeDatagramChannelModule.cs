@@ -68,7 +68,15 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly int m_MaximumDatagramBytes;
         readonly Queue<ServerAuthoritativePredictionDatagramEvent> m_PredictionEvents =
             new Queue<ServerAuthoritativePredictionDatagramEvent>();
-        readonly List<CanonicalInputSample> m_CommandHistory = new List<CanonicalInputSample>(4);
+        readonly CanonicalInputSample[] m_CommandHistory = new CanonicalInputSample[4];
+        readonly CanonicalInputSample[][] m_CommandPacketSamples =
+        {
+            new CanonicalInputSample[1],
+            new CanonicalInputSample[2],
+            new CanonicalInputSample[3],
+            new CanonicalInputSample[4]
+        };
+        int m_CommandHistoryCount;
         ServerAuthoritativeDataPlaneTicketMessage m_PredictionTicket;
         ServerAuthoritativeDatagramIdentity m_PredictionIdentity;
         ulong m_SendPacketSequence;
@@ -220,7 +228,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ulong interval = checked((ulong)(policy.SimulationTickRate / policy.CommandPacketRate));
             if (input.SourceTick != 1 && input.SourceTick % interval != 0)
                 return;
-            var command = new CommandDatagram(m_LatestSnapshotSequence, m_LatestSnapshotSequence, m_CommandHistory);
+            CanonicalInputSample[] packetSamples = m_CommandPacketSamples[m_CommandHistoryCount - 1];
+            Array.Copy(m_CommandHistory, packetSamples, m_CommandHistoryCount);
+            var command = CommandDatagram.FromOwnedSamples(
+                m_LatestSnapshotSequence,
+                m_LatestSnapshotSequence,
+                packetSamples);
             byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(command, m_PayloadWriter.Value);
             SendPacket(ServerAuthoritativeDatagramKind.Command, payload);
             m_CommandPacketCount++;
@@ -247,16 +260,22 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
         void AppendCommandHistory(CanonicalInputSample sample)
         {
-            if (m_CommandHistory.Count > 0 && sample.InputSequence <= m_CommandHistory[0].InputSequence)
+            if (m_CommandHistoryCount > 0 && sample.InputSequence <= m_CommandHistory[0].InputSequence)
                 throw new InvalidOperationException("Prediction command input sequence duplicated or regressed.");
-            while (m_CommandHistory.Count > 0 &&
+
+            while (m_CommandHistoryCount > 0 &&
                    m_CommandHistory[0].TargetAuthorityTick >= sample.TargetAuthorityTick)
             {
-                m_CommandHistory.RemoveAt(0);
+                Array.Copy(m_CommandHistory, 1, m_CommandHistory, 0, m_CommandHistoryCount - 1);
+                m_CommandHistoryCount--;
+                m_CommandHistory[m_CommandHistoryCount] = null;
             }
-            m_CommandHistory.Insert(0, sample);
-            if (m_CommandHistory.Count > 4)
-                m_CommandHistory.RemoveAt(4);
+
+            if (m_CommandHistoryCount == 4)
+                m_CommandHistoryCount--;
+            Array.Copy(m_CommandHistory, 0, m_CommandHistory, 1, m_CommandHistoryCount);
+            m_CommandHistory[0] = sample;
+            m_CommandHistoryCount++;
         }
 
         void SendHello(long clockMicros)
@@ -290,7 +309,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 return;
             m_Disposed = true;
             m_PredictionEvents.Clear();
-            m_CommandHistory.Clear();
+            Array.Clear(m_CommandHistory, 0, m_CommandHistory.Length);
+            m_CommandHistoryCount = 0;
             m_PredictionTicket = null;
             m_PayloadWriter.Dispose();
             m_Endpoint.Dispose();

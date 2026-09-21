@@ -295,7 +295,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         {
         }
 
-        internal static CommandDatagram FromOwnedSamples(
+        public static CommandDatagram FromOwnedSamples(
             ulong latestSnapshotSequence,
             ulong latestBaseSnapshotSequence,
             CanonicalInputSample[] samples)

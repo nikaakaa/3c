@@ -3659,3 +3659,11 @@
 - Prediction Output Disposition 第一遍校验 Current Step 连续性和 finalized result 数量，并统计 GameplayFact 与 PresentationCommand 的 disposition 总量；第二遍用 GameplayFact、PresentationCommand 和 header 的专用类型入口记录 journal、判断 replay duplicate 并填充精确数组。成功路径的 record、seal、排序和发布语义不变，失败路径提前于 journal 写入退出。
 - 每个 tick 的 disposition List、`Add<T>` lambda 中转、构造期数组和 List 清理壳删除；诊断的首个 Actor 在 owned array 排序前捕获，保持原诊断归属。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 command history 数组收口
+
+对应 tasks.md 的 5.5，新增 5.185 作为独立小步；5.5 保持未勾选。
+
+- Prediction command history 改为固定 4 槽 newest-first 数组和显式 count；淘汰、插入和满员裁剪用同数组移动并清空尾部引用，序列回退、按 authority tick 淘汰和最多保留四条语义不变。
+- 发送端按当前 history 数量选择 1–4 槽的常驻 scratch，复制 samples 后调用 `CommandDatagram.FromOwnedSamples` 直接转交；每次发包的 List、PrepareSamples 复制和 RemoveAt/Insert 删除。`FromOwnedSamples` 改为正式 public ownership 入口，解码校验和 wire 字段顺序不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

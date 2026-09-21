@@ -58,13 +58,13 @@
 
 ## 5. 同一动作的共享表现采样
 
-- [ ] 5.1 沿既有 Action 表现时钟策略拆出进度计算结果，输入正式 playback identity、committed controls / samples 和表现 delta，输出前后动作秒数、循环经过、变化原因与事件资格；同时接入第 7 节的停止和修正控制
-- [ ] 5.2 沿现有调用链明确共享采样的具体持有对象和帧内调用顺序，按动作实例 / generation 每表现帧计算一次采样，移除 Timeline driver 与动作 Player 对同一动作的独立累加，不增加第二 Registry 或同义时钟接口
-- [ ] 5.3 将动作动画、同 playback 的 Timeline Marker 与 Camera 采样接入该结果，Clip 源采样继续经过起点 / ClipIn / 速率映射，locomotion 与混合过渡保持原 owner
-- [ ] 5.4 在正式 composition / prepared binding 中接入策略与控制输入，保留有限 Action 的 committed sample 合同，不按游戏类型或 Network Model 在消费者内分支，不提供缺配置后的自由播 fallback
-- [ ] 5.5 让当前合法策略统一接收暂停、速率与终态控制，缺少所需 samples / binding 时报告对应正式失败或合同规定的保持状态，不擅自外推
-- [ ] 5.6 在既有正式播放控制中明确子弹时间／hitstop 的作用范围、倍率叠加、生效 Step 和解除来源；控制参与确定性状态，禁止写 Unity 全局时间或修改 tick 率，跟随样本的表现不重复应用倍率
-- [ ] 5.7 区分动作进度倍率和 Clip 源采样倍率：前者影响动作窗口与共享采样，后者只改变素材映射；不为 Timeline 另建时间控制服务
+- [x] 5.1 沿既有 Action 表现时钟策略拆出进度计算结果，输入正式 playback identity、committed controls / samples 和表现 delta，输出前后动作秒数、循环经过、变化原因与事件资格；同时接入第 7 节的停止和修正控制
+- [x] 5.2 沿现有调用链明确共享采样的具体持有对象和帧内调用顺序，按动作实例 / generation 每表现帧计算一次采样，移除 Timeline driver 与动作 Player 对同一动作的独立累加，不增加第二 Registry 或同义时钟接口
+- [x] 5.3 将动作动画、同 playback 的 Timeline Marker 与 Camera 采样接入该结果，Clip 源采样继续经过起点 / ClipIn / 速率映射，locomotion 与混合过渡保持原 owner
+- [x] 5.4 在正式 composition / prepared binding 中接入策略与控制输入，保留有限 Action 的 committed sample 合同，不按游戏类型或 Network Model 在消费者内分支，不提供缺配置后的自由播 fallback
+- [x] 5.5 让当前合法策略统一接收暂停、速率与终态控制，缺少所需 samples / binding 时报告对应正式失败或合同规定的保持状态，不擅自外推
+- [x] 5.6 在既有正式播放控制中明确子弹时间／hitstop 的作用范围、倍率叠加、生效 Step 和解除来源；控制参与确定性状态，禁止写 Unity 全局时间或修改 tick 率，跟随样本的表现不重复应用倍率
+- [x] 5.7 区分动作进度倍率和 Clip 源采样倍率：前者影响动作窗口与共享采样，后者只改变素材映射；不为 Timeline 另建时间控制服务
 
 实施对账：5.1–5.3 已接入原输出链的精确进度、Timeline 被动采样和动画已投影样本消费；已删除 Timeline 自主 delta 推进及把表现动画样本写入 committed history 的路径。已接入 Advance / Correction / Completed / Stopped 原因、终态确认交付和 Pose 帧候选提交／丢弃；正式播放控制、最终分支撤销和图执行事务仍未完整闭合，因此上述条目不提前勾选。具体改动与证据见 implementation.md。
 

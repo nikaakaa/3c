@@ -82,7 +82,11 @@ namespace GameLogic.ProductStartup
         private Text _statusText;
         private Text _busyText;
         private Text _downloadText;
-        private Text _diagnosticsText;
+        private Text _startupDiagnosticsText;
+        private Text _productDiagnosticsText;
+        private Text _resourceDiagnosticsText;
+        private Text _networkDiagnosticsText;
+        private Text _memoryDiagnosticsText;
         private Button _gameplayPlanButton;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         private GameObject faultLabRoot;
@@ -90,8 +94,16 @@ namespace GameLogic.ProductStartup
         private InputField _faultBundleInput;
         private InputField _faultScopeInput;
         private Text _faultResultText;
+        private readonly StringBuilder _faultResultDiagnostics = new StringBuilder(256);
 #endif
         private ProductShellBindings _bindings;
+        private const string WaitingForSnapshots = "Waiting for snapshots...";
+        private readonly StringBuilder _startupDiagnostics = new StringBuilder(512);
+        private readonly StringBuilder _productDiagnostics = new StringBuilder(256);
+        private readonly StringBuilder _resourceDiagnostics = new StringBuilder(1024);
+        private readonly StringBuilder _networkDiagnostics = new StringBuilder(512);
+        private readonly StringBuilder _memoryDiagnostics = new StringBuilder(512);
+        private readonly StringBuilder _downloadDiagnostics = new StringBuilder(512);
 
         public static ProductShellViewController CreateLoadedRoot()
         {
@@ -236,10 +248,16 @@ namespace GameLogic.ProductStartup
             _busyText = CreateText(busyRoot.transform, "Operation", string.Empty, 20, new Vector2(0.03f, 0.08f), new Vector2(0.97f, 0.92f));
 
             diagnosticsRoot = CreatePanel(canvasObject.transform, "Diagnostics", new Vector2(0.50f, 0.08f), new Vector2(0.98f, 0.94f));
-            _diagnosticsText = CreateText(diagnosticsRoot.transform, "SnapshotText", "Waiting for snapshots...", 15, new Vector2(0.025f, 0.025f), new Vector2(0.975f, 0.975f));
-            _diagnosticsText.alignment = TextAnchor.UpperLeft;
-            _diagnosticsText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            _diagnosticsText.verticalOverflow = VerticalWrapMode.Overflow;
+            _startupDiagnosticsText = CreateText(diagnosticsRoot.transform, "StartupText", WaitingForSnapshots, 14, new Vector2(0.025f, 0.80f), new Vector2(0.975f, 0.975f));
+            _productDiagnosticsText = CreateText(diagnosticsRoot.transform, "ProductText", WaitingForSnapshots, 14, new Vector2(0.025f, 0.68f), new Vector2(0.975f, 0.80f));
+            _resourceDiagnosticsText = CreateText(diagnosticsRoot.transform, "ResourceText", WaitingForSnapshots, 14, new Vector2(0.025f, 0.36f), new Vector2(0.975f, 0.68f));
+            _networkDiagnosticsText = CreateText(diagnosticsRoot.transform, "NetworkText", WaitingForSnapshots, 14, new Vector2(0.025f, 0.18f), new Vector2(0.975f, 0.36f));
+            _memoryDiagnosticsText = CreateText(diagnosticsRoot.transform, "MemoryText", WaitingForSnapshots, 14, new Vector2(0.025f, 0.025f), new Vector2(0.975f, 0.18f));
+            ConfigureDiagnosticsText(_startupDiagnosticsText);
+            ConfigureDiagnosticsText(_productDiagnosticsText);
+            ConfigureDiagnosticsText(_resourceDiagnosticsText);
+            ConfigureDiagnosticsText(_networkDiagnosticsText);
+            ConfigureDiagnosticsText(_memoryDiagnosticsText);
 
             _statusText = CreateText(canvasObject.transform, "Status", string.Empty, 17, new Vector2(0.03f, 0.005f), new Vector2(0.98f, 0.07f));
             _statusText.alignment = TextAnchor.MiddleLeft;
@@ -289,64 +307,17 @@ namespace GameLogic.ProductStartup
 
         private void RefreshDiagnostics()
         {
-            if (_bindings == null || !_diagnosticsText)
+            if (_bindings == null)
             {
                 return;
             }
 
-            var text = new StringBuilder(1024);
-            ProductStartupSnapshot startup = _bindings.StartupSnapshots.Current;
-            if (startup != null)
-            {
-                text.AppendLine("STARTUP");
-                text.Append("Stage ").Append(startup.Stage).Append("  Gen ").Append(startup.Generation).AppendLine();
-                text.Append("Client ").Append(startup.ClientBuildVersion).Append("  Resource ").Append(startup.ResourcePackageVersion).Append("  Protocol ").Append(startup.AuthProtocolVersion).AppendLine();
-                text.Append("Files ").Append(startup.CompletedFileCount).Append('/').Append(startup.TotalFileCount).Append("  Bytes ").Append(FormatBytes(startup.CompletedBytes)).Append('/').Append(FormatBytes(startup.TotalBytes)).AppendLine();
-                text.Append("Security CRC High | HTTPS | Manifest signature: out of scope").AppendLine();
-            }
-
-            ProductRuntimeSnapshot product = _bindings.ProductSnapshots.Current;
-            if (product != null)
-            {
-                text.AppendLine().AppendLine("PRODUCT");
-                text.Append(product.Stage).Append(" | Auth ").Append(product.AuthState).Append(" | Home ").Append(product.HomeState).Append(" | Gameplay ").Append(product.GameplayState).AppendLine();
-                if (!string.IsNullOrEmpty(product.SafeError)) text.Append("Error ").Append(product.SafeError).AppendLine();
-            }
-
-            ResourceRuntimeSnapshot resources = _bindings.ResourceSnapshots.Current;
-            if (resources != null)
-            {
-                text.AppendLine().AppendLine("RESOURCE");
-                text.Append("Logical ").Append(resources.LogicalLoadCount).Append("  Physical preflight ").Append(resources.PhysicalLoadCount).Append("  Join ").Append(resources.InFlightJoinCount).Append("  Known physical reuse ").Append(resources.CacheHitCount).AppendLine();
-                text.Append("Leases ").Append(resources.ActiveLeaseCount).Append("  Instances ").Append(resources.LiveInstanceCount).Append("  TEngine pool ").Append(resources.TEngineAssetPoolObjectCount).Append(" (free ").Append(resources.TEngineAssetPoolReleasableCount).Append(')').AppendLine();
-                text.Append("Package ").Append(resources.PackageName).Append(" @ ").Append(resources.PackageVersion).AppendLine();
-                foreach (ResourceScopeSnapshot scope in resources.Scopes)
-                {
-                    text.Append("#").Append(scope.Id.Value).Append(' ').Append(scope.Kind).Append(' ').Append(scope.State).Append(" L").Append(scope.LeaseCount).Append(" I").Append(scope.LiveInstanceCount).AppendLine();
-                }
-            }
-
-            NetworkRuntimeSnapshot network = _bindings.NetworkSnapshots.Current;
-            if (network != null)
-            {
-                text.AppendLine().AppendLine("NETWORK");
-                text.Append(network.ProductId).Append(" | ").Append(network.Transport).Append(" TLS=").Append(network.TlsEnabled).Append("  ").Append(network.RedactedEndpoint).Append("  ").Append(network.ConnectionState).AppendLine();
-                text.Append("Account ").Append(network.RedactedAccountId).Append("  Client ").Append(network.RedactedClientInstanceId).Append("  Generation ").Append(network.SessionGeneration).AppendLine();
-                text.Append("Token expires ").Append(network.TokenExpiresAt?.ToString("O") ?? "-").Append("  RTT ").Append(network.RoundTripMilliseconds).Append("ms  Error ").Append(network.LastErrorCode).AppendLine();
-            }
-
-            ProductCheckpointSnapshot checkpoint = _bindings.CheckpointSnapshots.Current;
-            if (checkpoint != null)
-            {
-                MemoryRuntimeSnapshot memory = checkpoint.Memory;
-                text.AppendLine().AppendLine("MEMORY");
-                text.Append(checkpoint.Checkpoint).Append("  Used ").Append(FormatBytes(memory.TotalUsedBytes)).Append("  Reserved ").Append(FormatBytes(memory.TotalReservedBytes)).AppendLine();
-                text.Append("GC ").Append(FormatBytes(memory.GcUsedBytes)).Append("  Texture ").Append(FormatBytes(memory.TextureBytes)).Append("  Mesh ").Append(FormatBytes(memory.MeshBytes)).AppendLine();
-                text.Append("Budget ").Append(memory.BudgetName).Append(' ').Append(FormatBytes(memory.BudgetBytes)).Append("  Over=").Append(memory.IsOverBudget).AppendLine();
-                if (!string.IsNullOrEmpty(memory.ConfigurationError)) text.Append(memory.ConfigurationError).AppendLine();
-            }
-
-            _diagnosticsText.text = text.ToString();
+            RefreshStartupDiagnostics(_bindings.StartupSnapshots.Current);
+            RefreshProductDiagnostics(_bindings.ProductSnapshots.Current);
+            RefreshResourceDiagnostics(_bindings.ResourceSnapshots.Current);
+            RefreshNetworkDiagnostics(_bindings.NetworkSnapshots.Current);
+            RefreshMemoryDiagnostics(_bindings.CheckpointSnapshots.Current);
+            RefreshDownload(_bindings.GameplayDownloadSnapshots.Current);
         }
 
         private void RefreshDownload(GameplayDownloadSnapshot snapshot)
@@ -355,19 +326,148 @@ namespace GameLogic.ProductStartup
             {
                 return;
             }
-            _downloadText.text = $"GAMEPLAY PACKAGE\nState {snapshot.State}\nFiles {snapshot.CompletedFiles}/{snapshot.TotalFiles}\nBytes {FormatBytes(snapshot.CompletedBytes)}/{FormatBytes(snapshot.TotalBytes)}\nDisk required {FormatBytes(snapshot.RequiredDiskBytes)}\nDisk available {FormatBytes(snapshot.AvailableDiskBytes)}\n{snapshot.CurrentFile}\n{snapshot.SafeError}";
+
+            _downloadDiagnostics.Clear();
+            _downloadDiagnostics.AppendLine("GAMEPLAY PACKAGE");
+            _downloadDiagnostics.Append("State ").AppendLine(snapshot.State.ToString());
+            _downloadDiagnostics.Append("Files ").Append(snapshot.CompletedFiles).Append('/').Append(snapshot.TotalFiles).AppendLine();
+            _downloadDiagnostics.Append("Bytes "); AppendBytes(_downloadDiagnostics, snapshot.CompletedBytes); _downloadDiagnostics.Append('/'); AppendBytes(_downloadDiagnostics, snapshot.TotalBytes); _downloadDiagnostics.AppendLine();
+            _downloadDiagnostics.Append("Disk required "); AppendBytes(_downloadDiagnostics, snapshot.RequiredDiskBytes); _downloadDiagnostics.Append("  Available "); AppendBytes(_downloadDiagnostics, snapshot.AvailableDiskBytes); _downloadDiagnostics.AppendLine();
+            _downloadDiagnostics.Append(snapshot.CurrentFile).AppendLine();
+            _downloadDiagnostics.Append(snapshot.SafeError);
+            _downloadText.text = _downloadDiagnostics.ToString();
         }
 
-        private void OnStartupChanged(ProductStartupSnapshot snapshot) => RefreshDiagnostics();
-        private void OnProductChanged(ProductRuntimeSnapshot snapshot) => RefreshDiagnostics();
-        private void OnResourceChanged(ResourceRuntimeSnapshot snapshot) => RefreshDiagnostics();
-        private void OnNetworkChanged(NetworkRuntimeSnapshot snapshot) => RefreshDiagnostics();
-        private void OnCheckpointChanged(ProductCheckpointSnapshot snapshot) => RefreshDiagnostics();
+        private void RefreshStartupDiagnostics(ProductStartupSnapshot startup)
+        {
+            if (!_startupDiagnosticsText)
+            {
+                return;
+            }
+
+            _startupDiagnostics.Clear();
+            if (startup == null)
+            {
+                _startupDiagnostics.Append(WaitingForSnapshots);
+            }
+            else
+            {
+                _startupDiagnostics.AppendLine("STARTUP");
+                _startupDiagnostics.Append("Stage ").Append(startup.Stage).Append("  Gen ").Append(startup.Generation).AppendLine();
+                _startupDiagnostics.Append("Client ").Append(startup.ClientBuildVersion).Append("  Resource ").Append(startup.ResourcePackageVersion).Append("  Protocol ").Append(startup.AuthProtocolVersion).AppendLine();
+                _startupDiagnostics.Append("Files ").Append(startup.CompletedFileCount).Append('/').Append(startup.TotalFileCount).Append("  Bytes "); AppendBytes(_startupDiagnostics, startup.CompletedBytes); _startupDiagnostics.Append('/'); AppendBytes(_startupDiagnostics, startup.TotalBytes); _startupDiagnostics.AppendLine();
+                _startupDiagnostics.Append("Security CRC High | HTTPS | Manifest signature: out of scope");
+            }
+
+            _startupDiagnosticsText.text = _startupDiagnostics.ToString();
+        }
+
+        private void RefreshProductDiagnostics(ProductRuntimeSnapshot product)
+        {
+            if (!_productDiagnosticsText)
+            {
+                return;
+            }
+
+            _productDiagnostics.Clear();
+            if (product == null)
+            {
+                _productDiagnostics.Append(WaitingForSnapshots);
+            }
+            else
+            {
+                _productDiagnostics.AppendLine("PRODUCT");
+                _productDiagnostics.Append(product.Stage).Append(" | Auth ").Append(product.AuthState).Append(" | Home ").Append(product.HomeState).Append(" | Gameplay ").Append(product.GameplayState);
+                if (!string.IsNullOrEmpty(product.SafeError)) _productDiagnostics.AppendLine().Append("Error ").Append(product.SafeError);
+            }
+
+            _productDiagnosticsText.text = _productDiagnostics.ToString();
+        }
+
+        private void RefreshResourceDiagnostics(ResourceRuntimeSnapshot resources)
+        {
+            if (!_resourceDiagnosticsText)
+            {
+                return;
+            }
+
+            _resourceDiagnostics.Clear();
+            if (resources == null)
+            {
+                _resourceDiagnostics.Append(WaitingForSnapshots);
+            }
+            else
+            {
+                _resourceDiagnostics.AppendLine("RESOURCE");
+                _resourceDiagnostics.Append("Logical ").Append(resources.LogicalLoadCount).Append("  Physical preflight ").Append(resources.PhysicalLoadCount).Append("  Join ").Append(resources.InFlightJoinCount).Append("  Known physical reuse ").Append(resources.CacheHitCount).AppendLine();
+                _resourceDiagnostics.Append("Leases ").Append(resources.ActiveLeaseCount).Append("  Instances ").Append(resources.LiveInstanceCount).Append("  TEngine pool ").Append(resources.TEngineAssetPoolObjectCount).Append(" (free ").Append(resources.TEngineAssetPoolReleasableCount).Append(')').AppendLine();
+                _resourceDiagnostics.Append("Package ").Append(resources.PackageName).Append(" @ ").Append(resources.PackageVersion);
+                foreach (ResourceScopeSnapshot scope in resources.Scopes)
+                {
+                    _resourceDiagnostics.AppendLine().Append('#').Append(scope.Id.Value).Append(' ').Append(scope.Kind).Append(' ').Append(scope.State).Append(" L").Append(scope.LeaseCount).Append(" I").Append(scope.LiveInstanceCount);
+                }
+            }
+
+            _resourceDiagnosticsText.text = _resourceDiagnostics.ToString();
+        }
+
+        private void RefreshNetworkDiagnostics(NetworkRuntimeSnapshot network)
+        {
+            if (!_networkDiagnosticsText)
+            {
+                return;
+            }
+
+            _networkDiagnostics.Clear();
+            if (network == null)
+            {
+                _networkDiagnostics.Append(WaitingForSnapshots);
+            }
+            else
+            {
+                _networkDiagnostics.AppendLine("NETWORK");
+                _networkDiagnostics.Append(network.ProductId).Append(" | ").Append(network.Transport).Append(" TLS=").Append(network.TlsEnabled).Append("  ").Append(network.RedactedEndpoint).Append("  ").Append(network.ConnectionState).AppendLine();
+                _networkDiagnostics.Append("Account ").Append(network.RedactedAccountId).Append("  Client ").Append(network.RedactedClientInstanceId).Append("  Generation ").Append(network.SessionGeneration).AppendLine();
+                _networkDiagnostics.Append("Token expires ").Append(network.TokenExpiresAt?.ToString("O") ?? "-").Append("  RTT ").Append(network.RoundTripMilliseconds).Append("ms  Error ").Append(network.LastErrorCode);
+            }
+
+            _networkDiagnosticsText.text = _networkDiagnostics.ToString();
+        }
+
+        private void RefreshMemoryDiagnostics(ProductCheckpointSnapshot checkpoint)
+        {
+            if (!_memoryDiagnosticsText)
+            {
+                return;
+            }
+
+            _memoryDiagnostics.Clear();
+            if (checkpoint == null)
+            {
+                _memoryDiagnostics.Append(WaitingForSnapshots);
+            }
+            else
+            {
+                MemoryRuntimeSnapshot memory = checkpoint.Memory;
+                _memoryDiagnostics.AppendLine("MEMORY");
+                _memoryDiagnostics.Append(checkpoint.Checkpoint).Append("  Used "); AppendBytes(_memoryDiagnostics, memory.TotalUsedBytes); _memoryDiagnostics.Append("  Reserved "); AppendBytes(_memoryDiagnostics, memory.TotalReservedBytes); _memoryDiagnostics.AppendLine();
+                _memoryDiagnostics.Append("GC "); AppendBytes(_memoryDiagnostics, memory.GcUsedBytes); _memoryDiagnostics.Append("  Texture "); AppendBytes(_memoryDiagnostics, memory.TextureBytes); _memoryDiagnostics.Append("  Mesh "); AppendBytes(_memoryDiagnostics, memory.MeshBytes); _memoryDiagnostics.AppendLine();
+                _memoryDiagnostics.Append("Budget ").Append(memory.BudgetName).Append(' '); AppendBytes(_memoryDiagnostics, memory.BudgetBytes); _memoryDiagnostics.Append("  Over=").Append(memory.IsOverBudget);
+                if (!string.IsNullOrEmpty(memory.ConfigurationError)) _memoryDiagnostics.AppendLine().Append(memory.ConfigurationError);
+            }
+
+            _memoryDiagnosticsText.text = _memoryDiagnostics.ToString();
+        }
+
+        private void OnStartupChanged(ProductStartupSnapshot snapshot) => RefreshStartupDiagnostics(snapshot);
+        private void OnProductChanged(ProductRuntimeSnapshot snapshot) => RefreshProductDiagnostics(snapshot);
+        private void OnResourceChanged(ResourceRuntimeSnapshot snapshot) => RefreshResourceDiagnostics(snapshot);
+        private void OnNetworkChanged(NetworkRuntimeSnapshot snapshot) => RefreshNetworkDiagnostics(snapshot);
+        private void OnCheckpointChanged(ProductCheckpointSnapshot snapshot) => RefreshMemoryDiagnostics(snapshot);
 
         private void OnGameplayDownloadChanged(GameplayDownloadSnapshot snapshot)
         {
             RefreshDownload(snapshot);
-            RefreshDiagnostics();
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -453,9 +553,10 @@ namespace GameLogic.ProductStartup
         {
             if (_faultResultText)
             {
-                _faultResultText.text = $"{fault.Command}: {(fault.Succeeded ? "OK" : "FAILED")}\n{fault.SafeResult}";
+                _faultResultDiagnostics.Clear();
+                _faultResultDiagnostics.Append(fault.Command).Append(": ").Append(fault.Succeeded ? "OK" : "FAILED").AppendLine().Append(fault.SafeResult);
+                _faultResultText.text = _faultResultDiagnostics.ToString();
             }
-            RefreshDiagnostics();
         }
 #endif
 
@@ -562,12 +663,60 @@ namespace GameLogic.ProductStartup
             }
         }
 
-        private static string FormatBytes(long value)
+        private static void ConfigureDiagnosticsText(Text text)
         {
-            if (value < 1024) return $"{value} B";
-            if (value < 1024L * 1024L) return $"{value / 1024d:F1} KiB";
-            if (value < 1024L * 1024L * 1024L) return $"{value / (1024d * 1024d):F1} MiB";
-            return $"{value / (1024d * 1024d * 1024d):F2} GiB";
+            text.alignment = TextAnchor.UpperLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+        }
+
+        private static void AppendBytes(StringBuilder builder, long value)
+        {
+            if (value < 1024)
+            {
+                builder.Append(value).Append(" B");
+                return;
+            }
+
+            if (value < 1024L * 1024L)
+            {
+                AppendScaledBytes(builder, value, 1024L, 1);
+                builder.Append(" KiB");
+                return;
+            }
+
+            if (value < 1024L * 1024L * 1024L)
+            {
+                AppendScaledBytes(builder, value, 1024L * 1024L, 1);
+                builder.Append(" MiB");
+                return;
+            }
+
+            AppendScaledBytes(builder, value, 1024L * 1024L * 1024L, 2);
+            builder.Append(" GiB");
+        }
+
+        private static void AppendScaledBytes(StringBuilder builder, long value, long divisor, int decimalCount)
+        {
+            long whole = Math.DivRem(value, divisor, out long remainder);
+            long scale = decimalCount == 1 ? 10 : 100;
+            long fraction = (remainder * scale + divisor / 2) / divisor;
+            if (fraction == scale)
+            {
+                whole++;
+                fraction = 0;
+            }
+
+            builder.Append(whole).Append('.');
+            if (decimalCount == 1 || fraction >= 10)
+            {
+                builder.Append(fraction / 10);
+            }
+            else
+            {
+                builder.Append('0');
+            }
+            builder.Append(fraction % 10);
         }
     }
 }

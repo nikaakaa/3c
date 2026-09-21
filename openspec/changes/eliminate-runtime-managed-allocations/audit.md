@@ -2674,3 +2674,12 @@
 - 四个 owner 原先持有 Queue，每次 `History` 都执行 `ToArray()`；该 getter 的结果只在读取瞬间成立，却在每次访问时新建完整数组。现在新增 internal `BoundedHistory<T>`，owner 持有同一只 List 和只读列表视图，构造时按正式 capacity＋1 预留，发布后用显式 capacity 淘汰最旧项。
 - `History` 返回 owner 长寿命 `IReadOnlyList`，外部不能修改；视图读取的是当前有界历史，不是独立快照。发布、Changed 事件、最新快照和 N 条保留规则不变。当前源码没有发现这些 History 的直接 UI 读取者，接口仍由 Product Shell view model 持有，后续 UI 消费者不再触发 getter 分配。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样；6.1 的 UI 刷新迁移和重复格式化清理仍未完成。
+
+## 2026-09-21 Product Shell 刷新消费者迁移
+
+对应 tasks.md 的 6.1，完成 UI 消费者迁移和重复格式化清理后整项关闭。
+
+- 诊断面板原先只有一个全文 `Text`；startup、product、resource、network、checkpoint、download 任意事件都会新建 `StringBuilder`，把全部 Current 重新格式化成一个新 string。现在每类状态持有自己的 `Text` 和长寿命 builder，事件处理器只格式化该事件对应的快照，初始绑定仍会逐区刷新一次。
+- 下载进度不再触发 resource、network、memory 等无关分区重写；Fault Lab 事件只更新自己的结果文本，资源或内存状态变化仍由对应 snapshot 事件发布并刷新。`FormatBytes` 不再为每个字段生成中间字符串，直接向 builder 写整数和定点小数。
+- UI 只消费 Current 和 Changed，不读取四类 History；`History` 继续返回 owner 的 bounded 只读视图。Unity `Text.text` 最终展示串仍会分配，属于 tasks.md 7.1 的字符串构造边界；本步没有引入 fallback、兼容路径或新控制面。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

@@ -3955,3 +3955,11 @@
 - Fixed 和 Float32 Action State Store 各自持有常驻 `TraceExecutionScope`；`EnterSkillExecution` 仍先进入 manager、再 push trace context，然后用 `Begin` 重绑 execution scope 和上一轮 trace context。
 - manager 的单 active frame 规则保证外层 scope 活动期间不能成功重入；`Dispose` 仍先退出 Skill execution frame，再恢复 trace context，最后清空包装引用。`PushSkillExecution` 的 Stack scope 允许按合同入栈，不在本步复用。
 - 每次 Skill execution 进入的外层 Trace Execution Scope 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Skill execution push scope 收口
+
+对应 tasks.md 的 5.5，新增 5.222 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Action State Store 为 `SkillExecutionScope` 建立归还池；`PushSkillExecution` 先按 Stack 合同压入 reference，再从池中取空闲 scope 或创建新 scope，并用 `Begin` 重绑 owner、expected reference 和 trace context。
+- `Dispose` 仍先 pop 并校验 expected reference，再恢复 trace context，最后把 scope 归还池并清空身份引用；嵌套 push 使用独立池实例，unbalanced 和重复 Dispose 语义不变。
+- 常规重复 push 不再创建新 scope class，只有超过历史归还深度的峰值会创建。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

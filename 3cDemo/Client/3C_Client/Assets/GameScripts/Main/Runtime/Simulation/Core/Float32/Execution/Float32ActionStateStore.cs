@@ -259,6 +259,7 @@ namespace ThirdPersonSimulation
 
 		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
+		readonly Stack<SkillExecutionScope> m_SkillExecutionScopePool = new();
 		readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
 		readonly TraceExecutionScope m_TraceExecutionScope = new();
 
@@ -442,10 +443,13 @@ namespace ThirdPersonSimulation
 				throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
 			Float32ActionInstanceReference reference = Float32ActionInstanceReference.FromInstance(action);
 			m_SkillExecutionStack.Push(reference);
-		return new SkillExecutionScope(
-			this,
-			reference,
-			m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
+			SkillExecutionScope scope = m_SkillExecutionScopePool.Count > 0
+				? m_SkillExecutionScopePool.Pop()
+				: new SkillExecutionScope();
+			return scope.Begin(
+				this,
+				reference,
+				m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
 		}
 
 		public bool TryGetCurrentSkillExecution(out Float32ActionInstanceState action)
@@ -820,12 +824,12 @@ namespace ThirdPersonSimulation
 
 		sealed class SkillExecutionScope : IDisposable
 		{
-			readonly Float32ActionStateStore m_Owner;
-			readonly Float32ActionInstanceReference m_Expected;
-			readonly Float32AbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
+			Float32ActionStateStore m_Owner;
+			Float32ActionInstanceReference m_Expected;
+			Float32AbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
 			bool m_Disposed;
 
-			public SkillExecutionScope(
+			public SkillExecutionScope Begin(
 				Float32ActionStateStore owner,
 				Float32ActionInstanceReference expected,
 				Float32AbilityExecutionFrame.ActionTraceContextScope traceScope)
@@ -833,6 +837,8 @@ namespace ThirdPersonSimulation
 				m_Owner = owner;
 				m_Expected = expected;
 				m_TraceScope = traceScope;
+				m_Disposed = false;
+				return this;
 			}
 
 			public void Dispose()
@@ -842,6 +848,10 @@ namespace ThirdPersonSimulation
 				m_Disposed = true;
 				m_Owner.PopSkillExecution(m_Expected);
 				m_TraceScope.Dispose();
+				m_Owner.m_SkillExecutionScopePool.Push(this);
+				m_Owner = null;
+				m_Expected = default;
+				m_TraceScope = default;
 			}
 		}
 

@@ -482,6 +482,7 @@
 - [x] 5.219 通用 Skill Execution Manager 在准备期持有 Scope；同一 manager 仍只允许一个 active frame，Enter 绑定 identity、Dispose 退出并清空，删除每次进入 Skill execution 的 scope class
 - [x] 5.220 两数值域 Ability Domain Tick 改用常驻 current actions 和 stopping instances scratch；State Store 提供显式 CopyCurrentActions 并删除旧返回新 List 的入口，保留两次快照、InstanceId 排序和异常清空
 - [x] 5.221 两数值域 Action State Store 复用 Trace Execution Scope；进入前仍先创建 manager frame 和 trace context，退出时按原顺序 Dispose 并清空引用，禁止嵌套由 manager 单 active frame 保障
+- [x] 5.222 两数值域 Action State Store 按 Skill execution Stack 深度复用 Skill Execution Scope；push 取归还实例并重绑 owner/reference/trace，pop 后归还并清空引用，保留嵌套、unbalanced 和重复 Dispose 保护
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -260,6 +260,7 @@ namespace ThirdPersonSimulation.Fixed
 
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
+        readonly Stack<SkillExecutionScope> m_SkillExecutionScopePool = new();
         readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
         readonly TraceExecutionScope m_TraceExecutionScope = new();
 
@@ -443,7 +444,10 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
             FixedActionInstanceReference reference = FixedActionInstanceReference.FromInstance(action);
             m_SkillExecutionStack.Push(reference);
-            return new SkillExecutionScope(
+            SkillExecutionScope scope = m_SkillExecutionScopePool.Count > 0
+                ? m_SkillExecutionScopePool.Pop()
+                : new SkillExecutionScope();
+            return scope.Begin(
                 this,
                 reference,
 			m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
@@ -821,12 +825,12 @@ namespace ThirdPersonSimulation.Fixed
 
         sealed class SkillExecutionScope : IDisposable
         {
-            readonly FixedActionStateStore m_Owner;
-            readonly FixedActionInstanceReference m_Expected;
-            readonly FixedAbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
+            FixedActionStateStore m_Owner;
+            FixedActionInstanceReference m_Expected;
+            FixedAbilityExecutionFrame.ActionTraceContextScope m_TraceScope;
             bool m_Disposed;
 
-            public SkillExecutionScope(
+            public SkillExecutionScope Begin(
                 FixedActionStateStore owner,
                 FixedActionInstanceReference expected,
                 FixedAbilityExecutionFrame.ActionTraceContextScope traceScope)
@@ -834,6 +838,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Owner = owner;
                 m_Expected = expected;
                 m_TraceScope = traceScope;
+                m_Disposed = false;
+                return this;
             }
 
             public void Dispose()
@@ -843,6 +849,10 @@ namespace ThirdPersonSimulation.Fixed
                 m_Disposed = true;
                 m_Owner.PopSkillExecution(m_Expected);
                 m_TraceScope.Dispose();
+                m_Owner.m_SkillExecutionScopePool.Push(this);
+                m_Owner = null;
+                m_Expected = default;
+                m_TraceScope = default;
             }
         }
 

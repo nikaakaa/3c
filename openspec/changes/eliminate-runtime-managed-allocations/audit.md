@@ -3233,3 +3233,11 @@
 - `RollbackInputHistory.GetRequired` 原先每次返回一只 `RollbackInputHistoryEntry`；record relay、applied input、canonical horizon、confirmed horizon 和 schedule 选择都只需要 predicted/canonical bundle 引用。现在删除该入口，新增内部 `TryGetBundles` 直接输出两个引用，正常路径不再创建包装对象或通过异常控制缺失历史。
 - 缺失历史时的 rollback 判定、异常语义和容量校验保持；checkpoint 的 `CaptureEntries` 仍为事务独立持有精确 entry 数组，restore 复用流程不变。全项目源码检索确认没有 rollback 外调用方。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback mapping scratch 复用
+
+对应 tasks.md 的 5.2，新增 5.133 作为独立小步；5.2 保持未勾选。
+
+- `RollbackSchedulePassRuntime.BuildPlan` 原先每个可执行 plan 都新建 `SimulationPipelineStepSourceMapping[]`；长度只由 replay mapping 和 current mapping 组合决定，取值 1 或 2。现在 pass 生命周期按长度保留 scratch，稳定长度下不再重复分配数组。
+- 返回的数组仍通过 `FromOwnedArrays` 交给 ExecutionPlan；每次构造前都会完整覆盖本次使用的 1 或 2 个元素。消费寿命继续由 ExecutionPlan 的 OuterTransaction 产品合同约束，不新增租约、归还回调和通用池。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

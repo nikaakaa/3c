@@ -45,6 +45,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         readonly DeterministicRollbackModelPolicy m_Policy;
         readonly RollbackRuntimeState m_State;
+        readonly SimulationPipelineStepSourceMapping[][] m_MappingScratches =
+            new SimulationPipelineStepSourceMapping[3][];
         string m_ReplaySourceClockId;
         string m_ReplayClockId;
 
@@ -154,8 +156,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             bool includeCurrentStep = canAdvancePrediction || replayStepCount == 0;
             var steps = new FixedSimulationStep[replayStepCount + (includeCurrentStep ? 1 : 0)];
-            var mappings = new SimulationPipelineStepSourceMapping[
-                (replayStepCount > 0 ? 1 : 0) + (includeCurrentStep ? 1 : 0)];
+            var mappings = RentMappingScratch(
+                (replayStepCount > 0 ? 1 : 0) + (includeCurrentStep ? 1 : 0));
             int stepIndex = 0;
             int mappingIndex = 0;
             ulong planSequence = 1;
@@ -233,6 +235,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ReplayClockId = string.Concat(clockId, "/rollback-replay");
             }
             return m_ReplayClockId;
+        }
+
+        SimulationPipelineStepSourceMapping[] RentMappingScratch(int count)
+        {
+            ref SimulationPipelineStepSourceMapping[] scratch = ref m_MappingScratches[count];
+            if (scratch == null)
+                scratch = new SimulationPipelineStepSourceMapping[count];
+            return scratch;
         }
 
         static SimulationRestoreDirective BuildRestoreDirective(

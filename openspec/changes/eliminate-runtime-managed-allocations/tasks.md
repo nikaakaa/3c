@@ -404,3 +404,5 @@
 - [x] 7.28 Pose Source/Foot/Managed resource catalog 直接消费外层已校验 Rig，删除三处重复 Rig schema 遍历；保留资源 identity、plan/descriptor、calibration、bone index 和 Native shape 校验
 
 - [x] 7.29 删除 SourceCatalog 未使用的 Plans/Resources ToArray 接口，统一只通过已建索引 RequirePlan/RequireDescriptor 读取，消除死 API 和临时数组分配
+
+- [x] 7.30 AnimationBlendSourcePoseWorkspace 复用外层已校验 Rig，删除四类 Pose player 共用构造器中的重复 Rig schema 遍历；保留 null、bone/parameter/source capacity 和 Native buffer shape 校验

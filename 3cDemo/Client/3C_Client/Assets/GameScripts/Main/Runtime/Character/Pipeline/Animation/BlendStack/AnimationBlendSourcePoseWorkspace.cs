@@ -68,7 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
-            rig.RequireValid();
             if (parameterCount <= 0 || sourceCapacity <= 0)
                 throw new ArgumentOutOfRangeException();
 

@@ -2122,6 +2122,15 @@
 - SourceCatalog 仍只在 ServiceFactory 创建阶段准备一次，Foot/Managed resource 仍按原顺序创建和释放；没有改变资源租约、handler 组合、约束求解或帧事务。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 资源分配采样。
 
+## 2026-09-21 Blend SourceWorkspace Rig 校验边界
+
+对应 tasks.md 的 7.30。
+
+- Clip Player、Selected Pose Player、Blend Space Player 和 Blend Stack 都从正式 Pose Domain ServiceFactory 的 Rig 创建 `AnimationBlendSourcePoseWorkspace`；外层 Presentation Rig binding 与 Pose preparation 已完成 Rig schema 校验。
+- 删除 Workspace 构造器的 `rig.RequireValid`，保留 Rig null、parameter/source capacity、bone count 派生、NativeArray 分配和每帧 source/page/lease 事务校验；不改变四类 player 的 source handoff 或提交顺序。
+- 这一步删除的是多个 workspace 实例创建时重复的静态 Rig 遍历及其临时校验集合，不删除当前 buffer shape 或 source completion 事实校验。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend Workspace 分配采样。
+
 ## 2026-09-21 SourceCatalog 死接口清理
 
 对应 tasks.md 的 7.29。

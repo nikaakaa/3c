@@ -402,6 +402,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         int EntryCapacity => m_CommittedEntries.Length;
         int StackReleaseCapacity => m_CommittedStackReleases.Length;
+        internal int SourceCapacity => EntryCapacity;
 
         internal AnimationBlendStackRuntime(
             AnimationBlendNodePayload slot,

@@ -59,15 +59,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
         readonly Func<PoseNodeId, AnimationPoseSourceId,
             PresentationPoseSourceSample> m_ProviderSampleProvider;
-        readonly List<PendingSource> m_Pending =
-            new List<PendingSource>();
-        readonly List<CharacterPoseNativeSourceRequest> m_Requests =
-            new List<CharacterPoseNativeSourceRequest>();
-        readonly HashSet<AnimationPoseSourceId> m_SourceIds =
-            new HashSet<AnimationPoseSourceId>();
+        readonly List<PendingSource> m_Pending;
+        readonly List<CharacterPoseNativeSourceRequest> m_Requests;
+        readonly HashSet<AnimationPoseSourceId> m_SourceIds;
 
         internal CharacterPoseNativeBlendStackSourceModuleBinding(
             CharacterPoseSourceModule source,
+            int sourceCapacity,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
             Func<PoseNodeId, AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> actionSampleProvider,
@@ -75,6 +73,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationPoseSourceSample> providerSampleProvider)
         {
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
+            m_Pending = new List<PendingSource>(sourceCapacity);
+            m_Requests = new List<CharacterPoseNativeSourceRequest>(sourceCapacity);
+            m_SourceIds = new HashSet<AnimationPoseSourceId>(sourceCapacity);
             m_SourceLeaseProvider = sourceLeaseProvider ??
                 throw new ArgumentNullException(nameof(sourceLeaseProvider));
             m_ActionSampleProvider = actionSampleProvider ??

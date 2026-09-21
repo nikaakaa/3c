@@ -401,6 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_Source,
                         new CharacterPoseNativeBlendStackSourceModuleBinding(
                             m_Source,
+                            stack.SourceCapacity,
                             m_SourceLeaseProvider,
                             (nodeId, sourceId) =>
                                 m_ActionSampleProvider(
@@ -485,6 +486,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_Source,
                         new CharacterPoseNativeBlendStackSourceModuleBinding(
                             m_Source,
+                            stack.SourceCapacity,
                             m_SourceLeaseProvider,
                             (nodeId, sourceId) =>
                                 m_ActionSampleProvider(

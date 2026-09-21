@@ -2139,6 +2139,14 @@
 - 删除旧 kernel 及其 Unity meta，消除无消费者的重复 Blend Stack 实现、数组工作区和 policy 静态校验入口；不改现行 runtime 的容量、采样、frame 或 Commit／Discard 语义。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend Stack 分配采样。
 
+## 2026-09-21 Blend source binding 工作集合容量定型
+
+对应 tasks.md 的 7.32。
+
+- Blend Stack 的 `EntryCapacity` 在创建 `AnimationBlendStackRuntime` 时已经由 prepared policy 定型，source binding 的 Pending、Request 和 source identity 三只工作集合的峰值不超过该容量。
+- 将三只集合改为构造阶段按 `SourceCapacity` 预分配，删除首个运行帧因动态增长产生的托管数组分配；每帧仍只清空并复用集合，不改变 Timeline／Motion Matching source 去重、request 顺序、source preparation 或 ResetFrame。
+- `ThirdPersonClient.Runtime.csproj` 当前完整编译受用户现有删除的 `Timeline.ActionCue.cs` 阻断，生成 csproj 仍引用该文件并产生 `CS2001`；本步未触碰该文件，待工作区现有删除收口后再执行完整编译确认。未新增测试、未操作共享 Unity、未做 Blend source 分配采样。
+
 ## 2026-09-21 SourceCatalog 死接口清理
 
 对应 tasks.md 的 7.29。

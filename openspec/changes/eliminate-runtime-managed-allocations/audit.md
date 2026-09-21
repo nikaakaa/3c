@@ -2131,6 +2131,14 @@
 - 这一步删除的是多个 workspace 实例创建时重复的静态 Rig 遍历及其临时校验集合，不删除当前 buffer shape 或 source completion 事实校验。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend Workspace 分配采样。
 
+## 2026-09-21 删除旧 Blend Stack kernel
+
+对应 tasks.md 的 7.31。
+
+- `CharacterAnimationBlendStackKernel` 中的 push request、owner workspace 和 frame plan 在项目内没有任何调用者；现行 Pose Blend Stack 由 `AnimationBlendStackRuntime` 创建并承接全部 source、frame plan 和提交事务。
+- 删除旧 kernel 及其 Unity meta，消除无消费者的重复 Blend Stack 实现、数组工作区和 policy 静态校验入口；不改现行 runtime 的容量、采样、frame 或 Commit／Discard 语义。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Blend Stack 分配采样。
+
 ## 2026-09-21 SourceCatalog 死接口清理
 
 对应 tasks.md 的 7.29。

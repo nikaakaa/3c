@@ -406,3 +406,4 @@
 - [x] 7.29 删除 SourceCatalog 未使用的 Plans/Resources ToArray 接口，统一只通过已建索引 RequirePlan/RequireDescriptor 读取，消除死 API 和临时数组分配
 
 - [x] 7.30 AnimationBlendSourcePoseWorkspace 复用外层已校验 Rig，删除四类 Pose player 共用构造器中的重复 Rig schema 遍历；保留 null、bone/parameter/source capacity 和 Native buffer shape 校验
+- [x] 7.31 删除无调用者的旧 CharacterAnimationBlendStackKernel 及其 Unity meta，统一只保留 AnimationBlendStackRuntime 正式 Blend Stack 链；不改变现行实例、source workspace、frame plan 和提交事务

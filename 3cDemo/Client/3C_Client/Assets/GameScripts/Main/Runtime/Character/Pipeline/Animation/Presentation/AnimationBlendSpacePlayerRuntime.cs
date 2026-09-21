@@ -121,7 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             m_FootAnalysis = footAnalysis;
-            m_Plan.RequireValid(footAnalysis != null && footAnalysis.IsEnabled);
             m_Solver = m_Plan.CreateSolverPlan();
             m_Phase = m_Plan.CreatePhasePlan(clipPhasePlans);
             m_Weights = new CharacterAnimationBlendSpaceWeightPage(m_Plan.Samples.Count);

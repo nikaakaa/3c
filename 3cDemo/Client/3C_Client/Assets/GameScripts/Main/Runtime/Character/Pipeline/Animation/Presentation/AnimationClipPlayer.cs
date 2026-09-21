@@ -305,7 +305,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(parameters));
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
-            source.RequireValid();
             if (descriptor.PresentationPoseSourceIndex != source.SourceIndex ||
                 !string.Equals(source.RigId, rig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(source.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
@@ -315,8 +314,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 throw new InvalidOperationException($"Clip Player '{descriptor.NodeId}' source binding does not match its compiled descriptor.");
             }
-            source.LeftFootFeatures.RequireValid();
-            source.RightFootFeatures.RequireValid();
             m_Parameters = new float[parameters.Count];
             m_ParameterAvailability = new byte[parameters.Count];
             for (int i = 0; i < parameters.Count; i++)

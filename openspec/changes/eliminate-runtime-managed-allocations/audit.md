@@ -2216,6 +2216,14 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Presentation player 静态内容校验边界
+
+对应 tasks.md 的 7.50。
+
+- `CharacterPoseNativeDomainServiceFactory` 在创建 Clip/Blend Space player 前已经从 SourceCatalog/ResourceSet 读取并准备过 source plan、foot feature 和 Blend Space plan；这些内容不再由 player 构造器重新执行完整 schema 校验。
+- 删除 `AnimationClipPlayerRuntime` 的 source/foot feature `RequireValid`，删除 `AnimationBlendSpacePlayerRuntime` 的 `m_Plan.RequireValid`；保留 source/descriptor identity、Rig revision、初始时间、参数索引、solver/page 和 foot analysis 运行绑定事实。
+- 不改变 player 创建顺序、采样、时钟、source lease、Playable job 或 frame 事务；当前完整编译上一轮已通过。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

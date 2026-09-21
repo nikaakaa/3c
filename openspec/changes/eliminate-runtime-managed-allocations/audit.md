@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Clip Player 与 Blend Space Player 输出包装复用
+
+对应 tasks.md 的 7.41。
+
+- Clip Player 与 Blend Space Player 原先在每次 job 完成时分别创建 Local Pose 和 discontinuity 两个托管 wrapper，并在每个 frame 清空引用。
+- 两个 handler 现在复用 `CharacterPoseNativeLocalPoseValue` 与 `CharacterPoseNativeDiscontinuityValue`；EvaluateOutput 只返回匹配当前 completion identity 的对象，旧 frame 对象不会被当作当前结果。
+- 不改变 player Complete/Commit/Discard、Playable job、Native 双页、Pose availability、CompletedAt 和 source binding reset 顺序；discontinuity 数据仍来自同一份 Native binding。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

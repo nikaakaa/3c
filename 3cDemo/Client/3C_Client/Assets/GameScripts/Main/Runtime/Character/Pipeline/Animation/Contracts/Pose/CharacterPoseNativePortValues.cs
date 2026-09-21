@@ -280,12 +280,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding native)
             : base(producerNodeId, native.CompletionIdentity)
         {
-            if (!native.IsValid || !native.Discontinuity[0].IsValid)
-            {
-                throw new ArgumentException(
-                    "Pose native discontinuity value is invalid.",
-                    nameof(native));
-            }
+            ValidateNative(producerNodeId, in native);
             Native = native.Discontinuity[0];
         }
 
@@ -299,8 +294,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Value = value;
         }
 
-        internal PoseDiscontinuityNative Native { get; }
-        internal PoseDiscontinuity Value { get; }
+        internal PoseDiscontinuityNative Native { get; private set; }
+        internal PoseDiscontinuity Value { get; private set; }
+
+        internal static CharacterPoseNativeDiscontinuityValue Reuse(
+            CharacterPoseNativeDiscontinuityValue value,
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (value == null)
+                return new CharacterPoseNativeDiscontinuityValue(producerNodeId, in native);
+            value.Refresh(producerNodeId, in native);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            ValidateNative(producerNodeId, in native);
+            SetIdentity(producerNodeId, native.CompletionIdentity);
+            Native = native.Discontinuity[0];
+            Value = default;
+        }
+
+        static void ValidateNative(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (!producerNodeId.IsValid || native.CompletionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!native.IsValid || !native.Discontinuity[0].IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose native discontinuity value is invalid.",
+                    nameof(native));
+            }
+        }
     }
 
     internal sealed class CharacterPoseNativeActionPlaybackValue : CharacterPoseNativePortValue

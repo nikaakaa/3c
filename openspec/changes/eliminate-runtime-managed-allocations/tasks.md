@@ -416,3 +416,4 @@
 - [x] 7.38 Space Conversion 按固定输出空间复用 Local/Component Pose 包装对象，删除每帧输出包装创建；保留空间转换、Native 双页和提交事务语义
 - [x] 7.39 Blend、Additive、Layered Bone Blend 复用 Local Pose 输出包装对象，删除三个纯 Pose 组合节点的稳态逐帧包装创建；保留连续性、Native 双页和提交状态语义
 - [x] 7.40 Entry Pose 与 Linked Pose 复用 Local Pose 输出包装对象，删除 source 复制节点的稳态逐帧包装创建；保留 source completion、Native 双页和提交状态语义
+- [x] 7.41 Clip Player 与 Blend Space Player 复用 Local Pose 和 discontinuity 输出包装对象，删除两类播放器稳态逐帧包装创建；保留当前 frame identity、Native 双页和提交事务语义

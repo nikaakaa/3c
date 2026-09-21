@@ -216,12 +216,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             if (portId.Value == "discontinuity")
-                return m_Discontinuity ?? throw new InvalidOperationException(
+                return m_Discontinuity != null &&
+                    m_Discontinuity.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity
+                    ? m_Discontinuity
+                    : throw new InvalidOperationException(
                     $"Blend Space Player '{NodeId}' discontinuity is not completed.");
             if (portId.Value != "pose")
                 throw new InvalidOperationException(
                     $"Blend Space Player '{NodeId}' has no output '{portId}'.");
-            return m_Output ?? throw new InvalidOperationException(
+            return m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity
+                ? m_Output
+                : throw new InvalidOperationException(
                 $"Blend Space Player '{NodeId}' output is not completed.");
         }
 
@@ -286,12 +292,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_WriteBinding.CompletedAt[0] != lineage.CompletionIdentity)
                 throw new InvalidOperationException(
                     $"Blend Space Player '{NodeId}' Job did not complete the current frame.");
-            m_Output = new CharacterPoseNativeLocalPoseValue(
+            CharacterPoseNativePoseReadBinding output =
+                new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
                 NodeId,
-                new CharacterPoseNativePoseReadBinding(in m_WriteBinding));
-            m_Discontinuity = new CharacterPoseNativeDiscontinuityValue(
+                in output);
+            m_Discontinuity = CharacterPoseNativeDiscontinuityValue.Reuse(
+                m_Discontinuity,
                 NodeId,
-                new CharacterPoseNativePoseReadBinding(in m_WriteBinding));
+                in output);
         }
 
         public void ValidatePending(
@@ -319,7 +329,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.CommitFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -372,8 +383,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_CapturePrepared = false;
             m_EvaluationPrepared = false;
-            m_Output = null;
-            m_Discontinuity = null;
             m_SourceBinding.ResetFrame();
         }
 

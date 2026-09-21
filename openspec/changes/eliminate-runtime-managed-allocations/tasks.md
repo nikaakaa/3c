@@ -455,6 +455,7 @@
 - [x] 5.192 Fixed Local Immediate output 先统计后填充精确 dispositions，并直接进入 owned disposition set；删除 List 收集、Clear 壳和构造复制，补齐 Float32 既有正式链路
 - [x] 5.193 两数值域 Pipeline Committer 的 per-step dispositions 改为常驻数组和显式 count；Simulation Committer 边界改为 array/count，删除 List 外壳和 Clear 临时集合
 - [x] 5.194 Authority route 的过期 input key 改为按队列容量准备的常驻 ulong 数组和显式 count；删除每次 Select 的 List、Add 和 Clear 临时壳
+- [x] 5.195 Authority route 的发送顺序队列改为按 checkpoint 容量加一准备的环形数组；确认、淘汰和未确认保护语义不变
 
 ## 6. UI、资源、渲染和生命周期
 

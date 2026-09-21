@@ -3739,3 +3739,11 @@
 - Authority Client Route 的过期 input key scratch 从 `List<ulong>` 改为按命令队列容量在构造期准备的 `ulong[]` 加显式 count；容量上限保证能记录一次 Select 中全部过期 key。SortedDictionary 的顺序遍历、最新有效输入选择、过期删除和 exact/late/neutral 计数不变。
 - 每次 Select 的 `List`、`Add` 内部扩容和 `Clear` 临时壳删除；删除完成后只重置 count。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Authority route sent sequence ring 收口
+
+对应 tasks.md 的 5.5，新增 5.195 作为独立小步；5.5 保持未勾选。
+
+- Authority Client Route 的 checkpoint 发送顺序从 `Queue<ulong>` 改为构造期按 `checkpoint capacity + 1` 准备的环形 `ulong[]`，用 head/count 显式进出队。容量覆盖先入队再裁剪的瞬时峰值；旧槽出队后清零。
+- AcknowledgeSnapshot 的顺序确认、StoreSent 的入队、超容量裁剪、未确认 checkpoint 保护和 SortedDictionary 移除顺序不变。
+- 按 `Queue` 的内部数组外壳和运行进出队临时路径删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

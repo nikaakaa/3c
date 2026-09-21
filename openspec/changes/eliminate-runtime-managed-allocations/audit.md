@@ -2658,3 +2658,11 @@
 - 完整消息解码原先每条消息都为 Session 和 Sender 新建 string；Channel 已绑定唯一预期身份。现在 Channel 构造期准备 `RollbackProtocolExpectedIdentity`，Codec 用 `CanonicalReader.ReadUtf8Segment` 读取 wire UTF-8 并与预期字节比较，命中时直接复用同一 string；wire 格式和 canonical 重编码不变。
 - 身份不匹配时仍解码实际 string，进入原有 envelope 身份校验和异常；payload 内的 Peer、Actor、哈希等字符串继续独立分配。identity binding 的 UTF-8 数据以 `ReadOnlyMemory<byte>` 暴露，不开放可变数组。
 - Endpoint 工程完整依赖构建仍被并行 Timeline 的 CS0050 阻断。用临时 Core audit 工程把含新 CanonicalReader 的源码编译成 Core DLL（临时副本只将并行文件的冲突方法收窄为 internal，业务源码未改），随后 `ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 均用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚 Datagram header 身份字符串复用
+
+对应 tasks.md 的 5.4，本步只处理 Datagram packet header 的 Session 和 Sender string，整项保持未勾选。
+
+- Datagram Endpoint 构造期新增正式 Session 和 sender 清单；Peer Endpoint 只注册 relay sender，Relay 从已唯一化的 roster 注册全部 sender。这套身份在接收线程启动前准备，因此不存在先收到包再补注册的运行期 fallback。
+- 解码时先比较 Session wire UTF-8，命中后继续在 sender 清单中比较；两者都命中时直接复用 canonical string。Session 或 sender 错配仍解码实际 string，交给 Channel 的原有身份校验抛错，不静默丢包。pooled packet 的 `Release` 继续清空身份引用，下次租用由 Codec 重新绑定。
+- Endpoint 完整依赖构建仍被并行 Timeline 的 CS0050 阻断。`ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

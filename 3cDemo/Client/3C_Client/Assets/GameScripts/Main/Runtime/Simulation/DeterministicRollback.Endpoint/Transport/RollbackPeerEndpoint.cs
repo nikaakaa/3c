@@ -45,6 +45,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_InputBatchFrames = new List<RollbackActorInputFrame>(inputRedundancyCount);
             m_Endpoint = new RollbackDatagramEndpoint(
                 localEndPoint,
+                definition.SessionId,
+                new[] { relayServerPeerId },
                 definition.MaximumQueuedMessages,
                 definition.MaximumDatagramBytes);
             try

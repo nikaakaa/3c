@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Text;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
@@ -155,6 +157,58 @@ namespace ThirdPersonSimulation.DeterministicRollback
         const uint Magic = 0x55425244;
         const int Version = 1;
 
+        internal readonly struct RollbackDatagramExpectedIdentity
+        {
+            public RollbackDatagramExpectedIdentity(string peerId)
+            {
+                PeerId = RollbackEndpointIdentity.Require(peerId, nameof(peerId));
+                PeerUtf8 = Encoding.UTF8.GetBytes(PeerId);
+            }
+
+            public string PeerId { get; }
+            public ReadOnlyMemory<byte> PeerUtf8 { get; }
+        }
+
+        internal readonly struct RollbackDatagramExpectedIdentitySet
+        {
+            readonly RollbackDatagramExpectedIdentity[] m_Senders;
+
+            public RollbackDatagramExpectedIdentitySet(string sessionId, IReadOnlyList<string> senderPeerIds)
+            {
+                if (senderPeerIds == null || senderPeerIds.Count == 0)
+                    throw new ArgumentNullException(nameof(senderPeerIds));
+                SessionId = RollbackEndpointIdentity.Require(sessionId, nameof(sessionId));
+                SessionUtf8 = Encoding.UTF8.GetBytes(SessionId);
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                m_Senders = new RollbackDatagramExpectedIdentity[senderPeerIds.Count];
+                for (int i = 0; i < senderPeerIds.Count; i++)
+                {
+                    m_Senders[i] = new RollbackDatagramExpectedIdentity(senderPeerIds[i]);
+                    if (!seen.Add(m_Senders[i].PeerId))
+                        throw new ArgumentException("Rollback datagram expected peer identity is duplicated.", nameof(senderPeerIds));
+                }
+            }
+
+            public string SessionId { get; }
+            public ReadOnlyMemory<byte> SessionUtf8 { get; }
+
+            public bool MatchSession(ReadOnlySpan<byte> value) => value.SequenceEqual(SessionUtf8.Span);
+
+            public bool TryMatchSender(ReadOnlySpan<byte> value, out string peerId)
+            {
+                for (int i = 0; i < m_Senders.Length; i++)
+                {
+                    if (value.SequenceEqual(m_Senders[i].PeerUtf8.Span))
+                    {
+                        peerId = m_Senders[i].PeerId;
+                        return true;
+                    }
+                }
+                peerId = null;
+                return false;
+            }
+        }
+
         public static int GetMaximumFragmentPayloadBytes(
             string sessionId,
             string senderPeerId,
@@ -212,7 +266,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ArraySegment<byte> bytes,
             int maximumDatagramBytes,
             RollbackDatagramPacket packet,
-            byte[] payloadBuffer)
+            byte[] payloadBuffer,
+            in RollbackDatagramExpectedIdentitySet expectedIdentities)
         {
             if (bytes.Count == 0 || bytes.Count > maximumDatagramBytes)
                 throw new InvalidDataException("Rollback datagram size is invalid.");
@@ -224,8 +279,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback datagram header is invalid.");
             RollbackDatagramKind kind = ReadKind(reader.ReadByte());
-            string sessionId = reader.ReadString();
-            string senderPeerId = reader.ReadString();
+            ArraySegment<byte> sessionBytes = reader.ReadUtf8Segment();
+            bool sessionMatched = expectedIdentities.MatchSession(sessionBytes.AsSpan());
+            string sessionId = sessionMatched ? expectedIdentities.SessionId : Encoding.UTF8.GetString(sessionBytes.Array, sessionBytes.Offset, sessionBytes.Count);
+            ArraySegment<byte> senderBytes = reader.ReadUtf8Segment();
+            string senderPeerId = sessionMatched && expectedIdentities.TryMatchSender(senderBytes.AsSpan(), out senderPeerId)
+                ? senderPeerId
+                : Encoding.UTF8.GetString(senderBytes.Array, senderBytes.Offset, senderBytes.Count);
             ulong datagramSequence = reader.ReadUInt64();
             ulong messageSequence = reader.ReadUInt64();
             bool reliable = reader.ReadBoolean();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -29,6 +30,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly ConcurrentStack<IPEndPoint> m_ReceiveEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentStack<RollbackDatagramPacket> m_ReceivePackets = new ConcurrentStack<RollbackDatagramPacket>();
         readonly ConcurrentStack<byte[]> m_ReceivePayloads = new ConcurrentStack<byte[]>();
+        readonly RollbackDatagramCodec.RollbackDatagramExpectedIdentitySet m_ExpectedIdentities;
         readonly ThreadLocal<CanonicalWriter> m_SendWriter;
         readonly EndPoint m_ReceiveFromEndPoint;
         readonly int m_MaximumDatagramBytes;
@@ -43,7 +45,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
         long m_DroppedReceivedDatagrams;
         Exception m_Failure;
 
-        public RollbackDatagramEndpoint(IPEndPoint localEndPoint, int queueCapacity, int maximumDatagramBytes)
+        public RollbackDatagramEndpoint(
+            IPEndPoint localEndPoint,
+            string sessionId,
+            IReadOnlyList<string> senderPeerIds,
+            int queueCapacity,
+            int maximumDatagramBytes)
         {
             if (localEndPoint == null)
                 throw new ArgumentNullException(nameof(localEndPoint));
@@ -53,6 +60,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentOutOfRangeException(nameof(maximumDatagramBytes));
             m_MaximumDatagramBytes = maximumDatagramBytes;
             m_QueueCapacity = queueCapacity;
+            m_ExpectedIdentities = new RollbackDatagramCodec.RollbackDatagramExpectedIdentitySet(sessionId, senderPeerIds);
             m_SendWriter = new ThreadLocal<CanonicalWriter>(() => new CanonicalWriter(new byte[m_MaximumDatagramBytes]));
             m_ReceiveFromEndPoint = LocalEndPoint.AddressFamily == AddressFamily.InterNetworkV6
                 ? new IPEndPoint(IPAddress.IPv6Any, 0)
@@ -167,7 +175,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     byte[] payloadBuffer = RentReceivePayload();
                     try
                     {
-                        packet = RollbackDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes, packet, payloadBuffer);
+                        packet = RollbackDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes, packet, payloadBuffer, m_ExpectedIdentities);
                     }
                     catch (Exception exception) when (exception is InvalidDataException || exception is ArgumentException)
                     {

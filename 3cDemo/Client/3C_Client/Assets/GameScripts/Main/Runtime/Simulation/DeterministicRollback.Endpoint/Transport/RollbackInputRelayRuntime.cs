@@ -107,8 +107,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 handshakeTemplate.Protocol);
             for (int i = 0; i < roster.Entries.Count; i++)
                 m_ExpectedPeers.Add(roster.Entries[i].PeerId, roster.Entries[i]);
+            var senderPeerIds = new string[roster.Entries.Count];
+            for (int i = 0; i < roster.Entries.Count; i++)
+                senderPeerIds[i] = roster.Entries[i].PeerId;
             m_Endpoint = new RollbackDatagramEndpoint(
                 new IPEndPoint(definition.Address, definition.Port),
+                definition.SessionId,
+                senderPeerIds,
                 definition.MaximumQueuedMessages,
                 definition.MaximumDatagramBytes);
         }

@@ -3201,3 +3201,11 @@
 - `RollbackPipelineStateRestoreTransaction.ValidateApplied` 原先调用 `CaptureSimulationProjection()`，只为计算哈希就生成一份完整 projection payload。现在 Runtime State 增加正式 `CaptureSimulationProjectionHash()`，复用生命周期内 `CanonicalWriter` 写入同一字段序列后直接 `ComputeHash`；validate 路径不再持有临时 `byte[]`。
 - projection 写入收敛到私有 `WriteSimulationProjection`，`CaptureSimulationProjection()` 仍先执行同一路径后 `ToArray`；magic、identity、completed tick、applied hash 数量、字段顺序和容量校验不变。capture 返回的 payload 仍由 state snapshot 独立持有。
 - 用户要求闭环运行期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback replay clock 缓存
+
+对应 tasks.md 的 5.2，新增 5.129 作为独立小步；5.2 保持未勾选。
+
+- `RollbackSchedulePassRuntime.BuildPlan` 原先每次有 rollback replay 都执行 `$"{ClockId}/rollback-replay"`，在同一 Source Clock 的每次 rollback 中重复分配 replay clock 字符串。现在 runtime 持有 source clock 与 replay clock 的生命周期缓存，仅在 Ordinal 不匹配时重新构造。
+- replay mapping、每个 replay step 的 `SimulationTickSourceIdentity` 和 current clock 归属保持不变；runtime 是 pipeline pass 生命周期对象，不引入静态状态。source clock 变化时旧缓存整体替换，不做兼容映射。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

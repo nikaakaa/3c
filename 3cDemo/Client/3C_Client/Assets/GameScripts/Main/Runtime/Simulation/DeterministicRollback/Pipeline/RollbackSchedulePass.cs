@@ -45,6 +45,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         readonly DeterministicRollbackModelPolicy m_Policy;
         readonly RollbackRuntimeState m_State;
+        string m_ReplaySourceClockId;
+        string m_ReplayClockId;
 
         public RollbackSchedulePassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -133,7 +135,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             string replayClock = null;
             if (replayStepCount > 0)
             {
-                replayClock = $"{context.Source.ClockId}/rollback-replay";
+                replayClock = GetReplayClockId(context.Source.ClockId);
                 if (deepRecoveryReplay)
                     m_State.BeginDeepRecoveryReplay(replayStart, context.CurrentCompletedTick);
                 else
@@ -217,6 +219,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 Array.Empty<FixedSimulationStep>(),
                 SimulationSessionPlanRequirement.WorkingState |
                 SimulationSessionPlanRequirement.OutputDisposition);
+        }
+
+        string GetReplayClockId(string clockId)
+        {
+            if (!string.Equals(m_ReplaySourceClockId, clockId, StringComparison.Ordinal))
+            {
+                m_ReplaySourceClockId = clockId;
+                m_ReplayClockId = string.Concat(clockId, "/rollback-replay");
+            }
+            return m_ReplayClockId;
         }
 
         static SimulationRestoreDirective BuildRestoreDirective(

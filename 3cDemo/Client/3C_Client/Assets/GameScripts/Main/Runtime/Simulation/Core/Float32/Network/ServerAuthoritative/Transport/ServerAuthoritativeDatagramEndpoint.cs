@@ -20,6 +20,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         void EnqueueSend(ServerAuthoritativeDatagramPacket packet);
         void PumpSend();
         bool TryReceive(out ServerAuthoritativeReceivedDatagram datagram);
+        void ReturnReceiveEndPoint(IPEndPoint remoteEndPoint);
         void ThrowIfUnavailable();
     }
 
@@ -72,6 +73,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly Socket m_Socket;
         readonly Thread m_ReceiveThread;
         readonly ConcurrentQueue<ServerAuthoritativeReceivedDatagram> m_ReceiveQueue = new ConcurrentQueue<ServerAuthoritativeReceivedDatagram>();
+        readonly ConcurrentStack<IPEndPoint> m_ReceiveEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
         readonly ConcurrentStack<IPEndPoint> m_SendEndPoints = new ConcurrentStack<IPEndPoint>();
         readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
@@ -230,6 +232,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return true;
         }
 
+        public void ReturnReceiveEndPoint(IPEndPoint remoteEndPoint)
+        {
+            if (m_ReceiveEndPoints.Count < m_QueueCapacity)
+                m_ReceiveEndPoints.Push(remoteEndPoint);
+        }
+
         public void ThrowIfUnavailable()
         {
             if (Volatile.Read(ref m_Disposed) != 0)
@@ -265,12 +273,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                         Interlocked.Increment(ref m_MalformedDrops);
                         continue;
                     }
-                    var remoteEndPoint = Clone((IPEndPoint)remote);
                     lock (m_RouteLock)
                     {
                         if (m_Routes.TryGetValue(packet.Header.Identity, out IPEndPoint expected))
                         {
-                            if (!EndPointEquals(expected, remoteEndPoint))
+                            if (!EndPointEquals(expected, (IPEndPoint)remote))
                             {
                                 Interlocked.Increment(ref m_EndpointMismatchDrops);
                                 Fail(new InvalidOperationException($"Gameplay data endpoint changed for '{packet.Header.Identity}'."));
@@ -283,9 +290,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                             continue;
                         }
                     }
+                    IPEndPoint remoteEndPoint = RentReceiveEndPoint((IPEndPoint)remote);
                     if (Interlocked.Increment(ref m_ReceiveCount) > m_QueueCapacity)
                     {
                         Interlocked.Decrement(ref m_ReceiveCount);
+                        ReturnReceiveEndPoint(remoteEndPoint);
                         Fail(new InvalidOperationException("Gameplay datagram receive queue overflow."));
                         continue;
                     }
@@ -330,9 +339,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             }
             if (m_ReceiveThread.IsAlive)
                 m_ReceiveThread.Join(1000);
-            while (m_ReceiveQueue.TryDequeue(out _))
-            {
-            }
+            while (m_ReceiveQueue.TryDequeue(out ServerAuthoritativeReceivedDatagram datagram))
+                ReturnReceiveEndPoint(datagram.RemoteEndPoint);
             while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
                 ReturnSendBuffer(pending.Bytes);
@@ -347,6 +355,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         }
 
         static IPEndPoint Clone(IPEndPoint value) => new IPEndPoint(value.Address, value.Port);
+
+        IPEndPoint RentReceiveEndPoint(IPEndPoint value)
+        {
+            if (!m_ReceiveEndPoints.TryPop(out IPEndPoint endpoint))
+                endpoint = new IPEndPoint(value.Address, value.Port);
+            endpoint.Address = value.Address;
+            endpoint.Port = value.Port;
+            return endpoint;
+        }
 
         static bool EndPointEquals(IPEndPoint left, IPEndPoint right) =>
             left.Port == right.Port && left.Address.Equals(right.Address);

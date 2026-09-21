@@ -137,49 +137,56 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Endpoint.ThrowIfUnavailable();
             while (m_Endpoint.TryReceive(out ServerAuthoritativeReceivedDatagram received))
             {
-                ServerAuthoritativeDatagramPacket packet = received.Packet;
-                if (!packet.Header.Identity.Equals(m_PredictionIdentity))
-                    continue;
-                if (packet.Header.PacketSequence <= m_LastReceivePacketSequence)
+                try
                 {
-                    if (packet.Header.PacketSequence == m_LastReceivePacketSequence)
-                        m_DuplicatePackets++;
-                    else
-                        m_OutOfOrderPackets++;
-                    continue;
+                    ServerAuthoritativeDatagramPacket packet = received.Packet;
+                    if (!packet.Header.Identity.Equals(m_PredictionIdentity))
+                        continue;
+                    if (packet.Header.PacketSequence <= m_LastReceivePacketSequence)
+                    {
+                        if (packet.Header.PacketSequence == m_LastReceivePacketSequence)
+                            m_DuplicatePackets++;
+                        else
+                            m_OutOfOrderPackets++;
+                        continue;
+                    }
+                    if (m_LastReceivePacketSequence != 0 && packet.Header.PacketSequence > m_LastReceivePacketSequence + 1)
+                        m_SequenceGaps = checked(m_SequenceGaps + packet.Header.PacketSequence - m_LastReceivePacketSequence - 1);
+                    m_LastReceivePacketSequence = packet.Header.PacketSequence;
+                    switch (packet.Header.Kind)
+                    {
+                        case ServerAuthoritativeDatagramKind.DataPlaneHelloAck:
+                        {
+                            DataPlaneHelloAck ack = ServerAuthoritativeDatagramPayloadCodec.ReadHelloAck(packet.Payload);
+                            if (m_PredictionTicket == null)
+                                throw new InvalidOperationException("Prediction received data-plane acknowledgement before its ticket.");
+                            if (m_PredictionReady)
+                                continue;
+                            m_PredictionReady = true;
+                            m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
+                                ServerAuthoritativePredictionDatagramEventKind.DataPlaneReady,
+                                ack.AuthorityTick,
+                                null));
+                            break;
+                        }
+                        case ServerAuthoritativeDatagramKind.Snapshot:
+                        {
+                            m_SnapshotPacketCount++;
+                            m_SnapshotPayloadBytes = checked(m_SnapshotPayloadBytes + (ulong)packet.Payload.Length);
+                            SnapshotDatagram snapshot = ServerAuthoritativeDatagramPayloadCodec.ReadSnapshot(packet.Payload);
+                            m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
+                                ServerAuthoritativePredictionDatagramEventKind.Snapshot,
+                                snapshot.AuthorityTick,
+                                snapshot));
+                            break;
+                        }
+                        default:
+                            throw new InvalidOperationException($"Prediction received unexpected gameplay datagram '{packet.Header.Kind}'.");
+                    }
                 }
-                if (m_LastReceivePacketSequence != 0 && packet.Header.PacketSequence > m_LastReceivePacketSequence + 1)
-                    m_SequenceGaps = checked(m_SequenceGaps + packet.Header.PacketSequence - m_LastReceivePacketSequence - 1);
-                m_LastReceivePacketSequence = packet.Header.PacketSequence;
-                switch (packet.Header.Kind)
+                finally
                 {
-                    case ServerAuthoritativeDatagramKind.DataPlaneHelloAck:
-                    {
-                        DataPlaneHelloAck ack = ServerAuthoritativeDatagramPayloadCodec.ReadHelloAck(packet.Payload);
-                        if (m_PredictionTicket == null)
-                            throw new InvalidOperationException("Prediction received data-plane acknowledgement before its ticket.");
-                        if (m_PredictionReady)
-                            continue;
-                        m_PredictionReady = true;
-                        m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
-                            ServerAuthoritativePredictionDatagramEventKind.DataPlaneReady,
-                            ack.AuthorityTick,
-                            null));
-                        break;
-                    }
-                    case ServerAuthoritativeDatagramKind.Snapshot:
-                    {
-                        m_SnapshotPacketCount++;
-                        m_SnapshotPayloadBytes = checked(m_SnapshotPayloadBytes + (ulong)packet.Payload.Length);
-                        SnapshotDatagram snapshot = ServerAuthoritativeDatagramPayloadCodec.ReadSnapshot(packet.Payload);
-                        m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
-                            ServerAuthoritativePredictionDatagramEventKind.Snapshot,
-                            snapshot.AuthorityTick,
-                            snapshot));
-                        break;
-                    }
-                    default:
-                        throw new InvalidOperationException($"Prediction received unexpected gameplay datagram '{packet.Header.Kind}'.");
+                    m_Endpoint.ReturnReceiveEndPoint(received.RemoteEndPoint);
                 }
             }
             m_Endpoint.PumpSend();

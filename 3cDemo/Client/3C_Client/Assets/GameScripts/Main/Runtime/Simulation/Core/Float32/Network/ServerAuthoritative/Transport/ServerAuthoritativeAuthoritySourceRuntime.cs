@@ -127,7 +127,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             PumpControl();
             m_Data.ThrowIfUnavailable();
             while (m_Data.TryReceive(out ServerAuthoritativeReceivedDatagram received))
-                ReceiveDatagram(received);
+            {
+                try
+                {
+                    ReceiveDatagram(received);
+                }
+                finally
+                {
+                    m_Data.ReturnReceiveEndPoint(received.RemoteEndPoint);
+                }
+            }
             m_Data.PumpSend();
             FlushControlOutputs();
         }

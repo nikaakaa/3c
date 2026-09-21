@@ -3490,3 +3490,11 @@
 - `ServerAuthoritativeDatagramPayloadCodec` 的 hello、hello ack、command 和 snapshot 四个 Write 入口统一改为显式 `CanonicalWriter` 合同；`Writer` 只负责 reset 和写 schema header，不再每次新建 writer。payload 仍通过 `ToArray` 独立持有并交给 datagram packet。
 - Authority Source 和客户端 Datagram Channel 分别按正式 `MaxGameplayDatagramBytes`／`maxDatagramBytes` 准备 owner `ThreadLocal` bounded writer，四个调用点全部迁移；Dispose 释放 writer，不保留旧的无 writer 入口。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 来源 endpoint 记录复用
+
+对应 tasks.md 的 5.5，新增 5.164 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramEndpoint` 按接收队列容量维护来源 `IPEndPoint` 池。接收线程先用 `ReceiveFrom` scratch 做路由和 endpoint 比较，校验通过后才租用独立记录入队；队列溢出时同步归还，删除每包 `Clone`。
+- 数据 transport 接口新增显式 `ReturnReceiveEndPoint`。Authority Source 在每次 `ReceiveDatagram` 后 finally 归还；客户端 Channel 在 `PumpPrediction` 每包 finally 归还；Hello 绑定 route 仍由 `BindRemote` 独立 clone，Dispose 清队同步归还，消费方不持有可复用记录。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

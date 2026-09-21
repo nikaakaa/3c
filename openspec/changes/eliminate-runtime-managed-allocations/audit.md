@@ -2684,6 +2684,14 @@
 - UI 只消费 Current 和 Changed，不读取四类 History；`History` 继续返回 owner 的 bounded 只读视图。Unity `Text.text` 最终展示串仍会分配，属于 tasks.md 7.1 的字符串构造边界；本步没有引入 fallback、兼容路径或新控制面。
 - `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 渲染材质块构造期准备
+
+对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。
+
+- `BlockImpactVfxController` 和 `ScreenSpaceDotTransparencyController` 原先把 `MaterialPropertyBlock` 留到第一次触发时懒建，首次特效或材质应用会把准备分配推入 Active。现在两个控制器实例字段构造期直接创建 block，`TryApplySettings`、flash 更新和静态应用入口删除空检查；每个实例仍只独占一只 block，并按次读取当前 renderer 状态。
+- 正式 RendererFeature/RenderPass 已核查且不改：所有 feature 长寿命持有 material 和 pass；`CommandBuffer` 通过 `CommandBufferPool` 取还；post-process 使用共享 `MaterialPropertyBlock`；Shape Projection 使用固定 workspace pool 和 persistent stale list。Feature Dispose 中 `CoreUtils.Destroy` 释放运行材质，`RTHandle.Release` 释放拷贝目标，Shape workspace Dispose 释放 compute buffer、纹理、mesh 和 triangle buffer。
+- `Assembly-CSharp.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 资源内部记录池化
 
 对应 tasks.md 的 6.2，新增 6.9 作为独立小步；6.2 保持未勾选。

@@ -373,7 +373,7 @@
 
 - [x] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本
 - [ ] 6.2 沿运行特效/音频/角色/资源实例的正式准备与租用入口治理Active期间分配，保留加载取消和退出释放
-- [ ] 6.3 沿正式RendererFeature/RenderPass及材质消费治理实际managed分配，分别记录native/GPU资源释放，不重写正确的复用实现
+- [x] 6.3 沿正式RendererFeature/RenderPass及材质消费治理实际managed分配，分别记录native/GPU资源释放，不重写正确的复用实现
 - [ ] 6.4 清理项目Editor/启动/离线工具中的已确认重复订阅和生命周期遗留，保持重操作显式触发并与运行0 GC结果分组
 - [x] 6.5 资源快照发布复用同一次对象池查询结果，标签与作用域直接填充最终独立数组，删除中间 List 和复制；保留历史快照寿命、排序及维护前后重新采集，不表示资源链或 History 已无分配
 - [x] 6.6 资源池统计统一调用正式填充 List 接口，运行时持有工作列表并在同步统计后清空引用，迁移发布和维护前后全部调用；初始容量来自当前池数量，新增池引起的容量增长及池内部统计分配仍未完成
@@ -384,6 +384,7 @@
 - [x] 6.11 资源 scope 持有私有 dispose id buffer，closing 后按当前 lease/instance 数量扩容并跨两次复制复用；先复制后释放的顺序和 closing 阻止新注册保持不变
 - [x] 6.12 删除无消费者的 Main startup History 合同、队列和容量常量，跨线程源只保留 Current 与 SnapshotChanged，避免加锁枚举活历史或每次读取生成快照数组
 - [x] 6.13 资源维护持有无主物理身份 scratch，RemoveUnownedPhysicalKnowledge 改为显式收集后移除，删除 lambda 闭包和委托；收集列表在维护结束后清空引用
+- [x] 6.14 BlockImpact VFX 与 ScreenSpaceDot 控制器在实例构造期创建 MaterialPropertyBlock，删除首次触发的懒加载分配和空检查；RendererFeature/RenderPass 既有 pass、material、CommandBuffer、workspace、GPU buffer 与 RTHandle 复用释放链保持不变
 
 ## 7. 诊断与正式性能交付
 

@@ -17,7 +17,7 @@ namespace ThirdPersonRendering
         [SerializeField] bool applyOnEnable = true;
         [SerializeField] bool clearOnDisable = true;
 
-        MaterialPropertyBlock propertyBlock;
+        readonly MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
 
         public ScreenSpaceDotTransparencyProfile Profile
         {
@@ -91,9 +91,6 @@ namespace ThirdPersonRendering
                 return false;
             }
 
-            if (propertyBlock == null)
-                propertyBlock = new MaterialPropertyBlock();
-
             bool applied = false;
             for (int i = 0; i < targetRenderers.Length; i++)
                 applied |= ApplyToRenderer(targetRenderers[i], settings, propertyBlock);
@@ -103,7 +100,7 @@ namespace ThirdPersonRendering
 
         public static bool ApplyToRenderer(Renderer target, ScreenSpaceDotTransparencySettings settings, MaterialPropertyBlock propertyBlock)
         {
-            if (target == null || propertyBlock == null)
+            if (target == null)
                 return false;
 
             target.GetPropertyBlock(propertyBlock);

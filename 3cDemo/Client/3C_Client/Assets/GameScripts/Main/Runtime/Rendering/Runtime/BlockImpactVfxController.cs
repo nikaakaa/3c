@@ -21,7 +21,7 @@ namespace ThirdPersonRendering
         [SerializeField] bool playOnEnable;
         [SerializeField] bool useMainCameraBillboard = true;
 
-        MaterialPropertyBlock propertyBlock;
+        readonly MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
         BlockImpactVfxRequest activeRequest;
         float elapsed;
         bool playing;
@@ -157,9 +157,6 @@ namespace ThirdPersonRendering
         {
             if (flashRenderer == null || !flashRenderer.gameObject.activeSelf)
                 return;
-
-            if (propertyBlock == null)
-                propertyBlock = new MaterialPropertyBlock();
 
             float intensity = profile != null ? profile.HdrIntensity * activeRequest.Intensity : activeRequest.Intensity;
             flashRenderer.GetPropertyBlock(propertyBlock);

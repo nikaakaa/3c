@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation
 		readonly EquipmentProgramLayout m_EquipmentLayout;
 		readonly EquipmentRuntimeControl m_Control;
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
+		readonly Stack<MutationScope> m_MutationScopePool = new();
 		public Float32EquipmentRuntime(
 			Float32GameplayAbilityExecutionAccess access,
 			IFloat32AbilityExecutionSavepointPort savepointPort,
@@ -314,7 +315,13 @@ namespace ThirdPersonSimulation
 		void IEquipmentRuntimePort.RemoveTags(string sourceId) => RequireGameplayEffects().RemoveEquipmentTags(sourceId);
 		ulong IEquipmentRuntimePort.ApplyPassiveEffect(string effectId) => RequireGameplayEffects().ApplyEquipmentPassive(effectId);
 		void IEquipmentRuntimePort.RemovePassiveEffect(ulong handle) => RequireGameplayEffects().RemoveEquipmentPassive(handle);
-		IEquipmentMutationScope IEquipmentRuntimePort.BeginMutation() => new MutationScope(m_Frame, m_SavepointPort);
+		IEquipmentMutationScope IEquipmentRuntimePort.BeginMutation()
+		{
+			MutationScope scope = m_MutationScopePool.Count > 0
+				? m_MutationScopePool.Pop()
+				: new MutationScope();
+			return scope.Begin(this, m_Frame, m_SavepointPort);
+		}
 		void IEquipmentRuntimePort.CommitEffectOutputs(OperationHandle source) => RequireGameplayEffects().CommitEquipmentMutation(RequireSource(source));
 		void IEquipmentRuntimePort.CancelEffectOutputs() => RequireGameplayEffects().CancelEquipmentMutation();
 		void IEquipmentRuntimePort.EmitLifecycle(OperationHandle source, EquipmentSlotState before, EquipmentSlotState after, PendingEquipmentChangeState state, EquipmentChangeId changeId)
@@ -343,22 +350,30 @@ namespace ThirdPersonSimulation
 
 		sealed class MutationScope : IEquipmentMutationScope
 		{
-			readonly Float32AbilityExecutionFrame m_Frame;
-			readonly IFloat32AbilityExecutionSavepointPort m_SavepointPort;
-			readonly IFloat32AbilityExecutionSavepoint m_Savepoint;
-			readonly Float32AbilityOutputSavepoint m_OutputSavepoint;
-			readonly AbilityStateValue[] m_Values;
+			Float32EquipmentRuntime m_Owner;
+			Float32AbilityExecutionFrame m_Frame;
+			IFloat32AbilityExecutionSavepointPort m_SavepointPort;
+			IFloat32AbilityExecutionSavepoint m_Savepoint;
+			Float32AbilityOutputSavepoint m_OutputSavepoint;
+			AbilityStateValue[] m_Values;
 			bool m_Completed;
 
-			public MutationScope(Float32AbilityExecutionFrame frame, IFloat32AbilityExecutionSavepointPort savepointPort)
+			public MutationScope Begin(
+				Float32EquipmentRuntime owner,
+				Float32AbilityExecutionFrame frame,
+				IFloat32AbilityExecutionSavepointPort savepointPort)
 			{
+				m_Owner = owner;
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 				m_Savepoint = m_SavepointPort.CreateSavepoint();
 				m_OutputSavepoint = frame.CreateOutputSavepoint();
-				m_Values = new AbilityStateValue[frame.Data.StateSlots.Count];
+				if (m_Values == null || m_Values.Length != frame.Data.StateSlots.Count)
+					m_Values = new AbilityStateValue[frame.Data.StateSlots.Count];
 				for (int i = 0; i < m_Values.Length; i++)
 					m_Values[i] = frame.SkillState.Get(i);
+				m_Completed = false;
+				return this;
 			}
 
 			public void Complete()
@@ -367,6 +382,7 @@ namespace ThirdPersonSimulation
 					throw new InvalidOperationException("Equipment mutation scope is already completed.");
 				m_SavepointPort.Release(m_Savepoint);
 				m_Completed = true;
+				Return();
 			}
 
 			public void Dispose()
@@ -378,6 +394,18 @@ namespace ThirdPersonSimulation
 				for (int i = 0; i < m_Values.Length; i++)
 					m_Frame.SkillState.Set(i, m_Values[i]);
 				m_Completed = true;
+				Return();
+			}
+
+			void Return()
+			{
+				Array.Clear(m_Values, 0, m_Values.Length);
+				m_Owner.m_MutationScopePool.Push(this);
+				m_Owner = null;
+				m_Frame = null;
+				m_SavepointPort = null;
+				m_Savepoint = null;
+				m_OutputSavepoint = default;
 			}
 		}
 	}

@@ -3963,3 +3963,11 @@
 - Fixed 和 Float32 Action State Store 为 `SkillExecutionScope` 建立归还池；`PushSkillExecution` 先按 Stack 合同压入 reference，再从池中取空闲 scope 或创建新 scope，并用 `Begin` 重绑 owner、expected reference 和 trace context。
 - `Dispose` 仍先 pop 并校验 expected reference，再恢复 trace context，最后把 scope 归还池并清空身份引用；嵌套 push 使用独立池实例，unbalanced 和重复 Dispose 语义不变。
 - 常规重复 push 不再创建新 scope class，只有超过历史归还深度的峰值会创建。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Equipment mutation scope 收口
+
+对应 tasks.md 的 5.5，新增 5.223 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Equipment Runtime 为 `MutationScope` 建立归还池；`BeginMutation` 取空闲或新建 scope，再按原顺序创建 execution savepoint、output savepoint 并快照 Skill state。
+- values scratch 按 StateSlots capacity 复用；`Complete` 仍只释放 savepoint，`Dispose` 仍恢复 output、savepoint 和全部 values。有效结束一次后归还池并清空 values 与 frame/savepoint 引用，避免旧状态跨 mutation 保留。
+- pool 天然支持嵌套 mutation；savepoint 自身的 class/capture 生命周期不在本步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

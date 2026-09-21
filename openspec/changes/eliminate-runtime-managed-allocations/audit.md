@@ -2291,6 +2291,15 @@
 - 这次不删除描述符构造检查，因为它是运行装配边界的最后一道 typed 合同；只删除反射实现，不新增兼容路径或第二份操作清单。
 - `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed` 和 `ThirdPersonSimulation.Float32` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
 
+## 2026-09-21 Semantic IR payload 枚举直接校验
+
+对应 tasks.md 的 7.59。
+
+- `GameplayAbilitySemanticIrCodec` 读取 literal 时原先用 `ReadEnum<SemanticLiteralKind>` 和 `ReadEnum<SemanticNumericPrecision>` 反射转换；document token 用 `ReadEnum<SemanticDataTokenKind>`，嵌套 Number 再反射读取 precision；constant input 另用 `Enum.IsDefined` 校验 `SemanticValueKind`。
+- 五处读取现在改为本 codec 的 typed helper：SemanticLiteralKind 接受 Boolean 至 Document，SemanticNumericPrecision 接受 Exact 至 TargetRounded，SemanticDataTokenKind 接受 Boolean 至 Bytes，SemanticValueKind 接受 Boolean 至 Identity。这些 byte 区间都连续，无隐藏成员。
+- payload 边界继续拒绝零和未知值；异常仍为 `InvalidDataException`，literal/document 的原文案保留，constant input 的原文案保留。读取顺序、字段宽度和后续 SemanticOperation 构造校验不变。
+- `ThirdPersonSimulation.Core` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，零警告零错误；随后 `dotnet build-server shutdown` 成功。未新增测试，未启动 Unity batchmode，未做 Player 实跑或分配采样。
+
 ## 2026-09-21 Graph Evaluator 输入值对象复用
 
 对应 tasks.md 的 7.49。

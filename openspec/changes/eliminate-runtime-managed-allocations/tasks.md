@@ -434,3 +434,4 @@
 - [x] 7.56 Fixed 和 Float32 Ability Execution Data Codec 的 SimulationOperationCode int payload 按 GameplayAbilityOperationSet 显式成员校验；保留数值范围和 InvalidDataException，删除 ReadEnum 反射读取
 - [x] 7.57 Semantic IR 和两数值域执行数据的 SimulationOperationCode 解码统一走 GameplayAbilitySemanticsCodec 的 typed 入口；保留当前 OperationSet 成员、ushort 范围和 Semantic IR 版本校验
 - [x] 7.58 OperationExecutionDescriptor 构造按 GameplayAbilityOperationSet 校验 OperationCode，删除 Enum.IsDefined 反射；保留 ArgumentOutOfRangeException，错误文案改为当前 OperationSet 不支持
+- [x] 7.59 Semantic IR Codec 的 literal、document 和 constant input byte 枚举改为连续正式值域直接校验；保留 payload 边界和原异常类型，删除该 codec 全部 Enum 反射

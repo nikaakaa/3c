@@ -356,10 +356,8 @@ namespace ThirdPersonSimulation
             var operation = new OperationHandle(reader.ReadInt32());
             string port = reader.ReadString();
             int constant = reader.ReadInt32();
-            byte kindValue = reader.ReadByte();
-            if (!Enum.IsDefined(typeof(SemanticValueKind), kindValue))
-                throw new InvalidDataException($"Semantic constant input contains unknown value kind '{kindValue}'.");
-            return new SemanticConstantInputBinding(operation, port, constant, (SemanticValueKind)kindValue);
+            SemanticValueKind valueKind = ReadSemanticValueKind(reader.ReadByte());
+            return new SemanticConstantInputBinding(operation, port, constant, valueKind);
         }
 
         static void WriteManifest(CanonicalWriter writer, GameplayAbilitySemanticIrManifest manifest)
@@ -422,8 +420,8 @@ namespace ThirdPersonSimulation
         {
             int index = reader.ReadInt32();
             string identity = reader.ReadString();
-            SemanticLiteralKind kind = GameplayAbilitySemanticsCodec.ReadEnum<SemanticLiteralKind>(reader.ReadByte());
-            SemanticNumericPrecision precision = GameplayAbilitySemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte());
+            SemanticLiteralKind kind = ReadLiteralKind(reader.ReadByte());
+            SemanticNumericPrecision precision = ReadNumericPrecision(reader.ReadByte());
             return kind switch
             {
                 SemanticLiteralKind.Boolean => SemanticLiteral.FromBoolean(index, identity, reader.ReadBoolean()),
@@ -470,7 +468,7 @@ namespace ThirdPersonSimulation
             var tokens = new SemanticDataToken[count];
             for (int i = 0; i < count; i++)
             {
-                SemanticDataTokenKind kind = GameplayAbilitySemanticsCodec.ReadEnum<SemanticDataTokenKind>(reader.ReadByte());
+                SemanticDataTokenKind kind = ReadDataTokenKind(reader.ReadByte());
                 tokens[i] = kind switch
                 {
                     SemanticDataTokenKind.Boolean => SemanticDataToken.FromBoolean(reader.ReadBoolean()),
@@ -478,12 +476,40 @@ namespace ThirdPersonSimulation
                     SemanticDataTokenKind.UInt32 => SemanticDataToken.FromUInt32(reader.ReadUInt32()),
                     SemanticDataTokenKind.UInt64 => SemanticDataToken.FromUInt64(reader.ReadUInt64()),
                     SemanticDataTokenKind.String => SemanticDataToken.FromString(reader.ReadString()),
-                    SemanticDataTokenKind.Number => SemanticDataToken.FromNumber(reader.ReadDouble(), reader.ReadString(), GameplayAbilitySemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte())),
+                    SemanticDataTokenKind.Number => SemanticDataToken.FromNumber(reader.ReadDouble(), reader.ReadString(), ReadNumericPrecision(reader.ReadByte())),
                     SemanticDataTokenKind.Bytes => SemanticDataToken.FromBytes(reader.ReadBytes()),
                     _ => throw new InvalidDataException($"Unsupported Semantic document token '{kind}'.")
                 };
             }
             return new SemanticDataDocument(tokens);
+        }
+
+        static SemanticLiteralKind ReadLiteralKind(byte value)
+        {
+            if (value < (byte)SemanticLiteralKind.Boolean || value > (byte)SemanticLiteralKind.Document)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for SemanticLiteralKind.");
+            return (SemanticLiteralKind)value;
+        }
+
+        static SemanticValueKind ReadSemanticValueKind(byte value)
+        {
+            if (value < (byte)SemanticValueKind.Boolean || value > (byte)SemanticValueKind.Identity)
+                throw new InvalidDataException($"Semantic constant input contains unknown value kind '{value}'.");
+            return (SemanticValueKind)value;
+        }
+
+        static SemanticNumericPrecision ReadNumericPrecision(byte value)
+        {
+            if (value < (byte)SemanticNumericPrecision.Exact || value > (byte)SemanticNumericPrecision.TargetRounded)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for SemanticNumericPrecision.");
+            return (SemanticNumericPrecision)value;
+        }
+
+        static SemanticDataTokenKind ReadDataTokenKind(byte value)
+        {
+            if (value < (byte)SemanticDataTokenKind.Boolean || value > (byte)SemanticDataTokenKind.Bytes)
+                throw new InvalidDataException($"Enum value '{value}' is invalid for SemanticDataTokenKind.");
+            return (SemanticDataTokenKind)value;
         }
 
         static void WriteOperation(CanonicalWriter writer, SemanticOperation operation)

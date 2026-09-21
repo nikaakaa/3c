@@ -121,7 +121,7 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeExecutionTickRecord
     {
-        readonly IReadOnlyList<RuntimeTraceEvent> m_Events;
+        readonly RuntimeTraceEvent[] m_Events;
         readonly RuntimeTraceEvent[] m_ExternalResults;
         readonly Guid[] m_SessionIds;
         readonly Guid[] m_ExecutionBranchIds;
@@ -140,7 +140,7 @@ namespace BTSMTL.Diagnostics.Editor
         internal RuntimeExecutionTickRecord(
             ulong tick,
             Guid executionBranchId,
-            List<RuntimeTraceEvent> events)
+            RuntimeTraceEvent[] events)
         {
             Tick = tick;
             ExecutionBranchId = executionBranchId;
@@ -159,7 +159,7 @@ namespace BTSMTL.Diagnostics.Editor
             Collector<ulong> inputSequences = default;
             Collector<string> characterStateHashes = default;
             Collector<string> worldHashes = default;
-            for (int i = 0; i < m_Events.Count; i++)
+            for (int i = 0; i < m_Events.Length; i++)
             {
                 RuntimeTraceEvent traceEvent = m_Events[i];
                 if (traceEvent.Kind == RuntimeTraceEventKind.SimulationNetworkModel)
@@ -273,7 +273,7 @@ namespace BTSMTL.Diagnostics.Editor
 
         bool Contains(RuntimeTraceEventKind kind)
         {
-            for (int i = 0; i < m_Events.Count; i++)
+            for (int i = 0; i < m_Events.Length; i++)
                 if (m_Events[i].Kind == kind)
                     return true;
             return false;
@@ -283,12 +283,12 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeExecutionPresentationFrame
     {
-        readonly IReadOnlyList<RuntimeTraceEvent> m_Events;
+        readonly RuntimeTraceEvent[] m_Events;
 
         internal RuntimeExecutionPresentationFrame(
             ulong frame,
             Guid executionBranchId,
-            List<RuntimeTraceEvent> events)
+            RuntimeTraceEvent[] events)
         {
             Frame = frame;
             ExecutionBranchId = executionBranchId;
@@ -302,7 +302,7 @@ namespace BTSMTL.Diagnostics.Editor
 
         bool Contains(RuntimeTraceEventKind kind)
         {
-            for (int i = 0; i < m_Events.Count; i++)
+            for (int i = 0; i < m_Events.Length; i++)
                 if (m_Events[i].Kind == kind)
                     return true;
             return false;
@@ -406,6 +406,8 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly HashSet<CheckpointKey> CheckpointKeys = new();
         static readonly HashSet<ulong> BoundarySequences = new();
         static readonly HashSet<Guid> BoundaryBranches = new();
+        static readonly List<EventGroup<TickKey>> HistoryGroups = new();
+        static readonly List<EventGroup<PresentationFrameKey>> PresentationGroups = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -599,8 +601,56 @@ namespace BTSMTL.Diagnostics.Editor
                     selectedEvents);
 
             selectedEvents.Sort(CompareGroupedEventsComparer);
-            var grouped = new List<EventGroup<TickKey>>();
-            var presentation = new List<EventGroup<PresentationFrameKey>>();
+            List<EventGroup<TickKey>> grouped = HistoryGroups;
+            List<EventGroup<PresentationFrameKey>> presentation = PresentationGroups;
+            grouped.Clear();
+            presentation.Clear();
+            for (int i = 0; i < selectedEvents.Count; i++)
+            {
+                RuntimeTraceEvent value = selectedEvents[i];
+                if (value.Domain == RuntimeTraceDomain.Presentation)
+                {
+                    var presentationKey = new PresentationFrameKey(value.Position, value.ExecutionBranchId);
+                    if (presentation.Count == 0 ||
+                        !EqualityComparer<PresentationFrameKey>.Default.Equals(
+                            presentation[presentation.Count - 1].Key,
+                            presentationKey))
+                    {
+                        presentation.Add(new EventGroup<PresentationFrameKey>(presentationKey));
+                    }
+                    EventGroup<PresentationFrameKey> presentationGroup = presentation[presentation.Count - 1];
+                    presentationGroup.AddCount();
+                    presentation[presentation.Count - 1] = presentationGroup;
+                    continue;
+                }
+                TickKey key = new TickKey(value.Position, value.ExecutionBranchId);
+                if (grouped.Count == 0 ||
+                    !EqualityComparer<TickKey>.Default.Equals(
+                        grouped[grouped.Count - 1].Key,
+                        key))
+                {
+                    grouped.Add(new EventGroup<TickKey>(key));
+                }
+                EventGroup<TickKey> tickGroup = grouped[grouped.Count - 1];
+                tickGroup.AddCount();
+                grouped[grouped.Count - 1] = tickGroup;
+            }
+
+            for (int i = 0; i < grouped.Count; i++)
+            {
+                EventGroup<TickKey> group = grouped[i];
+                group.PrepareEvents();
+                grouped[i] = group;
+            }
+            for (int i = 0; i < presentation.Count; i++)
+            {
+                EventGroup<PresentationFrameKey> group = presentation[i];
+                group.PrepareEvents();
+                presentation[i] = group;
+            }
+
+            int tickGroupIndex = 0;
+            int presentationGroupIndex = 0;
             int unmappedEventCount = 0;
             bool checkSourceCoverage = sourceMap != null || sourceMaps != null;
             for (int i = 0; i < selectedEvents.Count; i++)
@@ -617,26 +667,19 @@ namespace BTSMTL.Diagnostics.Editor
                 }
                 if (value.Domain == RuntimeTraceDomain.Presentation)
                 {
-                    var presentationKey = new PresentationFrameKey(value.Position, value.ExecutionBranchId);
-                    if (presentation.Count == 0 ||
-                        !EqualityComparer<PresentationFrameKey>.Default.Equals(
-                            presentation[presentation.Count - 1].Key,
-                            presentationKey))
-                    {
-                        presentation.Add(new EventGroup<PresentationFrameKey>(presentationKey));
-                    }
-                    presentation[presentation.Count - 1].Events.Add(value);
+                    EventGroup<PresentationFrameKey> presentationWriter = presentation[presentationGroupIndex];
+                    presentationWriter.Write(value);
+                    presentation[presentationGroupIndex] = presentationWriter;
+                    if (presentationWriter.IsFull)
+                        presentationGroupIndex++;
                     continue;
                 }
-                TickKey key = new TickKey(value.Position, value.ExecutionBranchId);
-                if (grouped.Count == 0 ||
-                    !EqualityComparer<TickKey>.Default.Equals(
-                        grouped[grouped.Count - 1].Key,
-                        key))
-                {
-                    grouped.Add(new EventGroup<TickKey>(key));
-                }
-                grouped[grouped.Count - 1].Events.Add(value);
+
+                EventGroup<TickKey> tickWriter = grouped[tickGroupIndex];
+                tickWriter.Write(value);
+                grouped[tickGroupIndex] = tickWriter;
+                if (tickWriter.IsFull)
+                    tickGroupIndex++;
             }
 
             var ticks = new List<RuntimeExecutionTickRecord>(grouped.Count);
@@ -647,7 +690,6 @@ namespace BTSMTL.Diagnostics.Editor
             bool complete = capture.EvictedEvents == 0 && grouped.Count != 0;
             foreach (EventGroup<TickKey> group in grouped)
             {
-                group.Events.Sort(CompareEventsComparer);
                 var record = new RuntimeExecutionTickRecord(
                     group.Key.Tick,
                     group.Key.ExecutionBranchId,
@@ -658,7 +700,7 @@ namespace BTSMTL.Diagnostics.Editor
             bool historyComplete = complete && unmappedEventCount == 0;
             foreach (EventGroup<TickKey> group in grouped)
             {
-                for (int i = 0; i < group.Events.Count; i++)
+                for (int i = 0; i < group.Events.Length; i++)
                 {
                     RuntimeTraceEvent traceEvent = group.Events[i];
                     if (traceEvent.Kind != RuntimeTraceEventKind.SimulationCheckpointCaptured)
@@ -680,13 +722,12 @@ namespace BTSMTL.Diagnostics.Editor
             }
             foreach (EventGroup<PresentationFrameKey> group in presentation)
             {
-                group.Events.Sort(CompareEventsComparer);
                 presentationFrames.Add(new RuntimeExecutionPresentationFrame(
                     group.Key.Frame,
                     group.Key.ExecutionBranchId,
                     group.Events));
             }
-            return new RuntimeExecutionHistory(
+            RuntimeExecutionHistory history = new(
                 capture.CaptureId,
                 capture.Channels,
                 capture.Detail,
@@ -697,6 +738,9 @@ namespace BTSMTL.Diagnostics.Editor
                 ticks,
                 checkpoints,
                 presentationFrames);
+            grouped.Clear();
+            presentation.Clear();
+            return history;
         }
 
         static void AddSessionBoundaryEvents(
@@ -765,16 +809,38 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeTraceEventKind.SimulationCheckpointCaptured;
         }
 
-        readonly struct EventGroup<TKey>
+        struct EventGroup<TKey>
         {
+            TKey m_Key;
+            RuntimeTraceEvent[] m_Events;
+            int m_Count;
+
             internal EventGroup(TKey key)
             {
-                Key = key;
-                Events = new List<RuntimeTraceEvent>();
+                m_Key = key;
+                m_Events = Array.Empty<RuntimeTraceEvent>();
+                m_Count = 0;
             }
 
-            internal TKey Key { get; }
-            internal List<RuntimeTraceEvent> Events { get; }
+            internal TKey Key => m_Key;
+            internal RuntimeTraceEvent[] Events => m_Events;
+            internal bool IsFull => m_Count == m_Events.Length;
+
+            internal void AddCount()
+            {
+                m_Count++;
+            }
+
+            internal void PrepareEvents()
+            {
+                m_Events = new RuntimeTraceEvent[m_Count];
+                m_Count = 0;
+            }
+
+            internal void Write(RuntimeTraceEvent value)
+            {
+                m_Events[m_Count++] = value;
+            }
         }
 
         static List<RuntimeTraceEvent> SelectEvents(

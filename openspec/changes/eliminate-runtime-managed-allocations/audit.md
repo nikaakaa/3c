@@ -245,6 +245,16 @@
 - 该入口和 selection、open、checkpoint 一样限定在 Editor 同步读取链；静态工作集合不做跨线程或重入合同。history 分组的 per-group List 和外层结果 List 仍在后续边界。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 boundary history 运行对比或分配采样。
 
+## 2026-09-21 执行 history 分组数组化
+
+对应 tasks.md 的 7.1，新增 7.80 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution history 的分组工作层，不计为 Player 每帧收益。
+
+- 原 `EventGroup<TKey>` 为每个逻辑 tick 和 presentation frame 新建 `List<RuntimeTraceEvent>`；列表对象、内部数组扩容和 group 内二次排序都在每次 history 构建中重复。TickRecord 与 PresentationFrame 又直接持有这些 List。
+- 现在 `EventGroup` 第一次扫描只保存连续 key 和数量；随后为每个 group 分配精确 `RuntimeTraceEvent[]`，第二次扫描按同一连续顺序填充。TickRecord 和 PresentationFrame 直接持有最终数组，公开 `IReadOnlyList` 语义不变。
+- selected events 先按 Position、ExecutionBranchId、Sequence 全局排序；同一 tick 或 presentation key 的 Position 和 Branch 相同，因此原 group 内按 Sequence 排序被全局排序覆盖，结果顺序不变。会话边界补充发生在排序前，仍参与同一顺序。
+- 分组外层两个 List 是 builder 静态 scratch，构造前清空、返回前清空，不持有最终数组；静态 builder 仍限定 Editor 同步读取链。source coverage 统计移到数组填充遍历，结果与原遍历条件一致。ticks、checkpoints、presentation frames 和 Timeline spans 的返回 List 仍在后续边界。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露数组 `Count`、局部变量重名和 struct 构造字段赋值问题，修正后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 history 运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

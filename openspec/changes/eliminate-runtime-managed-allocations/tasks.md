@@ -481,7 +481,8 @@
 - [x] 7.73 Tree 节点诊断状态改传 State／NodeStopStatus 枚举，入口用固定常量映射原文本并删除旧 string 状态入口；RunnableNode 全部调用方不再在采样判断前 ToString，未知枚举显式抛错，节点停止 Cause、边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
 - [x] 7.74 Tree 节点停止与状态退出 Cause 改传 NodeStopOriginCause／StateExitCause 枚举，诊断发布边界用固定常量映射原文本并删除诊断链内全部 Cause ToString；状态机内部退出和外部树停止保留两条正式 cause 入口，未知枚举显式抛错，边 Detail、图状态文本和 OwnerId 字符串仍在后续边界
 - [x] 7.75 Tree graph 生命周期状态改在发布边界用固定文本映射 GraphCreated／GraphDestroyed，删除 PublishGraph 的 kind ToString；其他 RuntimeTraceEventKind 进入 graph 生命周期入口显式抛错，节点停止 Cause 已由 7.74 处理，边 Detail 和 OwnerId 字符串仍在后续边界
-- [x] 7.76 执行 selection 的结果 List、sequence 去重、related graph 和 presentation frame 集合改为 builder 静态工作集合，调用前清空并保留容量；无过滤路径不再新建完整事件 List，两遍扫描、branch 收敛、去重和输出顺序不变。该 scratch 只用于 Editor 同步读取链，BuildCore 的 spans 与 history 分组输出集合仍在后续边界
+- [x] 7.76 执行 selection 的结果 List、sequence 去重、related graph 和 presentation frame 集合改为 builder 静态工作集合，调用前清空并保留容量；无过滤路径不再新建完整事件 List，两遍扫描、branch 收敛、去重和输出顺序不变。该 scratch 只用于 Editor 同步读取链，BuildCore 的 spans 与 history 返回结果 List 仍在后续边界
 - [x] 7.77 BuildCore 的 PendingSpan 从 class 改为值类型，四个 Last 更新点显式写回 open 字典；open Dictionary 复用 builder 静态外壳并调用前清空，保留既有桶容量。span 配对键、配对结果和未完成 span 语义不变；结果 spans List 会随 RuntimeExecutionTimeline 被外部持有，仍在后续边界
 - [x] 7.78 history checkpoint 去重 HashSet 复用 builder 静态外壳并调用前清空，CheckpointKey 连续 struct 比较和 first-seen 去重不变；checkpoint 结果 List、ticks、presentation frames 和 spans 结果集合会随返回值被外部消费，仍在后续边界
 - [x] 7.79 history 会话边界补充的 sequence 与 branch HashSet 改为 builder 静态工作集合，调用前清空；基线 checkpoint 查找、边界范围、去重和插入顺序不变。该阶段仍同步复用 selection List，未做跨线程或重入假设
+- [x] 7.80 history 分组删除每个 tick／presentation frame 的 List：EventGroup 先按排序后的连续 key 统计数量，再分配精确 RuntimeTraceEvent 数组并在第二遍填充；TickRecord 和 PresentationFrame 直接持有最终数组，全局 Position/Branch/Sequence 排序覆盖原 group 内排序，外层分组 scratch 调用后清空。ticks、checkpoints、presentation frames 和 spans 返回 List 仍在后续边界

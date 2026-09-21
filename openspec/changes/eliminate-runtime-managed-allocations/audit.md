@@ -3947,3 +3947,11 @@
 - Fixed 和 Float32 Ability Domain Runtime 持有常驻 current actions List 和 stopping instances HashSet；每次 tick 先重填/清空，最后在 `finally` 统一清空，异常路径不再把 Action identity 字符串保留到下一 tick。
 - Action State Store 删除每次返回新建 List、只读包装和内联排序 lambda 的 `CurrentActions`，新增显式 `CopyCurrentActions` 写入调用方 scratch；静态 Comparison 继续按 InstanceId 升序排序。
 - Tick 的两次快照时机、ProcessExisting 与 TickActive 顺序、stop 重复保护和 mutation 隔离不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧入口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Action trace execution scope 收口
+
+对应 tasks.md 的 5.5，新增 5.221 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Action State Store 各自持有常驻 `TraceExecutionScope`；`EnterSkillExecution` 仍先进入 manager、再 push trace context，然后用 `Begin` 重绑 execution scope 和上一轮 trace context。
+- manager 的单 active frame 规则保证外层 scope 活动期间不能成功重入；`Dispose` 仍先退出 Skill execution frame，再恢复 trace context，最后清空包装引用。`PushSkillExecution` 的 Stack scope 允许按合同入栈，不在本步复用。
+- 每次 Skill execution 进入的外层 Trace Execution Scope 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

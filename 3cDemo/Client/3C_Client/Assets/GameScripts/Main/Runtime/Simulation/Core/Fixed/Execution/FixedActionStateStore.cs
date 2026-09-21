@@ -261,6 +261,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
+        readonly TraceExecutionScope m_TraceExecutionScope = new();
 
         public FixedActionStateStore(
             FixedGameplayAbilityExecutionAccess access,
@@ -296,7 +297,7 @@ namespace ThirdPersonSimulation.Fixed
                 action.InstanceId,
                 action.PredictionKey,
                 action.SkillExecutionGeneration));
-            return new TraceExecutionScope(
+            return m_TraceExecutionScope.Begin(
                 execution,
 				m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
         }
@@ -847,14 +848,16 @@ namespace ThirdPersonSimulation.Fixed
 
         sealed class TraceExecutionScope : IDisposable
         {
-            readonly IDisposable m_Execution;
-            readonly FixedAbilityExecutionFrame.ActionTraceContextScope m_Trace;
+            IDisposable m_Execution;
+            FixedAbilityExecutionFrame.ActionTraceContextScope m_Trace;
             bool m_Disposed;
 
-            public TraceExecutionScope(IDisposable execution, FixedAbilityExecutionFrame.ActionTraceContextScope trace)
+            public TraceExecutionScope Begin(IDisposable execution, FixedAbilityExecutionFrame.ActionTraceContextScope trace)
             {
                 m_Execution = execution;
                 m_Trace = trace;
+                m_Disposed = false;
+                return this;
             }
 
             public void Dispose()
@@ -864,6 +867,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Disposed = true;
                 m_Execution.Dispose();
                 m_Trace.Dispose();
+                m_Execution = null;
+                m_Trace = default;
             }
         }
 

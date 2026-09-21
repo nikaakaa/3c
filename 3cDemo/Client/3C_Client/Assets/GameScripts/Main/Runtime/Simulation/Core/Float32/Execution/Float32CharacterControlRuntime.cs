@@ -542,7 +542,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Character Control runtime identity is incomplete.");
             m_Control = controlModules.Require(binding.ModuleId);
             binding.RequireContract(m_Control.Contract);
-            m_Schema = new CharacterControlStateSchema(m_Control.Contract);
+            m_Schema = m_Control.Contract.StateSchema;
             m_State = controlState.BindControl(m_Schema);
             m_ActorId = actorId;
             m_Tick = tick;

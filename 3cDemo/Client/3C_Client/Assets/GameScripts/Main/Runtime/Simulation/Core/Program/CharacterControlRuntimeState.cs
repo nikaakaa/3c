@@ -192,8 +192,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(contract));
             if (contract.ModuleId != ModuleId || contract.SemanticVersion != SemanticVersion)
                 throw new InvalidOperationException($"Character control runtime state '{ModuleId}/{SemanticVersion}' does not match module contract '{contract.ModuleId}/{contract.SemanticVersion}'.");
-            var expected = new CharacterControlStateSchema(contract);
-            if (!expected.SchemaHash.Equals(Schema.SchemaHash))
+            if (!contract.StateSchema.SchemaHash.Equals(Schema.SchemaHash))
                 throw new InvalidOperationException($"Character control runtime state schema does not match module '{ModuleId}'.");
         }
 
@@ -214,7 +213,7 @@ namespace ThirdPersonSimulation
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
             binding.RequireContract(contract);
-            var schema = new CharacterControlStateSchema(contract);
+            CharacterControlStateSchema schema = contract.StateSchema;
             var values = new CharacterControlStateValue[schema.FieldCount];
             for (int i = 0; i < values.Length; i++)
                 values[i] = CharacterControlStateValue.Default(schema.Fields[i].ValueKind);

@@ -3875,3 +3875,11 @@
 - Fixed 和 Float32 Character Input Runtime 从每个 Actor tick 构造改为 Character Runtime 准备期常驻；请求身份在准备期复制到精确 string 数组，仍按 Ordinal 排序并拒绝空身份和重复身份。
 - 每个 Actor tick 的 Evaluate 先用 Begin 重绑当前 role state 的 InputRequests 端口，再按原顺序应用 SimulationInputRequest；优先级、sequence、过期 tick 和写入顺序不变。
 - 每 Actor tick 的 runtime 外壳、中间 `List<string>` 和 `ReadOnlyCollection<string>` 删除；Timeline pending、Control Runtime 装配和 ability invocation 生命周期不在本步范围。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、两域同步复查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Character control state schema lifetime 收口
+
+对应 tasks.md 的 5.5，新增 5.212 作为独立小步；5.5 保持未勾选。
+
+- `CharacterControlStateSchema` 完全由 immutable `CharacterControlModuleContract` 推导，现在在 contract 构造末尾准备一次并通过正式 `StateSchema` 暴露；schema 的只读字段、索引、kind 表和 hash 生命周期跟随 contract。
+- Fixed 和 Float32 Character Control Runtime 直接消费 contract schema，不再每个 Control tick 重建 schema、state field 只读包装和两个查询字典；`RequireBinding` 与 `BindControl` 的输入不变。
+- `CharacterControlRuntimeState.CreateInitial` 和 `RequireContract` 改用同一 contract schema，只按 `SchemaHash` 校验，删除校验期重复 schema。运行期字段索引、kind 检查、默认值和错误语义不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、schema 构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -338,6 +338,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<SimulationInputValueId> m_InputValues;
         readonly ReadOnlyCollection<CharacterControlMotionDescriptor> m_Motions;
         readonly ReadOnlyCollection<CharacterSkillId> m_Abilities;
+        readonly CharacterControlStateSchema m_StateSchema;
 
         public CharacterControlModuleContract(
             CharacterControlModuleId moduleId,
@@ -375,6 +376,7 @@ namespace ThirdPersonSimulation
             m_Abilities = Freeze(abilities, value => value, "ability");
             InitialState = initialState;
             ValidateStateGraph();
+            m_StateSchema = new CharacterControlStateSchema(this);
         }
 
         public CharacterControlModuleId ModuleId { get; }
@@ -387,6 +389,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationInputValueId> InputValues => m_InputValues;
         public IReadOnlyList<CharacterControlMotionDescriptor> Motions => m_Motions;
         public IReadOnlyList<CharacterSkillId> Abilities => m_Abilities;
+        public CharacterControlStateSchema StateSchema => m_StateSchema;
 
         public bool TryResolveParameterSet(
             IEnumerable<CharacterControlParameterValue> overrides,

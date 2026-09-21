@@ -472,6 +472,7 @@
 - [x] 5.209 两数值域 Character Trace Sink 改为 Actor Binding 常驻实例；每 tick Begin 重绑诊断身份并重置 sequence，删除每 tick sink 新建
 - [x] 5.210 两数值域 Ability Execution Input 改为 Actor Binding 常驻实例；每 tick Begin 重绑 sequence 和 values，成功/异常边界清空引用，删除每 tick wrapper 新建
 - [x] 5.211 两数值域 Character Input Runtime 改为 Character Runtime 常驻实例；每 tick Begin 重绑事务请求端口，请求身份在准备期定序定形，删除每 tick wrapper、中间 List 和只读包装
+- [x] 5.212 Character Control State Schema 由 immutable Module Contract 准备期生成并共用；两数值域 Control Runtime、初始状态和合同校验消费同一 schema，删除每 tick schema 与字典重建
 
 ## 6. UI、资源、渲染和生命周期
 

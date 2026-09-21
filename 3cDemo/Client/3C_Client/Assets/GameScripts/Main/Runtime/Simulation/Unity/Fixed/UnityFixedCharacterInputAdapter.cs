@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly List<FixedSimulationInputValue> m_InputValues = new List<FixedSimulationInputValue>();
         readonly List<FixedSimulationInputRequest> m_InputRequests = new List<FixedSimulationInputRequest>();
         readonly List<string> m_ActionTargetInputIds = new List<string>();
+        readonly string m_SourceIdentity;
         readonly bool m_RequiresCameraBasis;
 
         ulong m_RenderFrame;
@@ -83,6 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 ? string.Empty
                 : actionTargetInputValueId.Trim();
             m_ActionTargetProvider = actionTargetProvider;
+            m_SourceIdentity = $"UnityInputSystem/FixedQ32.32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
             if ((m_ActionTargetProvider == null) != string.IsNullOrEmpty(m_ActionTargetInputValueId) ||
                 m_ActionTargetProvider != null && m_Owner == null)
             {
@@ -99,8 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_RequiresCameraBasis = RequiresCameraBasis(controlModule);
         }
 
-        public string SourceIdentity =>
-            $"UnityInputSystem/FixedQ32.32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+        public string SourceIdentity => m_SourceIdentity;
         public InputActionAsset Actions => m_Profile.SourceAsset;
 
         public void Activate()

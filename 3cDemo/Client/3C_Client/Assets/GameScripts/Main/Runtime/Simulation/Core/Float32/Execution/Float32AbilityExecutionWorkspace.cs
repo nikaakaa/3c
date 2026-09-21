@@ -36,6 +36,21 @@ namespace ThirdPersonSimulation
         public Stack<SimulationTimelineBlackboardContext> TimelineBlackboardContexts { get; } =
             new Stack<SimulationTimelineBlackboardContext>();
 
+        public void Reset()
+        {
+            Facts.Clear();
+            Presentation.Clear();
+            Trace.Clear();
+            ValueStack.Clear();
+            for (int i = 0; i < ValueBuffers.Count; i++)
+                ValueBuffers[i].Clear();
+            TimelineMotionWarps.Clear();
+            ActionWindowProjections.Clear();
+            ActionWindowProjectionKeys.Clear();
+            TimelineBlackboardContexts.Clear();
+            ClearMotionContributions();
+        }
+
         public void SubmitMotionContribution(in SimulationMotionContribution contribution)
         {
             if (m_MotionContributionCount == m_MotionContributions.Length)

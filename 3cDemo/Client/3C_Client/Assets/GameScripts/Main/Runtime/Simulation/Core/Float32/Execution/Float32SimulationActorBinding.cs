@@ -59,6 +59,9 @@ namespace ThirdPersonSimulation
         readonly Float32AbilityInvocationRuntime[] m_InvocationScratch;
         readonly Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_ActionRuntimes;
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
+        readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
+        readonly List<AbilityTimelineStopPending> m_TimelineStops = new List<AbilityTimelineStopPending>();
+        readonly Float32AbilityExecutionWorkspace[] m_Workspaces;
         readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
         readonly Float32CharacterEvaluationOutput m_EvaluationOutput = new Float32CharacterEvaluationOutput();
@@ -91,11 +94,17 @@ namespace ThirdPersonSimulation
             m_InvocationScratch = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);
+            m_Workspaces = new Float32AbilityExecutionWorkspace[AbilityInstallations.Installations.Count];
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
                 Float32GameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
                 if (data.NumericProfile != Float32SimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Float32.");
+                m_Workspaces[i] = new Float32AbilityExecutionWorkspace(
+                    m_EffectExecutionScratch,
+                    m_TimelineAdvances,
+                    m_TimelineStops,
+                    new Float32GraphValueWorkspace(data, AbilityInstallations.Installations[i].Layout));
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
@@ -128,6 +137,9 @@ namespace ThirdPersonSimulation
         internal Float32AbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
+        internal Float32AbilityExecutionWorkspace[] Workspaces => m_Workspaces;
+        internal List<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
+        internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
         internal IFloat32AbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
@@ -142,6 +154,18 @@ namespace ThirdPersonSimulation
         internal void ClearActionRuntimes()
         {
             m_ActionRuntimes.Clear();
+        }
+
+        internal void ClearWorkspaces()
+        {
+            for (int i = 0; i < m_Workspaces.Length; i++)
+                m_Workspaces[i].Reset();
+        }
+
+        internal void ClearTimelineTransfers()
+        {
+            m_TimelineAdvances.Clear();
+            m_TimelineStops.Clear();
         }
 
         public CharacterBodyMotionBinding BodyMotionBinding { get; }

@@ -33,7 +33,6 @@ namespace ThirdPersonSimulation
         Float32PipelinePassRuntimeBase,
         ISimulationStepPassRuntime<Float32AbilityEvaluateReadPorts, Float32AbilityEvaluateWritePorts>
     {
-        readonly Float32GraphValueWorkspace[][] m_ValueWorkspaces;
         readonly Float32CharacterEvaluationResult[] m_Evaluations;
         readonly CharacterWorldSolveRequest[] m_Requests;
         readonly SimulationIngress[][] m_Ingress;
@@ -49,15 +48,6 @@ namespace ThirdPersonSimulation
             int actorCount = roster.Count;
             if (actorCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(roster));
-            m_ValueWorkspaces = new Float32GraphValueWorkspace[actorCount][];
-            for (int actorIndex = 0; actorIndex < actorCount; actorIndex++)
-            {
-                IReadOnlyList<Float32GameplayAbilityExecutionInstallation> abilities = roster[actorIndex].AbilityInstallations.Installations;
-                var values = new Float32GraphValueWorkspace[abilities.Count];
-                for (int abilityIndex = 0; abilityIndex < abilities.Count; abilityIndex++)
-                    values[abilityIndex] = new Float32GraphValueWorkspace(abilities[abilityIndex].Data, abilities[abilityIndex].Layout);
-                m_ValueWorkspaces[actorIndex] = values;
-            }
             m_Evaluations = new Float32CharacterEvaluationResult[actorCount];
             m_Requests = new CharacterWorldSolveRequest[actorCount];
             m_Ingress = new SimulationIngress[actorCount][];
@@ -97,7 +87,6 @@ namespace ThirdPersonSimulation
                     m_Evaluations[i] = Float32CharacterEvaluationRuntime.Evaluate(
                         readPorts.CharacterRuntime.Runtime,
                         actor,
-                        m_ValueWorkspaces[i],
                         state.Actors[i].State,
                         step.Tick,
                         input,

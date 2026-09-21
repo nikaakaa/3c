@@ -49,10 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
             if (node.Kind != Kind || !node.BoneId.IsValid ||
-                node.ModifyBoneOperations == ModifyBoneOperationMask.None ||
-                !Enum.IsDefined(
-                    typeof(ModifyBoneReferenceSpace),
-                    node.ModifyBoneReferenceSpace))
+                node.ModifyBoneOperations == ModifyBoneOperationMask.None)
             {
                 throw new InvalidOperationException(
                     $"Modify Bone handler '{NodeId}' has invalid node configuration.");

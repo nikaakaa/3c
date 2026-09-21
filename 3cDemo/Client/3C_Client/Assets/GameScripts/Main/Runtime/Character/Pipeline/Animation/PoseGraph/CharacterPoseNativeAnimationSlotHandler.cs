@@ -72,10 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ICharacterPoseNativeAnimationSlotSource source,
             CharacterPoseNativeNodePoseBuffer outputBuffer)
         {
-            if (!nodeId.IsValid || !slotId.IsValid ||
-                !Enum.IsDefined(
-                    typeof(AnimationSelectionAvailabilityPolicy),
-                    availability))
+            if (!nodeId.IsValid || !slotId.IsValid)
             {
                 throw new ArgumentException(
                     "Pose native Animation Slot handler identity is invalid.");

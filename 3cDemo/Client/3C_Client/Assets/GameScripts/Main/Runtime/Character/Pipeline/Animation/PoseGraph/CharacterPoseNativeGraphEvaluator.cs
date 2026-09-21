@@ -87,7 +87,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native node handler is missing.",
                     nameof(handler));
             if (!handler.NodeId.IsValid ||
-                !Enum.IsDefined(typeof(CharacterPoseNodeKind), handler.Kind) ||
                 !m_Handlers.TryAdd(handler.NodeId, handler))
             {
                 handler.Dispose();

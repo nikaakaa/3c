@@ -25,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeNodeHandlerCreator creator)
         {
             if (m_Sealed ||
-                !Enum.IsDefined(typeof(CharacterPoseNodeKind), kind) ||
                 creator == null ||
                 IsBuiltin(kind) ||
                 !m_Creators.TryAdd(kind, creator))

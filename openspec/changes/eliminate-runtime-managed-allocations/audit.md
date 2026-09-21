@@ -2086,3 +2086,12 @@
 - 删除上述六类 handler 构造器及 `CharacterPoseNativeInstanceContext` 的第二次 Rig schema 遍历；保留 Rig 与场景 binding 的身份比对、节点配置/资源类型、骨骼索引、buffer 形状、曲线和输入变量等正式链路约束。
 - 没有改变 handler 创建顺序、资源释放、Attach/Start、帧 Begin/Prepare/Evaluate/Commit/Discard 或 publication 事务；删除的是同一份静态 Rig 配置在运行构造链的重复读取和校验。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。
+
+## 2026-09-21 Pose 运行链枚举反射清理
+
+对应 tasks.md 的 7.23。
+
+- `CharacterPoseNativeAnimationSlotHandler` 的 availability 在 authoring node definition、输入契约和 source binding 中已定型，handler 初始化还会比较 graph node 与 source 的同值关系；删除构造器的 `Enum.IsDefined`，保留 identity、source availability 和 graph node 一致性校验。
+- handler registry 的 kind 来自正式注册表常量，evaluator 的 kind 来自正式 handler 实现，并在初始化阶段再次比较 graph node kind；删除两处 `CharacterPoseNodeKind` 反射检查，保留 sealed、builtin、creator、重复 NodeId、handler identity 和 dispose 语义。
+- Modify Bone 的 reference space 已由 authoring node definition 校验，运行 handler 仍保留节点类型、BoneId、操作掩码和 Rig 骨骼索引检查；删除 `Enum.IsDefined`，不改变 Local/Mesh 的求解分支。
+- 这些修改只移除静态枚举反射/装箱，不改变节点创建顺序、source 准备、handler 生命周期和每帧事务。`ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。

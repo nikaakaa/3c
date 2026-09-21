@@ -390,3 +390,5 @@
 - [x] 7.21 Pose Graph 在 Prepare 已完成完整拓扑、端口和边界校验后，实例初始化直接消费 PreparedBinding，删除 InitializeGraph 的第二次整图校验；保留端口表构造、handler 绑定和运行帧事务校验
 
 - [x] 7.22 Pose handler 与 InstanceContext 直接消费已由正式入口校验的 Rig，删除构造阶段重复 Rig schema 校验；保留 binding 身份、节点配置、资源形状和运行帧事务校验
+
+- [x] 7.23 Pose Animation Slot、handler registry/evaluator、Modify Bone 已由 authoring/content preparation 定型的枚举不再在正式运行链调用 Enum.IsDefined；保留来源一致性、节点身份、重复注册和骨骼索引校验

@@ -3185,3 +3185,11 @@
 
 - `RollbackCanonicalInputAssembler.FirstCanonicalTick` 原先遍历 `m_Canonical.Keys`，每淘汰一个 canonical Tick 都会创建一只 `KeyCollection`。现在直接枚举 `SortedDictionary` 的 `KeyValuePair` 并返回首项 key；SortedDictionary 的升序、容量裁剪、explicit 计数清理和 history floor 推进不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
+## 2026-09-22 Rollback StateHash 旧历史容器删除
+
+对应 tasks.md 的 5.2，新增 5.127 作为独立小步；5.2 保持未勾选。
+
+- 全项目源码检索确认 `RollbackStateHashHistory` 已无构造或引用；它是本地 StateHash 改为直接编码 canonical payload 后留下的旧 per-peer report 保留容器。现在删除该类，不为其补 roster 容量、reset 或 lease 合同。
+- 仍被正式链路使用的 `RollbackInputHistory` 和 `RollbackSnapshotHistory` 保留；`RollbackInputHistory.RemoveThrough` 继续服务这两条 bounded history。网络解码后的 `RollbackStateHashReport` 也不受影响。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。

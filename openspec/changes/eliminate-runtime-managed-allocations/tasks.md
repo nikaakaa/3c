@@ -387,6 +387,7 @@
 - [x] 5.124 Rollback Hash Egress 直接把本地 snapshot 编码为 canonical StateHash payload，删除只为编码创建的 RollbackStateHashReport 和 RollbackActorHash 数组；网络报告对象、canonical 校验、字段顺序和接收侧所有权不变，report/snapshot 编码共用同一 core
 - [x] 5.125 Rollback Output Committer 的生命周期统计和 Actor/tick 已存在槽位扫描直接枚举 Dictionary KeyValuePair，删除每次读取的 Values／Keys 视图对象；扫描顺序、排序和事务结果不变
 - [x] 5.126 Rollback canonical input history 裁剪直接枚举 SortedDictionary KeyValuePair 取最旧 Tick，删除每次淘汰的 Keys 视图对象；保留容量、淘汰顺序和 explicit 计数清理
+- [x] 5.127 删除无消费者的 RollbackStateHashHistory 旧报告保留容器，state hash 保留链路统一为 snapshot history 和 canonical payload egress；input/snapshot history 裁剪合同不变
 
 ## 6. UI、资源、渲染和生命周期
 

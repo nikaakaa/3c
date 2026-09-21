@@ -277,6 +277,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly TickQueue<PresentationCommand> m_Commands = new TickQueue<PresentationCommand>();
         readonly TickQueue<ServerAuthoritativeReliableEvent> m_Reliable = new TickQueue<ServerAuthoritativeReliableEvent>();
         readonly List<CharacterPresentationBodyInterval> m_BodyIntervals = new List<CharacterPresentationBodyInterval>();
+        readonly Action<PresentationCommand> m_PublishCommand;
+        readonly Action<ServerAuthoritativeReliableEvent> m_PublishReliable;
 
         ulong m_LastReliableSequence;
         EventId m_LastReliableEventId;
@@ -312,6 +314,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             m_Release = release ?? throw new ArgumentNullException(nameof(release));
+            m_PublishCommand = PublishCommand;
+            m_PublishReliable = Publish;
             m_PresentationTarget = new ServerAuthoritativeRemotePresentationFrameTarget(this, m_Runtime);
         }
 
@@ -435,27 +439,13 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         void PublishDue(ulong sampleTick, ulong reliableTick)
         {
             m_Gameplay.BeginTick();
-            PublishDue(
-                m_Commands,
-                sampleTick,
-                value => m_Runtime.Publish(CharacterPresentationCommand.FromFloat32(value)));
-            PublishDue(m_Reliable, reliableTick, Publish);
+            m_Commands.PublishDue(sampleTick, m_PublishCommand);
+            m_Reliable.PublishDue(reliableTick, m_PublishReliable);
         }
 
-        static void PublishDue<T>(TickQueue<T> queue, ulong authorityTick, Action<T> publish)
-        {
-            var due = new List<ulong>();
-            foreach (KeyValuePair<ulong, List<T>> pair in queue)
-            {
-                if (pair.Key > authorityTick)
-                    break;
-                for (int i = 0; i < pair.Value.Count; i++)
-                    publish(pair.Value[i]);
-                due.Add(pair.Key);
-            }
-            for (int i = 0; i < due.Count; i++)
-                queue.Remove(due[i]);
-        }
+        void PublishCommand(PresentationCommand value) =>
+            m_Runtime.Publish(CharacterPresentationCommand.FromFloat32(value));
+
 
         static void Enqueue<T>(TickQueue<T> queue, ulong tick, T value) => queue.Enqueue(tick, value);
 
@@ -492,8 +482,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 get
                 {
                     int count = 0;
-                    foreach (List<T> values in m_Entries.Values)
-                        count = checked(count + values.Count);
+                    foreach (KeyValuePair<ulong, List<T>> pair in m_Entries)
+                        count = checked(count + pair.Value.Count);
                     return count;
                 }
             }
@@ -531,10 +521,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
             public void Clear()
             {
-                foreach (List<T> values in m_Entries.Values)
+                foreach (KeyValuePair<ulong, List<T>> pair in m_Entries)
                 {
-                    values.Clear();
-                    m_FreeValues.Push(values);
+                    pair.Value.Clear();
+                    m_FreeValues.Push(pair.Value);
                 }
                 m_Entries.Clear();
                 m_DueTicks.Clear();

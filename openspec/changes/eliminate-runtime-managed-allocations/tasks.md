@@ -352,6 +352,7 @@
 - [x] 5.89 Rollback schedule 直接消费 Fixed Character Runtime 已排序的 roster descriptor，删除每 outer tick 的 actor 数组复制、descriptor 重建和 roster hash 重算
 - [x] 5.90 Rollback input／snapshot／state-hash 历史边界与确认裁剪直接使用具体 KeyValuePair enumerator，删除 SortedDictionary Keys／Values 包装集合
 - [x] 5.91 RollbackOutputCommitter 的工作集合与正式／tentative 输出修正表按 MaximumOutputRecords 一次准备，删除重放窗口内的集合底层存储扩容
+- [x] 5.92 远端表现 Target 直接复用 TickQueue 到期 workspace，发布委托固定在 target 生命周期，删除每帧 due List／闭包和诊断 Values 包装
 
 ## 6. UI、资源、渲染和生命周期
 

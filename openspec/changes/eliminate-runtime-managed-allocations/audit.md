@@ -2521,3 +2521,12 @@
 - 该容量继续是 registry 的唯一上限和校验来源；工作集合与修正表不引入第二份配置。重放窗口内同一容量到达后只会在既有的 capacity 校验点报错，不在热点路径上经历字典和列表扩容。
 - 正式与 tentative Dictionary 保留成功提交后的引用交换语义，因此不声明 readonly；交换前清空、交换后清理的原子边界不变。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 远端表现到期发布去包装
+
+对应 tasks.md 的 5.4，本步处理 Remote Presentation Target 调用侧的到期发布，整项保持未勾选。
+
+- `TickQueue` 已有跨帧到期的 tick workspace，但调用侧仍每帧新建 `due` List，再逐个删除到期 tick；现在 Target 直接调用 `TickQueue.PublishDue`，到期的 values list 仍归还队列内部 free stack。
+- 表现命令和可靠事件的发布委托固定为 Target 生命周期字段，删除每帧两个 lambda；发布顺序保持先表现命令、后可靠事件，重复 reliable sequence 过滤和 Camera producer 检查不变。
+- 诊断统计和 Dispose 清理改为直接遍历 SortedDictionary KeyValuePair，删除 Count 与 Clear 的 Values 包装。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误、34 个既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

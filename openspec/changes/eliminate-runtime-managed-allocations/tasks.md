@@ -437,6 +437,7 @@
 - [x] 5.174 Float32 remote body selection、actor checkpoint 和 timeline checkpoint 改为 owned array 合同；capture、select、restore 解码删除中间 List、Values 视图和只读包装
 - [x] 5.175 Float32 Authority tick schedule 直接消费 Character Runtime 的 locked roster descriptor，删除 Pending 和 Executable 计划每次重建 ActorId 数组与 roster descriptor 的分配
 - [x] 5.176 Float32 Simulation Step 新增与 Fixed 一致的 owned inputs 入口；Authority tick schedule 使用精确 Actor input/Actor 数组，删除 List 中转和 Step 构造复制
+- [x] 5.177 Float32 Authority held input 改为可更新工作对象；同一 Actor 的更新 sequence 直接复用 holder，删除每条新输入的对象替换分配
 
 ## 6. UI、资源、渲染和生命周期
 

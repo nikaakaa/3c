@@ -240,11 +240,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 {
                     continue;
                 }
-                m_Held[input.ActorId] = new HeldAuthorityInput(
-                    input.ActorId,
-                    input.InputSequence,
-                    input.Input,
-                    authorityTick);
+                if (previous == null)
+                    m_Held.Add(input.ActorId, new HeldAuthorityInput(input.ActorId, input.InputSequence, input.Input, authorityTick));
+                else
+                    previous.Reset(input.ActorId, input.InputSequence, input.Input, authorityTick);
             }
         }
 
@@ -373,6 +372,22 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 SimulationTick acceptedTick,
                 ulong lastConsumedTick = 0)
             {
+                Reset(actorId, inputSequence, input, acceptedTick, lastConsumedTick);
+            }
+
+            public ActorId ActorId { get; private set; }
+            public ulong InputSequence { get; private set; }
+            public SimulationInput Input { get; private set; }
+            public SimulationTick AcceptedTick { get; private set; }
+            public ulong LastConsumedTick { get; private set; }
+
+            public void Reset(
+                ActorId actorId,
+                ulong inputSequence,
+                SimulationInput input,
+                SimulationTick acceptedTick,
+                ulong lastConsumedTick = 0)
+            {
                 ActorId = actorId;
                 InputSequence = inputSequence;
                 Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -380,11 +395,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 LastConsumedTick = lastConsumedTick;
             }
 
-            public ActorId ActorId { get; }
-            public ulong InputSequence { get; }
-            public SimulationInput Input { get; }
-            public SimulationTick AcceptedTick { get; }
-            public ulong LastConsumedTick { get; private set; }
             public void MarkConsumed(SimulationTick tick) => LastConsumedTick = tick.Value;
         }
     }

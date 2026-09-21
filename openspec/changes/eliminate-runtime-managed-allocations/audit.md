@@ -3595,3 +3595,11 @@
 - Authority tick schedule 不再把每个 Actor input 先塞进 `List` 再由 Step 构造复制，而是按 roster 数量填充精确 inputs 和 owned Actor 数组后直接转交。原 IEnumerable 构造继续服务仍需从长期 batch 复制的 Local 和 Prediction 路径。
 - Pending 缺输入时不在本轮分配 Step inputs；Executable 诊断循环、Actor 排序、重复校验、roster 绑定和 ExecutionPlan 语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Authority held input 复用
+
+对应 tasks.md 的 5.5，新增 5.177 作为独立小步；5.5 保持未勾选。
+
+- `HeldAuthorityInput` 的 ActorId、sequence、input、accepted tick 和 consumed tick 改为正式可更新状态，构造和更新统一走 `Reset`。`Accept` 收到同一 Actor 更新 sequence 时复用现有 holder，只在首次出现时新建；旧输入、旧 sequence 和旧消费状态被一次替换。
+- checkpoint capture 读取当前字段，restore 仍按 canonical 数据新建 holder；过期 sequence 继续跳过，BuildInput、fresh/reuse 判断和 MarkConsumed 语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

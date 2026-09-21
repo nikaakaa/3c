@@ -2207,6 +2207,15 @@
 - 不改变各自的 Pose 混合/叠加计算、连续性 identity、Native 双页、ValidatePending、Commit/Discard 和提交页索引；只删除稳态托管包装分配。
 - 当前完整编译仍受生成 csproj 的删除文件引用及依赖 DLL 文件锁影响；未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Entry Pose 与 Linked Pose 输出包装复用
+
+对应 tasks.md 的 7.40。
+
+- `CharacterPoseNativeEntryPoseHandler` 与 `CharacterPoseNativeLinkedPoseHandler` 原先在每个 source 复制结果上创建新的 Local Pose 包装对象。
+- 两个 handler 现在复用 `CharacterPoseNativeLocalPoseValue`；EvaluateOutput 只接受当前 completion identity 的缓存对象，ValidatePending 仍会在本帧没有有效输出时失败。
+- 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

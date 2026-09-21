@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
@@ -307,5 +308,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string SenderPeerId { get; }
         public ulong Sequence { get; }
         public IRollbackProtocolPayload Payload { get; }
+    }
+
+    public readonly struct RollbackProtocolExpectedIdentity
+    {
+        public RollbackProtocolExpectedIdentity(string sessionId, string senderPeerId)
+        {
+            SessionId = SimulationIdentity.Require(sessionId, nameof(sessionId));
+            SenderPeerId = SimulationIdentity.Require(senderPeerId, nameof(senderPeerId));
+            SessionUtf8 = Encoding.UTF8.GetBytes(SessionId);
+            SenderUtf8 = Encoding.UTF8.GetBytes(SenderPeerId);
+        }
+
+        public string SessionId { get; }
+        public string SenderPeerId { get; }
+        public ReadOnlyMemory<byte> SessionUtf8 { get; }
+        public ReadOnlyMemory<byte> SenderUtf8 { get; }
     }
 }

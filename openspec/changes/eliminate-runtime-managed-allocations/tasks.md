@@ -366,6 +366,7 @@
 - [x] 5.103 Rollback received datagram 改为 assembly 内只读引用记录，接收队列不再为每条收包创建 wrapper 对象；接收 packet、payload 和真实 UDP endpoint clone 继续独立持有
 - [x] 5.104 Rollback Datagram Endpoint 按接收队列容量复用真实来源 endpoint 记录，消费完成后显式归还；Peer 和 Relay 异常路径同步归还，新建 Channel 仍独立 clone
 - [x] 5.105 Rollback Datagram Endpoint 池化接收 packet 和 payload buffer，Codec 直接重置租用对象；完整重组、ACK 和重复完成后显式归还，incomplete 分片继续由 reassembly 持有
+- [x] 5.106 Protocol envelope header 使用 Channel 准备的 identity binding 比较 wire UTF-8，命中预期身份时复用同一 string；payload 字符串和 Datagram header 身份仍在后续小步
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -122,6 +122,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly int m_MaximumFragmentPayloadBytes;
         readonly CanonicalWriter m_EncodeWriter;
         readonly CanonicalWriter m_DecodeScratch;
+        readonly RollbackProtocolExpectedIdentity m_ExpectedProtocolIdentity;
         readonly byte[] m_AssembledPayload;
         readonly byte[] m_UnreliablePayload;
         RollbackDatagramPacket m_Acknowledgement;
@@ -140,6 +141,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             m_LocalPeerId = RollbackEndpointIdentity.Require(localPeerId, nameof(localPeerId));
             m_RemotePeerId = RollbackEndpointIdentity.Require(remotePeerId, nameof(remotePeerId));
+            m_ExpectedProtocolIdentity = new RollbackProtocolExpectedIdentity(m_Definition.SessionId, m_RemotePeerId);
             m_RemoteEndPoint = remoteEndPoint == null
                 ? throw new ArgumentNullException(nameof(remoteEndPoint))
                 : new IPEndPoint(remoteEndPoint.Address, remoteEndPoint.Port);
@@ -320,7 +322,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ReturnReassembly(assembly);
             RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(
                 m_DecodeScratch,
-                new ArraySegment<byte>(m_AssembledPayload, 0, assembledBytes));
+                new ArraySegment<byte>(m_AssembledPayload, 0, assembledBytes),
+                m_ExpectedProtocolIdentity);
             if (!string.Equals(envelope.SessionId, m_Definition.SessionId, StringComparison.Ordinal) ||
                 !string.Equals(envelope.SenderPeerId, m_RemotePeerId, StringComparison.Ordinal) ||
                 envelope.Sequence != packet.MessageSequence)

@@ -266,6 +266,15 @@ namespace ThirdPersonSimulation
             m_Offset += length;
             return value;
         }
+
+        public ArraySegment<byte> ReadUtf8Segment()
+        {
+            int length = ReadLength();
+            Require(length);
+            var value = new ArraySegment<byte>(m_Bytes, m_Offset, length);
+            m_Offset += length;
+            return value;
+        }
         public byte[] ReadBytes()
         {
             int length = ReadLength();

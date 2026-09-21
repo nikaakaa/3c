@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
@@ -58,15 +59,18 @@ namespace ThirdPersonSimulation.DeterministicRollback
             WritePayload(writer, payload);
         }
 
-        public static RollbackProtocolEnvelope Read(CanonicalWriter canonicalScratch, ArraySegment<byte> bytes)
+        public static RollbackProtocolEnvelope Read(
+            CanonicalWriter canonicalScratch,
+            ArraySegment<byte> bytes,
+            in RollbackProtocolExpectedIdentity expectedIdentity)
         {
             if (canonicalScratch == null)
                 throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback protocol envelope header is invalid.");
-            string sessionId = reader.ReadString();
-            string senderPeerId = reader.ReadString();
+            string sessionId = ReadIdentity(reader, expectedIdentity.SessionId, expectedIdentity.SessionUtf8.Span);
+            string senderPeerId = ReadIdentity(reader, expectedIdentity.SenderPeerId, expectedIdentity.SenderUtf8.Span);
             ulong sequence = reader.ReadUInt64();
             RollbackProtocolMessageKind kind = ReadKind(reader.ReadByte());
             IRollbackProtocolPayload payload = ReadPayload(reader, kind, canonicalScratch);
@@ -82,6 +86,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback protocol envelope is not canonical.");
             return envelope;
+        }
+
+        static string ReadIdentity(CanonicalReader reader, string expected, ReadOnlySpan<byte> expectedUtf8)
+        {
+            ArraySegment<byte> value = reader.ReadUtf8Segment();
+            return value.AsSpan().SequenceEqual(expectedUtf8)
+                ? expected
+                : Encoding.UTF8.GetString(value.Array, value.Offset, value.Count);
         }
 
         public static void WriteCanonicalPayload(CanonicalWriter writer, IRollbackProtocolPayload payload)

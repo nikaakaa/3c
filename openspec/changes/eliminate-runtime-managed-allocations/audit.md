@@ -2650,3 +2650,11 @@
 - Endpoint 在无效包和队列溢出时归还租用对象，Dispose 清空接收队列时同步归还。Channel 只在明确终点归还：ACK 处理完成、重复 message 已完成、完整重组复制到组装 buffer 后逐片归还；incomplete 分片继续由 `FragmentAssembly` 持有，不提前复用。
 - `FragmentAssembly.FragmentCount` 只放宽为 assembly 内读取，供外层完成路径枚举 packet。identity string 仍每次解码分配；发送 reliable pending 的自有 packet 不进入接收池。
 - Endpoint 工程完整依赖构建当前被并行 Timeline 的 `TimelineControlContracts.cs` CS0050 阻断，该文件未修改。`ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 改用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚协议 envelope 身份字符串复用
+
+对应 tasks.md 的 5.4，本步只处理 Protocol envelope header 的 Session 和 Sender string，整项保持未勾选。
+
+- 完整消息解码原先每条消息都为 Session 和 Sender 新建 string；Channel 已绑定唯一预期身份。现在 Channel 构造期准备 `RollbackProtocolExpectedIdentity`，Codec 用 `CanonicalReader.ReadUtf8Segment` 读取 wire UTF-8 并与预期字节比较，命中时直接复用同一 string；wire 格式和 canonical 重编码不变。
+- 身份不匹配时仍解码实际 string，进入原有 envelope 身份校验和异常；payload 内的 Peer、Actor、哈希等字符串继续独立分配。identity binding 的 UTF-8 数据以 `ReadOnlyMemory<byte>` 暴露，不开放可变数组。
+- Endpoint 工程完整依赖构建仍被并行 Timeline 的 CS0050 阻断。用临时 Core audit 工程把含新 CanonicalReader 的源码编译成 Core DLL（临时副本只将并行文件的冲突方法收窄为 internal，业务源码未改），随后 `ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 均用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
@@ -31,7 +30,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedPipelinePassRuntimeBase,
         ISimulationEgressPassRuntime<FixedLocalImmediateOutputReadPorts, FixedLocalImmediateOutputWritePorts>
     {
-        readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
+        SimulationOutputDisposition[] m_Dispositions = Array.Empty<SimulationOutputDisposition>();
 
         public FixedLocalImmediateOutputPassRuntime(SimulationPipelinePassDescriptor descriptor)
             : base(descriptor)
@@ -44,34 +43,43 @@ namespace ThirdPersonSimulation.Fixed
             FixedLocalImmediateOutputWritePorts writePorts)
         {
             RequireExecution();
-            m_Dispositions.Clear();
             try
             {
+                int dispositionCount = 0;
+                for (int i = 0; i < readPorts.Results.Count; i++)
+                {
+                    SimulationActorTickResult result = readPorts.Results.Get(i).Value;
+                    dispositionCount += result.GameplayFacts.Count + result.PresentationCommands.Count;
+                }
+
+                m_Dispositions = new SimulationOutputDisposition[dispositionCount];
+                int dispositionIndex = 0;
                 for (int i = 0; i < readPorts.Results.Count; i++)
                 {
                     SimulationActorTickResult result = readPorts.Results.Get(i).Value;
                     for (int eventIndex = 0; eventIndex < result.GameplayFacts.Count; eventIndex++)
                     {
-                        m_Dispositions.Add(new SimulationOutputDisposition(
+                        m_Dispositions[dispositionIndex++] = new SimulationOutputDisposition(
                             result.GameplayFacts[eventIndex].Header.EventId,
                             result.GameplayFacts[eventIndex].Header.ActorId,
-                            SimulationOutputDispositionKind.Publish));
+                            SimulationOutputDispositionKind.Publish);
                     }
                     for (int eventIndex = 0; eventIndex < result.PresentationCommands.Count; eventIndex++)
                     {
-                        m_Dispositions.Add(new SimulationOutputDisposition(
+                        m_Dispositions[dispositionIndex++] = new SimulationOutputDisposition(
                             result.PresentationCommands[eventIndex].Header.EventId,
                             result.PresentationCommands[eventIndex].Header.ActorId,
-                            SimulationOutputDispositionKind.Publish));
+                            SimulationOutputDispositionKind.Publish);
                     }
                 }
-                writePorts.Dispositions.Write(new SimulationPipelineOutputDispositionSet(
+
+                writePorts.Dispositions.Write(SimulationPipelineOutputDispositionSet.FromOwnedDispositions(
                     context.TransactionIdentity,
                     m_Dispositions));
             }
             finally
             {
-                m_Dispositions.Clear();
+                m_Dispositions = Array.Empty<SimulationOutputDisposition>();
             }
         }
     }

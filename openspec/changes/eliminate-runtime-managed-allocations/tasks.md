@@ -452,6 +452,7 @@
 - [x] 5.189 Float32 Remote presentation body stream 用私有 array-backed scratch 生成 intervals，保留 IReadOnlyList 边界；删除 List 收集和扩容壳
 - [x] 5.190 两数值域 Ability Evaluate 的 per-Actor ingress 改为常驻数组和显式 count；Evaluation 内部分发改为 array/count 边界，删除 List 外壳和 Clear 临时集合
 - [x] 5.191 两数值域 Simulation Committer 的 per-Actor outputs 改为常驻数组和显式 count，用常驻类型化 comparer 排序；删除 List 外壳和 Clear 临时集合
+- [x] 5.192 Fixed Local Immediate output 先统计后填充精确 dispositions，并直接进入 owned disposition set；删除 List 收集、Clear 壳和构造复制，补齐 Float32 既有正式链路
 
 ## 6. UI、资源、渲染和生命周期
 

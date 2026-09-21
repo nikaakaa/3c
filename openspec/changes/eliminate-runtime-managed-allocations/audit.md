@@ -3715,3 +3715,11 @@
 - Fixed 和 Float32 Simulation Committer 的每个 Actor 输出改为常驻可增长 `OrderedOutput[]` 加显式 count，容量不足时倍增；处理下一个 Actor 前清空上一轮使用区间。GameplayFact、PresentationCommand、Suppress、排序和异常包装语义不变。
 - `OutputComparer` 改为 Committer 常驻的类型化 comparer，`Array.Sort` 按 count 排序；每 Actor 输出的 `List`、`Clear` 临时壳和排序方法组委托删除。disposition 缺失、Actor 不匹配和提交异常路径保持原样。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Fixed local immediate dispositions 收口
+
+对应 tasks.md 的 5.5，新增 5.192 作为独立小步；5.5 保持未勾选。
+
+- Fixed Local Immediate Output 先统计所有 Actor 的 GameplayFact 和 PresentationCommand 数量，再填充精确 `SimulationOutputDisposition[]`，用 Float32 已有的 `FromOwnedDispositions` 正式入口转交。事务身份、Publish 顺序、owned array 排序和 Egress 消费语义不变。
+- 每 tick 的 disposition `List`、`Add` 扩容、`Clear` 临时壳和构造期二次复制删除；finally 继续清空本地 owned array 引用。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -156,7 +156,8 @@ namespace ThirdPersonCharacter.Control.Rules
             bool result = transitionId switch
             {
                 "IdleToWalkStart" => MoveAbove(m_Read),
-                "WalkStartToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 1.1d) && MoveAbove(m_Read),
+                "WalkStartToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 1.1d) &&
+                    !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "WalkLoopToWalkStopping" => MoveBelow(m_Read),
                 "WalkStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
                 "RunLoopToRunStopping" => MoveBelow(m_Read),

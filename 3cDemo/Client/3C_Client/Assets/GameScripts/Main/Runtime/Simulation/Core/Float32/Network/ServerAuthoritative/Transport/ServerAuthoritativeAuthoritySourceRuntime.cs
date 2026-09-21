@@ -177,7 +177,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 throw new InvalidOperationException("Authority Source accepts only canonical AuthorityReplication egress.");
             }
-            AuthorityReplicationBatch batch = ServerAuthoritativeEgressCodec.ReadAuthorityReplication(record.CopyPayload());
+            AuthorityReplicationBatch batch = ServerAuthoritativeEgressCodec.ReadAuthorityReplication(record.Payload);
             if (batch.AuthorityTick.Value != checked(m_LatestAuthorityTick + 1))
                 throw new InvalidOperationException("Authority replication Tick is not contiguous with the Authority Source clock.");
             m_LatestAuthorityTick = batch.AuthorityTick.Value;

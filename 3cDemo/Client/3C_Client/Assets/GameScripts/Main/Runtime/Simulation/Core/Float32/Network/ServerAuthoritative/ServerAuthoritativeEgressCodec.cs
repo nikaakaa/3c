@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, input.Input);
         }
 
-        public static OwnerCanonicalInputBatch ReadOwnerInput(byte[] bytes)
+        public static OwnerCanonicalInputBatch ReadOwnerInput(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, InputMagic, InputVersion, "owner input");
             var actorId = new ActorId(reader.ReadString());
@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var result = new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
             using var writer = new CanonicalWriter();
             WriteOwnerInput(writer, result);
-            RequireCanonical(bytes, writer, "owner input");
+            RequireCanonical(bytes.Span, writer, "owner input");
             return result;
         }
 
@@ -87,7 +87,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 WriteLengthPrefixedRemotePresentation(writer, batch.RemotePresentation[i]);
         }
 
-        public static AuthorityReplicationBatch ReadAuthorityReplication(byte[] bytes)
+        public static AuthorityReplicationBatch ReadAuthorityReplication(ReadOnlyMemory<byte> bytes)
         {
             CanonicalReader reader = Reader(bytes, ReplicationMagic, ReplicationVersion, "authority replication");
             var tick = new SimulationTick(reader.ReadUInt64());
@@ -107,7 +107,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var result = new AuthorityReplicationBatch(tick, acks, baselines, remote);
             using var writer = new CanonicalWriter();
             WriteAuthorityReplication(writer, result);
-            RequireCanonical(bytes, writer, "authority replication");
+            RequireCanonical(bytes.Span, writer, "authority replication");
             return result;
         }
 

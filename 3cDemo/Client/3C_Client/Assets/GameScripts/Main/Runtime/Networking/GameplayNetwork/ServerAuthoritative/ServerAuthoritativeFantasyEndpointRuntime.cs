@@ -813,7 +813,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             {
                 throw new InvalidOperationException("Prediction Endpoint accepts only canonical ClientInput egress.");
             }
-            OwnerCanonicalInputBatch input = ServerAuthoritativeEgressCodec.ReadOwnerInput(record.CopyPayload());
+            OwnerCanonicalInputBatch input = ServerAuthoritativeEgressCodec.ReadOwnerInput(record.Payload);
             if (input.ActorId != Process.ActorId)
                 throw new InvalidOperationException("Prediction input egress does not belong to the local owner ActorId.");
             Datagram.SendPredictionCommand(input, Policy);

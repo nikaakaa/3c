@@ -81,7 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PageIndex = m_CommittedPageIndex < 0
                 ? 0
                 : 1 - m_CommittedPageIndex;
-            m_Output = null;
         }
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
@@ -100,7 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "result")
                 throw new InvalidOperationException(
                     $"Modify Bone '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue inputValue =
@@ -150,7 +150,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativePoseReadBinding(
                     in m_WriteBinding,
                     CharacterPoseSpace.Component);
-            m_Output = new CharacterPoseNativeComponentPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeComponentPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -180,7 +183,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage)
         {
             RequireAlive();
-            if (m_Output == null)
+            if (m_Output == null ||
+                m_Output.CompletionIdentity != lineage.CompletionIdentity)
                 return;
             if (m_Output.Native.CompletionIdentity != lineage.CompletionIdentity ||
                 m_Output.Native.Space != CharacterPoseSpace.Component ||
@@ -199,7 +203,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -293,7 +298,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_FrameOpen = false;
-            m_Output = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

@@ -2180,6 +2180,15 @@
 - handler 不再在 BeginFrame/ClearFrame 丢弃包装对象，以 completion identity 区分当前 frame 输出；source pose、Native 双页、ValidatePending 和 CommitFrame 的事务顺序未改变。
 - 本步只收 Motion Matching Pose handler，不把其他 Pose 节点的输出包装迁移混入同一提交。当前完整编译仍受用户删除文件和 Unity 生成 csproj 未刷新阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Modify Bone Component Pose 输出包装复用
+
+对应 tasks.md 的 7.37。
+
+- `CharacterPoseNativeModifyBoneHandler` 原先在每次 Component Pose 输出完成后创建新的 `CharacterPoseNativeComponentPoseValue`，对象只服务当前 frame 的 graph output 读取。
+- `CharacterPoseNativeComponentPoseValue.Reuse` 首次创建后复用同一包装对象；更新前保持 producer identity、Native binding、Component space 和 availability 校验，失败时不修改上一结果。
+- handler 以 completion identity 判断当前输出，保留 Bone scratch、Native 双页、ValidatePending、Commit/Discard 和提交页索引语义；BeginFrame/ClearFrame 不再丢弃包装对象。
+- 本步只收 Modify Bone，不改变其它 Component Pose 节点。当前完整编译仍受生成 csproj 的删除文件引用阻断；未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 
 ## 2026-09-21 SourceCatalog 死接口清理
 

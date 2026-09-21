@@ -194,14 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding native)
             : base(producerNodeId, native.CompletionIdentity)
         {
-            if (!native.IsValid ||
-                native.Space != CharacterPoseSpace.Component ||
-                native.Availability[0] == AnimationPoseAvailability.Invalid)
-            {
-                throw new ArgumentException(
-                    "Pose native component value is invalid.",
-                    nameof(native));
-            }
+            ValidateNative(producerNodeId, in native);
             Native = native;
         }
 
@@ -215,8 +208,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Pose = pose;
         }
 
-        internal CharacterPoseNativePoseReadBinding Native { get; }
-        internal AnimationPoseValue Pose { get; }
+        internal CharacterPoseNativePoseReadBinding Native { get; private set; }
+        internal AnimationPoseValue Pose { get; private set; }
+
+        internal static CharacterPoseNativeComponentPoseValue Reuse(
+            CharacterPoseNativeComponentPoseValue value,
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (value == null)
+                return new CharacterPoseNativeComponentPoseValue(producerNodeId, in native);
+            value.Refresh(producerNodeId, in native);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            ValidateNative(producerNodeId, in native);
+            SetIdentity(producerNodeId, native.CompletionIdentity);
+            Native = native;
+            Pose = default;
+        }
+
+        static void ValidateNative(
+            PoseNodeId producerNodeId,
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (!producerNodeId.IsValid || native.CompletionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!native.IsValid ||
+                native.Space != CharacterPoseSpace.Component ||
+                native.Availability[0] == AnimationPoseAvailability.Invalid)
+            {
+                throw new ArgumentException(
+                    "Pose native component value is invalid.",
+                    nameof(native));
+            }
+        }
     }
 
     internal sealed class CharacterPoseNativeParameterValue : CharacterPoseNativePortValue

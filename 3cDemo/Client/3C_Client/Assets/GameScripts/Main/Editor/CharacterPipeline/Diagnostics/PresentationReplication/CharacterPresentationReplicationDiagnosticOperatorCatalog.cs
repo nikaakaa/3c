@@ -16,10 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             registry.Register(
                 new CharacterPresentationCameraPlanContinuityOperator());
             registry.Register(
-                new CharacterPresentationCameraCueLifecycleOperator());
-            registry.Register(
-                new CharacterPresentationCameraCueRoutingOperator());
-            registry.Register(
                 new CharacterPresentationCameraEffectLifecycleOperator());
             return registry;
         }

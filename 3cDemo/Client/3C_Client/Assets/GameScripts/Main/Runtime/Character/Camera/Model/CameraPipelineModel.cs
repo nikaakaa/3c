@@ -27,14 +27,4 @@ namespace ThirdPersonCamera
         HoldUntilSourceEnds
     }
 
-    public enum CameraCueKind
-    {
-        Shake,
-        FovKick,
-        Recoil,
-        CollisionCorrection,
-        Custom,
-        Override,
-        Shot
-    }
 }

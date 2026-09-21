@@ -661,3 +661,29 @@
 - 异常、动作事实缺失、Pose 评估失败和正常返回都沿原 finally 统一执行 Pose command、clock frame、Timeline、Camera 与桥接候选的 Discard；成功路径仍由原 Pose Commit、Timeline Commit 和表现帧 Commit 分段接受，没有新增时钟或第二队列。
 - 该批只收口调用顺序和事务寿命，动画策略仍由 `CommittedFollowPresentationClockCoordinator.ProjectSample` 按其正式 Action sample history 投影，尚未证明动画、Timeline Marker、Camera 已消费同一份最终秒数结果，因此 5.1–5.3 继续不勾选。
 - `Assembly-CSharp.csproj` 编译通过：146 warnings、0 errors；随后已执行 `dotnet build-server shutdown`。未新增测试，未进行端到端表现验收。
+
+## 纠正旧 ActionCue 轨道合同：TreeClip 节点是唯一触发源
+
+- 本节起按当前作者决定修正本 change 的活动口径：`ActionCueTrack`、`ActionCueClip`、`TimelineActionCueSample` 与 `CharacterTimelineHost.ActionCueCommitted` 不是现行正式链路。一次性 Gameplay、Camera、VFX 和 Audio 行为都属于对应 TreeClip 内的正式节点，由节点所属 domain emitter 直接提交。
+- 已同步更新 `openspec/project.md`、当前 `btsmtl-timeline-direct-runtime`、`btsmtl-timeline-editor-preview`、`character-camera-pipeline`、`character-camera-authoring` 以及本 change 的 proposal、design、delta spec、tasks。文档不再把 Timeline ActionCue 描述为保留合同，也不再把素材 `LocalFrame`、`CueType` 或 `CueId` 当成 Timeline 事件输出字段。
+- 原 implementation 章节中关于 ActionCue 轨道采样、ActionCue committed event、StateId / LocalFrame 事件身份和 ActionCue 诊断的记录保留为历史实施记录；它们从本节起不再是当前实现目标。对应任务 0.5、4.2、4.3、4.6、4.8、4.9、4.10 已重新打开，等待按 TreeClip 节点与正式 domain emitter 对账后再勾选。
+- 本次只改文档，未把旧代码或旧资产声明为已迁移，也未新增测试任务。上一轮 C# 全项目编译结果为 0 错误、146 个既有警告，随后已执行 `dotnet build-server shutdown`；该结果不证明旧 ActionCue 链路仍然符合当前合同。
+
+## 删除废弃的Pose History Collector节点族
+
+- 该节点族在资产中零使用（全部Timeline/PoseGraph资产无`PoseHistoryCollector`或`MotionMatchingPose`节点实例），MotionMatching节点source工厂早已是ThrowMotionMatching桩，plan描述符文件无任何外部引用；沿`fa234d972`"删除旧Motion Matching Provider链"与`cefefc45e`"删除旧MotionMatching执行壳"的既有弧线收尾。
+- 删除`CharacterPoseHistoryCollectorRuntime.cs`、`CharacterMotionMatchingFrameContext.cs`、`CharacterPoseNativeHistoryCollectorHandler.cs`、`CharacterMotionMatchingPosePlan.cs`及meta；同步移除`CharacterPoseNativeHistoryValue`、`CharacterPoseNativeTrajectoryValue`、`CharacterPosePortKind.PoseHistory/Trajectory`、`CharacterPoseNodeKind.PoseHistoryCollector`、`CharacterPoseHistoryId`、`CharacterPoseHistoryCollectorPayload`、注册/组合/工厂接线、图校验与子图deferred里的PoseHistory豁免、editor定义/模块注册/adapter `pose-history`分支/mutation `CreateCollector`与字段Set。
+- 该批清理是主线编译阻塞的收口：此前类型定义文件已删但引用方未迁，`ThirdPersonClient.Runtime.csproj`报8个CS0246。收口后Unity域重载控制台0错误，`ThirdPersonClient.Editor.csproj`静态编译0错误，构建服务器已shutdown。无fallback、无兼容读取。
+
+## 删除旧 Timeline Camera Cue轨道
+
+- 按作者确认，Camera Cue 也是 TreeClip 表现域节点的表达，不保留 Timeline 触发型第二路径。`CameraCueTrack`、`CameraCueClip`、`TimelineCameraCueSample`、`TimelineCameraCueKind`、camera-cue 曲线通道、作者配置字段、创建弹窗和 bridge 消费已删除。
+- Simulation 操作集删除 `TimelineCue` 与 `TimelineCameraCue`，Camera State / Response 编号压实，操作集版本升到 `/18`；不保留旧枚举空洞或兼容读取。
+- 当前 Corin Timeline 资产没有旧 CameraCue 轨道实例，无需迁移资产内容。Camera State / Response 和唯一 Effect 轨道继续作为持续窗口 / 状态表达走原 Camera bridge；本次删除只收口一次性 Cue，不把它们错误归入触发型 Camera Cue。
+- `ThirdPersonClient.Editor.csproj` 编译通过：32 warnings、0 errors；已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。
+
+## 删除旧 Camera Cue诊断残留
+
+- `CameraCueKind` 已无源码消费者，且正式相机效果已有 `CameraEffectKind`；零使用枚举删除。
+- `camera/cue-lifecycle` 与 `camera/cue-routing` 诊断计划、注册和实现删除。后者读取的 `PresentationCommandKind.Cue = 6` 现在属于 GameplayEffect 的 Gameplay Cue，不是相机命令；正式相机命令继续用 `CharacterPresentationCommandKind.Camera`，避免诊断把两个领域混在一起。
+- `character-presentation-replication-core.current.json` 与 full 计划通过 JSON 反序列化校验。`ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors；已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。

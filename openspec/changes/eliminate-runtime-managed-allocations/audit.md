@@ -3939,3 +3939,11 @@
 - `GameplayAbilityExecutionManager` 的 Scope 从每次 `Enter` 新建改为 manager 构造期创建并长期持有；Fixed 和 Float32 Action State Store 共用同一条通用链路。
 - manager 仍禁止嵌套 Skill execution frame：已有 active frame 时 `Enter` 报错，Scope `Dispose` 调用原 `Exit`、校验 frame、处理 generation 并清空 active。重复 Dispose、跨 evaluation 残留和 unbalanced 状态语义不变。
 - 每次进入 Skill execution 的 Scope class 分配删除；外层 Trace/Skill scope 与 execution frame 生命周期不在本步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability domain tick scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.220 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Domain Runtime 持有常驻 current actions List 和 stopping instances HashSet；每次 tick 先重填/清空，最后在 `finally` 统一清空，异常路径不再把 Action identity 字符串保留到下一 tick。
+- Action State Store 删除每次返回新建 List、只读包装和内联排序 lambda 的 `CurrentActions`，新增显式 `CopyCurrentActions` 写入调用方 scratch；静态 Comparison 继续按 InstanceId 升序排序。
+- Tick 的两次快照时机、ProcessExisting 与 TickActive 顺序、stop 重复保护和 mutation 隔离不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧入口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

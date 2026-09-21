@@ -11,6 +11,8 @@ namespace ThirdPersonSimulation
         readonly Float32ActionRuntime m_Actions;
         readonly Float32ActionStateStore m_ActionStore;
         readonly IFloat32AbilityOperationControlRuntime m_Control;
+        readonly List<Float32ActionInstanceState> m_CurrentActions = new();
+        readonly HashSet<ulong> m_StoppingInstances = new();
 
         public Float32AbilityDomainRuntime(
             GameplayAbilityExecutionBinding skill,
@@ -30,15 +32,22 @@ namespace ThirdPersonSimulation
         public void Tick()
         {
             GameplayAbilityExecutionBinding skill = m_Skill;
-            var stoppingInstances = new HashSet<ulong>();
-            IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
-            for (int i = 0; i < actions.Count; i++)
-                ProcessExisting(actions[i], skill, stoppingInstances);
+            try
+            {
+                m_ActionStore.CopyCurrentActions(skill.SkillId, m_CurrentActions);
+                for (int i = 0; i < m_CurrentActions.Count; i++)
+                    ProcessExisting(m_CurrentActions[i], skill, m_StoppingInstances);
 
-            m_Actions.TryCommitPendingControl(skill.SkillId);
-            actions = m_ActionStore.CurrentActions(skill.SkillId);
-            for (int i = 0; i < actions.Count; i++)
-                TickActive(actions[i], skill, stoppingInstances);
+                m_Actions.TryCommitPendingControl(skill.SkillId);
+                m_ActionStore.CopyCurrentActions(skill.SkillId, m_CurrentActions);
+                for (int i = 0; i < m_CurrentActions.Count; i++)
+                    TickActive(m_CurrentActions[i], skill, m_StoppingInstances);
+            }
+            finally
+            {
+                m_CurrentActions.Clear();
+                m_StoppingInstances.Clear();
+            }
         }
 
         void ProcessExisting(

@@ -255,6 +255,9 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess, IGameplayAbilityExecutionStorage<AbilityStateValue>
     {
+        static readonly Comparison<FixedActionInstanceState> s_InstanceComparison =
+            (left, right) => left.InstanceId.CompareTo(right.InstanceId);
+
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
@@ -401,16 +404,17 @@ namespace ThirdPersonSimulation.Fixed
             return found;
         }
 
-        public IReadOnlyList<FixedActionInstanceState> CurrentActions(CharacterSkillId skillId)
+        public void CopyCurrentActions(CharacterSkillId skillId, List<FixedActionInstanceState> results)
         {
-            var result = new List<FixedActionInstanceState>();
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            results.Clear();
             foreach (FixedActionInstanceState candidate in m_Frame.ActionState.GetActionInstances())
             {
                 if (candidate.IsValid && candidate.SkillId == skillId)
-                    result.Add(candidate);
+                    results.Add(candidate);
             }
-            result.Sort((left, right) => left.InstanceId.CompareTo(right.InstanceId));
-            return result.AsReadOnly();
+            results.Sort(s_InstanceComparison);
         }
 
         public IReadOnlyList<FixedActionInstanceState> ActionInstances => m_Frame.ActionState.GetActionInstances();

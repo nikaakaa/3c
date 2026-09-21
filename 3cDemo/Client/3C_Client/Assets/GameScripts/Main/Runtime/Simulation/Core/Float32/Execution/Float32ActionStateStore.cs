@@ -254,6 +254,9 @@ namespace ThirdPersonSimulation
 
 	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IGameplayAbilityExecutionStorage<AbilityStateValue>
 	{
+		static readonly Comparison<Float32ActionInstanceState> s_InstanceComparison =
+			(left, right) => left.InstanceId.CompareTo(right.InstanceId);
+
 		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
 		readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
@@ -400,16 +403,17 @@ namespace ThirdPersonSimulation
 			return found;
 		}
 
-		public IReadOnlyList<Float32ActionInstanceState> CurrentActions(CharacterSkillId skillId)
+		public void CopyCurrentActions(CharacterSkillId skillId, List<Float32ActionInstanceState> results)
 		{
-			var result = new List<Float32ActionInstanceState>();
+			if (results == null)
+				throw new ArgumentNullException(nameof(results));
+			results.Clear();
 			foreach (Float32ActionInstanceState candidate in m_Frame.ActionState.GetActionInstances())
 			{
 				if (candidate.IsValid && candidate.SkillId == skillId)
-					result.Add(candidate);
+					results.Add(candidate);
 			}
-			result.Sort((left, right) => left.InstanceId.CompareTo(right.InstanceId));
-			return result.AsReadOnly();
+			results.Sort(s_InstanceComparison);
 		}
 
 		public IReadOnlyList<Float32ActionInstanceState> ActionInstances => m_Frame.ActionState.GetActionInstances();

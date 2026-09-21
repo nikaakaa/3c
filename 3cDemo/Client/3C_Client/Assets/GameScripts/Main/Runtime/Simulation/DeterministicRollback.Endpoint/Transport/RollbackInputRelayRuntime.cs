@@ -69,6 +69,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly Dictionary<string, PeerState> m_Peers = new Dictionary<string, PeerState>(StringComparer.Ordinal);
         readonly List<RollbackActorInputFrame> m_AcceptedInputFrames;
         readonly RollbackExplicitInputFrontier[] m_ExplicitInputFrontierScratch;
+        readonly Dictionary<int, RollbackCanonicalInputBundle[]> m_CanonicalConfirmationScratches =
+            new Dictionary<int, RollbackCanonicalInputBundle[]>();
         RollbackCanonicalInputAssembler m_Assembler;
         ulong m_AssembledCount;
         ulong m_InputBatchCount;
@@ -366,18 +368,35 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!IsRosterLocked || m_Assembler.ConfirmedTick <= m_LastConfirmedBroadcastTick)
                 return;
             ulong confirmedTick = m_Assembler.ConfirmedTick;
-            RollbackCanonicalInputBundle[] bundles = m_Assembler.CaptureCanonicalRange(
-                m_LastConfirmedBroadcastTick,
-                confirmedTick);
-            Broadcast(
-                RollbackCanonicalConfirmation.FromOwnedBundles(
-                    m_LastConfirmedBroadcastTick,
-                    new SimulationTick(confirmedTick),
-                    bundles),
-                true,
-                null);
+            int count = checked((int)(confirmedTick - m_LastConfirmedBroadcastTick));
+            RollbackCanonicalInputBundle[] bundles = RentCanonicalConfirmationScratch(count);
+            try
+            {
+                m_Assembler.FillCanonicalRange(m_LastConfirmedBroadcastTick, confirmedTick, bundles);
+                Broadcast(
+                    RollbackCanonicalConfirmation.FromOwnedBundles(
+                        m_LastConfirmedBroadcastTick,
+                        new SimulationTick(confirmedTick),
+                        bundles),
+                    true,
+                    null);
+            }
+            finally
+            {
+                Array.Clear(bundles, 0, bundles.Length);
+            }
             m_LastConfirmedBroadcastTick = confirmedTick;
             m_ConfirmationBroadcastCount = checked(m_ConfirmationBroadcastCount + 1);
+        }
+
+        RollbackCanonicalInputBundle[] RentCanonicalConfirmationScratch(int count)
+        {
+            if (!m_CanonicalConfirmationScratches.TryGetValue(count, out RollbackCanonicalInputBundle[] scratch))
+            {
+                scratch = new RollbackCanonicalInputBundle[count];
+                m_CanonicalConfirmationScratches.Add(count, scratch);
+            }
+            return scratch;
         }
 
         void TryLockRoster()

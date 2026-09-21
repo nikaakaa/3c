@@ -3323,3 +3323,11 @@
 - `RollbackRuntimeState.TransactionCheckpoint` 从 class 改为 readonly struct；每次 rollback restore 或 checkpoint 捕获不再额外分配 checkpoint 外壳。构造时仍一次性复制 Runtime 的 horizon、诊断、recovery 和 output 字段，原 input history 数组、applied hash 数组和 input source checkpoint 继续独立持有。
 - `RestoreTransactionCheckpoint` 和 `RollbackStateCheckpoint` 不再用 null 判断 class 实例，改为显式校验 `Owner` 引用归属；跨 Runtime 恢复仍抛参数错误。readonly checkpoint 不暴露可变状态，不引入归还回调或全局池。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback confirmation 区间 scratch 复用
+
+对应 tasks.md 的 5.2，新增 5.144 作为独立小步；5.2 保持未勾选。
+
+- `RollbackCanonicalInputAssembler` 删除返回新数组的 `CaptureCanonicalRange`，改为 `FillCanonicalRange` 显式填充调用方精确长度数组；确认范围、历史下限、缺失 canonical Tick 和 buffer 长度校验保持。
+- `RollbackInputRelayRuntime` 按确认区间长度保留 bundle scratch。每次广播前完整填充，`RollbackCanonicalConfirmation.FromOwnedBundles` 原地排序校验后由 Datagram Channel 同步编码；可靠重发只保留 packet bytes。广播完成后 finally 清空 scratch 元素，payload 不再跨 Pump 保留 bundle 引用。
+- 长度变化的确认区间分别保留精确 scratch，稳定长度不再分配数组；广播失败不推进确认游标，下一次 Pump 会重新完整覆盖同一 scratch。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

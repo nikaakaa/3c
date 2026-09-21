@@ -189,9 +189,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return result;
         }
 
-        public RollbackCanonicalInputBundle[] CaptureCanonicalRange(
+        public void FillCanonicalRange(
             ulong previousConfirmedTick,
-            ulong confirmedTick)
+            ulong confirmedTick,
+            RollbackCanonicalInputBundle[] values)
         {
             if (confirmedTick <= previousConfirmedTick || confirmedTick >= m_NextTick)
                 throw new ArgumentException("Rollback canonical confirmation range is invalid.");
@@ -199,15 +200,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (firstTick < m_HistoryFloor)
                 throw new InvalidOperationException("Rollback canonical confirmation range predates bounded history.");
             int count = checked((int)(confirmedTick - previousConfirmedTick));
-            var result = new RollbackCanonicalInputBundle[count];
-            for (int i = 0; i < count; i++)
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+            if (values.Length != count)
+                throw new ArgumentException("Rollback canonical confirmation buffer does not match its Tick range.", nameof(values));
+            for (int i = 0; i < values.Length; i++)
             {
                 ulong tick = checked(firstTick + (ulong)i);
-                result[i] = m_Canonical.TryGetValue(tick, out RollbackCanonicalInputBundle bundle)
+                values[i] = m_Canonical.TryGetValue(tick, out RollbackCanonicalInputBundle bundle)
                     ? bundle
                     : throw new InvalidOperationException($"Rollback canonical confirmation Tick '{tick}' is absent.");
             }
-            return result;
         }
 
         void TrimHistory()

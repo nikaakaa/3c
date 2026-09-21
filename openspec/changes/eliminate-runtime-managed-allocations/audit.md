@@ -4003,3 +4003,11 @@
 - Fixed 和 Float32 Ability Installation 常驻一个 Operation Control Runtime wrapper；TreeClip Link 和 TreeClip entry Dictionary 随 wrapper 保存，Operation Control Runtime 首次 Bind 时按同一 topology 和执行计数上限创建。
 - `OperationControlRuntime` 增加 Rebind target；重绑前检查没有 state execution 和 transient 残留，每次 invocation 仍按原顺序 `BeginEvaluation`，成功或异常后 `EndEvaluation` 并解除 services 引用。
 - 每个 invocation 不再新建 Operation Control Runtime、Cursor、State Machine、Lifecycle、Composite runtime 和 TreeClip Link；Timeline pending list 只继续作为 target 输入，不在本步改变归属。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Ability execution service set 收口
+
+对应 tasks.md 的 5.5，新增 5.228 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 `AbilityExecutionServiceSet` 从 immutable class 改为 readonly struct；Operation Control Runtime 直接持有具体 ServiceSet，`Bind` 使用 `in` 参数重绑 Target，删除 `IFixedAbilityExecutionServices` 和 `IFloat32AbilityExecutionServices` 两条中间接口。
+- `BeginEvaluation` 和 `EndEvaluation` 的顺序、Gameplay Effect 与 Equipment 可选服务、诊断开关和 Timeline 只读列表边界保持不变；`EndEvaluation` 后把 ServiceSet 置为 `default`，不再把上一 invocation 的 Frame、Target、Action Store、Values、Blackboard 和 Timeline list 引用留在常驻 runtime。
+- 每次 Ability installation 的 ServiceSet class 分配删除。按用户要求闭环期间不触发编译和刷新；本步按 Fixed 和 Float32 两个域分别做静态修改、路径限定 diff 检查、旧接口残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

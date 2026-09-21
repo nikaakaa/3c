@@ -488,6 +488,7 @@
 - [x] 5.225 两数值域 Ability Execution Frame 接管 TreeClip 状态并把 Presentation Sink 改为 readonly struct；调用继续按具体 struct 传递，保留 active TreeClip 校验、Begin/End 顺序和 presentation event 通道
 - [x] 5.226 两数值域 Gameplay Effect Execution Scratch 常驻 Target 并跨 invocation 重绑；Begin 重建 committed causes、End 清理 working state、prediction 和事务绑定，删除每次 ability invocation 的 Target、Control Runtime 和 Admission Runtime
 - [x] 5.227 两数值域 Ability Installation 常驻 Operation Control Runtime 和 TreeClip Link；每次 invocation 只重绑 execution target，保留 transient state 校验、Begin/End evaluation、操作计数上限和 TreeClip invoker push/pop
+- [x] 5.228 两数值域 Ability Execution ServiceSet 改为 readonly struct 并删除 services 接口；Operation Control Runtime 直接持有具体 ServiceSet，EndEvaluation 后用 default 清理，保留 Begin/End 顺序、可选 Gameplay Effect/Equipment 服务和 Timeline 只读列表边界
 
 ## 6. UI、资源、渲染和生命周期
 

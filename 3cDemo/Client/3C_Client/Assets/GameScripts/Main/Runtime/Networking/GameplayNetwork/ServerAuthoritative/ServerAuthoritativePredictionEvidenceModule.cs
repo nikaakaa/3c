@@ -68,7 +68,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly Queue<AuthoritativeActorBaseline> m_Baselines = new Queue<AuthoritativeActorBaseline>();
         readonly Queue<RemotePresentationBatch> m_Remote = new Queue<RemotePresentationBatch>();
         readonly Queue<RemotePresentationBatch> m_Reliable = new Queue<RemotePresentationBatch>();
-        readonly List<AuthoritativeActorBaseline> m_DrainBaselines = new List<AuthoritativeActorBaseline>(1);
         readonly List<CharacterBodySample> m_DrainBodies = new List<CharacterBodySample>();
         readonly List<PresentationCommand> m_DrainSamples = new List<PresentationCommand>();
         readonly List<ServerAuthoritativeReliableEvent> m_DrainEvents = new List<ServerAuthoritativeReliableEvent>();
@@ -181,7 +180,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativePredictionDatagramMetrics datagram,
             ServerAuthoritativeCheckpointMetrics checkpoint)
         {
-            m_DrainBaselines.Clear();
             m_DrainBodies.Clear();
             m_DrainSamples.Clear();
             m_DrainEvents.Clear();
@@ -193,8 +191,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     throw new InvalidOperationException("Prediction baseline queue is not strictly increasing by authority Tick.");
                 latestBaseline = candidate;
             }
-            if (latestBaseline != null)
-                m_DrainBaselines.Add(latestBaseline);
+            AuthoritativeActorBaseline[] baselines = latestBaseline == null
+                ? Array.Empty<AuthoritativeActorBaseline>()
+                : new[] { latestBaseline };
             while (m_Remote.Count > 0)
             {
                 RemotePresentationBatch batch = m_Remote.Dequeue();
@@ -215,7 +214,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     ++m_ReceiveSequence,
                     authorityEstimate,
                     m_LatestAck,
-                    m_DrainBaselines,
+                    baselines,
                     new[] { new RemotePresentationBatch(
                         remoteActor,
                         m_DrainBodies.ToArray(),
@@ -234,7 +233,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             }
             finally
             {
-                m_DrainBaselines.Clear();
                 m_DrainBodies.Clear();
                 m_DrainSamples.Clear();
                 m_DrainEvents.Clear();

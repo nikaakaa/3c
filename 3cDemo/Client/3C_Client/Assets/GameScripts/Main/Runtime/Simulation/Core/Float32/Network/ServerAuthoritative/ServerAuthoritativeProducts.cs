@@ -496,23 +496,42 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class AuthoritativeObservationBatch
     {
-        readonly ReadOnlyCollection<AuthoritativeActorBaseline> m_Baselines;
-        readonly ReadOnlyCollection<RemotePresentationBatch> m_RemotePresentation;
+        static readonly Comparison<AuthoritativeActorBaseline> s_CompareBaselines =
+            (left, right) => left.ActorId.CompareTo(right.ActorId);
+        static readonly Comparison<RemotePresentationBatch> s_CompareRemote =
+            (left, right) => left.ActorId.CompareTo(right.ActorId);
+
+        readonly AuthoritativeActorBaseline[] m_Baselines;
+        readonly RemotePresentationBatch[] m_RemotePresentation;
 
         public AuthoritativeObservationBatch(
             ulong receiveSequence,
             ulong authorityTickEstimate,
             AuthoritativeInputAck ownerAck,
-            IEnumerable<AuthoritativeActorBaseline> baselines,
-            IEnumerable<RemotePresentationBatch> remotePresentation)
+            AuthoritativeActorBaseline[] baselines,
+            RemotePresentationBatch[] remotePresentation)
         {
-            if (receiveSequence == 0)
+            if (receiveSequence == 0 || baselines == null || remotePresentation == null)
                 throw new ArgumentOutOfRangeException(nameof(receiveSequence));
             ReceiveSequence = receiveSequence;
             AuthorityTickEstimate = authorityTickEstimate;
             OwnerAck = ownerAck;
-            m_Baselines = ServerAuthoritativeProductOrder.FreezeByActor(baselines, value => value.ActorId, nameof(baselines));
-            m_RemotePresentation = ServerAuthoritativeProductOrder.FreezeByActor(remotePresentation, value => value.ActorId, nameof(remotePresentation));
+            m_Baselines = baselines;
+            m_RemotePresentation = remotePresentation;
+            Array.Sort(m_Baselines, s_CompareBaselines);
+            Array.Sort(m_RemotePresentation, s_CompareRemote);
+            for (int i = 0; i < m_Baselines.Length; i++)
+            {
+                if (m_Baselines[i] == null || !m_Baselines[i].ActorId.IsValid ||
+                    i > 0 && m_Baselines[i - 1].ActorId == m_Baselines[i].ActorId)
+                    throw new ArgumentException("Observation baseline contains a missing or duplicate ActorId.", nameof(baselines));
+            }
+            for (int i = 0; i < m_RemotePresentation.Length; i++)
+            {
+                if (m_RemotePresentation[i] == null || !m_RemotePresentation[i].ActorId.IsValid ||
+                    i > 0 && m_RemotePresentation[i - 1].ActorId == m_RemotePresentation[i].ActorId)
+                    throw new ArgumentException("Observation remote presentation contains a missing or duplicate ActorId.", nameof(remotePresentation));
+            }
         }
 
         public ulong ReceiveSequence { get; }
@@ -592,21 +611,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < values.Length; i++)
                 values[i] = source[i];
             return values;
-        }
-
-        public static ReadOnlyCollection<T> FreezeByActor<T>(
-            IEnumerable<T> source,
-            Func<T, ActorId> actor,
-            string parameter) where T : class
-        {
-            var values = source == null ? new List<T>() : new List<T>(source);
-            values.Sort((left, right) => actor(left).CompareTo(actor(right)));
-            for (int i = 0; i < values.Count; i++)
-            {
-                if (values[i] == null || !actor(values[i]).IsValid || i > 0 && actor(values[i - 1]) == actor(values[i]))
-                    throw new ArgumentException("Actor-scoped product contains a missing or duplicate ActorId.", parameter);
-            }
-            return values.AsReadOnly();
         }
 
         public static int CompareEvents(ServerAuthoritativeReliableEvent left, ServerAuthoritativeReliableEvent right)

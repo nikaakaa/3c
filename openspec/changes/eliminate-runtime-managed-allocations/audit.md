@@ -3627,3 +3627,11 @@
 - `SelectedRemoteBodyBatch` 直接持有精确 `CharacterBodySample[]`，使用类型化静态 tick 比较；Actor 归属、tick 排序和重复校验不变。
 - Prediction schedule 的 current selections 按 first selection 的 body 数量和 current step 数量一次性分配最终数组，后续 selection 直接复制到对应区间；HardRecovery 的 `ToBodySamples` 精确数组直接转交。删除 BuildPlan 的 body List、`AddRange`、`AsReadOnly` 和构造期二次复制。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 observation batch arrays 收口
+
+对应 tasks.md 的 5.5，新增 5.181 作为独立小步；5.5 保持未勾选。
+
+- `AuthoritativeObservationBatch` 的 baselines 和 remote presentation 改为直接持有精确 owned arrays；类型化静态 Actor 排序替代 `FreezeByActor` 的 List 复制、lambda 排序和 `ReadOnlyCollection` 包装。baseline 与 remote presentation 的 Actor 归属、去重和排序校验不变。
+- Evidence drain 不再维护 baseline List；队列收敛后无 baseline 使用 `Array.Empty`，有 baseline 只生成一条记录的精确数组。remote presentation 仍合并当期 bodies、samples 和 events 后生成一个精确 outer 数组。无消费者的 `FreezeByActor` 删除。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

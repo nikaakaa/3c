@@ -3530,3 +3530,11 @@
 - `ServerAuthoritativeGameplayDatagramCodec.Read` 不再用 `ReadString` 无条件解码四个身份字符串；先读取 UTF8 片段，交给 endpoint 的 identity resolver 按已知 route bytes 匹配，命中后直接复用 route 中的 canonical `ServerAuthoritativeDatagramIdentity`。
 - Endpoint 的 `BindRemote` 在正式绑定 route 时缓存 Room、Session、Player、Actor 四段 UTF8 bytes；`RevokeRemote` 继续删除整条 route。首个未绑定 Hello 仍按原身份构造逻辑分配字符串，并在校验后进入 `BindRemote`，后续同一 route 的稳态接收不再分配身份字符串。
 - wire 中的身份必须与 canonical 身份的 UTF8 bytes 完全一致才会命中；未知身份的解码、ID 合法性校验、route 查找、endpoint 比较和坏包归还边界不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 command sample 数组收口
+
+对应 tasks.md 的 5.5，新增 5.169 作为独立小步；5.5 保持未勾选。
+
+- `CommandDatagram` 的 sample 存储从 `ReadOnlyCollection` 改为正式 owned 精确数组。公开构造接收 `IReadOnlyList`，把客户端既有 command history 复制一次后持有；新增加程序内部 `FromOwnedSamples`，canonical 解码完成后的精确数组直接转交，不再二次复制。
+- 构造期继续拒绝 null、空、超过四个、无效 sample 和乱序；`Samples` 消费端仍通过 `IReadOnlyList` 按下标读取，wire 字段顺序不变。每条发送命令删除临时 `List` 和 wrapper，每条接收命令删除第二份 sample 数组复制。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

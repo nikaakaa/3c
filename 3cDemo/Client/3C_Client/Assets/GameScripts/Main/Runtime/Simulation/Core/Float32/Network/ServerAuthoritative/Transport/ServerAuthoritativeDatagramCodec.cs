@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 
 namespace ThirdPersonSimulation.ServerAuthoritative.Transport
@@ -286,33 +285,64 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
     public sealed class CommandDatagram
     {
-        readonly ReadOnlyCollection<CanonicalInputSample> m_Samples;
+        readonly CanonicalInputSample[] m_Samples;
 
         public CommandDatagram(
             ulong latestSnapshotSequence,
             ulong latestBaseSnapshotSequence,
-            IEnumerable<CanonicalInputSample> samples)
+            IReadOnlyList<CanonicalInputSample> samples)
+            : this(latestSnapshotSequence, latestBaseSnapshotSequence, PrepareSamples(samples))
         {
-            var values = samples == null ? throw new ArgumentNullException(nameof(samples)) : new List<CanonicalInputSample>(samples);
-            if (values.Count == 0 || values.Count > 4)
-                throw new ArgumentException("Command datagram requires one to four input samples.", nameof(samples));
-            for (int i = 1; i < values.Count; i++)
-            {
-                if (values[i - 1].TargetAuthorityTick <= values[i].TargetAuthorityTick ||
-                    values[i - 1].InputSequence <= values[i].InputSequence)
-                {
-                    throw new ArgumentException("Command datagram samples must be newest-first and strictly ordered.", nameof(samples));
-                }
-            }
+        }
+
+        internal static CommandDatagram FromOwnedSamples(
+            ulong latestSnapshotSequence,
+            ulong latestBaseSnapshotSequence,
+            CanonicalInputSample[] samples)
+        {
+            ValidateSamples(samples);
+            return new CommandDatagram(latestSnapshotSequence, latestBaseSnapshotSequence, samples);
+        }
+
+        CommandDatagram(
+            ulong latestSnapshotSequence,
+            ulong latestBaseSnapshotSequence,
+            CanonicalInputSample[] samples)
+        {
             LatestSnapshotSequence = latestSnapshotSequence;
             LatestBaseSnapshotSequence = latestBaseSnapshotSequence;
-            m_Samples = values.AsReadOnly();
+            m_Samples = samples;
         }
 
         public ulong LatestSnapshotSequence { get; }
         public ulong LatestBaseSnapshotSequence { get; }
         public ulong SourceTick => m_Samples[0].Input.TickSource.SourceTick;
         public IReadOnlyList<CanonicalInputSample> Samples => m_Samples;
+
+        static CanonicalInputSample[] PrepareSamples(IReadOnlyList<CanonicalInputSample> samples)
+        {
+            ValidateSamples(samples);
+            var values = new CanonicalInputSample[samples.Count];
+            for (int i = 0; i < samples.Count; i++)
+                values[i] = samples[i];
+            return values;
+        }
+
+        static void ValidateSamples(IReadOnlyList<CanonicalInputSample> samples)
+        {
+            if (samples == null)
+                throw new ArgumentNullException(nameof(samples));
+            if (samples.Count == 0 || samples.Count > 4)
+                throw new ArgumentException("Command datagram requires one to four input samples.", nameof(samples));
+            for (int i = 1; i < samples.Count; i++)
+            {
+                if (samples[i - 1].TargetAuthorityTick <= samples[i].TargetAuthorityTick ||
+                    samples[i - 1].InputSequence <= samples[i].InputSequence)
+                {
+                    throw new ArgumentException("Command datagram samples must be newest-first and strictly ordered.", nameof(samples));
+                }
+            }
+        }
     }
 
     public sealed class SnapshotDatagram
@@ -431,7 +461,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 samples[i] = new CanonicalInputSample(targetTick, inputSequence, input);
             }
             reader.RequireComplete();
-            return new CommandDatagram(latestSnapshot, latestBase, samples);
+            return CommandDatagram.FromOwnedSamples(latestSnapshot, latestBase, samples);
         }
 
         public static byte[] Write(SnapshotDatagram value, CanonicalWriter writer)

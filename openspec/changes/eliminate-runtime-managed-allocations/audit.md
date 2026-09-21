@@ -3107,6 +3107,14 @@
 - 缺失 Actor 的异常、多个匹配时取最后一个匹配、bundle sequence、`RecordPredicted`、applied hash 判定和 rollback 触发语义保持不变。gameplay 变化时的 replacement Actor 数组仍由 `RollbackCanonicalInputBundle.FromOwnedActors` 和 input history 持有，不跨事务复用。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback Hash Egress 去会话快照中转
+
+对应 tasks.md 的 5.2，新增 5.118 作为独立小步；5.2 保持未勾选。
+
+- `RollbackHashEgressPassRuntime` 命中 completed step 时，原先用 step 的 composition identity、World 和 Pipeline projection 再构造一只 `FixedSimulationSessionSnapshot`，但后续只读取它的 World；这个中转对象还会重新计算 session SnapshotHash。现在 helper 直接返回 completed step 或 snapshot history 里的 `SimulationWorldSnapshot`，world hash 构建、KCC payload hash、owner 读取和 Tick 匹配语义不变。
+- completed step 和 snapshot history 的构造入口已分别在正式 Pipeline 和 Rollback snapshot 生命周期中校验 World、Pipeline 与 Tick 一致性；本步不复制、不复用或修改 World。egress payload `byte[]`、`RollbackStateHashReport` 及其 Actor 数组仍是 egress 记录的正式所有权数据，不在本步复用。
+- `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

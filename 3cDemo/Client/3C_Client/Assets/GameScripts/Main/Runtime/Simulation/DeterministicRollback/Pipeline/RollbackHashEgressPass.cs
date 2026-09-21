@@ -69,9 +69,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RequireExecution();
             while (m_State.TryReserveNextHashTick(m_Policy.HashCadenceTicks, out SimulationTick tick))
             {
-                FixedSimulationSessionSnapshot snapshot = GetSnapshot(tick, readPorts.CompletedSteps.Steps);
-                RollbackStateHashReport report = BuildReport(snapshot, m_State.LocalPeerId, m_State.RosterHash);
-                ActorId owner = snapshot.World.Actors[0].ActorId;
+                SimulationWorldSnapshot world = GetWorldSnapshot(tick, readPorts.CompletedSteps.Steps);
+                RollbackStateHashReport report = BuildReport(world, m_State.LocalPeerId, m_State.RosterHash);
+                ActorId owner = world.Actors[0].ActorId;
                 m_PayloadScratch.Reset();
                 RollbackProtocolCodec.WriteCanonicalPayload(m_PayloadScratch, report);
                 writePorts.Egress.Append(
@@ -86,7 +86,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        FixedSimulationSessionSnapshot GetSnapshot(
+        SimulationWorldSnapshot GetWorldSnapshot(
             SimulationTick tick,
             IReadOnlyList<FixedCompletedSimulationStep> completed)
         {
@@ -94,17 +94,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 FixedSimulationStepSnapshot step = completed[i].StepSnapshot;
                 if (step != null && step.Tick == tick)
-                    return new FixedSimulationSessionSnapshot(step.CompositionIdentity, step.World, step.PipelineProjection);
+                    return step.World;
             }
-            return m_State.Snapshots.GetRequired(tick);
+            return m_State.Snapshots.GetRequired(tick).World;
         }
 
         static RollbackStateHashReport BuildReport(
-            FixedSimulationSessionSnapshot snapshot,
+            SimulationWorldSnapshot world,
             string localPeerId,
             StableHash rosterHash)
         {
-            SimulationWorldSnapshot world = snapshot.World;
             WorldSimulationState worldState = world.DecodeWorldState();
             StableHash kccHash = SimulationCanonicalPayloadHash.Compute(
                 worldState.SolverStatePayload.Span);

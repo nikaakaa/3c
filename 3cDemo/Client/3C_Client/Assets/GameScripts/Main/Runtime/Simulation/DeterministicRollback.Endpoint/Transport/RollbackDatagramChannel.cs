@@ -83,6 +83,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly long m_ResendInterval;
         readonly int m_MaximumFragmentPayloadBytes;
         readonly CanonicalWriter m_EncodeWriter;
+        readonly CanonicalWriter m_DecodeScratch;
         ulong m_NextDatagramSequence = 1;
         ulong m_NextMessageSequence = 1;
 
@@ -108,6 +109,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int encodeBufferCapacity = checked(
                 m_MaximumFragmentPayloadBytes * m_Definition.MaximumFragmentsPerMessage);
             m_EncodeWriter = new CanonicalWriter(new byte[encodeBufferCapacity]);
+            m_DecodeScratch = new CanonicalWriter(new byte[encodeBufferCapacity]);
             int messageCapacity = m_Definition.MaximumQueuedMessages;
             m_CompletedHistoryCapacity = checked(messageCapacity * 2);
             int completedStorageCapacity = checked(m_CompletedHistoryCapacity + 1);
@@ -220,7 +222,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!assembly.IsComplete)
                 return;
             m_Reassembly.Remove(packet.MessageSequence);
-            RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(assembly.Complete());
+            RollbackProtocolEnvelope envelope = RollbackProtocolCodec.Read(m_DecodeScratch, assembly.Complete());
             if (!string.Equals(envelope.SessionId, m_Definition.SessionId, StringComparison.Ordinal) ||
                 !string.Equals(envelope.SenderPeerId, m_RemotePeerId, StringComparison.Ordinal) ||
                 envelope.Sequence != packet.MessageSequence)

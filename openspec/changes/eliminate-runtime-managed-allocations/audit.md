@@ -2417,3 +2417,13 @@
 - `RollbackDatagramChannel` 持有按“单分片预算×最大分片数”准备的有界发送 scratch：`FitsSingleDatagram` 与 `Send` 复用同一 writer，编码后直接从 `WrittenSpan` 切分片，删除每条消息的 writer、MemoryStream、`ToArray` 整份副本；分片包仍自行复制 payload，scratch 不存在跨包别名。超出总容量的 payload 由有界 writer 显式失败，仍会走到单帧超预算的原失败路径。
 - 5.3 剩余：接收解码 canonical 校验的 writer 复用、`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 与 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚接收解码 canonical 校验复用
+
+对应 tasks.md 的 5.3，本步完成接收侧，整项保持未勾选。
+
+- `RollbackInputCodec` 内部 `ReadInput`/`ReadBundle` 增加 canonical scratch 重载：解码并 `RequireComplete` 后 `Reset` 再重编码比较，删除每次解码的独立 writer 与 MemoryStream；公开 `byte[]` 入口保持自有 writer 行为不变。Bundle 内层 actor 仍按 reader 直读，canonical 校验只发生在 bundle 边界，与原实现一致。
+- `RollbackProtocolCodec` 的 `Read` 与 `ReadCanonicalPayload` 改为接收 canonical scratch，并穿透输入批次、转发批次、canonical bundle 与确认批次的解码校验。
+- `RollbackDatagramChannel` 增加与发送 scratch 同容量（单分片预算×最大分片数）的解码 scratch：合法消息的重编码长度不超过原消息长度，因此容量恒够；非 canonical 消息仍按原异常拒绝。`RollbackEndpointRuntimeBridge` 持有一只自增复用 scratch 供状态哈希 egress 校验使用，达到稳态后不再分配；该路径 payload 大小无形式上限声明，容量按实际内容增长。
+- 5.3 剩余：`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

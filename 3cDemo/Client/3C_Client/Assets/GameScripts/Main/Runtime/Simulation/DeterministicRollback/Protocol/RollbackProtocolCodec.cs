@@ -30,8 +30,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             WritePayload(writer, envelope.Payload);
         }
 
-        public static RollbackProtocolEnvelope Read(byte[] bytes)
+        public static RollbackProtocolEnvelope Read(CanonicalWriter canonicalScratch, byte[] bytes)
         {
+            if (canonicalScratch == null)
+                throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback protocol envelope header is invalid.");
@@ -39,12 +41,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
             string senderPeerId = reader.ReadString();
             ulong sequence = reader.ReadUInt64();
             RollbackProtocolMessageKind kind = ReadKind(reader.ReadByte());
-            IRollbackProtocolPayload payload = ReadPayload(reader, kind);
+            IRollbackProtocolPayload payload = ReadPayload(reader, kind, canonicalScratch);
             reader.RequireComplete();
             var envelope = new RollbackProtocolEnvelope(sessionId, senderPeerId, sequence, payload);
-            using var writer = new CanonicalWriter();
-            WriteEnvelope(writer, envelope);
-            if (!writer.ContentEquals(bytes))
+            canonicalScratch.Reset();
+            WriteEnvelope(canonicalScratch, envelope);
+            if (!canonicalScratch.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback protocol envelope is not canonical.");
             return envelope;
         }
@@ -66,16 +68,18 @@ namespace ThirdPersonSimulation.DeterministicRollback
             WritePayload(writer, payload);
         }
 
-        public static IRollbackProtocolPayload ReadCanonicalPayload(byte[] bytes)
+        public static IRollbackProtocolPayload ReadCanonicalPayload(CanonicalWriter canonicalScratch, byte[] bytes)
         {
+            if (canonicalScratch == null)
+                throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             if (reader.ReadUInt32() != PayloadMagic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback canonical payload header is invalid.");
-            IRollbackProtocolPayload payload = ReadPayload(reader, ReadKind(reader.ReadByte()));
+            IRollbackProtocolPayload payload = ReadPayload(reader, ReadKind(reader.ReadByte()), canonicalScratch);
             reader.RequireComplete();
-            using var writer = new CanonicalWriter();
-            WriteCanonicalPayload(writer, payload);
-            if (!writer.ContentEquals(bytes))
+            canonicalScratch.Reset();
+            WriteCanonicalPayload(canonicalScratch, payload);
+            if (!canonicalScratch.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback protocol payload is not canonical.");
             return payload;
         }
@@ -127,16 +131,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        static IRollbackProtocolPayload ReadPayload(CanonicalReader reader, RollbackProtocolMessageKind kind)
+        static IRollbackProtocolPayload ReadPayload(
+            CanonicalReader reader,
+            RollbackProtocolMessageKind kind,
+            CanonicalWriter canonicalScratch)
         {
             return kind switch
             {
                 RollbackProtocolMessageKind.Handshake => ReadHandshake(reader),
                 RollbackProtocolMessageKind.Roster => ReadRoster(reader),
-                RollbackProtocolMessageKind.ActorInputBatch => ReadInputBatch(reader),
-                RollbackProtocolMessageKind.RelayedExplicitInputBatch => ReadRelayedInputBatch(reader),
-                RollbackProtocolMessageKind.CanonicalBundle => RollbackInputCodec.ReadBundle(reader.ReadBytesSegment()),
-                RollbackProtocolMessageKind.CanonicalConfirmation => ReadCanonicalConfirmation(reader),
+                RollbackProtocolMessageKind.ActorInputBatch => ReadInputBatch(reader, canonicalScratch),
+                RollbackProtocolMessageKind.RelayedExplicitInputBatch => ReadRelayedInputBatch(reader, canonicalScratch),
+                RollbackProtocolMessageKind.CanonicalBundle => RollbackInputCodec.ReadBundle(reader.ReadBytesSegment(), canonicalScratch),
+                RollbackProtocolMessageKind.CanonicalConfirmation => ReadCanonicalConfirmation(reader, canonicalScratch),
                 RollbackProtocolMessageKind.StateHash => ReadStateHash(reader),
                 RollbackProtocolMessageKind.SnapshotRequest => new RollbackSnapshotRequest(
                     reader.ReadString(),
@@ -161,12 +168,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 RollbackInputCodec.WriteLengthPrefixedInput(writer, value.Frames[i]);
         }
 
-        static RollbackActorInputBatch ReadInputBatch(CanonicalReader reader)
+        static RollbackActorInputBatch ReadInputBatch(CanonicalReader reader, CanonicalWriter canonicalScratch)
         {
             int count = ReadCount(reader);
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
-                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
+                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment(), canonicalScratch);
             return RollbackActorInputBatch.FromOwnedFrames(frames);
         }
 
@@ -177,12 +184,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 RollbackInputCodec.WriteLengthPrefixedInput(writer, value.Frames[i]);
         }
 
-        static RollbackRelayedExplicitInputBatch ReadRelayedInputBatch(CanonicalReader reader)
+        static RollbackRelayedExplicitInputBatch ReadRelayedInputBatch(CanonicalReader reader, CanonicalWriter canonicalScratch)
         {
             int count = ReadCount(reader);
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
-                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
+                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment(), canonicalScratch);
             return RollbackRelayedExplicitInputBatch.FromOwnedFrames(frames);
         }
 
@@ -195,14 +202,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 RollbackInputCodec.WriteLengthPrefixedBundle(writer, value.FinalBundles[i]);
         }
 
-        static RollbackCanonicalConfirmation ReadCanonicalConfirmation(CanonicalReader reader)
+        static RollbackCanonicalConfirmation ReadCanonicalConfirmation(CanonicalReader reader, CanonicalWriter canonicalScratch)
         {
             ulong previousConfirmedTick = reader.ReadUInt64();
             var confirmedTick = new SimulationTick(reader.ReadUInt64());
             int count = ReadCount(reader);
             var bundles = new RollbackCanonicalInputBundle[count];
             for (int i = 0; i < count; i++)
-                bundles[i] = RollbackInputCodec.ReadBundle(reader.ReadBytesSegment());
+                bundles[i] = RollbackInputCodec.ReadBundle(reader.ReadBytesSegment(), canonicalScratch);
             return RollbackCanonicalConfirmation.FromOwnedBundles(previousConfirmedTick, confirmedTick, bundles);
         }
 

@@ -27,12 +27,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         internal static RollbackActorInputFrame ReadInput(ArraySegment<byte> bytes)
         {
+            using var writer = new CanonicalWriter();
+            return ReadInput(bytes, writer);
+        }
+
+        internal static RollbackActorInputFrame ReadInput(ArraySegment<byte> bytes, CanonicalWriter canonicalScratch)
+        {
+            if (canonicalScratch == null)
+                throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes);
             RollbackActorInputFrame frame = ReadInput(reader);
             reader.RequireComplete();
-            using var writer = new CanonicalWriter();
-            WriteInput(writer, frame);
-            if (!writer.ContentEquals(bytes.AsSpan()))
+            canonicalScratch.Reset();
+            WriteInput(canonicalScratch, frame);
+            if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback Actor input is not canonical.");
             return frame;
         }
@@ -82,6 +90,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         internal static RollbackCanonicalInputBundle ReadBundle(ArraySegment<byte> bytes)
         {
+            using var writer = new CanonicalWriter();
+            return ReadBundle(bytes, writer);
+        }
+
+        internal static RollbackCanonicalInputBundle ReadBundle(ArraySegment<byte> bytes, CanonicalWriter canonicalScratch)
+        {
+            if (canonicalScratch == null)
+                throw new ArgumentNullException(nameof(canonicalScratch));
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != BundleMagic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback canonical bundle header is invalid.");
@@ -93,9 +109,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 actors[i] = ReadInput(reader);
             reader.RequireComplete();
             RollbackCanonicalInputBundle bundle = RollbackCanonicalInputBundle.FromOwnedActors(tick, sequence, actors);
-            using var writer = new CanonicalWriter();
-            WriteBundle(writer, bundle);
-            if (!writer.ContentEquals(bytes.AsSpan()))
+            canonicalScratch.Reset();
+            WriteBundle(canonicalScratch, bundle);
+            if (!canonicalScratch.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback canonical bundle is not canonical.");
             return bundle;
         }

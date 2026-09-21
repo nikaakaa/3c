@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new SortedDictionary<ulong, Dictionary<string, RollbackStateHashReport>>();
         readonly SortedDictionary<ulong, StableHash> m_RequestedSnapshots =
             new SortedDictionary<ulong, StableHash>();
+        readonly CanonicalWriter m_CanonicalScratch = new CanonicalWriter();
 
         public RollbackEndpointRuntimeBridge(
             RollbackPeerEndpoint peer,
@@ -72,7 +73,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 throw new InvalidOperationException($"Rollback Source Egress channel '{record.ChannelId}' is unsupported.");
             }
-            if (RollbackProtocolCodec.ReadCanonicalPayload(record.CopyPayload()) is not RollbackStateHashReport report ||
+            if (RollbackProtocolCodec.ReadCanonicalPayload(m_CanonicalScratch, record.CopyPayload()) is not RollbackStateHashReport report ||
                 !string.Equals(report.PeerId, m_Peer.LocalPeerId, StringComparison.Ordinal) ||
                 report.Tick != record.Tick ||
                 !report.RosterHash.Equals(m_State.RosterHash))

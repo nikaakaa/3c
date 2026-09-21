@@ -227,6 +227,15 @@
 - span key、start/end 判定、timeline requested 到 started 的合并、未完成 span 的 completed=false 输出和 span 排序不变。`spans` List 会随 `RuntimeExecutionTimeline` 被外部持有，不能简单静态复用；history 分组输出集合和 checkpoint HashSet 仍在后续边界。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution span 运行对比或分配采样。
 
+## 2026-09-21 执行 checkpoint 去重复用
+
+对应 tasks.md 的 7.1，新增 7.78 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution history 的 checkpoint 去重索引，不计为 Player 每帧收益。
+
+- `BuildHistory` 原先每次都新建 `HashSet<CheckpointKey>`，用于同一 tick、branch、revision、epoch 和 snapshot identity 的 first-seen 去重。该 HashSet 只在 history 构造期间消费，不会随返回值暴露。
+- 现在去重集合由 builder 静态外壳长期持有，每次构造前清空并保留现有容量。`CheckpointKey` 保持 readonly struct、`HashCode.Combine` 和 Ordinal 字符串比较，checkpoint 去重结果和归属顺序不变。
+- checkpoint 结果 List、tick record List、presentation frame List 和 Timeline 的 spans List 都会被返回值消费，不在本轮复用；后续应沿调用方持有结果 List 或最终数组化路线处理。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 checkpoint history 运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

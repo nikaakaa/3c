@@ -403,6 +403,7 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly Comparison<RuntimeExecutionSpan> CompareSpansComparer = CompareSpans;
         static readonly SelectionScratch Selection = new();
         static readonly Dictionary<SpanKey, PendingSpan> Open = new();
+        static readonly HashSet<CheckpointKey> CheckpointKeys = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -639,7 +640,8 @@ namespace BTSMTL.Diagnostics.Editor
             var ticks = new List<RuntimeExecutionTickRecord>(grouped.Count);
             var checkpoints = new List<RuntimeExecutionCheckpoint>();
             var presentationFrames = new List<RuntimeExecutionPresentationFrame>(presentation.Count);
-            var checkpointKeys = new HashSet<CheckpointKey>();
+            HashSet<CheckpointKey> checkpointKeys = CheckpointKeys;
+            checkpointKeys.Clear();
             bool complete = capture.EvictedEvents == 0 && grouped.Count != 0;
             foreach (EventGroup<TickKey> group in grouped)
             {

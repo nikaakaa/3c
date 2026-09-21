@@ -305,8 +305,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
                 {
                     StateRuntime state = m_ActiveStates[activeIndex];
+                    bool entering = state.Graph != null &&
+                        (!m_CommittedInitialized ||
+                         state.Definition.StateId != m_CommittedState &&
+                         (m_CommittedTransition == null ||
+                          state.Definition.StateId != m_CommittedTransition.TargetStateId));
                     EnsureState(runtime, state);
                     SynchronizeReset(runtime, state);
+                    if (entering)
+                        state.Graph.ResetForStateEntry();
                     state.Lease = state.Graph.BeginFrame(in input, lineage.CompletionIdentity);
                     state.Preparation = state.Graph.PrepareFrame(state.Lease);
                     if (!state.Preparation.IsValid ||

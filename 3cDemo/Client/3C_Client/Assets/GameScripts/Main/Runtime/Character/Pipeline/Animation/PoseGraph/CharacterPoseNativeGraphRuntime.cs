@@ -945,6 +945,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal void ResetForStateEntry()
+        {
+            RequireStarted();
+            if (m_FrameLease.IsValid)
+                throw new InvalidOperationException("Pose state entry requires a closed graph frame.");
+            ResetState(m_ResetGeneration);
+        }
+
+        void ResetState(ulong resetGeneration)
+        {
+            m_Evaluator.Reset(this, resetGeneration);
+            m_OutputCache.Clear();
+            m_Observations.Clear();
+            m_CommittedObservations.Clear();
+            m_Evaluating.Clear();
+            m_LastCommittedLineage = default;
+        }
+
         internal CharacterPoseNativeResetResult ResetInstance(
             ulong resetGeneration)
         {
@@ -976,12 +994,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     Discard(
                         m_FrameLease,
                         CharacterPoseNativeFailureCode.Stale);
-                m_Evaluator.Reset(this, resetGeneration);
-                m_OutputCache.Clear();
-                m_Observations.Clear();
-                m_CommittedObservations.Clear();
-                m_Evaluating.Clear();
-                m_LastCommittedLineage = default;
+                ResetState(resetGeneration);
                 m_ResetGeneration = resetGeneration;
                 return CharacterPoseNativeResetResult.Succeeded(
                     m_CreateRequest.Context.ActorId,

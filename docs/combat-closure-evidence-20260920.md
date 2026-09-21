@@ -4,6 +4,20 @@
 
 尚未闭环。本文不是完成通知；早期交接约定保留为历史，其他任务是否开展整理不代表这里的运行验收已经通过。
 
+## 2026-09-21 继续动作闭环
+
+- 当前任务已设置 active goal，沿主目录继续，不创建 worktree、不新增测试。用户确认另一个任务正在小步处理 GC，允许本任务继续；不得覆盖其在途修改。
+- 当前正式运动链已存在：Timeline evaluation → CharacterTimelineHost.CopyPendingTimelineMotion → Fixed/Float32CharacterEvaluationRuntime → ResolveMotion。旧记录中的“尚未接入”已过时。
+- `587557d34` 修复多 Timeline 收集：Copy 每次清空接收列表，因此必须每条读取后立即合并；MotionWarp 在帧开始清空各技能结果，再逐条读取并分发。Fixed/Float32 同步。补齐 Fixed Unity 对 RootMotion 程序集的正式引用，Unity 刷新重载后 Console 0 error。
+- 复用 Center 改动 `dd37173262704b34bb1aa04056de01a7`。RunHost 的 character.replay before 请求返回 WorkspaceEditorInUse，未产生 RunId；保留主验收 Editor，没有创建替代执行器。随后使用项目已有 character.fixed_input_trace 正式入口采集现场，不把它表述成 Center A/B 通过。
+- 第一轮 1492 帧 replay_start 使用 Trace `f169da25c67742aaafa0e9860ae4a230`，工具正确绑定 fixed-player，但角色注册报 Fixed Gameplay Ability payload version is unsupported，自动退出 Play，未进入动作回放。
+- `3969e56a9` 通过正式 Republish Corin Ability Data 菜单重建四组 Fixed/Float32 共八份资产。正式 FixedData.Load 读取四份成功：Attack SourceMap=2063、DodgeBack=195、DodgeForward=195、RushAttack=1057。只覆盖加载，不代表动作正常。
+- 第二轮相同 trace 越过 payload 加载，角色注册时报 AbilityTimelineMotionWarpCatalog 类型初始化失败：Empty 把字符串 empty 传给要求 64 位十六进制的 StableHash。已改为正式 SimulationIdentity.Hash；目录输入先校验 Timeline/Clip 身份，再由目录分配 Operation，避免要求输入已有尚未分配的 Operation；查询键改为字符串二元组，删除逐次 string.Concat。
+- 上述 MotionWarp 目录修复尚未载入运行复核。当前刷新遇到并行 GC 改动编译错误：EventIdBuilder 的 stackalloc span 传递 CS8352/CS8350，以及 RuntimeExecutionTimeline 的数组 Count、AddCount、列表/数组和 unmappedEventCount 残留。未改动这些文件。Editor 最近读取为非 Play、非编译；回放没有完成 Proof。
+- 下一步：待当前程序集可编译后，先在 Edit 模式复核空目录及真实目录初始化，再用同 trace 继续角色注册和动作推进；继续完成 Fixed 曲线采样和 MotionWarp 数值合同。当前普通曲线仍在 float 采样后转 FixedScalar，MotionWarp 合同仍携带 float 源位置/进度，不能宣称完整定点或整链路 0 GC。
+
+代码入口：TimelineControlContracts.cs 的 AbilityTimelineMotionWarpCatalog；CharacterTimelineHost.cs 的 CopyPendingTimelineMotion/CopyPendingMotionWarps；Timeline.MotionCurve.cs 的采样；TimelineRuntimePreparation.cs 的分段求值；Fixed/Float32CharacterEvaluationRuntime.cs 的贡献合成。下一阶段应复用正式曲线数值实现并在内容准备时构建数据，不在逐帧读取时转换曲线或增加旁路。
+
 ## 2026-09-20 后续核对与提交
 
 - 用户确定先完成 Timeline 时间迁移，再继续技能位移接入。任务 `01a0bcde-cf76-7162-9fcd-da6283a04b7a` 最近读取仍为 active，未取得依赖完成结论。

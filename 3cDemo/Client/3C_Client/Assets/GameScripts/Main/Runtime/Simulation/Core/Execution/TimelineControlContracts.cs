@@ -354,10 +354,10 @@ namespace ThirdPersonSimulation
 
         public static AbilityTimelineMotionWarpCatalog Empty { get; } = new(
             Array.Empty<AbilityTimelineMotionWarpStateIdentity>(),
-            "empty",
-            "empty");
+            SimulationIdentity.Hash("ability-timeline-motion-warp-state-schema/1", "0"),
+            SimulationIdentity.Hash("ability-timeline-motion-warp-content/1", "empty"));
 
-        readonly Dictionary<string, OperationHandle> m_Operations;
+        readonly Dictionary<(string TimelineId, string ClipId), OperationHandle> m_Operations;
 
         public AbilityTimelineMotionWarpCatalog(
             IReadOnlyList<AbilityTimelineMotionWarpStateIdentity> identities,
@@ -367,18 +367,18 @@ namespace ThirdPersonSimulation
             if (identities == null)
                 throw new ArgumentNullException(nameof(identities));
             Identities = new AbilityTimelineMotionWarpStateIdentity[identities.Count];
-            m_Operations = new Dictionary<string, OperationHandle>(identities.Count, StringComparer.Ordinal);
+            m_Operations = new Dictionary<(string TimelineId, string ClipId), OperationHandle>(identities.Count);
             for (int index = 0; index < identities.Count; index++)
             {
                 AbilityTimelineMotionWarpStateIdentity identity = identities[index];
-                if (!identity.IsValid)
+                if (string.IsNullOrEmpty(identity.TimelineId) || string.IsNullOrEmpty(identity.ClipAuthoringId))
                     throw new ArgumentException("Timeline MotionWarp catalog contains an invalid identity.", nameof(identities));
                 OperationHandle operation = new OperationHandle(DirectStateOperationBase + index);
                 Identities[index] = new AbilityTimelineMotionWarpStateIdentity(
                     identity.TimelineId,
                     identity.ClipAuthoringId,
                     operation);
-                if (!m_Operations.TryAdd(IdentityKey(identity.TimelineId, identity.ClipAuthoringId), operation))
+                if (!m_Operations.TryAdd((identity.TimelineId, identity.ClipAuthoringId), operation))
                     throw new ArgumentException("Timeline MotionWarp catalog contains duplicate clip identities.", nameof(identities));
             }
             SchemaHash = new StableHash(SimulationIdentity.Require(schemaHash, nameof(schemaHash)));
@@ -394,10 +394,7 @@ namespace ThirdPersonSimulation
             operation.Value < DirectStateOperationBase + Identities.Length;
 
         public bool TryGetOperation(string timelineId, string clipAuthoringId, out OperationHandle operation) =>
-            m_Operations.TryGetValue(IdentityKey(timelineId, clipAuthoringId), out operation);
-
-        static string IdentityKey(string timelineId, string clipAuthoringId) =>
-            string.Concat(timelineId, "/", clipAuthoringId);
+            m_Operations.TryGetValue((timelineId, clipAuthoringId), out operation);
     }
 
     public readonly struct AbilityTimelineMotionWarpStateIdentity

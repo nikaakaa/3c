@@ -241,6 +241,7 @@ namespace BTSMTL.Timeline.Runtime
             NumericTarget = preparation.NumericTarget;
             Content = preparation.Content;
             SourceTimeline = preparation.SourceTimeline;
+            MotionSampling = preparation.MotionSampling;
             PreparedDependencies = preparation.PreparedDependencies;
             PreparedBindings = preparation.PreparedBindings;
             int clipCapacity = Content.Clips.Count;
@@ -265,6 +266,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         internal TimelineData SourceTimeline { get; }
+        internal TimelineRuntimeMotionSampling MotionSampling { get; }
         internal TimelineRuntimePreparationResult Preparation { get; }
         public string ContentRevision => Content.ContentHash;
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
@@ -436,6 +438,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
                 m_CandidateEvaluation,
                 SourceTimeline,
+                MotionSampling,
                 Content,
                 m_CursorTime,
                 m_Cycle,
@@ -923,6 +926,9 @@ namespace BTSMTL.Timeline.Runtime
             PlaybackMode = playbackMode;
             NumericTarget = numericTarget;
             SourceTimeline = sourceTimeline;
+            MotionSampling = status == TimelineRuntimePreparationStatus.Ready
+                ? new TimelineRuntimeMotionSampling(sourceTimeline, numericTarget)
+                : null;
             Content = content;
             BindingPlan = bindingPlan;
             CallInput = callInput;
@@ -937,6 +943,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineData SourceTimeline { get; }
+        internal TimelineRuntimeMotionSampling MotionSampling { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content?.ContentHash ?? string.Empty;
         public TimelineBindingPlan BindingPlan { get; }
@@ -1839,6 +1846,7 @@ namespace BTSMTL.Timeline.Runtime
         public static TimelineRuntimeEvaluationResult Evaluate(
             TimelineRuntimeEvaluationStorage storage,
             TimelineData timeline,
+            TimelineRuntimeMotionSampling motionSampling,
             TimelineContentUnit content,
             FixedScalar previousPosition,
             int previousCycle,
@@ -1906,7 +1914,8 @@ namespace BTSMTL.Timeline.Runtime
                     }
                     else if (track is MotionCurveTrack motionTrack)
                     {
-                        motionTrack.Sample(
+                        motionSampling.Sample(
+                            motionTrack,
                             segment.PreviousTime,
                             segment.CurrentTime,
                             timeline.AuthoringId,

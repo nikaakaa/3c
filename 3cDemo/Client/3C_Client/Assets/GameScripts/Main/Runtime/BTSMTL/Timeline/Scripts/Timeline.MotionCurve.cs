@@ -37,12 +37,14 @@ namespace BTSMTL.Timeline
             TimelineMotionContributionSpace space,
             TimelineMotionChannel channel,
             TimelineMotionBlendMode blendMode,
-            Vector3 displacement,
-            float yawDegrees,
+            FixedScalar displacementX,
+            FixedScalar displacementY,
+            FixedScalar displacementZ,
+            FixedScalar yawDegrees,
             int priority,
-            float weight,
+            FixedScalar weight,
             bool consumeLowerChannels,
-            float normalizedTime)
+            FixedScalar normalizedTime)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
@@ -51,12 +53,14 @@ namespace BTSMTL.Timeline
             Space = space;
             Channel = channel;
             BlendMode = blendMode;
-            Displacement = displacement;
+            DisplacementX = displacementX;
+            DisplacementY = displacementY;
+            DisplacementZ = displacementZ;
             YawDegrees = yawDegrees;
             Priority = priority;
-            Weight = Mathf.Clamp01(weight);
+            Weight = FixedScalar.Clamp(weight, FixedScalar.Zero, FixedScalar.One);
             ConsumeLowerChannels = consumeLowerChannels;
-            NormalizedTime = Mathf.Clamp01(normalizedTime);
+            NormalizedTime = FixedScalar.Clamp(normalizedTime, FixedScalar.Zero, FixedScalar.One);
         }
 
         public string SourceId { get; }
@@ -66,14 +70,16 @@ namespace BTSMTL.Timeline
         public TimelineMotionContributionSpace Space { get; }
         public TimelineMotionChannel Channel { get; }
         public TimelineMotionBlendMode BlendMode { get; }
-        public Vector3 Displacement { get; }
-        public float YawDegrees { get; }
+        public FixedScalar DisplacementX { get; }
+        public FixedScalar DisplacementY { get; }
+        public FixedScalar DisplacementZ { get; }
+        public FixedScalar YawDegrees { get; }
         public int Priority { get; }
-        public float Weight { get; }
+        public FixedScalar Weight { get; }
         public bool ConsumeLowerChannels { get; }
-        public float NormalizedTime { get; }
-        public bool HasDelta => Weight > 0f && (Displacement.sqrMagnitude > 0.0000001f || Mathf.Abs(YawDegrees) > 0.0001f);
-        public bool ClaimsLowerChannels => Weight > 0f && BlendMode == TimelineMotionBlendMode.Override && ConsumeLowerChannels;
+        public FixedScalar NormalizedTime { get; }
+        public bool HasDelta => Weight > FixedScalar.Zero && (DisplacementX != FixedScalar.Zero || DisplacementY != FixedScalar.Zero || DisplacementZ != FixedScalar.Zero || YawDegrees != FixedScalar.Zero);
+        public bool ClaimsLowerChannels => Weight > FixedScalar.Zero && BlendMode == TimelineMotionBlendMode.Override && ConsumeLowerChannels;
         public bool CanResolve => HasDelta || ClaimsLowerChannels;
     }
 
@@ -81,112 +87,6 @@ namespace BTSMTL.Timeline
     public sealed class MotionCurveTrack : Track
     {
         public override string ContractKind => TimelineContractKinds.MotionCurveTrack;
-
-        public void Sample(
-            FixedScalar previousTimelineTime,
-            FixedScalar timelineTime,
-            string sourceId,
-            string sourceName,
-            ICollection<TimelineMotionCurveContribution> contributions)
-        {
-            if (m_PersistentMuted || contributions == null)
-                return;
-
-            foreach (var clip in Clips)
-            {
-                if (clip is not MotionCurveClip motionCurveClip)
-                    continue;
-
-                if (!TrySampleClip(motionCurveClip, previousTimelineTime, timelineTime, out TimelineMotionCurveContribution contribution))
-                    continue;
-
-                if (!contribution.CanResolve)
-                    continue;
-
-                contributions.Add(new TimelineMotionCurveContribution(
-                    sourceId,
-                    sourceName,
-                    Name,
-                    motionCurveClip.CurveId,
-                    contribution.Space,
-                    contribution.Channel,
-                    contribution.BlendMode,
-                    contribution.Displacement,
-                    contribution.YawDegrees,
-                    contribution.Priority,
-                    contribution.Weight,
-                    contribution.ConsumeLowerChannels,
-                    contribution.NormalizedTime));
-            }
-        }
-
-        static bool TrySampleClip(
-            MotionCurveClip clip,
-            FixedScalar previousTimelineTime,
-            FixedScalar timelineTime,
-            out TimelineMotionCurveContribution contribution)
-        {
-            contribution = default;
-            if (timelineTime <= clip.StartTime || previousTimelineTime >= clip.EndTime)
-                return false;
-
-            float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-            FixedScalar previousLocalTime = FixedScalar.Clamp(previousTimelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime);
-            FixedScalar localTime = FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime);
-            if (previousLocalTime == localTime)
-                return false;
-
-            float selfTime = localTime.ToSingle();
-            float weightNormalizedTime = Mathf.Clamp01(selfTime / duration);
-            float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
-            float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
-            if (weight <= 0f)
-                return false;
-
-            Vector3 previousPosition = clip.EvaluatePositionAtTimelineTime(previousTimelineTime);
-            Vector3 currentPosition = clip.EvaluatePositionAtTimelineTime(timelineTime);
-            contribution = new TimelineMotionCurveContribution(
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                clip.CurveId,
-                clip.Space,
-                clip.Channel,
-                clip.BlendMode,
-                currentPosition - previousPosition,
-                clip.EvaluateYawAtTimelineTime(timelineTime) - clip.EvaluateYawAtTimelineTime(previousTimelineTime),
-                clip.Priority,
-                weight,
-                clip.ConsumeLowerChannels,
-                weightNormalizedTime);
-            return true;
-        }
-
-        static float SampleWeight(
-            AnimationCurve weightCurve,
-            AnimationCurve easeInCurve,
-            AnimationCurve easeOutCurve,
-            float normalizedTime,
-            float selfTime,
-            float remainTime,
-            float easeInTime,
-            float easeOutTime)
-        {
-            float fadeInWeight = 1f;
-            if (easeInTime > 0f && selfTime < easeInTime)
-                fadeInWeight = EvaluateCurve(easeInCurve, Mathf.Clamp01(selfTime / easeInTime), 1f);
-
-            float fadeOutWeight = 1f;
-            if (easeOutTime > 0f && remainTime < easeOutTime)
-                fadeOutWeight = 1f - EvaluateCurve(easeOutCurve, Mathf.Clamp01(1f - remainTime / easeOutTime), 0f);
-
-            return Mathf.Clamp01(EvaluateCurve(weightCurve, normalizedTime, 1f) * fadeInWeight * fadeOutWeight);
-        }
-
-        static float EvaluateCurve(AnimationCurve curve, float time, float defaultValue)
-        {
-            return curve != null && curve.length > 0 ? curve.Evaluate(time) : defaultValue;
-        }
 
 #if UNITY_EDITOR
         public override Type ClipType => typeof(MotionCurveClip);

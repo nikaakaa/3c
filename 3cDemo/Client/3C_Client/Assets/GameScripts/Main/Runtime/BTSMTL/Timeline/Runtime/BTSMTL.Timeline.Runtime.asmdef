@@ -6,7 +6,8 @@
         "BTSMTL.Timeline.Tree",
         "BTSMTL.Diagnostics",
         "BTSMTL.TreeDesigner",
-        "ThirdPersonSimulation.Core"
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Fixed"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

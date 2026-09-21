@@ -3707,3 +3707,11 @@
 - Fixed 和 Float32 Ability Evaluate 的 per-Actor ingress 从 `List` 改为常驻可增长 `SimulationIngress[]` 加显式 count。Prepare 先清空上一 tick 使用区间，再按 locked roster actor index 分组填充；action、gameplay result、effect lifecycle 和 attribute value 的分发顺序不变。
 - 两域 Character Evaluation 的内部边界改为 `SimulationIngress[] + ingressCount`，Apply、Effect 校验和 no-effect 检查都按 count 遍历。异常路径仍统一清空 scratch，成功路径保留 evaluation batch 和 world request 语义。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 两数值域 simulation output scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.191 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Simulation Committer 的每个 Actor 输出改为常驻可增长 `OrderedOutput[]` 加显式 count，容量不足时倍增；处理下一个 Actor 前清空上一轮使用区间。GameplayFact、PresentationCommand、Suppress、排序和异常包装语义不变。
+- `OutputComparer` 改为 Committer 常驻的类型化 comparer，`Array.Sort` 按 count 排序；每 Actor 输出的 `List`、`Clear` 临时壳和排序方法组委托删除。disposition 缺失、Actor 不匹配和提交异常路径保持原样。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

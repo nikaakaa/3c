@@ -32,7 +32,9 @@ namespace ThirdPersonSimulation
         readonly ISimulationPresentationOutputPort m_PresentationPort;
         readonly Dictionary<EventId, SimulationOutputDisposition> m_Dispositions =
             new Dictionary<EventId, SimulationOutputDisposition>();
-        readonly List<OrderedOutput> m_Outputs = new List<OrderedOutput>();
+        readonly OutputComparer m_OutputComparer = new OutputComparer();
+        OrderedOutput[] m_Outputs = Array.Empty<OrderedOutput>();
+        int m_OutputCount;
 
         public SimulationCommitter(
             ISimulationGameplayOutputPort gameplayPort,
@@ -55,14 +57,15 @@ namespace ThirdPersonSimulation
             for (int actor = 0; actor < result.Actors.Count; actor++)
             {
                 SimulationActorTickResult actorResult = result.Actors[actor];
-                m_Outputs.Clear();
+                Array.Clear(m_Outputs, 0, m_OutputCount);
+                m_OutputCount = 0;
                 for (int i = 0; i < actorResult.GameplayFacts.Count; i++)
-                    m_Outputs.Add(new OrderedOutput(actorResult.GameplayFacts[i]));
+                    AddOutput(new OrderedOutput(actorResult.GameplayFacts[i]));
                 for (int i = 0; i < actorResult.PresentationCommands.Count; i++)
-                    m_Outputs.Add(new OrderedOutput(actorResult.PresentationCommands[i]));
-                m_Outputs.Sort(OrderedOutput.Compare);
+                    AddOutput(new OrderedOutput(actorResult.PresentationCommands[i]));
+                Array.Sort(m_Outputs, 0, m_OutputCount, m_OutputComparer);
 
-                for (int i = 0; i < m_Outputs.Count; i++)
+                for (int i = 0; i < m_OutputCount; i++)
                 {
                     OrderedOutput output = m_Outputs[i];
                     if (!m_Dispositions.TryGetValue(output.Header.EventId, out SimulationOutputDisposition disposition))
@@ -108,6 +111,19 @@ namespace ThirdPersonSimulation
                 default:
                     throw new InvalidOperationException($"Gameplay output disposition '{disposition.Kind}' cannot be committed.");
             }
+        }
+
+        void AddOutput(OrderedOutput output)
+        {
+            if (m_OutputCount == m_Outputs.Length)
+            {
+                int capacity = Math.Max(4, m_Outputs.Length * 2);
+                var values = new OrderedOutput[capacity];
+                Array.Copy(m_Outputs, values, m_OutputCount);
+                m_Outputs = values;
+            }
+
+            m_Outputs[m_OutputCount++] = output;
         }
 
         void CommitPresentation(SimulationOutputDisposition disposition, PresentationCommand command)
@@ -159,7 +175,11 @@ namespace ThirdPersonSimulation
             public bool IsGameplay { get; }
             public SimulationEventHeader Header => IsGameplay ? Gameplay.Header : Presentation.Header;
 
-            public static int Compare(OrderedOutput left, OrderedOutput right)
+        }
+
+        sealed class OutputComparer : IComparer<OrderedOutput>
+        {
+            public int Compare(OrderedOutput left, OrderedOutput right)
             {
                 int sequence = left.Header.Sequence.CompareTo(right.Header.Sequence);
                 return sequence != 0

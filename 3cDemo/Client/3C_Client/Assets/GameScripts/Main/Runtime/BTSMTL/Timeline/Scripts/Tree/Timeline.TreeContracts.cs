@@ -10,7 +10,6 @@ namespace BTSMTL.Timeline
                 MotionCurveTimelineContracts.Provider,
                 MotionWarpTimelineContracts.Provider,
                 TreeTimelineContracts.Provider,
-                ActionCueTimelineContracts.Provider,
                 CameraTimelineContracts.Provider,
                 ScenePresentationTimelineContracts.Provider
             });

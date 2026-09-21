@@ -154,11 +154,6 @@ namespace BTSMTL.Timeline.Editor
                 int next = EditorGUILayout.Popup("Source Motion", selected, labels);
                 m_Request.SourceMotionClipId = next > 0 ? m_MotionClipIds[next - 1] : string.Empty;
             }
-            else if (m_Request.Kind == TimelineContractKinds.ActionCueClip)
-            {
-                m_Request.CueId = EditorGUILayout.TextField("Cue Id", m_Request.CueId);
-                m_Request.CueType = EditorGUILayout.TextField("Cue Type", m_Request.CueType);
-            }
             else if (m_Request.Kind == TimelineContractKinds.CameraStateClip)
             {
                 m_Request.CameraMode = (TimelineCameraMode)EditorGUILayout.EnumPopup("Mode", m_Request.CameraMode);
@@ -235,9 +230,6 @@ namespace BTSMTL.Timeline.Editor
                 return "MotionWarp 必须选择已有 MotionCurve 来源。";
             if (m_Request.Kind == TimelineContractKinds.CameraEffectClip && m_Request.Resource is not CameraEffectAsset)
                 return "Camera Effect 必须选择正式相机效果资源。";
-            if (m_Request.Kind == TimelineContractKinds.ActionCueClip &&
-                (string.IsNullOrWhiteSpace(m_Request.CueId) || string.IsNullOrWhiteSpace(m_Request.CueType)))
-                return "Cue Id 和 Cue Type 必须填写。";
             if (m_Request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip &&
                 (string.IsNullOrEmpty(m_Request.TargetBindingId) || string.IsNullOrEmpty(m_Request.ParameterBindingId)))
                 return "Scene 参数 Clip 必须选择 Target 和 Parameter binding。";

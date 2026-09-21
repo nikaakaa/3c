@@ -693,3 +693,11 @@
 - 按当前口径，绑定动作实例的一次性相机触发只能由 TreeClip 内正式相机 Node 提交；持续效果窗口仍由唯一效果轨道采样。生成资产核对未发现 Presentation Marker Camera 节点实例，因此无需迁移内容。
 - 删除 `PresentationGraphCameraOutput`、Marker 图 Camera 输出准备与执行、Host 精确绑定求值和 Camera 资源验证、表现域 Marker Camera 资源验证，以及 Camera bridge 的 `AddMarkerCamera` 消费。Presentation 图遇到 Camera State / Effect / Response / Target 节点时在准备边界明确失败，不产生空命令或第二触发链。
 - `ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors；已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。
+
+## 收口秒制作者存储并清理源帧命名
+
+- 对应 0.2：`TimelineData` 的 Section、`TimelineMarker` 和 Clip 的开始、结束、Ease、ClipIn、时长与自有时间坐标均已使用 Q32.32 raw 秒存储；正式作者 API 只接受 `FixedScalar` 或 decimal 秒。全工程资产搜索没有旧的 `m_Frame`、`m_StartFrame`、`m_EndFrame`、`m_CurrentFrame`、`m_MaxFrame` 或 `m_LocalFrame` 作者存储。
+- `MaxFrame` 与编辑器 `CurrentFrame` 只是按 `DurationTime` 和固定作者帧率投影的显示 / 编辑游标；Rush 生成 builder 的原 `totalFrame` 与 `Boundary.Frame` 改名为 `sourceDurationFrame` 与 `SourceFrame`，在进入正式 Ensure API 前换算为秒。稳定身份种子和生成资产内容不变。
+- `BTSMTL.Timeline.Editor.csproj` 编译通过：0 warnings、0 errors；已执行 `dotnet build-server shutdown`。完整 `ThirdPersonClient.Editor.csproj` 当前被并行网络模块的 `ServerAuthoritativeRemotePresentationTarget.TickQueue` 编译错误阻塞，本批未修改该文件。
+- 对应 0.3：Corin Timeline 资产检查到的 Section、Clip 开始 / 结束 / ClipIn 都是 `m_TimeRaw`、`m_StartTimeRaw`、`m_EndTimeRaw`、`m_ClipInTimeRaw`；生成 C# 只输出 decimal 秒并经 `FixedScalar.FromDecimal` 进入正式作者 API。Rush 源素材帧仅作为映射入参，先除以固定作者帧率再写秒。
+- 闭包使用 Clip / Section 的 `FixedScalar` 时间和 Marker 的 `Time.Raw` 计算内容 hash；authoring fingerprint 序列化 raw 秒 `TimelineData`。`CharacterTimelineContentExport` 只携带 TimelineData 克隆、authoring revision 和 content revision，没有 tick 版作者内容。因此 0.3 勾选。

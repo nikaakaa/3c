@@ -399,7 +399,6 @@ namespace BTSMTL.Diagnostics
         ActionActivationRequested,
         ActionLifecycleTransitioned,
         ActionWindowSampled,
-        ActionCueSubmitted,
         ActionResultSubmitted,
         GameplayEffectLifecycle,
         GameplayAttributeChanged,

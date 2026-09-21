@@ -171,8 +171,6 @@ namespace BTSMTL.Timeline
         public const string MotionWarpClip = "motion-warp.clip";
         public const string TreeTrack = "tree.track";
         public const string TreeClip = "tree.clip";
-        public const string ActionCueTrack = "action-cue.track";
-        public const string ActionCueClip = "action-cue.clip";
         public const string CameraStateTrack = "camera-state.track";
         public const string CameraStateClip = "camera-state.clip";
         public const string CameraCueTrack = "camera-cue.track";

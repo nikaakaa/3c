@@ -207,7 +207,7 @@
 - [x] 4.4.4 轨道采样返回高度与半径的值结果，删除临时作者 Payload 对象（`b96234f54`）
 - [x] 4.4.5 目标绑定及快照均失败后才构造错误文本，删除成功解析中的废弃字符串（`affbf9883`）
 - [x] 4.4.6 将相机碰撞编号生产者、结果合同和消费者统一为 ColliderInstanceId 整数，删除旧字符串路径（`53f2e3a47`）
-- [ ] 4.4.7 治理效果状态创建及各请求／贡献／去重集合的容量，沿正式停止、撤销、完成边界复用存储
+- [x] 4.4.7 治理效果状态创建及各请求／贡献／去重集合的容量，沿正式停止、撤销、完成边界复用存储
 - [ ] 4.4.8 完成 Input、Behavior Designer 与第三方相机正式调用中尚未处理的分配治理
 - [x] 4.4.9 相机 Sequence／Effect／Response／Target 运行请求构造及 IsValid 按四种 Kind 与两种 Lifecycle 正式值域校验，删除每次激活／退役最多四处 Enum.IsDefined 装箱
 - [x] 4.4.10 Fixed Unity 输入适配器的提交／丢弃／恢复 disposition 按四种正式状态值域校验，pending request 恢复按 Immediate／Offensive 值域校验，删除运行通知及按请求数重复的 Enum.IsDefined 装箱

@@ -4060,3 +4060,12 @@
 - Fixed 和 Float32 Character Evaluate 原先每次新建 `AbilityTimelineLogicMotion` 与 `AbilityTimelineLogicMotionWarp` 两个搬运 List。现在两域 Actor Binding 常驻持有这两组 scratch；每次 Timeline advance 消费时仍由 Host 先 Clear 再重填，Ability 过滤和提交顺序不变。
 - Evaluate 成功产物生成后与异常终点都调用 `ClearTimelineMotionScratches`，避免常驻列表跨 tick 保留 warp 里的 action context 字符串；Timeline advances/stops 的 Accept/Discard 转移合同不在本步改变。
 - `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Camera effect 存储边界复查
+
+对应 tasks.md 的 4.4.7，本节是对既有相机提交的当前代码复查和文档收口；4.4 保持未勾选。
+
+- `CameraEffectRuntimeStateStore` 现在按正式 `RequestCapacity` 构造状态池和活动列表；`Add` 重用池内状态，`RemoveAt` 通过池槽交换归还，`Reset` 先清空身份再移除活动引用。活动效果和退休尾迹共同受同一容量限制，超限显式失败。
+- `CameraEffectEvaluator` 的请求集合由外层域运行时按 `RequestCapacity` 准备；贡献、待退休、可见状态、完成事件和完成移除 scratch 在求值器构造期按同一容量准备。`Resolve` 先校验新请求数量，`Retire` 校验待退休数量。
+- 生命周期边界保持显式：`Reset` 清空全部工作集合；撤销先进入待退休列表并在下一次 Resolve 应用；自然完成只有在当前请求仍包含同一事件键时进入完成去重；请求不再包含该键时，下一次 Resolve 通过专用 scratch 移除完成记录。`CameraEffectEventKey` 是值类型身份。
+- 早期审计中“状态池和集合容量仍未完成”的结论已由 `2ae352382`、`38f302785`、`cc7d51153` 后的当前代码取代。本节只记录静态复查，未重复编译、未刷新 Unity、未做 Player 分配采样；第三方相机内部仍不属于本任务声明范围。

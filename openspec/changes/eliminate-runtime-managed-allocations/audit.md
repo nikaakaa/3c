@@ -3115,6 +3115,14 @@
 - completed step 和 snapshot history 的构造入口已分别在正式 Pipeline 和 Rollback snapshot 生命周期中校验 World、Pipeline 与 Tick 一致性；本步不复制、不复用或修改 World。egress payload `byte[]`、`RollbackStateHashReport` 及其 Actor 数组仍是 egress 记录的正式所有权数据，不在本步复用。
 - `ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
 
+## 2026-09-22 Rollback projection 编解码 scratch 复用
+
+对应 tasks.md 的 5.2，新增 5.119 作为独立小步；5.2 保持未勾选。
+
+- `RollbackRuntimeState.CaptureSimulationProjection` 原先每次捕获都新建 `CanonicalWriter`。现在 writer 改为 Runtime State 生命周期字段，捕获前 `Reset`；`ToArray()` 生成的 payload 仍由 `SimulationPipelinePassStateSnapshot` 和 restore transaction 独立持有，不做跨快照复用。
+- `RestoreSimulationProjection` 原先每次新建临时 `SortedDictionary<ulong, StableHash>`，读完后再复制到当前 applied hashes。现在复用 Runtime State 私有 scratch：先清空并读入 payload，经过 identity、数量上限、重复 Tick、`RequireComplete` 和 confirmed horizon 校验后，才清空并替换当前 applied hashes。任一校验失败都不会污染当前状态。
+- 成功或失败后 scratch 中可能保留本次读入值，但每次 restore 入口先清空，且不暴露给外部；string 身份和 StableHash 都是不可变值内容，不会形成可变别名。`ThirdPersonSimulation.DeterministicRollback.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行时分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

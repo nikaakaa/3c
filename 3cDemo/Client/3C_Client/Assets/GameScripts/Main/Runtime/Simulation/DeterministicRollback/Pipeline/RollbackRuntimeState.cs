@@ -254,6 +254,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly RollbackSnapshotHistory m_Snapshots;
         readonly SortedDictionary<ulong, StableHash> m_AppliedGameplayHashes =
             new SortedDictionary<ulong, StableHash>();
+        readonly CanonicalWriter m_ProjectionWriter = new CanonicalWriter();
+        readonly SortedDictionary<ulong, StableHash> m_ProjectionScratch =
+            new SortedDictionary<ulong, StableHash>();
         ulong m_LastCanonicalContiguousTick;
         ulong m_RelayConfirmedTick;
         ulong m_ConfirmedTick;
@@ -698,19 +701,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new InvalidOperationException(
                     $"Rollback applied-input history count '{m_AppliedGameplayHashes.Count}' exceeds configured capacity '{m_Policy.HistoryLengthTicks}' before snapshot capture.");
             }
-            using var writer = new CanonicalWriter();
-            writer.WriteUInt32(0x50524244);
-            writer.WriteInt32(1);
-            writer.WriteString(m_Policy.ConfigurationHash.Value);
-            writer.WriteString(m_RosterHash.Value);
-            writer.WriteUInt64(m_LastCompletedTick);
-            writer.WriteInt32(m_AppliedGameplayHashes.Count);
+            m_ProjectionWriter.Reset();
+            m_ProjectionWriter.WriteUInt32(0x50524244);
+            m_ProjectionWriter.WriteInt32(1);
+            m_ProjectionWriter.WriteString(m_Policy.ConfigurationHash.Value);
+            m_ProjectionWriter.WriteString(m_RosterHash.Value);
+            m_ProjectionWriter.WriteUInt64(m_LastCompletedTick);
+            m_ProjectionWriter.WriteInt32(m_AppliedGameplayHashes.Count);
             foreach (KeyValuePair<ulong, StableHash> pair in m_AppliedGameplayHashes)
             {
-                writer.WriteUInt64(pair.Key);
-                writer.WriteString(pair.Value.Value);
+                m_ProjectionWriter.WriteUInt64(pair.Key);
+                m_ProjectionWriter.WriteString(pair.Value.Value);
             }
-            return writer.ToArray();
+            return m_ProjectionWriter.ToArray();
         }
 
         public void RestoreSimulationProjection(byte[] payload)
@@ -724,14 +727,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             ulong lastCompleted = reader.ReadUInt64();
             int appliedCount = ReadCount(reader, m_Policy.HistoryLengthTicks);
-            var applied = new SortedDictionary<ulong, StableHash>();
+            m_ProjectionScratch.Clear();
             for (int i = 0; i < appliedCount; i++)
-                applied.Add(reader.ReadUInt64(), new StableHash(reader.ReadString()));
+                m_ProjectionScratch.Add(reader.ReadUInt64(), new StableHash(reader.ReadString()));
             reader.RequireComplete();
             if (lastCompleted < m_ConfirmedTick)
                 throw new InvalidDataException("Rollback simulation projection predates the confirmed horizon.");
             m_AppliedGameplayHashes.Clear();
-            foreach (KeyValuePair<ulong, StableHash> pair in applied)
+            foreach (KeyValuePair<ulong, StableHash> pair in m_ProjectionScratch)
                 m_AppliedGameplayHashes.Add(pair.Key, pair.Value);
             m_LastCompletedTick = lastCompleted;
         }

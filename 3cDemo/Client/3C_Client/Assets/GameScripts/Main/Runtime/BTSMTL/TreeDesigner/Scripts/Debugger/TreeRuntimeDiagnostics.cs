@@ -21,8 +21,26 @@ namespace TreeDesigner
         public static void PublishNode(
             RunnableNode node,
             RuntimeTraceEventKind kind,
-            string status,
+            State status,
             NodeStopContext stopContext = default)
+        {
+            PublishNode(node, kind, StatusText(status), stopContext);
+        }
+
+        public static void PublishNode(
+            RunnableNode node,
+            RuntimeTraceEventKind kind,
+            NodeStopStatus status,
+            NodeStopContext stopContext = default)
+        {
+            PublishNode(node, kind, StatusText(status), stopContext);
+        }
+
+        static void PublishNode(
+            RunnableNode node,
+            RuntimeTraceEventKind kind,
+            string status,
+            NodeStopContext stopContext)
         {
             BaseGraph graph = node?.Owner;
             if (!TryGet(graph, RuntimeTraceChannel.Graph, kind, out RuntimeDiagnosticsContext diagnostics))
@@ -46,6 +64,29 @@ namespace TreeDesigner
                     RelatedElementId = stopContext.ReplacementNodeGuid,
                     Detail = stopContext.SourceNodeGuid
                 });
+        }
+
+        static string StatusText(State status)
+        {
+            return status switch
+            {
+                State.None => "None",
+                State.Running => "Running",
+                State.Success => "Success",
+                State.Failure => "Failure",
+                _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Node state has no diagnostics status.")
+            };
+        }
+
+        static string StatusText(NodeStopStatus status)
+        {
+            return status switch
+            {
+                NodeStopStatus.Running => "Running",
+                NodeStopStatus.Completed => "Completed",
+                NodeStopStatus.Failed => "Failed",
+                _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Node stop status has no diagnostics status.")
+            };
         }
 
         public static void PublishEdge(

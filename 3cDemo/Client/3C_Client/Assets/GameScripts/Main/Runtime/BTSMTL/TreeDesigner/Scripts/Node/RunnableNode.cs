@@ -174,19 +174,19 @@ namespace TreeDesigner
                 if (entering)
                 {
                     OnStart();
-                    TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeEntered, m_State.ToString());
+                    TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeEntered, m_State);
                 }
 
                 if (m_State == State.Running)
                     m_State = OnUpdate();
 
-                TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStatus, m_State.ToString());
+                TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStatus, m_State);
 
                 if (m_State == State.Success || m_State == State.Failure)
                 {
                     State result = m_State;
                     OnCompleted(result);
-                    TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeCompleted, result.ToString());
+                    TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeCompleted, result);
                     m_LifecyclePhase = NodeLifecyclePhase.Dormant;
                     OnCompletedCallback?.Invoke();
                     ClearActivation();
@@ -217,7 +217,7 @@ namespace TreeDesigner
             m_StopContext = context;
             m_LifecyclePhase = NodeLifecyclePhase.Stopping;
             m_LastStopStatus = NodeStopStatus.Running;
-            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopRequested, m_LastStopStatus.ToString(), context);
+            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopRequested, m_LastStopStatus, context);
             TreeExecutionActivationScope executionScope = m_ActivationScope;
             PushActivation(executionScope);
             try
@@ -235,7 +235,7 @@ namespace TreeDesigner
             if (m_LifecyclePhase != NodeLifecyclePhase.Stopping)
                 return NodeStopStatus.Completed;
 
-            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopping, m_LastStopStatus.ToString(), m_StopContext);
+            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopping, m_LastStopStatus, m_StopContext);
             TreeExecutionActivationScope executionScope = m_ActivationScope;
             PushActivation(executionScope);
             try
@@ -258,7 +258,7 @@ namespace TreeDesigner
             try
             {
                 OnForceStopped(context);
-                TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeForceStopped, NodeStopStatus.Completed.ToString(), context);
+                TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeForceStopped, NodeStopStatus.Completed, context);
                 m_StopContext = context;
                 m_LastStopStatus = NodeStopStatus.Completed;
                 m_State = State.None;
@@ -401,7 +401,7 @@ namespace TreeDesigner
 
             m_LastStopStatus = status;
             OnStopped(m_StopContext, status);
-            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopped, status.ToString(), m_StopContext);
+            TreeRuntimeDiagnostics.PublishNode(this, RuntimeTraceEventKind.NodeStopped, status, m_StopContext);
             m_State = State.None;
             m_LifecyclePhase = NodeLifecyclePhase.Dormant;
             OnStoppedCallback?.Invoke();

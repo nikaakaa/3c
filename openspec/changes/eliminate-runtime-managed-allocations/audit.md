@@ -178,6 +178,16 @@
 - 事件、span 和新增分组排序的 `Comparison<T>` 改为静态长期持有，删除每次调用 List.Sort 可能生成的方法组委托。静态 builder 只在 Editor 同步读取链使用，没有跨帧持有 selected 事件。
 - `BTSMTL.Diagnostics.Editor.csproj` 首次编译暴露 checkpoint 构造里的 `pair` 残留引用；改为 `group.Key` 后重编成功，0 警告 0 错误。构建使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
 
+## 2026-09-21 Tree 节点状态 typed 化
+
+对应 tasks.md 的 7.1，新增 7.73 作为独立小步；7.1 保持未勾选。
+
+- `RunnableNode` 原先在调用诊断前执行 `m_State.ToString()`、`result.ToString()` 或 `NodeStopStatus.ToString()`；即使当前没有 live/capture 兴趣，参数对象也已经在进入 `TreeRuntimeDiagnostics.PublishNode` 前创建。采样开启时，这些字符串还会进入 `RuntimeTracePayload.Status` 并被 capture 持有。
+- `TreeRuntimeDiagnostics.PublishNode` 现在提供 `State` 和 `NodeStopStatus` 两个正式入口，内部只在确定要发布后用 switch 返回固定字面量 `None`、`Running`、`Success`、`Failure`、`Completed`、`Failed`。旧 string 状态入口删除，全项目调用方只有 `RunnableNode`，已全部改为传枚举。
+- 固定映射保持原 `Enum.ToString` 的合法成员文本。未列出枚举值不再伪造 `"Unknown"`，直接抛 `ArgumentOutOfRangeException`；这是正式枚举边界错误，不是兼容 fallback。
+- `PublishNode` 的停止原因仍调用 `NodeStopOriginCause.ToString()`，edge detail 仍拼接 GUID，graph 状态仍调用 kind `ToString()`，state transition owner 仍拼接 state 和代次。这些是 Tree 采样字符串的后续边界。
+- `BTSMTL.TreeDesigner.csproj` 和 `BTSMTL.TreeDesigner.Editor.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；runtime 0 警告 0 错误，Editor 0 错误且只剩既有 `BaseTreeView` CS0108 警告。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 Tree 运行对比或 Player 分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

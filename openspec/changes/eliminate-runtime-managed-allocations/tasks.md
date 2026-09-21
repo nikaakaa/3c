@@ -478,3 +478,4 @@
 - [x] 7.70 RuntimeExecutionTickRecord 的外部结果和 13 类身份摘要改用 Collector 产出最终数组，删除每次 tick 的 List 对象和 AsReadOnly 包装；外部结果重复保留，身份去重顺序和 EqualityComparer 比较合同不变，payload 字符串仍在后续边界
 - [x] 7.71 图实例读取改为调用方持有结果 List，ViewModel 复用 sequence scratch 和固定排序器，删除 GetInstances、GetGraphInstances 与 CollectInstances 的每次 List、Dictionary、闭包和委托；技能执行筛选、图 ID 匹配、最高 sequence 去重和降序排序不变，Timeline 实例读取仍在后续边界
 - [x] 7.72 执行 history 分组改用按 Position/Branch/Sequence 预排序的连续 EventGroup 列表，删除 tick 与 presentation 两个 SortedDictionary 和每个 key 的排序树节点；group 内仍按 Position/Sequence 排序，builder 的事件与 span 比较委托改为静态缓存，输出组顺序、checkpoint 去重和 record 归属不变，SelectEvents/open/spans/checkpoint 集合仍在后续边界
+- [x] 7.73 Tree 节点诊断状态改传 State／NodeStopStatus 枚举，入口用固定常量映射原文本并删除旧 string 状态入口；RunnableNode 全部调用方不再在采样判断前 ToString，未知枚举显式抛错，节点停止 Cause、边 Detail、图状态文本和 OwnerId 字符串仍在后续边界

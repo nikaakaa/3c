@@ -6,6 +6,8 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 排序修复后，同一录制实际运行至 755/1492 帧，期间读取过 Replaying 231/1492，随后因 Action profile 'Attack' is absent from the Ability catalog 自动退出。堆栈定位跨技能替换准入：用当前技能 Services 查旧动作配置。修复在 ActiveAction 中携带所属 SkillId，通过安装集合按 SkillId 和 ActionId 读取旧动作正式配置；Fixed / Float32 同步，不添加配置别名或运行时临时编译。已停止失败回放释放 tick drive，修复待编译与重跑。
+
 - `94707544f` 补齐本地角色 coordinator，Unity Console 0 error；随后相同录制推进到 149 个 issued ticks，报 Fixed Presentation state channel 'timeline-progress' has no reconciliation order。已停止 replay 释放 tick drive。FixedUnityPresentationOutputAdapter 的正式排序漏列自己生成的 timeline-progress 键；补为先提交 Timeline 进度，再处理动画选择、采样、结束与相机，尚待下一轮运行。
 
 - 纠正此前“回放被重编译打断”的单一判断：Editor.log 中三次存在 Timeline progress requires an installed Action presentation clock，随后 PlayModeErrorAutoExit 退出；因此重载只是部分现象，实际已触发运行错误。堆栈为 FixedUnityPresentationOutputAdapter.CompleteCommit → CharacterPresentationDomainRuntime.Publish。工厂仅给 SimulatedActor 创建 coordinator，本地玩家为 null；现改为两种角色均装配同一 coordinator，并保留原有按角色选择动作播放策略和移动时钟策略。尚待 Unity 编译及重跑。

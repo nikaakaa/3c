@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedAbilityActionBindingProvider
     {
         GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId);
+        internal ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId abilityId, string actionId);
     }
 
     internal sealed class FixedAbilityExecutionAssembly

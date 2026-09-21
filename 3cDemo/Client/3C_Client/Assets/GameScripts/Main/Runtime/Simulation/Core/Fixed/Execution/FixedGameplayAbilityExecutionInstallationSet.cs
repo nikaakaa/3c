@@ -72,5 +72,8 @@ namespace ThirdPersonSimulation.Fixed
         public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
             Require(abilityId).Data.Binding;
 
+        ActionAdmissionProfile IFixedAbilityActionBindingProvider.RequireAdmissionProfile(CharacterSkillId abilityId, string actionId) =>
+            Require(abilityId).Services.RequireAdmissionProfile(actionId);
+
     }
 }

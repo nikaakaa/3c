@@ -71,5 +71,8 @@ namespace ThirdPersonSimulation
         public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
             Require(abilityId).Data.Binding;
 
+        ActionAdmissionProfile IFloat32AbilityActionBindingProvider.RequireAdmissionProfile(CharacterSkillId abilityId, string actionId) =>
+            Require(abilityId).Services.RequireAdmissionProfile(actionId);
+
     }
 }

@@ -26,6 +26,7 @@ namespace ThirdPersonSimulation
     public interface IFloat32AbilityActionBindingProvider
     {
         GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId);
+        internal ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId abilityId, string actionId);
     }
 
     internal sealed class Float32AbilityExecutionAssembly

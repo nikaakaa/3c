@@ -90,16 +90,18 @@ namespace ThirdPersonSimulation
 
     internal readonly struct ActionAdmissionActiveAction
     {
-        public ActionAdmissionActiveAction(string actionId, ulong instanceId)
+        public ActionAdmissionActiveAction(string actionId, ulong instanceId, CharacterSkillId skillId)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             if (instanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(instanceId));
             InstanceId = instanceId;
+            SkillId = skillId;
         }
 
         public string ActionId { get; }
         public ulong InstanceId { get; }
+        public CharacterSkillId SkillId { get; }
     }
 
     internal readonly struct ActionAdmissionTargetCandidate
@@ -161,7 +163,7 @@ namespace ThirdPersonSimulation
     {
         IEnumerable<string> OwnedGameplayTags { get; }
         IEnumerable<ActionAdmissionActiveAction> ActiveActions { get; }
-        ActionAdmissionProfile RequireAdmissionProfile(string actionId);
+        ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId skillId, string actionId);
         bool TryGetGameplayTagParent(string tag, out string parentTag);
     }
 
@@ -374,7 +376,7 @@ namespace ThirdPersonSimulation
                     if (!hasReplacementSource)
                         return Reject(ActionAdmissionRejectReason.ReplacementSourceMissing, string.Empty, 0);
 
-                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireAdmissionProfile(replacementSource.ActionId);
+                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireAdmissionProfile(replacementSource.SkillId, replacementSource.ActionId);
                     AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
                     if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
                         return Reject(ActionAdmissionRejectReason.SourceActionStillActive, replacementSource.ActionId, replacementSource.InstanceId);

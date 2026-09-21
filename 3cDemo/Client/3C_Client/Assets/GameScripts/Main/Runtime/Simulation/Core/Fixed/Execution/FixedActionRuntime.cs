@@ -298,9 +298,9 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        ActionAdmissionProfile IActionAdmissionReadPort.RequireAdmissionProfile(string actionId)
+        ActionAdmissionProfile IActionAdmissionReadPort.RequireAdmissionProfile(CharacterSkillId skillId, string actionId)
         {
-            return RequireAdmissionProfile(actionId);
+            return m_ActionBindings.RequireAdmissionProfile(skillId, actionId);
         }
 
         bool IActionAdmissionReadPort.TryGetGameplayTagParent(string tag, out string parentTag)
@@ -673,7 +673,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             foreach (FixedActionInstanceState action in m_Actions.EnumerateActiveActions())
             {
-                yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
+                yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId, action.SkillId);
             }
         }
 

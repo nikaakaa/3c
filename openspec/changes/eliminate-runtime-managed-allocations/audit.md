@@ -3339,3 +3339,10 @@
 - `RollbackInputRelayRuntime.ReceiveInput` 原先每次有去重后接受的输入都新建 relayed frame 数组。现在 Relay 按批次长度保留精确 frame scratch，填充 provenance 后交给 `RollbackRelayedExplicitInputBatch.FromOwnedFrames`，由 Datagram Channel 同步编码；可靠重发只保留 packet bytes。
 - 广播完成后 finally 清空 scratch 元素，避免 ephemeral batch 或失败路径继续保留 `RollbackActorInputFrame` 引用。同一稳定批长不再分配数组；去重计数、广播计数、输入所有权和 provenance 校验不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback 5.2 源码收口
+
+- Rollback schedule 的 source mappings、steps、actor inputs、ActorId 和 typed ingress 均已迁移到 pass 生命周期 scratch；forward、rollback replay 和深恢复的多步槽位按实际深度准备，OuterTransaction 只读消费。5.129、5.133～5.138 和 d3bb156da 已覆盖 mapping、step、payload 和 ingress 链路。
+- Rollback output 的 disposition index、operations、正式／tentative correction registry、record pool 和逐 Actor 工作集合都按 `MaximumOutputRecords` 构造准备；5.84～5.89、5.116、5.125、5.131 和 5.139 已覆盖索引、记录、发布与 egress 数组。替换、取消、确认和失败路径保持事务隔离。
+- Rollback input history、applied projection、snapshot history 和 checkpoint 数组由 policy 的 `HistoryLengthTicks`、`MaximumQueuedBundles`、`MaximumQueuedSnapshots` 明确容量；policy 构造强制 rollback depth 小于 history/snapshot 容量。5.71、5.90、5.119、5.128、5.132、5.142 和 5.143 已覆盖历史、projection、checkpoint 和查询路径。
+- `DeterministicRollbackModelPolicy` 构造期拒绝 `MaximumRollbackDepthTicks >= HistoryLengthTicks`、`MaximumPredictionLeadTicks >= HistoryLengthTicks` 或 `MaximumQueuedSnapshots <= MaximumRollbackDepthTicks` 的配置；超容量路径继续显式失败，不热点扩容。5.2 源码迁移收口只表示源码链路完成，不表示 Player 已实测 0 GC。

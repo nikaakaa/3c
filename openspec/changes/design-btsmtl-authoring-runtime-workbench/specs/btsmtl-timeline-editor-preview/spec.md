@@ -82,7 +82,7 @@ Timeline UI MUST 只读取正式 Timeline Runtime、Ability lifecycle、Action p
 
 ### Requirement: 编辑控件不能冒充真实角色预览
 
-Timeline MUST 保留编辑游标、整数帧输入和逐帧操作；编辑游标、真实运行标记和 Capture 历史位置 MUST 分别保存。已明确的 Profile、三态切换和 Session 菜单 MUST 通过正式 ScenePlay owner 操作运行。普通来源导航 MUST NOT 启动或重建 Session。嵌入按钮、快捷键、EditorUpdate、初始化/释放、保存和 delayCall MUST NOT 调用 Slate Play/Sample/ReSample/Stop 执行预览，MUST 清理 AutoKey 与临时作者播放器。
+Timeline MUST 使用秒制编辑游标和时间输入，保留独立的秒／帧显示切换与显式吸附网格；编辑游标、真实运行标记和 Capture 历史位置 MUST 分别保存。已明确的 Profile、三态切换和 Session 菜单 MUST 通过正式 ScenePlay owner 操作运行。普通来源导航 MUST NOT 启动或重建 Session。嵌入按钮、快捷键、EditorUpdate、初始化/释放、保存和 delayCall MUST NOT 调用 Slate Play/Sample/ReSample/Stop 执行预览，MUST 清理 AutoKey 与临时作者播放器。
 
 #### Scenario: 没有运行绑定
 
@@ -95,3 +95,31 @@ Timeline MUST 保留编辑游标、整数帧输入和逐帧操作；编辑游标
 - **WHEN** 作者在 Preview 中编辑正式 Timeline
 - **THEN** 作者数据 MUST 经同一 Mutation/Undo 修改，运行标记 MUST 只读消费真实绑定
 - **AND** 新版本是否采用 MUST 由正式内容 owner 的实际报告决定；没有实际目标、版本未知或准备失败时 MUST NOT 显示已采用
+
+### Requirement: 动态 TreeClip 长度必须来自对应执行域的实例事实
+
+Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源，图内“结束片段”只结束当前调用实例。Presentation 的 FrameBoundary MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
+
+#### Scenario: 动态片段仍在执行
+
+- **WHEN** 所观察实例尚无已接受的退出或销毁事实
+- **THEN** 可视 End MUST 使用对应执行域的已提交游标；Presentation 使用表现时间，Logic 使用逻辑时间
+- **AND** 身份 MUST 包含 playback、generation、cycle 和 Clip；不同调用不能共享实际长度
+
+#### Scenario: 表现图主动结束片段
+
+- **WHEN** 当前表现 TreeClip 在 OnEnable 或 Root 请求退出
+- **THEN** 同一候选帧 MUST 执行 OnDisable、撤下该实例的活跃状态和持续输出
+- **AND** 只有整帧接受后 MUST 保存退出并发布实际退出时间；Discard MUST 保留此前接受状态
+
+#### Scenario: 回看退出之前的历史
+
+- **WHEN** 当前历史位置尚未包含本次实例的退出事实
+- **THEN** Clip MUST 显示 open 并截取到该历史位置的对应域游标
+- **AND** MUST NOT 读取未来事件或使用当前作者结束时间
+
+#### Scenario: 父播放结束或被撤销
+
+- **WHEN** 正式父 Timeline 结束、离开 cycle、停止、撤销或修正
+- **THEN** 动态子片段 MUST 由原生命周期链路退出或销毁，不留下孤立输出
+- **AND** MUST NOT 为延长子片段创建独立时间源或继续执行已结束父播放

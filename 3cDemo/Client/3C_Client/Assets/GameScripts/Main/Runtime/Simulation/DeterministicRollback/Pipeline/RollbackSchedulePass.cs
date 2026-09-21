@@ -47,6 +47,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly RollbackRuntimeState m_State;
         readonly SimulationPipelineStepSourceMapping[][] m_MappingScratches =
             new SimulationPipelineStepSourceMapping[3][];
+        readonly List<SimulationPipelineActorInput<FixedStepInput>[]> m_ActorInputScratches =
+            new List<SimulationPipelineActorInput<FixedStepInput>[]>();
         string m_ReplaySourceClockId;
         string m_ReplayClockId;
 
@@ -172,17 +174,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     ulong tick = checked(replayStart.Value + (ulong)i);
                     RollbackCanonicalInputBundle bundle = SelectBundle(new SimulationTick(tick));
                     var source = new SimulationTickSourceIdentity(SimulationTickSourceKind.Replay, replayClock, tick);
+                    var actorInputs = RentActorInputScratch(stepIndex, bundle.Actors.Count);
                     steps[stepIndex++] = BuildStep(
                         bundle,
                         source,
                         SimulationPipelineStepExecutionKind.Replay,
                         planSequence++,
+                        actorInputs,
                         Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>());
                 }
             }
             if (includeCurrentStep)
             {
                 RollbackCanonicalInputBundle current = SelectBundle(new SimulationTick(nextTick));
+                var actorInputs = RentActorInputScratch(stepIndex, current.Actors.Count);
                 mappings[mappingIndex] = new SimulationPipelineStepSourceMapping(
                     context.Source.ClockId,
                     context.Source.ClockId,
@@ -192,6 +197,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     new SimulationTickSourceIdentity(context.Source.Kind, context.Source.ClockId, nextTick),
                     restore == null ? SimulationPipelineStepExecutionKind.Forward : SimulationPipelineStepExecutionKind.Current,
                     planSequence,
+                    actorInputs,
                     ingress.TypedIngress.Ingress);
             }
             return SimulationSessionExecutionPlan<FixedSimulationStep>.FromOwnedArrays(
@@ -245,6 +251,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return scratch;
         }
 
+        SimulationPipelineActorInput<FixedStepInput>[] RentActorInputScratch(int stepIndex, int actorCount)
+        {
+            while (m_ActorInputScratches.Count <= stepIndex)
+                m_ActorInputScratches.Add(null);
+            SimulationPipelineActorInput<FixedStepInput>[] scratch = m_ActorInputScratches[stepIndex];
+            if (scratch == null || scratch.Length != actorCount)
+            {
+                scratch = new SimulationPipelineActorInput<FixedStepInput>[actorCount];
+                m_ActorInputScratches[stepIndex] = scratch;
+            }
+            return scratch;
+        }
+
         static SimulationRestoreDirective BuildRestoreDirective(
             SimulationTick restoreTick,
             FixedSimulationSessionSnapshot snapshot,
@@ -274,9 +293,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationTickSourceIdentity source,
             SimulationPipelineStepExecutionKind kind,
             ulong planSequence,
+            SimulationPipelineActorInput<FixedStepInput>[] inputs,
             IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> typedIngress)
         {
-            var inputs = new SimulationPipelineActorInput<FixedStepInput>[bundle.Actors.Count];
             for (int i = 0; i < bundle.Actors.Count; i++)
             {
                 RollbackActorInputFrame actor = bundle.Actors[i];

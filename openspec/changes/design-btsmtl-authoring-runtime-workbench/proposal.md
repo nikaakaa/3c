@@ -80,3 +80,11 @@ BtsmtlScenePlayProfile
 - 当前 `btsmtl-timeline-editor-preview` 前部已规定原 Timeline Session 菜单，后部仍有“默认不包含未确认的 Timeline 内 Scene Play 快捷控制”。本 change 只明确已确认的 Profile、三态和正式 Session 菜单；普通编辑游标仍不执行角色。delta 改为当前 requirement 名称，避免归档时覆盖不存在的旧条款。
 - 动画层和 MM 的现行 spec 仍含独立 Fact/Query Fixture 预览措辞，与当前 `openspec/project.md` 及原生 Pose spec 的唯一 ScenePlay 合同冲突。本 change 的对应 delta 统一为正式 Actor 的只读观察，不恢复 Fixture 或旧 Projection。
 - 三种形态始终从原 Timeline 窗口进入；FlowCanvas 仅复用已有图面板进行来源导航，不替换 Timeline 内的 Slate，也不新增 Workbench。
+
+## 2026-09-22 动态长度补充
+
+- 明确逻辑域与表现域的 `TreeDecision` 都由本次实例的图退出请求决定实际长度；表现域固定区间使用显式 `FrameBoundary`。
+- 表现域退出加入原表现帧候选提交与丢弃链路，运行观察按各域已提交时间和该次调用的退出事实显示。
+- 秒制作者游标、帧格式显示、吸附网格分别定义。普通编辑游标依然不执行角色。
+- 现行 `character-animation-pipeline` 中“PresentationFrame 不重复产生 TreeClip”应明确为不得重发逻辑域 TreeClip 事实；表现域 TreeClip 的自身生命周期由表现帧执行。
+- 本补充不改变 Track 重叠合同，不新增播放器，不把文档更新视为运行验收完成。

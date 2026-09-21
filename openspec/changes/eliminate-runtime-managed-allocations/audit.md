@@ -3241,3 +3241,11 @@
 - `RollbackSchedulePassRuntime.BuildPlan` 原先每个可执行 plan 都新建 `SimulationPipelineStepSourceMapping[]`；长度只由 replay mapping 和 current mapping 组合决定，取值 1 或 2。现在 pass 生命周期按长度保留 scratch，稳定长度下不再重复分配数组。
 - 返回的数组仍通过 `FromOwnedArrays` 交给 ExecutionPlan；每次构造前都会完整覆盖本次使用的 1 或 2 个元素。消费寿命继续由 ExecutionPlan 的 OuterTransaction 产品合同约束，不新增租约、归还回调和通用池。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Rollback actor input scratch 复用
+
+对应 tasks.md 的 5.2，新增 5.134 作为独立小步；5.2 保持未勾选。
+
+- `RollbackSchedulePassRuntime.BuildStep` 原先每个 replay 或 forward step 都新建 `SimulationPipelineActorInput<FixedStepInput>[]`。现在 schedule pass 按 plan 内 step 槽位持有 scratch；同一槽位在稳定 roster 下跨 OuterTransaction 复用，roster 数量变化时替换精确长度数组。
+- 每个 step 构造前完整覆盖 scratch 内容，不同 step 仍持有各自槽位数组。`FixedSimulationStep` 对象、`FromOwnedArrays` 和 ExecutionPlan 的 OuterTransaction 合同不变，不改 step 对象、输入值或执行顺序。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

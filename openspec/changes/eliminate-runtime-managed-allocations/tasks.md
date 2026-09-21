@@ -394,6 +394,7 @@
 - [x] 5.131 Rollback output diagnostics code 按三种正式 operation 直接映射固定字符串，删除每次发布诊断的 enum ToString、小写化和 code 插值；detail 与 sink 合同不变
 - [x] 5.132 Rollback input history 查询直接输出 predicted/canonical bundle 引用，删除每次读取的只读 entry 包装和异常控制流；capture checkpoint 仍独立持有精确 entry 数组
 - [x] 5.133 Rollback schedule 按长度复用 execution plan 的 step-source mapping scratch，删除每个外层 tick 的 1/2 元素数组；mapping 内容按本次计划完整覆盖，可见寿命仍限定 OuterTransaction
+- [x] 5.134 Rollback schedule 按 plan step 槽位复用 actor input scratch，删除每次 forward/replay 构造步骤的 roster 数组；FixedSimulationStep 对象和 OuterTransaction 所有权不变
 
 ## 6. UI、资源、渲染和生命周期
 

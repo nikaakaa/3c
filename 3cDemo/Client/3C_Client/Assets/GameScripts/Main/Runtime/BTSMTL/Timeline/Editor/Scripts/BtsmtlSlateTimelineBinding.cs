@@ -972,8 +972,9 @@ namespace BTSMTL.Timeline.Editor
                 return "Add Clip 的目标 Track 已锁定。";
             }
             bool isTreeClip = request.Kind == TimelineContractKinds.TreeClip;
-            bool terminalLogicTreeClip = isTreeClip &&
-                track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
+            bool terminalTreeClip = isTreeClip &&
+                (track.Source.ExecutionDomain == TimelineExecutionDomain.Logic ||
+                 request.TreeExitSource == TimelineClipExitSource.TreeDecision);
             FixedScalar terminalTime = FixedScalar.Max(request.StartTime + FixedScalar.FromRaw(1), Timeline.DurationTime);
             try
             {
@@ -996,7 +997,9 @@ namespace BTSMTL.Timeline.Editor
                         : request.Resource != null
                             ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartTime)
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartTime);
-                    added.ConfigureTimeRange(added.StartTime, terminalLogicTreeClip ? terminalTime : request.EndTime);
+                    if (added is TreeClip treeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                        treeClip.SetExitSource(request.TreeExitSource);
+                    added.ConfigureTimeRange(added.StartTime, terminalTreeClip ? terminalTime : request.EndTime);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))
@@ -1035,11 +1038,6 @@ namespace BTSMTL.Timeline.Editor
             }
             if (request.Kind == TimelineContractKinds.MotionWarpClip)
                 configuration.SourceMotionClipId = request.SourceMotionClipId;
-            if (request.Kind == TimelineContractKinds.ActionCueClip)
-            {
-                configuration.CueId = request.CueId;
-                configuration.CueType = request.CueType;
-            }
             if (request.Kind == TimelineContractKinds.CameraStateClip)
             {
                 configuration.CameraMode = request.CameraMode;
@@ -1048,15 +1046,6 @@ namespace BTSMTL.Timeline.Editor
                 configuration.CameraBlendOutSeconds = request.CameraBlendOutSeconds;
                 configuration.CameraTargetKey = request.CameraTargetKey;
                 configuration.CameraInterruptPolicy = request.CameraInterruptPolicy;
-            }
-            if (request.Kind == TimelineContractKinds.CameraCueClip)
-            {
-                configuration.CueId = request.CueId;
-                configuration.CameraCueKind = request.CameraCueKind;
-                configuration.CueType = request.CueType;
-                configuration.CameraIntensity = request.CameraIntensity;
-                configuration.CameraDurationSeconds = request.CameraDurationSeconds;
-                configuration.Priority = request.CameraPriority;
             }
             if (request.Kind == TimelineContractKinds.CameraResponseClip)
             {

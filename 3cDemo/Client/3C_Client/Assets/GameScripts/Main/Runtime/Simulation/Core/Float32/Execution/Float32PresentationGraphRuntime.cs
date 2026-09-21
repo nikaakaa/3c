@@ -55,6 +55,8 @@ namespace ThirdPersonSimulation
         bool m_Executing;
         IFloat32PresentationGraphOutput m_Output;
         bool m_Retiring;
+        bool m_ExitRequested;
+        bool m_CanRequestExit;
         readonly string[] m_Callers;
         readonly AbilityTreeClipHook[] m_Hooks;
         readonly string[] m_Producers;
@@ -134,7 +136,7 @@ namespace ThirdPersonSimulation
             return match >= 0;
         }
 
-        public void Evaluate(int binding, in Float32PresentationGraphFacts facts, IFloat32PresentationGraphOutput output)
+        public bool Evaluate(int binding, in Float32PresentationGraphFacts facts, IFloat32PresentationGraphOutput output)
         {
             if (m_Executing)
                 throw new InvalidOperationException("Presentation graph evaluation is already active.");
@@ -144,6 +146,8 @@ namespace ThirdPersonSimulation
             m_Facts = facts;
             m_Output = output;
             m_Retiring = m_Hooks[binding] == AbilityTreeClipHook.OnDisable || m_Hooks[binding] == AbilityTreeClipHook.OnDestroy;
+            m_ExitRequested = false;
+            m_CanRequestExit = entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip && !m_Retiring;
             m_Executing = true;
             Array.Copy(m_Defaults, m_State, m_State.Length);
             try
@@ -153,7 +157,7 @@ namespace ThirdPersonSimulation
                 OperationExecutionResult result = m_Control.Tick(new OperationHandle(entry.TargetIndex));
                 if (result != OperationExecutionResult.Success && result != OperationExecutionResult.Failure)
                     throw new InvalidOperationException($"Presentation Marker '{entry.InvocationCallerClipId}' did not complete its OnEnable graph: {result}.");
-                return;
+                return m_ExitRequested;
             }
             finally
             {
@@ -184,6 +188,7 @@ namespace ThirdPersonSimulation
             int capacity = 0;
             switch (operation.Code)
             {
+                case SimulationOperationCode.TimelineClipExitRequest:
                 case SimulationOperationCode.Root:
                 case SimulationOperationCode.Sequence:
                 case SimulationOperationCode.Selector:
@@ -332,6 +337,11 @@ namespace ThirdPersonSimulation
                             throw new InvalidOperationException("Presentation graph has no Camera output consumer.");
                         m_Owner.m_Output.SubmitCamera(m_Owner.m_Producers[operation.Handle.Value],
                             m_Owner.m_Activations[operation.Handle.Value], m_Owner.m_Retirements[operation.Handle.Value], m_Owner.m_Retiring);
+                        return OperationExecutionResult.Success;
+                    case SimulationOperationCode.TimelineClipExitRequest:
+                        if (!m_Owner.m_CanRequestExit)
+                            throw new InvalidOperationException("Only an active Presentation TreeClip can request its own exit.");
+                        m_Owner.m_ExitRequested = true;
                         return OperationExecutionResult.Success;
                     case SimulationOperationCode.BlackboardSet:
                         m_Owner.m_Values.WriteParameter(cursor, operation);

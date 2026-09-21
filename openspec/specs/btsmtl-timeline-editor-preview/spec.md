@@ -66,6 +66,28 @@ Timeline UI MUST 只读取正式 Timeline Runtime、Ability lifecycle、Action p
 - **THEN** Prepare 或 playback 创建 MUST 精确失败
 - **AND** MUST 不创建空 Ability、假 Actor、默认资源或 fallback 播放器
 
+### Requirement: 动态 TreeClip 长度必须来自对应执行域的实例事实
+
+Logic 与 Presentation 的 TreeClip MUST 支持显式 `TreeDecision` 结束来源，图内“结束片段”只结束当前 playback、generation 与 cycle 的调用实例。Presentation 的 `FrameBoundary` MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
+
+#### Scenario: 动态片段仍在执行
+
+- **WHEN** 所观察实例尚无已接受的退出或销毁事实
+- **THEN** 可视 End MUST 使用对应执行域的已提交游标；Presentation 使用表现时间，Logic 使用逻辑时间
+- **AND** 不同 playback、generation 或 cycle MUST 独立保存实际长度
+
+#### Scenario: 表现图主动结束片段
+
+- **WHEN** 当前 Presentation TreeClip 的 OnEnable 或 Root 请求结束当前片段
+- **THEN** 原表现驱动 MUST 在当前候选帧执行 OnDisable、移除活跃片段并回收持续输出
+- **AND** 只有 Commit 后 MUST 保存退出；Discard MUST 保留此前已接受状态
+
+#### Scenario: 回看退出之前的历史
+
+- **WHEN** 历史位置尚未包含本次实例的退出事实
+- **THEN** Clip MUST 显示 open 并截取到该历史位置的对应域游标
+- **AND** MUST NOT 使用未来退出事件或当前作者结束时间
+
 ### Requirement: Timeline 私有状态必须由 Timeline Runtime 拥有
 
 Timeline Runtime MUST 保存自己的 committed cursor、循环/Section 位置、活动 Clip、窗口阶段、TreeClip 调用关联、停止原因、generation、内容 revision 和恢复所需的正式私有状态。Character 核心负责整体快照校验、Step 接受/丢弃和最终安装；Timeline UI、Ability 和 Pose 不得复制可写 Timeline 状态。

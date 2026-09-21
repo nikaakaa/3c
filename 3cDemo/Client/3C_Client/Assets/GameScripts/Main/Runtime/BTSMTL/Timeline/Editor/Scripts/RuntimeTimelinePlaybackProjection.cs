@@ -15,6 +15,7 @@ namespace BTSMTL.Timeline.Editor
         TimelineData m_Runtime;
         RuntimeInstanceKey m_Playback;
         RuntimeDebugViewModel m_Observation;
+        ulong m_LastEventSequence;
 
         public bool Matches(TimelineData source, RuntimeInstanceKey playback) =>
             ReferenceEquals(m_Source, source) && m_Playback.Equals(playback);
@@ -28,12 +29,16 @@ namespace BTSMTL.Timeline.Editor
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
-            if (!Matches(source, playback) || !ReferenceEquals(m_Observation, observation))
+            ulong latestSequence = 0;
+            for (int index = 0; index < events.Count; index++)
+                latestSequence = Math.Max(latestSequence, events[index].Event.Sequence);
+            if (!Matches(source, playback) || !ReferenceEquals(m_Observation, observation) || latestSequence < m_LastEventSequence)
             {
                 Reset(source, playback);
                 m_Observation = observation;
             }
 
+            m_LastEventSequence = latestSequence;
             bool changed = false;
             for (int index = 0; index < events.Count; index++)
             {
@@ -61,17 +66,23 @@ namespace BTSMTL.Timeline.Editor
                     if (track.Clips[clipIndex] is not TreeClip clip ||
                         clip.ClipExitSource != TimelineClipExitSource.TreeDecision)
                         continue;
-                    float end = summary.LogicTime;
+                    bool presentation = clip.ExecutionDomain == TimelineExecutionDomain.Presentation;
+                    RuntimeTraceDomain domain = presentation ? RuntimeTraceDomain.Presentation : RuntimeTraceDomain.Logic;
+                    int cycle = presentation ? summary.VisualCycle : summary.LogicCycle;
+                    float end = presentation ? summary.VisualTime : summary.LogicTime;
+                    ulong latestSequence = 0;
                     for (int eventIndex = 0; eventIndex < events.Count; eventIndex++)
                     {
                         RuntimeDebugEventView item = events[eventIndex];
-                        if (item.Event.Payload.Cycle == summary.Cycle &&
-                            item.Event.Kind is RuntimeTraceEventKind.TreeClipExited or RuntimeTraceEventKind.TreeClipDestroyed &&
-                            string.Equals(item.Source.ClipAuthoringId, clip.AuthoringId, StringComparison.Ordinal))
-                        {
-                            end = item.Event.Payload.Time;
-                            break;
-                        }
+                        if (item.Event.Domain != domain || item.Event.Payload.Cycle != cycle ||
+                            !string.Equals(item.Source.ClipAuthoringId, clip.AuthoringId, StringComparison.Ordinal) ||
+                            item.Event.Sequence <= latestSequence ||
+                            item.Event.Kind is not (RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated or
+                                RuntimeTraceEventKind.TreeClipExited or RuntimeTraceEventKind.TreeClipDestroyed))
+                            continue;
+                        latestSequence = item.Event.Sequence;
+                        end = item.Event.Kind is RuntimeTraceEventKind.TreeClipExited or RuntimeTraceEventKind.TreeClipDestroyed
+                            ? item.Event.Payload.Time : presentation ? summary.VisualTime : summary.LogicTime;
                     }
                     FixedScalar endTime = FixedScalar.FromDouble(Math.Max(0d, end));
                     clip.ConfigureTimeRange(clip.StartTime, endTime < clip.StartTime ? clip.StartTime : endTime);
@@ -106,7 +117,7 @@ namespace BTSMTL.Timeline.Editor
             if (runtimeClip is TreeClip treeClip &&
                 treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision)
             {
-                runtimeClip.ConfigureTimeRange(runtimeClip.StartTime, TimelineTimeGrid.Position(m_SourceSnapshot.MaxFrame, TimelineUtility.FrameRate));
+                runtimeClip.ConfigureTimeRange(runtimeClip.StartTime, m_SourceSnapshot.DurationTime);
             }
             int sourceIndex = sourceTrack.Clips.IndexOf(sourceClip);
             int insertIndex = runtimeTrack.Clips.Count;

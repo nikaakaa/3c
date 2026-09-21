@@ -1675,6 +1675,16 @@ namespace BTSMTL.Timeline.Runtime
             Version = checked(Version + 1);
         }
 
+        public void RemoveAt(int index)
+        {
+            if ((uint)index >= (uint)Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            int remaining = Count - index - 1;
+            if (remaining != 0)
+                Array.Copy(m_Values, index + 1, m_Values, index, remaining);
+            m_Values[--Count] = default;
+        }
+
         public void Sort(IComparer<T> comparer) => Array.Sort(m_Values, 0, Count, comparer);
 
         public bool Contains(T value) => Array.IndexOf(m_Values, value, 0, Count) >= 0;

@@ -6,6 +6,14 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 ## 本轮补齐
 
+### 2026-09-22 动态长度 TreeClip
+
+表现域 TreeClip 已接入正式表现帧候选链。TreeDecision 片段由表现 TimelineBody 的 OnEnable/Root 图请求结束；请求在当前候选帧执行 OnDisable、移除 ActiveTreeClips 并撤回持续 Camera 输出，只有 Commit 保存退出状态，Discard 保留上一次已接受状态。FrameBoundary 仍表示固定区间。
+
+运行观察按执行域分别使用 LogicCycle/LogicTime 和 VisualCycle/VisualTime。未退出片段跟随对应已提交游标，已退出片段使用实际退出事实；History 不读取未来退出事件，作者资产不被运行长度改写。动态长度按 playback、generation、cycle 和 clip identity 隔离。
+
+相关入口：`TimelineRuntimePresentationDriver.RequestTreeClipExit`、`CharacterTimelineHost.ExecutePresentationGraphs`、`RuntimeTimelinePlaybackProjection.UpdateOpenClipEnds`。表现图只读取只读角色事实并提交已有 Camera owner，不新增播放器或时钟。
+
 | 任务 | 输入与处理 | 作者可见结果 |
 |---|---|---|
 | 2.3 | 最后一个 Timeline 窗口关闭时释放控制器与图观察的 interest；不调用 Session Stop | 关闭工具面不停止角色运行，不遗留该窗口的观察订阅 |

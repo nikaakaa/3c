@@ -843,20 +843,24 @@ namespace BTSMTL.Timeline.Editor
             {
                 RuntimeDebugEventView item = events[index];
                 RuntimeSourceElementKey source = item.Source;
+                bool presentation = item.Event.Domain == RuntimeTraceDomain.Presentation;
+                ulong latestPosition = presentation ? summary.LatestPresentationFrame : summary.LatestLogicTick;
+                int cycle = presentation ? summary.VisualCycle : summary.LogicCycle;
+                bool terminal = !presentation && summary.IsTerminal;
                 string status = !string.IsNullOrEmpty(item.Event.Payload.Status)
                     ? item.Event.Payload.Status
                     : item.Event.Kind.ToString();
                 if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
                 {
-                    if (!summary.IsTerminal && item.Event.Position == summary.LatestLogicTick &&
-                        item.Event.Payload.Cycle == summary.Cycle)
+                    if (!terminal && item.Event.Position == latestPosition &&
+                        item.Event.Payload.Cycle == cycle)
                         activeTracks.TryAdd(source.TrackAuthoringId, status);
                 }
                 else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
                 {
-                    if ((summary.IsTerminal || item.Event.Position < summary.LatestLogicTick ||
-                         item.Event.Payload.Cycle != summary.Cycle) &&
+                    if ((terminal || item.Event.Position < latestPosition ||
+                         item.Event.Payload.Cycle != cycle) &&
                         item.Event.Kind is RuntimeTraceEventKind.ClipActive or RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated)
                         status = "已执行";
                     activeClips.TryAdd(source.ClipAuthoringId, status);

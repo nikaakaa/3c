@@ -25,7 +25,7 @@ Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer bind
 
 ### Requirement: Timeline逻辑采样与表现采样必须分离
 
-Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；Action visual sampling与state-local Pose sampling MUST只按PresentationFrame发生。两个Simulation Tick之间的多个PresentationFrame MUST不重复产生TreeClip、Motion、ActionWindow、Cue fact或Effect mutation。Presentation sample MUST不推进CharacterSimulationState的Timeline clock。
+Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；Action visual sampling、Presentation TreeClip与state-local Pose sampling MUST只按PresentationFrame发生。两个Simulation Tick之间的多个PresentationFrame MUST不重复产生Logic TreeClip、Motion、ActionWindow、Cue fact或Effect mutation。Presentation sample MUST不推进CharacterSimulationState的Timeline clock。
 
 #### Scenario: 两个逻辑Tick之间多次渲染
 
@@ -37,12 +37,19 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 
 Timeline Track MUST唯一声明 `Logic` 或 `Presentation`；Clip 与同级 Marker MUST继承所在 Track，MUST NOT提供 Clip 域覆盖或 DualProjection。Logic MUST在 SimulationTick 消费外部逻辑进度并遵守 Commit / Discard；Presentation MUST在表现帧消费外部采样并只产生表现结果。两类轨道 MUST共用正式播放管理者提供的动作进度，表现采样 MUST遵守已有 sample / horizon 合同，不得自行外推未来事件。逻辑结果传给表现 MUST走原提交链。Presentation MUST不执行 Logic TimelineBody 图或写 Gameplay fact；域声明 MUST不成为自主时钟或隐式进度策略开关。
 
+#### Scenario: 表现域 TreeClip 由节点图结束
+
+- **WHEN** Presentation TreeClip 的 TimelineBody 图在当前表现候选帧发出结束片段请求
+- **THEN** PresentationFrame MUST 在同一候选帧执行该片段的 OnDisable 并撤下其持续表现输出
+- **AND** Commit 与 Discard MUST 同时决定片段结束状态和表现输出是否生效
+- **AND** MUST 不修改 Gameplay Timeline 时钟、Logic TreeClip 或 Simulation state
+
 #### Scenario: TreeClip 触发表现事件
 
 - **WHEN** TreeClip 的 Presentation Marker 被视觉游标跨过
 - **THEN** PresentationFrame MUST直接产生 Presentation Event
 - **AND** 该事件 MUST不等待 SimulationTick
-- **AND** Gameplay TreeClip 的逻辑输出仍 MUST按 Logic Tick 与 Commit / Discard 执行
+- **AND** Logic TreeClip 的逻辑输出仍 MUST按 Logic Tick 与 Commit / Discard 执行
 
 ### Requirement: 表现运行时必须执行唯一原生Pose链
 

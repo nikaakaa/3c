@@ -33,17 +33,12 @@ namespace BTSMTL.Timeline.Editor
         public int Priority = 100;
         public bool ConsumeLowerChannels = true;
         public string SourceMotionClipId;
-        public string CueId = "Cue";
-        public string CueType = "Cue";
         public TimelineCameraMode CameraMode = TimelineCameraMode.SkillCloseup;
         public int CameraPriority = 100;
         public float CameraBlendInSeconds = 0.15f;
         public float CameraBlendOutSeconds = 0.2f;
         public string CameraTargetKey = string.Empty;
         public TimelineCameraInterruptPolicy CameraInterruptPolicy = TimelineCameraInterruptPolicy.BlendOut;
-        public TimelineCameraCueKind CameraCueKind = TimelineCameraCueKind.Shake;
-        public float CameraIntensity = 1f;
-        public float CameraDurationSeconds = 0.2f;
         public TimelineCameraLookResponseMode CameraLookResponse = TimelineCameraLookResponseMode.Suppressed;
         public float ManualOrbitWeight;
         public float PitchResponseWeight = 1f;
@@ -52,6 +47,7 @@ namespace BTSMTL.Timeline.Editor
         public string ParameterBindingId = string.Empty;
         public BtsmtlSkillFlowGraph TreeGraph;
         public string NewTreeGraphName = string.Empty;
+        public TimelineClipExitSource TreeExitSource = TimelineClipExitSource.FrameBoundary;
     }
 
     sealed class TimelineClipCreationPopup : PopupWindowContent
@@ -104,6 +100,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (IsTreeClip)
                 {
+                    if (m_Request.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                        m_Request.TreeExitSource = (TimelineClipExitSource)EditorGUILayout.EnumPopup("Exit Source", m_Request.TreeExitSource);
                     m_Request.TreeGraph = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField(
                         "Skill Graph",
                         m_Request.TreeGraph,
@@ -162,15 +160,6 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.CameraBlendOutSeconds = EditorGUILayout.FloatField("Blend Out", m_Request.CameraBlendOutSeconds);
                 m_Request.CameraTargetKey = EditorGUILayout.TextField("Target Key", m_Request.CameraTargetKey);
                 m_Request.CameraInterruptPolicy = (TimelineCameraInterruptPolicy)EditorGUILayout.EnumPopup("Interrupt", m_Request.CameraInterruptPolicy);
-            }
-            else if (m_Request.Kind == TimelineContractKinds.CameraCueClip)
-            {
-                m_Request.CueId = EditorGUILayout.TextField("Cue Id", m_Request.CueId);
-                m_Request.CameraCueKind = (TimelineCameraCueKind)EditorGUILayout.EnumPopup("Cue Kind", m_Request.CameraCueKind);
-                m_Request.CueType = EditorGUILayout.TextField("Cue Type", m_Request.CueType);
-                m_Request.CameraIntensity = EditorGUILayout.FloatField("Intensity", m_Request.CameraIntensity);
-                m_Request.CameraDurationSeconds = EditorGUILayout.FloatField("Duration", m_Request.CameraDurationSeconds);
-                m_Request.CameraPriority = EditorGUILayout.IntField("Priority", m_Request.CameraPriority);
             }
             else if (m_Request.Kind == TimelineContractKinds.CameraResponseClip)
             {

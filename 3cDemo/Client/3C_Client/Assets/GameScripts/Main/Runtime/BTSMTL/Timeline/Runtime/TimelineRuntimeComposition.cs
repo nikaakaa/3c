@@ -437,6 +437,39 @@ namespace BTSMTL.Timeline.Runtime
             return true;
         }
 
+        public bool RequestTreeClipExit(in TimelineRuntimePresentationFrame frame, in TimelineRuntimeTreeClipRequest request)
+        {
+            if (!m_Playbacks.TryGetValue(frame.Handle.Value, out PresentationPlaybackState state) ||
+                state.Generation != frame.Generation || !state.HasPendingFrame || state.PendingFrame.PresentationFrame != frame.PresentationFrame)
+                throw new InvalidOperationException("Presentation TreeClip exit requires its current candidate frame.");
+            for (int index = 0; index < state.Trees.Length; index++)
+            {
+                PresentationTree tree = state.Trees[index];
+                if (tree.Clip.AuthoringId != request.ClipAuthoringId)
+                    continue;
+                if (tree.Clip.ClipExitSource != TimelineClipExitSource.TreeDecision)
+                    throw new InvalidOperationException("A fixed-interval Presentation TreeClip cannot request a graph-controlled exit.");
+                if (state.PendingTreeCycles[index] != request.Cycle)
+                    return false;
+                state.PendingTreeCycles[index] = -1;
+                state.PendingTreeExitCycles[index] = request.Cycle;
+                for (int activeIndex = state.Candidate.ActiveTreeClips.Count - 1; activeIndex >= 0; activeIndex--)
+                    if (state.Candidate.ActiveTreeClips[activeIndex].ClipAuthoringId == request.ClipAuthoringId)
+                        state.Candidate.ActiveTreeClips.RemoveAt(activeIndex);
+                if (request.EventKind == TimelineRuntimeTreeClipEventKind.Enter)
+                    for (int pendingIndex = state.Candidate.TreeClips.Count - 1; pendingIndex >= 0; pendingIndex--)
+                    {
+                        TimelineRuntimeTreeClipRequest pending = state.Candidate.TreeClips[pendingIndex];
+                        if (pending.ClipAuthoringId == request.ClipAuthoringId && pending.Cycle == request.Cycle &&
+                            pending.EventKind == TimelineRuntimeTreeClipEventKind.Update)
+                            state.Candidate.TreeClips.RemoveAt(pendingIndex);
+                    }
+                state.Candidate.TreeClips.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Exit, frame.Time, request.Cycle, frame.Generation));
+                return true;
+            }
+            throw new InvalidOperationException("Presentation TreeClip exit has no prepared clip.");
+        }
+
         public void CommitPresentationFrame(ulong presentationFrame)
         {
             foreach (PresentationPlaybackState state in m_Playbacks.Values)
@@ -445,6 +478,7 @@ namespace BTSMTL.Timeline.Runtime
                     continue;
                 Array.Copy(state.PendingMarkerLastTraversal, state.MarkerLastTraversal, state.MarkerLastTraversal.Length);
                 Array.Copy(state.PendingTreeCycles, state.TreeCycles, state.TreeCycles.Length);
+                Array.Copy(state.PendingTreeExitCycles, state.TreeExitCycles, state.TreeExitCycles.Length);
                 state.CursorTime = state.PendingTime;
                 state.Cycle = state.PendingCycle;
                 state.Finished = state.PendingFinished;
@@ -593,6 +627,8 @@ namespace BTSMTL.Timeline.Runtime
             {
                 PresentationTree tree = state.Trees[index];
                 int activeCycle = state.TreeCycles[index];
+                int exitCycle = correction ? -1 : state.TreeExitCycles[index];
+                bool dynamic = tree.Clip.ClipExitSource == TimelineClipExitSource.TreeDecision;
                 if ((stopped || correction) && activeCycle >= 0)
                 {
                     output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Destroy, state.CursorTime, activeCycle, playback.Generation));
@@ -608,15 +644,18 @@ namespace BTSMTL.Timeline.Runtime
                         bool crossesStart = tree.Clip.StartTime > from ||
                             tree.Clip.StartTime == from && (!state.InitialBoundaryConsumed || cycle > state.Cycle);
                         bool align = !traverse && cycle == sample.Cycle &&
-                            to >= tree.Clip.StartTime && to < tree.Clip.EndTime;
-                        if (activeCycle < 0 && to >= tree.Clip.StartTime && (crossesStart && traverse || align))
+                            to >= tree.Clip.StartTime && (dynamic || to < tree.Clip.EndTime);
+                        if (activeCycle < 0 && cycle > exitCycle && to >= tree.Clip.StartTime && (crossesStart && traverse || align))
                         {
                             activeCycle = cycle;
                             output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Enter, tree.Clip.StartTime, cycle, playback.Generation));
                         }
-                        if (activeCycle >= 0 && (activeCycle < cycle || to >= tree.Clip.EndTime || sample.EndsPlayback && cycle == sample.Cycle))
+                        if (activeCycle >= 0 && (activeCycle < cycle || !dynamic && to >= tree.Clip.EndTime ||
+                            cycle < sample.Cycle || sample.EndsPlayback && cycle == sample.Cycle))
                         {
-                            output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Exit, tree.Clip.EndTime, activeCycle, playback.Generation));
+                            FixedScalar exitTime = dynamic ? to : FixedScalar.Min(to, tree.Clip.EndTime);
+                            output.Add(tree.Request(TimelineRuntimeTreeClipEventKind.Exit, exitTime, activeCycle, playback.Generation));
+                            exitCycle = activeCycle;
                             activeCycle = -1;
                         }
                     }
@@ -629,6 +668,7 @@ namespace BTSMTL.Timeline.Runtime
                     }
                 }
                 state.PendingTreeCycles[index] = activeCycle;
+                state.PendingTreeExitCycles[index] = exitCycle;
             }
         }
 
@@ -656,13 +696,19 @@ namespace BTSMTL.Timeline.Runtime
                 Trees = trees.ToArray();
                 TreeCycles = new int[Trees.Length];
                 PendingTreeCycles = new int[Trees.Length];
+                TreeExitCycles = new int[Trees.Length];
+                PendingTreeExitCycles = new int[Trees.Length];
                 Array.Fill(TreeCycles, -1);
                 Array.Fill(PendingTreeCycles, -1);
+                Array.Fill(TreeExitCycles, -1);
+                Array.Fill(PendingTreeExitCycles, -1);
             }
 
             public readonly PresentationTree[] Trees;
             public readonly int[] TreeCycles;
             public readonly int[] PendingTreeCycles;
+            public readonly int[] TreeExitCycles;
+            public readonly int[] PendingTreeExitCycles;
             public TimelineRuntimePresentationBuffer Candidate;
             public TimelineRuntimePresentationBuffer Accepted;
             public readonly ulong[] MarkerLastTraversal;
@@ -699,6 +745,8 @@ namespace BTSMTL.Timeline.Runtime
                 Accepted.Clear();
                 Array.Fill(TreeCycles, -1);
                 Array.Fill(PendingTreeCycles, -1);
+                Array.Fill(TreeExitCycles, -1);
+                Array.Fill(PendingTreeExitCycles, -1);
             }
 
         }

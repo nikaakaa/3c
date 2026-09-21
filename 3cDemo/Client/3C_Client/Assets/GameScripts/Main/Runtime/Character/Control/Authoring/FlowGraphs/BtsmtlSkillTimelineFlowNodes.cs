@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("结束片段"), Category("BTSMTL/Timeline")]
-    [BtsmtlSkillNodeKind("timelineClipExitRequest")]
+    [BtsmtlSkillNodeKind("timelineClipExitRequest", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillTimelineExitRequestFlowNode : BtsmtlSkillFlowNode
     {
         protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");

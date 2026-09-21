@@ -1201,7 +1201,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
 
-        internal void CopyPendingTimelineMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results)
+        public void CopyPendingTimelineMotion(int runtimeHandle, List<AbilityTimelineLogicMotion> results)
         {
             if (results == null)
                 throw new ArgumentNullException(nameof(results));
@@ -2037,7 +2037,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         _ => throw new ArgumentOutOfRangeException()
                     },
                     string.Empty,
-                    time,
+                    domain == RuntimeTraceDomain.Presentation ? request.Time.ToSingle() : time,
                     request.Cycle,
                     treeClip,
                     request.TreeGraphId);
@@ -2289,8 +2289,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         TimelineRuntimeTreeClipEventKind.Destroy => AbilityTreeClipHook.OnDestroy,
                         _ => throw new ArgumentOutOfRangeException()
                     };
-                    ExecutePresentationGraph(active, request.TreeGraphId, request.TreeGraphRevision,
-                        ProgramInvocationCallerKind.PresentationTreeClip, hook);
+                    if (ExecutePresentationGraph(active, request.TreeGraphId, request.TreeGraphRevision,
+                        ProgramInvocationCallerKind.PresentationTreeClip, hook))
+                        m_Host.RequestPresentationTreeClipExit(frame, request);
                 }
                 for (int index = 0; index < frame.Events.Count; index++)
                 {
@@ -2310,7 +2311,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void ExecutePresentationGraph(in ActivePlayback active, string graphId, string revision,
+        bool ExecutePresentationGraph(in ActivePlayback active, string graphId, string revision,
             ProgramInvocationCallerKind kind, AbilityTreeClipHook hook)
         {
             Float32PresentationGraphRuntime matched = null;
@@ -2328,7 +2329,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             if (matched == null)
                 throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry.");
-            matched.Evaluate(binding, m_PresentationFacts, this);
+            return matched.Evaluate(binding, m_PresentationFacts, this);
         }
 
         void IFloat32PresentationGraphOutput.SubmitCamera(string producer, in PresentationCameraRequest activation,

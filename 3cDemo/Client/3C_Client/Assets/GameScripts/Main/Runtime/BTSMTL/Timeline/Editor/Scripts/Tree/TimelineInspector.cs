@@ -87,19 +87,41 @@ namespace BTSMTL.Timeline.Editor
             EditorGUILayout.LabelField("Name", clip.Name);
             EditorGUILayout.LabelField("Kind", clip.ContractKind);
             EditorGUILayout.LabelField("Domain (Inherited from Track)", clip.ExecutionDomain.ToString());
+            if (clip is TreeClip selectedTree)
+            {
+                TimelineClipExitSource exitSource = selectedTree.ClipExitSource;
+                TimelineClipExitSource nextExitSource = exitSource;
+                if (selectedTree.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                    nextExitSource = (TimelineClipExitSource)EditorGUILayout.EnumPopup("Exit Source", exitSource);
+                else
+                    EditorGUILayout.LabelField("Exit Source", TimelineClipExitSource.TreeDecision.ToString());
+                if (nextExitSource != exitSource && TryBeginMutation(asset))
+                {
+                    try
+                    {
+                        asset.Data.ApplyModify(() => selectedTree.SetExitSource(nextExitSource), "Edit TreeClip Exit Source");
+                        asset.Data.Init();
+                        m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
+                        m_ConfigurationError = null;
+                    }
+                    catch (Exception exception)
+                    {
+                        m_ConfigurationError = exception.Message;
+                    }
+                }
+            }
             FixedScalar startTime = clip.StartTime;
             FixedScalar endTime = clip.EndTime;
             FixedScalar easeIn = clip.SelfEaseInTime;
             FixedScalar easeOut = clip.SelfEaseOutTime;
-            bool isTerminalLogicTreeClip = clip is TreeClip treeClip &&
-                treeClip.ExecutionDomain == TimelineExecutionDomain.Logic &&
+            bool isDynamicTreeClip = clip is TreeClip treeClip &&
                 treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
             EditorGUI.BeginChangeCheck();
             EditorGUI.BeginChangeCheck();
             double startSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Start (Seconds)", startTime.ToDouble()));
             if (EditorGUI.EndChangeCheck())
                 startTime = FixedScalar.FromDouble(startSeconds);
-            if (isTerminalLogicTreeClip)
+            if (isDynamicTreeClip)
                 EditorGUILayout.LabelField("End (Seconds)", $"Timeline End ({endTime})");
             else
             {

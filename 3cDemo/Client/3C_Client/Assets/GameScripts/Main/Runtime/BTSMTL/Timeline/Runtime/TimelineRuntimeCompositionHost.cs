@@ -115,6 +115,9 @@ namespace BTSMTL.Timeline.Runtime
                 out frame);
         }
 
+        public bool RequestPresentationTreeClipExit(in TimelineRuntimePresentationFrame frame, in TimelineRuntimeTreeClipRequest request) =>
+            m_PresentationDriver.RequestTreeClipExit(frame, request);
+
         public void CommitPresentationFrame(ulong frame) => m_PresentationDriver.CommitPresentationFrame(frame);
         public void DiscardPresentationFrame(ulong frame) => m_PresentationDriver.DiscardPresentationFrame(frame);
         public void SuspendPresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation) => m_PresentationDriver.SuspendPresentationPlayback(handle, generation);

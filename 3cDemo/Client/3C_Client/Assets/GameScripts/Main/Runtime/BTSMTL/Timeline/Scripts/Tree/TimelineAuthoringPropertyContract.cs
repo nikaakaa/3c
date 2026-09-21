@@ -121,7 +121,6 @@ namespace BTSMTL.Timeline
             UnityEngine.Object referenceObject)
         {
             if (clip is TreeClip tree &&
-                tree.ExecutionDomain == TimelineExecutionDomain.Logic &&
                 tree.ClipExitSource == TimelineClipExitSource.TreeDecision)
             {
                 return false;
@@ -144,7 +143,7 @@ namespace BTSMTL.Timeline
             TimelineAuthoringClipConfiguration configuration = DefaultConfiguration();
             string sourceMotionClipId = string.Empty;
             TimelineTreeExecutionPhase executionPhase = TimelineTreeExecutionPhase.Commit;
-            TimelineClipExitSource exitSource = TimelineClipExitSource.FrameBoundary;
+            TimelineClipExitSource exitSource = TimelineClipExitSource.TreeDecision;
             UnityEngine.Object treeAsset = null;
             foreach (TimelineAuthoringPropertyValue value in values ?? Array.Empty<TimelineAuthoringPropertyValue>())
             {
@@ -224,18 +223,13 @@ namespace BTSMTL.Timeline
                 "maxTotalYawCorrectionDegrees" => configuration.MaxTotalYawCorrectionDegrees,
                 "maximumYawRateDegreesPerSecond" => configuration.MaximumYawRateDegreesPerSecond,
                 "limitPolicy" => configuration.LimitPolicy,
-                "cueId" => configuration.CueId,
-                "cueType" => configuration.CueType,
                 "mode" => configuration.CameraMode,
                 "sequenceId" => configuration.CameraSequenceId,
                 "blendInSeconds" => configuration.CameraBlendInSeconds,
                 "blendOutSeconds" => configuration.CameraBlendOutSeconds,
                 "targetKey" => configuration.CameraTargetKey,
                 "interruptPolicy" => configuration.CameraInterruptPolicy,
-                "cueKind" => configuration.CameraCueKind,
                 "resourceId" => configuration.CameraResourceId,
-                "intensity" => configuration.CameraIntensity,
-                "durationSeconds" => configuration.CameraDurationSeconds,
                 "lookResponse" => configuration.CameraLookResponse,
                 "manualOrbitWeight" => configuration.ManualOrbitWeight,
                 "pitchResponseWeight" => configuration.PitchResponseWeight,
@@ -273,18 +267,13 @@ namespace BTSMTL.Timeline
                 case "maxTotalYawCorrectionDegrees": configuration.MaxTotalYawCorrectionDegrees = (float)value; break;
                 case "maximumYawRateDegreesPerSecond": configuration.MaximumYawRateDegreesPerSecond = (float)value; break;
                 case "limitPolicy": configuration.LimitPolicy = (MotionWarpLimitPolicy)value; break;
-                case "cueId": configuration.CueId = (string)value; break;
-                case "cueType": configuration.CueType = (string)value; break;
                 case "mode": configuration.CameraMode = (TimelineCameraMode)value; break;
                 case "sequenceId": configuration.CameraSequenceId = (string)value; break;
                 case "blendInSeconds": configuration.CameraBlendInSeconds = (float)value; break;
                 case "blendOutSeconds": configuration.CameraBlendOutSeconds = (float)value; break;
                 case "targetKey": configuration.CameraTargetKey = (string)value; break;
                 case "interruptPolicy": configuration.CameraInterruptPolicy = (TimelineCameraInterruptPolicy)value; break;
-                case "cueKind": configuration.CameraCueKind = (TimelineCameraCueKind)value; break;
                 case "resourceId": configuration.CameraResourceId = (string)value; break;
-                case "intensity": configuration.CameraIntensity = (float)value; break;
-                case "durationSeconds": configuration.CameraDurationSeconds = (float)value; break;
                 case "lookResponse": configuration.CameraLookResponse = (TimelineCameraLookResponseMode)value; break;
                 case "manualOrbitWeight": configuration.ManualOrbitWeight = (float)value; break;
                 case "pitchResponseWeight": configuration.PitchResponseWeight = (float)value; break;
@@ -316,17 +305,12 @@ namespace BTSMTL.Timeline
                 MaxTotalYawCorrectionDegrees = 45f,
                 MaximumYawRateDegreesPerSecond = 360f,
                 LimitPolicy = MotionWarpLimitPolicy.ApplyClamped,
-                CueId = "Cue",
-                CueType = "Gameplay",
                 CameraMode = TimelineCameraMode.SkillCloseup,
                 CameraSequenceId = string.Empty,
                 CameraBlendInSeconds = 0.15f,
                 CameraBlendOutSeconds = 0.2f,
                 CameraTargetKey = string.Empty,
                 CameraInterruptPolicy = TimelineCameraInterruptPolicy.BlendOut,
-                CameraCueKind = TimelineCameraCueKind.Shake,
-                CameraIntensity = 1f,
-                CameraDurationSeconds = 0.2f,
                 CameraResourceId = string.Empty,
                 CameraLookResponse = TimelineCameraLookResponseMode.Suppressed,
                 ManualOrbitWeight = 0f,
@@ -336,9 +320,9 @@ namespace BTSMTL.Timeline
                 ParameterBindingId = "openAmount",
                 PositionProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpPositionProgress),
                 YawProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpYawProgress),
-                CameraWeightCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueWeight),
-                CameraEaseInCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueEaseIn),
-                CameraEaseOutCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueEaseOut),
+                CameraWeightCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectWeight),
+                CameraEaseInCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectEaseIn),
+                CameraEaseOutCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectEaseOut),
                 ValueCurve = DefaultCurve(TimelineCurveChannelCatalog.ScenePresentationValue)
             };
 
@@ -357,7 +341,6 @@ namespace BTSMTL.Timeline
                 "space" => TimelineMotionContributionSpace.Local,
                 "channel" => TimelineMotionChannel.Action,
                 "blendMode" => TimelineMotionBlendMode.Override,
-                "priority" when clip is CameraCueClip => 0,
                 "priority" => 100,
                 "consumeLowerChannels" => true,
                 "sourceMotionClipId" => string.Empty,
@@ -371,9 +354,7 @@ namespace BTSMTL.Timeline
                 "maxTotalYawCorrectionDegrees" => 45f,
                 "maximumYawRateDegreesPerSecond" => 360f,
                 "limitPolicy" => MotionWarpLimitPolicy.ApplyClamped,
-                "cueId" when clip is CameraCueClip => "CameraCue",
                 "cueId" => "Cue",
-                "cueType" when clip is CameraCueClip => "Camera",
                 "cueType" => "Gameplay",
                 "mode" => TimelineCameraMode.SkillCloseup,
                 "sequenceId" => string.Empty,
@@ -381,7 +362,6 @@ namespace BTSMTL.Timeline
                 "blendOutSeconds" => 0.2f,
                 "targetKey" => string.Empty,
                 "interruptPolicy" => TimelineCameraInterruptPolicy.BlendOut,
-                "cueKind" => TimelineCameraCueKind.Shake,
                 "resourceId" => string.Empty,
                 "intensity" => 1f,
                 "durationSeconds" => 0.2f,

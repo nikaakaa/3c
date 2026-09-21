@@ -73,7 +73,8 @@ namespace BTSMTL.Diagnostics.Editor
             ulong latestPresentationFrame,
             float logicTime,
             float visualTime,
-            int cycle,
+            int logicCycle,
+            int visualCycle,
             RuntimeTraceEventKind lifecycle,
             string lifecycleStatus,
             RuntimeTraceEventKind terminal,
@@ -85,7 +86,8 @@ namespace BTSMTL.Diagnostics.Editor
             LatestPresentationFrame = latestPresentationFrame;
             LogicTime = logicTime;
             VisualTime = visualTime;
-            Cycle = cycle;
+            LogicCycle = logicCycle;
+            VisualCycle = visualCycle;
             Lifecycle = lifecycle;
             LifecycleStatus = lifecycleStatus ?? string.Empty;
             Terminal = terminal;
@@ -98,7 +100,8 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong LatestPresentationFrame { get; }
         public float LogicTime { get; }
         public float VisualTime { get; }
-        public int Cycle { get; }
+        public int LogicCycle { get; }
+        public int VisualCycle { get; }
         public RuntimeTraceEventKind Lifecycle { get; }
         public string LifecycleStatus { get; }
         public RuntimeTraceEventKind Terminal { get; }
@@ -731,7 +734,8 @@ namespace BTSMTL.Diagnostics.Editor
             public ulong LatestPresentationFrame { get; private set; }
             public float LogicTime { get; private set; }
             public float VisualTime { get; private set; }
-            public int Cycle { get; private set; }
+            public int LogicCycle { get; private set; }
+            public int VisualCycle { get; private set; }
             public RuntimeTraceEventKind Lifecycle { get; private set; }
             public string LifecycleStatus { get; private set; } = string.Empty;
             public RuntimeTraceEventKind Terminal { get; private set; }
@@ -752,7 +756,7 @@ namespace BTSMTL.Diagnostics.Editor
                     if (traceEvent.Kind == RuntimeTraceEventKind.TimelineLogicTime)
                     {
                         LogicTime = payload.Time;
-                        Cycle = payload.Cycle;
+                        LogicCycle = payload.Cycle;
                     }
                 }
                 else if (traceEvent.Domain == RuntimeTraceDomain.Presentation && traceEvent.Position >= LatestPresentationFrame)
@@ -761,7 +765,7 @@ namespace BTSMTL.Diagnostics.Editor
                     if (traceEvent.Kind == RuntimeTraceEventKind.TimelineVisualTime)
                     {
                         VisualTime = payload.Time;
-                        Cycle = payload.Cycle;
+                        VisualCycle = payload.Cycle;
                     }
                 }
 
@@ -787,7 +791,8 @@ namespace BTSMTL.Diagnostics.Editor
                     LatestPresentationFrame,
                     LogicTime,
                     VisualTime,
-                    Cycle,
+                    LogicCycle,
+                    VisualCycle,
                     Lifecycle,
                     LifecycleStatus,
                     Terminal,

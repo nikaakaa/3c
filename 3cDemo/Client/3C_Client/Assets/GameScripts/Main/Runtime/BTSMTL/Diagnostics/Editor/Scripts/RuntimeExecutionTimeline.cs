@@ -404,6 +404,8 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly SelectionScratch Selection = new();
         static readonly Dictionary<SpanKey, PendingSpan> Open = new();
         static readonly HashSet<CheckpointKey> CheckpointKeys = new();
+        static readonly HashSet<ulong> BoundarySequences = new();
+        static readonly HashSet<Guid> BoundaryBranches = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -715,8 +717,10 @@ namespace BTSMTL.Diagnostics.Editor
             if (first == ulong.MaxValue)
                 return;
 
-            var selectedSequences = new HashSet<ulong>();
-            var selectedBranches = new HashSet<Guid>();
+            HashSet<ulong> selectedSequences = BoundarySequences;
+            HashSet<Guid> selectedBranches = BoundaryBranches;
+            selectedSequences.Clear();
+            selectedBranches.Clear();
             for (int i = 0; i < historyEvents.Count; i++)
             {
                 selectedSequences.Add(historyEvents[i].Sequence);

@@ -484,3 +484,4 @@
 - [x] 7.76 执行 selection 的结果 List、sequence 去重、related graph 和 presentation frame 集合改为 builder 静态工作集合，调用前清空并保留容量；无过滤路径不再新建完整事件 List，两遍扫描、branch 收敛、去重和输出顺序不变。该 scratch 只用于 Editor 同步读取链，BuildCore 的 spans 与 history 分组输出集合仍在后续边界
 - [x] 7.77 BuildCore 的 PendingSpan 从 class 改为值类型，四个 Last 更新点显式写回 open 字典；open Dictionary 复用 builder 静态外壳并调用前清空，保留既有桶容量。span 配对键、配对结果和未完成 span 语义不变；结果 spans List 会随 RuntimeExecutionTimeline 被外部持有，仍在后续边界
 - [x] 7.78 history checkpoint 去重 HashSet 复用 builder 静态外壳并调用前清空，CheckpointKey 连续 struct 比较和 first-seen 去重不变；checkpoint 结果 List、ticks、presentation frames 和 spans 结果集合会随返回值被外部消费，仍在后续边界
+- [x] 7.79 history 会话边界补充的 sequence 与 branch HashSet 改为 builder 静态工作集合，调用前清空；基线 checkpoint 查找、边界范围、去重和插入顺序不变。该阶段仍同步复用 selection List，未做跨线程或重入假设

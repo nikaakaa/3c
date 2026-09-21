@@ -236,6 +236,15 @@
 - checkpoint 结果 List、tick record List、presentation frame List 和 Timeline 的 spans List 都会被返回值消费，不在本轮复用；后续应沿调用方持有结果 List 或最终数组化路线处理。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 checkpoint history 运行对比或分配采样。
 
+## 2026-09-21 执行边界索引复用
+
+对应 tasks.md 的 7.1，新增 7.79 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution history 的会话边界补充索引，不计为 Player 每帧收益。
+
+- `AddSessionBoundaryEvents` 原先每次为 selected sequence 和 selected branch 新建两个 HashSet；这些索引只用于本次边界范围、基线 checkpoint 和边界事件补充，不随 history 结果暴露。
+- 现在两个 HashSet 由 builder 静态外壳长期持有，调用前清空并保留现有容量。ulong 与 Guid 仍用默认相等比较，边界事件插入顺序、去重和 selection List 原地补充语义不变。
+- 该入口和 selection、open、checkpoint 一样限定在 Editor 同步读取链；静态工作集合不做跨线程或重入合同。history 分组的 per-group List 和外层结果 List 仍在后续边界。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 boundary history 运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

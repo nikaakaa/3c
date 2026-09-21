@@ -7,7 +7,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     internal sealed class ServerAuthoritativePredictionDispositionJournal
     {
         readonly int m_Capacity;
-        readonly List<EventId> m_PruneScratch;
+        readonly EventId[] m_PruneScratch;
+        int m_PruneScratchCount;
         SortedDictionary<EventId, ServerAuthoritativeJournalEntry> m_Entries =
             new SortedDictionary<EventId, ServerAuthoritativeJournalEntry>();
 
@@ -16,7 +17,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (historyCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(historyCapacity));
             m_Capacity = checked(historyCapacity * 64);
-            m_PruneScratch = new List<EventId>(m_Capacity);
+            m_PruneScratch = new EventId[m_Capacity];
         }
 
         public ulong Cursor { get; private set; }
@@ -66,7 +67,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                             : ServerAuthoritativeEventDisposition.PredictedRejected),
                     firstRetainedHistoryTick,
                     m_Capacity,
-                    m_PruneScratch);
+                    m_PruneScratch,
+                    ref m_PruneScratchCount);
             }
             if (!horizon.IsEmpty && !entries.ContainsKey(horizon.EventId))
             {
@@ -80,7 +82,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                         ServerAuthoritativeEventDisposition.AuthorityConfirmed),
                     firstRetainedHistoryTick,
                     m_Capacity,
-                    m_PruneScratch);
+                    m_PruneScratch,
+                    ref m_PruneScratchCount);
             }
             return new ServerAuthoritativePredictionJournalCheckpoint(entries, cursor, rejectedCount);
         }
@@ -92,7 +95,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (checkpoint == null)
                 throw new ArgumentNullException(nameof(checkpoint));
             var entries = CopyEntries(checkpoint.Entries);
-            Prune(entries, firstRetainedHistoryTick, m_PruneScratch);
+            Prune(entries, firstRetainedHistoryTick, m_PruneScratch, ref m_PruneScratchCount);
             return new ServerAuthoritativePredictionJournalCheckpoint(
                 entries,
                 checkpoint.Cursor,
@@ -101,7 +104,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public void Prune(ulong firstRetainedHistoryTick)
         {
-            Prune(m_Entries, firstRetainedHistoryTick, m_PruneScratch);
+            Prune(m_Entries, firstRetainedHistoryTick, m_PruneScratch, ref m_PruneScratchCount);
         }
 
         public ServerAuthoritativePredictionJournalCheckpoint Capture() =>
@@ -122,7 +125,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             var entries = CopyEntries(m_Entries);
             ulong cursor = Cursor;
-            Record(entries, ref cursor, entry, firstRetainedHistoryTick, m_Capacity, m_PruneScratch);
+            Record(entries, ref cursor, entry, firstRetainedHistoryTick, m_Capacity, m_PruneScratch, ref m_PruneScratchCount);
             return new ServerAuthoritativePredictionJournalCheckpoint(entries, cursor, LastRejectedCount);
         }
 
@@ -132,7 +135,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeJournalEntry entry,
             ulong firstRetainedHistoryTick,
             int capacity,
-            List<EventId> pruneScratch)
+            EventId[] pruneScratch,
+            ref int pruneScratchCount)
         {
             if (entries.TryGetValue(entry.EventId, out ServerAuthoritativeJournalEntry existing))
             {
@@ -144,7 +148,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             else
             {
-                Prune(entries, firstRetainedHistoryTick, pruneScratch);
+                Prune(entries, firstRetainedHistoryTick, pruneScratch, ref pruneScratchCount);
                 if (entries.Count >= capacity)
                     throw new InvalidOperationException("Prediction disposition journal capacity is exhausted by live predicted events.");
             }
@@ -155,9 +159,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static void Prune(
             SortedDictionary<EventId, ServerAuthoritativeJournalEntry> entries,
             ulong firstRetainedHistoryTick,
-            List<EventId> remove)
+            EventId[] remove,
+            ref int removeCount)
         {
-            remove.Clear();
+            removeCount = 0;
             foreach (KeyValuePair<EventId, ServerAuthoritativeJournalEntry> pair in entries)
             {
                 if (pair.Value.Tick.Value >= firstRetainedHistoryTick ||
@@ -166,11 +171,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 {
                     continue;
                 }
-                remove.Add(pair.Key);
+                remove[removeCount++] = pair.Key;
             }
-            for (int i = 0; i < remove.Count; i++)
+            for (int i = 0; i < removeCount; i++)
                 entries.Remove(remove[i]);
-            remove.Clear();
+            removeCount = 0;
         }
 
         static SortedDictionary<EventId, ServerAuthoritativeJournalEntry> CopyEntries(

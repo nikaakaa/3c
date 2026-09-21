@@ -459,6 +459,7 @@
 - [x] 5.196 Authority route 的命令队列改为按容量准备的有序 sample/tick 常驻数组；保留同 tick 替换、过期前缀删除和容量溢出语义
 - [x] 5.197 Authority route 的已发送 checkpoint 索引并入发送顺序环形数组；查找改为有界 ring 扫描，删除 SortedDictionary 和重复索引
 - [x] 5.198 Authority source 的 reliable event 和 full checkpoint 输出改为按 policy 容量构造的共享有界环形存储；保留 overflow、发送顺序和同步 flush 语义
+- [x] 5.199 Prediction disposition journal 的 prune scratch 改为按 journal 容量准备的 EventId 数组和显式 count；删除 List、Add 和 Clear 临时壳
 
 ## 6. UI、资源、渲染和生命周期
 

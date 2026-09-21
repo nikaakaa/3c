@@ -3771,3 +3771,11 @@
 - Authority Source 的 reliable event batch 和 full checkpoint 输出从 `Queue` 改为按 policy 容量构造期精确分配的共享 `OutputRing<T>`，用 head/count 记录顺序；出队清空槽位，Dispose 重置 ring 并清空所有 payload 引用。
 - 入队前的容量检查、overflow 文案、先 reliable 后 full checkpoint 的同步 flush 顺序、payload 和 output 对象所有权保持不变。
 - 两个 `Queue` 的内部数组增长壳删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Prediction disposition journal prune scratch 收口
+
+对应 tasks.md 的 5.5，新增 5.199 作为独立小步；5.5 保持未勾选。
+
+- Prediction disposition journal 的 prune scratch 从按容量准备的 `List<EventId>` 改为同容量 `EventId[]` 加显式 count；Record、PrepareConfirmation、PreparePrune 和直接 Prune 共用同一 scratch，调用链显式传递 count。
+- 顺序遍历、待删除 EventId 的删除顺序、journal capacity 检查和 checkpoint 生成语义不变；每次 prune 结束重置 count。
+- `List`、`Add` 扩容和 `Clear` 临时壳删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

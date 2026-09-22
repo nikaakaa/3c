@@ -4633,3 +4633,13 @@
 - 该路径覆盖事务初始化时 `FixedAbilityRuntimeState.Clone`／`Float32AbilityRuntimeState.Clone`，以及 `FixedSkillExecutionState.SnapshotState`／`Float32SkillExecutionState.SnapshotState` 的快照构造。事务工作字典仍独立复制，能力执行状态和 MotionWarp 状态继续深隔离。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力技能激活、状态写入、保存点恢复和事务 commit，确认 Ability state 隔离一致；分配采样应观察 StateValues 复制的桶扩容消失，字典对象、ability execution aggregate 和 MotionWarp 字典仍是正式独立分配。
+
+## 2026-09-22 角色能力快照数组化
+
+对应 tasks.md 的 2.102；2.4 保持未勾选。
+
+- Fixed 和 Float32 `CharacterRuntimeState` 的 `Abilities` 字段改为 `AbilityRuntimeState[]`。构造时按 `ICollection.Count` 先准备容量，不认识的可枚举只保留必要的增长路径；排序使用静态比较器，不再在构造器里创建比较 lambda。
+- 快照仍按 `AbilityId` 排序，并保留 null 项和重复 Ability partition 异常。公开 `Abilities` 继续是 `IReadOnlyList`，现有 Codec、事务、Authority 消费者仍按 `Count` 和下标读取；删除的是最终快照的 `List` 增长外壳和 `ReadOnlyCollection` 包装。
+- Timeline snapshots 是并行任务等待范围，本步未改。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力角色 commit、rollback restore 和角色状态 codec，确认 Abilities 顺序与内容一致；分配采样应观察每次角色快照的 ability List 和只读包装消失，最终 ability 数组和各 AbilityRuntimeState 仍是正式独立分配。

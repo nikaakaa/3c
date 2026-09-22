@@ -4460,3 +4460,13 @@
 - `Payload` 仍是 snapshot 拥有的 immutable `ReadOnlyMemory<byte>`；payload hash 仍对这份 owned bytes 计算。`CopyPayload` 继续保留，专门给 restore 事务创建独立可变副本，避免 `RestoreState` 持有或改写 snapshot 内部 bytes。
 - `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发 rollback/session checkpoint、Prediction restore 和 authority checkpoint，确认 state restore、payload hash 和 SnapshotHash 不变；分配采样应观察 capture/decode 构造 participant payload 的克隆消失，但 restore 事务的正式 `CopyPayload` 副本仍在。
+
+## 2026-09-22 Pipeline participant hash 入口拆分
+
+对应 tasks.md 的 5.5，新增 5.269 作为独立小步；5.5 保持未勾选。代码提交为 `b0c1898a7`。
+
+- `SimulationPipelinePassStateSnapshot` 的 public 构造器删除，改为私有 trusted 构造；新增 `FromOwnedPayload` 和 `FromWirePayload`。owned capture 生产者只计算一次 payload hash 后移交 trusted 构造；wire payload 先计算一次，与 reader 提供的 expected `StateHash` 精确比较后才进入 trusted 构造。这条拆分避免“生产者计算一次、构造器再校验一次”的重复 SHA-256。
+- `FromOwnedPayload` 迁移 Rollback History capture、Fixed/Float32 Local Input Ingress capture、两个 Authority state capture 和 ServerAuthoritative correction/history/journal restore payload。`FromWirePayload` 迁移 Fixed/Float32 Session Snapshot pipeline decode 和 ServerAuthoritative Prediction History pipeline decode。
+- payload hash、`StateHash`、payload 字段顺序和 mismatch 的 `ArgumentException` 语义不变。decode 侧仍拒绝 wire hash 与 canonical payload 不一致的数据；owned capture 的 hash 来自本次移交的 owned bytes。
+- `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint、Authority checkpoint 和 Prediction history checkpoint，确认 hash 一致、坏 payload 仍失败；分配采样应观察 capture 和 restore-plan 路径的重复 payload SHA-256 计算消失，但不表示 SHA/hash 字符串已消除。

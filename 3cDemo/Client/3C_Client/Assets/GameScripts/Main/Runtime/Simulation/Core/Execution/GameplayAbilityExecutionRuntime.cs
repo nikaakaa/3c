@@ -184,25 +184,24 @@ namespace ThirdPersonSimulation
         where TValue : struct, IEquatable<TValue>
     {
         readonly List<GameplayAbilityExecutionFrame<TValue>> m_Frames;
-        readonly System.Collections.ObjectModel.ReadOnlyCollection<GameplayAbilityExecutionFrame<TValue>> m_ReadOnlyFrames;
 
         public GameplayAbilityExecutionAggregate(
-            IEnumerable<GameplayAbilityExecutionFrame<TValue>> frames = null)
+            IReadOnlyList<GameplayAbilityExecutionFrame<TValue>> frames = null)
         {
-            m_Frames = new List<GameplayAbilityExecutionFrame<TValue>>();
+            m_Frames = new List<GameplayAbilityExecutionFrame<TValue>>(frames?.Count ?? 0);
             if (frames != null)
             {
-                foreach (GameplayAbilityExecutionFrame<TValue> frame in frames)
+                for (int i = 0; i < frames.Count; i++)
                 {
+                    GameplayAbilityExecutionFrame<TValue> frame = frames[i];
                     if (frame == null || Find(frame.ActionInstanceId) != null)
                         throw new ArgumentException("Skill execution state frames are invalid or duplicated.", nameof(frames));
                     m_Frames.Add(frame.Clone());
                 }
             }
-            m_ReadOnlyFrames = m_Frames.AsReadOnly();
         }
 
-        public IReadOnlyList<GameplayAbilityExecutionFrame<TValue>> Frames => m_ReadOnlyFrames;
+        public IReadOnlyList<GameplayAbilityExecutionFrame<TValue>> Frames => m_Frames;
 
         public GameplayAbilityExecutionFrame<TValue> Find(ulong actionInstanceId)
         {

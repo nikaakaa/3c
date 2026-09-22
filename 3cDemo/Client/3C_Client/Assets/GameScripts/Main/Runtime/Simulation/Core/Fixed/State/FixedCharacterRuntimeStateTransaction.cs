@@ -335,8 +335,11 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
             state = state ?? throw new ArgumentNullException(nameof(state));
             m_CommittedState = state;
-            m_StateValues = state.StateValues;
-            m_MotionWarpStates = state.MotionWarpStates;
+            if (m_StateValues == null)
+                m_StateValues = new Dictionary<int, AbilityStateValue>();
+            if (m_MotionWarpStates == null)
+                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>();
+            LoadCommittedCollections();
             m_AbilityExecutionState = state.AbilityExecutionState;
         }
 
@@ -347,8 +350,11 @@ namespace ThirdPersonSimulation.Fixed
             if (state.AbilityIdentity.AbilityId != m_Identity.AbilityId)
                 throw new ArgumentException("Fixed Ability runtime state identity does not match its workspace.", nameof(state));
             m_CommittedState = state;
-            m_StateValues = state.StateValues;
-            m_MotionWarpStates = state.MotionWarpStates;
+            if (m_StateValues == null)
+                m_StateValues = new Dictionary<int, AbilityStateValue>();
+            if (m_MotionWarpStates == null)
+                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>();
+            LoadCommittedCollections();
             m_AbilityExecutionState = state.AbilityExecutionState;
             m_Dirty = false;
             m_Disposed = false;
@@ -379,7 +385,6 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
-            EnsureOwnedValues();
             m_Dirty = true;
             m_StateValues[address.SlotIndex] = value;
         }
@@ -422,7 +427,6 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (!m_Layout.HasMotionWarp(operation))
                 throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no MotionWarp state for '{operation}'.");
-            EnsureOwnedMotionWarpStates();
             m_Dirty = true;
             if (value.Active)
                 m_MotionWarpStates[operation.Value] = value;
@@ -444,28 +448,25 @@ namespace ThirdPersonSimulation.Fixed
                 Clear();
                 return committed;
             }
-            FixedAbilityRuntimeState snapshot = FixedAbilityRuntimeState.Adopt(
+            FixedAbilityRuntimeState snapshot = new FixedAbilityRuntimeState(
                 m_Identity,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);
-            m_StateValues = null;
-            m_MotionWarpStates = null;
-            m_AbilityExecutionState = null;
+            m_CommittedState = snapshot;
+            m_AbilityExecutionState = snapshot.AbilityExecutionState;
             m_Disposed = true;
             return snapshot;
         }
 
-        void EnsureOwnedValues()
+        void LoadCommittedCollections()
         {
-            if (ReferenceEquals(m_StateValues, m_CommittedState.StateValues))
-                m_StateValues = new Dictionary<int, AbilityStateValue>(m_CommittedState.StateValues);
-        }
-
-        void EnsureOwnedMotionWarpStates()
-        {
-            if (ReferenceEquals(m_MotionWarpStates, m_CommittedState.MotionWarpStates))
-                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(m_CommittedState.MotionWarpStates);
+            m_StateValues.Clear();
+            foreach (KeyValuePair<int, AbilityStateValue> value in m_CommittedState.StateValues)
+                m_StateValues.Add(value.Key, value.Value);
+            m_MotionWarpStates.Clear();
+            foreach (KeyValuePair<int, FixedMotionWarpState> value in m_CommittedState.MotionWarpStates)
+                m_MotionWarpStates.Add(value.Key, value.Value);
         }
 
         void Clear()

@@ -693,3 +693,4 @@
 - [x] 7.86 RuntimeDebugSourceMapSnapshot 的 source hash 冻结改为先统计每个 source 数量再填充精确数组，删除每个 source 的中间 List 与扩容数组；hash 顺序、最终字典键顺序、Match 查找和 source map 冻结时序不变。hash 字符串和 entries 字典仍由 source map 快照独立持有
 - [x] 7.87 Timeline 实例读取改为调用方 Copy 工作列表并复用 ViewBinding scratch，删除 GetTimelineInstances 的每次 List、排序闭包和旧返回入口；Timeline/Graph 筛选、最高或最新 sequence 降序、Follow/Pinned 判断不变
 - [x] 7.88 RuntimeElementDebugState.Status 的空 payload fallback 改用类型准备期 RuntimeTraceEventKind 名字表，删除 Tree overlay 与技能 observation 每次读取的 Kind.ToString；Payload.Status 原文和正式枚举名不变
+- [x] 7.89 Product 生命周期诊断共享 BoundedHistory 改为 capacity+1 环形数组，runtime/checkpoint/resource/fault 历史满员时前进 head 并覆盖旧槽；公开 IReadOnlyList 顺序、容量和 Changed 语义不变，删除满员 RemoveAt(0) 前移

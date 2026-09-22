@@ -4756,3 +4756,14 @@
 - barrier 仍按计划顺序等待，每个 barrier 内的资源加载并发不变。异常仍通过 `WhenAll` 传播，取消 token 仍传入每个资源加载，completed 占位任务不改变业务结果。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
 - Unity MCP 在本轮检查时没有可用 session；本步没有 Unity 编译、Console、资源预加载回放或 Player 分配采样证据。每个计划的一次任务数组、WhenAll promise、cancellation source 和 lease record 仍是 6.2 后续边界。
+
+## 2026-09-22 Product 生命周期诊断历史环形化
+
+对应 tasks.md 的 7.89；7.1 的采样窗口字符串和热点索引重建保持未勾选。
+
+- `GameLogic.ProductDiagnostics.BoundedHistory<T>` 是 Product runtime、checkpoint、resource snapshot 和 fault event 四条生命周期诊断历史共用的存储。原先内部用 `List<T>`，每次超过容量都执行 `RemoveAt(0)`，数组有效区间随每条旧记录前移一次。
+- 现在构造期按 `capacity + 1` 分配 `T[]`，额外槽位覆盖“先写新 tail、再前进 head”的瞬时峰值。满员写入只移动 `_head`，未满员推进 `_count`；读取下标按 head 偏移映射回物理槽位。
+- `History` 对外仍是 `IReadOnlyList<T>`，顺序继续是最旧到最新；`Count`、索引异常和四个 store 的 `Changed` 发布时机不变。循环器是具体 struct，直接 foreach 不再经由 `List<T>.Enumerator` 的接口包装，只读取当前有效区间。
+- Product 生命周期诊断的输入是各 store 冻结后的不可变 snapshot/event，输出是按提交顺序保留的有界历史；处理点从“满员后整段前移 List 存储”改为“环形槽位替换”，不改变业务快照内容。
+- 用 `GameLogic.csproj` 中的 Product 诊断/资源/启动源码子集加 `netstandard`、UnityEngine、TEngine、UniTask、YooAsset 和 ThirdPerson.ProductStartup 正式引用做 `csc` 聚焦编译；结果 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- Unity MCP 实例 `3C_Client@e852139597e42532` 可见，但 editor state 和 project info 都返回 ping 未响应或超时；本步没有 Unity 编译、Console、生命周期快照回放或 Player 分配采样证据。历史快照对象本体、字符串、事件委托调用和后续新 snapshot 分配不在本步范围内。

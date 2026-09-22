@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly Dictionary<string, LatchedInputValue> m_LatchedValues =
             new Dictionary<string, LatchedInputValue>(StringComparer.Ordinal);
         readonly List<PendingRequest> m_PendingRequests = new List<PendingRequest>();
+        readonly List<PendingRequest> m_RestoreScratch = new List<PendingRequest>();
         readonly List<FixedSimulationInputValue> m_InputValues = new List<FixedSimulationInputValue>();
         readonly List<FixedSimulationInputRequest> m_InputRequests = new List<FixedSimulationInputRequest>();
         readonly List<string> m_ActionTargetInputIds = new List<string>();
@@ -124,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Actions.Disable();
             m_LatchedValues.Clear();
             m_PendingRequests.Clear();
+            m_RestoreScratch.Clear();
             m_InputValues.Clear();
             m_InputRequests.Clear();
             m_LatchedCameraBasis = default;
@@ -284,38 +286,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int count = reader.ReadInt32();
             if (count < 0)
                 throw new InvalidDataException("Unity Fixed Input Adapter state request count is invalid.");
-            var pendingRequests = new PendingRequest[count];
-            for (int i = 0; i < count; i++)
+            List<PendingRequest> scratch = m_RestoreScratch;
+            scratch.Clear();
+            try
             {
-                string requestId = reader.ReadString();
-                ulong sequence = reader.ReadUInt64();
-                ulong captureRenderFrame = reader.ReadUInt64();
-                float bufferSeconds = checked((float)reader.ReadDouble());
-                int priority = reader.ReadInt32();
-                var timingClass = (CharacterActionRequestTimingClass)reader.ReadByte();
-                ulong captureTick = reader.ReadUInt64();
-                ulong eligibleTick = reader.ReadUInt64();
-                if (timingClass < CharacterActionRequestTimingClass.Immediate ||
-                    timingClass > CharacterActionRequestTimingClass.Offensive ||
-                    captureTick == 0 != (eligibleTick == 0) || eligibleTick < captureTick)
+                for (int i = 0; i < count; i++)
                 {
-                    throw new InvalidDataException("Unity Fixed Input Adapter pending request state is invalid.");
+                    string requestId = reader.ReadString();
+                    ulong sequence = reader.ReadUInt64();
+                    ulong captureRenderFrame = reader.ReadUInt64();
+                    float bufferSeconds = checked((float)reader.ReadDouble());
+                    int priority = reader.ReadInt32();
+                    var timingClass = (CharacterActionRequestTimingClass)reader.ReadByte();
+                    ulong captureTick = reader.ReadUInt64();
+                    ulong eligibleTick = reader.ReadUInt64();
+                    if (timingClass < CharacterActionRequestTimingClass.Immediate ||
+                        timingClass > CharacterActionRequestTimingClass.Offensive ||
+                        captureTick == 0 != (eligibleTick == 0) || eligibleTick < captureTick)
+                    {
+                        throw new InvalidDataException("Unity Fixed Input Adapter pending request state is invalid.");
+                    }
+                    PendingRequest pending = new PendingRequest(
+                        requestId,
+                        sequence,
+                        captureRenderFrame,
+                        bufferSeconds,
+                        priority,
+                        timingClass);
+                    if (captureTick != 0)
+                        pending = pending.Schedule(captureTick, checked((int)(eligibleTick - captureTick)));
+                    scratch.Add(pending);
                 }
-                PendingRequest pending = new PendingRequest(
-                    requestId,
-                    sequence,
-                    captureRenderFrame,
-                    bufferSeconds,
-                    priority,
-                    timingClass);
-                if (captureTick != 0)
-                    pending = pending.Schedule(captureTick, checked((int)(eligibleTick - captureTick)));
-                pendingRequests[i] = pending;
+                reader.RequireComplete();
+                m_RequestSequence = requestSequence;
+                m_PendingRequests.Clear();
+                m_PendingRequests.AddRange(scratch);
             }
-            reader.RequireComplete();
-            m_RequestSequence = requestSequence;
-            m_PendingRequests.Clear();
-            m_PendingRequests.AddRange(pendingRequests);
+            finally
+            {
+                scratch.Clear();
+            }
         }
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)

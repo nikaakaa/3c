@@ -311,7 +311,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 retired = true;
             }
             if (retired)
-                PublishRequestDiagnostics(command, reason.ToString());
+                PublishRequestDiagnostics(
+                    command,
+                    reason == CameraPresentationStopReason.NaturalComplete
+                        ? "NaturalComplete"
+                        : "EventRevoked");
         }
 
         internal CharacterDomainRuntimeFact CaptureDomainFact() =>

@@ -176,6 +176,71 @@ namespace ThirdPersonSimulation
             ChangeCursor = changeCursor;
         }
 
+        internal GameplayEffectStateAggregate CreateChangedFrom(
+            SortedDictionary<string, string[]> tagSources,
+            SortedDictionary<string, PortableAttributeState> attributes,
+            List<PortableActiveEffectState> activeEffects,
+            SortedDictionary<ulong, ulong> periods,
+            SortedDictionary<ulong, List<PortablePredictionRecord>> journal,
+            SortedDictionary<ulong, ulong> lastLifecycleRevisions,
+            bool tagsChanged,
+            bool attributesChanged,
+            bool activeEffectsChanged,
+            bool periodsChanged,
+            bool journalChanged,
+            bool lastLifecycleRevisionsChanged,
+            ulong changeCursor)
+        {
+            SortedDictionary<string, string[]> changedTags = tagsChanged
+                ? CloneTagSources(tagSources)
+                : m_TagSources;
+            SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
+                ? CloneAttributes(attributes)
+                : m_Attributes;
+            List<PortableActiveEffectState> changedActiveEffects = activeEffectsChanged
+                ? CloneActiveEffects(activeEffects)
+                : m_ActiveEffects;
+            SortedDictionary<ulong, ulong> changedPeriods = periodsChanged
+                ? CloneMap(periods)
+                : m_Periods;
+            SortedDictionary<ulong, List<PortablePredictionRecord>> changedJournal = journalChanged
+                ? CloneJournal(journal)
+                : m_Journal;
+            SortedDictionary<ulong, ulong> changedRevisions = lastLifecycleRevisionsChanged
+                ? CloneMap(lastLifecycleRevisions)
+                : m_LastLifecycleRevisions;
+            string[] ownedTags = tagsChanged ? CollectOwnedTags(changedTags) : m_OwnedTags;
+            return new GameplayEffectStateAggregate(
+                changedTags,
+                changedAttributes,
+                changedActiveEffects,
+                changedPeriods,
+                changedJournal,
+                changedRevisions,
+                ownedTags,
+                changeCursor);
+        }
+
+        GameplayEffectStateAggregate(
+            SortedDictionary<string, string[]> tagSources,
+            SortedDictionary<string, PortableAttributeState> attributes,
+            List<PortableActiveEffectState> activeEffects,
+            SortedDictionary<ulong, ulong> periods,
+            SortedDictionary<ulong, List<PortablePredictionRecord>> journal,
+            SortedDictionary<ulong, ulong> lastLifecycleRevisions,
+            string[] ownedTags,
+            ulong changeCursor)
+        {
+            m_TagSources = tagSources;
+            m_Attributes = attributes;
+            m_ActiveEffects = activeEffects;
+            m_Periods = periods;
+            m_Journal = journal;
+            m_LastLifecycleRevisions = lastLifecycleRevisions;
+            m_OwnedTags = ownedTags;
+            ChangeCursor = changeCursor;
+        }
+
         internal ulong ChangeCursor { get; }
         internal int ActiveEffectCount => m_ActiveEffects.Count;
 
@@ -1052,13 +1117,19 @@ namespace ThirdPersonSimulation
             {
                 return m_Baseline;
             }
-            return new GameplayEffectStateAggregate(
+            return m_Baseline.CreateChangedFrom(
                 m_TagSources,
                 m_Attributes,
                 m_ActiveEffects,
                 m_Periods,
                 m_Journal,
                 m_LastLifecycleRevisions,
+                m_TagsDirty,
+                m_AttributesDirty,
+                m_ActiveEffectsDirty,
+                m_PeriodsDirty,
+                m_JournalDirty,
+                m_LastLifecycleRevisionsDirty,
                 m_ChangeCursor);
         }
 

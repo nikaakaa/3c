@@ -221,8 +221,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
         public void SendPredictionCommand(OwnerCanonicalInputBatch input, ServerAuthoritativeModelPolicy policy)
         {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
+            if (!input.IsValid)
+                throw new ArgumentException("Owner canonical input batch is invalid.", nameof(input));
             if (policy == null)
                 throw new ArgumentNullException(nameof(policy));
             var sample = new CanonicalInputSample(input.SourceTick, input.InputSequence, input.Input);

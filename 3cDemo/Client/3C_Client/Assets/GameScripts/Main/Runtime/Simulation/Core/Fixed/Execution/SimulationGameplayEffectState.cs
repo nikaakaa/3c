@@ -746,8 +746,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 Definition = source.Definition,
                 Context = source.Context,
-                SourceTags = source.SourceTags == null || source.SourceTags.Length == 0 ? Array.Empty<string>() : (string[])source.SourceTags.Clone(),
-                TargetTags = source.TargetTags == null || source.TargetTags.Length == 0 ? Array.Empty<string>() : (string[])source.TargetTags.Clone(),
+                SourceTags = SharedTags(source.SourceTags),
+                TargetTags = SharedTags(source.TargetTags),
                 DurationTicks = source.DurationTicks,
                 PeriodTicks = source.PeriodTicks
             };
@@ -756,6 +756,9 @@ namespace ThirdPersonSimulation.Fixed
             Copy(source.TargetAttributes, result.TargetAttributes);
             return result;
         }
+
+        static string[] SharedTags(string[] tags) =>
+            tags == null || tags.Length == 0 ? Array.Empty<string>() : tags;
 
         static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneJournal(
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source)

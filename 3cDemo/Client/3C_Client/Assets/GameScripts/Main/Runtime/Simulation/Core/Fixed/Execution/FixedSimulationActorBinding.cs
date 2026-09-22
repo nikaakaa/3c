@@ -69,6 +69,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
         readonly FixedCharacterTraceSink m_CharacterTraceSink;
         readonly FixedAbilityExecutionInput m_AbilityExecutionInput = new FixedAbilityExecutionInput();
+        readonly FixedCharacterInputRequestState m_InputRequestState = new FixedCharacterInputRequestState();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -167,6 +168,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
         internal FixedCharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
         internal FixedAbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
+        internal FixedCharacterInputRequestState InputRequestState => m_InputRequestState;
 
         internal void ClearActionRuntimes()
         {

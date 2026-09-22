@@ -5,20 +5,23 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32CharacterInputRequestState : IFloat32InputRequestStatePort
     {
-        readonly SimulationTick m_Tick;
+        SimulationTick m_Tick;
         readonly Dictionary<string, SimulationInputRequestState> m_Requests;
         bool m_Disposed;
 
-        public Float32CharacterInputRequestState(
+        public Float32CharacterInputRequestState()
+        {
+            m_Requests = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
+        }
+
+        public Float32CharacterInputRequestState Restart(
             SimulationTick tick,
             KeyValuePair<string, SimulationInputRequestState>[] requests)
         {
             if (!tick.IsValid)
                 throw new ArgumentException("Float32 Character input request state tick is invalid.", nameof(tick));
             m_Tick = tick;
-            m_Requests = new Dictionary<string, SimulationInputRequestState>(
-                requests?.Length ?? 0,
-                StringComparer.Ordinal);
+            m_Requests.Clear();
             if (requests != null)
             {
                 for (int i = 0; i < requests.Length; i++)
@@ -28,6 +31,8 @@ namespace ThirdPersonSimulation
                         throw new ArgumentException("Float32 Character input request identities are null or duplicated.", nameof(requests));
                 }
             }
+            m_Disposed = false;
+            return this;
         }
 
         public SimulationTick Tick => m_Tick;

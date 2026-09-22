@@ -234,6 +234,10 @@ namespace ThirdPersonSimulation.Fixed
         public FixedVector3 Position { get; }
         public FixedYaw Yaw { get; }
         public bool HasTarget => !string.IsNullOrEmpty(TargetId);
+        public bool Equals(SimulationActionTargetSnapshot other) =>
+            string.Equals(TargetId, other.TargetId, StringComparison.Ordinal) &&
+            Position.Equals(other.Position) &&
+            Yaw.Equals(other.Yaw);
         public static SimulationActionTargetSnapshot None => new SimulationActionTargetSnapshot(string.Empty, FixedVector3.Zero, FixedYaw.Zero);
     }
 

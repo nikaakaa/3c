@@ -247,6 +247,23 @@ namespace ThirdPersonSimulation.Fixed
         public FixedScalar LastPositionProgress { get; }
         public FixedScalar LastYawProgress { get; }
         public OperationHandle SourceOperation { get; }
+        public bool Equals(FixedMotionWarpState other) =>
+            Active == other.Active &&
+            Initialized == other.Initialized &&
+            PlaybackGeneration == other.PlaybackGeneration &&
+            ActionInstance.Equals(other.ActionInstance) &&
+            StartBodyPosition.Equals(other.StartBodyPosition) &&
+            StartBodyYaw.Equals(other.StartBodyYaw) &&
+            SourceWindowStartPosition.Equals(other.SourceWindowStartPosition) &&
+            SourceWindowStartYaw.Equals(other.SourceWindowStartYaw) &&
+            ResolvedTargetPosition.Equals(other.ResolvedTargetPosition) &&
+            ResolvedTargetYaw.Equals(other.ResolvedTargetYaw) &&
+            LimitResult == other.LimitResult &&
+            PreviousWarpedPosition.Equals(other.PreviousWarpedPosition) &&
+            PreviousWarpedYaw.Equals(other.PreviousWarpedYaw) &&
+            LastPositionProgress.Equals(other.LastPositionProgress) &&
+            LastYawProgress.Equals(other.LastYawProgress) &&
+            SourceOperation.Equals(other.SourceOperation);
 
         public FixedMotionWarpState WithProgress(
             FixedVector3 previousWarpedPosition,

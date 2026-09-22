@@ -205,6 +205,14 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterSkillId SkillId { get; }
         public OperationHandle SkillEntryOperation { get; }
         public ulong SkillExecutionGeneration { get; }
+        public bool Equals(FixedActionInstanceReference other) =>
+            string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
+            string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
+            InstanceId == other.InstanceId &&
+            PredictionKey == other.PredictionKey &&
+            SkillId.Equals(other.SkillId) &&
+            SkillEntryOperation.Equals(other.SkillEntryOperation) &&
+            SkillExecutionGeneration == other.SkillExecutionGeneration;
         public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
         public bool HasAnyIdentity =>
             !string.IsNullOrEmpty(ActionId) ||

@@ -385,6 +385,14 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
+            ProgramStateSlot slot = m_Layout.StateSlots[address.SlotIndex];
+            AbilityStateValue current = m_StateValues.TryGetValue(address.SlotIndex, out AbilityStateValue existing)
+                ? existing
+                : slot.DefaultConstantIndex >= 0
+                    ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
+                    : AbilityStateValue.Default(slot.ValueKind);
+            if (current.Equals(value))
+                return;
             m_Dirty = true;
             m_StateValues[address.SlotIndex] = value;
         }
@@ -427,11 +435,23 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (!m_Layout.HasMotionWarp(operation))
                 throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no MotionWarp state for '{operation}'.");
-            m_Dirty = true;
             if (value.Active)
+            {
+                if (m_MotionWarpStates.TryGetValue(operation.Value, out FixedMotionWarpState current) &&
+                    current.Equals(value))
+                    return;
+                m_Dirty = true;
                 m_MotionWarpStates[operation.Value] = value;
+            }
             else
+            {
+                if (!m_MotionWarpStates.TryGetValue(operation.Value, out FixedMotionWarpState current))
+                    return;
+                if (current.Equals(default))
+                    return;
+                m_Dirty = true;
                 m_MotionWarpStates.Remove(operation.Value);
+            }
         }
 
         public void Dispose()

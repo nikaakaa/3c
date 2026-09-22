@@ -49,6 +49,19 @@ namespace ThirdPersonSimulation.Fixed
 		public BlackboardOwnerToken BlackboardOwnerToken => Require(ProgramStateValueKind.BlackboardOwnerToken, m_BlackboardOwnerToken);
 		public BlackboardWriteStamp BlackboardWriteStamp => Require(ProgramStateValueKind.BlackboardWriteStamp, m_BlackboardWriteStamp);
 		public SimulationActionTargetSnapshot ActionTargetSnapshot { get; }
+		public bool Equals(AbilityStateValue other) =>
+			Kind == other.Kind &&
+			Boolean == other.Boolean &&
+			Int32 == other.Int32 &&
+			UInt64 == other.UInt64 &&
+			Scalar.Equals(other.Scalar) &&
+			Vector2.Equals(other.Vector2) &&
+			Vector3.Equals(other.Vector3) &&
+			Yaw.Equals(other.Yaw) &&
+			string.Equals(Identity, other.Identity, StringComparison.Ordinal) &&
+			m_BlackboardOwnerToken.Equals(other.m_BlackboardOwnerToken) &&
+			m_BlackboardWriteStamp.Equals(other.m_BlackboardWriteStamp) &&
+			ActionTargetSnapshot.Equals(other.ActionTargetSnapshot);
 		public static AbilityStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
 		public static AbilityStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
 		public static AbilityStateValue FromUInt64(ulong value) => Create(ProgramStateValueKind.UInt64, uint64: value);

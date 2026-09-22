@@ -98,15 +98,19 @@ namespace GameLogic.ProductResource
 
             try
             {
-                using (CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(scope.CancellationToken, cancellationToken, _runtimeCancellation.Token))
+                CancellationTokenSource linked = cancellationToken.CanBeCanceled
+                    ? CancellationTokenSource.CreateLinkedTokenSource(scope.LifetimeToken, cancellationToken)
+                    : null;
+                CancellationToken cancellation = linked == null ? scope.LifetimeToken : linked.Token;
+                try
                 {
                     bool knownPhysicalReuse = _knownPhysicalAssets.Contains(identity);
-                    await EnsurePhysicalAssetAsync(identity).AttachExternalCancellation(linked.Token);
+                    await EnsurePhysicalAssetAsync(identity).AttachExternalCancellation(cancellation);
                     if (knownPhysicalReuse)
                     {
                         _cacheHitCount++;
                     }
-                    Object asset = await _resourceModule.LoadAssetAsync(identity.Location, identity.AssetType, linked.Token, identity.PackageName);
+                    Object asset = await _resourceModule.LoadAssetAsync(identity.Location, identity.AssetType, cancellation, identity.PackageName);
                     if (!asset)
                     {
                         throw new InvalidOperationException($"TEngine failed to acquire resource '{identity}'.");
@@ -116,7 +120,7 @@ namespace GameLogic.ProductResource
                     if (!scope.TryRegisterLease(leaseId))
                     {
                         _resourceModule.UnloadAsset(asset);
-                        throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before lease commit.", linked.Token);
+                        throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before lease commit.", cancellation);
                     }
 
                     LeaseRecord leaseRecord = RentLeaseRecord();
@@ -126,6 +130,10 @@ namespace GameLogic.ProductResource
                     _leases.Add(leaseId, leaseRecord);
                     AddOwnedReference(identity);
                     PublishSnapshot();
+                }
+                finally
+                {
+                    linked?.Dispose();
                 }
             }
             finally
@@ -291,7 +299,7 @@ namespace GameLogic.ProductResource
 
         private ResourceScope CreateScopeInternal(ResourceScopeKind kind, string name)
         {
-            var scope = new ResourceScope(this, new ResourceScopeId(++_nextScopeId), kind, name);
+            var scope = new ResourceScope(this, new ResourceScopeId(++_nextScopeId), kind, name, _runtimeCancellation.Token);
             _scopes.Add(scope.Id, scope);
             if (_disposeScopeBuffer.Length < _scopes.Count)
             {

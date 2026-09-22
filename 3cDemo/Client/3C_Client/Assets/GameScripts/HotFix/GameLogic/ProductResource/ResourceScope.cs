@@ -8,12 +8,14 @@ namespace GameLogic.ProductResource
     {
         private readonly ProductResourceRuntime _runtime;
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+        private readonly CancellationTokenSource _lifetimeCancellation;
         private readonly HashSet<long> _leaseIds = new HashSet<long>();
         private long[] _disposeBuffer;
 
-        internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name)
+        internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name, CancellationToken runtimeCancellation)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(runtimeCancellation);
             Id = id;
             Kind = kind;
             Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("Scope name is required.", nameof(name)) : name.Trim();
@@ -29,6 +31,8 @@ namespace GameLogic.ProductResource
         public ResourceScopeState State { get; private set; }
 
         public CancellationToken CancellationToken => _cancellation.Token;
+
+        internal CancellationToken LifetimeToken => _lifetimeCancellation.Token;
 
         public int LeaseCount => _leaseIds.Count;
 
@@ -58,6 +62,7 @@ namespace GameLogic.ProductResource
             State = ResourceScopeState.Disposed;
             _leaseIds.Clear();
             _cancellation.Dispose();
+            _lifetimeCancellation.Dispose();
         }
 
         internal bool TryRegisterLease(long leaseId)

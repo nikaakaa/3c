@@ -4215,3 +4215,12 @@
 - `AuthoritativeObservationBatch` 从 sealed class 改为 readonly struct。Prediction Evidence 生成 canonical batch，Fantasy observation source 和 Session source port 传递，Float32 Exclusive Product Slot 保存，Observation ingress 与 Correction schedule 读取都按值携带，删除每次观测的批外壳对象。
 - 构造合同不变：receive sequence 非零，baseline 和 remote presentation 数组存在，数组分别按 Actor 排序去重，元素身份有效。新增 `IsValid` 表达 default batch 的非法状态；Evidence result 和 Observation ingress 不再用 null 合并，改为显式拒绝无 canonical 观测。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。包含 GameplayNetwork evidence 的 `ThirdPersonSimulation.ServerAuthoritative.Unity.csproj` 及全 Unity 汇总未通过，错误来自并行 Timeline 改动：`TimelineRuntimeComposition.cs` 缺少 `branchRevision`，`TimelineControlContracts.cs` 的 struct 自动属性未完全分配。这些文件不属于本步，未修改。未做 Player 分配采样。
+
+## 2026-09-22 Authority replication batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.244 作为独立小步；5.5 保持未勾选。
+
+- `AuthorityReplicationBatch` 从 sealed class 改为 readonly struct。Authority egress 构造批后同时写入 Exclusive Product Slot 和 canonical egress，Authority Source 解码提交，Transport 内部按 baseline、snapshot 和 reliable event 消费；这些链路都不再创建批外壳对象。
+- 构造合同不变：Authority Tick 有效，acks 和 remote presentation 非空；三组数组按 Actor 排序去重，ack 必须匹配 batch Tick，baseline 可以为空但元素身份和 Tick 必须一致，remote presentation 元素必须完整。新增 `IsValid` 表达 default batch 的非法状态，编码入口把旧 null 检查改为 `IsValid`。
+- 解码后 batch 已由构造器完整校验，Authority Source 不再重复检查 `IsValid`，只保留当前正式的 Tick 连续性失败；避免同一条数据在消费端做多重防御。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；随后均执行 `dotnet build-server shutdown`。代码提交后 Unity Editor 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

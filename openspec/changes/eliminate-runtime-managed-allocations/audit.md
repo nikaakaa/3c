@@ -4937,3 +4937,14 @@
 - 本步只消除 wrapper 分配；Equipment aggregate 自身的 Clone、savepoint 快照和最终 snapshot 数组所有权仍在后续小步处理。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做装备安装/卸载、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 角色事务对象跨步复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `04135b29e`。
+
+- Fixed 和 Float32 `CharacterRuntimeStateTransaction` 外壳改为 `SimulationActorBinding` 长期持有；Evaluate 不再新建事务对象，而是调用 `Restart` 重绑 base state、Tick、TickRate、effect catalog 和各领域 pending 存储。
+- ability 映射跨步保留并在 Restart 前清空重填；savepoint 活动栈和 savepoint 归还池也随事务对象跨步保留。Restart 前要求没有活动 savepoint，防止异常半事务污染下一逻辑步。
+- Restart 重置 Control 的本次事务绑定标记和Disposed状态；首次空事务保持关闭，避免包装对象在半初始化时被访问。Commit、Abort、savepoint 平衡校验和 candidate 只在 Commit 后生效的边界不变。
+- 首次编译发现 `Dictionary` 在当前目标框架没有公开 `Capacity`，已删除错误准备逻辑；字典随事务对象长期保留，首次增长后不再新建。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做角色能力回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment aggregate Clone、事务 Capture 的最终数组和嵌套对象所有权仍在后续小步处理。

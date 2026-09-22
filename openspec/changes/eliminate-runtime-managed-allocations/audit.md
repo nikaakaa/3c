@@ -5138,3 +5138,13 @@
 - baseline 不存在时保持脏；相同值写入仍直接返回。Commit、Restore、Initialize 的游标初始化路径不变。`LastLifecycleRevisions` 仍暴露可变 SortedDictionary，需要后续单独封装后才能做恢复等价判定。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Gameplay Effect 游标先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect生命周期修订封装
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect working page 原先通过 `LastLifecycleRevisions` 暴露可变 `SortedDictionary`，ControlPort 直接写入；revision map 自身没有脏分类，只能依赖调用方随后 `MarkJournalDirty`。现在 state 提供 `TryGetLastLifecycleRevision` 和 `SetLastLifecycleRevision`，公开可变字典入口删除。
+- `SetLastLifecycleRevision` 对相同 revision 直接返回；真实写入后按 baseline 的 instance/revision 映射重算独立 `LastLifecycleRevisionsDirty`，写回等价映射会清除该分类脏标记。`HasChanges` 和 `Freeze` 将其纳入正式判定，Commit/Restore/ClearDirty 重置不变。
+- 上游 `ApplyLifecycle` 写入 revision 后仍显式 `MarkJournalDirty`；journal 分类的恢复等价判定未处理，因此真实调用序列的 aggregate 分配是否消失仍取决于 journal 边界，不在本步宣称零分配。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 lifecycle revision 先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

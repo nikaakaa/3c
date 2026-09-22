@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class CharacterControlRuntimeState
+    public readonly struct CharacterControlRuntimeState
     {
         readonly CharacterControlStateValue[] m_ValueArray;
 
@@ -193,6 +193,7 @@ namespace ThirdPersonSimulation
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<CharacterControlStateValue> Values => m_ValueArray;
         public StableHash StateHash { get; }
+        public bool IsValid => Schema != null && m_ValueArray != null;
 
         static StableHash ComputeHash(
             CharacterControlStateSchema schema,
@@ -306,8 +307,8 @@ namespace ThirdPersonSimulation
             CharacterControlStateSchema schema,
             SimulationTick tick)
         {
-            if (state == null)
-                throw new ArgumentNullException(nameof(state));
+            if (!state.IsValid)
+                throw new ArgumentException("Character control runtime state is invalid.", nameof(state));
             if (schema == null)
                 throw new ArgumentNullException(nameof(schema));
             if (!state.Schema.SchemaHash.Equals(schema.SchemaHash))
@@ -369,8 +370,8 @@ namespace ThirdPersonSimulation
         public void Restore(CharacterControlRuntimeState state)
         {
             RequireActive();
-            if (state == null)
-                throw new ArgumentNullException(nameof(state));
+            if (!state.IsValid)
+                throw new ArgumentException("Character control runtime state is invalid.", nameof(state));
             if (!state.Schema.SchemaHash.Equals(m_Schema.SchemaHash) ||
                 state.LastCompletedTick != m_Tick.Value)
                 throw new InvalidOperationException("Character control runtime state restore identity does not match the active transaction.");
@@ -499,8 +500,8 @@ namespace ThirdPersonSimulation
         {
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
-            if (state == null)
-                throw new ArgumentNullException(nameof(state));
+            if (!state.IsValid)
+                throw new ArgumentException("Character control runtime state is invalid.", nameof(state));
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             WriteCanonical(writer, state);
             writer.EndLengthPrefixedBlock(prefixPosition);

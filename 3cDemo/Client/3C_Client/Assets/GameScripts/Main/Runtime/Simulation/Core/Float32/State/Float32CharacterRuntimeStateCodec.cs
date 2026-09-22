@@ -87,7 +87,7 @@ namespace ThirdPersonSimulation
             ulong handleAllocator = reader.ReadUInt64();
             CharacterControlRuntimeState controlState = reader.ReadBoolean()
                 ? CharacterControlRuntimeStateCodec.Read(reader.ReadBytesSegment())
-                : null;
+                : default;
             GameplayEffectStateAggregate gameplayEffectState = null;
             if (reader.ReadBoolean())
             {
@@ -165,8 +165,8 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
-            writer.WriteBoolean(state.ControlState != null);
-            if (state.ControlState != null)
+            writer.WriteBoolean(state.ControlState.IsValid);
+            if (state.ControlState.IsValid)
                 CharacterControlRuntimeStateCodec.WriteLengthPrefixed(writer, state.ControlState);
             writer.WriteBoolean(state.GameplayEffectState != null);
             if (state.GameplayEffectState != null)

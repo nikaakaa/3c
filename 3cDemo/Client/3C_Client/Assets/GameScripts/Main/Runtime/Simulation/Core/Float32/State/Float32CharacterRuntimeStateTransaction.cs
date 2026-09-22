@@ -153,7 +153,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(schema));
             if (m_ControlStateBound)
                 throw new InvalidOperationException("Float32 Character Control state is already bound.");
-            if (m_BaseState.ControlState == null)
+            if (!m_BaseState.ControlState.IsValid)
                 throw new InvalidOperationException("Float32 Character runtime has no Control state.");
             m_ControlStateBound = true;
             return m_ControlState.Restart(

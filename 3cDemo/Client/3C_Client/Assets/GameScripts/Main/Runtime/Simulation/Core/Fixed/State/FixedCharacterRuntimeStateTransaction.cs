@@ -153,7 +153,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(schema));
             if (m_ControlStateBound)
                 throw new InvalidOperationException("Fixed Character Control state is already bound.");
-            if (m_BaseState.ControlState == null)
+            if (!m_BaseState.ControlState.IsValid)
                 throw new InvalidOperationException("Fixed Character runtime has no Control state.");
             m_ControlStateBound = true;
             return m_ControlState.Restart(

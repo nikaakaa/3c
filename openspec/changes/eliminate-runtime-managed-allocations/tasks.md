@@ -215,6 +215,7 @@
 - [x] 4.4.12 Fixed Unity 输入适配器的 PendingRequest 改为值记录；调度结果显式写回当前槽位，删除采样、手动入队和状态恢复中的每条请求对象分配
 - [x] 4.4.13 Fixed Unity 输入适配器复用恢复 scratch 列表；pending state 校验通过后原子提交，失败或完成后清空引用，删除每次恢复的 PendingRequest 临时数组
 - [x] 4.4.14 Fixed Unity 输入适配器在 binding 构造期缓存 request id UTF-8；恢复命中正式 binding 时复用同一字符串，未知 request id 仍解码为独立字符串
+- [x] 4.4.15 Fixed 控制源在构造期缓存 source identity UTF-8；恢复状态头直接比较 UTF-8 segment，删除每次恢复的 source identity 字符串
 - [x] 4.5 角色 locomotion 表现 Plan、FactLineage、PreparedBinding 与 DomainRuntimeFact 集中按五类正式连续枚举值域校验，删除运行有效性读取及事实构造中的六处 Enum.IsDefined 装箱
 
 ## 5. 世界求解、回滚和网络

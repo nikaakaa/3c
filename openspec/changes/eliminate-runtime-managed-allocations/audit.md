@@ -4105,6 +4105,15 @@
 - 正式 binding 的 pending 恢复不再为 request id 创建 string。canonical source identity header 仍先解码再比较，`CaptureState` 返回 byte[] 仍在后续边界。
 - `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；17 个警告均为既有包或 Editor 代码警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
 
+## 2026-09-22 Fixed source identity 恢复复用
+
+对应 tasks.md 的 4.4.8，新增 4.4.15 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `UnityFixedCharacterInputAdapter` 和 `NeutralFixedSimulationInputAdapter` 都在构造期缓存 source identity 的 UTF-8 bytes；这份缓存只随控制源装配准备一次。
+- 两类 `RestoreState` 改读 canonical UTF-8 segment，并直接与缓存 bytes 比较；魔数、版本、source identity、后续字段读取顺序和错误语义不变。非法身份不再先创建完整 string。
+- 正式控制源恢复状态头不再分配 source identity string。`CaptureState` 的 canonical writer 最终 byte[] 仍在后续边界。
+- `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；唯一警告是既有 `BaseTreeView.SerializeGraphElements` 隐藏成员警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
+
 ## 2026-09-22 Rollback 与 Authority 调用方闭环
 
 对应 tasks.md 的 5.235。

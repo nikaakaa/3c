@@ -4077,3 +4077,13 @@
 - `UnityFixedCharacterInputAdapter.SourceIdentity` 原先每次读取都用 BindingGroup、Action target 输入 ID 和 Provider identity 插值新字符串；每个模拟 tick 的 `BuildInput` 和每次 `CaptureState` 都会分配。这些输入在构造装配后固定，身份文本没有理由随读取重建。
 - 现在在构造完成 Action target 组合检查并建立正式绑定前缓存 `m_SourceIdentity`；`SourceIdentity`、live input、Canonical 状态写入和恢复身份比较复用同一 string。文本格式、Ordinal 比较和恢复拒绝语义不变。
 - `ThirdPersonSimulation.Fixed.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；输出中的 34 个警告均为既有第三方包、其它工程或既有未使用字段警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样；PendingRequest、输入对象和快照 byte[] 的分配仍在后续边界。
+
+## 2026-09-22 Rollback 与 Authority 调用方闭环
+
+对应 tasks.md 的 5.235。
+
+- `RollbackProtocolEnvelope` 已经是 readonly struct，协议编码入口不能检查 envelope 引用；现在只检查 `Payload == null`，异常输入仍显式失败。
+- ServerAuthoritative Authority 输出的 acks、baselines 和 remote 已经是数组，复制提交诊断从 `.Count` 改为 `.Length`，不改变诊断字段顺序。
+- Prediction 远端 Body 保持 `CharacterBodySample[]` 精确数组合同；`ToBodySamples` 不再返回 `IReadOnlyList`，HardRecovery 里的判空和恢复样本长度检查同步使用 `Length`。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.DeterministicRollback.csproj` 先后使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；每次编译后执行 `dotnet build-server shutdown`。
+- Unity Editor 清空 Console 后强制刷新并请求编译，旧 8 个 Rollback/ServerAuthoritative 编译错误与 Burst `Failed to find entry-points` 连带错误消失。剩余两条 `ScreenSpaceDotTransparencyController` 和 `BlockImpactVfxController` 的 MonoBehaviour 构造器 `MaterialPropertyBlock` 异常与本次 0GC 链路无关，仍在渲染装配边界处理。未做 Player 分配采样。

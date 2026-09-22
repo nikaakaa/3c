@@ -13,9 +13,9 @@ namespace ThirdPersonSimulation
         public SimulationInput Input { get; }
     }
 
-    public sealed class Float32CanonicalInputBatch
+    public readonly struct Float32CanonicalInputBatch
     {
-        readonly IReadOnlyList<SimulationPipelineActorInput<Float32StepInput>> m_Inputs;
+        readonly SimulationPipelineActorInput<Float32StepInput>[] m_Inputs;
 
         internal Float32CanonicalInputBatch(
             SimulationTickSourceIdentity source,
@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Canonical input batch source is incomplete.", nameof(source));
             if (inputs == null || inputs.Length == 0)
                 throw new ArgumentException("Canonical input batch cannot be empty.", nameof(inputs));
-            Array.Sort(inputs, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            Array.Sort(inputs, static (left, right) => left.ActorId.CompareTo(right.ActorId));
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (i > 0 && inputs[i - 1].ActorId.Equals(inputs[i].ActorId) ||
@@ -41,6 +41,7 @@ namespace ThirdPersonSimulation
 
         public SimulationTickSourceIdentity Source { get; }
         public IReadOnlyList<SimulationPipelineActorInput<Float32StepInput>> Inputs => m_Inputs;
+        public bool IsValid => Source.SourceTick != 0 && !string.IsNullOrEmpty(Source.ClockId) && m_Inputs != null;
     }
 
     public sealed class Float32TypedIngressBatch

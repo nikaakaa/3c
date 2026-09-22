@@ -91,7 +91,7 @@ namespace ThirdPersonSimulation
         {
             if (HasValue)
                 throw new InvalidOperationException($"Exclusive Pipeline Product '{Contract.ProductId}' already has a producer value.");
-            if (value == null)
+            if (!typeof(T).IsValueType && EqualityComparer<T>.Default.Equals(value, default))
                 throw new ArgumentNullException(nameof(value));
             m_Value = value;
             HasValue = true;

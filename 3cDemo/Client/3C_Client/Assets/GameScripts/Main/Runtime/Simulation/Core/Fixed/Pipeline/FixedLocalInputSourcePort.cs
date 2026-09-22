@@ -134,8 +134,10 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedLocalInputFrame(FixedCanonicalInputBatch canonicalInputs, FixedTypedIngressBatch typedIngress)
         {
-            CanonicalInputs = canonicalInputs ?? throw new ArgumentNullException(nameof(canonicalInputs));
+            if (!canonicalInputs.IsValid)
+                throw new ArgumentException("Canonical input batch is incomplete.", nameof(canonicalInputs));
             TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
+            CanonicalInputs = canonicalInputs;
         }
 
         public FixedCanonicalInputBatch CanonicalInputs { get; }

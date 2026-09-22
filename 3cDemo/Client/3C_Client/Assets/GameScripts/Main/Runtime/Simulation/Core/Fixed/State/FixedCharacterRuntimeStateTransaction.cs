@@ -277,9 +277,11 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionIdentity m_Identity;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
+        readonly FixedAbilityRuntimeState m_CommittedState;
         Dictionary<int, AbilityStateValue> m_StateValues;
         Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
+        bool m_Dirty;
         bool m_Disposed;
 
         public FixedSkillExecutionState(
@@ -298,9 +300,10 @@ namespace ThirdPersonSimulation.Fixed
             if (m_Ability.AbilityId != m_Identity.AbilityId)
                 throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
             state = state ?? throw new ArgumentNullException(nameof(state));
-            m_StateValues = new Dictionary<int, AbilityStateValue>(state.StateValues);
-            m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(state.MotionWarpStates);
-            m_AbilityExecutionState = state.AbilityExecutionState.Clone();
+            m_CommittedState = state;
+            m_StateValues = state.StateValues;
+            m_MotionWarpStates = state.MotionWarpStates;
+            m_AbilityExecutionState = state.AbilityExecutionState;
         }
 
         internal object BindingIdentity => m_BindingIdentity;
@@ -327,6 +330,8 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
+            EnsureOwnedValues();
+            m_Dirty = true;
             m_StateValues[address.SlotIndex] = value;
         }
 
@@ -349,6 +354,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             m_AbilityExecutionState = state ?? throw new ArgumentNullException(nameof(state));
+            if (!ReferenceEquals(m_AbilityExecutionState, m_CommittedState.AbilityExecutionState))
+                m_Dirty = true;
         }
 
         public FixedMotionWarpState GetMotionWarpState(OperationHandle operation)
@@ -366,6 +373,8 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (!m_Layout.HasMotionWarp(operation))
                 throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no MotionWarp state for '{operation}'.");
+            EnsureOwnedMotionWarpStates();
+            m_Dirty = true;
             if (value.Active)
                 m_MotionWarpStates[operation.Value] = value;
             else
@@ -380,6 +389,12 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedAbilityRuntimeState TakeSnapshot()
         {
             RequireActive();
+            if (!m_Dirty)
+            {
+                FixedAbilityRuntimeState committed = m_CommittedState;
+                Clear();
+                return committed;
+            }
             FixedAbilityRuntimeState snapshot = FixedAbilityRuntimeState.Adopt(
                 m_Identity,
                 m_StateValues,
@@ -390,6 +405,26 @@ namespace ThirdPersonSimulation.Fixed
             m_AbilityExecutionState = null;
             m_Disposed = true;
             return snapshot;
+        }
+
+        void EnsureOwnedValues()
+        {
+            if (ReferenceEquals(m_StateValues, m_CommittedState.StateValues))
+                m_StateValues = new Dictionary<int, AbilityStateValue>(m_CommittedState.StateValues);
+        }
+
+        void EnsureOwnedMotionWarpStates()
+        {
+            if (ReferenceEquals(m_MotionWarpStates, m_CommittedState.MotionWarpStates))
+                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(m_CommittedState.MotionWarpStates);
+        }
+
+        void Clear()
+        {
+            m_StateValues = null;
+            m_MotionWarpStates = null;
+            m_AbilityExecutionState = null;
+            m_Disposed = true;
         }
 
         void RequireActive()

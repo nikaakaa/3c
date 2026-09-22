@@ -370,11 +370,12 @@ namespace ThirdPersonSimulation
                 outer.Source,
                 completedTick);
             ExecutePhase(
+                context,
                 SimulationPipelinePhase.Ingress,
                 SimulationSessionFailureStage.Ingress,
                 outer.Source,
                 completedTick,
-                pass => pass.Execute(context));
+                static (pass, phaseContext) => pass.Execute(phaseContext));
         }
 
         [PerformanceProbe("simulation.pipeline.schedule")]
@@ -386,11 +387,12 @@ namespace ThirdPersonSimulation
                 outer.Source,
                 completedTick);
             ExecutePhase(
+                context,
                 SimulationPipelinePhase.Schedule,
                 SimulationSessionFailureStage.Schedule,
                 outer.Source,
                 completedTick,
-                pass => pass.Execute(context));
+                static (pass, phaseContext) => pass.Execute(phaseContext));
         }
 
         void ExecuteStepPasses(
@@ -442,19 +444,21 @@ namespace ThirdPersonSimulation
                 completedStepCount,
                 transactionIdentity);
             ExecutePhase(
+                context,
                 SimulationPipelinePhase.Egress,
                 SimulationSessionFailureStage.Egress,
                 outer.Source,
                 completedTick,
-                pass => pass.Execute(context));
+                static (pass, phaseContext) => pass.Execute(phaseContext));
         }
 
-        void ExecutePhase(
+        void ExecutePhase<TContext>(
+            TContext context,
             SimulationPipelinePhase phase,
             SimulationSessionFailureStage failureStage,
             SimulationTickSourceIdentity source,
             ulong completedTick,
-            Action<ICompiledSimulationPipelinePassRuntime> execute)
+            Action<ICompiledSimulationPipelinePassRuntime, TContext> execute)
         {
             for (int i = 0; i < m_Services.Passes.Count; i++)
             {
@@ -466,7 +470,8 @@ namespace ThirdPersonSimulation
                         failureStage,
                         source,
                         completedTick,
-                        () => execute(pass));
+                        execute,
+                        context);
                 }
             }
         }
@@ -574,18 +579,19 @@ namespace ThirdPersonSimulation
             }
         }
 
-        void ExecutePassCore(
+        void ExecutePassCore<TContext>(
             ICompiledSimulationPipelinePassRuntime pass,
             SimulationSessionFailureStage stage,
             SimulationTickSourceIdentity source,
             ulong completedTick,
-            Action execute)
+            Action<ICompiledSimulationPipelinePassRuntime, TContext> execute,
+            TContext context)
         {
             bool trace = m_Target.DiagnosticsEnabled;
             long started = trace ? Stopwatch.GetTimestamp() : 0;
             try
             {
-                execute();
+                execute(pass, context);
                 if (trace)
                     PublishPass(pass, source, completedTick, true, "Pipeline Pass completed.", Stopwatch.GetTimestamp() - started);
             }

@@ -107,9 +107,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
         readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
-        readonly HashSet<int> m_MotionWarpOperations;
         readonly int[] m_MotionWarpOperationIds;
-        readonly HashSet<int> m_SkillExecutionStateSlots;
+        readonly int[] m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly string[] m_OperationSourcePaths;
@@ -180,18 +179,18 @@ namespace ThirdPersonSimulation.Fixed
                 CatalogIndex,
                 out m_InputRequestIds,
                 out m_ActionCapacities,
-                out m_MotionWarpOperations,
+                out HashSet<int> motionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             timelineMotionWarpCatalog ??= AbilityTimelineMotionWarpCatalog.Empty;
             if (m_Operations.Count > AbilityTimelineMotionWarpCatalog.DirectStateOperationBase)
                 throw new InvalidDataException("Program operations enter the reserved Timeline MotionWarp state range.");
             for (int index = 0; index < timelineMotionWarpCatalog.Identities.Length; index++)
             {
-                if (!m_MotionWarpOperations.Add(timelineMotionWarpCatalog.Identities[index].Operation.Value))
+                if (!motionWarpOperations.Add(timelineMotionWarpCatalog.Identities[index].Operation.Value))
                     throw new InvalidDataException("Timeline MotionWarp state operation identities are duplicated.");
             }
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
-            m_MotionWarpOperationIds = SortedIndexes(m_MotionWarpOperations);
+            m_MotionWarpOperationIds = SortedIndexes(motionWarpOperations);
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(
                 m_Operations,
                 m_Constants,
@@ -307,8 +306,9 @@ namespace ThirdPersonSimulation.Fixed
                 ? capacity
                 : throw new InvalidOperationException($"Ability '{AbilityId}' has no Action '{actionId}' capacity.");
         public bool HasMotionWarp(OperationHandle operation) =>
-            operation.IsValid && m_MotionWarpOperations.Contains(operation.Value);
-        public bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
+            operation.IsValid && Array.BinarySearch(m_MotionWarpOperationIds, operation.Value) >= 0;
+        public bool IsSkillExecutionStateSlot(int slotIndex) =>
+            Array.BinarySearch(m_SkillExecutionStateSlots, slotIndex) >= 0;
         public bool TryGetActionTargetSnapshot(OperationHandle operation, out TypedStateAddress address)
         {
             RequireOperation(operation);
@@ -778,7 +778,7 @@ namespace ThirdPersonSimulation.Fixed
             return string.Empty;
         }
 
-        static HashSet<int> BuildSkillExecutionStateSlots(
+        static int[] BuildSkillExecutionStateSlots(
             int operationCount,
             IReadOnlyList<ProgramScopeLayout> scopes,
             IReadOnlyList<ProgramStateSlot> stateSlots,
@@ -824,7 +824,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int slotIndex = 0; slotIndex < scope.StateSlots.Count; slotIndex++)
                     AddSkillStateSlot(scope.StateSlots[slotIndex], stateSlots, characterScoped, result);
             }
-            return result;
+            return SortedIndexes(result);
         }
 
         static OperationHandle Root(OperationExecutionTopology topology) => topology.RootOperation;

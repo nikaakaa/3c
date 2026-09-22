@@ -5642,3 +5642,12 @@
 - append 产品封口一次的语义、provenance 排序、重复 provenance 异常、产品读取顺序和 outer transaction 清理不变。每槽位的静态比较器只按泛型实例化一次，不引入共享池或跨槽位状态。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 输入回放、Source Egress 发送、rollback restore和 Player 分配采样。
+
+## 2026-09-23 Pipeline输入结果排序静态化
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `fc2ce827f`。
+
+- Fixed/Float32 Canonical input 批、Character evaluation result batch 和 Output disposition set 原先分别在构造、`Reset` 或 owned 排序时创建排序委托。现在三类结果都持有类型内静态 `IComparer`，按 ActorId 或 SourceEventId 复用同一比较器。
+- 输入 Actor 顺序、评估结果顺序、disposition 排序、重复检查、canonical 身份检查和异常语义不变；比较器只归各自结果类型所有，不引入跨会话状态。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 多 Actor 输入回放、evaluation 恢复、rollback restore和 Player 分配采样。

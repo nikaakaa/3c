@@ -4538,3 +4538,12 @@
 - 这一步只收口每 Step、每 Pass 的热路径；Ingress、Schedule、Egress 仍是每 Tick 一次的通用 Action 链，留给后续小步处理。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行包含技能 Step 的 Fixed/Float32 session，确认 Pass 顺序、world resolve、诊断采样和异常回滚不变；分配采样应观察每个 Step Pass 的闭包和委托对象消失。
+
+## 2026-09-22 Pipeline phase 调用去闭包
+
+对应 tasks.md 的 5.5，新增 5.277 作为独立小步；5.5 保持未勾选。
+
+- Ingress、Schedule 和 Egress 的 `ExecutePhase` 改为显式传入 typed context，并使用无捕获的静态 `(pass, context) => pass.Execute(context)` 调用器；不再在每个 Tick 创建捕获 context 的 lambda。
+- `ExecutePassCore` 接收同一个静态 invoker 和 typed context，循环内不再为每个 Pass 嵌套 `() => execute(pass)` 闭包。Ingress/Schedule/Egress 的 phase 匹配、Pass 顺序、诊断耗时和异常包装语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Fixed/Float32 session，确认 ingress 输入、schedule 计划和 egress 输出顺序不变；分配采样应观察每 Tick/每 Pass 的 phase 调用闭包消失，静态 invoker 本身只由编译器缓存一次。

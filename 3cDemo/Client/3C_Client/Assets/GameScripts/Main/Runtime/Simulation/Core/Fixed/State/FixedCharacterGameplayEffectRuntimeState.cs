@@ -30,7 +30,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_Working = null;
                     m_Scratch = null;
                 }
-                else
+                else if (!m_Working.IsCommitted(m_Aggregate))
                 {
                     m_Working.Restore(m_Aggregate);
                 }
@@ -73,6 +73,15 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             return m_Working?.Freeze() ?? m_Aggregate;
+        }
+
+        internal GameplayEffectStateAggregate Commit()
+        {
+            RequireActive();
+            if (m_Working == null)
+                return m_Aggregate ?? throw new InvalidOperationException("Character does not install Gameplay Effect state.");
+            m_Aggregate = m_Working.Commit();
+            return m_Aggregate;
         }
 
         internal void Restore(GameplayEffectStateAggregate aggregate)

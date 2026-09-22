@@ -766,6 +766,20 @@ namespace ThirdPersonSimulation.Fixed
                 m_ChangeCursor);
         }
 
+        internal bool IsCommitted(GameplayEffectStateAggregate aggregate)
+        {
+            return aggregate != null && ReferenceEquals(m_Baseline, aggregate) && !HasChanges;
+        }
+
+        internal GameplayEffectStateAggregate Commit()
+        {
+            GameplayEffectStateAggregate aggregate = Freeze();
+            m_Baseline = aggregate;
+            m_ChangeCursor = aggregate.ChangeCursor;
+            ClearDirty();
+            return aggregate;
+        }
+
         public void Restore(GameplayEffectStateAggregate aggregate, bool hasChanges = false)
         {
             if (aggregate == null)

@@ -243,7 +243,7 @@ namespace ThirdPersonSimulation
                 m_ActionState.ActionEventSequence,
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
-                m_GameplayEffectState.Capture(),
+                m_GameplayEffectState.Commit(),
                 m_EquipmentState.Capture(),
                 m_BaseState.TimelineSnapshots,
                 ownsInputRequests: true);

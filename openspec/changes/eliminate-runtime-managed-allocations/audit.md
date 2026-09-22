@@ -5109,3 +5109,13 @@
 - Restore 走同一 Set 入口，恢复到非 base 内容保持脏，恢复到 base 内容允许 Snapshot 复用 committed 数组。changed path 的最终数组本身和真实持续变化场景仍需要独立分配。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做动作/输入先改后恢复回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect标签恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect tag source 原先一旦修改就永久置脏；先修改再恢复到 committed 等价内容时，`Freeze` 仍会重新构造 aggregate。现在 baseline aggregate 提供 tag source 内容比较，working page 在每次真实 tag source 变更后重算 `TagsDirty`，恢复等价内容会清除该分类脏标记。
+- 比较按 source count、Ordinal source key、tag count 和 Ordinal tag 语义执行；新增、覆盖、移除和移除到空都走同一刷新入口。`m_RestoredDirty` 与其它分类脏标记不受影响，无变化 `Freeze` 继续复用 baseline。
+- 这只处理 tag source 分类；attribute、active effect、period、journal 和 lifecycle revision 的“改了又恢复”仍在后续小步。changed aggregate 自身及其嵌套对象的真实变化分配仍存在。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Gameplay Effect 标签先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

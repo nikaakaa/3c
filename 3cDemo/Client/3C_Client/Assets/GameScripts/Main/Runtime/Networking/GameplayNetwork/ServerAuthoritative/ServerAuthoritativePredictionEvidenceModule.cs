@@ -119,7 +119,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         {
             if (result.Kind != ServerAuthoritativeCheckpointResultKind.Accepted)
                 throw new InvalidOperationException("Prediction evidence accepts only reconstructed checkpoints.");
-            m_LatestAck = result.Ack ?? throw new InvalidOperationException("Reconstructed checkpoint omitted owner acknowledgement.");
+            if (!result.Ack.IsValid)
+                throw new InvalidOperationException("Reconstructed checkpoint omitted owner acknowledgement.");
+            m_LatestAck = result.Ack;
             m_Baselines.Enqueue(result.Baseline ?? throw new InvalidOperationException("Reconstructed checkpoint omitted owner baseline."));
             if (result.Remote != null)
                 m_Remote.Enqueue(result.Remote);
@@ -300,7 +302,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativePredictionDatagramMetrics datagram,
             ServerAuthoritativeCheckpointMetrics checkpoint)
         {
-            if (m_LatestAck == null)
+            if (!m_LatestAck.IsValid)
                 return default;
             ulong interval = checked((ulong)m_Policy.SimulationTickRate * 5UL);
             if (m_LastStreamEvidenceSourceTick != 0 && sourceTick < m_LastStreamEvidenceSourceTick + interval)

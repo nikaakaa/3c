@@ -476,7 +476,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public bool IsValid => ActorId.IsValid && Tick.IsValid && m_BodySamples != null;
     }
 
-    public sealed class AuthoritativeInputAck
+    public readonly struct AuthoritativeInputAck
     {
         public AuthoritativeInputAck(
             ActorId actorId,
@@ -496,6 +496,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationTick AuthorityTick { get; }
         public ulong ConfirmedInputSequence { get; }
         public ServerAuthoritativeEventHorizon ConfirmedEventHorizon { get; }
+        public bool IsValid => ActorId.IsValid && AuthorityTick.IsValid;
     }
 
     public sealed class AuthoritativeObservationBatch
@@ -570,7 +571,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentException("Authority replication requires Actor acks and presentation streams.", nameof(acks));
             for (int i = 0; i < m_Acks.Length; i++)
             {
-                if (m_Acks[i] == null || !m_Acks[i].ActorId.IsValid ||
+                if (!m_Acks[i].IsValid ||
                     i > 0 && m_Acks[i - 1].ActorId == m_Acks[i].ActorId ||
                     m_Acks[i].AuthorityTick != authorityTick)
                     throw new ArgumentException("Authority replication ack set is invalid or does not match the batch.", nameof(acks));

@@ -172,7 +172,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public void ApplyAck(AuthoritativeInputAck ack)
         {
-            if (ack == null)
+            if (!ack.IsValid)
                 return;
             if (m_History.Count > 0 && m_History.FirstRecord().Input.ActorId != ack.ActorId)
                 throw new InvalidOperationException("Authority input ack targets another Prediction owner.");

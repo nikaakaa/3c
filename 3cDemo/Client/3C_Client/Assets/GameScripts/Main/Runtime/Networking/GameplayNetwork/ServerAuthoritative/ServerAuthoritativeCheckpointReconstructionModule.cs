@@ -90,11 +90,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (!remoteActor.IsValid || remoteActor == m_OwnerActor)
                 throw new ArgumentException("Remote ActorId is invalid.", nameof(remoteActor));
             if (snapshot.SnapshotSequence <= m_LatestSnapshotSequence)
-                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.Ignored, snapshot.SnapshotSequence, null, null, null);
+                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.Ignored, snapshot.SnapshotSequence, default, null, null);
             if (!m_Checkpoints.TryGetValue(snapshot.BaseSnapshotSequence, out NetworkCheckpoint baseline))
             {
                 m_BaselineMisses++;
-                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.BaselineMissing, snapshot.SnapshotSequence, null, null, null);
+                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.BaselineMissing, snapshot.SnapshotSequence, default, null, null);
             }
             NetworkCheckpoint checkpoint;
             RemotePresentationBatch remote;
@@ -149,7 +149,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new InvalidOperationException("Full checkpoint metadata does not match its canonical payload.");
             }
             if (snapshotSequence <= m_LatestSnapshotSequence)
-                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.Ignored, snapshotSequence, null, null, null);
+                return new ServerAuthoritativeCheckpointResult(ServerAuthoritativeCheckpointResultKind.Ignored, snapshotSequence, default, null, null);
             if (authorityTick < m_LatestAuthorityTick)
             {
                 throw new InvalidOperationException(

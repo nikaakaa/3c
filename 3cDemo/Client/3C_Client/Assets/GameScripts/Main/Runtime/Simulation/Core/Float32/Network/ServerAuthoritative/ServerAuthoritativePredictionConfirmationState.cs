@@ -49,8 +49,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ServerAuthoritativePredictionCorrectionCheckpoint PrepareAck(AuthoritativeInputAck ack)
         {
-            if (ack == null)
-                throw new ArgumentNullException(nameof(ack));
+            if (!ack.IsValid)
+                throw new ArgumentException("Authority input ack is incomplete.", nameof(ack));
             if (ack.AuthorityTick.Value < LastAuthorityAckTick)
             {
                 throw new InvalidOperationException(

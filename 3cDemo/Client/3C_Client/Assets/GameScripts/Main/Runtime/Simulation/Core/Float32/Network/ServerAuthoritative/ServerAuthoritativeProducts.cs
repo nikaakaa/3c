@@ -309,7 +309,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public bool IsValid => ActorId.IsValid && InputSequence != 0 && Input != null;
     }
 
-    public sealed class AcceptedAuthorityInputBatch
+    public readonly struct AcceptedAuthorityInputBatch
     {
         readonly AcceptedAuthorityInput[] m_Inputs;
 
@@ -336,6 +336,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public SimulationTick AuthorityTick { get; }
         public IReadOnlyList<AcceptedAuthorityInput> Inputs => m_Inputs;
+        public bool IsValid => AuthorityTick.IsValid && m_Inputs != null;
 
         static int CompareByActor(AcceptedAuthorityInput left, AcceptedAuthorityInput right) =>
             left.ActorId.CompareTo(right.ActorId);

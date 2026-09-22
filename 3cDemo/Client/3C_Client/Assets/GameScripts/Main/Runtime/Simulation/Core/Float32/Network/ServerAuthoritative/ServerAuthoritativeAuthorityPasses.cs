@@ -44,7 +44,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             AuthorityAcceptedInputIngressWrites writePorts)
         {
             RequireExecution();
-            AcceptedAuthorityInputBatch batch = readPorts.Source.Read(context.Source) ??
+            AcceptedAuthorityInputBatch batch = readPorts.Source.Read(context.Source);
+            if (!batch.IsValid)
                 throw new InvalidOperationException("Authority accepted-input Source returned no canonical batch.");
             writePorts.Batch.Write(batch);
         }

@@ -363,8 +363,8 @@ namespace ThirdPersonSimulation.Fixed
 
         FixedValueInputBuffer RequireInputBuffer(int depth)
         {
-            while (m_InputBuffers.Count <= depth)
-                m_InputBuffers.Add(new FixedValueInputBuffer());
+            if (depth >= m_InputBuffers.Count)
+                throw new InvalidOperationException("Fixed value recursion exceeds its prepared operation bound.");
             return m_InputBuffers[depth];
         }
 

@@ -11,12 +11,24 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedAbilityExecutionWorkspace(
             FixedGameplayEffectExecutionScratch gameplayEffects,
+            FixedGameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
             List<AbilityTimelineAdvancePending> timelineAdvances,
             List<AbilityTimelineStopPending> timelineStops)
         {
             GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
             TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
             TimelineStops = timelineStops ?? throw new ArgumentNullException(nameof(timelineStops));
+            int depthCapacity = checked(data.Operations.Count + 1);
+            int inputCapacity = 0;
+            for (int index = 0; index < data.Operations.Count; index++)
+                inputCapacity = Math.Max(inputCapacity, layout.ValueInputs(data.Operations[index].Handle).Length);
+            ValueStack.EnsureCapacity(depthCapacity);
+            while (ValueBuffers.Count < depthCapacity)
+                ValueBuffers.Add(new FixedValueInputBuffer());
+            for (int index = 0; index < ValueBuffers.Count; index++)
+                if (ValueBuffers[index].Values.Capacity < inputCapacity)
+                    ValueBuffers[index].Values.Capacity = inputCapacity;
         }
 
         public List<GameplayFact> Facts { get; } = new List<GameplayFact>();

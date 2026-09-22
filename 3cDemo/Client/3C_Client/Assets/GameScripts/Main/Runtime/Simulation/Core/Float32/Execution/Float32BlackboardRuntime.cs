@@ -126,6 +126,7 @@ namespace ThirdPersonSimulation
         readonly List<SimulationActionWindowProjectionCandidate> m_ActionWindowProjections;
         readonly HashSet<SimulationActionWindowProjectionKey> m_ActionWindowProjectionKeys;
         readonly Stack<SimulationTimelineBlackboardContext> m_TimelineBlackboardContexts;
+        readonly Stack<TimelineBlackboardScope> m_TimelineBlackboardScopePool = new();
 
         public Float32BlackboardRuntime(
             Float32GameplayAbilityExecutionAccess access,
@@ -572,7 +573,10 @@ namespace ThirdPersonSimulation
                 clip.Handle,
                 cycle,
                 action));
-            return new TimelineBlackboardScope(this);
+            TimelineBlackboardScope scope = m_TimelineBlackboardScopePool.Count > 0
+                ? m_TimelineBlackboardScopePool.Pop()
+                : new TimelineBlackboardScope();
+            return scope.Begin(this);
         }
 
         AbilityStateValue DefaultValue(SimulationBlackboardSlotGroup group)
@@ -600,9 +604,10 @@ namespace ThirdPersonSimulation
         {
             Float32BlackboardRuntime m_Owner;
 
-            public TimelineBlackboardScope(Float32BlackboardRuntime owner)
+            public TimelineBlackboardScope Begin(Float32BlackboardRuntime owner)
             {
                 m_Owner = owner;
+                return this;
             }
 
             public void Dispose()
@@ -610,6 +615,7 @@ namespace ThirdPersonSimulation
                 if (m_Owner == null)
                     return;
                 m_Owner.m_TimelineBlackboardContexts.Pop();
+                m_Owner.m_TimelineBlackboardScopePool.Push(this);
                 m_Owner = null;
             }
         }

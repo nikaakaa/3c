@@ -102,6 +102,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 m_Workspaces[i] = new FixedAbilityExecutionWorkspace(
                     m_EffectExecutionScratch,
+                    AbilityInstallations.Installations[i].Data,
+                    AbilityInstallations.Installations[i].Layout,
                     m_TimelineAdvances,
                     m_TimelineStops);
             }

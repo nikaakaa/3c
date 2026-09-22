@@ -202,13 +202,13 @@ namespace ThirdPersonSimulation.Fixed
                 ? CloneChangedActiveEffects(activeEffects, m_ActiveEffects)
                 : m_ActiveEffects;
             SortedDictionary<ulong, ulong> changedPeriods = periodsChanged
-                ? CloneMap(periods)
+                ? CloneChangedMap(periods, m_Periods)
                 : m_Periods;
             SortedDictionary<ulong, List<PortablePredictionRecord>> changedJournal = journalChanged
                 ? CloneChangedJournal(journal, m_Journal)
                 : m_Journal;
             SortedDictionary<ulong, ulong> changedRevisions = lastLifecycleRevisionsChanged
-                ? CloneMap(lastLifecycleRevisions)
+                ? CloneChangedMap(lastLifecycleRevisions, m_LastLifecycleRevisions)
                 : m_LastLifecycleRevisions;
             string[] ownedTags = tagsChanged ? CollectOwnedTags(changedTags) : m_OwnedTags;
             return new GameplayEffectStateAggregate(
@@ -807,6 +807,29 @@ namespace ThirdPersonSimulation.Fixed
                     result.Add(pair.Key, pair.Value);
             }
             return result;
+        }
+
+        static SortedDictionary<ulong, ulong> CloneChangedMap(
+            IReadOnlyDictionary<ulong, ulong> source,
+            SortedDictionary<ulong, ulong> baseline)
+        {
+            if (source == null)
+                return baseline;
+            if (source.Count == baseline.Count)
+            {
+                bool matches = true;
+                foreach (KeyValuePair<ulong, ulong> pair in source)
+                {
+                    if (!baseline.TryGetValue(pair.Key, out ulong value) || value != pair.Value)
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return baseline;
+            }
+            return CloneMap(source);
         }
 
         static string[] CollectOwnedTags(SortedDictionary<string, string[]> sources)

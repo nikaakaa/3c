@@ -28,9 +28,11 @@ namespace ThirdPersonSimulation
     {
         ulong NextActionEventSequence();
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
-        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
+        void AddActivationRequest(SimulationActionActivationRequestState request, int capacity);
+        void RemoveActivationRequestAt(int index);
         IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
-        void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions);
+        void ReplaceActionInstanceAt(int index, Float32ActionInstanceState action);
+        void AddActionInstance(Float32ActionInstanceState action, int capacity);
     }
 
     internal interface IFloat32HandleAllocatorStatePort

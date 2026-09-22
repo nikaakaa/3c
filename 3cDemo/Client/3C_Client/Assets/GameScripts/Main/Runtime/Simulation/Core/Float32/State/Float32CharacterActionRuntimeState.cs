@@ -28,21 +28,8 @@ namespace ThirdPersonSimulation
         {
             m_BaseActionActivationRequests = actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>();
             m_BaseActionInstances = actionInstances ?? Array.Empty<Float32ActionInstanceState>();
-            m_ActionActivationRequests.Clear();
-            if (actionActivationRequests != null)
-            {
-                if (m_ActionActivationRequests.Capacity < actionActivationRequests.Count)
-                    m_ActionActivationRequests.Capacity = actionActivationRequests.Count;
-                m_ActionActivationRequests.AddRange(actionActivationRequests);
-            }
-
-            m_ActionInstances.Clear();
-            if (actionInstances != null)
-            {
-                if (m_ActionInstances.Capacity < actionInstances.Count)
-                    m_ActionInstances.Capacity = actionInstances.Count;
-                m_ActionInstances.AddRange(actionInstances);
-            }
+            ReplaceActivationRequests(actionActivationRequests);
+            ReplaceActionInstances(actionInstances);
 
             m_ActionEventSequence = actionEventSequence;
             m_ActivationRequestsDirty = false;
@@ -66,34 +53,50 @@ namespace ThirdPersonSimulation
             return m_ActionActivationRequests;
         }
 
-        public void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests)
-        {
-            RequireActive();
-            if (Same(m_ActionActivationRequests, requests))
-                return;
-            m_ActivationRequestsDirty = true;
-            m_ActionActivationRequests.Clear();
-            if (requests != null)
-                m_ActionActivationRequests.AddRange(requests);
-            m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
-        }
-
         public IReadOnlyList<Float32ActionInstanceState> GetActionInstances()
         {
             RequireActive();
             return m_ActionInstances;
         }
 
-        public void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions)
+        public void ReplaceActionInstanceAt(int index, Float32ActionInstanceState action)
         {
             RequireActive();
-            if (Same(m_ActionInstances, actions))
-                return;
-            m_InstancesDirty = true;
-            m_ActionInstances.Clear();
-            if (actions != null)
-                m_ActionInstances.AddRange(actions);
+            if (index < 0 || index >= m_ActionInstances.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            m_ActionInstances[index] = action;
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
+        }
+
+        public void AddActionInstance(Float32ActionInstanceState action, int capacity)
+        {
+            RequireActive();
+            if (capacity < m_ActionInstances.Count + 1)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            if (m_ActionInstances.Capacity < capacity)
+                m_ActionInstances.Capacity = capacity;
+            m_ActionInstances.Add(action);
+            m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
+        }
+
+        public void AddActivationRequest(SimulationActionActivationRequestState request, int capacity)
+        {
+            RequireActive();
+            if (capacity < m_ActionActivationRequests.Count + 1)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            if (m_ActionActivationRequests.Capacity < capacity)
+                m_ActionActivationRequests.Capacity = capacity;
+            m_ActionActivationRequests.Add(request);
+            m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
+        }
+
+        public void RemoveActivationRequestAt(int index)
+        {
+            RequireActive();
+            if (index < 0 || index >= m_ActionActivationRequests.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            m_ActionActivationRequests.RemoveAt(index);
+            m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
         }
 
         internal ulong ActionEventSequence
@@ -115,9 +118,39 @@ namespace ThirdPersonSimulation
             ulong actionEventSequence)
         {
             RequireActive();
-            SetActionActivationRequests(actionActivationRequests);
-            SetActionInstances(actionInstances);
+            ReplaceActivationRequests(actionActivationRequests);
+            ReplaceActionInstances(actionInstances);
             m_ActionEventSequence = actionEventSequence;
+        }
+
+        void ReplaceActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests)
+        {
+            if (Same(m_ActionActivationRequests, requests))
+                return;
+            m_ActivationRequestsDirty = true;
+            m_ActionActivationRequests.Clear();
+            if (requests != null)
+            {
+                if (m_ActionActivationRequests.Capacity < requests.Count)
+                    m_ActionActivationRequests.Capacity = requests.Count;
+                m_ActionActivationRequests.AddRange(requests);
+            }
+            m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
+        }
+
+        void ReplaceActionInstances(IReadOnlyList<Float32ActionInstanceState> actions)
+        {
+            if (Same(m_ActionInstances, actions))
+                return;
+            m_InstancesDirty = true;
+            m_ActionInstances.Clear();
+            if (actions != null)
+            {
+                if (m_ActionInstances.Capacity < actions.Count)
+                    m_ActionInstances.Capacity = actions.Count;
+                m_ActionInstances.AddRange(actions);
+            }
+            m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
         internal void Dispose()

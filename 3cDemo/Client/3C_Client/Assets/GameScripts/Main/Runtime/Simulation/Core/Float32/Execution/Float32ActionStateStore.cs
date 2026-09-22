@@ -620,26 +620,21 @@ namespace ThirdPersonSimulation
 				index = FindEmptyInstanceIndex(action.ActionId);
 			if (index < 0)
 				throw new InvalidOperationException($"Action '{action.ActionId}' has no free instance state capacity.");
-			IReadOnlyList<Float32ActionInstanceState> current = m_Frame.ActionState.GetActionInstances();
-			var actions = new List<Float32ActionInstanceState>(current);
+            IReadOnlyList<Float32ActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
 			if (index < actions.Count)
 			{
 				Float32ActionInstanceState previous = actions[index];
 				if (previous.IsValid && previous.IsTerminal)
 					m_SkillExecution.Remove(previous.InstanceId);
-				actions[index] = action;
+				m_Frame.ActionState.ReplaceActionInstanceAt(index, action);
 			}
 			else
-				actions.Add(action);
-			m_Frame.ActionState.SetActionInstances(actions);
+				m_Frame.ActionState.AddActionInstance(action, m_Layout.ActionInstanceCapacity);
         }
 
 		void ReplaceAction(int index, Float32ActionInstanceState action)
 		{
-			IReadOnlyList<Float32ActionInstanceState> current = m_Frame.ActionState.GetActionInstances();
-			var actions = new List<Float32ActionInstanceState>(current);
-			actions[index] = action;
-			m_Frame.ActionState.SetActionInstances(actions);
+			m_Frame.ActionState.ReplaceActionInstanceAt(index, action);
 		}
 
 		public bool HasPendingRequest(string actionId)
@@ -659,11 +654,7 @@ namespace ThirdPersonSimulation
 					count++;
 			if (count >= m_Layout.ActionCapacity(state.ActionId))
 				throw new InvalidOperationException($"Action '{state.ActionId}' has no free activation request capacity.");
-			var requests = new List<SimulationActionActivationRequestState>(current.Count + 1);
-            for (int i = 0; i < current.Count; i++)
-                requests.Add(current[i]);
-            requests.Add(state);
-            m_Frame.ActionState.SetActionActivationRequests(requests);
+            m_Frame.ActionState.AddActivationRequest(state, m_Layout.ActionInstanceCapacity);
         }
 
 		public int FindPendingSkill(
@@ -745,14 +736,7 @@ namespace ThirdPersonSimulation
 
 		public void ClearRequestAt(int index)
 		{
-			IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.ActionState.GetActionActivationRequests();
-			if (index < 0 || index >= current.Count)
-				throw new ArgumentOutOfRangeException(nameof(index));
-			var requests = new List<SimulationActionActivationRequestState>(current.Count - 1);
-			for (int i = 0; i < current.Count; i++)
-				if (i != index)
-					requests.Add(current[i]);
-            m_Frame.ActionState.SetActionActivationRequests(requests);
+            m_Frame.ActionState.RemoveActivationRequestAt(index);
 		}
 
 		bool TryFindInstanceIndex(ulong instanceId, out int index)

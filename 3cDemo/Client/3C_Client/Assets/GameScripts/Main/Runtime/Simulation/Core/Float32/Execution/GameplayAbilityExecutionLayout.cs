@@ -105,6 +105,7 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
         readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
+        readonly int m_ActionInstanceCapacity;
         readonly int[] m_MotionWarpOperationIds;
         readonly int[] m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
@@ -177,6 +178,7 @@ namespace ThirdPersonSimulation
                 CatalogIndex,
                 out m_InputRequestIds,
                 out m_ActionCapacities,
+                out m_ActionInstanceCapacity,
                 out HashSet<int> motionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             timelineMotionWarpCatalog ??= AbilityTimelineMotionWarpCatalog.Empty;
@@ -224,6 +226,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
+        public int ActionInstanceCapacity => m_ActionInstanceCapacity;
         public IReadOnlyList<int> MotionWarpOperationIds => m_MotionWarpOperationIds;
         public AbilityTimelineMotionWarpCatalog TimelineMotionWarpCatalog { get; }
 
@@ -605,11 +608,13 @@ namespace ThirdPersonSimulation
             ProgramCatalogRuntimeIndex catalog,
             out string[] inputRequestIds,
             out IReadOnlyDictionary<string, int> actionCapacities,
+            out int actionInstanceCapacity,
             out HashSet<int> motionWarpOperations,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new HashSet<string>(StringComparer.Ordinal);
             var capacities = new Dictionary<string, int>(StringComparer.Ordinal);
+            int totalActionCapacity = 0;
             var motionWarp = new HashSet<int>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             for (int i = 0; i < catalogEntries.Count; i++)
@@ -629,6 +634,7 @@ namespace ThirdPersonSimulation
                         constantIndex => ReadInt32Constant(constants, constantIndex));
                     if (!capacities.TryAdd(actionId, profile.MaxConcurrentInstances))
                         throw new InvalidDataException($"Action '{actionId}' is duplicated.");
+                    totalActionCapacity += profile.MaxConcurrentInstances;
                 }
             }
 
@@ -643,6 +649,7 @@ namespace ThirdPersonSimulation
                 }
             }
             actionCapacities = capacities;
+            actionInstanceCapacity = totalActionCapacity;
             motionWarpOperations = motionWarp;
             actionTargetSnapshots = targets;
         }

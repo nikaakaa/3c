@@ -539,6 +539,7 @@
 - [x] 5.268 Pipeline participant payload 使用 owned bytes 合同；全部捕获和 decode 生产者直接移交新建数组，构造器不再克隆
 - [x] 5.269 Pipeline participant hash 入口拆分 owned capture 与 wire decode；生产者删除重复 payload SHA-256 计算，decode 保留 expected hash 校验
 - [x] 5.270 Pipeline snapshot participants 使用 owned array 合同；删除 IReadOnlyList 复制构造和 Session decode 的 List 中转，全部调用方移交精确数组
+- [x] 5.271 Pipeline restore transactions 使用 owned array 合同；PrepareRestore 删除 List 和 ReadOnlyCollection 中转，异常按已准备数量逆序释放
 
 ## 6. UI、资源、渲染和生命周期
 

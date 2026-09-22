@@ -4481,3 +4481,13 @@
 - participant 排序顺序、PassId 重复检查、空 roster 拒绝和 `SnapshotHash` 内容不变。participant 对象及其 owned payload 的所有权不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint 和 ServerAuthoritative Prediction history checkpoint，再触发 Prediction restore，确认 pipeline SnapshotHash 与状态一致；分配采样应观察 decode 的 List 外壳和 participant 数组复制消失。
+
+## 2026-09-22 Pipeline restore transactions owned array 收口
+
+对应 tasks.md 的 5.5，新增 5.271 作为独立小步；5.5 保持未勾选。代码提交为 `e38a47b0f`。
+
+- `SimulationPipelineStateRestoreTransaction` 的 public `IEnumerable` 构造器删除，改为私有 trusted 构造和 `FromOwnedTransactions`。事务直接持有 `ISimulationPipelinePassRestoreTransaction[]`，删除每次 restore 的 `List<T>`、复制和 `ReadOnlyCollection<T>` 包装。
+- `PrepareRestore` 按 snapshot participant 数量准备精确 transactions 数组；循环内用 `preparedCount` 只统计已成功准备的事务。任何准备失败都会按 `preparedCount` 逆序 `Dispose`，不会释放空槽，也不会触碰未准备事务。
+- 构造器仍原地按 PassId 排序，仍校验 null 事务、数量和 participant identity；Apply、ValidateApplied、CompleteAfterSessionPublish、Rollback 和 Dispose 的顺序不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次 Pipeline restore，确认参与者应用顺序、校验失败和 rollback 行为不变；分配采样应观察 restore 准备路径的 List、扩容和只读包装消失，但各 participant 返回的 restore transaction 对象仍是正式分配。

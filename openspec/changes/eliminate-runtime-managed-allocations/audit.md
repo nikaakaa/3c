@@ -5059,3 +5059,13 @@
 - `CharacterControlStateValue.Equals` 按字段和 Ordinal identity 比较，避免 identity 引用不同导致假脏。 restored 状态也会重置变化标记。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未对比控制状态 canonical bytes、未做 rollback restore 和 Player 分配采样。2.4 保持未勾选：changed 路径、Ability candidate 分配、Timeline snapshot 外壳和实际分配采样仍待处理。
+
+## 2026-09-23 Ability假脏写入抑制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed 和 Float32 `SkillExecutionState` 原先只要调用 StateValue 或 MotionWarp 写入就置脏；写入相同值也会触发 lazy copy、candidate 重建和最终数组替换。现在先与当前生效值显式比较，相同写入直接返回，只有真实变化才置脏。
+- 值比较按正式业务值语义执行：数值和向量使用各数值域 Equals，identity 字符串使用 Ordinal，Blackboard token/stamp、Action target、Action instance reference 和 MotionWarp 全字段参与比较。inactive MotionWarp 写入缺失或等价空状态时不再产生假脏。
+- Restart、读取默认值、slot kind 校验、MotionWarp Active/Inactive 规则和 commit 所有权边界不变。Execution aggregate 仍按引用判断；内容相同但 aggregate 引用不同的场景留在后续小步。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做技能状态回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：changed 路径的 aggregate/集合分配、非空最终数组、Timeline snapshot 外壳和分配采样仍待处理。

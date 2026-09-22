@@ -5148,3 +5148,13 @@
 - 上游 `ApplyLifecycle` 写入 revision 后仍显式 `MarkJournalDirty`；journal 分类的恢复等价判定未处理，因此真实调用序列的 aggregate 分配是否消失仍取决于 journal 边界，不在本步宣称零分配。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 lifecycle revision 先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect预测Journal封装与恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect working page 删除公开可变 `Journal` 字典；ControlPort 改为通过 `TryGetJournalRecords`、`AddJournalRecord`、`RemoveJournalRecords` 和 `CopyJournalKeys` 访问。预测 key 快照仍使用 Actor scratch，新增和移除后立即按 baseline 重算 journal dirty。
+- `MarkJournalDirty` 更名为 `RefreshJournalDirty`：不再永久置脏，而是完整比较 key、record 数量、handle/instance/confirmed 状态、active-before 快照、effect definition 身份、context、SetByCaller/source/target 数值、source/target tags、duration/period、cue 顺序和 prediction attribute 快照。先加入再移除、或内容恢复到 committed baseline 的 journal 不再强制重建 aggregate。
+- baseline 中的 definition 只接受同一目录对象或 Id/Revision 相同；其余业务状态逐字段比较，字符串用 Ordinal，数值用各数值域 Equals。working record 仍通过实际 list 暴露给读取方，确认和 attribute restore 的原地修改由随后的 Refresh 覆盖。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做预测加入/确认/拒绝回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

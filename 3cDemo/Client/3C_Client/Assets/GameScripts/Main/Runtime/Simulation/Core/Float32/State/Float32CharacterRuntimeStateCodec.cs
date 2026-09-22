@@ -33,11 +33,13 @@ namespace ThirdPersonSimulation
         }
 
         public static Float32CharacterRuntimeState Read(
-            byte[] bytes,
+            ReadOnlyMemory<byte> bytes,
             SimulationActorBinding actor)
         {
-            if (bytes == null || actor == null)
-                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(actor));
+            if (actor == null)
+                throw new ArgumentNullException(nameof(actor));
+            if (bytes.Length == 0)
+                throw new ArgumentException("Character runtime state payload is empty.", nameof(bytes));
             Float32GameplayAbilityExecutionInstallationSet installations = actor.AbilityInstallations;
             GameplayContentHash expectedGameplayContentHash = new GameplayContentHash(actor.GameplayContentHash);
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding = actor.GameplayEffectRuntimeBinding;
@@ -130,7 +132,7 @@ namespace ThirdPersonSimulation
                 timelineSnapshots);
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, state);
-            if (!writer.ContentEquals(bytes))
+            if (!writer.ContentEquals(bytes.Span))
                 throw new InvalidDataException("Float32 Character runtime state is not canonical.");
             return state;
         }

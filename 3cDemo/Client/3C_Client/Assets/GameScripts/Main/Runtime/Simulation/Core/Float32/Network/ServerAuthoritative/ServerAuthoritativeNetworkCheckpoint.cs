@@ -93,13 +93,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (!checkpoint.Baseline.GameplayContentHash.Equals(RequireActorContentHash(checkpoint.Baseline.ActorId)) ||
                 !string.Equals(checkpoint.Baseline.StateCodecIdentity, StateCodecIdentity, StringComparison.Ordinal))
                 throw new InvalidDataException("Network checkpoint does not match the locked Character Runtime state.");
-            ValidateState(checkpoint.Baseline.ActorId, checkpoint.Baseline.AuthorityTick, checkpoint.StateBytes, checkpoint.Baseline.StateHash);
+            ValidateState(checkpoint.Baseline.ActorId, checkpoint.Baseline.AuthorityTick, checkpoint.StateMemory, checkpoint.Baseline.StateHash);
         }
 
         internal Float32CharacterRuntimeState ValidateState(
             ActorId actorId,
             SimulationTick tick,
-            byte[] bytes,
+            ReadOnlyMemory<byte> bytes,
             CharacterStateHash expectedHash)
         {
             SimulationActorBinding actor = RequireActor(actorId);
@@ -148,6 +148,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public AuthoritativeActorBaseline Baseline { get; }
         internal byte[] StateBytes => (byte[])m_StateBytes.Clone();
         internal ReadOnlySpan<byte> StateSpan => m_StateBytes;
+        internal ReadOnlyMemory<byte> StateMemory => m_StateBytes;
         public StableHash CheckpointHash { get; }
         public bool IsValid => Baseline.IsValid && m_StateBytes != null;
 

@@ -119,6 +119,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public void EnqueueSend(ServerAuthoritativeDatagramPacket packet) => m_Endpoint.EnqueueSend(packet);
         public void PumpSend() => m_Endpoint.PumpSend();
         public bool TryReceive(out ServerAuthoritativeReceivedDatagram datagram) => m_Endpoint.TryReceive(out datagram);
+        public void ReturnReceiveEndPoint(IPEndPoint remoteEndPoint) => m_Endpoint.ReturnReceiveEndPoint(remoteEndPoint);
+        public void ReturnReceivedPacket(ServerAuthoritativeDatagramPacket packet) => m_Endpoint.ReturnReceivedPacket(packet);
         public void ThrowIfUnavailable() => m_Endpoint.ThrowIfUnavailable();
         public ServerAuthoritativeDatagramMetrics CaptureMetrics() => m_Endpoint.CaptureMetrics();
 

@@ -239,6 +239,40 @@ namespace ThirdPersonSimulation
         public GameplayAbilityExecutionAggregate<TValue> Clone() =>
             new GameplayAbilityExecutionAggregate<TValue>(m_Frames);
 
+        internal GameplayAbilityExecutionAggregate<TValue> CreateMutableShell()
+        {
+            var frames = new List<GameplayAbilityExecutionFrame<TValue>>(m_Frames.Count);
+            frames.AddRange(m_Frames);
+            return Adopt(frames);
+        }
+
+        internal GameplayAbilityExecutionAggregate<TValue> CloneForActiveFrameMutation(ulong actionInstanceId)
+        {
+            int mutableIndex = -1;
+            for (int i = 0; i < m_Frames.Count; i++)
+            {
+                if (m_Frames[i].ActionInstanceId == actionInstanceId)
+                {
+                    mutableIndex = i;
+                    break;
+                }
+            }
+            if (mutableIndex < 0)
+                throw new InvalidOperationException($"Skill execution frame '{actionInstanceId}' is absent from the committed aggregate.");
+            var frames = new List<GameplayAbilityExecutionFrame<TValue>>(m_Frames.Count);
+            for (int i = 0; i < m_Frames.Count; i++)
+                frames.Add(i == mutableIndex ? m_Frames[i].Clone() : m_Frames[i]);
+            return Adopt(frames);
+        }
+
+        static GameplayAbilityExecutionAggregate<TValue> Adopt(List<GameplayAbilityExecutionFrame<TValue>> frames) =>
+            new GameplayAbilityExecutionAggregate<TValue>(frames, true);
+
+        GameplayAbilityExecutionAggregate(List<GameplayAbilityExecutionFrame<TValue>> frames, bool adopted)
+        {
+            m_Frames = frames;
+        }
+
         public bool Equals(GameplayAbilityExecutionAggregate<TValue> other)
         {
             if (other == null || m_Frames.Count != other.m_Frames.Count)
@@ -291,11 +325,10 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Skill execution frame identity is incomplete.", nameof(identity));
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution frames cannot be nested.");
-            EnsureStates();
+            EnsureMutableShell();
             GameplayAbilityExecutionFrame<TValue> frame = m_States.Find(identity.ActionInstanceId);
             if (frame == null)
             {
-                EnsureMutableStates();
                 frame = new GameplayAbilityExecutionFrame<TValue>(
                     identity.SkillId,
                     identity.EntryOperation,
@@ -321,10 +354,9 @@ namespace ThirdPersonSimulation
         {
             if (m_Active != null && m_Active.ActionInstanceId == actionInstanceId)
                 throw new InvalidOperationException("Active Skill execution frame cannot be removed while active.");
-            EnsureStates();
+            EnsureMutableShell();
             if (m_States.Find(actionInstanceId) == null)
                 return false;
-            EnsureMutableStates();
             if (!m_States.Remove(actionInstanceId))
                 return false;
             m_Storage.WriteAggregate(m_States);
@@ -393,19 +425,24 @@ namespace ThirdPersonSimulation
             m_StatesShared = true;
         }
 
-        void EnsureMutableStates()
+        void EnsureMutableShell()
         {
             EnsureStates();
             if (!m_StatesShared)
                 return;
-            m_States = m_States.Clone();
+            m_States = m_States.CreateMutableShell();
             m_StatesShared = false;
         }
 
         void MakeActiveFrameMutable()
         {
             RequireActiveFrame(0);
-            EnsureMutableStates();
+            EnsureStates();
+            if (m_StatesShared)
+            {
+                m_States = m_States.CloneForActiveFrameMutation(m_Active.ActionInstanceId);
+                m_StatesShared = false;
+            }
             m_Active = m_States.Find(m_Active.ActionInstanceId);
             if (m_Active == null)
                 throw new InvalidOperationException("Skill execution active frame disappeared while preparing state changes.");
@@ -417,7 +454,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Skill execution frame scope is unbalanced.");
             if (frame.Generation == 0)
             {
-                EnsureMutableStates();
+                EnsureMutableShell();
                 m_States.Remove(frame.ActionInstanceId);
             }
             m_Storage.WriteAggregate(m_States);

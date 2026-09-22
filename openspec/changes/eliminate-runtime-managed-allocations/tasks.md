@@ -548,6 +548,7 @@
 - [x] 5.277 Pipeline Ingress/Schedule/Egress 改用静态 phase invoker；删除每 Tick 捕获 context 的 lambda 和每 Pass 嵌套闭包
 - [x] 5.278 Fixed/Float32 transaction port 复用 working state shell；每 Tick 只替换 immutable state，不再创建托管外壳
 - [x] 5.279 Fixed/Float32 Commit batch 使用 workspace 精确数组；删除 steps/source egress 构造期二次复制
+- [x] 5.280 Fixed/Float32 Commit batch 改为 readonly struct；删除同步 commit 的托管外壳，default 用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -4567,3 +4567,13 @@
 - transaction workspace 继续在事务开始和结束时清空；commit batch 持有的是移交出去的正式结果数组，不回写或共享 workspace 的 `List` 存储。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Fixed/Rollback 和 Float32 commit，确认 Step 输出、source egress 和 output disposition 顺序不变；分配采样应观察 commit freeze 时的两组构造期复制消失，最终 result 数组本身仍是正式分配。
+
+## 2026-09-22 Commit batch 值类型收口
+
+对应 tasks.md 的 5.5，新增 5.280 作为独立小步；5.5 保持未勾选。
+
+- Fixed 与 Float32 `SimulationCommitBatch` 从 sealed class 改为 readonly struct；Pipeline transaction 泛型删除 `TCommitBatch : class` 约束。freeze 返回值和 target commit 参数按值传递，稳定 Tick 不再创建 batch 托管外壳。
+- batch 增加 `IsValid`，default 结构体显式无效；Fixed Local、Fixed adapter、Float32 adapter、Rollback Output、Rollback History 的入口检查从引用判空改为 `IsValid` 拒绝。构造器仍校验 transaction identity、disposition identity、Step 顺序、事件覆盖、egress 内容和重复 EventId。
+- 所有 committer 都在同一 `Commit` 调用内遍历 batch，已确认不保存 batch 外壳；它们继续消费 steps、results、dispositions 和 source egress 的 owned arrays，发布与 rollback 语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行普通 Local commit、Rollback replay commit 和 Float32 commit，确认发布、观察者、source egress 和快照捕获顺序不变；分配采样应观察每 Tick 的 batch 托管外壳消失，batch 内的 steps 和 egress 结果数组仍是正式分配。

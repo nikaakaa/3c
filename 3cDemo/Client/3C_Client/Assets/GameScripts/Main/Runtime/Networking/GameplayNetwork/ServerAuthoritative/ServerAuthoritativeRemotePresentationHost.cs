@@ -346,7 +346,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public void Commit(RemotePresentationBatch batch)
         {
             RequireAlive();
-            if (!m_Activated || batch == null || batch.ActorId != ActorId)
+            if (!m_Activated || !batch.IsValid || batch.ActorId != ActorId)
                 throw new InvalidOperationException("Remote Presentation batch does not match the active target.");
             if (batch.ResetBodyStream && batch.BodySamples.Count == 0)
                 throw new InvalidOperationException("Remote selected Body stream reset requires an explicit anchor interval.");

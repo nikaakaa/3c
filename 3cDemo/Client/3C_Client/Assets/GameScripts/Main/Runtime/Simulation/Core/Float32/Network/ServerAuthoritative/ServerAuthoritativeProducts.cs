@@ -364,7 +364,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationEventHeader Header => IsGameplay ? GameplayFact.Header : PresentationCommand.Header;
     }
 
-    public sealed class RemotePresentationBatch
+    public readonly struct RemotePresentationBatch
     {
         static readonly Comparison<CharacterBodySample> s_CompareByTick =
             (left, right) => left.Tick.CompareTo(right.Tick);
@@ -440,6 +440,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<CharacterBodySample> BodySamples => m_BodySamples;
         public IReadOnlyList<PresentationCommand> SampleCommands => m_SampleCommands;
         public IReadOnlyList<ServerAuthoritativeReliableEvent> ReliableEvents => m_ReliableEvents;
+        public bool IsValid => ActorId.IsValid && m_BodySamples != null && m_SampleCommands != null && m_ReliableEvents != null;
     }
 
     public readonly struct SelectedRemoteBodyBatch
@@ -533,7 +534,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             for (int i = 0; i < m_RemotePresentation.Length; i++)
             {
-                if (m_RemotePresentation[i] == null || !m_RemotePresentation[i].ActorId.IsValid ||
+                if (!m_RemotePresentation[i].IsValid ||
                     i > 0 && m_RemotePresentation[i - 1].ActorId == m_RemotePresentation[i].ActorId)
                     throw new ArgumentException("Observation remote presentation contains a missing or duplicate ActorId.", nameof(remotePresentation));
             }
@@ -585,7 +586,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             for (int i = 0; i < m_RemotePresentation.Length; i++)
             {
-                if (m_RemotePresentation[i] == null || !m_RemotePresentation[i].ActorId.IsValid ||
+                if (!m_RemotePresentation[i].IsValid ||
                     i > 0 && m_RemotePresentation[i - 1].ActorId == m_RemotePresentation[i].ActorId)
                     throw new ArgumentException("Authority replication presentation set is invalid.", nameof(remotePresentation));
             }

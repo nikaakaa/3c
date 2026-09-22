@@ -413,8 +413,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public void Observe(RemotePresentationBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Remote presentation batch is invalid.", nameof(batch));
             if (!m_Samples.TryGetValue(batch.ActorId, out SortedDictionary<ulong, CharacterBodySample> samples))
                 throw new InvalidOperationException($"Remote body sample targets unlocked Actor '{batch.ActorId}'.");
             for (int i = 0; i < batch.BodySamples.Count; i++)

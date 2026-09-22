@@ -565,16 +565,18 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         static RemotePresentationBatch FindRemote(AuthorityReplicationBatch batch, ActorId owner)
         {
-            RemotePresentationBatch remote = null;
+            RemotePresentationBatch remote = default;
             for (int i = 0; i < batch.RemotePresentation.Count; i++)
             {
                 if (batch.RemotePresentation[i].ActorId == owner)
                     continue;
-                remote = remote == null
+                remote = !remote.IsValid
                     ? batch.RemotePresentation[i]
                     : throw new InvalidOperationException("Authority replication has more than one remote Actor.");
             }
-            return remote ?? throw new InvalidOperationException("Authority replication has no remote Actor.");
+            if (!remote.IsValid)
+                throw new InvalidOperationException("Authority replication has no remote Actor.");
+            return remote;
         }
 
         void WriteAuthorityEvidence(AuthorityReplicationBatch batch)

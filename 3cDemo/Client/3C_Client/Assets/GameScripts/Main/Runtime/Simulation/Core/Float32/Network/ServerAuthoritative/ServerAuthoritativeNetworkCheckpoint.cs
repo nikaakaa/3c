@@ -263,7 +263,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (baseline.Baseline.ActorId != target.Baseline.ActorId ||
                 target.Baseline.AuthorityTick.CompareTo(baseline.Baseline.AuthorityTick) <= 0)
                 throw new InvalidDataException("Network Checkpoint delta does not advance the same Actor.");
-            if (remote == null || remote.ActorId != target.Baseline.ActorId)
+            if (!remote.IsValid || remote.ActorId != target.Baseline.ActorId)
                 throw new InvalidDataException("Network Checkpoint delta requires the target Actor remote presentation.");
             using var writer = new CanonicalWriter();
             AuthoritativeActorBaseline value = target.Baseline;

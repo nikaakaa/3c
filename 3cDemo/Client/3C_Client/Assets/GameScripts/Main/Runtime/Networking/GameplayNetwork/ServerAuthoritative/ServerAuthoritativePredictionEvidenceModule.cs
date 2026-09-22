@@ -123,7 +123,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new InvalidOperationException("Reconstructed checkpoint omitted owner acknowledgement.");
             m_LatestAck = result.Ack;
             m_Baselines.Enqueue(result.Baseline ?? throw new InvalidOperationException("Reconstructed checkpoint omitted owner baseline."));
-            if (result.Remote != null)
+            if (result.Remote.IsValid)
                 m_Remote.Enqueue(result.Remote);
             m_LastSnapshotSourceTick = sourceTick;
             ObserveAuthorityClock(result.Ack.AuthorityTick.Value, clockMicros, true);

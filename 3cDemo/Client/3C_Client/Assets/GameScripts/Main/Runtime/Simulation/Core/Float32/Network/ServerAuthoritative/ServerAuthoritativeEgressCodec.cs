@@ -137,8 +137,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static byte[] WriteRemotePresentation(RemotePresentationBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Remote presentation batch is invalid.", nameof(batch));
             using var writer = new CanonicalWriter();
             WriteRemotePresentation(writer, batch);
             return writer.ToArray();
@@ -164,8 +164,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static void WriteLengthPrefixedRemotePresentation(CanonicalWriter writer, RemotePresentationBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Remote presentation batch is invalid.", nameof(batch));
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             WriteRemotePresentation(writer, batch);
             writer.EndLengthPrefixedBlock(prefixPosition);

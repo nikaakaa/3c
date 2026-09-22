@@ -64,7 +64,7 @@
 
 ### Requirement: Corin动画必须从作者Clip唯一编译到ACL运行资源
 
-动画系统 MUST 允许不同角色或产品资源分别选择`NativeClip`或ACL采样后端，但每个正式动画源在一次编译闭包中 MUST 只声明一个后端。Corin可达的Locomotion、攻击、闪避和Rush动画源 MUST全部声明为ACL；`AnimationClip`只作为作者素材、Timeline动作选择身份和ACL构建输入存在。Timeline发布的动作样本 MUST携带精确Clip身份，并在进入Pose Source前解析为同一Corin ACL目录中的资源索引和组内Clip索引。Corin Runtime MUST不从ACL失败、缺失或过期状态回退到`AnimationClip`、Playable或另一份资源目录。
+动画系统 MUST 允许不同角色或产品资源分别选择`NativeClip`或ACL采样后端，但每个正式动画源在一次编译闭包中 MUST 只声明一个后端。Corin可达的Locomotion、攻击、闪避和Rush动画源 MUST全部声明为ACL；`AnimationClip`只作为作者素材、Timeline动作选择身份和ACL构建输入存在。Timeline发布的动作样本 MUST携带精确Clip身份，并在进入Pose Source前解析为同一Corin ACL目录中的资源索引和组内Clip索引。Corin Runtime MUST不从ACL动画采样失败、缺失或过期状态降级到`NativeClip`采样、Playable采样或另一份动画资源目录；该约束 MUST不解释为网络、Rollback或Authority路径的回退规则。
 
 ACL构建与发布 MUST由显式Editor／Agent重操作触发，并对整组声明资源执行完整性、身份、质量和运行读取校验后原子替换。普通Pose编译、Play、Replay、窗口打开或运行时 MUST不隐式重建ACL资源。资源组缺失、过期、Clip未声明或Timeline Clip无法精确解析时 MUST在进入正式运行或Replay前失败并保留诊断。
 

@@ -112,7 +112,7 @@ Camera与Pose、Timeline一样进入Corin Presentation Closure。当前Corin作�
 
 ### 10. 动画后端由Source Binding逐资源选择，Corin统一使用ACL
 
-通用动画框架继续支持`NativeClip`与ACL，两者复用唯一Source Module、Pose事务、Blend Stack和Final Publication。每个正式作者Clip由Source Resource Binding选择唯一后端；同一编译闭包不得为同一Clip同时生成两条可运行路径，也不得在ACL失败时回退NativeClip。
+通用动画框架继续支持`NativeClip`与ACL，两者复用唯一Source Module、Pose事务、Blend Stack和Final Publication。每个正式作者Clip由Source Resource Binding选择唯一后端；同一编译闭包不得为同一Clip同时生成两条可运行路径。这里的“禁止降级”专指ACL动画采样失败后不能改走`NativeClip`采样，与网络、Rollback或Authority路径无关。
 
 Corin的Locomotion目标Clip和Timeline动作Clip全部进入一个由Corin Definition拥有的ACL资源组。`AnimationClip`仍承担作者编辑、Timeline引用和构建输入职责；编译结果保存资源目录索引、组内Clip索引、正式时长、内容身份和资源描述。Runtime动作命令携带Timeline当帧选中的精确Clip身份，下一帧由Animation Slot解析为已编译ACL source并按原视觉时间采样，避免从当前Timeline状态重新猜测Clip。
 

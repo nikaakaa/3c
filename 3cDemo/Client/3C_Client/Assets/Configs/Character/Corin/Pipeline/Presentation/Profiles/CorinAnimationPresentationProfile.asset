@@ -93,13 +93,27 @@ MonoBehaviour:
   m_SourceResourceBindings:
   - m_AuthoringClip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: 16c681fc2af3cc3419198f418b99e6db, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 16f38330684ce314189be68cc86fadc1, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 4b7a6729d30a44e4182952a81816caf2, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 4bd2aa40793a8a5449b6ef7f4de23426, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 4cfdcca827720544e9b01db0507ad2bf, type: 2}
     m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 4e613663635adb8428d84960c297d5d7, type: 2}
+    m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 4ef82b85767cffe4883132371252902e, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 56dc445e7347ede4b84c0bba50500ed1, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 5bc3f78b966fa364583dc0e7af8cd0c8, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 6149a312e589f154f972a457f3976c42, type: 2}
+    m_Backend: 2
+  - m_AuthoringClip: {fileID: 7400000, guid: 6437129dbd005054ba50336a44c4d4e3, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 67587c79547407b4a9fb97cadcf2b6e6, type: 2}
     m_Backend: 2
@@ -107,23 +121,17 @@ MonoBehaviour:
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 6f9dc7e23ba63244e95d8f8d7142c5a2, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 7dbd59f643bcfbe4495990d45ad359ef, type: 2}
-    m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: 7bd5e9c109acf4744b50901ed2675c3c, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 928dc4fc54458fe488f6ee2bd52054a7, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 9654782e7ebbcd14bab93c76dc248019, type: 2}
-    m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: ac3b96331bba6754aa9bc13302762790, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: c0186e9f72ed34e4dae58f9f7de9ffa0, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: c3f6deae23e56064fb4b8938601e35e5, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: c951d5ebb89abba4ea0dfa17d4ed55ab, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: cacfffd6d16755a40bd024ab1cfd8438, type: 2}
-    m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: e569e81bd2858154b9bf4f2e660cf981, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: edd7c59a8dbf622489dcbd2692cd2ecd, type: 2}
     m_Backend: 2
@@ -478,8 +486,8 @@ MonoBehaviour:
   m_LocomotionSyncGroups:
   - m_GroupId: Locomotion.Gait
     m_Members:
-    - {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
-    - {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
+    - {fileID: 7400000, guid: 4e613663635adb8428d84960c297d5d7, type: 2}
+    - {fileID: 7400000, guid: 5bc3f78b966fa364583dc0e7af8cd0c8, type: 2}
   m_FootPlacementAnalysisMode: 1
   m_PoseNativeDomainResources: {fileID: 11400000, guid: ed97b3257b8448d89d6c3e38087ac407,
     type: 2}

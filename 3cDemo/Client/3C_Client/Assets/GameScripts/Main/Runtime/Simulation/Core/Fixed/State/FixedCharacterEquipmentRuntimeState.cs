@@ -7,9 +7,15 @@ namespace ThirdPersonSimulation.Fixed
         EquipmentStateAggregate m_State;
         bool m_Disposed;
 
-        public FixedCharacterEquipmentRuntimeState(EquipmentStateAggregate state)
+        public FixedCharacterEquipmentRuntimeState()
+        {
+        }
+
+        public FixedCharacterEquipmentRuntimeState Restart(EquipmentStateAggregate state)
         {
             m_State = state;
+            m_Disposed = false;
+            return this;
         }
 
         public EquipmentStateAggregate GetEquipmentState()

@@ -44,7 +44,8 @@ namespace ThirdPersonSimulation.Fixed
                 actor.ControlState,
                 actor.EventSequenceState,
                 actor.HandleAllocatorState,
-                actor.GameplayEffectState);
+                actor.GameplayEffectState,
+                actor.EquipmentState);
             FixedAbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;

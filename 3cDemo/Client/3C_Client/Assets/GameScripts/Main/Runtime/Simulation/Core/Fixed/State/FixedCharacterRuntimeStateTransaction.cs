@@ -72,7 +72,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlRuntimeStateTransaction controlState,
             FixedCharacterEventSequenceState eventSequenceState,
             FixedCharacterHandleAllocatorState handleAllocatorState,
-            FixedCharacterGameplayEffectRuntimeState gameplayEffectState)
+            FixedCharacterGameplayEffectRuntimeState gameplayEffectState,
+            FixedCharacterEquipmentRuntimeState equipmentState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -97,7 +98,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_TickRate,
                 gameplayEffectCatalog,
                 baseState.GameplayEffectState);
-            m_EquipmentState = new FixedCharacterEquipmentRuntimeState(baseState.EquipmentState);
+            m_EquipmentState = equipmentState.Restart(baseState.EquipmentState);
             m_ControlState = controlState;
         }
 

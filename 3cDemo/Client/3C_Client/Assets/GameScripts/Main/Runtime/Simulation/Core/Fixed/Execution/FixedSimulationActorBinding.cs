@@ -75,6 +75,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterEventSequenceState m_EventSequenceState = new FixedCharacterEventSequenceState();
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState = new FixedCharacterHandleAllocatorState();
         readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState = new FixedCharacterGameplayEffectRuntimeState();
+        readonly FixedCharacterEquipmentRuntimeState m_EquipmentState = new FixedCharacterEquipmentRuntimeState();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -179,6 +180,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterEventSequenceState EventSequenceState => m_EventSequenceState;
         internal FixedCharacterHandleAllocatorState HandleAllocatorState => m_HandleAllocatorState;
         internal FixedCharacterGameplayEffectRuntimeState GameplayEffectState => m_GameplayEffectState;
+        internal FixedCharacterEquipmentRuntimeState EquipmentState => m_EquipmentState;
 
         internal void ClearActionRuntimes()
         {

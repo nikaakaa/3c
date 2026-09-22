@@ -7,9 +7,15 @@ namespace ThirdPersonSimulation
         EquipmentStateAggregate m_State;
         bool m_Disposed;
 
-        public Float32CharacterEquipmentRuntimeState(EquipmentStateAggregate state)
+        public Float32CharacterEquipmentRuntimeState()
+        {
+        }
+
+        public Float32CharacterEquipmentRuntimeState Restart(EquipmentStateAggregate state)
         {
             m_State = state;
+            m_Disposed = false;
+            return this;
         }
 
         public EquipmentStateAggregate GetEquipmentState()

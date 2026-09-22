@@ -4190,3 +4190,11 @@
 - `SelectedRemoteBodyBatch` 从 sealed class 改为 readonly struct。Prediction Schedule 每次把 HardRecovery 或普通远端 Body 选择写入 Exclusive Product Slot，Remote Presentation Egress 再读取该结果时都不再创建 batch 外壳对象。
 - 构造合同不变：ActorId 与 Tick 有效，BodySamples 精确数组按 Tick 排序、校验 Actor 归属并拒绝重复 Tick；reset 标志继续原样传递。新增 `IsValid` 只表达 default struct 的非法状态。
 - 全项目搜索确认该类型只被 Prediction Schedule、Remote Presentation Egress 和两处 Float32 Exclusive Product Slot 目录消费。`ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；ServerAuthoritative 为 0 警告 0 错误，Unity 为 0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。未刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-22 Authoritative input ack 值化收口
+
+对应 tasks.md 的 5.5，新增 5.241 作为独立小步；5.5 保持未勾选。
+
+- `AuthoritativeInputAck` 从 sealed class 改为 readonly struct。Authority replication 生成、canonical codec 解码、Observation batch 携带、Prediction confirmation 消费、Checkpoint reconstruction 合成和 Evidence 记录都按值传递，删除每 Actor 每 tick 的 ack 对象分配。
+- default ack 是明确的“没有 owner ack”状态；正式 ack 的 ActorId 与 Authority Tick 有效时才 `IsValid`。Observation、Prediction 和 Evidence 的空合同从 null 改为 `IsValid`，Checkpoint result 的 Ignored／BaselineMissing 返回 default ack，非法或缺失 ack 仍显式失败或保持忽略语义。
+- Authority replication 的 ack 数组继续按 Actor 排序去重，并要求 Authority Tick 与 batch 一致；数组元素不再持有 class 引用。`ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；随后均执行 `dotnet build-server shutdown`。未刷新 Unity、未做 Player 分配采样。

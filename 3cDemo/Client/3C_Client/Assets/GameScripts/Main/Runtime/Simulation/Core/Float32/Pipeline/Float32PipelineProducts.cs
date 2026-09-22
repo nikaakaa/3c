@@ -313,23 +313,22 @@ namespace ThirdPersonSimulation
 
         public Float32SimulationCommitBatch(
             StableHash transactionIdentity,
-            IReadOnlyList<Float32CompletedSimulationStep> steps,
+            Float32CompletedSimulationStep[] ownedSteps,
             SimulationPipelineOutputDispositionSet outputDispositions,
-            IReadOnlyList<Float32SourceEgressRecord> sourceEgress)
+            Float32SourceEgressRecord[] ownedSourceEgress)
         {
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Commit batch transaction identity is invalid.", nameof(transactionIdentity));
             OutputDispositions = outputDispositions ?? throw new ArgumentNullException(nameof(outputDispositions));
             if (!outputDispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw new ArgumentException("Commit batch and disposition transaction identities do not match.", nameof(outputDispositions));
-            var stepValues = steps == null || steps.Count == 0
+            var stepValues = ownedSteps == null || ownedSteps.Length == 0
                 ? Array.Empty<Float32CompletedSimulationStep>()
-                : new Float32CompletedSimulationStep[steps.Count];
+                : ownedSteps;
             for (int i = 0; i < stepValues.Length; i++)
             {
-                stepValues[i] = steps[i];
                 if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
-                    throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
+                    throw new ArgumentException("Commit batch Step order is invalid.", nameof(ownedSteps));
             }
             var outputEvents = outputDispositions.Dispositions.Count == 0
                 ? Array.Empty<OutputEventOwner>()
@@ -371,14 +370,13 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Commit batch contains duplicate or undisposed EventIds.", nameof(outputDispositions));
                 }
             }
-            var egressValues = sourceEgress == null || sourceEgress.Count == 0
+            var egressValues = ownedSourceEgress == null || ownedSourceEgress.Length == 0
                 ? Array.Empty<Float32SourceEgressRecord>()
-                : new Float32SourceEgressRecord[sourceEgress.Count];
+                : ownedSourceEgress;
             for (int i = 0; i < egressValues.Length; i++)
             {
-                egressValues[i] = sourceEgress[i];
                 if (egressValues[i] == null)
-                    throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(sourceEgress));
+                    throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(ownedSourceEgress));
             }
             TransactionIdentity = transactionIdentity;
             m_Steps = stepValues;

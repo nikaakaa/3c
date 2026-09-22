@@ -194,7 +194,7 @@ namespace ThirdPersonSimulation
         void ApplyCompletedStep(TWorkingState workingState, TCompletedStep completedStep);
         TCommitBatch FreezeCommitBatch(
             StableHash transactionIdentity,
-            IReadOnlyList<TCompletedStep> completedSteps,
+            ExecutionWorkspaceBuffer<TCompletedStep> completedSteps,
             SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> workspace);
         void PublishWorkingState(TWorkingState workingState);
         void CompleteStatePublish(TWorkingState workingState);

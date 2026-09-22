@@ -415,7 +415,7 @@ namespace ThirdPersonSimulation
 
         public Float32SimulationCommitBatch FreezeCommitBatch(
             StableHash transactionIdentity,
-            IReadOnlyList<Float32CompletedSimulationStep> completedSteps,
+            ExecutionWorkspaceBuffer<Float32CompletedSimulationStep> completedSteps,
             SessionExecutionWorkspace<
                 Float32CompletedSimulationStep,
                 SimulationActorState,
@@ -427,10 +427,10 @@ namespace ThirdPersonSimulation
                 .Read();
             if (!dispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw Failure("output_disposition_transaction_mismatch", "OutputDispositionSet belongs to another outer transaction.", SimulationSessionFailureStage.Egress);
-            IReadOnlyList<Float32SourceEgressRecord> sourceEgress = ReadSourceEgress(workspace.Egress);
+            Float32SourceEgressRecord[] sourceEgress = ReadSourceEgress(workspace.Egress);
             return new Float32SimulationCommitBatch(
                 transactionIdentity,
-                completedSteps,
+                completedSteps.ToArray(),
                 dispositions,
                 sourceEgress);
         }
@@ -530,7 +530,7 @@ namespace ThirdPersonSimulation
                 SimulationPipelineProducts.FinalizedStepResult);
         }
 
-        IReadOnlyList<Float32SourceEgressRecord> ReadSourceEgress(
+        Float32SourceEgressRecord[] ReadSourceEgress(
             ExecutionWorkspaceBuffer<Float32SourceEgressRecord> values)
         {
             values.Clear();
@@ -538,12 +538,12 @@ namespace ThirdPersonSimulation
                     SimulationPipelineProducts.SourceEgress,
                     out Float32AppendProductSlot<Float32SourceEgressRecord> slot))
             {
-                return values;
+                return values.ToArray();
             }
             values.EnsureCapacity(slot.Count);
             for (int i = 0; i < slot.Count; i++)
                 values.Add(slot.Get(i).Value);
-            return values;
+            return values.ToArray();
         }
 
         static SimulationSessionCompositionException Failure(

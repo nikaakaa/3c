@@ -5089,3 +5089,13 @@
 - candidate 外壳和真实变化分类的复制仍会分配；精确复制不等于 changed path 已零分配。非空最终数组、Timeline snapshot 外壳和 Player 分配采样仍留在后续小步。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做能力状态回放、savepoint restore、rollback restore 和分配采样。
+
+## 2026-09-23 Action与Input值比较去反射
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Action request、Action instance、Input request 和共享 Action target snapshot 的相同值判断原先依赖 `EqualityComparer<T>.Default`；这些业务值类型没有统一 `IEquatable<T>` 时可能退回 `ValueType.Equals`，带来装箱或反射开销。现在全部显式实现 `IEquatable<T>`，事务比较直接调用强类型 Equals。
+- 字符串身份继续按 Ordinal 比较；Skill/Operation identity、Execution source、Equipment context、target snapshot、生命周期字段和全部数值字段参与比较。`Same` 泛型约束收紧为 `struct, IEquatable<T>`，不改变列表数量、顺序和 null 语义。
+- 这一步消除 Action/Input 假脏判断路径的潜在反射和装箱；Input changed path 的最终数组分配和 Action changed path 的最终数组分配仍未消除。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做动作/输入回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。

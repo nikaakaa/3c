@@ -266,7 +266,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public long AuthorityClockMicros { get; }
     }
 
-    public sealed class CanonicalInputSample
+    public readonly struct CanonicalInputSample
     {
         public CanonicalInputSample(ulong targetAuthorityTick, ulong inputSequence, SimulationInput input)
         {
@@ -282,6 +282,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong TargetAuthorityTick { get; }
         public ulong InputSequence { get; }
         public SimulationInput Input { get; }
+        public bool IsValid => TargetAuthorityTick != 0 && InputSequence != 0 && Input != null;
     }
 
     public sealed class CommandDatagram
@@ -335,9 +336,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 throw new ArgumentNullException(nameof(samples));
             if (samples.Count == 0 || samples.Count > 4)
                 throw new ArgumentException("Command datagram requires one to four input samples.", nameof(samples));
+            if (!samples[0].IsValid)
+                throw new ArgumentException("Command datagram sample is invalid.", nameof(samples));
             for (int i = 1; i < samples.Count; i++)
             {
-                if (samples[i - 1].TargetAuthorityTick <= samples[i].TargetAuthorityTick ||
+                if (!samples[i].IsValid ||
+                    samples[i - 1].TargetAuthorityTick <= samples[i].TargetAuthorityTick ||
                     samples[i - 1].InputSequence <= samples[i].InputSequence)
                 {
                     throw new ArgumentException("Command datagram samples must be newest-first and strictly ordered.", nameof(samples));

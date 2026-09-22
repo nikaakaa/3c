@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong FullCheckpointCount { get; private set; }
         public ulong DeltaMtuExceededCount { get; private set; }
         public int LastDeltaPayloadBytes { get; private set; }
-        public bool HasInput => m_Held != null || m_InputCount > 0;
+        public bool HasInput => m_Held.IsValid || m_InputCount > 0;
         public ulong CommandPacketCount { get; private set; }
         public ulong CommandPayloadBytes { get; private set; }
         public ulong PacketSequenceGaps { get; private set; }
@@ -77,8 +77,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public void Enqueue(CanonicalInputSample sample)
         {
-            if (sample == null)
-                throw new ArgumentNullException(nameof(sample));
+            if (!sample.IsValid)
+                throw new ArgumentException("Canonical input sample is invalid.", nameof(sample));
             if (sample.InputSequence <= m_LastEnqueuedInputSequence)
                 return;
             m_LastEnqueuedInputSequence = sample.InputSequence;
@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public AcceptedAuthorityInput Select(ulong authorityTick, int holdTicks)
         {
-            CanonicalInputSample selected = null;
+            CanonicalInputSample selected = default;
             int expiredCount = 0;
             while (expiredCount < m_InputCount && m_InputTargetTicks[expiredCount] <= authorityTick)
             {
@@ -117,7 +117,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 m_InputCount = remaining;
             }
 
-            if (selected != null)
+            if (selected.IsValid)
             {
                 if (selected.TargetAuthorityTick == authorityTick)
                     ExactInputCount++;
@@ -126,14 +126,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 m_Held = selected;
                 m_HeldAcceptedTick = authorityTick;
             }
-            if (m_Held == null)
+            if (!m_Held.IsValid)
                 throw new InvalidOperationException($"Authority has no canonical input for Actor '{Roster.ActorId}' at Tick '{authorityTick}'.");
             if (authorityTick - m_HeldAcceptedTick > (ulong)holdTicks)
             {
                 NeutralInputCount++;
                 return new AcceptedAuthorityInput(Roster.ActorId, m_Held.InputSequence, Neutral(m_Held.Input, authorityTick));
             }
-            if (selected == null)
+            if (!selected.IsValid)
                 HeldInputCount++;
             return new AcceptedAuthorityInput(Roster.ActorId, m_Held.InputSequence, m_Held.Input);
         }

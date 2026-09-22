@@ -270,7 +270,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             {
                 Array.Copy(m_CommandHistory, 1, m_CommandHistory, 0, m_CommandHistoryCount - 1);
                 m_CommandHistoryCount--;
-                m_CommandHistory[m_CommandHistoryCount] = null;
+                m_CommandHistory[m_CommandHistoryCount] = default;
             }
 
             if (m_CommandHistoryCount == 4)

@@ -4821,3 +4821,16 @@
 - scratch 中只为重建排序结果服务的 `OwnedTagSet` 已删除，两域 `Reset` 不再清空这个死索引。标签排序、父标签匹配、应用准备时 source=self 共用 target 标签、已准备 spec 对旧标签数据的只读依赖和异常语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做 Gameplay Effect 回放、rollback restore 和 Player 分配采样。用户可运行多 tag source 增删、同 source 重复写入、HasTag/Matches、自来源效果应用、Active Effect 保存恢复和 rollback restore，确认标签顺序与应用快照不变；分配采样应观察每次标签查询和效果应用准备的 scratch 重建、排序 List 返回及二次数组复制消失，首次快照数组仍是 state 正式所有权分配。
+
+## 2026-09-23 Fixed 角色与能力周期装配复用
+
+对应 tasks.md 的 2.1；2.2 保持未勾选。
+
+- Fixed `FixedCharacterEvaluationRuntime.Evaluate` 原先每个 installation 都执行 `new FixedAbilityInvocationRuntime`，其内部继续新建 `FixedAbilityExecutionFrame` 并调用 service factory 重建 Input、Action、Blackboard、Gameplay Effect、Equipment、Value、Motion、Control 和 Domain。角色控制入口也在同一 Evaluate 中新建 `FixedCharacterControlRuntime` 及其 read/output/state port。
+- 现在 `SimulationActorBinding` 在 Actor 构造期持有每个 installation 的 `FixedAbilityInvocationRuntime`。首个逻辑步用当前上下文创建一次 frame 和 service assembly；之后 Evaluate 只传入 `FixedAbilityInvocationContext` 执行 `Begin`，按逻辑步重绑 Actor、Tick、Input、BodyFacts、SkillState、savepoint、InputRequests 和角色状态 port。旧 InvocationScratch、ClearInvocationScratch 和 Evaluate 内 service factory 调用路径已删除。
+- `FixedAbilityExecutionFrame` 只保留 Data、Layout、Services、workspace output、EventSequence、sink 和 Trace 为 owner 级；周期字段通过 Begin 重绑。InputRuntime、Gameplay Effect/Equipment savepoint、MotionWarp SkillState 和 execution target 的 Timeline Tick 直接从 frame 读取，不再在装配期复制周期值。
+- `FixedCharacterRuntime` 按 Actor 持有 `FixedCharacterControlRuntime`。Control module、binding、schema、委托和 output port 只构造一次；`Begin` 只替换 control transaction、InputRequests、ActionState、Tick 和 BodyFacts。角色查询和 Equipment context 委托固定引用 Actor 的 invocation 数组，Evaluate 内不再创建控制装配或查询 lambda。
+- invocation 结束、失败和异常路径保留原有提交、Abort、SkillState dispose 和 Timeline discard 语义。Begin 半途失败会归还当前 SkillState 并结束 frame，不会把半初始化 invocation 留在下一次复用路径中。Control service 引用跨步保留，不再在 EndEvaluation 后清空。
+- 业务输入仍是角色快照、逻辑输入、ingress 和 body 状态；输出仍是 candidate state、facts、presentation、trace、motion 和 world request。处理点从“每 tick 重建装配和周期依赖”改为“生命周期对象复用、周期上下文重绑”，执行顺序和提交边界不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed 技能回放、角色控制回放、rollback restore 和 Player 分配采样。首个 frame/service assembly、每个逻辑步的 SkillState transaction 和 Complete 最终数组仍是当前所有权边界的正式分配；后续按 2.4、2.5 继续处理。

@@ -226,7 +226,8 @@ namespace ThirdPersonSimulation
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Capture(),
                 m_EquipmentState.Capture(),
-                m_BaseState.TimelineSnapshots);
+                m_BaseState.TimelineSnapshots,
+                ownsInputRequests: true);
         }
 
         Float32AbilityExecutionSavepoint RequireTopSavepoint(IFloat32AbilityExecutionSavepoint savepoint)

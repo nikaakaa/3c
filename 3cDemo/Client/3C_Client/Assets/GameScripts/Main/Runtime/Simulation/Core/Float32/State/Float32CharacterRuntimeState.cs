@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation
             IEnumerable<Float32AbilityRuntimeState> abilities,
             IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
             IEnumerable<Float32ActionInstanceState> actionInstances,
-            IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
             ulong eventSequence,
             ulong actionEventSequence,
             ulong handleAllocator,
@@ -73,6 +73,43 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState,
             IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
+            : this(
+                numericProfile,
+                gameplayContentHash,
+                stateSchemaHash,
+                lastCompletedTick,
+                abilities,
+                actionActivationRequests,
+                actionInstances,
+                inputRequests,
+                eventSequence,
+                actionEventSequence,
+                handleAllocator,
+                controlState,
+                gameplayEffectState,
+                equipmentState,
+                timelineSnapshots,
+                ownsInputRequests: false)
+        {
+        }
+
+        internal Float32CharacterRuntimeState(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
+            ulong lastCompletedTick,
+            IEnumerable<Float32AbilityRuntimeState> abilities,
+            IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
+            IEnumerable<Float32ActionInstanceState> actionInstances,
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
+            ulong eventSequence,
+            ulong actionEventSequence,
+            ulong handleAllocator,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots,
+            bool ownsInputRequests)
         {
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
@@ -91,8 +128,17 @@ namespace ThirdPersonSimulation
             ActionActivationRequests = CopyArray(actionActivationRequests);
             ActionInstances = CopyArray(actionInstances);
             InputRequests = inputRequests == null
-                ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
-                : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
+                ? Array.Empty<KeyValuePair<string, SimulationInputRequestState>>()
+                : ownsInputRequests
+                    ? inputRequests
+                    : CopyArray(inputRequests);
+            Array.Sort(InputRequests, InputRequestKeyComparer.Instance);
+            for (int i = 1; i < InputRequests.Length; i++)
+            {
+                if (InputRequests[i].Key == null ||
+                    string.CompareOrdinal(InputRequests[i - 1].Key, InputRequests[i].Key) >= 0)
+                    throw new ArgumentException("Character runtime state Input request identities are null, duplicated, or not canonically ordered.", nameof(inputRequests));
+            }
             EventSequence = eventSequence;
             ActionEventSequence = actionEventSequence;
             HandleAllocator = handleAllocator;
@@ -122,7 +168,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
         internal SimulationActionActivationRequestState[] ActionActivationRequests { get; }
         internal Float32ActionInstanceState[] ActionInstances { get; }
-        internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
+        internal KeyValuePair<string, SimulationInputRequestState>[] InputRequests { get; }
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
         internal ulong HandleAllocator { get; }

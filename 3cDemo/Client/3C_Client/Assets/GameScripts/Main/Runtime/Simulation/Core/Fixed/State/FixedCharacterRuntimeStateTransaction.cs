@@ -226,7 +226,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Capture(),
                 m_EquipmentState.Capture(),
-                m_BaseState.TimelineSnapshots);
+                m_BaseState.TimelineSnapshots,
+                ownsInputRequests: true);
         }
 
         FixedAbilityExecutionSavepoint RequireTopSavepoint(IFixedAbilityExecutionSavepoint savepoint)

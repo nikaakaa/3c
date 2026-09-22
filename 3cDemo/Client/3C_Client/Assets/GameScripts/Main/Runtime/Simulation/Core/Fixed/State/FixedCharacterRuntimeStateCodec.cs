@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                 : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
             List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
-            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installations);
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -127,7 +127,8 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                timelineSnapshots);
+                timelineSnapshots,
+                ownsInputRequests: true);
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, state);
             if (!writer.ContentEquals(bytes))
@@ -452,19 +453,17 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteInputRequests(
             CanonicalWriter writer,
-            IReadOnlyDictionary<string, SimulationInputRequestState> requests)
+            KeyValuePair<string, SimulationInputRequestState>[] requests)
         {
-            var keys = new List<string>(requests.Keys);
-            keys.Sort(StringComparer.Ordinal);
-            writer.WriteInt32(keys.Count);
-            for (int i = 0; i < keys.Count; i++)
+            writer.WriteInt32(requests.Length);
+            for (int i = 0; i < requests.Length; i++)
             {
-                writer.WriteString(keys[i]);
-                SimulationInputRequestStateCodec.Write(writer, requests[keys[i]]);
+                writer.WriteString(requests[i].Key);
+                SimulationInputRequestStateCodec.Write(writer, requests[i].Value);
             }
         }
 
-        static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
+        static KeyValuePair<string, SimulationInputRequestState>[] ReadInputRequests(
             CanonicalReader reader,
             FixedGameplayAbilityExecutionInstallationSet installations)
         {
@@ -473,7 +472,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int installationIndex = 0; installationIndex < installations.Installations.Count; installationIndex++)
                 for (int requestIndex = 0; requestIndex < installations.Installations[installationIndex].Layout.InputRequestIds.Count; requestIndex++)
                     known.Add(installations.Installations[installationIndex].Layout.InputRequestIds[requestIndex]);
-            var requests = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
+            var requests = new KeyValuePair<string, SimulationInputRequestState>[count];
             string previous = null;
             for (int i = 0; i < count; i++)
             {
@@ -483,7 +482,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
                 if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
                     throw new InvalidDataException("Fixed Character Input request state key does not match its value.");
-                requests.Add(requestId, value);
+                requests[i] = new(requestId, value);
                 previous = requestId;
             }
             return requests;

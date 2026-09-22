@@ -265,7 +265,7 @@ namespace ThirdPersonSimulation.Fixed
             KeyValuePair<string, SimulationInputRequestState>[] inputRequests = m_InputRequestState.IsUnchanged
                 ? m_BaseState.InputRequests
                 : m_InputRequestState.Capture();
-            return FixedCharacterRuntimeState.Snapshot(
+            return FixedCharacterRuntimeState.AdoptSnapshot(
                 m_BaseState.NumericProfile,
                 m_BaseState.GameplayContentHash,
                 m_BaseState.StateSchemaHash,

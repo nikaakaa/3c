@@ -300,7 +300,7 @@ namespace ThirdPersonSimulation.Fixed
                 GameplayEffectState,
                 EquipmentState,
                 snapshots);
-        internal static FixedCharacterRuntimeState Snapshot(
+        internal static FixedCharacterRuntimeState AdoptSnapshot(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             StableHash stateSchemaHash,

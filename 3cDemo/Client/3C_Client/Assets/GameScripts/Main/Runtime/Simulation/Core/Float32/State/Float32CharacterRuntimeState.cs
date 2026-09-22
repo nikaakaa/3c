@@ -301,7 +301,7 @@ namespace ThirdPersonSimulation
                 EquipmentState,
                 snapshots);
 
-        internal static Float32CharacterRuntimeState Snapshot(
+        internal static Float32CharacterRuntimeState AdoptSnapshot(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             StableHash stateSchemaHash,

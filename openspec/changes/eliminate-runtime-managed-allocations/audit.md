@@ -4501,3 +4501,12 @@
 - 构造器仍先校验 null 事务，再原地按 Kind 排序，仍要求数量为 3、顺序为 Character/World/Pipeline 且 identity 非空；ApplyAndValidate、CompleteAfterAtomicSessionPublish、Rollback 和 Dispose 顺序不变。
 - `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；前者连带编译 Core。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次 Session restore，确认 Character、World、Pipeline 应用顺序，校验失败 rollback 和正式发布边界不变；分配采样应观察 restore 会话包装层的 List、扩容和只读包装消失，但三个 participant transaction 对象仍是正式分配。
+
+## 2026-09-22 Actor roster owned array 收口
+
+对应 tasks.md 的 5.5，新增 5.273 作为独立小步；5.5 保持未勾选。
+
+- `SimulationActorRosterDescriptor` 构造合同从 `IEnumerable<ActorId>` 改为 owned `ActorId[]`。装配调用方移交精确数组后，descriptor 原地排序、校验并直接持有这份数组；原来的 `List<ActorId>` 复制、排序容器和 `ReadOnlyCollection<ActorId>` 包装删除。
+- 四个调用方都是装配期正式生产者：Fixed/Float32 Character Runtime 从 roster binding 的 `ActorId[]` 移交、Deterministic Rollback Session Source 移交精确数组、ServerAuthoritative correction roster 移交单元素数组。`Actors` 继续返回排序后的只读 identity 视图，`RosterHash` 和错误语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可启动 Fixed/Float32 Session 或触发一次 ServerAuthoritative correction，确认锁定 roster、Step 校验和 correction identity 不变；分配采样应观察 roster 装配期的 List 和只读包装消失，但这只影响 Session/correction 装配边界，不表示每帧 Player 链路已零分配。

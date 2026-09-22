@@ -541,6 +541,7 @@
 - [x] 5.270 Pipeline snapshot participants 使用 owned array 合同；删除 IReadOnlyList 复制构造和 Session decode 的 List 中转，全部调用方移交精确数组
 - [x] 5.271 Pipeline restore transactions 使用 owned array 合同；PrepareRestore 删除 List 和 ReadOnlyCollection 中转，异常按已准备数量逆序释放
 - [x] 5.272 Session restore transactions 使用 owned array 合同；Fixed/Float32 立即与延迟 restore 删除 List 和 ReadOnlyCollection 中转
+- [x] 5.273 SimulationActorRosterDescriptor 使用 owned ActorId 数组；删除 IEnumerable 复制、List 和 ReadOnlyCollection 包装，装配调用方移交精确数组
 
 ## 6. UI、资源、渲染和生命周期
 

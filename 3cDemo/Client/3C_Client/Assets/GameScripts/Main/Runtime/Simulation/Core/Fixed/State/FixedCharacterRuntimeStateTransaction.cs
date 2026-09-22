@@ -45,8 +45,8 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionSavepointPort, IFixedControlRuntimeStatePort
     {
         FixedCharacterRuntimeState m_BaseState;
-        readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
-        readonly Dictionary<CharacterSkillId, FixedSkillExecutionState> m_SkillStates = new Dictionary<CharacterSkillId, FixedSkillExecutionState>();
+        Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
+        Dictionary<CharacterSkillId, FixedSkillExecutionState> m_SkillStates;
         SimulationTick m_Tick;
         int m_TickRate;
         readonly Stack<FixedAbilityExecutionSavepoint> m_Savepoints =
@@ -66,7 +66,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedCharacterRuntimeStateTransaction()
         {
-            m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();
             m_Disposed = true;
         }
 
@@ -90,6 +89,10 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Fixed Character runtime transaction reuse found active savepoints.");
             m_Tick = tick;
             m_TickRate = tickRate;
+            if (m_AbilityStates == null)
+                m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>(baseState.Abilities.Count);
+            if (m_SkillStates == null)
+                m_SkillStates = new Dictionary<CharacterSkillId, FixedSkillExecutionState>(baseState.Abilities.Count);
             m_AbilityStates.Clear();
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {

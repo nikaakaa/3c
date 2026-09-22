@@ -45,8 +45,8 @@ namespace ThirdPersonSimulation
     internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionSavepointPort, IFloat32ControlRuntimeStatePort
     {
         Float32CharacterRuntimeState m_BaseState;
-        readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
-        readonly Dictionary<CharacterSkillId, Float32SkillExecutionState> m_SkillStates = new Dictionary<CharacterSkillId, Float32SkillExecutionState>();
+        Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
+        Dictionary<CharacterSkillId, Float32SkillExecutionState> m_SkillStates;
         SimulationTick m_Tick;
         int m_TickRate;
         readonly Stack<Float32AbilityExecutionSavepoint> m_Savepoints =
@@ -66,7 +66,6 @@ namespace ThirdPersonSimulation
 
         public Float32CharacterRuntimeStateTransaction()
         {
-            m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>();
             m_Disposed = true;
         }
 
@@ -90,6 +89,10 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Float32 Character runtime transaction reuse found active savepoints.");
             m_Tick = tick;
             m_TickRate = tickRate;
+            if (m_AbilityStates == null)
+                m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>(baseState.Abilities.Count);
+            if (m_SkillStates == null)
+                m_SkillStates = new Dictionary<CharacterSkillId, Float32SkillExecutionState>(baseState.Abilities.Count);
             m_AbilityStates.Clear();
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {

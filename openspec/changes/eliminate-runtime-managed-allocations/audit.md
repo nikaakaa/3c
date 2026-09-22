@@ -4367,3 +4367,14 @@
 - `SimulationActorSnapshot` 的 baseline 验证和 restore merge 仍调用 `CopyCharacterStateBytes`；这是它的公开快照所有权边界，不属于本步。checkpoint decode 后的独立副本也不变。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Authority 连续 capture checkpoint、full checkpoint、changed/unchanged delta 和 restore replay；分配采样应观察 capture 状态数组消失、production baseline 构造克隆消失，同时不能把 codec 编码数组、delta payload 和 decode 后 checkpoint 副本误算为本步目标。
+
+## 2026-09-22 NetworkCheckpoint decode 状态共享收口
+
+对应 tasks.md 的 5.5，新增 5.260 作为独立小步；5.5 保持未勾选。
+
+- `ReadFull` 重建 baseline 后直接使用已有 `NetworkCheckpoint(baseline)` 构造；wire 解码出的 state bytes 由 baseline 拥有，checkpoint 与内嵌 baseline 共享同一 immutable buffer，删除构造期的完整数组克隆。
+- `ReadDelta` 的 changed 分支同样让 rebuilt baseline 接管 `CanonicalReader.ReadBytes` 产物；unchanged 分支引用 acknowledged checkpoint 内嵌 baseline 的 StateBuffer。两种分支的 checkpoint 都直接共享 rebuilt baseline 状态，不再复制。
+- `NetworkCheckpoint` 删除仅剩的 `baseline + stateBytes` 构造器和无消费者的 `StateBytes` 克隆入口，统一保留 `StateSpan`／`StateMemory` 只读视图。协议字段顺序、checkpoint hash、layout 校验和 Client Route 的确认存储顺序不变。
+- 所有共享数组仍按 immutable contract 使用：baseline、checkpoint 和 route 没有暴露可变数组写入入口；`CopyCharacterStateBytes` 只属于 Prediction restore/验证快照边界，不属于本步。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 full checkpoint 接收、changed/unchanged delta、同一 route 连续确认淘汰和 restore replay；分配采样应观察 decode checkpoint 构造克隆消失，但 wire 中的 state bytes、delta payload 和 restore 快照副本仍是正式分配。

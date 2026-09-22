@@ -528,6 +528,7 @@
 - [x] 5.257 ServerAuthoritative NetworkCheckpoint 发送编码改读 owned StateSpan；WriteFull 与 delta 状态写入/比较删除发送前数组克隆，layout 校验的 byte[] 合同保持
 - [x] 5.258 Float32 Character Runtime State Codec 读取合同改为 ReadOnlyMemory；NetworkCheckpoint layout 校验直接读 owned state memory，删除校验前数组克隆
 - [x] 5.259 ServerAuthoritative ActorBaseline 使用 owned state bytes；Checkpoint Capture 共享内嵌 baseline 状态，unchanged delta 不再克隆 acknowledged 状态
+- [x] 5.260 ServerAuthoritative Checkpoint decode 与重建 baseline 共享 immutable 状态；删除构造期克隆和无消费者 StateBytes 入口
 
 ## 6. UI、资源、渲染和生命周期
 

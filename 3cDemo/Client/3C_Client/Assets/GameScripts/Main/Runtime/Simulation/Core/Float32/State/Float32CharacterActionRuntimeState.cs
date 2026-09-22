@@ -8,6 +8,8 @@ namespace ThirdPersonSimulation
     {
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<Float32ActionInstanceState> m_ActionInstances;
+        bool m_ActivationRequestsDirty;
+        bool m_InstancesDirty;
         ulong m_ActionEventSequence;
         bool m_Disposed;
 
@@ -39,6 +41,8 @@ namespace ThirdPersonSimulation
             }
 
             m_ActionEventSequence = actionEventSequence;
+            m_ActivationRequestsDirty = false;
+            m_InstancesDirty = false;
             m_Disposed = false;
             return this;
         }
@@ -61,6 +65,9 @@ namespace ThirdPersonSimulation
         public void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests)
         {
             RequireActive();
+            if (Same(m_ActionActivationRequests, requests))
+                return;
+            m_ActivationRequestsDirty = true;
             m_ActionActivationRequests.Clear();
             if (requests != null)
                 m_ActionActivationRequests.AddRange(requests);
@@ -75,6 +82,9 @@ namespace ThirdPersonSimulation
         public void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions)
         {
             RequireActive();
+            if (Same(m_ActionInstances, actions))
+                return;
+            m_InstancesDirty = true;
             m_ActionInstances.Clear();
             if (actions != null)
                 m_ActionInstances.AddRange(actions);
@@ -88,6 +98,10 @@ namespace ThirdPersonSimulation
                 return m_ActionEventSequence;
             }
         }
+
+        internal bool AreActionActivationRequestsUnchanged => !m_ActivationRequestsDirty;
+
+        internal bool AreActionInstancesUnchanged => !m_InstancesDirty;
 
         internal void Restore(
             IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
@@ -109,6 +123,20 @@ namespace ThirdPersonSimulation
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(Float32CharacterActionRuntimeState));
+        }
+
+        static bool Same<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)
+        {
+            if (left == null || right == null)
+                return left == right;
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (!EqualityComparer<T>.Default.Equals(left[i], right[i]))
+                    return false;
+            }
+            return true;
         }
     }
 }

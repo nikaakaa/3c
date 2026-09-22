@@ -587,6 +587,7 @@
 - [x] 6.24 ProductGameplayDelivery 生命周期固定下载进度／开始／错误实例委托；每次下载复用绑定并以 active plan 加 generation 判定，等待后解除引用
 - [x] 6.25 ResourceScope 使用 linked 到 runtime 的唯一 cancellation source；公开 token 统一表达 scope/runtime 生命周期，删除内部第二个 lifetime source
 - [x] 6.26 PreloadPlan 构造期推导 MaxBarrierItemCount；Executor 每次计划共用一个 UniTask 缓冲，小 barrier 尾部填充 completed task，保持 barrier 顺序和加载并发
+- [x] 6.27 ProductResourceRuntime 的无主物理资源扫描改用 owner 生命周期数组 scratch 和精确有效长度；扫描顺序、删除集合和清空引用不变，删除每次维护 List 本体与扩容
 
 ## 7. 诊断与正式性能交付
 

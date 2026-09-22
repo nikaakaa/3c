@@ -4767,3 +4767,13 @@
 - Product 生命周期诊断的输入是各 store 冻结后的不可变 snapshot/event，输出是按提交顺序保留的有界历史；处理点从“满员后整段前移 List 存储”改为“环形槽位替换”，不改变业务快照内容。
 - 用 `GameLogic.csproj` 中的 Product 诊断/资源/启动源码子集加 `netstandard`、UnityEngine、TEngine、UniTask、YooAsset 和 ThirdPerson.ProductStartup 正式引用做 `csc` 聚焦编译；结果 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - Unity MCP 实例 `3C_Client@e852139597e42532` 可见，但 editor state 和 project info 都返回 ping 未响应或超时；本步没有 Unity 编译、Console、生命周期快照回放或 Player 分配采样证据。历史快照对象本体、字符串、事件委托调用和后续新 snapshot 分配不在本步范围内。
+
+## 2026-09-22 资源无主物理知识扫描数组化
+
+对应 tasks.md 的 6.27；6.2 保持未勾选。
+
+- `ProductResourceRuntime.RemoveUnownedPhysicalKnowledge` 的输入是当前 `_knownPhysicalAssets`、`_ownedReferenceCounts` 和 `_pendingAcquireCounts`；输出是对无主 identity 的 `_knownPhysicalAssets` 删除结果。维护流程本身不变。
+- 原先每次维护创建或复用一个 `List<ResourceIdentity>` scratch，首次命中会分配 List 本体和底层数组，容量不足还会继续扩容。现在 owner 持有 `ResourceIdentity[]` 和精确有效长度，只在观测峰值不足时扩数组。
+- 扫描仍按 `_knownPhysicalAssets` 当前枚举顺序记录待删 identity，第二遍统一删除，避免边枚举边改集合；删除后 `Array.Clear` 清空本次有效区间，不把旧 identity 引用留在长期 scratch 中。
+- 用 Product 资源、诊断、启动合同和 ThirdPerson ProductStartup 合同源码子集做 `csc` 聚焦编译；0 错误，构建后 `dotnet build-server shutdown` 成功。Unity 序列化字段在脱离 Unity 编译上下文时产生既有 CS0649，不属于本链源码错误。
+- Unity MCP editor 仍 ping 未响应；本步没有 Unity 编译、Console、资源维护回放或 Player 分配采样证据。物理加载任务、completion source、lease record、scope cancellation source 和快照对象分配仍是 6.2 后续边界。

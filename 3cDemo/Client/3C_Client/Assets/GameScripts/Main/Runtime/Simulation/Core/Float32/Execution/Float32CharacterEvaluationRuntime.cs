@@ -323,7 +323,7 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId,
             CharacterSkillId abilityId)
         {
-            for (int i = 0; i < state.ActionInstances.Count; i++)
+            for (int i = 0; i < state.ActionInstances.Length; i++)
             {
                 Float32ActionInstanceState action = state.ActionInstances[i];
                 if (action.InstanceId == actionInstanceId)

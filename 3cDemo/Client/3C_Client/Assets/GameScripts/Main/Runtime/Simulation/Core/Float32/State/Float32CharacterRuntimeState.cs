@@ -88,10 +88,8 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
             }
             m_Abilities = copied;
-            ActionActivationRequests = new List<SimulationActionActivationRequestState>(
-                actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
-            ActionInstances = new List<Float32ActionInstanceState>(
-                actionInstances ?? Array.Empty<Float32ActionInstanceState>());
+            ActionActivationRequests = CopyArray(actionActivationRequests);
+            ActionInstances = CopyArray(actionInstances);
             InputRequests = inputRequests == null
                 ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
                 : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
@@ -122,8 +120,8 @@ namespace ThirdPersonSimulation
             return equipment != null;
         }
         public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
-        internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
-        internal List<Float32ActionInstanceState> ActionInstances { get; }
+        internal SimulationActionActivationRequestState[] ActionActivationRequests { get; }
+        internal Float32ActionInstanceState[] ActionInstances { get; }
         internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
@@ -189,7 +187,7 @@ namespace ThirdPersonSimulation
         {
             if (snapshot.State != AbilityTimelineSnapshotState.Completed && snapshot.State != AbilityTimelineSnapshotState.Stopped)
                 return true;
-            for (int index = 0; index < ActionInstances.Count; index++)
+            for (int index = 0; index < ActionInstances.Length; index++)
             {
                 Float32ActionInstanceState action = ActionInstances[index];
                 if (action.IsActive && action.InstanceId == snapshot.ActionContext.InstanceId &&

@@ -324,7 +324,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong actionInstanceId,
             CharacterSkillId abilityId)
         {
-            for (int i = 0; i < state.ActionInstances.Count; i++)
+            for (int i = 0; i < state.ActionInstances.Length; i++)
             {
                 FixedActionInstanceState action = state.ActionInstances[i];
                 if (action.InstanceId == actionInstanceId)

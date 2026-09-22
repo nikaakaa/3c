@@ -581,6 +581,7 @@
 - [x] 6.18 资源 runtime 关停 scope 收集改为 owner 数组和静态比较器；删除关停 List 与排序 lambda，保持 ResourceScopeKind 降序释放和 owned scope 校验
 - [x] 6.19 ResourceScope 构造期建立 scope/runtime linked cancellation，AcquireAsync 默认外部令牌复用该 token；只有可取消外部令牌才创建并在完成后释放专用 linked source
 - [x] 6.20 ResourceScope 删除重复租约 HashSet 和关停复制 buffer，保留精确计数并由 runtime 中央 `_leases` 表唯一承载所有权；关闭按中央表逐个释放
+- [x] 6.21 资源 PreparedTags 快照在集合新增时构建一次 Ordinal 精确数组；后续每次 PublishSnapshot 共享不可变结果，删除重复复制和排序
 
 ## 7. 诊断与正式性能交付
 

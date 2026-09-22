@@ -4696,3 +4696,13 @@
 - 计数大于零但中央表找不到所属 lease 是所有权表断裂，直接抛 `InvalidOperationException`；不补建 fallback 状态。释放过程中 `LeaseCount` 和既有快照语义保持递减可见。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除。
 - Unity MCP state 仍为 `ping not answered`；本步继续没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。lease record、cancellation source、UniTaskCompletionSource、快照数组和字符串分配仍是 6.2 后续边界。
+
+## 2026-09-22 资源标签快照共享
+
+对应 tasks.md 的 6.21；6.2 保持未勾选。代码提交为 `1f9213436`。
+
+- `_preparedTags` 是运行期只增不减的正式标签集合；资源获取、释放、维护和池统计变化都会触发 `PublishSnapshot`。原先每次发布都从 HashSet 复制完整 `string[]`，再按 Ordinal 重新排序，即使标签集合没有变化。
+- 现在只有 `RecordPreparedTag` 成功新增标签时重建精确长度快照：复制、排序并替换旧数组。后续 `PublishSnapshot` 直接把该数组交给 `ResourceRuntimeSnapshot`，不再重复复制和排序。
+- 快照公开合同仍是 `IReadOnlyList<string>`；数组不被 runtime 修改，多份历史快照共享同一个不可变内容。首次标签为空时继续共享 `Array.Empty<string>()`，Ordinal 输出顺序不变。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除。
+- Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。scope snapshot 对象/数组、lease record、cancellation source 和 UniTaskCompletionSource 仍是 6.2 后续边界。

@@ -34,34 +34,10 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationActorTickResult
     {
-        readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
-        readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
-        readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
+        readonly GameplayFact[] m_GameplayFacts;
+        readonly PresentationCommand[] m_PresentationCommands;
+        readonly SimulationTraceRecord[] m_TraceRecords;
         CharacterStateHash m_StateHash;
-
-        public SimulationActorTickResult(
-            ActorId actorId,
-            SimulationTick tick,
-            FixedCharacterRuntimeState state,
-            CharacterStateHash stateHash,
-            CharacterBodySample bodySample,
-            CharacterMotionRequest motion,
-            IReadOnlyList<GameplayFact> gameplayFacts,
-            IReadOnlyList<PresentationCommand> presentationCommands,
-            IReadOnlyList<SimulationTraceRecord> traceRecords)
-            : this(
-                actorId,
-                tick,
-                state,
-                stateHash,
-                bodySample,
-                motion,
-                Copy(gameplayFacts),
-                Copy(presentationCommands),
-                Copy(traceRecords),
-                true)
-        {
-        }
 
         SimulationActorTickResult(
             ActorId actorId,
@@ -72,8 +48,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterMotionRequest motion,
             GameplayFact[] gameplayFacts,
             PresentationCommand[] presentationCommands,
-            SimulationTraceRecord[] traceRecords,
-            bool _)
+            SimulationTraceRecord[] traceRecords)
         {
             if (!actorId.IsValid || !tick.IsValid || bodySample.ActorId != actorId || bodySample.Tick != tick)
                 throw new ArgumentException("Actor Tick result identity is incomplete.");
@@ -87,12 +62,12 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             BodySample = bodySample;
             Motion = motion;
-            m_GameplayFacts = gameplayFacts;
-            m_PresentationCommands = presentationCommands;
-            m_TraceRecords = traceRecords;
-            ValidateHeaders(m_GameplayFacts, value => value.Header, state.NumericProfile, actorId, tick, "Gameplay fact");
-            ValidateHeaders(m_PresentationCommands, value => value.Header, state.NumericProfile, actorId, tick, "Presentation command");
-            ValidateHeaders(m_TraceRecords, value => value.Header, state.NumericProfile, actorId, tick, "Trace record");
+            m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
+            m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
+            m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
+            ValidateHeaders(m_GameplayFacts, state.NumericProfile, actorId, tick, "Gameplay fact");
+            ValidateHeaders(m_PresentationCommands, state.NumericProfile, actorId, tick, "Presentation command");
+            ValidateHeaders(m_TraceRecords, state.NumericProfile, actorId, tick, "Trace record");
         }
 
         internal static SimulationActorTickResult FromOwnedOutputs(
@@ -104,18 +79,19 @@ namespace ThirdPersonSimulation.Fixed
             CharacterMotionRequest motion,
             GameplayFact[] gameplayFacts,
             PresentationCommand[] presentationCommands,
-            SimulationTraceRecord[] traceRecords) =>
-            new SimulationActorTickResult(
+            SimulationTraceRecord[] traceRecords)
+        {
+            return new SimulationActorTickResult(
                 actorId,
                 tick,
                 state,
                 stateHash,
                 bodySample,
                 motion,
-                gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts)),
-                presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands)),
-                traceRecords ?? throw new ArgumentNullException(nameof(traceRecords)),
-                true);
+                gameplayFacts,
+                presentationCommands,
+                traceRecords);
+        }
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
@@ -127,27 +103,46 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
         public IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
 
-        static T[] Copy<T>(IReadOnlyList<T> values)
-        {
-            if (values == null || values.Count == 0)
-                return Array.Empty<T>();
-            var result = new T[values.Count];
-            for (int i = 0; i < result.Length; i++)
-                result[i] = values[i];
-            return result;
-        }
-
-        static void ValidateHeaders<T>(
-            IReadOnlyList<T> values,
-            Func<T, SimulationEventHeader> headerSelector,
+        static void ValidateHeaders(
+            GameplayFact[] values,
             SimulationNumericProfile numericProfile,
             ActorId actorId,
             SimulationTick tick,
             string label)
         {
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
-                SimulationEventHeader header = headerSelector(values[i]);
+                SimulationEventHeader header = values[i].Header;
+                if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)
+                    throw new ArgumentException($"{label} header does not match Actor result identity.");
+            }
+        }
+
+        static void ValidateHeaders(
+            PresentationCommand[] values,
+            SimulationNumericProfile numericProfile,
+            ActorId actorId,
+            SimulationTick tick,
+            string label)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                SimulationEventHeader header = values[i].Header;
+                if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)
+                    throw new ArgumentException($"{label} header does not match Actor result identity.");
+            }
+        }
+
+        static void ValidateHeaders(
+            SimulationTraceRecord[] values,
+            SimulationNumericProfile numericProfile,
+            ActorId actorId,
+            SimulationTick tick,
+            string label)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                SimulationEventHeader header = values[i].Header;
                 if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)
                     throw new ArgumentException($"{label} header does not match Actor result identity.");
             }

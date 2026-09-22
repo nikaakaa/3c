@@ -275,7 +275,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Float32Angle.Delta(BeforeBody.Yaw, FinalBody.Yaw));
     }
 
-    internal sealed class ServerAuthoritativeRemoteBodySelectionFrame
+    internal readonly struct ServerAuthoritativeRemoteBodySelectionFrame
     {
         readonly ServerAuthoritativeRemoteBodySelection[] m_Selections;
         static readonly Comparison<ServerAuthoritativeRemoteBodySelection> s_CompareByActor =
@@ -301,6 +301,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public SimulationTick Tick { get; }
         public IReadOnlyList<ServerAuthoritativeRemoteBodySelection> Selections => m_Selections;
+        public bool IsValid => Tick.IsValid && m_Selections != null;
 
         public ObservedWorldConstraintFrame ToObservedWorldConstraints(StableHash contactShapeConfigurationHash)
         {

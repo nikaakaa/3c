@@ -95,6 +95,17 @@ namespace ThirdPersonSimulation
         public double Y { get; }
         public double Z { get; }
         public string Identity { get; }
+
+        public bool Equals(EquipmentRuntimeStateValue other) =>
+            other != null &&
+            Kind == other.Kind &&
+            Boolean == other.Boolean &&
+            Int32 == other.Int32 &&
+            UInt64 == other.UInt64 &&
+            X == other.X &&
+            Y == other.Y &&
+            Z == other.Z &&
+            string.Equals(Identity, other.Identity, StringComparison.Ordinal);
     }
 
     public sealed class CharacterEquipmentRuntimeBinding

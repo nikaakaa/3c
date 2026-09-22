@@ -831,6 +831,8 @@ namespace ThirdPersonSimulation
             {
                 if (values[i].FeatureId != featureId || values[i].StateId != stateId)
                     continue;
+                if (values[i].Value.Equals(value))
+                    return this;
                 if (values[i].Value.Kind != value.Kind)
                     throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
                 values[i] = new EquipmentLocalStateValue(featureId, stateId, value);

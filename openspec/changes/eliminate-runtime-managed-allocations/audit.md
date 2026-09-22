@@ -5030,3 +5030,14 @@
 - `WithPending` 与 `ResolvePending` 只更新 pending/resolved 变更记录，现在直接复用现有 Slot 和 LocalState 只读集合，删除两份列表、数组和只读包装重建。CatalogHash、pending 记录状态约束和异常语义不变。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做装备安装/卸载、本地 Equipment state 回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：控制状态 Capture、Timeline snapshot 外壳和实际分配采样仍在后续小步处理。
+
+## 2026-09-23 Control状态hash缓冲复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `c0a8a26ff`。
+
+- `CharacterControlRuntimeStateTransaction` 新增 Actor 生命周期 `byte[]` hash 缓冲。Capture 直接把 canonical hash 输入写入该缓冲并交给 SHA-256，不再创建 `List<string>`、数值/布尔临时字符串、`string.Join` 字符串、UTF8 中转数组和最终 string 数组。
+- 直写输入保持原 `StableHash.Compute` 的完整等价：固定 identity、schema hash、invariant 十进制 Tick，每个 value 的 kind decimal、Boolean 1/0、Int32 decimal、UInt64 decimal、identity 字符串，以及 U+001F 分隔符和字段顺序。Int32 最小值和空 identity 语义不变。
+- Capture 通过内部 RuntimeState 构造接管精确 `CharacterControlStateValue[]` 和预计算 StateHash；values 仍满足 schema 数量和类型校验。公共构造与状态解码继续使用原字符串 hash 路径，内容准备和 wire 输入行为不变。
+- 首次编译发现事务内实例方法与公共构造使用的静态 ComputeHash 需要分开，并修正 Int32 最小值到 UInt64 的显式转换；随后四工程编译通过。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未对比 Control 状态 canonical bytes、状态 Codec、rollback restore 和 Player 分配采样。用户可运行控制状态保存/恢复并对比 StateHash 与 canonical bytes；2.4 保持未勾选，Timeline snapshot 外壳和实际分配采样仍在后续小步处理。

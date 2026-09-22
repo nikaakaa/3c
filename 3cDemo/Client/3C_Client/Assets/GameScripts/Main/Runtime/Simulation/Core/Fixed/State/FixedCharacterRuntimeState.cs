@@ -205,6 +205,7 @@ namespace ThirdPersonSimulation.Fixed
             return equipment != null;
         }
         public IReadOnlyList<FixedAbilityRuntimeState> Abilities => m_Abilities;
+        internal FixedAbilityRuntimeState[] AbilitiesArray => m_Abilities;
         internal SimulationActionActivationRequestState[] ActionActivationRequests { get; }
         internal FixedActionInstanceState[] ActionInstances { get; }
         internal KeyValuePair<string, SimulationInputRequestState>[] InputRequests { get; }
@@ -299,6 +300,99 @@ namespace ThirdPersonSimulation.Fixed
                 GameplayEffectState,
                 EquipmentState,
                 snapshots);
+        internal static FixedCharacterRuntimeState Snapshot(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
+            ulong lastCompletedTick,
+            FixedAbilityRuntimeState[] abilities,
+            SimulationActionActivationRequestState[] actionActivationRequests,
+            FixedActionInstanceState[] actionInstances,
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
+            ulong eventSequence,
+            ulong actionEventSequence,
+            ulong handleAllocator,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            IReadOnlyList<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
+        {
+            if (abilities == null)
+                throw new ArgumentNullException(nameof(abilities));
+            if (actionActivationRequests == null)
+                throw new ArgumentNullException(nameof(actionActivationRequests));
+            if (actionInstances == null)
+                throw new ArgumentNullException(nameof(actionInstances));
+            if (inputRequests == null)
+                throw new ArgumentNullException(nameof(inputRequests));
+            Array.Sort(abilities, CompareAbilities);
+            for (int i = 0; i < abilities.Length; i++)
+            {
+                if (abilities[i] == null || i > 0 && abilities[i - 1].AbilityIdentity.AbilityId == abilities[i].AbilityIdentity.AbilityId)
+                    throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
+            }
+            Array.Sort(inputRequests, InputRequestKeyComparer.Instance);
+            for (int i = 1; i < inputRequests.Length; i++)
+            {
+                if (inputRequests[i].Key == null ||
+                    string.CompareOrdinal(inputRequests[i - 1].Key, inputRequests[i].Key) >= 0)
+                    throw new ArgumentException("Character runtime state Input request identities are null, duplicated, or not canonically ordered.", nameof(inputRequests));
+            }
+            return new FixedCharacterRuntimeState(
+                numericProfile,
+                gameplayContentHash,
+                stateSchemaHash,
+                lastCompletedTick,
+                abilities,
+                actionActivationRequests,
+                actionInstances,
+                inputRequests,
+                eventSequence,
+                actionEventSequence,
+                handleAllocator,
+                controlState,
+                gameplayEffectState,
+                equipmentState,
+                timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
+        }
+
+        private FixedCharacterRuntimeState(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
+            ulong lastCompletedTick,
+            FixedAbilityRuntimeState[] abilities,
+            SimulationActionActivationRequestState[] actionActivationRequests,
+            FixedActionInstanceState[] actionInstances,
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
+            ulong eventSequence,
+            ulong actionEventSequence,
+            ulong handleAllocator,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            IReadOnlyList<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
+        {
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
+                throw new ArgumentException("Character runtime state identity is incomplete.");
+            NumericProfile = numericProfile;
+            GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
+            LastCompletedTick = lastCompletedTick;
+            m_Abilities = abilities;
+            ActionActivationRequests = actionActivationRequests;
+            ActionInstances = actionInstances;
+            InputRequests = inputRequests;
+            EventSequence = eventSequence;
+            ActionEventSequence = actionEventSequence;
+            HandleAllocator = handleAllocator;
+            ControlState = controlState;
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+            m_TimelineSnapshots = timelineSnapshots as ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> ??
+                new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots).AsReadOnly();
+        }
+
         internal static FixedCharacterRuntimeState CreateInitial(
             IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,

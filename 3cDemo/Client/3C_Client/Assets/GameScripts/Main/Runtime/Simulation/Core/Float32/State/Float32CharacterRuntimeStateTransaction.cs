@@ -61,6 +61,7 @@ namespace ThirdPersonSimulation
         Float32CharacterEquipmentRuntimeState m_EquipmentState;
         CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_ControlStateBound;
+        bool m_AbilitiesChanged;
         bool m_Disposed;
 
         public Float32CharacterRuntimeStateTransaction()
@@ -109,6 +110,7 @@ namespace ThirdPersonSimulation
             m_EquipmentState = equipmentState.Restart(baseState.EquipmentState);
             m_ControlState = controlState;
             m_ControlStateBound = false;
+            m_AbilitiesChanged = false;
             m_Disposed = false;
             return this;
         }
@@ -166,6 +168,8 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Float32 Ability transaction belongs to another Character runtime transaction.");
             }
             Float32AbilityRuntimeState state = ability.TakeSnapshot();
+            if (!ReferenceEquals(m_AbilityStates[state.AbilityIdentity.AbilityId], state))
+                m_AbilitiesChanged = true;
             m_AbilityStates[state.AbilityIdentity.AbilityId] = state;
         }
 
@@ -240,23 +244,43 @@ namespace ThirdPersonSimulation
 
         Float32CharacterRuntimeState Snapshot()
         {
-            return new Float32CharacterRuntimeState(
+            Float32AbilityRuntimeState[] abilities = m_AbilitiesChanged
+                ? ToArray(m_AbilityStates.Values)
+                : m_BaseState.AbilitiesArray;
+            SimulationActionActivationRequestState[] activationRequests = m_ActionState.AreActionActivationRequestsUnchanged
+                ? m_BaseState.ActionActivationRequests
+                : ToArray(m_ActionState.GetActionActivationRequests());
+            Float32ActionInstanceState[] actionInstances = m_ActionState.AreActionInstancesUnchanged
+                ? m_BaseState.ActionInstances
+                : ToArray(m_ActionState.GetActionInstances());
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests = m_InputRequestState.IsUnchanged
+                ? m_BaseState.InputRequests
+                : m_InputRequestState.Capture();
+            return Float32CharacterRuntimeState.Snapshot(
                 m_BaseState.NumericProfile,
                 m_BaseState.GameplayContentHash,
                 m_BaseState.StateSchemaHash,
                 m_Tick.Value,
-                m_AbilityStates.Values,
-                m_ActionState.GetActionActivationRequests(),
-                m_ActionState.GetActionInstances(),
-                m_InputRequestState.Capture(),
+                abilities,
+                activationRequests,
+                actionInstances,
+                inputRequests,
                 m_EventSequenceState.EventSequence,
                 m_ActionState.ActionEventSequence,
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Commit(),
                 m_EquipmentState.Capture(),
-                m_BaseState.TimelineSnapshots,
-                ownsInputRequests: true);
+                m_BaseState.TimelineSnapshots);
+        }
+
+        static T[] ToArray<T>(IReadOnlyCollection<T> values)
+        {
+            var result = new T[values.Count];
+            int index = 0;
+            foreach (T value in values)
+                result[index++] = value;
+            return result;
         }
 
         Float32AbilityExecutionSavepoint RequireTopSavepoint(IFloat32AbilityExecutionSavepoint savepoint)

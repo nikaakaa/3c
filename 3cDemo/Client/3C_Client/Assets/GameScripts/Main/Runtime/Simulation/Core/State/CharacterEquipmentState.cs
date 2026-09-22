@@ -686,8 +686,8 @@ namespace ThirdPersonSimulation
 
     public sealed class EquipmentStateAggregate
     {
-        readonly ReadOnlyCollection<EquipmentSlotState> m_Slots;
-        readonly ReadOnlyCollection<EquipmentLocalStateValue> m_LocalStates;
+        readonly EquipmentSlotState[] m_Slots;
+        readonly EquipmentLocalStateValue[] m_LocalStates;
 
         public EquipmentStateAggregate(
             StableHash catalogHash,
@@ -705,7 +705,7 @@ namespace ThirdPersonSimulation
                 if (stable[i - 1].SlotId == stable[i].SlotId)
                     throw new InvalidDataException($"Equipment state Slot '{stable[i].SlotId}' is duplicated.");
             }
-            m_Slots = Array.AsReadOnly(stable);
+            m_Slots = stable;
             EquipmentLocalStateValue[] localStateValues = (localStates ?? Array.Empty<EquipmentLocalStateValue>())
                 .OrderBy(value => $"{value.FeatureId.Value}:{value.StateId.Value}", StringComparer.Ordinal)
                 .ToArray();
@@ -719,7 +719,7 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"Equipment local state '{localStateValues[i].FeatureId}/{localStateValues[i].StateId}' is duplicated.");
                 }
             }
-            m_LocalStates = Array.AsReadOnly(localStateValues);
+            m_LocalStates = localStateValues;
             if (pendingChange.IsValid && !pendingChange.IsPending)
                 throw new ArgumentException("Equipment aggregate pending record is already resolved.", nameof(pendingChange));
             if (lastResolvedChange.IsValid && lastResolvedChange.IsPending)
@@ -730,8 +730,8 @@ namespace ThirdPersonSimulation
 
         EquipmentStateAggregate(
             StableHash catalogHash,
-            ReadOnlyCollection<EquipmentSlotState> slots,
-            ReadOnlyCollection<EquipmentLocalStateValue> localStates,
+            EquipmentSlotState[] slots,
+            EquipmentLocalStateValue[] localStates,
             PendingEquipmentChange pendingChange,
             PendingEquipmentChange lastResolvedChange)
         {
@@ -785,7 +785,7 @@ namespace ThirdPersonSimulation
 
         public EquipmentSlotState RequireSlot(EquipmentSlotId slotId)
         {
-            for (int i = 0; i < m_Slots.Count; i++)
+            for (int i = 0; i < m_Slots.Length; i++)
             {
                 if (m_Slots[i].SlotId == slotId)
                     return m_Slots[i];
@@ -795,7 +795,7 @@ namespace ThirdPersonSimulation
 
         public EquipmentRuntimeStateValue RequireLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
         {
-            for (int i = 0; i < m_LocalStates.Count; i++)
+            for (int i = 0; i < m_LocalStates.Length; i++)
                 if (m_LocalStates[i].FeatureId == featureId && m_LocalStates[i].StateId == stateId)
                     return m_LocalStates[i].Value;
             throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
@@ -811,7 +811,7 @@ namespace ThirdPersonSimulation
                 values[i] = slot;
                 return new EquipmentStateAggregate(
                     CatalogHash,
-                    Array.AsReadOnly(values),
+                    values,
                     m_LocalStates,
                     PendingChange,
                     LastResolvedChange);
@@ -839,7 +839,7 @@ namespace ThirdPersonSimulation
                 return new EquipmentStateAggregate(
                     CatalogHash,
                     m_Slots,
-                    Array.AsReadOnly(values),
+                    values,
                     PendingChange,
                     LastResolvedChange);
             }
@@ -883,7 +883,7 @@ namespace ThirdPersonSimulation
                 values[i] = slot;
                 return new EquipmentStateAggregate(
                     CatalogHash,
-                    Array.AsReadOnly(values),
+                    values,
                     m_LocalStates,
                     default,
                     PendingChange.Resolve(state, resolvedTick));

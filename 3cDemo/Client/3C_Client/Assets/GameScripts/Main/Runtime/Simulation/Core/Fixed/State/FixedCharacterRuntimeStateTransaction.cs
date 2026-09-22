@@ -77,7 +77,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 FixedAbilityRuntimeState state = baseState.Abilities[i];
-                m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state.Clone());
+                m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state);
             }
             m_ActionState = new FixedCharacterActionRuntimeState(
                 baseState.ActionActivationRequests,
@@ -136,7 +136,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 throw new InvalidOperationException("Fixed Ability transaction belongs to another Character runtime transaction.");
             }
-            FixedAbilityRuntimeState state = ability.SnapshotState();
+            FixedAbilityRuntimeState state = ability.TakeSnapshot();
             m_AbilityStates[state.AbilityIdentity.AbilityId] = state;
         }
 
@@ -258,8 +258,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionIdentity m_Identity;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
-        readonly Dictionary<int, AbilityStateValue> m_StateValues;
-        readonly Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
+        Dictionary<int, AbilityStateValue> m_StateValues;
+        Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
         bool m_Disposed;
 
@@ -358,14 +358,19 @@ namespace ThirdPersonSimulation.Fixed
             m_Disposed = true;
         }
 
-        internal FixedAbilityRuntimeState SnapshotState()
+        internal FixedAbilityRuntimeState TakeSnapshot()
         {
             RequireActive();
-            return new FixedAbilityRuntimeState(
+            FixedAbilityRuntimeState snapshot = FixedAbilityRuntimeState.Adopt(
                 m_Identity,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);
+            m_StateValues = null;
+            m_MotionWarpStates = null;
+            m_AbilityExecutionState = null;
+            m_Disposed = true;
+            return snapshot;
         }
 
         void RequireActive()

@@ -26,17 +26,56 @@ namespace ThirdPersonSimulation.Fixed
                 : new Dictionary<int, FixedMotionWarpState>(motionWarpStates);
         }
 
+        FixedAbilityRuntimeState(
+            GameplayAbilityExecutionIdentity abilityIdentity,
+            Dictionary<int, AbilityStateValue> stateValues,
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
+            Dictionary<int, FixedMotionWarpState> motionWarpStates)
+        {
+            if (!abilityIdentity.IsValid)
+                throw new ArgumentException("Fixed Ability runtime state identity is incomplete.", nameof(abilityIdentity));
+            m_AbilityIdentity = abilityIdentity;
+            StateValues = stateValues;
+            AbilityExecutionState = abilityExecutionState;
+            MotionWarpStates = motionWarpStates;
+        }
+
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, FixedMotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
 
         internal FixedAbilityRuntimeState Clone() =>
-            new FixedAbilityRuntimeState(
+            Adopt(
                 m_AbilityIdentity,
                 StateValues,
                 AbilityExecutionState,
                 MotionWarpStates);
+
+        internal static FixedAbilityRuntimeState Adopt(
+            GameplayAbilityExecutionIdentity abilityIdentity,
+            Dictionary<int, AbilityStateValue> stateValues,
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
+            Dictionary<int, FixedMotionWarpState> motionWarpStates)
+        {
+            if (stateValues == null)
+                throw new ArgumentNullException(nameof(stateValues));
+            if (abilityExecutionState == null)
+                throw new ArgumentNullException(nameof(abilityExecutionState));
+            if (motionWarpStates == null)
+                throw new ArgumentNullException(nameof(motionWarpStates));
+            foreach (int slotIndex in stateValues.Keys)
+                if (slotIndex < 0)
+                    throw new ArgumentException("Ability runtime state values are invalid.", nameof(stateValues));
+            foreach (int operation in motionWarpStates.Keys)
+                if (operation < 0)
+                    throw new ArgumentException("Ability runtime MotionWarp states are invalid.", nameof(motionWarpStates));
+            return new FixedAbilityRuntimeState(
+                abilityIdentity,
+                stateValues,
+                abilityExecutionState,
+                motionWarpStates);
+        }
 
         static Dictionary<int, AbilityStateValue> CopyValues(IDictionary<int, AbilityStateValue> values)
         {

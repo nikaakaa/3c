@@ -26,17 +26,56 @@ namespace ThirdPersonSimulation
                 : new Dictionary<int, Float32MotionWarpState>(motionWarpStates);
         }
 
+        Float32AbilityRuntimeState(
+            GameplayAbilityExecutionIdentity abilityIdentity,
+            Dictionary<int, AbilityStateValue> stateValues,
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
+            Dictionary<int, Float32MotionWarpState> motionWarpStates)
+        {
+            if (!abilityIdentity.IsValid)
+                throw new ArgumentException("Float32 Ability runtime state identity is incomplete.", nameof(abilityIdentity));
+            m_AbilityIdentity = abilityIdentity;
+            StateValues = stateValues;
+            AbilityExecutionState = abilityExecutionState;
+            MotionWarpStates = motionWarpStates;
+        }
+
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
 
         internal Float32AbilityRuntimeState Clone() =>
-            new Float32AbilityRuntimeState(
+            Adopt(
                 m_AbilityIdentity,
                 StateValues,
                 AbilityExecutionState,
                 MotionWarpStates);
+
+        internal static Float32AbilityRuntimeState Adopt(
+            GameplayAbilityExecutionIdentity abilityIdentity,
+            Dictionary<int, AbilityStateValue> stateValues,
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
+            Dictionary<int, Float32MotionWarpState> motionWarpStates)
+        {
+            if (stateValues == null)
+                throw new ArgumentNullException(nameof(stateValues));
+            if (abilityExecutionState == null)
+                throw new ArgumentNullException(nameof(abilityExecutionState));
+            if (motionWarpStates == null)
+                throw new ArgumentNullException(nameof(motionWarpStates));
+            foreach (int slotIndex in stateValues.Keys)
+                if (slotIndex < 0)
+                    throw new ArgumentException("Ability runtime state values are invalid.", nameof(stateValues));
+            foreach (int operation in motionWarpStates.Keys)
+                if (operation < 0)
+                    throw new ArgumentException("Ability runtime MotionWarp states are invalid.", nameof(motionWarpStates));
+            return new Float32AbilityRuntimeState(
+                abilityIdentity,
+                stateValues,
+                abilityExecutionState,
+                motionWarpStates);
+        }
 
         static Dictionary<int, AbilityStateValue> CopyValues(IDictionary<int, AbilityStateValue> values)
         {

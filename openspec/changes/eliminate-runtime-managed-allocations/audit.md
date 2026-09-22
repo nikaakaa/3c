@@ -4864,3 +4864,14 @@
 - 运行期 scope 归属现为：ActionTrace 和 StateExecution 是 readonly struct；SkillExecution、Equipment Mutation 和 Timeline Blackboard scope 由 owner pool 借还；TraceExecution 和公共 ability manager Scope 是 owner 级长期实例。周期路径不再新建 disposable class。
 - 运行期 key 中的临时字符串已在 2.100 改为 declaration identity 加 instance id 的 readonly struct 复合键。Value evaluation key 只保存准备数据中的 output port 引用；普通求值路径不再构造 key 字符串。字符串插值保留在显式开启 trace 的诊断和错误构造路径，不属于正常 0GC Tick 主路径。
 - 值求值次数、输入读取顺序、递归循环检测、Timeline context 压栈/弹出和异常路径不变。本轮没有新增代码，只汇总已提交代码证据并把 2.3 标记完成。
+
+## 2026-09-23 Ability 事务状态所有权移交
+
+对应 tasks.md 的 2.4 首个切片；2.4 保持未勾选。
+
+- Fixed 和 Float32 `CharacterRuntimeStateTransaction` 原先在构造时把每个 committed `AbilityRuntimeState` 深拷贝一次；`BindAbility` 再为 pending 工作状态深拷贝一次；`AcceptAbility` 调用 `SnapshotState` 时第三次深拷贝。每 tick 每个已安装 ability 最多重复三次字典/aggregate 复制。
+- 现在事务的 ability 映射只记录 committed 对象引用，committed 状态在事务内不被原地修改。`BindAbility` 仍为每个参与执行的能力创建唯一 pending 工作副本；接受时 `TakeSnapshot` 把 state value 字典、MotionWarp 字典和 ability execution aggregate 的所有权直接移交给 candidate `AbilityRuntimeState`，不再第三次复制。
+- `Adopt` 保留 identity、state slot、MotionWarp operation 和 aggregate 的合法性校验；移交后工作状态置空并关闭，避免 candidate 与 pending 继续共享可变集合。未接受能力继续引用 committed 状态，保存点、异常丢弃和 candidate 只在 `Commit` 后生效的边界不变。
+- 每个参与执行的 ability 的周期复制从三层降到一层；未绑定能力只做事务映射插入，不再深拷贝。外部 state codec、rollback restore 和后续 Timeline snapshot 仍读取 candidate 中的独立对象。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 ability 状态回放、savepoint 恢复、rollback restore 和 Player 分配采样。2.4 未完成：action/control/input、GE/Equipment 工作页、事务对象跨步寿命和其余周期 Clone 存储仍需后续切片。

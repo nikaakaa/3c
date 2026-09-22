@@ -4450,3 +4450,13 @@
 - 验证开始时 `Temp/obj` 的 NuGet assets 曾被清空，`dotnet build --no-restore` 在进入代码编译前报 `NETSDK1004`；未执行 restore 或复制 fallback assets。Unity 重新加载后正式 assets 恢复，继续完成下列验证。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未读取 Console、未做网络联调和 Player 分配采样。用户可触发 Session snapshot/Prediction restore，确认 pipeline SnapshotHash 不变；分配采样应观察 hash 构建的数组和插值字符串消失，但不表示 SHA/hash 字符串已消除。
+
+## 2026-09-22 Pipeline participant payload owned state 收口
+
+对应 tasks.md 的 5.5，新增 5.268 作为独立小步；5.5 保持未勾选。代码提交为 `6172c06c5`。
+
+- `SimulationPipelinePassStateSnapshot` 构造参数改为 `ownedPayload`，snapshot 直接持有调用方移交的 byte 数组；原来的 `(byte[])payload.Clone()` 构造期复制删除。
+- 全 Client 九个构造点核对完毕，都传入正式新建数组：Rollback History 和两数值域 Local Input Ingress 的 capture 使用 `CanonicalWriter.ToArray` 或 source `CaptureState` 新数组；两数值域 Session Snapshot 和 ServerAuthoritative Prediction History decode 使用 `CanonicalReader.ReadBytes` 新数组；Authority 两个 state capture 使用 writer 新数组；ServerAuthoritative correction/history/journal restore 使用 `WriteCorrection`、`WriteHistory`、`WriteJournal` 新数组。
+- `Payload` 仍是 snapshot 拥有的 immutable `ReadOnlyMemory<byte>`；payload hash 仍对这份 owned bytes 计算。`CopyPayload` 继续保留，专门给 restore 事务创建独立可变副本，避免 `RestoreState` 持有或改写 snapshot 内部 bytes。
+- `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发 rollback/session checkpoint、Prediction restore 和 authority checkpoint，确认 state restore、payload hash 和 SnapshotHash 不变；分配采样应观察 capture/decode 构造 participant payload 的克隆消失，但 restore 事务的正式 `CopyPayload` 副本仍在。

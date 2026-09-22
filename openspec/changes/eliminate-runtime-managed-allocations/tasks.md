@@ -513,6 +513,7 @@
 - [x] 5.242 ServerAuthoritative RemotePresentationBatch 改为 readonly struct；Body、表现命令和可靠事件批按值穿过 Product、History、Checkpoint、Evidence 和表现 Host，default 表示无远程表现并用 IsValid 统一拒绝
 - [x] 5.243 ServerAuthoritative AuthoritativeObservationBatch 改为 readonly struct；Prediction Evidence、Observation Source、Product Slot 和 Schedule 按值携带观测批，default 表示无 canonical 观测并用 IsValid 显式拒绝
 - [x] 5.244 ServerAuthoritative AuthorityReplicationBatch 改为 readonly struct；Authority egress、Product Slot、canonical codec 和 Authority Source 按值携带复制批，default 用 IsValid 显式拒绝
+- [x] 5.245 ServerAuthoritative 可靠事件输出与输出批改为 readonly struct；Authority Source 到控制传输和 Fantasy 连接按值携带，default 输出用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

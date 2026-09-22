@@ -4810,3 +4810,14 @@
 - scratch 在每个同步入口先清空再填充，方法返回后不长期持有 Gameplay Effect 数据；最终 aggregate、wire 字符串和 state 数组仍是正式独立分配。两域的标签规范化、Ordinal 去重、属性计算顺序、异常路径和 Active 校验语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做 Gameplay Effect 回放、rollback restore 和 Player 分配采样。用户可运行标签添加/查询、属性基础修改、modifier 增删、Active Effect 保存恢复、rollback restore 和状态 Codec 解码，确认结果不变；分配采样应观察空 scratch fallback 的 List/Dictionary/HashSet 消失，Actor scratch 本体和 aggregate 快照仍是准备期或快照所有权分配。
+
+## 2026-09-23 Gameplay Effect owned tags 快照缓存
+
+对应 tasks.md 的 2.108。
+
+- Fixed 与 Float32 working `SimulationGameplayEffectState` 原先每次 `CopyOwnedTags` 都清空 scratch、遍历全部 tag source、重建排序 List；`HasTag`、`Matches`、Target `OwnedTags` 和每次效果应用准备都会重复这条路径。Admission `CopyTargetTags` 还在 List 只读合同外再 `ToArray`，同一目标标签数组被复制两次。
+- 现在 working state 持有 `m_OwnedTagsSnapshot`。首次读取时用 `OwnedTags` scratch 一次性汇总、Ordinal 排序并生成精确 `string[]`；之后只复用这份不可变快照。空标签集合直接使用 `Array.Empty<string>`。Admission 合同改名为 `TargetTags`，直接接收 state 的内部数组；`HasTag`、`Matches` 和 Target `OwnedTags` 统一走同一快照。
+- tag source 新增或删除、source 移除、working state 初始化和 aggregate 恢复都会把快照置空。同一个 source 写入相同标签时仍沿用现有数组，不触发失效。快照生成后 scratch `OwnedTags` 清空，不在 working state 外保留内容。已提交 aggregate 的只读标签路径继续返回其自有数组。
+- scratch 中只为重建排序结果服务的 `OwnedTagSet` 已删除，两域 `Reset` 不再清空这个死索引。标签排序、父标签匹配、应用准备时 source=self 共用 target 标签、已准备 spec 对旧标签数据的只读依赖和异常语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做 Gameplay Effect 回放、rollback restore 和 Player 分配采样。用户可运行多 tag source 增删、同 source 重复写入、HasTag/Matches、自来源效果应用、Active Effect 保存恢复和 rollback restore，确认标签顺序与应用快照不变；分配采样应观察每次标签查询和效果应用准备的 scratch 重建、排序 List 返回及二次数组复制消失，首次快照数组仍是 state 正式所有权分配。

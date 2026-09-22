@@ -175,6 +175,7 @@
 - [x] 2.105 两数值域 Ability Layout 删除与排序 InputRequestIds 重复的 HashSet，HasInputRequest 改为 Ordinal 二分；状态 Codec 解码直接遍历 installations 校验，删除每次读取的 HashSet
 - [x] 2.106 两数值域 Ability Layout 删除 MotionWarp 排序数组旁的 HashSet，Skill Execution State Slots 改为精确排序数组；运行 HasMotionWarp 和 IsSkillExecutionStateSlot 都用二分，准备期局部去重集合不外泄
 - [x] 2.107 两数值域 Gameplay Effect working state 强制绑定 Actor scratch；删除标签、属性、Active 校验和 canonical tags 的空 scratch fallback，初始准备与 Codec Read 显式传入同一 Actor 生命周期 scratch
+- [x] 2.108 两数值域 Gameplay Effect working state 缓存 Ordinal 排序的 owned tags 快照；HasTag、Matches、Target OwnedTags 和应用准备复用同一数组，来源变化或状态恢复时失效，删除 Admission 的数组二次复制和 OwnedTagSet
 
 ## 3. Timeline和事件图
 

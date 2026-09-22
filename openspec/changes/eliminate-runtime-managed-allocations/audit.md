@@ -4855,3 +4855,12 @@
 - Fixed 与 Float32 `PushTimelineContext` 原先每次都新建 `TimelineBlackboardScope` class。现在各自 Blackboard runtime 持有 scope pool，Push 时借出、Dispose 时归还；Timeline context stack、Pop 时机和异常传播不变。首个达到的嵌套深度仍会分配一个 scope，后续同深度复用。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Timeline/技能回放和 Player 分配采样。2.3 未完成：周期字符串诊断、临时字符串键、剩余 class scope 归属和跨步容量审计仍需后续切片；涉及 Timeline 的改动只触碰 runtime scope 所有权，未修改并行 Timeline 资产或曲线任务。
+
+## 2026-09-23 值求值作用域完成审计
+
+对应 tasks.md 的 2.3 完成审计。
+
+- 两域 value recursion stack 都按 `Operations.Count + 1` 预留；每一层 value input buffer 都在 workspace 构造期存在，并按全 operation 最大输入数预留容量。`ReadInputs` 只借用当前深度 buffer，超界返回原错误；release 仍按递归序校验。
+- 运行期 scope 归属现为：ActionTrace 和 StateExecution 是 readonly struct；SkillExecution、Equipment Mutation 和 Timeline Blackboard scope 由 owner pool 借还；TraceExecution 和公共 ability manager Scope 是 owner 级长期实例。周期路径不再新建 disposable class。
+- 运行期 key 中的临时字符串已在 2.100 改为 declaration identity 加 instance id 的 readonly struct 复合键。Value evaluation key 只保存准备数据中的 output port 引用；普通求值路径不再构造 key 字符串。字符串插值保留在显式开启 trace 的诊断和错误构造路径，不属于正常 0GC Tick 主路径。
+- 值求值次数、输入读取顺序、递归循环检测、Timeline context 压栈/弹出和异常路径不变。本轮没有新增代码，只汇总已提交代码证据并把 2.3 标记完成。

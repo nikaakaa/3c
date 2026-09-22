@@ -5488,3 +5488,13 @@
 - 2.4 保持未勾选：Equipment slot 数组复制、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment 安装/卸载、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Equipment相同槽位复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `5f2ecaf79`。
+
+- 共用 `EquipmentSlotState` 增加身份、版本、generation、contributions、TagSource 和完整 passive handle 序列的 Ordinal 比较。`WithSlot` 找到同 Slot 且内容完全相同时直接复用原 aggregate，不再复制槽位数组或创建新候选；`WithSlotAndResolvedPending` 仍推进 pending 解析，但相同槽位继续共享槽位数组，只有槽位真实变化才复制一次。
+- `EquipmentStateAggregate` 构造排序改用静态 `Comparison`；本地状态按 `FeatureId`、分隔符、`StateId` 的联合字符序列做 Ordinal 比较，保持原拼接键的顺序语义，同时删除 `OrderBy`、每次比较拼接的字符串、lambda 闭包和查询中间分配。重复槽位、重复本地状态、pending 合法和空槽约束不变。
+- 2.4 保持未勾选：Equipment 真实变化槽位/本地状态数组、GE 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载、重复写入、pending resolve/cancel、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。

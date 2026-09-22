@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text;
 
 namespace ThirdPersonSimulation
 {
@@ -183,6 +184,52 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlStateValue> Values => m_Values;
         public StableHash StateHash { get; }
 
+        static StableHash ComputeHash(
+            CharacterControlStateSchema schema,
+            ulong lastCompletedTick,
+            IReadOnlyList<CharacterControlStateValue> values)
+        {
+            var parts = new List<string>
+            {
+                "character-control-runtime-state/2",
+                schema.SchemaHash.Value,
+                lastCompletedTick.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+            for (int i = 0; i < values.Count; i++)
+            {
+                CharacterControlStateValue value = values[i];
+                parts.Add(((int)value.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                parts.Add(value.Boolean ? "1" : "0");
+                parts.Add(value.Int32.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                parts.Add(value.UInt64.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                parts.Add(value.Identity);
+            }
+            return StableHash.Compute(parts.ToArray());
+        }
+
+        internal CharacterControlRuntimeState(
+            CharacterControlStateSchema schema,
+            ulong lastCompletedTick,
+            CharacterControlStateValue[] values,
+            StableHash stateHash)
+        {
+            Schema = schema ?? throw new ArgumentNullException(nameof(schema));
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+            if (values.Length != schema.FieldCount)
+                throw new ArgumentException("Character control runtime state values do not match its schema.", nameof(values));
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i].Kind != schema.Fields[i].ValueKind)
+                    throw new ArgumentException($"Character control runtime state field '{schema.Fields[i].Id}' kind does not match its schema.", nameof(values));
+            }
+            ModuleId = schema.ModuleId;
+            SemanticVersion = schema.SemanticVersion;
+            LastCompletedTick = lastCompletedTick;
+            m_Values = Array.AsReadOnly(values);
+            StateHash = stateHash;
+        }
+
         public CharacterControlStateValue Get(CharacterControlStateFieldId field) =>
             m_Values[Schema.RequireIndex(field)];
 
@@ -220,28 +267,6 @@ namespace ThirdPersonSimulation
             return new CharacterControlRuntimeState(schema, 0, values);
         }
 
-        static StableHash ComputeHash(
-            CharacterControlStateSchema schema,
-            ulong lastCompletedTick,
-            IReadOnlyList<CharacterControlStateValue> values)
-        {
-            var parts = new List<string>
-            {
-                "character-control-runtime-state/2",
-                schema.SchemaHash.Value,
-                lastCompletedTick.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            };
-            for (int i = 0; i < values.Count; i++)
-            {
-                CharacterControlStateValue value = values[i];
-                parts.Add(((int)value.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
-                parts.Add(value.Boolean ? "1" : "0");
-                parts.Add(value.Int32.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                parts.Add(value.UInt64.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                parts.Add(value.Identity);
-            }
-            return StableHash.Compute(parts.ToArray());
-        }
     }
 
     public enum CharacterControlRuntimeStateTransactionStatus : byte
@@ -256,6 +281,7 @@ namespace ThirdPersonSimulation
         CharacterControlStateSchema m_Schema;
         SimulationTick m_Tick;
         readonly List<CharacterControlStateValue> m_Values;
+        byte[] m_HashBuffer = Array.Empty<byte>();
         CharacterControlRuntimeStateTransactionStatus m_Status;
 
         public CharacterControlRuntimeStateTransaction()
@@ -312,7 +338,9 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeState Capture()
         {
             RequireActive();
-            return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, m_Values);
+            CharacterControlStateValue[] values = m_Values.ToArray();
+            StableHash stateHash = ComputeHash();
+            return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, values, stateHash);
         }
 
         public void Restore(CharacterControlRuntimeState state)
@@ -346,6 +374,88 @@ namespace ThirdPersonSimulation
         {
             if (m_Status != CharacterControlRuntimeStateTransactionStatus.Active)
                 throw new InvalidOperationException("Character control runtime state transaction is not active.");
+        }
+
+        StableHash ComputeHash()
+        {
+            int length = 0;
+            AppendString(ref length, "character-control-runtime-state/2");
+            AppendSeparator(ref length);
+            AppendString(ref length, m_Schema.SchemaHash.Value);
+            AppendSeparator(ref length);
+            AppendUInt64(ref length, m_Tick.Value);
+            for (int i = 0; i < m_Values.Count; i++)
+            {
+                CharacterControlStateValue value = m_Values[i];
+                AppendSeparator(ref length);
+                AppendInt32(ref length, (int)value.Kind);
+                AppendSeparator(ref length);
+                AppendAscii(ref length, value.Boolean ? '1' : '0');
+                AppendSeparator(ref length);
+                AppendInt32(ref length, value.Int32);
+                AppendSeparator(ref length);
+                AppendUInt64(ref length, value.UInt64);
+                AppendSeparator(ref length);
+                AppendString(ref length, value.Identity);
+            }
+            return SimulationCanonicalPayloadHash.Compute(m_HashBuffer.AsSpan(0, length));
+        }
+
+        void AppendSeparator(ref int length) => AppendAscii(ref length, '\u001f');
+
+        void AppendAscii(ref int length, char value)
+        {
+            EnsureHashCapacity(length + 1);
+            m_HashBuffer[length++] = (byte)value;
+        }
+
+        void AppendInt32(ref int length, int value)
+        {
+            if (value < 0)
+            {
+                AppendAscii(ref length, '-');
+                AppendUInt64(ref length, (ulong)(-(long)value));
+            }
+            else
+            {
+                AppendUInt64(ref length, (ulong)value);
+            }
+        }
+
+        void AppendUInt64(ref int length, ulong value)
+        {
+            if (value == 0)
+            {
+                AppendAscii(ref length, '0');
+                return;
+            }
+            int end = length + 20;
+            EnsureHashCapacity(end);
+            while (value != 0)
+            {
+                m_HashBuffer[--end] = (byte)('0' + value % 10);
+                value /= 10;
+            }
+            int count = length + 20 - end;
+            if (end != length)
+                Array.Copy(m_HashBuffer, end, m_HashBuffer, length, count);
+            length += count;
+        }
+
+        void AppendString(ref int length, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+            EnsureHashCapacity(length + Encoding.UTF8.GetMaxByteCount(value.Length));
+            length += Encoding.UTF8.GetBytes(value, 0, value.Length, m_HashBuffer, length);
+        }
+
+        void EnsureHashCapacity(int required)
+        {
+            if (required <= m_HashBuffer.Length)
+                return;
+            int capacity = Math.Max(required, m_HashBuffer.Length * 2);
+            Array.Resize(ref m_HashBuffer, capacity);
         }
     }
 

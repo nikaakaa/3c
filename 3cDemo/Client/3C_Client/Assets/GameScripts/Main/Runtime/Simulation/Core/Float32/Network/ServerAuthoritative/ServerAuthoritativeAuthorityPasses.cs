@@ -586,7 +586,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     readPorts.Diagnostics.Sink.PublishModel(new SimulationModelTraceRecord(
                         SimulationModelTraceKind.Transport,
                         "authority_replication_commit",
-                        $"acks={m_Acks.Count};baselines={m_Baselines.Count};remote={m_Remote.Count};fullBaseline={emitBaseline};reliable={m_Dispositions.Length}",
+                        $"acks={m_Acks.Length};baselines={m_Baselines.Length};remote={m_Remote.Length};fullBaseline={emitBaseline};reliable={m_Dispositions.Length}",
                         default,
                         context.Source.SourceTick,
                         completed.Step.Tick.Value,

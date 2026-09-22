@@ -310,7 +310,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new ObservedWorldConstraintFrame(Tick, constraints);
         }
 
-        public IReadOnlyList<CharacterBodySample> ToBodySamples()
+        public CharacterBodySample[] ToBodySamples()
         {
             var samples = new CharacterBodySample[m_Selections.Length];
             for (int i = 0; i < samples.Length; i++)

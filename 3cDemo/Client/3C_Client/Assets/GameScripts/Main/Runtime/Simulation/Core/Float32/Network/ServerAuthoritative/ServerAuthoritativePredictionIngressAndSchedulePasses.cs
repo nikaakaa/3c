@@ -368,12 +368,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 }
                 throw;
             }
-            if (decision.Kind == PredictionCorrectionDecisionKind.HardRecovery && selectedRemoteBodies.Count == 0)
+            if (decision.Kind == PredictionCorrectionDecisionKind.HardRecovery && selectedRemoteBodies.Length == 0)
             {
                 if (restore == null)
                     throw new InvalidOperationException("HardRecovery requires an explicit restore Tick for the remote visual reset anchor.");
                 selectedRemoteBodies = m_State.SelectRemoteBodyFrame(restore.Tick).ToBodySamples();
-                if (selectedRemoteBodies.Count == 0)
+                if (selectedRemoteBodies.Length == 0)
                     throw new InvalidOperationException("HardRecovery produced no selected remote Body reset anchor.");
             }
             writePorts.SelectedRemoteBodies.Write(new SelectedRemoteBodyBatch(

@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
-            if (envelope == null)
+            if (envelope.Payload == null)
                 throw new ArgumentNullException(nameof(envelope));
             WriteEnvelope(
                 writer,

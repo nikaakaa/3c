@@ -549,6 +549,7 @@
 - [x] 5.278 Fixed/Float32 transaction port 复用 working state shell；每 Tick 只替换 immutable state，不再创建托管外壳
 - [x] 5.279 Fixed/Float32 Commit batch 使用 workspace 精确数组；删除 steps/source egress 构造期二次复制
 - [x] 5.280 Fixed/Float32 Commit batch 改为 readonly struct；删除同步 commit 的托管外壳，default 用 IsValid 显式拒绝
+- [x] 5.281 Fixed/Float32 Commit batch 输出覆盖校验复用 ArrayPool 缓冲；排序和比较改为精确范围与静态 comparer，删除临时数组和比较委托
 
 ## 6. UI、资源、渲染和生命周期
 

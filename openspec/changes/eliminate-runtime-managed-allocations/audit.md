@@ -4577,3 +4577,13 @@
 - 所有 committer 都在同一 `Commit` 调用内遍历 batch，已确认不保存 batch 外壳；它们继续消费 steps、results、dispositions 和 source egress 的 owned arrays，发布与 rollback 语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行普通 Local commit、Rollback replay commit 和 Float32 commit，确认发布、观察者、source egress 和快照捕获顺序不变；分配采样应观察每 Tick 的 batch 托管外壳消失，batch 内的 steps 和 egress 结果数组仍是正式分配。
+
+## 2026-09-22 Commit batch 输出校验缓冲复用
+
+对应 tasks.md 的 5.281，5.5 保持未勾选。
+
+- Fixed 与 Float32 `SimulationCommitBatch` 构造器不再按 disposition 数量新建输出校验数组。非空校验从 `ArrayPool<OutputEventOwner>` 租用；空校验继续复用 `Array.Empty`。缓冲只在构造器内使用，校验结束、异常和提前失败都通过 `finally` 归还。
+- 输出事件仍按 Steps、Actor、GameplayFacts、PresentationCommands 顺序填充；数量不足、数量不匹配、身份不匹配和重复 EventId 的异常不变。排序和后续比较只访问 `expectedEventCount` 精确范围，因此池化数组尾部的租借残留不会进入判断。
+- 比较器改为长寿命 `OutputEventOwnerComparer.Instance`，`Array.Sort` 使用带范围的重载；删除每次构造 Commit batch 的比较委托和闭包。两个数值域的校验规则、排序规则和公开 Commit batch 合同不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行包含输出事件的 Fixed/Rollback 和 Float32 commit，确认 disposition 顺序、异常路径和 source egress 不变；分配采样应观察每次构造输出校验数组和比较委托的分配消失，租借缓冲本身由 `ArrayPool` 托管。

@@ -4799,3 +4799,14 @@
 - 业务输入是编译后的 operation topology、catalog、scope 和 state slots；输出是 prepared layout 的稳定只读索引。处理点从“运行查询依赖长期哈希集合”改为“准备期唯一化并排序，运行期只查精确数组”。
 - `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做 MotionWarp 或 Skill slot 回放和 Player 分配采样。用户可运行带 Timeline MotionWarp、Skill scoped state 和非 character scope slot 的技能，确认触发、槽位读写和外部 IDs 不变；分配采样应观察两个 layout 长期 HashSet 消失，最终数组由准备期正式产出。
+
+## 2026-09-23 Gameplay Effect scratch 所有权收口
+
+对应 tasks.md 的 2.107；2.3 和 2.4 保持未勾选。
+
+- Fixed 与 Float32 `SimulationGameplayEffectState` 原先允许 `scratch = null`，标签汇总、属性重算、属性变更、Active 校验和 canonical tag 去重都有 `m_Scratch?. ... ?? new` 分裂路径。现在构造器要求 Actor 生命周期 scratch，字段非空；所有运行方法直接复用对应 `List`、`Dictionary` 或 `HashSet`。
+- `GameplayEffectStateAggregate.CreateInitial` 与 Aggregate Codec `Read` 显式接收 scratch。Character Runtime Ports 初始状态准备和 Character Runtime State Codec 解码都传入 `SimulationActorBinding.EffectExecutionScratch`，避免准备或恢复路径偷偷创建第二套工作集合。
+- `FixedCharacterGameplayEffectRuntimeState`／`Float32CharacterGameplayEffectRuntimeState` 在 scratch 尚未通过 `GetGameplayEffectState` 绑定时，Restore 只更新 base aggregate，不再尝试用空 scratch 构造 working state。后续首次 Get 会用当前 aggregate 和正式 scratch 构造；已绑定时仍原地 `Restore` 并保持 Actor 归属校验。
+- scratch 在每个同步入口先清空再填充，方法返回后不长期持有 Gameplay Effect 数据；最终 aggregate、wire 字符串和 state 数组仍是正式独立分配。两域的标签规范化、Ordinal 去重、属性计算顺序、异常路径和 Active 校验语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做 Gameplay Effect 回放、rollback restore 和 Player 分配采样。用户可运行标签添加/查询、属性基础修改、modifier 增删、Active Effect 保存恢复、rollback restore 和状态 Codec 解码，确认结果不变；分配采样应观察空 scratch fallback 的 List/Dictionary/HashSet 消失，Actor scratch 本体和 aggregate 快照仍是准备期或快照所有权分配。

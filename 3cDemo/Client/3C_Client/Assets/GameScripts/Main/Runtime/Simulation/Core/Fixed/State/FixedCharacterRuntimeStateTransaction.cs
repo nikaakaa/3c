@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
+        readonly Dictionary<CharacterSkillId, FixedSkillExecutionState> m_SkillStates = new Dictionary<CharacterSkillId, FixedSkillExecutionState>();
         SimulationTick m_Tick;
         int m_TickRate;
         readonly Stack<FixedAbilityExecutionSavepoint> m_Savepoints =
@@ -128,7 +129,16 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
             if (!m_AbilityStates.TryGetValue(identity.AbilityId, out FixedAbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{identity.AbilityId}' is not part of the Character runtime state.");
-            return new FixedSkillExecutionState(this, identity, layout, ability, state);
+            if (!m_SkillStates.TryGetValue(identity.AbilityId, out FixedSkillExecutionState skillState))
+            {
+                skillState = new FixedSkillExecutionState(this, identity, layout, ability, state);
+                m_SkillStates.Add(identity.AbilityId, skillState);
+            }
+            else
+            {
+                skillState.Restart(state);
+            }
+            return skillState;
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -277,7 +287,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionIdentity m_Identity;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
-        readonly FixedAbilityRuntimeState m_CommittedState;
+        FixedAbilityRuntimeState m_CommittedState;
         Dictionary<int, AbilityStateValue> m_StateValues;
         Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
@@ -304,6 +314,21 @@ namespace ThirdPersonSimulation.Fixed
             m_StateValues = state.StateValues;
             m_MotionWarpStates = state.MotionWarpStates;
             m_AbilityExecutionState = state.AbilityExecutionState;
+        }
+
+        internal FixedSkillExecutionState Restart(FixedAbilityRuntimeState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (state.AbilityIdentity.AbilityId != m_Identity.AbilityId)
+                throw new ArgumentException("Fixed Ability runtime state identity does not match its workspace.", nameof(state));
+            m_CommittedState = state;
+            m_StateValues = state.StateValues;
+            m_MotionWarpStates = state.MotionWarpStates;
+            m_AbilityExecutionState = state.AbilityExecutionState;
+            m_Dirty = false;
+            m_Disposed = false;
+            return this;
         }
 
         internal object BindingIdentity => m_BindingIdentity;

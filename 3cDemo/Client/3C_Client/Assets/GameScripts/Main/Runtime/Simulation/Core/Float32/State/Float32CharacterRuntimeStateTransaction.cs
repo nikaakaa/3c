@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation
     {
         Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
+        readonly Dictionary<CharacterSkillId, Float32SkillExecutionState> m_SkillStates = new Dictionary<CharacterSkillId, Float32SkillExecutionState>();
         SimulationTick m_Tick;
         int m_TickRate;
         readonly Stack<Float32AbilityExecutionSavepoint> m_Savepoints =
@@ -128,7 +129,16 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Ability execution data does not match its identity.", nameof(ability));
             if (!m_AbilityStates.TryGetValue(identity.AbilityId, out Float32AbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{identity.AbilityId}' is not part of the Character runtime state.");
-            return new Float32SkillExecutionState(this, identity, layout, ability, state);
+            if (!m_SkillStates.TryGetValue(identity.AbilityId, out Float32SkillExecutionState skillState))
+            {
+                skillState = new Float32SkillExecutionState(this, identity, layout, ability, state);
+                m_SkillStates.Add(identity.AbilityId, skillState);
+            }
+            else
+            {
+                skillState.Restart(state);
+            }
+            return skillState;
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -277,7 +287,7 @@ namespace ThirdPersonSimulation
         readonly GameplayAbilityExecutionIdentity m_Identity;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly Float32GameplayAbilityExecutionData m_Ability;
-        readonly Float32AbilityRuntimeState m_CommittedState;
+        Float32AbilityRuntimeState m_CommittedState;
         Dictionary<int, AbilityStateValue> m_StateValues;
         Dictionary<int, Float32MotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
@@ -304,6 +314,21 @@ namespace ThirdPersonSimulation
             m_StateValues = state.StateValues;
             m_MotionWarpStates = state.MotionWarpStates;
             m_AbilityExecutionState = state.AbilityExecutionState;
+        }
+
+        internal Float32SkillExecutionState Restart(Float32AbilityRuntimeState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (state.AbilityIdentity.AbilityId != m_Identity.AbilityId)
+                throw new ArgumentException("Float32 Ability runtime state identity does not match its workspace.", nameof(state));
+            m_CommittedState = state;
+            m_StateValues = state.StateValues;
+            m_MotionWarpStates = state.MotionWarpStates;
+            m_AbilityExecutionState = state.AbilityExecutionState;
+            m_Dirty = false;
+            m_Disposed = false;
+            return this;
         }
 
         internal object BindingIdentity => m_BindingIdentity;

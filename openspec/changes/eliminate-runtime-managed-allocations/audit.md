@@ -4256,3 +4256,11 @@
 - `PredictionCorrectionDecision` 从 sealed class 改为 readonly struct。Authority Reconciler 生成 NoCorrection、RestoreReplay 或 HardRecovery 后，Prediction State、Correction Schedule 的 Exclusive Product Slot 和 Prediction Egress 按值携带决策，删除每个 Actor 每个观察 tick 的决策对象分配。
 - 构造合同不变：Kind 和 Reason 必须是正式成员，Baseline Tick 必须有效，restore tick 与 Kind 匹配，replay 起止必须同时有效且顺序正确。新增 `IsValid` 表达 default decision 的非法状态；Restore plan 和 State 入口的旧 `decision == null` 检查改为 `!decision.IsValid`，NoCorrection 和 HardRecovery 判定保持原语义。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Canonical input sample 值化收口
+
+对应 tasks.md 的 5.5，新增 5.249 作为独立小步；5.5 保持未勾选。
+
+- `CanonicalInputSample` 从 sealed class 改为 readonly struct。Fantasy Datagram Channel 把 owner 输入写入固定命令历史和 1～4 长度的 packet sample 数组；Authority Datagram Codec 解码 command 后交给 Authority Client Route 的排序队列和 held 槽位。这些路径不再创建每个输入样本的外壳对象。
+- 构造合同不变：Target Authority Tick、Input Sequence 和 `SimulationInput` 必须有效，Input Sequence 必须与 input 一致，source tick 不能为 0。新增 `IsValid` 表达 default sample 的非法状态。`CommandDatagram` 先逐个检查样本 `IsValid`，再保留一到四个样本、Target Tick 和 Input Sequence 严格降序的原合同。Client Route 淘汰槽位写 default，`HasInput`、选中输入和 held 输入改用 `IsValid`；exact、late、held 统计和 neutral 回退不变。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

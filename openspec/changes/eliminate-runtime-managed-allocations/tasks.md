@@ -517,6 +517,7 @@
 - [x] 5.246 ServerAuthoritative 全量 Checkpoint 输出改为 readonly struct；控制传输到 Fantasy 连接按值携带快照回包，default 输出用 IsValid 显式拒绝
 - [x] 5.247 ServerAuthoritative 数据面 Ticket 改为 readonly struct；Fantasy 入队、Source 消费、Client Route 保存和 consumed 回包按值携带，default 用 IsValid 显式拒绝
 - [x] 5.248 ServerAuthoritative PredictionCorrectionDecision 改为 readonly struct；Reconciler、Prediction State、Correction Schedule 和 Egress 按值携带每 Actor 决策，default 用 IsValid 显式拒绝
+- [x] 5.249 ServerAuthoritative CanonicalInputSample 改为 readonly struct；Datagram 发送历史、packet sample、接收 codec 和 Authority Route 输入队列按值携带，default 用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

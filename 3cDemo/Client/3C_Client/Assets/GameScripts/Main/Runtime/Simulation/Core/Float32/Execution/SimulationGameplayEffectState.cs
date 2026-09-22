@@ -204,6 +204,18 @@ namespace ThirdPersonSimulation
             return true;
         }
 
+        internal bool MatchesLastLifecycleRevisions(IReadOnlyDictionary<ulong, ulong> revisions)
+        {
+            if (revisions == null || m_LastLifecycleRevisions.Count != revisions.Count)
+                return false;
+            foreach (KeyValuePair<ulong, ulong> pair in m_LastLifecycleRevisions)
+            {
+                if (!revisions.TryGetValue(pair.Key, out ulong value) || value != pair.Value)
+                    return false;
+            }
+            return true;
+        }
+
         static bool EqualStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
         {
             if (ReferenceEquals(left, right))
@@ -492,6 +504,7 @@ namespace ThirdPersonSimulation
         bool m_PeriodsDirty;
         bool m_JournalDirty;
         bool m_ChangeCursorDirty;
+        bool m_LastLifecycleRevisionsDirty;
         bool m_RestoredDirty;
 
         public SimulationGameplayEffectState(
@@ -513,7 +526,17 @@ namespace ThirdPersonSimulation
         public Float32GameplayEffectRuntimeCatalog Catalog => m_Catalog;
         public IReadOnlyList<PortableActiveEffectState> ActiveEffects => m_ActiveEffects;
         public SortedDictionary<ulong, List<PortablePredictionRecord>> Journal => m_Journal;
-        public SortedDictionary<ulong, ulong> LastLifecycleRevisions => m_LastLifecycleRevisions;
+        public bool TryGetLastLifecycleRevision(ulong instanceId, out ulong revision) =>
+            m_LastLifecycleRevisions.TryGetValue(instanceId, out revision);
+
+        public void SetLastLifecycleRevision(ulong instanceId, ulong revision)
+        {
+            if (m_LastLifecycleRevisions.TryGetValue(instanceId, out ulong current) && current == revision)
+                return;
+            m_LastLifecycleRevisions[instanceId] = revision;
+            m_LastLifecycleRevisionsDirty = m_Baseline == null ||
+                !m_Baseline.MatchesLastLifecycleRevisions(m_LastLifecycleRevisions);
+        }
         public ulong ChangeCursor
         {
             get => m_ChangeCursor;
@@ -533,6 +556,7 @@ namespace ThirdPersonSimulation
             m_PeriodsDirty ||
             m_JournalDirty ||
             m_ChangeCursorDirty ||
+            m_LastLifecycleRevisionsDirty ||
             m_RestoredDirty;
 
         public IReadOnlyList<string> OwnedTagsSnapshot => m_OwnedTagsSnapshot ??= BuildOwnedTagsSnapshot();
@@ -790,7 +814,8 @@ namespace ThirdPersonSimulation
                 !m_ActiveEffectsDirty &&
                 !m_PeriodsDirty &&
                 !m_JournalDirty &&
-                !m_ChangeCursorDirty)
+                !m_ChangeCursorDirty &&
+                !m_LastLifecycleRevisionsDirty)
             {
                 return m_Baseline;
             }
@@ -885,6 +910,7 @@ namespace ThirdPersonSimulation
             m_PeriodsDirty = false;
             m_JournalDirty = false;
             m_ChangeCursorDirty = false;
+            m_LastLifecycleRevisionsDirty = false;
             m_RestoredDirty = false;
         }
 

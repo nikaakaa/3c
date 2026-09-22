@@ -5020,3 +5020,13 @@
 - 编译中发现 `Abilities` 公开合同是 `IReadOnlyList`，因此增加内部数组读取入口；手写 ToArray 使用循环填充，不引入 LINQ 或跨步可变数组共享。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做动作/输入/能力状态回放、rollback restore、状态 Codec 恢复和 Player 分配采样。2.4 保持未勾选：changed 路径数组、控制状态、Equipment aggregate 和 Timeline snapshot 外壳仍需继续审计。
+
+## 2026-09-23 Equipment聚合变更去重排序
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `a02fa8c59`。
+
+- `EquipmentStateAggregate` 增加内部 adoption 构造，直接接收已校验、已排序的 Slot 和 LocalState 只读集合。公开构造仍负责初始和解码输入的排序、插值排序键、重复项与状态记录校验。
+- `WithSlot` 与 `WithLocalState` 只为实际变化的集合复制一份精确数组并建立新只读包装；未变化集合直接从旧 aggregate 复用。这两个变更路径不再经过公开构造的第二轮 LINQ 排序和临时排序容器。
+- `WithPending` 与 `ResolvePending` 只更新 pending/resolved 变更记录，现在直接复用现有 Slot 和 LocalState 只读集合，删除两份列表、数组和只读包装重建。CatalogHash、pending 记录状态约束和异常语义不变。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做装备安装/卸载、本地 Equipment state 回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：控制状态 Capture、Timeline snapshot 外壳和实际分配采样仍在后续小步处理。

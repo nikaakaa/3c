@@ -473,13 +473,13 @@ namespace ThirdPersonSimulation
                 return committed;
             }
             Dictionary<int, AbilityStateValue> stateValues = m_StateValuesChanged
-                ? new Dictionary<int, AbilityStateValue>(m_StateValues)
+                ? m_StateValues
                 : m_CommittedState.StateValues;
             Dictionary<int, Float32MotionWarpState> motionWarpStates = m_MotionWarpStatesChanged
-                ? new Dictionary<int, Float32MotionWarpState>(m_MotionWarpStates)
+                ? m_MotionWarpStates
                 : m_CommittedState.MotionWarpStates;
             GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = m_AbilityExecutionStateChanged
-                ? m_AbilityExecutionState.Clone()
+                ? m_AbilityExecutionState
                 : m_CommittedState.AbilityExecutionState;
             Float32AbilityRuntimeState snapshot = Float32AbilityRuntimeState.Adopt(
                 m_Identity,

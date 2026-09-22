@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation
             ulong changeCursor)
         {
             SortedDictionary<string, string[]> changedTags = tagsChanged
-                ? CloneChangedTagSources(tagSources, m_TagSources)
+                ? AdoptChangedTagSources(tagSources, m_TagSources)
                 : m_TagSources;
             SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
                 ? CloneChangedAttributes(attributes, m_Attributes)
@@ -621,7 +621,7 @@ namespace ThirdPersonSimulation
             return result;
         }
 
-        static SortedDictionary<string, string[]> CloneChangedTagSources(
+        static SortedDictionary<string, string[]> AdoptChangedTagSources(
             IReadOnlyDictionary<string, string[]> source,
             IReadOnlyDictionary<string, string[]> baseline)
         {
@@ -632,7 +632,7 @@ namespace ThirdPersonSimulation
                     EqualStrings(pair.Value, baselineValue))
                     result.Add(pair.Key, baselineValue);
                 else
-                    result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+                    result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : pair.Value);
             }
             return result;
         }

@@ -4547,3 +4547,13 @@
 - `ExecutePassCore` 接收同一个静态 invoker 和 typed context，循环内不再为每个 Pass 嵌套 `() => execute(pass)` 闭包。Ingress/Schedule/Egress 的 phase 匹配、Pass 顺序、诊断耗时和异常包装语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Fixed/Float32 session，确认 ingress 输入、schedule 计划和 egress 输出顺序不变；分配采样应观察每 Tick/每 Pass 的 phase 调用闭包消失，静态 invoker 本身只由编译器缓存一次。
+
+## 2026-09-22 Working state shell 复用
+
+对应 tasks.md 的 5.5，新增 5.278 作为独立小步；5.5 保持未勾选。
+
+- Fixed 与 Float32 pipeline transaction port 各自持有一个长寿命 working state shell。首个 Tick 创建一次；之后 `CreateWorkingState` 通过现有 `Replace` 把外壳指向 `SimulationWorldStateStore.Current`，并继续校验 Actor 数量和锁定 roster 顺序。
+- shell 只在 transaction port 内复用；`PublishWorkingState`、commit batch、working state port 和 state store 消费的都是 immutable 内部 state，不是 shell。Tick 失败回到 baseline 后，下一 Tick 仍用同一 locked roster 重置 shell，不保留候选 state 的业务所有权。
+- `RestoreCheckpoint` 的临时 working state shell 保持独立创建，避免让显式 checkpoint 恢复事务进入正式 Tick 的复用生命周期。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可连续运行普通 Tick、restore correction 和失败 rollback，确认发布后的 state、timeline 和 world solver 一致；分配采样应观察稳定 Tick 的 working state 托管外壳消失，首 Tick 和 checkpoint restore 的 shell 仍是正式分配。

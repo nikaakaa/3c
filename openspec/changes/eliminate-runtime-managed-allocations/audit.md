@@ -5661,3 +5661,13 @@
 - `ExecutionWorkspaceBuffer.ToArray` 只服务旧 commit 复制路径，确认无调用者后删除；不保留数组移交和租约视图两条正式入口。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 提交回放、Source Egress 发送、rollback restore和 Player 分配采样。
+
+## 2026-09-23 CompleteStep结果外壳值化
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `fa84cd92e`。
+
+- Fixed/Float32 `CompletedSimulationStep` 原先是 sealed class，`CompleteStep` 每个逻辑步都创建一个只用于聚合 Step、Result、State 和可选 StepSnapshot 的托管外壳。现在改为 `readonly struct`，共享 Pipeline 的 `TCompletedStep` 约束同步改为 `struct`，workspace 和 CommitBatch 中的 step 外壳不再分配。
+- 新增 `IsValid` 表达 Step、Result、State 必须存在的正式合同；`StepSnapshot` 仍保持可空。Server Authoritative 的 Prediction input 读取和 history capture 把旧 `null` 判断改为 `IsValid`，history 仍要求存在 StepSnapshot；CommitBatch 的 Step 校验也改用 `IsValid`，默认值不能进入提交链。
+- Step 顺序、快照身份、Prediction history 提取字段、Rollback output/hash 消费和异常语义不变。Pipeline projection 仍由可选 StepSnapshot 推导。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 提交回放、Prediction replay、rollback restore和 Player 分配采样。

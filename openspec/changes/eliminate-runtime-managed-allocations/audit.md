@@ -4557,3 +4557,13 @@
 - `RestoreCheckpoint` 的临时 working state shell 保持独立创建，避免让显式 checkpoint 恢复事务进入正式 Tick 的复用生命周期。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可连续运行普通 Tick、restore correction 和失败 rollback，确认发布后的 state、timeline 和 world solver 一致；分配采样应观察稳定 Tick 的 working state 托管外壳消失，首 Tick 和 checkpoint restore 的 shell 仍是正式分配。
+
+## 2026-09-22 Commit batch owned array 收口
+
+对应 tasks.md 的 5.5，新增 5.279 作为独立小步；5.5 保持未勾选。
+
+- `ExecutionWorkspaceBuffer` 新增 internal `ToArray`：空结果共享 `Array.Empty`，非空结果生成一次精确数组。Pipeline target port 的 `FreezeCommitBatch` 合同改为接收 typed execution workspace buffer，不再把 completed steps 降级成 `IReadOnlyList`。
+- Fixed 与 Float32 `SimulationCommitBatch` 构造器改为 owned steps/source egress arrays，直接校验并持有调用方移交的数组；原来的 steps 精确数组复制和 source egress 精确数组复制删除。Step Tick 顺序、空数组语义、output disposition 覆盖校验、egress 非空校验和公开只读视图不变。
+- transaction workspace 继续在事务开始和结束时清空；commit batch 持有的是移交出去的正式结果数组，不回写或共享 workspace 的 `List` 存储。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Fixed/Rollback 和 Float32 commit，确认 Step 输出、source egress 和 output disposition 顺序不变；分配采样应观察 commit freeze 时的两组构造期复制消失，最终 result 数组本身仍是正式分配。

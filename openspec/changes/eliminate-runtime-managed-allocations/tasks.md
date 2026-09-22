@@ -515,6 +515,7 @@
 - [x] 5.244 ServerAuthoritative AuthorityReplicationBatch 改为 readonly struct；Authority egress、Product Slot、canonical codec 和 Authority Source 按值携带复制批，default 用 IsValid 显式拒绝
 - [x] 5.245 ServerAuthoritative 可靠事件输出与输出批改为 readonly struct；Authority Source 到控制传输和 Fantasy 连接按值携带，default 输出用 IsValid 显式拒绝
 - [x] 5.246 ServerAuthoritative 全量 Checkpoint 输出改为 readonly struct；控制传输到 Fantasy 连接按值携带快照回包，default 输出用 IsValid 显式拒绝
+- [x] 5.247 ServerAuthoritative 数据面 Ticket 改为 readonly struct；Fantasy 入队、Source 消费、Client Route 保存和 consumed 回包按值携带，default 用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

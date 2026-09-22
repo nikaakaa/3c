@@ -4240,3 +4240,11 @@
 - `ServerAuthoritativeAuthorityFullCheckpointOutput` 从 sealed class 改为 readonly struct。Authority 控制传输接口、输出 ring 和 Fantasy Authority Connection 发送入口按值携带全量快照回复，删除每次全量 Checkpoint 回包的外壳对象。
 - 构造合同不变：Player、Actor 和 SnapshotSequence 必须有效，Checkpoint 和 Payload 必须存在。`RequestSequence` 合法可为 0，因此只保留在输出字段里，不参与 `IsValid`。新增 `IsValid` 表达 default 输出的非法状态；Fantasy 发送边界把旧 null 检查改为 `IsValid`，内部消费端不再重复防御。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，前者 0 警告 0 错误，后者 0 错误和 17 个既有包/Editor 警告；随后 `dotnet build-server shutdown` 成功。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Data plane ticket 值化收口
+
+对应 tasks.md 的 5.5，新增 5.247 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityDataPlaneTicket` 从 sealed class 改为 readonly struct。Fantasy Authority Connection 接收 ticket 后入队，Authority Source Runtime 消费，Client Route 保存，consumed 回包继续使用同一 ticket；这些位置都不再创建 ticket 外壳对象。
+- 构造合同不变：Session、Host、Player、Actor 必须有效，过期时间必须为正，TicketId 和 Nonce 必须存在。新增 `IsValid` 表达 default ticket 的非法状态；Client Route 的已持有 ticket 判断、Source Hello 前置检查和 Fantasy 发送边界从 class null 语义改为 `IsValid`。每条路由仍只能绑定一张 ticket，过期 ticket 仍不能通过 Hello。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

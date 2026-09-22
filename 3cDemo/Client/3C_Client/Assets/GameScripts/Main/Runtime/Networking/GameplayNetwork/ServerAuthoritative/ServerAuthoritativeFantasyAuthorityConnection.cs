@@ -242,8 +242,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativeAuthorityFullCheckpointOutput value)
         {
             RequireOperational();
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+            if (!value.IsValid)
+                throw new ArgumentException("Full checkpoint output is invalid.", nameof(value));
             using var response = W2G_ServerAuthoritativeFullCheckpointResponse.Create();
             response.RoomId = Process.RoomId.Value;
             response.SessionId = SessionId.Value;

@@ -161,7 +161,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong RequestSequence { get; }
     }
 
-    public sealed class ServerAuthoritativeAuthorityFullCheckpointOutput
+    public readonly struct ServerAuthoritativeAuthorityFullCheckpointOutput
     {
         public ServerAuthoritativeAuthorityFullCheckpointOutput(
             ServerAuthoritativePlayerId playerId,
@@ -187,6 +187,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong SnapshotSequence { get; }
         public NetworkCheckpoint Checkpoint { get; }
         public byte[] Payload { get; }
+        public bool IsValid => PlayerId.IsValid && ActorId.IsValid && SnapshotSequence != 0 &&
+            Checkpoint != null && Payload != null;
     }
 
     public readonly struct ServerAuthoritativeAuthorityReliableEventOutput

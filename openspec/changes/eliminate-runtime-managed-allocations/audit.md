@@ -4323,3 +4323,14 @@
 - `ThirdPersonSimulation.ServerAuthoritative.Transport.csproj`、`ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - 编译期间 Unity MCP 实例列表曾返回 0 个实例；文档整理前目标实例 `e852139597e42532` 已恢复。当前 Codex 会话只暴露该 MCP 的资源读取，没有把 `refresh_unity` 和 `read_console` 映射为可调用工具，因此本步未触发刷新，也未读取 Console。不声称 U2022 Domain Reload 后无错误，未做网络联调和 Player 分配采样。
 - 用户可先在 `e852139597e42532` 非 Play 状态刷新并确认 Console 无编译错误，再跑一条 Authority/Prediction 对局验证 Hello/Ack、Command、Snapshot、序号去重和 endpoint 归还后的持续收发。既有 Player 分配采样可确认 gameplay packet 外壳和部分发送 payload 消失，但 Snapshot delta、SnapshotDatagram 复制、身份字符串和解码结果仍会出现在采样里，不能把它们误算为本步回归。
+
+## 2026-09-22 Snapshot owned delta payload 收口
+
+对应 tasks.md 的 5.5，新增 5.256 作为独立小步；5.5 保持未勾选。
+
+- `SnapshotDatagram` 的 `byte[]` 构造改为 owned payload 合同。Authority Source 把 `NetworkCheckpointCodec.WriteDelta` 刚产出的独立数组交给快照后，`SnapshotDatagram` 直接接管该数组，不再复制一份后让源数组变成垃圾；随后删除这段 delta 的发送侧二次复制。
+- 快照记录 `DeltaPayloadLength`，发送编码只读取有效区间；payload buffer 可以大于实际 delta。接收解码继续从接收 buffer 按 wire 长度复制成精确数组，已入队快照不会被下一次接收覆盖。
+- `CopyDeltaPayload` 改为按实际长度生成精确数组。Checkpoint reconstruction 仍独立持有副本，但它不再因为 `SnapshotDatagram` 借用接收线程的最大 MTU buffer 而克隆整块容量。
+- `ThirdPersonSimulation.ServerAuthoritative.Transport.csproj` 与 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- Unity MCP 只确认目标实例 `e852139597e42532` 在线、非 Play、非编译状态；当前会话没有可调用的 `refresh_unity` 或 `read_console` 工具，因此未触发刷新、未读取 Console，也不声称 U2022 Domain Reload 后无错误。未做网络联调和 Player 分配采样。
+- 用户可在非 Play 状态刷新后验证 Delta Snapshot 仍能完成 Prediction 重建，重点覆盖同一 route 连续多个 delta、ack 后再发和 full checkpoint 回退。分配采样应观察发送链的 `WriteDelta` 后 SnapshotDatagram 复制消失；接收解码精确副本和 reconstruction 副本仍是正式所有权，不属于本步删除目标。

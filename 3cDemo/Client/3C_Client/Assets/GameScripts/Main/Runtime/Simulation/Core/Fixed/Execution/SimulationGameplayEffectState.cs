@@ -523,7 +523,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (m_ChangeCursor == value)
                     return;
                 m_ChangeCursor = value;
-                m_ChangeCursorDirty = true;
+                m_ChangeCursorDirty = m_Baseline == null || m_Baseline.ChangeCursor != value;
             }
         }
 

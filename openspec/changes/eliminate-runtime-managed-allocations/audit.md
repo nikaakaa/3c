@@ -4906,3 +4906,13 @@
 - 首次 Fixed 编译暴露 `m_ControlStateBound` 只写未读，原因是重复绑定仍误查非空引用；已改为查询事务级标记并重编。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做角色控制回放、savepoint 恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment 工作页、事件/Handle 小状态、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。
+
+## 2026-09-23 事件与Handle状态跨步复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `8dd060afb`。
+
+- Fixed 和 Float32 角色事务原先每个逻辑步新建 `CharacterEventSequenceState` 和 `CharacterHandleAllocatorState`，两个对象只为包装一个 `ulong`。现在 `SimulationActorBinding` 按 Actor 长期持有这两个 pending 状态，事务构造时调用 `Restart` 重绑 committed 序列值。
+- `NextEventSequence`、`NextHandleAllocator` 的 checked 递增和零值溢出错误不变；`CaptureHandleAllocator`、`RestoreHandleAllocator`、事件 `Restore` 和 Dispose active 语义不变。
+- 事务 Dispose 仍关闭本次视图；下一次 Evaluate 通过 `Restart` 显式恢复 active，不会跨事务残留可写状态。提交快照继续按值复制事件序列和 HandleAllocator，rollback 历史不借用 Actor 包装对象。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做事件句柄生成、savepoint 恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment 工作页、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。

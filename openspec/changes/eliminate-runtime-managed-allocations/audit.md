@@ -5568,3 +5568,13 @@
 - 2.4 保持未勾选：journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 GE 激活、移除、stack 写入、inhibit 写入、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE相同预测日志映射复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `5c9dbc51e`。
+
+- Fixed/Float32 GE journal 标脏但全量内容未变化时，原先即使每个 record 列表都可复用，也仍新建外层 `SortedDictionary<ulong, List<PortablePredictionRecord>>`。现在 key 数量相同，且每个 key 都存在、record 数量相同、`MatchesRecords` 完整匹配时，直接复用 baseline 日志映射。
+- 新增 key、删除 key、数量变化或任一 record 变化仍进入既有分容器复制路径；外层排序、record 顺序、confirmed 状态和回滚语义不变。
+- 2.4 保持未勾选：periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 prediction journal 写入、confirmed 更新、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

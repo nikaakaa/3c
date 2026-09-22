@@ -4916,3 +4916,14 @@
 - 事务 Dispose 仍关闭本次视图；下一次 Evaluate 通过 `Restart` 显式恢复 active，不会跨事务残留可写状态。提交快照继续按值复制事件序列和 HandleAllocator，rollback 历史不借用 Actor 包装对象。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做事件句柄生成、savepoint 恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment 工作页、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。
+
+## 2026-09-23 Gameplay Effect工作页外壳复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `352d740d0`。
+
+- Fixed 和 Float32 角色事务原先每个逻辑步新建 `CharacterGameplayEffectRuntimeState`；首个效果映射又会创建大型 `SimulationGameplayEffectState`，事务结束后整体丢弃。现在 `SimulationActorBinding` 长期持有 wrapper 和已创建的 working page，事务构造时 `Restart` 重绑 TickRate、catalog 和 committed aggregate。
+- working page 已存在时，`Restart` 立即用新 committed aggregate 调用既有 `Restore`，让 pending 基线回到当前事务；不存在时保持原首次 `GetGameplayEffectState` 创建路径。scratch 仍只接受当前 Actor 的 `EffectExecutionScratch`，跨 Actor 绑定继续显式失败。
+- savepoint 的 `Capture`、savepoint `Restore`、无效果角色的 aggregate 错误、事务 Dispose 和 candidate 提交边界不变。Actor working page 只属于当前事务 pending 期，提交结果仍由 `Freeze` 产生独立 aggregate。
+- 本步只复用 wrapper 与 working page 的字典、列表和状态外壳；`GameplayEffectStateAggregate.CopyTo` 的 Clone、`Freeze` aggregate 和最终 snapshot 数组仍在变化时分配，不能视为 2.4 完成。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Gameplay Effect 添加/移除、周期属性、savepoint restore、rollback restore 和 Player 分配采样。

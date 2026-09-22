@@ -5558,3 +5558,13 @@
 - 2.4 保持未勾选：active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做属性修改、modifier 添加移除、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE相同活动效果列表复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `c63943325`。
+
+- Fixed/Float32 GE 变更快照在 `activeEffectsChanged` 时原先总是新建 `List<PortableActiveEffectState>`。现在数量相同且每项都能按 Handle、InstanceId 和完整 `MatchesActiveEffect` 匹配 baseline 时，直接复用 baseline 列表。
+- 任一效果缺失、新增或内容不同时仍新建列表；未变化项继续复用 baseline 对象，变化项继续独立克隆。`PortableEffectSpecState` 继续共享，stack、inhibited、生命周期 revision、排序和回滚语义不变。
+- 2.4 保持未勾选：journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 GE 激活、移除、stack 写入、inhibit 写入、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

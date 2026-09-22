@@ -5691,3 +5691,13 @@
 - `workspace.ActorStates` 确认无其他消费者后删除；共享 Pipeline 的 `TActorResult` 和 `TActorState` 泛型参数也只服务这条旧 scratch 路径，一并移除。CompleteStep 合同不再接收 workspace，FreezeCommitBatch 仍使用 Egress scratch。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 提交回放、快照恢复、rollback restore和 Player 分配采样。
+
+## 2026-09-23 Actor结果输出数组移交
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `6f15f8d3c`。
+
+- Fixed/Float32 `SimulationActorTickResult` 原先的公开构造把 `GameplayFacts`、`PresentationCommands` 和 `TraceRecords` 再复制一份；实际正式链路已由 Character Evaluation `TakeOutputs` 移交最终数组，并只通过 `FromOwnedOutputs` 构造。现在删除无调用者的复制构造和 `Copy<T>`，`FromOwnedOutputs` 直接接管三份 owned 数组。
+- Header 校验原先为每个 Actor 结果创建三个 `Func<T, SimulationEventHeader>` 委托。现在按 GameplayFact、PresentationCommand、TraceRecord 提供具体数组遍历，字段存储也改为精确数组类型；公开只读列表接口不变。
+- 每个数组的 null 合同、Numeric Profile、ActorId、Tick 一致性检查和异常文本不变。空数组继续由上游 `ToArray` 的共享空数组承接，不额外分配。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 输入回放、技能事件发布、rollback restore和 Player 分配采样。

@@ -244,9 +244,18 @@ namespace ThirdPersonSimulation
 
         Float32CharacterRuntimeState Snapshot()
         {
-            Float32AbilityRuntimeState[] abilities = m_AbilitiesChanged
-                ? ToArray(m_AbilityStates.Values)
-                : m_BaseState.AbilitiesArray;
+            Float32AbilityRuntimeState[] abilities;
+            if (m_AbilitiesChanged)
+            {
+                abilities = new Float32AbilityRuntimeState[m_AbilityStates.Count];
+                int abilityIndex = 0;
+                foreach (KeyValuePair<CharacterSkillId, Float32AbilityRuntimeState> pair in m_AbilityStates)
+                    abilities[abilityIndex++] = pair.Value;
+            }
+            else
+            {
+                abilities = m_BaseState.AbilitiesArray;
+            }
             SimulationActionActivationRequestState[] activationRequests = m_ActionState.AreActionActivationRequestsUnchanged
                 ? m_BaseState.ActionActivationRequests
                 : ToArray(m_ActionState.GetActionActivationRequests());
@@ -274,12 +283,11 @@ namespace ThirdPersonSimulation
                 m_BaseState.TimelineSnapshots);
         }
 
-        static T[] ToArray<T>(IReadOnlyCollection<T> values)
+        static T[] ToArray<T>(IReadOnlyList<T> values)
         {
             var result = new T[values.Count];
-            int index = 0;
-            foreach (T value in values)
-                result[index++] = value;
+            for (int index = 0; index < values.Count; index++)
+                result[index] = values[index];
             return result;
         }
 

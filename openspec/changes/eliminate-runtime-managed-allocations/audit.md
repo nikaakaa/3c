@@ -5178,3 +5178,13 @@
 - 这只处理 attributes 分类。changed aggregate、modifier 列表和真实新增/移除分配仍存在；真实变化仍按原 revision、重算顺序、异常和 canonical 语义提交。2.4 保持未勾选。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做属性先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。用户可通过属性 modifier 应用/移除或预测属性恢复后对比 `Freeze` 结果是否复用 committed aggregate。
+
+## 2026-09-23 Ability提交集合所有权隔离
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `62e98fa55`。
+
+- Fixed/Float32 `SkillExecutionState` 的 changed path 已经为 candidate 新建 `StateValues` 和 `MotionWarpStates` 字典，但 pending 工作页仍保留同一字典引用。下一次 `BindAbility` 调用 `Restart` 时会清空 pending 字典，实际也会清空已提交 candidate 持有的字典，破坏 pending 与 committed 的独立寿命。
+- 现在 `TakeSnapshot` 组装 candidate 后立即调用 `Clear`，释放 pending 对 candidate 集合和 execution aggregate 的引用。下一次 `Restart` 从 committed candidate 重新灌入新 pending 工作页；读取默认值、真实值置脏、恢复等价清脏和嵌套保存点语义不变。
+- 这一步修正 2.4 的存储所有权边界，不宣称 changed path 已零分配；candidate 字典复制和 execution aggregate 克隆仍保留。2.4 保持未勾选。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做连续两次能力状态写入、savepoint restore、rollback restore 和 Player 分配采样。用户可用同一能力在连续 tick 写状态后检查第二次读值与 rollback candidate。

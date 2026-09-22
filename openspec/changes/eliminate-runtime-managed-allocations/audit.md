@@ -5388,3 +5388,13 @@
 - 2.4 保持未勾选：pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做状态保存/加载、技能进入/退出、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability状态解码直接采纳
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `0974f267e`。
+
+- Fixed/Float32 状态 Codec 原先解码出独立的 stateValues、MotionWarpStates 和 execution aggregate 后，又调用 Ability runtime state 复制构造，把 stateValues 和 MotionWarpStates 再复制一遍。现在改用 `Adopt` 直接接管这些刚解码的正式存储；`Adopt` 继续检查空集合、state slot 和 operation 键有效性，execution aggregate 保留独立所有权。
+- 该链路没有别的前任持有者，直接采纳不会造成跨状态共享。技能身份、分区数量、canonical 值、MotionWarp 内容和 aggregate 语义不变。Ability runtime state 复制构造仍服务 initial state 需要的空状态装配。
+- 2.4 保持未勾选：savepoint/rollback 恢复中的状态重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 先尝试把复制构造改为具体 Dictionary，发现与 Adopt 私有构造签名冲突后未提交该方向，改为上文的直接采纳；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做状态保存/加载、技能进入/退出、savepoint restore、rollback restore 和 Player 分配采样。

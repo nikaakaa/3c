@@ -58,28 +58,82 @@ namespace GameLogic.ProductDiagnostics
 
     internal sealed class BoundedHistory<T> : IReadOnlyList<T>
     {
-        private readonly List<T> _items;
+        private readonly T[] _items;
         private readonly int _capacity;
+        private int _head;
+        private int _count;
 
         public BoundedHistory(int capacity)
         {
             _capacity = capacity;
-            _items = new List<T>(checked(capacity + 1));
+            _items = new T[checked(capacity + 1)];
         }
 
-        public T this[int index] => _items[index];
-        public int Count => _items.Count;
-
-        public void Add(T item)
+        public T this[int index]
         {
-            _items.Add(item);
-            while (_items.Count > _capacity)
+            get
             {
-                _items.RemoveAt(0);
+                if ((uint)index >= (uint)_count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                return _items[(_head + index) % _items.Length];
             }
         }
 
-        public IEnumerator<T> GetEnumerator() => _items.GetEnumerator();
+        public int Count => _count;
+
+        public void Add(T item)
+        {
+            int tail = (_head + _count) % _items.Length;
+            _items[tail] = item;
+            if (_count == _capacity)
+            {
+                _head = (_head + 1) % _items.Length;
+            }
+            else
+            {
+                _count++;
+            }
+        }
+
+        public Enumerator GetEnumerator() => new Enumerator(this);
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public struct Enumerator : IEnumerator<T>
+        {
+            readonly BoundedHistory<T> _history;
+            int _index;
+            T _current;
+
+            internal Enumerator(BoundedHistory<T> history)
+            {
+                _history = history;
+                _index = 0;
+                _current = default;
+            }
+
+            public T Current => _current;
+            object IEnumerator.Current => Current;
+
+            public bool MoveNext()
+            {
+                if (_index >= _history._count)
+                    return false;
+                _current = _history[_index++];
+                return true;
+            }
+
+            public void Reset()
+            {
+                _index = 0;
+                _current = default;
+            }
+
+            public void Dispose()
+            {
+            }
+        }
     }
 }

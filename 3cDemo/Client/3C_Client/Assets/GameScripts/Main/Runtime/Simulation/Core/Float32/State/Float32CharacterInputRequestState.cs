@@ -7,6 +7,7 @@ namespace ThirdPersonSimulation
     {
         SimulationTick m_Tick;
         readonly Dictionary<string, SimulationInputRequestState> m_Requests;
+        KeyValuePair<string, SimulationInputRequestState>[] m_BaseRequests;
         bool m_Dirty;
         bool m_Disposed;
 
@@ -22,6 +23,7 @@ namespace ThirdPersonSimulation
             if (!tick.IsValid)
                 throw new ArgumentException("Float32 Character input request state tick is invalid.", nameof(tick));
             m_Tick = tick;
+            m_BaseRequests = requests;
             m_Requests.Clear();
             m_Dirty = false;
             if (requests != null)
@@ -55,7 +57,7 @@ namespace ThirdPersonSimulation
                 existing.Equals(state))
                 return;
             m_Requests[identity] = state;
-            m_Dirty = true;
+            m_Dirty = !MatchesBaseRequests();
         }
 
         internal KeyValuePair<string, SimulationInputRequestState>[] Capture()
@@ -71,6 +73,21 @@ namespace ThirdPersonSimulation
         }
 
         internal bool IsUnchanged => !m_Dirty;
+
+        bool MatchesBaseRequests()
+        {
+            int expectedCount = m_BaseRequests?.Length ?? 0;
+            if (m_Requests.Count != expectedCount)
+                return false;
+            for (int i = 0; i < expectedCount; i++)
+            {
+                KeyValuePair<string, SimulationInputRequestState> request = m_BaseRequests[i];
+                if (!m_Requests.TryGetValue(request.Key, out SimulationInputRequestState value) ||
+                    !value.Equals(request.Value))
+                    return false;
+            }
+            return true;
+        }
 
         internal void Dispose()
         {

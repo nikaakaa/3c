@@ -11,6 +11,8 @@ namespace ThirdPersonSimulation
         bool m_ActivationRequestsDirty;
         bool m_InstancesDirty;
         ulong m_ActionEventSequence;
+        IReadOnlyList<SimulationActionActivationRequestState> m_BaseActionActivationRequests;
+        IReadOnlyList<Float32ActionInstanceState> m_BaseActionInstances;
         bool m_Disposed;
 
         public Float32CharacterActionRuntimeState()
@@ -24,6 +26,8 @@ namespace ThirdPersonSimulation
             IReadOnlyList<Float32ActionInstanceState> actionInstances,
             ulong actionEventSequence)
         {
+            m_BaseActionActivationRequests = actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>();
+            m_BaseActionInstances = actionInstances ?? Array.Empty<Float32ActionInstanceState>();
             m_ActionActivationRequests.Clear();
             if (actionActivationRequests != null)
             {
@@ -71,6 +75,7 @@ namespace ThirdPersonSimulation
             m_ActionActivationRequests.Clear();
             if (requests != null)
                 m_ActionActivationRequests.AddRange(requests);
+            m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
         }
 
         public IReadOnlyList<Float32ActionInstanceState> GetActionInstances()
@@ -88,6 +93,7 @@ namespace ThirdPersonSimulation
             m_ActionInstances.Clear();
             if (actions != null)
                 m_ActionInstances.AddRange(actions);
+            m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
         internal ulong ActionEventSequence

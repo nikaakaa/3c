@@ -289,8 +289,7 @@ namespace ThirdPersonSimulation
     public enum CharacterControlRuntimeStateTransactionStatus : byte
     {
         Active = 1,
-        Committed = 2,
-        Aborted = 3
+        Aborted = 2
     }
 
     public sealed class CharacterControlRuntimeStateTransaction : IDisposable
@@ -383,13 +382,6 @@ namespace ThirdPersonSimulation
             m_Values.Clear();
             m_Values.AddRange(state.Values);
             m_ValuesChanged = !MatchesBaseValues(state.Values);
-        }
-
-        public CharacterControlRuntimeState Commit()
-        {
-            RequireActive();
-            m_Status = CharacterControlRuntimeStateTransactionStatus.Committed;
-            return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, m_Values);
         }
 
         public void Abort()

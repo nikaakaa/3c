@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation
 
         static Dictionary<int, AbilityStateValue> CopyValues(IDictionary<int, AbilityStateValue> values)
         {
-            var result = new Dictionary<int, AbilityStateValue>();
+            var result = new Dictionary<int, AbilityStateValue>(values?.Count ?? 0);
             if (values == null)
                 return result;
             foreach (KeyValuePair<int, AbilityStateValue> value in values)

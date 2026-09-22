@@ -640,8 +640,23 @@ namespace ThirdPersonSimulation.Fixed
 
         static SortedDictionary<string, PortableAttributeState> CloneChangedAttributes(
             IReadOnlyDictionary<string, PortableAttributeState> source,
-            IReadOnlyDictionary<string, PortableAttributeState> baseline)
+            SortedDictionary<string, PortableAttributeState> baseline)
         {
+            if (source.Count == baseline.Count)
+            {
+                bool matches = true;
+                foreach (KeyValuePair<string, PortableAttributeState> pair in source)
+                {
+                    if (!baseline.TryGetValue(pair.Key, out PortableAttributeState baselineValue) ||
+                        !MatchesAttribute(pair.Value, baselineValue))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return baseline;
+            }
             var result = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, PortableAttributeState> pair in source)
             {

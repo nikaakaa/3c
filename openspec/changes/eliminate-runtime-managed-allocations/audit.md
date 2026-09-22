@@ -5468,3 +5468,13 @@
 - 2.4 保持未勾选：Control pending 页每次 Restart 仍复制 base values，hash 输出、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Control 输入回放、保存/加载 canonical 对比、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Control工作页写时复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `e11b331ea`。
+
+- Fixed/Float32 共用的 Control 事务 `Restart` 原先每个逻辑步都把 base values 复制进长期 pending 数组，即使本步没有写 Control 状态。现在未写入前直接共享 committed base 数组；首次 `Set` 真实变化时才复制成独立 pending 页。Restore 回 base 重新共享，恢复到变化状态则复制独立页。
+- `Capture` 未变化继续复用 base 数组；真实变化仍复制一次最终数组，避免 struct 候选引用事务 mutable 页后被后续 `Set` 污染。schema、字段定位、dirty 标记、hash、Restore 身份检查和发布状态不可变性不变。
+- 2.4 保持未勾选：Control 真实变化值数组、hash 输出、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做稳定 Control Tick、真实 Control 写入、Restore base、Restore changed、canonical 对比和 Player 分配采样。

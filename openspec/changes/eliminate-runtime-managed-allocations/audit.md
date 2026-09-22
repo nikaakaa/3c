@@ -5671,3 +5671,13 @@
 - Step 顺序、快照身份、Prediction history 提取字段、Rollback output/hash 消费和异常语义不变。Pipeline projection 仍由可选 StepSnapshot 推导。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 提交回放、Prediction replay、rollback restore和 Player 分配采样。
+
+## 2026-09-23 输出处置集合值化
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `7b3311332`。
+
+- Fixed/Float32 `SimulationPipelineOutputDispositionSet` 原先是 sealed class，每个 outer transaction 的 output pass 都会创建一个集合外壳。现在改为 `readonly struct`，直接由 Exclusive Product Slot 按值持有，事务结束重置为默认值；本地、Rollback 和 Server Authoritative 输出链都删除这一托管分配。
+- 删除无调用者的公开 `IReadOnlyList` 构造，保留 `FromOwnedDispositions` 作为唯一正式入口；owned 数组排序和重复 EventId 校验后移交。新增 `IsValid` 表示身份有效且存在 disposition 数组，CommitBatch 构造和 `IsValid` 改用该合同，默认处置集合不能进入提交。
+- disposition 排序、EventId 覆盖校验、事务身份检查、Publish/Defer/丢弃消费顺序和异常语义不变。数组仍由处置集合独占，product slot 只重置值外壳，不提前复用数组。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 提交回放、Source Egress 发送、rollback restore和 Player 分配采样。

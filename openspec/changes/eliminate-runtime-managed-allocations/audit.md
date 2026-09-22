@@ -5478,3 +5478,13 @@
 - 2.4 保持未勾选：Control 真实变化值数组、hash 输出、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做稳定 Control Tick、真实 Control 写入、Restore base、Restore changed、canonical 对比和 Player 分配采样。
+
+## 2026-09-23 Equipment槽位句柄移交
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `44060f0ac`。
+
+- 共用 `EquipmentSlotState` 构造的 passive Effect handles 从 `IEnumerable<ulong>` 改为 owned `ulong[]`。安装时新分配的句柄数组和状态解码生成的最终数组直接移交；`Array.Empty` 空槽继续复用共享数组，删除原构造中的 `ToArray` 二次复制。
+- 构造校验改用一次线性扫描检查零句柄，并用嵌套比较检查重复，删除 `Any`、`Distinct`、lambda 闭包、接口枚举和 `Distinct` 内部集合分配。非法输入仍然拒绝，空槽不能带 contributions 的约束不变。
+- 2.4 保持未勾选：Equipment slot 数组复制、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。

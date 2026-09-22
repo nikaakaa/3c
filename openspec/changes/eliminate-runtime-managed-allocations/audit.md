@@ -4999,3 +4999,13 @@
 - 上一次事务成功提交或 Abort 后，下一事务可以重新绑定同一工作页；修改路径的 lazy copy、无修改 committed 复用、savepoint 平衡校验和 candidate 移交边界不变。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做多能力触发、技能中断、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：修改路径 pending 字典、非空最终数组、Equipment aggregate 和 Timeline snapshot 外壳所有权仍在后续小步处理。
+
+## 2026-09-23 Action与Input状态脏标记
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `7cc319173`。
+
+- Fixed 和 Float32 `ActionRuntimeState` 新增 activation request 与 action instance 两项事务内变化事实。`Restart` 清空脏标记；Set 时先逐项比较当前列表，内容相同直接返回，不再 Clear/AddRange，内容变化才标记并重建列表。
+- Fixed 和 Float32 `InputRequestState` 对相同 identity/value 写入直接返回；新增 identity 或值变化才置脏。Restart 清空脏标记。Get、Capture、Dispose 和非法 identity 语义不变。
+- 这一步建立相对 committed 事务起点的变化事实，供 Snapshot 决定能否复用 base 最终数组；本步尚未接入 Snapshot 数组复用，也没有删除 changed 路径的最终数组分配。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做动作/输入回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。

@@ -33,6 +33,8 @@ namespace ThirdPersonSimulation
         Float32PipelinePassRuntimeBase,
         ISimulationStepPassRuntime<Float32AbilityFinalizeReadPorts, Float32AbilityFinalizeWritePorts>
     {
+        readonly CanonicalWriter m_StateHashWriter = new();
+
         public Float32AbilityFinalizePassRuntime(SimulationPipelinePassDescriptor descriptor)
             : base(descriptor)
         {
@@ -52,6 +54,7 @@ namespace ThirdPersonSimulation
                 evaluations.Evaluations.Count != world.Results.Count ||
                 evaluations.Evaluations.Count != readPorts.CharacterRuntime.Runtime.Roster.Count)
                 throw new InvalidOperationException("Ability Finalize Pass inputs do not match the current Step roster.");
+            m_StateHashWriter.Reset();
 
             for (int i = 0; i < evaluations.Evaluations.Count; i++)
             {
@@ -79,7 +82,7 @@ namespace ThirdPersonSimulation
                     worldResult.AppliedYawDegrees);
                 evaluation.Consume();
                 Float32CharacterRuntimeState finalState = evaluation.CandidateState;
-                CharacterStateHash stateHash = Float32CharacterRuntimeStateCodec.ComputeHash(finalState);
+                CharacterStateHash stateHash = Float32CharacterRuntimeStateCodec.ComputeHash(finalState, m_StateHashWriter);
                 evaluation.TakeOutputs(
                     out GameplayFact[] gameplayFacts,
                     out PresentationCommand[] presentationCommands,

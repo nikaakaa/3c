@@ -27,6 +27,15 @@ namespace ThirdPersonSimulation
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
             using var writer = new CanonicalWriter();
+            return ComputeHash(state, writer);
+        }
+
+        public static CharacterStateHash ComputeHash(Float32CharacterRuntimeState state, CanonicalWriter writer)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
             writer.WriteString(HashIdentity);
             WriteCanonical(writer, state);
             return new CharacterStateHash(writer.ComputeHash());

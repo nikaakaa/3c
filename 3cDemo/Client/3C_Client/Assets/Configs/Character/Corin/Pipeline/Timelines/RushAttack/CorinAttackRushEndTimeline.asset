@@ -17,7 +17,6 @@ MonoBehaviour:
     m_Name: CorinAttackRushEndTimeline
     m_Tracks:
     - rid: 207050555325416083
-    - rid: 207050624796459019
     m_Sections:
     - m_AuthoringId: bcd0c997-0211-5653-03de-2e1f13f88e29
       m_Name: Attack_Rush_End
@@ -127,52 +126,3 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
-    - rid: 207050555325416087
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: bd24e9a1-b4b4-f88b-6730-e5b175a5b347
-        m_StartTimeRaw: 5655040273
-        m_EndTimeRaw: 5726623061
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 1
-        m_AssetTree: {fileID: 6725826254608866796}
-    - rid: 207050624796459019
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 5bb8a763-a921-77f4-7cc0-6051df3779cf
-        Name: Host_Route / Terminal
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416087
-        m_Markers: []
---- !u!114 &6725826254608866796
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Boundary Attack_Rush_End Host_Route Terminal @80
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"1af444c4-a6dd-4b32-872f-7410a4c01bbd","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"2e3eb4bc-5e76-45fb-ade2-52ff12dc9c46","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"54c079a7-90d7-4d17-996d-f26a0e1a10cb","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"c5577919-74c6-40b6-a6c6-e88e8849e854","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"7a1d347f-58bd-8069-ce30-7204f21a3f11","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 7a1d347f-58bd-8069-ce30-7204f21a3f11
-  m_Role: 5
-  m_BlackboardDeclarations: []

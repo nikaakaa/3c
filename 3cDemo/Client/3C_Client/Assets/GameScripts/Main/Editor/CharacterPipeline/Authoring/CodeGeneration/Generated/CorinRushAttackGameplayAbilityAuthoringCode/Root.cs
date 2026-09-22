@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
+using FlowCanvas.Nodes;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
@@ -22,24 +22,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_AttackProperty_01_01.asset", 11400000L),
                 context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_AttackProperty_01_02.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_AttackProperty_02.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_Enhance_AttackProperty_01_01.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_Enhance_AttackProperty_01_02.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_Enhance_AttackProperty_01_03.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_Enhance_AttackProperty_01_04.asset", 11400000L),
-                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_Enhance_AttackProperty_02.asset", 11400000L)
+                context.ResolveExternalAsset<GameplayEffectDefinition>("Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties/Corin_Attack_Rush_AttackProperty_02.asset", 11400000L)
             };
 
             var timelines = new Dictionary<string, TimelineAsset>
             {
                 ["Attack_Rush"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushTimeline.asset", 11400000L),
                 ["Attack_Rush_Explode"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushExplodeTimeline.asset", 11400000L),
-                ["Attack_Rush_End"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEndTimeline.asset", 11400000L),
-                ["Attack_Rush_Enhance"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEnhanceTimeline.asset", 11400000L),
-                ["Attack_Rush_Enhance_Loop"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEnhanceLoopTimeline.asset", 11400000L),
-                ["Attack_Rush_Enhance_End"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEnhanceEndTimeline.asset", 11400000L),
-                ["Attack_Rush_Enhance_Explode"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEnhanceExplodeTimeline.asset", 11400000L),
-                ["Attack_Rush_Enhance_Explode_End"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEnhanceExplodeEndTimeline.asset", 11400000L)
+                ["Attack_Rush_End"] = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEndTimeline.asset", 11400000L)
             };
 
             parts.graph = BtsmtlSkillAuthoringCode.EnsureAbilityRoot(context, "RushAttack", parts.rootId, "RushAttack");
@@ -49,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             parts.states["Entry"] = BtsmtlSkillAuthoringCode.EnsureNativeState(parts.machine, typeof(BtsmtlSkillNativeEntryState), RushId("state:Entry"), "状态机入口", new Vector2(-320f, 0f));
             parts.states["Exit"] = BtsmtlSkillAuthoringCode.EnsureNativeState(parts.machine, typeof(BtsmtlSkillNativeExitState), RushId("state:Exit"), "状态机出口", new Vector2(1320f, 0f));
-            var stateNames = new[] { "Attack_Rush", "Attack_Rush_Explode", "Attack_Rush_End", "Attack_Rush_Enhance", "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_End", "Attack_Rush_Enhance_Explode", "Attack_Rush_Enhance_Explode_End" };
+            var stateNames = new[] { "Attack_Rush", "Attack_Rush_Explode", "Attack_Rush_End" };
             for (int i = 0; i < stateNames.Length; i++)
             {
                 var name = stateNames[i];
@@ -57,44 +47,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 parts.bodyGraphs[name] = BuildStateBody(parts, name, timelines[name]);
             }
 
-            var endRules = new[] { CreateEndRule(GameplayAbilityEndTrigger.AbortRequested, ActionLifecycleTransitionType.Abort, "", "TreeAbort"), CreateEndRule(GameplayAbilityEndTrigger.InterruptRequested, ActionLifecycleTransitionType.Interrupt, "", "TreeInterrupt"), CreateEndRule(GameplayAbilityEndTrigger.ActionWindowClosed, ActionLifecycleTransitionType.Cancel, "RecoveryOpen", "RushClosed"), CreateEndRule(GameplayAbilityEndTrigger.ExecutionCompleted, ActionLifecycleTransitionType.Complete, "", "TimelineCompleted") };
+            var endRules = new[] { CreateEndRule(GameplayAbilityEndTrigger.AbortRequested, ActionLifecycleTransitionType.Abort, "", "TreeAbort"), CreateEndRule(GameplayAbilityEndTrigger.InterruptRequested, ActionLifecycleTransitionType.Interrupt, "", "TreeInterrupt"), CreateEndRule(GameplayAbilityEndTrigger.ExecutionCompleted, ActionLifecycleTransitionType.Complete, "", "TimelineCompleted") };
             BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), parts.profile, effects, endRules, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Rush", true, "", "", false);
             BtsmtlSkillAuthoringContract.Apply(machineNode, new[] { new BtsmtlSkillAuthoringFieldValue("graphId", parts.machine) });
             BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph, rootFlowNode, "Output", machineNode, "Input", RushId("edge:RushAttack.root"));
-
-            AddDeclaration(parts, "RushSelected", "RushSelected");
-            AddDeclaration(parts, "RushEnhanceSelected", "RushEnhanceSelected");
-            AddDeclaration(parts, "RushHoldReleased", "RushHoldReleased");
-            AddDeclaration(parts, "RushSawExplode", "RushSawExplode");
-
+            BtsmtlSkillAuthoringCode.PruneNativeStateMachine(parts.machine, RushStateIds(), Array.Empty<string>());
 
             AddEdge(parts, "Entry", "Attack_Rush", RequestCondition(parts, "entry-rush-request", "Entry To Attack_Rush", "Rush"));
-            AddEdge(parts, "Entry", "Attack_Rush_Enhance", BooleanCondition(parts, "entry-enhance", "Entry To Attack_Rush_Enhance", "RushEnhanceSelected"));
-            AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-release", "Attack_Rush Release", "RushHoldReleased"));
-            AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-saw", "Attack_Rush SawExplode", "RushSawExplode"));
+            AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", ReleaseCondition(parts));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", CompletedCondition(parts, "rush-terminal", "Attack_Rush Terminal"));
-            AddEdge(parts, "Attack_Rush_Explode", "Exit", RequestCondition(parts, "explode-normal", "Attack_Rush_Explode NormalHandoff", "Attack"));
+            AddEdge(parts, "Attack_Rush_Explode", "Exit", HandoffCondition(parts));
             AddEdge(parts, "Attack_Rush_Explode", "Attack_Rush_End", CompletedCondition(parts, "explode-terminal", "Attack_Rush_Explode Terminal"));
             AddEdge(parts, "Attack_Rush_End", "Exit", CompletedCondition(parts, "end-terminal", "Attack_Rush_End Terminal"));
-            AddEdge(parts, "Attack_Rush_Enhance", "Attack_Rush_Enhance_Loop", CompletedCondition(parts, "enhance-terminal", "Attack_Rush_Enhance Terminal"));
-            AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_Explode", BooleanCondition(parts, "loop-saw", "Enhance_Loop SawExplode", "RushSawExplode"));
-            AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_Loop", CompletedCondition(parts, "loop-reenter", "Enhance_Loop Reenter"));
-            AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_End", BooleanCondition(parts, "loop-release", "Enhance_Loop Release", "RushHoldReleased"));
-            AddEdge(parts, "Attack_Rush_Enhance_End", "Exit", RequestCondition(parts, "enhance-end-normal", "Enhance_End NormalHandoff", "Attack"));
-            AddEdge(parts, "Attack_Rush_Enhance_End", "Attack_Rush_End", CompletedCondition(parts, "enhance-end-terminal", "Enhance_End Terminal"));
-            AddEdge(parts, "Attack_Rush_Enhance_Explode", "Exit", RequestCondition(parts, "enhance-explode-normal", "Enhance_Explode NormalHandoff", "Attack"));
-            AddEdge(parts, "Attack_Rush_Enhance_Explode", "Attack_Rush_Enhance_Explode_End", CompletedCondition(parts, "enhance-explode-terminal", "Enhance_Explode Terminal"));
-            AddEdge(parts, "Attack_Rush_Enhance_Explode_End", "Exit", CompletedCondition(parts, "enhance-explode-end-terminal", "Enhance_Explode_End Terminal"));
 
             BtsmtlSkillAuthoringCode.PruneFlowGraph(parts.graph, new[] { RushId("node:RushAttack.root"), RushId("node:RushAttack.machine") }, new[] { RushId("edge:RushAttack.root") });
             return parts;
-        }
-
-        static void AddDeclaration(RootParts parts, string seed, string name)
-        {
-            string id = RushId($"declaration:{seed}");
-            parts.declarations[name] = id;
-            BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph, id, name, typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, $"Action/Rush/{name}", null, null);
         }
 
         static void AddEdge(RootParts parts, string source, string target, BtsmtlSkillFlowGraph condition)
@@ -115,14 +82,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return graph;
         }
 
-        static BtsmtlSkillFlowGraph BooleanCondition(RootParts parts, string seed, string name, string declarationName)
+        static BtsmtlSkillFlowGraph ReleaseCondition(RootParts parts)
         {
-            var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, name);
-            var value = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillBlackboardBooleanFlowNode), RushId($"node:{seed}:value"), declarationName, new Vector2(-520f, 0f));
+            const string seed = "rush-release";
+            var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Attack_Rush Release");
+            var window = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionWindowActiveFlowNode), RushId($"node:{seed}:window"), "Window RushRelease", new Vector2(-520f, 0f));
+            var held = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillBooleanInputFlowNode), RushId($"node:{seed}:held"), "RushHeld", new Vector2(-520f, 120f));
+            var not = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillNativeNodeWrapper<NOT>), RushId($"node:{seed}:not"), "NOT", new Vector2(-240f, 120f));
+            var and = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillNativeNodeWrapper<AND>), RushId($"node:{seed}:and"), "AND", new Vector2(120f, 60f));
             var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
-            BtsmtlSkillAuthoringContract.Apply(value, new[] { new BtsmtlSkillAuthoringFieldValue("declarationId", parts.declarations[declarationName]), new BtsmtlSkillAuthoringFieldValue("ownerId", parts.rootId) });
-            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, value, "m_Output", result, "m_Result", RushId($"edge:{seed}"));
-            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:value"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}") });
+            BtsmtlSkillAuthoringContract.Apply(window, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RushRelease") });
+            BindInput(held, "RushHeld");
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:window"), RushId($"node:{seed}:held"), RushId($"node:{seed}:not"), RushId($"node:{seed}:and"), RushId($"node:{seed}:result") }, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, window, "m_Output", and, "a", RushId($"edge:{seed}:window"));
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, held, "m_Output", not, "value", RushId($"edge:{seed}:held"));
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, not, "Value", and, "b", RushId($"edge:{seed}:not"));
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, and, "Value", result, "m_Result", RushId($"edge:{seed}:result"));
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:window"), RushId($"node:{seed}:held"), RushId($"node:{seed}:not"), RushId($"node:{seed}:and"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}:window"), RushId($"edge:{seed}:held"), RushId($"edge:{seed}:not"), RushId($"edge:{seed}:result") });
+            return graph;
+        }
+
+        static BtsmtlSkillFlowGraph HandoffCondition(RootParts parts)
+        {
+            const string seed = "explode-normal";
+            var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Attack_Rush_Explode NormalHandoff");
+            var window = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionWindowActiveFlowNode), RushId($"node:{seed}:window"), "Window RushAttackHandoff", new Vector2(-520f, 0f));
+            var request = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionRequestFlowNode), RushId($"node:{seed}:request"), "Has Attack Request", new Vector2(-520f, 120f));
+            var and = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillNativeNodeWrapper<AND>), RushId($"node:{seed}:and"), "AND", new Vector2(120f, 60f));
+            var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
+            BtsmtlSkillAuthoringContract.Apply(window, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RushAttackHandoff") });
+            BindInput(request, "Attack");
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:window"), RushId($"node:{seed}:request"), RushId($"node:{seed}:and"), RushId($"node:{seed}:result") }, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, window, "m_Output", and, "a", RushId($"edge:{seed}:window"));
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, request, "m_Output", and, "b", RushId($"edge:{seed}:request"));
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, and, "Value", result, "m_Result", RushId($"edge:{seed}:result"));
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:window"), RushId($"node:{seed}:request"), RushId($"node:{seed}:and"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}:window"), RushId($"edge:{seed}:request"), RushId($"edge:{seed}:result") });
             return graph;
         }
 
@@ -142,33 +136,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             foreach (var body in parts.bodyGraphs)
                 BtsmtlSkillAuthoringCode.ConfigureNativeState(parts.states[body.Key], body.Value);
-            BtsmtlSkillAuthoringCode.PruneBlackboard(parts.graph, new List<string>(parts.declarations.Values).ToArray());
-            BtsmtlSkillAuthoringCode.PruneNativeStateMachine(parts.machine, new List<string>
-            {
-                RushId("state:Entry"),
-                RushId("state:Attack_Rush"),
-                RushId("state:Attack_Rush_Explode"),
-                RushId("state:Attack_Rush_End"),
-                RushId("state:Attack_Rush_Enhance"),
-                RushId("state:Attack_Rush_Enhance_Loop"),
-                RushId("state:Attack_Rush_Enhance_End"),
-                RushId("state:Attack_Rush_Enhance_Explode"),
-                RushId("state:Attack_Rush_Enhance_Explode_End"),
-                RushId("state:Exit")
-            }, parts.connections.ToArray());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(parts.graph, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneNativeStateMachine(parts.machine, RushStateIds(), parts.connections.ToArray());
             BtsmtlSkillAuthoringCode.BindAbilityRoot(context, parts.graph);
         }
+
+        static string[] RushStateIds() => new[]
+        {
+            RushId("state:Entry"),
+            RushId("state:Attack_Rush"),
+            RushId("state:Attack_Rush_Explode"),
+            RushId("state:Attack_Rush_End"),
+            RushId("state:Exit")
+        };
 
         static BtsmtlSkillFlowGraph RequestCondition(RootParts parts, string seed, string name, string requestId)
         {
             var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, name);
             var request = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionRequestFlowNode), RushId($"node:{seed}:request"), $"Has {requestId} Request", new Vector2(-520f, 0f));
             var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
-            BtsmtlSkillAuthoringContract.Apply(request, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", requestId), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
+            BindInput(request, requestId);
             BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, request, "m_Output", result, "m_Result", RushId($"edge:{seed}"));
             BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:request"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}") });
             return graph;
         }
+
+        static void BindInput(FlowCanvas.FlowNode node, string inputId) =>
+            BtsmtlSkillAuthoringContract.Apply(node, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", inputId), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
 
         static GameplayAbilityEndRule CreateEndRule(GameplayAbilityEndTrigger trigger, ActionLifecycleTransitionType transition, string window, string source)
         {
@@ -195,7 +189,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             internal BtsmtlSkillNativeStateMachine machine;
             internal Dictionary<string, BtsmtlSkillNativeState> states = new Dictionary<string, BtsmtlSkillNativeState>();
             internal Dictionary<string, BtsmtlSkillFlowGraph> bodyGraphs = new Dictionary<string, BtsmtlSkillFlowGraph>();
-            internal Dictionary<string, string> declarations = new Dictionary<string, string>();
             internal List<string> connections = new List<string>();
             internal Dictionary<string, int> orders = new Dictionary<string, int>();
         }

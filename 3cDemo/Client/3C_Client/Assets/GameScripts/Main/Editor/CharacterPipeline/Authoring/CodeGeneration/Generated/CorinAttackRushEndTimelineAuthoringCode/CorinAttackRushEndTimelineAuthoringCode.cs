@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)
         {
-            var boundaries = new List<CorinRushTimelineAuthoringBuilder.Boundary> { new CorinRushTimelineAuthoringBuilder.Boundary { Target = "Host_Route", Condition = "Terminal", SourceFrame = 80 } };
+            var boundaries = new List<CorinRushTimelineAuthoringBuilder.Boundary>();
             var timeline = CorinRushTimelineAuthoringBuilder.Build(context, "Attack_Rush_End", "Rush", "Assets/AssetArt/Animation/ZZZ/可琳/dump/Avatar_Female_Size01_Corin_Ani_Attack_Rush_End.anim", 80, boundaries);
             return context.Complete(timeline);
         }

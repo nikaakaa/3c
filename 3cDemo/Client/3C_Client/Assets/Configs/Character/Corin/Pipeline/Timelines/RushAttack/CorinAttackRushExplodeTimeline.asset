@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-4492388455580125647
+--- !u!114 &-4971423278103499887
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -10,34 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Boundary Attack_Rush_Explode Attack_Normal_04 PressAttackA_Mode4_44 @14
+  m_Name: Open RushAttackHandoff @14
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"b108a963-cf1f-485d-872f-1f6f3d20b467","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"3d2f9f13-3827-4552-ae34-61b3f25c57d6","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"cf336e8f-b3ef-4e56-9f81-4328cedf31d8","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"8426132d-4393-4c4d-bc9d-9cdb22919b24","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"7bd96c6f-4480-8426-1abb-438b7c99cec0","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 123.32659, y: 110.4392}
-    _zoomFactor: 0.6315484
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 7bd96c6f-4480-8426-1abb-438b7c99cec0
-  m_Role: 5
-  m_BlackboardDeclarations: []
---- !u!114 &-3864534380766175192
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Boundary Attack_Rush_Explode Attack_Normal_04 NoHold_Mode4_44 @14
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"ac535c2e-93c0-4035-97c0-093812cd1065","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"8de28258-852d-4448-940b-2d9754804d6a","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"dd9c377e-491f-4efe-b514-0169e6b4acd3","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"e79bbdd1-c565-410d-9f47-d16c75f84f7f","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"11a8a0cf-bad3-dc82-059f-4372079cce32","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"01307e8c-ef8a-490d-b4f2-03023b2ddbdc","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"a911a1cd-7774-74ab-3e3c-c94e914a1999","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"c0b6e090-4d93-9e2d-9659-95b8aede20b0","m_OwnerId":"0e892811-e868-5a83-6173-273343bdf627"},"m_ValueType":0,"_UID":"dc66d8e7-ec9e-52af-a696-cb6cc9b315db","_name":"Open
+    RushAttackHandoff","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"09842c59-cca9-4782-99a1-e95a511dfa0e","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"693dee71-0043-496d-8c5c-6487fa76de05","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"361e6f96-de77-5f3e-7185-8d888d1a29ab","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RushAttackHandoffOpen":{"_name":"RushAttackHandoffOpen","_id":"c0b6e090-4d93-9e2d-9659-95b8aede20b0","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"Identity":"0e892811-e868-5a83-6173-273343bdf627","Role":5,"Declarations":[{"m_VariableId":"c0b6e090-4d93-9e2d-9659-95b8aede20b0","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Rush/Windows","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"RushAttackHandoff","m_ActionWindowId":"RushAttackHandoffOpen","m_ActionWindowDigest":8102}}],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
     _version: 3.42
@@ -47,34 +24,20 @@ MonoBehaviour:
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 11a8a0cf-bad3-dc82-059f-4372079cce32
+  m_AuthoringId: 0e892811-e868-5a83-6173-273343bdf627
   m_Role: 5
-  m_BlackboardDeclarations: []
---- !u!114 &-2633343535866875467
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Boundary Attack_Rush_Explode Attack_Rush_End Terminal @70
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"5c25d9e1-c9a9-4990-9ec3-63a724692a41","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"dfdce865-f834-45b8-b8ca-88c375ec4c73","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"328b3449-b5f4-4fe8-ab49-af2dce78dd96","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"cebbf20c-eacb-457f-9b84-ee2d79e701a1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1fb2fbef-c55f-a883-06c3-ca52acc058bc","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 128.19351, y: 84.321465}
-    _zoomFactor: 0.71380246
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 1fb2fbef-c55f-a883-06c3-ca52acc058bc
-  m_Role: 5
-  m_BlackboardDeclarations: []
+  m_BlackboardDeclarations:
+  - m_VariableId: c0b6e090-4d93-9e2d-9659-95b8aede20b0
+    m_Scope: 4
+    m_Lifetime: 4
+    m_Category: Action/Rush/Windows
+    m_InputBinding:
+      m_InputValueId: 
+    m_FactProjection:
+      m_Kind: 0
+      m_ActionWindowType: RushAttackHandoff
+      m_ActionWindowId: RushAttackHandoffOpen
+      m_ActionWindowDigest: 8102
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -92,9 +55,7 @@ MonoBehaviour:
     m_Name: CorinAttackRushExplodeTimeline
     m_Tracks:
     - rid: 207050555325416075
-    - rid: 207050624796459016
-    - rid: 207050624796459017
-    - rid: 207050624796459018
+    - rid: 207050638220591106
     m_Sections:
     - m_AuthoringId: 866672da-8a24-aa7c-d040-bc8f3df58e6a
       m_Name: Attack_Rush_Explode
@@ -204,10 +165,20 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
-    - rid: 207050555325416080
+    - rid: 207050638220591106
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 1bf4b743-1d2b-a12e-4bcf-f5fb5a4d2ca6
+        Name: Open RushAttackHandoff
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050638220591107
+        m_Markers: []
+    - rid: 207050638220591107
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
-        m_AuthoringId: 23649304-75ce-39e3-76e7-77045e4ef141
+        m_AuthoringId: e1786aa0-8844-0d5b-f435-599b31ebef46
         m_StartTimeRaw: 930576247
         m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
@@ -217,62 +188,4 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
-        m_AssetTree: {fileID: -3864534380766175192}
-    - rid: 207050555325416081
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 938b3b49-0d76-736e-9bb4-a9f462e3adba
-        m_StartTimeRaw: 930576247
-        m_EndTimeRaw: 5010795179
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 1
-        m_AssetTree: {fileID: -4492388455580125647}
-    - rid: 207050555325416082
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 949ac819-f328-eeeb-22e0-049f7ab29292
-        m_StartTimeRaw: 4939212390
-        m_EndTimeRaw: 5010795179
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 1
-        m_AssetTree: {fileID: -2633343535866875467}
-    - rid: 207050624796459016
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 073f3639-3e8f-48c7-779f-b680c341b53f
-        Name: Attack_Normal_04 / NoHold_Mode4_44
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416080
-        m_Markers: []
-    - rid: 207050624796459017
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 4fbc27b6-eb73-c889-7082-b52b576ba547
-        Name: Attack_Normal_04 / PressAttackA_Mode4_44
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416081
-        m_Markers: []
-    - rid: 207050624796459018
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: d131c171-7262-65d8-e4ea-da5430c4abac
-        Name: Attack_Rush_End / Terminal
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416082
-        m_Markers: []
+        m_AssetTree: {fileID: -4971423278103499887}

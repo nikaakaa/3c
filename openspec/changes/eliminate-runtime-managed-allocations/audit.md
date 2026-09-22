@@ -5615,3 +5615,12 @@
 - 数组所有权、wire 顺序、合法项校验、canonical 重新编码和错误语义不变。`System.Linq` 引用删除；CharacterState candidate 外壳、GE/Equipment 真实变化嵌套复制和实际分配采样仍在 2.4 后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做状态保存加载、savepoint restore、rollback restore和 Player 分配采样。
+
+## 2026-09-23 CharacterState最终hash缓冲复用
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `1f567b228`。
+
+- Fixed/Float32 Ability Finalize 原先每个角色每个 tick 调用 `ComputeHash`，每次新建 `CanonicalWriter` 并至少分配初始 256 字节缓冲。现在 Codec 提供接收 CanonicalWriter 的正式 hash 入口，Finalize Pass 持有 Actor 生命周期 writer，每个 step `Reset`，同批角色复用同一缓冲。
+- canonical 写入顺序、hash 结果、旧无参入口、结果所有权和 null 合同不变。最终 TickResult 数组和状态外壳仍由发布所有权决定，不在本步删除。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 输入回放、快照捕获、rollback restore和 Player 分配采样。

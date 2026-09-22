@@ -108,7 +108,7 @@ namespace ThirdPersonSimulation
     }
 
     internal sealed class GameplayAbilityExecutionFrame<TValue>
-        where TValue : struct
+        where TValue : struct, IEquatable<TValue>
     {
         readonly SortedDictionary<int, TValue> m_Values;
 
@@ -165,10 +165,23 @@ namespace ThirdPersonSimulation
                 PredictionKey,
                 Generation,
                 m_Values);
+
+        public bool Equals(GameplayAbilityExecutionFrame<TValue> other)
+        {
+            if (other == null || m_Values.Count != other.m_Values.Count)
+                return false;
+            foreach (KeyValuePair<int, TValue> value in m_Values)
+            {
+                if (!other.m_Values.TryGetValue(value.Key, out TValue otherValue) ||
+                    !value.Value.Equals(otherValue))
+                    return false;
+            }
+            return true;
+        }
     }
 
     internal sealed class GameplayAbilityExecutionAggregate<TValue>
-        where TValue : struct
+        where TValue : struct, IEquatable<TValue>
     {
         readonly List<GameplayAbilityExecutionFrame<TValue>> m_Frames;
         readonly System.Collections.ObjectModel.ReadOnlyCollection<GameplayAbilityExecutionFrame<TValue>> m_ReadOnlyFrames;
@@ -220,10 +233,24 @@ namespace ThirdPersonSimulation
 
         public GameplayAbilityExecutionAggregate<TValue> Clone() =>
             new GameplayAbilityExecutionAggregate<TValue>(m_Frames);
+
+        public bool Equals(GameplayAbilityExecutionAggregate<TValue> other)
+        {
+            if (other == null || m_Frames.Count != other.m_Frames.Count)
+                return false;
+            for (int i = 0; i < m_Frames.Count; i++)
+            {
+                GameplayAbilityExecutionFrame<TValue> frame = m_Frames[i];
+                GameplayAbilityExecutionFrame<TValue> otherFrame = other.Find(frame.ActionInstanceId);
+                if (otherFrame == null || !otherFrame.Equals(frame))
+                    return false;
+            }
+            return true;
+        }
     }
 
     internal sealed class GameplayAbilityExecutionManager<TValue>
-        where TValue : struct
+        where TValue : struct, IEquatable<TValue>
     {
         readonly IGameplayAbilityExecutionStorage<TValue> m_Storage;
         GameplayAbilityExecutionAggregate<TValue> m_States;

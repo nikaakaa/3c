@@ -315,7 +315,9 @@ namespace ThirdPersonSimulation
         Dictionary<int, AbilityStateValue> m_StateValues;
         Dictionary<int, Float32MotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
-        bool m_Dirty;
+        bool m_StateValuesChanged;
+        bool m_MotionWarpStatesChanged;
+        bool m_AbilityExecutionStateChanged;
         bool m_Disposed;
 
         public Float32SkillExecutionState(
@@ -356,7 +358,9 @@ namespace ThirdPersonSimulation
                 m_MotionWarpStates = new Dictionary<int, Float32MotionWarpState>();
             LoadCommittedCollections();
             m_AbilityExecutionState = state.AbilityExecutionState;
-            m_Dirty = false;
+            m_StateValuesChanged = false;
+            m_MotionWarpStatesChanged = false;
+            m_AbilityExecutionStateChanged = false;
             m_Disposed = false;
             return this;
         }
@@ -393,7 +397,7 @@ namespace ThirdPersonSimulation
                     : AbilityStateValue.Default(slot.ValueKind);
             if (current.Equals(value))
                 return;
-            m_Dirty = true;
+            m_StateValuesChanged = true;
             m_StateValues[address.SlotIndex] = value;
         }
 
@@ -416,8 +420,8 @@ namespace ThirdPersonSimulation
         {
             RequireActive();
             m_AbilityExecutionState = state ?? throw new ArgumentNullException(nameof(state));
-            if (!ReferenceEquals(m_AbilityExecutionState, m_CommittedState.AbilityExecutionState))
-                m_Dirty = true;
+            m_AbilityExecutionStateChanged =
+                !m_AbilityExecutionState.Equals(m_CommittedState.AbilityExecutionState);
         }
 
         public Float32MotionWarpState GetMotionWarpState(OperationHandle operation)
@@ -440,7 +444,7 @@ namespace ThirdPersonSimulation
                 if (m_MotionWarpStates.TryGetValue(operation.Value, out Float32MotionWarpState current) &&
                     current.Equals(value))
                     return;
-                m_Dirty = true;
+                m_MotionWarpStatesChanged = true;
                 m_MotionWarpStates[operation.Value] = value;
             }
             else
@@ -449,7 +453,7 @@ namespace ThirdPersonSimulation
                     return;
                 if (current.Equals(default))
                     return;
-                m_Dirty = true;
+                m_MotionWarpStatesChanged = true;
                 m_MotionWarpStates.Remove(operation.Value);
             }
         }
@@ -462,7 +466,7 @@ namespace ThirdPersonSimulation
         internal Float32AbilityRuntimeState TakeSnapshot()
         {
             RequireActive();
-            if (!m_Dirty)
+            if (!m_StateValuesChanged && !m_MotionWarpStatesChanged && !m_AbilityExecutionStateChanged)
             {
                 Float32AbilityRuntimeState committed = m_CommittedState;
                 Clear();

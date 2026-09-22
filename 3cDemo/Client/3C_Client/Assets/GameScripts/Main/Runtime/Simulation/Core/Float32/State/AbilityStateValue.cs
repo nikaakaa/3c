@@ -3,7 +3,7 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
-	public readonly struct AbilityStateValue
+	public readonly struct AbilityStateValue : IEquatable<AbilityStateValue>
 	{
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
 		readonly BlackboardWriteStamp m_BlackboardWriteStamp;

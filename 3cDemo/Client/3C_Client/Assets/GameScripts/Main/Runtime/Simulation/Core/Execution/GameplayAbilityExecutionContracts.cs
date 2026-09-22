@@ -100,7 +100,7 @@ namespace ThirdPersonSimulation
     }
 
     internal interface IGameplayAbilityExecutionStorage<TValue>
-        where TValue : struct
+        where TValue : struct, IEquatable<TValue>
     {
         bool IsAbilityStateSlot(int slotIndex);
         bool IsValueValid(int slotIndex, TValue value);

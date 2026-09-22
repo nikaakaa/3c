@@ -223,7 +223,8 @@ namespace ThirdPersonSimulation
             CharacterControlStateSchema schema,
             ulong lastCompletedTick,
             CharacterControlStateValue[] values,
-            StableHash stateHash)
+            StableHash stateHash,
+            ReadOnlyCollection<CharacterControlStateValue> valueView = null)
         {
             Schema = schema ?? throw new ArgumentNullException(nameof(schema));
             if (values == null)
@@ -239,11 +240,12 @@ namespace ThirdPersonSimulation
             SemanticVersion = schema.SemanticVersion;
             LastCompletedTick = lastCompletedTick;
             m_ValueArray = values;
-            m_Values = Array.AsReadOnly(values);
+            m_Values = valueView ?? Array.AsReadOnly(values);
             StateHash = stateHash;
         }
 
         internal CharacterControlStateValue[] ValueArray => m_ValueArray;
+        internal ReadOnlyCollection<CharacterControlStateValue> ValuesView => m_Values;
 
         public CharacterControlStateValue Get(CharacterControlStateFieldId field) =>
             m_Values[Schema.RequireIndex(field)];
@@ -362,7 +364,12 @@ namespace ThirdPersonSimulation
                 ? m_Values.ToArray()
                 : BaseState.ValueArray;
             StableHash stateHash = ComputeHash();
-            return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, values, stateHash);
+            return new CharacterControlRuntimeState(
+                m_Schema,
+                m_Tick.Value,
+                values,
+                stateHash,
+                m_ValuesChanged ? null : BaseState.ValuesView);
         }
 
         public void Restore(CharacterControlRuntimeState state)

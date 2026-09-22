@@ -769,6 +769,12 @@ namespace ThirdPersonSimulation
                     result.Add(pair.Key, changedRecords);
                     continue;
                 }
+                bool matches = MatchesRecords(pair.Value, baselineRecords);
+                if (matches)
+                {
+                    result.Add(pair.Key, baselineRecords);
+                    continue;
+                }
                 var records = new List<PortablePredictionRecord>(pair.Value.Count);
                 for (int i = 0; i < pair.Value.Count; i++)
                     records.Add(MatchesRecord(pair.Value[i], baselineRecords[i])

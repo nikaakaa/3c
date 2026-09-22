@@ -79,7 +79,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void Publish(ActionAnimationPlaybackCommand command)
         {
-            RequireWritable();
             if (!command.IsValid)
             {
                 throw new ArgumentException(

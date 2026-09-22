@@ -5129,3 +5129,12 @@
 - active effect 分类仍可能因增加后移除保持脏，attribute、journal、lifecycle revision 的恢复等价清理也未处理；真实变化时的 aggregate 和嵌套对象分配仍存在。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Gameplay Effect 周期先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect变更游标恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect `ChangeCursor` 原先只要写入就永久置脏；游标先前进再写回 baseline 值时，`Freeze` 仍会重建 aggregate。现在 setter 在真实值变化后按 committed baseline 重算 `ChangeCursorDirty`，写回等价值会清除该分类脏标记。
+- baseline 不存在时保持脏；相同值写入仍直接返回。Commit、Restore、Initialize 的游标初始化路径不变。`LastLifecycleRevisions` 仍暴露可变 SortedDictionary，需要后续单独封装后才能做恢复等价判定。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Gameplay Effect 游标先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

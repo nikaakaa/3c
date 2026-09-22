@@ -4979,3 +4979,13 @@
 - 非空 abilities、actions、activation request 和 InputRequest 仍创建独立最终数组；rollback 历史、状态 Codec 结果和事务 pending 存储不会共享可变数组。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做空/非空角色状态保存恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：非空最终数组、Equipment aggregate 变更和 Timeline snapshot 外壳所有权仍在后续小步处理。
+
+## 2026-09-23 Ability未变化状态复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `8b6d7e7a4`。
+
+- Fixed 和 Float32 `SkillExecutionState` 原先在 `BindAbility` 时无条件复制 state values 和 MotionWarp 字典，并 Clone execution aggregate；未触发或只读能力也每次生成完整 pending 状态。现在构造时只借用 committed 集合引用，`TakeSnapshot` 发现无脏标记时直接返回 committed 状态。
+- 首次写入 state slot 或 MotionWarp 状态时才创建独立 pending 字典。execution aggregate 在 manager 进入执行 scope 时会 Clone 并通过 `SetAbilityExecutionState` 回写；引用与 committed 不同即置脏。后续写入继续复用这份 pending aggregate。
+- 读取、默认值、Reset、MotionWarp Active/Inactive、身份和 slot 校验不变。接受无修改能力时 candidate 继续引用原 committed 状态；原状态集合没有公开可变入口。接受修改能力时仍移交独立 pending 集合，rollback 历史不共享可变字典。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做触发/未触发技能、state slot 写入、MotionWarp 写入、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：SkillExecutionState 外壳本身、修改路径 pending 字典、非空最终数组和其他快照所有权仍在后续小步处理。

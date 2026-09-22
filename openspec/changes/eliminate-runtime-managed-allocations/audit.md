@@ -5578,3 +5578,13 @@
 - 2.4 保持未勾选：periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 prediction journal 写入、confirmed 更新、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE相同标签来源映射复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `d535fcdb9`。
+
+- Fixed/Float32 GE tag sources 标脏但所有来源键和完整标签数组都与 baseline 相同时，原先 `AdoptChangedTagSources` 仍新建外层 `SortedDictionary`，随后又重建 owned tags 的 `HashSet` 和数组。现在全量相同直接复用 baseline 映射和既有 owned tags 快照。
+- 任一来源变化仍新建映射，未变化来源继续复用 baseline 数组，变化来源沿用 working page 数组并重算汇总。Ordinal 排序、去重、tag 匹配、canonical 输出和回滚语义不变。
+- 2.4 保持未勾选：Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 tag source 设置、移除、owned tags 变化、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

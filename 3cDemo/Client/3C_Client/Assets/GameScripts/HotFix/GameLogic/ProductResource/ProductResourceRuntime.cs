@@ -32,6 +32,7 @@ namespace GameLogic.ProductResource
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
         private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
+        private ResourceScope[] _disposeScopeBuffer = Array.Empty<ResourceScope>();
         private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
@@ -201,12 +202,17 @@ namespace GameLogic.ProductResource
             Application.lowMemory -= OnLowMemory;
             _runtimeCancellation.Cancel();
 
-            var scopes = new List<ResourceScope>(_scopes.Values);
-            scopes.Sort((left, right) => right.Kind.CompareTo(left.Kind));
-            foreach (ResourceScope scope in scopes)
+            int scopeCount = 0;
+            foreach (ResourceScope scope in _scopes.Values)
             {
-                DisposeScope(scope);
+                _disposeScopeBuffer[scopeCount++] = scope;
             }
+            Array.Sort(_disposeScopeBuffer, 0, scopeCount, ScopeDisposeOrder.Instance);
+            for (int index = 0; index < scopeCount; index++)
+            {
+                DisposeScope(_disposeScopeBuffer[index]);
+            }
+            Array.Clear(_disposeScopeBuffer, 0, scopeCount);
 
             _runtimeCancellation.Dispose();
         }
@@ -287,6 +293,10 @@ namespace GameLogic.ProductResource
         {
             var scope = new ResourceScope(this, new ResourceScopeId(++_nextScopeId), kind, name);
             _scopes.Add(scope.Id, scope);
+            if (_disposeScopeBuffer.Length < _scopes.Count)
+            {
+                Array.Resize(ref _disposeScopeBuffer, _scopes.Count);
+            }
             return scope;
         }
 
@@ -538,6 +548,16 @@ namespace GameLogic.ProductResource
             public int Compare(ResourceScopeSnapshot left, ResourceScopeSnapshot right)
             {
                 return left.Id.Value.CompareTo(right.Id.Value);
+            }
+        }
+
+        private sealed class ScopeDisposeOrder : IComparer<ResourceScope>
+        {
+            internal static readonly ScopeDisposeOrder Instance = new ScopeDisposeOrder();
+
+            public int Compare(ResourceScope left, ResourceScope right)
+            {
+                return right.Kind.CompareTo(left.Kind);
             }
         }
     }

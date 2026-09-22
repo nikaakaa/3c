@@ -4096,6 +4096,15 @@
 - 恢复路径不再每次分配 `PendingRequest[]`；scratch 的底层容量按实际恢复峰值保留。canonical reader 反序列化的 request id 字符串和 `CaptureState` 返回 byte[] 仍在后续边界。
 - `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；17 个警告均为既有包或 Editor 代码警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
 
+## 2026-09-22 Fixed request id 身份复用
+
+对应 tasks.md 的 4.4.8，新增 4.4.14 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `UnityFixedCharacterInputAdapter` 的 request binding 在构造期把正式 `RequestId` 编码为 UTF-8 bytes；适配器生命周期内这份 byte 缓存只准备一次。
+- `RestoreState` 改读 canonical UTF-8 segment，并按 bytes 与正式 request binding 比较。命中时 pending 记录直接复用 binding 的 string；未命中才调用 `Encoding.UTF8.GetString` fallback，保留原来接受旧 canonical request id 的行为。
+- 正式 binding 的 pending 恢复不再为 request id 创建 string。canonical source identity header 仍先解码再比较，`CaptureState` 返回 byte[] 仍在后续边界。
+- `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；17 个警告均为既有包或 Editor 代码警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
+
 ## 2026-09-22 Rollback 与 Authority 调用方闭环
 
 对应 tasks.md 的 5.235。

@@ -5208,3 +5208,13 @@
 - 2.4 保持未勾选：CharacterRuntimeState candidate 外壳、Control/GE/Equipment changed path、非空最终数组和 Timeline snapshot 外壳仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做真实能力变化、进入不写状态、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 GameplayEffect变更分类精确复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `8fab0a6c1`。
+
+- Fixed/Float32 `GameplayEffectStateAggregate` 的 changed `Freeze` 原先调用公共构造，把 tags、attributes、active effects、periods、journal 和 lifecycle revisions 全部深拷贝；即使只有 ChangeCursor 或一个分类变化，也会重建所有 committed 集合。现在 aggregate 增加 `CreateChangedFrom`，按六个独立脏分类选择复制 working 集合或复用 committed 私有集合。
+- 未变化分类与旧 committed aggregate 共享的集合只在 aggregate 内部持有，公开 `CopyTo` 仍深拷贝，后续 working page 修改也不会写入旧 committed。owned tags 只在 tags 分类真实变化时重建；ChangeCursor 单独变化时全部集合都可复用。
+- 真实变化分类的嵌套对象复制和 canonical 语义保持不变。2.4 保持未勾选：change cursor 或生命周期 revision 变化仍需要新 aggregate 外壳，Control、Equipment、CharacterState 和 Timeline snapshot 剩余边界未完成。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做单分类效果变化、ChangeCursor-only、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。

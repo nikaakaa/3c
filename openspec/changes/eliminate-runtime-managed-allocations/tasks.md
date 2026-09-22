@@ -586,6 +586,7 @@
 - [x] 6.23 资源 PublishSnapshot 复用最近 scope 快照数组；scope 数量与全部 State/LeaseCount 不变时新旧快照共享数组，任一变化才重建排序数组
 - [x] 6.24 ProductGameplayDelivery 生命周期固定下载进度／开始／错误实例委托；每次下载复用绑定并以 active plan 加 generation 判定，等待后解除引用
 - [x] 6.25 ResourceScope 使用 linked 到 runtime 的唯一 cancellation source；公开 token 统一表达 scope/runtime 生命周期，删除内部第二个 lifetime source
+- [x] 6.26 PreloadPlan 构造期推导 MaxBarrierItemCount；Executor 每次计划共用一个 UniTask 缓冲，小 barrier 尾部填充 completed task，保持 barrier 顺序和加载并发
 
 ## 7. 诊断与正式性能交付
 

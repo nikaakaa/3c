@@ -4746,3 +4746,13 @@
 - runtime 退出会通过 linked source 让所有 scope token 进入 canceled 状态；随后的 owner 关停流程继续按 ResourceScopeKind 降序释放并维护 owned scope 校验。可取消外部 token 仍通过专用 linked source 合并，等待结束后释放。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
 - Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。每 scope 的 linked cancellation source 本体、lease record、UniTaskCompletionSource 和快照字符串仍是 6.2 后续边界。
+
+## 2026-09-22 资源预加载任务缓冲合并
+
+对应 tasks.md 的 6.26；6.2 保持未勾选。代码提交为 `0a06519bc`。
+
+- `PreloadPlan` 构造时校验并固定 barrier 集合，同时推导 `MaxBarrierItemCount` 作为正式任务缓冲容量；该容量来自计划内容，不是额外 fallback 配置。
+- `PreloadPlanExecutor.ExecuteAsync` 原先每个 barrier 新建 `UniTask[]`。现在每次执行计划只分配一个精确最大长度缓冲；实际任务仍全部启动后一起等待，尾部小于最大容量的槽位填充 `UniTask.CompletedTask`。
+- barrier 仍按计划顺序等待，每个 barrier 内的资源加载并发不变。异常仍通过 `WhenAll` 传播，取消 token 仍传入每个资源加载，completed 占位任务不改变业务结果。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
+- Unity MCP 在本轮检查时没有可用 session；本步没有 Unity 编译、Console、资源预加载回放或 Player 分配采样证据。每个计划的一次任务数组、WhenAll promise、cancellation source 和 lease record 仍是 6.2 后续边界。

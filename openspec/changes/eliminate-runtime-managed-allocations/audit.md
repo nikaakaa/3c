@@ -5259,6 +5259,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment 安装/卸载、本地状态重置回放、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 GameplayEffect属性变化精确复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `0fb07c1e1`。
+
+- Fixed/Float32 attributes 分类原先只要置脏，`CreateChangedFrom` 就会克隆全部 `PortableAttributeState` 和全部 modifier。现在逐项用 baseline 的深比较判定：内容相同的 attribute 直接复用 committed 对象；真实变化或 baseline 缺失的 attribute 才克隆自身、modifier 列表和 modifier 对象。
+- 新 candidate 仍然持有独立的 SortedDictionary；working page 的可变 attribute 不进入 committed。未变化对象只从不可逃逸的 committed aggregate 复用引用，公开 `CopyTo` 仍继续深拷贝。属性排序、definition、base/current、revision、modifier 顺序和 canonical 语义不变。
+- 2.4 保持未勾选：active effects、journal、tags 的嵌套项粒度复制、CharacterState candidate 外壳、Equipment slot 变更和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做单属性 modifier 应用/移除、多属性效果回放、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

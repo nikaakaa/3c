@@ -5633,3 +5633,12 @@
 - Actor 排序、roster 校验位置、顺序和重复检查、候选快照身份校验、OutputEvents 组装以及 `CompleteStep` 失败语义不变。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 输入回放、快照捕获、rollback restore和 Player 分配采样。
+
+## 2026-09-23 Pipeline产品封口排序复用
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `5173b2d37`。
+
+- Fixed/Float32 `AppendProductSlot<T>` 原先每次 `Seal` 都把 provenance 排序封装成新 lambda；Finalize 结果和 Source Egress 等 append 产品每 outer tick 封口时都会重复创建委托。现在泛型槽位持有静态 `EntryIdentityComparer`，按同一个 `SimulationPipelineAppendProductEntry.Identity` 顺序排序。
+- append 产品封口一次的语义、provenance 排序、重复 provenance 异常、产品读取顺序和 outer transaction 清理不变。每槽位的静态比较器只按泛型实例化一次，不引入共享池或跨槽位状态。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 输入回放、Source Egress 发送、rollback restore和 Player 分配采样。

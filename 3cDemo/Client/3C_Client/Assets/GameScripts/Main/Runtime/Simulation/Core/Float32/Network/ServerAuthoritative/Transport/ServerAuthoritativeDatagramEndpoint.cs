@@ -70,7 +70,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public IPEndPoint RemoteEndPoint { get; }
     }
 
-    public sealed class ServerAuthoritativeDatagramEndpoint : IServerAuthoritativeAuthorityDataTransport
+    public sealed class ServerAuthoritativeDatagramEndpoint :
+        IServerAuthoritativeAuthorityDataTransport,
+        IServerAuthoritativeDatagramIdentityResolver
     {
         readonly Socket m_Socket;
         readonly Thread m_ReceiveThread;

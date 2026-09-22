@@ -4927,3 +4927,13 @@
 - 本步只复用 wrapper 与 working page 的字典、列表和状态外壳；`GameplayEffectStateAggregate.CopyTo` 的 Clone、`Freeze` aggregate 和最终 snapshot 数组仍在变化时分配，不能视为 2.4 完成。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Gameplay Effect 添加/移除、周期属性、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Equipment事务包装复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `28fa09967`。
+
+- Fixed 和 Float32 角色事务原先每个逻辑步新建 `CharacterEquipmentRuntimeState`。现在 `SimulationActorBinding` 长期持有包装对象，事务构造时调用 `Restart` 重绑 committed `EquipmentStateAggregate`。
+- `GetEquipmentState`、`SetEquipmentState`、savepoint `Capture`、savepoint `Restore`、null aggregate 错误和事务 Dispose 语义不变。包装对象不再跨事务保留 Equipment 引用；下一次 Evaluate 必须显式 Restart。
+- 本步只消除 wrapper 分配；Equipment aggregate 自身的 Clone、savepoint 快照和最终 snapshot 数组所有权仍在后续小步处理。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做装备安装/卸载、savepoint restore、rollback restore 和 Player 分配采样。

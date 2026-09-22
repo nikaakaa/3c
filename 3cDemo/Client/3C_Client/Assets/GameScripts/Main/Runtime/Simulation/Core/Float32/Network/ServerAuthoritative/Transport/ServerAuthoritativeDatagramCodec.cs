@@ -326,7 +326,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ulong reliableEventHorizon,
             byte[] deltaPayload)
             : this(snapshotSequence, baseSnapshotSequence, authorityTick, acknowledgedInputSequence,
-                reliableEventHorizon, deltaPayload == null ? default : new ArraySegment<byte>(deltaPayload))
+                reliableEventHorizon, deltaPayload, deltaPayload?.Length ?? 0)
         {
         }
 
@@ -337,15 +337,33 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ulong acknowledgedInputSequence,
             ulong reliableEventHorizon,
             ArraySegment<byte> deltaPayload)
+            : this(snapshotSequence, baseSnapshotSequence, authorityTick, acknowledgedInputSequence,
+                reliableEventHorizon, deltaPayload.Array ?? throw new ArgumentNullException(nameof(deltaPayload)), deltaPayload.Count)
+        {
+        }
+
+        internal SnapshotDatagram(
+            ulong snapshotSequence,
+            ulong baseSnapshotSequence,
+            ulong authorityTick,
+            ulong acknowledgedInputSequence,
+            ulong reliableEventHorizon,
+            byte[] deltaPayload,
+            int deltaPayloadLength)
         {
             if (snapshotSequence == 0 || authorityTick == 0)
                 throw new ArgumentException("Snapshot datagram identity is invalid.");
+            if (deltaPayload == null)
+                throw new ArgumentNullException(nameof(deltaPayload));
+            if (deltaPayloadLength < 0 || deltaPayloadLength > deltaPayload.Length)
+                throw new ArgumentException("Snapshot delta payload length is invalid.", nameof(deltaPayload));
             SnapshotSequence = snapshotSequence;
             BaseSnapshotSequence = baseSnapshotSequence;
             AuthorityTick = authorityTick;
             AcknowledgedInputSequence = acknowledgedInputSequence;
             ReliableEventHorizon = reliableEventHorizon;
-            m_DeltaPayload = deltaPayload.Array == null ? throw new ArgumentNullException(nameof(deltaPayload)) : deltaPayload.AsSpan().ToArray();
+            m_DeltaPayload = deltaPayload;
+            DeltaPayloadLength = deltaPayloadLength;
         }
 
         public ulong SnapshotSequence { get; }
@@ -353,9 +371,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong AuthorityTick { get; }
         public ulong AcknowledgedInputSequence { get; }
         public ulong ReliableEventHorizon { get; }
+        internal int DeltaPayloadLength { get; }
         public bool IsValid => SnapshotSequence != 0 && AuthorityTick != 0 && m_DeltaPayload != null;
-        public ReadOnlySpan<byte> DeltaPayload => m_DeltaPayload;
-        public byte[] CopyDeltaPayload() => (byte[])m_DeltaPayload.Clone();
+        public ReadOnlySpan<byte> DeltaPayload => m_DeltaPayload.AsSpan(0, DeltaPayloadLength);
+        public byte[] CopyDeltaPayload()
+        {
+            var payload = new byte[DeltaPayloadLength];
+            Buffer.BlockCopy(m_DeltaPayload, 0, payload, 0, DeltaPayloadLength);
+            return payload;
+        }
     }
 
     public static class ServerAuthoritativeDatagramPayloadCodec

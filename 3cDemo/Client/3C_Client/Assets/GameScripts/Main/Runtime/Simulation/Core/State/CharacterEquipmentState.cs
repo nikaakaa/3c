@@ -728,6 +728,26 @@ namespace ThirdPersonSimulation
             LastResolvedChange = lastResolvedChange;
         }
 
+        EquipmentStateAggregate(
+            StableHash catalogHash,
+            ReadOnlyCollection<EquipmentSlotState> slots,
+            ReadOnlyCollection<EquipmentLocalStateValue> localStates,
+            PendingEquipmentChange pendingChange,
+            PendingEquipmentChange lastResolvedChange)
+        {
+            if (!catalogHash.IsValid)
+                throw new ArgumentException("Equipment state catalog hash is invalid.", nameof(catalogHash));
+            CatalogHash = catalogHash;
+            m_Slots = slots;
+            m_LocalStates = localStates;
+            if (pendingChange.IsValid && !pendingChange.IsPending)
+                throw new ArgumentException("Equipment aggregate pending record is already resolved.", nameof(pendingChange));
+            if (lastResolvedChange.IsValid && lastResolvedChange.IsPending)
+                throw new ArgumentException("Equipment aggregate resolved record is still pending.", nameof(lastResolvedChange));
+            PendingChange = pendingChange;
+            LastResolvedChange = lastResolvedChange;
+        }
+
         public StableHash CatalogHash { get; }
         public IReadOnlyList<EquipmentSlotState> Slots => m_Slots;
         public IReadOnlyList<EquipmentLocalStateValue> LocalStates => m_LocalStates;
@@ -789,7 +809,12 @@ namespace ThirdPersonSimulation
                 if (values[i].SlotId != slot.SlotId)
                     continue;
                 values[i] = slot;
-                return new EquipmentStateAggregate(CatalogHash, values, m_LocalStates, PendingChange, LastResolvedChange);
+                return new EquipmentStateAggregate(
+                    CatalogHash,
+                    Array.AsReadOnly(values),
+                    m_LocalStates,
+                    PendingChange,
+                    LastResolvedChange);
             }
             throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
         }
@@ -809,13 +834,23 @@ namespace ThirdPersonSimulation
                 if (values[i].Value.Kind != value.Kind)
                     throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
                 values[i] = new EquipmentLocalStateValue(featureId, stateId, value);
-                return new EquipmentStateAggregate(CatalogHash, m_Slots, values, PendingChange, LastResolvedChange);
+                return new EquipmentStateAggregate(
+                    CatalogHash,
+                    m_Slots,
+                    Array.AsReadOnly(values),
+                    PendingChange,
+                    LastResolvedChange);
             }
             throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
         }
 
         public EquipmentStateAggregate WithPending(PendingEquipmentChange pending) =>
-            new EquipmentStateAggregate(CatalogHash, m_Slots, m_LocalStates, pending, LastResolvedChange);
+            new EquipmentStateAggregate(
+                CatalogHash,
+                m_Slots,
+                m_LocalStates,
+                pending,
+                LastResolvedChange);
 
         public EquipmentStateAggregate ResolvePending(PendingEquipmentChangeState state, ulong resolvedTick)
         {

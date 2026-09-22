@@ -241,7 +241,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         NoAuthoritativeBaseline = 7
     }
 
-    public sealed class PredictionCorrectionDecision
+    public readonly struct PredictionCorrectionDecision
     {
         public PredictionCorrectionDecision(
             PredictionCorrectionDecisionKind kind,
@@ -288,6 +288,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationTick ReplayEnd { get; }
         public Float32Scalar PositionError { get; }
         public Float32Scalar YawError { get; }
+        public bool IsValid => Kind != default && Reason != default && BaselineTick.IsValid;
     }
 
     public readonly struct AcceptedAuthorityInput

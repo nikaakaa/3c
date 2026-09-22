@@ -208,7 +208,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             PredictionCorrectionDecision decision,
             SimulationPipelineIdentity pipeline)
         {
-            if (baseline == null || decision == null || decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
+            if (baseline == null || !decision.IsValid || decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
                 throw new ArgumentException("Prediction restore requires a corrective baseline and decision.");
             if (!m_History.TryGet(baseline.AuthorityTick, out ServerAuthoritativePredictionHistoryRecord local))
                 local = m_History.LastRecord();

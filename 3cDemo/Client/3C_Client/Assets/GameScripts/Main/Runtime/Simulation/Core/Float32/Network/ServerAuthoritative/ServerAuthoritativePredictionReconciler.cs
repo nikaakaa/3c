@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] historyState,
             byte[] journalState)
         {
-            if (local == null || baseline == null || decision == null ||
+            if (local == null || baseline == null || !decision.IsValid ||
                 decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
             {
                 throw new ArgumentException("Prediction restore requires a local frame, corrective baseline, and decision.");

@@ -167,6 +167,7 @@
 - [x] 2.97 Fixed/Float32 Ability factory 显式接收常驻 OperationControl；Float32 值递归栈和输入缓冲由唯一 GraphValueWorkspace 持有并统一 Reset，删除 Reset-only 第二组集合；闭合正式 Savepoint／EffectTarget 构造可见性
 - [x] 2.98 Operation 状态执行作用域改为嵌套 readonly struct typed 合同；状态机每个状态上下文删除 IDisposable 装箱和旧 class disposable，保留状态压栈、预测覆盖、转移选择和异常弹栈语义
 - [x] 2.99 Fixed/Float32 角色事务 pending ability 字典按 base state 能力数一次准备容量，删除每次角色评估的字典扩容；Clone、查找、覆盖和快照顺序不变，pending/committed 独立存储仍在 2.4
+- [x] 2.100 Fixed/Float32 ActionWindow 投影去重键改为 declaration identity 加 instance id 的 readonly struct；删除每次投影的插值字符串，保留 Ordinal 去重、候选顺序和 Frame 查询语义
 
 ## 3. Timeline和事件图
 

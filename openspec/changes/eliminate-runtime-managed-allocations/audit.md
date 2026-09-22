@@ -4615,3 +4615,12 @@
 - 每次角色评估不再按 ability 数量触发 dictionary 桶和 entry 数组扩容。能力 `Clone`、`BindAbility` 查找、`AcceptAbility` 覆盖、`Snapshot` 中 `Values` 的枚举顺序、保存点池和 restore 语义保持不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力角色的激活、停止、保存点恢复和事务 commit，确认角色状态一致；分配采样应观察字典扩容分配消失，但 pending 字典对象、ability Clone 和 Snapshot 的独立集合仍在，2.4 的独立 Pending/Committed 存储未完成。
+
+## 2026-09-22 ActionWindow 投影键值化
+
+对应 tasks.md 的 2.100；2.3 保持未勾选。
+
+- Fixed 和 Float32 Blackboard 新增 `SimulationActionWindowProjectionKey` readonly struct，使用 declaration identity 和 action instance id 做复合键；`AbilityExecutionWorkspace` 的投影去重集合改为 `HashSet<SimulationActionWindowProjectionKey>`。
+- 每次 ActionWindow 投影写入不再构造 `declaration/instance` 插值字符串和 `ulong.ToString`。键比较保持 declaration identity 的 Ordinal 语义和 instance id 精确相等；候选列表追加顺序、`IsActionWindowActive` 查询、空值拒绝和投影异常路径不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可触发同一 ActionWindow 的重复写入、跨 Action 实例写入和 Window 查询，确认去重与激活状态一致；分配采样应观察每次投影的临时 key 字符串消失，候选对象和 declaration identity 字符串仍由正式数据持有。

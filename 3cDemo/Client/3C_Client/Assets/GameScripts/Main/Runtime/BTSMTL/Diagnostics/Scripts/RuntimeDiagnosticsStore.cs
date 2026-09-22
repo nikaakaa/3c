@@ -568,9 +568,13 @@ namespace BTSMTL.Diagnostics
                 Segment removed = GetSegment(0);
                 RemoveFirstSegment();
                 m_EvictedEvents += removed.Events.Count;
-                m_LastEvictionVersion = m_Version;
                 if (removed.Events.Count > 0)
+                {
+                    m_LastEvictionVersion = Math.Max(
+                        m_LastEvictionVersion,
+                        removed.Events[removed.Events.Count - 1].Revision);
                     RemoveFirstChanges(removed.Events.Count);
+                }
                 ReturnSegment(removed);
             }
         }

@@ -5588,3 +5588,12 @@
 - 2.4 保持未勾选：Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 tag source 设置、移除、owned tags 变化、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 Equipment准备数组所有权移交
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `67d82b032`。
+
+- `EquipmentStateAggregate.CreateInitial` 和 Codec `Read` 原先已经精确创建 slot 与 local state 数组，但公开构造又执行 `.ToArray()`，每次准备或状态恢复多复制两份数组。现在新增内部 `AdoptPrepared`，直接接管这两份 owned 数组。
+- 接管前仍在原数组上原地执行 Ordinal 排序，并保留重复 Slot、缺失本地状态、重复本地状态和 catalog hash 校验；wire 数据顺序、aggregate 顺序、canonical 编码和错误语义不变。真实变化槽位/本地状态数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在 2.4 后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。

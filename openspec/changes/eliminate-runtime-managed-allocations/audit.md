@@ -4141,3 +4141,12 @@
 - Read 仍先校验 source Tick、numeric profile、tick rate、roster、committed observation 和 Actor 顺序，再逐个覆盖 scratch；成功时 `Float32CanonicalInputBatch` 接管同一数组，产品寿命保持 OuterTransaction。Source Port 强制 source tick 递增，不会在活跃 batch 有效期间重建同一 scratch。
 - batch 构造成功后才推进 `m_LastReadSourceTick`。任一 control source 校验失败或 batch 校验失败时，finally 清空 scratch 引用，source tick 状态保持原值。
 - 每 tick 的 actor input 数组分配删除；`Float32CanonicalInputBatch` 外壳和 `SimulationInput` 本体仍在后续边界。`ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。Unity Editor 已按用户授权刷新，Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 两数值域 Canonical input batch 值化收口
+
+对应 tasks.md 的 4.4.8，新增 4.4.18 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `FixedCanonicalInputBatch` 和 `Float32CanonicalInputBatch` 从 sealed class 改为 readonly struct；原来每 tick 通过 Input Frame、Exclusive Product Slot 和 Schedule Builder 传递时都会留下一个 batch 外壳对象，现在只剩构造期已有的输入数组。
+- 构造合同不变：source 身份完整、输入非空、Actor 排序去重、输入归属同一 source、`Source` 和 `Inputs` 输出不变。排序 lambda 改为 static lambda，避免每次构造重新创建 delegate。新增 `IsValid` 只表达 default struct 和构造失败状态；Frame 和 Schedule 仍显式拒绝不完整 batch。
+- Fixed／Float32 Exclusive Product Slot 的空值判断改为只对引用类型产品拒绝 null，值类型产品按自身构造校验负责；这是支持值产品的正式合同，不是兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。全项目搜索确认 Canonical batch 无 Core 外调用方。Unity Editor 已按用户授权再次刷新，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

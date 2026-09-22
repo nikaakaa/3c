@@ -218,6 +218,7 @@
 - [x] 4.4.15 Fixed 控制源在构造期缓存 source identity UTF-8；恢复状态头直接比较 UTF-8 segment，删除每次恢复的 source identity 字符串
 - [x] 4.4.16 Fixed Local Input Source Port 复用按锁定 roster 准备的 actor input 数组；读取成功后交给 OuterTransaction batch，异常时清空 scratch，不改变 source tick 和校验顺序
 - [x] 4.4.17 Float32 Local Input Source Port 复用按锁定 roster 准备的 actor input 数组；读取成功后交给 Canonical batch，异常时清空 scratch，不改变 source tick 和校验顺序
+- [x] 4.4.18 两数值域 Canonical Input Batch 改为 readonly struct，排序 lambda 固定为静态函数；Exclusive Product Slot 空值合同同步区分值与引用产品，删除每 tick 输入批外壳
 - [x] 4.5 角色 locomotion 表现 Plan、FactLineage、PreparedBinding 与 DomainRuntimeFact 集中按五类正式连续枚举值域校验，删除运行有效性读取及事实构造中的六处 Enum.IsDefined 装箱
 
 ## 5. 世界求解、回滚和网络

@@ -211,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 PendingRequest pending = m_PendingRequests[i];
                 if (pending.CaptureTick != 0)
                     continue;
-                pending.Schedule(
+                m_PendingRequests[i] = pending.Schedule(
                     context.SimulationTick.Value,
                     pending.TimingClass == CharacterActionRequestTimingClass.Offensive
                         ? context.OffensiveRequestDelayTicks
@@ -301,7 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     throw new InvalidDataException("Unity Fixed Input Adapter pending request state is invalid.");
                 }
-                var pending = new PendingRequest(
+                PendingRequest pending = new PendingRequest(
                     requestId,
                     sequence,
                     captureRenderFrame,
@@ -309,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     priority,
                     timingClass);
                 if (captureTick != 0)
-                    pending.Schedule(captureTick, checked((int)(eligibleTick - captureTick)));
+                    pending = pending.Schedule(captureTick, checked((int)(eligibleTick - captureTick)));
                 pendingRequests[i] = pending;
             }
             reader.RequireComplete();
@@ -650,7 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             public CharacterActionRequestTimingClass TimingClass { get; }
         }
 
-        sealed class PendingRequest
+        struct PendingRequest
         {
             public PendingRequest(
                 string requestId,
@@ -677,12 +677,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             public ulong CaptureTick { get; private set; }
             public ulong EligibleTick { get; private set; }
 
-            public void Schedule(ulong captureTick, int delayTicks)
+            public PendingRequest Schedule(ulong captureTick, int delayTicks)
             {
                 if (CaptureTick != 0 || captureTick == 0 || delayTicks < 0)
                     throw new InvalidOperationException("Unity Fixed Input Adapter request schedule is invalid.");
-                CaptureTick = captureTick;
-                EligibleTick = checked(captureTick + (ulong)delayTicks);
+                PendingRequest result = this;
+                result.CaptureTick = captureTick;
+                result.EligibleTick = checked(captureTick + (ulong)delayTicks);
+                return result;
             }
 
         }

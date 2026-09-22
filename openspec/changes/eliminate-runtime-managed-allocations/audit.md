@@ -4207,3 +4207,11 @@
 - 构造合同不变：ActorId 有效，三组最终数组存在；Body 按 Tick 排序并拒绝重复 Tick 或错误 Actor，Sample 命令排序去重且保持 Action 实例一致，Reliable event 排序去重。新增 `IsValid` 只表达 default batch 的非法状态。
 - “没有远程表现”不再用 class null 表示：Checkpoint full reconstruction 和 Ignored／BaselineMissing 结果返回 default batch，Evidence 用 `IsValid` 过滤；History、Codec、Network Checkpoint 和表现 Host 的空合同统一改为 `IsValid` 显式拒绝。Authority Source 查找远端批时用 default 作未命中状态，缺失或重复命中仍显式失败。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；随后均执行 `dotnet build-server shutdown`。代码提交后 Unity Editor 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Authoritative observation batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.243 作为独立小步；5.5 保持未勾选。
+
+- `AuthoritativeObservationBatch` 从 sealed class 改为 readonly struct。Prediction Evidence 生成 canonical batch，Fantasy observation source 和 Session source port 传递，Float32 Exclusive Product Slot 保存，Observation ingress 与 Correction schedule 读取都按值携带，删除每次观测的批外壳对象。
+- 构造合同不变：receive sequence 非零，baseline 和 remote presentation 数组存在，数组分别按 Actor 排序去重，元素身份有效。新增 `IsValid` 表达 default batch 的非法状态；Evidence result 和 Observation ingress 不再用 null 合并，改为显式拒绝无 canonical 观测。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。包含 GameplayNetwork evidence 的 `ThirdPersonSimulation.ServerAuthoritative.Unity.csproj` 及全 Unity 汇总未通过，错误来自并行 Timeline 改动：`TimelineRuntimeComposition.cs` 缺少 `branchRevision`，`TimelineControlContracts.cs` 的 struct 自动属性未完全分配。这些文件不属于本步，未修改。未做 Player 分配采样。

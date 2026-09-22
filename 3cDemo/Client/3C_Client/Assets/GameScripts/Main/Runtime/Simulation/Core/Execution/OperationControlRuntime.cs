@@ -203,10 +203,10 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        public IDisposable PushStateExecution(OperationHandle state, int exitCause)
+        public StateExecutionScope PushStateExecution(OperationHandle state, int exitCause)
         {
             PushStateExecutionContext(state, exitCause);
-            return new StateExecutionDisposable(this);
+            return new StateExecutionScope(this);
         }
 
         StateExecutionScope PushStateExecutionScope(OperationHandle state, int exitCause)
@@ -346,8 +346,8 @@ namespace ThirdPersonSimulation
         void IOperationStateMachineHost<TTarget>.NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) => m_Target.NotifyStateTransition(machine, exitingState, targetState);
         void IOperationStateMachineHost<TTarget>.EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) => m_Target.EmitTrace(operation, code, severity, detail);
         string IOperationStateMachineHost<TTarget>.CurrentStateExecutionPath => m_StateExecution.Count == 0 ? string.Empty : m_StateExecution.Peek().Path;
-        IDisposable IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause) => PushStateExecutionScope(state, exitCause);
-        IDisposable IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride) =>
+        StateExecutionScope IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause) => PushStateExecutionScope(state, exitCause);
+        StateExecutionScope IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride) =>
             hasRootCompletedOverride
                 ? PushStateExecutionScope(state, exitCause, rootCompletedOverride)
                 : PushStateExecutionScope(state, exitCause);
@@ -406,11 +406,11 @@ namespace ThirdPersonSimulation
             public bool RootCompletedOverride { get; }
         }
 
-        readonly struct StateExecutionScope : IDisposable
+        public readonly struct StateExecutionScope : IDisposable
         {
             readonly OperationControlRuntime<TTarget> m_Owner;
 
-            public StateExecutionScope(OperationControlRuntime<TTarget> owner)
+            internal StateExecutionScope(OperationControlRuntime<TTarget> owner)
             {
                 m_Owner = owner;
             }
@@ -423,22 +423,5 @@ namespace ThirdPersonSimulation
             }
         }
 
-        sealed class StateExecutionDisposable : IDisposable
-        {
-            OperationControlRuntime<TTarget> m_Owner;
-
-            public StateExecutionDisposable(OperationControlRuntime<TTarget> owner)
-            {
-                m_Owner = owner;
-            }
-
-            public void Dispose()
-            {
-                if (m_Owner == null)
-                    return;
-                m_Owner.m_StateExecution.Pop();
-                m_Owner = null;
-            }
-        }
     }
 }

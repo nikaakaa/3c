@@ -28,8 +28,8 @@ namespace ThirdPersonSimulation
         void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
         OperationExecutionResult Wait(OperationExecutionDescriptor operation, OperationWaitReason reason);
         string CurrentStateExecutionPath { get; }
-        IDisposable PushStateScope(OperationHandle state, int exitCause);
-        IDisposable PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride);
+        OperationControlRuntime<TTarget>.StateExecutionScope PushStateScope(OperationHandle state, int exitCause);
+        OperationControlRuntime<TTarget>.StateExecutionScope PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride);
     }
 
     internal sealed class OperationStateMachineRuntime<TTarget>
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation
 
         public ProgramControlFlowEdge PredictCurrentStateRootCompletionTransition(OperationHandle state)
         {
-            IDisposable scope = m_Host.PushStateScope(state, -1, true, true);
+            OperationControlRuntime<TTarget>.StateExecutionScope scope = m_Host.PushStateScope(state, -1, true, true);
             try
             {
                 return SelectTransition(state);
@@ -166,7 +166,7 @@ namespace ThirdPersonSimulation
             if (root == null)
                 return OperationExecutionResult.Running;
             OperationExecutionResult rootResult;
-            IDisposable scope = m_Host.PushStateScope(operation.Handle, -1);
+            OperationControlRuntime<TTarget>.StateExecutionScope scope = m_Host.PushStateScope(operation.Handle, -1);
             try
             {
                 rootResult = m_Host.TickPersistent(root.Target);
@@ -294,7 +294,10 @@ namespace ThirdPersonSimulation
             if (!source.IsValid)
                 return null;
             var transitions = m_Host.Topology.Outgoing(source, ProgramControlFlowKind.Transition);
-            IDisposable scope = stateContext.IsValid ? m_Host.PushStateScope(stateContext, -1) : null;
+            bool hasScope = stateContext.IsValid;
+            OperationControlRuntime<TTarget>.StateExecutionScope scope = hasScope
+                ? m_Host.PushStateScope(stateContext, -1)
+                : default;
             try
             {
                 for (int i = 0; i < transitions.Count; i++)
@@ -308,7 +311,8 @@ namespace ThirdPersonSimulation
             }
             finally
             {
-                scope?.Dispose();
+                if (hasScope)
+                    scope.Dispose();
             }
         }
 
@@ -326,7 +330,7 @@ namespace ThirdPersonSimulation
 
         OperationExecutionResult TickInStateContext(OperationExecutionDescriptor state, OperationHandle target, int exitCause)
         {
-            IDisposable scope = m_Host.PushStateScope(state.Handle, exitCause);
+            OperationControlRuntime<TTarget>.StateExecutionScope scope = m_Host.PushStateScope(state.Handle, exitCause);
             try
             {
                 return m_Host.Tick(target);

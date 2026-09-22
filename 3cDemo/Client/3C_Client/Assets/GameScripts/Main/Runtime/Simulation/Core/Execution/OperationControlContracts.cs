@@ -181,6 +181,6 @@ namespace ThirdPersonSimulation
         public bool TryGetCurrentStateExecutionPath(OperationHandle state, out string path) =>
             m_Runtime.TryGetCurrentStateExecutionPath(state, out path);
         public bool IsCurrentStateExecution(OperationHandle state) => m_Runtime.IsCurrentStateExecution(state);
-        public IDisposable PushStateExecution(OperationHandle state, int exitCause) => m_Runtime.PushStateExecution(state, exitCause);
+        public OperationControlRuntime<TTarget>.StateExecutionScope PushStateExecution(OperationHandle state, int exitCause) => m_Runtime.PushStateExecution(state, exitCause);
     }
 }

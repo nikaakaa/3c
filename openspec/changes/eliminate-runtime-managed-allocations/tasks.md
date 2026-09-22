@@ -526,6 +526,7 @@
 - [x] 5.255 ServerAuthoritative DatagramPacket 改为 readonly struct；发送合同改为 header 加 payload span 直接入队，接收租用 buffer 按值携带并统一归还，删除 packet 外壳池和发送 payload 数组
 - [x] 5.256 ServerAuthoritative SnapshotDatagram 使用 owned delta payload 合同；发送侧直接接管 WriteDelta 独立数组，接收侧继续按 wire 长度复制，重建副本按实际长度生成
 - [x] 5.257 ServerAuthoritative NetworkCheckpoint 发送编码改读 owned StateSpan；WriteFull 与 delta 状态写入/比较删除发送前数组克隆，layout 校验的 byte[] 合同保持
+- [x] 5.258 Float32 Character Runtime State Codec 读取合同改为 ReadOnlyMemory；NetworkCheckpoint layout 校验直接读 owned state memory，删除校验前数组克隆
 
 ## 6. UI、资源、渲染和生命周期
 

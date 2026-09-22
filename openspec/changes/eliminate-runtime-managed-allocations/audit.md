@@ -4345,3 +4345,14 @@
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - Unity MCP 资源只确认目标实例 `e852139597e42532` 在线且非 Play、非编译状态；当前会话仍没有可调用的 `refresh_unity` 或 `read_console` 工具，因此未刷新 U2022、未读取 Console，也不声称 Domain Reload 后无错误。未做网络联调和 Player 分配采样。
 - 用户可在非 Play 状态刷新后验证 full checkpoint、连续 delta、状态变化/未变化两种 delta、ack 后淘汰和 full checkpoint 回退。分配采样应观察 `WriteFull`／`WriteDelta` 发送编码侧 state bytes 克隆消失，但 `layout.Require` 校验克隆、接收解码副本和 checkpoint reconstruction 副本仍属正式后续边界。
+
+## 2026-09-22 Float32 character state codec memory 收口
+
+对应 tasks.md 的 5.5，新增 5.258 作为独立小步；5.5 保持未勾选。
+
+- `Float32CharacterRuntimeStateCodec.Read` 的正式输入从 `byte[]` 改为 `ReadOnlyMemory<byte>`，删除旧数组入口。全仓三个调用方统一迁移：NetworkCheckpoint layout 校验、Float32 SimulationActorSnapshot 解码和 DotRecast Authority manifest 初始状态校验。
+- `NetworkCheckpoint` 增加 `StateMemory` 零复制视图。`NetworkCheckpointLayout.Require` 直接把 checkpoint owned buffer 交给 codec，删除每次校验前由 `StateBytes` 克隆出的完整 Character Runtime state 数组。
+- Codec 归一化复检改为读取 `bytes.Span`。`CanonicalReader` 继续要求 payload array-backed；当前三个调用方分别来自 owned byte[]、snapshot byte[] 和 manifest 复制的 byte[]，不引入非数组缓存路径。
+- DotRecast Authority manifest loader 仍先复制 binding 内的初始状态数组；这是它自己的 payload 边界，不属于 NetworkCheckpoint 校验克隆。接收解码、baseline 构造和 checkpoint reconstruction 的独立所有权不变。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.DotRecastAuthority.csproj` 编译成功，0 错误和 2 个既有 DotRecast.Core nullable 注释警告；`ThirdPersonSimulation.Unity.csproj` 编译成功，0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可在 Authority/Prediction 对局里验证 full checkpoint、delta checkpoint、需要 restore replay 的 correction 和 DotRecast Authority manifest 加载；分配采样应观察 checkpoint layout 校验前不再出现完整 state bytes 克隆。

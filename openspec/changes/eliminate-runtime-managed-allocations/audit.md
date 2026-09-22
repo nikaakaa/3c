@@ -5229,6 +5229,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态先改后恢复、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 Control事务旧提交入口清理
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `0cda65efe`。
+
+- 全仓搜索确认 `CharacterControlRuntimeStateTransaction.Commit` 没有消费者。该入口会绕过 `Capture` 已有的 hash buffer、未变化 value 数组复用和只读视图复用，直接从 List 复制并走旧 hash 路径，形成第二条 Control 提交链路。现在删除该方法，`Committed` 死状态一并删除；正式候选只走 `Capture`，事务结束走 `Abort/Dispose`。
+- 正式运行链路不变：Fixed/Float32 Character transaction 的 Snapshot 调用 `m_ControlState.Capture`，随后 Character transaction Dispose 会结束 Control 事务。
+- 2.4 保持未勾选：Control candidate 外壳和 hash、changed value 数组、CharacterState 外壳、GE 真实变化嵌套复制和 Timeline snapshot 仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做控制状态回放、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

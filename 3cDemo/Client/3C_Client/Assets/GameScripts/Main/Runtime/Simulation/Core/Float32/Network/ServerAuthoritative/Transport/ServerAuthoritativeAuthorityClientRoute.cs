@@ -185,7 +185,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             AcknowledgedSnapshotSequence = latestSnapshot;
             AcknowledgedCheckpoint = checkpoint;
             while (m_SentSequenceOrder[m_SentSequenceHead] < latestSnapshot)
-                m_Sent.Remove(DequeueSentSequence());
+                DequeueSentSequence();
         }
 
         public void StoreSent(ulong sequence, NetworkCheckpoint checkpoint)
@@ -195,8 +195,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             EnqueueSentSequence(sequence, checkpoint);
             while (m_SentSequenceCount > m_Capacity)
             {
-                ulong sequence = m_SentSequenceOrder[m_SentSequenceHead];
-                if (sequence >= AcknowledgedSnapshotSequence && AcknowledgedSnapshotSequence != 0)
+                ulong oldestSequence = m_SentSequenceOrder[m_SentSequenceHead];
+                if (oldestSequence >= AcknowledgedSnapshotSequence && AcknowledgedSnapshotSequence != 0)
                     throw new InvalidOperationException("Authority snapshot baseline capacity cannot discard an unconfirmed checkpoint.");
                 DequeueSentSequence();
             }

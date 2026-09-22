@@ -579,6 +579,7 @@
 - [x] 6.16 删除无消费者的 ResourceLease 外壳和 PreloadPlanResult，AcquireAsync 改为 UniTask 并由 scope 唯一持有资产租约；barrier 保持并发等待和失败传播
 - [x] 6.17 资源快照 scope 排序器在类型准备期固定，删除每次 PublishSnapshot 的捕获 lambda 和比较委托；scope 与 tags 快照数组继续保持独立寿命
 - [x] 6.18 资源 runtime 关停 scope 收集改为 owner 数组和静态比较器；删除关停 List 与排序 lambda，保持 ResourceScopeKind 降序释放和 owned scope 校验
+- [x] 6.19 ResourceScope 构造期建立 scope/runtime linked cancellation，AcquireAsync 默认外部令牌复用该 token；只有可取消外部令牌才创建并在完成后释放专用 linked source
 
 ## 7. 诊断与正式性能交付
 

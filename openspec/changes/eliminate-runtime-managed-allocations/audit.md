@@ -4674,3 +4674,14 @@
 - 完整 `dotnet build GameLogic.csproj --no-restore --no-dependencies` 在依赖链的 `UnityEditor.UI.csproj` 先失败；错误来自 `Library/PackageCache/com.unity.ugui@1.0.0/Editor/UI/MenuOptions.cs` 的既有 CS0200，未到达本次源码。失败后已执行 `dotnet build-server shutdown`。
 - 随后用 `GameLogic.csproj` 解析出的全部 Compile 源和 HintPath 引用，并补充 ProjectReference 对应的 `Library/ScriptAssemblies` DLL，使用 `csc` 聚焦编译整个 GameLogic 源清单；结果 0 警告 0 错误，临时产物删除。
 - Unity MCP 触发 `refresh_unity` 后等待 editor ready 超时，随后 state 持续提示 ping not answered；因此本步没有 Unity 编译、Console 或运行证据。未做资源关停对比、资源加载回放和 Player 分配采样。
+
+## 2026-09-22 资源获取取消令牌生命周期复用
+
+对应 tasks.md 的 6.19；6.2 保持未勾选。代码提交为 `605f54d2b`。
+
+- `ResourceScope` 现在构造期接收 runtime cancellation token，并建立 scope cancellation 与 runtime cancellation 的 linked source。scope 关闭或 runtime 退出都会先取消这个 owner 级 token；scope 完全 dispose 后才释放 source。
+- `AcquireAsync` 的外部 `CancellationToken` 是 default 或不可取消时，直接使用 owner 级 token，不再为每次资源获取新建 scope/runtime/external 三源 `CancellationTokenSource`。物理加载等待、资源模块加载等待和租约提交前取消检查都使用同一令牌。
+- 外部调用方确实传入可取消令牌时，仍然建立专用 linked source，把外部取消与 owner 级 token 合并；获取成功、失败或取消后立即释放。scope 关闭、runtime 退出和外部取消的传播时机不变，租约未提交时仍卸载已加载资源并抛取消异常。
+- 前一次外部可取消令牌的专用 source 释放后不会影响 owner 级 token，因此同 scope 的下一次资源获取仍能正常等待 scope 或 runtime 取消。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除。
+- Unity MCP state 仍持续 `ping not answered`，本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。 lease HashSet 扩容、linked cancellation source 本体、UniTaskCompletionSource、快照数组和字符串等分配仍是 6.2 后续边界。

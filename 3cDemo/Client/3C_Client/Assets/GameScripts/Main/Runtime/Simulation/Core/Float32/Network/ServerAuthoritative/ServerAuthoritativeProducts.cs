@@ -161,7 +161,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             string stateCodecIdentity,
             GameplayContentHash gameplayContentHash,
             OperationSetVersion operationSetVersion,
-            byte[] characterStateBytes,
+            byte[] ownedCharacterStateBytes,
             CharacterStateHash stateHash,
             WorldRevision worldRevision,
             SolverImplementationId solverId,
@@ -180,8 +180,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 throw new ArgumentException("Authoritative baseline identity is incomplete.");
             }
-            if (characterStateBytes == null || characterStateBytes.Length == 0)
-                throw new ArgumentException("Authoritative baseline requires full Character state bytes.", nameof(characterStateBytes));
+            if (ownedCharacterStateBytes == null || ownedCharacterStateBytes.Length == 0)
+                throw new ArgumentException("Authoritative baseline requires full Character state bytes.", nameof(ownedCharacterStateBytes));
             ActorId = actorId;
             AuthorityTick = authorityTick;
             NumericProfile = numericProfile;
@@ -189,7 +189,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             StateCodecIdentity = stateCodecIdentity;
             GameplayContentHash = gameplayContentHash;
             OperationSetVersion = operationSetVersion;
-            m_CharacterStateBytes = (byte[])characterStateBytes.Clone();
+            m_CharacterStateBytes = ownedCharacterStateBytes;
             StateHash = stateHash;
             WorldRevision = worldRevision;
             SolverId = solverId;
@@ -221,6 +221,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong ConfirmedInputSequence { get; }
         public ServerAuthoritativeEventHorizon ConfirmedEventHorizon { get; }
         public bool IsValid => ActorId.IsValid && AuthorityTick.IsValid && m_CharacterStateBytes != null;
+        internal byte[] StateBuffer => m_CharacterStateBytes;
         public byte[] CopyCharacterStateBytes() => (byte[])m_CharacterStateBytes.Clone();
     }
 

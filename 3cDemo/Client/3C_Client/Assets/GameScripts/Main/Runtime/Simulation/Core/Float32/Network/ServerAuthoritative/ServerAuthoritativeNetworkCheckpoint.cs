@@ -134,6 +134,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         readonly byte[] m_StateBytes;
 
+        internal NetworkCheckpoint(AuthoritativeActorBaseline baseline)
+        {
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
+            Baseline = baseline;
+            m_StateBytes = baseline.StateBuffer;
+            CheckpointHash = ComputeHash(baseline, m_StateBytes);
+        }
+
         internal NetworkCheckpoint(AuthoritativeActorBaseline baseline, byte[] stateBytes)
         {
             if (!baseline.IsValid)
@@ -183,7 +192,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(layout));
             if (!baseline.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(baseline));
-            var checkpoint = new NetworkCheckpoint(baseline, baseline.CopyCharacterStateBytes());
+            var checkpoint = new NetworkCheckpoint(baseline);
             layout.Require(checkpoint);
             return checkpoint;
         }
@@ -326,7 +335,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 baseline.Baseline.ConfirmedEventHorizon,
                 reader.ReadUInt64());
             bool stateChanged = reader.ReadBoolean();
-            byte[] stateBytes = stateChanged ? reader.ReadBytes() : baseline.StateBytes;
+            byte[] stateBytes = stateChanged ? reader.ReadBytes() : baseline.Baseline.StateBuffer;
             remote = ReadCompactRemote(reader, layout, authorityTick, actorId);
             StableHash expectedCheckpointHash = new StableHash(reader.ReadString());
             reader.RequireComplete();

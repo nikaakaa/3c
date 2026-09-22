@@ -8,35 +8,55 @@
 |---|---|
 | Admission Profile | `Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinRushAdmissionProfile.asset` |
 | Ability Definition | `Assets/Configs/Character/Corin/Pipeline/Abilities/CorinRushAttackGameplayAbilityDefinition.asset` |
-| Profile authoring | `Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinRushAdmissionProfileAuthoringCode` |
+| Input Profile | `Assets/Configs/Character/Corin/Pipeline/Input/CorinCharacterInputProfile.asset` |
 | Ability authoring | `Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinRushAttackGameplayAbilityAuthoringCode` |
+| Timeline authoring | `Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRush*TimelineAuthoringCode` |
 
-Admission Profile 使用 `Rush` tag、单实例；Cancel tags 是 `Attack`、`Dodge`、`Rush`。Profile 尚未接入 `CorinCharacterPipelineDefinition.m_AbilityGrants`，因此当前不会形成 fake Dodge 自动激活入口。
+`CorinCharacterPipelineDefinition` 已正式登记 Rush Ability Grant、Rush Fixed/Float32 执行数据和三条 Rush Timeline。Definition 的 Control Motion Timeline catalog 当前共 13 条，没有强化 Rush 的残留引用。
 
-## 状态与 Timeline
+## 输入合同
 
-8 个业务状态是 `Attack_Rush`、`Attack_Rush_Explode`、`Attack_Rush_End`、`Attack_Rush_Enhance`、`Attack_Rush_Enhance_Loop`、`Attack_Rush_Enhance_End`、`Attack_Rush_Enhance_Explode`、`Attack_Rush_Enhance_Explode_End`。
+- `Rush` 是一次性动作请求，由输入动作的 `WasPressedThisFrame()` 产生；Ability 入口消费该请求。
+- `RushHeld` 是同一输入动作的连续布尔值，由 `IsPressed()` 每帧锁存；它只决定蓄力段何时释放，不承担 Ability 激活。
+- `Attack` 保留为普通攻击请求；Rush 爆发段只读取它，不提前消费，退出 Rush 后由普通攻击链继续处理。
 
-每个状态有独立 State Body；State Body 只做一件事：播放各自的 shared Timeline。7 个 Motion 复用关系由 Timeline 层保留，Ability 层不合并状态身份。
+## 状态与转移
 
-## 当前 FSM 转移
+正式状态只有三段：
 
-- 入口只接受 `RushSelected` 或 `RushEnhanceSelected`，两者默认 false；Dodge/Control owner 提供真实选择前，Rush Ability 不会被伪造启动。
-- `Attack_Rush -> Attack_Rush_Explode` 已有 terminal 转移，另有 `RushHoldReleased`、`RushSawExplode` 显式条件位；条件数据源未接入前保持 false，不猜测默认值。
-- `Attack_Rush_Explode -> Attack_Rush_End`、`Attack_Rush_Enhance -> Enhance_Loop`、`Enhance_Loop` 重入/收口、`Enhance_End -> Rush_End`、`Enhance_Explode -> Explode_End` 使用 terminal 转移。
-- `Attack_Rush_End`、`Attack_Rush_Enhance_Explode_End` 到 Exit 使用 terminal 收口。
-- 回归 `Attack_Normal_04` 当前表达为 `RushNormalHandoff` 条件到 Exit；`Attack`、`Evade`、`Aid`、`Switch` 等 `special_*` owner 未接前不伪造目标。
+`Attack_Rush -> Attack_Rush_Explode -> Attack_Rush_End -> Exit`
+
+| 来源 | 目标 | 条件 |
+|---|---|---|
+| Entry | `Attack_Rush` | 存在 `Rush` 请求 |
+| `Attack_Rush` | `Attack_Rush_Explode` | `RushRelease` 窗口打开且 `RushHeld=false` |
+| `Attack_Rush` | `Attack_Rush_Explode` | 当前 Timeline 完成 |
+| `Attack_Rush_Explode` | Exit | `RushAttackHandoff` 窗口打开且存在 `Attack` 请求 |
+| `Attack_Rush_Explode` | `Attack_Rush_End` | 当前 Timeline 完成 |
+| `Attack_Rush_End` | Exit | 当前 Timeline 完成 |
+
+每个状态的 State Body 只播放对应 shared Timeline，播放模式为 Once。旧的 `RushSelected`、`RushEnhanceSelected`、`RushHoldReleased`、`RushSawExplode` 和五段强化 Rush 状态已经删除。
+
+## 结束规则
+
+Ability 只保留三条宿主结束规则：
+
+- `AbortRequested -> Abort`
+- `InterruptRequested -> Interrupt`
+- `ExecutionCompleted -> Complete`
+
+释放和普通攻击交接由状态机条件负责，不再复制成 Ability EndRule。
 
 ## Effect 依赖
 
-Rush Ability 已登记 8 个唯一 Rush AttackProperty GameplayEffect：普通侧 `_01_01`、`_01_02`、`_02`，强化侧 `_01_01`、`_01_02`、`_01_03`、`_01_04`、`_02`。Timeline cue 只携带身份事件；伤害、碰撞、相机 payload 仍归对应 owner。
+Rush Ability 只登记三个普通 Rush AttackProperty GameplayEffect：
 
-## 复验
+- `Corin_Attack_Rush_AttackProperty_01_01`
+- `Corin_Attack_Rush_AttackProperty_01_02`
+- `Corin_Attack_Rush_AttackProperty_02`
 
-无输入 Replay 及对应 Proof 已删除。当前尚无包含 Rush 请求的回放证据，不能据此认定 Rush 或 NormalAttack 的运行闭环。
+五个强化 Rush GameplayEffect 已从 `CorinCharacterGameplayEffectProfile` 移除并删除。当前 Rush Timeline 没有 AttackProperty 应用节点或 ActionCue；这三个 Effect 在本链路中是发布依赖，不应把它们解释成已经发生的命中事件。
 
-## 运行装配补口
+## 发布合同
 
-`CorinCharacterPipelineDefinition` 已接入 Rush 正式输入请求和 4 项运行资源：Rush Float32/Fixed 执行数据、Rush Admission Profile、Rush Ability Grant、8 条 Rush Timeline producer。`InputSystem.inputactions` 的 `Rush` 请求绑定 `LeftCtrl` 与 Gamepad `North`；Ability 入口条件消费 `Rush` 请求，进入 `Attack_Rush`。`RushEnhanceSelected` 仍是显式 false，强化入口继续等 Dodge/Badge owner。
-
-正式 Republish 已生成 `RushAttack.Float32Data.asset` / `RushAttack.FixedData.asset`，并把 Pipeline 的 AbilityData 与 ControlMotionTimelines 重建为统一闭包。补口后同 Trace `92695eab609c4de4abf0fdd9006bdd85` 3870 帧 `DivergentFrameCount=0`；aggregate 只因 Rush 正式内容加入而变更 `runtime_content_hash / source_revision / semantic_hash`，没有运行帧回归。
+正式 Republish 同时生成 `RushAttack.FixedData.asset` 和 `RushAttack.Float32Data.asset`。两份产物的 `SourceRevision`、`SemanticHash`、`AbilityGuid` 与 `ContentIdentity` 必须一致；Attack、DodgeBack、DodgeForward 也遵循同一合同。

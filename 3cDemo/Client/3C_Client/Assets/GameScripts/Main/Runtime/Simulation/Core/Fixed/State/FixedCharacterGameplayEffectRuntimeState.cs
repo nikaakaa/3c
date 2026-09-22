@@ -4,14 +4,18 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedCharacterGameplayEffectRuntimeState : IFixedGameplayEffectStatePort
     {
-        readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
-        readonly int m_TickRate;
+        FixedGameplayEffectRuntimeCatalog m_Catalog;
+        int m_TickRate;
         GameplayEffectStateAggregate m_Aggregate;
         SimulationGameplayEffectState m_Working;
         FixedGameplayEffectExecutionScratch m_Scratch;
         bool m_Disposed;
 
-        public FixedCharacterGameplayEffectRuntimeState(
+        public FixedCharacterGameplayEffectRuntimeState()
+        {
+        }
+
+        public FixedCharacterGameplayEffectRuntimeState Restart(
             int tickRate,
             FixedGameplayEffectRuntimeCatalog catalog,
             GameplayEffectStateAggregate aggregate)
@@ -19,6 +23,20 @@ namespace ThirdPersonSimulation.Fixed
             m_TickRate = tickRate;
             m_Catalog = catalog;
             m_Aggregate = aggregate;
+            if (m_Working != null)
+            {
+                if (m_Aggregate == null)
+                {
+                    m_Working = null;
+                    m_Scratch = null;
+                }
+                else
+                {
+                    m_Working.Restore(m_Aggregate);
+                }
+            }
+            m_Disposed = false;
+            return this;
         }
 
         public int TickRate => m_TickRate;

@@ -42,7 +42,8 @@ namespace ThirdPersonSimulation
                 actor.ActionState,
                 actor.ControlState,
                 actor.EventSequenceState,
-                actor.HandleAllocatorState);
+                actor.HandleAllocatorState,
+                actor.GameplayEffectState);
             Float32AbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;

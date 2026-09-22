@@ -4,14 +4,18 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32CharacterGameplayEffectRuntimeState : IFloat32GameplayEffectStatePort
     {
-        readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
-        readonly int m_TickRate;
+        Float32GameplayEffectRuntimeCatalog m_Catalog;
+        int m_TickRate;
         GameplayEffectStateAggregate m_Aggregate;
         SimulationGameplayEffectState m_Working;
         Float32GameplayEffectExecutionScratch m_Scratch;
         bool m_Disposed;
 
-        public Float32CharacterGameplayEffectRuntimeState(
+        public Float32CharacterGameplayEffectRuntimeState()
+        {
+        }
+
+        public Float32CharacterGameplayEffectRuntimeState Restart(
             int tickRate,
             Float32GameplayEffectRuntimeCatalog catalog,
             GameplayEffectStateAggregate aggregate)
@@ -19,6 +23,20 @@ namespace ThirdPersonSimulation
             m_TickRate = tickRate;
             m_Catalog = catalog;
             m_Aggregate = aggregate;
+            if (m_Working != null)
+            {
+                if (m_Aggregate == null)
+                {
+                    m_Working = null;
+                    m_Scratch = null;
+                }
+                else
+                {
+                    m_Working.Restore(m_Aggregate);
+                }
+            }
+            m_Disposed = false;
+            return this;
         }
 
         public int TickRate => m_TickRate;

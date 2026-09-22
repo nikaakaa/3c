@@ -71,7 +71,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedCharacterActionRuntimeState actionState,
             CharacterControlRuntimeStateTransaction controlState,
             FixedCharacterEventSequenceState eventSequenceState,
-            FixedCharacterHandleAllocatorState handleAllocatorState)
+            FixedCharacterHandleAllocatorState handleAllocatorState,
+            FixedCharacterGameplayEffectRuntimeState gameplayEffectState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -92,7 +93,7 @@ namespace ThirdPersonSimulation.Fixed
             m_InputRequestState = inputRequestState.Restart(m_Tick, baseState.InputRequests);
             m_EventSequenceState = eventSequenceState.Restart(baseState.EventSequence);
             m_HandleAllocatorState = handleAllocatorState.Restart(baseState.HandleAllocator);
-            m_GameplayEffectState = new FixedCharacterGameplayEffectRuntimeState(
+            m_GameplayEffectState = gameplayEffectState.Restart(
                 m_TickRate,
                 gameplayEffectCatalog,
                 baseState.GameplayEffectState);

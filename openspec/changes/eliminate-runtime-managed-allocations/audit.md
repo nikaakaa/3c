@@ -5308,3 +5308,13 @@
 - 2.4 保持未勾选：Control candidate 外壳和 hash、changed value 数组、CharacterState 外壳、GE 真实变化嵌套复制和 Timeline snapshot 仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态先改后恢复、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 GameplayEffect保存点恢复按页复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `0ff33ba8c`。
+
+- Fixed/Float32 `SimulationGameplayEffectState.Restore` 原先清空全部 working 页后，从保存点 aggregate 深拷贝 tags、attributes、active effects、periods、journal 和 lifecycle revisions。现在逐类先用 aggregate 的现有深比较判定：内容一致的页继续保留 working page 的独立对象；只有真实差异页清空并从目标 aggregate 重新导出。tags 未变化时 `OwnedTagsSnapshot` 不重建。
+- 这里不让 working page 直接借用 committed aggregate 内部对象，因为 attribute、active effect 和 journal 记录仍是可变对象，直接借用会让后续玩法写入污染保存点。类别导出方法只调整复制粒度，排序、校验、`ChangeCursor`、dirty 重置和 committed aggregate 独立寿命不变。
+- 2.4 保持未勾选：CharacterState candidate 外壳、Equipment slot/pending 真实变更粒度、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 GE savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。

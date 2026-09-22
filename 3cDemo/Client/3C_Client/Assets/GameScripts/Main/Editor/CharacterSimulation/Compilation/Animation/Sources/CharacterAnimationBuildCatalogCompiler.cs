@@ -320,6 +320,58 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             return bundle.reports;
         }
 
+        string ResolveGroupBuildInputIdentity(IReadOnlyList<CharacterAnimationBuildCatalogEntry> group)
+        {
+            var clipIdentityValues = new List<string>(group.Count * 6);
+            for (int i = 0; i < group.Count; i++)
+            {
+                CharacterAnimationBuildCatalogEntry entry = group[i];
+                if (!entry.AuthoringClip)
+                    throw new InvalidOperationException(
+                        $"ACL animation catalog entry '{entry.StableIdentity}' has no authoring Clip for the formal build.");
+                CharacterAnimationClipContentIdentity identity =
+                    CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
+                clipIdentityValues.Add(identity.AssetGuid);
+                clipIdentityValues.Add(identity.LocalFileId.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture));
+                clipIdentityValues.Add(identity.FullDependencyHash);
+                clipIdentityValues.Add(identity.RegisteredCurveHash);
+                clipIdentityValues.Add(identity.SourceDurationSeconds.ToString(
+                    "R", System.Globalization.CultureInfo.InvariantCulture));
+                clipIdentityValues.Add(identity.Loop ? "loop" : "once");
+            }
+            return ComputeGroupBuildInputIdentity(clipIdentityValues,
+                CharacterAnimationBuildChannel.Transform | CharacterAnimationBuildChannel.AnimatedProperty);
+        }
+
+        internal IReadOnlyList<CharacterAclAnimationGroupArtifact> BuildAclArtifacts()
+        {
+            var result = new List<CharacterAclAnimationGroupArtifact>(m_AclResourceGroupIndices.Count);
+            foreach (KeyValuePair<string, int> groupIdentity in m_AclResourceGroupIndices.OrderBy(value => value.Value))
+            {
+                List<CharacterAnimationBuildCatalogEntry> group = m_Groups[groupIdentity.Key];
+                var requests = new List<CharacterAclAnimationBuildRequest>(group.Count);
+                for (int i = 0; i < group.Count; i++)
+                {
+                    CharacterAnimationBuildCatalogEntry entry = group[i] ??
+                        throw new InvalidOperationException("Declared ACL Clip is not registered for publication.");
+                    CharacterAnimationClipContentIdentity identity =
+                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
+                    requests.Add(new CharacterAclAnimationBuildRequest(
+                        new CharacterAnimationAuthoringReadRequest(entry.AuthoringClip, identity,
+                            m_Input.SourceRig, m_Input.ParameterLayout, m_Input.Profile.AnimationPropertyBindings,
+                            Array.Empty<CharacterAnimationParameterCurveSourceBinding>(),
+                            $"animation-clip/{identity.AssetGuid}/{identity.LocalFileId}",
+                            CharacterAnimationBuildChannel.Transform | CharacterAnimationBuildChannel.AnimatedProperty),
+                        m_Input.Compression));
+                }
+                result.Add(CharacterAclAnimationResourceBuilder.BuildGroup(requests,
+                    m_GroupIndices[groupIdentity.Key], m_Input.OwnerAssetGuid, m_Input.NativeArtifactIdentity,
+                    ResolveGroupBuildInputIdentity(group)));
+            }
+            return result;
+        }
+
         internal CharacterAnimationBuildCatalog Complete(List<string> errors)
         {
             var timingWatch = System.Diagnostics.Stopwatch.StartNew();
@@ -395,28 +447,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     }
                     continue;
                 }
-                var clipIdentityValues = new List<string>(group.Count * 6);
-                for (int i = 0; i < group.Count; i++)
-                {
-                    CharacterAnimationBuildCatalogEntry entry = group[i];
-                    if (!entry.AuthoringClip)
-                        throw new InvalidOperationException(
-                            $"ACL animation catalog entry '{entry.StableIdentity}' has no authoring Clip for the formal build.");
-                    CharacterAnimationClipContentIdentity identity =
-                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
-                    clipIdentityValues.Add(identity.AssetGuid);
-                    clipIdentityValues.Add(identity.LocalFileId.ToString(
-                        System.Globalization.CultureInfo.InvariantCulture));
-                    clipIdentityValues.Add(identity.FullDependencyHash);
-                    clipIdentityValues.Add(identity.RegisteredCurveHash);
-                    clipIdentityValues.Add(identity.SourceDurationSeconds.ToString(
-                        "R", System.Globalization.CultureInfo.InvariantCulture));
-                    clipIdentityValues.Add(identity.Loop ? "loop" : "once");
-                }
-                string buildInputIdentity = ComputeGroupBuildInputIdentity(
-                    clipIdentityValues,
-                    CharacterAnimationBuildChannel.Transform |
-                    CharacterAnimationBuildChannel.AnimatedProperty);
+                string buildInputIdentity = ResolveGroupBuildInputIdentity(group);
                 CharacterAclAnimationGroupArtifact groupArtifact =
                     RequirePublishedGroup(
                         publishedInventory,

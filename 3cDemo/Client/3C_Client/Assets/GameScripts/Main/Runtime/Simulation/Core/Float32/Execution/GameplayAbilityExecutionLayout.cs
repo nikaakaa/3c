@@ -103,7 +103,6 @@ namespace ThirdPersonSimulation
         readonly Dictionary<string, int>[] m_StateSlotsByOwner;
         readonly TypedStateAddress[] m_TypedAddresses;
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
-        readonly HashSet<string> m_InputRequests;
         readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
         readonly HashSet<int> m_MotionWarpOperations;
@@ -177,7 +176,7 @@ namespace ThirdPersonSimulation
                 m_StateSlots,
                 m_TypedAddresses,
                 CatalogIndex,
-                out m_InputRequests,
+                out m_InputRequestIds,
                 out m_ActionCapacities,
                 out m_MotionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
@@ -190,7 +189,6 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException("Timeline MotionWarp state operation identities are duplicated.");
             }
             TimelineMotionWarpCatalog = timelineMotionWarpCatalog;
-            m_InputRequestIds = SortedStrings(m_InputRequests);
             m_MotionWarpOperationIds = SortedIndexes(m_MotionWarpOperations);
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(
                 m_Operations,
@@ -300,7 +298,8 @@ namespace ThirdPersonSimulation
             return m_TypedAddresses[slotIndex];
         }
 
-        public bool HasInputRequest(string requestId) => m_InputRequests.Contains(requestId ?? string.Empty);
+        public bool HasInputRequest(string requestId) =>
+            Array.BinarySearch(m_InputRequestIds, requestId ?? string.Empty, StringComparer.Ordinal) >= 0;
         public int ActionCapacity(string actionId) =>
             m_ActionCapacities.TryGetValue(actionId ?? string.Empty, out int capacity)
                 ? capacity
@@ -604,7 +603,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<TypedStateAddress> addresses,
             ProgramCatalogRuntimeIndex catalog,
-            out HashSet<string> inputRequests,
+            out string[] inputRequestIds,
             out IReadOnlyDictionary<string, int> actionCapacities,
             out HashSet<int> motionWarpOperations,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
@@ -632,6 +631,8 @@ namespace ThirdPersonSimulation
                         throw new InvalidDataException($"Action '{actionId}' is duplicated.");
                 }
             }
+
+            inputRequestIds = SortedStrings(inputs);
             for (int i = 0; i < stateSlots.Count; i++)
             {
                 ProgramStateSlot slot = stateSlots[i];
@@ -641,7 +642,6 @@ namespace ThirdPersonSimulation
                     AddUnique(targets, slot.OwnerIdentity, addresses[i], "Action target snapshot");
                 }
             }
-            inputRequests = inputs;
             actionCapacities = capacities;
             motionWarpOperations = motionWarp;
             actionTargetSnapshots = targets;

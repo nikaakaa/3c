@@ -468,16 +468,13 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionInstallationSet installations)
         {
             int count = ReadCount(reader, 1000000, "Fixed Character Input request");
-            var known = new HashSet<string>(StringComparer.Ordinal);
-            for (int installationIndex = 0; installationIndex < installations.Installations.Count; installationIndex++)
-                for (int requestIndex = 0; requestIndex < installations.Installations[installationIndex].Layout.InputRequestIds.Count; requestIndex++)
-                    known.Add(installations.Installations[installationIndex].Layout.InputRequestIds[requestIndex]);
             var requests = new KeyValuePair<string, SimulationInputRequestState>[count];
             string previous = null;
             for (int i = 0; i < count; i++)
             {
                 string requestId = SimulationIdentity.Require(reader.ReadString(), "InputRequestId");
-                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !known.Contains(requestId))
+                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 ||
+                    !ContainsInputRequest(installations, requestId))
                     throw new InvalidDataException("Fixed Character Input request identities are invalid or not canonically ordered.");
                 SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
                 if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
@@ -486,6 +483,18 @@ namespace ThirdPersonSimulation.Fixed
                 previous = requestId;
             }
             return requests;
+        }
+
+        static bool ContainsInputRequest(
+            FixedGameplayAbilityExecutionInstallationSet installations,
+            string requestId)
+        {
+            for (int i = 0; i < installations.Installations.Count; i++)
+            {
+                if (installations.Installations[i].Layout.HasInputRequest(requestId))
+                    return true;
+            }
+            return false;
         }
 
         static void WriteActionActivationRequests(

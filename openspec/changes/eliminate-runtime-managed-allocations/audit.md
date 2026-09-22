@@ -4685,3 +4685,14 @@
 - 前一次外部可取消令牌的专用 source 释放后不会影响 owner 级 token，因此同 scope 的下一次资源获取仍能正常等待 scope 或 runtime 取消。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除。
 - Unity MCP state 仍持续 `ping not answered`，本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。 lease HashSet 扩容、linked cancellation source 本体、UniTaskCompletionSource、快照数组和字符串等分配仍是 6.2 后续边界。
+
+## 2026-09-22 资源租约所有权表统一
+
+对应 tasks.md 的 6.20；6.2 保持未勾选。代码提交为 `e7da090cc`。
+
+- `ResourceScope` 原先同时维护 `_leaseIds` HashSet，`DisposeScope` 又把 HashSet 复制到 `_disposeBuffer` 后按 id 逐个释放。中央 `_leases` 表本来就持有 lease id 到 `LeaseRecord.Scope` 的唯一所有权，scope 侧集合是重复索引。
+- 现在 scope 只保留 `_leaseCount` 精确计数。注册成功加一，`LeaseRecord` 释放时减一；HashSet 查重、hash 桶扩容、关停 `long[]` 复制和 peek 缓冲全部删除。lease id 的唯一性由 runtime 全局递增分配器保证。
+- `DisposeScope` 先把 scope 置为 closing，再从中央表找出第一个仍属于该 scope 的 lease 并释放；循环直到计数为零。每次释放后 `_leases` 已变更，下一次重新枚举，不会边枚举边修改字典。释放顺序跟随中央表当前枚举序，仍然只保证逐个卸载，不保证业务顺序。
+- 计数大于零但中央表找不到所属 lease 是所有权表断裂，直接抛 `InvalidOperationException`；不补建 fallback 状态。释放过程中 `LeaseCount` 和既有快照语义保持递减可见。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除。
+- Unity MCP state 仍为 `ping not answered`；本步继续没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。lease record、cancellation source、UniTaskCompletionSource、快照数组和字符串分配仍是 6.2 后续边界。

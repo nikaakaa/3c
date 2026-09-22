@@ -30,6 +30,7 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
+        private string[] _preparedTagSnapshot = Array.Empty<string>();
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
         private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
         private ResourceScope[] _disposeScopeBuffer = Array.Empty<ResourceScope>();
@@ -163,6 +164,9 @@ namespace GameLogic.ProductResource
 
             if (_preparedTags.Add(tag.Trim()))
             {
+                _preparedTagSnapshot = new string[_preparedTags.Count];
+                _preparedTags.CopyTo(_preparedTagSnapshot);
+                Array.Sort(_preparedTagSnapshot, StringComparer.Ordinal);
                 PublishSnapshot();
             }
         }
@@ -494,9 +498,6 @@ namespace GameLogic.ProductResource
             }
             Array.Sort(scopeSnapshots, ScopeSnapshotSort.Instance);
 
-            var tags = new string[_preparedTags.Count];
-            _preparedTags.CopyTo(tags);
-            Array.Sort(tags, StringComparer.Ordinal);
             string packageVersion;
             try
             {
@@ -522,7 +523,7 @@ namespace GameLogic.ProductResource
                 assetPoolReleasable,
                 _packageName,
                 packageVersion,
-                tags,
+                _preparedTagSnapshot,
                 scopeSnapshots,
                 _lastMaintenance);
 

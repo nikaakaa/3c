@@ -5079,3 +5079,13 @@
 - `GameplayAbilityExecutionFrame` 按身份和全部 StateValue 比较；aggregate 数量一致后按 ActionInstanceId 匹配 frame，不依赖 List 展示顺序。`AbilityStateValue` 显式实现 `IEquatable<TValue>`，泛型比较不经过 object 装箱。
 - 首次编译暴露 `IGameplayAbilityExecutionStorage` 泛型约束未同步，补齐 `IEquatable<TValue>` 后，四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做技能执行 frame 回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：changed 路径 candidate 的字典/aggregate 克隆、非空最终数组、Timeline snapshot 外壳和分配采样仍待处理。
+
+## 2026-09-23 Ability提交精确复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed 和 Float32 Ability changed path 原先无论哪类状态变化都通过 public 构造整包复制 StateValues、MotionWarp 和 execution aggregate。现在 `TakeSnapshot` 按三类变化事实精确交接：变化分类复制 pending 数据，未变化分类复用 committed 的只读引用。
+- StateValues 或 MotionWarp 变化时继续生成独立 Dictionary；execution aggregate 变化时调用 Clone。未变化分类与 committed 共享的是没有公开修改入口的已提交引用，Actor pending 工作页仍使用自己的可变 Dictionary，rollback 历史不会共享 pending。
+- candidate 外壳和真实变化分类的复制仍会分配；精确复制不等于 changed path 已零分配。非空最终数组、Timeline snapshot 外壳和 Player 分配采样仍留在后续小步。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做能力状态回放、savepoint restore、rollback restore 和分配采样。

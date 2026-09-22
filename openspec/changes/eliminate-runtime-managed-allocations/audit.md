@@ -4726,3 +4726,13 @@
 - 数组仍只以 `IReadOnlyList<ResourceScopeSnapshot>` 公开；runtime 不会在已发布后原地修改内容。旧历史快照引用旧数组，scope 变化后的新数组与历史隔离，排序规则仍为 `Id` 升序。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
 - Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。`ResourceRuntimeSnapshot` 本体、lease record、cancellation source、UniTaskCompletionSource 和字符串分配仍是 6.2 后续边界。
+
+## 2026-09-22 资源下载回调生命周期固定
+
+对应 tasks.md 的 6.24；6.2 保持未勾选。代码提交为 `1fe6b908f`。
+
+- `ProductGameplayDelivery` 原先每次确认下载都创建三个捕获 `plan` 的 lambda，再赋给 downloader 的进度、文件开始和错误回调。现在这三个实例委托在 delivery 构造期创建，生命周期内跨下载复用。
+- `DownloadConfirmedPlanAsync` 开始下载前记录 `_activeDownloadPlan` 并绑定固定委托；回调先检查 active plan 是否存在，再比较 generation，只有当前确认计划才发布快照。等待结束后解除 downloader 回调引用；如果该计划仍是 active，则清空 active plan。
+- 取消路径先调用正式 `CancelCurrentGeneration` 推进 generation，再抛出取消异常，最后统一清理当前计划的回调绑定；普通失败、换代下载和完成后的发布字段与顺序保持。快照对象仍按状态变化创建，这是外部只读合同的独立数据。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
+- Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源下载回放或 Player 分配采样证据。下载进度快照、cancellation source、lease record 和 UniTaskCompletionSource 仍是 6.2 后续边界。

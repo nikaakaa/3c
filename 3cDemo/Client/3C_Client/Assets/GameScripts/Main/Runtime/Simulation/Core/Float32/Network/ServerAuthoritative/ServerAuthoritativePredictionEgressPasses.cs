@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         public static OwnerCanonicalInputBatch Read(Float32CompletedSimulationStep step)
         {
-            if (step == null || step.Step.Inputs.Count != 1)
+            if (!step.IsValid || step.Step.Inputs.Count != 1)
                 throw new InvalidOperationException("Prediction Step must contain exactly one owner input.");
             SimulationPipelineActorInput<Float32StepInput> actorInput = step.Step.Inputs[0];
             return new OwnerCanonicalInputBatch(

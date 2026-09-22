@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ulong lastAuthorityAckTick,
             ulong lastBaselineTick)
         {
-            if (!input.IsValid || completed == null || completed.StepSnapshot == null)
+            if (!input.IsValid || !completed.IsValid || completed.StepSnapshot == null)
                 throw new ArgumentException("Prediction history capture requires input and a completed Step snapshot.");
             if (completed.Step.Tick != completed.StepSnapshot.Tick || completed.State.Actors.Count != 1 ||
                 completed.State.Actors[0].ActorId != input.ActorId)

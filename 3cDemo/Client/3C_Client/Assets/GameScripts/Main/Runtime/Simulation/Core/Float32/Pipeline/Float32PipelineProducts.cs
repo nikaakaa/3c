@@ -170,7 +170,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class Float32CompletedSimulationStep
+    public readonly struct Float32CompletedSimulationStep
     {
         public Float32CompletedSimulationStep(
             Float32SimulationStep step,
@@ -193,6 +193,7 @@ namespace ThirdPersonSimulation
         public SimulationWorldStateSet State { get; }
         public Float32SimulationStepSnapshot StepSnapshot { get; }
         public SimulationPipelineStateSnapshot PipelineProjection => StepSnapshot?.PipelineProjection;
+        public bool IsValid => Step != null && Result != null && State != null;
     }
 
     public sealed class SimulationPipelineOutputDispositionSet
@@ -362,7 +363,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(steps));
             for (int i = 0; i < steps.Count; i++)
             {
-                if (steps[i] == null || i > 0 && steps[i - 1].Step.Tick.CompareTo(steps[i].Step.Tick) >= 0)
+                if (!steps[i].IsValid || i > 0 && steps[i - 1].Step.Tick.CompareTo(steps[i].Step.Tick) >= 0)
                     throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
             }
             int expectedEventCount = outputDispositions.Dispositions.Count;

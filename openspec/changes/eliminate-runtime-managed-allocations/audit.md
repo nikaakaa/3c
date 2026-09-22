@@ -4272,3 +4272,11 @@
 - `CommandDatagram` 从 sealed class 改为 readonly struct。Fantasy Datagram Channel 从固定 packet sample 数组构造 owner command，Payload Codec 直接写入 canonical bytes，Authority Source 解码后传给 `ReceiveCommand`；这条链路不再创建每个 command packet 的外壳对象。
 - 两个 snapshot sequence 和最终 sample 数组所有权不变：发送侧继续借用固定槽位完成编码，接收侧数组继续由本次 command 持有。构造和 `FromOwnedSamples` 仍要求一到四个样本、每个样本有效、Target Authority Tick 和 Input Sequence 严格降序。新增 `IsValid` 表达 default datagram 的非法状态；Payload Codec 写入边界的旧 null 检查改为 `IsValid`。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Snapshot datagram 值化收口
+
+对应 tasks.md 的 5.5，新增 5.251 作为独立小步；5.5 保持未勾选。
+
+- `SnapshotDatagram` 从 sealed class 改为 readonly struct。Authority Source 生成增量快照后交给 Payload Codec 编码，Fantasy Datagram Channel 解码后放入 Prediction Datagram Event，Checkpoint Reconstruction Module 消费；这些路径不再创建每个快照包的外壳对象。
+- 构造合同不变：SnapshotSequence 和 AuthorityTick 必须有效，delta payload 必须存在。payload 仍在构造时复制并独立持有，发送缓冲、接收 packet 池和 reconstruction 的寿命不变。新增 `IsValid` 表达 default snapshot 的非法状态；DataPlaneReady 事件用 default 表示无快照，codec 写入边界和 checkpoint 入口的旧 null 合同改为 `IsValid`。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

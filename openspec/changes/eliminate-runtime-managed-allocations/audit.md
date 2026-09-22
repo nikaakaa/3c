@@ -5249,6 +5249,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 GameplayEffect savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
 
+## 2026-09-23 Equipment本地状态同值抑制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `51421c5b6`。
+
+- `EquipmentRuntimeStateValue` 增加强类型 `Equals`，比较 kind、Boolean、Int32、UInt64、X/Y/Z 和 Ordinal identity。`EquipmentStateAggregate.WithLocalState` 定位到同一 feature/state 后先做值比较，相同内容直接返回原 aggregate。
+- 这消除了把 local state 重置为已有默认值时的假变更候选：不再复制 `m_LocalStates`、新建数组只读包装和独立 aggregate。不同值继续精确复制数组；kind 变化继续抛原 `InvalidOperationException`，unknown feature/state 继续抛原 `InvalidOperationException`。
+- 首次编译发现 Equals 被误放到 Parameter value 类型，已移动到 State value 类型后重新编译。2.4 保持未勾选：Equipment slot 变更、pending 记录、CharacterState 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载、本地状态重置回放、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

@@ -4491,3 +4491,13 @@
 - 构造器仍原地按 PassId 排序，仍校验 null 事务、数量和 participant identity；Apply、ValidateApplied、CompleteAfterSessionPublish、Rollback 和 Dispose 的顺序不变。
 - `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次 Pipeline restore，确认参与者应用顺序、校验失败和 rollback 行为不变；分配采样应观察 restore 准备路径的 List、扩容和只读包装消失，但各 participant 返回的 restore transaction 对象仍是正式分配。
+
+## 2026-09-22 Session restore transactions owned array 收口
+
+对应 tasks.md 的 5.5，新增 5.272 作为独立小步；5.5 保持未勾选。代码提交为 `88ed4522b`。
+
+- `SimulationSessionRestoreTransaction` 的 public `IEnumerable` 构造器删除，改为私有 trusted 构造和 `FromOwnedTransactions`；事务直接持有长度为三的 `ISimulationSessionRestoreParticipantTransaction[]`。每次 restore 删除 `List<T>` 复制、排序容器和 `ReadOnlyCollection<T>` 包装。
+- Fixed 与 Float32 的立即恢复、延迟 restore preparation 都改为 `FromOwnedTransactions`；四个调用点都已在调用表达式生成 Character、World、Pipeline 三个元素的精确数组，调用方不再保留或修改该数组。
+- 构造器仍先校验 null 事务，再原地按 Kind 排序，仍要求数量为 3、顺序为 Character/World/Pipeline 且 identity 非空；ApplyAndValidate、CompleteAfterAtomicSessionPublish、Rollback 和 Dispose 顺序不变。
+- `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；前者连带编译 Core。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次 Session restore，确认 Character、World、Pipeline 应用顺序，校验失败 rollback 和正式发布边界不变；分配采样应观察 restore 会话包装层的 List、扩容和只读包装消失，但三个 participant transaction 对象仍是正式分配。

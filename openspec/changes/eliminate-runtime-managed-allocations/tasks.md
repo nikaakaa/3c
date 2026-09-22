@@ -520,6 +520,7 @@
 - [x] 5.249 ServerAuthoritative CanonicalInputSample 改为 readonly struct；Datagram 发送历史、packet sample、接收 codec 和 Authority Route 输入队列按值携带，default 用 IsValid 显式拒绝
 - [x] 5.250 ServerAuthoritative CommandDatagram 改为 readonly struct；Owner command 发送构造、payload codec 和 Authority Source 接收按值携带，default 用 IsValid 显式拒绝
 - [x] 5.251 ServerAuthoritative SnapshotDatagram 改为 readonly struct；快照发送、Prediction 事件队列和 Checkpoint reconstruction 按值携带，default 用 IsValid 显式拒绝
+- [x] 5.252 ServerAuthoritative AuthoritativeActorBaseline 改为 readonly struct；Authority 复制、Checkpoint、Prediction Evidence 和 Reconciler 按值携带 baseline，default 用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

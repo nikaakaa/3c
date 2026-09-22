@@ -4280,3 +4280,15 @@
 - `SnapshotDatagram` 从 sealed class 改为 readonly struct。Authority Source 生成增量快照后交给 Payload Codec 编码，Fantasy Datagram Channel 解码后放入 Prediction Datagram Event，Checkpoint Reconstruction Module 消费；这些路径不再创建每个快照包的外壳对象。
 - 构造合同不变：SnapshotSequence 和 AuthorityTick 必须有效，delta payload 必须存在。payload 仍在构造时复制并独立持有，发送缓冲、接收 packet 池和 reconstruction 的寿命不变。新增 `IsValid` 表达 default snapshot 的非法状态；DataPlaneReady 事件用 default 表示无快照，codec 写入边界和 checkpoint 入口的旧 null 合同改为 `IsValid`。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Authoritative actor baseline 值化收口
+
+对应 tasks.md 的 5.5，新增 5.252 作为独立小步；5.5 保持未勾选。
+
+- `AuthoritativeActorBaseline` 从 sealed class 改为 readonly struct。Authority egress 生成 baseline 后，Replication batch、canonical codec、Authority Source checkpoint、Prediction observation、Prediction State、Reconciler 和 Evidence queue 都按值携带，删除每 Actor 每次基线同步的外壳对象。
+- 构造合同不变：Actor、Authority Tick、数值域、ABI、状态编码、内容哈希、Operation Set、状态字节、世界和 Solver 身份必须完整；Character state bytes 继续在构造时克隆，`CopyCharacterStateBytes` 仍返回独立副本。新增 `IsValid` 只表达 default baseline 的非法状态。
+- Observation batch 和 Replication batch 对数组元素改为显式检查 `IsValid`，排序、去重、Authority Tick 一致性和数组所有权不变。Canonical codec、Network checkpoint、Prediction confirmation、Prediction State 和 Reconciler 的旧 null 合同改为 `IsValid`。找不到 owner baseline 或 remote baseline 使用 default，不再用引用空值表达。
+- GameplayNetwork 的 Checkpoint reconstruction result 把 Ignored／BaselineMissing 的 baseline 改为 default；Evidence 接受 checkpoint 时显式检查 `IsValid`，drain 时用 default 表示无最新 baseline。快照重建、严格递增、latest baseline 选择和 Observation batch 生成顺序不变。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
+- Unity MCP 状态显示目标实例刷新后恢复 idle，目标实例仍是 `e852139597e42532`；当前资源面板未暴露 Console 读取资源，因此本记录不声称 Unity Console 错误为 0。未做 Player 分配采样，也不能用编译结果证明运行期 baseline 分配已归零。
+- 用户可沿一条带快照的 Authority/Prediction 对局确认：Authority 端能继续生成并编码 full replication baseline，客户端能完成 full/delta checkpoint 重建，Prediction 首次 baseline 进场、NoCorrection 和需要 correction 的路径都不回退；同时用既有 Player 分配采样观察 baseline 外壳不再出现在这些路径。

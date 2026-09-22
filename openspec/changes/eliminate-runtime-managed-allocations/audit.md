@@ -4788,3 +4788,14 @@
 - 业务输入是 installation 准备数据和 wire 中的 InputRequest pair 序列，输出仍是最终 `KeyValuePair<string, SimulationInputRequestState>[]`。处理点从“layout 保留双索引、每次解码复制索引”改为“layout 唯一排序索引、解码直接查询”。
 - `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做状态回放和 Player 分配采样。用户可运行包含 InputRequest 的角色状态保存、恢复和 rollback restore，确认请求顺序、非法 identity 拒绝和状态内容不变；分配采样应观察每次 Codec Read 的 HashSet 和 layout 重复索引消失，wire 字符串和最终数组仍是正式独立分配。
+
+## 2026-09-23 Ability MotionWarp 和 Skill Slot 索引数组化
+
+对应 tasks.md 的 2.106；2.3 保持未勾选。
+
+- Fixed 与 Float32 `GameplayAbilityExecutionLayout` 原先为 MotionWarp 同时保留 `HashSet<int>` 和排序 `int[]`；`HasMotionWarp` 走哈希集合，排序数组只给外部只读合同。现在 HashSet 只在构造函数局部存在，接收 Domain Index、补充 Timeline catalog、排序并赋给最终数组后不再长期保存。
+- `BuildSkillExecutionStateSlots` 原先返回长期 `HashSet<int>`；现在内部继续用局部 HashSet 去重，返回前调用既有 `SortedIndexes` 生成精确 `int[]`。layout 字段同步改为数组。
+- `HasMotionWarp` 和 `IsSkillExecutionStateSlot` 改用 `Array.BinarySearch`。Timeline MotionWarp 重复操作、Skill slot 去重、`MotionWarpOperationIds` 输出顺序和两个查询的结果不变。
+- 业务输入是编译后的 operation topology、catalog、scope 和 state slots；输出是 prepared layout 的稳定只读索引。处理点从“运行查询依赖长期哈希集合”改为“准备期唯一化并排序，运行期只查精确数组”。
+- `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做 MotionWarp 或 Skill slot 回放和 Player 分配采样。用户可运行带 Timeline MotionWarp、Skill scoped state 和非 character scope slot 的技能，确认触发、槽位读写和外部 IDs 不变；分配采样应观察两个 layout 长期 HashSet 消失，最终数组由准备期正式产出。

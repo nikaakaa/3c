@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation.Fixed
                 Dictionary<int, AbilityStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
                 Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
-                abilities.Add(new FixedAbilityRuntimeState(
+                abilities.Add(FixedAbilityRuntimeState.Adopt(
                     identity,
                     stateValues,
                     abilityExecutionState,

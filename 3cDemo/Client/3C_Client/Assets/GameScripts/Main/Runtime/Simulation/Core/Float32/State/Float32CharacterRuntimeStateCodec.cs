@@ -70,7 +70,7 @@ namespace ThirdPersonSimulation
                 Dictionary<int, AbilityStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
                 Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
-                abilities.Add(new Float32AbilityRuntimeState(
+                abilities.Add(Float32AbilityRuntimeState.Adopt(
                     identity,
                     stateValues,
                     abilityExecutionState,

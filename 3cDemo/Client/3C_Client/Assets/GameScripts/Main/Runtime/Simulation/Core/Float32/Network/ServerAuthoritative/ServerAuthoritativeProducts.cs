@@ -548,7 +548,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public bool IsValid => ReceiveSequence != 0 && m_Baselines != null && m_RemotePresentation != null;
     }
 
-    public sealed class AuthorityReplicationBatch
+    public readonly struct AuthorityReplicationBatch
     {
         readonly AuthoritativeInputAck[] m_Acks;
         readonly AuthoritativeActorBaseline[] m_Baselines;
@@ -606,6 +606,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<AuthoritativeInputAck> Acks => m_Acks;
         public IReadOnlyList<AuthoritativeActorBaseline> Baselines => m_Baselines;
         public IReadOnlyList<RemotePresentationBatch> RemotePresentation => m_RemotePresentation;
+        public bool IsValid => AuthorityTick.IsValid && m_Acks != null && m_Baselines != null && m_RemotePresentation != null;
     }
 
     static class ServerAuthoritativeProductOrder

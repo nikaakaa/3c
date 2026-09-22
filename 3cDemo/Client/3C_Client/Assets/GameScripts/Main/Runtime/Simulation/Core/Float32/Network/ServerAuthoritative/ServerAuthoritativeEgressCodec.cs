@@ -64,8 +64,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static byte[] WriteAuthorityReplication(AuthorityReplicationBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Authority replication batch is invalid.", nameof(batch));
             using var writer = new CanonicalWriter();
             WriteAuthorityReplication(writer, batch);
             return writer.ToArray();

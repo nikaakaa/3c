@@ -507,6 +507,7 @@
 - [x] 5.236 ServerAuthoritative Owner Canonical Input Batch 改为 readonly struct；历史记录、Capture、编解码和 Product Slot 传值不再创建 batch 外壳，default 值统一用 IsValid 显式拒绝
 - [x] 5.237 ServerAuthoritative AcceptedAuthorityInput 改为 readonly struct；Authority route 选择结果和 accepted batch 元素按值传递，default 输入由 IsValid 与 batch 构造显式拒绝
 - [x] 5.238 ServerAuthoritative AcceptedAuthorityInputBatch 改为 readonly struct；accepted input Source 到 Product 与 Authority Schedule 的整批传递不再创建外壳，default batch 用 IsValid 拒绝
+- [x] 5.239 同步 GameplayNetwork Datagram Channel 的 Owner Canonical Input Batch 调用方；发送入口改用 IsValid 校验，补齐 Unity 程序集编译
 
 ## 6. UI、资源、渲染和生命周期
 

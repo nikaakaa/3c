@@ -888,17 +888,32 @@ namespace ThirdPersonSimulation
 
     public readonly struct AbilityTimelineTreeClipState
     {
-        public AbilityTimelineTreeClipState(string clipAuthoringId, string treeGraphId, int cycle)
+        public AbilityTimelineTreeClipState(
+            string clipAuthoringId,
+            string treeGraphId,
+            string treeGraphRevision,
+            string nodeAuthoringId,
+            ulong playbackGeneration,
+            ulong branchRevision,
+            int cycle)
         {
             ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
             TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
-            if (cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(cycle));
+            TreeGraphRevision = SimulationIdentity.Require(treeGraphRevision, nameof(treeGraphRevision));
+            NodeAuthoringId = SimulationIdentity.Require(nodeAuthoringId, nameof(nodeAuthoringId));
+            if (playbackGeneration == 0 || branchRevision == 0 || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            PlaybackGeneration = playbackGeneration;
+            BranchRevision = branchRevision;
             Cycle = cycle;
         }
 
         public string ClipAuthoringId { get; }
         public string TreeGraphId { get; }
+        public string TreeGraphRevision { get; }
+        public string NodeAuthoringId { get; }
+        public ulong PlaybackGeneration { get; }
+        public ulong BranchRevision { get; }
         public int Cycle { get; }
     }
 
@@ -1036,33 +1051,62 @@ namespace ThirdPersonSimulation
         public AbilityTreeClipInvocation(
             string clipAuthoringId,
             string treeGraphId,
+            string treeGraphRevision,
+            string nodeAuthoringId,
             AbilityTreeClipHook hook,
+            FixedScalar time,
             int cycle,
+            ulong playbackGeneration,
+            ulong branchRevision,
             ulong actionInstanceId,
             int timelineRuntimeHandle)
         {
             ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
             TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
+            TreeGraphRevision = SimulationIdentity.Require(treeGraphRevision, nameof(treeGraphRevision));
+            NodeAuthoringId = SimulationIdentity.Require(nodeAuthoringId, nameof(nodeAuthoringId));
             if ((byte)hook > (byte)AbilityTreeClipHook.Root)
                 throw new ArgumentOutOfRangeException(nameof(hook));
+            if (time < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(time));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (playbackGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            if (branchRevision == 0)
+                throw new ArgumentOutOfRangeException(nameof(branchRevision));
             if (actionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
             if (timelineRuntimeHandle == 0)
                 throw new ArgumentOutOfRangeException(nameof(timelineRuntimeHandle));
+            Time = time;
             Hook = hook;
             Cycle = cycle;
+            PlaybackGeneration = playbackGeneration;
+            BranchRevision = branchRevision;
             ActionInstanceId = actionInstanceId;
             TimelineRuntimeHandle = timelineRuntimeHandle;
         }
 
         public string ClipAuthoringId { get; }
         public string TreeGraphId { get; }
+        public string TreeGraphRevision { get; }
+        public string NodeAuthoringId { get; }
         public AbilityTreeClipHook Hook { get; }
+        public FixedScalar Time { get; }
         public int Cycle { get; }
+        public ulong PlaybackGeneration { get; }
+        public ulong BranchRevision { get; }
         public ulong ActionInstanceId { get; }
         public int TimelineRuntimeHandle { get; }
+        public bool IsValid => !string.IsNullOrEmpty(ClipAuthoringId) &&
+            !string.IsNullOrEmpty(TreeGraphId) &&
+            !string.IsNullOrEmpty(TreeGraphRevision) &&
+            !string.IsNullOrEmpty(NodeAuthoringId) &&
+            PlaybackGeneration != 0 &&
+            BranchRevision != 0 &&
+            ActionInstanceId != 0 &&
+            TimelineRuntimeHandle != 0;
     }
 
     public interface IAbilityTreeClipInvoker

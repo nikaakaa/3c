@@ -179,6 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var invocation = new AbilityTreeClipInvocation(
                 request.ClipAuthoringId,
                 request.TreeGraphId,
+                request.TreeGraphRevision,
+                request.ClipAuthoringId,
                 request.EventKind switch
                 {
                     TimelineRuntimeTreeClipEventKind.Enter => AbilityTreeClipHook.OnEnable,
@@ -186,7 +188,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     TimelineRuntimeTreeClipEventKind.Exit => AbilityTreeClipHook.OnDisable,
                     _ => throw new ArgumentOutOfRangeException(nameof(request))
                 },
+                request.Time,
                 request.Cycle,
+                request.Generation,
+                request.BranchRevision,
                 m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle),
                 checked((int)context.Playback.Handle.Value));
             return invoker.InvokeTreeClip(invocation);
@@ -230,7 +235,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     clips = new List<AbilityTimelineTreeClipState>(context.Playback.Content.Clips.Count);
                     m_ActiveClips.Add(handle, clips);
                 }
-                clips.Add(new AbilityTimelineTreeClipState(request.ClipAuthoringId, request.TreeGraphId, request.Cycle));
+                clips.Add(new AbilityTimelineTreeClipState(
+                    request.ClipAuthoringId,
+                    request.TreeGraphId,
+                    request.TreeGraphRevision,
+                    request.ClipAuthoringId,
+                    request.Generation,
+                    request.BranchRevision,
+                    request.Cycle));
             }
             if (context.Advance.Completes)
                 m_ActiveClips.Remove(handle);
@@ -250,8 +262,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 var invocation = new AbilityTreeClipInvocation(
                     clip.ClipAuthoringId,
                     clip.TreeGraphId,
+                    clip.TreeGraphRevision,
+                    clip.NodeAuthoringId,
                     AbilityTreeClipHook.OnDestroy,
+                    FixedScalar.Zero,
                     clip.Cycle,
+                    clip.PlaybackGeneration,
+                    clip.BranchRevision,
                     m_Host.RequireAbilityPlaybackActionInstanceId(request.Handle),
                     checked((int)request.Handle.Value));
                 invoker.InvokeTreeClip(invocation);
@@ -333,8 +350,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var invocation = new AbilityTreeClipInvocation(
                 request.MarkerAuthoringId,
                 request.GraphId,
+                request.GraphRevision,
+                request.MarkerAuthoringId,
                 AbilityTreeClipHook.OnEnable,
+                request.Time,
                 request.Cycle,
+                request.Generation,
+                MotionWarpRuntimeSemantics.ComposePlaybackGeneration(request.Generation, request.Cycle),
                 m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle),
                 checked((int)context.Playback.Handle.Value));
             return invoker.InvokeTreeClip(invocation);
@@ -440,7 +462,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     internal readonly struct TimelinePresentationGraphCameraOutput
     {
         internal TimelinePresentationGraphCameraOutput(TimelineRuntimePresentationFrame frame, string callerId,
-            bool marker, int cycle, long time, string producer, PresentationCameraRequest activation,
+            bool marker, int cycle, long time, in Float32PresentationGraphOutputIdentity identity,
+            string producer, PresentationCameraRequest activation,
             PresentationCameraRequest retirement, bool retiring)
         {
             Frame = frame;
@@ -448,6 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Marker = marker;
             Cycle = cycle;
             Time = time;
+            Identity = identity;
             Producer = producer;
             Activation = activation;
             Retirement = retirement;
@@ -458,6 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal readonly bool Marker;
         internal readonly int Cycle;
         internal readonly long Time;
+        internal readonly Float32PresentationGraphOutputIdentity Identity;
         internal readonly string Producer;
         internal readonly PresentationCameraRequest Activation;
         internal readonly PresentationCameraRequest Retirement;
@@ -2329,16 +2354,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             if (matched == null)
                 throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry.");
-            return matched.Evaluate(binding, m_PresentationFacts, this);
+            return matched.Evaluate(binding, m_PresentationFacts, m_GraphFrame.Generation, this);
         }
 
-        void IFloat32PresentationGraphOutput.SubmitCamera(string producer, in PresentationCameraRequest activation,
+        void IFloat32PresentationGraphOutput.SubmitCamera(in Float32PresentationGraphOutputIdentity identity, string producer,
+            in PresentationCameraRequest activation,
             in PresentationCameraRequest retirement, bool retiring)
         {
             if (PresentationGraphCameraPrepared == null)
                 throw new InvalidOperationException("Timeline Presentation graph has no composed Camera consumer.");
             PresentationGraphCameraPrepared(new TimelinePresentationGraphCameraOutput(m_GraphFrame, m_GraphCaller,
-                m_GraphMarker, m_GraphCycle, m_GraphTime, producer, activation, retirement, retiring));
+                m_GraphMarker, m_GraphCycle, m_GraphTime, identity, producer, activation, retirement, retiring));
         }
 
         internal void CommitPresentationFrame(ulong frame, IActionPresentationClockCoordinator clock)

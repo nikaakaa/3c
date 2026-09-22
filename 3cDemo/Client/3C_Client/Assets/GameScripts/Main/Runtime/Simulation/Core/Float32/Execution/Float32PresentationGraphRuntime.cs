@@ -6,15 +6,18 @@ namespace ThirdPersonSimulation
     public readonly struct Float32PresentationGraphFacts
     {
         public Float32PresentationGraphFacts(ulong renderFrame, Float32Vector3 position,
-            Float32Vector3 velocity, Float32Yaw yaw, bool grounded)
+            Float32Vector3 velocity, Float32Yaw yaw, bool grounded, ulong branchRevision)
         {
             if (renderFrame == 0)
                 throw new ArgumentOutOfRangeException(nameof(renderFrame));
+            if (branchRevision == 0)
+                throw new ArgumentOutOfRangeException(nameof(branchRevision));
             RenderFrame = renderFrame;
             Position = position;
             Velocity = velocity;
             Yaw = yaw;
             Grounded = grounded;
+            BranchRevision = branchRevision;
         }
 
         public ulong RenderFrame { get; }
@@ -22,6 +25,7 @@ namespace ThirdPersonSimulation
         public Float32Vector3 Velocity { get; }
         public Float32Yaw Yaw { get; }
         public bool Grounded { get; }
+        public ulong BranchRevision { get; }
 
         internal AbilityStateValue ReadCharacterState(string field) => field switch
         {
@@ -34,9 +38,42 @@ namespace ThirdPersonSimulation
         };
     }
 
+    public readonly struct Float32PresentationGraphOutputIdentity
+    {
+        public Float32PresentationGraphOutputIdentity(
+            EventId eventId,
+            string treeGraphId,
+            string treeGraphRevision,
+            string nodeAuthoringId,
+            ulong playbackGeneration,
+            ulong branchRevision)
+        {
+            if (!eventId.IsValid)
+                throw new ArgumentException("Presentation output EventId is invalid.", nameof(eventId));
+            TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
+            TreeGraphRevision = SimulationIdentity.Require(treeGraphRevision, nameof(treeGraphRevision));
+            NodeAuthoringId = SimulationIdentity.Require(nodeAuthoringId, nameof(nodeAuthoringId));
+            if (playbackGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            if (branchRevision == 0)
+                throw new ArgumentOutOfRangeException(nameof(branchRevision));
+            EventId = eventId;
+            PlaybackGeneration = playbackGeneration;
+            BranchRevision = branchRevision;
+        }
+
+        public EventId EventId { get; }
+        public string TreeGraphId { get; }
+        public string TreeGraphRevision { get; }
+        public string NodeAuthoringId { get; }
+        public ulong PlaybackGeneration { get; }
+        public ulong BranchRevision { get; }
+    }
+
     public interface IFloat32PresentationGraphOutput
     {
-        void SubmitCamera(string producer, in PresentationCameraRequest activation,
+        void SubmitCamera(in Float32PresentationGraphOutputIdentity identity, string producer,
+            in PresentationCameraRequest activation,
             in PresentationCameraRequest retirement, bool retiring);
     }
 
@@ -57,6 +94,8 @@ namespace ThirdPersonSimulation
         bool m_Retiring;
         bool m_ExitRequested;
         bool m_CanRequestExit;
+        ulong m_PlaybackGeneration;
+        ulong m_BranchRevision;
         readonly string[] m_Callers;
         readonly AbilityTreeClipHook[] m_Hooks;
         readonly string[] m_Producers;
@@ -136,7 +175,8 @@ namespace ThirdPersonSimulation
             return match >= 0;
         }
 
-        public bool Evaluate(int binding, in Float32PresentationGraphFacts facts, IFloat32PresentationGraphOutput output)
+        public bool Evaluate(int binding, in Float32PresentationGraphFacts facts, ulong playbackGeneration,
+            IFloat32PresentationGraphOutput output)
         {
             if (m_Executing)
                 throw new InvalidOperationException("Presentation graph evaluation is already active.");
@@ -148,6 +188,8 @@ namespace ThirdPersonSimulation
             m_Retiring = m_Hooks[binding] == AbilityTreeClipHook.OnDisable || m_Hooks[binding] == AbilityTreeClipHook.OnDestroy;
             m_ExitRequested = false;
             m_CanRequestExit = entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip && !m_Retiring;
+            m_PlaybackGeneration = playbackGeneration;
+            m_BranchRevision = facts.BranchRevision;
             m_Executing = true;
             Array.Copy(m_Defaults, m_State, m_State.Length);
             try
@@ -163,6 +205,8 @@ namespace ThirdPersonSimulation
             {
                 m_Output = null;
                 m_Facts = default;
+                m_PlaybackGeneration = 0;
+                m_BranchRevision = 0;
                 m_Executing = false;
             }
         }
@@ -261,6 +305,40 @@ namespace ThirdPersonSimulation
             return reference.TargetIndex;
         }
 
+        Float32PresentationGraphOutputIdentity CreateOutputIdentity(SimulationOperation operation)
+        {
+            ProgramSourceMapEntry source = null;
+            for (int index = 0; index < m_Data.SourceMap.Count; index++)
+            {
+                ProgramSourceMapEntry candidate = m_Data.SourceMap[index];
+                if (candidate.TargetKind == ProgramSourceTargetKind.Operation &&
+                    candidate.TargetIndex == operation.Handle.Value)
+                {
+                    if (source != null)
+                        throw new InvalidOperationException($"Presentation operation '{operation.Handle.Value}' has multiple source entries.");
+                    source = candidate;
+                }
+            }
+            if (source == null)
+                throw new InvalidOperationException($"Presentation operation '{operation.Handle.Value}' has no source entry.");
+
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append("presentation-treeclip-output");
+            builder.Append(source.GraphId);
+            builder.Append(source.ContentHash);
+            builder.Append(source.NodeId);
+            builder.Append(m_PlaybackGeneration);
+            builder.Append(m_BranchRevision);
+            return new Float32PresentationGraphOutputIdentity(
+                builder.Build(),
+                source.GraphId,
+                source.ContentHash,
+                source.NodeId,
+                m_PlaybackGeneration,
+                m_BranchRevision);
+        }
+
         void ResetOperation(OperationExecutionDescriptor operation)
         {
             for (int index = 0; index < operation.StateSlots.Count; index++)
@@ -335,7 +413,8 @@ namespace ThirdPersonSimulation
                     case SimulationOperationCode.CameraTarget:
                         if (m_Owner.m_Output == null)
                             throw new InvalidOperationException("Presentation graph has no Camera output consumer.");
-                        m_Owner.m_Output.SubmitCamera(m_Owner.m_Producers[operation.Handle.Value],
+                        m_Owner.m_Output.SubmitCamera(m_Owner.CreateOutputIdentity(operation),
+                            m_Owner.m_Producers[operation.Handle.Value],
                             m_Owner.m_Activations[operation.Handle.Value], m_Owner.m_Retirements[operation.Handle.Value], m_Owner.m_Retiring);
                         return OperationExecutionResult.Success;
                     case SimulationOperationCode.TimelineClipExitRequest:

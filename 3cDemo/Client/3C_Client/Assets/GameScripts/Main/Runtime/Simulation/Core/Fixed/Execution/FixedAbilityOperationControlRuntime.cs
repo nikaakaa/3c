@@ -467,7 +467,7 @@ namespace ThirdPersonSimulation.Fixed
                 header,
                 PresentationCommandKind.Camera,
                 RequireCameraProducer(operation),
-                FixedScalar.Zero,
+                invocation.Time,
                 FixedScalar.One,
                 header.Activation.Generation,
                 invocation.Cycle,

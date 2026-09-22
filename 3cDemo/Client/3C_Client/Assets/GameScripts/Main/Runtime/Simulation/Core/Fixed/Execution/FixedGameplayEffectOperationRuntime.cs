@@ -33,9 +33,9 @@ namespace ThirdPersonSimulation.Fixed
 			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-            m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
-            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
-            m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+            m_Handles = handles;
+            m_Facts = facts;
+            m_Presentation = presentation;
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_Scratch = scratch ?? throw new ArgumentNullException(nameof(scratch));
         }
@@ -52,8 +52,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.Tick,
                 m_Handles.Next,
                 m_Handles.Capture,
-                m_Handles.Restore,
-                m_Scratch);
+                m_Handles.Restore);
         }
 
         public void EndEvaluation()
@@ -279,7 +278,7 @@ namespace ThirdPersonSimulation.Fixed
                                 presentationHeader,
                                 PresentationCommandKind.Cue,
                                 producer.Identity,
-                                FixedScalar.Zero,
+                                PresentationSampleTime,
                                 FixedScalar.One,
                                 presentationHeader.Activation.Generation));
                             break;
@@ -324,6 +323,10 @@ namespace ThirdPersonSimulation.Fixed
         {
             return m_Frame.Services.RequireGameplayCueProducer(effectId, cueId);
         }
+
+        FixedScalar PresentationSampleTime => m_Presentation.HasTreeClipInvocation
+            ? m_Presentation.TreeClipInvocation.Time
+            : FixedScalar.Zero;
 
         ulong GetUInt64Constant(SimulationOperation operation, OperationNamedConstant field, ulong fallback)
         {

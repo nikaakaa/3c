@@ -611,7 +611,8 @@ namespace BTSMTL.Timeline.Runtime
             public readonly string Revision;
             public TimelineRuntimeTreeClipRequest Request(TimelineRuntimeTreeClipEventKind kind, FixedScalar time, int cycle, ulong generation) =>
                 new(Clip.AuthoringId, Clip.Track.AuthoringId, GraphId, Revision, TimelineTreeExecutionPhase.Commit,
-                    kind, time, cycle, ((time - Clip.StartTime) / (Clip.EndTime - Clip.StartTime)).ToSingle(), generation);
+                    kind, time, cycle, ((time - Clip.StartTime) / (Clip.EndTime - Clip.StartTime)).ToSingle(), generation,
+                    TimelineRuntimeTreeClipRequest.ComposeBranchRevision(generation, cycle));
         }
 
         static void AppendTreeClips(TimelineRuntimePlayback playback, PresentationPlaybackState state,

@@ -468,7 +468,7 @@ namespace ThirdPersonSimulation
                 header,
                 PresentationCommandKind.Camera,
                 RequireCameraProducer(operation),
-                Float32Scalar.Zero,
+                Float32Scalar.FromSingle(invocation.Time.ToSingle()),
                 Float32Scalar.One,
                 header.Activation.Generation,
                 invocation.Cycle,

@@ -106,5 +106,37 @@ namespace ThirdPersonSimulation
             builder.Append(channel);
             return builder.Build();
         }
+
+        public static EventId CreateTreeClip(
+            GameplayContentHash sourceContent,
+            ActorId actor,
+            ActivationId activation,
+            SimulationTick tick,
+            ulong sequence,
+            string channel,
+            in AbilityTreeClipInvocation treeClip)
+        {
+            if (!sourceContent.IsValid || !actor.IsValid || !activation.IsValid ||
+                !tick.IsValid || sequence == 0 || !treeClip.IsValid)
+                throw new ArgumentException("TreeClip event identity is incomplete.");
+            Span<byte> block = stackalloc byte[64];
+            var builder = new EventIdBuilder(block);
+            builder.Append(sourceContent.Value.Value);
+            builder.Append(actor.Value);
+            builder.Append(activation);
+            builder.Append(tick.Value);
+            builder.Append(sequence);
+            builder.Append(channel);
+            builder.Append(treeClip.TreeGraphId);
+            builder.Append(treeClip.TreeGraphRevision);
+            builder.Append(treeClip.NodeAuthoringId);
+            builder.Append(treeClip.PlaybackGeneration);
+            builder.Append(treeClip.BranchRevision);
+            builder.Append((ulong)treeClip.TimelineRuntimeHandle);
+            builder.Append((ulong)treeClip.Time.Raw);
+            builder.Append((ulong)treeClip.Cycle);
+            builder.Append(treeClip.ActionInstanceId);
+            return builder.Build();
+        }
     }
 }

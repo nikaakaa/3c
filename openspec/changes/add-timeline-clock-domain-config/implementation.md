@@ -774,3 +774,13 @@
 - 本轮 `ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors。构建使用禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
 - `OwnerCanonicalInputBatch` 已是 readonly struct，`SendPredictionCommand` 原来的 `input == null` 编译失败改为按正式 `IsValid` 拒绝无效 batch；这是同一 struct 化链路的编译修正，不新增 null fallback。
 - 4.2 和 4.6 勾选到当前内容边界。0.5、4.3、4.10 继续保持未勾选：Ability 侧 Apply 节点已存在，但 TreeClip 正式节点输出的统一稳定 EventId 仍没有完整携带 TreeGraphId、TreeGraphRevision、NodeAuthoringId、playback generation 和最终 BranchRevision 的 Fixed / Float 全链合同。
+
+## TreeClip节点输出身份与秒制消费收口
+
+- 对应 0.5、4.3、4.10：`TimelineRuntimeTreeClipRequest` 补上 `BranchRevision`，Logic Enter / Exit / Update 和 Presentation commit 请求都从已提交 playback generation 与 cycle 组成同一 branch revision；旧的 generation-only 请求不再存在。
+- `AbilityTreeClipInvocation` 与 `AbilityTimelineTreeClipState` 携带 TreeGraphId、TreeGraphRevision、NodeAuthoringId、秒制 Time、PlaybackGeneration、BranchRevision、cycle、ActionInstanceId 和 TimelineRuntimeHandle。Enter / Exit / Destroy、停止和快照恢复使用同一身份，不重建降级身份。
+- `CharacterTimelineHost` 把 Logic TreeClip 的正式身份交给 `IAbilityTreeClipInvoker`；Logic commit 范围内通过 Fixed / Float execution frame 持有 invocation，期间产生的 presentation header 统一带 `SimulationEventHeader.TreeClipInvocation`。普通执行路径保持原 `EventId.Create`，TreeClip 执行路径改用 `EventId.CreateTreeClip`，稳定 EventId 混入图 revision、节点身份、playback generation、branch revision、秒制位置和 Action Context。
+- Camera 与 Gameplay Cue 输出的 `SampleTime` 改为当前 TreeClip 的 Q32.32 秒；Fixed 直接使用，Float32 在领域边界显式转换成 Float32 标量。没有 0 秒缺省旁路，也没有素材 LocalFrame 第二时间轴。
+- Fixed / Float 角色快照正式序列化活跃 TreeClip 的新身份字段；旧快照格式不保留兼容读取。Presentation 图 output 继续从 SourceMap 取真实 graph / node identity，并把最终表现分支 revision 放入输出 identity 和稳定 EventId。
+- 全工程 `GameScripts/Main` 搜索旧 `ActionCueTrack`、`CameraCueTrack`、`TimelineCameraCue`、ActionCue sample / committed event 和素材 LocalFrame 旁路均无结果；GameplayEffect 自己的 `CueId` 是正式 Gameplay Cue 合同，不是 Timeline Cue。`ProgramCatalogFieldId` 中已无消费者的 `CurveEndFrame` / `MaxFrame` 枚举项删除，剩余字段从 0 压实到 0–24。
+- `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 警告、0 错误；`ThirdPersonClient.Editor.csproj` 编译 92 warnings、0 errors。所有构建禁用 build servers / node reuse / shared compilation，结束后已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。

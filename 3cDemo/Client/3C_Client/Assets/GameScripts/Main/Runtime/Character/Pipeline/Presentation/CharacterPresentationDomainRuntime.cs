@@ -445,7 +445,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     var graphFacts = new Float32PresentationGraphFacts(context.RenderFrame,
                         new Float32Vector3(Float32Scalar.FromSingle(position.x), Float32Scalar.FromSingle(position.y), Float32Scalar.FromSingle(position.z)),
                         new Float32Vector3(Float32Scalar.FromSingle(velocity.x), Float32Scalar.FromSingle(velocity.y), Float32Scalar.FromSingle(velocity.z)),
-                        new Float32Yaw(Float32Scalar.FromSingle(factFrame.Rotation.eulerAngles.y)), factFrame.Grounded);
+                        new Float32Yaw(Float32Scalar.FromSingle(factFrame.Rotation.eulerAngles.y)), factFrame.Grounded,
+                        factFrame.BodyDiscontinuityGeneration);
                     m_TimelineHost.Present(context, m_PresentationClockCoordinator, in graphFacts);
                 }
                 m_Camera?.ValidateFrame();

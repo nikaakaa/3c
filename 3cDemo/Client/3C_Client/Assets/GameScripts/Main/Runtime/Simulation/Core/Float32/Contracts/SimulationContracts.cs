@@ -353,7 +353,8 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             ActivationId activation,
             ulong sequence,
-            string channel)
+            string channel,
+            AbilityTreeClipInvocation? treeClipInvocation = null)
         {
             if (!numericProfile.IsValid || !eventId.IsValid || !actorId.IsValid || !tick.IsValid || !activation.IsValid || sequence == 0)
                 throw new ArgumentException("Simulation event header is incomplete.");
@@ -364,6 +365,7 @@ namespace ThirdPersonSimulation
             Activation = activation;
             Sequence = sequence;
             Channel = SimulationIdentity.Require(channel, nameof(channel));
+            TreeClipInvocation = treeClipInvocation;
         }
 
         public SimulationNumericProfile NumericProfile { get; }
@@ -373,6 +375,7 @@ namespace ThirdPersonSimulation
         public ActivationId Activation { get; }
         public ulong Sequence { get; }
         public string Channel { get; }
+        public AbilityTreeClipInvocation? TreeClipInvocation { get; }
     }
 
     public enum GameplayFactKind : byte

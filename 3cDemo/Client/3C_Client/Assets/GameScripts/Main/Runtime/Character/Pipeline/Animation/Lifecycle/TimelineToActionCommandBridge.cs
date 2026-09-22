@@ -284,37 +284,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-internal sealed class TimelinePresentationEventBridge : IDisposable
-{
-    readonly struct CameraEventKey : IEquatable<CameraEventKey>
+    internal sealed class TimelinePresentationEventBridge : IDisposable
     {
-        CameraEventKey(ulong handle, ulong generation, string marker, string track, string producer, int cycle)
+        readonly struct CameraEventKey : IEquatable<CameraEventKey>
         {
-            Handle = handle;
-            Generation = generation;
-            Marker = marker;
-            Track = track;
-            Producer = producer;
-            Cycle = cycle;
-        }
+            CameraEventKey(ulong handle, ulong generation, string marker, string track, string producer, int cycle,
+                string treeGraphId, string treeGraphRevision, string nodeAuthoringId, ulong branchRevision)
+            {
+                Handle = handle;
+                Generation = generation;
+                Marker = marker;
+                Track = track;
+                Producer = producer;
+                Cycle = cycle;
+                TreeGraphId = treeGraphId;
+                TreeGraphRevision = treeGraphRevision;
+                NodeAuthoringId = nodeAuthoringId;
+                BranchRevision = branchRevision;
+            }
 
         internal static CameraEventKey ForMarker(ulong handle, ulong generation, string marker, string producer, int cycle) =>
-            new(handle, generation, marker, string.Empty, producer, cycle);
+            new(handle, generation, marker, string.Empty, producer, cycle, null, null, null, 0);
         internal static CameraEventKey ForClip(ulong handle, ulong generation, string track, string clip, int cycle) =>
-            new(handle, generation, null, track, clip, cycle);
+            new(handle, generation, null, track, clip, cycle, null, null, null, 0);
+        internal static CameraEventKey ForGraphMarker(ulong handle, ulong generation, string marker, string producer, int cycle,
+            in Float32PresentationGraphOutputIdentity identity) =>
+            new(handle, generation, marker, null, producer, cycle,
+                identity.TreeGraphId, identity.TreeGraphRevision, identity.NodeAuthoringId, identity.BranchRevision);
+        internal static CameraEventKey ForGraphClip(ulong handle, ulong generation, string track, string producer, int cycle,
+            in Float32PresentationGraphOutputIdentity identity) =>
+            new(handle, generation, null, track, producer, cycle,
+                identity.TreeGraphId, identity.TreeGraphRevision, identity.NodeAuthoringId, identity.BranchRevision);
         internal readonly ulong Handle;
         internal readonly ulong Generation;
         internal readonly string Marker;
         internal readonly string Track;
         internal readonly string Producer;
         internal readonly int Cycle;
+        internal readonly string TreeGraphId;
+        internal readonly string TreeGraphRevision;
+        internal readonly string NodeAuthoringId;
+        internal readonly ulong BranchRevision;
         public bool Equals(CameraEventKey other) => Handle == other.Handle && Generation == other.Generation && Cycle == other.Cycle &&
             string.Equals(Marker, other.Marker, StringComparison.Ordinal) && string.Equals(Track, other.Track, StringComparison.Ordinal) &&
-            string.Equals(Producer, other.Producer, StringComparison.Ordinal);
+            string.Equals(Producer, other.Producer, StringComparison.Ordinal) &&
+            string.Equals(TreeGraphId, other.TreeGraphId, StringComparison.Ordinal) &&
+            string.Equals(TreeGraphRevision, other.TreeGraphRevision, StringComparison.Ordinal) &&
+            string.Equals(NodeAuthoringId, other.NodeAuthoringId, StringComparison.Ordinal) &&
+            BranchRevision == other.BranchRevision;
         public override bool Equals(object obj) => obj is CameraEventKey other && Equals(other);
         public override int GetHashCode() => unchecked((((Handle.GetHashCode() * 397 ^ Generation.GetHashCode()) * 397 ^ Cycle) * 397 ^
             (Marker == null ? 0 : StringComparer.Ordinal.GetHashCode(Marker))) * 397 ^
-            StringComparer.Ordinal.GetHashCode(Track) ^ StringComparer.Ordinal.GetHashCode(Producer));
+            (Track == null ? 0 : StringComparer.Ordinal.GetHashCode(Track)) ^
+            (Producer == null ? 0 : StringComparer.Ordinal.GetHashCode(Producer)) ^
+            (TreeGraphId == null ? 0 : StringComparer.Ordinal.GetHashCode(TreeGraphId)) ^
+            (TreeGraphRevision == null ? 0 : StringComparer.Ordinal.GetHashCode(TreeGraphRevision)) ^
+            (NodeAuthoringId == null ? 0 : StringComparer.Ordinal.GetHashCode(NodeAuthoringId)) ^
+            BranchRevision.GetHashCode());
     }
 
     readonly struct CameraEventState
@@ -481,8 +507,10 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         TimelineRuntimePresentationFrame frame = output.Frame;
         CameraEventKey key = output.Marker
-            ? CameraEventKey.ForMarker(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer, output.Cycle)
-            : CameraEventKey.ForClip(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer, output.Cycle);
+            ? CameraEventKey.ForGraphMarker(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer,
+                output.Cycle, output.Identity)
+            : CameraEventKey.ForGraphClip(frame.Handle.Value, frame.Generation, output.CallerId, output.Producer,
+                output.Cycle, output.Identity);
         if (output.Retiring)
         {
             if (m_Events.TryGetValue(key, out CameraEventState previous))
@@ -494,7 +522,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         }
         if (!m_TimelineHost.TryGetPresentationExecutionContext(frame.Handle, out TimelinePresentationExecutionContext context))
             throw new InvalidOperationException("Presentation graph Camera output has no execution identity.");
-        PublishCamera(key, frame, context, output.Activation, output.Retirement, output.Producer, output.Time, output.Cycle);
+        PublishCamera(key, frame, context, output.Activation, output.Retirement, output.Producer, output.Time,
+            output.Cycle, output.Identity);
     }
 
     void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason, bool retainForCorrection)
@@ -602,7 +631,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         in TimelinePresentationExecutionContext context,
         PresentationCameraRequest activationRequest,
         PresentationCameraRequest retirementRequest,
-        string graphProducer = null, long markerTime = 0, int markerCycle = 0)
+        string graphProducer = null, long markerTime = 0, int markerCycle = 0,
+        in Float32PresentationGraphOutputIdentity graphIdentity = default)
     {
         if (m_RequestCapacity == 0)
             throw new InvalidOperationException("Timeline Camera outputs require a composed Camera domain.");
@@ -612,6 +642,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         EventId eventId;
         if (existing)
             eventId = previous.Activation.Header.EventId;
+        else if (graphIdentity.NodeAuthoringId != null)
+            eventId = graphIdentity.EventId;
         else
         {
             Span<byte> block = stackalloc byte[64];

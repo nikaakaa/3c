@@ -32,9 +32,9 @@ namespace ThirdPersonSimulation
 			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
-			m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
-			m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
+			m_Handles = handles;
+			m_Facts = facts;
+			m_Presentation = presentation;
 			m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
 			m_Scratch = scratch ?? throw new ArgumentNullException(nameof(scratch));
 		}
@@ -51,8 +51,7 @@ namespace ThirdPersonSimulation
 				m_Frame.Tick,
 				m_Handles.Next,
 				m_Handles.Capture,
-				m_Handles.Restore,
-				m_Scratch);
+				m_Handles.Restore);
 		}
 
 		public void EndEvaluation()
@@ -278,7 +277,7 @@ namespace ThirdPersonSimulation
 								presentationHeader,
 								PresentationCommandKind.Cue,
 								producer.Identity,
-								Float32Scalar.Zero,
+								PresentationSampleTime,
 								Float32Scalar.One,
 								presentationHeader.Activation.Generation));
 							break;
@@ -323,6 +322,10 @@ namespace ThirdPersonSimulation
 		{
 			return m_Frame.Services.RequireGameplayCueProducer(effectId, cueId);
 		}
+
+		Float32Scalar PresentationSampleTime => m_Presentation.HasTreeClipInvocation
+			? Float32Scalar.FromSingle(m_Presentation.TreeClipInvocation.Time.ToSingle())
+			: Float32Scalar.Zero;
 
 		ulong GetUInt64Constant(SimulationOperation operation, OperationNamedConstant field, ulong fallback)
 		{

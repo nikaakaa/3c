@@ -1137,7 +1137,8 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar time,
             int cycle,
             float normalizedTime,
-            ulong generation)
+            ulong generation,
+            ulong branchRevision)
         {
             ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
                 ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
@@ -1159,6 +1160,9 @@ namespace BTSMTL.Timeline.Runtime
             Generation = generation == 0
                 ? throw new ArgumentOutOfRangeException(nameof(generation))
                 : generation;
+            if (branchRevision == 0)
+                throw new ArgumentOutOfRangeException(nameof(branchRevision));
+            BranchRevision = branchRevision;
         }
 
         public string ClipAuthoringId { get; }
@@ -1171,6 +1175,17 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
         public float NormalizedTime { get; }
         public ulong Generation { get; }
+        public ulong BranchRevision { get; }
+
+        public static ulong ComposeBranchRevision(ulong generation, int cycle)
+        {
+            if (generation == 0 || generation > uint.MaxValue)
+                throw new InvalidOperationException(
+                    $"TreeClip activation generation '{generation}' exceeds the branch revision range.");
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
+            return generation << 32 | (uint)cycle;
+        }
     }
 
     public readonly struct TimelineRuntimeMarkerRequest
@@ -2053,7 +2068,8 @@ namespace BTSMTL.Timeline.Runtime
                     boundary.Time,
                     boundary.Cycle,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f,
-                    generation));
+                    generation,
+                    TimelineRuntimeTreeClipRequest.ComposeBranchRevision(generation, boundary.Cycle)));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -2141,7 +2157,8 @@ namespace BTSMTL.Timeline.Runtime
                         currentPosition,
                         currentCycle,
                         local,
-                        generation));
+                        generation,
+                        TimelineRuntimeTreeClipRequest.ComposeBranchRevision(generation, currentCycle)));
                     traces.Add(new TimelineRuntimeTraceOutput(
                         timeline.AuthoringId,
                         treeTrack.AuthoringId,

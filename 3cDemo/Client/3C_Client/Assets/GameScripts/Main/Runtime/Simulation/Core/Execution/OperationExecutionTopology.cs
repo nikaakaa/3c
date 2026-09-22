@@ -12,32 +12,30 @@ namespace ThirdPersonSimulation
         BlendMode = 3,
         Channel = 4,
         ConsumeLowerChannels = 5,
-        CurveEndFrame = 6,
-        EaseInCurve = 7,
-        EaseOutCurve = 8,
-        Intensity = 9,
-        MaxFrame = 10,
-        Muted = 11,
-        Parent = 12,
-        PositionX = 13,
-        PositionY = 14,
-        PositionZ = 15,
-        Priority = 16,
-        Projection = 17,
-        Space = 18,
-        Timeline = 19,
-        Track = 20,
-        WeightCurve = 21,
-        Yaw = 22,
-        TargetRequirement = 23,
-        ValueType = 24,
-        InputValueId = 25,
-        SectionCount = 26
+        EaseInCurve = 6,
+        EaseOutCurve = 7,
+        Intensity = 8,
+        Muted = 9,
+        Parent = 10,
+        PositionX = 11,
+        PositionY = 12,
+        PositionZ = 13,
+        Priority = 14,
+        Projection = 15,
+        Space = 16,
+        Timeline = 17,
+        Track = 18,
+        WeightCurve = 19,
+        Yaw = 20,
+        TargetRequirement = 21,
+        ValueType = 22,
+        InputValueId = 23,
+        SectionCount = 24
     }
 
     public sealed class ProgramCatalogRuntimeIndex
     {
-        const int FieldCount = 27;
+        const int FieldCount = 25;
         readonly IReadOnlyList<ProgramCatalogEntry> m_Entries;
         readonly int m_KindCount;
         readonly int[] m_OperationEntries;

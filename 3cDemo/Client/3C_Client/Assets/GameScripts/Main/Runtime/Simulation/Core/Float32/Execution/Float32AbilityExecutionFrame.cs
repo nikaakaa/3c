@@ -302,7 +302,7 @@ namespace ThirdPersonSimulation
         internal void AddPresentation(PresentationCommand value) => m_Presentation.Add(value);
         internal void AddTrace(SimulationTraceRecord value) => m_Trace.Add(value);
 
-        internal readonly struct ActionTraceContextScope : IDisposable
+        internal struct ActionTraceContextScope : IDisposable
         {
             readonly Float32AbilityExecutionFrame m_Owner;
             readonly ulong m_PreviousInstanceId;
@@ -320,6 +320,7 @@ namespace ThirdPersonSimulation
                 m_PreviousInstanceId = previousInstanceId;
                 m_PreviousSkillId = previousSkillId;
                 m_PreviousEntryOperation = previousEntryOperation;
+                m_Disposed = false;
             }
 
             public void Dispose()
@@ -434,25 +435,42 @@ namespace ThirdPersonSimulation
             if (generation == 0)
                 throw new InvalidOperationException(
                     $"Operation '{SourcePath(operation)}' has no active activation generation.");
-            return Next(
+            return Create(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
                 generation,
-                channel);
+                channel,
+                m_Frame.HasTreeClipInvocation ? m_Frame.TreeClipInvocation : null);
         }
 
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
+            => Create(source, generation, channel, null);
+
+        SimulationEventHeader Create(
+            SimulationExecutionSource source,
+            ulong generation,
+            string channel,
+            AbilityTreeClipInvocation? treeClipInvocation)
         {
             ulong sequence = m_Frame.EventSequenceState.NextEventSequence();
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);
-            var eventId = EventId.Create(
-                new GameplayContentHash(m_Frame.Identity.ContentHash),
-                m_Frame.ActorId,
-                activation,
-                m_Frame.Tick,
-                sequence,
-                channel);
+            EventId eventId = treeClipInvocation.HasValue
+                ? EventId.CreateTreeClip(
+                    new GameplayContentHash(m_Frame.Identity.ContentHash),
+                    m_Frame.ActorId,
+                    activation,
+                    m_Frame.Tick,
+                    sequence,
+                    channel,
+                    treeClipInvocation.Value)
+                : EventId.Create(
+                    new GameplayContentHash(m_Frame.Identity.ContentHash),
+                    m_Frame.ActorId,
+                    activation,
+                    m_Frame.Tick,
+                    sequence,
+                    channel);
             return new SimulationEventHeader(
                 m_Frame.NumericProfile,
                 eventId,
@@ -460,7 +478,8 @@ namespace ThirdPersonSimulation
                 m_Frame.Tick,
                 activation,
                 sequence,
-                channel);
+                channel,
+                treeClipInvocation);
         }
 
         public string SourcePath(SimulationOperation operation)
@@ -520,6 +539,7 @@ namespace ThirdPersonSimulation
         public Float32DiagnosticSequence(Float32AbilityExecutionFrame frame)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_Sequence = 0;
         }
 
         public void Reset()

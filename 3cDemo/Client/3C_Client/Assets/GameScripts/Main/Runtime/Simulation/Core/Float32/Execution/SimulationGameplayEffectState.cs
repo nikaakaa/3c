@@ -552,14 +552,40 @@ namespace ThirdPersonSimulation
             IDictionary<ulong, List<PortablePredictionRecord>> journal,
             IDictionary<ulong, ulong> lastLifecycleRevisions)
         {
+            CopyTagSourcesTo(tagSources);
+            CopyAttributesTo(attributes);
+            CopyActiveEffectsTo(activeEffects);
+            CopyPeriodsTo(periods);
+            CopyJournalTo(journal);
+            CopyLastLifecycleRevisionsTo(lastLifecycleRevisions);
+        }
+
+        internal void CopyTagSourcesTo(IDictionary<string, string[]> tagSources)
+        {
             foreach (KeyValuePair<string, string[]> pair in m_TagSources)
                 tagSources.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+        }
+
+        internal void CopyAttributesTo(IDictionary<string, PortableAttributeState> attributes)
+        {
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
                 attributes.Add(pair.Key, CloneAttribute(pair.Value));
+        }
+
+        internal void CopyActiveEffectsTo(IList<PortableActiveEffectState> activeEffects)
+        {
             for (int i = 0; i < m_ActiveEffects.Count; i++)
                 activeEffects.Add(CloneActive(m_ActiveEffects[i]));
+        }
+
+        internal void CopyPeriodsTo(IDictionary<ulong, ulong> periods)
+        {
             foreach (KeyValuePair<ulong, ulong> pair in m_Periods)
                 periods.Add(pair.Key, pair.Value);
+        }
+
+        internal void CopyJournalTo(IDictionary<ulong, List<PortablePredictionRecord>> journal)
+        {
             foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in m_Journal)
             {
                 var records = new List<PortablePredictionRecord>(pair.Value.Count);
@@ -567,6 +593,10 @@ namespace ThirdPersonSimulation
                     records.Add(ClonePrediction(pair.Value[i]));
                 journal.Add(pair.Key, records);
             }
+        }
+
+        internal void CopyLastLifecycleRevisionsTo(IDictionary<ulong, ulong> lastLifecycleRevisions)
+        {
             foreach (KeyValuePair<ulong, ulong> pair in m_LastLifecycleRevisions)
                 lastLifecycleRevisions.Add(pair.Key, pair.Value);
         }
@@ -1233,14 +1263,43 @@ namespace ThirdPersonSimulation
         {
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
-            ClearCollections();
-            aggregate.CopyTo(
-                m_TagSources,
-                m_Attributes,
-                m_ActiveEffects,
-                m_Periods,
-                m_Journal,
-                m_LastLifecycleRevisions);
+            bool tagsMatch = aggregate.MatchesTagSources(m_TagSources);
+            bool attributesMatch = aggregate.MatchesAttributes(m_Attributes);
+            bool activeEffectsMatch = aggregate.MatchesActiveEffects(m_ActiveEffects);
+            bool periodsMatch = aggregate.MatchesPeriods(m_Periods);
+            bool journalMatch = aggregate.MatchesJournal(m_Journal);
+            bool revisionsMatch = aggregate.MatchesLastLifecycleRevisions(m_LastLifecycleRevisions);
+            if (!tagsMatch)
+            {
+                m_TagSources.Clear();
+                aggregate.CopyTagSourcesTo(m_TagSources);
+                m_OwnedTagsSnapshot = null;
+            }
+            if (!attributesMatch)
+            {
+                m_Attributes.Clear();
+                aggregate.CopyAttributesTo(m_Attributes);
+            }
+            if (!activeEffectsMatch)
+            {
+                m_ActiveEffects.Clear();
+                aggregate.CopyActiveEffectsTo(m_ActiveEffects);
+            }
+            if (!periodsMatch)
+            {
+                m_Periods.Clear();
+                aggregate.CopyPeriodsTo(m_Periods);
+            }
+            if (!journalMatch)
+            {
+                m_Journal.Clear();
+                aggregate.CopyJournalTo(m_Journal);
+            }
+            if (!revisionsMatch)
+            {
+                m_LastLifecycleRevisions.Clear();
+                aggregate.CopyLastLifecycleRevisionsTo(m_LastLifecycleRevisions);
+            }
             m_Baseline = aggregate;
             m_ChangeCursor = aggregate.ChangeCursor;
             ClearDirty();

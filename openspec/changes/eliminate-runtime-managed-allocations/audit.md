@@ -5597,3 +5597,12 @@
 - 接管前仍在原数组上原地执行 Ordinal 排序，并保留重复 Slot、缺失本地状态、重复本地状态和 catalog hash 校验；wire 数据顺序、aggregate 顺序、canonical 编码和错误语义不变。真实变化槽位/本地状态数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在 2.4 后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment 安装/卸载、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 CharacterState解码数组所有权移交
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `9604fd2e5`。
+
+- Fixed/Float32 CharacterRuntimeState 状态解码原先把 abilities、action activation requests、action instances 和 timeline snapshots 交给公开构造，后者再通过 `CopyArray` 逐类复制，timeline 还从 List 重建第二个 List 后包装。现在新增 `AdoptPrepared`，Codec 精确准备数组后直接移交所有权。
+- 接管入口保留 identity、ability 分区、input request 排序与重复、timeline snapshot 排序与重复校验；timeline 用 `ReadOnlyCollection` 直接包装 owned 数组。canonical 重新编码、wire 排序、历史只读外壳和错误语义不变。CharacterState 提交 candidate 本身仍是 class 外壳，值化或 pending/committed 外壳改造仍在 2.4 后续。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做状态保存加载、savepoint restore、rollback restore和 Player 分配采样。

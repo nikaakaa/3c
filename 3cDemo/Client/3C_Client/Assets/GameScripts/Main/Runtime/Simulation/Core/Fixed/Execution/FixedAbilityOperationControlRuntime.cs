@@ -443,6 +443,7 @@ namespace ThirdPersonSimulation.Fixed
                 source.GraphId,
                 source.NodeId,
                 source.GraphInvocationPath,
+                m_Access.SourcePath(operation),
                 generation);
         }
 

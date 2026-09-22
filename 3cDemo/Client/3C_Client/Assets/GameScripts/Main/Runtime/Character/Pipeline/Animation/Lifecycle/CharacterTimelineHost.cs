@@ -391,6 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelinePlaybackHandle handle,
             int runtimeHandle,
             TimelineRuntimeAdvanceResult result,
+            string timelineId,
             AbilityTimelineRuntimeStatus status,
             ulong sequence)
         {
@@ -398,7 +399,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Result = result;
             Status = status;
             AbilityTimelineProgress progress = !result.IsValid ? default : new AbilityTimelineProgress(
-                result.ContentIdentity,
+                timelineId,
                 result.ContentRevision,
                 result.Generation,
                 result.LogicTick,
@@ -423,6 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelinePlaybackHandle handle,
             int runtimeHandle,
             TimelineRuntimeStopRequest request,
+            string timelineId,
             AbilityTimelineRuntimeStatus status,
             ulong sequence)
         {
@@ -431,7 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Status = status;
             TimelineRuntimePlayback playback = request.Playback;
             AbilityTimelineProgress progress = playback == null || request.Reason.LocalLogicTick == 0 ? default : new AbilityTimelineProgress(
-                playback.Content.Identity, playback.ContentRevision, playback.Generation, request.Reason.LocalLogicTick,
+                timelineId, playback.ContentRevision, playback.Generation, request.Reason.LocalLogicTick,
                 playback.Content.Duration, playback.CursorTime, playback.CursorTime, playback.Cycle, playback.Cycle,
                 playback.PlaybackMode == TimelinePlaybackMode.Loop, AbilityTimelineProgressState.Stopped, playback.Control);
             Pending = playback != null ? new AbilityTimelineStopPending(runtimeHandle, sequence, progress) : default;
@@ -504,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal ulong ActionInstanceId;
             internal RuntimeInstanceKey RuntimeInstance;
             internal RuntimeTimelinePlaybackProvenance Provenance;
+            internal string OperationExecutionPath;
             internal bool TerminalPublished;
             internal bool PresentationWithdrawn;
             internal bool LogicOwnerReleased;
@@ -1177,6 +1180,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         updated.SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime;
                         updated.CoreDriven = true;
                         updated.ActionContextId = actionContext.ContextId;
+                        updated.OperationExecutionPath = invocationSource.OperationExecutionPath;
                         m_ActivePlaybacks[i] = updated;
                     }
                 }
@@ -1194,9 +1198,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline advancement requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                return new CharacterTimelinePendingAdvance(handle, 0, default, MapTerminalStatus(status), 0);
+                return new CharacterTimelinePendingAdvance(handle, 0, default, string.Empty, MapTerminalStatus(status), 0);
+            if (!TryGetActivePlayback(new TimelineRuntimePlaybackHandle(handle.Value), out ActivePlayback active))
+                throw new InvalidOperationException($"Timeline advance '{handle.Value}' has no registered playback.");
             TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount, control);
-            var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running, checked((ulong)System.Threading.Interlocked.Increment(ref s_NextPendingSequence)));
+            var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, active.Timeline.AuthoringId,
+                AbilityTimelineRuntimeStatus.Running, checked((ulong)System.Threading.Interlocked.Increment(ref s_NextPendingSequence)));
             m_PendingAdvances[handle.Value] = pending;
             return pending;
         }
@@ -1247,7 +1254,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException($"Timeline motion '{pending.Handle.Value}' has no Ability invocation provenance.");
             var source = SimulationExecutionSource.FromSkillOperation(
                 new OperationHandle(active.Provenance.SourceOperationIndex),
-                active.Provenance.SourceInvocationPath);
+                active.OperationExecutionPath);
             TimelineRuntimeSampleView<TimelineMotionCurveContribution> contributions =
                 pending.Result.Evaluation.MotionContributions;
             for (int index = 0; index < contributions.Count; index++)
@@ -1296,7 +1303,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new ArgumentNullException(nameof(motionWarpCatalog));
             var source = SimulationExecutionSource.FromSkillOperation(
                 new OperationHandle(active.Provenance.SourceOperationIndex),
-                active.Provenance.SourceInvocationPath);
+                active.OperationExecutionPath);
             TimelineRuntimeSampleView<TimelineRuntimeMotionWarpRequest> requests =
                 pending.Result.Evaluation.MotionWarps;
             for (int index = 0; index < requests.Count; index++)
@@ -1497,7 +1504,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
                 var source = SimulationExecutionSource.FromSkillOperation(
                     new OperationHandle(active.Provenance.SourceOperationIndex),
-                    active.Provenance.SourceInvocationPath);
+                    active.OperationExecutionPath);
                 context = new TimelinePresentationExecutionContext(
                     active.ActionContext.ActionInstanceId,
                     new SimulationTick(tick),
@@ -1524,13 +1531,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline stop requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                return new CharacterTimelinePendingStop(handle, 0, default, MapTerminalStatus(status), 0);
+                return new CharacterTimelinePendingStop(handle, 0, default, string.Empty, MapTerminalStatus(status), 0);
+            if (!TryGetActivePlayback(new TimelineRuntimePlaybackHandle(handle.Value), out ActivePlayback active))
+                throw new InvalidOperationException($"Timeline stop '{handle.Value}' has no registered playback.");
             if (!m_Host.Service.RequestStopTimelinePlayback(
                     handle,
                     stopContext,
                     out TimelineRuntimeStopRequest request))
                 throw new InvalidOperationException($"Timeline stop '{handle.Value}' was rejected.");
-            var pending = new CharacterTimelinePendingStop(handle, (int)handle.Value, request, AbilityTimelineRuntimeStatus.Running,
+            var pending = new CharacterTimelinePendingStop(handle, (int)handle.Value, request, active.Timeline.AuthoringId, AbilityTimelineRuntimeStatus.Running,
                 checked((ulong)System.Threading.Interlocked.Increment(ref s_NextPendingSequence)));
             m_PendingStops[handle.Value] = pending;
             return pending;
@@ -1763,7 +1772,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Provenance = CreateAbilityPlaybackProvenance(
                     snapshot.InvocationSource,
                     snapshot.ActionContext,
-                    playbackTimeline.Name)
+                    playbackTimeline.Name),
+                OperationExecutionPath = snapshot.InvocationSource.OperationExecutionPath
             };
             m_ActivePlaybacks.Add(active);
             PublishPlaybackSnapshot(active);
@@ -2254,7 +2264,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     if (clock == null)
                         throw new InvalidOperationException("Ability Timeline presentation requires its Action clock coordinator.");
                     hasSample = clock.TrySampleTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation,
+                        active.OperationExecutionPath, active.Timeline.AuthoringId, active.Generation,
                         context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
                 }
                 if (active.PresentationWithdrawn && hasSample && sample.Reason == TimelinePresentationSampleReason.Withdrawn && sample.RetainForCorrection)
@@ -2399,7 +2409,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 bool retainForCorrection = m_PresentationEndCandidates[i].RetainForCorrection;
                 if (active.CoreDriven && !retainForCorrection)
                     clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation);
+                        active.OperationExecutionPath, active.Timeline.AuthoringId, active.Generation);
                 var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
                 if (!active.PresentationWithdrawn)
                     PresentationPlaybackEnded?.Invoke(handle, active.Generation, m_PresentationEndCandidates[i].Reason);

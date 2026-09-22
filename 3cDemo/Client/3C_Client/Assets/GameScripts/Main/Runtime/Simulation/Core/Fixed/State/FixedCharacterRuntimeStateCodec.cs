@@ -238,6 +238,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(snapshot.InvocationSource.GraphAuthoringId);
             writer.WriteString(snapshot.InvocationSource.NodeAuthoringId);
             writer.WriteString(snapshot.InvocationSource.GraphInvocationPath);
+            writer.WriteString(snapshot.InvocationSource.OperationExecutionPath);
             writer.WriteUInt64(snapshot.InvocationSource.InvocationGeneration);
             writer.WriteUInt64(snapshot.InputSequence);
             writer.WriteUInt64(snapshot.StartTick.Value);
@@ -299,6 +300,7 @@ namespace ThirdPersonSimulation.Fixed
             string invocationGraphAuthoringId = reader.ReadString();
             string invocationNodeAuthoringId = reader.ReadString();
             string invocationPath = reader.ReadString();
+            string operationExecutionPath = reader.ReadString();
             ulong invocationGeneration = reader.ReadUInt64();
             ulong inputSequence = reader.ReadUInt64();
             ulong startTickValue = reader.ReadUInt64();
@@ -319,6 +321,7 @@ namespace ThirdPersonSimulation.Fixed
                 invocationGraphAuthoringId,
                 invocationNodeAuthoringId,
                 invocationPath,
+                operationExecutionPath,
                 invocationGeneration);
             return new AbilityTimelineRuntimeSnapshot(
                 runtimeHandle,

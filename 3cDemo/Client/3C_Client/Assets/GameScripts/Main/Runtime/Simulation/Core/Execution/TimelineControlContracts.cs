@@ -420,6 +420,7 @@ namespace ThirdPersonSimulation
             string graphAuthoringId,
             string nodeAuthoringId,
             string graphInvocationPath,
+            string operationExecutionPath,
             ulong invocationGeneration)
         {
             if (operationIndex < 0)
@@ -428,6 +429,7 @@ namespace ThirdPersonSimulation
             GraphAuthoringId = SimulationIdentity.Require(graphAuthoringId, nameof(graphAuthoringId));
             NodeAuthoringId = SimulationIdentity.Require(nodeAuthoringId, nameof(nodeAuthoringId));
             GraphInvocationPath = SimulationIdentity.Require(graphInvocationPath, nameof(graphInvocationPath));
+            OperationExecutionPath = SimulationIdentity.Require(operationExecutionPath, nameof(operationExecutionPath));
             if (invocationGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(invocationGeneration));
             InvocationGeneration = invocationGeneration;
@@ -437,11 +439,13 @@ namespace ThirdPersonSimulation
         public string GraphAuthoringId { get; }
         public string NodeAuthoringId { get; }
         public string GraphInvocationPath { get; }
+        public string OperationExecutionPath { get; }
         public ulong InvocationGeneration { get; }
         public bool IsValid => OperationIndex >= 0 &&
                                !string.IsNullOrEmpty(GraphAuthoringId) &&
                                !string.IsNullOrEmpty(NodeAuthoringId) &&
                                !string.IsNullOrEmpty(GraphInvocationPath) &&
+                               !string.IsNullOrEmpty(OperationExecutionPath) &&
                                InvocationGeneration != 0;
     }
 

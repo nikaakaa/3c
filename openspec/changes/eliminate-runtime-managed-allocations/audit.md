@@ -4519,3 +4519,12 @@
 - 开启诊断时的 detail 文本、`PipelineTransactionTraceKind.StepCompleted`、Step/Tick 来源、成功标记和发布顺序不变。错误路径和其他诊断文本保持原状，留给后续 typed diagnostics 边界处理。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可分别关闭和开启诊断运行同一固定输入，关闭时应观察每 Step 的 completed 字符串分配消失；开启后 Console/诊断 trace 中的 Step completed 文本应保持不变。
+
+## 2026-09-22 Typed ingress batch 值类型收口
+
+对应 tasks.md 的 5.5，新增 5.275 作为独立小步；5.5 保持未勾选。
+
+- Fixed 与 Float32 `TypedIngressBatch` 从 sealed class 改为 readonly struct；`Empty` 返回 default，`Ingress` 固定返回 `Array.Empty`。正式链路当前只发布空 typed ingress，原 `IEnumerable` 构造器全仓没有调用方，其中的 `List` 复制、排序委托和去重路径直接删除。
+- Local input frame、Rollback ingress batch、Local schedule 输入校验改用 struct 的 `IsValid`；Exclusive Product 槽已有值类型判断，pipeline 端口包装仍是引用类型并保留原 null 校验。发布、读取顺序和空集合语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Local/Rollback/Authoritative session，确认输入 ingress 和 schedule 不变；分配采样应观察 Empty batch 的托管外壳消失，空数组继续由运行时共享。

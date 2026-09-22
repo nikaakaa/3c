@@ -784,8 +784,24 @@ namespace ThirdPersonSimulation
 
         static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneChangedJournal(
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source,
-            IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> baseline)
+            SortedDictionary<ulong, List<PortablePredictionRecord>> baseline)
         {
+            if (source != null && source.Count == baseline.Count)
+            {
+                bool matches = true;
+                foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
+                {
+                    if (!baseline.TryGetValue(pair.Key, out List<PortablePredictionRecord> baselineRecords) ||
+                        pair.Value.Count != baselineRecords.Count ||
+                        !MatchesRecords(pair.Value, baselineRecords))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return baseline;
+            }
             var result = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
             foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
             {

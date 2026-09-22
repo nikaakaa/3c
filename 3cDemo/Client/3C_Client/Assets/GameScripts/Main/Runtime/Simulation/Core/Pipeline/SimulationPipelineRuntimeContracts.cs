@@ -218,9 +218,9 @@ namespace ThirdPersonSimulation
             string stateSchemaId,
             int stateSchemaVersion,
             StableHash stateHash,
-            byte[] payload)
+            byte[] ownedPayload)
         {
-            if (!passId.IsValid || !implementationVersion.IsValid || stateSchemaVersion <= 0 || !stateHash.IsValid || payload == null)
+            if (!passId.IsValid || !implementationVersion.IsValid || stateSchemaVersion <= 0 || !stateHash.IsValid || ownedPayload == null)
                 throw new ArgumentException("Pass state snapshot identity is incomplete.");
             PassId = passId;
             ImplementationVersion = implementationVersion;
@@ -228,7 +228,7 @@ namespace ThirdPersonSimulation
             StateSchemaId = SimulationIdentity.Require(stateSchemaId, nameof(stateSchemaId));
             StateSchemaVersion = stateSchemaVersion;
             StateHash = stateHash;
-            m_Payload = (byte[])payload.Clone();
+            m_Payload = ownedPayload;
             StableHash computed = SimulationCanonicalPayloadHash.Compute(m_Payload);
             if (!computed.Equals(stateHash))
                 throw new ArgumentException("Pass state payload hash does not match its canonical bytes.", nameof(stateHash));

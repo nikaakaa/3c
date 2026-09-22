@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace ThirdPersonSimulation
 {
@@ -73,6 +74,8 @@ namespace ThirdPersonSimulation
     {
         readonly IReadOnlyList<SimulationPipelinePassStateSnapshot> m_Participants;
 
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public SimulationPipelineStateSnapshot(
             SimulationPipelineIdentity pipeline,
             SimulationComponentIdentity backend,
@@ -129,18 +132,72 @@ namespace ThirdPersonSimulation
 
         StableHash ComputeHash()
         {
-            var values = new string[m_Participants.Count + 5];
-            values[0] = "simulation-pipeline-state-snapshot/1";
-            values[1] = Pipeline.ToString();
-            values[2] = Backend.ComponentId;
-            values[3] = Backend.SemanticVersion;
-            values[4] = LastCompletedTick.ToString(CultureInfo.InvariantCulture);
+            CanonicalWriter writer = HashWriter();
+            WriteHashText(writer, "simulation-pipeline-state-snapshot/1");
+            WriteSeparator(writer);
+            WriteHashText(writer, Pipeline.Id.Value);
+            WriteHashText(writer, "@");
+            WriteHashText(writer, Pipeline.Revision.Value);
+            WriteHashText(writer, "/schema");
+            WriteHashText(writer, Pipeline.SchemaVersion.Value.ToString());
+            WriteHashText(writer, "/");
+            WriteHashText(writer, Pipeline.Hash.Value.Value);
+            WriteSeparator(writer);
+            WriteHashText(writer, Backend.ComponentId);
+            WriteSeparator(writer);
+            WriteHashText(writer, Backend.SemanticVersion);
+            WriteSeparator(writer);
+            WriteHashText(writer, LastCompletedTick.ToString(CultureInfo.InvariantCulture));
             for (int i = 0; i < m_Participants.Count; i++)
             {
                 SimulationPipelinePassStateSnapshot participant = m_Participants[i];
-                values[i + 5] = $"{participant.PassId}:{participant.ImplementationVersion}:{participant.StateOwner}:{participant.StateSchemaId}:{participant.StateSchemaVersion}:{participant.StateHash}";
+                WriteSeparator(writer);
+                WriteHashText(writer, participant.PassId.Value);
+                WriteHashText(writer, ":");
+                WriteHashText(writer, participant.ImplementationVersion.Value);
+                WriteHashText(writer, ":");
+                WriteHashText(writer, participant.StateOwner);
+                WriteHashText(writer, ":");
+                WriteHashText(writer, participant.StateSchemaId);
+                WriteHashText(writer, ":");
+                WriteHashText(writer, participant.StateSchemaVersion.ToString());
+                WriteHashText(writer, ":");
+                WriteHashText(writer, participant.StateHash.Value);
             }
-            return StableHash.Compute(values);
+            return writer.ComputeHash();
+        }
+
+        static void WriteSeparator(CanonicalWriter writer)
+        {
+            Span<byte> separator = stackalloc byte[1];
+            separator[0] = 0x1f;
+            writer.WriteRawBytes(separator);
+        }
+
+        static void WriteHashText(CanonicalWriter writer, string value)
+        {
+            const int characterCapacity = 256;
+            Span<byte> buffer = stackalloc byte[characterCapacity * 3];
+            int offset = 0;
+            while (offset < value.Length)
+            {
+                int count = Math.Min(characterCapacity, value.Length - offset);
+                if (offset + count < value.Length &&
+                    char.IsHighSurrogate(value[offset + count - 1]) &&
+                    char.IsLowSurrogate(value[offset + count]))
+                    count--;
+                int written = Encoding.UTF8.GetBytes(value.AsSpan(offset, count), buffer);
+                writer.WriteRawBytes(buffer.Slice(0, written));
+                offset += count;
+            }
+        }
+
+        static CanonicalWriter HashWriter()
+        {
+            if (s_HashWriter == null)
+                s_HashWriter = new CanonicalWriter();
+            s_HashWriter.Reset();
+            return s_HashWriter;
         }
     }
 

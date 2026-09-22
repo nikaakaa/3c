@@ -534,6 +534,7 @@
 - [x] 5.263 Float32 World Snapshot codec 复用线程生命周期 hash 与 canonical writer；Read 校验不再生成完整临时编码数组，wire 内容和失败语义不变
 - [x] 5.264 两数值域 World Snapshot 嵌套编码改为长度前缀流式写入；Fixed 同步复用校验 writer，Session Snapshot 与 Prediction History 删除内层数组中转
 - [x] 5.265 两数值域与 ServerAuthoritative Pipeline 状态编码直读 immutable Payload；Session Snapshot 与 Prediction History 保存不再克隆 participant 状态
+- [x] 5.266 Pipeline restore 前的 participant payload hash 校验直读 immutable Payload；删除只供 hash 使用的完整数组克隆
 
 ## 6. UI、资源、渲染和生命周期
 

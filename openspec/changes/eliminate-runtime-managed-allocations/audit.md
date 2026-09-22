@@ -4430,3 +4430,12 @@
 - wire 字段顺序、长度前缀、payload hash 和 snapshot hash 语义不变。checkpoint 外层输出数组、字符串/hash 分配和 decode 后 participant payload 复制保留。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint 和 ServerAuthoritative Prediction history checkpoint，再触发 restore replay，确认 pipeline 状态一致；分配采样应观察编码端 participant payload 克隆消失，但不表示 ingress restore 或 authority pass state 的正式独立 payload 已删除。
+
+## 2026-09-22 Pipeline restore hash 校验直读
+
+对应 tasks.md 的 5.5，新增 5.266 作为独立小步；5.5 保持未勾选。代码提交为 `26f57d8b1`。
+
+- `SimulationPipelineStateSnapshot.RequireSnapshotIdentity` 在校验 participant payload hash 时改为直接计算 immutable `Payload.Span`；原 `CopyPayload()` 生成的完整临时数组只服务这次哈希，现已删除。
+- participant 身份校验顺序、payload SHA-256、StableHash 比较和 mismatch 异常语义不变。snapshot 仍然拥有 immutable payload；需要独立可变数组的 ingress replacement 和 authority pass state 继续使用 `CopyPayload`。
+- `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；后者连带编译 Float32。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次使用 pipeline state 的 restore，确认状态恢复和 mismatch 诊断不变；分配采样应观察 restore 校验路径的 payload 哈希克隆消失，但不表示 restore 后的正式独立 payload 已删除。

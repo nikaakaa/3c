@@ -85,8 +85,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public void Commit(FixedSimulationCommitBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Commit batch is invalid.", nameof(batch));
             if (batch.Steps.Count != 1 || batch.SourceEgress.Count != 0 ||
                 batch.Steps[0].Step.ExecutionKind != SimulationPipelineStepExecutionKind.Forward)
             {

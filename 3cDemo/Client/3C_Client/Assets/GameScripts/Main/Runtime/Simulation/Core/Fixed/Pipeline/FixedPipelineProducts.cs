@@ -298,7 +298,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationTick Tick => World.Tick;
     }
 
-    public sealed class FixedSimulationCommitBatch
+    public readonly struct FixedSimulationCommitBatch
     {
         readonly IReadOnlyList<FixedCompletedSimulationStep> m_Steps;
         readonly IReadOnlyList<FixedSourceEgressRecord> m_SourceEgress;
@@ -376,6 +376,10 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public StableHash TransactionIdentity { get; }
+        public bool IsValid => TransactionIdentity.IsValid &&
+                               OutputDispositions != null &&
+                               m_Steps != null &&
+                               m_SourceEgress != null;
         public IReadOnlyList<FixedCompletedSimulationStep> Steps => m_Steps;
         public SimulationPipelineOutputDispositionSet OutputDispositions { get; }
         public IReadOnlyList<FixedSourceEgressRecord> SourceEgress => m_SourceEgress;

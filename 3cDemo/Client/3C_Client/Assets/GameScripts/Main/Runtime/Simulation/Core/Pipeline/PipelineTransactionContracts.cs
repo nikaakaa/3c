@@ -159,7 +159,6 @@ namespace ThirdPersonSimulation
         where TStep : SimulationPipelineStep
         where TWorkingState : class
         where TCompletedStep : class
-        where TCommitBatch : class
     {
         string TransactionIdentityDomain { get; }
         bool DiagnosticsEnabled { get; }

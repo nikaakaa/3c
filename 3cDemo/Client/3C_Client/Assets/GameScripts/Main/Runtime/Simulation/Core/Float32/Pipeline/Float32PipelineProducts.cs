@@ -306,7 +306,7 @@ namespace ThirdPersonSimulation
         public SimulationTick Tick => World.Tick;
     }
 
-    public sealed class Float32SimulationCommitBatch
+    public readonly struct Float32SimulationCommitBatch
     {
         readonly IReadOnlyList<Float32CompletedSimulationStep> m_Steps;
         readonly IReadOnlyList<Float32SourceEgressRecord> m_SourceEgress;
@@ -384,6 +384,10 @@ namespace ThirdPersonSimulation
         }
 
         public StableHash TransactionIdentity { get; }
+        public bool IsValid => TransactionIdentity.IsValid &&
+                               OutputDispositions != null &&
+                               m_Steps != null &&
+                               m_SourceEgress != null;
         public IReadOnlyList<Float32CompletedSimulationStep> Steps => m_Steps;
         public SimulationPipelineOutputDispositionSet OutputDispositions { get; }
         public IReadOnlyList<Float32SourceEgressRecord> SourceEgress => m_SourceEgress;

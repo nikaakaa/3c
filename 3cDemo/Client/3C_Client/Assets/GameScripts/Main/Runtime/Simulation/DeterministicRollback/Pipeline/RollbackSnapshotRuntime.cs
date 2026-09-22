@@ -79,8 +79,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void Commit(FixedSimulationCommitBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Commit batch is invalid.", nameof(batch));
             m_Downstream.Commit(batch);
             for (int i = 0; i < batch.Steps.Count; i++)
             {

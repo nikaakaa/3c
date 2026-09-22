@@ -19,7 +19,6 @@ namespace ThirdPersonSimulation
         where TStep : SimulationPipelineStep
         where TWorkingState : class
         where TCompletedStep : class
-        where TCommitBatch : class
     {
         readonly PipelineTransactionRuntimeServices m_Services;
         readonly IPipelineTransactionTargetPort<

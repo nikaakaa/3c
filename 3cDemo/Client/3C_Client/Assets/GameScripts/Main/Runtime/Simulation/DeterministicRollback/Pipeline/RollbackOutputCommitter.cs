@@ -105,8 +105,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void Commit(FixedSimulationCommitBatch batch)
         {
-            if (batch == null)
-                throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Commit batch is invalid.", nameof(batch));
             m_DispositionIndex.Clear();
             m_Operations.Clear();
             m_CommitRecords.Clear();

@@ -288,7 +288,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 bool matchesReference = true;
                 for (int i = 0; i < keys.Length; i++)
                 {
-                    if (keys[i].value != referenceValue)
+                    if (Mathf.Abs(keys[i].value - referenceValue) > 0.0000001f ||
+                        keys[i].inTangent != 0f || keys[i].outTangent != 0f)
                     {
                         matchesReference = false;
                         break;

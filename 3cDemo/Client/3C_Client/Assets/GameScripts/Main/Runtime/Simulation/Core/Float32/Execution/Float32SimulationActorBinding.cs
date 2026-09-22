@@ -75,6 +75,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState = new Float32CharacterHandleAllocatorState();
         readonly Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState = new Float32CharacterGameplayEffectRuntimeState();
         readonly Float32CharacterEquipmentRuntimeState m_EquipmentState = new Float32CharacterEquipmentRuntimeState();
+        readonly Float32CharacterRuntimeStateTransaction m_RuntimeState = new Float32CharacterRuntimeStateTransaction();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -174,6 +175,7 @@ namespace ThirdPersonSimulation
         internal Float32CharacterHandleAllocatorState HandleAllocatorState => m_HandleAllocatorState;
         internal Float32CharacterGameplayEffectRuntimeState GameplayEffectState => m_GameplayEffectState;
         internal Float32CharacterEquipmentRuntimeState EquipmentState => m_EquipmentState;
+        internal Float32CharacterRuntimeStateTransaction RuntimeState => m_RuntimeState;
 
         internal void ClearActionRuntimes()
         {

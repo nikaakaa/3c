@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Float32 Character evaluation identity does not match the active Character Runtime.");
 
             Float32GameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
-            var roleState = new Float32CharacterRuntimeStateTransaction(
+            var roleState = actor.RuntimeState.Restart(
                 sourceState,
                 tick,
                 characterRuntime.TickRate,

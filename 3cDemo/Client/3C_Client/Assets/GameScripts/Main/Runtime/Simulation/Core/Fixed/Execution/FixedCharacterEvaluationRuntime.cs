@@ -34,7 +34,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Fixed Character evaluation identity does not match the active Character Runtime.");
 
             FixedGameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
-            var roleState = new FixedCharacterRuntimeStateTransaction(
+            var roleState = actor.RuntimeState.Restart(
                 sourceState,
                 tick,
                 characterRuntime.TickRate,

@@ -44,25 +44,31 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionSavepointPort, IFixedControlRuntimeStatePort
     {
-        readonly FixedCharacterRuntimeState m_BaseState;
+        FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
-        readonly SimulationTick m_Tick;
-        readonly int m_TickRate;
+        SimulationTick m_Tick;
+        int m_TickRate;
         readonly Stack<FixedAbilityExecutionSavepoint> m_Savepoints =
             new Stack<FixedAbilityExecutionSavepoint>();
         readonly Stack<FixedAbilityExecutionSavepoint> m_SavepointPool =
             new Stack<FixedAbilityExecutionSavepoint>();
-        readonly FixedCharacterActionRuntimeState m_ActionState;
-        readonly FixedCharacterInputRequestState m_InputRequestState;
-        readonly FixedCharacterEventSequenceState m_EventSequenceState;
-        readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
-        readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
-        readonly FixedCharacterEquipmentRuntimeState m_EquipmentState;
-        readonly CharacterControlRuntimeStateTransaction m_ControlState;
+        FixedCharacterActionRuntimeState m_ActionState;
+        FixedCharacterInputRequestState m_InputRequestState;
+        FixedCharacterEventSequenceState m_EventSequenceState;
+        FixedCharacterHandleAllocatorState m_HandleAllocatorState;
+        FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
+        FixedCharacterEquipmentRuntimeState m_EquipmentState;
+        CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_ControlStateBound;
         bool m_Disposed;
 
-        public FixedCharacterRuntimeStateTransaction(
+        public FixedCharacterRuntimeStateTransaction()
+        {
+            m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();
+            m_Disposed = true;
+        }
+
+        public FixedCharacterRuntimeStateTransaction Restart(
             FixedCharacterRuntimeState baseState,
             SimulationTick tick,
             int tickRate,
@@ -78,10 +84,11 @@ namespace ThirdPersonSimulation.Fixed
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Fixed Character runtime transaction timing is incomplete.");
+            if (m_Savepoints.Count != 0)
+                throw new InvalidOperationException("Fixed Character runtime transaction reuse found active savepoints.");
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>(
-                baseState.Abilities.Count);
+            m_AbilityStates.Clear();
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 FixedAbilityRuntimeState state = baseState.Abilities[i];
@@ -100,6 +107,9 @@ namespace ThirdPersonSimulation.Fixed
                 baseState.GameplayEffectState);
             m_EquipmentState = equipmentState.Restart(baseState.EquipmentState);
             m_ControlState = controlState;
+            m_ControlStateBound = false;
+            m_Disposed = false;
+            return this;
         }
 
         internal IFixedSkillExecutionState BindAbility(

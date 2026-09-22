@@ -44,25 +44,31 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionSavepointPort, IFloat32ControlRuntimeStatePort
     {
-        readonly Float32CharacterRuntimeState m_BaseState;
+        Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
-        readonly SimulationTick m_Tick;
-        readonly int m_TickRate;
+        SimulationTick m_Tick;
+        int m_TickRate;
         readonly Stack<Float32AbilityExecutionSavepoint> m_Savepoints =
             new Stack<Float32AbilityExecutionSavepoint>();
         readonly Stack<Float32AbilityExecutionSavepoint> m_SavepointPool =
             new Stack<Float32AbilityExecutionSavepoint>();
-        readonly Float32CharacterActionRuntimeState m_ActionState;
-        readonly Float32CharacterInputRequestState m_InputRequestState;
-        readonly Float32CharacterEventSequenceState m_EventSequenceState;
-        readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState;
-        readonly Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState;
-        readonly Float32CharacterEquipmentRuntimeState m_EquipmentState;
-        readonly CharacterControlRuntimeStateTransaction m_ControlState;
+        Float32CharacterActionRuntimeState m_ActionState;
+        Float32CharacterInputRequestState m_InputRequestState;
+        Float32CharacterEventSequenceState m_EventSequenceState;
+        Float32CharacterHandleAllocatorState m_HandleAllocatorState;
+        Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState;
+        Float32CharacterEquipmentRuntimeState m_EquipmentState;
+        CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_ControlStateBound;
         bool m_Disposed;
 
-        public Float32CharacterRuntimeStateTransaction(
+        public Float32CharacterRuntimeStateTransaction()
+        {
+            m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>();
+            m_Disposed = true;
+        }
+
+        public Float32CharacterRuntimeStateTransaction Restart(
             Float32CharacterRuntimeState baseState,
             SimulationTick tick,
             int tickRate,
@@ -78,10 +84,11 @@ namespace ThirdPersonSimulation
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character runtime transaction timing is incomplete.");
+            if (m_Savepoints.Count != 0)
+                throw new InvalidOperationException("Float32 Character runtime transaction reuse found active savepoints.");
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>(
-                baseState.Abilities.Count);
+            m_AbilityStates.Clear();
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 Float32AbilityRuntimeState state = baseState.Abilities[i];
@@ -100,6 +107,9 @@ namespace ThirdPersonSimulation
                 baseState.GameplayEffectState);
             m_EquipmentState = equipmentState.Restart(baseState.EquipmentState);
             m_ControlState = controlState;
+            m_ControlStateBound = false;
+            m_Disposed = false;
+            return this;
         }
 
         internal IFloat32SkillExecutionState BindAbility(

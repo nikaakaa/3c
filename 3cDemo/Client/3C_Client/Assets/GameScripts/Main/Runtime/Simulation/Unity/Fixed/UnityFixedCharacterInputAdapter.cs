@@ -41,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly List<FixedSimulationInputRequest> m_InputRequests = new List<FixedSimulationInputRequest>();
         readonly List<string> m_ActionTargetInputIds = new List<string>();
         readonly string m_SourceIdentity;
+        readonly byte[] m_SourceIdentityUtf8;
         readonly bool m_RequiresCameraBasis;
 
         ulong m_RenderFrame;
@@ -87,6 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 : actionTargetInputValueId.Trim();
             m_ActionTargetProvider = actionTargetProvider;
             m_SourceIdentity = $"UnityInputSystem/FixedQ32.32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+            m_SourceIdentityUtf8 = Encoding.UTF8.GetBytes(m_SourceIdentity);
             if ((m_ActionTargetProvider == null) != string.IsNullOrEmpty(m_ActionTargetInputValueId) ||
                 m_ActionTargetProvider != null && m_Owner == null)
             {
@@ -279,7 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             RequireAlive();
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
             if (reader.ReadUInt32() != 0x49584655 || reader.ReadInt32() != 1 ||
-                !string.Equals(reader.ReadString(), SourceIdentity, StringComparison.Ordinal))
+                !reader.ReadUtf8Segment().AsSpan().SequenceEqual(m_SourceIdentityUtf8))
             {
                 throw new InvalidDataException("Unity Fixed Input Adapter state identity is invalid.");
             }
@@ -293,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 for (int i = 0; i < count; i++)
                 {
-                string requestId = ResolveRestoredRequestId(reader.ReadUtf8Segment());
+                    string requestId = ResolveRestoredRequestId(reader.ReadUtf8Segment());
                     ulong sequence = reader.ReadUInt64();
                     ulong captureRenderFrame = reader.ReadUInt64();
                     float bufferSeconds = checked((float)reader.ReadDouble());

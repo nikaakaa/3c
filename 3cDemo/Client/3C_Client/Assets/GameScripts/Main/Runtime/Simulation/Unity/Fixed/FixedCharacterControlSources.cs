@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
@@ -128,9 +129,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentNullException(nameof(inputCatalog));
             m_Values.AddRange(inputCatalog.NeutralValues);
             SourceIdentity = "neutral-character-inputs/fixed-q32-32";
+            SourceIdentityUtf8 = Encoding.UTF8.GetBytes(SourceIdentity);
         }
 
         public string SourceIdentity { get; }
+        byte[] SourceIdentityUtf8 { get; }
 
         public void EnqueueRequest(string requestId) =>
             throw new InvalidOperationException($"Neutral character input source has no request binding '{requestId}'.");
@@ -182,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             var reader = new CanonicalReader(state ?? throw new ArgumentNullException(nameof(state)));
             if (reader.ReadUInt32() != 0x4e584655 || reader.ReadInt32() != 1 ||
-                !string.Equals(reader.ReadString(), SourceIdentity, StringComparison.Ordinal))
+                !reader.ReadUtf8Segment().AsSpan().SequenceEqual(SourceIdentityUtf8))
             {
                 throw new InvalidOperationException("Neutral Fixed Character input state identity is invalid.");
             }

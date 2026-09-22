@@ -142,7 +142,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ObservationIngressWrites writePorts)
         {
             RequireExecution();
-            AuthoritativeObservationBatch batch = readPorts.Source.Drain(context.Source) ??
+            AuthoritativeObservationBatch batch = readPorts.Source.Drain(context.Source);
+            if (!batch.IsValid)
                 throw new InvalidOperationException("Prediction observation Source returned no canonical batch.");
             if (batch.RemotePresentation.Count != 1)
                 throw new InvalidOperationException("Prediction observation batch must contain the locked remote presentation Actor.");

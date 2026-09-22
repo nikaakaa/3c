@@ -500,7 +500,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public bool IsValid => ActorId.IsValid && AuthorityTick.IsValid;
     }
 
-    public sealed class AuthoritativeObservationBatch
+    public readonly struct AuthoritativeObservationBatch
     {
         static readonly Comparison<AuthoritativeActorBaseline> s_CompareBaselines =
             (left, right) => left.ActorId.CompareTo(right.ActorId);
@@ -545,6 +545,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public AuthoritativeInputAck OwnerAck { get; }
         public IReadOnlyList<AuthoritativeActorBaseline> Baselines => m_Baselines;
         public IReadOnlyList<RemotePresentationBatch> RemotePresentation => m_RemotePresentation;
+        public bool IsValid => ReceiveSequence != 0 && m_Baselines != null && m_RemotePresentation != null;
     }
 
     public sealed class AuthorityReplicationBatch

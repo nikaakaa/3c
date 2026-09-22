@@ -52,7 +52,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             AuthoritativeObservationBatch batch,
             ServerAuthoritativePredictionEvidenceReport report)
         {
-            Batch = batch ?? throw new ArgumentNullException(nameof(batch));
+            if (!batch.IsValid)
+                throw new ArgumentException("Authoritative observation batch is invalid.", nameof(batch));
+            Batch = batch;
             Report = report;
         }
 

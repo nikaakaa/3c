@@ -4302,3 +4302,12 @@
 - Layout 校验、StoreSent 和 full checkpoint output 的旧 null 合同改为 `IsValid`；Client Route 未命中、淘汰槽位和未确认 ack 状态改用 default。latest checkpoint 查找、snapshot 严格递增、delta 基线选择和客户端 SortedDictionary 重建顺序不变。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
 - 未刷新 Unity，未做 Player 分配采样。用户应重点验证同一路 Authority/Prediction 对局里的 full checkpoint、delta checkpoint、packet ack 和客户端重建；既有分配采样可确认 checkpoint 外壳减少，但不能把 state bytes、codec 输出和协议字符串分配误算入本步目标。
+
+## 2026-09-22 Remote body selection frame 值化收口
+
+对应 tasks.md 的 5.5，新增 5.254 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeRemoteBodySelectionFrame` 从 sealed class 改为 readonly struct。Remote Body Timeline 每次 `Select` 生成 frame，Prediction State、History 和 Correction Schedule 之间按值传递，删除每次预测 tick 的 selection frame 外壳对象。
+- 构造合同不变：目标 Tick 有效，selection 数组存在并按 Actor 排序去重，selection 的 Tick 必须匹配 frame；转成 `ObservedWorldConstraintFrame` 或 `CharacterBodySample[]` 的顺序、采样内容和数组所有权不变。新增 `IsValid` 表达 default frame 的未选择状态。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
+- 未刷新 Unity，未做 Player 分配采样。用户可沿 HardRecovery 远端重置锚点和连续预测 tick 的远端 Body 采样验证表现位置与约束不变，并用分配采样确认 selection frame 外壳减少。

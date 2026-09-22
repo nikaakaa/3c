@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public static ServerAuthoritativeEventHorizon Empty => default;
     }
 
-    public sealed class AuthoritativeActorBaseline
+    public readonly struct AuthoritativeActorBaseline
     {
         readonly byte[] m_CharacterStateBytes;
 
@@ -220,6 +220,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public StableHash BodyHash { get; }
         public ulong ConfirmedInputSequence { get; }
         public ServerAuthoritativeEventHorizon ConfirmedEventHorizon { get; }
+        public bool IsValid => ActorId.IsValid && AuthorityTick.IsValid && m_CharacterStateBytes != null;
         public byte[] CopyCharacterStateBytes() => (byte[])m_CharacterStateBytes.Clone();
     }
 
@@ -529,7 +530,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Array.Sort(m_RemotePresentation, s_CompareRemote);
             for (int i = 0; i < m_Baselines.Length; i++)
             {
-                if (m_Baselines[i] == null || !m_Baselines[i].ActorId.IsValid ||
+                if (!m_Baselines[i].IsValid ||
                     i > 0 && m_Baselines[i - 1].ActorId == m_Baselines[i].ActorId)
                     throw new ArgumentException("Observation baseline contains a missing or duplicate ActorId.", nameof(baselines));
             }
@@ -581,7 +582,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             for (int i = 0; i < m_Baselines.Length; i++)
             {
-                if (m_Baselines[i] == null || !m_Baselines[i].ActorId.IsValid ||
+                if (!m_Baselines[i].IsValid ||
                     i > 0 && m_Baselines[i - 1].ActorId == m_Baselines[i].ActorId ||
                     m_Baselines[i].AuthorityTick != authorityTick)
                     throw new ArgumentException("Authority replication baseline set is invalid or does not match the batch.", nameof(baselines));

@@ -136,7 +136,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         internal NetworkCheckpoint(AuthoritativeActorBaseline baseline, byte[] stateBytes)
         {
-            Baseline = baseline ?? throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
+            Baseline = baseline;
             if (stateBytes == null || stateBytes.Length == 0)
                 throw new ArgumentException("Network checkpoint Character state is missing.", nameof(stateBytes));
             m_StateBytes = (byte[])stateBytes.Clone();
@@ -176,8 +178,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (layout == null)
                 throw new ArgumentNullException(nameof(layout));
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             var checkpoint = new NetworkCheckpoint(baseline, baseline.CopyCharacterStateBytes());
             layout.Require(checkpoint);
             return checkpoint;

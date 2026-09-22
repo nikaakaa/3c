@@ -36,8 +36,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             AuthoritativeActorBaseline baseline,
             ServerAuthoritativePredictionHistoryRecord firstHistory)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             SimulationActorBinding actor = RequireActor(baseline.ActorId);
             GameplayContentHash actorContentHash = new GameplayContentHash(actor.GameplayContentHash);
             if (baseline.NumericProfile != m_CharacterRuntime.NumericProfile ||
@@ -77,8 +77,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             int replayCount,
             ServerAuthoritativeModelPolicy policy)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             if (policy == null)
                 throw new ArgumentNullException(nameof(policy));
             if (local == null)
@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] historyState,
             byte[] journalState)
         {
-            if (local == null || baseline == null || !decision.IsValid ||
+            if (local == null || !baseline.IsValid || !decision.IsValid ||
                 decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
             {
                 throw new ArgumentException("Prediction restore requires a local frame, corrective baseline, and decision.");

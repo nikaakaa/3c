@@ -124,7 +124,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (!result.Ack.IsValid)
                 throw new InvalidOperationException("Reconstructed checkpoint omitted owner acknowledgement.");
             m_LatestAck = result.Ack;
-            m_Baselines.Enqueue(result.Baseline ?? throw new InvalidOperationException("Reconstructed checkpoint omitted owner baseline."));
+            if (!result.Baseline.IsValid)
+                throw new InvalidOperationException("Reconstructed checkpoint omitted owner baseline.");
+            m_Baselines.Enqueue(result.Baseline);
             if (result.Remote.IsValid)
                 m_Remote.Enqueue(result.Remote);
             m_LastSnapshotSourceTick = sourceTick;
@@ -188,15 +190,15 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativeCheckpointMetrics checkpoint)
         {
             ClearDrainScratch();
-            AuthoritativeActorBaseline latestBaseline = null;
+            AuthoritativeActorBaseline latestBaseline = default;
             while (m_Baselines.Count > 0)
             {
                 AuthoritativeActorBaseline candidate = m_Baselines.Dequeue();
-                if (latestBaseline != null && candidate.AuthorityTick.CompareTo(latestBaseline.AuthorityTick) <= 0)
+                if (latestBaseline.IsValid && candidate.AuthorityTick.CompareTo(latestBaseline.AuthorityTick) <= 0)
                     throw new InvalidOperationException("Prediction baseline queue is not strictly increasing by authority Tick.");
                 latestBaseline = candidate;
             }
-            AuthoritativeActorBaseline[] baselines = latestBaseline == null
+            AuthoritativeActorBaseline[] baselines = !latestBaseline.IsValid
                 ? Array.Empty<AuthoritativeActorBaseline>()
                 : new[] { latestBaseline };
             while (m_Remote.Count > 0)

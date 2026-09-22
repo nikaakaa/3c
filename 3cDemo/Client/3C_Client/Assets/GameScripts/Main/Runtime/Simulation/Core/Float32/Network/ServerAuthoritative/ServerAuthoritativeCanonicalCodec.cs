@@ -88,8 +88,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static byte[] WriteBaseline(AuthoritativeActorBaseline baseline)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             using var writer = new CanonicalWriter();
             WriteBaseline(writer, baseline);
             return writer.ToArray();
@@ -97,8 +97,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         internal static void WriteLengthPrefixedBaseline(CanonicalWriter writer, AuthoritativeActorBaseline baseline)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             WriteBaseline(writer, baseline);
             writer.EndLengthPrefixedBlock(prefixPosition);

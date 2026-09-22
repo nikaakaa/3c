@@ -301,7 +301,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             PredictionCorrectionDecision decision;
             SimulationRestoreDirective restore = null;
             IReadOnlyList<ServerAuthoritativePredictionHistoryRecord> replay = Array.Empty<ServerAuthoritativePredictionHistoryRecord>();
-            if (baseline == null)
+            if (!baseline.IsValid)
             {
                 var next = new SimulationTick(checked(context.CurrentCompletedTick + 1));
                 decision = new PredictionCorrectionDecision(
@@ -486,7 +486,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 if (batch.Baselines[i].ActorId == owner)
                     return batch.Baselines[i];
             }
-            return null;
+            return default;
         }
 
         static string DescribeObservedBaselineDifference(
@@ -494,7 +494,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             AuthoritativeObservationBatch observations,
             ServerAuthoritativePredictionState state)
         {
-            if (ownerBaseline == null)
+            if (!ownerBaseline.IsValid)
                 return "unavailable:no-owner-baseline";
             if (!state.TryGetHistory(ownerBaseline.AuthorityTick, out ServerAuthoritativePredictionHistoryRecord history))
                 return "unavailable:no-local-history";
@@ -504,7 +504,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < frame.Constraints.Count; i++)
             {
                 ObservedWorldConstraint observed = frame.Constraints[i];
-                AuthoritativeActorBaseline remote = null;
+                AuthoritativeActorBaseline remote = default;
                 for (int baselineIndex = observations.Baselines.Count - 1; baselineIndex >= 0; baselineIndex--)
                 {
                     AuthoritativeActorBaseline candidate = observations.Baselines[baselineIndex];
@@ -514,7 +514,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                         break;
                     }
                 }
-                if (remote == null)
+                if (!remote.IsValid)
                     return $"unavailable:{frame.FrameHash}";
                 if (!WorldSolveBatchRequest.BodyEquals(observed.FinalBody, remote.Body))
                     return $"different:{frame.FrameHash}";

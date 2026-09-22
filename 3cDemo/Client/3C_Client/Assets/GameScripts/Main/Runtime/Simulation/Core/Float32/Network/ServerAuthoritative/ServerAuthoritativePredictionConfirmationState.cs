@@ -67,8 +67,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ServerAuthoritativePredictionCorrectionCheckpoint PrepareBaseline(AuthoritativeActorBaseline baseline)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             return ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
                 Math.Max(ConfirmedInputSequence, baseline.ConfirmedInputSequence),
                 MergeConfirmationHorizon(ConfirmedEventHorizon, baseline.ConfirmedEventHorizon),

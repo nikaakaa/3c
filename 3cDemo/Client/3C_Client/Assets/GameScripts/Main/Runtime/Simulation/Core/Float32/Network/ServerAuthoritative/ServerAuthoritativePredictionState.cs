@@ -187,8 +187,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public PredictionCorrectionDecision Decide(AuthoritativeActorBaseline baseline)
         {
-            if (baseline == null)
-                throw new ArgumentNullException(nameof(baseline));
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
             ServerAuthoritativePredictionHistoryRecord first = m_History.Count == 0
                 ? null
                 : m_History.FirstRecord();
@@ -208,7 +208,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             PredictionCorrectionDecision decision,
             SimulationPipelineIdentity pipeline)
         {
-            if (baseline == null || !decision.IsValid || decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
+            if (!baseline.IsValid || !decision.IsValid || decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
                 throw new ArgumentException("Prediction restore requires a corrective baseline and decision.");
             if (!m_History.TryGet(baseline.AuthorityTick, out ServerAuthoritativePredictionHistoryRecord local))
                 local = m_History.LastRecord();

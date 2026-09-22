@@ -382,6 +382,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Character control runtime state restore identity does not match the active transaction.");
             m_Values.Clear();
             m_Values.AddRange(state.Values);
+            m_ValuesChanged = !MatchesBaseValues(state.Values);
         }
 
         public CharacterControlRuntimeState Commit()
@@ -403,6 +404,18 @@ namespace ThirdPersonSimulation
         {
             if (m_Status != CharacterControlRuntimeStateTransactionStatus.Active)
                 throw new InvalidOperationException("Character control runtime state transaction is not active.");
+        }
+
+        bool MatchesBaseValues(IReadOnlyList<CharacterControlStateValue> values)
+        {
+            if (values.Count != BaseState.Values.Count)
+                return false;
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!values[i].Equals(BaseState.Values[i]))
+                    return false;
+            }
+            return true;
         }
 
         StableHash ComputeHash()

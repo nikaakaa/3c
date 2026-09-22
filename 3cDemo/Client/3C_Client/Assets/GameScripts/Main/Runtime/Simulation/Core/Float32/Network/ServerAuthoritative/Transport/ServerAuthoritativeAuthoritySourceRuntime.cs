@@ -396,7 +396,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     route.PendingCheckpointRequest = 0;
                     continue;
                 }
-                if (route.AcknowledgedCheckpoint == null)
+                if (!route.AcknowledgedCheckpoint.IsValid)
                 {
                     QueueFullCheckpoint(route, target, 0);
                     continue;

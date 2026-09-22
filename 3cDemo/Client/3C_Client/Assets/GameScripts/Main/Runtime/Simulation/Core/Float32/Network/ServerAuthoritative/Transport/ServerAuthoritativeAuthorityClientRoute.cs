@@ -192,8 +192,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public void StoreSent(ulong sequence, NetworkCheckpoint checkpoint)
         {
-            if (checkpoint == null)
-                throw new ArgumentNullException(nameof(checkpoint));
+            if (!checkpoint.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(checkpoint));
             EnqueueSentSequence(sequence, checkpoint);
             while (m_SentSequenceCount > m_Capacity)
             {
@@ -285,7 +285,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         {
             ulong sequence = m_SentSequenceOrder[m_SentSequenceHead];
             m_SentSequenceOrder[m_SentSequenceHead] = 0;
-            m_SentCheckpoints[m_SentSequenceHead] = null;
+            m_SentCheckpoints[m_SentSequenceHead] = default;
             m_SentSequenceHead = (m_SentSequenceHead + 1) % m_SentSequenceOrder.Length;
             m_SentSequenceCount--;
             return sequence;
@@ -302,7 +302,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 return true;
             }
 
-            checkpoint = null;
+            checkpoint = default;
             return false;
         }
 

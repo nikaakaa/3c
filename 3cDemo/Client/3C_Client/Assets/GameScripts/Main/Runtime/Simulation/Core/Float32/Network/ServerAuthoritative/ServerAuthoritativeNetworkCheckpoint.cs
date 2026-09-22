@@ -88,8 +88,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public void Require(NetworkCheckpoint checkpoint)
         {
-            if (checkpoint == null)
-                throw new ArgumentNullException(nameof(checkpoint));
+            if (!checkpoint.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(checkpoint));
             if (!checkpoint.Baseline.GameplayContentHash.Equals(RequireActorContentHash(checkpoint.Baseline.ActorId)) ||
                 !string.Equals(checkpoint.Baseline.StateCodecIdentity, StateCodecIdentity, StringComparison.Ordinal))
                 throw new InvalidDataException("Network checkpoint does not match the locked Character Runtime state.");
@@ -130,7 +130,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public string ExecutionPath { get; }
     }
 
-    public sealed class NetworkCheckpoint
+    public readonly struct NetworkCheckpoint
     {
         readonly byte[] m_StateBytes;
 
@@ -148,6 +148,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public AuthoritativeActorBaseline Baseline { get; }
         internal byte[] StateBytes => (byte[])m_StateBytes.Clone();
         public StableHash CheckpointHash { get; }
+        public bool IsValid => Baseline.IsValid && m_StateBytes != null;
 
         static StableHash ComputeHash(AuthoritativeActorBaseline baseline, byte[] stateBytes)
         {

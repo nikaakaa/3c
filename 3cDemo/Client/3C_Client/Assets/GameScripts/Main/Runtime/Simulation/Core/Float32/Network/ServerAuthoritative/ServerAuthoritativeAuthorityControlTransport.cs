@@ -180,7 +180,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ActorId = actorId;
             RequestSequence = requestSequence;
             SnapshotSequence = snapshotSequence;
-            Checkpoint = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
+            if (!checkpoint.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(checkpoint));
+            Checkpoint = checkpoint;
             Payload = payload ?? throw new ArgumentNullException(nameof(payload));
         }
 
@@ -191,7 +193,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public NetworkCheckpoint Checkpoint { get; }
         public byte[] Payload { get; }
         public bool IsValid => PlayerId.IsValid && ActorId.IsValid && SnapshotSequence != 0 &&
-            Checkpoint != null && Payload != null;
+            Checkpoint.IsValid && Payload != null;
     }
 
     public readonly struct ServerAuthoritativeAuthorityReliableEventOutput

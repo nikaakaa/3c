@@ -4439,3 +4439,14 @@
 - participant 身份校验顺序、payload SHA-256、StableHash 比较和 mismatch 异常语义不变。snapshot 仍然拥有 immutable payload；需要独立可变数组的 ingress replacement 和 authority pass state 继续使用 `CopyPayload`。
 - `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；后者连带编译 Float32。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次使用 pipeline state 的 restore，确认状态恢复和 mismatch 诊断不变；分配采样应观察 restore 校验路径的 payload 哈希克隆消失，但不表示 restore 后的正式独立 payload 已删除。
+
+## 2026-09-22 Pipeline snapshot hash 直写缓冲
+
+对应 tasks.md 的 5.5，新增 5.267 作为独立小步；5.5 保持未勾选。代码提交为 `579c5aacf`。
+
+- `SimulationPipelineStateSnapshot.ComputeHash` 原先创建 `participant count + 5` 的 string 数组，逐 participant 创建插值字符串，再经通用 `StableHash.Compute` join、UTF-8 编码和 SHA-256。现在使用同一线程生命周期 `CanonicalWriter`，按原顺序直写标签、pipeline、backend、tick 和 participant identity 的 UTF-8 字节。
+- 分隔符仍按 join 语义写入 `U+001F`，participant 内部仍按 `PassId:ImplementationVersion:StateOwner:StateSchemaId:StateSchemaVersion:StateHash` 编码。跨线程 writer 独立，方法内没有嵌套复用；UTF-8 分块写法保留 surrogate 边界检查。
+- StableHash 内容和 SHA-256 结果不变。原先的 string 数组、participant 插值字符串、tick 格式化中转、join 字符串和 UTF-8 byte 数组分配删除；`CanonicalWriter` 首次扩容和 SHA/hash 字符串仍是正式分配。
+- 验证开始时 `Temp/obj` 的 NuGet assets 曾被清空，`dotnet build --no-restore` 在进入代码编译前报 `NETSDK1004`；未执行 restore 或复制 fallback assets。Unity 重新加载后正式 assets 恢复，继续完成下列验证。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未读取 Console、未做网络联调和 Player 分配采样。用户可触发 Session snapshot/Prediction restore，确认 pipeline SnapshotHash 不变；分配采样应观察 hash 构建的数组和插值字符串消失，但不表示 SHA/hash 字符串已消除。

@@ -535,6 +535,7 @@
 - [x] 5.264 两数值域 World Snapshot 嵌套编码改为长度前缀流式写入；Fixed 同步复用校验 writer，Session Snapshot 与 Prediction History 删除内层数组中转
 - [x] 5.265 两数值域与 ServerAuthoritative Pipeline 状态编码直读 immutable Payload；Session Snapshot 与 Prediction History 保存不再克隆 participant 状态
 - [x] 5.266 Pipeline restore 前的 participant payload hash 校验直读 immutable Payload；删除只供 hash 使用的完整数组克隆
+- [x] 5.267 Pipeline snapshot hash 改用线程生命周期 CanonicalWriter；删除 string 数组、插值字符串和 UTF-8 中转数组
 
 ## 6. UI、资源、渲染和生命周期
 

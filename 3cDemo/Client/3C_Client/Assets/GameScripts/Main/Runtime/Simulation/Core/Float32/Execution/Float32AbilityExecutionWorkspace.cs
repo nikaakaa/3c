@@ -41,9 +41,7 @@ namespace ThirdPersonSimulation
             Facts.Clear();
             Presentation.Clear();
             Trace.Clear();
-            ValueStack.Clear();
-            for (int i = 0; i < ValueBuffers.Count; i++)
-                ValueBuffers[i].Clear();
+            Values.Reset();
             TimelineMotionWarps.Clear();
             ActionWindowProjections.Clear();
             ActionWindowProjectionKeys.Clear();

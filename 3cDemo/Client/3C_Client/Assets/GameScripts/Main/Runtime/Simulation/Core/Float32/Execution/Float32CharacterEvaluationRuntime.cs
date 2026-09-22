@@ -58,11 +58,11 @@ namespace ThirdPersonSimulation
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;
             List<SimulationTraceRecord> characterTrace = evaluationOutput.CharacterTrace;
+            Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
                 IFloat32AbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
                 IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
-                Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
                 abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;

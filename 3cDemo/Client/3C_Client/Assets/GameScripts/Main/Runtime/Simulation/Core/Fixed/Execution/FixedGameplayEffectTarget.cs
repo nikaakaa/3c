@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.Fixed
         SimulationGameplayEffectState m_State;
         PortablePredictionRecord m_CurrentPrediction;
 
-        FixedGameplayEffectTarget(FixedGameplayEffectExecutionScratch scratch)
+        internal FixedGameplayEffectTarget(FixedGameplayEffectExecutionScratch scratch)
         {
             if (scratch == null)
                 throw new ArgumentNullException(nameof(scratch));

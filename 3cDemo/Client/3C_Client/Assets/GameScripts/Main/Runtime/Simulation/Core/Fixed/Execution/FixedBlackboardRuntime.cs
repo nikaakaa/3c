@@ -114,10 +114,10 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionWorkspace workspace)
             : base(access)
         {
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
+            m_State = state;
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
+            m_Facts = facts;
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             if (workspace == null)
                 throw new ArgumentNullException(nameof(workspace));

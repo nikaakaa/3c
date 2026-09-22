@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityExecutionSavepoint
         : IFixedAbilityExecutionSavepoint
     {
-        FixedAbilityExecutionSavepoint()
+        internal FixedAbilityExecutionSavepoint()
         {
         }
 

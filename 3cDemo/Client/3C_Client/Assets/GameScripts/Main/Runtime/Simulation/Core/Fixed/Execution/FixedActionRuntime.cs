@@ -47,8 +47,8 @@ namespace ThirdPersonSimulation.Fixed
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_GameplayTags = gameplayTags;
             m_GameplayEffectActions = gameplayEffectActions;
-            m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
-            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
+            m_Handles = handles;
+            m_Facts = facts;
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_EquipmentContext = equipmentContext;
             m_IsOperationStopComplete = isOperationStopComplete ?? (operation => true);

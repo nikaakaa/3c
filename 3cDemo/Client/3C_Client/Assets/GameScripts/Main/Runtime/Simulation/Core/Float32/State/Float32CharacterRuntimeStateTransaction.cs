@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityExecutionSavepoint
         : IFloat32AbilityExecutionSavepoint
     {
-        Float32AbilityExecutionSavepoint()
+        internal Float32AbilityExecutionSavepoint()
         {
         }
 

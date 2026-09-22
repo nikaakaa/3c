@@ -59,11 +59,11 @@ namespace ThirdPersonSimulation.Fixed
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;
             List<SimulationTraceRecord> characterTrace = evaluationOutput.CharacterTrace;
+            FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
                 IFixedAbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
                 IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
-                FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
                 abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;

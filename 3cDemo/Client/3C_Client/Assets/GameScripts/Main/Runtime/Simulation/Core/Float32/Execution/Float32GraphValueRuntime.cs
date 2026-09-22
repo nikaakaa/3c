@@ -84,6 +84,13 @@ namespace ThirdPersonSimulation
                 if (InputBuffers[index].Values.Capacity < inputCapacity)
                     InputBuffers[index].Values.Capacity = inputCapacity;
         }
+
+        internal void Reset()
+        {
+            ValueStack.Clear();
+            for (int index = 0; index < InputBuffers.Count; index++)
+                InputBuffers[index].Clear();
+        }
     }
 
     internal abstract class Float32GraphValueRuntime : IFloat32ValueInputReader

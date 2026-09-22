@@ -34,9 +34,9 @@ namespace ThirdPersonSimulation.Fixed
 			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
+			m_Handles = handles;
 			m_GameplayEffects = gameplayEffects;
-            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
+            m_Facts = facts;
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_EquipmentLayout = equipmentLayout ?? throw new ArgumentNullException(nameof(equipmentLayout));
 			m_Control = new EquipmentRuntimeControl(this);

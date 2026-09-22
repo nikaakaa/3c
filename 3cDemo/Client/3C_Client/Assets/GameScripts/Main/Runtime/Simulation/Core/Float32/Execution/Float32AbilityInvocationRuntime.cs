@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
+            Float32AbilityOperationControlRuntime control,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace);

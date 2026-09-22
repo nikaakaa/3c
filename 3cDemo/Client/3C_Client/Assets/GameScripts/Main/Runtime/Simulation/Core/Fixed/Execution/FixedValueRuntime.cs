@@ -101,7 +101,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Equipment = equipment;
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
+            m_ControlState = controlState;
             if (workspace == null)
                 throw new ArgumentNullException(nameof(workspace));
             m_ValueStack = workspace.ValueStack;

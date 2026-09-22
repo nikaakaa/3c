@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
         SimulationGameplayEffectState m_State;
         PortablePredictionRecord m_CurrentPrediction;
 
-        Float32GameplayEffectTarget(Float32GameplayEffectExecutionScratch scratch)
+        internal Float32GameplayEffectTarget(Float32GameplayEffectExecutionScratch scratch)
         {
             if (scratch == null)
                 throw new ArgumentNullException(nameof(scratch));

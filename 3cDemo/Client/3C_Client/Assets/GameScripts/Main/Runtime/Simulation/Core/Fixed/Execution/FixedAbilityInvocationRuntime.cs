@@ -19,6 +19,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
+            FixedAbilityOperationControlRuntime control,
             IFixedAbilityExecutionSavepointPort savepointPort,
             IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace);

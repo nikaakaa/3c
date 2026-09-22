@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationSelectedPosePlayerRuntime> m_SelectedPlayerFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, PresentationPoseSourceSample> m_SelectedSampleFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationBlendStackRuntime> m_StackFactory;
+        readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationBlendStackRuntime, CharacterPoseNativeActionSlotSource> m_ActionSlotSourceFactory;
         readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
         readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, PresentationPoseSourceSample> m_ProviderSampleProvider;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int> m_BindingIndexFactory;
@@ -28,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationSelectedPosePlayerRuntime> selectedPlayerFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, PresentationPoseSourceSample> selectedSampleFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationBlendStackRuntime> stackFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, AnimationBlendStackRuntime, CharacterPoseNativeActionSlotSource> actionSlotSourceFactory,
             Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, AnimationResolvedPoseSourceSample> actionSampleProvider,
             Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, PresentationPoseSourceSample> providerSampleProvider,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int> bindingIndexFactory,
@@ -41,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SelectedPlayerFactory = selectedPlayerFactory ?? throw new ArgumentNullException(nameof(selectedPlayerFactory));
             m_SelectedSampleFactory = selectedSampleFactory ?? throw new ArgumentNullException(nameof(selectedSampleFactory));
             m_StackFactory = stackFactory ?? throw new ArgumentNullException(nameof(stackFactory));
+            m_ActionSlotSourceFactory = actionSlotSourceFactory ?? throw new ArgumentNullException(nameof(actionSlotSourceFactory));
             m_ActionSampleProvider = actionSampleProvider ?? throw new ArgumentNullException(nameof(actionSampleProvider));
             m_ProviderSampleProvider = providerSampleProvider ?? throw new ArgumentNullException(nameof(providerSampleProvider));
             m_BindingIndexFactory = bindingIndexFactory ?? throw new ArgumentNullException(nameof(bindingIndexFactory));
@@ -83,7 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Source,
                 m_SourceLeaseProvider,
                 m_StackFactory,
-                m_ActionSampleProvider,
+                m_ActionSlotSourceFactory,
                 m_ProviderSampleProvider,
                 m_BufferFactory);
         }

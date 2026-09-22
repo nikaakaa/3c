@@ -477,7 +477,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class AnimationResolvedPoseSourceSample
     {
+        internal AnimationResolvedPoseSourceSample()
+        {
+        }
+
         internal AnimationResolvedPoseSourceSample(
+            AnimationPoseSampleRequest request,
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures,
+            bool hasFootFeatures)
+        {
+            Set(
+                request,
+                in leftFootFeatures,
+                in rightFootFeatures,
+                hasFootFeatures);
+        }
+
+        internal void Set(
             AnimationPoseSampleRequest request,
             in AnimationFootFeatureSample leftFootFeatures,
             in AnimationFootFeatureSample rightFootFeatures,
@@ -491,14 +508,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Animation source pose sample is invalid.");
         }
 
-        readonly AnimationFootFeatureSample m_LeftFootFeatures;
-        readonly AnimationFootFeatureSample m_RightFootFeatures;
-        internal AnimationPoseSampleRequest Request { get; }
+        AnimationFootFeatureSample m_LeftFootFeatures;
+        AnimationFootFeatureSample m_RightFootFeatures;
+        internal AnimationPoseSampleRequest Request { get; private set; }
         internal ref readonly AnimationFootFeatureSample LeftFootFeatures =>
             ref m_LeftFootFeatures;
         internal ref readonly AnimationFootFeatureSample RightFootFeatures =>
             ref m_RightFootFeatures;
-        internal bool HasFootFeatures { get; }
+        internal bool HasFootFeatures { get; private set; }
         internal bool IsValid => Request.IsValid && (HasFootFeatures
             ? LeftFootFeatures.IsValid && RightFootFeatures.IsValid
             : !LeftFootFeatures.IsValid && !RightFootFeatures.IsValid);

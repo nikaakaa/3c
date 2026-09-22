@@ -1174,6 +1174,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ulong sequence)
         {
             Entry created = GetWritable(playbackId, true);
+            created.Clear();
+            created.Occupied = true;
+            created.PlaybackId = playbackId;
             created.ActionInstanceId = actionInstanceId;
             created.SourcePoseContinuityIdentity =
                 NextSourcePoseContinuityIdentity();

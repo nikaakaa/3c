@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
+using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonCharacter.Pipeline.Presentation;
 
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         ulong ConfirmedTimelineTick { get; }
         void ConfirmTimelineHistory(ulong confirmedTick);
         void AcceptTimelineProgress(in CharacterPresentationCommand command);
+        void AcceptTimelinePresentationFrame(in TimelineRuntimePresentationFrame frame);
         void RetireTimelineProgress(in CharacterPresentationCommand command);
         void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation);
         bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation,
@@ -31,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void CommitSamplingFrame();
         void DiscardSamplingFrame();
         void BeginFrame(IReadOnlyList<ActionAnimationPlaybackCommand> commands);
+        void ValidateFrame();
         void CommitFrame();
         void DiscardFrame();
         void Reset();
@@ -109,8 +112,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal TimelineRuntimePresentationSample Sample;
         }
 
+        struct TimelineAnimationFrameEntry
+        {
+            internal bool Occupied;
+            internal TimelineRuntimePlaybackHandle Handle;
+            internal ulong Generation;
+            internal ulong PresentationFrame;
+            internal TimelineRuntimeSampleView<TimelineAnimationContribution> Contributions;
+        }
+
         readonly TimelineProgressEntry[] m_TimelineProgress = new TimelineProgressEntry[64];
         readonly TimelineProgressEntry[] m_TimelineFrameBaseline = new TimelineProgressEntry[64];
+        readonly TimelineAnimationFrameEntry[] m_TimelineAnimationFrames = new TimelineAnimationFrameEntry[64];
         bool m_SamplingFrameActive;
         ulong m_ConfirmedTimelineTick;
         public ulong ConfirmedTimelineTick => m_ConfirmedTimelineTick;
@@ -121,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_SamplingFrameActive)
                 throw new InvalidOperationException("Action sampling frame is already open.");
             Array.Copy(m_TimelineProgress, m_TimelineFrameBaseline, m_TimelineProgress.Length);
+            Array.Clear(m_TimelineAnimationFrames, 0, m_TimelineAnimationFrames.Length);
             m_SamplingFrameActive = true;
         }
 
@@ -130,6 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException("Action sampling frame is not open.");
             m_SamplingFrameActive = false;
             Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
+            Array.Clear(m_TimelineAnimationFrames, 0, m_TimelineAnimationFrames.Length);
         }
 
         public void DiscardSamplingFrame()
@@ -138,6 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             Array.Copy(m_TimelineFrameBaseline, m_TimelineProgress, m_TimelineProgress.Length);
             Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
+            Array.Clear(m_TimelineAnimationFrames, 0, m_TimelineAnimationFrames.Length);
             m_SamplingFrameActive = false;
         }
 
@@ -192,6 +208,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (slot < 0)
                 throw new InvalidOperationException("Action Timeline progress capacity was exceeded.");
             m_TimelineProgress[slot] = new TimelineProgressEntry { Occupied = true, Command = command };
+        }
+
+        public void AcceptTimelinePresentationFrame(in TimelineRuntimePresentationFrame frame)
+        {
+            RequireAlive();
+            if (!m_SamplingFrameActive || !frame.Handle.IsValid || frame.Generation == 0 ||
+                frame.PresentationFrame == 0)
+                throw new InvalidOperationException("Timeline presentation frame requires an open sampling frame.");
+            for (int index = 0; index < m_TimelineAnimationFrames.Length; index++)
+            {
+                ref TimelineAnimationFrameEntry entry = ref m_TimelineAnimationFrames[index];
+                if (!entry.Occupied || entry.Handle != frame.Handle || entry.Generation != frame.Generation)
+                    continue;
+                entry.PresentationFrame = frame.PresentationFrame;
+                entry.Contributions = frame.Operations.AnimationContributions;
+                return;
+            }
+            for (int index = 0; index < m_TimelineAnimationFrames.Length; index++)
+            {
+                ref TimelineAnimationFrameEntry entry = ref m_TimelineAnimationFrames[index];
+                if (entry.Occupied)
+                    continue;
+                entry = new TimelineAnimationFrameEntry
+                {
+                    Occupied = true,
+                    Handle = frame.Handle,
+                    Generation = frame.Generation,
+                    PresentationFrame = frame.PresentationFrame,
+                    Contributions = frame.Operations.AnimationContributions
+                };
+                return;
+            }
+            throw new InvalidOperationException("Timeline animation presentation capacity was exceeded.");
         }
 
         public void RetireTimelineProgress(in CharacterPresentationCommand command)
@@ -278,65 +327,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return false;
         }
 
-        readonly ActionAnimationPlaybackLifecycleRegistry m_Registry =
-            new ActionAnimationPlaybackLifecycleRegistry(64, 8, 128);
-        readonly ActionCommittedSampleHistory m_History =
-            new ActionCommittedSampleHistory(64, 128);
-        readonly ActionPresentationSampleProjector m_Projector =
-            new ActionPresentationSampleProjector(64);
-        readonly List<ActionPlaybackInboxEntry> m_Entries =
-            new List<ActionPlaybackInboxEntry>(128);
-        ActionLifecycleMutationLease m_RegistryLease;
+        readonly ActionAnimationPlaybackRuntime m_Playback;
+        readonly ActionCommittedSampleHistory m_History = new ActionCommittedSampleHistory(64, 128);
+        readonly ActionPresentationSampleProjector m_Projector = new ActionPresentationSampleProjector(64);
         ActionSampleHistoryMutationLease m_HistoryLease;
         ActionSampleProjectionMutationLease m_ProjectorLease;
-        ulong m_NextCommandSequence;
-        bool m_RegistryActive;
         bool m_HistoryActive;
         bool m_ProjectorActive;
         bool m_Disposed;
 
+        internal CommittedFollowPresentationClockCoordinator(ActionAnimationPlaybackRuntime playback)
+        {
+            m_Playback = playback ?? throw new ArgumentNullException(nameof(playback));
+        }
+
         public void BeginFrame(IReadOnlyList<ActionAnimationPlaybackCommand> commands)
         {
             RequireAlive();
-            if (m_RegistryActive || m_HistoryActive || m_ProjectorActive)
-                throw new InvalidOperationException(
-                    "Committed follow clock frame is already open.");
-            m_Entries.Clear();
-            if (commands != null)
-            {
-                for (int i = 0; i < commands.Count; i++)
-                {
-                    ActionAnimationPlaybackCommand command = commands[i];
-                    if (!command.IsValid)
-                        throw new InvalidOperationException(
-                            "Committed follow clock received an invalid command.");
-                    m_NextCommandSequence++;
-                    if (m_NextCommandSequence == 0)
-                        throw new InvalidOperationException(
-                            "Committed follow clock command sequence was exhausted.");
-                    m_Entries.Add(new ActionPlaybackInboxEntry(
-                        m_NextCommandSequence,
-                        command));
-                }
-            }
+            if (m_Playback.IsFrameOpen || m_HistoryActive || m_ProjectorActive)
+                throw new InvalidOperationException("Committed follow clock frame is already open.");
             try
             {
-                m_RegistryLease = m_Registry.BeginMutation();
-                m_RegistryActive = true;
+                m_Playback.BeginFrame(commands);
                 m_HistoryLease = m_History.BeginMutation();
                 m_HistoryActive = true;
                 m_ProjectorLease = m_Projector.BeginMutation();
                 m_ProjectorActive = true;
-                m_Registry.ApplyCommands(m_RegistryLease, m_Entries);
-                m_History.ApplyCommands(m_HistoryLease, m_Entries);
-                for (int i = 0; i < m_Entries.Count; i++)
+                m_History.ApplyCommands(m_HistoryLease, m_Playback.Commands);
+                for (int i = 0; i < commands.Count; i++)
                 {
-                    ActionAnimationPlaybackCommand command = m_Entries[i].Command;
+                    ActionAnimationPlaybackCommand command = commands[i];
                     if (command.Kind == ActionAnimationPlaybackCommandKind.Release || command.Kind == ActionAnimationPlaybackCommandKind.Withdraw)
                         m_Projector.RemovePlayback(m_ProjectorLease, command.PlaybackId);
                 }
-                m_Registry.ValidateFrame(m_RegistryLease);
-                m_History.ValidateFrame(m_HistoryLease);
             }
             catch
             {
@@ -345,30 +368,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
+        public void ValidateFrame()
+        {
+            RequireActiveFrame();
+            m_Playback.ValidateFrame();
+            for (int i = 0; i < m_Playback.Retirements.Count; i++)
+            {
+                AnimationPlaybackId playbackId = m_Playback.Retirements[i].PlaybackId;
+                m_History.RemovePlayback(m_HistoryLease, playbackId);
+                m_Projector.RemovePlayback(m_ProjectorLease, playbackId);
+            }
+            m_Projector.ValidateFrame(m_ProjectorLease);
+            m_History.ValidateFrame(m_HistoryLease);
+        }
+
         public void CommitFrame()
         {
             RequireAlive();
             RequireActiveFrame();
-            try
-            {
-                m_Projector.ValidateFrame(m_ProjectorLease);
-                m_History.ValidateFrame(m_HistoryLease);
-                m_Registry.Commit(m_RegistryLease);
-                m_RegistryActive = false;
-                m_History.Commit(m_HistoryLease);
-                m_HistoryActive = false;
-                m_Projector.Commit(m_ProjectorLease);
-                m_ProjectorActive = false;
-            }
-            catch
-            {
-                DiscardFrame();
-                throw;
-            }
-            finally
-            {
-                m_Entries.Clear();
-            }
+            m_Playback.CommitFrame();
+            m_History.Commit(m_HistoryLease);
+            m_HistoryActive = false;
+            m_Projector.Commit(m_ProjectorLease);
+            m_ProjectorActive = false;
         }
 
         public void DiscardFrame()
@@ -383,26 +405,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_History.Discard(m_HistoryLease);
                 m_HistoryActive = false;
             }
-            if (m_RegistryActive)
-            {
-                m_Registry.Discard(m_RegistryLease);
-                m_RegistryActive = false;
-            }
-            m_Entries.Clear();
+            m_Playback.DiscardFrame();
         }
 
         public void Reset()
         {
             RequireAlive();
-            if (m_RegistryActive || m_HistoryActive || m_ProjectorActive || m_SamplingFrameActive)
+            if (m_Playback.IsFrameOpen || m_HistoryActive || m_ProjectorActive || m_SamplingFrameActive)
                 throw new InvalidOperationException(
                     "Committed follow clock cannot reset during an open frame.");
             Array.Clear(m_TimelineProgress, 0, m_TimelineProgress.Length);
+            Array.Clear(m_TimelineAnimationFrames, 0, m_TimelineAnimationFrames.Length);
             m_ConfirmedTimelineTick = 0;
-            m_Registry.Reset();
+            m_Playback.Reset();
             m_History.Reset();
             m_Projector.Reset();
-            m_Entries.Clear();
         }
 
         public IActionPresentationClockPolicy CreatePolicy()
@@ -421,12 +438,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireActiveFrame();
             if (!channelId.IsValid)
                 throw new ArgumentException("Committed follow sampling requires a valid animation channel.", nameof(channelId));
-            if (!m_Registry.TryGetLatestPlayback(
+            if (!m_Playback.TryGetLatestPlayback(
                     channelId,
                     out AnimationPlaybackId playbackId,
                     out ActionAnimationPlaybackLifecyclePhase phase))
                 throw new InvalidOperationException($"Committed follow channel '{channelId.Value}' has no committed playback sample.");
-            if (m_Registry.TryGetProjectedSample(playbackId, out ActionProjectedSample projected, out EventId sourceEventId))
+            m_Playback.TryGetProjectedSample(playbackId, out ActionProjectedSample projected, out EventId sourceEventId);
+            if (TryGetTimelineAnimationSample(playbackId, channelId, out PresentationPoseSampleTime timelineSample))
+                return new ProjectedActionPresentationSample(playbackId, sourceEventId, timelineSample, false);
+            if (projected.IsValid)
                 return new ProjectedActionPresentationSample(playbackId, sourceEventId, projected.Time, false);
             if (!m_History.TryGetProjectionWindow(
                     m_HistoryLease,
@@ -443,6 +463,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sourceDurationSeconds,
                 sourceDurationSeconds,
                 phase);
+        }
+
+        bool TryGetTimelineAnimationSample(
+            AnimationPlaybackId playbackId,
+            AnimationChannelId channelId,
+            out PresentationPoseSampleTime sample)
+        {
+            sample = default;
+            float weight = float.NegativeInfinity;
+            string selectedClipId = null;
+            for (int frameIndex = 0; frameIndex < m_TimelineAnimationFrames.Length; frameIndex++)
+            {
+                TimelineAnimationFrameEntry entry = m_TimelineAnimationFrames[frameIndex];
+                if (!entry.Occupied || entry.Generation != playbackId.Generation)
+                    continue;
+                for (int contributionIndex = 0; contributionIndex < entry.Contributions.Count; contributionIndex++)
+                {
+                    TimelineAnimationContribution contribution = entry.Contributions[contributionIndex];
+                    var producerId = new AnimationProducerId(contribution.TimelineAuthoringId, contribution.TrackAuthoringId);
+                    if (!producerId.Equals(playbackId.ProducerId) || !contribution.AnimationChannelId.Equals(channelId) ||
+                        contribution.Weight < weight || contribution.Weight == weight &&
+                        string.CompareOrdinal(contribution.ClipAuthoringId, selectedClipId) >= 0)
+                        continue;
+                    weight = contribution.Weight;
+                    selectedClipId = contribution.ClipAuthoringId;
+                    sample = new PresentationPoseSampleTime(
+                        contribution.ClipTime,
+                        contribution.ContinuousClipTime,
+                        contribution.Cycle,
+                        contribution.IsLooping,
+                        1f);
+                }
+            }
+            return sample.IsValid;
         }
 
         public void Dispose()
@@ -463,7 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void RequireActiveFrame()
         {
-            if (!m_RegistryActive || !m_HistoryActive || !m_ProjectorActive)
+            if (!m_Playback.IsFrameOpen || !m_HistoryActive || !m_ProjectorActive)
                 throw new InvalidOperationException(
                     "Committed follow clock frame is not open.");
         }

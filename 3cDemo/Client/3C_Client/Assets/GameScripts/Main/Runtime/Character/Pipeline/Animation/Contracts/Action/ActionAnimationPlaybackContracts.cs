@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -76,10 +77,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public readonly struct ActionProjectedSample
     {
         public ActionProjectedSample(ulong localLogicTick, ulong presentationFrame,
+            AnimationClip authoringClipIdentity,
             PresentationPoseSampleTime time, float producerWeight)
         {
             LocalLogicTick = localLogicTick;
             PresentationFrame = presentationFrame;
+            AuthoringClipIdentity = authoringClipIdentity;
             Time = time;
             ProducerWeight = producerWeight;
             if (!IsValid)
@@ -88,10 +91,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public ulong LocalLogicTick { get; }
         public ulong PresentationFrame { get; }
+        public AnimationClip AuthoringClipIdentity { get; }
         public PresentationPoseSampleTime Time { get; }
         public float ProducerWeight { get; }
         public bool IsValid => LocalLogicTick != 0 && PresentationFrame != 0 &&
-            Time.IsValid && float.IsFinite(ProducerWeight) && ProducerWeight >= 0f && ProducerWeight <= 1f;
+            AuthoringClipIdentity && Time.IsValid && float.IsFinite(ProducerWeight) &&
+            ProducerWeight > 0f && ProducerWeight <= 1f;
     }
 
     public readonly struct ActionAnimationPlaybackCommand

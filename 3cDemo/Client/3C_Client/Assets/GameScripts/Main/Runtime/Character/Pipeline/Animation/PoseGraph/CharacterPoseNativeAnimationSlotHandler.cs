@@ -638,6 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ICharacterPoseNativeAnimationSlotSource
     {
         readonly AnimationBlendStackRuntime m_Stack;
+        readonly CharacterPoseNativeActionSlotSource m_ActionSource;
         readonly CharacterPoseSourceModule m_Source;
         readonly ICharacterPoseNativeBlendStackSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
@@ -654,11 +655,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseNativeAnimationSlotSourceBinding(
             AnimationBlendStackRuntime stack,
+            CharacterPoseNativeActionSlotSource actionSource,
             CharacterPoseSourceModule source,
             ICharacterPoseNativeBlendStackSourceBinding sourceBinding,
             CharacterPoseNativeNodePoseBuffer outputBuffer)
         {
             m_Stack = stack ?? throw new ArgumentNullException(nameof(stack));
+            m_ActionSource = actionSource ??
+                throw new ArgumentNullException(nameof(actionSource));
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
             m_SourceBinding = sourceBinding ??
                 throw new ArgumentNullException(nameof(sourceBinding));
@@ -689,6 +693,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             try
             {
                 m_Stack.Advance(input.DeltaSeconds);
+                m_ActionSource.BeginFrame(
+                    in input,
+                    in lineage,
+                    m_Stack);
                 m_Stack.BeginSourceFrame(lineage.CompletionIdentity);
                 return m_SourceBinding.PrepareFrame(
                     runtime,
@@ -700,6 +708,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             catch
             {
                 m_Stack.DiscardFrame();
+                m_ActionSource.DiscardFrame();
                 m_SourceBinding.ResetFrame();
                 m_FrameOpen = false;
                 throw;
@@ -782,6 +791,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Animation Slot source '{m_Stack.PoseNodeId}' frame is not open.");
             m_Stack.CommitFrame();
+            m_ActionSource.CommitFrame();
             m_CommittedPageIndex = m_PageIndex;
             m_SourceBinding.ResetFrame();
             m_FrameOpen = false;
@@ -799,6 +809,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_FrameOpen)
                 return;
             m_Stack.DiscardFrame();
+            m_ActionSource.DiscardFrame();
             m_SourceBinding.ResetFrame();
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
@@ -812,6 +823,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             if (m_FrameOpen)
                 m_Stack.DiscardFrame();
+            if (m_FrameOpen)
+                m_ActionSource.DiscardFrame();
+            m_ActionSource.Reset();
             m_SourceBinding.ResetFrame();
             m_FrameOpen = false;
             m_EvaluationPrepared = false;
@@ -827,8 +841,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Disposed = true;
             if (m_FrameOpen)
                 m_Stack.DiscardFrame();
+            if (m_FrameOpen)
+                m_ActionSource.DiscardFrame();
             if (m_Playable.IsValid())
                 AnimancerUtilities.RemovePlayable(m_Playable);
+            m_ActionSource.Dispose();
             m_Stack.Dispose();
             m_OutputBuffer.Dispose();
             m_SecondaryOutputBuffer.Dispose();

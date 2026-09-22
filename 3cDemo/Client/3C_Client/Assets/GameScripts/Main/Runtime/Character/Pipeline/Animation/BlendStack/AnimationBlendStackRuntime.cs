@@ -685,6 +685,103 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             GetCurrentEndpoint(out sourceOwnerIndex, out endpointKind);
         }
 
+        internal int RequireSourceOwnerIndex(string sourceOwnerIdentity)
+        {
+            RequireAlive();
+            RequireNoPreparedPlan();
+            if (string.IsNullOrWhiteSpace(sourceOwnerIdentity))
+                throw new ArgumentException(
+                    "Animation source owner identity is missing.",
+                    nameof(sourceOwnerIdentity));
+            int result = -1;
+            for (int i = 0; i < m_Slot.Transitions.Count; i++)
+            {
+                AnimationBlendTransitionPayload transition =
+                    m_Slot.Transitions[i];
+                if (transition.SourceEndpointKind ==
+                        AnimationBlendTransitionEndpointKind.SourceOwner &&
+                    string.Equals(
+                        transition.SourceOwnerIdentity,
+                        sourceOwnerIdentity,
+                        StringComparison.Ordinal))
+                {
+                    RequireMatchingOwnerIndex(
+                        sourceOwnerIdentity,
+                        transition.SourceOwnerIndex,
+                        ref result);
+                }
+                if (transition.TargetEndpointKind ==
+                        AnimationBlendTransitionEndpointKind.SourceOwner &&
+                    string.Equals(
+                        transition.TargetOwnerIdentity,
+                        sourceOwnerIdentity,
+                        StringComparison.Ordinal))
+                {
+                    RequireMatchingOwnerIndex(
+                        sourceOwnerIdentity,
+                        transition.TargetOwnerIndex,
+                        ref result);
+                }
+            }
+            return result >= 0
+                ? result
+                : throw new InvalidOperationException(
+                    $"Animation source owner '{sourceOwnerIdentity}' is not compiled for Blend Stack '{PoseNodeId}'.");
+        }
+
+        internal AnimationBlendTransitionPayload RequireTransitionTo(
+            int targetOwnerIndex,
+            AnimationBlendTransitionEndpointKind targetEndpointKind)
+        {
+            RequireAlive();
+            RequireNoPreparedPlan();
+            GetCurrentEndpoint(
+                out int sourceOwnerIndex,
+                out AnimationBlendTransitionEndpointKind sourceEndpointKind);
+            return m_Slot.RequireTransition(
+                sourceOwnerIndex,
+                sourceEndpointKind,
+                targetOwnerIndex,
+                targetEndpointKind);
+        }
+
+        internal bool ContainsSource(AnimationPoseSourceId sourceId)
+        {
+            RequireAlive();
+            if (!sourceId.IsValid)
+                return false;
+            for (int i = 0; i < m_EntryCount; i++)
+            {
+                AnimationBlendEntryState entry = ReadEntry(i);
+                if (!entry.IsSourcePose && entry.SourceId.Equals(sourceId))
+                    return true;
+            }
+            return false;
+        }
+
+        internal bool IsCurrentSource(AnimationPoseSourceId sourceId)
+        {
+            RequireAlive();
+            RequireNoPreparedPlan();
+            if (!sourceId.IsValid || m_EntryCount == 0)
+                return false;
+            AnimationBlendEntryState current = ReadEntry(m_EntryCount - 1);
+            return !current.IsSourcePose && current.SourceId.Equals(sourceId);
+        }
+
+        static void RequireMatchingOwnerIndex(
+            string sourceOwnerIdentity,
+            int candidate,
+            ref int result)
+        {
+            if (candidate < 0 || result >= 0 && result != candidate)
+            {
+                throw new InvalidOperationException(
+                    $"Animation source owner '{sourceOwnerIdentity}' has inconsistent compiled indexes.");
+            }
+            result = candidate;
+        }
+
         internal void BeginSourceFrame(ulong completionIdentity)
         {
             RequireAlive();

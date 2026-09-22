@@ -236,6 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         void PublishSample(ProducerState producer, TimelineAnimationContribution contribution, ulong logicTick, ulong presentationFrame)
         {
             var sample = new ActionProjectedSample(logicTick, presentationFrame,
+                contribution.Clip,
                 new PresentationPoseSampleTime(contribution.ClipTime, contribution.ContinuousClipTime,
                     contribution.Cycle, contribution.IsLooping, 1f), contribution.Weight);
             m_Inbox.Publish(ActionAnimationPlaybackCommand.PresentSample(producer.PlaybackId,

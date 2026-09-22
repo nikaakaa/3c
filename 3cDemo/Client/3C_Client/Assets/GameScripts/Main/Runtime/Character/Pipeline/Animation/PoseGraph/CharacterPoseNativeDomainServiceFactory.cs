@@ -1,3 +1,4 @@
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using System;
 using System.Globalization;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeSourceResourceCatalog m_SourceCatalog;
         readonly CharacterAnimationResourceScope m_ResourceScope;
         readonly ICharacterPoseNativeActionCommandSource m_ActionCommandSource;
+        readonly IActionAnimationPlaybackFrameSource m_ActionPlayback;
         readonly ICharacterPoseNativeEventFrameSource m_EventFrameSource;
         readonly CharacterWorldAwarePresentationBinding m_World;
         readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
@@ -39,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeDomainResourceSet resources,
             CharacterAnimationResourceScope resourceScope,
             ICharacterPoseNativeActionCommandSource actionCommandSource,
+            IActionAnimationPlaybackFrameSource actionPlayback,
             ICharacterPoseNativeEventFrameSource eventFrameSource,
             CharacterWorldAwarePresentationBinding world,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
@@ -51,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Resources = resources ?? throw new ArgumentNullException(nameof(resources));
             m_ResourceScope = resourceScope ?? throw new ArgumentNullException(nameof(resourceScope));
             m_ActionCommandSource = actionCommandSource ?? throw new ArgumentNullException(nameof(actionCommandSource));
+            m_ActionPlayback = actionPlayback ?? throw new ArgumentNullException(nameof(actionPlayback));
             m_EventFrameSource = eventFrameSource ?? throw new ArgumentNullException(nameof(eventFrameSource));
             m_World = world ? world : throw new ArgumentNullException(nameof(world));
             m_FutureBodyTranslationSource = futureBodyTranslationSource;
@@ -131,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowSelectedPlayer,
                 ThrowSelectedSample,
                 CreateBlendStack,
+                CreateActionSlotSource,
                 ThrowActionSample,
                 ThrowProviderSample,
                 RequireBindingIndex,
@@ -409,10 +414,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var transitions = new List<AnimationBlendTransitionPayload>();
             var curveEntries = new List<AnimationBlendCurveCatalogEntry>();
             var profileEntries = new List<AnimationBlendProfileCatalogEntry>();
-            BuildTransition(
-                policy.DefaultTransition, 0, transitions, curveEntries, profileEntries);
-            for (int i = 0; i < policy.Overrides.Count; i++)
-                BuildTransition(policy.Overrides[i].Rule, i + 1, transitions, curveEntries, profileEntries);
+            if (slotPayload != null)
+            {
+                BuildActionSlotTransitions(
+                    policy,
+                    transitions,
+                    curveEntries,
+                    profileEntries);
+            }
+            else
+            {
+                BuildTransition(
+                    policy.DefaultTransition,
+                    0,
+                    transitions,
+                    curveEntries,
+                    profileEntries);
+                for (int i = 0; i < policy.Overrides.Count; i++)
+                {
+                    BuildTransition(
+                        policy.Overrides[i].Rule,
+                        i + 1,
+                        transitions,
+                        curveEntries,
+                        profileEntries);
+                }
+            }
             var slotPayload2 = new AnimationBlendNodePayload(
                 node.NodeId,
                 policy.PolicyId,
@@ -462,6 +489,111 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<AnimationBlendCurveCatalogEntry> curveEntries,
             List<AnimationBlendProfileCatalogEntry> profileEntries)
         {
+            BuildTransition(
+                rule,
+                index,
+                AnimationBlendTransitionEndpointKind.SourceOwner,
+                $"owner/{index}",
+                index + 1,
+                AnimationBlendTransitionEndpointKind.SourceOwner,
+                $"owner/{index + 1}",
+                transitions,
+                curveEntries,
+                profileEntries);
+        }
+
+        void BuildActionSlotTransitions(
+            CharacterAnimationBlendPolicy policy,
+            List<AnimationBlendTransitionPayload> transitions,
+            List<AnimationBlendCurveCatalogEntry> curveEntries,
+            List<AnimationBlendProfileCatalogEntry> profileEntries)
+        {
+            var ownerIdentities = new List<string>();
+            for (int i = 0; i < policy.Overrides.Count; i++)
+            {
+                CharacterAnimationBlendTransitionOverride transition =
+                    policy.Overrides[i];
+                if (transition.SourceEndpointKind ==
+                    AnimationBlendTransitionEndpointKind.SourceOwner)
+                {
+                    AddOwnerIdentity(
+                        ownerIdentities,
+                        transition.SourceOwnerIdentity);
+                }
+                if (transition.TargetEndpointKind ==
+                    AnimationBlendTransitionEndpointKind.SourceOwner)
+                {
+                    AddOwnerIdentity(
+                        ownerIdentities,
+                        transition.TargetOwnerIdentity);
+                }
+            }
+            ownerIdentities.Sort(StringComparer.Ordinal);
+            int endpointCount = ownerIdentities.Count + 1;
+            for (int sourceEndpoint = 0;
+                 sourceEndpoint < endpointCount;
+                 sourceEndpoint++)
+            {
+                bool sourcePose = sourceEndpoint == 0;
+                int sourceOwnerIndex = sourcePose
+                    ? -1
+                    : sourceEndpoint - 1;
+                string sourceOwnerIdentity = sourcePose
+                    ? string.Empty
+                    : ownerIdentities[sourceOwnerIndex];
+                AnimationBlendTransitionEndpointKind sourceKind =
+                    sourcePose
+                        ? AnimationBlendTransitionEndpointKind.SourcePose
+                        : AnimationBlendTransitionEndpointKind.SourceOwner;
+                for (int targetEndpoint = 0;
+                     targetEndpoint < endpointCount;
+                     targetEndpoint++)
+                {
+                    bool targetPose = targetEndpoint == 0;
+                    int targetOwnerIndex = targetPose
+                        ? -1
+                        : targetEndpoint - 1;
+                    string targetOwnerIdentity = targetPose
+                        ? string.Empty
+                        : ownerIdentities[targetOwnerIndex];
+                    AnimationBlendTransitionEndpointKind targetKind =
+                        targetPose
+                            ? AnimationBlendTransitionEndpointKind.SourcePose
+                            : AnimationBlendTransitionEndpointKind.SourceOwner;
+                    CharacterAnimationBlendTransitionRule rule =
+                        FindTransitionRule(
+                            policy,
+                            sourceKind,
+                            sourceOwnerIdentity,
+                            targetKind,
+                            targetOwnerIdentity);
+                    BuildTransition(
+                        rule,
+                        sourceOwnerIndex,
+                        sourceKind,
+                        sourceOwnerIdentity,
+                        targetOwnerIndex,
+                        targetKind,
+                        targetOwnerIdentity,
+                        transitions,
+                        curveEntries,
+                        profileEntries);
+                }
+            }
+        }
+
+        void BuildTransition(
+            CharacterAnimationBlendTransitionRule rule,
+            int sourceOwnerIndex,
+            AnimationBlendTransitionEndpointKind sourceEndpointKind,
+            string sourceOwnerIdentity,
+            int targetOwnerIndex,
+            AnimationBlendTransitionEndpointKind targetEndpointKind,
+            string targetOwnerIdentity,
+            List<AnimationBlendTransitionPayload> transitions,
+            List<AnimationBlendCurveCatalogEntry> curveEntries,
+            List<AnimationBlendProfileCatalogEntry> profileEntries)
+        {
             AnimationBlendCurvePayload curvePayload = BuildCurvePayload(rule);
             int curveIndex = RequireOrAddCurve(curveEntries, curvePayload);
             var profilePayload = new AnimationBlendProfilePayload(
@@ -475,18 +607,90 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             int profileIndex = RequireOrAddProfile(profileEntries, profilePayload);
             var transition = new AnimationBlendTransitionPayload(
-                index,
-                AnimationBlendTransitionEndpointKind.SourceOwner,
-                $"owner/{index}",
-                index + 1,
-                AnimationBlendTransitionEndpointKind.SourceOwner,
-                $"owner/{index + 1}",
+                sourceOwnerIndex,
+                sourceEndpointKind,
+                sourceOwnerIdentity,
+                targetOwnerIndex,
+                targetEndpointKind,
+                targetOwnerIdentity,
                 rule.BlendLogic,
                 rule.DurationSeconds,
                 curveIndex,
                 profileIndex);
             transition.RequireValid(curveEntries.Count, profileEntries.Count);
             transitions.Add(transition);
+        }
+
+        static void AddOwnerIdentity(
+            List<string> ownerIdentities,
+            string ownerIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(ownerIdentity))
+                throw new InvalidOperationException(
+                    "Animation Blend source owner identity is missing.");
+            for (int i = 0; i < ownerIdentities.Count; i++)
+            {
+                if (string.Equals(
+                    ownerIdentities[i],
+                    ownerIdentity,
+                    StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+            ownerIdentities.Add(ownerIdentity);
+        }
+
+        static CharacterAnimationBlendTransitionRule FindTransitionRule(
+            CharacterAnimationBlendPolicy policy,
+            AnimationBlendTransitionEndpointKind sourceEndpointKind,
+            string sourceOwnerIdentity,
+            AnimationBlendTransitionEndpointKind targetEndpointKind,
+            string targetOwnerIdentity)
+        {
+            for (int i = 0; i < policy.Overrides.Count; i++)
+            {
+                CharacterAnimationBlendTransitionOverride candidate =
+                    policy.Overrides[i];
+                if (candidate.SourceEndpointKind == sourceEndpointKind &&
+                    candidate.TargetEndpointKind == targetEndpointKind &&
+                    string.Equals(
+                        candidate.SourceOwnerIdentity,
+                        sourceOwnerIdentity,
+                        StringComparison.Ordinal) &&
+                    string.Equals(
+                        candidate.TargetOwnerIdentity,
+                        targetOwnerIdentity,
+                        StringComparison.Ordinal))
+                {
+                    return candidate.Rule;
+                }
+            }
+            return policy.DefaultTransition;
+        }
+
+        CharacterPoseNativeActionSlotSource CreateActionSlotSource(
+            CharacterPoseCanvasNode node,
+            CharacterPoseNativeInstanceContext context,
+            AnimationBlendStackRuntime stack)
+        {
+            if (node?.Payload is not CharacterAnimationSlotPosePayload payload ||
+                stack == null || stack.PoseNodeId != node.NodeId ||
+                stack.AnimationChannelId != payload.AnimationChannelId)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Animation Slot '{node?.NodeId.ToString() ?? "missing"}' Action source assembly is invalid.");
+            }
+            return new CharacterPoseNativeActionSlotSource(
+                node.NodeId,
+                payload.SlotId,
+                payload.AnimationChannelId,
+                m_ActionPlayback,
+                stack.SourceCapacity,
+                m_SourceCatalog,
+                m_InputContract,
+                RequireParameterIndex(
+                    AnimationPoseParameterIds.FootPlacementWeight));
         }
 
         static int RequireOrAddCurve(

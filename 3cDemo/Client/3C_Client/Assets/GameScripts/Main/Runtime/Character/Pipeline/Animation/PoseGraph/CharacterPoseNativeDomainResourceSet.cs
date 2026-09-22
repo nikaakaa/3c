@@ -24,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterPresentationPoseSourceSlot>();
         [SerializeField] CharacterAnimationCompiledResourceDescriptor[] m_ResourceDescriptors =
             Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+        [SerializeField] CharacterActionAnimationSourcePlan[] m_ActionSourcePlans =
+            Array.Empty<CharacterActionAnimationSourcePlan>();
         [SerializeField] CharacterPoseBoneIkGoalBinding[] m_PoseBoneIkGoalBindings =
             Array.Empty<CharacterPoseBoneIkGoalBinding>();
         [SerializeField] int[] m_GoalAssemblerContributions = Array.Empty<int>();
@@ -46,6 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationPoseSourceSlot> SourceSlots => m_SourceSlots;
         public IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> ResourceDescriptors =>
             m_ResourceDescriptors ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+        public IReadOnlyList<CharacterActionAnimationSourcePlan> ActionSourcePlans =>
+            m_ActionSourcePlans ?? Array.Empty<CharacterActionAnimationSourcePlan>();
         public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
             m_PoseBoneIkGoalBindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
         public IReadOnlyList<int> GoalAssemblerContributions =>
@@ -60,9 +64,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<RootMotionCurveAsset> RootOrientationCurves =>
             m_RootOrientationCurves ?? Array.Empty<RootMotionCurveAsset>();
 
-        internal void ReplaceSourcePlans(
+        internal void ReplaceAnimationSources(
             IReadOnlyList<CharacterPresentationPoseSourcePlan> sourcePlans,
-            IReadOnlyList<CharacterPresentationPoseSourceSlot> sourceSlots)
+            IReadOnlyList<CharacterPresentationPoseSourceSlot> sourceSlots,
+            IReadOnlyList<CharacterActionAnimationSourcePlan> actionSourcePlans,
+            IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> resourceDescriptors)
         {
             if (sourcePlans == null || sourcePlans.Count == 0)
                 throw new InvalidOperationException(
@@ -92,6 +98,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_SourcePlans = plans;
             m_SourceSlots = slots;
+            if (actionSourcePlans == null || actionSourcePlans.Count == 0)
+                throw new ArgumentException(
+                    "Action animation source plans are missing.");
+            var actions = new CharacterActionAnimationSourcePlan[
+                actionSourcePlans.Count];
+            var actionClips = new HashSet<AnimationClip>();
+            for (int i = 0; i < actions.Length; i++)
+            {
+                CharacterActionAnimationSourcePlan action =
+                    actionSourcePlans[i] ??
+                    throw new ArgumentException(
+                        $"Action animation source plan #{i} is missing.");
+                action.RequireValid();
+                if (!actionClips.Add(action.AuthoringClipIdentity))
+                    throw new ArgumentException(
+                        "Action animation source Clip identity is duplicated.");
+                actions[i] = action;
+            }
+            if (resourceDescriptors == null)
+                throw new ArgumentNullException(nameof(resourceDescriptors));
+            var descriptors = new CharacterAnimationCompiledResourceDescriptor[
+                resourceDescriptors.Count];
+            for (int i = 0; i < descriptors.Length; i++)
+            {
+                CharacterAnimationCompiledResourceDescriptor descriptor =
+                    resourceDescriptors[i] ??
+                    throw new ArgumentException(
+                        $"Animation resource descriptor #{i} is missing.");
+                descriptor.RequireValid();
+                if (descriptor.ResourceIndex != i)
+                    throw new ArgumentException(
+                        "Animation resource descriptors are not contiguous.");
+                descriptors[i] = descriptor;
+            }
+            m_ActionSourcePlans = actions;
+            m_ResourceDescriptors = descriptors;
         }
         internal CharacterPoseNativeSourceResourceCatalog CreateSourceCatalog(
             CharacterAnimationRigPayload rig,
@@ -105,6 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rig,
                 resourceScope,
                 SourcePlans,
+                ActionSourcePlans,
                 ResourceDescriptors);
         }
 

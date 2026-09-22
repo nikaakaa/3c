@@ -621,6 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterPoseNativeValidationResult validation = m_PoseDomain.Session.ValidatePending();
                     if (validation.IsValidated)
                     {
+                        m_PresentationClockCoordinator?.ValidateFrame();
                         CharacterPoseNativePublicationResult commit =
                             m_PoseDomain.Session.Commit(false);
                         if (commit.Status == CharacterPoseNativeFrameStatus.Committed)

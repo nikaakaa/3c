@@ -15,18 +15,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly CharacterAnimationRigPayload m_Rig;
         readonly Dictionary<int, CharacterPresentationPoseSourcePlan> m_Plans;
+        readonly Dictionary<AnimationClip, CharacterActionAnimationSourcePlan> m_ActionPlans;
         readonly Dictionary<int, CharacterAnimationCompiledResourceDescriptor> m_Descriptors;
 
         internal CharacterPoseNativeSourceResourceCatalog(
             CharacterAnimationRigPayload rig,
             CharacterAnimationResourceScope resourceScope,
             IReadOnlyList<CharacterPresentationPoseSourcePlan> sourcePlans,
+            IReadOnlyList<CharacterActionAnimationSourcePlan> actionSourcePlans,
             IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> resourceDescriptors)
         {
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             if (resourceScope == null)
                 throw new ArgumentNullException(nameof(resourceScope));
             m_Plans = BuildIndex(sourcePlans, value => value.SourceIndex.Value);
+            m_ActionPlans = BuildActionIndex(actionSourcePlans);
             m_Descriptors = BuildIndex(resourceDescriptors, value => value.ResourceIndex);
             foreach (CharacterPresentationPoseSourcePlan plan in m_Plans.Values)
             {
@@ -45,6 +48,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 pair.Value.RequireValid();
                 resourceScope.Register(pair.Value);
             }
+            foreach (CharacterActionAnimationSourcePlan plan in m_ActionPlans.Values)
+            {
+                plan.RequireValid();
+                if (plan.Backend != CharacterAnimationSamplingBackendKind.Acl)
+                    continue;
+                CharacterAnimationCompiledResourceDescriptor descriptor =
+                    RequireDescriptor(plan.ResourceCatalogIndex);
+                CharacterAclAnimationResourceManifest manifest =
+                    descriptor.RequireManifest(plan.GroupClipIndex);
+                if (!string.Equals(
+                        manifest.FormalClipIdentity,
+                        plan.ClipIdentity,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        manifest.SourceDependencyHash,
+                        plan.FullDependencyHash,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(manifest.RigId, m_Rig.RigId, StringComparison.Ordinal) ||
+                    !string.Equals(manifest.RigRevision, m_Rig.RigRevision, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Action animation source plan '{plan.ClipIdentity}' does not match its ACL manifest.");
+                }
+            }
         }
 
         internal CharacterPresentationPoseSourcePlan RequirePlan(PresentationPoseSourceIndex sourceIndex)
@@ -61,6 +88,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return descriptor;
         }
 
+        internal CharacterActionAnimationSourcePlan RequireActionPlan(
+            AnimationClip authoringClipIdentity)
+        {
+            if (!authoringClipIdentity ||
+                !m_ActionPlans.TryGetValue(
+                    authoringClipIdentity,
+                    out CharacterActionAnimationSourcePlan plan))
+            {
+                throw new InvalidOperationException(
+                    $"Action animation Clip '{authoringClipIdentity?.name ?? "missing"}' has no compiled source plan.");
+            }
+            return plan;
+        }
+
         static Dictionary<int, TValue> BuildIndex<TValue>(
             IReadOnlyList<TValue> values,
             Func<TValue, int> keySelector)
@@ -73,6 +114,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 TValue value = values[i] ?? throw new ArgumentException($"Pose source resource #{i} is missing.", nameof(values));
                 if (!result.TryAdd(keySelector(value), value))
                     throw new InvalidOperationException("Pose source resource identity is duplicated.");
+            }
+            return result;
+        }
+
+        static Dictionary<AnimationClip, CharacterActionAnimationSourcePlan>
+            BuildActionIndex(
+                IReadOnlyList<CharacterActionAnimationSourcePlan> values)
+        {
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+            var result = new Dictionary<AnimationClip, CharacterActionAnimationSourcePlan>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                CharacterActionAnimationSourcePlan value = values[i] ??
+                    throw new ArgumentException(
+                        $"Action animation source resource #{i} is missing.",
+                        nameof(values));
+                if (!result.TryAdd(value.AuthoringClipIdentity, value))
+                    throw new InvalidOperationException(
+                        "Action animation source identity is duplicated.");
             }
             return result;
         }
@@ -269,16 +330,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Motion Matching database '{artifactIdentity}' is not registered.");
             return new MotionMatchingPoseSourceRuntime(database);
         }
-
-        internal CharacterPoseHistoryCollectorRuntime CreateHistoryCollector(
-            CharacterPoseHistoryId historyId,
-            CharacterMotionMatchingRigLineage rigLineage,
-            int capacity) =>
-            new CharacterPoseHistoryCollectorRuntime(
-                historyId,
-                rigLineage,
-                m_Rig.PoseBoneCount,
-                capacity);
 
         internal RootMotionCurveAsset RequireRootOrientationCurve(string curveName)
         {

@@ -132,8 +132,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterPoseNativeDomainInstance poseDomain = null;
             CharacterAnimationResourceScope resourceScope = null;
+            var actionPlayback = new ActionAnimationPlaybackRuntime(64, 128);
             IActionPresentationClockCoordinator presentationClockCoordinator =
-                new CommittedFollowPresentationClockCoordinator();
+                new CommittedFollowPresentationClockCoordinator(actionPlayback);
             IActionPresentationClockPolicy locomotionClockPolicy =
                 locomotionBinding.ClockMode == CharacterLocomotionClockMode.CommittedMovement
                     ? new CommittedMovementPresentationClockPolicy()
@@ -168,6 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         poseResources,
                         resourceScope,
                         actionCommandSource,
+                        actionPlayback,
                         runtime,
                         worldAwarePresentation,
                         sessionHost,

@@ -31,6 +31,7 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private string[] _preparedTagSnapshot = Array.Empty<string>();
+        private ResourceScopeSnapshot[] _scopeSnapshot = Array.Empty<ResourceScopeSnapshot>();
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
         private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
         private ResourceScope[] _disposeScopeBuffer = Array.Empty<ResourceScope>();
@@ -490,13 +491,33 @@ namespace GameLogic.ProductResource
         {
             GetAssetPoolMetrics(out int poolCount, out int assetPoolObjects, out int assetPoolReleasable);
 
-            var scopeSnapshots = new ResourceScopeSnapshot[_scopes.Count];
+            ResourceScopeSnapshot[] previousScopeSnapshots = _scopeSnapshot;
+            bool scopeSnapshotsUnchanged = previousScopeSnapshots.Length == _scopes.Count;
             int scopeIndex = 0;
             foreach (ResourceScope scope in _scopes.Values)
             {
-                scopeSnapshots[scopeIndex++] = scope.GetSnapshot();
+                ResourceScopeSnapshot snapshot = scope.GetSnapshot();
+                if (scopeSnapshotsUnchanged && !ReferenceEquals(previousScopeSnapshots[scopeIndex], snapshot))
+                {
+                    scopeSnapshotsUnchanged = false;
+                }
+
+                scopeIndex++;
             }
-            Array.Sort(scopeSnapshots, ScopeSnapshotSort.Instance);
+
+            ResourceScopeSnapshot[] scopeSnapshots = previousScopeSnapshots;
+            if (!scopeSnapshotsUnchanged)
+            {
+                scopeSnapshots = new ResourceScopeSnapshot[_scopes.Count];
+                scopeIndex = 0;
+                foreach (ResourceScope scope in _scopes.Values)
+                {
+                    scopeSnapshots[scopeIndex++] = scope.GetSnapshot();
+                }
+
+                Array.Sort(scopeSnapshots, ScopeSnapshotSort.Instance);
+                _scopeSnapshot = scopeSnapshots;
+            }
 
             string packageVersion;
             try

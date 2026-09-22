@@ -770,7 +770,6 @@ namespace ThirdPersonSimulation.Fixed
         bool m_JournalDirty;
         bool m_ChangeCursorDirty;
         bool m_LastLifecycleRevisionsDirty;
-        bool m_RestoredDirty;
 
         public SimulationGameplayEffectState(
             FixedGameplayEffectRuntimeCatalog catalog,
@@ -855,8 +854,7 @@ namespace ThirdPersonSimulation.Fixed
             m_PeriodsDirty ||
             m_JournalDirty ||
             m_ChangeCursorDirty ||
-            m_LastLifecycleRevisionsDirty ||
-            m_RestoredDirty;
+            m_LastLifecycleRevisionsDirty;
 
         public IReadOnlyList<string> OwnedTagsSnapshot => m_OwnedTagsSnapshot ??= BuildOwnedTagsSnapshot();
 
@@ -1148,7 +1146,7 @@ namespace ThirdPersonSimulation.Fixed
             return aggregate;
         }
 
-        public void Restore(GameplayEffectStateAggregate aggregate, bool hasChanges = false)
+        public void Restore(GameplayEffectStateAggregate aggregate)
         {
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
@@ -1163,7 +1161,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Baseline = aggregate;
             m_ChangeCursor = aggregate.ChangeCursor;
             ClearDirty();
-            m_RestoredDirty = hasChanges;
             ValidateRuntimeClosure();
         }
 
@@ -1216,7 +1213,6 @@ namespace ThirdPersonSimulation.Fixed
             m_JournalDirty = false;
             m_ChangeCursorDirty = false;
             m_LastLifecycleRevisionsDirty = false;
-            m_RestoredDirty = false;
         }
 
         void RefreshTagsDirty()

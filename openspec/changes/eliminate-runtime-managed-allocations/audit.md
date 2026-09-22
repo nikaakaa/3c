@@ -4834,3 +4834,14 @@
 - 业务输入仍是角色快照、逻辑输入、ingress 和 body 状态；输出仍是 candidate state、facts、presentation、trace、motion 和 world request。处理点从“每 tick 重建装配和周期依赖”改为“生命周期对象复用、周期上下文重绑”，执行顺序和提交边界不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed 技能回放、角色控制回放、rollback restore 和 Player 分配采样。首个 frame/service assembly、每个逻辑步的 SkillState transaction 和 Complete 最终数组仍是当前所有权边界的正式分配；后续按 2.4、2.5 继续处理。
+
+## 2026-09-23 Float32 角色与能力周期装配复用
+
+对应 tasks.md 的 2.2；2.3 保持未勾选。
+
+- Float32 Evaluate 原先与 Fixed 相同：每个 installation 新建 invocation、frame 和 service assembly；角色控制 runtime、read/output/state port、查询委托也逐 tick 重建。Float32 数值类型、graph value workspace、action/effect/equipment 后端和状态事务语义保留。
+- Float32 `SimulationActorBinding` 现在按 installation 持有 invocation；首个逻辑步创建 frame 与执行 assembly，后续逻辑步用 `Float32AbilityInvocationContext` 重绑周期状态。`InvocationScratch`、`ClearInvocationScratch` 和 Evaluate 内 factory 调用路径删除。
+- Float32 frame 周期字段、InputRuntime、savepoint、MotionWarp SkillState、execution target Timeline Tick 改为按 frame 读取。Float32 `Float32CharacterRuntime` 按 Actor 持有 control runtime；控制静态依赖和查询委托只构造一次，Begin 只重绑 transaction、状态端口、InputRequests、ActionState、Tick 和 BodyFacts。
+- invocation 的成功完成、异常 Abort、SkillState dispose 和 Timeline discard 语义保持。Begin 半途失败会结束 frame 并归还 SkillState；Control service 引用跨步保留，避免 EndEvaluation 后丢失。公共模型没有新增第二套抽象，两数值域仍保留各自的强类型执行后端。
+- `ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用禁用共享编译的 `dotnet build` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Fixed.csproj` 在本轮前一次构建也已通过。构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Float32 技能回放、角色控制回放、rollback restore 和 Player 分配采样。首个 Float32 frame/service assembly、每步 SkillState transaction、GraphValue lease 和 Complete 最终数组仍由后续 2.3 到 2.5 的所有权小步处理。

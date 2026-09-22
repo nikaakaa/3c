@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 namespace GameLogic.ProductResource
@@ -9,8 +8,7 @@ namespace GameLogic.ProductResource
         private readonly ProductResourceRuntime _runtime;
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly CancellationTokenSource _lifetimeCancellation;
-        private readonly HashSet<long> _leaseIds = new HashSet<long>();
-        private long[] _disposeBuffer;
+        private int _leaseCount;
 
         internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name, CancellationToken runtimeCancellation)
         {
@@ -34,7 +32,7 @@ namespace GameLogic.ProductResource
 
         internal CancellationToken LifetimeToken => _lifetimeCancellation.Token;
 
-        public int LeaseCount => _leaseIds.Count;
+        public int LeaseCount => _leaseCount;
 
         public void Dispose()
         {
@@ -60,37 +58,25 @@ namespace GameLogic.ProductResource
         internal void CompleteDispose()
         {
             State = ResourceScopeState.Disposed;
-            _leaseIds.Clear();
+            _leaseCount = 0;
             _cancellation.Dispose();
             _lifetimeCancellation.Dispose();
         }
 
-        internal bool TryRegisterLease(long leaseId)
+        internal bool TryRegisterLease()
         {
-            return State == ResourceScopeState.Active && _leaseIds.Add(leaseId);
-        }
-
-        internal void RemoveLease(long leaseId)
-        {
-            _leaseIds.Remove(leaseId);
-        }
-
-        internal void CopyLeaseIdsForDispose(out int count)
-        {
-            CopyIds(_leaseIds, ref _disposeBuffer, out count);
-        }
-
-        internal long PeekLeaseId(int index) => _disposeBuffer[index];
-
-        private static void CopyIds(HashSet<long> ids, ref long[] buffer, out int count)
-        {
-            count = ids.Count;
-            if (buffer == null || buffer.Length < count)
+            if (State != ResourceScopeState.Active)
             {
-                buffer = new long[count];
+                return false;
             }
 
-            ids.CopyTo(buffer, 0);
+            _leaseCount++;
+            return true;
+        }
+
+        internal void RemoveLease()
+        {
+            _leaseCount--;
         }
     }
 }

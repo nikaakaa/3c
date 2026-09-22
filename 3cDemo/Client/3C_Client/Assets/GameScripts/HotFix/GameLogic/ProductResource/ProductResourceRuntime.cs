@@ -117,7 +117,7 @@ namespace GameLogic.ProductResource
                     }
 
                     long leaseId = ++_nextLeaseId;
-                    if (!scope.TryRegisterLease(leaseId))
+                    if (!scope.TryRegisterLease())
                     {
                         _resourceModule.UnloadAsset(asset);
                         throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before lease commit.", cancellation);
@@ -237,11 +237,7 @@ namespace GameLogic.ProductResource
                 return;
             }
 
-            scope.CopyLeaseIdsForDispose(out int leaseCount);
-            for (int index = 0; index < leaseCount; index++)
-            {
-                ReleaseLease(scope.PeekLeaseId(index));
-            }
+            ReleaseScopeLeases(scope);
 
             _scopes.Remove(scope.Id);
             scope.CompleteDispose();
@@ -260,7 +256,7 @@ namespace GameLogic.ProductResource
             }
 
             _leases.Remove(leaseId);
-            record.Scope.RemoveLease(leaseId);
+            record.Scope.RemoveLease();
             RemoveOwnedReference(record.Identity);
             _resourceModule.UnloadAsset(record.Asset);
             ReturnLeaseRecord(record);
@@ -279,6 +275,30 @@ namespace GameLogic.ProductResource
             {
                 PublishSnapshot();
             }
+        }
+
+        private void ReleaseScopeLeases(ResourceScope scope)
+        {
+            while (scope.LeaseCount > 0)
+            {
+                ReleaseFirstScopeLease(scope);
+            }
+        }
+
+        private void ReleaseFirstScopeLease(ResourceScope scope)
+        {
+            foreach (KeyValuePair<long, LeaseRecord> lease in _leases)
+            {
+                if (!ReferenceEquals(lease.Value.Scope, scope))
+                {
+                    continue;
+                }
+
+                ReleaseLease(lease.Key);
+                return;
+            }
+
+            throw new InvalidOperationException("Resource scope lease registry is incomplete.");
         }
 
         private ResourceScope CreateUniqueScope(ResourceScopeKind kind, string name)

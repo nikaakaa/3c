@@ -4989,3 +4989,13 @@
 - 读取、默认值、Reset、MotionWarp Active/Inactive、身份和 slot 校验不变。接受无修改能力时 candidate 继续引用原 committed 状态；原状态集合没有公开可变入口。接受修改能力时仍移交独立 pending 集合，rollback 历史不共享可变字典。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做触发/未触发技能、state slot 写入、MotionWarp 写入、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：SkillExecutionState 外壳本身、修改路径 pending 字典、非空最终数组和其他快照所有权仍在后续小步处理。
+
+## 2026-09-23 Ability工作页跨步复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `7c0b15a34`。
+
+- Fixed 和 Float32 `CharacterRuntimeStateTransaction` 增加 `SkillExecutionState` 工作页表，按 `CharacterSkillId` 长期持有每个已安装能力的 pending 工作页。首个逻辑步创建外壳；后续 `BindAbility` 通过 `Restart` 重绑新 committed `AbilityRuntimeState`。
+- `Restart` 清空脏标记，重新借用 committed state values、MotionWarp 字典和 execution aggregate 引用，并把事务视图恢复为 active。能力 identity、layout、execution data 和 binding identity 仍属于固定 installation 与当前角色事务，不跨 Actor 复用。
+- 上一次事务成功提交或 Abort 后，下一事务可以重新绑定同一工作页；修改路径的 lazy copy、无修改 committed 复用、savepoint 平衡校验和 candidate 移交边界不变。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做多能力触发、技能中断、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：修改路径 pending 字典、非空最终数组、Equipment aggregate 和 Timeline snapshot 外壳所有权仍在后续小步处理。

@@ -74,7 +74,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(Version);
             writer.WriteString(snapshot.SnapshotHash.ToString());
             writer.WriteString(snapshot.CompositionIdentity.ToString());
-            writer.WriteBytes(SimulationWorldSnapshotCodec.Write(snapshot.World));
+            SimulationWorldSnapshotCodec.WriteLengthPrefixed(writer, snapshot.World);
             WritePipeline(writer, snapshot.Pipeline);
             return writer.ToArray();
         }

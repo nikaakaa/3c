@@ -416,13 +416,13 @@ namespace ThirdPersonSimulation
         [ThreadStatic] static CanonicalWriter s_HashWriter;
         [ThreadStatic] static CanonicalWriter s_CanonicalWriter;
 
-        public static byte[] Write(SimulationWorldSnapshot snapshot)
+        public static void WriteLengthPrefixed(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            CanonicalWriter writer = CanonicalScratch();
-            WriteHashPayload(writer, snapshot);
-            return writer.ToArray();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
+            WriteCanonicalPayload(writer, snapshot);
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         public static SimulationWorldSnapshot Read(byte[] bytes)

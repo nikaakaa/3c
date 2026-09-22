@@ -477,7 +477,7 @@ namespace ThirdPersonSimulation
             if (!m_StateValuesChanged && !m_MotionWarpStatesChanged && !m_AbilityExecutionStateChanged)
             {
                 Float32AbilityRuntimeState committed = m_CommittedState;
-                Clear();
+                Clear(false, false);
                 return committed;
             }
             Dictionary<int, AbilityStateValue> stateValues = m_StateValuesChanged
@@ -495,7 +495,7 @@ namespace ThirdPersonSimulation
                 abilityExecutionState,
                 motionWarpStates);
             m_CommittedState = snapshot;
-            Clear();
+            Clear(m_StateValuesChanged, m_MotionWarpStatesChanged);
             return snapshot;
         }
 
@@ -509,10 +509,12 @@ namespace ThirdPersonSimulation
                 m_MotionWarpStates.Add(value.Key, value.Value);
         }
 
-        void Clear()
+        void Clear(bool releaseStateValues, bool releaseMotionWarpStates)
         {
-            m_StateValues = null;
-            m_MotionWarpStates = null;
+            if (releaseStateValues)
+                m_StateValues = null;
+            if (releaseMotionWarpStates)
+                m_MotionWarpStates = null;
             m_AbilityExecutionState = null;
             m_Disposed = true;
         }

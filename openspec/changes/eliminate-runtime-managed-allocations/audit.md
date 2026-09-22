@@ -4606,3 +4606,12 @@
 - 作用域仍然由 owner 私有 `m_StateExecution` 栈保存和弹出。default scope 的 `Dispose` 保持空操作；`SelectTransition` 没有状态上下文时用显式 `hasScope` 标记，不再依赖 null 引用判断。状态压栈、当前退出原因、预测根完成覆盖、异常路径弹栈和执行顺序不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行状态机切换、状态进入/退出、预测转移选择和异常回滚，确认状态路径与退出原因不变；分配采样应观察每个状态上下文作用域的装箱对象和 disposable class 分配消失，执行路径字符串仍在后续边界。
+
+## 2026-09-22 角色事务 ability 字典容量准备
+
+对应 tasks.md 的 2.99；2.4 保持未勾选。
+
+- Fixed 和 Float32 `CharacterRuntimeStateTransaction` 构造 pending ability 字典时直接使用 `baseState.Abilities.Count` 准备容量；正式能力清单来自同一 base state，后续新增能力不被当前事务合同允许，字典仍会在 `AcceptAbility` 覆盖既有键。
+- 每次角色评估不再按 ability 数量触发 dictionary 桶和 entry 数组扩容。能力 `Clone`、`BindAbility` 查找、`AcceptAbility` 覆盖、`Snapshot` 中 `Values` 的枚举顺序、保存点池和 restore 语义保持不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力角色的激活、停止、保存点恢复和事务 commit，确认角色状态一致；分配采样应观察字典扩容分配消失，但 pending 字典对象、ability Clone 和 Snapshot 的独立集合仍在，2.4 的独立 Pending/Committed 存储未完成。

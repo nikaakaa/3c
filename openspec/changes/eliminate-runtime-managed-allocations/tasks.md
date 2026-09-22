@@ -166,6 +166,7 @@
 - [x] 2.96 两数值域 CompleteStep 直接按 finalized 数量组装 SimulationActorTickResult 最终数组并转交 SimulationTickResult，删除 workspace ActorResults List 及其重复复制；公开构造仍隔离外部输入
 - [x] 2.97 Fixed/Float32 Ability factory 显式接收常驻 OperationControl；Float32 值递归栈和输入缓冲由唯一 GraphValueWorkspace 持有并统一 Reset，删除 Reset-only 第二组集合；闭合正式 Savepoint／EffectTarget 构造可见性
 - [x] 2.98 Operation 状态执行作用域改为嵌套 readonly struct typed 合同；状态机每个状态上下文删除 IDisposable 装箱和旧 class disposable，保留状态压栈、预测覆盖、转移选择和异常弹栈语义
+- [x] 2.99 Fixed/Float32 角色事务 pending ability 字典按 base state 能力数一次准备容量，删除每次角色评估的字典扩容；Clone、查找、覆盖和快照顺序不变，pending/committed 独立存储仍在 2.4
 
 ## 3. Timeline和事件图
 

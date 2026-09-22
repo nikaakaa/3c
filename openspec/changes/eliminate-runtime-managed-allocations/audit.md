@@ -4114,6 +4114,15 @@
 - 正式控制源恢复状态头不再分配 source identity string。`CaptureState` 的 canonical writer 最终 byte[] 仍在后续边界。
 - `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；唯一警告是既有 `BaseTreeView.SerializeGraphElements` 隐藏成员警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
 
+## 2026-09-22 Fixed local input batch scratch 收口
+
+对应 tasks.md 的 4.4.8，新增 4.4.16 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `FixedLocalInputSourcePort` 原先每次 Read 都按 roster 新建 `SimulationPipelineActorInput<FixedStepInput>[]`；现在在构造期按锁定 binding 数量准备精确长度 scratch。
+- Read 仍先校验 source Tick、roster、committed observation 和 Actor 顺序，再逐个覆盖 scratch；成功时 `FixedCanonicalInputBatch` 接管同一数组，产品寿命保持 OuterTransaction。Source Port 强制 source tick 递增，不会在活跃 batch 有效期间重建同一 scratch。
+- batch 构造成功后才推进 `m_LastReadSourceTick`。任一 control source 校验失败或 batch 校验失败时，finally 清空 scratch 引用，source tick 状态保持原值。
+- 每 tick 的 actor input 数组分配删除；`FixedCanonicalInputBatch` 外壳和 `SimulationInput` 本体仍在后续边界。`ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
+
 ## 2026-09-22 Rollback 与 Authority 调用方闭环
 
 对应 tasks.md 的 5.235。

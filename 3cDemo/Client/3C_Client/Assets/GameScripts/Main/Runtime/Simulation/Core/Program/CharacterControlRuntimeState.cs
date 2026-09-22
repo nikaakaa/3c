@@ -160,7 +160,6 @@ namespace ThirdPersonSimulation
 
     public sealed class CharacterControlRuntimeState
     {
-        readonly ReadOnlyCollection<CharacterControlStateValue> m_Values;
         readonly CharacterControlStateValue[] m_ValueArray;
 
         public CharacterControlRuntimeState(
@@ -185,7 +184,6 @@ namespace ThirdPersonSimulation
             SemanticVersion = schema.SemanticVersion;
             LastCompletedTick = lastCompletedTick;
             m_ValueArray = copied;
-            m_Values = Array.AsReadOnly(copied);
             StateHash = ComputeHash(schema, lastCompletedTick, copied);
         }
 
@@ -193,7 +191,7 @@ namespace ThirdPersonSimulation
         public CharacterControlModuleId ModuleId { get; }
         public int SemanticVersion { get; }
         public ulong LastCompletedTick { get; }
-        public IReadOnlyList<CharacterControlStateValue> Values => m_Values;
+        public IReadOnlyList<CharacterControlStateValue> Values => m_ValueArray;
         public StableHash StateHash { get; }
 
         static StableHash ComputeHash(
@@ -223,8 +221,7 @@ namespace ThirdPersonSimulation
             CharacterControlStateSchema schema,
             ulong lastCompletedTick,
             CharacterControlStateValue[] values,
-            StableHash stateHash,
-            ReadOnlyCollection<CharacterControlStateValue> valueView = null)
+            StableHash stateHash)
         {
             Schema = schema ?? throw new ArgumentNullException(nameof(schema));
             if (values == null)
@@ -240,15 +237,13 @@ namespace ThirdPersonSimulation
             SemanticVersion = schema.SemanticVersion;
             LastCompletedTick = lastCompletedTick;
             m_ValueArray = values;
-            m_Values = valueView ?? Array.AsReadOnly(values);
             StateHash = stateHash;
         }
 
         internal CharacterControlStateValue[] ValueArray => m_ValueArray;
-        internal ReadOnlyCollection<CharacterControlStateValue> ValuesView => m_Values;
 
         public CharacterControlStateValue Get(CharacterControlStateFieldId field) =>
-            m_Values[Schema.RequireIndex(field)];
+            m_ValueArray[Schema.RequireIndex(field)];
 
         public void RequireContract(CharacterControlModuleContract contract)
         {
@@ -368,8 +363,7 @@ namespace ThirdPersonSimulation
                 m_Schema,
                 m_Tick.Value,
                 values,
-                stateHash,
-                m_ValuesChanged ? null : BaseState.ValuesView);
+                stateHash);
         }
 
         public void Restore(CharacterControlRuntimeState state)

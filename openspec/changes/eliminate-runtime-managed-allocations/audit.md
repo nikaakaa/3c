@@ -5606,3 +5606,12 @@
 - 接管入口保留 identity、ability 分区、input request 排序与重复、timeline snapshot 排序与重复校验；timeline 用 `ReadOnlyCollection` 直接包装 owned 数组。canonical 重新编码、wire 排序、历史只读外壳和错误语义不变。CharacterState 提交 candidate 本身仍是 class 外壳，值化或 pending/committed 外壳改造仍在 2.4 后续。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做状态保存加载、savepoint restore、rollback restore和 Player 分配采样。
+
+## 2026-09-23 CharacterState动作页精确数组解码
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `6cb57fe07`。
+
+- Fixed/Float32 CharacterState 解码 action activation request 和 action instance 页时，原先各建一个 `List<T>`，再由调用方 `ToArray` 生成第二份数组。现在读取器按 wire count 准备精确数组并直接移交；canonical 正常页没有中间容器，只有异常稀疏页在收缩时 `Array.Resize`。
+- 数组所有权、wire 顺序、合法项校验、canonical 重新编码和错误语义不变。`System.Linq` 引用删除；CharacterState candidate 外壳、GE/Equipment 真实变化嵌套复制和实际分配采样仍在 2.4 后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做状态保存加载、savepoint restore、rollback restore和 Player 分配采样。

@@ -345,10 +345,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
             state = state ?? throw new ArgumentNullException(nameof(state));
             m_CommittedState = state;
-            if (m_StateValues == null)
-                m_StateValues = new Dictionary<int, AbilityStateValue>();
-            if (m_MotionWarpStates == null)
-                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>();
             LoadCommittedCollections();
             m_AbilityExecutionState = state.AbilityExecutionState;
         }
@@ -360,10 +356,6 @@ namespace ThirdPersonSimulation.Fixed
             if (state.AbilityIdentity.AbilityId != m_Identity.AbilityId)
                 throw new ArgumentException("Fixed Ability runtime state identity does not match its workspace.", nameof(state));
             m_CommittedState = state;
-            if (m_StateValues == null)
-                m_StateValues = new Dictionary<int, AbilityStateValue>();
-            if (m_MotionWarpStates == null)
-                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>();
             LoadCommittedCollections();
             m_AbilityExecutionState = state.AbilityExecutionState;
             m_StateValuesChanged = false;
@@ -501,6 +493,10 @@ namespace ThirdPersonSimulation.Fixed
 
         void LoadCommittedCollections()
         {
+            if (m_StateValues == null)
+                m_StateValues = new Dictionary<int, AbilityStateValue>(m_CommittedState.StateValues.Count);
+            if (m_MotionWarpStates == null)
+                m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(m_CommittedState.MotionWarpStates.Count);
             m_StateValues.Clear();
             foreach (KeyValuePair<int, AbilityStateValue> value in m_CommittedState.StateValues)
                 m_StateValues.Add(value.Key, value.Value);

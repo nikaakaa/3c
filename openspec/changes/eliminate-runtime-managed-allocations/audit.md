@@ -4087,6 +4087,15 @@
 - 采样输入、手动入队和状态恢复路径不再为每条 pending 请求创建 class 对象。`CaptureState` 的 canonical writer 最终 byte[]、`RestoreState` 的临时 pending 数组和 `FixedSimulationInput` 输入对象仍在后续边界。
 - `ThirdPersonSimulation.Fixed.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译；`ThirdPersonSimulation.Unity` 已产出成功，但整条构建随后被工作区并行 Timeline 改动阻断：`TimelineToActionCommandBridge.CameraEventKey` 缺 `treeGraphId`，`CharacterTimelineHost` 的 `frame` 不存在。构建服务已关闭；未刷新 Unity、未做 Player 分配采样。
 
+## 2026-09-22 Fixed pending restore scratch 收口
+
+对应 tasks.md 的 4.4.8，新增 4.4.13 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `UnityFixedCharacterInputAdapter.RestoreState` 原先每次按 canonical count 新建 `PendingRequest[]`；现在适配器常驻一个恢复 scratch 列表，反序列化和校验先写入 scratch。
+- `RequireComplete` 通过后才更新 request sequence，清空正式 pending 列表并从 scratch 提交；canonical 数据非法、数量不合法或 reader 未消费完时，正式状态和 request sequence 不变。finally 与 Deactivate 都清空 scratch，避免跨恢复持有 request id 字符串。
+- 恢复路径不再每次分配 `PendingRequest[]`；scratch 的底层容量按实际恢复峰值保留。canonical reader 反序列化的 request id 字符串和 `CaptureState` 返回 byte[] 仍在后续边界。
+- `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；17 个警告均为既有包或 Editor 代码警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
+
 ## 2026-09-22 Rollback 与 Authority 调用方闭环
 
 对应 tasks.md 的 5.235。

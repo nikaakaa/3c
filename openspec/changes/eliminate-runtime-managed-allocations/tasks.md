@@ -531,6 +531,7 @@
 - [x] 5.260 ServerAuthoritative Checkpoint decode 与重建 baseline 共享 immutable 状态；删除构造期克隆和无消费者 StateBytes 入口
 - [x] 5.261 ServerAuthoritative Authority baseline 校验直接读取 owned CharacterStateBytes；删除临时 SimulationActorSnapshot 和状态数组克隆
 - [x] 5.262 Float32 SimulationActorSnapshot 使用 owned state bytes；Authority restore merge 直接引用 immutable baseline StateBuffer 并删除旧复制入口
+- [x] 5.263 Float32 World Snapshot codec 复用线程生命周期 hash 与 canonical writer；Read 校验不再生成完整临时编码数组，wire 内容和失败语义不变
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -4399,3 +4399,13 @@
 - snapshot 世界字节数组、restore merge 新建的 actor/body 数组、`WorldSimulationStateCodec.Write` 输出和 snapshot hash 计算仍保持正式所有权，本步不宣称 restore 全链零分配。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次需要 RestoreReplay 的 Prediction correction，确认角色状态、Body、世界 hash 和后续预测恢复不变；分配采样应观察 restore merge 的 baseline state 两次复制消失，但 codec/canonical 输出和 restore snapshot 自身数组仍是正式分配。
+
+## 2026-09-22 World Snapshot canonical 校验缓冲复用
+
+对应 tasks.md 的 5.5，新增 5.263 作为独立小步；5.5 保持未勾选。代码提交为 `40f124d0f`。
+
+- `SimulationWorldSnapshotCodec.Write` 与 `ComputeHash` 不再每次新建 `CanonicalWriter`。同一线程各自保留 canonical 编码和 hash 编码缓冲，入口先 Reset 再写；两个 writer 分开，避免快照构造计算 `WorldHash` 时覆盖外层校验缓冲。
+- `SimulationWorldSnapshotCodec.Read` 在完成 header、roster、state、`WorldHash` 校验并构造快照后，直接在 canonical scratch 中重写完整 wire payload，并与输入 byte 数组比较。原来的 `Write(snapshot)` 完整临时 byte 数组和逐字节比较 helper 删除。
+- wire magic、版本、字段顺序、长度前缀、hash 内容、canonical 判定和 `InvalidDataException` 语义不变。`Write` 返回的 byte 数组仍是发送和 checkpoint 保存的正式 owned 输出；快照内 actor state、world state、actor 数组和 SHA/hash 字符串分配仍保留。
+- `ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Prediction history checkpoint 保存/读取、Authority correction restore replay 后的世界 hash 与状态一致；分配采样应观察 decode canonical 校验的完整临时编码数组消失，但不表示 snapshot 保存或 hash 计算全链零分配。

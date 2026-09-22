@@ -5328,3 +5328,13 @@
 - 2.4 保持未勾选：Control/GE/Equipment changed path 的真实变化分配、非空最终数组、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做多能力 changed path 回放、Action/Input changed path 回放、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Equipment状态包装删除
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `a479f9a3f`。
+
+- `EquipmentStateAggregate` 原先在 canonical 数组外再创建 `ReadOnlyCollection` 包装；初始状态、`WithSlot`、`WithLocalState` 和 `WithSlotAndResolvedPending` 都会重复付出这个包装分配。现在 aggregate 私有持有排序数组，公开属性仍以 `IReadOnlyList` 暴露，内部读取用 `Length`。
+- 槽位或本地状态真实变化仍复制一个新数组，保持旧 aggregate 独立可见；pending/resolved 记录、排序、唯一性校验、值类型 Equals 和读取语义不变。启动的 layout 只读包装不属于本步范围。
+- 2.4 保持未勾选：Equipment slot 变更自身的数组复制、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 中间一次编译发现误改同名 layout 循环并立即纠正；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载提交回放、pending cancel 路径、savepoint restore、rollback restore 和 Player 分配采样。

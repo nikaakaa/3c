@@ -320,9 +320,7 @@ namespace ThirdPersonSimulation
             m_Schema = schema;
             m_Tick = tick;
             BaseState = state;
-            if (m_Values == null || m_Values.Length != state.Values.Count)
-                m_Values = new CharacterControlStateValue[state.Values.Count];
-            Array.Copy(state.ValueArray, m_Values, m_Values.Length);
+            m_Values = state.ValueArray;
             m_ValuesChanged = false;
             m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
             return this;
@@ -346,6 +344,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException($"Character control state field '{field}' kind does not match its schema.", nameof(value));
             if (m_Values[index].Equals(value))
                 return;
+            MakeValuesMutable();
             m_Values[index] = value;
             m_ValuesChanged = true;
         }
@@ -353,11 +352,15 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeState Capture()
         {
             RequireActive();
-            CharacterControlStateValue[] values = BaseState.ValueArray;
+            CharacterControlStateValue[] values;
             if (m_ValuesChanged)
             {
                 values = new CharacterControlStateValue[m_Values.Length];
-                Array.Copy(m_Values, values, m_Values.Length);
+                Array.Copy(m_Values, values, values.Length);
+            }
+            else
+            {
+                values = BaseState.ValueArray;
             }
             StableHash stateHash = ComputeHash();
             return new CharacterControlRuntimeState(
@@ -375,10 +378,16 @@ namespace ThirdPersonSimulation
             if (!state.Schema.SchemaHash.Equals(m_Schema.SchemaHash) ||
                 state.LastCompletedTick != m_Tick.Value)
                 throw new InvalidOperationException("Character control runtime state restore identity does not match the active transaction.");
-            if (m_Values == null || m_Values.Length != state.Values.Count)
-                m_Values = new CharacterControlStateValue[state.Values.Count];
-            Array.Copy(state.ValueArray, m_Values, m_Values.Length);
-            m_ValuesChanged = !MatchesBaseValues(state.Values);
+            if (MatchesBaseValues(state.Values))
+            {
+                m_Values = BaseState.ValueArray;
+                m_ValuesChanged = false;
+                return;
+            }
+            var values = new CharacterControlStateValue[state.Values.Count];
+            Array.Copy(state.ValueArray, values, values.Length);
+            m_Values = values;
+            m_ValuesChanged = true;
         }
 
         public void Abort()
@@ -405,6 +414,15 @@ namespace ThirdPersonSimulation
                     return false;
             }
             return true;
+        }
+
+        void MakeValuesMutable()
+        {
+            if (m_ValuesChanged && !ReferenceEquals(m_Values, BaseState.ValueArray))
+                return;
+            var values = new CharacterControlStateValue[BaseState.ValueArray.Length];
+            Array.Copy(BaseState.ValueArray, values, values.Length);
+            m_Values = values;
         }
 
         StableHash ComputeHash()

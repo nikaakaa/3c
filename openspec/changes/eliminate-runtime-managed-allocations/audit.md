@@ -5099,3 +5099,13 @@
 - 这一步消除 Action/Input 假脏判断路径的潜在反射和装箱；Input changed path 的最终数组分配和 Action changed path 的最终数组分配仍未消除。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做动作/输入回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 Action与Input恢复等价复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Action 和 Input 事务状态原先一旦写入就永久置脏；先修改再恢复到 committed 等价内容时，Snapshot 仍会复制并替换最终数组。现在每次真实写入后按事务 Restart 的 base 内容重新判定变化事实，恢复等价内容会清除脏标记。
+- Action 分别跟踪 activation request 和 action instance；Input 在 Dictionary 写入后按 base 数组的数量、Ordinal key 和值语义校验。null 集合按空集合参与比较，Lifecycle event sequence 仍独立影响 Snapshot。
+- Restore 走同一 Set 入口，恢复到非 base 内容保持脏，恢复到 base 内容允许 Snapshot 复用 committed 数组。changed path 的最终数组本身和真实持续变化场景仍需要独立分配。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做动作/输入先改后恢复回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。

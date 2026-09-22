@@ -529,6 +529,7 @@
 - [x] 5.258 Float32 Character Runtime State Codec 读取合同改为 ReadOnlyMemory；NetworkCheckpoint layout 校验直接读 owned state memory，删除校验前数组克隆
 - [x] 5.259 ServerAuthoritative ActorBaseline 使用 owned state bytes；Checkpoint Capture 共享内嵌 baseline 状态，unchanged delta 不再克隆 acknowledged 状态
 - [x] 5.260 ServerAuthoritative Checkpoint decode 与重建 baseline 共享 immutable 状态；删除构造期克隆和无消费者 StateBytes 入口
+- [x] 5.261 ServerAuthoritative Authority baseline 校验直接读取 owned CharacterStateBytes；删除临时 SimulationActorSnapshot 和状态数组克隆
 
 ## 6. UI、资源、渲染和生命周期
 

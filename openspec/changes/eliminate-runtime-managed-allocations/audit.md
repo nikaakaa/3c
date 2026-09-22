@@ -4378,3 +4378,13 @@
 - 所有共享数组仍按 immutable contract 使用：baseline、checkpoint 和 route 没有暴露可变数组写入入口；`CopyCharacterStateBytes` 只属于 Prediction restore/验证快照边界，不属于本步。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 full checkpoint 接收、changed/unchanged delta、同一 route 连续确认淘汰和 restore replay；分配采样应观察 decode checkpoint 构造克隆消失，但 wire 中的 state bytes、delta payload 和 restore 快照副本仍是正式分配。
+
+## 2026-09-22 Authority baseline 校验状态直接读取收口
+
+对应 tasks.md 的 5.5，新增 5.261 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativePredictionReconciler.ValidateBaselineIdentity` 不再调用 `baseline.CopyCharacterStateBytes` 构造一次性 `SimulationActorSnapshot`，改为把 baseline 的 `CharacterStateBytes` 直接交给 `Float32CharacterRuntimeStateCodec.Read`。
+- Actor、GameplayContentHash、StateCodecIdentity、Operation Set、Solver 和 World identity 前置校验保持原顺序；codec 继续校验 canonical schema 并解码完整 Character Runtime state。随后仍用 canonical hash 与 `baseline.StateHash` 精确比较，失败改为抛 `InvalidDataException`。
+- 这条校验路径删除一次完整 state bytes 克隆和一个临时快照对象。decode 过程中的状态集合、canonical hash writer 和正式 restore merge 使用的 `SimulationActorSnapshot` 仍保持原所有权。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Authority baseline 进入 Prediction 的 identity 校验、NoCorrection、RestoreReplay 和 HardRecovery；分配采样应观察校验路径的 baseline state 克隆和临时 snapshot 消失，但 codec 解码状态、hash writer 和 restore 快照仍是正式分配。

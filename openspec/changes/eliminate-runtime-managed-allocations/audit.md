@@ -4948,3 +4948,13 @@
 - 首次编译发现 `Dictionary` 在当前目标框架没有公开 `Capacity`，已删除错误准备逻辑；字典随事务对象长期保留，首次增长后不再新建。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做角色能力回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment aggregate Clone、事务 Capture 的最终数组和嵌套对象所有权仍在后续小步处理。
+
+## 2026-09-23 Gameplay Effect状态复制去中转
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `d3b26cf49`。
+
+- Fixed 和 Float32 `GameplayEffectStateAggregate.CopyTo` 原先对 tag source、attribute、active effect、period、journal 和 lifecycle revision 各自先构造临时 `SortedDictionary` 或 `List`，再复制进目标容器。现在 source 私有集合直接遍历并深拷贝到目标。
+- 深拷贝边界不变：tag source 数组仍独立复制；attribute state/modifier、active effect/spec、prediction record、journal record list 仍创建独立对象；period 和 lifecycle revision 仍是值复制。working page Restore、savepoint Restore 和 Character Runtime State Codec 读取共用同一 CopyTo 合同。
+- 本步删除的是六类中转容器，不消除嵌套独立对象本身；`Freeze` 变化路径仍创建新 aggregate，working page 的 pending/committed 独立所有权保持。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Gameplay Effect 标签/属性/Active 回放、savepoint restore、rollback restore、状态 Codec 恢复和 Player 分配采样。

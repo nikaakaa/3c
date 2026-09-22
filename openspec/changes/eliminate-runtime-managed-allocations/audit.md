@@ -4388,3 +4388,14 @@
 - 这条校验路径删除一次完整 state bytes 克隆和一个临时快照对象。decode 过程中的状态集合、canonical hash writer 和正式 restore merge 使用的 `SimulationActorSnapshot` 仍保持原所有权。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Authority baseline 进入 Prediction 的 identity 校验、NoCorrection、RestoreReplay 和 HardRecovery；分配采样应观察校验路径的 baseline state 克隆和临时 snapshot 消失，但 codec 解码状态、hash writer 和 restore 快照仍是正式分配。
+
+## 2026-09-22 Restore actor snapshot owned state 收口
+
+对应 tasks.md 的 5.5，新增 5.262 作为独立小步；5.5 保持未勾选。
+
+- Float32 `SimulationActorSnapshot` 构造合同改为 owned state bytes。全仓三个 Float32 构造点都传入新建或 immutable owned 数组：snapshot Capture 使用 `Float32CharacterRuntimeStateCodec.Write` 新数组，snapshot decode 使用 `CanonicalReader.ReadBytes` 新数组，Authority restore merge 使用 `AuthoritativeActorBaseline.StateBuffer`。构造器不再克隆一份。
+- Authority `MergeWorld` 直接引用 baseline 的 immutable StateBuffer；原来 `baseline.CopyCharacterStateBytes` 加 snapshot 构造克隆形成的两次完整 state bytes 分配都删除。baseline、actor snapshot 和 restore 计划都按 immutable contract 使用这份 buffer。
+- 删除无调用方的 `AuthoritativeActorBaseline.CopyCharacterStateBytes` 旧入口，不保留兼容克隆路径。Fixed 数值域的同名 snapshot 类型是独立链路，本步不改。
+- snapshot 世界字节数组、restore merge 新建的 actor/body 数组、`WorldSimulationStateCodec.Write` 输出和 snapshot hash 计算仍保持正式所有权，本步不宣称 restore 全链零分配。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可触发一次需要 RestoreReplay 的 Prediction correction，确认角色状态、Body、世界 hash 和后续预测恢复不变；分配采样应观察 restore merge 的 baseline state 两次复制消失，但 codec/canonical 输出和 restore snapshot 自身数组仍是正式分配。

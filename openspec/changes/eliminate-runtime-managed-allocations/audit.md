@@ -5009,3 +5009,14 @@
 - 这一步建立相对 committed 事务起点的变化事实，供 Snapshot 决定能否复用 base 最终数组；本步尚未接入 Snapshot 数组复用，也没有删除 changed 路径的最终数组分配。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做动作/输入回放、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 角色状态Snapshot数组复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4d7395f83`。
+
+- Fixed 和 Float32 角色事务新增 ability 映射变化事实：AcceptAbility 收到新的 candidate 引用时置脏，无修改能力返回 committed 引用时保持未脏。结合 Action 和 Input 脏标记，Snapshot 按项选择数据来源。
+- abilities、activation requests、action instances 和 InputRequests 未变化时直接复用 base committed 的不可变数组；变化时才通过手写精确复制生成新数组。InputRequest changed 路径仍走 Capture，ability 和 Input 数组在 Snapshot adoption 前保留排序与 Ordinal 校验。
+- `CharacterRuntimeState.Snapshot` 成为事务提交专用 adoption 入口，直接接管最终数组并生成新的 candidate 外壳；Timeline 只复用 base 的现有只读包装，本步不修改 Timeline 逻辑或内容。控制状态、GE Commit 和 Equipment Capture 的独立提交边界不变。
+- 编译中发现 `Abilities` 公开合同是 `IReadOnlyList`，因此增加内部数组读取入口；手写 ToArray 使用循环填充，不引入 LINQ 或跨步可变数组共享。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做动作/输入/能力状态回放、rollback restore、状态 Codec 恢复和 Player 分配采样。2.4 保持未勾选：changed 路径数组、控制状态、Equipment aggregate 和 Timeline snapshot 外壳仍需继续审计。

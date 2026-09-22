@@ -4845,3 +4845,13 @@
 - invocation 的成功完成、异常 Abort、SkillState dispose 和 Timeline discard 语义保持。Begin 半途失败会结束 frame 并归还 SkillState；Control service 引用跨步保留，避免 EndEvaluation 后丢失。公共模型没有新增第二套抽象，两数值域仍保留各自的强类型执行后端。
 - `ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用禁用共享编译的 `dotnet build` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Fixed.csproj` 在本轮前一次构建也已通过。构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Float32 技能回放、角色控制回放、rollback restore 和 Player 分配采样。首个 Float32 frame/service assembly、每步 SkillState transaction、GraphValue lease 和 Complete 最终数组仍由后续 2.3 到 2.5 的所有权小步处理。
+
+## 2026-09-23 值求值缓冲与 Timeline scope 复用
+
+对应 tasks.md 的 2.3 首个切片；2.3 保持未勾选。
+
+- Fixed `FixedAbilityExecutionWorkspace` 原先只创建空 `ValueBuffers`，运行期递归加深时 `RequireInputBuffer` 继续新增 buffer。现在构造期按 `Operations.Count + 1` 准备值递归栈和每一层 buffer，并按全 operation 最大 value input 数设置 `List` 容量；`FixedValueRuntime` 超过准备上界时抛出原递归越界语义的新异常，不再运行期扩集合。
+- Fixed 值栈通过 `EnsureCapacity` 预留同深度上界，求值顺序、循环检测和 release 顺序不变。Float32 已有的 prepared value workspace 保持不变。
+- Fixed 与 Float32 `PushTimelineContext` 原先每次都新建 `TimelineBlackboardScope` class。现在各自 Blackboard runtime 持有 scope pool，Push 时借出、Dispose 时归还；Timeline context stack、Pop 时机和异常传播不变。首个达到的嵌套深度仍会分配一个 scope，后续同深度复用。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Timeline/技能回放和 Player 分配采样。2.3 未完成：周期字符串诊断、临时字符串键、剩余 class scope 归属和跨步容量审计仍需后续切片；涉及 Timeline 的改动只触碰 runtime scope 所有权，未修改并行 Timeline 资产或曲线任务。

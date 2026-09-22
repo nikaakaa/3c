@@ -4264,3 +4264,11 @@
 - `CanonicalInputSample` 从 sealed class 改为 readonly struct。Fantasy Datagram Channel 把 owner 输入写入固定命令历史和 1～4 长度的 packet sample 数组；Authority Datagram Codec 解码 command 后交给 Authority Client Route 的排序队列和 held 槽位。这些路径不再创建每个输入样本的外壳对象。
 - 构造合同不变：Target Authority Tick、Input Sequence 和 `SimulationInput` 必须有效，Input Sequence 必须与 input 一致，source tick 不能为 0。新增 `IsValid` 表达 default sample 的非法状态。`CommandDatagram` 先逐个检查样本 `IsValid`，再保留一到四个样本、Target Tick 和 Input Sequence 严格降序的原合同。Client Route 淘汰槽位写 default，`HasInput`、选中输入和 held 输入改用 `IsValid`；exact、late、held 统计和 neutral 回退不变。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Command datagram 值化收口
+
+对应 tasks.md 的 5.5，新增 5.250 作为独立小步；5.5 保持未勾选。
+
+- `CommandDatagram` 从 sealed class 改为 readonly struct。Fantasy Datagram Channel 从固定 packet sample 数组构造 owner command，Payload Codec 直接写入 canonical bytes，Authority Source 解码后传给 `ReceiveCommand`；这条链路不再创建每个 command packet 的外壳对象。
+- 两个 snapshot sequence 和最终 sample 数组所有权不变：发送侧继续借用固定槽位完成编码，接收侧数组继续由本次 command 持有。构造和 `FromOwnedSamples` 仍要求一到四个样本、每个样本有效、Target Authority Tick 和 Input Sequence 严格降序。新增 `IsValid` 表达 default datagram 的非法状态；Payload Codec 写入边界的旧 null 检查改为 `IsValid`。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

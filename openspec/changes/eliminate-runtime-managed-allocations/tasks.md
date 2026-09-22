@@ -518,6 +518,7 @@
 - [x] 5.247 ServerAuthoritative 数据面 Ticket 改为 readonly struct；Fantasy 入队、Source 消费、Client Route 保存和 consumed 回包按值携带，default 用 IsValid 显式拒绝
 - [x] 5.248 ServerAuthoritative PredictionCorrectionDecision 改为 readonly struct；Reconciler、Prediction State、Correction Schedule 和 Egress 按值携带每 Actor 决策，default 用 IsValid 显式拒绝
 - [x] 5.249 ServerAuthoritative CanonicalInputSample 改为 readonly struct；Datagram 发送历史、packet sample、接收 codec 和 Authority Route 输入队列按值携带，default 用 IsValid 显式拒绝
+- [x] 5.250 ServerAuthoritative CommandDatagram 改为 readonly struct；Owner command 发送构造、payload codec 和 Authority Source 接收按值携带，default 用 IsValid 显式拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

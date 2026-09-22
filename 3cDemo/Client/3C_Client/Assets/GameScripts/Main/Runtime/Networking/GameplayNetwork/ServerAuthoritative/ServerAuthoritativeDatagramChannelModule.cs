@@ -116,11 +116,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public void BindRemote(ServerAuthoritativeDatagramIdentity identity, IPEndPoint remoteEndPoint) =>
             m_Endpoint.BindRemote(identity, remoteEndPoint);
         public void RevokeRemote(ServerAuthoritativeDatagramIdentity identity) => m_Endpoint.RevokeRemote(identity);
-        public void EnqueueSend(ServerAuthoritativeDatagramPacket packet) => m_Endpoint.EnqueueSend(packet);
+        public void EnqueueSend(ServerAuthoritativeDatagramHeader header, ReadOnlySpan<byte> payload) =>
+            m_Endpoint.EnqueueSend(header, payload);
         public void PumpSend() => m_Endpoint.PumpSend();
         public bool TryReceive(out ServerAuthoritativeReceivedDatagram datagram) => m_Endpoint.TryReceive(out datagram);
-        public void ReturnReceiveEndPoint(IPEndPoint remoteEndPoint) => m_Endpoint.ReturnReceiveEndPoint(remoteEndPoint);
-        public void ReturnReceivedPacket(ServerAuthoritativeDatagramPacket packet) => m_Endpoint.ReturnReceivedPacket(packet);
+        public void ReturnReceived(in ServerAuthoritativeReceivedDatagram datagram) => m_Endpoint.ReturnReceived(datagram);
         public void ThrowIfUnavailable() => m_Endpoint.ThrowIfUnavailable();
         public ServerAuthoritativeDatagramMetrics CaptureMetrics() => m_Endpoint.CaptureMetrics();
 
@@ -196,8 +196,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 }
                 finally
                 {
-                    m_Endpoint.ReturnReceivedPacket(received.Packet);
-                    m_Endpoint.ReturnReceiveEndPoint(received.RemoteEndPoint);
+                    m_Endpoint.ReturnReceived(received);
                 }
             }
             m_Endpoint.PumpSend();
@@ -236,10 +235,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_LatestSnapshotSequence,
                 m_LatestSnapshotSequence,
                 packetSamples);
-            byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(command, m_PayloadWriter.Value);
-            SendPacket(ServerAuthoritativeDatagramKind.Command, payload);
+            CanonicalWriter writer = m_PayloadWriter.Value;
+            ServerAuthoritativeDatagramPayloadCodec.Write(command, writer);
+            int payloadLength = (int)writer.Length;
+            SendPacket(ServerAuthoritativeDatagramKind.Command, writer);
             m_CommandPacketCount++;
-            m_CommandPayloadBytes = checked(m_CommandPayloadBytes + (ulong)payload.Length);
+            m_CommandPayloadBytes = checked(m_CommandPayloadBytes + (ulong)payloadLength);
             m_Endpoint.PumpSend();
         }
 
@@ -284,25 +285,25 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         {
             if (m_PredictionTicket == null)
                 return;
-            SendPacket(
-                ServerAuthoritativeDatagramKind.DataPlaneHello,
-                ServerAuthoritativeDatagramPayloadCodec.Write(
-                    new DataPlaneHello(
-                        m_PredictionTicket.TicketId,
-                        m_PredictionTicket.Nonce,
-                        clockMicros),
-                    m_PayloadWriter.Value));
+            CanonicalWriter writer = m_PayloadWriter.Value;
+            ServerAuthoritativeDatagramPayloadCodec.Write(
+                new DataPlaneHello(
+                    m_PredictionTicket.TicketId,
+                    m_PredictionTicket.Nonce,
+                    clockMicros),
+                writer);
+            SendPacket(ServerAuthoritativeDatagramKind.DataPlaneHello, writer);
             m_Endpoint.PumpSend();
         }
 
-        void SendPacket(ServerAuthoritativeDatagramKind kind, byte[] payload)
+        void SendPacket(ServerAuthoritativeDatagramKind kind, CanonicalWriter payloadWriter)
         {
             var header = new ServerAuthoritativeDatagramHeader(
                 m_PredictionIdentity,
                 kind,
                 ++m_SendPacketSequence,
-                payload.Length);
-            m_Endpoint.EnqueueSend(new ServerAuthoritativeDatagramPacket(header, payload));
+                (int)payloadWriter.Length);
+            m_Endpoint.EnqueueSend(header, payloadWriter.WrittenSpan);
         }
 
         public void Dispose()

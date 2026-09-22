@@ -292,11 +292,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         ServerAuthoritativeDatagramMetrics IServerAuthoritativeAuthorityDataTransport.CaptureMetrics() => Datagram.CaptureMetrics();
         void IServerAuthoritativeAuthorityDataTransport.BindRemote(ServerAuthoritativeDatagramIdentity identity, IPEndPoint remoteEndPoint) => Datagram.BindRemote(identity, remoteEndPoint);
         void IServerAuthoritativeAuthorityDataTransport.RevokeRemote(ServerAuthoritativeDatagramIdentity identity) => Datagram.RevokeRemote(identity);
-        void IServerAuthoritativeAuthorityDataTransport.EnqueueSend(ServerAuthoritativeDatagramPacket packet) => Datagram.EnqueueSend(packet);
+        void IServerAuthoritativeAuthorityDataTransport.EnqueueSend(ServerAuthoritativeDatagramHeader header, ReadOnlySpan<byte> payload) =>
+            Datagram.EnqueueSend(header, payload);
         void IServerAuthoritativeAuthorityDataTransport.PumpSend() => Datagram.PumpSend();
         bool IServerAuthoritativeAuthorityDataTransport.TryReceive(out ServerAuthoritativeReceivedDatagram datagram) => Datagram.TryReceive(out datagram);
-        void IServerAuthoritativeAuthorityDataTransport.ReturnReceiveEndPoint(IPEndPoint remoteEndPoint) => Datagram.ReturnReceiveEndPoint(remoteEndPoint);
-        void IServerAuthoritativeAuthorityDataTransport.ReturnReceivedPacket(ServerAuthoritativeDatagramPacket packet) => Datagram.ReturnReceivedPacket(packet);
+        void IServerAuthoritativeAuthorityDataTransport.ReturnReceived(in ServerAuthoritativeReceivedDatagram datagram) =>
+            Datagram.ReturnReceived(datagram);
         void IServerAuthoritativeAuthorityDataTransport.ThrowIfUnavailable() => Datagram.ThrowIfUnavailable();
 
         void Enqueue<T>(Queue<T> queue, T value)

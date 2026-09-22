@@ -138,8 +138,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
                 finally
                 {
-                    m_Data.ReturnReceivedPacket(received.Packet);
-                    m_Data.ReturnReceiveEndPoint(received.RemoteEndPoint);
+                    m_Data.ReturnReceived(received);
                 }
             }
             m_Data.PumpSend();
@@ -340,10 +339,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_Data.BindRemote(route.Identity, received.RemoteEndPoint);
             route.DataPlaneReady = true;
             route.AcceptHelloSequence(received.Packet.Header.PacketSequence);
-            byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(
+            CanonicalWriter writer = m_PayloadWriter.Value;
+            ServerAuthoritativeDatagramPayloadCodec.Write(
                 new DataPlaneHelloAck(m_LatestAuthorityTick, hello.ClientClockMicros, ClockMicros()),
-                m_PayloadWriter.Value);
-            SendPacket(route, ServerAuthoritativeDatagramKind.DataPlaneHelloAck, payload);
+                writer);
+            SendPacket(route, ServerAuthoritativeDatagramKind.DataPlaneHelloAck, writer);
             if (!route.TicketConsumptionReported)
             {
                 route.TicketConsumptionReported = true;
@@ -410,17 +410,23 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     FindAck(batch, route.Roster.ActorId).ConfirmedInputSequence,
                     target.Baseline.ConfirmedEventHorizon.Sequence,
                     delta);
-                byte[] payload = ServerAuthoritativeDatagramPayloadCodec.Write(snapshot, m_PayloadWriter.Value);
-                ServerAuthoritativeDatagramPacket packet = Packet(route, ServerAuthoritativeDatagramKind.Snapshot, payload);
+                CanonicalWriter writer = m_PayloadWriter.Value;
+                ServerAuthoritativeDatagramPayloadCodec.Write(snapshot, writer);
+                int payloadLength = (int)writer.Length;
+                var header = new ServerAuthoritativeDatagramHeader(
+                    route.Identity,
+                    ServerAuthoritativeDatagramKind.Snapshot,
+                    sequence,
+                    payloadLength);
                 try
                 {
-                    m_Data.EnqueueSend(packet);
+                    m_Data.EnqueueSend(header, writer.WrittenSpan);
                     route.StoreSent(sequence, target);
-                    route.RecordDeltaSnapshot(payload.Length);
+                    route.RecordDeltaSnapshot(payloadLength);
                     Publish(
                         SimulationModelTraceKind.Transport,
                         "authority_snapshot_queued",
-                        $"actor={route.Roster.ActorId};bytes={payload.Length};base={route.AcknowledgedSnapshotSequence};target={sequence}",
+                        $"actor={route.Roster.ActorId};bytes={payloadLength};base={route.AcknowledgedSnapshotSequence};target={sequence}",
                         route.Roster.ActorId,
                         batch.AuthorityTick.Value,
                         FindAck(batch, route.Roster.ActorId).ConfirmedInputSequence,
@@ -431,11 +437,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
                 catch (InvalidDataException)
                 {
-                    route.RecordDeltaMtuExceeded(payload.Length);
+                    route.RecordDeltaMtuExceeded(payloadLength);
                     Publish(
                         SimulationModelTraceKind.Transport,
                         "server_authoritative_delta_mtu_exceeded",
-                        $"actor={route.Roster.ActorId};deltaBytes={payload.Length};mtu={m_Policy.ModelPolicy.MaxGameplayDatagramBytes};base={route.AcknowledgedSnapshotSequence};target={sequence}",
+                        $"actor={route.Roster.ActorId};deltaBytes={payloadLength};mtu={m_Policy.ModelPolicy.MaxGameplayDatagramBytes};base={route.AcknowledgedSnapshotSequence};target={sequence}",
                         route.Roster.ActorId,
                         batch.AuthorityTick.Value,
                         FindAck(batch, route.Roster.ActorId).ConfirmedInputSequence,
@@ -525,22 +531,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         void SendPacket(
             ServerAuthoritativeAuthorityClientRoute route,
             ServerAuthoritativeDatagramKind kind,
-            byte[] payload)
-        {
-            m_Data.EnqueueSend(Packet(route, kind, payload));
-        }
-
-        static ServerAuthoritativeDatagramPacket Packet(
-            ServerAuthoritativeAuthorityClientRoute route,
-            ServerAuthoritativeDatagramKind kind,
-            byte[] payload)
+            CanonicalWriter payloadWriter)
         {
             var header = new ServerAuthoritativeDatagramHeader(
                 route.Identity,
                 kind,
                 route.NextSendPacketSequence(),
-                payload.Length);
-            return ServerAuthoritativeDatagramPacket.FromOwnedPayload(header, payload);
+                (int)payloadWriter.Length);
+            m_Data.EnqueueSend(header, payloadWriter.WrittenSpan);
         }
 
         bool HasPendingCheckpointRequest()

@@ -75,59 +75,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public int PayloadLength { get; }
     }
 
-    public sealed class ServerAuthoritativeDatagramPacket
+    public readonly struct ServerAuthoritativeDatagramPacket
     {
-        ServerAuthoritativeDatagramHeader m_Header;
-        byte[] m_Payload;
-        int m_PayloadLength;
-
-        public ServerAuthoritativeDatagramPacket(ServerAuthoritativeDatagramHeader header, byte[] payload)
-            : this(header, payload == null ? throw new ArgumentNullException(nameof(payload)) : payload.AsSpan())
+        public ServerAuthoritativeDatagramPacket(ServerAuthoritativeDatagramHeader header, byte[] payloadBuffer, int payloadLength)
         {
+            if (payloadBuffer == null)
+                throw new ArgumentNullException(nameof(payloadBuffer));
+            if (payloadLength < 0 || payloadLength > payloadBuffer.Length || header.PayloadLength != payloadLength)
+                throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payloadBuffer));
+            Header = header;
+            PayloadBuffer = payloadBuffer;
+            PayloadLength = payloadLength;
         }
 
-        internal ServerAuthoritativeDatagramPacket(ServerAuthoritativeDatagramHeader header, ReadOnlySpan<byte> payload)
-        {
-            m_Payload = payload.ToArray();
-            m_PayloadLength = m_Payload.Length;
-            if (header.PayloadLength != m_Payload.Length)
-                throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payload));
-            m_Header = header;
-        }
-
-        internal static ServerAuthoritativeDatagramPacket FromOwnedPayload(
-            ServerAuthoritativeDatagramHeader header,
-            byte[] payload)
-        {
-            var packet = new ServerAuthoritativeDatagramPacket();
-            packet.Reset(header, payload, payload.Length);
-            return packet;
-        }
-
-        public ServerAuthoritativeDatagramHeader Header => m_Header;
-        public ReadOnlyMemory<byte> Payload => m_Payload.AsMemory(0, m_PayloadLength);
-
-        internal ServerAuthoritativeDatagramPacket()
-        {
-        }
-
-        internal void Reset(ServerAuthoritativeDatagramHeader header, byte[] payload, int payloadLength)
-        {
-            m_Payload = payload ?? throw new ArgumentNullException(nameof(payload));
-            if (payloadLength < 0 || payloadLength > payload.Length || header.PayloadLength != payloadLength)
-                throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payload));
-            m_Header = header;
-            m_PayloadLength = payloadLength;
-        }
-
-        internal byte[] Release()
-        {
-            byte[] payload = m_Payload;
-            m_Header = default;
-            m_Payload = null;
-            m_PayloadLength = 0;
-            return payload;
-        }
+        public ServerAuthoritativeDatagramHeader Header { get; }
+        public byte[] PayloadBuffer { get; }
+        public int PayloadLength { get; }
+        public bool IsValid => PayloadBuffer != null;
+        public ReadOnlyMemory<byte> Payload => PayloadBuffer.AsMemory(0, PayloadLength);
     }
 
     public static class ServerAuthoritativeGameplayDatagramCodec
@@ -142,37 +107,40 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             kind == ServerAuthoritativeDatagramKind.Snapshot;
 
         public static int Write(
-            ServerAuthoritativeDatagramPacket packet,
+            ServerAuthoritativeDatagramHeader header,
+            ReadOnlySpan<byte> payload,
             CanonicalWriter writer,
             int maximumBytes)
         {
-            if (packet == null)
-                throw new ArgumentNullException(nameof(packet));
+            if (header.PayloadLength != payload.Length)
+                throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payload));
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
             writer.Reset();
-            Write(writer, packet, maximumBytes);
+            Write(writer, header, payload, maximumBytes);
             int length = checked((int)writer.Length);
             if (length > maximumBytes)
                 throw new InvalidDataException($"Gameplay datagram size '{length}' exceeds budget '{maximumBytes}'.");
             return length;
         }
 
-        static void Write(CanonicalWriter writer, ServerAuthoritativeDatagramPacket packet, int maximumBytes)
+        static void Write(
+            CanonicalWriter writer,
+            ServerAuthoritativeDatagramHeader header,
+            ReadOnlySpan<byte> payload,
+            int maximumBytes)
         {
-            if (packet == null)
-                throw new ArgumentNullException(nameof(packet));
             if (maximumBytes <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumBytes));
             writer.WriteUInt32(Magic);
             writer.WriteInt32(ProtocolVersion);
-            writer.WriteByte((byte)packet.Header.Kind);
-            writer.WriteString(packet.Header.Identity.RoomId.Value);
-            writer.WriteString(packet.Header.Identity.SessionId.Value);
-            writer.WriteString(packet.Header.Identity.PlayerId.Value);
-            writer.WriteString(packet.Header.Identity.ActorId.Value);
-            writer.WriteUInt64(packet.Header.PacketSequence);
-            writer.WriteBytes(packet.Payload.Span);
+            writer.WriteByte((byte)header.Kind);
+            writer.WriteString(header.Identity.RoomId.Value);
+            writer.WriteString(header.Identity.SessionId.Value);
+            writer.WriteString(header.Identity.PlayerId.Value);
+            writer.WriteString(header.Identity.ActorId.Value);
+            writer.WriteUInt64(header.PacketSequence);
+            writer.WriteBytes(payload);
             if (writer.Length > maximumBytes)
                 throw new InvalidDataException($"Gameplay datagram size '{writer.Length}' exceeds budget '{maximumBytes}'.");
         }
@@ -180,19 +148,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         internal static ServerAuthoritativeDatagramPacket Read(
             ArraySegment<byte> bytes,
             int maximumBytes,
-            ServerAuthoritativeDatagramPacket packet,
             byte[] payloadBuffer,
             IServerAuthoritativeDatagramIdentityResolver identityResolver)
         {
             if (bytes.Count == 0 || bytes.Count > maximumBytes)
                 throw new InvalidDataException("Gameplay datagram length is invalid.");
-            if (packet == null)
-                throw new ArgumentNullException(nameof(packet));
             if (payloadBuffer == null || payloadBuffer.Length < maximumBytes)
                 throw new ArgumentException("Gameplay datagram payload buffer is invalid.", nameof(payloadBuffer));
             if (identityResolver == null)
                 throw new ArgumentNullException(nameof(identityResolver));
-            packet.Reset(default, payloadBuffer, 0);
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic)
                 throw new InvalidDataException("Gameplay datagram magic is invalid.");
@@ -219,11 +183,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
             payload.AsSpan().CopyTo(payloadBuffer);
-            packet.Reset(
+            return new ServerAuthoritativeDatagramPacket(
                 new ServerAuthoritativeDatagramHeader(identity, kind, packetSequence, payload.Count),
                 payloadBuffer,
                 payload.Count);
-            return packet;
         }
     }
 
@@ -399,13 +362,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
     {
         const int SchemaVersion = 1;
 
-        public static byte[] Write(DataPlaneHello value, CanonicalWriter writer)
+        public static void Write(DataPlaneHello value, CanonicalWriter writer)
         {
             Writer(writer, ServerAuthoritativeDatagramKind.DataPlaneHello);
             writer.WriteString(value.TicketId);
             writer.WriteString(value.Nonce);
             writer.WriteInt64(value.ClientClockMicros);
-            return writer.ToArray();
         }
 
         public static DataPlaneHello ReadHello(ReadOnlyMemory<byte> bytes)
@@ -416,13 +378,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return value;
         }
 
-        public static byte[] Write(DataPlaneHelloAck value, CanonicalWriter writer)
+        public static void Write(DataPlaneHelloAck value, CanonicalWriter writer)
         {
             Writer(writer, ServerAuthoritativeDatagramKind.DataPlaneHelloAck);
             writer.WriteUInt64(value.AuthorityTick);
             writer.WriteInt64(value.EchoedClientClockMicros);
             writer.WriteInt64(value.AuthorityClockMicros);
-            return writer.ToArray();
         }
 
         public static DataPlaneHelloAck ReadHelloAck(ReadOnlyMemory<byte> bytes)
@@ -433,7 +394,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return value;
         }
 
-        public static byte[] Write(CommandDatagram value, CanonicalWriter writer)
+        public static void Write(CommandDatagram value, CanonicalWriter writer)
         {
             if (!value.IsValid)
                 throw new ArgumentException("Command datagram is invalid.", nameof(value));
@@ -448,7 +409,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 writer.WriteUInt64(sample.InputSequence);
                 ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, sample.Input);
             }
-            return writer.ToArray();
         }
 
         public static CommandDatagram ReadCommand(ReadOnlyMemory<byte> bytes)
@@ -471,7 +431,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return CommandDatagram.FromOwnedSamples(latestSnapshot, latestBase, samples);
         }
 
-        public static byte[] Write(SnapshotDatagram value, CanonicalWriter writer)
+        public static void Write(SnapshotDatagram value, CanonicalWriter writer)
         {
             if (!value.IsValid)
                 throw new ArgumentException("Snapshot datagram is invalid.", nameof(value));
@@ -482,7 +442,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             writer.WriteUInt64(value.AcknowledgedInputSequence);
             writer.WriteUInt64(value.ReliableEventHorizon);
             writer.WriteBytes(value.DeltaPayload);
-            return writer.ToArray();
         }
 
         public static SnapshotDatagram ReadSnapshot(ReadOnlyMemory<byte> bytes)

@@ -4198,3 +4198,12 @@
 - `AuthoritativeInputAck` 从 sealed class 改为 readonly struct。Authority replication 生成、canonical codec 解码、Observation batch 携带、Prediction confirmation 消费、Checkpoint reconstruction 合成和 Evidence 记录都按值传递，删除每 Actor 每 tick 的 ack 对象分配。
 - default ack 是明确的“没有 owner ack”状态；正式 ack 的 ActorId 与 Authority Tick 有效时才 `IsValid`。Observation、Prediction 和 Evidence 的空合同从 null 改为 `IsValid`，Checkpoint result 的 Ignored／BaselineMissing 返回 default ack，非法或缺失 ack 仍显式失败或保持忽略语义。
 - Authority replication 的 ack 数组继续按 Actor 排序去重，并要求 Authority Tick 与 batch 一致；数组元素不再持有 class 引用。`ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；随后均执行 `dotnet build-server shutdown`。未刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-22 Remote presentation batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.242 作为独立小步；5.5 保持未勾选。
+
+- `RemotePresentationBatch` 从 sealed class 改为 readonly struct。Authority 复制、Prediction 观测和历史、Remote Presentation egress、Checkpoint delta、Evidence 队列和表现 Host 之间按值传递，删除每 Actor 每次远程表现同步的批外壳对象。
+- 构造合同不变：ActorId 有效，三组最终数组存在；Body 按 Tick 排序并拒绝重复 Tick 或错误 Actor，Sample 命令排序去重且保持 Action 实例一致，Reliable event 排序去重。新增 `IsValid` 只表达 default batch 的非法状态。
+- “没有远程表现”不再用 class null 表示：Checkpoint full reconstruction 和 Ignored／BaselineMissing 结果返回 default batch，Evidence 用 `IsValid` 过滤；History、Codec、Network Checkpoint 和表现 Host 的空合同统一改为 `IsValid` 显式拒绝。Authority Source 查找远端批时用 default 作未命中状态，缺失或重复命中仍显式失败。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；随后均执行 `dotnet build-server shutdown`。代码提交后 Unity Editor 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

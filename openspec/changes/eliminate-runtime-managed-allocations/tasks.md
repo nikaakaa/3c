@@ -510,6 +510,7 @@
 - [x] 5.239 同步 GameplayNetwork Datagram Channel 的 Owner Canonical Input Batch 调用方；发送入口改用 IsValid 校验，补齐 Unity 程序集编译
 - [x] 5.240 ServerAuthoritative SelectedRemoteBodyBatch 改为 readonly struct；Prediction Schedule 到 Remote Presentation Egress 的 Body 选择结果按值传递，default batch 用 IsValid 拒绝
 - [x] 5.241 ServerAuthoritative AuthoritativeInputAck 改为 readonly struct；Authority 复制、观测、Checkpoint 重建和 Evidence 证据按值携带 ack，default 表示无 ack 并用 IsValid 统一拒绝
+- [x] 5.242 ServerAuthoritative RemotePresentationBatch 改为 readonly struct；Body、表现命令和可靠事件批按值穿过 Product、History、Checkpoint、Evidence 和表现 Host，default 表示无远程表现并用 IsValid 统一拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

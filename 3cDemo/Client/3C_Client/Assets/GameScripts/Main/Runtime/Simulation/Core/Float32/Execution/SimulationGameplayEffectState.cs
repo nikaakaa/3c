@@ -237,12 +237,23 @@ namespace ThirdPersonSimulation
             IDictionary<ulong, List<PortablePredictionRecord>> journal,
             IDictionary<ulong, ulong> lastLifecycleRevisions)
         {
-            Copy(CloneTagSources(m_TagSources), tagSources);
-            Copy(CloneAttributes(m_Attributes), attributes);
-            Copy(CloneActiveEffects(m_ActiveEffects), activeEffects);
-            Copy(CloneMap(m_Periods), periods);
-            Copy(CloneJournal(m_Journal), journal);
-            Copy(CloneMap(m_LastLifecycleRevisions), lastLifecycleRevisions);
+            foreach (KeyValuePair<string, string[]> pair in m_TagSources)
+                tagSources.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+            foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
+                attributes.Add(pair.Key, CloneAttribute(pair.Value));
+            for (int i = 0; i < m_ActiveEffects.Count; i++)
+                activeEffects.Add(CloneActive(m_ActiveEffects[i]));
+            foreach (KeyValuePair<ulong, ulong> pair in m_Periods)
+                periods.Add(pair.Key, pair.Value);
+            foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in m_Journal)
+            {
+                var records = new List<PortablePredictionRecord>(pair.Value.Count);
+                for (int i = 0; i < pair.Value.Count; i++)
+                    records.Add(ClonePrediction(pair.Value[i]));
+                journal.Add(pair.Key, records);
+            }
+            foreach (KeyValuePair<ulong, ulong> pair in m_LastLifecycleRevisions)
+                lastLifecycleRevisions.Add(pair.Key, pair.Value);
         }
 
         static SortedDictionary<string, string[]> CloneTagSources(IReadOnlyDictionary<string, string[]> source)

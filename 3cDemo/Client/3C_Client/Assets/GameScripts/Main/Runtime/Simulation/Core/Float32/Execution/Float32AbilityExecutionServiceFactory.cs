@@ -8,7 +8,6 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
-            IFloat32AbilityExecutionSavepointPort savepointPort,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -35,7 +34,6 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
-            IFloat32AbilityExecutionSavepointPort savepointPort,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -45,7 +43,6 @@ namespace ThirdPersonSimulation
                 ? null
                 : new Float32GameplayEffectOperationRuntime(
                     access,
-                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -58,7 +55,6 @@ namespace ThirdPersonSimulation
             {
                 equipment = new Float32EquipmentRuntime(
                     access,
-                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -86,8 +82,6 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             Float32AbilityOperationControlRuntime control,
-            IFloat32AbilityExecutionSavepointPort savepointPort,
-            IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
@@ -96,7 +90,7 @@ namespace ThirdPersonSimulation
                 "Control",
                 executionServices.ControlPolicy);
             Float32ActionStateStore actionStore = new Float32ActionStateStore(access, frame);
-            Float32InputRuntime input = new Float32InputRuntime(frame, inputRequests);
+            Float32InputRuntime input = new Float32InputRuntime(frame);
             Float32HandleAllocator handles = new Float32HandleAllocator(frame);
             Float32BlackboardRuntime blackboard = new Float32BlackboardRuntime(
                 access,
@@ -110,7 +104,6 @@ namespace ThirdPersonSimulation
                 executionServices.GameplayEffectCatalog,
                 access,
                 frame,
-                savepointPort,
                 actionStore,
                 handles,
                 equipmentLayout,
@@ -173,7 +166,7 @@ namespace ThirdPersonSimulation
                 actionStore,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops,
-                frame.Tick,
+                frame,
                 treeClipLink);
             var services = new Float32AbilityExecutionServiceSet(
                 frame,

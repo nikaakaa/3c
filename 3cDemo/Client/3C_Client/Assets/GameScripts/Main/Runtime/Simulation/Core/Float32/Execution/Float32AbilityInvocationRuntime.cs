@@ -19,8 +19,6 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             Float32AbilityOperationControlRuntime control,
-            IFloat32AbilityExecutionSavepointPort savepointPort,
-            IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace);
     }
 
@@ -63,96 +61,107 @@ namespace ThirdPersonSimulation
         public Float32AbilityDomainRuntime Domain { get; }
     }
 
-    internal sealed class Float32AbilityInvocationRuntime : IDisposable
+    internal sealed class Float32AbilityInvocationRuntime
     {
-        readonly IFloat32SkillExecutionState m_SkillState;
+        IFloat32SkillExecutionState m_SkillState;
         readonly Float32AbilityExecutionWorkspace m_Workspace;
-        readonly Float32AbilityExecutionFrame m_Frame;
-        readonly Float32InputRuntime m_Input;
-        readonly Float32ActionRuntime m_Actions;
-        readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
-        readonly IEquipmentActionContextReader m_Equipment;
-        readonly Float32BlackboardRuntime m_Blackboard;
-        readonly Float32MotionAccumulator m_Motion;
+        Float32AbilityExecutionFrame m_Frame;
+        Float32InputRuntime m_Input;
+        Float32ActionRuntime m_Actions;
+        Float32GameplayEffectOperationRuntime m_GameplayEffects;
+        IEquipmentActionContextReader m_Equipment;
+        Float32BlackboardRuntime m_Blackboard;
+        Float32MotionAccumulator m_Motion;
         readonly Float32AbilityOperationControlRuntime m_Control;
-        readonly Float32AbilityDomainRuntime m_Domain;
+        Float32AbilityDomainRuntime m_Domain;
+        readonly Float32AbilityExecutionContext m_Execution;
+        readonly IFloat32AbilityActionBindingProvider m_ActionBindings;
+        readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory;
+        readonly EquipmentProgramLayout m_EquipmentLayout;
+        readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
         bool m_Begun;
+        bool m_Beginning;
         bool m_Completed;
         bool m_Accepted;
-        bool m_Disposed;
+        bool m_AssemblyBuilt;
 
         public Float32AbilityInvocationRuntime(
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
-            IFloat32SkillExecutionState skillState,
-            IFloat32AbilityExecutionSavepointPort savepointPort,
-            IFloat32InputRequestStatePort inputRequests,
-            IFloat32ActionRuntimeStatePort actionState,
-            IFloat32HandleAllocatorStatePort handleAllocatorState,
-            IFloat32EventSequenceStatePort eventSequenceState,
-            IFloat32GameplayEffectStatePort gameplayEffectState,
-            IFloat32EquipmentStatePort equipmentState,
-            ActorId actorId,
-            SimulationTick tick,
-            Float32AbilityExecutionInput input,
-            Float32AbilityBodyFacts bodyFacts,
             Float32AbilityExecutionWorkspace workspace,
             Float32AbilityOperationControlRuntime control,
             IFloat32AbilityExecutionServiceFactory serviceFactory)
         {
             execution = execution ?? throw new ArgumentNullException(nameof(execution));
             AbilityId = execution.Data.AbilityId;
+            m_Execution = execution;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
-            skillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            savepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
-            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
-            if (!actorId.IsValid || !tick.IsValid)
-                throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             control = control ?? throw new ArgumentNullException(nameof(control));
-            m_SkillState = skillState;
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
-            m_Frame = new Float32AbilityExecutionFrame(
-                execution.Data,
-                execution.Layout,
-                execution.Services,
-                actorId,
-                tick,
-                input,
-                bodyFacts,
-                skillState,
-                actionState,
-                handleAllocatorState,
-                eventSequenceState,
-                gameplayEffectState,
-                equipmentState,
-                execution.Trace,
-                m_Workspace);
-
-            Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
-                execution.Data,
-                execution.Services,
-                actionBindings,
-                domainRuntimeFactory,
-                equipmentLayout,
-                m_Frame,
-                control,
-                savepointPort,
-                inputRequests,
-                m_Workspace);
-            m_Input = assembly.Input;
-            m_Actions = assembly.ActionRuntime;
-            m_GameplayEffects = assembly.GameplayEffects;
-            m_Equipment = assembly.Equipment;
-            m_Blackboard = assembly.Blackboard;
-            m_Motion = assembly.Motion;
-            m_Control = assembly.Control;
-            m_Domain = assembly.Domain;
+            m_ActionBindings = actionBindings;
+            m_DomainRuntimeFactory = domainRuntimeFactory;
+            m_EquipmentLayout = equipmentLayout;
+            m_Control = control;
+            m_ServiceFactory = serviceFactory ?? throw new ArgumentNullException(nameof(serviceFactory));
         }
 
         public CharacterSkillId AbilityId { get; }
+
+        public void Begin(in Float32AbilityInvocationContext context)
+        {
+            if (m_Begun)
+            {
+                if (!m_Completed)
+                    throw new InvalidOperationException("Float32 Ability invocation evaluation is already active.");
+                m_Begun = false;
+                m_Completed = false;
+                m_Accepted = false;
+            }
+
+            m_SkillState = context.SkillState ?? throw new ArgumentNullException(nameof(context.SkillState));
+            m_Beginning = true;
+            if (m_Frame == null)
+            {
+                m_Frame = new Float32AbilityExecutionFrame(
+                    m_Execution.Data,
+                    m_Execution.Layout,
+                    m_Execution.Services,
+                    context.ActorId,
+                    m_Execution.Trace,
+                    m_Workspace);
+            }
+
+            m_Frame.Begin(context);
+            if (!m_AssemblyBuilt)
+            {
+                Float32AbilityExecutionAssembly assembly = m_ServiceFactory.Create(
+                    m_Execution.Data,
+                    m_Execution.Services,
+                    m_ActionBindings,
+                    m_DomainRuntimeFactory,
+                    m_EquipmentLayout,
+                    m_Frame,
+                    m_Control,
+                    m_Workspace);
+                m_Input = assembly.Input;
+                m_Actions = assembly.ActionRuntime;
+                m_GameplayEffects = assembly.GameplayEffects;
+                m_Equipment = assembly.Equipment;
+                m_Blackboard = assembly.Blackboard;
+                m_Motion = assembly.Motion;
+                m_Domain = assembly.Domain;
+                m_AssemblyBuilt = true;
+            }
+
+            m_Begun = true;
+            m_Beginning = false;
+            m_Completed = false;
+            m_Accepted = false;
+        }
+
         public IReadOnlyList<AbilityTimelineLogicMotionWarp> TimelineMotionWarps => m_Workspace.TimelineMotionWarps;
 
         public void CopyMotionContributionsTo(Float32MotionContributionScratch contributions)
@@ -200,7 +209,6 @@ namespace ThirdPersonSimulation
             bool captureValues,
             bool captureControlFlow)
         {
-            RequireOpen();
             if (m_Begun)
                 throw new InvalidOperationException("Float32 Ability invocation evaluation is already active.");
             m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
@@ -263,7 +271,6 @@ namespace ThirdPersonSimulation
 
         public void Accept(Action<IFloat32SkillExecutionState> acceptAbility)
         {
-            RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Float32 Ability invocation cannot accept its current candidate.");
             acceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
@@ -274,39 +281,34 @@ namespace ThirdPersonSimulation
 
         public void Abort()
         {
-            if (m_Disposed)
+            if (m_Beginning)
+            {
+                m_Frame?.End();
+                m_SkillState?.Dispose();
+                m_Beginning = false;
+                m_SkillState = null;
                 return;
-            if (m_Begun && !m_Completed)
+            }
+
+            if (!m_Begun)
+                return;
+            if (!m_Completed)
             {
                 m_Control.EndEvaluation();
                 m_Frame.End();
-                m_Completed = true;
             }
             if (!m_Accepted)
                 m_SkillState.Dispose();
-        }
-
-        public void Dispose()
-        {
-            if (m_Disposed)
-                return;
-            if (!m_Accepted)
-                Abort();
-            m_SkillState.Dispose();
-            m_Disposed = true;
+            m_Begun = false;
+            m_Completed = false;
+            m_Accepted = false;
+            m_SkillState = null;
         }
 
         void RequireEvaluation()
         {
-            RequireOpen();
             if (!m_Begun || m_Completed)
                 throw new InvalidOperationException("Float32 Ability invocation is not in its evaluation phase.");
-        }
-
-        void RequireOpen()
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(Float32AbilityInvocationRuntime));
         }
     }
 }

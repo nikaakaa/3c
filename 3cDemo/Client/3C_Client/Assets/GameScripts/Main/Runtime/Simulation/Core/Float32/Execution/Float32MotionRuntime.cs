@@ -502,7 +502,6 @@ namespace ThirdPersonSimulation
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32ActionStateStore m_Actions;
-        readonly IFloat32SkillExecutionState m_SkillState;
 
         public Float32MotionWarpTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -512,7 +511,6 @@ namespace ThirdPersonSimulation
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-            m_SkillState = m_Frame.SkillState ?? throw new InvalidOperationException("MotionWarp target requires an active Skill state.");
         }
 
         public void ApplyTimelineMotionWarp(AbilityTimelineLogicMotionWarp warp, ref ResolvedMotionChannel channel)
@@ -531,7 +529,7 @@ namespace ThirdPersonSimulation
                 action.SkillId,
                 action.SkillEntryOperation,
                 action.SkillExecutionGeneration);
-            Float32MotionWarpState storedState = m_SkillState.GetMotionWarpState(warp.StateOperation);
+            Float32MotionWarpState storedState = m_Frame.SkillState.GetMotionWarpState(warp.StateOperation);
             var storedAction = storedState.ActionInstance.IsValid
                 ? new TimelineActionContextIdentity(
                     storedState.ActionInstance.ActionId,
@@ -569,7 +567,7 @@ namespace ThirdPersonSimulation
                     ActionTargetRequirement requirement = Access.Services.RequireAdmissionProfile(action.ActionId).TargetRequirement;
                     if (requirement == ActionTargetRequirement.OptionalSnapshot)
                     {
-                        m_SkillState.SetMotionWarpState(warp.StateOperation, default);
+                        m_Frame.SkillState.SetMotionWarpState(warp.StateOperation, default);
                         return;
                     }
                     FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.TargetSnapshotRequired,
@@ -585,7 +583,7 @@ namespace ThirdPersonSimulation
                     out limitResult);
                 if (limitResult == ProgramMotionWarpLimitResult.PreservedByLimitPolicy)
                 {
-                    m_SkillState.SetMotionWarpState(warp.StateOperation, default);
+                    m_Frame.SkillState.SetMotionWarpState(warp.StateOperation, default);
                     return;
                 }
                 EvaluateDirectPose(warp,
@@ -669,7 +667,7 @@ namespace ThirdPersonSimulation
             channel.ApplyCorrection(
                 currentWarpedPosition - previousWarpedPosition - rawSourceDelta,
                 Float32Angle.Delta(previousWarpedYaw, currentWarpedYaw) - rawSourceYawDelta);
-            m_SkillState.SetMotionWarpState(warp.StateOperation,
+            m_Frame.SkillState.SetMotionWarpState(warp.StateOperation,
                 storedState.WithProgress(
                     currentWarpedPosition,
                     currentWarpedYaw,

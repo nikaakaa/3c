@@ -59,7 +59,6 @@ namespace ThirdPersonSimulation
         internal void EndEvaluation()
         {
             m_Services.EndEvaluation();
-            m_Services = default;
         }
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
         {
@@ -137,7 +136,7 @@ namespace ThirdPersonSimulation
         readonly Float32TraceSink m_Trace;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         readonly Float32ActionStateStore m_ActionState;
-        readonly SimulationTick m_Tick;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32TreeClipInvokerLink m_TreeClipLink;
         readonly List<AbilityTimelineAdvancePending> m_TimelinePendingAdvances;
         readonly List<AbilityTimelineStopPending> m_TimelinePendingStops;
@@ -159,7 +158,7 @@ namespace ThirdPersonSimulation
             Float32ActionStateStore actionState,
             List<AbilityTimelineAdvancePending> timelineAdvances,
             List<AbilityTimelineStopPending> timelineStops,
-            SimulationTick tick,
+            Float32AbilityExecutionFrame frame,
             Float32TreeClipInvokerLink treeClipLink)
         {
             m_Access = access;
@@ -176,11 +175,11 @@ namespace ThirdPersonSimulation
             m_Trace = trace;
             m_TimelineRuntime = timelineRuntime;
             m_ActionState = actionState;
+            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_TimelinePendingAdvances = timelineAdvances ??
                 throw new ArgumentNullException(nameof(timelineAdvances));
             m_TimelinePendingStops = timelineStops ??
                 throw new ArgumentNullException(nameof(timelineStops));
-            m_Tick = tick;
             m_TreeClipLink = treeClipLink;
         }
 
@@ -384,7 +383,7 @@ namespace ThirdPersonSimulation
                     actionContext,
                     CreateTimelineInvocationSource(operation),
                     action.InputSequence,
-                    m_Tick);
+                    m_Frame.Tick);
                 runtimeHandle = m_TimelineRuntime.Start(in request);
                 if (runtimeHandle == 0)
                     throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' did not return a runtime handle.");
@@ -402,7 +401,7 @@ namespace ThirdPersonSimulation
                 {
                     var control = new AbilityTimelinePlaybackControl(
                         ThirdPersonSimulation.Fixed.FixedScalar.FromDouble(inputs[0].Scalar.ToDouble()), inputs[1].Boolean);
-                    tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1, control);
+                    tick = m_TimelineRuntime.Tick(runtimeHandle, m_Frame.Tick.Value, 1, control);
                 }
             }
             finally
@@ -570,7 +569,7 @@ namespace ThirdPersonSimulation
                 host.PushTreeClipInvoker(m_TreeClipLink.Invoker);
             try
             {
-                AbilityTimelineStopResult stop = m_TimelineRuntime.Stop(runtimeHandle, m_Tick.Value);
+                AbilityTimelineStopResult stop = m_TimelineRuntime.Stop(runtimeHandle, m_Frame.Tick.Value);
                 if (stop.Progress.IsValid)
                 {
                     SimulationOperation operation = m_Access.Operation(descriptor.Handle);

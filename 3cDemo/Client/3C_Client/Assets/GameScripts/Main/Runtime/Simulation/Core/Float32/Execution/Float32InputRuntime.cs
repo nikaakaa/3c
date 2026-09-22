@@ -6,14 +6,11 @@ namespace ThirdPersonSimulation
     internal readonly struct Float32InputRuntime
     {
         readonly Float32AbilityExecutionFrame m_Frame;
-        readonly IFloat32InputRequestStatePort m_InputRequests;
 
         public Float32InputRuntime(
-            Float32AbilityExecutionFrame frame,
-            IFloat32InputRequestStatePort inputRequests)
+            Float32AbilityExecutionFrame frame)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
         }
 
         public void ApplyBlackboardInputBindings(IFloat32BlackboardPort blackboard)
@@ -34,7 +31,7 @@ namespace ThirdPersonSimulation
                 state = default;
                 return false;
             }
-            state = m_InputRequests.GetInputRequest(requestId);
+            state = m_Frame.InputRequests.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
@@ -42,9 +39,9 @@ namespace ThirdPersonSimulation
         {
             if (!m_Frame.Layout.HasInputRequest(requestId))
                 return;
-            SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
+            SimulationInputRequestState state = m_Frame.InputRequests.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
-                m_InputRequests.SetInputRequest(requestId, state.Consume());
+                m_Frame.InputRequests.SetInputRequest(requestId, state.Consume());
         }
 
         public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

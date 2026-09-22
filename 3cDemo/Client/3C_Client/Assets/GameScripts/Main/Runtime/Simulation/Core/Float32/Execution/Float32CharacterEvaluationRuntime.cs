@@ -38,8 +38,8 @@ namespace ThirdPersonSimulation
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);
-            Float32AbilityInvocationRuntime[] invocations = actor.InvocationScratch;
-            int invocationCount = 0;
+            Float32AbilityInvocationRuntime[] invocations = actor.Invocations;
+            int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
             actionRuntimes.Clear();
             Float32GameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
@@ -61,8 +61,6 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                IFloat32AbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
-                IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
                 abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;
@@ -83,11 +81,12 @@ namespace ThirdPersonSimulation
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                    var invocation = new Float32AbilityInvocationRuntime(
-                        installation.Execution,
-                        actor.AbilityInstallations,
-                        domainRuntimeFactory,
-                        installation.EquipmentLayout,
+                    Float32AbilityInvocationRuntime invocation = invocations[i];
+                    invocation.Begin(new Float32AbilityInvocationContext(
+                        actor.ActorId,
+                        tick,
+                        abilityInput,
+                        bodyFacts,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         roleState.InputRequests,
@@ -95,15 +94,7 @@ namespace ThirdPersonSimulation
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
-                        roleState.EquipmentState,
-                        actor.ActorId,
-                        tick,
-                        abilityInput,
-                        bodyFacts,
-                        workspaces[i],
-                        installation.Control,
-                        serviceFactory);
-                    invocations[invocationCount++] = invocation;
+                        roleState.EquipmentState));
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
@@ -128,22 +119,13 @@ namespace ThirdPersonSimulation
                 if (!effectAdvanced)
                     RequireNoGameplayEffectIngress(ingress, ingressCount);
 
-                var control = new Float32CharacterControlRuntime(
-                    characterRuntime.ControlModules,
-                    actor.ControlRuntimeBinding,
+                Float32CharacterControlRuntime control = characterRuntime.ControlRuntime(actor.ActorId);
+                control.Begin(
                     roleState,
                     roleState.InputRequests,
                     roleState.ActionState,
-                    actor.ActorId,
                     tick,
-                    characterRuntime.TickRate,
-                    abilityInput,
-                    bodyFacts,
-                    controlMotion,
-                    characterTraceSink,
-                    actionRuntimes,
-                    (skill, window) => IsActionWindowActive(invocations, invocationCount, skill, window),
-                    route => ReadEquipmentActionContext(invocations, invocationCount, route));
+                    bodyFacts);
                 control.Tick();
                 controlMotion.CopyContributionsTo(motionContributions);
 
@@ -225,7 +207,6 @@ namespace ThirdPersonSimulation
                     actor.TimelineRuntime,
                     timelineAdvances.ToArray(),
                     timelineStops.ToArray());
-                actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
@@ -240,8 +221,7 @@ namespace ThirdPersonSimulation
                 DiscardTimelineAdvances(actor.TimelineRuntime, timelineAdvances);
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
                 for (int i = 0; i < invocationCount; i++)
-                    invocations[i].Dispose();
-                actor.ClearInvocationScratch(invocationCount);
+                    invocations[i].Abort();
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
@@ -332,13 +312,12 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        static bool IsActionWindowActive(
+        internal static bool IsActionWindowActive(
             Float32AbilityInvocationRuntime[] invocations,
-            int invocationCount,
             CharacterSkillId skillId,
             string windowType)
         {
-            for (int i = 0; i < invocationCount; i++)
+            for (int i = 0; i < invocations.Length; i++)
             {
                 Float32AbilityInvocationRuntime invocation = invocations[i];
                 if (invocation.AbilityId != skillId)
@@ -348,12 +327,11 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
+        internal static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
             Float32AbilityInvocationRuntime[] invocations,
-            int invocationCount,
             EquipmentActionRouteId route)
         {
-            for (int i = 0; i < invocationCount; i++)
+            for (int i = 0; i < invocations.Length; i++)
             {
                 IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))

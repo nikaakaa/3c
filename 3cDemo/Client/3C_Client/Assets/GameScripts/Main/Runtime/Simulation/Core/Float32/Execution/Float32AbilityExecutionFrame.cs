@@ -83,14 +83,58 @@ namespace ThirdPersonSimulation
         public int PresentationCount { get; }
     }
 
+    internal readonly struct Float32AbilityInvocationContext
+    {
+        public Float32AbilityInvocationContext(
+            ActorId actorId,
+            SimulationTick tick,
+            Float32AbilityExecutionInput input,
+            Float32AbilityBodyFacts bodyFacts,
+            IFloat32SkillExecutionState skillState,
+            IFloat32AbilityExecutionSavepointPort savepointPort,
+            IFloat32InputRequestStatePort inputRequests,
+            IFloat32ActionRuntimeStatePort actionState,
+            IFloat32HandleAllocatorStatePort handleAllocatorState,
+            IFloat32EventSequenceStatePort eventSequenceState,
+            IFloat32GameplayEffectStatePort gameplayEffectState,
+            IFloat32EquipmentStatePort equipmentState)
+        {
+            ActorId = actorId;
+            Tick = tick;
+            Input = input;
+            BodyFacts = bodyFacts;
+            SkillState = skillState;
+            SavepointPort = savepointPort;
+            InputRequests = inputRequests;
+            ActionState = actionState;
+            HandleAllocatorState = handleAllocatorState;
+            EventSequenceState = eventSequenceState;
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+        }
+
+        public ActorId ActorId { get; }
+        public SimulationTick Tick { get; }
+        public Float32AbilityExecutionInput Input { get; }
+        public Float32AbilityBodyFacts BodyFacts { get; }
+        public IFloat32SkillExecutionState SkillState { get; }
+        public IFloat32AbilityExecutionSavepointPort SavepointPort { get; }
+        public IFloat32InputRequestStatePort InputRequests { get; }
+        public IFloat32ActionRuntimeStatePort ActionState { get; }
+        public IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
+        public IFloat32EventSequenceStatePort EventSequenceState { get; }
+        public IFloat32GameplayEffectStatePort GameplayEffectState { get; }
+        public IFloat32EquipmentStatePort EquipmentState { get; }
+    }
+
     internal sealed class Float32AbilityExecutionFrame
     {
         readonly List<GameplayFact> m_Facts;
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
-        readonly Float32AbilityBodyFacts m_BodyFacts;
-        readonly IFloat32GameplayEffectStatePort m_GameplayEffectState;
-        readonly IFloat32EquipmentStatePort m_EquipmentState;
+        Float32AbilityBodyFacts m_BodyFacts;
+        IFloat32GameplayEffectStatePort m_GameplayEffectState;
+        IFloat32EquipmentStatePort m_EquipmentState;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -104,15 +148,6 @@ namespace ThirdPersonSimulation
             GameplayAbilityExecutionLayout layout,
             Float32GameplayAbilityExecutionServices services,
             ActorId actorId,
-            SimulationTick tick,
-            Float32AbilityExecutionInput input,
-            Float32AbilityBodyFacts bodyFacts,
-            IFloat32SkillExecutionState skillState,
-            IFloat32ActionRuntimeStatePort actionState,
-            IFloat32HandleAllocatorStatePort handleAllocatorState,
-            IFloat32EventSequenceStatePort eventSequenceState,
-            IFloat32GameplayEffectStatePort gameplayEffectState,
-            IFloat32EquipmentStatePort equipmentState,
             Float32TraceSink trace,
             Float32AbilityExecutionWorkspace workspace)
         {
@@ -120,15 +155,6 @@ namespace ThirdPersonSimulation
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             ActorId = actorId;
-            Tick = tick;
-            Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_BodyFacts = bodyFacts;
-            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
-            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
-            EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
-            m_GameplayEffectState = gameplayEffectState;
-            m_EquipmentState = equipmentState;
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -140,21 +166,59 @@ namespace ThirdPersonSimulation
             Trace.Bind(this);
         }
 
+        internal void Begin(in Float32AbilityInvocationContext context)
+        {
+            if (!context.ActorId.IsValid || !context.Tick.IsValid)
+                throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
+            if (context.ActorId != ActorId)
+                throw new InvalidOperationException("Float32 Ability invocation actor does not match its frame.");
+            if (context.Input == null)
+                throw new ArgumentNullException(nameof(context.Input));
+            if (context.SkillState == null)
+                throw new ArgumentNullException(nameof(context.SkillState));
+            if (context.SavepointPort == null)
+                throw new ArgumentNullException(nameof(context.SavepointPort));
+            if (context.InputRequests == null)
+                throw new ArgumentNullException(nameof(context.InputRequests));
+            if (context.ActionState == null)
+                throw new ArgumentNullException(nameof(context.ActionState));
+            if (context.HandleAllocatorState == null)
+                throw new ArgumentNullException(nameof(context.HandleAllocatorState));
+            if (context.EventSequenceState == null)
+                throw new ArgumentNullException(nameof(context.EventSequenceState));
+
+            Tick = context.Tick;
+            Input = context.Input;
+            m_BodyFacts = context.BodyFacts;
+            SkillState = context.SkillState;
+            SavepointPort = context.SavepointPort;
+            InputRequests = context.InputRequests;
+            ActionState = context.ActionState;
+            HandleAllocatorState = context.HandleAllocatorState;
+            EventSequenceState = context.EventSequenceState;
+            m_GameplayEffectState = context.GameplayEffectState;
+            m_EquipmentState = context.EquipmentState;
+            m_SkillExecutionStateAccess = null;
+            Trace.Bind(this);
+        }
+
         public Float32GameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         internal Float32GameplayAbilityExecutionServices Services { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
         public SimulationNumericProfile NumericProfile => Data.NumericProfile;
         public ActorId ActorId { get; }
-        public SimulationTick Tick { get; }
-        public Float32AbilityExecutionInput Input { get; }
+        public SimulationTick Tick { get; private set; }
+        public Float32AbilityExecutionInput Input { get; private set; }
         public Float32AbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
-        internal IFloat32SkillExecutionState SkillState { get; }
-        internal IFloat32ActionRuntimeStatePort ActionState { get; }
-        internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
-        internal IFloat32EventSequenceStatePort EventSequenceState { get; }
+        internal IFloat32SkillExecutionState SkillState { get; private set; }
+        internal IFloat32AbilityExecutionSavepointPort SavepointPort { get; private set; }
+        internal IFloat32InputRequestStatePort InputRequests { get; private set; }
+        internal IFloat32ActionRuntimeStatePort ActionState { get; private set; }
+        internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; private set; }
+        internal IFloat32EventSequenceStatePort EventSequenceState { get; private set; }
         internal IFloat32GameplayEffectStatePort GameplayEffectState => m_GameplayEffectState ??
             throw new InvalidOperationException("Float32 Ability invocation has no Gameplay Effect state service.");
         internal IFloat32EquipmentStatePort EquipmentState => m_EquipmentState ??

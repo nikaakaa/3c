@@ -27,6 +27,8 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<string> m_InputRequestIds;
         readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
         readonly Float32CharacterInputRuntime m_InputRuntime;
+        readonly Dictionary<ActorId, Float32CharacterControlRuntime> m_ControlRuntimes =
+            new Dictionary<ActorId, Float32CharacterControlRuntime>();
 
         public Float32CharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -111,6 +113,27 @@ namespace ThirdPersonSimulation
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
             m_InputRuntime = new Float32CharacterInputRuntime(m_InputRequestIds);
+            for (int i = 0; i < values.Count; i++)
+            {
+                SimulationActorBinding actor = values[i];
+                m_ControlRuntimes.Add(actor.ActorId, new Float32CharacterControlRuntime(
+                    ControlModules,
+                    actor.ControlRuntimeBinding,
+                    actor.AbilityExecutionInput,
+                    actor.ActorId,
+                    TickRate,
+                    actor.ControlMotion,
+                    actor.CharacterTraceSink,
+                    actor.ActionRuntimes,
+                    (skill, window) => Float32CharacterEvaluationRuntime.IsActionWindowActive(
+                        actor.Invocations,
+                        skill,
+                        window),
+                    route => Float32CharacterEvaluationRuntime.ReadEquipmentActionContext(
+                        actor.Invocations,
+                        route)));
+            }
+
             var parts = new List<string>
             {
                 "float32-character-runtime/1",
@@ -139,6 +162,8 @@ namespace ThirdPersonSimulation
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         internal Float32CharacterInputRuntime InputRuntime => m_InputRuntime;
+        internal Float32CharacterControlRuntime ControlRuntime(ActorId actorId) =>
+            m_ControlRuntimes[actorId];
         public StableHash StateSchemaHash { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }

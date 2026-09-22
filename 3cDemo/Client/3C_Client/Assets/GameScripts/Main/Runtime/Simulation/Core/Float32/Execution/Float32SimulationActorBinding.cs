@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32CharacterControlMotionRuntime m_ControlMotion;
         readonly Float32MotionContributionScratch m_MotionContributions = new Float32MotionContributionScratch();
-        readonly Float32AbilityInvocationRuntime[] m_InvocationScratch;
+        readonly Float32AbilityInvocationRuntime[] m_Invocations;
         readonly Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_ActionRuntimes;
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
@@ -65,8 +65,6 @@ namespace ThirdPersonSimulation
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineLogicMotionWarps =
             new List<AbilityTimelineLogicMotionWarp>();
         readonly Float32AbilityExecutionWorkspace[] m_Workspaces;
-        readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
-        readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
         readonly Float32CharacterEvaluationOutput m_EvaluationOutput = new Float32CharacterEvaluationOutput();
         readonly Float32CharacterTraceSink m_CharacterTraceSink;
         readonly Float32AbilityExecutionInput m_AbilityExecutionInput = new Float32AbilityExecutionInput();
@@ -94,7 +92,7 @@ namespace ThirdPersonSimulation
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 timelineMotionWarpCatalog);
-            m_InvocationScratch = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
+            m_Invocations = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);
             m_Workspaces = new Float32AbilityExecutionWorkspace[AbilityInstallations.Installations.Count];
@@ -112,7 +110,21 @@ namespace ThirdPersonSimulation
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
-            m_ServiceFactory = new Float32AbilityExecutionServiceFactory(timelineRuntime);
+            IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
+            IFloat32AbilityExecutionServiceFactory serviceFactory = new Float32AbilityExecutionServiceFactory(timelineRuntime);
+            for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
+            {
+                Float32GameplayAbilityExecutionInstallation installation = AbilityInstallations.Installations[i];
+                m_Invocations[i] = new Float32AbilityInvocationRuntime(
+                    installation.Execution,
+                    AbilityInstallations,
+                    domainRuntimeFactory,
+                    installation.EquipmentLayout,
+                    m_Workspaces[i],
+                    installation.Control,
+                    serviceFactory);
+            }
+
             m_CharacterTraceSink = new Float32CharacterTraceSink(m_EvaluationOutput.CharacterTrace);
             TimelineMotionReader = GetMotionReader(timelineRuntime);
             TimelineMotionWarpReader = GetMotionWarpReader(timelineRuntime);
@@ -137,7 +149,7 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         internal Float32CharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
-        internal Float32AbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
+        internal Float32AbilityInvocationRuntime[] Invocations => m_Invocations;
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal Float32AbilityExecutionWorkspace[] Workspaces => m_Workspaces;
@@ -145,16 +157,9 @@ namespace ThirdPersonSimulation
         internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
         internal List<AbilityTimelineLogicMotion> TimelineLogicMotion => m_TimelineLogicMotion;
         internal List<AbilityTimelineLogicMotionWarp> TimelineLogicMotionWarps => m_TimelineLogicMotionWarps;
-        internal IFloat32AbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
-        internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
         internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
         internal Float32CharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
         internal Float32AbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
-
-        internal void ClearInvocationScratch(int count)
-        {
-            Array.Clear(m_InvocationScratch, 0, count);
-        }
 
         internal void ClearActionRuntimes()
         {

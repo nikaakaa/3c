@@ -5651,3 +5651,13 @@
 - 输入 Actor 顺序、评估结果顺序、disposition 排序、重复检查、canonical 身份检查和异常语义不变；比较器只归各自结果类型所有，不引入跨会话状态。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 多 Actor 输入回放、evaluation 恢复、rollback restore和 Player 分配采样。
+
+## 2026-09-23 CommitBatch租约视图化
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `a360d01e1`。
+
+- Fixed/Float32 `FreezeCommitBatch` 原先每个已提交 outer tick 调用 `completedSteps.ToArray()`，`ReadSourceEgress` 也把 workspace 收集结果再复制一份数组。现在 `CommitBatch` 直接持有当前 `SessionExecutionWorkspace` 租约集合，同步 `Commit` 完成后由 workspace 统一 `EndTransaction` 清理。
+- 本地 immediate、Rollback history/output 和 Server Authoritative committer 均已核对为同步消费，不保存 `CommitBatch` 容器本身；进入历史、表现和发送队列的是 Step、Actor result、snapshot 和 Source record 等独立对象。Step 顺序、事件覆盖校验、egress 非空校验和异常语义不变。
+- `ExecutionWorkspaceBuffer.ToArray` 只服务旧 commit 复制路径，确认无调用者后删除；不保留数组移交和租约视图两条正式入口。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 提交回放、Source Egress 发送、rollback restore和 Player 分配采样。

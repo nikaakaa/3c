@@ -5428,3 +5428,13 @@
 - 2.4 保持未勾选：真实变化路径分配、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做连续角色评估、多能力绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability聚合按frame写时复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `7a42dbccd`。
+
+- 共用 `GameplayAbilityExecutionAggregate` 准备可变状态时原先调用完整 `Clone`，复制候选列表和全部 frame 的 `SortedDictionary`；即使只写一个 active frame 或只新增/移除一个 frame，也会复制所有执行状态。现在新增两类候选：`CreateMutableShell` 只创建新 frame 列表，用于新增、移除和零代次退场；`CloneForActiveFrameMutation` 只克隆 active frame，其余 frame 按序共享。
+- candidate 独立持有新列表和被克隆的 active frame；未修改 frame 在 candidate 与 committed 间只读共享，manager 没有其他写入路径。写入前 `MakeActiveFrameMutable` 会从目标 frame 克隆，因此 committed 不会被污染。完整 `Clone` 保留给正式状态复制。Fixed 与 Float32 继续共用这一实现。
+- 2.4 保持未勾选：active frame 内部的 `SortedDictionary` 克隆、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、多 frame 聚合、savepoint restore、rollback restore 和 Player 分配采样。

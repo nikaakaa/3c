@@ -413,14 +413,14 @@ namespace ThirdPersonSimulation
         const uint Magic = 0x504e5343;
         const int Version = 6;
 
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+        [ThreadStatic] static CanonicalWriter s_CanonicalWriter;
+
         public static byte[] Write(SimulationWorldSnapshot snapshot)
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            using var writer = new CanonicalWriter();
-            writer.WriteUInt32(Magic);
-            writer.WriteInt32(Version);
-            writer.WriteString(snapshot.WorldHash.ToString());
+            CanonicalWriter writer = CanonicalScratch();
             WriteHashPayload(writer, snapshot);
             return writer.ToArray();
         }
@@ -468,15 +468,26 @@ namespace ThirdPersonSimulation
                 deterministicValidity);
             if (!snapshot.WorldHash.Equals(expectedHash))
                 throw new InvalidDataException($"Simulation World Snapshot hash mismatch. Expected '{expectedHash}', actual '{snapshot.WorldHash}'.");
-            RequireCanonical(bytes, Write(snapshot), "Simulation World Snapshot");
+            CanonicalWriter writer = CanonicalScratch();
+            WriteCanonicalPayload(writer, snapshot);
+            if (!writer.ContentEquals(bytes))
+                throw new InvalidDataException("Simulation World Snapshot is not canonical.");
             return snapshot;
         }
 
         public static SimulationWorldHash ComputeHash(SimulationWorldSnapshot snapshot)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = HashWriter();
             WriteHashPayload(writer, snapshot);
             return new SimulationWorldHash(writer.ComputeHash());
+        }
+
+        static void WriteCanonicalPayload(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
+        {
+            writer.WriteUInt32(Magic);
+            writer.WriteInt32(Version);
+            writer.WriteString(snapshot.WorldHash.ToString());
+            WriteHashPayload(writer, snapshot);
         }
 
         static void WriteHashPayload(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
@@ -503,13 +514,20 @@ namespace ThirdPersonSimulation
             writer.WriteBytes(snapshot.WorldStateBytesBuffer);
         }
 
-        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        static CanonicalWriter HashWriter()
         {
-            if (source.Length != canonical.Length)
-                throw new InvalidDataException($"{label} is not canonical.");
-            for (int i = 0; i < source.Length; i++)
-                if (source[i] != canonical[i])
-                    throw new InvalidDataException($"{label} is not canonical.");
+            if (s_HashWriter == null)
+                s_HashWriter = new CanonicalWriter();
+            s_HashWriter.Reset();
+            return s_HashWriter;
+        }
+
+        static CanonicalWriter CanonicalScratch()
+        {
+            if (s_CanonicalWriter == null)
+                s_CanonicalWriter = new CanonicalWriter();
+            s_CanonicalWriter.Reset();
+            return s_CanonicalWriter;
         }
     }
 }

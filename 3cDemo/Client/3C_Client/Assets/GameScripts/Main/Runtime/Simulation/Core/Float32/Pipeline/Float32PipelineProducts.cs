@@ -26,7 +26,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Canonical input batch source is incomplete.", nameof(source));
             if (inputs == null || inputs.Length == 0)
                 throw new ArgumentException("Canonical input batch cannot be empty.", nameof(inputs));
-            Array.Sort(inputs, static (left, right) => left.ActorId.CompareTo(right.ActorId));
+            Array.Sort(inputs, ActorInputComparer.Instance);
             for (int i = 0; i < inputs.Length; i++)
             {
                 if (i > 0 && inputs[i - 1].ActorId.Equals(inputs[i].ActorId) ||
@@ -38,6 +38,20 @@ namespace ThirdPersonSimulation
             }
             Source = source;
             m_Inputs = inputs;
+        }
+
+        sealed class ActorInputComparer : IComparer<SimulationPipelineActorInput<Float32StepInput>>
+        {
+            public static readonly ActorInputComparer Instance = new ActorInputComparer();
+
+            ActorInputComparer() { }
+
+            public int Compare(
+                SimulationPipelineActorInput<Float32StepInput> left,
+                SimulationPipelineActorInput<Float32StepInput> right)
+            {
+                return left.ActorId.CompareTo(right.ActorId);
+            }
         }
 
         public SimulationTickSourceIdentity Source { get; }
@@ -121,7 +135,7 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Character evaluation result batch contains a missing evaluation.", nameof(evaluations));
             }
             Array.Copy(evaluations, m_Evaluations, evaluations.Length);
-            Array.Sort(m_Evaluations, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            Array.Sort(m_Evaluations, EvaluationComparer.Instance);
             for (int i = 0; i < m_Evaluations.Length; i++)
             {
                 if (m_Evaluations[i].Tick != tick ||
@@ -132,6 +146,18 @@ namespace ThirdPersonSimulation
             }
             Tick = tick;
             return this;
+        }
+
+        sealed class EvaluationComparer : IComparer<Float32CharacterEvaluationResult>
+        {
+            public static readonly EvaluationComparer Instance = new EvaluationComparer();
+
+            EvaluationComparer() { }
+
+            public int Compare(Float32CharacterEvaluationResult left, Float32CharacterEvaluationResult right)
+            {
+                return left.ActorId.CompareTo(right.ActorId);
+            }
         }
 
         public SimulationTick Tick { get; private set; }
@@ -184,7 +210,7 @@ namespace ThirdPersonSimulation
                 : new SimulationOutputDisposition[dispositions.Count];
             for (int i = 0; i < values.Length; i++)
                 values[i] = dispositions[i];
-            Array.Sort(values, (left, right) => left.SourceEventId.CompareTo(right.SourceEventId));
+            Array.Sort(values, DispositionComparer.Instance);
             for (int i = 1; i < values.Length; i++)
             {
                 if (values[i - 1].SourceEventId.Equals(values[i].SourceEventId))
@@ -201,7 +227,7 @@ namespace ThirdPersonSimulation
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Output disposition transaction identity is invalid.", nameof(transactionIdentity));
             SimulationOutputDisposition[] values = dispositions ?? Array.Empty<SimulationOutputDisposition>();
-            Array.Sort(values, CompareDispositions);
+            Array.Sort(values, DispositionComparer.Instance);
             for (int i = 1; i < values.Length; i++)
             {
                 if (values[i - 1].SourceEventId.Equals(values[i].SourceEventId))
@@ -221,8 +247,17 @@ namespace ThirdPersonSimulation
         public StableHash TransactionIdentity { get; }
         public IReadOnlyList<SimulationOutputDisposition> Dispositions => m_Dispositions;
 
-        static int CompareDispositions(SimulationOutputDisposition left, SimulationOutputDisposition right) =>
-            left.SourceEventId.CompareTo(right.SourceEventId);
+        sealed class DispositionComparer : IComparer<SimulationOutputDisposition>
+        {
+            public static readonly DispositionComparer Instance = new DispositionComparer();
+
+            DispositionComparer() { }
+
+            public int Compare(SimulationOutputDisposition left, SimulationOutputDisposition right)
+            {
+                return left.SourceEventId.CompareTo(right.SourceEventId);
+            }
+        }
     }
 
     public sealed class Float32SourceEgressRecord

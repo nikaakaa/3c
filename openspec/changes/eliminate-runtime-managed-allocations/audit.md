@@ -4166,3 +4166,11 @@
 - `AcceptedAuthorityInput` 从 sealed class 改为 readonly struct。Authority Client Route 每次选择 Fresh、Held 或 Neutral 输入，以及 Source Runtime 填充 accepted batch 时都按值传递，删除每 Actor 每 authority tick 的输入记录对象分配。
 - 构造合同不变：ActorId 有效、input sequence 非零、`SimulationInput` 存在且 sequence 一致。新增 `IsValid` 表达 default struct 的非法状态；Accepted batch 构造把原来的 null／ActorId 检查合并为同一显式拒绝，非法输入仍不进入 batch。
 - 该类型只被 Authority accepted-input Source、Route 和 Authority Passes 消费；搜索确认没有其它调用方。`ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-22 ServerAuthoritative accepted input batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.238 作为独立小步；5.5 保持未勾选。
+
+- `AcceptedAuthorityInputBatch` 从 sealed class 改为 readonly struct。Authority Source Runtime 生成整批 accepted input 后，经过 Ingress 端口、Exclusive Product Slot 和 Authority Schedule 读取都按值传递，删除每个 authority tick 的 batch 外壳对象。
+- 构造合同不变：Authority Tick 有效，inputs 非空、Actor 排序去重、每个 `AcceptedAuthorityInput` 有效。新增 `IsValid` 表达 default batch 的非法状态；Ingress 不再用 null 合并，改为显式拒绝 Source 返回的不完整 batch。
+- 该 batch 只被 Authority accepted-input Source、Float32 Exclusive Product Slot 和 Authority Passes 消费；搜索确认没有其它调用方。`ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。

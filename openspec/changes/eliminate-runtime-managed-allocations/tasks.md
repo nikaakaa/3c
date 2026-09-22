@@ -506,6 +506,7 @@
 - [x] 5.235 Rollback 与 ServerAuthoritative 的数组/值类型迁移同步调用方：struct envelope 检查 Payload，数组诊断与远端 Body 判空读取改用 Length，预测历史 Body 输出统一为精确数组
 - [x] 5.236 ServerAuthoritative Owner Canonical Input Batch 改为 readonly struct；历史记录、Capture、编解码和 Product Slot 传值不再创建 batch 外壳，default 值统一用 IsValid 显式拒绝
 - [x] 5.237 ServerAuthoritative AcceptedAuthorityInput 改为 readonly struct；Authority route 选择结果和 accepted batch 元素按值传递，default 输入由 IsValid 与 batch 构造显式拒绝
+- [x] 5.238 ServerAuthoritative AcceptedAuthorityInputBatch 改为 readonly struct；accepted input Source 到 Product 与 Authority Schedule 的整批传递不再创建外壳，default batch 用 IsValid 拒绝
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -5418,3 +5418,13 @@
 - 2.4 保持未勾选：真实变化路径仍需要新页、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 角色Ability映射容量回归修正
+
+对应 tasks.md 的 2.4；2.99 当前源码恢复一致，2.4 保持未勾选。代码提交为 `77e24a082`。
+
+- 当前源码核对发现 2.99 的结果已回归：Fixed/Float32 pending ability 映射在无参构造中按默认容量创建，`Restart` 只 `Clear` 后灌入 base state 能力清单。同一处技能工作区映射也用默认容量。现在两张映射推迟到首次 `Restart`，按 `baseState.Abilities.Count` 一次分配，之后跨事务复用；事务未重启时不创建运行存储。
+- `Restart` 仍清空并重灌 ability 映射；skill workspace 继续按 ability identity 复用并调用各自 `Restart`。字典查找、`AcceptAbility` 覆盖、能力数量不变性和快照语义不变。这个修正不把 2.4 勾选完成。
+- 2.4 保持未勾选：真实变化路径分配、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做连续角色评估、多能力绑定、savepoint restore、rollback restore 和 Player 分配采样。

@@ -4643,3 +4643,12 @@
 - Timeline snapshots 是并行任务等待范围，本步未改。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力角色 commit、rollback restore 和角色状态 codec，确认 Abilities 顺序与内容一致；分配采样应观察每次角色快照的 ability List 和只读包装消失，最终 ability 数组和各 AbilityRuntimeState 仍是正式独立分配。
+
+## 2026-09-22 角色 action 快照数组化
+
+对应 tasks.md 的 2.103；2.4 保持未勾选。
+
+- Fixed 和 Float32 `CharacterRuntimeState` 的 `ActionActivationRequests` 与 `ActionInstances` 从 `List` 改为精确数组。构造时复用 2.102 的 `CopyArray` 容量规则；数组是角色提交快照的最终结果，不再保留增长外壳。
+- `FixedCharacterActionRuntimeState`／`Float32CharacterActionRuntimeState` 仍持有事务工作 `List`，继续保持运行期 Set、Clear、AddRange 和事务隔离。Timeline snapshot 保留检查和 `OwnsAction` 只读扫描改用 `Length`，顺序与匹配语义不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行 pending action 提交、替换、rollback restore 和角色状态 codec，确认 action 请求、实例顺序和归属一致；分配采样应观察每次角色快照的两只 action List 消失，最终数组与事务工作 List 仍是正式独立分配。

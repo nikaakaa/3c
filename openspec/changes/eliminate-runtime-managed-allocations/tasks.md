@@ -170,6 +170,7 @@
 - [x] 2.100 Fixed/Float32 ActionWindow 投影去重键改为 declaration identity 加 instance id 的 readonly struct；删除每次投影的插值字符串，保留 Ordinal 去重、候选顺序和 Frame 查询语义
 - [x] 2.101 Fixed/Float32 AbilityRuntimeState 复制 StateValues 按源字典数量一次准备容量，删除事务装配、能力快照和 Clone 的逐步扩容；键校验和隔离语义不变
 - [x] 2.102 Fixed/Float32 CharacterRuntimeState 的 Abilities 快照改为精确数组并使用静态比较器；删除 List 与 ReadOnlyCollection 包装，排序和 Ability partition 校验不变
+- [x] 2.103 Fixed/Float32 CharacterRuntimeState 的 ActionActivationRequests／ActionInstances 快照改为精确数组；删除每次角色提交快照的两只 List，事务工作 List 和只读消费不变
 
 ## 3. Timeline和事件图
 

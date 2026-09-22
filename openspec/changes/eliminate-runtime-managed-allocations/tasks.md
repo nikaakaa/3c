@@ -171,6 +171,7 @@
 - [x] 2.101 Fixed/Float32 AbilityRuntimeState 复制 StateValues 按源字典数量一次准备容量，删除事务装配、能力快照和 Clone 的逐步扩容；键校验和隔离语义不变
 - [x] 2.102 Fixed/Float32 CharacterRuntimeState 的 Abilities 快照改为精确数组并使用静态比较器；删除 List 与 ReadOnlyCollection 包装，排序和 Ability partition 校验不变
 - [x] 2.103 Fixed/Float32 CharacterRuntimeState 的 ActionActivationRequests／ActionInstances 快照改为精确数组；删除每次角色提交快照的两只 List，事务工作 List 和只读消费不变
+- [x] 2.104 Fixed/Float32 CharacterRuntimeState 的 InputRequests 快照改为 Ordinal 排序精确数组；事务 Capture 和 Codec Read 的新建数组由 owned 构造直接接管，删除 Codec 写入的临时 key List，事务字典查找和序列化键序不变
 
 ## 3. Timeline和事件图
 

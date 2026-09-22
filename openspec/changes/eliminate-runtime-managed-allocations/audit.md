@@ -4652,3 +4652,14 @@
 - `FixedCharacterActionRuntimeState`／`Float32CharacterActionRuntimeState` 仍持有事务工作 `List`，继续保持运行期 Set、Clear、AddRange 和事务隔离。Timeline snapshot 保留检查和 `OwnsAction` 只读扫描改用 `Length`，顺序与匹配语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行 pending action 提交、替换、rollback restore 和角色状态 codec，确认 action 请求、实例顺序和归属一致；分配采样应观察每次角色快照的两只 action List 消失，最终数组与事务工作 List 仍是正式独立分配。
+
+## 2026-09-22 角色输入请求快照数组化
+
+对应 tasks.md 的 2.104；2.4 保持未勾选。代码提交为 `075581a75`。
+
+- Fixed 和 Float32 `InputRequestState.Capture` 把事务工作字典复制成精确 `KeyValuePair<string, SimulationInputRequestState>[]`。工作字典继续用于运行期 Get/Set 和事务隔离，不再为提交快照复制整个 Dictionary 外壳。
+- `CharacterRuntimeState.InputRequests` 改为排序 pair 数组。internal owned 构造直接接管事务 Capture 和 Codec Read 的新建数组；普通构造继续独立复制外部输入。数组在这里统一执行 Ordinal 排序，并保留 null、重复和非 canonical 顺序异常。
+- Codec 写入直接按下标写数组长度和 pair 内容，删除每次写入新建 key List、复制 keys 和再排序的路径。读取仍校验数量上限、Ordinal 递增、已知 request identity 和 value 内 RequestId 一致，wire 格式与旧 Ordinal 键序不变。
+- `ReadInputRequests` 内部的 known identity HashSet 仍按每次读取构造，留作同一状态的后续边界。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、固定输入回放和 Player 分配采样。用户可运行角色 commit、rollback restore 和状态 codec，确认 request 写入、恢复和 canonical 字节一致；分配采样应观察每次快照的 Dictionary 复制和 Codec 写入 key List 消失，Capture/Read 的最终 pair 数组与事务工作字典仍是正式独立分配。

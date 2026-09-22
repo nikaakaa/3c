@@ -1,5 +1,6 @@
 ﻿using ThirdPersonSimulation;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
@@ -322,45 +323,58 @@ namespace ThirdPersonSimulation.Fixed
                 if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
                     throw new ArgumentException("Commit batch Step order is invalid.", nameof(ownedSteps));
             }
-            var outputEvents = outputDispositions.Dispositions.Count == 0
-                ? Array.Empty<OutputEventOwner>()
-                : new OutputEventOwner[outputDispositions.Dispositions.Count];
-            int outputEventCount = 0;
-            for (int i = 0; i < stepValues.Length; i++)
+            int expectedEventCount = outputDispositions.Dispositions.Count;
+            OutputEventOwner[] outputEvents = Array.Empty<OutputEventOwner>();
+            bool outputEventsRented = false;
+            try
             {
-                SimulationTickResult result = stepValues[i].Result;
-                for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
+                if (expectedEventCount > 0)
                 {
-                    SimulationActorTickResult actor = result.Actors[actorIndex];
-                    for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
+                    outputEvents = ArrayPool<OutputEventOwner>.Shared.Rent(expectedEventCount);
+                    outputEventsRented = true;
+                }
+                int outputEventCount = 0;
+                for (int i = 0; i < stepValues.Length; i++)
+                {
+                    SimulationTickResult result = stepValues[i].Result;
+                    for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
                     {
-                        if (outputEventCount >= outputEvents.Length)
-                            throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
-                        outputEvents[outputEventCount++] = new OutputEventOwner(
-                            actor.GameplayFacts[eventIndex].Header.EventId,
-                            actor.ActorId);
+                        SimulationActorTickResult actor = result.Actors[actorIndex];
+                        for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
+                        {
+                            if (outputEventCount >= expectedEventCount)
+                                throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
+                            outputEvents[outputEventCount++] = new OutputEventOwner(
+                                actor.GameplayFacts[eventIndex].Header.EventId,
+                                actor.ActorId);
+                        }
+                        for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
+                        {
+                            if (outputEventCount >= expectedEventCount)
+                                throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
+                            outputEvents[outputEventCount++] = new OutputEventOwner(
+                                actor.PresentationCommands[eventIndex].Header.EventId,
+                                actor.ActorId);
+                        }
                     }
-                    for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
+                }
+                if (outputEventCount != expectedEventCount)
+                    throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
+                Array.Sort(outputEvents, 0, expectedEventCount, OutputEventOwnerComparer.Instance);
+                for (int i = 0; i < expectedEventCount; i++)
+                {
+                    if (!outputEvents[i].EventId.Equals(outputDispositions.Dispositions[i].SourceEventId) ||
+                        !outputEvents[i].ActorId.Equals(outputDispositions.Dispositions[i].ActorId) ||
+                        i > 0 && outputEvents[i - 1].EventId.Equals(outputEvents[i].EventId))
                     {
-                        if (outputEventCount >= outputEvents.Length)
-                            throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
-                        outputEvents[outputEventCount++] = new OutputEventOwner(
-                            actor.PresentationCommands[eventIndex].Header.EventId,
-                            actor.ActorId);
+                        throw new ArgumentException("Commit batch contains duplicate or undisposed EventIds.", nameof(outputDispositions));
                     }
                 }
             }
-            if (outputEventCount != outputEvents.Length)
-                throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
-            Array.Sort(outputEvents, (left, right) => left.EventId.CompareTo(right.EventId));
-            for (int i = 0; i < outputEvents.Length; i++)
+            finally
             {
-                if (!outputEvents[i].EventId.Equals(outputDispositions.Dispositions[i].SourceEventId) ||
-                    !outputEvents[i].ActorId.Equals(outputDispositions.Dispositions[i].ActorId) ||
-                    i > 0 && outputEvents[i - 1].EventId.Equals(outputEvents[i].EventId))
-                {
-                    throw new ArgumentException("Commit batch contains duplicate or undisposed EventIds.", nameof(outputDispositions));
-                }
+                if (outputEventsRented)
+                    ArrayPool<OutputEventOwner>.Shared.Return(outputEvents);
             }
             var egressValues = ownedSourceEgress == null || ownedSourceEgress.Length == 0
                 ? Array.Empty<FixedSourceEgressRecord>()
@@ -394,6 +408,14 @@ namespace ThirdPersonSimulation.Fixed
 
             public EventId EventId { get; }
             public ActorId ActorId { get; }
+        }
+
+        sealed class OutputEventOwnerComparer : IComparer<OutputEventOwner>
+        {
+            public static readonly OutputEventOwnerComparer Instance = new OutputEventOwnerComparer();
+
+            public int Compare(OutputEventOwner left, OutputEventOwner right) =>
+                left.EventId.CompareTo(right.EventId);
         }
     }
 

@@ -95,6 +95,7 @@ namespace ThirdPersonSimulation
         readonly IReadOnlySimulationPipelineProductPort<Float32CharacterEvaluationResultBatch> m_CharacterEvaluationResults;
         readonly Float32WorkingStatePort m_WorkingStatePort;
         readonly Float32CompletedStepPort m_CompletedStepPort;
+        Float32PipelineWorkingState m_WorkingStateShell;
 
         public Float32PipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -200,7 +201,11 @@ namespace ThirdPersonSimulation
 
         public Float32PipelineWorkingState CreateWorkingState()
         {
-            return new Float32PipelineWorkingState(m_StateStore.Current);
+            if (m_WorkingStateShell == null)
+                m_WorkingStateShell = new Float32PipelineWorkingState(m_StateStore.Current);
+            else
+                m_WorkingStateShell.Replace(m_StateStore.Current);
+            return m_WorkingStateShell;
         }
 
         public ulong GetLastCompletedTick(Float32PipelineWorkingState workingState)

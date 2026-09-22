@@ -97,6 +97,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlySimulationPipelineProductPort<FixedCharacterEvaluationResultBatch> m_CharacterEvaluationResults;
         readonly FixedWorkingStatePort m_WorkingStatePort;
         readonly FixedCompletedStepPort m_CompletedStepPort;
+        FixedPipelineWorkingState m_WorkingStateShell;
 
         public FixedPipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -202,7 +203,11 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedPipelineWorkingState CreateWorkingState()
         {
-            return new FixedPipelineWorkingState(m_StateStore.Current);
+            if (m_WorkingStateShell == null)
+                m_WorkingStateShell = new FixedPipelineWorkingState(m_StateStore.Current);
+            else
+                m_WorkingStateShell.Replace(m_StateStore.Current);
+            return m_WorkingStateShell;
         }
 
         public ulong GetLastCompletedTick(FixedPipelineWorkingState workingState)

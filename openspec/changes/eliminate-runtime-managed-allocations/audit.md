@@ -5681,3 +5681,13 @@
 - disposition 排序、EventId 覆盖校验、事务身份检查、Publish/Defer/丢弃消费顺序和异常语义不变。数组仍由处置集合独占，product slot 只重置值外壳，不提前复用数组。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 提交回放、Source Egress 发送、rollback restore和 Player 分配采样。
+
+## 2026-09-23 Complete状态Actor数组移交
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `04aab3ff5`。
+
+- Fixed/Float32 `CompleteStep` 原先把排序后的 Actor 结果灌进 `workspace.ActorStates` scratch List，`SimulationWorldStateSet` 再复制一份最终数组并用每次调用的 lambda 重新排序。现在直接构造最终 `SimulationActorState[]`，通过新增 `FromPreparedActors` 移交给 state set；数组继续作为 published/current state 的独立所有权。
+- prepared 入口保留非空 Actor state、非空数量、World body 数量、Numeric Profile、Actor 与 body 顺序以及重复 Actor 检查；普通构造和恢复路径仍先复制、用静态 `ActorStateComparer` 排序后走同一校验。快照捕获改用最终数组，内容与原 List 输入一致。
+- `workspace.ActorStates` 确认无其他消费者后删除；共享 Pipeline 的 `TActorResult` 和 `TActorState` 泛型参数也只服务这条旧 scratch 路径，一并移除。CompleteStep 合同不再接收 workspace，FreezeCommitBatch 仍使用 Egress scratch。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 提交回放、快照恢复、rollback restore和 Player 分配采样。

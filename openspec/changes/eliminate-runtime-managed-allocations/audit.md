@@ -5218,3 +5218,13 @@
 - 真实变化分类的嵌套对象复制和 canonical 语义保持不变。2.4 保持未勾选：change cursor 或生命周期 revision 变化仍需要新 aggregate 外壳，Control、Equipment、CharacterState 和 Timeline snapshot 剩余边界未完成。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做单分类效果变化、ChangeCursor-only、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
+
+## 2026-09-23 Control状态只读视图复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `ba8386fe5`。
+
+- `CharacterControlRuntimeStateTransaction.Capture` 在控制字段未变化时已经复用 committed value 数组，但仍为同一个数组新建 `ReadOnlyCollection` 包装。现在 `CharacterControlRuntimeState` 的内部构造可显式接收只读视图；未变化 Capture 复用 `BaseState.ValuesView`，真实变化 Capture 为新数组创建独立包装。
+- 数组只由 immutable state 内部持有，公开合同仍返回只读视图，不存在外部写入口。Tick 和 StateHash 属于每个 Tick 的正式变化，因此 candidate state 和 hash 仍每 Tick 重建；本步只删除同一数组的重复只读包装。
+- 2.4 保持未勾选：Control candidate 外壳和 hash 计算、changed value 数组、CharacterState 外壳、GE 真实变化嵌套复制和 Timeline snapshot 仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做控制状态先改后恢复、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。

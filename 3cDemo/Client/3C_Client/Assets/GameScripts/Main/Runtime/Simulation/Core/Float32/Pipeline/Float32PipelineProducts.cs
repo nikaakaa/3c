@@ -196,30 +196,9 @@ namespace ThirdPersonSimulation
         public bool IsValid => Step != null && Result != null && State != null;
     }
 
-    public sealed class SimulationPipelineOutputDispositionSet
+    public readonly struct SimulationPipelineOutputDispositionSet
     {
-        readonly IReadOnlyList<SimulationOutputDisposition> m_Dispositions;
-
-        public SimulationPipelineOutputDispositionSet(
-            StableHash transactionIdentity,
-            IReadOnlyList<SimulationOutputDisposition> dispositions)
-        {
-            if (!transactionIdentity.IsValid)
-                throw new ArgumentException("Output disposition transaction identity is invalid.", nameof(transactionIdentity));
-            var values = dispositions == null || dispositions.Count == 0
-                ? Array.Empty<SimulationOutputDisposition>()
-                : new SimulationOutputDisposition[dispositions.Count];
-            for (int i = 0; i < values.Length; i++)
-                values[i] = dispositions[i];
-            Array.Sort(values, DispositionComparer.Instance);
-            for (int i = 1; i < values.Length; i++)
-            {
-                if (values[i - 1].SourceEventId.Equals(values[i].SourceEventId))
-                    throw new ArgumentException("Output disposition set contains duplicate EventId ownership.", nameof(dispositions));
-            }
-            TransactionIdentity = transactionIdentity;
-            m_Dispositions = values;
-        }
+        readonly SimulationOutputDisposition[] m_Dispositions;
 
         public static SimulationPipelineOutputDispositionSet FromOwnedDispositions(
             StableHash transactionIdentity,
@@ -247,6 +226,7 @@ namespace ThirdPersonSimulation
 
         public StableHash TransactionIdentity { get; }
         public IReadOnlyList<SimulationOutputDisposition> Dispositions => m_Dispositions;
+        public bool IsValid => TransactionIdentity.IsValid && m_Dispositions != null;
 
         sealed class DispositionComparer : IComparer<SimulationOutputDisposition>
         {
@@ -356,7 +336,9 @@ namespace ThirdPersonSimulation
         {
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Commit batch transaction identity is invalid.", nameof(transactionIdentity));
-            OutputDispositions = outputDispositions ?? throw new ArgumentNullException(nameof(outputDispositions));
+            OutputDispositions = outputDispositions;
+            if (!outputDispositions.IsValid)
+                throw new ArgumentException("Output disposition set is invalid.", nameof(outputDispositions));
             if (!outputDispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw new ArgumentException("Commit batch and disposition transaction identities do not match.", nameof(outputDispositions));
             if (steps == null)
@@ -433,9 +415,9 @@ namespace ThirdPersonSimulation
 
         public StableHash TransactionIdentity { get; }
         public bool IsValid => TransactionIdentity.IsValid &&
-                               OutputDispositions != null &&
                                m_Steps != null &&
-                               m_SourceEgress != null;
+                               m_SourceEgress != null &&
+                               OutputDispositions.IsValid;
         public IReadOnlyList<Float32CompletedSimulationStep> Steps => m_Steps;
         public SimulationPipelineOutputDispositionSet OutputDispositions { get; }
         public IReadOnlyList<Float32SourceEgressRecord> SourceEgress => m_SourceEgress;

@@ -180,6 +180,33 @@ namespace ThirdPersonSimulation.Fixed
         internal ulong ChangeCursor { get; }
         internal int ActiveEffectCount => m_ActiveEffects.Count;
 
+        internal bool MatchesTagSources(IReadOnlyDictionary<string, string[]> sources)
+        {
+            if (sources == null || m_TagSources.Count != sources.Count)
+                return false;
+            foreach (KeyValuePair<string, string[]> pair in m_TagSources)
+            {
+                if (!sources.TryGetValue(pair.Key, out string[] values) ||
+                    !EqualStrings(pair.Value, values))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool EqualStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left == null || right == null || left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                    return false;
+            }
+            return true;
+        }
+
         internal void CollectActiveEffectIdentities(List<GameplayEffectActiveIdentity> values)
         {
             if (values == null)
@@ -545,7 +572,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (m_TagSources.Remove(source))
                 {
                     m_OwnedTagsSnapshot = null;
-                    m_TagsDirty = true;
+                    RefreshTagsDirty();
                 }
                 return;
             }
@@ -553,7 +580,7 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             m_TagSources[source] = values;
             m_OwnedTagsSnapshot = null;
-            m_TagsDirty = true;
+            RefreshTagsDirty();
         }
 
         public void RemoveTagSource(string sourceId)
@@ -561,7 +588,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_TagSources.Remove(sourceId))
             {
                 m_OwnedTagsSnapshot = null;
-                m_TagsDirty = true;
+                RefreshTagsDirty();
             }
         }
 
@@ -848,6 +875,11 @@ namespace ThirdPersonSimulation.Fixed
             m_JournalDirty = false;
             m_ChangeCursorDirty = false;
             m_RestoredDirty = false;
+        }
+
+        void RefreshTagsDirty()
+        {
+            m_TagsDirty = m_Baseline == null || !m_Baseline.MatchesTagSources(m_TagSources);
         }
 
         Dictionary<string, PortableAttributeBefore> CaptureAttributeBefore()

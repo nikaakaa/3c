@@ -472,11 +472,20 @@ namespace ThirdPersonSimulation.Fixed
                 Clear();
                 return committed;
             }
-            FixedAbilityRuntimeState snapshot = new FixedAbilityRuntimeState(
+            Dictionary<int, AbilityStateValue> stateValues = m_StateValuesChanged
+                ? new Dictionary<int, AbilityStateValue>(m_StateValues)
+                : m_CommittedState.StateValues;
+            Dictionary<int, FixedMotionWarpState> motionWarpStates = m_MotionWarpStatesChanged
+                ? new Dictionary<int, FixedMotionWarpState>(m_MotionWarpStates)
+                : m_CommittedState.MotionWarpStates;
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = m_AbilityExecutionStateChanged
+                ? m_AbilityExecutionState.Clone()
+                : m_CommittedState.AbilityExecutionState;
+            FixedAbilityRuntimeState snapshot = FixedAbilityRuntimeState.Adopt(
                 m_Identity,
-                m_StateValues,
-                m_AbilityExecutionState,
-                m_MotionWarpStates);
+                stateValues,
+                abilityExecutionState,
+                motionWarpStates);
             m_CommittedState = snapshot;
             m_AbilityExecutionState = snapshot.AbilityExecutionState;
             m_Disposed = true;

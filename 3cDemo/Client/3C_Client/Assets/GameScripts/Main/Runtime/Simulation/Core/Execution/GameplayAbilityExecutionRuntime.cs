@@ -158,13 +158,19 @@ namespace ThirdPersonSimulation
         }
 
         public GameplayAbilityExecutionFrame<TValue> Clone() =>
-            new GameplayAbilityExecutionFrame<TValue>(
-                SkillId,
-                EntryOperation,
-                ActionInstanceId,
-                PredictionKey,
-                Generation,
-                m_Values);
+            new GameplayAbilityExecutionFrame<TValue>(this);
+
+        GameplayAbilityExecutionFrame(GameplayAbilityExecutionFrame<TValue> source)
+        {
+            SkillId = source.SkillId;
+            EntryOperation = source.EntryOperation;
+            ActionInstanceId = source.ActionInstanceId;
+            PredictionKey = source.PredictionKey;
+            Generation = source.Generation;
+            m_Values = new SortedDictionary<int, TValue>();
+            foreach (KeyValuePair<int, TValue> value in source.m_Values)
+                m_Values.Add(value.Key, value.Value);
+        }
 
         public bool Equals(GameplayAbilityExecutionFrame<TValue> other)
         {

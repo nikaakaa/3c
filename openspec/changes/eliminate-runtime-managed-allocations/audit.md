@@ -4969,3 +4969,13 @@
 - committed aggregate 和 working baseline 共享同一个不可变 aggregate 引用；其集合没有公开修改入口。pending 集合仍由 Actor working page 独有，后续变化只通过新 `Freeze`/`Commit` 产生新 committed aggregate。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做效果提交、savepoint restore、rollback restore、状态 Codec 恢复和 Player 分配采样。2.4 仍未完成：Equipment aggregate 变更、事务最终数组和其他嵌套快照所有权仍在后续小步处理。
+
+## 2026-09-23 角色状态空数组统一
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `dd11fa5e6`。
+
+- Fixed 和 Float32 `CharacterRuntimeState.CopyArray` 对 null 或 `ICollection<T>.Count == 0` 的输入复用 `Array.Empty<T>`，abilities、activation request 和 action instance 不再为空集合每次快照创建零长数组。
+- InputRequest 事务 Capture 和 Character Runtime State Codec 读取在 Count 为 0 时同样复用 `Array.Empty`；wire 中写入和读取的数量、非空数组的 Ordinal 排序、身份校验和独立所有权不变。
+- 非空 abilities、actions、activation request 和 InputRequest 仍创建独立最终数组；rollback 历史、状态 Codec 结果和事务 pending 存储不会共享可变数组。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做空/非空角色状态保存恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：非空最终数组、Equipment aggregate 变更和 Timeline snapshot 外壳所有权仍在后续小步处理。

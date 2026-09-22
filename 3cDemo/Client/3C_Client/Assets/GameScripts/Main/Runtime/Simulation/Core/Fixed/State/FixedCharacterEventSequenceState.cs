@@ -7,9 +7,16 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_EventSequence;
         bool m_Disposed;
 
-        public FixedCharacterEventSequenceState(ulong eventSequence)
+        public FixedCharacterEventSequenceState()
+        {
+
+        }
+
+        public FixedCharacterEventSequenceState Restart(ulong eventSequence)
         {
             m_EventSequence = eventSequence;
+            m_Disposed = false;
+            return this;
         }
 
         public ulong NextEventSequence()

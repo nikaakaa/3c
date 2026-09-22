@@ -7,9 +7,16 @@ namespace ThirdPersonSimulation
         ulong m_EventSequence;
         bool m_Disposed;
 
-        public Float32CharacterEventSequenceState(ulong eventSequence)
+        public Float32CharacterEventSequenceState()
+        {
+
+        }
+
+        public Float32CharacterEventSequenceState Restart(ulong eventSequence)
         {
             m_EventSequence = eventSequence;
+            m_Disposed = false;
+            return this;
         }
 
         public ulong NextEventSequence()

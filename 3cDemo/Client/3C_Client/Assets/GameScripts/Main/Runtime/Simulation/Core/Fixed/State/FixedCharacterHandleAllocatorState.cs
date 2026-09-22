@@ -7,9 +7,16 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_HandleAllocator;
         bool m_Disposed;
 
-        public FixedCharacterHandleAllocatorState(ulong handleAllocator)
+        public FixedCharacterHandleAllocatorState()
+        {
+
+        }
+
+        public FixedCharacterHandleAllocatorState Restart(ulong handleAllocator)
         {
             m_HandleAllocator = handleAllocator;
+            m_Disposed = false;
+            return this;
         }
 
         public ulong NextHandleAllocator()

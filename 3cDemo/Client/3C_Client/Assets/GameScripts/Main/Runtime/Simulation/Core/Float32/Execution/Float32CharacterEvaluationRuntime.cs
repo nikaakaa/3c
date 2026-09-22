@@ -40,7 +40,9 @@ namespace ThirdPersonSimulation
                 effectCatalog,
                 actor.InputRequestState,
                 actor.ActionState,
-                actor.ControlState);
+                actor.ControlState,
+                actor.EventSequenceState,
+                actor.HandleAllocatorState);
             Float32AbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;

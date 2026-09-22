@@ -72,6 +72,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterInputRequestState m_InputRequestState = new FixedCharacterInputRequestState();
         readonly FixedCharacterActionRuntimeState m_ActionState = new FixedCharacterActionRuntimeState();
         readonly CharacterControlRuntimeStateTransaction m_ControlState = new CharacterControlRuntimeStateTransaction();
+        readonly FixedCharacterEventSequenceState m_EventSequenceState = new FixedCharacterEventSequenceState();
+        readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState = new FixedCharacterHandleAllocatorState();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -173,6 +175,8 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterInputRequestState InputRequestState => m_InputRequestState;
         internal FixedCharacterActionRuntimeState ActionState => m_ActionState;
         internal CharacterControlRuntimeStateTransaction ControlState => m_ControlState;
+        internal FixedCharacterEventSequenceState EventSequenceState => m_EventSequenceState;
+        internal FixedCharacterHandleAllocatorState HandleAllocatorState => m_HandleAllocatorState;
 
         internal void ClearActionRuntimes()
         {

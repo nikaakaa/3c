@@ -69,7 +69,9 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32CharacterInputRequestState inputRequestState,
             Float32CharacterActionRuntimeState actionState,
-            CharacterControlRuntimeStateTransaction controlState)
+            CharacterControlRuntimeStateTransaction controlState,
+            Float32CharacterEventSequenceState eventSequenceState,
+            Float32CharacterHandleAllocatorState handleAllocatorState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -88,8 +90,8 @@ namespace ThirdPersonSimulation
                 baseState.ActionInstances,
                 baseState.ActionEventSequence);
             m_InputRequestState = inputRequestState.Restart(m_Tick, baseState.InputRequests);
-            m_EventSequenceState = new Float32CharacterEventSequenceState(baseState.EventSequence);
-            m_HandleAllocatorState = new Float32CharacterHandleAllocatorState(baseState.HandleAllocator);
+            m_EventSequenceState = eventSequenceState.Restart(baseState.EventSequence);
+            m_HandleAllocatorState = handleAllocatorState.Restart(baseState.HandleAllocator);
             m_GameplayEffectState = new Float32CharacterGameplayEffectRuntimeState(
                 m_TickRate,
                 gameplayEffectCatalog,

@@ -7,9 +7,16 @@ namespace ThirdPersonSimulation
         ulong m_HandleAllocator;
         bool m_Disposed;
 
-        public Float32CharacterHandleAllocatorState(ulong handleAllocator)
+        public Float32CharacterHandleAllocatorState()
+        {
+
+        }
+
+        public Float32CharacterHandleAllocatorState Restart(ulong handleAllocator)
         {
             m_HandleAllocator = handleAllocator;
+            m_Disposed = false;
+            return this;
         }
 
         public ulong NextHandleAllocator()

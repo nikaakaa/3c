@@ -85,7 +85,11 @@ namespace GameLogic.ProductResource
         private readonly int _downloadConcurrency;
         private readonly int _retryCount;
         private readonly long _diskSafetyMarginBytes;
+        private readonly ResourceDownloaderOperation.DownloadUpdate _downloadUpdateCallback;
+        private readonly ResourceDownloaderOperation.DownloadFileBegin _downloadFileBeginCallback;
+        private readonly ResourceDownloaderOperation.DownloadError _downloadErrorCallback;
         private GameplayDownloadPlan _currentPlan;
+        private GameplayDownloadPlan _activeDownloadPlan;
         private int _generation;
 
         private readonly IProductTagDownloadService _tagDownloadService;
@@ -109,6 +113,9 @@ namespace GameLogic.ProductResource
             _downloadConcurrency = profile.DownloadMaxConcurrency;
             _retryCount = profile.DownloadRetryCount;
             _diskSafetyMarginBytes = profile.DiskSafetyMarginBytes;
+            _downloadUpdateCallback = OnDownloadUpdate;
+            _downloadFileBeginCallback = OnDownloadFileBegin;
+            _downloadErrorCallback = OnDownloadError;
             Current = new GameplayDownloadSnapshot(0, GameplayDownloadState.None, 0, 0, 0, 0, 0, 0, string.Empty, string.Empty);
         }
 
@@ -161,38 +168,10 @@ namespace GameLogic.ProductResource
                 return;
             }
 
-            downloader.DownloadUpdateCallback = data =>
-            {
-                if (plan.Generation == _generation)
-                {
-                    Current = new GameplayDownloadSnapshot(
-                        plan.Generation,
-                        GameplayDownloadState.Downloading,
-                        data.TotalDownloadCount,
-                        data.CurrentDownloadCount,
-                        data.TotalDownloadBytes,
-                        data.CurrentDownloadBytes,
-                        plan.RequiredDiskBytes,
-                        plan.AvailableDiskBytes,
-                        Current.CurrentFile,
-                        string.Empty);
-                    Changed?.Invoke(Current);
-                }
-            };
-            downloader.DownloadFileBeginCallback = data =>
-            {
-                if (plan.Generation == _generation)
-                {
-                    Publish(GameplayDownloadState.Downloading, data.FileName, string.Empty);
-                }
-            };
-            downloader.DownloadErrorCallback = data =>
-            {
-                if (plan.Generation == _generation)
-                {
-                    Publish(GameplayDownloadState.Failed, data.FileName, data.ErrorInfo);
-                }
-            };
+            _activeDownloadPlan = plan;
+            downloader.DownloadUpdateCallback = _downloadUpdateCallback;
+            downloader.DownloadFileBeginCallback = _downloadFileBeginCallback;
+            downloader.DownloadErrorCallback = _downloadErrorCallback;
 
             Publish(GameplayDownloadState.Downloading, string.Empty, string.Empty);
             downloader.BeginDownload();
@@ -206,7 +185,16 @@ namespace GameLogic.ProductResource
                 {
                     CancelCurrentGeneration();
                 }
+
                 throw;
+            }
+
+            finally
+            {
+                if (ReferenceEquals(_activeDownloadPlan, plan))
+                {
+                    _activeDownloadPlan = null;
+                }
             }
 
             if (plan.Generation != _generation)
@@ -265,6 +253,47 @@ namespace GameLogic.ProductResource
                     currentFile,
                     safeError);
             Changed?.Invoke(Current);
+        }
+
+        private void OnDownloadUpdate(DownloadUpdateData data)
+        {
+            if (_activeDownloadPlan == null || _activeDownloadPlan.Generation != _generation)
+            {
+                return;
+            }
+
+            Current = new GameplayDownloadSnapshot(
+                _activeDownloadPlan.Generation,
+                GameplayDownloadState.Downloading,
+                data.TotalDownloadCount,
+                data.CurrentDownloadCount,
+                data.TotalDownloadBytes,
+                data.CurrentDownloadBytes,
+                _activeDownloadPlan.RequiredDiskBytes,
+                _activeDownloadPlan.AvailableDiskBytes,
+                Current.CurrentFile,
+                string.Empty);
+            Changed?.Invoke(Current);
+        }
+
+        private void OnDownloadFileBegin(DownloadFileData data)
+        {
+            if (_activeDownloadPlan == null || _activeDownloadPlan.Generation != _generation)
+            {
+                return;
+            }
+
+            Publish(GameplayDownloadState.Downloading, data.FileName, string.Empty);
+        }
+
+        private void OnDownloadError(DownloadErrorData data)
+        {
+            if (_activeDownloadPlan == null || _activeDownloadPlan.Generation != _generation)
+            {
+                return;
+            }
+
+            Publish(GameplayDownloadState.Failed, data.FileName, data.ErrorInfo);
         }
     }
 }

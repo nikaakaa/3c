@@ -652,7 +652,7 @@ namespace ThirdPersonSimulation
         void Reset();
     }
 
-    internal sealed class SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressScratch>
+    internal sealed class SessionExecutionWorkspace<TCompletedStep, TEgressScratch>
     {
         readonly object m_Gate = new object();
         bool m_InUse;
@@ -660,8 +660,6 @@ namespace ThirdPersonSimulation
 
         public ExecutionWorkspaceBuffer<TCompletedStep> CompletedSteps { get; } =
             new ExecutionWorkspaceBuffer<TCompletedStep>();
-        public ExecutionWorkspaceBuffer<TActorState> ActorStates { get; } =
-            new ExecutionWorkspaceBuffer<TActorState>();
         public ExecutionWorkspaceBuffer<TEgressScratch> Egress { get; } =
             new ExecutionWorkspaceBuffer<TEgressScratch>();
 
@@ -699,7 +697,6 @@ namespace ThirdPersonSimulation
         void Reset()
         {
             CompletedSteps.Clear();
-            ActorStates.Clear();
             Egress.Clear();
         }
     }

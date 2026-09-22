@@ -12,8 +12,6 @@ namespace ThirdPersonSimulation
         TStep,
         TWorkingState,
         TCompletedStep,
-        TActorResult,
-        TActorState,
         TEgressRecord,
         TCommitBatch>
         where TStep : SimulationPipelineStep
@@ -25,12 +23,10 @@ namespace ThirdPersonSimulation
             TStep,
             TWorkingState,
             TCompletedStep,
-            TActorResult,
-            TActorState,
             TEgressRecord,
             TCommitBatch> m_Target;
-        readonly SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> m_Workspace =
-            new SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord>();
+        readonly SessionExecutionWorkspace<TCompletedStep, TEgressRecord> m_Workspace =
+            new SessionExecutionWorkspace<TCompletedStep, TEgressRecord>();
         readonly Dictionary<SimulationPipelinePassId, PassProductTrace> m_PassProductTraces =
             new Dictionary<SimulationPipelinePassId, PassProductTrace>();
 
@@ -40,8 +36,6 @@ namespace ThirdPersonSimulation
                 TStep,
                 TWorkingState,
                 TCompletedStep,
-                TActorResult,
-                TActorState,
                 TEgressRecord,
                 TCommitBatch> target)
         {
@@ -159,8 +153,7 @@ namespace ThirdPersonSimulation
                         executionPlan,
                         step,
                         finalizedStart,
-                        working,
-                        m_Workspace);
+                        working);
                     SimulationPipelineStateSnapshot pipelineProjection = m_Target.GetPipelineProjection(completedStep);
                     if (pipelineProjection != null)
                     {

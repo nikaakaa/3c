@@ -152,8 +152,6 @@ namespace ThirdPersonSimulation
         TStep,
         TWorkingState,
         TCompletedStep,
-        TActorResult,
-        TActorState,
         TEgressRecord,
         TCommitBatch>
         where TStep : SimulationPipelineStep
@@ -187,14 +185,13 @@ namespace ThirdPersonSimulation
             SimulationSessionExecutionPlan<TStep> executionPlan,
             TStep step,
             int finalizedStart,
-            TWorkingState workingState,
-            SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> workspace);
+            TWorkingState workingState);
         SimulationPipelineStateSnapshot GetPipelineProjection(TCompletedStep completedStep);
         void ApplyCompletedStep(TWorkingState workingState, TCompletedStep completedStep);
         TCommitBatch FreezeCommitBatch(
             StableHash transactionIdentity,
             ExecutionWorkspaceBuffer<TCompletedStep> completedSteps,
-            SessionExecutionWorkspace<TCompletedStep, TActorState, TEgressRecord> workspace);
+            SessionExecutionWorkspace<TCompletedStep, TEgressRecord> workspace);
         void PublishWorkingState(TWorkingState workingState);
         void CompleteStatePublish(TWorkingState workingState);
         void RestoreSolverBaseline();

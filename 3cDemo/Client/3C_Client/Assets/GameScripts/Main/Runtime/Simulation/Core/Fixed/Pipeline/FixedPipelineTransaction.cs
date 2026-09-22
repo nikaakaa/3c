@@ -13,8 +13,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationStep,
             FixedPipelineWorkingState,
             FixedCompletedSimulationStep,
-            SimulationActorTickResult,
-            SimulationActorState,
             FixedSourceEgressRecord,
             FixedSimulationCommitBatch> m_Coordinator;
 
@@ -57,8 +55,6 @@ namespace ThirdPersonSimulation.Fixed
                 FixedSimulationStep,
                 FixedPipelineWorkingState,
                 FixedCompletedSimulationStep,
-                SimulationActorTickResult,
-                SimulationActorState,
                 FixedSourceEgressRecord,
                 FixedSimulationCommitBatch>(services, m_Target);
         }
@@ -79,8 +75,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationStep,
             FixedPipelineWorkingState,
             FixedCompletedSimulationStep,
-            SimulationActorTickResult,
-            SimulationActorState,
             FixedSourceEgressRecord,
             FixedSimulationCommitBatch>
     {
@@ -338,11 +332,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationSessionExecutionPlan<FixedSimulationStep> executionPlan,
             FixedSimulationStep step,
             int finalizedStart,
-            FixedPipelineWorkingState workingState,
-            SessionExecutionWorkspace<
-                FixedCompletedSimulationStep,
-                SimulationActorState,
-                FixedSourceEgressRecord> workspace)
+            FixedPipelineWorkingState workingState)
         {
             _ = workingState;
             FixedAppendProductSlot<SimulationActorTickResult> finalized = GetFinalizedSlot();
@@ -368,12 +358,13 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationPipelineProducts.WorldSolveBatchResult)
                 .Read();
             ValidateWorldResult(worldResult, step.Tick);
-            ExecutionWorkspaceBuffer<SimulationActorState> nextActors = workspace.ActorStates;
-            nextActors.Clear();
-            nextActors.EnsureCapacity(actorResults.Length);
+            var nextActors = new SimulationActorState[actorResults.Length];
             for (int i = 0; i < actorResults.Length; i++)
-                nextActors.Add(new SimulationActorState(actorResults[i].ActorId, actorResults[i].State));
-            var candidateState = new SimulationWorldStateSet(step.Tick.Value, nextActors, worldResult.NextWorldState);
+                nextActors[i] = new SimulationActorState(actorResults[i].ActorId, actorResults[i].State);
+            var candidateState = SimulationWorldStateSet.FromPreparedActors(
+                step.Tick.Value,
+                nextActors,
+                worldResult.NextWorldState);
             bool capture = (executionPlan.Requirements &
                 (SimulationSessionPlanRequirement.Snapshot | SimulationSessionPlanRequirement.StateHash)) != 0;
             SimulationPipelineStateSnapshot pipelineSnapshot = capture
@@ -420,7 +411,6 @@ namespace ThirdPersonSimulation.Fixed
             ExecutionWorkspaceBuffer<FixedCompletedSimulationStep> completedSteps,
             SessionExecutionWorkspace<
                 FixedCompletedSimulationStep,
-                SimulationActorState,
                 FixedSourceEgressRecord> workspace)
         {
             SimulationPipelineOutputDispositionSet dispositions = m_Products

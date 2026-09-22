@@ -267,24 +267,63 @@ namespace ThirdPersonSimulation.Fixed
                 if (copied[i].State == null)
                     throw new ArgumentException("Simulation state Actor roster contains a null entry.", nameof(actors));
             }
-            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Length == 0 || copied.Length != worldState.Bodies.Count)
-                throw new ArgumentException("Simulation state Actor and World body rosters must be non-empty and equal.", nameof(actors));
-            for (int i = 0; i < copied.Length; i++)
-            {
-                if (copied[i].State.NumericProfile != worldState.NumericProfile ||
-                    copied[i].ActorId != worldState.Bodies[i].ActorId ||
-                    i > 0 && copied[i - 1].ActorId == copied[i].ActorId)
-                {
-                    throw new ArgumentException("Simulation state Actor and World body rosters must share one stable ActorId order.", nameof(actors));
-                }
-            }
+            Array.Sort(copied, ActorStateComparer.Instance);
+            ValidatePrepared(copied, worldState);
             m_Actors = copied;
+        }
+
+        internal static SimulationWorldStateSet FromPreparedActors(
+            ulong lastCompletedTick,
+            SimulationActorState[] actors,
+            WorldSimulationState worldState)
+        {
+            if (actors == null)
+                throw new ArgumentNullException(nameof(actors));
+            ValidatePrepared(actors, worldState);
+            return new SimulationWorldStateSet(lastCompletedTick, actors, worldState);
+        }
+
+        SimulationWorldStateSet(ulong lastCompletedTick, SimulationActorState[] actors, WorldSimulationState worldState)
+        {
+            LastCompletedTick = lastCompletedTick;
+            WorldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
+            m_Actors = actors;
         }
 
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<SimulationActorState> Actors => m_Actors;
         public WorldSimulationState WorldState { get; }
+
+        static void ValidatePrepared(
+            SimulationActorState[] actors,
+            WorldSimulationState worldState)
+        {
+            if (actors.Length == 0 || actors.Length != worldState.Bodies.Count)
+                throw new ArgumentException("Simulation state Actor and World body rosters must be non-empty and equal.", nameof(actors));
+            for (int i = 0; i < actors.Length; i++)
+            {
+                if (actors[i].State == null)
+                    throw new ArgumentException("Simulation state Actor roster contains a null entry.", nameof(actors));
+                if (actors[i].State.NumericProfile != worldState.NumericProfile ||
+                    actors[i].ActorId != worldState.Bodies[i].ActorId ||
+                    i > 0 && actors[i - 1].ActorId == actors[i].ActorId)
+                {
+                    throw new ArgumentException("Simulation state Actor and World body rosters must share one stable ActorId order.", nameof(actors));
+                }
+            }
+        }
+
+        sealed class ActorStateComparer : IComparer<SimulationActorState>
+        {
+            public static readonly ActorStateComparer Instance = new ActorStateComparer();
+
+            ActorStateComparer() { }
+
+            public int Compare(SimulationActorState left, SimulationActorState right)
+            {
+                return left.ActorId.CompareTo(right.ActorId);
+            }
+        }
     }
 
     public sealed class SimulationWorldStateStore

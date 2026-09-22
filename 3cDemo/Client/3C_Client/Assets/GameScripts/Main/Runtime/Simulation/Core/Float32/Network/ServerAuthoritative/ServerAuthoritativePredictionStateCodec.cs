@@ -338,7 +338,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var participants = new SimulationPipelinePassStateSnapshot[count];
             for (int i = 0; i < count; i++)
             {
-                participants[i] = new SimulationPipelinePassStateSnapshot(
+                participants[i] = SimulationPipelinePassStateSnapshot.FromWirePayload(
                     new SimulationPipelinePassId(reader.ReadString()),
                     new SimulationPipelinePassImplementationVersion(reader.ReadString()),
                     reader.ReadString(),

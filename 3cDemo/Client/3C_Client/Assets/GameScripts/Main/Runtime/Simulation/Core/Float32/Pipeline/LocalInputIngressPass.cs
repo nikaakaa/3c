@@ -85,13 +85,12 @@ namespace ThirdPersonSimulation
         {
             RequireCaptureOrRestore();
             byte[] payload = RequireSource().CaptureState();
-            return new SimulationPipelinePassStateSnapshot(
+            return SimulationPipelinePassStateSnapshot.FromOwnedPayload(
                 Descriptor.PassId,
                 Descriptor.ImplementationVersion,
                 StateIdentity.StateOwner,
                 StateIdentity.StateSchemaId,
                 StateIdentity.StateSchemaVersion,
-                SimulationCanonicalPayloadHash.Compute(payload),
                 payload);
         }
 

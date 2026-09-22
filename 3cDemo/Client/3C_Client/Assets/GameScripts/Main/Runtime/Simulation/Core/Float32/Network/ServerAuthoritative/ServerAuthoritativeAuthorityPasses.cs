@@ -310,13 +310,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             RequireCaptureOrRestore();
             byte[] payload = Capture();
-            return new SimulationPipelinePassStateSnapshot(
+            return SimulationPipelinePassStateSnapshot.FromOwnedPayload(
                 Descriptor.PassId,
                 Descriptor.ImplementationVersion,
                 StateIdentity.StateOwner,
                 StateIdentity.StateSchemaId,
                 StateIdentity.StateSchemaVersion,
-                SimulationCanonicalPayloadHash.Compute(payload),
                 payload);
         }
 
@@ -729,13 +728,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             RequireCaptureOrRestore();
             byte[] payload = Capture();
-            return new SimulationPipelinePassStateSnapshot(
+            return SimulationPipelinePassStateSnapshot.FromOwnedPayload(
                 Descriptor.PassId,
                 Descriptor.ImplementationVersion,
                 StateIdentity.StateOwner,
                 StateIdentity.StateSchemaId,
                 StateIdentity.StateSchemaVersion,
-                SimulationCanonicalPayloadHash.Compute(payload),
                 payload);
         }
 

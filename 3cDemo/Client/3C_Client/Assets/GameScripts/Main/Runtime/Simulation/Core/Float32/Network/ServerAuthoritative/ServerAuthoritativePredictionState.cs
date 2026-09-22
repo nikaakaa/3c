@@ -359,13 +359,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (schemaVersion <= 0)
                 throw new ArgumentOutOfRangeException(nameof(schemaVersion));
-            return new SimulationPipelinePassStateSnapshot(
+            return SimulationPipelinePassStateSnapshot.FromOwnedPayload(
                 passId,
                 new SimulationPipelinePassImplementationVersion(ServerAuthoritativePredictionPassIds.ImplementationVersion),
                 stateOwner,
                 schema,
                 schemaVersion,
-                SimulationCanonicalPayloadHash.Compute(payload),
                 payload);
         }
     }

@@ -166,7 +166,7 @@ namespace ThirdPersonSimulation.Fixed
                 int schemaVersion = reader.ReadInt32();
                 var stateHash = new StableHash(reader.ReadString());
                 byte[] payload = reader.ReadBytes();
-                participants.Add(new SimulationPipelinePassStateSnapshot(
+                participants.Add(SimulationPipelinePassStateSnapshot.FromWirePayload(
                     passId,
                     implementationVersion,
                     stateOwner,

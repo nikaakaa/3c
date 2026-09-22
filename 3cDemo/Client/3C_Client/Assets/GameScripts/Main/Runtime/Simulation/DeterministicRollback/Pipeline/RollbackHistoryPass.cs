@@ -76,13 +76,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             RequireCaptureOrRestore();
             byte[] payload = m_State.CaptureSimulationProjection();
-            return new SimulationPipelinePassStateSnapshot(
+            return SimulationPipelinePassStateSnapshot.FromOwnedPayload(
                 StateIdentity.PassId,
                 StateIdentity.ImplementationVersion,
                 StateIdentity.StateOwner,
                 StateIdentity.StateSchemaId,
                 StateIdentity.StateSchemaVersion,
-                SimulationCanonicalPayloadHash.Compute(payload),
                 payload);
         }
 

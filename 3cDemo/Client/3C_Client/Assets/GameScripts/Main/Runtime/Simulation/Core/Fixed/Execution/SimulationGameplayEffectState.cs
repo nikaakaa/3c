@@ -728,7 +728,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 Handle = source.Handle,
                 InstanceId = source.InstanceId,
-                Spec = CloneSpec(source.Spec),
+                Spec = source.Spec,
                 StartTick = source.StartTick,
                 EndTick = source.EndTick,
                 InsertionSequence = source.InsertionSequence,
@@ -737,28 +737,6 @@ namespace ThirdPersonSimulation.Fixed
                 LifecycleRevision = source.LifecycleRevision
             };
         }
-
-        static PortableEffectSpecState CloneSpec(PortableEffectSpecState source)
-        {
-            if (source == null)
-                return null;
-            var result = new PortableEffectSpecState
-            {
-                Definition = source.Definition,
-                Context = source.Context,
-                SourceTags = SharedTags(source.SourceTags),
-                TargetTags = SharedTags(source.TargetTags),
-                DurationTicks = source.DurationTicks,
-                PeriodTicks = source.PeriodTicks
-            };
-            Copy(source.SetByCaller, result.SetByCaller);
-            Copy(source.SourceAttributes, result.SourceAttributes);
-            Copy(source.TargetAttributes, result.TargetAttributes);
-            return result;
-        }
-
-        static string[] SharedTags(string[] tags) =>
-            tags == null || tags.Length == 0 ? Array.Empty<string>() : tags;
 
         static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneJournal(
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source)
@@ -806,7 +784,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             var result = new PortablePredictionRecord
             {
-                Spec = CloneSpec(source.Spec),
+                Spec = source.Spec,
                 Handle = source.Handle,
                 InstanceId = source.InstanceId,
                 CreatedActive = source.CreatedActive,
@@ -844,12 +822,6 @@ namespace ThirdPersonSimulation.Fixed
             tags.CopyTo(result);
             Array.Sort(result, StringComparer.Ordinal);
             return result;
-        }
-
-        static void Copy<TKey, TValue>(SortedDictionary<TKey, TValue> source, IDictionary<TKey, TValue> destination)
-        {
-            foreach (KeyValuePair<TKey, TValue> pair in source)
-                destination.Add(pair.Key, pair.Value);
         }
 
         static void Copy<T>(IReadOnlyList<T> source, IList<T> destination)

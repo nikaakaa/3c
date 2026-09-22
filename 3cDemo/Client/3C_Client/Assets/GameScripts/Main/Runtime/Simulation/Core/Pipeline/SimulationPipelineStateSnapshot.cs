@@ -687,7 +687,7 @@ namespace ThirdPersonSimulation
             {
                 throw Failure("pipeline_state_snapshot_version_mismatch", expected.PassId, "Pipeline state snapshot participant version or schema does not match.");
             }
-            StableHash payloadHash = SimulationCanonicalPayloadHash.Compute(snapshot.CopyPayload());
+            StableHash payloadHash = SimulationCanonicalPayloadHash.Compute(snapshot.Payload.Span);
             if (!payloadHash.Equals(snapshot.StateHash))
                 throw Failure("pipeline_state_snapshot_payload_hash_mismatch", expected.PassId, "Pipeline state snapshot payload hash does not match canonical bytes.");
         }

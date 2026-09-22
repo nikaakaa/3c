@@ -5448,3 +5448,13 @@
 - 2.4 保持未勾选：Ability 变化路径仍需新页、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Action 激活、实例容量替换、pending 清除、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Equipment本地状态去排序复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `49af0d994`。
+
+- 两数值域共用的 `EquipmentStateAggregate.WithLocalState` 原先把已 canonical 排序的本地状态交给 `OrderBy`，比较时拼接 `FeatureId/StateId` 字符串；即使值相同也会产生枚举、委托和结果数组，真实变化还会继续构造新 aggregate。现在直接扫描源数组的唯一身份，值相同返回原 aggregate，真实变化只分配精确长度的本地状态副本。
+- 源数组在构造时已按本地状态身份排序，替换同位置元素不会破坏顺序。slot 数组、pending 与 resolved 记录继续共享，值相同、缺失、值类型变化和 aggregate 不变量保持原语义。
+- CharacterState candidate 外壳暂不原地复用：发布后的 state 会被 `SimulationActorTickResult` 和历史持有，直接改壳会污染旧 tick。该边界需要独立所有权方案。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment local state 写入、pending 变更、savepoint restore、rollback restore 和 Player 分配采样。

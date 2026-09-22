@@ -193,19 +193,19 @@ namespace ThirdPersonSimulation.Fixed
             ulong changeCursor)
         {
             SortedDictionary<string, string[]> changedTags = tagsChanged
-                ? CloneTagSources(tagSources)
+                ? CloneChangedTagSources(tagSources, m_TagSources)
                 : m_TagSources;
             SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
                 ? CloneChangedAttributes(attributes, m_Attributes)
                 : m_Attributes;
             List<PortableActiveEffectState> changedActiveEffects = activeEffectsChanged
-                ? CloneActiveEffects(activeEffects)
+                ? CloneChangedActiveEffects(activeEffects, m_ActiveEffects)
                 : m_ActiveEffects;
             SortedDictionary<ulong, ulong> changedPeriods = periodsChanged
                 ? CloneMap(periods)
                 : m_Periods;
             SortedDictionary<ulong, List<PortablePredictionRecord>> changedJournal = journalChanged
-                ? CloneJournal(journal)
+                ? CloneChangedJournal(journal, m_Journal)
                 : m_Journal;
             SortedDictionary<ulong, ulong> changedRevisions = lastLifecycleRevisionsChanged
                 ? CloneMap(lastLifecycleRevisions)
@@ -592,6 +592,22 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
+        static SortedDictionary<string, string[]> CloneChangedTagSources(
+            IReadOnlyDictionary<string, string[]> source,
+            IReadOnlyDictionary<string, string[]> baseline)
+        {
+            var result = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string[]> pair in source)
+            {
+                if (baseline.TryGetValue(pair.Key, out string[] baselineValue) &&
+                    EqualStrings(pair.Value, baselineValue))
+                    result.Add(pair.Key, baselineValue);
+                else
+                    result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+            }
+            return result;
+        }
+
         static SortedDictionary<string, PortableAttributeState> CloneChangedAttributes(
             IReadOnlyDictionary<string, PortableAttributeState> source,
             IReadOnlyDictionary<string, PortableAttributeState> baseline)
@@ -650,6 +666,32 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
+        static List<PortableActiveEffectState> CloneChangedActiveEffects(
+            IReadOnlyList<PortableActiveEffectState> source,
+            IReadOnlyList<PortableActiveEffectState> baseline)
+        {
+            var result = new List<PortableActiveEffectState>(source?.Count ?? 0);
+            if (source == null)
+                return result;
+            for (int i = 0; i < source.Count; i++)
+                result.Add(FindMatchingActive(baseline, source[i]) ?? CloneActive(source[i]));
+            return result;
+        }
+
+        static PortableActiveEffectState FindMatchingActive(
+            IReadOnlyList<PortableActiveEffectState> baseline,
+            PortableActiveEffectState source)
+        {
+            for (int i = 0; i < baseline.Count; i++)
+            {
+                if (baseline[i].Handle == source.Handle &&
+                    baseline[i].InstanceId == source.InstanceId &&
+                    MatchesActiveEffect(baseline[i], source))
+                    return baseline[i];
+            }
+            return null;
+        }
+
         static PortableActiveEffectState CloneActive(PortableActiveEffectState source)
         {
             return new PortableActiveEffectState
@@ -696,6 +738,32 @@ namespace ThirdPersonSimulation.Fixed
                 var records = new List<PortablePredictionRecord>(pair.Value.Count);
                 for (int i = 0; i < pair.Value.Count; i++)
                     records.Add(ClonePrediction(pair.Value[i]));
+                result.Add(pair.Key, records);
+            }
+            return result;
+        }
+
+        static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneChangedJournal(
+            IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source,
+            IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> baseline)
+        {
+            var result = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
+            foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
+            {
+                if (!baseline.TryGetValue(pair.Key, out List<PortablePredictionRecord> baselineRecords) ||
+                    pair.Value.Count != baselineRecords.Count)
+                {
+                    var changedRecords = new List<PortablePredictionRecord>(pair.Value.Count);
+                    for (int i = 0; i < pair.Value.Count; i++)
+                        changedRecords.Add(ClonePrediction(pair.Value[i]));
+                    result.Add(pair.Key, changedRecords);
+                    continue;
+                }
+                var records = new List<PortablePredictionRecord>(pair.Value.Count);
+                for (int i = 0; i < pair.Value.Count; i++)
+                    records.Add(MatchesRecord(pair.Value[i], baselineRecords[i])
+                        ? baselineRecords[i]
+                        : ClonePrediction(pair.Value[i]));
                 result.Add(pair.Key, records);
             }
             return result;

@@ -4470,3 +4470,14 @@
 - payload hash、`StateHash`、payload 字段顺序和 mismatch 的 `ArgumentException` 语义不变。decode 侧仍拒绝 wire hash 与 canonical payload 不一致的数据；owned capture 的 hash 来自本次移交的 owned bytes。
 - `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint、Authority checkpoint 和 Prediction history checkpoint，确认 hash 一致、坏 payload 仍失败；分配采样应观察 capture 和 restore-plan 路径的重复 payload SHA-256 计算消失，但不表示 SHA/hash 字符串已消除。
+
+## 2026-09-22 Pipeline snapshot participant 数组 owned state 收口
+
+对应 tasks.md 的 5.5，新增 5.270 作为独立小步；5.5 保持未勾选。代码提交为 `c7e7220d4`。
+
+- `SimulationPipelineStateSnapshot` 删除 `IReadOnlyList<SimulationPipelinePassStateSnapshot>` public 构造器和 `CopyParticipants`，新增 `FromOwnedParticipants` 直接移交 participant 精确数组；构造器仍原地排序并校验重复。调用方不再保留或改写该数组。
+- Pipeline `Capture` 和 `CaptureStepProjection` 本就生成精确 snapshots 数组，现改为 `FromOwnedParticipants`，删除构造期的数组复制。
+- Fixed/Float32 Session Snapshot decode 从 `List<...>` 改为按 wire count 生成精确 participant 数组，删除 List 外壳和构造器二次复制。ServerAuthoritative Prediction History decode 与 Prediction restore merge 本就准备精确数组，现也统一走 owned 入口。
+- participant 排序顺序、PassId 重复检查、空 roster 拒绝和 `SnapshotHash` 内容不变。participant 对象及其 owned payload 的所有权不变。
+- `ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint 和 ServerAuthoritative Prediction history checkpoint，再触发 Prediction restore，确认 pipeline SnapshotHash 与状态一致；分配采样应观察 decode 的 List 外壳和 participant 数组复制消失。

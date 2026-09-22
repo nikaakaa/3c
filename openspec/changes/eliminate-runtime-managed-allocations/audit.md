@@ -5548,3 +5548,13 @@
 - 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 prediction journal 写入、confirmed 更新、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE相同属性映射复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `cfc859e89`。
+
+- Fixed/Float32 GE 变更快照在 `attributesChanged` 时原先总是新建 `SortedDictionary<string, PortableAttributeState>`，即使全部属性的数量、键、基础值、当前值、revision 和 modifiers 都恢复为 baseline。现在先用既有 `MatchesAttribute` 比较全部项，全部相同直接复用 baseline 映射。
+- 任一属性不同或缺键时继续新建容器；匹配 baseline 的属性继续复用 baseline 对象，变化属性继续完整克隆。排序、revision、属性变更输出、保存点和回滚语义不变。
+- 2.4 保持未勾选：active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做属性修改、modifier 添加移除、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

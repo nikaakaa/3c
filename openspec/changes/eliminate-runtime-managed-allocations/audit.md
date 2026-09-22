@@ -4334,3 +4334,14 @@
 - `ThirdPersonSimulation.ServerAuthoritative.Transport.csproj` 与 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
 - Unity MCP 只确认目标实例 `e852139597e42532` 在线、非 Play、非编译状态；当前会话没有可调用的 `refresh_unity` 或 `read_console` 工具，因此未触发刷新、未读取 Console，也不声称 U2022 Domain Reload 后无错误。未做网络联调和 Player 分配采样。
 - 用户可在非 Play 状态刷新后验证 Delta Snapshot 仍能完成 Prediction 重建，重点覆盖同一 route 连续多个 delta、ack 后再发和 full checkpoint 回退。分配采样应观察发送链的 `WriteDelta` 后 SnapshotDatagram 复制消失；接收解码精确副本和 reconstruction 副本仍是正式所有权，不属于本步删除目标。
+
+## 2026-09-22 NetworkCheckpoint 发送状态 span 收口
+
+对应 tasks.md 的 5.5，新增 5.257 作为独立小步；5.5 保持未勾选。
+
+- `NetworkCheckpoint` 新增内部 `StateSpan`，直接读取自身 owned 状态 buffer。`WriteFull` 编码 full checkpoint 时不再克隆整份 state bytes；`WriteDelta` 读取 target 状态和比较 baseline/target 状态一致性也改用只读 span。
+- `Equal` 改为 `ReadOnlySpan<byte>.SequenceEqual`，删除旧数组比较入口。序列化字段顺序、delta 判定规则、checkpoint hash、full/delta wire 格式和 full checkpoint 回退语义不变。
+- `StateBytes` 克隆合同暂时保留给 `NetworkCheckpointLayout.Require` 和 delta 重建路径，因为 `Float32CharacterRuntimeStateCodec.Read` 仍要求 `byte[]`；本步不宣称 checkpoint 校验已零复制，也不改变构造、接收解码和 checkpoint reconstruction 的独立所有权。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- Unity MCP 资源只确认目标实例 `e852139597e42532` 在线且非 Play、非编译状态；当前会话仍没有可调用的 `refresh_unity` 或 `read_console` 工具，因此未刷新 U2022、未读取 Console，也不声称 Domain Reload 后无错误。未做网络联调和 Player 分配采样。
+- 用户可在非 Play 状态刷新后验证 full checkpoint、连续 delta、状态变化/未变化两种 delta、ack 后淘汰和 full checkpoint 回退。分配采样应观察 `WriteFull`／`WriteDelta` 发送编码侧 state bytes 克隆消失，但 `layout.Require` 校验克隆、接收解码副本和 checkpoint reconstruction 副本仍属正式后续边界。

@@ -5458,3 +5458,13 @@
 - CharacterState candidate 外壳暂不原地复用：发布后的 state 会被 `SimulationActorTickResult` 和历史持有，直接改壳会污染旧 tick。该边界需要独立所有权方案。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment local state 写入、pending 变更、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Control候选状态值化
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `7d47dea43`。
+
+- 共用 `CharacterControlRuntimeState` 从 `sealed class` 改为 `readonly struct`，删除 Fixed/Float32 Control 事务每次 `Capture` 的 candidate 托管壳。未变化路径继续复用 base 值数组，只推进 Tick 并计算新 hash；真实变化路径仍精确复制一次值数组。
+- 缺失 Control 状态改为 `default`，新增 `IsValid` 合同并替换事务和角色状态 codec 的旧 null 判断。wire 里仍保留原有布尔存在位；schema、值数量、值类型、hash、Restore 身份检查和固定长度 canonical 编码不变。
+- 2.4 保持未勾选：Control pending 页每次 Restart 仍复制 base values，hash 输出、GE/Equipment 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Control 输入回放、保存/加载 canonical 对比、savepoint restore、rollback restore 和 Player 分配采样。

@@ -5289,6 +5289,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做多能力 changed path 回放、Action/Input changed path 回放、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 Equipment提交原子候选
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `6065f91fb`。
+
+- `EquipmentRuntimeControl.Commit` 原先调用 `WithSlot(incoming).ResolvePending(...)`：第一步创建保留 pending 的中间 aggregate 和 slot 只读包装，第二步再创建最终 candidate，中间对象立刻丢弃。现在 `EquipmentStateAggregate.WithSlotAndResolvedPending` 一次生成最终 candidate，直接替换目标槽位、清空 pending 并写入 resolved 记录。
+- 新入口要求 active pending 存在、incoming slot 与 pending 的 slot 一致且槽位存在；这些校验由原两段链路的正式语义合并而来。`WithSlot` 和 `ResolvePending` 仍服务各自独立变更入口，local states、其他槽位和原 aggregate 引用继续复用。
+- 2.4 保持未勾选：Equipment slot 变更自身的数组/包装分配、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Equipment 安装/卸载提交回放、pending cancel 路径、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

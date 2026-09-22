@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using GameLogic.ProductDiagnostics;
 
 namespace GameLogic.ProductResource
 {
@@ -9,6 +10,7 @@ namespace GameLogic.ProductResource
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly CancellationTokenSource _lifetimeCancellation;
         private int _leaseCount;
+        private ResourceScopeSnapshot _snapshot;
 
         internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name, CancellationToken runtimeCancellation)
         {
@@ -33,6 +35,16 @@ namespace GameLogic.ProductResource
         internal CancellationToken LifetimeToken => _lifetimeCancellation.Token;
 
         public int LeaseCount => _leaseCount;
+
+        internal ResourceScopeSnapshot GetSnapshot()
+        {
+            if (_snapshot == null || _snapshot.State != State || _snapshot.LeaseCount != _leaseCount)
+            {
+                _snapshot = new ResourceScopeSnapshot(Id, Kind, Name, State, _leaseCount);
+            }
+
+            return _snapshot;
+        }
 
         public void Dispose()
         {

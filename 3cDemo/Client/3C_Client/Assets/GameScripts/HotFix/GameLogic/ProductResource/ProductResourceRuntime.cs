@@ -494,7 +494,7 @@ namespace GameLogic.ProductResource
             int scopeIndex = 0;
             foreach (ResourceScope scope in _scopes.Values)
             {
-                scopeSnapshots[scopeIndex++] = new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount);
+                scopeSnapshots[scopeIndex++] = scope.GetSnapshot();
             }
             Array.Sort(scopeSnapshots, ScopeSnapshotSort.Instance);
 

@@ -5279,6 +5279,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做多效果叠加/抑制/过期、预测加入/确认/拒绝、tag source 先改后恢复、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 角色状态数组转换去枚举
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `e760e430a`。
+
+- Fixed/Float32 Character transaction 的 changed path 原先用 `ToArray(IReadOnlyCollection<T>)` 复制 ability map、activation requests 和 action instances。Dictionary `ValueCollection` 和 `List` 经接口枚举时可能装箱枚举器。现在 ability map 用具体 `Dictionary` 的 struct enumerator 直接填充精确长度数组；Action 列表改为 `IReadOnlyList<T>` 的 `Count` 加索引复制。
+- 只调整复制机制，不改变最终数组语义：未变化分类继续复用 BaseState 数组；变化分类仍创建精确长度、candidate 独立持有的最终数组。`Snapshot` 内部数组的排序、去重和 Ordinal 校验不变。
+- 2.4 保持未勾选：CharacterState candidate 外壳、Control/GE/Equipment changed path 的真实变化分配、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做多能力 changed path 回放、Action/Input changed path 回放、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

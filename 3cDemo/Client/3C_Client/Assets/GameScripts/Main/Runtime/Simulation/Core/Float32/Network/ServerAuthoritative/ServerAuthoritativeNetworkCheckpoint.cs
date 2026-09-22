@@ -143,19 +143,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             CheckpointHash = ComputeHash(baseline, m_StateBytes);
         }
 
-        internal NetworkCheckpoint(AuthoritativeActorBaseline baseline, byte[] stateBytes)
-        {
-            if (!baseline.IsValid)
-                throw new ArgumentOutOfRangeException(nameof(baseline));
-            Baseline = baseline;
-            if (stateBytes == null || stateBytes.Length == 0)
-                throw new ArgumentException("Network checkpoint Character state is missing.", nameof(stateBytes));
-            m_StateBytes = (byte[])stateBytes.Clone();
-            CheckpointHash = ComputeHash(baseline, m_StateBytes);
-        }
-
         public AuthoritativeActorBaseline Baseline { get; }
-        internal byte[] StateBytes => (byte[])m_StateBytes.Clone();
         internal ReadOnlySpan<byte> StateSpan => m_StateBytes;
         internal ReadOnlyMemory<byte> StateMemory => m_StateBytes;
         public StableHash CheckpointHash { get; }
@@ -260,7 +248,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 inputSequence,
                 horizon,
                 stateBytes);
-            var checkpoint = new NetworkCheckpoint(baseline, stateBytes);
+            var checkpoint = new NetworkCheckpoint(baseline);
             if (!checkpoint.CheckpointHash.Equals(expectedCheckpointHash))
                 throw new InvalidDataException("Full Network Checkpoint hash is invalid.");
             return checkpoint;
@@ -356,7 +344,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 confirmedInputSequence,
                 horizon,
                 stateBytes);
-            var checkpoint = new NetworkCheckpoint(rebuilt, stateBytes);
+            var checkpoint = new NetworkCheckpoint(rebuilt);
             if (!checkpoint.CheckpointHash.Equals(expectedCheckpointHash))
                 throw new InvalidDataException("Delta Network Checkpoint hash is invalid.");
             return checkpoint;

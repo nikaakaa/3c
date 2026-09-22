@@ -30,7 +30,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static byte[] WriteOwnerInput(OwnerCanonicalInputBatch input)
         {
-            if (input == null)
+            if (!input.IsValid)
                 throw new ArgumentNullException(nameof(input));
             using var writer = new CanonicalWriter();
             WriteOwnerInput(writer, input);

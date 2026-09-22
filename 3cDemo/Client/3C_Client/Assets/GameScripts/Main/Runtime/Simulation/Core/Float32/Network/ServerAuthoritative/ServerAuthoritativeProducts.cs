@@ -112,7 +112,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
     }
 
-    public sealed class OwnerCanonicalInputBatch
+    public readonly struct OwnerCanonicalInputBatch
     {
         public OwnerCanonicalInputBatch(ActorId actorId, ulong sourceTick, ulong inputSequence, SimulationInput input)
         {
@@ -130,6 +130,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong SourceTick { get; }
         public ulong InputSequence { get; }
         public SimulationInput Input { get; }
+        public bool IsValid => ActorId.IsValid && SourceTick != 0 && InputSequence != 0 && Input != null;
     }
 
     public readonly struct ServerAuthoritativeEventHorizon

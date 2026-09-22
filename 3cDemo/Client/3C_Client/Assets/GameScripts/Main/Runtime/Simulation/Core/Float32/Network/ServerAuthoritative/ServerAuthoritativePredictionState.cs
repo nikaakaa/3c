@@ -52,12 +52,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ObservedWorldConstraintFrame observedWorldConstraints,
             ulong journalCursor)
         {
-            Input = input ?? throw new ArgumentNullException(nameof(input));
-            if (!compositionIdentity.IsValid || world == null || pipelineProjection == null || observedWorldConstraints == null ||
+            if (!input.IsValid || !compositionIdentity.IsValid || world == null || pipelineProjection == null || observedWorldConstraints == null ||
                 world.Tick.Value != pipelineProjection.LastCompletedTick || world.Tick.Value == 0)
             {
                 throw new ArgumentException("Prediction history record identity is incomplete.");
             }
+            Input = input;
             if (world.Actors.Count != 1 || world.Actors[0].ActorId != input.ActorId)
                 throw new ArgumentException("Prediction history record must contain the exact owner Actor.");
             if (observedWorldConstraints.Tick != world.Tick)

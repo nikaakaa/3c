@@ -4958,3 +4958,14 @@
 - 本步删除的是六类中转容器，不消除嵌套独立对象本身；`Freeze` 变化路径仍创建新 aggregate，working page 的 pending/committed 独立所有权保持。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Gameplay Effect 标签/属性/Active 回放、savepoint restore、rollback restore、状态 Codec 恢复和 Player 分配采样。
+
+## 2026-09-23 Gameplay Effect提交基线复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `0f98bea03`。
+
+- Fixed 和 Float32 `SimulationGameplayEffectState` 增加最终提交语义：`Commit` 先沿用原 `Freeze` 规则生成 committed aggregate，再把它固定为 working page baseline 并清除全部脏标记。角色事务 Snapshot 改用 `Commit`。
+- savepoint 仍走原 `Capture`，只冻结当前 aggregate，不改变 baseline 和脏标记；savepoint Restore、Release、异常 Abort 和无效果角色路径不变。
+- 下一事务 Restart 时，如果传入 committed aggregate 正是 working page 的干净 baseline，直接复用当前 pending 集合，不再调用 `Restore` 整份深拷贝。committed 引用不同、有脏状态或无 working page 时继续完整 Restore。
+- committed aggregate 和 working baseline 共享同一个不可变 aggregate 引用；其集合没有公开修改入口。pending 集合仍由 Actor working page 独有，后续变化只通过新 `Freeze`/`Commit` 产生新 committed aggregate。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做效果提交、savepoint restore、rollback restore、状态 Codec 恢复和 Player 分配采样。2.4 仍未完成：Equipment aggregate 变更、事务最终数组和其他嵌套快照所有权仍在后续小步处理。

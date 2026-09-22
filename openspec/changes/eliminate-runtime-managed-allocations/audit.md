@@ -4150,3 +4150,11 @@
 - 构造合同不变：source 身份完整、输入非空、Actor 排序去重、输入归属同一 source、`Source` 和 `Inputs` 输出不变。排序 lambda 改为 static lambda，避免每次构造重新创建 delegate。新增 `IsValid` 只表达 default struct 和构造失败状态；Frame 和 Schedule 仍显式拒绝不完整 batch。
 - Fixed／Float32 Exclusive Product Slot 的空值判断改为只对引用类型产品拒绝 null，值类型产品按自身构造校验负责；这是支持值产品的正式合同，不是兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。全项目搜索确认 Canonical batch 无 Core 外调用方。Unity Editor 已按用户授权再次刷新，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 ServerAuthoritative owner input batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.236 作为独立小步；5.5 保持未勾选。
+
+- `OwnerCanonicalInputBatch` 从 sealed class 改为 readonly struct。Prediction ingress、schedule rebind、completed-step 读取、history record、canonical restore 和 egress 编解码之间按值传递，删除每个 owner input tick 和恢复读取的 batch 外壳对象。
+- 构造合同不变：ActorId、source tick、input sequence 和 `SimulationInput` 必须完整且元数据一致。新增 `IsValid` 只表达 default struct 的不可能消费状态；History record、History capture 和 Egress 编解码仍显式拒绝不完整 batch。
+- 该类型只被 ServerAuthoritative 预测链路和 Float32 Exclusive Product Slot 消费；搜索确认没有其它调用方。`ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样。

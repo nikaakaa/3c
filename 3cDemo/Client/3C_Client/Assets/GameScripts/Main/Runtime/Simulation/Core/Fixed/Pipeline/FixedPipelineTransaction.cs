@@ -429,10 +429,10 @@ namespace ThirdPersonSimulation.Fixed
                 .Read();
             if (!dispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw Failure("output_disposition_transaction_mismatch", "OutputDispositionSet belongs to another outer transaction.", SimulationSessionFailureStage.Egress);
-            FixedSourceEgressRecord[] sourceEgress = ReadSourceEgress(workspace.Egress);
+            IReadOnlyList<FixedSourceEgressRecord> sourceEgress = ReadSourceEgress(workspace.Egress);
             return new FixedSimulationCommitBatch(
                 transactionIdentity,
-                completedSteps.ToArray(),
+                completedSteps,
                 dispositions,
                 sourceEgress);
         }
@@ -532,7 +532,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationPipelineProducts.FinalizedStepResult);
         }
 
-        FixedSourceEgressRecord[] ReadSourceEgress(
+        IReadOnlyList<FixedSourceEgressRecord> ReadSourceEgress(
             ExecutionWorkspaceBuffer<FixedSourceEgressRecord> values)
         {
             values.Clear();
@@ -540,12 +540,12 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationPipelineProducts.SourceEgress,
                     out FixedAppendProductSlot<FixedSourceEgressRecord> slot))
             {
-                return values.ToArray();
+                return values;
             }
             values.EnsureCapacity(slot.Count);
             for (int i = 0; i < slot.Count; i++)
                 values.Add(slot.Get(i).Value);
-            return values.ToArray();
+            return values;
         }
 
         static SimulationSessionCompositionException Failure(

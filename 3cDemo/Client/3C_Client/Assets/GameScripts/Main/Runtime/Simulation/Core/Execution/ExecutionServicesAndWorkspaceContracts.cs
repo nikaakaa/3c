@@ -602,15 +602,6 @@ namespace ThirdPersonSimulation
 
         public void Clear() => m_Values.Clear();
 
-        internal T[] ToArray()
-        {
-            if (m_Values.Count == 0)
-                return Array.Empty<T>();
-            var values = new T[m_Values.Count];
-            m_Values.CopyTo(values);
-            return values;
-        }
-
         public IEnumerator<T> GetEnumerator() => m_Values.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => m_Values.GetEnumerator();
 

@@ -349,22 +349,21 @@ namespace ThirdPersonSimulation
 
         public Float32SimulationCommitBatch(
             StableHash transactionIdentity,
-            Float32CompletedSimulationStep[] ownedSteps,
+            IReadOnlyList<Float32CompletedSimulationStep> steps,
             SimulationPipelineOutputDispositionSet outputDispositions,
-            Float32SourceEgressRecord[] ownedSourceEgress)
+            IReadOnlyList<Float32SourceEgressRecord> sourceEgress)
         {
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Commit batch transaction identity is invalid.", nameof(transactionIdentity));
             OutputDispositions = outputDispositions ?? throw new ArgumentNullException(nameof(outputDispositions));
             if (!outputDispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw new ArgumentException("Commit batch and disposition transaction identities do not match.", nameof(outputDispositions));
-            var stepValues = ownedSteps == null || ownedSteps.Length == 0
-                ? Array.Empty<Float32CompletedSimulationStep>()
-                : ownedSteps;
-            for (int i = 0; i < stepValues.Length; i++)
+            if (steps == null)
+                throw new ArgumentNullException(nameof(steps));
+            for (int i = 0; i < steps.Count; i++)
             {
-                if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
-                    throw new ArgumentException("Commit batch Step order is invalid.", nameof(ownedSteps));
+                if (steps[i] == null || i > 0 && steps[i - 1].Step.Tick.CompareTo(steps[i].Step.Tick) >= 0)
+                    throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
             }
             int expectedEventCount = outputDispositions.Dispositions.Count;
             OutputEventOwner[] outputEvents = Array.Empty<OutputEventOwner>();
@@ -377,9 +376,9 @@ namespace ThirdPersonSimulation
                     outputEventsRented = true;
                 }
                 int outputEventCount = 0;
-                for (int i = 0; i < stepValues.Length; i++)
+                for (int i = 0; i < steps.Count; i++)
                 {
-                    SimulationTickResult result = stepValues[i].Result;
+                    SimulationTickResult result = steps[i].Result;
                     for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
                     {
                         SimulationActorTickResult actor = result.Actors[actorIndex];
@@ -419,17 +418,16 @@ namespace ThirdPersonSimulation
                 if (outputEventsRented)
                     ArrayPool<OutputEventOwner>.Shared.Return(outputEvents);
             }
-            var egressValues = ownedSourceEgress == null || ownedSourceEgress.Length == 0
-                ? Array.Empty<Float32SourceEgressRecord>()
-                : ownedSourceEgress;
-            for (int i = 0; i < egressValues.Length; i++)
+            if (sourceEgress == null)
+                throw new ArgumentNullException(nameof(sourceEgress));
+            for (int i = 0; i < sourceEgress.Count; i++)
             {
-                if (egressValues[i] == null)
-                    throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(ownedSourceEgress));
+                if (sourceEgress[i] == null)
+                    throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(sourceEgress));
             }
             TransactionIdentity = transactionIdentity;
-            m_Steps = stepValues;
-            m_SourceEgress = egressValues;
+            m_Steps = steps;
+            m_SourceEgress = sourceEgress;
         }
 
         public StableHash TransactionIdentity { get; }

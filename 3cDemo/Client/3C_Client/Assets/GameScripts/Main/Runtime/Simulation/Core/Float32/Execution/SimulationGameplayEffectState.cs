@@ -195,7 +195,7 @@ namespace ThirdPersonSimulation
                 ? CloneTagSources(tagSources)
                 : m_TagSources;
             SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
-                ? CloneAttributes(attributes)
+                ? CloneChangedAttributes(attributes, m_Attributes)
                 : m_Attributes;
             List<PortableActiveEffectState> changedActiveEffects = activeEffectsChanged
                 ? CloneActiveEffects(activeEffects)
@@ -588,6 +588,22 @@ namespace ThirdPersonSimulation
                 return result;
             foreach (KeyValuePair<string, PortableAttributeState> pair in source)
                 result.Add(pair.Key, CloneAttribute(pair.Value));
+            return result;
+        }
+
+        static SortedDictionary<string, PortableAttributeState> CloneChangedAttributes(
+            IReadOnlyDictionary<string, PortableAttributeState> source,
+            IReadOnlyDictionary<string, PortableAttributeState> baseline)
+        {
+            var result = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, PortableAttributeState> pair in source)
+            {
+                if (baseline.TryGetValue(pair.Key, out PortableAttributeState baselineValue) &&
+                    MatchesAttribute(pair.Value, baselineValue))
+                    result.Add(pair.Key, baselineValue);
+                else
+                    result.Add(pair.Key, CloneAttribute(pair.Value));
+            }
             return result;
         }
 

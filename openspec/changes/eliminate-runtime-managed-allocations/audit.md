@@ -4409,3 +4409,14 @@
 - wire magic、版本、字段顺序、长度前缀、hash 内容、canonical 判定和 `InvalidDataException` 语义不变。`Write` 返回的 byte 数组仍是发送和 checkpoint 保存的正式 owned 输出；快照内 actor state、world state、actor 数组和 SHA/hash 字符串分配仍保留。
 - `ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Prediction history checkpoint 保存/读取、Authority correction restore replay 后的世界 hash 与状态一致；分配采样应观察 decode canonical 校验的完整临时编码数组消失，但不表示 snapshot 保存或 hash 计算全链零分配。
+
+## 2026-09-22 World Snapshot 嵌套写入流式化
+
+对应 tasks.md 的 5.5，新增 5.264 作为独立小步；5.5 保持未勾选。代码提交为 `e210e8442`。
+
+- Fixed 与 Float32 `SimulationWorldSnapshotCodec` 统一暴露 `WriteLengthPrefixed`：先写入外层长度前缀，再把 magic、版本、世界 hash 和正式 hash payload 直接写进调用方 canonical writer，结束时回填长度。
+- `FixedSimulationSessionSnapshotCodec.Write`、`Float32SimulationSessionSnapshotCodec.Write` 和 `ServerAuthoritativePredictionStateCodec.WriteHistory` 改用该合同。原来的“内层 `Write` 先生成完整 byte[]，外层 `WriteBytes` 再复制”的中转删除；每个 Session snapshot 或 History record 保存少一份世界快照数组分配。
+- Fixed `SimulationWorldSnapshotCodec.Read` 同步采用线程生命周期 hash/canonical writer，Read 不再通过旧 `Write` 生成完整 canonical 数组比较。无调用方的旧 `Write` 入口在两数值域删除，不保留兼容壳。
+- wire 长度前缀、magic、版本、字段顺序、世界 hash、canonical 判定和 `InvalidDataException` 语义不变。Read 仍为 actor state 和 world state 复制正式 owned 数组；外层 checkpoint 输出数组、外层 writer 扩容和 SHA/hash 字符串保留。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 rollback/session checkpoint 保存读取、ServerAuthoritative Prediction history checkpoint 保存读取和 restore replay 后世界状态一致；分配采样应观察嵌套世界快照数组中转消失，但不表示外层 checkpoint 输出已零分配。

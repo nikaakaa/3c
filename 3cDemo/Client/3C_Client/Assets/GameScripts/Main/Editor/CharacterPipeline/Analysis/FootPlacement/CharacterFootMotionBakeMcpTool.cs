@@ -91,11 +91,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             clipSourcePath,
                             ".anim",
                             "Source AnimationClip");
-                        CharacterAnimationClipAuthoringService.ReplaceSource(
+                        CharacterFootMotionBakePlan plan =
+                            CharacterFootMotionBakeService.ReplaceSource(
+                            source,
                             clipSource,
                             target,
                             normalizeRootTranslation);
-                        CharacterFootMotionBakePlan plan = CharacterFootMotionBakeService.Analyze(source, target);
                         return Success(plan, false, includeSamples);
                     }
                     default:

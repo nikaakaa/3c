@@ -71,7 +71,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void ReplaceSource(
             AnimationClip source,
             AnimationClip target,
-            bool normalizeRootTranslation)
+            bool normalizeRootTranslation) =>
+            ReplaceSource(source, target, normalizeRootTranslation, null);
+
+        internal static void ReplaceSource(
+            AnimationClip source,
+            AnimationClip target,
+            bool normalizeRootTranslation,
+            Action validate)
         {
             if (!source || !target || source == target)
                 throw new ArgumentException("Animation source replacement requires different source and target Clips.");
@@ -116,6 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterAnimationClipRegisteredCurveCatalog.Replace(target, pair.Key, pair.Value);
                 EditorUtility.SetDirty(target);
                 AssetDatabase.SaveAssetIfDirty(target);
+                validate?.Invoke();
             }
             catch
             {
@@ -137,9 +145,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < bindings.Length; i++)
             {
                 EditorCurveBinding binding = bindings[i];
-                bool rootBone = string.Equals(binding.path, "Bip001", StringComparison.Ordinal) &&
-                                (string.Equals(binding.propertyName, "m_LocalPosition.x", StringComparison.Ordinal) ||
-                                 string.Equals(binding.propertyName, "m_LocalPosition.z", StringComparison.Ordinal));
+                bool rootBone =
+                    (string.Equals(binding.path, "Bip001", StringComparison.Ordinal) ||
+                     string.Equals(binding.path, "Root", StringComparison.Ordinal)) &&
+                    (string.Equals(binding.propertyName, "m_LocalPosition.x", StringComparison.Ordinal) ||
+                     string.Equals(binding.propertyName, "m_LocalPosition.z", StringComparison.Ordinal));
                 bool animatorRoot = string.IsNullOrEmpty(binding.path) &&
                                     (string.Equals(binding.propertyName, "RootT.x", StringComparison.Ordinal) ||
                                      string.Equals(binding.propertyName, "RootT.z", StringComparison.Ordinal));

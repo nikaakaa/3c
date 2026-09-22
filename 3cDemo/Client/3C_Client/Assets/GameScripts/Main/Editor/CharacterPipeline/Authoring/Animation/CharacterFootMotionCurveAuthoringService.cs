@@ -395,6 +395,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public static class CharacterFootMotionBakeService
     {
+        public static CharacterFootMotionBakePlan ReplaceSource(
+            CharacterFootPlacementAnalysisSource source,
+            AnimationClip sourceClip,
+            AnimationClip targetClip,
+            bool normalizeRootTranslation)
+        {
+            RequireInput(source, targetClip);
+            if (!sourceClip)
+                throw new ArgumentNullException(nameof(sourceClip));
+            CharacterFootMotionBakePlan plan = null;
+            CharacterAnimationClipAuthoringService.ReplaceSource(
+                sourceClip,
+                targetClip,
+                normalizeRootTranslation,
+                () => plan = Analyze(source, targetClip));
+            return plan;
+        }
+
         public static CharacterFootMotionBakePlan Analyze(
             CharacterFootPlacementAnalysisSource source,
             AnimationClip targetClip)

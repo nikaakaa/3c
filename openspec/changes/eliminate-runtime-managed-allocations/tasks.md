@@ -583,6 +583,7 @@
 - [x] 6.20 ResourceScope 删除重复租约 HashSet 和关停复制 buffer，保留精确计数并由 runtime 中央 `_leases` 表唯一承载所有权；关闭按中央表逐个释放
 - [x] 6.21 资源 PreparedTags 快照在集合新增时构建一次 Ordinal 精确数组；后续每次 PublishSnapshot 共享不可变结果，删除重复复制和排序
 - [x] 6.22 ResourceScope 自持不可变 ResourceScopeSnapshot；identity/kind/name 不变，仅 State 或 LeaseCount 变化时重建，PublishSnapshot 未变化 scope 共享旧对象
+- [x] 6.23 资源 PublishSnapshot 复用最近 scope 快照数组；scope 数量与全部 State/LeaseCount 不变时新旧快照共享数组，任一变化才重建排序数组
 
 ## 7. 诊断与正式性能交付
 

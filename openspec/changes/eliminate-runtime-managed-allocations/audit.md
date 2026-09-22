@@ -4716,3 +4716,13 @@
 - 旧历史快照继续引用旧 scope snapshot；scope 缓存替换不影响已发布数据。调用方只能读取 `IReadOnlyList`，不能改写缓存或数组内容。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
 - Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。外层 scope 数组、lease record、cancellation source、UniTaskCompletionSource 和字符串分配仍是 6.2 后续边界。
+
+## 2026-09-22 资源 scope 快照数组复用
+
+对应 tasks.md 的 6.23；6.2 保持未勾选。代码提交为 `474fd7a29`。
+
+- `PublishSnapshot` 原先每次新建 `ResourceScopeSnapshot[]`。现在 runtime 记录最近一次发布数组，先逐个比较各 scope 的缓存快照引用；scope 数量相同且所有 `State`／`LeaseCount` 都未变化时，直接把同一数组交给新 `ResourceRuntimeSnapshot`。
+- scope 新增、删除或任一 scope 快照变化时才创建精确长度数组、按 Id 排序并替换最近数组。维护、标签新增、池指标变化等没有 scope 变化的事件不再分配 scope 数组。
+- 数组仍只以 `IReadOnlyList<ResourceScopeSnapshot>` 公开；runtime 不会在已发布后原地修改内容。旧历史快照引用旧数组，scope 变化后的新数组与历史隔离，排序规则仍为 `Id` 升序。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
+- Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。`ResourceRuntimeSnapshot` 本体、lease record、cancellation source、UniTaskCompletionSource 和字符串分配仍是 6.2 后续边界。

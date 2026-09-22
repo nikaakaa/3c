@@ -2,7 +2,7 @@
 
 本设计承接`proposal.md`和五组delta spec。当前Corin的上游资料包含外部ZZZ Dump索引（工作区可见`Tools/Rendering/CorinRenderData/整理数据.json`及其Dump输出引用）、Unity正式作者资产、Gameplay Graph artifact、领域／表现binding和Fixed Input／Runtime Dump。它们目前可以单独存在，但不能用同一身份证明“这次Replay确实运行了这批配置”。
 
-Corin正式根是`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。现有BTSMTL Graph、领域／表现准备和3C Development Center已经分别拥有正式产物入口、固定输入Trace与Replay Gate；本设计只增加它们之间的身份和串行Gate，不新增编译器、Replay执行器或第二份运行时配置。
+Corin正式根是`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。现有BTSMTL Graph、领域／表现准备和3C Development Center已经分别拥有正式产物入口、固定输入Trace与Replay Gate；本设计增加它们之间的身份和串行Gate，并补齐显式ACL构建发布与Timeline动作样本进入Pose Source的唯一正式链，不新增整角色编译器、Replay执行器或第二份运行时配置。
 
 ## Goals / Non-Goals
 
@@ -17,6 +17,7 @@ Corin正式根是`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharac
 - 让作者闭包、Graph artifact、领域／表现binding、Session、Runtime Dump和Replay使用同一组Definition／Session／Trace身份。
 - 让失败停在明确Gate，禁止旧产物、其他worktree或目录扫描补齐缺失配置。
 - 使用现有3C Development Center的change、RunHost、fixed input trace、replay和compare流程，保存前后证据。
+- 保留通用动画框架的`NativeClip`与ACL双后端能力，同时让Corin所有正式Locomotion和Action资源在同一闭包中只使用ACL。
 
 **Non-Goals:**
 
@@ -24,7 +25,7 @@ Corin正式根是`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharac
 - 不把Runtime Dump转成作者配置，不让Graph artifact或领域／表现binding反向修改Definition。
 - 不建立Agent Document、同步包或第二套作者协议；作者创建与导出继续使用现行C# authoring入口。
 - 不新增临时Replay执行器、不新增测试代码、不启动Player性能采集流程。
-- 不在本change里重写Pose、Foot Analysis、IK或网络Pass实现；它们只作为闭包依赖和Gate输入。
+- 不在本change里重写Pose、Foot Analysis或IK算法；只补齐Corin ACL资源编译、动作sample解析、Slot选择和既有Source Module装配。
 
 ## Decisions
 
@@ -108,3 +109,11 @@ Camera与Pose、Timeline一样进入Corin Presentation Closure。当前Corin作�
 配置盘点不只列资产文件。对每个正式Corin作者资产记录schema、identity、owner、引用、枚举／模式、所有标量／vector／quaternion／时间／权重／阈值／速度／角度／距离／迭代次数／容量和曲线元数据；对Animation／Pose Transition记录Blend Logic、Duration、Blend Mode、Custom Curve、Blend Profile、Slot／Layer／Mask、Inertialization和Animation Channel。Graph artifact与领域／表现binding只记录输入依赖与输出hash，不逐字段复制生成字节。
 
 这份清单是来源和验收索引，不成为第二份配置；正式资产和metadata仍是唯一真相。
+
+### 10. 动画后端由Source Binding逐资源选择，Corin统一使用ACL
+
+通用动画框架继续支持`NativeClip`与ACL，两者复用唯一Source Module、Pose事务、Blend Stack和Final Publication。每个正式作者Clip由Source Resource Binding选择唯一后端；同一编译闭包不得为同一Clip同时生成两条可运行路径，也不得在ACL失败时回退NativeClip。
+
+Corin的Locomotion目标Clip和Timeline动作Clip全部进入一个由Corin Definition拥有的ACL资源组。`AnimationClip`仍承担作者编辑、Timeline引用和构建输入职责；编译结果保存资源目录索引、组内Clip索引、正式时长、内容身份和资源描述。Runtime动作命令携带Timeline当帧选中的精确Clip身份，下一帧由Animation Slot解析为已编译ACL source并按原视觉时间采样，避免从当前Timeline状态重新猜测Clip。
+
+ACL烘焙是显式Editor／Agent重操作。该入口收集Profile已声明的ACL source、构建整组、暂存并完整校验，再原子安装并更新Pose Domain Resource Set。普通Pose编译只读取已发布且身份匹配的ACL组；Play和Replay不触发重建。这样保留双后端扩展能力，同时让Corin运行只有一个资源真相。

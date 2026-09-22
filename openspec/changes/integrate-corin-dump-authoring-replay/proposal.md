@@ -15,6 +15,7 @@ Corin当前的数据来源分散在外部Dump、Unity正式作者资产、Gamepl
 - 将Dump资源先归一化为正式Unity作者资产，再由Definition引用；禁止用Graph产物、领域／表现binding或Dump文件反向充当作者配置。
 - 将Corin的Float32、Fixed、Rollback和Server Authority目标与各自Graph artifact、Domain Binding Set、Presentation Binding、Session、Prefab／Scene和网络Adapter身份绑定，禁止跨目标混用产物。
 - 将固定输入Trace、运行版本、GraphArtifactHash、DomainBindingSetHash、PresentationBindingHash、初始Actor／World配置和Runtime Dump绑定为Replay Request；Replay只消费正式产物和固定输入，不创建临时执行器或第二套运行链。
+- 保留通用动画框架按资源选择`NativeClip`或ACL的能力，将Corin全部Locomotion与Action作者Clip统一显式构建为同一ACL资源组；Timeline动作样本携带精确Clip身份并解析到该组，ACL缺失或过期时拒绝运行而不回退NativeClip。
 - 规定串行闭环：Dump source核对 → 正式作者配置闭包 → Graph／领域／表现产物准备 → Session／Play → Runtime Dump与Replay → A／B比较和交付汇总。
 - **BREAKING**：禁止通过目录扫描、显示名、临时Dump路径、旧生成产物或其他worktree文件补齐Corin依赖；缺少来源、身份、哈希或正式owner时必须拒绝Build/Replay。
 
@@ -33,4 +34,4 @@ Corin当前的数据来源分散在外部Dump、Unity正式作者资产、Gamepl
 
 ## Impact
 
-影响Corin Dump索引与来源校验、Character Definition／Presentation／Skill配置、正式C#作者资产、Float32／Fixed Graph与领域binding准备、Rollback／Server Authority Session配置、Runtime Diagnostics、固定输入Replay和3C Development Center记录。需要新增正式manifest／identity合同、串行Gate和失败诊断；不把外部Dump、运行产物或Replay数据写回作者配置，不新增第二套编译、网络或回放执行器。
+影响Corin Dump索引与来源校验、Character Definition／Presentation／Skill配置、正式C#作者资产、ACL显式构建发布、Pose Source／Animation Slot动作采样、Float32／Fixed Graph与领域binding准备、Rollback／Server Authority Session配置、Runtime Diagnostics、固定输入Replay和3C Development Center记录。需要新增正式manifest／identity合同、串行Gate和失败诊断；不把外部Dump、运行产物或Replay数据写回作者配置，不新增整角色编译、网络或回放执行器。

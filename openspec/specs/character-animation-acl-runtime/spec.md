@@ -158,3 +158,27 @@ ACL backend MUST 复用当前唯一 Source Module、Pose Plan、Evaluate Barrier
 - **WHEN** ACL backend 请求独立 PlayableGraph、第二 Final Pose 或直接写 Physical Transform
 - **THEN** Runtime 构造或验证 MUST 失败
 - **AND** 当前 Actor MUST 保持既有 Committed 结果，不得建立旁路播放链
+
+### Requirement: 动画采样后端必须按正式资源唯一选择
+
+通用动画框架 MUST允许正式Source Resource Binding为不同动画源分别选择`NativeClip`或ACL，并让两种后端复用同一Source Module、Pose事务、Blend Stack和Final Publication。单个作者Clip在一次编译闭包中 MUST只对应一个采样后端；编译产物 MUST保存该选择及其精确资源身份。ACL-backed source的`AnimationClip` MAY作为作者素材、Timeline选择身份和构建输入存在，但 Runtime MUST只凭已编译资源索引采样，不得把作者Clip保留为失败后的播放回退。
+
+ACL组的构建与发布 MUST是显式Editor重操作，并在原子安装前验证整组Clip声明、Rig、绑定、内容Hash、质量报告和运行读取结果。普通内容编译 MUST只读取已经发布且身份匹配的资源；Play、Preview、Replay和Runtime MUST不隐式构建或替换ACL组。
+
+#### Scenario: 两个资源选择不同后端
+
+- **WHEN** 两个正式动画源分别声明`NativeClip`和ACL
+- **THEN** Source Module MUST按各自编译选择准备对应backend，并保持相同时间、参数、capture、blend和release合同
+- **AND** 系统 MUST不因框架支持两种backend而为同一源同时创建两条采样路径
+
+#### Scenario: ACL动作由Timeline选择作者Clip
+
+- **WHEN** Timeline输出一个ACL-backed作者Clip的动作样本
+- **THEN** 动作命令 MUST保留精确Clip身份，Animation Slot MUST将其解析为已编译资源索引和组内Clip索引
+- **AND** Source MUST按Timeline有效时间解码ACL，不得直接采样该作者Clip
+
+#### Scenario: 已发布ACL组过期
+
+- **WHEN** 作者Clip、Rig、绑定或压缩设置变化导致已发布ACL组身份不匹配
+- **THEN** 显式准备或普通编译 MUST报告过期并拒绝产出可运行绑定
+- **AND** Play、Preview或Replay MUST不自动重建资源，也不得回退NativeClip或旧ACL组

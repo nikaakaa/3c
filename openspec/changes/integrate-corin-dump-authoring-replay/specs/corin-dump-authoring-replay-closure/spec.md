@@ -62,6 +62,36 @@
 - **THEN** 系统 MUST 停在当前Gate并保留机器诊断
 - **AND** MUST 不使用旧产物或其他worktree结果继续Replay
 
+### Requirement: Corin动画必须从作者Clip唯一编译到ACL运行资源
+
+动画系统 MUST 允许不同角色或产品资源分别选择`NativeClip`或ACL采样后端，但每个正式动画源在一次编译闭包中 MUST 只声明一个后端。Corin可达的Locomotion、攻击、闪避和Rush动画源 MUST全部声明为ACL；`AnimationClip`只作为作者素材、Timeline动作选择身份和ACL构建输入存在。Timeline发布的动作样本 MUST携带精确Clip身份，并在进入Pose Source前解析为同一Corin ACL目录中的资源索引和组内Clip索引。Corin Runtime MUST不从ACL失败、缺失或过期状态回退到`AnimationClip`、Playable或另一份资源目录。
+
+ACL构建与发布 MUST由显式Editor／Agent重操作触发，并对整组声明资源执行完整性、身份、质量和运行读取校验后原子替换。普通Pose编译、Play、Replay、窗口打开或运行时 MUST不隐式重建ACL资源。资源组缺失、过期、Clip未声明或Timeline Clip无法精确解析时 MUST在进入正式运行或Replay前失败并保留诊断。
+
+#### Scenario: 其它角色选择NativeClip
+
+- **WHEN** 另一个角色的正式Source Resource Binding明确声明`NativeClip`
+- **THEN** 通用动画框架 MUST允许该资源沿唯一Source Module采样
+- **AND** 该能力 MUST不改变Corin资源全部使用ACL的闭包要求
+
+#### Scenario: Corin Locomotion进入Pose Source
+
+- **WHEN** Corin Pose State选择Idle、Walk、Run、Stop或Turn的任一正式Clip
+- **THEN** 编译结果 MUST提供ACL资源索引、组内Clip索引、正式时长和内容身份
+- **AND** Runtime MUST只提交对应ACL sample，不得同时保留可采样的备用`AnimationClip`
+
+#### Scenario: Timeline发布攻击或闪避动画
+
+- **WHEN** Corin Timeline为攻击、闪避或Rush输出带精确作者Clip的表现样本
+- **THEN** Animation Slot MUST把该Clip解析为同一ACL资源组的唯一source sample，并按Timeline视觉时间提交Pose请求
+- **AND** Slot Blend与返回Locomotion MUST继续使用正式producer、source-pose和精确transition路由
+
+#### Scenario: Corin ACL资源过期
+
+- **WHEN** Corin作者Clip、Rig、绑定、压缩设置或内容Hash变化而已发布ACL组没有同步更新
+- **THEN** 显式准备Gate MUST报告资源缺失或过期并阻止Play／Replay
+- **AND** 系统 MUST不改用NativeClip、旧ACL组或其他worktree产物继续
+
 ### Requirement: Camera必须作为Corin Presentation闭包的一部分
 
 Corin正式配置 MUST 包含Camera Profile、Default Sequence、Camera Curve、Action/Scene Camera Sequence以及近远裁剪、Locate Radius、Elevation、FOV、Smooth、Rotation/Avatar Transition、Input、Locking、Collision、Zoom、Stretch、Shake和Shot参数。Skill Timeline的Camera/Scene请求 MUST 只能引用这些正式Camera owner，Replay MUST 固定Camera配置与相机输入身份。

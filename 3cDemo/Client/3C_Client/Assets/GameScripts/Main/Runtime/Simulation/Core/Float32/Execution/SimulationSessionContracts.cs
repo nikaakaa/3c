@@ -52,14 +52,14 @@ namespace ThirdPersonSimulation
                 numericProfile,
                 gameplayContentHash,
                 tick,
-                Copy(actors),
+                CopySorted(actors),
                 worldSummary,
                 candidateSnapshot,
                 true)
         {
         }
 
-        internal static SimulationTickResult FromOwnedActors(
+        internal static SimulationTickResult FromSortedOwnedActors(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             SimulationTick tick,
@@ -96,7 +96,6 @@ namespace ThirdPersonSimulation
                  candidateSnapshot.NumericProfile != numericProfile ||
                  !candidateSnapshot.GameplayContentHash.Equals(gameplayContentHash)))
                 throw new ArgumentException("Candidate snapshot identity does not match result identity.", nameof(candidateSnapshot));
-            Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Length == 0 || values.Length != worldSummary.ActorCount)
                 throw new ArgumentException("Simulation result Actor count does not match world summary.", nameof(actors));
             if (candidateSnapshot != null && candidateSnapshot.Actors.Count != values.Length)
@@ -138,14 +137,32 @@ namespace ThirdPersonSimulation
             WorldSummary = worldSummary;
         }
 
-        static SimulationActorTickResult[] Copy(IReadOnlyList<SimulationActorTickResult> actors)
+        static SimulationActorTickResult[] CopySorted(IReadOnlyList<SimulationActorTickResult> actors)
         {
             if (actors == null || actors.Count == 0)
                 return Array.Empty<SimulationActorTickResult>();
             var result = new SimulationActorTickResult[actors.Count];
             for (int i = 0; i < result.Length; i++)
                 result[i] = actors[i];
+            Array.Sort(result, ActorIdComparer.Instance);
             return result;
+        }
+
+        internal static void SortByActorId(SimulationActorTickResult[] actors)
+        {
+            Array.Sort(actors ?? throw new ArgumentNullException(nameof(actors)), ActorIdComparer.Instance);
+        }
+
+        sealed class ActorIdComparer : IComparer<SimulationActorTickResult>
+        {
+            public static readonly ActorIdComparer Instance = new ActorIdComparer();
+
+            ActorIdComparer() { }
+
+            public int Compare(SimulationActorTickResult left, SimulationActorTickResult right)
+            {
+                return left.ActorId.CompareTo(right.ActorId);
+            }
         }
 
         public SimulationNumericProfile NumericProfile { get; }

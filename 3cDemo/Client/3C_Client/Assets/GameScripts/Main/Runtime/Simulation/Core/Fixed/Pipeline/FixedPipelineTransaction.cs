@@ -357,7 +357,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw Failure("finalized_actor_tick_mismatch", "Ability Finalize Pass produced a result for another Tick.", SimulationSessionFailureStage.Step);
                 actorResults[i - finalizedStart] = result;
             }
-            Array.Sort(actorResults, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            SimulationTickResult.SortByActorId(actorResults);
             for (int i = 0; i < actorResults.Length; i++)
             {
                 if (!actorResults[i].ActorId.Equals(m_Roster[i].ActorId))
@@ -393,7 +393,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationStepSnapshot stepSnapshot = capture
                 ? new FixedSimulationStepSnapshot(m_Services.Descriptor.Identity, worldSnapshot, pipelineSnapshot)
                 : null;
-            var tickResult = SimulationTickResult.FromOwnedActors(
+            var tickResult = SimulationTickResult.FromSortedOwnedActors(
                 m_CharacterRuntime.NumericProfile,
                 m_CharacterRuntime.GameplayContentHash,
                 step.Tick,

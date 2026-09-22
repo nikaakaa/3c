@@ -54,6 +54,8 @@ namespace ThirdPersonSimulation
         internal KeyValuePair<string, SimulationInputRequestState>[] Capture()
         {
             RequireActive();
+            if (m_Requests.Count == 0)
+                return Array.Empty<KeyValuePair<string, SimulationInputRequestState>>();
             var requests = new KeyValuePair<string, SimulationInputRequestState>[m_Requests.Count];
             int index = 0;
             foreach (KeyValuePair<string, SimulationInputRequestState> request in m_Requests)

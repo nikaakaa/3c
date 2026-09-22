@@ -473,6 +473,8 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionInstallationSet installations)
         {
             int count = ReadCount(reader, 1000000, "Float32 Character Input request");
+            if (count == 0)
+                return Array.Empty<KeyValuePair<string, SimulationInputRequestState>>();
             var requests = new KeyValuePair<string, SimulationInputRequestState>[count];
             string previous = null;
             for (int i = 0; i < count; i++)

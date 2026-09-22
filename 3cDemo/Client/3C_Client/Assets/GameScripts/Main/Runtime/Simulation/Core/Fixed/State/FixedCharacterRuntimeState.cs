@@ -340,7 +340,9 @@ namespace ThirdPersonSimulation.Fixed
 
         static T[] CopyArray<T>(IEnumerable<T> values)
         {
-            int count = values is ICollection<T> collection ? collection.Count : 0;
+            if (values == null || values is ICollection<T> collection && collection.Count == 0)
+                return Array.Empty<T>();
+            int count = values is ICollection<T> known ? known.Count : 0;
             var result = new T[count];
             int index = 0;
             if (values != null)

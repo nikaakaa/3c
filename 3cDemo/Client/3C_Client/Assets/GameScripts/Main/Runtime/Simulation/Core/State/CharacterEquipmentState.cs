@@ -826,15 +826,17 @@ namespace ThirdPersonSimulation
         {
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
-            var values = m_LocalStates.ToArray();
-            for (int i = 0; i < values.Length; i++)
+
+            for (int i = 0; i < m_LocalStates.Length; i++)
             {
-                if (values[i].FeatureId != featureId || values[i].StateId != stateId)
+                if (m_LocalStates[i].FeatureId != featureId || m_LocalStates[i].StateId != stateId)
                     continue;
-                if (values[i].Value.Equals(value))
+                if (m_LocalStates[i].Value.Equals(value))
                     return this;
-                if (values[i].Value.Kind != value.Kind)
+                if (m_LocalStates[i].Value.Kind != value.Kind)
                     throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
+                var values = new EquipmentLocalStateValue[m_LocalStates.Length];
+                Array.Copy(m_LocalStates, values, m_LocalStates.Length);
                 values[i] = new EquipmentLocalStateValue(featureId, stateId, value);
                 return new EquipmentStateAggregate(
                     CatalogHash,

@@ -5158,3 +5158,13 @@
 - baseline 中的 definition 只接受同一目录对象或 Id/Revision 相同；其余业务状态逐字段比较，字符串用 Ordinal，数值用各数值域 Equals。working record 仍通过实际 list 暴露给读取方，确认和 attribute restore 的原地修改由随后的 Refresh 覆盖。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做预测加入/确认/拒绝回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect活动效果恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect active effects 原先一旦调用 Mark 就永久置脏；效果先添加后移除、堆叠/抑制/revision 先修改再恢复原值时，`Freeze` 仍会重建 aggregate。现在 baseline aggregate 按当前列表逐位比较 active effect，`RefreshActiveEffectsDirty` 覆盖 handle、instance、起止 tick、插入序、堆叠、抑制、revision 和完整 spec。
+- 新增或移除后立即重算；外部直接修改 active 对象后的原 Mark 调用点全部迁移到 `RefreshActiveEffectsDirty`，保证只读接口返回可变对象的所有路径都不会绕过脏重算。移除效果关联 period 时仍单独重算 period 分类。
+- 基于同一 baseline 的先改动后恢复不再因 active effects 分类强制重建 aggregate；attribute 分类的永久脏标记和真实变化时的 aggregate 分配仍未完成。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做效果添加/移除、堆叠/抑制/过期、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

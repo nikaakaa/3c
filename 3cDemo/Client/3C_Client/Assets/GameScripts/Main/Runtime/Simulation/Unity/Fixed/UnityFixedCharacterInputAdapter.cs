@@ -692,6 +692,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 BufferSeconds = bufferSeconds;
                 Priority = priority;
                 TimingClass = timingClass;
+                CaptureTick = 0;
+                EligibleTick = 0;
             }
 
             public string RequestId { get; }

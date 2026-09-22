@@ -757,3 +757,20 @@
 - 4.6：`Attack_Normal_03_Explode` Section 在 Attack.cs 生成代码 line 190 已存在于 1.25 秒（= 75 帧 / 60fps），但对应 TreeClip 的攻击属性节点尚未创建。
 - 4.8：Attack5End/End2 条件图（graph47/graph51/graph46/graph49）已生成，Attack5End.asset 存在。End_2 的分支身份和 15 个状态本地节点需要进一步对账。
 - 4.2/4.3/4.10：ActionCue 轨道/sample/committed event/LocalFrame 旁路已全部删除。`TreeGraphId`/`NodeAuthoringId`/`PlaybackGeneration`/`InvocationGeneration` 在 TimelineControlContracts 中。`TreeGraphRevision` 在 TimelineRuntimePreparation 中。`BranchRevision` 作为独立字段尚未在执行合同中出现，可能需用户决策是否作为 TreeClip 节点输出合同的一部分单独增加。
+
+## TreeClip输出与4.x任务回开
+
+- 重新对账生成代码后，`Attack.cs` 已有 `Attack_Normal_03_Explode` Section（1.25 秒），`Attack5_End2.cs` 与 `Attack.cs` 的 graph48 已建立 End_2 的 15 个状态本地节点，因此 4.8 保持完成。
+- 全部 Corin Attack 生成分支只解析 `GameplayEffectDefinition` 资产，没有生成 `ApplyGameplayEffectNode` 或同义的 TreeClip Gameplay emitter；当前 TreeClip 内可确认的一次性节点只有相机效果节点。因此 4.2、4.3、4.6 回开。
+- `TimelineControlContracts` 有 `TreeGraphId`、`TreeGraphRevision`、`NodeAuthoringId`、`PlaybackGeneration`、`InvocationGeneration` 和 MotionWarp 的 playback generation 组合，但没有 TreeClip domain output 的最终 `BranchRevision`；0.5 与 4.10 回开。
+- 全工程 `GameScripts/Main` 搜索旧 `ActionCueTrack`、`CameraCueTrack`、`TimelineCameraCue` 和正式 Program 帧目录字段无结果；旧的 `CurveEndFrame` 只剩 `OperationExecutionTopology` 枚举名，后续应随其唯一消费者一起改名或删除。
+- 本轮 `ThirdPersonClient.Runtime.csproj` 编译通过（1 warning、0 errors），已执行 `dotnet build-server shutdown`。修复了 0GC struct 化后的 35 个静态编译错误：工厂合同补回 operation control，struct 参数不再做 null 判断，常驻 workspace 恢复 value stack/buffers，泛型池化对象构造可见性补齐，diagnostic sequence 和 trace scope 显式初始化，evaluation catch 可访问常驻 ability input。该编译不证明 TreeClip 输出业务已验收。
+
+## Attack3 Explode正式节点回写
+
+- `Attack3` 的 `Decision Attack3Hit` TimelineBody 增加 `Apply Attack3 Explode` 的正式 `BtsmtlSkillApplyGameplayEffectFlowNode`，引用 `Corin_Attack_Normal_03_AttackProperty_02.asset`。`Set Attack3Hit` 的 declaration 修正为 Attack3Hit；`node110` 显式设置为 `true`。
+- 不使用不存在的 Apply 输出端口串联。Root 现在触发正式两步 Sequence：先 Apply GameplayEffect，再 Set Attack3Hit；Apply 节点、Sequence 节点和步骤端口都有稳定 identity。生成的资产已通过 `btsmtl.generate_assets` 替换，返回 `saved=true`、`diagnostics=[]`。
+- 随后用 `btsmtl.export_code` 从 CorinAttackGameplayAbilityDefinition 反向导出 10 个文件，诊断为空；导出结果与当前源码进入同一正式 authoring 链，不再只依赖手工改源码。
+- 本轮 `ThirdPersonClient.Editor.csproj` 编译通过：92 warnings、0 errors。构建使用禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。
+- `OwnerCanonicalInputBatch` 已是 readonly struct，`SendPredictionCommand` 原来的 `input == null` 编译失败改为按正式 `IsValid` 拒绝无效 batch；这是同一 struct 化链路的编译修正，不新增 null fallback。
+- 4.2 和 4.6 勾选到当前内容边界。0.5、4.3、4.10 继续保持未勾选：Ability 侧 Apply 节点已存在，但 TreeClip 正式节点输出的统一稳定 EventId 仍没有完整携带 TreeGraphId、TreeGraphRevision、NodeAuthoringId、playback generation 和最终 BranchRevision 的 Fixed / Float 全链合同。

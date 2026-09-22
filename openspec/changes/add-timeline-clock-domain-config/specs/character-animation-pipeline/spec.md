@@ -22,6 +22,13 @@ Timeline Track MUST唯一声明 `Logic` 或 `Presentation`；Clip 与同级 Mark
 - **AND** 该事件 MUST不要求再次调用SimulationTick或Logic evaluator
 - **AND** Gameplay TreeClip 的逻辑输出仍 MUST按 Logic Tick 与 Commit / Discard 执行
 
+#### Scenario: 表现域 TreeClip 由节点图结束
+
+- **WHEN** 表现域 TreeClip 的正式节点图在当前表现候选帧发出结束片段请求
+- **THEN** PresentationFrame MUST在同一候选帧执行该片段的 OnDisable 并撤下其持续表现输出
+- **AND** Commit 与 Discard MUST同时决定片段结束状态和表现输出是否生效
+- **AND** 该路径 MUST不修改 Gameplay Timeline 时钟、Logic TreeClip 或 Simulation state
+
 ## ADDED Requirements
 
 ### Requirement: 同一动作的表现采样结果必须被统一消费

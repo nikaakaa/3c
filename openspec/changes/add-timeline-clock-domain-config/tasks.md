@@ -8,11 +8,11 @@
 - [x] 0.2 将 Timeline 起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标迁移为秒，更新正式字段名与作者 API，删除整数作者帧双写和兼容读取
 - [x] 0.3 将旧资产和生成 authoring 代码按正式旧时间 / 素材映射一次性迁移，保留内容身份和引用；同步闭包、指纹及正式派生产品格式，不生成 tick 版作者内容
 - [x] 0.4 将精确动作进度、倍率、暂停与换算余数归入既有逻辑播放管理者，Timeline 接收前后秒数／经过／原因被动遍历；播放状态与求值状态在同一 Step 和 Capture / Restore 链提交恢复，保留循环、Decision 与边界截停规则
-- [x] 0.5 将 TreeClip 正式节点输出的位置和运行消费者迁移为秒，节点保留 LogicTick、cycle、TreeGraph／Node identity 与 branch revision；Timeline 不再定义 ActionCue 事件或以素材 LocalFrame 推进
+- [ ] 0.5 将 TreeClip 正式节点输出的位置和运行消费者迁移为秒，节点保留 LogicTick、cycle、TreeGraph／Node identity 与 branch revision；Timeline 不再定义 ActionCue 事件或以素材 LocalFrame 推进
 - [x] 0.6 迁移 Slate、Inspector、Session、mutation / Undo 和 C# 导出重建的时间读写，帧只作显示与可选吸附，删除 StartFrame 等旧正式存储入口
 - [x] 0.7 将逻辑和表现 Timeline 调用入口统一为被动区间求值，删除自主 delta 累加；沿既有预分配存储传递推进与候选结果，运行热路径保持 0 GC
 
-以上按实际完成情况勾选；数值决定已完成，秒制字段和运行链迁移尚未完成。调整运行 tick 率不改作者秒数，不承诺不同 tick 率下碰撞与输入结果完全相同；短窗口的业务区间消费仍属于原战斗领域。
+以上按实际完成情况勾选。秒制存储、被动求值和旧 Timeline 轨道已收口；TreeClip 正式节点输出与最终 branch revision 还未闭合。调整运行 tick 率不改作者秒数，不承诺不同 tick 率下碰撞与输入结果完全相同；短窗口的业务区间消费仍属于原战斗领域。
 
 ## 1. 已有作者帧基准与逻辑换算（由第 0 节迁移）
 
@@ -47,14 +47,14 @@
 
 - [x] 4.1 Timeline 顶栏拆为 TimelineEditorBindingState、TimelineEditorToolbarView 与 TimelineEditorWindow，保留 Slate 单一编辑入口
 - [x] 4.2 AttackProperty 由 TreeClip 内正式 Gameplay 节点提交，Ability / Attack 领域转换和消费；Timeline 不引入原始 dump 解析器、ActionCue 轨道或第二运行链
-- [x] 4.3 TreeClip 节点只在 Logic commit 发布 typed domain output 与正式事件身份，不代行其它领域逻辑，不再经过 ActionCue 包装
+- [ ] 4.3 TreeClip 节点只在 Logic commit 发布 typed domain output 与正式事件身份，不代行其它领域逻辑，不再经过 ActionCue 包装
 - [x] 4.4 同步 Corin AttackProperty 效果 key 与 uint 编号合同，payload 留在 GameplayEffect / Ability，保留旧 TreeDesigner Timeline UI 删除结果
 - [x] 4.5 登记 Normal Attack End / Explode 内容边界，Branch / Rush 不并入现有五段 Timeline
 - [x] 4.6 Attack3 在 frame=75 建 Attack_Normal_03_Explode Section，并在对应 TreeClip 中建立攻击属性节点，不把素材本地帧当作第二时间轴
 - [x] 4.7 Attack5 在 frame=47 建 Attack5EndBoundary 及 End / End_2 正式状态转移
 - [x] 4.8 建立 CorinAttack5EndTimeline / CorinAttack5End2Timeline，End_2 在对应 TreeClip 中携带分支身份与 15 个状态本地节点
 - [x] 4.9 删除 Attack5 frame=64 多余 `_01_02` 节点并重建对应 Ability 定义
-- [x] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
+- [ ] 4.10 TreeClip 节点输出携带 TreeGraphId / TreeGraphRevision / NodeAuthoringId / branch revision 与稳定 EventId，不再维护 ActionCue sample、committed event、StateId / LocalFrame 旁路
 
 ## 5. 同一动作的共享表现采样
 

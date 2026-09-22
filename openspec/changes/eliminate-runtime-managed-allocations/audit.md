@@ -4356,3 +4356,14 @@
 - DotRecast Authority manifest loader 仍先复制 binding 内的初始状态数组；这是它自己的 payload 边界，不属于 NetworkCheckpoint 校验克隆。接收解码、baseline 构造和 checkpoint reconstruction 的独立所有权不变。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.DotRecastAuthority.csproj` 编译成功，0 错误和 2 个既有 DotRecast.Core nullable 注释警告；`ThirdPersonSimulation.Unity.csproj` 编译成功，0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可在 Authority/Prediction 对局里验证 full checkpoint、delta checkpoint、需要 restore replay 的 correction 和 DotRecast Authority manifest 加载；分配采样应观察 checkpoint layout 校验前不再出现完整 state bytes 克隆。
+
+## 2026-09-22 Authority baseline owned state 收口
+
+对应 tasks.md 的 5.5，新增 5.259 作为独立小步；5.5 保持未勾选。
+
+- `AuthoritativeActorBaseline` 构造合同改为 owned state bytes。当前三个生产边界都传入新建数组：Authority egress 使用 `Float32CharacterRuntimeStateCodec.Write` 产物，canonical baseline decode 使用 `CanonicalReader.ReadBytes` 产物，checkpoint rebuild 使用 wire 解码产物或 acknowledged checkpoint 的 immutable buffer。构造器不再克隆一次。
+- Baseline 暴露内部 `StateBuffer`。`NetworkCheckpoint.Capture` 现在创建内嵌同一 baseline 的 checkpoint，并直接共享该 immutable buffer；原来每次 capture 的 `CopyCharacterStateBytes` 和 checkpoint 构造克隆两次分配都删除。
+- Unchanged delta 重建不再把 acknowledged checkpoint 状态克隆成临时数组；`BuildBaseline` 直接引用其 StateBuffer。随后 checkpoint 仍通过原构造器独立持有一次状态副本，接收队列中的 acknowledged checkpoint 不会被覆盖或复用。
+- `SimulationActorSnapshot` 的 baseline 验证和 restore merge 仍调用 `CopyCharacterStateBytes`；这是它的公开快照所有权边界，不属于本步。checkpoint decode 后的独立副本也不变。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 Authority 连续 capture checkpoint、full checkpoint、changed/unchanged delta 和 restore replay；分配采样应观察 capture 状态数组消失、production baseline 构造克隆消失，同时不能把 codec 编码数组、delta payload 和 decode 后 checkpoint 副本误算为本步目标。

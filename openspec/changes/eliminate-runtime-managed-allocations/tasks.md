@@ -527,6 +527,7 @@
 - [x] 5.256 ServerAuthoritative SnapshotDatagram 使用 owned delta payload 合同；发送侧直接接管 WriteDelta 独立数组，接收侧继续按 wire 长度复制，重建副本按实际长度生成
 - [x] 5.257 ServerAuthoritative NetworkCheckpoint 发送编码改读 owned StateSpan；WriteFull 与 delta 状态写入/比较删除发送前数组克隆，layout 校验的 byte[] 合同保持
 - [x] 5.258 Float32 Character Runtime State Codec 读取合同改为 ReadOnlyMemory；NetworkCheckpoint layout 校验直接读 owned state memory，删除校验前数组克隆
+- [x] 5.259 ServerAuthoritative ActorBaseline 使用 owned state bytes；Checkpoint Capture 共享内嵌 baseline 状态，unchanged delta 不再克隆 acknowledged 状态
 
 ## 6. UI、资源、渲染和生命周期
 

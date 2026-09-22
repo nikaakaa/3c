@@ -29,7 +29,7 @@ namespace ThirdPersonSimulation.Fixed
             new List<AbilityTimelineLogicMotionWarp>();
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
-        public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<SimulationActionWindowProjectionKey> ActionWindowProjectionKeys { get; } = new();
         public List<AbilityTimelineAdvancePending> TimelineAdvances { get; }
         public List<AbilityTimelineStopPending> TimelineStops { get; }
         public Stack<SimulationTimelineBlackboardContext> TimelineBlackboardContexts { get; } =

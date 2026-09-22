@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
@@ -92,6 +91,31 @@ namespace ThirdPersonSimulation
         public ulong Digest { get; }
     }
 
+    internal readonly struct SimulationActionWindowProjectionKey : IEquatable<SimulationActionWindowProjectionKey>
+    {
+        readonly string m_DeclarationId;
+        readonly ulong m_ActionInstanceId;
+
+        public SimulationActionWindowProjectionKey(string declarationId, ulong actionInstanceId)
+        {
+            m_DeclarationId = declarationId ?? string.Empty;
+            m_ActionInstanceId = actionInstanceId;
+        }
+
+        public bool Equals(SimulationActionWindowProjectionKey other) =>
+            m_ActionInstanceId == other.m_ActionInstanceId &&
+            string.Equals(m_DeclarationId, other.m_DeclarationId, StringComparison.Ordinal);
+
+        public override bool Equals(object obj) =>
+            obj is SimulationActionWindowProjectionKey other && Equals(other);
+
+        public override int GetHashCode() =>
+            unchecked((m_DeclarationId == null
+                ? 0
+                : StringComparer.Ordinal.GetHashCode(m_DeclarationId)) * 397 ^
+                m_ActionInstanceId.GetHashCode());
+    }
+
     internal sealed class Float32BlackboardRuntime : Float32OperationModule, IFloat32BlackboardPort
     {
         readonly Float32StatePort m_State;
@@ -100,7 +124,7 @@ namespace ThirdPersonSimulation
         readonly Float32FactSink m_Facts;
         readonly Float32TraceSink m_Trace;
         readonly List<SimulationActionWindowProjectionCandidate> m_ActionWindowProjections;
-        readonly HashSet<string> m_ActionWindowProjectionKeys;
+        readonly HashSet<SimulationActionWindowProjectionKey> m_ActionWindowProjectionKeys;
         readonly Stack<SimulationTimelineBlackboardContext> m_TimelineBlackboardContexts;
 
         public Float32BlackboardRuntime(
@@ -437,8 +461,9 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"ActionWindow projection '{declaration.Identity}' has no current Blackboard write stamp.");
             }
 
-            string key = $"{declaration.Identity}/{action.InstanceId.ToString(CultureInfo.InvariantCulture)}";
-            if (!m_ActionWindowProjectionKeys.Add(key))
+            if (!m_ActionWindowProjectionKeys.Add(new SimulationActionWindowProjectionKey(
+                    declaration.Identity,
+                    action.InstanceId)))
                 return;
             m_ActionWindowProjections.Add(new SimulationActionWindowProjectionCandidate(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),

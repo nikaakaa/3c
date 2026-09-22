@@ -125,6 +125,14 @@ namespace ThirdPersonSimulation
         public ulong UInt64 { get; }
         public string Identity { get; }
 
+        public bool Equals(CharacterControlStateValue other) =>
+            Kind == other.Kind &&
+            Boolean == other.Boolean &&
+            Int32 == other.Int32 &&
+            UInt64 == other.UInt64 &&
+            (Kind != CharacterControlStateValueKind.Identity ||
+                string.Equals(Identity, other.Identity, StringComparison.Ordinal));
+
         public static CharacterControlStateValue FromBoolean(bool value) =>
             new CharacterControlStateValue(CharacterControlStateValueKind.Boolean, value, 0, 0, string.Empty);
 
@@ -153,6 +161,7 @@ namespace ThirdPersonSimulation
     public sealed class CharacterControlRuntimeState
     {
         readonly ReadOnlyCollection<CharacterControlStateValue> m_Values;
+        readonly CharacterControlStateValue[] m_ValueArray;
 
         public CharacterControlRuntimeState(
             CharacterControlStateSchema schema,
@@ -161,11 +170,13 @@ namespace ThirdPersonSimulation
         {
             Schema = schema ?? throw new ArgumentNullException(nameof(schema));
             var copied = values == null
-                ? new List<CharacterControlStateValue>()
-                : new List<CharacterControlStateValue>(values);
-            if (copied.Count != schema.FieldCount)
+                ? new CharacterControlStateValue[0]
+                : values is CharacterControlStateValue[] valueArray
+                    ? (CharacterControlStateValue[])valueArray.Clone()
+                    : new List<CharacterControlStateValue>(values).ToArray();
+            if (copied.Length != schema.FieldCount)
                 throw new ArgumentException("Character control runtime state values do not match its schema.", nameof(values));
-            for (int i = 0; i < copied.Count; i++)
+            for (int i = 0; i < copied.Length; i++)
             {
                 if (copied[i].Kind != schema.Fields[i].ValueKind)
                     throw new ArgumentException($"Character control runtime state field '{schema.Fields[i].Id}' kind does not match its schema.", nameof(values));
@@ -173,7 +184,8 @@ namespace ThirdPersonSimulation
             ModuleId = schema.ModuleId;
             SemanticVersion = schema.SemanticVersion;
             LastCompletedTick = lastCompletedTick;
-            m_Values = copied.AsReadOnly();
+            m_ValueArray = copied;
+            m_Values = Array.AsReadOnly(copied);
             StateHash = ComputeHash(schema, lastCompletedTick, copied);
         }
 
@@ -226,9 +238,12 @@ namespace ThirdPersonSimulation
             ModuleId = schema.ModuleId;
             SemanticVersion = schema.SemanticVersion;
             LastCompletedTick = lastCompletedTick;
+            m_ValueArray = values;
             m_Values = Array.AsReadOnly(values);
             StateHash = stateHash;
         }
+
+        internal CharacterControlStateValue[] ValueArray => m_ValueArray;
 
         public CharacterControlStateValue Get(CharacterControlStateFieldId field) =>
             m_Values[Schema.RequireIndex(field)];
@@ -283,6 +298,7 @@ namespace ThirdPersonSimulation
         readonly List<CharacterControlStateValue> m_Values;
         byte[] m_HashBuffer = Array.Empty<byte>();
         CharacterControlRuntimeStateTransactionStatus m_Status;
+        bool m_ValuesChanged;
 
         public CharacterControlRuntimeStateTransaction()
         {
@@ -312,6 +328,7 @@ namespace ThirdPersonSimulation
             if (m_Values.Capacity < state.Values.Count)
                 m_Values.Capacity = state.Values.Count;
             m_Values.AddRange(state.Values);
+            m_ValuesChanged = false;
             m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
             return this;
         }
@@ -332,13 +349,18 @@ namespace ThirdPersonSimulation
             int index = m_Schema.RequireIndex(field);
             if (value.Kind != m_Schema.Fields[index].ValueKind)
                 throw new ArgumentException($"Character control state field '{field}' kind does not match its schema.", nameof(value));
+            if (m_Values[index].Equals(value))
+                return;
             m_Values[index] = value;
+            m_ValuesChanged = true;
         }
 
         public CharacterControlRuntimeState Capture()
         {
             RequireActive();
-            CharacterControlStateValue[] values = m_Values.ToArray();
+            CharacterControlStateValue[] values = m_ValuesChanged
+                ? m_Values.ToArray()
+                : BaseState.ValueArray;
             StableHash stateHash = ComputeHash();
             return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, values, stateHash);
         }

@@ -158,6 +158,7 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedLocalInputSourcePort : IFixedLocalInputSourcePort
     {
         readonly ReadOnlyCollection<FixedLocalSimulationInputBinding> m_Bindings;
+        readonly SimulationPipelineActorInput<FixedStepInput>[] m_InputScratch;
         readonly int m_OffensiveRequestDelayTicks;
         readonly int m_MaximumPendingRequests;
         ulong m_LastReadSourceTick;
@@ -194,6 +195,7 @@ namespace ThirdPersonSimulation.Fixed
                 identity[i + 4] = $"{binding.ActorId}:{binding.ControlSource.SourceIdentity}";
             }
             m_Bindings = values.AsReadOnly();
+            m_InputScratch = new SimulationPipelineActorInput<FixedStepInput>[values.Count];
             m_OffensiveRequestDelayTicks = offensiveRequestDelayTicks;
             m_MaximumPendingRequests = maximumPendingRequests;
             Descriptor = new SimulationPortDescriptor(
@@ -230,41 +232,53 @@ namespace ThirdPersonSimulation.Fixed
                 if (roster[i] == null || !committedObservation.Actors[i].ActorId.Equals(roster[i].ActorId))
                     throw new InvalidOperationException("Fixed Local input Source committed observation Actor order does not match its locked roster.");
             }
-            var inputs = new SimulationPipelineActorInput<FixedStepInput>[roster.Count];
-            for (int i = 0; i < roster.Count; i++)
+            SimulationPipelineActorInput<FixedStepInput>[] inputs = m_InputScratch;
+            bool prepared = false;
+            try
             {
-                SimulationActorBinding actor = roster[i] ??
-                    throw new InvalidOperationException("Fixed Local input Source roster contains a missing Actor binding.");
-                FixedLocalSimulationInputBinding binding = m_Bindings[i];
-                IFixedCharacterControlSourceRuntime controlSource = binding.ControlSource;
-                if (!actor.ActorId.Equals(binding.ActorId))
+                for (int i = 0; i < roster.Count; i++)
                 {
-                    throw new InvalidOperationException($"Fixed Local input binding for Actor '{actor.ActorId}' is incompatible.");
+                    SimulationActorBinding actor = roster[i] ??
+                        throw new InvalidOperationException("Fixed Local input Source roster contains a missing Actor binding.");
+                    FixedLocalSimulationInputBinding binding = m_Bindings[i];
+                    IFixedCharacterControlSourceRuntime controlSource = binding.ControlSource;
+                    if (!actor.ActorId.Equals(binding.ActorId))
+                    {
+                        throw new InvalidOperationException($"Fixed Local input binding for Actor '{actor.ActorId}' is incompatible.");
+                    }
+                    var context = new FixedCharacterInputBuildContext(
+                        actor.ActorId,
+                        simulationTick,
+                        source,
+                        source.SourceTick,
+                        tickRate,
+                        m_OffensiveRequestDelayTicks,
+                        m_MaximumPendingRequests,
+                        committedObservation);
+                    SimulationInput input = controlSource.BuildInput(context);
+                    if (input == null || input.NumericProfile != FixedSimulationNumericProfile.Value ||
+                        !input.TickSource.Equals(source) || input.Sequence != source.SourceTick)
+                    {
+                        throw new InvalidOperationException($"Fixed Control Source '{controlSource.SourceIdentity}' returned input outside the Local Source contract.");
+                    }
+                    inputs[i] = new SimulationPipelineActorInput<FixedStepInput>(
+                        actor.ActorId,
+                        source.SourceTick,
+                        new FixedStepInput(input));
                 }
-                var context = new FixedCharacterInputBuildContext(
-                    actor.ActorId,
-                    simulationTick,
-                    source,
-                    source.SourceTick,
-                    tickRate,
-                    m_OffensiveRequestDelayTicks,
-                    m_MaximumPendingRequests,
-                    committedObservation);
-                SimulationInput input = controlSource.BuildInput(context);
-                if (input == null || input.NumericProfile != FixedSimulationNumericProfile.Value ||
-                    !input.TickSource.Equals(source) || input.Sequence != source.SourceTick)
-                {
-                    throw new InvalidOperationException($"Fixed Control Source '{controlSource.SourceIdentity}' returned input outside the Local Source contract.");
-                }
-                inputs[i] = new SimulationPipelineActorInput<FixedStepInput>(
-                    actor.ActorId,
-                    source.SourceTick,
-                    new FixedStepInput(input));
+                FixedCanonicalInputBatch batch = new FixedCanonicalInputBatch(source, inputs);
+                m_LastReadSourceTick = source.SourceTick;
+                prepared = true;
+                return new FixedLocalInputFrame(batch, FixedTypedIngressBatch.Empty);
             }
-            m_LastReadSourceTick = source.SourceTick;
-            return new FixedLocalInputFrame(
-                new FixedCanonicalInputBatch(source, inputs),
-                FixedTypedIngressBatch.Empty);
+            finally
+            {
+                if (!prepared)
+                {
+                    for (int i = 0; i < inputs.Length; i++)
+                        inputs[i] = default;
+                }
+            }
         }
 
         public byte[] CaptureState()

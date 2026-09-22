@@ -285,7 +285,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public bool IsValid => TargetAuthorityTick != 0 && InputSequence != 0 && Input != null;
     }
 
-    public sealed class CommandDatagram
+    public readonly struct CommandDatagram
     {
         readonly CanonicalInputSample[] m_Samples;
 
@@ -318,6 +318,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public ulong LatestSnapshotSequence { get; }
         public ulong LatestBaseSnapshotSequence { get; }
+        public bool IsValid => m_Samples != null && m_Samples.Length > 0;
         public ulong SourceTick => m_Samples[0].Input.TickSource.SourceTick;
         public IReadOnlyList<CanonicalInputSample> Samples => m_Samples;
 
@@ -433,8 +434,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public static byte[] Write(CommandDatagram value, CanonicalWriter writer)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+            if (!value.IsValid)
+                throw new ArgumentException("Command datagram is invalid.", nameof(value));
             Writer(writer, ServerAuthoritativeDatagramKind.Command);
             writer.WriteUInt64(value.LatestSnapshotSequence);
             writer.WriteUInt64(value.LatestBaseSnapshotSequence);

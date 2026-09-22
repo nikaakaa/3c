@@ -253,32 +253,18 @@ namespace ThirdPersonSimulation
 
     public sealed class CharacterControlRuntimeStateTransaction : IDisposable
     {
-        readonly CharacterControlStateSchema m_Schema;
-        readonly SimulationTick m_Tick;
+        CharacterControlStateSchema m_Schema;
+        SimulationTick m_Tick;
         readonly List<CharacterControlStateValue> m_Values;
         CharacterControlRuntimeStateTransactionStatus m_Status;
 
-        CharacterControlRuntimeStateTransaction(
-            CharacterControlRuntimeState state,
-            CharacterControlStateSchema schema,
-            SimulationTick tick)
+        public CharacterControlRuntimeStateTransaction()
         {
-            if (state.ModuleId != schema.ModuleId || state.SemanticVersion != schema.SemanticVersion)
-                throw new InvalidOperationException("Character control runtime state identity does not match its schema.");
-            if (!tick.IsValid || tick.Value != checked(state.LastCompletedTick + 1))
-                throw new ArgumentException("Character control runtime state transaction Tick is not the next Tick.", nameof(tick));
-            m_Schema = schema;
-            m_Tick = tick;
-            BaseState = state;
-            m_Values = new List<CharacterControlStateValue>(state.Values);
-            m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
+            m_Values = new List<CharacterControlStateValue>();
+            m_Status = CharacterControlRuntimeStateTransactionStatus.Aborted;
         }
 
-        public CharacterControlRuntimeStateTransactionStatus Status => m_Status;
-        public CharacterControlRuntimeState BaseState { get; }
-        public SimulationTick Tick => m_Tick;
-
-        public static CharacterControlRuntimeStateTransaction Begin(
+        public CharacterControlRuntimeStateTransaction Restart(
             CharacterControlRuntimeState state,
             CharacterControlStateSchema schema,
             SimulationTick tick)
@@ -289,8 +275,24 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(schema));
             if (!state.Schema.SchemaHash.Equals(schema.SchemaHash))
                 throw new InvalidOperationException("Character control runtime state schema is stale.");
-            return new CharacterControlRuntimeStateTransaction(state, schema, tick);
+            if (state.ModuleId != schema.ModuleId || state.SemanticVersion != schema.SemanticVersion)
+                throw new InvalidOperationException("Character control runtime state identity does not match its schema.");
+            if (!tick.IsValid || tick.Value != checked(state.LastCompletedTick + 1))
+                throw new ArgumentException("Character control runtime state transaction Tick is not the next Tick.", nameof(tick));
+            m_Schema = schema;
+            m_Tick = tick;
+            BaseState = state;
+            m_Values.Clear();
+            if (m_Values.Capacity < state.Values.Count)
+                m_Values.Capacity = state.Values.Count;
+            m_Values.AddRange(state.Values);
+            m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
+            return this;
         }
+
+        public CharacterControlRuntimeStateTransactionStatus Status => m_Status;
+        public CharacterControlRuntimeState BaseState { get; private set; }
+        public SimulationTick Tick => m_Tick;
 
         public CharacterControlStateValue Get(CharacterControlStateFieldId field)
         {

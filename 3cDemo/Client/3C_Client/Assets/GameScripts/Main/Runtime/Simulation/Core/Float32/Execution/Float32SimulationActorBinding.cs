@@ -70,6 +70,7 @@ namespace ThirdPersonSimulation
         readonly Float32AbilityExecutionInput m_AbilityExecutionInput = new Float32AbilityExecutionInput();
         readonly Float32CharacterInputRequestState m_InputRequestState = new Float32CharacterInputRequestState();
         readonly Float32CharacterActionRuntimeState m_ActionState = new Float32CharacterActionRuntimeState();
+        readonly CharacterControlRuntimeStateTransaction m_ControlState = new CharacterControlRuntimeStateTransaction();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -164,6 +165,7 @@ namespace ThirdPersonSimulation
         internal Float32AbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
         internal Float32CharacterInputRequestState InputRequestState => m_InputRequestState;
         internal Float32CharacterActionRuntimeState ActionState => m_ActionState;
+        internal CharacterControlRuntimeStateTransaction ControlState => m_ControlState;
 
         internal void ClearActionRuntimes()
         {

@@ -58,7 +58,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
         readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
         readonly FixedCharacterEquipmentRuntimeState m_EquipmentState;
-        CharacterControlRuntimeStateTransaction m_ControlState;
+        readonly CharacterControlRuntimeStateTransaction m_ControlState;
+        bool m_ControlStateBound;
         bool m_Disposed;
 
         public FixedCharacterRuntimeStateTransaction(
@@ -67,7 +68,8 @@ namespace ThirdPersonSimulation.Fixed
             int tickRate,
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
             FixedCharacterInputRequestState inputRequestState,
-            FixedCharacterActionRuntimeState actionState)
+            FixedCharacterActionRuntimeState actionState,
+            CharacterControlRuntimeStateTransaction controlState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -93,6 +95,7 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectCatalog,
                 baseState.GameplayEffectState);
             m_EquipmentState = new FixedCharacterEquipmentRuntimeState(baseState.EquipmentState);
+            m_ControlState = controlState;
         }
 
         internal IFixedSkillExecutionState BindAbility(
@@ -119,15 +122,15 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (schema == null)
                 throw new ArgumentNullException(nameof(schema));
-            if (m_ControlState != null)
+            if (m_ControlStateBound)
                 throw new InvalidOperationException("Fixed Character Control state is already bound.");
             if (m_BaseState.ControlState == null)
                 throw new InvalidOperationException("Fixed Character runtime has no Control state.");
-            m_ControlState = CharacterControlRuntimeStateTransaction.Begin(
+            m_ControlStateBound = true;
+            return m_ControlState.Restart(
                 m_BaseState.ControlState,
                 schema,
                 m_Tick);
-            return m_ControlState;
         }
 
         internal void AcceptAbility(IFixedSkillExecutionState skillState)

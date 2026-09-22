@@ -254,6 +254,7 @@ namespace ThirdPersonSimulation
     {
         readonly IGameplayAbilityExecutionStorage<TValue> m_Storage;
         GameplayAbilityExecutionAggregate<TValue> m_States;
+        bool m_StatesShared;
         GameplayAbilityExecutionFrame<TValue> m_Active;
         readonly Scope m_Scope;
 
@@ -268,6 +269,7 @@ namespace ThirdPersonSimulation
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution state retained an active frame across evaluations.");
             m_States = null;
+            m_StatesShared = false;
         }
 
         public void EndEvaluation()
@@ -275,6 +277,7 @@ namespace ThirdPersonSimulation
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution state has an unclosed frame.");
             m_States = null;
+            m_StatesShared = false;
         }
 
         public IDisposable Enter(AbilityExecutionContext identity)
@@ -287,6 +290,7 @@ namespace ThirdPersonSimulation
             GameplayAbilityExecutionFrame<TValue> frame = m_States.Find(identity.ActionInstanceId);
             if (frame == null)
             {
+                EnsureMutableStates();
                 frame = new GameplayAbilityExecutionFrame<TValue>(
                     identity.SkillId,
                     identity.EntryOperation,
@@ -313,6 +317,9 @@ namespace ThirdPersonSimulation
             if (m_Active != null && m_Active.ActionInstanceId == actionInstanceId)
                 throw new InvalidOperationException("Active Skill execution frame cannot be removed while active.");
             EnsureStates();
+            if (m_States.Find(actionInstanceId) == null)
+                return false;
+            EnsureMutableStates();
             if (!m_States.Remove(actionInstanceId))
                 return false;
             m_Storage.WriteAggregate(m_States);
@@ -329,6 +336,7 @@ namespace ThirdPersonSimulation
         {
             if (m_Active == null || m_Active.ActionInstanceId != actionInstanceId)
                 return false;
+            MakeActiveFrameMutable();
             m_Active.BindGeneration(generation);
             m_Storage.WriteAggregate(m_States);
             return true;
@@ -355,6 +363,7 @@ namespace ThirdPersonSimulation
             RequireActiveFrame(slotIndex);
             if (!m_Storage.IsValueValid(slotIndex, value))
                 throw new InvalidOperationException($"Skill execution state slot '{slotIndex}' contains a value with the wrong kind.");
+            MakeActiveFrameMutable();
             m_Active.SetValue(slotIndex, value);
             m_Storage.WriteAggregate(m_States);
             return true;
@@ -365,6 +374,7 @@ namespace ThirdPersonSimulation
             if (!m_Storage.IsAbilityStateSlot(slotIndex))
                 return false;
             RequireActiveFrame(slotIndex);
+            MakeActiveFrameMutable();
             m_Active.SetValue(slotIndex, m_Storage.DefaultValue(slotIndex));
             m_Storage.WriteAggregate(m_States);
             return true;
@@ -374,8 +384,26 @@ namespace ThirdPersonSimulation
         {
             if (m_States != null)
                 return;
-            m_States = m_Storage.ReadAggregate().Clone();
-            m_Storage.WriteAggregate(m_States);
+            m_States = m_Storage.ReadAggregate();
+            m_StatesShared = true;
+        }
+
+        void EnsureMutableStates()
+        {
+            EnsureStates();
+            if (!m_StatesShared)
+                return;
+            m_States = m_States.Clone();
+            m_StatesShared = false;
+        }
+
+        void MakeActiveFrameMutable()
+        {
+            RequireActiveFrame(0);
+            EnsureMutableStates();
+            m_Active = m_States.Find(m_Active.ActionInstanceId);
+            if (m_Active == null)
+                throw new InvalidOperationException("Skill execution active frame disappeared while preparing state changes.");
         }
 
         void Exit(GameplayAbilityExecutionFrame<TValue> frame)
@@ -383,7 +411,10 @@ namespace ThirdPersonSimulation
             if (!ReferenceEquals(m_Active, frame))
                 throw new InvalidOperationException("Skill execution frame scope is unbalanced.");
             if (frame.Generation == 0)
+            {
+                EnsureMutableStates();
                 m_States.Remove(frame.ActionInstanceId);
+            }
             m_Storage.WriteAggregate(m_States);
             m_Active = null;
         }

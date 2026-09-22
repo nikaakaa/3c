@@ -5398,3 +5398,13 @@
 - 2.4 保持未勾选：savepoint/rollback 恢复中的状态重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 先尝试把复制构造改为具体 Dictionary，发现与 Adopt 私有构造签名冲突后未提交该方向，改为上文的直接采纳；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做状态保存/加载、技能进入/退出、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability工作页按移交释放
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `011b7ce42`。
+
+- Fixed/Float32 `SkillExecutionState.TakeSnapshot` 原先在无变化和有变化路径都调用统一 `Clear`，无条件丢弃 pending stateValues 与 MotionWarpStates。无变化快照实际直接返回 committed state，两个 pending 字典没有移交；下一次 `Restart` 会重新 `new Dictionary`。现在 `Clear` 只释放真实移交给 candidate 的页：无变化路径保留两页；有变化时只有对应 changed 分类置空，未变化分类保留。
+- 保留页在下一次 `Restart` 仍先 Clear 再从 committed 复制，不会把旧 pending 数据带进新技能执行。execution aggregate 可能是 committed 引用或移交 candidate，继续置空。快照身份、candidate 所有权、嵌套保存点语义和 committed 独立存储不变。
+- 2.4 保持未勾选：真实变化路径的新 pending 页分配、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。

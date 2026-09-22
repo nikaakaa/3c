@@ -4736,3 +4736,13 @@
 - 取消路径先调用正式 `CancelCurrentGeneration` 推进 generation，再抛出取消异常，最后统一清理当前计划的回调绑定；普通失败、换代下载和完成后的发布字段与顺序保持。快照对象仍按状态变化创建，这是外部只读合同的独立数据。
 - 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
 - Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源下载回放或 Player 分配采样证据。下载进度快照、cancellation source、lease record 和 UniTaskCompletionSource 仍是 6.2 后续边界。
+
+## 2026-09-22 资源 scope 取消源统一
+
+对应 tasks.md 的 6.25；6.2 保持未勾选。代码提交为 `43cdb55e1`。
+
+- `ResourceScope` 原先持有自己的 `_cancellation`，又为内部获取路径创建 linked 到 runtime 的 `_lifetimeCancellation`；每个 scope 因此保留两个 cancellation source。现在 scope source 本身构造期 linked 到 runtime token，只保留一个 source。
+- 公开 `CancellationToken` 统一表达 scope 关闭和 runtime 退出；`AcquireAsync` 在外部 token 不可取消时直接使用这个 token。scope `TryBeginClosing` 仍取消同一 source，`CompleteDispose` 仍释放它。
+- runtime 退出会通过 linked source 让所有 scope token 进入 canceled 状态；随后的 owner 关停流程继续按 ResourceScopeKind 降序释放并维护 owned scope 校验。可取消外部 token 仍通过专用 linked source 合并，等待结束后释放。
+- 使用 `GameLogic.csproj` 解析出的完整 Compile 源清单、HintPath 引用和 ProjectReference 的 `Library/ScriptAssemblies` DLL 做 `csc` 聚焦编译；0 警告 0 错误，临时产物删除，并执行 `dotnet build-server shutdown`。
+- Unity MCP state 仍为 `ping not answered`；本步没有 Unity 编译、Console、资源加载回放或 Player 分配采样证据。每 scope 的 linked cancellation source 本体、lease record、UniTaskCompletionSource 和快照字符串仍是 6.2 后续边界。

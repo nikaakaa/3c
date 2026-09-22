@@ -585,6 +585,7 @@
 - [x] 6.22 ResourceScope 自持不可变 ResourceScopeSnapshot；identity/kind/name 不变，仅 State 或 LeaseCount 变化时重建，PublishSnapshot 未变化 scope 共享旧对象
 - [x] 6.23 资源 PublishSnapshot 复用最近 scope 快照数组；scope 数量与全部 State/LeaseCount 不变时新旧快照共享数组，任一变化才重建排序数组
 - [x] 6.24 ProductGameplayDelivery 生命周期固定下载进度／开始／错误实例委托；每次下载复用绑定并以 active plan 加 generation 判定，等待后解除引用
+- [x] 6.25 ResourceScope 使用 linked 到 runtime 的唯一 cancellation source；公开 token 统一表达 scope/runtime 生命周期，删除内部第二个 lifetime source
 
 ## 7. 诊断与正式性能交付
 

@@ -328,28 +328,27 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationPipelineStateRestoreTransaction : ISimulationSessionRestoreParticipantTransaction
     {
-        readonly ReadOnlyCollection<ISimulationPipelinePassRestoreTransaction> m_Participants;
+        readonly ISimulationPipelinePassRestoreTransaction[] m_Participants;
         int m_AppliedCount;
         bool m_Validated;
         bool m_Completed;
 
-        public SimulationPipelineStateRestoreTransaction(
+        private SimulationPipelineStateRestoreTransaction(
             SimulationPipelineStateSnapshot snapshot,
-            IEnumerable<ISimulationPipelinePassRestoreTransaction> participants)
+            ISimulationPipelinePassRestoreTransaction[] ownedParticipants)
         {
             Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-            var values = participants == null
-                ? new List<ISimulationPipelinePassRestoreTransaction>()
-                : new List<ISimulationPipelinePassRestoreTransaction>(participants);
-            for (int i = 0; i < values.Count; i++)
+            ISimulationPipelinePassRestoreTransaction[] values = ownedParticipants ??
+                throw new ArgumentNullException(nameof(ownedParticipants));
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null)
-                    throw new ArgumentException("Pipeline restore transaction contains a missing participant.", nameof(participants));
+                    throw new ArgumentException("Pipeline restore transaction contains a missing participant.", nameof(ownedParticipants));
             }
-            values.Sort((left, right) => left.Participant.PassId.CompareTo(right.Participant.PassId));
-            if (values.Count != snapshot.Participants.Count)
-                throw new ArgumentException("Pipeline restore transaction participant count does not match the snapshot.", nameof(participants));
-            for (int i = 0; i < values.Count; i++)
+            Array.Sort(values, (left, right) => left.Participant.PassId.CompareTo(right.Participant.PassId));
+            if (values.Length != snapshot.Participants.Count)
+                throw new ArgumentException("Pipeline restore transaction participant count does not match the snapshot.", nameof(ownedParticipants));
+            for (int i = 0; i < values.Length; i++)
             {
                 SimulationPipelinePassStateSnapshot state = snapshot.Participants[i];
                 SimulationPipelineStateParticipantIdentity participant = values[i].Participant;
@@ -359,10 +358,10 @@ namespace ThirdPersonSimulation
                     !string.Equals(participant.StateSchemaId, state.StateSchemaId, StringComparison.Ordinal) ||
                     participant.StateSchemaVersion != state.StateSchemaVersion)
                 {
-                    throw new ArgumentException("Pipeline restore transaction participant order does not match the snapshot.", nameof(participants));
+                    throw new ArgumentException("Pipeline restore transaction participant order does not match the snapshot.", nameof(ownedParticipants));
                 }
             }
-            m_Participants = values.AsReadOnly();
+            m_Participants = values;
         }
 
         public SimulationPipelineStateSnapshot Snapshot { get; }
@@ -377,7 +376,7 @@ namespace ThirdPersonSimulation
             m_Validated = false;
             try
             {
-                for (int i = 0; i < m_Participants.Count; i++)
+                for (int i = 0; i < m_Participants.Length; i++)
                 {
                     m_Participants[i].Apply();
                     m_AppliedCount++;
@@ -393,9 +392,9 @@ namespace ThirdPersonSimulation
         public void ValidateApplied()
         {
             RequireOpen();
-            if (m_AppliedCount != m_Participants.Count)
+            if (m_AppliedCount != m_Participants.Length)
                 throw new InvalidOperationException("Pipeline restore transaction is not fully applied.");
-            for (int i = 0; i < m_Participants.Count; i++)
+            for (int i = 0; i < m_Participants.Length; i++)
                 m_Participants[i].ValidateApplied();
             m_Validated = true;
         }
@@ -403,9 +402,9 @@ namespace ThirdPersonSimulation
         public void CompleteAfterSessionPublish()
         {
             RequireOpen();
-            if (m_AppliedCount != m_Participants.Count || !m_Validated)
+            if (m_AppliedCount != m_Participants.Length || !m_Validated)
                 throw new InvalidOperationException("Pipeline restore transaction was not applied and validated before Session publish.");
-            for (int i = 0; i < m_Participants.Count; i++)
+            for (int i = 0; i < m_Participants.Length; i++)
                 m_Participants[i].CompleteAfterSessionPublish();
             m_Completed = true;
         }
@@ -424,7 +423,7 @@ namespace ThirdPersonSimulation
         {
             if (!m_Completed)
                 Rollback();
-            for (int i = m_Participants.Count - 1; i >= 0; i--)
+            for (int i = m_Participants.Length - 1; i >= 0; i--)
                 m_Participants[i].Dispose();
             m_Completed = true;
         }
@@ -434,6 +433,11 @@ namespace ThirdPersonSimulation
             if (m_Completed)
                 throw new ObjectDisposedException(nameof(SimulationPipelineStateRestoreTransaction));
         }
+
+        internal static SimulationPipelineStateRestoreTransaction FromOwnedTransactions(
+            SimulationPipelineStateSnapshot snapshot,
+            ISimulationPipelinePassRestoreTransaction[] ownedParticipants) =>
+            new SimulationPipelineStateRestoreTransaction(snapshot, ownedParticipants);
     }
 
     public sealed class SimulationSessionRestoreTransaction : IDisposable
@@ -640,7 +644,10 @@ namespace ThirdPersonSimulation
             ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
             if (values.Length != snapshot.Participants.Count)
                 throw Failure("pipeline_snapshot_participant_count_mismatch", default, "Pipeline snapshot participant count does not match the compiled plan.");
-            var transactions = new List<ISimulationPipelinePassRestoreTransaction>(values.Length);
+            var transactions = values.Length == 0
+                ? Array.Empty<ISimulationPipelinePassRestoreTransaction>()
+                : new ISimulationPipelinePassRestoreTransaction[values.Length];
+            int preparedCount = 0;
             try
             {
                 for (int i = 0; i < values.Length; i++)
@@ -651,13 +658,13 @@ namespace ThirdPersonSimulation
                         throw Failure("pipeline_state_restore_prepare_missing", values[i].StateIdentity.PassId, "State participant returned no restore transaction.");
                     if (!transaction.Participant.Equals(values[i].StateIdentity))
                         throw Failure("pipeline_state_restore_participant_mismatch", values[i].StateIdentity.PassId, "Prepared restore transaction identity does not match its participant.");
-                    transactions.Add(transaction);
+                    transactions[preparedCount++] = transaction;
                 }
-                return new SimulationPipelineStateRestoreTransaction(snapshot, transactions);
+                return SimulationPipelineStateRestoreTransaction.FromOwnedTransactions(snapshot, transactions);
             }
             catch
             {
-                for (int i = transactions.Count - 1; i >= 0; i--)
+                for (int i = preparedCount - 1; i >= 0; i--)
                     transactions[i].Dispose();
                 throw;
             }

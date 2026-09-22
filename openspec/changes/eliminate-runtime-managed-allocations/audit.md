@@ -4420,3 +4420,13 @@
 - wire 长度前缀、magic、版本、字段顺序、世界 hash、canonical 判定和 `InvalidDataException` 语义不变。Read 仍为 actor state 和 world state 复制正式 owned 数组；外层 checkpoint 输出数组、外层 writer 扩容和 SHA/hash 字符串保留。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可验证 rollback/session checkpoint 保存读取、ServerAuthoritative Prediction history checkpoint 保存读取和 restore replay 后世界状态一致；分配采样应观察嵌套世界快照数组中转消失，但不表示外层 checkpoint 输出已零分配。
+
+## 2026-09-22 Pipeline participant 状态编码直读
+
+对应 tasks.md 的 5.5，新增 5.265 作为独立小步；5.5 保持未勾选。代码提交为 `b94243f93`。
+
+- `SimulationPipelinePassStateSnapshot.Payload` 的 backing bytes 由 snapshot 拥有，公开视图是 immutable `ReadOnlyMemory<byte>`。Fixed Session Snapshot、Float32 Session Snapshot 和 ServerAuthoritative Prediction History 的 participant 编码改为直接写 `Payload.Span`，删除每次保存 checkpoint 的完整 payload 克隆。
+- `CopyPayload` 仍服务于需要独立可变数组的正式消费者：Fixed/Float32 Local Input Ingress replacement 和 ServerAuthoritative Authority pass state runtime。这条合同不删除，避免把 restore 输入误共享给后续状态变更。
+- wire 字段顺序、长度前缀、payload hash 和 snapshot hash 语义不变。checkpoint 外层输出数组、字符串/hash 分配和 decode 后 participant payload 复制保留。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可保存/读取 rollback session checkpoint 和 ServerAuthoritative Prediction history checkpoint，再触发 restore replay，确认 pipeline 状态一致；分配采样应观察编码端 participant payload 克隆消失，但不表示 ingress restore 或 authority pass state 的正式独立 payload 已删除。

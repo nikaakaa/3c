@@ -4292,3 +4292,13 @@
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
 - Unity MCP 状态显示目标实例刷新后恢复 idle，目标实例仍是 `e852139597e42532`；当前资源面板未暴露 Console 读取资源，因此本记录不声称 Unity Console 错误为 0。未做 Player 分配采样，也不能用编译结果证明运行期 baseline 分配已归零。
 - 用户可沿一条带快照的 Authority/Prediction 对局确认：Authority 端能继续生成并编码 full replication baseline，客户端能完成 full/delta checkpoint 重建，Prediction 首次 baseline 进场、NoCorrection 和需要 correction 的路径都不回退；同时用既有 Player 分配采样观察 baseline 外壳不再出现在这些路径。
+
+## 2026-09-22 Network checkpoint 值化收口
+
+对应 tasks.md 的 5.5，新增 5.253 作为独立小步；5.5 保持未勾选。
+
+- `NetworkCheckpoint` 从 sealed class 改为 readonly struct。Authority Source 从 baseline 捕获 checkpoint 后，latest checkpoint、Client Route 的发送环形槽、full checkpoint output、full/delta codec 和客户端 reconstruction 都按值携带，删除每份权威快照的 checkpoint 外壳对象。
+- 构造合同不变：内嵌 `AuthoritativeActorBaseline` 必须有效，Character state bytes 必须非空并在构造时克隆；`StateBytes` 继续返回独立副本，checkpoint hash 继续按原字段顺序计算。新增 `IsValid` 表达 default checkpoint 的非法状态。
+- Layout 校验、StoreSent 和 full checkpoint output 的旧 null 合同改为 `IsValid`；Client Route 未命中、淘汰槽位和未确认 ack 状态改用 default。latest checkpoint 查找、snapshot 严格递增、delta 基线选择和客户端 SortedDictionary 重建顺序不变。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
+- 未刷新 Unity，未做 Player 分配采样。用户应重点验证同一路 Authority/Prediction 对局里的 full checkpoint、delta checkpoint、packet ack 和客户端重建；既有分配采样可确认 checkpoint 外壳减少，但不能把 state bytes、codec 输出和协议字符串分配误算入本步目标。

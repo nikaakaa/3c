@@ -85,6 +85,7 @@ namespace GameLogic.ProductResource
         public const string GameplayCorinPresentationBarrier = "Gameplay.CorinPresentation";
 
         private readonly PreloadBarrier[] _barriers;
+        private readonly int _maxBarrierItemCount;
 
         public PreloadPlan(string name, IReadOnlyList<PreloadBarrier> barriers)
         {
@@ -103,12 +104,19 @@ namespace GameLogic.ProductResource
                 {
                     throw new ArgumentException($"Barrier '{barrier.Name}' is duplicated.", nameof(barriers));
                 }
+
+                if (barrier.Items.Count > _maxBarrierItemCount)
+                {
+                    _maxBarrierItemCount = barrier.Items.Count;
+                }
+
                 _barriers[index] = barrier;
             }
         }
 
         public string Name { get; }
         public IReadOnlyList<PreloadBarrier> Barriers => _barriers;
+        public int MaxBarrierItemCount => _maxBarrierItemCount;
 
         public static PreloadPlan Home(IReadOnlyList<PreloadItem> sharedUi, IReadOnlyList<PreloadItem> homeUi, IReadOnlyList<PreloadItem> presentation)
         {
@@ -149,10 +157,15 @@ namespace GameLogic.ProductResource
 
             foreach (PreloadBarrier barrier in plan.Barriers)
             {
-                var tasks = new UniTask[barrier.Items.Count];
+                var tasks = new UniTask[plan.MaxBarrierItemCount];
                 for (int index = 0; index < barrier.Items.Count; index++)
                 {
                     tasks[index] = ExecuteItemAsync(barrier.Items[index], scope, cancellationToken);
+                }
+
+                for (int index = barrier.Items.Count; index < tasks.Length; index++)
+                {
+                    tasks[index] = UniTask.CompletedTask;
                 }
 
                 await UniTask.WhenAll(tasks);

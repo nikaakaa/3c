@@ -215,7 +215,10 @@ namespace ThirdPersonSimulation
                 ResetFeatureState(incoming.FeatureId);
                 if (incoming.IsEquipped)
                     incoming = Install(incoming);
-                aggregate = aggregate.WithSlot(incoming).ResolvePending(PendingEquipmentChangeState.Committed, m_Port.Tick);
+                aggregate = aggregate.WithSlotAndResolvedPending(
+                    incoming,
+                    PendingEquipmentChangeState.Committed,
+                    m_Port.Tick);
                 m_Port.WriteState(aggregate);
                 m_Port.CommitEffectOutputs(source);
                 m_Port.EmitLifecycle(source, outgoing, incoming, PendingEquipmentChangeState.Committed, changeId);

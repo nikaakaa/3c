@@ -865,6 +865,31 @@ namespace ThirdPersonSimulation
                 default,
                 PendingChange.Resolve(state, resolvedTick));
         }
+
+        public EquipmentStateAggregate WithSlotAndResolvedPending(
+            EquipmentSlotState slot,
+            PendingEquipmentChangeState state,
+            ulong resolvedTick)
+        {
+            if (!PendingChange.IsPending)
+                throw new InvalidOperationException("Equipment aggregate has no active pending change.");
+            if (slot.SlotId != PendingChange.SlotId)
+                throw new InvalidOperationException($"Equipment pending change targets '{PendingChange.SlotId.Value}', not '{slot.SlotId.Value}'.");
+            var values = m_Slots.ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i].SlotId != slot.SlotId)
+                    continue;
+                values[i] = slot;
+                return new EquipmentStateAggregate(
+                    CatalogHash,
+                    Array.AsReadOnly(values),
+                    m_LocalStates,
+                    default,
+                    PendingChange.Resolve(state, resolvedTick));
+            }
+            throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
+        }
     }
 
     public static class EquipmentStateAggregateCodec

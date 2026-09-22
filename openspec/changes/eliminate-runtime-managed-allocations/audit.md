@@ -5378,3 +5378,13 @@
 - 2.4 保持未勾选：pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability状态解码按字典拷贝
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `c00dc8dfb`。
+
+- 共用的 `GameplayAbilityExecutionFrame<TValue>` 构造原先把状态值输入声明为 `IEnumerable<KeyValuePair<int,TValue>>`；Fixed/Float32 状态 Codec 的正式输入实际都是具体 `Dictionary<int,TValue>`，接口遍历会产生枚举器分配。现在构造直接接收 `Dictionary`，使用其 struct enumerator 拷入 frame 内部 `SortedDictionary`。
+- 键范围检查、重复拒绝、空状态值、frame 身份校验和只读 `Values` 语义不变。该构造只服务状态 Codec 与无初值的新 frame；Clone 已由上一小步的私有 copy 构造处理。
+- 2.4 保持未勾选：pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做状态保存/加载、技能进入/退出、savepoint restore、rollback restore 和 Player 分配采样。

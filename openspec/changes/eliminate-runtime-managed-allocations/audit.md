@@ -4078,6 +4078,15 @@
 - 现在在构造完成 Action target 组合检查并建立正式绑定前缓存 `m_SourceIdentity`；`SourceIdentity`、live input、Canonical 状态写入和恢复身份比较复用同一 string。文本格式、Ordinal 比较和恢复拒绝语义不变。
 - `ThirdPersonSimulation.Fixed.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；输出中的 34 个警告均为既有第三方包、其它工程或既有未使用字段警告。随后 `dotnet build-server shutdown` 成功。未刷新 Unity、未做 Player 分配采样；PendingRequest、输入对象和快照 byte[] 的分配仍在后续边界。
 
+## 2026-09-22 Fixed pending request 值化收口
+
+对应 tasks.md 的 4.4.8，新增 4.4.12 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `UnityFixedCharacterInputAdapter.PendingRequest` 从私有 sealed class 改为 struct；request id 仍借用正式 binding 或 canonical state 里的 string，sequence、render frame、buffer、priority、timing 和调度 tick 按值保存。
+- `Schedule` 不再原地修改对象，改为返回带 CaptureTick 和 EligibleTick 的新值；`BuildInput` 写回当前 pending 列表槽位，`RestoreState` 写回恢复数组槽位。Immediate 与 Offensive 的延迟计算、eligible 检查、发射顺序和异常语义不变。
+- 采样输入、手动入队和状态恢复路径不再为每条 pending 请求创建 class 对象。`CaptureState` 的 canonical writer 最终 byte[]、`RestoreState` 的临时 pending 数组和 `FixedSimulationInput` 输入对象仍在后续边界。
+- `ThirdPersonSimulation.Fixed.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译；`ThirdPersonSimulation.Unity` 已产出成功，但整条构建随后被工作区并行 Timeline 改动阻断：`TimelineToActionCommandBridge.CameraEventKey` 缺 `treeGraphId`，`CharacterTimelineHost` 的 `frame` 不存在。构建服务已关闭；未刷新 Unity、未做 Player 分配采样。
+
 ## 2026-09-22 Rollback 与 Authority 调用方闭环
 
 对应 tasks.md 的 5.235。

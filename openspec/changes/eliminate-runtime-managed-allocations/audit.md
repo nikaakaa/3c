@@ -5338,3 +5338,13 @@
 - 2.4 保持未勾选：Equipment slot 变更自身的数组复制、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 中间一次编译发现误改同名 layout 循环并立即纠正；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment 安装/卸载提交回放、pending cancel 路径、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Control事务pending数组化
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `b7c57537f`。
+
+- `CharacterControlRuntimeStateTransaction` 原先用长期 `List<CharacterControlStateValue>` 保存 pending 工作页；每次 `Restart` 执行 `Clear` 加 `AddRange`，`Capture` 真实变化时再 `ToArray`。现在 pending 页改为事务持有、按 schema 长度准备的一次性数组，重启和恢复直接 `Array.Copy`，读取、写入和哈希遍历用 `Length` 加下标。
+- 未变化 `Capture` 仍复用 BaseState 数组和 `ValuesView`；真实变化仍新建精确长度 committed 数组并复制 pending 内容，保证旧 aggregate 不被下一事务覆盖。`m_ValuesChanged` 重算、Tick、StateHash 和恢复语义不变。
+- 2.4 保持未勾选：Control changed path 的候选外壳、hash、GE/Equipment 真实变化嵌套复制、CharacterState 外壳和实际分配采样仍在后续范围。
+- 首次编译发现数组没有 `ToArray` 后改为 `Array.Copy`；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做控制状态先改后恢复、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。

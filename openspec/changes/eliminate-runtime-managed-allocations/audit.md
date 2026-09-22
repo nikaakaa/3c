@@ -5498,3 +5498,13 @@
 - 2.4 保持未勾选：Equipment 真实变化槽位/本地状态数组、GE 嵌套真实变化、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Equipment 安装/卸载、重复写入、pending resolve/cancel、状态保存加载、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 GE变更标签数组移交
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `86be044f1`。
+
+- Fixed/Float32 共用的 Gameplay Effect aggregate 创建 changed 快照时，与 baseline 内容相同的 tag source 继续复用 baseline 数组；真实变化的 tag 数组从 working page 直接移交进新 aggregate，不再执行 `string[]` Clone。`CloneChangedTagSources` 相应改为 `AdoptChangedTagSources`。
+- 所有权边界保持不变：working page 后续 `SetTagSource` 只整体替换数组，不修改已共享数组；Restore 到不同内容时重新复制。标签排序、去重、dirty 判定、owned tags 汇总、保存点和回滚语义不变。
+- 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 tag source 设置/移除、GE 提交、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

@@ -5228,3 +5228,13 @@
 - 2.4 保持未勾选：Control candidate 外壳和 hash 计算、changed value 数组、CharacterState 外壳、GE 真实变化嵌套复制和 Timeline snapshot 仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态先改后恢复、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Control状态恢复等价判定
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。
+
+- `CharacterControlRuntimeStateTransaction.Restore` 原先只重灌状态值，不重算 `m_ValuesChanged`；事务内先修改控制字段再恢复到 BaseState 等价内容时，后续 `Capture` 仍会复制 changed 数组。现在 Restore 后按 BaseState 的数量和逐项值语义重算变化标记，恢复等价内容清除脏标记，恢复到不同内容保持脏。
+- 判定使用现有强类型 value Equals 和下标读取，字符串身份保持 Ordinal 语义，不新增集合、包装或字符串分配。Tick 和 StateHash 仍由 Capture 按当前事务 Tick 正式重建。
+- 2.4 保持未勾选：Control candidate 外壳和 hash、changed value 数组、CharacterState 外壳、GE 真实变化嵌套复制和 Timeline snapshot 仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做控制状态先改后恢复、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。

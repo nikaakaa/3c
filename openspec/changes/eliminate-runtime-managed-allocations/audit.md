@@ -5318,3 +5318,13 @@
 - 2.4 保持未勾选：CharacterState candidate 外壳、Equipment slot/pending 真实变更粒度、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 GE savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
+
+## 2026-09-23 角色提交采纳最终分区
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `6b806d684`。
+
+- Fixed/Float32 角色事务的 `Snapshot` 原先接收最终数组后又进入复制构造，把未变化的 abilities、activation requests、action instances、input requests 再复制一遍，并把 base state 已有的 Timeline `ReadOnlyCollection` 重建为新的 List 包装。唯一调用方就是角色事务提交，现在方法改为 `AdoptSnapshot`，明确采用这些已完成分区并使用私有 adopt 构造。
+- Adopt 前仍原地排序 abilities 和 input requests，并完整检查空值、重复项和 Ordinal 顺序；未变化分区本身已满足 canonical 不变量，排序不改变内容。真实的 changed 分区仍由事务生成精确长度数组并独立移交。每个事务仍会为新的 `LastCompletedTick` 创建角色状态外壳。
+- 2.4 保持未勾选：Control/GE/Equipment changed path 的真实变化分配、非空最终数组、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做多能力 changed path 回放、Action/Input changed path 回放、savepoint restore、rollback restore 和 Player 分配采样。

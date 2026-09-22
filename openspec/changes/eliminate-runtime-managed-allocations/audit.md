@@ -4663,3 +4663,14 @@
 - `ReadInputRequests` 内部的 known identity HashSet 仍按每次读取构造，留作同一状态的后续边界。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、固定输入回放和 Player 分配采样。用户可运行角色 commit、rollback restore 和状态 codec，确认 request 写入、恢复和 canonical 字节一致；分配采样应观察每次快照的 Dictionary 复制和 Codec 写入 key List 消失，Capture/Read 的最终 pair 数组与事务工作字典仍是正式独立分配。
+
+## 2026-09-22 资源关停 scope 收集数组化
+
+对应 tasks.md 的 6.18；6.2 保持未勾选。代码提交为 `80a643c02`。
+
+- `ProductResourceRuntime.Dispose` 原先每次新建 `List<ResourceScope>` 复制 `_scopes.Values`，再用捕获两个参数的 lambda 按 `ResourceScopeKind` 降序排序。现在 owner 生命周期持有 `_disposeScopeBuffer`，`CreateScopeInternal` 按当前 owned scope 数量准备；scope 释放引起的数量收缩不会缩容，后续关停复用同一数组。
+- 关停时先复制当前 `Values` 到数组有效区间，用静态 `ScopeDisposeOrder` 在精确区间内排序，再逐项调用既有 `DisposeScope`。这保证运行时不再边释放边枚举字典，Global、Home/Gameplay、Transient 的降序关闭顺序、owned scope 校验和单独 scope dispose 行为不变。
+- 有效项释放完成后 `Array.Clear` 清空 buffer 引用，避免已关闭 scope 被关停上下文继续持有。这是关停路径治理，不表示 Active 期间资源快照数组、lease HashSet、 linked cancellation source 或首次加载 completion source 已经全部零分配。
+- 完整 `dotnet build GameLogic.csproj --no-restore --no-dependencies` 在依赖链的 `UnityEditor.UI.csproj` 先失败；错误来自 `Library/PackageCache/com.unity.ugui@1.0.0/Editor/UI/MenuOptions.cs` 的既有 CS0200，未到达本次源码。失败后已执行 `dotnet build-server shutdown`。
+- 随后用 `GameLogic.csproj` 解析出的全部 Compile 源和 HintPath 引用，并补充 ProjectReference 对应的 `Library/ScriptAssemblies` DLL，使用 `csc` 聚焦编译整个 GameLogic 源清单；结果 0 警告 0 错误，临时产物删除。
+- Unity MCP 触发 `refresh_unity` 后等待 editor ready 超时，随后 state 持续提示 ping not answered；因此本步没有 Unity 编译、Console 或运行证据。未做资源关停对比、资源加载回放和 Player 分配采样。

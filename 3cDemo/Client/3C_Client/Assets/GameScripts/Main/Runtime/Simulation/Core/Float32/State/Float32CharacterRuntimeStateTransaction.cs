@@ -62,11 +62,12 @@ namespace ThirdPersonSimulation
         bool m_Disposed;
 
         public Float32CharacterRuntimeStateTransaction(
-        Float32CharacterRuntimeState baseState,
+            Float32CharacterRuntimeState baseState,
             SimulationTick tick,
             int tickRate,
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
-            Float32CharacterInputRequestState inputRequestState)
+            Float32CharacterInputRequestState inputRequestState,
+            Float32CharacterActionRuntimeState actionState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -80,7 +81,7 @@ namespace ThirdPersonSimulation
                 Float32AbilityRuntimeState state = baseState.Abilities[i];
                 m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state);
             }
-            m_ActionState = new Float32CharacterActionRuntimeState(
+            m_ActionState = actionState.Restart(
                 baseState.ActionActivationRequests,
                 baseState.ActionInstances,
                 baseState.ActionEventSequence);

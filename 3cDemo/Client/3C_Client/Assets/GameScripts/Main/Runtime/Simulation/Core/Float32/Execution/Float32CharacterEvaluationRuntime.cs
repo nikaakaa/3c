@@ -38,7 +38,8 @@ namespace ThirdPersonSimulation
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog,
-                actor.InputRequestState);
+                actor.InputRequestState,
+                actor.ActionState);
             Float32AbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;

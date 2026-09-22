@@ -39,7 +39,8 @@ namespace ThirdPersonSimulation.Fixed
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog,
-                actor.InputRequestState);
+                actor.InputRequestState,
+                actor.ActionState);
             FixedAbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;

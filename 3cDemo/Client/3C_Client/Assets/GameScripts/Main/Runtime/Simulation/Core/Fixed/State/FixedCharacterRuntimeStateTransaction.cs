@@ -62,11 +62,12 @@ namespace ThirdPersonSimulation.Fixed
         bool m_Disposed;
 
         public FixedCharacterRuntimeStateTransaction(
-        FixedCharacterRuntimeState baseState,
+            FixedCharacterRuntimeState baseState,
             SimulationTick tick,
             int tickRate,
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
-            FixedCharacterInputRequestState inputRequestState)
+            FixedCharacterInputRequestState inputRequestState,
+            FixedCharacterActionRuntimeState actionState)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
@@ -80,7 +81,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedAbilityRuntimeState state = baseState.Abilities[i];
                 m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state);
             }
-            m_ActionState = new FixedCharacterActionRuntimeState(
+            m_ActionState = actionState.Restart(
                 baseState.ActionActivationRequests,
                 baseState.ActionInstances,
                 baseState.ActionEventSequence);

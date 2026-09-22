@@ -11,18 +11,36 @@ namespace ThirdPersonSimulation
         ulong m_ActionEventSequence;
         bool m_Disposed;
 
-        public Float32CharacterActionRuntimeState(
+        public Float32CharacterActionRuntimeState()
+        {
+            m_ActionActivationRequests = new List<SimulationActionActivationRequestState>();
+            m_ActionInstances = new List<Float32ActionInstanceState>();
+        }
+
+        public Float32CharacterActionRuntimeState Restart(
             IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
             IReadOnlyList<Float32ActionInstanceState> actionInstances,
             ulong actionEventSequence)
         {
-            m_ActionActivationRequests = actionActivationRequests == null
-                ? new List<SimulationActionActivationRequestState>()
-                : new List<SimulationActionActivationRequestState>(actionActivationRequests);
-            m_ActionInstances = actionInstances == null
-                ? new List<Float32ActionInstanceState>()
-                : new List<Float32ActionInstanceState>(actionInstances);
+            m_ActionActivationRequests.Clear();
+            if (actionActivationRequests != null)
+            {
+                if (m_ActionActivationRequests.Capacity < actionActivationRequests.Count)
+                    m_ActionActivationRequests.Capacity = actionActivationRequests.Count;
+                m_ActionActivationRequests.AddRange(actionActivationRequests);
+            }
+
+            m_ActionInstances.Clear();
+            if (actionInstances != null)
+            {
+                if (m_ActionInstances.Capacity < actionInstances.Count)
+                    m_ActionInstances.Capacity = actionInstances.Count;
+                m_ActionInstances.AddRange(actionInstances);
+            }
+
             m_ActionEventSequence = actionEventSequence;
+            m_Disposed = false;
+            return this;
         }
 
         public ulong NextActionEventSequence()

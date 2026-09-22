@@ -69,6 +69,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterTraceSink m_CharacterTraceSink;
         readonly Float32AbilityExecutionInput m_AbilityExecutionInput = new Float32AbilityExecutionInput();
         readonly Float32CharacterInputRequestState m_InputRequestState = new Float32CharacterInputRequestState();
+        readonly Float32CharacterActionRuntimeState m_ActionState = new Float32CharacterActionRuntimeState();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -162,6 +163,7 @@ namespace ThirdPersonSimulation
         internal Float32CharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
         internal Float32AbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
         internal Float32CharacterInputRequestState InputRequestState => m_InputRequestState;
+        internal Float32CharacterActionRuntimeState ActionState => m_ActionState;
 
         internal void ClearActionRuntimes()
         {

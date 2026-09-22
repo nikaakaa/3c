@@ -4132,3 +4132,12 @@
 - Prediction 远端 Body 保持 `CharacterBodySample[]` 精确数组合同；`ToBodySamples` 不再返回 `IReadOnlyList`，HardRecovery 里的判空和恢复样本长度检查同步使用 `Length`。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.DeterministicRollback.csproj` 先后使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均为 0 警告 0 错误；每次编译后执行 `dotnet build-server shutdown`。
 - Unity Editor 清空 Console 后强制刷新并请求编译，旧 8 个 Rollback/ServerAuthoritative 编译错误与 Burst `Failed to find entry-points` 连带错误消失。剩余两条 `ScreenSpaceDotTransparencyController` 和 `BlockImpactVfxController` 的 MonoBehaviour 构造器 `MaterialPropertyBlock` 异常与本次 0GC 链路无关，仍在渲染装配边界处理。未做 Player 分配采样。
+
+## 2026-09-22 Float32 local input batch scratch 收口
+
+对应 tasks.md 的 4.4.8，新增 4.4.17 作为独立小步；4.4、4.4.8 保持未勾选。
+
+- `Float32LocalInputSourcePort` 原先每次 Read 都按 roster 新建 `SimulationPipelineActorInput<Float32StepInput>[]`；现在在构造期按锁定 binding 数量准备精确长度 scratch。
+- Read 仍先校验 source Tick、numeric profile、tick rate、roster、committed observation 和 Actor 顺序，再逐个覆盖 scratch；成功时 `Float32CanonicalInputBatch` 接管同一数组，产品寿命保持 OuterTransaction。Source Port 强制 source tick 递增，不会在活跃 batch 有效期间重建同一 scratch。
+- batch 构造成功后才推进 `m_LastReadSourceTick`。任一 control source 校验失败或 batch 校验失败时，finally 清空 scratch 引用，source tick 状态保持原值。
+- 每 tick 的 actor input 数组分配删除；`Float32CanonicalInputBatch` 外壳和 `SimulationInput` 本体仍在后续边界。`ThirdPersonSimulation.Core.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。Unity Editor 已按用户授权刷新，Console 错误为 0。未做 Player 分配采样。

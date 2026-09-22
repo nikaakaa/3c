@@ -4885,3 +4885,13 @@
 - `Capture` 仍生成精确 pair 数组并交给 committed `CharacterRuntimeState` 独立持有，rollback 历史、状态保存和事务字典不共享可变存储。
 - 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；Release assets 缺失时按正式命令执行了一次还原，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做角色输入请求回放、rollback restore 和 Player 分配采样。2.4 仍未完成：Action、Control、GE/Equipment 工作页、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。
+
+## 2026-09-23 Action 事务存储跨步复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `eec01a9be`。
+
+- Fixed 和 Float32 `CharacterRuntimeStateTransaction` 原先每个逻辑步都新建 `ActionRuntimeState`，同时新建 activation request 和 action instance 两组 `List`。现在 `SimulationActorBinding` 按 Actor 长期持有这份 pending 状态，事务构造时调用 `Restart` 重绑 committed 数据。
+- `Restart` 先清空两组列表；容量不足时按当前 committed 数量提升容量，随后 `AddRange`。这样首个活跃上界后，稳态逻辑步不再因包装对象或底层列表数组扩容产生新分配。activation request、action instance、事件序列和 null 输入处理保持原语义。
+- 事务 `Restore`、`SetActionActivationRequests`、`SetActionInstances`、`Dispose` 和原有 active 校验不变；`CharacterRuntimeState` 提交快照仍复制成独立数组，rollback 历史不借用 Actor pending 列表。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做动作触发、动作结束、rollback restore 和 Player 分配采样。2.4 仍未完成：Control、GE/Equipment 工作页、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。

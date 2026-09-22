@@ -456,7 +456,7 @@ namespace ThirdPersonSimulation
             ulong lifecycleRevision);
         void AddActive(TActive active);
         void RemoveActive(TActive active);
-        void MarkActiveEffectsDirty();
+        void RefreshActiveEffectsDirty();
         ulong GetNextPeriod(ulong instanceId);
         void SetNextPeriod(ulong instanceId, ulong tick);
         void DeactivatePersistent(TActive active);

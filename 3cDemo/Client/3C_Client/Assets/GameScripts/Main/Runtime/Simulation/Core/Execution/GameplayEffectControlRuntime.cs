@@ -147,7 +147,7 @@ namespace ThirdPersonSimulation
                             m_Port.DeactivatePersistent(active);
                             active.Inhibited = true;
                             active.LifecycleRevision = checked(active.LifecycleRevision + 1);
-                            m_Port.MarkActiveEffectsDirty();
+                            m_Port.RefreshActiveEffectsDirty();
                             m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.Inhibited);
                         }
                         else if (ongoing && active.Inhibited)
@@ -155,7 +155,7 @@ namespace ThirdPersonSimulation
                             active.Inhibited = false;
                             ActivatePersistent(active);
                             active.LifecycleRevision = checked(active.LifecycleRevision + 1);
-                            m_Port.MarkActiveEffectsDirty();
+                            m_Port.RefreshActiveEffectsDirty();
                             m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.Resumed);
                         }
                         if (!active.Inhibited)
@@ -241,7 +241,7 @@ namespace ThirdPersonSimulation
                     active.StartTick = command.StartTick;
                     active.EndTick = command.EndTick;
                     active.LifecycleRevision = command.LifecycleRevision;
-                    m_Port.MarkActiveEffectsDirty();
+                    m_Port.RefreshActiveEffectsDirty();
                     ActivatePersistent(active);
                     m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.StackChanged);
                     break;
@@ -261,7 +261,7 @@ namespace ThirdPersonSimulation
                         ActivatePersistent(active);
                     }
                     active.LifecycleRevision = command.LifecycleRevision;
-                    m_Port.MarkActiveEffectsDirty();
+                    m_Port.RefreshActiveEffectsDirty();
                     m_Port.EmitLifecycle(active, command.Kind);
                     break;
                 }
@@ -412,7 +412,7 @@ namespace ThirdPersonSimulation
                 active.StackCount++;
                 active.LifecycleRevision = checked(active.LifecycleRevision + 1);
                 UpdateStackTime(active, incoming);
-                m_Port.MarkActiveEffectsDirty();
+                m_Port.RefreshActiveEffectsDirty();
                 ActivatePersistent(active);
                 InvokeApplied(incoming, active.InstanceId);
                 m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.StackChanged);
@@ -433,7 +433,7 @@ namespace ThirdPersonSimulation
         GameplayEffectApplyResult ApplyOverflow(GameplayEffectPreparedSpec<TSpec> spec, TActive active)
         {
             active.LifecycleRevision = checked(active.LifecycleRevision + 1);
-            m_Port.MarkActiveEffectsDirty();
+            m_Port.RefreshActiveEffectsDirty();
             m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.Overflow);
             switch (spec.Descriptor.Overflow)
             {
@@ -455,7 +455,7 @@ namespace ThirdPersonSimulation
             active.LifecycleRevision = authoritativeRevision > 0
                 ? authoritativeRevision
                 : checked(active.LifecycleRevision + 1);
-            m_Port.MarkActiveEffectsDirty();
+            m_Port.RefreshActiveEffectsDirty();
             m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.PeriodExecuted);
         }
 
@@ -468,7 +468,7 @@ namespace ThirdPersonSimulation
             {
                 InvokeRemoved(active, lifecycle);
                 active.LifecycleRevision = checked(active.LifecycleRevision + 1);
-                m_Port.MarkActiveEffectsDirty();
+                m_Port.RefreshActiveEffectsDirty();
                 m_Port.EmitLifecycle(active, lifecycle);
             }
             m_Port.RemoveActive(active);
@@ -482,7 +482,7 @@ namespace ThirdPersonSimulation
             active.StackCount = snapshot.StackCount;
             active.Inhibited = snapshot.Inhibited;
             active.LifecycleRevision = snapshot.LifecycleRevision;
-            m_Port.MarkActiveEffectsDirty();
+            m_Port.RefreshActiveEffectsDirty();
             m_Port.SetNextPeriod(active.InstanceId, snapshot.NextPeriodTick);
             if (!active.Inhibited)
                 ActivatePersistent(active);
@@ -498,11 +498,11 @@ namespace ThirdPersonSimulation
                     case GameplayEffectDurationUpdateKind.Refresh:
                         active.StartTick = m_Port.Tick;
                         active.EndTick = CheckedAdd(m_Port.Tick, incoming.DurationTicks);
-                        m_Port.MarkActiveEffectsDirty();
+                        m_Port.RefreshActiveEffectsDirty();
                         break;
                     case GameplayEffectDurationUpdateKind.Extend:
                         active.EndTick = CheckedAdd(active.EndTick, incoming.DurationTicks);
-                        m_Port.MarkActiveEffectsDirty();
+                        m_Port.RefreshActiveEffectsDirty();
                         break;
                 }
             }
@@ -805,7 +805,7 @@ namespace ThirdPersonSimulation
                         m_Port.SetNextPeriod(active.InstanceId, nextPeriod);
                     }
                     active.LifecycleRevision = Math.Max(active.LifecycleRevision, command.LifecycleRevision > 0 ? command.LifecycleRevision : 1);
-                    m_Port.MarkActiveEffectsDirty();
+                    m_Port.RefreshActiveEffectsDirty();
                     instanceId = active.InstanceId;
                     m_Port.EmitLifecycle(active, GameplayEffectLifecycleKind.Confirmed);
                 }

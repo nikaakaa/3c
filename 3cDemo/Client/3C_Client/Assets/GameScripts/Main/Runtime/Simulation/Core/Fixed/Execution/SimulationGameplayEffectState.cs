@@ -217,6 +217,35 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
+        internal bool MatchesActiveEffects(IReadOnlyList<PortableActiveEffectState> activeEffects)
+        {
+            if (activeEffects == null || m_ActiveEffects.Count != activeEffects.Count)
+                return false;
+            for (int i = 0; i < m_ActiveEffects.Count; i++)
+            {
+                if (!MatchesActiveEffect(m_ActiveEffects[i], activeEffects[i]))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesActiveEffect(PortableActiveEffectState left, PortableActiveEffectState right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left == null || right == null)
+                return false;
+            return left.Handle == right.Handle &&
+                left.InstanceId == right.InstanceId &&
+                left.StartTick == right.StartTick &&
+                left.EndTick == right.EndTick &&
+                left.InsertionSequence == right.InsertionSequence &&
+                left.StackCount == right.StackCount &&
+                left.Inhibited == right.Inhibited &&
+                left.LifecycleRevision == right.LifecycleRevision &&
+                MatchesSpec(left.Spec, right.Spec);
+        }
+
         internal bool MatchesJournal(IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> journal)
         {
             if (journal == null || m_Journal.Count != journal.Count)
@@ -922,14 +951,14 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Duplicate Active Gameplay Effect '{active.Handle}/{active.InstanceId}'.");
             m_ActiveEffects.Add(active);
             m_ActiveEffects.Sort(CompareActive);
-            m_ActiveEffectsDirty = true;
+            RefreshActiveEffectsDirty();
         }
 
         public void RemoveActive(PortableActiveEffectState active)
         {
             if (active == null || !m_ActiveEffects.Remove(active))
                 throw new InvalidOperationException("Active Gameplay Effect removal target is missing.");
-            m_ActiveEffectsDirty = true;
+            RefreshActiveEffectsDirty();
             if (m_Periods.Remove(active.InstanceId))
                 RefreshPeriodsDirty();
         }
@@ -952,9 +981,9 @@ namespace ThirdPersonSimulation.Fixed
             RefreshPeriodsDirty();
         }
 
-        public void MarkActiveEffectsDirty()
+        public void RefreshActiveEffectsDirty()
         {
-            m_ActiveEffectsDirty = true;
+            m_ActiveEffectsDirty = m_Baseline == null || !m_Baseline.MatchesActiveEffects(m_ActiveEffects);
         }
 
         public void RefreshJournalDirty()

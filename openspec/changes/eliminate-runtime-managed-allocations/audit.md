@@ -5195,6 +5195,16 @@
 
 - 共用 `GameplayAbilityExecutionManager` 原先在 `Enter` 时无条件 clone committed aggregate；本次只是进入已有执行 frame、读取默认值或正常退出且没有状态变化时，也会产生周期 aggregate、frame 和 SortedDictionary 分配。现在 evaluation 借用 SkillState 的 committed aggregate 并标记 shared，只有新增、移除、写状态、重置状态或绑定 generation 前才 clone 成 mutable 工作副本。
 - 复制后会把 active frame 重新定位到新 aggregate，`Exit` 移除零 generation frame 前也会先复制，确保 committed frame 和列表不被 manager 原地修改。真实变化仍通过 `WriteAggregate` 交给 SkillState 做内容判脏和 TakeSnapshot 独立提交。
-- 这一步删除只进入路径的周期 aggregate clone；真实状态变化路径的 clone、candidate 字典复制和 commit aggregate 克隆仍在 2.4 后续范围。2.4 保持未勾选。
+- 这一步删除只进入路径的周期 aggregate clone；真实状态变化路径当时仍保留 Clone，随后由候选状态移交步骤删除。2.4 保持未勾选。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做能力进入不写状态、连续写状态、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability候选状态移交
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `16fa8e646`。
+
+- Fixed/Float32 `SkillExecutionState.TakeSnapshot` 的 changed path 原先把 pending 的 StateValues、MotionWarpStates 和 execution aggregate 再复制一份给 candidate。调用顺序已经保证 `Complete` 先结束 evaluation，`GameplayAbilityExecutionManager` 释放工作 aggregate，然后 `AcceptAbility` 才触发 TakeSnapshot，因此 changed 集合可由 candidate 直接接管。
+- 现在 pending changed 字典和 aggregate 直接移交给 candidate，TakeSnapshot 后 Clear 释放 pending 引用；下一次 `Restart` 从 committed 重灌新工作页。未变化分类继续复用 committed 引用。真实变化路径删除两次字典复制和 execution aggregate clone，身份、排序、内容判脏和事务提交边界不变。
+- 2.4 保持未勾选：CharacterRuntimeState candidate 外壳、Control/GE/Equipment changed path、非空最终数组和 Timeline snapshot 外壳仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做真实能力变化、进入不写状态、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。

@@ -5348,3 +5348,13 @@
 - 2.4 保持未勾选：Control changed path 的候选外壳、hash、GE/Equipment 真实变化嵌套复制、CharacterState 外壳和实际分配采样仍在后续范围。
 - 首次编译发现数组没有 `ToArray` 后改为 `Array.Copy`；最终四个工程编译成功，均 0 警告 0 错误，构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态先改后恢复、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
+
+## 2026-09-23 Control状态包装删除
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4bb33c98d`。
+
+- `CharacterControlRuntimeState` 原先同时持有 canonical 值数组和 `ReadOnlyCollection` 包装；初始状态、真实变化候选和恢复解码每次都多一个包装分配。现在公开 `Values` 直接以 `IReadOnlyList` 暴露数组，`Get` 使用数组下标，内部 adopt 构造删除无消费者的 view 参数。
+- 数组仍由 aggregate 私有持有并通过只读接口暴露；schema、值种类校验、`StateHash`、事务读取和 Capture 语义不变。schema 准备期的只读包装不在本步范围。
+- 2.4 保持未勾选：Control 候选外壳和 hash、GE/Equipment 真实变化嵌套复制、CharacterState 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做控制状态创建/修改/恢复回放、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。

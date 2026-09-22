@@ -168,6 +168,7 @@
 - [x] 2.98 Operation 状态执行作用域改为嵌套 readonly struct typed 合同；状态机每个状态上下文删除 IDisposable 装箱和旧 class disposable，保留状态压栈、预测覆盖、转移选择和异常弹栈语义
 - [x] 2.99 Fixed/Float32 角色事务 pending ability 字典按 base state 能力数一次准备容量，删除每次角色评估的字典扩容；Clone、查找、覆盖和快照顺序不变，pending/committed 独立存储仍在 2.4
 - [x] 2.100 Fixed/Float32 ActionWindow 投影去重键改为 declaration identity 加 instance id 的 readonly struct；删除每次投影的插值字符串，保留 Ordinal 去重、候选顺序和 Frame 查询语义
+- [x] 2.101 Fixed/Float32 AbilityRuntimeState 复制 StateValues 按源字典数量一次准备容量，删除事务装配、能力快照和 Clone 的逐步扩容；键校验和隔离语义不变
 
 ## 3. Timeline和事件图
 

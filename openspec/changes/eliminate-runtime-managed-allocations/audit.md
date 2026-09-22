@@ -4624,3 +4624,12 @@
 - 每次 ActionWindow 投影写入不再构造 `declaration/instance` 插值字符串和 `ulong.ToString`。键比较保持 declaration identity 的 Ordinal 语义和 instance id 精确相等；候选列表追加顺序、`IsActionWindowActive` 查询、空值拒绝和投影异常路径不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可触发同一 ActionWindow 的重复写入、跨 Action 实例写入和 Window 查询，确认去重与激活状态一致；分配采样应观察每次投影的临时 key 字符串消失，候选对象和 declaration identity 字符串仍由正式数据持有。
+
+## 2026-09-22 Ability runtime state 字典容量准备
+
+对应 tasks.md 的 2.101；2.4 保持未勾选。
+
+- Fixed 和 Float32 `AbilityRuntimeState.CopyValues` 按 `values.Count` 一次构造目标字典，保留负键拒绝、重复键异常和值类型复制顺序；不再从默认容量逐步扩容。
+- 该路径覆盖事务初始化时 `FixedAbilityRuntimeState.Clone`／`Float32AbilityRuntimeState.Clone`，以及 `FixedSkillExecutionState.SnapshotState`／`Float32SkillExecutionState.SnapshotState` 的快照构造。事务工作字典仍独立复制，能力执行状态和 MotionWarp 状态继续深隔离。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行多能力技能激活、状态写入、保存点恢复和事务 commit，确认 Ability state 隔离一致；分配采样应观察 StateValues 复制的桶扩容消失，字典对象、ability execution aggregate 和 MotionWarp 字典仍是正式独立分配。

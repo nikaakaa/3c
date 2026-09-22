@@ -639,7 +639,7 @@ namespace ThirdPersonSimulation
             ulong generation,
             bool contributionsInstalled,
             string tagSource,
-            IEnumerable<ulong> passiveEffectHandles)
+            ulong[] ownedPassiveEffectHandles)
         {
             if (!slotId.IsValid || revision == 0 || generation == 0)
                 throw new ArgumentException("Equipment Slot state is invalid.");
@@ -659,9 +659,17 @@ namespace ThirdPersonSimulation
             Generation = generation;
             ContributionsInstalled = contributionsInstalled;
             TagSource = tagSource ?? string.Empty;
-            m_PassiveEffectHandles = (passiveEffectHandles ?? Array.Empty<ulong>()).ToArray();
-            if (m_PassiveEffectHandles.Any(value => value == 0) || m_PassiveEffectHandles.Distinct().Count() != m_PassiveEffectHandles.Length)
-                throw new ArgumentException("Equipment Slot passive Effect handles are invalid.");
+            m_PassiveEffectHandles = ownedPassiveEffectHandles ?? Array.Empty<ulong>();
+            for (int i = 0; i < m_PassiveEffectHandles.Length; i++)
+            {
+                if (m_PassiveEffectHandles[i] == 0)
+                    throw new ArgumentException("Equipment Slot passive Effect handle is zero.", nameof(ownedPassiveEffectHandles));
+                for (int prior = 0; prior < i; prior++)
+                {
+                    if (m_PassiveEffectHandles[prior] == m_PassiveEffectHandles[i])
+                        throw new ArgumentException("Equipment Slot passive Effect handles are duplicated.", nameof(ownedPassiveEffectHandles));
+                }
+            }
             if (empty && (TagSource.Length != 0 || m_PassiveEffectHandles.Length != 0))
                 throw new ArgumentException("Empty Equipment Slot cannot own contributions.");
         }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -66,7 +65,7 @@ namespace ThirdPersonSimulation
 
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.AddSourceAttribute(PortableEffectSpecState spec, string attributeId, Float32Scalar value) => spec.SourceAttributes.Add(attributeId, value);
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.AddTargetAttribute(PortableEffectSpecState spec, string attributeId, Float32Scalar value) => spec.TargetAttributes.Add(attributeId, value);
-        string[] IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.CopyTargetTags() => m_State.CopyOwnedTags().ToArray();
+        string[] IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.TargetTags() => m_State.OwnedTagsSnapshotArray;
         int IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.SourceTagCount(SimulationGameplayEffectApplication application) => application.SourceTagSnapshot.Count;
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.SourceTag(SimulationGameplayEffectApplication application, int index) => application.SourceTagSnapshot[index];
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, Float32Scalar>.NormalizeTag(string tag) => Float32GameplayEffectRuntimeCatalog.NormalizeTag(tag);

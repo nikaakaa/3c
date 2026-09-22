@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Scratch.ActiveIdentities.Clear();
         }
 
-        public IReadOnlyList<string> OwnedTags => m_State != null ? m_State.CopyOwnedTags() : m_CommittedState.CopyOwnedTags();
+        public IReadOnlyList<string> OwnedTags => m_State != null ? m_State.OwnedTagsSnapshot : m_CommittedState.CopyOwnedTags();
 
         public bool HasTag(string tagId)
         {

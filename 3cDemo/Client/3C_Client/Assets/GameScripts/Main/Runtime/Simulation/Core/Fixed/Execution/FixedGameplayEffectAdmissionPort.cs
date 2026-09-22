@@ -1,7 +1,6 @@
 using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
 {
@@ -67,7 +66,7 @@ namespace ThirdPersonSimulation.Fixed
 
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.AddSourceAttribute(PortableEffectSpecState spec, string attributeId, FixedScalar value) => spec.SourceAttributes.Add(attributeId, value);
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.AddTargetAttribute(PortableEffectSpecState spec, string attributeId, FixedScalar value) => spec.TargetAttributes.Add(attributeId, value);
-        string[] IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.CopyTargetTags() => m_State.CopyOwnedTags().ToArray();
+        string[] IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.TargetTags() => m_State.OwnedTagsSnapshotArray;
         int IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SourceTagCount(SimulationGameplayEffectApplication application) => application.SourceTagSnapshot.Count;
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SourceTag(SimulationGameplayEffectApplication application, int index) => application.SourceTagSnapshot[index];
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeTag(string tag) => FixedGameplayEffectRuntimeCatalog.NormalizeTag(tag);

@@ -564,7 +564,7 @@ namespace ThirdPersonSimulation
         bool TryReadTargetAttribute(string attributeId, out TScalar value);
         void AddSourceAttribute(TSpec spec, string attributeId, TScalar value);
         void AddTargetAttribute(TSpec spec, string attributeId, TScalar value);
-        string[] CopyTargetTags();
+        string[] TargetTags();
         int SourceTagCount(TApplication application);
         string SourceTag(TApplication application, int index);
         string NormalizeTag(string tag);
@@ -685,7 +685,7 @@ namespace ThirdPersonSimulation
                     m_Port.AddTargetAttribute(spec, attributeId, current);
                 }
 
-                string[] targetTags = m_Port.CopyTargetTags();
+                string[] targetTags = m_Port.TargetTags();
                 m_Port.SetTargetTags(spec, targetTags);
                 if (m_Port.SourceTagCount(application) > 0)
                 {

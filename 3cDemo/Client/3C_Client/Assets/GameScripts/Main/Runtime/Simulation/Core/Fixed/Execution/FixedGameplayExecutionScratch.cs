@@ -34,7 +34,6 @@ namespace ThirdPersonSimulation.Fixed
         public HashSet<ulong> ActiveInstances { get; } = new HashSet<ulong>();
         public List<GameplayEffectActiveIdentity> ActiveIdentities { get; } =
             new List<GameplayEffectActiveIdentity>();
-        public HashSet<string> OwnedTagSet { get; } = new HashSet<string>(StringComparer.Ordinal);
         public List<string> OwnedTags { get; } = new List<string>();
         public List<string> CanonicalTags { get; } = new List<string>();
 
@@ -60,7 +59,6 @@ namespace ThirdPersonSimulation.Fixed
             ActiveHandles.Clear();
             ActiveInstances.Clear();
             ActiveIdentities.Clear();
-            OwnedTagSet.Clear();
             OwnedTags.Clear();
             CanonicalTags.Clear();
         }

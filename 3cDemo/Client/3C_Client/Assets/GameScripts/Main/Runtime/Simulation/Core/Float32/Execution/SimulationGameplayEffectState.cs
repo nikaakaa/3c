@@ -434,6 +434,7 @@ namespace ThirdPersonSimulation
         readonly SortedDictionary<ulong, List<PortablePredictionRecord>> m_Journal = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
         readonly SortedDictionary<ulong, ulong> m_LastLifecycleRevisions = new SortedDictionary<ulong, ulong>();
         GameplayEffectStateAggregate m_Baseline;
+        string[] m_OwnedTagsSnapshot;
         ulong m_ChangeCursor;
         bool m_TagsDirty;
         bool m_AttributesDirty;
@@ -484,28 +485,31 @@ namespace ThirdPersonSimulation
             m_ChangeCursorDirty ||
             m_RestoredDirty;
 
-        public IReadOnlyList<string> CopyOwnedTags()
+        public IReadOnlyList<string> OwnedTagsSnapshot => m_OwnedTagsSnapshot ??= BuildOwnedTagsSnapshot();
+
+        internal string[] OwnedTagsSnapshotArray => m_OwnedTagsSnapshot ??= BuildOwnedTagsSnapshot();
+
+        string[] BuildOwnedTagsSnapshot()
         {
-            HashSet<string> tags = m_Scratch.OwnedTagSet;
             List<string> values = m_Scratch.OwnedTags;
-            tags.Clear();
             values.Clear();
             foreach (KeyValuePair<string, string[]> sourcePair in m_TagSources)
             {
                 string[] source = sourcePair.Value;
                 for (int i = 0; i < source.Length; i++)
-                    tags.Add(source[i]);
+                    values.Add(source[i]);
             }
-            foreach (string tag in tags)
-                values.Add(tag);
             values.Sort(s_CompareOwnedTags);
-            return values;
+            string[] snapshot = values.Count == 0 ? Array.Empty<string>() : values.ToArray();
+            values.Clear();
+            m_OwnedTagsSnapshot = snapshot;
+            return snapshot;
         }
 
         public bool HasTag(string tagId)
         {
             string query = Float32GameplayEffectRuntimeCatalog.NormalizeTag(tagId);
-            IReadOnlyList<string> owned = CopyOwnedTags();
+            IReadOnlyList<string> owned = OwnedTagsSnapshot;
             for (int i = 0; i < owned.Count; i++)
             {
                 if (m_Catalog.IsTagOrParent(owned[i], query))
@@ -516,7 +520,7 @@ namespace ThirdPersonSimulation
 
         public bool Matches(PortableTagQuery query)
         {
-            return m_Catalog.Matches(query, CopyOwnedTags());
+            return m_Catalog.Matches(query, OwnedTagsSnapshot);
         }
 
         public void SetTagSource(string sourceId, IEnumerable<string> tags)
@@ -527,19 +531,26 @@ namespace ThirdPersonSimulation
             if (values.Length == 0)
             {
                 if (m_TagSources.Remove(source))
+                {
+                    m_OwnedTagsSnapshot = null;
                     m_TagsDirty = true;
+                }
                 return;
             }
             if (ReferenceEquals(current, values))
                 return;
             m_TagSources[source] = values;
+            m_OwnedTagsSnapshot = null;
             m_TagsDirty = true;
         }
 
         public void RemoveTagSource(string sourceId)
         {
             if (m_TagSources.Remove(sourceId))
+            {
+                m_OwnedTagsSnapshot = null;
                 m_TagsDirty = true;
+            }
         }
 
         public bool TryGetAttribute(string attributeId, out PortableAttributeState value)
@@ -794,6 +805,7 @@ namespace ThirdPersonSimulation
         void ClearCollections()
         {
             m_TagSources.Clear();
+            m_OwnedTagsSnapshot = null;
             m_Attributes.Clear();
             m_ActiveEffects.Clear();
             m_Periods.Clear();

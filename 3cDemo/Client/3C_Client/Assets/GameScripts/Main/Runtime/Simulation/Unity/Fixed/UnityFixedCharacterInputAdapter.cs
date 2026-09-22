@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -292,7 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 for (int i = 0; i < count; i++)
                 {
-                    string requestId = reader.ReadString();
+                string requestId = ResolveRestoredRequestId(reader.ReadUtf8Segment());
                     ulong sequence = reader.ReadUInt64();
                     ulong captureRenderFrame = reader.ReadUInt64();
                     float bufferSeconds = checked((float)reader.ReadDouble());
@@ -326,6 +327,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 scratch.Clear();
             }
+        }
+
+        string ResolveRestoredRequestId(ArraySegment<byte> value)
+        {
+            for (int i = 0; i < m_RequestBindings.Count; i++)
+            {
+                RequestBinding binding = m_RequestBindings[i];
+                if (binding.RequestIdUtf8.AsSpan().SequenceEqual(value.AsSpan()))
+                    return binding.RequestId;
+            }
+            return Encoding.UTF8.GetString(value.Array, value.Offset, value.Count);
         }
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)
@@ -647,6 +659,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterActionRequestTimingClass timingClass)
             {
                 RequestId = requestId;
+                RequestIdUtf8 = Encoding.UTF8.GetBytes(requestId);
                 Action = action;
                 BufferSeconds = bufferSeconds;
                 Priority = priority;
@@ -654,6 +667,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
 
             public string RequestId { get; }
+            public byte[] RequestIdUtf8 { get; }
             public InputAction Action { get; }
             public float BufferSeconds { get; }
             public int Priority { get; }

@@ -2,7 +2,6 @@ using System;
 using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation
@@ -81,9 +80,9 @@ namespace ThirdPersonSimulation
                 ? null
                 : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
             SimulationActionActivationRequestState[] actionActivationRequests =
-                ReadActionActivationRequests(reader, installations, equipmentLayout).ToArray();
+                ReadActionActivationRequests(reader, installations, equipmentLayout);
             Float32ActionInstanceState[] actionInstances =
-                ReadActionInstances(reader, installations, equipmentLayout).ToArray();
+                ReadActionInstances(reader, installations, equipmentLayout);
             KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
@@ -532,13 +531,14 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
+        static SimulationActionActivationRequestState[] ReadActionActivationRequests(
             CanonicalReader reader,
             Float32GameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Float32 Action activation request");
-            var requests = new List<SimulationActionActivationRequestState>(count);
+            var requests = new SimulationActionActivationRequestState[count];
+            int requestCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!reader.ReadBoolean())
@@ -559,8 +559,10 @@ namespace ThirdPersonSimulation
                 if (!request.IsValid)
                     throw new InvalidDataException("Float32 Action activation request identity is invalid.");
                 RequireSkillExecution(request.SkillId, request.SkillEntryOperation, installations);
-                requests.Add(request);
+                requests[requestCount++] = request;
             }
+            if (requestCount != count)
+                Array.Resize(ref requests, requestCount);
             return requests;
         }
 
@@ -597,13 +599,14 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static List<Float32ActionInstanceState> ReadActionInstances(
+        static Float32ActionInstanceState[] ReadActionInstances(
             CanonicalReader reader,
             Float32GameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Float32 Action instance");
-            var actions = new List<Float32ActionInstanceState>(count);
+            var actions = new Float32ActionInstanceState[count];
+            int actionCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!reader.ReadBoolean())
@@ -633,8 +636,10 @@ namespace ThirdPersonSimulation
                 if (!action.IsValid)
                     throw new InvalidDataException("Float32 Action instance identity is invalid.");
                 RequireSkillExecution(action.SkillId, action.SkillEntryOperation, installations);
-                actions.Add(action);
+                actions[actionCount++] = action;
             }
+            if (actionCount != count)
+                Array.Resize(ref actions, actionCount);
             return actions;
         }
 

@@ -2,7 +2,6 @@ using System;
 using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
@@ -79,9 +78,9 @@ namespace ThirdPersonSimulation.Fixed
                 ? null
                 : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
             SimulationActionActivationRequestState[] actionActivationRequests =
-                ReadActionActivationRequests(reader, installations, equipmentLayout).ToArray();
+                ReadActionActivationRequests(reader, installations, equipmentLayout);
             FixedActionInstanceState[] actionInstances =
-                ReadActionInstances(reader, installations, equipmentLayout).ToArray();
+                ReadActionInstances(reader, installations, equipmentLayout);
             KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
@@ -530,13 +529,14 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
+        static SimulationActionActivationRequestState[] ReadActionActivationRequests(
             CanonicalReader reader,
             FixedGameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Fixed Action activation request");
-            var requests = new List<SimulationActionActivationRequestState>(count);
+            var requests = new SimulationActionActivationRequestState[count];
+            int requestCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!reader.ReadBoolean())
@@ -557,8 +557,10 @@ namespace ThirdPersonSimulation.Fixed
                 if (!request.IsValid)
                     throw new InvalidDataException("Fixed Action activation request identity is invalid.");
                 RequireSkillExecution(request.SkillId, request.SkillEntryOperation, installations);
-                requests.Add(request);
+                requests[requestCount++] = request;
             }
+            if (requestCount != count)
+                Array.Resize(ref requests, requestCount);
             return requests;
         }
 
@@ -595,13 +597,14 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static List<FixedActionInstanceState> ReadActionInstances(
+        static FixedActionInstanceState[] ReadActionInstances(
             CanonicalReader reader,
             FixedGameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Fixed Action instance");
-            var actions = new List<FixedActionInstanceState>(count);
+            var actions = new FixedActionInstanceState[count];
+            int actionCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!reader.ReadBoolean())
@@ -631,8 +634,10 @@ namespace ThirdPersonSimulation.Fixed
                 if (!action.IsValid)
                     throw new InvalidDataException("Fixed Action instance identity is invalid.");
                 RequireSkillExecution(action.SkillId, action.SkillEntryOperation, installations);
-                actions.Add(action);
+                actions[actionCount++] = action;
             }
+            if (actionCount != count)
+                Array.Resize(ref actions, actionCount);
             return actions;
         }
 

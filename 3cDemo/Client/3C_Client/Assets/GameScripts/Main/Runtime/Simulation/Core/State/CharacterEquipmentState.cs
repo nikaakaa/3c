@@ -796,6 +796,40 @@ namespace ThirdPersonSimulation
         public PendingEquipmentChange PendingChange { get; }
         public PendingEquipmentChange LastResolvedChange { get; }
 
+        internal static EquipmentStateAggregate AdoptPrepared(
+            StableHash catalogHash,
+            EquipmentSlotState[] slots,
+            EquipmentLocalStateValue[] localStates,
+            PendingEquipmentChange pendingChange,
+            PendingEquipmentChange lastResolvedChange)
+        {
+            if (!catalogHash.IsValid)
+                throw new ArgumentException("Equipment state catalog hash is invalid.", nameof(catalogHash));
+            Array.Sort(slots, s_CompareSlots);
+            for (int i = 1; i < slots.Length; i++)
+            {
+                if (slots[i - 1].SlotId == slots[i].SlotId)
+                    throw new InvalidDataException($"Equipment state Slot '{slots[i].SlotId}' is duplicated.");
+            }
+            Array.Sort(localStates, s_CompareLocalStates);
+            for (int i = 0; i < localStates.Length; i++)
+            {
+                if (localStates[i] == null)
+                    throw new InvalidDataException("Equipment aggregate contains a missing local state.");
+                if (i > 0 && localStates[i - 1].FeatureId == localStates[i].FeatureId &&
+                    localStates[i - 1].StateId == localStates[i].StateId)
+                {
+                    throw new InvalidDataException($"Equipment local state '{localStates[i].FeatureId}/{localStates[i].StateId}' is duplicated.");
+                }
+            }
+            return new EquipmentStateAggregate(
+                catalogHash,
+                slots,
+                localStates,
+                pendingChange,
+                lastResolvedChange);
+        }
+
         static int CompareJoinedIdentity(
             string leftFeature,
             string leftState,
@@ -849,7 +883,7 @@ namespace ThirdPersonSimulation
                     localState.StateId,
                     localState.DefaultValue);
             }
-            return new EquipmentStateAggregate(layout.CatalogHash, slots, localStates, default, default);
+            return AdoptPrepared(layout.CatalogHash, slots, localStates, default, default);
         }
 
         public EquipmentSlotState RequireSlot(EquipmentSlotId slotId)
@@ -1077,7 +1111,7 @@ namespace ThirdPersonSimulation
             }
             PendingEquipmentChange pending = ReadChange(reader, layout);
             PendingEquipmentChange resolved = ReadChange(reader, layout);
-            return new EquipmentStateAggregate(hash, slots, localStates, pending, resolved);
+            return EquipmentStateAggregate.AdoptPrepared(hash, slots, localStates, pending, resolved);
         }
 
         static void WriteStateValue(CanonicalWriter writer, EquipmentRuntimeStateValue value)

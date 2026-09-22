@@ -4232,3 +4232,11 @@
 - `ServerAuthoritativeAuthorityReliableEventOutput` 和 `ServerAuthoritativeAuthorityReliableEventBatchOutput` 从 sealed class 改为 readonly struct。Authority Source 从 remote presentation 提取可靠事件后，控制传输 ring、接口发送和 Fantasy Authority Connection 消费都按值传递，删除每条事件和每个事件批的输出外壳对象。
 - 事件输出继续要求收发 Actor 有效且不同，payload 存在；事件批继续要求路由有效、事件数组非空且每条事件路由一致。新增 `IsValid` 表达 default 输出的非法状态；Fantasy 发送边界的旧 null 检查改为 `IsValid`，内部 ring 消费不再重复防御。
 - 首次 Unity 刷新发现 Fantasy Authority Connection 还保留 struct 的 null 比较；同步改为 `IsValid` 后并入同一个代码提交。最终 `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别编译成功，前者 0 警告 0 错误，后者 0 错误和 17 个既有包/Editor 警告；每次编译后 `dotnet build-server shutdown` 成功。代码提交后 Unity 强制刷新，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。
+
+## 2026-09-22 Full checkpoint output 值化收口
+
+对应 tasks.md 的 5.5，新增 5.246 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeAuthorityFullCheckpointOutput` 从 sealed class 改为 readonly struct。Authority 控制传输接口、输出 ring 和 Fantasy Authority Connection 发送入口按值携带全量快照回复，删除每次全量 Checkpoint 回包的外壳对象。
+- 构造合同不变：Player、Actor 和 SnapshotSequence 必须有效，Checkpoint 和 Payload 必须存在。`RequestSequence` 合法可为 0，因此只保留在输出字段里，不参与 `IsValid`。新增 `IsValid` 表达 default 输出的非法状态；Fantasy 发送边界把旧 null 检查改为 `IsValid`，内部消费端不再重复防御。
+- `ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，前者 0 警告 0 错误，后者 0 错误和 17 个既有包/Editor 警告；随后 `dotnet build-server shutdown` 成功。代码提交后 Unity 强制刷新并请求编译，Domain Reload 后 Console 错误为 0。未做 Player 分配采样。

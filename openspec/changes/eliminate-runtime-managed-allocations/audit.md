@@ -4587,3 +4587,13 @@
 - 比较器改为长寿命 `OutputEventOwnerComparer.Instance`，`Array.Sort` 使用带范围的重载；删除每次构造 Commit batch 的比较委托和闭包。两个数值域的校验规则、排序规则和公开 Commit batch 合同不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行包含输出事件的 Fixed/Rollback 和 Float32 commit，确认 disposition 顺序、异常路径和 source egress 不变；分配采样应观察每次构造输出校验数组和比较委托的分配消失，租借缓冲本身由 `ArrayPool` 托管。
+
+## 2026-09-22 Ability execution 值栈所有权和工厂合同收口
+
+对应 tasks.md 的 2.97；2.3 保持未勾选。
+
+- Fixed 和 Float32 `AbilityExecutionServiceFactory` 接口显式接收安装层常驻 `AbilityOperationControlRuntime`，与既有工厂实现、Invocation Runtime 和 Action 停止判断使用同一实例；不再依赖接口缺失参数造成的分裂合同。
+- Float32 `AbilityExecutionWorkspace` 不再另持有一组只在 Reset 中清空的 `ValueStack`／`ValueBuffers`。递归栈和输入缓冲继续由构造期准备容量的 `Float32GraphValueWorkspace` 唯一持有，执行 workspace 的 Reset 委托给它，避免两条所有权路径和重复集合。
+- Fixed／Float32 Ability Execution Savepoint 与 GameplayEffectTarget 构造器开放给同程序集的正式 transaction／scratch 入口；装配边界删除上游已保证非空的 handles、facts、state 和 control state 重复空检查。`AbilityExecutionInput` 在事务外取一次，正式 Tick 的读取时机不变。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调、回放和 Player 分配采样。用户可运行包含技能、子图值、Gameplay Effect 和 Equipment 值的 Fixed/Float32 Tick，确认求值顺序、保存点恢复和 effect/equipment 提交不变；分配采样应观察 Float32 workspace 中第二组值栈集合消失，2.3 的临时字符串键和 class scope 仍未完成。

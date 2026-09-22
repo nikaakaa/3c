@@ -164,6 +164,7 @@
 
 - [x] 2.95 两数值域 CharacterEvaluationResult 在 Consume 成功后通过一次性 TakeOutputs 转移 facts／presentation／trace 数组，AbilityFinalize 以内部 owned 入口构造 SimulationActorTickResult，删除每 Actor 每 completed tick 的三次数组复制
 - [x] 2.96 两数值域 CompleteStep 直接按 finalized 数量组装 SimulationActorTickResult 最终数组并转交 SimulationTickResult，删除 workspace ActorResults List 及其重复复制；公开构造仍隔离外部输入
+- [x] 2.97 Fixed/Float32 Ability factory 显式接收常驻 OperationControl；Float32 值递归栈和输入缓冲由唯一 GraphValueWorkspace 持有并统一 Reset，删除 Reset-only 第二组集合；闭合正式 Savepoint／EffectTarget 构造可见性
 
 ## 3. Timeline和事件图
 

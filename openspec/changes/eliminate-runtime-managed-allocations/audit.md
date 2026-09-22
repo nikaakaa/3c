@@ -5624,3 +5624,12 @@
 - canonical 写入顺序、hash 结果、旧无参入口、结果所有权和 null 合同不变。最终 TickResult 数组和状态外壳仍由发布所有权决定，不在本步删除。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 输入回放、快照捕获、rollback restore和 Player 分配采样。
+
+## 2026-09-23 Complete结果Actor排序收敛
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `f659f3249`。
+
+- Fixed/Float32 `CompleteStep` 原先对最终 Actor 结果数组用每次调用的 lambda 排序，随后 `SimulationTickResult.FromOwnedActors` 又对同一所有权数组用新建 lambda 排序一次。现在 `SimulationTickResult` 持有静态 `ActorIdComparer`：`CompleteStep` 通过 `SortByActorId` 完成排序和 roster 校验，正式入口改名 `FromSortedOwnedActors` 后直接接管已排序数组，不再二次排序；公开构造继续通过 `CopySorted` 复制并排序。
+- Actor 排序、roster 校验位置、顺序和重复检查、候选快照身份校验、OutputEvents 组装以及 `CompleteStep` 失败语义不变。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 输入回放、快照捕获、rollback restore和 Player 分配采样。

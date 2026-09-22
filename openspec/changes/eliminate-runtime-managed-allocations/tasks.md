@@ -523,6 +523,7 @@
 - [x] 5.252 ServerAuthoritative AuthoritativeActorBaseline 改为 readonly struct；Authority 复制、Checkpoint、Prediction Evidence 和 Reconciler 按值携带 baseline，default 用 IsValid 显式拒绝
 - [x] 5.253 ServerAuthoritative NetworkCheckpoint 改为 readonly struct；Authority Source、Client Route、快照 codec 和 Checkpoint reconstruction 按值携带 checkpoint，default 用 IsValid 显式拒绝
 - [x] 5.254 ServerAuthoritative RemoteBodySelectionFrame 改为 readonly struct；Prediction Schedule 的远端 Body 采样选择按值携带，default 用 IsValid 表达未选择状态
+- [x] 5.255 ServerAuthoritative DatagramPacket 改为 readonly struct；发送合同改为 header 加 payload span 直接入队，接收租用 buffer 按值携带并统一归还，删除 packet 外壳池和发送 payload 数组
 
 ## 6. UI、资源、渲染和生命周期
 

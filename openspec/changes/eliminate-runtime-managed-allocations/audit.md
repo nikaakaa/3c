@@ -4311,3 +4311,15 @@
 - 构造合同不变：目标 Tick 有效，selection 数组存在并按 Actor 排序去重，selection 的 Tick 必须匹配 frame；转成 `ObservedWorldConstraintFrame` 或 `CharacterBodySample[]` 的顺序、采样内容和数组所有权不变。新增 `IsValid` 表达 default frame 的未选择状态。
 - `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。
 - 未刷新 Unity，未做 Player 分配采样。用户可沿 HardRecovery 远端重置锚点和连续预测 tick 的远端 Body 采样验证表现位置与约束不变，并用分配采样确认 selection frame 外壳减少。
+
+## 2026-09-22 ServerAuthoritative gameplay datagram packet 值化收口
+
+对应 tasks.md 的 5.5，新增 5.255 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeDatagramPacket` 从 sealed class 改为 readonly struct，接收路径只承载 Authority 路由 header、租用的最大 MTU payload buffer 和实际长度。接收 packet 对象池和 `Release` 所有权入口删除，`IsValid` 表达无收包状态。
+- Endpoint 发送合同改为 `ServerAuthoritativeDatagramHeader` 加 payload span。`CanonicalWriter` 同步完成 wire 编码后，Endpoint 直接把 `WrittenSpan` 复制进既有按队列容量租用的 UDP 发送 buffer；Authority Source 与 Prediction Datagram Channel 不再创建发送 packet，Hello、Ack 和 Command 不再创建发送 payload 数组。
+- `ServerAuthoritativeReceivedDatagram` 按值携带 packet 和远端 endpoint。Endpoint 新增统一 `ReturnReceived` 合同，消费完成和 Dispose 同时归还 payload buffer 与 endpoint；坏包、未知路由、endpoint 冲突和接收队列溢出只归还尚未入队的资源。成功入队后不提前归还，消费方仍可读取 payload。
+- Snapshot 发送仍先由 `NetworkCheckpointCodec.WriteDelta` 建立独立 delta，`SnapshotDatagram` 仍复制 delta；本步只删除外层 gameplay datagram packet 和 payload 数组，不宣称 checkpoint delta 或 SnapshotDatagram 已无分配。身份字符串、应用层解码结果、最终队列节点和首次池填充仍未完成。
+- `ThirdPersonSimulation.ServerAuthoritative.Transport.csproj`、`ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；`ThirdPersonSimulation.Unity.csproj` 使用同一参数编译成功，0 错误和 17 个既有包/Editor 警告。每次编译后 `dotnet build-server shutdown` 成功。
+- 编译期间 Unity MCP 实例列表曾返回 0 个实例；文档整理前目标实例 `e852139597e42532` 已恢复。当前 Codex 会话只暴露该 MCP 的资源读取，没有把 `refresh_unity` 和 `read_console` 映射为可调用工具，因此本步未触发刷新，也未读取 Console。不声称 U2022 Domain Reload 后无错误，未做网络联调和 Player 分配采样。
+- 用户可先在 `e852139597e42532` 非 Play 状态刷新并确认 Console 无编译错误，再跑一条 Authority/Prediction 对局验证 Hello/Ack、Command、Snapshot、序号去重和 endpoint 归还后的持续收发。既有 Player 分配采样可确认 gameplay packet 外壳和部分发送 payload 消失，但 Snapshot delta、SnapshotDatagram 复制、身份字符串和解码结果仍会出现在采样里，不能把它们误算为本步回归。

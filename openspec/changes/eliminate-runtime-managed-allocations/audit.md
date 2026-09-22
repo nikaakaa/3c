@@ -5239,6 +5239,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态回放、状态 Codec、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 GameplayEffect恢复假脏状态清理
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `fa4160912`。
+
+- Fixed/Float32 `SimulationGameplayEffectState.m_RestoredDirty` 只在字段声明、`HasChanges` 和 `ClearDirty` 中出现；`Restore` 的 `hasChanges` 参数没有任何调用方传 `true`，该字段永远不会真实置位。它让恢复语义看起来存在第七个变更分类，但运行链路只有 tags、attributes、active effects、periods、journal、lifecycle revisions 和 ChangeCursor 六类独立判定。
+- 现在删除 `m_RestoredDirty`、`hasChanges` 参数和对应清零路径。`Restore` 仍从 committed aggregate 深拷贝到 working page，`ValidateRuntimeClosure` 和所有真实分类脏判定不变。
+- 2.4 保持未勾选：恢复时的嵌套对象深拷贝、CharacterState candidate 外壳、Equipment changed path 和 Timeline snapshot 仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 GameplayEffect savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

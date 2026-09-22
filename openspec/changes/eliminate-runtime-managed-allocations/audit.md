@@ -5408,3 +5408,13 @@
 - 2.4 保持未勾选：真实变化路径的新 pending 页分配、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability重灌页预分配
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `e71dbdcbd`。
+
+- Fixed/Float32 技能真实变化后，对应 pending 字典会移交给 candidate 并置空；下一次 `Restart` 原先用默认容量 `new Dictionary`，`LoadCommittedCollections` 装载 committed 内容时还会按内部策略扩容。现在空页准备收敛到 `LoadCommittedCollections`，新建时直接按新 committed `StateValues.Count` 和 `MotionWarpStates.Count` 分配；constructor 与 Restart 不再重复准备。
+- 已保留的未移交页仍先 `Clear` 再从 committed 复制，不借用 committed 字典，也不改变 pending/committed 独立所有权。技能身份校验、快照移交、真实变化页分配和恢复语义不变。
+- 2.4 保持未勾选：真实变化路径仍需要新页、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。

@@ -147,6 +147,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public AuthoritativeActorBaseline Baseline { get; }
         internal byte[] StateBytes => (byte[])m_StateBytes.Clone();
+        internal ReadOnlySpan<byte> StateSpan => m_StateBytes;
         public StableHash CheckpointHash { get; }
         public bool IsValid => Baseline.IsValid && m_StateBytes != null;
 
@@ -206,7 +207,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WriteBody(writer, baseline.Body);
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
             WriteHorizon(writer, baseline.ConfirmedEventHorizon);
-            writer.WriteBytes(checkpoint.StateBytes);
+            writer.WriteBytes(checkpoint.StateSpan);
             writer.WriteString(checkpoint.CheckpointHash.ToString());
             return writer.ToArray();
         }
@@ -286,8 +287,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WriteBody(writer, value.Body);
             writer.WriteUInt64(value.ConfirmedInputSequence);
             WriteDeltaHorizon(writer, baseline.Baseline.ConfirmedEventHorizon, value.ConfirmedEventHorizon);
-            byte[] targetState = target.StateBytes;
-            bool stateChanged = !Equal(baseline.StateBytes, targetState);
+            ReadOnlySpan<byte> targetState = target.StateSpan;
+            bool stateChanged = !Equal(baseline.StateSpan, targetState);
             writer.WriteBoolean(stateChanged);
             if (stateChanged)
                 writer.WriteBytes(targetState);
@@ -617,14 +618,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new ServerAuthoritativeEventHorizon(sequence, eventId);
         }
 
-        static bool Equal(byte[] left, byte[] right)
-        {
-            if (left == null || right == null || left.Length != right.Length)
-                return false;
-            for (int i = 0; i < left.Length; i++)
-                if (left[i] != right[i])
-                    return false;
-            return true;
-        }
+        static bool Equal(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right) => left.SequenceEqual(right);
     }
 }

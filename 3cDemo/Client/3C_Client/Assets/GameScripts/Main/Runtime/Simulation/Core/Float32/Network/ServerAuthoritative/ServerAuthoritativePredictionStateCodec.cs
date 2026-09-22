@@ -348,7 +348,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     reader.ReadBytes());
             }
             reader.RequireComplete();
-            return new SimulationPipelineStateSnapshot(pipeline, backend, tick, participants);
+            return SimulationPipelineStateSnapshot.FromOwnedParticipants(pipeline, backend, tick, participants);
         }
 
         static void RequireHeader(CanonicalReader reader, uint magic, int version)

@@ -249,7 +249,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ServerAuthoritativePredictionPassIds.JournalStateSchema,
                 journalState,
                 ServerAuthoritativePredictionPassIds.JournalStateSchemaVersion);
-            return new SimulationPipelineStateSnapshot(pipeline, projection.Backend, tick, participants);
+            return SimulationPipelineStateSnapshot.FromOwnedParticipants(pipeline, projection.Backend, tick, participants);
         }
 
         static Float32Scalar PositionError(WorldBodyState left, WorldBodyState right)

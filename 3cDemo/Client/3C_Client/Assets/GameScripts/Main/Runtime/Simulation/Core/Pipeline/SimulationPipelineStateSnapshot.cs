@@ -76,16 +76,7 @@ namespace ThirdPersonSimulation
 
         [ThreadStatic] static CanonicalWriter s_HashWriter;
 
-        public SimulationPipelineStateSnapshot(
-            SimulationPipelineIdentity pipeline,
-            SimulationComponentIdentity backend,
-            ulong lastCompletedTick,
-            IReadOnlyList<SimulationPipelinePassStateSnapshot> participants)
-            : this(pipeline, backend, lastCompletedTick, CopyParticipants(participants))
-        {
-        }
-
-        internal SimulationPipelineStateSnapshot(
+        private SimulationPipelineStateSnapshot(
             SimulationPipelineIdentity pipeline,
             SimulationComponentIdentity backend,
             ulong lastCompletedTick,
@@ -119,16 +110,12 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationPipelinePassStateSnapshot> Participants => m_Participants;
         public StableHash SnapshotHash { get; }
 
-        static SimulationPipelinePassStateSnapshot[] CopyParticipants(
-            IReadOnlyList<SimulationPipelinePassStateSnapshot> participants)
-        {
-            if (participants == null || participants.Count == 0)
-                return Array.Empty<SimulationPipelinePassStateSnapshot>();
-            var values = new SimulationPipelinePassStateSnapshot[participants.Count];
-            for (int i = 0; i < values.Length; i++)
-                values[i] = participants[i];
-            return values;
-        }
+        public static SimulationPipelineStateSnapshot FromOwnedParticipants(
+            SimulationPipelineIdentity pipeline,
+            SimulationComponentIdentity backend,
+            ulong lastCompletedTick,
+            SimulationPipelinePassStateSnapshot[] ownedParticipants) =>
+            new SimulationPipelineStateSnapshot(pipeline, backend, lastCompletedTick, ownedParticipants);
 
         StableHash ComputeHash()
         {
@@ -600,7 +587,7 @@ namespace ThirdPersonSimulation
                 RequireSnapshotIdentity(values[i].StateIdentity, snapshot);
                 snapshots[i] = snapshot;
             }
-            return new SimulationPipelineStateSnapshot(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
+            return SimulationPipelineStateSnapshot.FromOwnedParticipants(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
         }
 
         public static SimulationPipelineStateSnapshot CaptureStepProjection(
@@ -636,7 +623,7 @@ namespace ThirdPersonSimulation
                 RequireSnapshotIdentity(values[i].StateIdentity, snapshot);
                 snapshots[snapshotIndex++] = snapshot;
             }
-            return new SimulationPipelineStateSnapshot(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
+            return SimulationPipelineStateSnapshot.FromOwnedParticipants(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
         }
 
         public static SimulationPipelineStateRestoreTransaction PrepareRestore(

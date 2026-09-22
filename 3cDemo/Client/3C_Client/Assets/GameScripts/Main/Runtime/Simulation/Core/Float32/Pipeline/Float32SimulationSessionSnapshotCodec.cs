@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace ThirdPersonSimulation
@@ -156,7 +155,7 @@ namespace ThirdPersonSimulation
             int count = reader.ReadInt32();
             if (count < 0 || count > 1000000)
                 throw new InvalidDataException($"Pipeline snapshot participant count '{count}' is invalid.");
-            var participants = new List<SimulationPipelinePassStateSnapshot>(count);
+            var participants = new SimulationPipelinePassStateSnapshot[count];
             for (int i = 0; i < count; i++)
             {
                 var passId = new SimulationPipelinePassId(reader.ReadString());
@@ -166,16 +165,16 @@ namespace ThirdPersonSimulation
                 int schemaVersion = reader.ReadInt32();
                 var stateHash = new StableHash(reader.ReadString());
                 byte[] payload = reader.ReadBytes();
-                participants.Add(SimulationPipelinePassStateSnapshot.FromWirePayload(
+                participants[i] = SimulationPipelinePassStateSnapshot.FromWirePayload(
                     passId,
                     implementationVersion,
                     stateOwner,
                     schemaId,
                     schemaVersion,
                     stateHash,
-                    payload));
+                    payload);
             }
-            var snapshot = new SimulationPipelineStateSnapshot(pipeline, backend, lastCompletedTick, participants);
+            var snapshot = SimulationPipelineStateSnapshot.FromOwnedParticipants(pipeline, backend, lastCompletedTick, participants);
             if (!snapshot.SnapshotHash.Equals(expectedHash))
                 throw new InvalidDataException($"Pipeline state snapshot hash mismatch. Expected '{expectedHash}', actual '{snapshot.SnapshotHash}'.");
             return snapshot;

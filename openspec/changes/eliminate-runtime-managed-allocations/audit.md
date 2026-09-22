@@ -5528,3 +5528,13 @@
 - 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 GE application、tag snapshot 变化、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE相同周期与生命周期映射复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `a6eb06eab`。
+
+- Fixed/Float32 GE 变更快照原先在 `periodsChanged` 或 `lastLifecycleRevisionsChanged` 时无条件新建 `SortedDictionary<ulong, ulong>`。现在先比较数量和每个键值，内容与 baseline 完全相同就复用原映射；内容真实变化仍调用原 `CloneMap` 完整复制。
+- 该比较只服务 dirty 标记已置位但值恢复相同的路径，不改变 dirty 判定、字段类型、映射顺序、提交快照和回滚语义。新增 `CloneChangedMap` 与现有 `CloneMap` 保持同一实际存储合同。
+- 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 GE period 写入、lifecycle revision 恢复、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

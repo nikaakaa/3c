@@ -315,7 +315,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteString(participant.StateSchemaId);
                 writer.WriteInt32(participant.StateSchemaVersion);
                 writer.WriteString(participant.StateHash.ToString());
-                writer.WriteBytes(participant.CopyPayload());
+                writer.WriteBytes(participant.Payload.Span);
             }
             return writer.ToArray();
         }

@@ -2,6 +2,7 @@ using System;
 using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation
@@ -61,7 +62,7 @@ namespace ThirdPersonSimulation
             int abilityCount = ReadCount(reader, installations.Installations.Count, "Float32 Character Ability partition");
             if (abilityCount != installations.Installations.Count)
                 throw new InvalidDataException("Float32 Character runtime state Ability partitions do not match the installed Ability set.");
-            var abilities = new List<Float32AbilityRuntimeState>(abilityCount);
+            var abilities = new Float32AbilityRuntimeState[abilityCount];
             for (int i = 0; i < abilityCount; i++)
             {
                 GameplayAbilityExecutionIdentity identity = ReadIdentity(reader);
@@ -70,17 +71,19 @@ namespace ThirdPersonSimulation
                 Dictionary<int, AbilityStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
                 Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
-                abilities.Add(Float32AbilityRuntimeState.Adopt(
+                abilities[i] = Float32AbilityRuntimeState.Adopt(
                     identity,
                     stateValues,
                     abilityExecutionState,
-                    motionWarpStates));
+                    motionWarpStates);
             }
             EquipmentProgramLayout equipmentLayout = !installations.RequiresEquipment || equipmentBinding == null
                 ? null
                 : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
-            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
-            List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
+            SimulationActionActivationRequestState[] actionActivationRequests =
+                ReadActionActivationRequests(reader, installations, equipmentLayout).ToArray();
+            Float32ActionInstanceState[] actionInstances =
+                ReadActionInstances(reader, installations, equipmentLayout).ToArray();
             KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
@@ -113,11 +116,11 @@ namespace ThirdPersonSimulation
                 equipmentReader.RequireComplete();
             }
             int timelineSnapshotCount = ReadCount(reader, 1024, "Float32 Character Timeline snapshot");
-            var timelineSnapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshotCount);
+            var timelineSnapshots = new AbilityTimelineRuntimeSnapshot[timelineSnapshotCount];
             for (int i = 0; i < timelineSnapshotCount; i++)
-                timelineSnapshots.Add(ReadTimelineSnapshot(reader));
+                timelineSnapshots[i] = ReadTimelineSnapshot(reader);
             reader.RequireComplete();
-            var state = new Float32CharacterRuntimeState(
+            var state = Float32CharacterRuntimeState.AdoptPrepared(
                 numericProfile,
                 gameplayContentHash,
                 stateSchemaHash,
@@ -132,8 +135,7 @@ namespace ThirdPersonSimulation
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                timelineSnapshots,
-                ownsInputRequests: true);
+                timelineSnapshots);
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, state);
             if (!writer.ContentEquals(bytes.Span))

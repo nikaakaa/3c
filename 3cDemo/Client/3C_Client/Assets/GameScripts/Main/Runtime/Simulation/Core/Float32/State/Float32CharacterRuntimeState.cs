@@ -96,6 +96,9 @@ namespace ThirdPersonSimulation
         readonly Float32AbilityRuntimeState[] m_Abilities;
         readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
 
+        static readonly Comparison<AbilityTimelineRuntimeSnapshot> s_CompareTimelineSnapshots =
+            (left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle);
+
         internal Float32CharacterRuntimeState(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
@@ -355,6 +358,62 @@ namespace ThirdPersonSimulation
                 gameplayEffectState,
                 equipmentState,
                 timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
+        }
+
+        internal static Float32CharacterRuntimeState AdoptPrepared(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
+            ulong lastCompletedTick,
+            Float32AbilityRuntimeState[] abilities,
+            SimulationActionActivationRequestState[] actionActivationRequests,
+            Float32ActionInstanceState[] actionInstances,
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
+            ulong eventSequence,
+            ulong actionEventSequence,
+            ulong handleAllocator,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            AbilityTimelineRuntimeSnapshot[] timelineSnapshots)
+        {
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
+                throw new ArgumentException("Character runtime state identity is incomplete.");
+            Array.Sort(abilities, CompareAbilities);
+            for (int i = 0; i < abilities.Length; i++)
+            {
+                if (abilities[i] == null || i > 0 && abilities[i - 1].AbilityIdentity.AbilityId == abilities[i].AbilityIdentity.AbilityId)
+                    throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.");
+            }
+            Array.Sort(inputRequests, InputRequestKeyComparer.Instance);
+            for (int i = 1; i < inputRequests.Length; i++)
+            {
+                if (inputRequests[i].Key == null ||
+                    string.CompareOrdinal(inputRequests[i - 1].Key, inputRequests[i].Key) >= 0)
+                    throw new ArgumentException("Character runtime state Input request identities are null, duplicated, or not canonically ordered.");
+            }
+            Array.Sort(timelineSnapshots, s_CompareTimelineSnapshots);
+            for (int i = 0; i < timelineSnapshots.Length; i++)
+            {
+                if (!timelineSnapshots[i].IsValid || i > 0 && timelineSnapshots[i - 1].RuntimeHandle == timelineSnapshots[i].RuntimeHandle)
+                    throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.");
+            }
+            return new Float32CharacterRuntimeState(
+                numericProfile,
+                gameplayContentHash,
+                stateSchemaHash,
+                lastCompletedTick,
+                abilities,
+                actionActivationRequests,
+                actionInstances,
+                inputRequests,
+                eventSequence,
+                actionEventSequence,
+                handleAllocator,
+                controlState,
+                gameplayEffectState,
+                equipmentState,
+                new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(timelineSnapshots));
         }
 
         private Float32CharacterRuntimeState(

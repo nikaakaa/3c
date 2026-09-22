@@ -442,7 +442,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<ServerAuthoritativeReliableEvent> ReliableEvents => m_ReliableEvents;
     }
 
-    public sealed class SelectedRemoteBodyBatch
+    public readonly struct SelectedRemoteBodyBatch
     {
         static readonly Comparison<CharacterBodySample> s_CompareByTick =
             (left, right) => left.Tick.CompareTo(right.Tick);
@@ -473,6 +473,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationTick Tick { get; }
         public IReadOnlyList<CharacterBodySample> BodySamples => m_BodySamples;
         public bool ResetStream { get; }
+        public bool IsValid => ActorId.IsValid && Tick.IsValid && m_BodySamples != null;
     }
 
     public sealed class AuthoritativeInputAck

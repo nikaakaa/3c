@@ -4528,3 +4528,13 @@
 - Local input frame、Rollback ingress batch、Local schedule 输入校验改用 struct 的 `IsValid`；Exclusive Product 槽已有值类型判断，pipeline 端口包装仍是引用类型并保留原 null 校验。发布、读取顺序和空集合语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行 Local/Rollback/Authoritative session，确认输入 ingress 和 schedule 不变；分配采样应观察 Empty batch 的托管外壳消失，空数组继续由运行时共享。
+
+## 2026-09-22 Step Pass 调用去闭包
+
+对应 tasks.md 的 5.5，新增 5.276 作为独立小步；5.5 保持未勾选。
+
+- `PipelineTransactionCoordinator.ExecuteStepPasses` 不再把 `() => pass.Execute(context)` 交给通用 `Action`；Step Pass 现在直接携带 `SimulationPipelineStepTransactionContext`，`ExecutePass` 按 Evaluate、ResolveBatch、Finalize 和其他阶段分派到原有 probe 方法，方法内调用新的 `ExecuteStepPassCore` 直接执行 Pass。
+- 四个 `PerformanceProbe` 方法名和 metric id 保持不变，所以 evaluate、world-resolve、finalize 和 step-other 的阶段采样边界不变。Pass 成功、composition failure、普通异常包装、诊断成功/失败记录和耗时起点也保持原语义。
+- 这一步只收口每 Step、每 Pass 的热路径；Ingress、Schedule、Egress 仍是每 Tick 一次的通用 Action 链，留给后续小步处理。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可运行包含技能 Step 的 Fixed/Float32 session，确认 Pass 顺序、world resolve、诊断采样和异常回滚不变；分配采样应观察每个 Step Pass 的闭包和委托对象消失。

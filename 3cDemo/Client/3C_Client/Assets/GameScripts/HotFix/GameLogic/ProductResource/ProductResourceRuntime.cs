@@ -101,9 +101,9 @@ namespace GameLogic.ProductResource
             try
             {
                 CancellationTokenSource linked = cancellationToken.CanBeCanceled
-                    ? CancellationTokenSource.CreateLinkedTokenSource(scope.LifetimeToken, cancellationToken)
+                    ? CancellationTokenSource.CreateLinkedTokenSource(scope.CancellationToken, cancellationToken)
                     : null;
-                CancellationToken cancellation = linked == null ? scope.LifetimeToken : linked.Token;
+                CancellationToken cancellation = linked == null ? scope.CancellationToken : linked.Token;
                 try
                 {
                     bool knownPhysicalReuse = _knownPhysicalAssets.Contains(identity);

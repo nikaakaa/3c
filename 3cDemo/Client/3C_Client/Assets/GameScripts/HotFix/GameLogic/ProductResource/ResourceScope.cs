@@ -7,15 +7,14 @@ namespace GameLogic.ProductResource
     public sealed class ResourceScope : IDisposable
     {
         private readonly ProductResourceRuntime _runtime;
-        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
-        private readonly CancellationTokenSource _lifetimeCancellation;
+        private readonly CancellationTokenSource _cancellation;
         private int _leaseCount;
         private ResourceScopeSnapshot _snapshot;
 
         internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name, CancellationToken runtimeCancellation)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _lifetimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(runtimeCancellation);
+            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(runtimeCancellation);
             Id = id;
             Kind = kind;
             Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("Scope name is required.", nameof(name)) : name.Trim();
@@ -31,8 +30,6 @@ namespace GameLogic.ProductResource
         public ResourceScopeState State { get; private set; }
 
         public CancellationToken CancellationToken => _cancellation.Token;
-
-        internal CancellationToken LifetimeToken => _lifetimeCancellation.Token;
 
         public int LeaseCount => _leaseCount;
 
@@ -72,7 +69,6 @@ namespace GameLogic.ProductResource
             State = ResourceScopeState.Disposed;
             _leaseCount = 0;
             _cancellation.Dispose();
-            _lifetimeCancellation.Dispose();
         }
 
         internal bool TryRegisterLease()

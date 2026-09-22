@@ -97,7 +97,10 @@ namespace ThirdPersonSimulation
                 if (effectCatalog == null)
                     throw new InvalidDataException("Float32 Character runtime state contains Gameplay Effect state without a Character Effect service.");
                 var effectReader = new CanonicalReader(reader.ReadBytesSegment());
-                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectCatalog);
+                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(
+                    effectReader,
+                    effectCatalog,
+                    actor.EffectExecutionScratch);
                 effectReader.RequireComplete();
             }
             EquipmentStateAggregate equipmentState = null;

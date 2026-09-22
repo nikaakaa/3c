@@ -220,11 +220,13 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        internal static GameplayEffectStateAggregate CreateInitial(Float32GameplayEffectRuntimeCatalog catalog)
+        internal static GameplayEffectStateAggregate CreateInitial(
+            Float32GameplayEffectRuntimeCatalog catalog,
+            Float32GameplayEffectExecutionScratch scratch)
         {
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
-            return new SimulationGameplayEffectState(catalog, null).Freeze();
+            return new SimulationGameplayEffectState(catalog, null, scratch).Freeze();
         }
 
         internal void CopyTo(
@@ -444,12 +446,12 @@ namespace ThirdPersonSimulation
         public SimulationGameplayEffectState(
             Float32GameplayEffectRuntimeCatalog catalog,
             GameplayEffectStateAggregate aggregate,
-            Float32GameplayEffectExecutionScratch scratch = null)
+            Float32GameplayEffectExecutionScratch scratch)
         {
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
+            m_Scratch = scratch ?? throw new ArgumentNullException(nameof(scratch));
             m_Catalog = catalog;
-            m_Scratch = scratch;
             if (aggregate == null)
                 Initialize();
             else
@@ -484,9 +486,8 @@ namespace ThirdPersonSimulation
 
         public IReadOnlyList<string> CopyOwnedTags()
         {
-            HashSet<string> tags = m_Scratch?.OwnedTagSet ??
-                new HashSet<string>(StringComparer.Ordinal);
-            List<string> values = m_Scratch?.OwnedTags ?? new List<string>();
+            HashSet<string> tags = m_Scratch.OwnedTagSet;
+            List<string> values = m_Scratch.OwnedTags;
             tags.Clear();
             values.Clear();
             foreach (KeyValuePair<string, string[]> sourcePair in m_TagSources)
@@ -589,7 +590,7 @@ namespace ThirdPersonSimulation
 
         public IReadOnlyList<PortableAttributeChange> RemoveModifiersByEffect(ulong sourceEffectHandle)
         {
-            List<PortableAttributeChange> changes = m_Scratch?.AttributeChanges ?? new List<PortableAttributeChange>();
+            List<PortableAttributeChange> changes = m_Scratch.AttributeChanges;
             changes.Clear();
             bool removed = false;
             foreach (KeyValuePair<string, PortableAttributeState> attributePair in m_Attributes)
@@ -622,7 +623,7 @@ namespace ThirdPersonSimulation
             attribute.BaseValue = baseValue;
             attribute.CurrentValue = currentValue;
             attribute.Revision = revision;
-            List<PortableAttributeChange> result = m_Scratch?.AttributeChanges ?? new List<PortableAttributeChange>();
+            List<PortableAttributeChange> result = m_Scratch.AttributeChanges;
             result.Clear();
             result.Add(new PortableAttributeChange(attribute.Definition.Id, before[attribute.Definition.Id].Base, baseValue, before[attribute.Definition.Id].Current, currentValue, revision, causeHandle));
             result.AddRange(RecalculateAll(before, causeHandle, attribute.Definition.Id));
@@ -643,7 +644,7 @@ namespace ThirdPersonSimulation
             attribute.BaseValue = snapshot.BaseValue;
             attribute.CurrentValue = snapshot.CurrentValue;
             attribute.Revision = snapshot.BeforeRevision;
-            List<PortableAttributeChange> result = m_Scratch?.AttributeChanges ?? new List<PortableAttributeChange>();
+            List<PortableAttributeChange> result = m_Scratch.AttributeChanges;
             result.Clear();
             result.Add(new PortableAttributeChange(attribute.Definition.Id, before[attribute.Definition.Id].Base, attribute.BaseValue, before[attribute.Definition.Id].Current, attribute.CurrentValue, attribute.Revision, causeHandle));
             result.AddRange(RecalculateAll(before, causeHandle, attribute.Definition.Id));
@@ -778,9 +779,8 @@ namespace ThirdPersonSimulation
                     Revision = 1
                 });
             }
-            Dictionary<string, Float32Scalar> cache = m_Scratch?.AttributeValues ??
-                new Dictionary<string, Float32Scalar>(StringComparer.Ordinal);
-            HashSet<string> stack = m_Scratch?.AttributeStack ?? new HashSet<string>(StringComparer.Ordinal);
+            Dictionary<string, Float32Scalar> cache = m_Scratch.AttributeValues;
+            HashSet<string> stack = m_Scratch.AttributeStack;
             cache.Clear();
             stack.Clear();
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
@@ -814,8 +814,7 @@ namespace ThirdPersonSimulation
 
         Dictionary<string, PortableAttributeBefore> CaptureAttributeBefore()
         {
-            Dictionary<string, PortableAttributeBefore> result = m_Scratch?.AttributeBefore ??
-                new Dictionary<string, PortableAttributeBefore>(StringComparer.Ordinal);
+            Dictionary<string, PortableAttributeBefore> result = m_Scratch.AttributeBefore;
             result.Clear();
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
                 result.Add(pair.Key, new PortableAttributeBefore(pair.Value.BaseValue, pair.Value.CurrentValue, pair.Value.Revision));
@@ -824,15 +823,13 @@ namespace ThirdPersonSimulation
 
         IReadOnlyList<PortableAttributeChange> RecalculateAll(Dictionary<string, PortableAttributeBefore> before, ulong causeHandle, string excludedAttribute)
         {
-            Dictionary<string, Float32Scalar> cache = m_Scratch?.AttributeValues ??
-                new Dictionary<string, Float32Scalar>(StringComparer.Ordinal);
-            HashSet<string> stack = m_Scratch?.AttributeStack ?? new HashSet<string>(StringComparer.Ordinal);
+            Dictionary<string, Float32Scalar> cache = m_Scratch.AttributeValues;
+            HashSet<string> stack = m_Scratch.AttributeStack;
             cache.Clear();
             stack.Clear();
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
                 CalculateCurrent(pair.Key, excludedAttribute, cache, stack);
-            List<PortableAttributeChange> changes = m_Scratch?.RecalculatedAttributeChanges ??
-                new List<PortableAttributeChange>();
+            List<PortableAttributeChange> changes = m_Scratch.RecalculatedAttributeChanges;
             changes.Clear();
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
             {
@@ -971,8 +968,8 @@ namespace ThirdPersonSimulation
         }
         void ValidateRuntimeClosure()
         {
-            HashSet<ulong> handles = m_Scratch?.ActiveHandles ?? new HashSet<ulong>();
-            HashSet<ulong> instances = m_Scratch?.ActiveInstances ?? new HashSet<ulong>();
+            HashSet<ulong> handles = m_Scratch.ActiveHandles;
+            HashSet<ulong> instances = m_Scratch.ActiveInstances;
             handles.Clear();
             instances.Clear();
             ulong previousInsertion = 0;
@@ -1002,7 +999,7 @@ namespace ThirdPersonSimulation
 
         string[] CanonicalTags(IEnumerable<string> tags, string[] current = null)
         {
-            List<string> values = m_Scratch?.CanonicalTags ?? new List<string>();
+            List<string> values = m_Scratch.CanonicalTags;
             values.Clear();
             try
             {

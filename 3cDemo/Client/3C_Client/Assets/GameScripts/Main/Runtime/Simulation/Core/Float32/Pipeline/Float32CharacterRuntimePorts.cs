@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             GameplayEffectStateAggregate effectState = effectCatalog == null
                 ? null
-                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
+                : GameplayEffectStateAggregate.CreateInitial(effectCatalog, actor.EffectExecutionScratch);
             EquipmentStateAggregate equipmentState = null;
             CreateEquipmentInitialState(actor, out equipmentState);
             var abilityIdentities = new List<GameplayAbilityExecutionIdentity>(actor.AbilityInstallations.Installations.Count);

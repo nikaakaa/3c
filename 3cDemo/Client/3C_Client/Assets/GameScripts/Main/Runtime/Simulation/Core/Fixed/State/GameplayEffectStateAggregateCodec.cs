@@ -41,12 +41,15 @@ namespace ThirdPersonSimulation.Fixed
 
         internal static GameplayEffectStateAggregate Read(
             CanonicalReader reader,
-            FixedGameplayEffectRuntimeCatalog catalog)
+            FixedGameplayEffectRuntimeCatalog catalog,
+            FixedGameplayEffectExecutionScratch scratch)
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
+            if (scratch == null)
+                throw new ArgumentNullException(nameof(scratch));
 
             var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
             var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
@@ -69,7 +72,7 @@ namespace ThirdPersonSimulation.Fixed
                 journal,
                 lifecycleRevisions,
                 reader.ReadUInt64());
-            return new SimulationGameplayEffectState(catalog, aggregate).Freeze();
+            return new SimulationGameplayEffectState(catalog, aggregate, scratch).Freeze();
         }
 
         static void WriteTags(CanonicalWriter writer, IReadOnlyDictionary<string, string[]> tagSources)

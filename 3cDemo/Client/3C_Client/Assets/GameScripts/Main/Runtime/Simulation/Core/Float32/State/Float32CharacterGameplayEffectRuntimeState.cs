@@ -68,7 +68,6 @@ namespace ThirdPersonSimulation
             }
             if (m_Working == null)
             {
-                m_Working = new SimulationGameplayEffectState(m_Catalog, m_Aggregate, m_Scratch);
                 return;
             }
             m_Working.Restore(m_Aggregate);

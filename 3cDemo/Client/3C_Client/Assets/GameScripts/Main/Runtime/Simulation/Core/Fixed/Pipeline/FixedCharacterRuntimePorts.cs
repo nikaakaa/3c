@@ -161,7 +161,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             GameplayEffectStateAggregate effectState = effectCatalog == null
                 ? null
-                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
+                : GameplayEffectStateAggregate.CreateInitial(effectCatalog, actor.EffectExecutionScratch);
             EquipmentStateAggregate equipmentState = null;
             if (actor.AbilityInstallations.RequiresEquipment)
             {

@@ -192,9 +192,13 @@ namespace ThirdPersonSimulation.Fixed
             bool lastLifecycleRevisionsChanged,
             ulong changeCursor)
         {
-            SortedDictionary<string, string[]> changedTags = tagsChanged
-                ? AdoptChangedTagSources(tagSources, m_TagSources)
-                : m_TagSources;
+            SortedDictionary<string, string[]> changedTags = m_TagSources;
+            bool tagsUnchanged = true;
+            if (tagsChanged)
+            {
+                changedTags = AdoptChangedTagSources(tagSources, m_TagSources);
+                tagsUnchanged = ReferenceEquals(changedTags, m_TagSources);
+            }
             SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
                 ? CloneChangedAttributes(attributes, m_Attributes)
                 : m_Attributes;
@@ -210,7 +214,7 @@ namespace ThirdPersonSimulation.Fixed
             SortedDictionary<ulong, ulong> changedRevisions = lastLifecycleRevisionsChanged
                 ? CloneChangedMap(lastLifecycleRevisions, m_LastLifecycleRevisions)
                 : m_LastLifecycleRevisions;
-            string[] ownedTags = tagsChanged ? CollectOwnedTags(changedTags) : m_OwnedTags;
+            string[] ownedTags = tagsUnchanged ? m_OwnedTags : CollectOwnedTags(changedTags);
             return new GameplayEffectStateAggregate(
                 changedTags,
                 changedAttributes,
@@ -624,8 +628,23 @@ namespace ThirdPersonSimulation.Fixed
 
         static SortedDictionary<string, string[]> AdoptChangedTagSources(
             IReadOnlyDictionary<string, string[]> source,
-            IReadOnlyDictionary<string, string[]> baseline)
+            SortedDictionary<string, string[]> baseline)
         {
+            if (source.Count == baseline.Count)
+            {
+                bool matches = true;
+                foreach (KeyValuePair<string, string[]> pair in source)
+                {
+                    if (!baseline.TryGetValue(pair.Key, out string[] baselineValue) ||
+                        !EqualStrings(pair.Value, baselineValue))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return baseline;
+            }
             var result = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, string[]> pair in source)
             {

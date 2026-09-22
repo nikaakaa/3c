@@ -4895,3 +4895,14 @@
 - 事务 `Restore`、`SetActionActivationRequests`、`SetActionInstances`、`Dispose` 和原有 active 校验不变；`CharacterRuntimeState` 提交快照仍复制成独立数组，rollback 历史不借用 Actor pending 列表。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做动作触发、动作结束、rollback restore 和 Player 分配采样。2.4 仍未完成：Control、GE/Equipment 工作页、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。
+
+## 2026-09-23 Control 事务存储跨步复用
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `11a9eb236`。
+
+- Fixed 和 Float32 角色事务原先在 `BindControl` 时新建 `CharacterControlRuntimeStateTransaction`，其内部再新建值 `List`。现在两个 `SimulationActorBinding` 各自长期持有 Control 事务外壳，`BindControl` 调用 `Restart` 重绑 base state、schema、Tick 和 pending 值列表。
+- `Restart` 在修改前保留 schema hash、schema 身份、下一步 Tick、null state/schema 的原校验；按当前 state 数量准备容量后复制。角色事务新增事务级 `m_ControlStateBound` 标记，因为 Actor 级事务对象永远非空，不能再以 null 判断本次绑定。
+- `Get`、`Set`、`Restore`、`Capture`、`Commit`、`Abort` 和 Dispose 的 active 语义不变。提交的 `CharacterControlRuntimeState` 仍独立持有 values 的 `ReadOnlyCollection`，Actor pending List 不进入 rollback 历史。
+- 首次 Fixed 编译暴露 `m_ControlStateBound` 只写未读，原因是重复绑定仍误查非空引用；已改为查询事务级标记并重编。
+- 四个工程使用禁用共享编译和旧式 MSBuild worker 的 `dotnet build` Release 全量编译，结果均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做角色控制回放、savepoint 恢复、rollback restore 和 Player 分配采样。2.4 仍未完成：GE/Equipment 工作页、事件/Handle 小状态、事务外层对象寿命和最终快照数组所有权仍在后续小步处理。

@@ -107,6 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     lookInputId,
                     physicsScene,
                     rootHierarchy,
+                    diagnostics,
                     initializeExternalState)
                 : null;
             bool hasEquipmentProfile = equipmentPresentationProfile;

@@ -437,6 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out actionCommands))
                         throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
                     m_PresentationClockCoordinator?.BeginFrame(actionCommands);
+                    PublishAnimationCommands(actionCommands);
                 }
                 if (m_TimelineHost != null)
                 {
@@ -498,6 +499,79 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Detail = $"plan={m_LocomotionBinding.PlanIdentity};clockMode={m_LocomotionBinding.ClockMode};bodySource={m_LocomotionBinding.BodySource};correctionMode={m_LocomotionBinding.CorrectionMode};profile={m_LocomotionBinding.BodyProfileIdentity};lineagePlan={lineage.PlanIdentity};lineageBodySource={lineage.BodySource};movementClock={lineage.MovementClockIdentity};lineageGeneration={lineage.LineageGeneration};movementSegment={lineage.MovementSegmentIdentity};resetSequence={m_Body.ResetSequence};resetReason={m_Body.ResetReason};failure={m_LocomotionFailureCode}",
                     Value = DebugValueSnapshot.Capture((int)m_LocomotionFailureCode)
                 });
+        }
+
+        void PublishAnimationCommands(IReadOnlyList<ActionAnimationPlaybackCommand> commands)
+        {
+            for (int i = 0; i < commands.Count; i++)
+            {
+                ActionAnimationPlaybackCommand command = commands[i];
+                RuntimeTraceEventKind eventKind = command.Kind switch
+                {
+                    ActionAnimationPlaybackCommandKind.Select => RuntimeTraceEventKind.AnimationSelectionSubmitted,
+                    ActionAnimationPlaybackCommandKind.Sample or
+                        ActionAnimationPlaybackCommandKind.ProjectedSample => RuntimeTraceEventKind.AnimationProducerSampled,
+                    ActionAnimationPlaybackCommandKind.Complete => RuntimeTraceEventKind.AnimationPlaybackCompleted,
+                    ActionAnimationPlaybackCommandKind.Release => RuntimeTraceEventKind.AnimationPlaybackReleased,
+                    ActionAnimationPlaybackCommandKind.Withdraw => RuntimeTraceEventKind.AnimationPlaybackRetired,
+                    _ => RuntimeTraceEventKind.None
+                };
+                if (eventKind == RuntimeTraceEventKind.None ||
+                    !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, eventKind))
+                {
+                    continue;
+                }
+                float time = 0f;
+                float secondaryTime = 0f;
+                float weight = 0f;
+                int cycle = 0;
+                bool loop = false;
+                ulong inputSequence = 0;
+                if (command.Kind == ActionAnimationPlaybackCommandKind.Sample)
+                {
+                    ActionCommittedRawSample sample = command.CommittedRawSample;
+                    time = sample.VisualTime;
+                    secondaryTime = (float)sample.ContinuousVisualTime;
+                    weight = sample.ProducerWeight;
+                    cycle = sample.Cycle;
+                    loop = sample.Loop;
+                    inputSequence = sample.CommittedSequence;
+                }
+                else if (command.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)
+                {
+                    ActionProjectedSample sample = command.ProjectedSample;
+                    time = sample.Time.SampleTime;
+                    secondaryTime = (float)sample.Time.ContinuousTime;
+                    weight = sample.ProducerWeight;
+                    cycle = sample.Time.Cycle;
+                    loop = sample.Time.Loop;
+                }
+                m_Diagnostics.Publish(
+                    RuntimeTraceChannel.Animation,
+                    RuntimeTraceDomain.Presentation,
+                    eventKind,
+                    RuntimeSourceElementHandle.Invalid,
+                    RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
+                    new RuntimeTracePayload
+                    {
+                        Status = command.Kind.ToString(),
+                        Name = command.ProgramProducerId,
+                        OwnerId = command.PlaybackId.ToString(),
+                        RelatedElementId = command.EventId.IsValid
+                            ? command.EventId.ToString()
+                            : string.Empty,
+                        AnimationChannelId = command.AnimationChannelId.Value,
+                        ActionInstanceId = command.ActionInstanceId,
+                        ActivationGeneration = command.Generation,
+                        InputSequence = inputSequence,
+                        Time = time,
+                        SecondaryTime = secondaryTime,
+                        Weight = weight,
+                        Cycle = cycle,
+                        Flag = loop,
+                        Detail = $"logicTick={command.LocalLogicTick};playback={command.PlaybackId};channel={command.AnimationChannelId.Value};action={command.ActionInstanceId};generation={command.Generation};time={time:0.######};continuous={secondaryTime:0.######};cycle={cycle};weight={weight:0.######};loop={loop}"
+                    });
+            }
         }
 
         bool RunPoseFrame(

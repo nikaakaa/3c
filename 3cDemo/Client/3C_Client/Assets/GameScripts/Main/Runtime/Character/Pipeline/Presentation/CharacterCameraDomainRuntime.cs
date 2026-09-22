@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonGameplay.Tick;
@@ -11,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal sealed class CharacterCameraDomainRuntime : IDisposable
     {
         readonly ActorId m_ActorId;
+        readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly CameraRuntimeBinding m_Binding;
         readonly CameraBindingAdoptedResult m_Adopted;
         readonly CharacterCameraProjectionPayload m_Projection;
@@ -53,11 +55,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string lookInputId,
             PhysicsScene physicsScene,
             CharacterRootHierarchyBinding rootHierarchy,
+            RuntimeDiagnosticsContext diagnostics,
             bool initializeExternalState)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Camera domain Actor identity is invalid.", nameof(actorId));
             m_ActorId = actorId;
+            m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             if (!profile)
                 throw new ArgumentNullException(nameof(profile));
             if (!cameraRig)
@@ -266,14 +270,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     string.Equals(current.Command.CameraRequest.ResourceId, command.CameraRequest.ResourceId, StringComparison.Ordinal))
                 {
                     requests[i] = new ActiveCameraRequest(command, current.AcceptedIndex);
+                    PublishRequestDiagnostics(command, "Updated");
                     return;
                 }
                 RetireRequest(current, CameraPresentationStopReason.EventRevoked);
+                PublishRequestDiagnostics(current.Command, "Replaced");
                 requests.RemoveAt(i);
             }
             if (requests.Count == m_RequestCapacity)
                 throw new InvalidOperationException($"Camera request capacity {m_RequestCapacity} is exhausted.");
             requests.Add(new ActiveCameraRequest(command));
+            PublishRequestDiagnostics(command, "Activated");
         }
 
         internal void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
@@ -293,6 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? CameraPresentationStopReason.NaturalComplete
                     : CameraPresentationStopReason.EventRevoked;
             List<ActiveCameraRequest> requests = Requests;
+            bool retired = false;
             for (int i = requests.Count - 1; i >= 0; i--)
             {
                 CharacterPresentationCommand active = requests[i].Command;
@@ -300,7 +308,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     continue;
                 RetireRequest(requests[i], reason);
                 requests.RemoveAt(i);
+                retired = true;
             }
+            if (retired)
+                PublishRequestDiagnostics(command, reason.ToString());
         }
 
         internal CharacterDomainRuntimeFact CaptureDomainFact() =>
@@ -488,6 +499,67 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Projection.Input.PitchLimit.y);
             plan = m_EnvironmentSolver.Apply(plan, in frameInput);
             m_Rig.Apply(in plan);
+            PublishSnapshotDiagnostics(in plan, resetReason);
+        }
+
+        void PublishRequestDiagnostics(CharacterPresentationCommand command, string status)
+        {
+            if (!m_Diagnostics.ShouldPublish(
+                    RuntimeTraceChannel.Animation,
+                    RuntimeTraceEventKind.CameraRequest))
+            {
+                return;
+            }
+            PresentationCameraRequest request = command.CameraRequest;
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.CameraRequest,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = status,
+                    Name = request.Kind.ToString(),
+                    OwnerId = command.ProducerId,
+                    RelatedElementId = request.RequestId,
+                    ActionInstanceId = command.SourceActionInstanceId,
+                    Time = command.SampleTime,
+                    Weight = request.Weight,
+                    Priority = request.Priority,
+                    Cycle = command.Cycle,
+                    Detail = $"lifecycle={request.Lifecycle};sequence={request.SequenceId};resource={request.ResourceId};target={request.TargetKey};anchor={request.AnchorKey};aim={request.AimPointKey};mode={request.Mode};effect={request.EffectKind};generation={command.ProducerGeneration}"
+                });
+        }
+
+        void PublishSnapshotDiagnostics(in CameraFramePlan plan, CameraResetReason resetReason)
+        {
+            if (!m_Diagnostics.ShouldPublish(
+                    RuntimeTraceChannel.Animation,
+                    RuntimeTraceEventKind.CameraSnapshot))
+            {
+                return;
+            }
+            CameraBasisSnapshot basis = m_Rig.BasisSnapshot;
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.CameraSnapshot,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = plan.Valid && basis.Valid ? "Ready" : "Invalid",
+                    Name = plan.SequenceId,
+                    OwnerId = plan.SourceId,
+                    RelatedElementId = plan.ShotId,
+                    ActionInstanceId = plan.SourceActionInstanceId,
+                    Time = plan.BlendProgress,
+                    SecondaryTime = plan.FieldOfView,
+                    Flag = plan.ResetHistory,
+                    Cause = resetReason.ToString(),
+                    Detail = $"position={plan.Location};pivot={plan.PivotLocation};yaw={plan.Yaw:0.###};pitch={plan.Pitch:0.###};basisYaw={basis.Yaw:0.###};basisPitch={basis.Pitch:0.###};look={basis.LookDirection};aim={basis.AimPoint};collision={plan.Collision.Status};reset={plan.ResetHistory};resetReason={resetReason};activeRequests={m_ActiveRequests.Count}"
+                });
         }
 
         void CaptureRequests(

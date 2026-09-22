@@ -5368,3 +5368,13 @@
 - 2.4 保持未勾选：frame 值表克隆、pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Ability执行帧克隆去枚举
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `091520d33`。
+
+- 共用的 `GameplayAbilityExecutionFrame<TValue>.Clone` 原先把内部 `SortedDictionary<int,TValue>` 作为 `IEnumerable<KeyValuePair<int,TValue>>` 传回公共构造，编译期接口遍历会引入枚举器分配。现在 Clone 使用私有 copy 构造，按具体 `SortedDictionary` 的 struct enumerator 复制键值，并直接继承原 frame 身份和 generation。
+- 状态值按键唯一且来自已验证 frame，复制顺序、键值内容、只读 `Values` 视图和 Equals 语义不变。真实 Clone 仍创建新 frame 和新 `SortedDictionary`；该独立所有权保留。
+- 2.4 保持未勾选：pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。

@@ -5168,3 +5168,13 @@
 - 基于同一 baseline 的先改动后恢复不再因 active effects 分类强制重建 aggregate；attribute 分类的永久脏标记和真实变化时的 aggregate 分配仍未完成。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做效果添加/移除、堆叠/抑制/过期、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect属性恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `18e6dd272`。
+
+- Fixed/Float32 Gameplay Effect attributes 原先只要执行 `MutateBase`、`AddModifier`、`RemoveModifiersByEffect`、`ApplyAuthoritativeAttribute` 或 `RestorePredictedAttribute` 就永久置脏；属性先修改再恢复到 committed 等价内容时，`Freeze` 仍会重建 aggregate。现在 baseline aggregate 提供 attributes 深比较，五个真实修改入口统一调用 `RefreshAttributesDirty`，恢复等价内容会清除该分类脏标记。
+- 比较覆盖 definition 身份、base/current 值、revision，以及 modifier 的 handle、来源效果、operation、magnitude、priority、clamp、live 属性、live 系数、live post add 和插入序。字符串按 Ordinal，数值按各数值域 Equals，modifier 保持列表顺序。现有外层 `TryGetAttribute` 和 `RequireAttribute` 消费点只读取 base/current/revision，没有绕过 state 的属性或 modifier 写入路径。
+- 这只处理 attributes 分类。changed aggregate、modifier 列表和真实新增/移除分配仍存在；真实变化仍按原 revision、重算顺序、异常和 canonical 语义提交。2.4 保持未勾选。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做属性先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。用户可通过属性 modifier 应用/移除或预测属性恢复后对比 `Freeze` 结果是否复用 committed aggregate。

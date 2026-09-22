@@ -524,7 +524,7 @@ namespace ThirdPersonSimulation
         void EmitPredictionCueRemoval(TPrediction prediction, string cueId);
         bool TryGetLastLifecycleRevision(ulong instanceId, out ulong revision);
         void SetLastLifecycleRevision(ulong instanceId, ulong revision);
-        void MarkJournalDirty();
+        void RefreshJournalDirty();
         bool TryEmitRejectedApplication(TApplication application, GameplayEffectApplyResult failure);
     }
 

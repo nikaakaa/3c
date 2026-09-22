@@ -217,6 +217,127 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
+        internal bool MatchesJournal(IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> journal)
+        {
+            if (journal == null || m_Journal.Count != journal.Count)
+                return false;
+            foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in m_Journal)
+            {
+                if (!journal.TryGetValue(pair.Key, out List<PortablePredictionRecord> records) ||
+                    !MatchesRecords(pair.Value, records))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesRecords(IReadOnlyList<PortablePredictionRecord> left, IReadOnlyList<PortablePredictionRecord> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (!MatchesRecord(left[i], right[i]))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesRecord(PortablePredictionRecord left, PortablePredictionRecord right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left == null || right == null)
+                return false;
+            return left.Handle == right.Handle &&
+                left.InstanceId == right.InstanceId &&
+                left.CreatedActive == right.CreatedActive &&
+                left.HasActiveBefore == right.HasActiveBefore &&
+                left.Confirmed == right.Confirmed &&
+                MatchesSnapshot(left.ActiveBefore, right.ActiveBefore) &&
+                MatchesSpec(left.Spec, right.Spec) &&
+                MatchesStrings(left.CueIds, right.CueIds) &&
+                MatchesAttributes(left.Attributes, right.Attributes);
+        }
+
+        static bool MatchesSnapshot(GameplayEffectActiveControlSnapshot left, GameplayEffectActiveControlSnapshot right) =>
+            left.InstanceId == right.InstanceId &&
+            left.StartTick == right.StartTick &&
+            left.EndTick == right.EndTick &&
+            left.NextPeriodTick == right.NextPeriodTick &&
+            left.StackCount == right.StackCount &&
+            left.Inhibited == right.Inhibited &&
+            left.LifecycleRevision == right.LifecycleRevision;
+
+        static bool MatchesSpec(PortableEffectSpecState left, PortableEffectSpecState right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left == null || right == null)
+                return false;
+            return (ReferenceEquals(left.Definition, right.Definition) ||
+                    string.Equals(left.Definition.Id, right.Definition.Id, StringComparison.Ordinal) &&
+                    left.Definition.Revision == right.Definition.Revision) &&
+                left.Context.SourceActorId.Equals(right.Context.SourceActorId) &&
+                left.Context.TargetActorId.Equals(right.Context.TargetActorId) &&
+                left.Context.SourceActionInstanceId == right.Context.SourceActionInstanceId &&
+                left.Context.PredictionKey == right.Context.PredictionKey &&
+                left.Context.GameplayResultId == right.Context.GameplayResultId &&
+                left.Context.SourceTick == right.Context.SourceTick &&
+                left.Context.ApplicationMode == right.Context.ApplicationMode &&
+                MatchesValues(left.SetByCaller, right.SetByCaller) &&
+                MatchesValues(left.SourceAttributes, right.SourceAttributes) &&
+                MatchesValues(left.TargetAttributes, right.TargetAttributes) &&
+                MatchesStrings(left.SourceTags, right.SourceTags) &&
+                MatchesStrings(left.TargetTags, right.TargetTags) &&
+                left.DurationTicks == right.DurationTicks &&
+                left.PeriodTicks == right.PeriodTicks;
+        }
+
+        static bool MatchesValues(IReadOnlyDictionary<string, FixedScalar> left, IReadOnlyDictionary<string, FixedScalar> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            foreach (KeyValuePair<string, FixedScalar> pair in left)
+            {
+                if (!right.TryGetValue(pair.Key, out FixedScalar value) || !pair.Value.Equals(value))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesAttributes(
+            IReadOnlyDictionary<string, PortablePredictionAttributeSnapshot> left,
+            IReadOnlyDictionary<string, PortablePredictionAttributeSnapshot> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            foreach (KeyValuePair<string, PortablePredictionAttributeSnapshot> pair in left)
+            {
+                if (!right.TryGetValue(pair.Key, out PortablePredictionAttributeSnapshot value))
+                    return false;
+                PortablePredictionAttributeSnapshot leftValue = pair.Value;
+                if (!string.Equals(leftValue.AttributeId, value.AttributeId, StringComparison.Ordinal) ||
+                    !leftValue.BaseValue.Equals(value.BaseValue) ||
+                    !leftValue.CurrentValue.Equals(value.CurrentValue) ||
+                    leftValue.BeforeRevision != value.BeforeRevision ||
+                    leftValue.AfterRevision != value.AfterRevision)
+                    return false;
+            }
+            return true;
+        }
+
         static bool EqualStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
         {
             if (ReferenceEquals(left, right))
@@ -526,7 +647,41 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedGameplayEffectRuntimeCatalog Catalog => m_Catalog;
         public IReadOnlyList<PortableActiveEffectState> ActiveEffects => m_ActiveEffects;
-        public SortedDictionary<ulong, List<PortablePredictionRecord>> Journal => m_Journal;
+        public bool TryGetJournalRecords(ulong predictionKey, out IReadOnlyList<PortablePredictionRecord> records)
+        {
+            if (m_Journal.TryGetValue(predictionKey, out List<PortablePredictionRecord> values))
+            {
+                records = values;
+                return true;
+            }
+            records = null;
+            return false;
+        }
+
+        public void AddJournalRecord(PortablePredictionRecord record)
+        {
+            ulong key = record.Spec.Context.PredictionKey;
+            if (!m_Journal.TryGetValue(key, out List<PortablePredictionRecord> records))
+            {
+                records = new List<PortablePredictionRecord>();
+                m_Journal.Add(key, records);
+            }
+            records.Add(record);
+            RefreshJournalDirty();
+        }
+
+        public void RemoveJournalRecords(ulong predictionKey)
+        {
+            m_Journal.Remove(predictionKey);
+            RefreshJournalDirty();
+        }
+
+        public void CopyJournalKeys(List<ulong> keys)
+        {
+            keys.Clear();
+            foreach (ulong key in m_Journal.Keys)
+                keys.Add(key);
+        }
         public bool TryGetLastLifecycleRevision(ulong instanceId, out ulong revision) =>
             m_LastLifecycleRevisions.TryGetValue(instanceId, out revision);
 
@@ -802,9 +957,9 @@ namespace ThirdPersonSimulation.Fixed
             m_ActiveEffectsDirty = true;
         }
 
-        public void MarkJournalDirty()
+        public void RefreshJournalDirty()
         {
-            m_JournalDirty = true;
+            m_JournalDirty = m_Baseline == null || !m_Baseline.MatchesJournal(m_Journal);
         }
 
         public GameplayEffectStateAggregate Freeze()

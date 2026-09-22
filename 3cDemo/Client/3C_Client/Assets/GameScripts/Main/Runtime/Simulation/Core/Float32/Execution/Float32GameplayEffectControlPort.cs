@@ -217,20 +217,13 @@ namespace ThirdPersonSimulation
             ulong predictionKey,
             out IReadOnlyList<PortablePredictionRecord> predictions)
         {
-            if (m_State.Journal.TryGetValue(predictionKey, out List<PortablePredictionRecord> records))
-            {
-                predictions = records;
-                return true;
-            }
-            predictions = null;
-            return false;
+            return m_State.TryGetJournalRecords(predictionKey, out predictions);
         }
 
         IReadOnlyList<ulong> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.AcquirePredictionKeys()
         {
             List<ulong> values = m_Scratch.PredictionKeys.Acquire();
-            foreach (ulong key in m_State.Journal.Keys)
-                values.Add(key);
+            m_State.CopyJournalKeys(values);
             return values;
         }
 
@@ -243,16 +236,10 @@ namespace ThirdPersonSimulation
 
         void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.AddPrediction(PortablePredictionRecord prediction)
         {
-            ulong key = prediction.Spec.Context.PredictionKey;
-            if (!m_State.Journal.TryGetValue(key, out List<PortablePredictionRecord> records))
-            {
-                records = new List<PortablePredictionRecord>();
-                m_State.Journal.Add(key, records);
-            }
-            records.Add(prediction);
+            m_State.AddJournalRecord(prediction);
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.RemovePredictions(ulong predictionKey) => m_State.Journal.Remove(predictionKey);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.RemovePredictions(ulong predictionKey) => m_State.RemoveJournalRecords(predictionKey);
 
         bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.RestorePredictionAttributes(PortablePredictionRecord prediction)
         {
@@ -272,7 +259,7 @@ namespace ThirdPersonSimulation
 
         bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.TryGetLastLifecycleRevision(ulong instanceId, out ulong revision) => m_State.TryGetLastLifecycleRevision(instanceId, out revision);
         void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.SetLastLifecycleRevision(ulong instanceId, ulong revision) => m_State.SetLastLifecycleRevision(instanceId, revision);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.MarkJournalDirty() => m_State.MarkJournalDirty();
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.RefreshJournalDirty() => m_State.RefreshJournalDirty();
 
         bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFloat32AbilityExecutionSavepoint>.TryEmitRejectedApplication(
             SimulationGameplayEffectApplication application,

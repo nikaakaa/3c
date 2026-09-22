@@ -274,7 +274,7 @@ namespace ThirdPersonSimulation
             if (command.InstanceId != 0 && command.LifecycleRevision != 0)
             {
                 m_Port.SetLastLifecycleRevision(command.InstanceId, command.LifecycleRevision);
-                m_Port.MarkJournalDirty();
+                m_Port.RefreshJournalDirty();
             }
         }
 
@@ -312,7 +312,7 @@ namespace ThirdPersonSimulation
                 m_Port.ReleasePredictionKeys(keys);
             }
             if (removed)
-                m_Port.MarkJournalDirty();
+                m_Port.RefreshJournalDirty();
         }
 
         GameplayEffectApplyResult ApplyCore(TApplication application)
@@ -767,7 +767,7 @@ namespace ThirdPersonSimulation
                 return;
             m_Port.CompletePrediction(record);
             m_Port.AddPrediction(record);
-            m_Port.MarkJournalDirty();
+            m_Port.RefreshJournalDirty();
         }
 
         void CancelPrediction()
@@ -826,7 +826,7 @@ namespace ThirdPersonSimulation
             }
             if (!found)
                 throw new InvalidOperationException($"Gameplay Effect prediction '{key}' did not match '{command.EffectId}'.");
-            m_Port.MarkJournalDirty();
+            m_Port.RefreshJournalDirty();
         }
 
         void RejectPrediction(ulong predictionKey)
@@ -834,7 +834,7 @@ namespace ThirdPersonSimulation
             if (predictionKey == 0 || !m_Port.TryGetPredictions(predictionKey, out IReadOnlyList<TPrediction> records))
                 throw new InvalidOperationException($"Gameplay Effect prediction '{predictionKey}' was not found.");
             m_Port.RemovePredictions(predictionKey);
-            m_Port.MarkJournalDirty();
+            m_Port.RefreshJournalDirty();
             bool conflict = false;
             for (int i = records.Count - 1; i >= 0; i--)
             {

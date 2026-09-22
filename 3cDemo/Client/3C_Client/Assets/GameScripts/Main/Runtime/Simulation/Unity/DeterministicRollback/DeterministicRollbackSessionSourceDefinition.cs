@@ -326,7 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 ThirdPersonSimulation.Fixed.SimulationPipelineInitialStateSource.CaptureActivatedDefaults);
         }
 
-        static IReadOnlyList<ActorId> ActorIds(IReadOnlyList<IFixedSimulationActorRegistration> registrations)
+        static ActorId[] ActorIds(IReadOnlyList<IFixedSimulationActorRegistration> registrations)
         {
             var values = new ActorId[registrations.Count];
             for (int i = 0; i < registrations.Count; i++)

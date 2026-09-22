@@ -172,7 +172,7 @@ namespace ThirdPersonSimulation
         {
             if (m_Sealed)
                 return;
-            m_Entries.Sort((left, right) => left.Identity.CompareTo(right.Identity));
+            m_Entries.Sort(EntryIdentityComparer.Instance);
             for (int i = 1; i < m_Entries.Count; i++)
             {
                 if (m_Entries[i - 1].Identity.CompareTo(m_Entries[i].Identity) == 0)
@@ -185,6 +185,20 @@ namespace ThirdPersonSimulation
         {
             m_Entries.Clear();
             m_Sealed = false;
+        }
+
+        sealed class EntryIdentityComparer : IComparer<SimulationPipelineAppendProductEntry<T>>
+        {
+            public static readonly EntryIdentityComparer Instance = new EntryIdentityComparer();
+
+            EntryIdentityComparer() { }
+
+            public int Compare(
+                SimulationPipelineAppendProductEntry<T> left,
+                SimulationPipelineAppendProductEntry<T> right)
+            {
+                return left.Identity.CompareTo(right.Identity);
+            }
         }
     }
 

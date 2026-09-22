@@ -5069,3 +5069,13 @@
 - Restart、读取默认值、slot kind 校验、MotionWarp Active/Inactive 规则和 commit 所有权边界不变。Execution aggregate 仍按引用判断；内容相同但 aggregate 引用不同的场景留在后续小步。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做技能状态回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：changed 路径的 aggregate/集合分配、非空最终数组、Timeline snapshot 外壳和分配采样仍待处理。
+
+## 2026-09-23 Ability执行聚合内容判脏
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed 和 Float32 `SkillExecutionState` 的单一脏标记拆为 StateValues、MotionWarp 和 execution aggregate 三类。某一分类先变化又恢复到 committed 内容时，只清除自己的变化事实，不影响其它分类。
+- `SetAbilityExecutionState` 从引用比较改为 aggregate 内容比较。执行管理器 Enter/Exit 产生的临时 Clone 如果与 committed 内容一致，不再把 candidate 判脏；新增或更新 frame、generation、状态值后仍按实际内容置脏。
+- `GameplayAbilityExecutionFrame` 按身份和全部 StateValue 比较；aggregate 数量一致后按 ActionInstanceId 匹配 frame，不依赖 List 展示顺序。`AbilityStateValue` 显式实现 `IEquatable<TValue>`，泛型比较不经过 object 装箱。
+- 首次编译暴露 `IGameplayAbilityExecutionStorage` 泛型约束未同步，补齐 `IEquatable<TValue>` 后，四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做技能执行 frame 回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选：changed 路径 candidate 的字典/aggregate 克隆、非空最终数组、Timeline snapshot 外壳和分配采样仍待处理。

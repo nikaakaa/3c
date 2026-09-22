@@ -72,7 +72,8 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Character runtime transaction timing is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();
+            m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>(
+                baseState.Abilities.Count);
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 FixedAbilityRuntimeState state = baseState.Abilities[i];

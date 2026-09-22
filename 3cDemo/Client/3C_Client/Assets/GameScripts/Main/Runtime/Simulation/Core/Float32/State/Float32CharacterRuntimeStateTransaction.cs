@@ -72,7 +72,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Character runtime transaction timing is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>();
+            m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>(
+                baseState.Abilities.Count);
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 Float32AbilityRuntimeState state = baseState.Abilities[i];

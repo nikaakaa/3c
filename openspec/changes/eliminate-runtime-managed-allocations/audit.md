@@ -4182,3 +4182,11 @@
 - Unity `GameplayNetwork` 的 Datagram Channel 是 5.236 值化后遗漏的 Owner Canonical Input Batch 消费方；`SendPredictionCommand` 原先检查 `input == null`，现在按值合同检查 `IsValid` 并用 `ArgumentException` 显式拒绝不完整输入。
 - 这条入口继续把 batch 的 SourceTick、InputSequence 和 SimulationInput 装入 `CanonicalInputSample`，发包节流、packet history 和指标记录不变。
 - `ThirdPersonSimulation.Unity.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 错误；唯一警告是既有 `BaseTreeView.SerializeGraphElements` 隐藏成员。随后 `dotnet build-server shutdown` 成功。Unity 刷新曾暴露该调用方编译错误，同步修复后再次进入刷新检查。未做 Player 分配采样。
+
+## 2026-09-22 Selected remote body batch 值化收口
+
+对应 tasks.md 的 5.5，新增 5.240 作为独立小步；5.5 保持未勾选。
+
+- `SelectedRemoteBodyBatch` 从 sealed class 改为 readonly struct。Prediction Schedule 每次把 HardRecovery 或普通远端 Body 选择写入 Exclusive Product Slot，Remote Presentation Egress 再读取该结果时都不再创建 batch 外壳对象。
+- 构造合同不变：ActorId 与 Tick 有效，BodySamples 精确数组按 Tick 排序、校验 Actor 归属并拒绝重复 Tick；reset 标志继续原样传递。新增 `IsValid` 只表达 default struct 的非法状态。
+- 全项目搜索确认该类型只被 Prediction Schedule、Remote Presentation Egress 和两处 Float32 Exclusive Product Slot 目录消费。`ThirdPersonSimulation.ServerAuthoritative.csproj` 与 `ThirdPersonSimulation.Unity.csproj` 分别使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功；ServerAuthoritative 为 0 警告 0 错误，Unity 为 0 错误和 17 个既有包/Editor 警告。两次编译后均执行 `dotnet build-server shutdown`。未刷新 Unity、未做 Player 分配采样。

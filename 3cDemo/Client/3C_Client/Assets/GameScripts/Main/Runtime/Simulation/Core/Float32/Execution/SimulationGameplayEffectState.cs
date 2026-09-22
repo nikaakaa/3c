@@ -204,6 +204,55 @@ namespace ThirdPersonSimulation
             return true;
         }
 
+        internal bool MatchesAttributes(IReadOnlyDictionary<string, PortableAttributeState> attributes)
+        {
+            if (attributes == null || m_Attributes.Count != attributes.Count)
+                return false;
+            foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
+            {
+                if (!attributes.TryGetValue(pair.Key, out PortableAttributeState value) ||
+                    !MatchesAttribute(pair.Value, value))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool MatchesAttribute(PortableAttributeState left, PortableAttributeState right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left == null || right == null)
+                return false;
+            return ReferenceEquals(left.Definition, right.Definition) &&
+                left.BaseValue.Equals(right.BaseValue) &&
+                left.CurrentValue.Equals(right.CurrentValue) &&
+                left.Revision == right.Revision &&
+                MatchesModifiers(left.Modifiers, right.Modifiers);
+        }
+
+        static bool MatchesModifiers(IReadOnlyList<PortableAttributeModifierState> left, IReadOnlyList<PortableAttributeModifierState> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                PortableAttributeModifierState leftValue = left[i];
+                PortableAttributeModifierState rightValue = right[i];
+                if (leftValue.Handle != rightValue.Handle ||
+                    leftValue.SourceEffectHandle != rightValue.SourceEffectHandle ||
+                    leftValue.Operation != rightValue.Operation ||
+                    !leftValue.Magnitude.Equals(rightValue.Magnitude) ||
+                    leftValue.Priority != rightValue.Priority ||
+                    leftValue.ClampBound != rightValue.ClampBound ||
+                    !string.Equals(leftValue.LiveAttributeId, rightValue.LiveAttributeId, StringComparison.Ordinal) ||
+                    !leftValue.LiveCoefficient.Equals(rightValue.LiveCoefficient) ||
+                    !leftValue.LivePostAdd.Equals(rightValue.LivePostAdd) ||
+                    leftValue.InsertionSequence != rightValue.InsertionSequence)
+                    return false;
+            }
+            return true;
+        }
+
         internal bool MatchesLastLifecycleRevisions(IReadOnlyDictionary<ulong, ulong> revisions)
         {
             if (revisions == null || m_LastLifecycleRevisions.Count != revisions.Count)
@@ -829,7 +878,7 @@ namespace ThirdPersonSimulation
             Dictionary<string, PortableAttributeBefore> before = CaptureAttributeBefore();
             attribute.BaseValue = ApplyModifier(attribute.BaseValue, operation, magnitude, clampBound);
             IReadOnlyList<PortableAttributeChange> changes = RecalculateAll(before, causeHandle, null);
-            m_AttributesDirty = true;
+            RefreshAttributesDirty();
             return changes;
         }
 
@@ -853,7 +902,7 @@ namespace ThirdPersonSimulation
             attribute.Modifiers.Add(modifier);
             attribute.Modifiers.Sort(CompareModifier);
             IReadOnlyList<PortableAttributeChange> changes = RecalculateAll(before, modifier.SourceEffectHandle, null);
-            m_AttributesDirty = true;
+            RefreshAttributesDirty();
             return changes;
         }
 
@@ -876,7 +925,7 @@ namespace ThirdPersonSimulation
                 }
             }
             if (removed)
-                m_AttributesDirty = true;
+                RefreshAttributesDirty();
             return changes;
         }
 
@@ -897,7 +946,7 @@ namespace ThirdPersonSimulation
             result.Add(new PortableAttributeChange(attribute.Definition.Id, before[attribute.Definition.Id].Base, baseValue, before[attribute.Definition.Id].Current, currentValue, revision, causeHandle));
             result.AddRange(RecalculateAll(before, causeHandle, attribute.Definition.Id));
             changes = result;
-            m_AttributesDirty = true;
+            RefreshAttributesDirty();
             return true;
         }
 
@@ -918,7 +967,7 @@ namespace ThirdPersonSimulation
             result.Add(new PortableAttributeChange(attribute.Definition.Id, before[attribute.Definition.Id].Base, attribute.BaseValue, before[attribute.Definition.Id].Current, attribute.CurrentValue, attribute.Revision, causeHandle));
             result.AddRange(RecalculateAll(before, causeHandle, attribute.Definition.Id));
             changes = result;
-            m_AttributesDirty = true;
+            RefreshAttributesDirty();
             return true;
         }
 
@@ -1106,6 +1155,11 @@ namespace ThirdPersonSimulation
         void RefreshPeriodsDirty()
         {
             m_PeriodsDirty = m_Baseline == null || !m_Baseline.MatchesPeriods(m_Periods);
+        }
+
+        void RefreshAttributesDirty()
+        {
+            m_AttributesDirty = m_Baseline == null || !m_Baseline.MatchesAttributes(m_Attributes);
         }
 
         Dictionary<string, PortableAttributeBefore> CaptureAttributeBefore()

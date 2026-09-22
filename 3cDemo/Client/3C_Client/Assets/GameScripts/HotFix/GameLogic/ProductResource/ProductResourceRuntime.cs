@@ -33,7 +33,8 @@ namespace GameLogic.ProductResource
         private string[] _preparedTagSnapshot = Array.Empty<string>();
         private ResourceScopeSnapshot[] _scopeSnapshot = Array.Empty<ResourceScopeSnapshot>();
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
-        private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
+        private ResourceIdentity[] _unownedIdentityScratch = Array.Empty<ResourceIdentity>();
+        private int _unownedIdentityScratchCount;
         private ResourceScope[] _disposeScopeBuffer = Array.Empty<ResourceScope>();
         private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
@@ -443,21 +444,26 @@ namespace GameLogic.ProductResource
 
         private void RemoveUnownedPhysicalKnowledge()
         {
-            _unownedIdentityScratch.Clear();
+            _unownedIdentityScratchCount = 0;
             foreach (ResourceIdentity identity in _knownPhysicalAssets)
             {
                 if (!_ownedReferenceCounts.ContainsKey(identity) && !_pendingAcquireCounts.ContainsKey(identity))
                 {
-                    _unownedIdentityScratch.Add(identity);
+                    if (_unownedIdentityScratchCount == _unownedIdentityScratch.Length)
+                    {
+                        Array.Resize(ref _unownedIdentityScratch, Math.Max(_knownPhysicalAssets.Count, _unownedIdentityScratchCount + 1));
+                    }
+                    _unownedIdentityScratch[_unownedIdentityScratchCount++] = identity;
                 }
             }
 
-            for (int index = 0; index < _unownedIdentityScratch.Count; index++)
+            for (int index = 0; index < _unownedIdentityScratchCount; index++)
             {
                 _knownPhysicalAssets.Remove(_unownedIdentityScratch[index]);
             }
 
-            _unownedIdentityScratch.Clear();
+            Array.Clear(_unownedIdentityScratch, 0, _unownedIdentityScratchCount);
+            _unownedIdentityScratchCount = 0;
         }
 
         private void AddPendingAcquire(ResourceIdentity identity)

@@ -67,9 +67,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ServerAuthoritativeAuthorityDataPlaneTicket ticket,
             ServerAuthoritativeDatagramIdentity identity)
         {
-            if (Ticket != null)
+            if (Ticket.IsValid)
                 throw new InvalidOperationException("Authority route received more than one data-plane ticket.");
-            Ticket = ticket ?? throw new ArgumentNullException(nameof(ticket));
+            if (!ticket.IsValid)
+                throw new ArgumentException("Authority data-plane ticket is invalid.", nameof(ticket));
+            Ticket = ticket;
             Identity = identity;
         }
 

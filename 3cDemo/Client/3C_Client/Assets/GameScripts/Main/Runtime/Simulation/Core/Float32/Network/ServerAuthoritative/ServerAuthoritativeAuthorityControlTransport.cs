@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<ServerAuthoritativeRosterEntry> Roster => m_Roster;
     }
 
-    public sealed class ServerAuthoritativeAuthorityDataPlaneTicket
+    public readonly struct ServerAuthoritativeAuthorityDataPlaneTicket
     {
         public ServerAuthoritativeAuthorityDataPlaneTicket(
             ServerAuthoritativeSessionId sessionId,
@@ -117,6 +117,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public string TicketId { get; }
         public string Nonce { get; }
         public long ExpiresAtUnixMilliseconds { get; }
+
+        public bool IsValid => SessionId.IsValid && Host.IsValid && PlayerId.IsValid && ActorId.IsValid &&
+            ExpiresAtUnixMilliseconds > 0 && TicketId != null && Nonce != null;
 
         static string Require(string value, string parameter) => string.IsNullOrWhiteSpace(value)
             ? throw new ArgumentException("Authority data-plane ticket value is required.", parameter)

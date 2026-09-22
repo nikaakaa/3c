@@ -326,7 +326,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ServerAuthoritativeAuthorityClientRoute route,
             ServerAuthoritativeReceivedDatagram received)
         {
-            if (route.Ticket == null ||
+            if (!route.Ticket.IsValid ||
                 route.Ticket.ExpiresAtUnixMilliseconds <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
                 Fail("authority_data_hello_without_ticket", "Authority received Hello without a live ticket.");

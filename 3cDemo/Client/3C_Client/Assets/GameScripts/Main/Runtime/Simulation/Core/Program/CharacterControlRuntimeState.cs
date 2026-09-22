@@ -296,14 +296,13 @@ namespace ThirdPersonSimulation
     {
         CharacterControlStateSchema m_Schema;
         SimulationTick m_Tick;
-        readonly List<CharacterControlStateValue> m_Values;
+        CharacterControlStateValue[] m_Values;
         byte[] m_HashBuffer = Array.Empty<byte>();
         CharacterControlRuntimeStateTransactionStatus m_Status;
         bool m_ValuesChanged;
 
         public CharacterControlRuntimeStateTransaction()
         {
-            m_Values = new List<CharacterControlStateValue>();
             m_Status = CharacterControlRuntimeStateTransactionStatus.Aborted;
         }
 
@@ -325,10 +324,9 @@ namespace ThirdPersonSimulation
             m_Schema = schema;
             m_Tick = tick;
             BaseState = state;
-            m_Values.Clear();
-            if (m_Values.Capacity < state.Values.Count)
-                m_Values.Capacity = state.Values.Count;
-            m_Values.AddRange(state.Values);
+            if (m_Values == null || m_Values.Length != state.Values.Count)
+                m_Values = new CharacterControlStateValue[state.Values.Count];
+            Array.Copy(state.ValueArray, m_Values, m_Values.Length);
             m_ValuesChanged = false;
             m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
             return this;
@@ -359,9 +357,12 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeState Capture()
         {
             RequireActive();
-            CharacterControlStateValue[] values = m_ValuesChanged
-                ? m_Values.ToArray()
-                : BaseState.ValueArray;
+            CharacterControlStateValue[] values = BaseState.ValueArray;
+            if (m_ValuesChanged)
+            {
+                values = new CharacterControlStateValue[m_Values.Length];
+                Array.Copy(m_Values, values, m_Values.Length);
+            }
             StableHash stateHash = ComputeHash();
             return new CharacterControlRuntimeState(
                 m_Schema,
@@ -379,8 +380,9 @@ namespace ThirdPersonSimulation
             if (!state.Schema.SchemaHash.Equals(m_Schema.SchemaHash) ||
                 state.LastCompletedTick != m_Tick.Value)
                 throw new InvalidOperationException("Character control runtime state restore identity does not match the active transaction.");
-            m_Values.Clear();
-            m_Values.AddRange(state.Values);
+            if (m_Values == null || m_Values.Length != state.Values.Count)
+                m_Values = new CharacterControlStateValue[state.Values.Count];
+            Array.Copy(state.ValueArray, m_Values, m_Values.Length);
             m_ValuesChanged = !MatchesBaseValues(state.Values);
         }
 
@@ -418,7 +420,7 @@ namespace ThirdPersonSimulation
             AppendString(ref length, m_Schema.SchemaHash.Value);
             AppendSeparator(ref length);
             AppendUInt64(ref length, m_Tick.Value);
-            for (int i = 0; i < m_Values.Count; i++)
+            for (int i = 0; i < m_Values.Length; i++)
             {
                 CharacterControlStateValue value = m_Values[i];
                 AppendSeparator(ref length);

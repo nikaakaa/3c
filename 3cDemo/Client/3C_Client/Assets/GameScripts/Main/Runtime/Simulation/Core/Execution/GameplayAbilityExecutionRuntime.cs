@@ -118,7 +118,7 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId,
             ulong predictionKey,
             ulong generation,
-            IEnumerable<KeyValuePair<int, TValue>> values = null)
+            Dictionary<int, TValue> values = null)
         {
             if (!skillId.IsValid || !entryOperation.IsValid || actionInstanceId == 0 || predictionKey == 0)
                 throw new ArgumentException("Skill execution frame identity is incomplete.");

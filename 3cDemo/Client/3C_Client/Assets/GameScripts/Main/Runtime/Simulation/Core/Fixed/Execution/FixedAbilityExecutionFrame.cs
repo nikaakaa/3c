@@ -84,14 +84,58 @@ namespace ThirdPersonSimulation.Fixed
         public int PresentationCount { get; }
     }
 
+    internal readonly struct FixedAbilityInvocationContext
+    {
+        public FixedAbilityInvocationContext(
+            ActorId actorId,
+            SimulationTick tick,
+            FixedAbilityExecutionInput input,
+            FixedAbilityBodyFacts bodyFacts,
+            IFixedSkillExecutionState skillState,
+            IFixedAbilityExecutionSavepointPort savepointPort,
+            IFixedInputRequestStatePort inputRequests,
+            IFixedActionRuntimeStatePort actionState,
+            IFixedHandleAllocatorStatePort handleAllocatorState,
+            IFixedEventSequenceStatePort eventSequenceState,
+            IFixedGameplayEffectStatePort gameplayEffectState,
+            IFixedEquipmentStatePort equipmentState)
+        {
+            ActorId = actorId;
+            Tick = tick;
+            Input = input;
+            BodyFacts = bodyFacts;
+            SkillState = skillState;
+            SavepointPort = savepointPort;
+            InputRequests = inputRequests;
+            ActionState = actionState;
+            HandleAllocatorState = handleAllocatorState;
+            EventSequenceState = eventSequenceState;
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+        }
+
+        public ActorId ActorId { get; }
+        public SimulationTick Tick { get; }
+        public FixedAbilityExecutionInput Input { get; }
+        public FixedAbilityBodyFacts BodyFacts { get; }
+        public IFixedSkillExecutionState SkillState { get; }
+        public IFixedAbilityExecutionSavepointPort SavepointPort { get; }
+        public IFixedInputRequestStatePort InputRequests { get; }
+        public IFixedActionRuntimeStatePort ActionState { get; }
+        public IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
+        public IFixedEventSequenceStatePort EventSequenceState { get; }
+        public IFixedGameplayEffectStatePort GameplayEffectState { get; }
+        public IFixedEquipmentStatePort EquipmentState { get; }
+    }
+
     internal sealed class FixedAbilityExecutionFrame
     {
         readonly List<GameplayFact> m_Facts;
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
-        readonly FixedAbilityBodyFacts m_BodyFacts;
-        readonly IFixedGameplayEffectStatePort m_GameplayEffectState;
-        readonly IFixedEquipmentStatePort m_EquipmentState;
+        FixedAbilityBodyFacts m_BodyFacts;
+        IFixedGameplayEffectStatePort m_GameplayEffectState;
+        IFixedEquipmentStatePort m_EquipmentState;
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -105,15 +149,6 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityExecutionLayout layout,
             FixedGameplayAbilityExecutionServices services,
             ActorId actorId,
-            SimulationTick tick,
-            FixedAbilityExecutionInput input,
-            FixedAbilityBodyFacts bodyFacts,
-            IFixedSkillExecutionState skillState,
-            IFixedActionRuntimeStatePort actionState,
-            IFixedHandleAllocatorStatePort handleAllocatorState,
-            IFixedEventSequenceStatePort eventSequenceState,
-            IFixedGameplayEffectStatePort gameplayEffectState,
-            IFixedEquipmentStatePort equipmentState,
             FixedTraceSink trace,
             FixedAbilityExecutionWorkspace workspace)
         {
@@ -121,15 +156,6 @@ namespace ThirdPersonSimulation.Fixed
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             ActorId = actorId;
-            Tick = tick;
-            Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_BodyFacts = bodyFacts;
-            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
-            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
-            EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
-            m_GameplayEffectState = gameplayEffectState;
-            m_EquipmentState = equipmentState;
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -141,21 +167,59 @@ namespace ThirdPersonSimulation.Fixed
             Trace.Bind(this);
         }
 
+        internal void Begin(in FixedAbilityInvocationContext context)
+        {
+            if (!context.ActorId.IsValid || !context.Tick.IsValid)
+                throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
+            if (context.ActorId != ActorId)
+                throw new InvalidOperationException("Fixed Ability invocation actor does not match its frame.");
+            if (context.Input == null)
+                throw new ArgumentNullException(nameof(context.Input));
+            if (context.SkillState == null)
+                throw new ArgumentNullException(nameof(context.SkillState));
+            if (context.SavepointPort == null)
+                throw new ArgumentNullException(nameof(context.SavepointPort));
+            if (context.InputRequests == null)
+                throw new ArgumentNullException(nameof(context.InputRequests));
+            if (context.ActionState == null)
+                throw new ArgumentNullException(nameof(context.ActionState));
+            if (context.HandleAllocatorState == null)
+                throw new ArgumentNullException(nameof(context.HandleAllocatorState));
+            if (context.EventSequenceState == null)
+                throw new ArgumentNullException(nameof(context.EventSequenceState));
+
+            Tick = context.Tick;
+            Input = context.Input;
+            m_BodyFacts = context.BodyFacts;
+            SkillState = context.SkillState;
+            SavepointPort = context.SavepointPort;
+            InputRequests = context.InputRequests;
+            ActionState = context.ActionState;
+            HandleAllocatorState = context.HandleAllocatorState;
+            EventSequenceState = context.EventSequenceState;
+            m_GameplayEffectState = context.GameplayEffectState;
+            m_EquipmentState = context.EquipmentState;
+            m_SkillExecutionStateAccess = null;
+            Trace.Bind(this);
+        }
+
         public FixedGameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         internal FixedGameplayAbilityExecutionServices Services { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
         public SimulationNumericProfile NumericProfile => Data.NumericProfile;
         public ActorId ActorId { get; }
-        public SimulationTick Tick { get; }
-        public FixedAbilityExecutionInput Input { get; }
+        public SimulationTick Tick { get; private set; }
+        public FixedAbilityExecutionInput Input { get; private set; }
         public FixedAbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
-        internal IFixedSkillExecutionState SkillState { get; }
-        internal IFixedActionRuntimeStatePort ActionState { get; }
-        internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
-        internal IFixedEventSequenceStatePort EventSequenceState { get; }
+        internal IFixedSkillExecutionState SkillState { get; private set; }
+        internal IFixedAbilityExecutionSavepointPort SavepointPort { get; private set; }
+        internal IFixedInputRequestStatePort InputRequests { get; private set; }
+        internal IFixedActionRuntimeStatePort ActionState { get; private set; }
+        internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; private set; }
+        internal IFixedEventSequenceStatePort EventSequenceState { get; private set; }
         internal IFixedGameplayEffectStatePort GameplayEffectState => m_GameplayEffectState ??
             throw new InvalidOperationException("Fixed Ability invocation has no Gameplay Effect state service.");
         internal IFixedEquipmentStatePort EquipmentState => m_EquipmentState ??

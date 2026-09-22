@@ -250,53 +250,57 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedCharacterControlReadPort : ICharacterControlReadPort
     {
         readonly FixedAbilityExecutionInput m_Input;
-        readonly FixedAbilityBodyFacts m_Body;
+        FixedAbilityBodyFacts m_Body;
+        IFixedInputRequestStatePort m_InputRequests;
+        IFixedActionRuntimeStatePort m_ActionState;
         readonly Func<string, bool> m_HasInputRequest;
         readonly Func<CharacterControlParameterId, FixedScalar> m_ReadParameter;
-        readonly Func<CharacterSkillId, bool> m_IsAbilityActive;
-        readonly Func<CharacterSkillId, (bool Found, ulong InstanceId)> m_TryGetActiveAbilityInstanceId;
-        readonly Func<CharacterSkillId, bool> m_IsAbilityCompleted;
-        readonly Func<CharacterSkillId, ulong> m_CompletedAbilityInstanceId;
         readonly Func<CharacterSkillId, string, bool> m_IsActionWindowActive;
         readonly Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> m_TryReadEquipmentActionContext;
 
         public FixedCharacterControlReadPort(
             FixedAbilityExecutionInput input,
-            FixedAbilityBodyFacts body,
             Func<string, bool> hasInputRequest,
             Func<CharacterControlParameterId, FixedScalar> readParameter,
-            Func<CharacterSkillId, bool> isAbilityActive,
-            Func<CharacterSkillId, (bool Found, ulong InstanceId)> tryGetActiveAbilityInstanceId,
-            Func<CharacterSkillId, bool> isAbilityCompleted,
-            Func<CharacterSkillId, ulong> completedAbilityInstanceId,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_Body = body;
             m_HasInputRequest = hasInputRequest ?? throw new ArgumentNullException(nameof(hasInputRequest));
             m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
-            m_IsAbilityActive = isAbilityActive ?? throw new ArgumentNullException(nameof(isAbilityActive));
-            m_TryGetActiveAbilityInstanceId = tryGetActiveAbilityInstanceId ?? throw new ArgumentNullException(nameof(tryGetActiveAbilityInstanceId));
-            m_IsAbilityCompleted = isAbilityCompleted ?? throw new ArgumentNullException(nameof(isAbilityCompleted));
-            m_CompletedAbilityInstanceId = completedAbilityInstanceId ?? throw new ArgumentNullException(nameof(completedAbilityInstanceId));
             m_IsActionWindowActive = isActionWindowActive ?? throw new ArgumentNullException(nameof(isActionWindowActive));
             m_TryReadEquipmentActionContext = tryReadEquipmentActionContext ?? throw new ArgumentNullException(nameof(tryReadEquipmentActionContext));
         }
 
+        internal void Begin(
+            FixedAbilityBodyFacts body,
+            IFixedInputRequestStatePort inputRequests,
+            IFixedActionRuntimeStatePort actionState)
+        {
+            if (!body.IsValid)
+                throw new ArgumentException("Fixed Character Control read port requires Body Facts.", nameof(body));
+            m_Body = body;
+            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
+            m_ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
+        }
+
         public bool HasInputRequest(string requestId) => m_HasInputRequest(requestId);
 
-        public bool IsAbilityActive(CharacterSkillId abilityId) => m_IsAbilityActive(abilityId);
+        public bool IsAbilityActive(CharacterSkillId abilityId) =>
+            IsStateAbilityActive(m_ActionState, abilityId);
 
         public bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId)
         {
-            (bool found, ulong value) = m_TryGetActiveAbilityInstanceId(abilityId);
+            (bool found, ulong value) = TryGetStateActiveAbilityInstanceId(m_ActionState, abilityId);
             instanceId = value;
             return found;
         }
 
-        public bool IsAbilityCompleted(CharacterSkillId abilityId) => m_IsAbilityCompleted(abilityId);
-        public ulong CompletedAbilityInstanceId(CharacterSkillId abilityId) => m_CompletedAbilityInstanceId(abilityId);
+        public bool IsAbilityCompleted(CharacterSkillId abilityId) =>
+            IsStateAbilityCompleted(m_ActionState, abilityId);
+
+        public ulong CompletedAbilityInstanceId(CharacterSkillId abilityId) =>
+            GetStateCompletedAbilityInstanceId(m_ActionState, abilityId);
         public bool IsAbilityWindowActive(CharacterSkillId abilityId, string windowType) => m_IsActionWindowActive(abilityId, windowType);
 
         public bool TryReadEquipmentActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context)
@@ -365,19 +369,71 @@ namespace ThirdPersonSimulation.Fixed
                 _ => throw new ArgumentOutOfRangeException(nameof(comparison))
             };
         }
+
+        static bool IsStateAbilityActive(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId)
+        {
+            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
+            for (int i = 0; i < actions.Count; i++)
+                if (actions[i].IsActive && actions[i].SkillId == abilityId)
+                    return true;
+            return false;
+        }
+
+        static (bool Found, ulong InstanceId) TryGetStateActiveAbilityInstanceId(
+            IFixedActionRuntimeStatePort state,
+            CharacterSkillId abilityId)
+        {
+            ulong found = 0;
+            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
+            for (int i = 0; i < actions.Count; i++)
+            {
+                FixedActionInstanceState action = actions[i];
+                if (!action.IsActive || action.SkillId != abilityId)
+                    continue;
+                if (found != 0)
+                    return (false, 0);
+                found = action.InstanceId;
+            }
+            return (found != 0, found);
+        }
+
+        static bool IsStateAbilityCompleted(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId) =>
+            GetStateCompletedAbilityInstanceId(state, abilityId) != 0;
+
+        static ulong GetStateCompletedAbilityInstanceId(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId)
+        {
+            ulong result = 0;
+            ulong tick = 0;
+            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
+            for (int i = 0; i < actions.Count; i++)
+            {
+                FixedActionInstanceState action = actions[i];
+                if (action.SkillId != abilityId || action.State != SimulationActionState.Ended)
+                    continue;
+                if (result == 0 || action.LastTransitionTick > tick ||
+                    action.LastTransitionTick == tick && action.InstanceId > result)
+                {
+                    result = action.InstanceId;
+                    tick = action.LastTransitionTick;
+                }
+            }
+            return result;
+        }
     }
 
     internal sealed class FixedCharacterControlStatePort : ICharacterControlStatePort
     {
-        readonly CharacterControlRuntimeStateTransaction m_State;
         readonly CharacterControlStateSchema m_Schema;
+        CharacterControlRuntimeStateTransaction m_State;
 
-        public FixedCharacterControlStatePort(
-            CharacterControlRuntimeStateTransaction state,
-            CharacterControlStateSchema schema)
+        public FixedCharacterControlStatePort(CharacterControlStateSchema schema)
+        {
+            m_Schema = schema ?? throw new ArgumentNullException(nameof(schema));
+        }
+
+        internal void Begin(CharacterControlRuntimeStateTransaction state)
         {
             m_State = state ?? throw new ArgumentNullException(nameof(state));
-            m_Schema = schema ?? throw new ArgumentNullException(nameof(schema));
         }
 
         public CharacterControlStateId ReadState(CharacterControlStateFieldId field)
@@ -506,26 +562,23 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly ICharacterControlModule m_Control;
         readonly CharacterControlRuntimeBinding m_Binding;
-        readonly CharacterControlRuntimeStateTransaction m_State;
         readonly CharacterControlStateSchema m_Schema;
-        readonly FixedCharacterControlReadPort m_Read;
-        readonly FixedCharacterControlOutputPort m_Output;
-        readonly FixedCharacterControlStatePort m_StatePort;
+        FixedCharacterControlReadPort m_Read;
+        FixedCharacterControlOutputPort m_Output;
+        FixedCharacterControlStatePort m_StatePort;
         readonly ActorId m_ActorId;
-        readonly SimulationTick m_Tick;
         readonly int m_TickRate;
+        SimulationTick m_Tick;
+        IFixedInputRequestStatePort m_InputRequests;
+        IFixedActionRuntimeStatePort m_ActionState;
+        CharacterControlRuntimeStateTransaction m_State;
 
         public FixedCharacterControlRuntime(
             CharacterControlModuleCatalog controlModules,
             CharacterControlRuntimeBinding binding,
-            IFixedControlRuntimeStatePort controlState,
-            IFixedInputRequestStatePort inputRequests,
-            IFixedActionRuntimeStatePort actionState,
-            ActorId actorId,
-            SimulationTick tick,
-            int tickRate,
             FixedAbilityExecutionInput input,
-            FixedAbilityBodyFacts body,
+            ActorId actorId,
+            int tickRate,
             FixedCharacterControlMotionRuntime motion,
             FixedCharacterTraceSink trace,
             IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> actions,
@@ -534,27 +587,18 @@ namespace ThirdPersonSimulation.Fixed
         {
             controlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
-            controlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
-            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
-            actionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
-            if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
+            if (!actorId.IsValid || tickRate <= 0)
                 throw new ArgumentException("Fixed Character Control runtime identity is incomplete.");
             m_Control = controlModules.Require(binding.ModuleId);
             binding.RequireContract(m_Control.Contract);
             m_Schema = m_Control.Contract.StateSchema;
-            m_State = controlState.BindControl(m_Schema);
             m_ActorId = actorId;
-            m_Tick = tick;
             m_TickRate = tickRate;
+
             m_Read = new FixedCharacterControlReadPort(
                 input,
-                body,
-                requestId => HasInputRequest(inputRequests, requestId),
+                requestId => HasInputRequest(m_InputRequests, requestId),
                 parameter => FixedScalar.FromDouble(binding.Parameters.ReadNumeric(parameter)),
-                skill => IsAbilityActive(actionState, skill),
-                skill => TryGetActiveAbilityInstanceId(actionState, skill),
-                skill => IsAbilityCompleted(actionState, skill),
-                skill => CompletedAbilityInstanceId(actionState, skill),
                 isActionWindowActive,
                 tryReadEquipmentActionContext);
             m_Output = new FixedCharacterControlOutputPort(
@@ -562,7 +606,26 @@ namespace ThirdPersonSimulation.Fixed
                 motion,
                 actions,
                 trace);
-            m_StatePort = new FixedCharacterControlStatePort(m_State, m_Schema);
+            m_StatePort = new FixedCharacterControlStatePort(m_Schema);
+        }
+
+        internal void Begin(
+            IFixedControlRuntimeStatePort controlState,
+            IFixedInputRequestStatePort inputRequests,
+            IFixedActionRuntimeStatePort actionState,
+            SimulationTick tick,
+            FixedAbilityBodyFacts body)
+        {
+            if (controlState == null)
+                throw new ArgumentNullException(nameof(controlState));
+            if (!tick.IsValid)
+                throw new ArgumentException("Fixed Character Control runtime identity is incomplete.", nameof(tick));
+            m_State = controlState.BindControl(m_Schema);
+            m_StatePort.Begin(m_State);
+            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
+            m_ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
+            m_Read.Begin(body, inputRequests, actionState);
+            m_Tick = tick;
         }
 
         public CharacterControlRuntimeStateTransaction State => m_State;
@@ -574,60 +637,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Control.Tick(in context, m_Read, m_StatePort, m_Output);
         }
 
-        static bool IsAbilityActive(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId)
-        {
-            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
-            for (int i = 0; i < actions.Count; i++)
-                if (actions[i].IsActive && actions[i].SkillId == abilityId)
-                    return true;
-            return false;
-        }
-
         static bool HasInputRequest(IFixedInputRequestStatePort state, string requestId)
         {
             SimulationInputRequestState request = state.GetInputRequest(requestId);
             return request.IsValid && !request.Consumed && request.ExpireTick >= state.Tick.Value;
         }
 
-        static (bool Found, ulong InstanceId) TryGetActiveAbilityInstanceId(
-            IFixedActionRuntimeStatePort state,
-            CharacterSkillId abilityId)
-        {
-            ulong found = 0;
-            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
-            for (int i = 0; i < actions.Count; i++)
-            {
-                FixedActionInstanceState action = actions[i];
-                if (!action.IsActive || action.SkillId != abilityId)
-                    continue;
-                if (found != 0)
-                    return (false, 0);
-                found = action.InstanceId;
-            }
-            return (found != 0, found);
-        }
-
-        static bool IsAbilityCompleted(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId) =>
-            CompletedAbilityInstanceId(state, abilityId) != 0;
-
-        static ulong CompletedAbilityInstanceId(IFixedActionRuntimeStatePort state, CharacterSkillId abilityId)
-        {
-            ulong result = 0;
-            ulong tick = 0;
-            IReadOnlyList<FixedActionInstanceState> actions = state.GetActionInstances();
-            for (int i = 0; i < actions.Count; i++)
-            {
-                FixedActionInstanceState action = actions[i];
-                if (action.SkillId != abilityId || action.State != SimulationActionState.Ended)
-                    continue;
-                if (result == 0 || action.LastTransitionTick > tick ||
-                    action.LastTransitionTick == tick && action.InstanceId > result)
-                {
-                    result = action.InstanceId;
-                    tick = action.LastTransitionTick;
-                }
-            }
-            return result;
-        }
     }
 }

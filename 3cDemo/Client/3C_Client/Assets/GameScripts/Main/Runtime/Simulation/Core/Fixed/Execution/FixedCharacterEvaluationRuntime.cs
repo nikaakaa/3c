@@ -39,8 +39,8 @@ namespace ThirdPersonSimulation.Fixed
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);
-            FixedAbilityInvocationRuntime[] invocations = actor.InvocationScratch;
-            int invocationCount = 0;
+            FixedAbilityInvocationRuntime[] invocations = actor.Invocations;
+            int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
             actionRuntimes.Clear();
             FixedGameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
@@ -62,8 +62,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                IFixedAbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
-                IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = actor.DomainRuntimeFactory;
                 abilityInput.Begin(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;
@@ -84,11 +82,12 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                    var invocation = new FixedAbilityInvocationRuntime(
-                        installation.Execution,
-                        actor.AbilityInstallations,
-                        domainRuntimeFactory,
-                        installation.EquipmentLayout,
+                    FixedAbilityInvocationRuntime invocation = invocations[i];
+                    invocation.Begin(new FixedAbilityInvocationContext(
+                        actor.ActorId,
+                        tick,
+                        abilityInput,
+                        bodyFacts,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         roleState.InputRequests,
@@ -96,15 +95,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
-                        roleState.EquipmentState,
-                        actor.ActorId,
-                        tick,
-                        abilityInput,
-                        bodyFacts,
-                        workspaces[i],
-                        installation.Control,
-                        serviceFactory);
-                    invocations[invocationCount++] = invocation;
+                        roleState.EquipmentState));
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
@@ -129,22 +120,13 @@ namespace ThirdPersonSimulation.Fixed
                 if (!effectAdvanced)
                     RequireNoGameplayEffectIngress(ingress, ingressCount);
 
-                var control = new FixedCharacterControlRuntime(
-                    characterRuntime.ControlModules,
-                    actor.ControlRuntimeBinding,
+                FixedCharacterControlRuntime control = characterRuntime.ControlRuntime(actor.ActorId);
+                control.Begin(
                     roleState,
                     roleState.InputRequests,
                     roleState.ActionState,
-                    actor.ActorId,
                     tick,
-                    characterRuntime.TickRate,
-                    abilityInput,
-                    bodyFacts,
-                    controlMotion,
-                    characterTraceSink,
-                    actionRuntimes,
-                    (skill, window) => IsActionWindowActive(invocations, invocationCount, skill, window),
-                    route => ReadEquipmentActionContext(invocations, invocationCount, route));
+                    bodyFacts);
                 control.Tick();
                 controlMotion.CopyContributionsTo(motionContributions);
 
@@ -226,7 +208,6 @@ namespace ThirdPersonSimulation.Fixed
                     trace.ToArray(),
                     timelineAdvances.ToArray(),
                     timelineStops.ToArray());
-                actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
@@ -241,8 +222,7 @@ namespace ThirdPersonSimulation.Fixed
                 DiscardTimelineAdvances(actor.TimelineRuntime, timelineAdvances);
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
                 for (int i = 0; i < invocationCount; i++)
-                    invocations[i].Dispose();
-                actor.ClearInvocationScratch(invocationCount);
+                    invocations[i].Abort();
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
@@ -333,13 +313,12 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static bool IsActionWindowActive(
+        internal static bool IsActionWindowActive(
             FixedAbilityInvocationRuntime[] invocations,
-            int invocationCount,
             CharacterSkillId skillId,
             string windowType)
         {
-            for (int i = 0; i < invocationCount; i++)
+            for (int i = 0; i < invocations.Length; i++)
             {
                 FixedAbilityInvocationRuntime invocation = invocations[i];
                 if (invocation.AbilityId != skillId)
@@ -349,12 +328,11 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
+        internal static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
             FixedAbilityInvocationRuntime[] invocations,
-            int invocationCount,
             EquipmentActionRouteId route)
         {
-            for (int i = 0; i < invocationCount; i++)
+            for (int i = 0; i < invocations.Length; i++)
             {
                 IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))

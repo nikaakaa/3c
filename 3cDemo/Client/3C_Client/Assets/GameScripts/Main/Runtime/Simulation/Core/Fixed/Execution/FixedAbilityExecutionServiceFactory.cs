@@ -10,7 +10,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
             FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
-            IFixedAbilityExecutionSavepointPort savepointPort,
             FixedActionStateStore actionStore,
             FixedHandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -37,7 +36,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
             FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
-            IFixedAbilityExecutionSavepointPort savepointPort,
             FixedActionStateStore actionStore,
             FixedHandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -47,7 +45,6 @@ namespace ThirdPersonSimulation.Fixed
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
                     access,
-                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -60,7 +57,6 @@ namespace ThirdPersonSimulation.Fixed
             {
                 equipment = new FixedEquipmentRuntime(
                     access,
-                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -90,8 +86,6 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
             FixedAbilityOperationControlRuntime control,
-            IFixedAbilityExecutionSavepointPort savepointPort,
-            IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace)
         {
             FixedGameplayAbilityExecutionAccess access = executionServices.Access;
@@ -99,7 +93,7 @@ namespace ThirdPersonSimulation.Fixed
                 "Control",
                 executionServices.ControlPolicy);
             FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
-            FixedInputRuntime input = new FixedInputRuntime(frame, inputRequests);
+            FixedInputRuntime input = new FixedInputRuntime(frame);
             FixedHandleAllocator handles = new FixedHandleAllocator(frame);
             FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
                 access,
@@ -113,7 +107,6 @@ namespace ThirdPersonSimulation.Fixed
                 executionServices.GameplayEffectCatalog,
                 access,
                 frame,
-                savepointPort,
                 actionStore,
                 handles,
                 equipmentLayout,
@@ -176,7 +169,7 @@ namespace ThirdPersonSimulation.Fixed
                 actionStore,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops,
-                frame.Tick,
+                frame,
                 treeClipLink);
             var services = new FixedAbilityExecutionServiceSet(
                 frame,

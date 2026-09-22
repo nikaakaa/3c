@@ -9,7 +9,6 @@ namespace ThirdPersonSimulation.Fixed
 		IEquipmentActionContextProvider
 	{
 		readonly FixedAbilityExecutionFrame m_Frame;
-		readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
 		readonly FixedActionStateStore m_Actions;
 		readonly FixedHandleAllocator m_Handles;
 		readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
@@ -21,7 +20,6 @@ namespace ThirdPersonSimulation.Fixed
 		readonly Stack<MutationScope> m_MutationScopePool = new();
 		public FixedEquipmentRuntime(
 			FixedGameplayAbilityExecutionAccess access,
-			IFixedAbilityExecutionSavepointPort savepointPort,
 			FixedAbilityExecutionFrame frame,
 			FixedActionStateStore actions,
 			FixedHandleAllocator handles,
@@ -31,7 +29,6 @@ namespace ThirdPersonSimulation.Fixed
 			EquipmentProgramLayout equipmentLayout)
 			: base(access)
 		{
-			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles;
@@ -321,7 +318,7 @@ namespace ThirdPersonSimulation.Fixed
 			MutationScope scope = m_MutationScopePool.Count > 0
 				? m_MutationScopePool.Pop()
 				: new MutationScope();
-			return scope.Begin(this, m_Frame, m_SavepointPort);
+			return scope.Begin(this, m_Frame, m_Frame.SavepointPort);
 		}
 		void IEquipmentRuntimePort.CommitEffectOutputs(OperationHandle source) => RequireGameplayEffects().CommitEquipmentMutation(RequireSource(source));
 		void IEquipmentRuntimePort.CancelEffectOutputs() => RequireGameplayEffects().CancelEquipmentMutation();

@@ -9,7 +9,6 @@ namespace ThirdPersonSimulation.Fixed
         IFixedGameplayEffectActionPort
     {
 		readonly FixedAbilityExecutionFrame m_Frame;
-		readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
         readonly IFixedActionContextReader m_Actions;
         readonly FixedHandleAllocator m_Handles;
         readonly FixedFactSink m_Facts;
@@ -20,7 +19,6 @@ namespace ThirdPersonSimulation.Fixed
 
 		public FixedGameplayEffectOperationRuntime(
 			FixedGameplayAbilityExecutionAccess access,
-			IFixedAbilityExecutionSavepointPort savepointPort,
 			FixedAbilityExecutionFrame frame,
             IFixedActionContextReader actions,
             FixedHandleAllocator handles,
@@ -30,7 +28,6 @@ namespace ThirdPersonSimulation.Fixed
 			FixedGameplayEffectExecutionScratch scratch)
 			: base(access)
 		{
-			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Handles = handles;
@@ -45,7 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_GameplayEffects != null)
                 throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
 			m_GameplayEffects = m_Scratch.Target.Begin(
-				m_SavepointPort,
+				m_Frame.SavepointPort,
                 m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
                 m_Frame.ActorId,

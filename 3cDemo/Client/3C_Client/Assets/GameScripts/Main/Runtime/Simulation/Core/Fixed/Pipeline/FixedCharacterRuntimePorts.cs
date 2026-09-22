@@ -28,6 +28,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<string> m_InputRequestIds;
         readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
         readonly FixedCharacterInputRuntime m_InputRuntime;
+        readonly Dictionary<ActorId, FixedCharacterControlRuntime> m_ControlRuntimes =
+            new Dictionary<ActorId, FixedCharacterControlRuntime>();
 
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -112,6 +114,27 @@ namespace ThirdPersonSimulation.Fixed
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
             m_InputRuntime = new FixedCharacterInputRuntime(m_InputRequestIds);
+            for (int i = 0; i < values.Count; i++)
+            {
+                SimulationActorBinding actor = values[i];
+                m_ControlRuntimes.Add(actor.ActorId, new FixedCharacterControlRuntime(
+                    ControlModules,
+                    actor.ControlRuntimeBinding,
+                    actor.AbilityExecutionInput,
+                    actor.ActorId,
+                    TickRate,
+                    actor.ControlMotion,
+                    actor.CharacterTraceSink,
+                    actor.ActionRuntimes,
+                    (skill, window) => FixedCharacterEvaluationRuntime.IsActionWindowActive(
+                        actor.Invocations,
+                        skill,
+                        window),
+                    route => FixedCharacterEvaluationRuntime.ReadEquipmentActionContext(
+                        actor.Invocations,
+                        route)));
+            }
+
             var parts = new List<string>
             {
                 "fixed-character-runtime/1",
@@ -140,6 +163,8 @@ namespace ThirdPersonSimulation.Fixed
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         internal FixedCharacterInputRuntime InputRuntime => m_InputRuntime;
+        internal FixedCharacterControlRuntime ControlRuntime(ActorId actorId) =>
+            m_ControlRuntimes[actorId];
         public StableHash StateSchemaHash { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }

@@ -22,7 +22,8 @@ namespace ThirdPersonSimulation
     }
 
     internal readonly struct SimulationActionActivationRequestState<TTargetSnapshot>
-        where TTargetSnapshot : struct
+        : IEquatable<SimulationActionActivationRequestState<TTargetSnapshot>>
+        where TTargetSnapshot : struct, IEquatable<TTargetSnapshot>
     {
         public SimulationActionActivationRequestState(
             string actionId,
@@ -66,6 +67,19 @@ namespace ThirdPersonSimulation
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public bool Equals(SimulationActionActivationRequestState<TTargetSnapshot> other) =>
+            string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
+            SkillId.Equals(other.SkillId) &&
+            SkillEntryOperation.Equals(other.SkillEntryOperation) &&
+            string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
+            string.Equals(SourceInputRequestId, other.SourceInputRequestId, StringComparison.Ordinal) &&
+            InputSequence == other.InputSequence &&
+            StartTick == other.StartTick &&
+            string.Equals(TargetKey, other.TargetKey, StringComparison.Ordinal) &&
+            TargetSnapshot.Equals(other.TargetSnapshot) &&
+            Source.Equals(other.Source) &&
+            EquipmentContext.Equals(other.EquipmentContext) &&
+            ReplacementActionInstanceId == other.ReplacementActionInstanceId;
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&

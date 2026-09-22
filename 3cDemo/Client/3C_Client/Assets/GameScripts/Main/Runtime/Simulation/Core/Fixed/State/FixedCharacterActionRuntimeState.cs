@@ -126,6 +126,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static bool Same<T>(IReadOnlyList<T> left, IReadOnlyList<T> right)
+            where T : struct, IEquatable<T>
         {
             if (left == null || right == null)
                 return left == right;
@@ -133,7 +134,7 @@ namespace ThirdPersonSimulation.Fixed
                 return false;
             for (int i = 0; i < left.Count; i++)
             {
-                if (!EqualityComparer<T>.Default.Equals(left[i], right[i]))
+                if (!left[i].Equals(right[i]))
                     return false;
             }
             return true;

@@ -6,7 +6,7 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
-    internal readonly struct SimulationInputRequestState
+    internal readonly struct SimulationInputRequestState : IEquatable<SimulationInputRequestState>
     {
         public SimulationInputRequestState(
             string requestId,
@@ -30,6 +30,13 @@ namespace ThirdPersonSimulation
         public ulong ExpireTick { get; }
         public int Priority { get; }
         public bool Consumed { get; }
+        public bool Equals(SimulationInputRequestState other) =>
+            string.Equals(RequestId, other.RequestId, StringComparison.Ordinal) &&
+            Sequence == other.Sequence &&
+            SourceTick == other.SourceTick &&
+            ExpireTick == other.ExpireTick &&
+            Priority == other.Priority &&
+            Consumed == other.Consumed;
         public bool IsValid => !string.IsNullOrEmpty(RequestId) && Sequence != 0;
 
         public SimulationInputRequestState Consume() =>

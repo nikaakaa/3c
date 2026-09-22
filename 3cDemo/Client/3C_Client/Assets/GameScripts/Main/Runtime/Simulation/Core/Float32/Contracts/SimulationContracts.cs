@@ -188,7 +188,7 @@ namespace ThirdPersonSimulation
         Abort = 7
     }
 
-    public readonly struct SimulationActionTargetSnapshot
+    public readonly struct SimulationActionTargetSnapshot : IEquatable<SimulationActionTargetSnapshot>
     {
         public SimulationActionTargetSnapshot(string targetId, Float32Vector3 position, Float32Yaw yaw)
         {

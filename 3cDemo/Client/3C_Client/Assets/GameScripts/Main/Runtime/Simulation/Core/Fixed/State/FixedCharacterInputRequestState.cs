@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             string identity = requestId ?? string.Empty;
             if (m_Requests.TryGetValue(identity, out SimulationInputRequestState existing) &&
-                EqualityComparer<SimulationInputRequestState>.Default.Equals(existing, state))
+                existing.Equals(state))
                 return;
             m_Requests[identity] = state;
             m_Dirty = true;

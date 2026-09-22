@@ -4,7 +4,7 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-	internal readonly struct Float32ActionInstanceState
+	internal readonly struct Float32ActionInstanceState : IEquatable<Float32ActionInstanceState>
     {
 		public Float32ActionInstanceState(
 			string actionId,
@@ -71,8 +71,30 @@ namespace ThirdPersonSimulation
         public SimulationActionLifecycleTransitionType LastTransition { get; }
         public ulong LastTransitionTick { get; }
         public ulong LastTransitionSourceTick { get; }
-        public string Reason { get; }
-        public EquipmentActionContext EquipmentContext { get; }
+		public string Reason { get; }
+		public EquipmentActionContext EquipmentContext { get; }
+		public bool Equals(Float32ActionInstanceState other) =>
+			string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
+			SkillId.Equals(other.SkillId) &&
+			SkillEntryOperation.Equals(other.SkillEntryOperation) &&
+			SkillExecutionGeneration == other.SkillExecutionGeneration &&
+			SegmentGeneration == other.SegmentGeneration &&
+			string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
+			InstanceId == other.InstanceId &&
+			PredictionKey == other.PredictionKey &&
+			string.Equals(SourceInputRequestId, other.SourceInputRequestId, StringComparison.Ordinal) &&
+			InputSequence == other.InputSequence &&
+			StartTick == other.StartTick &&
+			string.Equals(TargetKey, other.TargetKey, StringComparison.Ordinal) &&
+			TargetSnapshot.Equals(other.TargetSnapshot) &&
+			Source.Equals(other.Source) &&
+			Phase == other.Phase &&
+			State == other.State &&
+			LastTransition == other.LastTransition &&
+			LastTransitionTick == other.LastTransitionTick &&
+			LastTransitionSourceTick == other.LastTransitionSourceTick &&
+			string.Equals(Reason, other.Reason, StringComparison.Ordinal) &&
+			EquipmentContext.Equals(other.EquipmentContext);
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&

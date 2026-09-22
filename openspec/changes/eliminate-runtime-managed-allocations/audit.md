@@ -5041,3 +5041,11 @@
 - 首次编译发现事务内实例方法与公共构造使用的静态 ComputeHash 需要分开，并修正 Int32 最小值到 UInt64 的显式转换；随后四工程编译通过。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DeterministicRollback.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未对比 Control 状态 canonical bytes、状态 Codec、rollback restore 和 Player 分配采样。用户可运行控制状态保存/恢复并对比 StateHash 与 canonical bytes；2.4 保持未勾选，Timeline snapshot 外壳和实际分配采样仍在后续小步处理。
+
+## 2026-09-23 Ability提交状态独立
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed 和 Float32 `SkillExecutionState` 原先在修改路径把 pending StateValues、MotionWarp 字典和 execution aggregate 直接移交 candidate；candidate 进入 committed 状态后，rollback 历史会长期持有这些原本属于 Actor 工作页的可变集合。
+- 现在 `TakeSnapshot` 通过正式 public 构造复制出 candidate 独立集合和 aggregate，pending 字典保留在 Actor 工作页内；`Restart` 清空并重灌同一字典，不再直接借用 committed 集合引用。读取默认值、脏标记、MotionWarp Active/Inactive、identity/slot 校验和异常语义不变。
+- 该步建立 pending 与 committed 的明确所有权边界，不宣称 changed 路径已零分配。candidate 复制仍创建字典和 aggregate，非空最终数组、Timeline snapshot 外壳和分配采样仍留在后续小步。

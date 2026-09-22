@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32CharacterRuntimeState
     {
-        readonly ReadOnlyCollection<Float32AbilityRuntimeState> m_Abilities;
+        readonly Float32AbilityRuntimeState[] m_Abilities;
         readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
 
         internal Float32CharacterRuntimeState(
@@ -80,16 +80,14 @@ namespace ThirdPersonSimulation
             GameplayContentHash = gameplayContentHash;
             StateSchemaHash = stateSchemaHash;
             LastCompletedTick = lastCompletedTick;
-            var copied = abilities == null
-                ? new List<Float32AbilityRuntimeState>()
-                : new List<Float32AbilityRuntimeState>(abilities);
-            copied.Sort((left, right) => left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId));
-            for (int i = 0; i < copied.Count; i++)
+            Float32AbilityRuntimeState[] copied = CopyArray(abilities);
+            Array.Sort(copied, CompareAbilities);
+            for (int i = 0; i < copied.Length; i++)
             {
                 if (copied[i] == null || i > 0 && copied[i - 1].AbilityIdentity.AbilityId == copied[i].AbilityIdentity.AbilityId)
                     throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
             }
-            m_Abilities = copied.AsReadOnly();
+            m_Abilities = copied;
             ActionActivationRequests = new List<SimulationActionActivationRequestState>(
                 actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
             ActionInstances = new List<Float32ActionInstanceState>(
@@ -257,5 +255,27 @@ namespace ThirdPersonSimulation
                 equipmentState,
                 null);
         }
+
+        static T[] CopyArray<T>(IEnumerable<T> values)
+        {
+            int count = values is ICollection<T> collection ? collection.Count : 0;
+            var result = new T[count];
+            int index = 0;
+            if (values != null)
+            {
+                foreach (T value in values)
+                {
+                    if (index == result.Length)
+                        Array.Resize(ref result, Math.Max(4, result.Length * 2));
+                    result[index++] = value;
+                }
+            }
+            if (index != result.Length)
+                Array.Resize(ref result, index);
+            return result;
+        }
+
+        static int CompareAbilities(Float32AbilityRuntimeState left, Float32AbilityRuntimeState right) =>
+            left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId);
     }
 }

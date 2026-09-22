@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation
             StableHash stateSchemaHash,
             CharacterStateHash stateHash,
             string stateCodecIdentity,
-            byte[] stateBytes)
+            byte[] ownedStateBytes)
         {
             if (!actorId.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid || !stateHash.IsValid ||
                 !string.Equals(stateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal))
@@ -40,7 +40,9 @@ namespace ThirdPersonSimulation
             StateSchemaHash = stateSchemaHash;
             StateHash = stateHash;
             StateCodecIdentity = stateCodecIdentity;
-            m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
+            m_StateBytes = ownedStateBytes == null
+                ? throw new ArgumentNullException(nameof(ownedStateBytes))
+                : ownedStateBytes;
         }
 
         public ActorId ActorId { get; }

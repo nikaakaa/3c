@@ -222,7 +222,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativeEventHorizon ConfirmedEventHorizon { get; }
         public bool IsValid => ActorId.IsValid && AuthorityTick.IsValid && m_CharacterStateBytes != null;
         internal byte[] StateBuffer => m_CharacterStateBytes;
-        public byte[] CopyCharacterStateBytes() => (byte[])m_CharacterStateBytes.Clone();
     }
 
     public enum PredictionCorrectionDecisionKind : byte

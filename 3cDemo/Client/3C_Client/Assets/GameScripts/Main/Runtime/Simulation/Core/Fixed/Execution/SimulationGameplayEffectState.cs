@@ -193,6 +193,18 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
+        internal bool MatchesPeriods(IReadOnlyDictionary<ulong, ulong> periods)
+        {
+            if (periods == null || m_Periods.Count != periods.Count)
+                return false;
+            foreach (KeyValuePair<ulong, ulong> pair in m_Periods)
+            {
+                if (!periods.TryGetValue(pair.Key, out ulong value) || value != pair.Value)
+                    return false;
+            }
+            return true;
+        }
+
         static bool EqualStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
         {
             if (ReferenceEquals(left, right))
@@ -740,7 +752,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Active Gameplay Effect removal target is missing.");
             m_ActiveEffectsDirty = true;
             if (m_Periods.Remove(active.InstanceId))
-                m_PeriodsDirty = true;
+                RefreshPeriodsDirty();
         }
 
         public ulong GetNextPeriod(ulong instanceId)
@@ -752,13 +764,13 @@ namespace ThirdPersonSimulation.Fixed
             if (tick == 0)
             {
                 if (m_Periods.Remove(instanceId))
-                    m_PeriodsDirty = true;
+                    RefreshPeriodsDirty();
                 return;
             }
             if (m_Periods.TryGetValue(instanceId, out ulong current) && current == tick)
                 return;
             m_Periods[instanceId] = tick;
-            m_PeriodsDirty = true;
+            RefreshPeriodsDirty();
         }
 
         public void MarkActiveEffectsDirty()
@@ -880,6 +892,11 @@ namespace ThirdPersonSimulation.Fixed
         void RefreshTagsDirty()
         {
             m_TagsDirty = m_Baseline == null || !m_Baseline.MatchesTagSources(m_TagSources);
+        }
+
+        void RefreshPeriodsDirty()
+        {
+            m_PeriodsDirty = m_Baseline == null || !m_Baseline.MatchesPeriods(m_Periods);
         }
 
         Dictionary<string, PortableAttributeBefore> CaptureAttributeBefore()

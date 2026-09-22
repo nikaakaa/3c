@@ -690,12 +690,46 @@ namespace ThirdPersonSimulation
             : default;
         public EquipmentVisualSelection CreateVisualSelection(ActorId actorId, ulong sourceTick) =>
             new EquipmentVisualSelection(actorId, SlotId, EquipmentId, VisualBindingId, Revision, sourceTick);
+
+        public bool Equals(EquipmentSlotState other) =>
+            SlotId == other.SlotId &&
+            EquipmentId == other.EquipmentId &&
+            FeatureId == other.FeatureId &&
+            FeatureRevision == other.FeatureRevision &&
+            VisualBindingId == other.VisualBindingId &&
+            Revision == other.Revision &&
+            Generation == other.Generation &&
+            ContributionsInstalled == other.ContributionsInstalled &&
+            string.Equals(TagSource, other.TagSource, StringComparison.Ordinal) &&
+            SameHandles(PassiveEffectHandles, other.PassiveEffectHandles);
+
+        static bool SameHandles(IReadOnlyList<ulong> left, IReadOnlyList<ulong> right)
+        {
+            if (left.Count != right.Count)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (left[i] != right[i])
+                    return false;
+            }
+            return true;
+        }
     }
 
     public sealed class EquipmentStateAggregate
     {
         readonly EquipmentSlotState[] m_Slots;
         readonly EquipmentLocalStateValue[] m_LocalStates;
+
+        static readonly Comparison<EquipmentSlotState> s_CompareSlots =
+            (left, right) => string.CompareOrdinal(left.SlotId.Value, right.SlotId.Value);
+        static readonly Comparison<EquipmentLocalStateValue> s_CompareLocalStates =
+            (left, right) =>
+                CompareJoinedIdentity(
+                    left.FeatureId.Value,
+                    left.StateId.Value,
+                    right.FeatureId.Value,
+                    right.StateId.Value);
 
         public EquipmentStateAggregate(
             StableHash catalogHash,
@@ -707,16 +741,16 @@ namespace ThirdPersonSimulation
             if (!catalogHash.IsValid)
                 throw new ArgumentException("Equipment state catalog hash is invalid.", nameof(catalogHash));
             CatalogHash = catalogHash;
-            EquipmentSlotState[] stable = (slots ?? Array.Empty<EquipmentSlotState>()).OrderBy(value => value.SlotId.Value, StringComparer.Ordinal).ToArray();
+            EquipmentSlotState[] stable = (slots ?? Array.Empty<EquipmentSlotState>()).ToArray();
+            Array.Sort(stable, s_CompareSlots);
             for (int i = 1; i < stable.Length; i++)
             {
                 if (stable[i - 1].SlotId == stable[i].SlotId)
                     throw new InvalidDataException($"Equipment state Slot '{stable[i].SlotId}' is duplicated.");
             }
             m_Slots = stable;
-            EquipmentLocalStateValue[] localStateValues = (localStates ?? Array.Empty<EquipmentLocalStateValue>())
-                .OrderBy(value => $"{value.FeatureId.Value}:{value.StateId.Value}", StringComparer.Ordinal)
-                .ToArray();
+            EquipmentLocalStateValue[] localStateValues = (localStates ?? Array.Empty<EquipmentLocalStateValue>()).ToArray();
+            Array.Sort(localStateValues, s_CompareLocalStates);
             for (int i = 0; i < localStateValues.Length; i++)
             {
                 if (localStateValues[i] == null)
@@ -761,6 +795,33 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<EquipmentLocalStateValue> LocalStates => m_LocalStates;
         public PendingEquipmentChange PendingChange { get; }
         public PendingEquipmentChange LastResolvedChange { get; }
+
+        static int CompareJoinedIdentity(
+            string leftFeature,
+            string leftState,
+            string rightFeature,
+            string rightState)
+        {
+            int leftLength = leftFeature.Length + 1 + leftState.Length;
+            int rightLength = rightFeature.Length + 1 + rightState.Length;
+            int length = Math.Max(leftLength, rightLength);
+            for (int i = 0; i < length; i++)
+            {
+                char leftValue = i < leftFeature.Length
+                    ? leftFeature[i]
+                    : i == leftFeature.Length
+                        ? ':'
+                        : leftState[i - leftFeature.Length - 1];
+                char rightValue = i < rightFeature.Length
+                    ? rightFeature[i]
+                    : i == rightFeature.Length
+                        ? ':'
+                        : rightState[i - rightFeature.Length - 1];
+                if (leftValue != rightValue)
+                    return leftValue < rightValue ? -1 : 1;
+            }
+            return 0;
+        }
 
         public static EquipmentStateAggregate CreateInitial(EquipmentProgramLayout layout)
         {
@@ -811,11 +872,14 @@ namespace ThirdPersonSimulation
 
         public EquipmentStateAggregate WithSlot(EquipmentSlotState slot)
         {
-            var values = m_Slots.ToArray();
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < m_Slots.Length; i++)
             {
-                if (values[i].SlotId != slot.SlotId)
+                if (m_Slots[i].SlotId != slot.SlotId)
                     continue;
+                if (m_Slots[i].Equals(slot))
+                    return this;
+                var values = new EquipmentSlotState[m_Slots.Length];
+                Array.Copy(m_Slots, values, m_Slots.Length);
                 values[i] = slot;
                 return new EquipmentStateAggregate(
                     CatalogHash,
@@ -885,12 +949,17 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Equipment aggregate has no active pending change.");
             if (slot.SlotId != PendingChange.SlotId)
                 throw new InvalidOperationException($"Equipment pending change targets '{PendingChange.SlotId.Value}', not '{slot.SlotId.Value}'.");
-            var values = m_Slots.ToArray();
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < m_Slots.Length; i++)
             {
-                if (values[i].SlotId != slot.SlotId)
+                if (m_Slots[i].SlotId != slot.SlotId)
                     continue;
-                values[i] = slot;
+                EquipmentSlotState[] values = m_Slots;
+                if (!m_Slots[i].Equals(slot))
+                {
+                    values = new EquipmentSlotState[m_Slots.Length];
+                    Array.Copy(m_Slots, values, m_Slots.Length);
+                    values[i] = slot;
+                }
                 return new EquipmentStateAggregate(
                     CatalogHash,
                     values,

@@ -5269,6 +5269,16 @@
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做单属性 modifier 应用/移除、多属性效果回放、savepoint restore、rollback restore 和 Player 分配采样。
 
+## 2026-09-23 GameplayEffect嵌套项精确复制
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `aa9c9a02f`。
+
+- Fixed/Float32 tags、active effects 和 journal 分类置脏时，`CreateChangedFrom` 原先会克隆整类嵌套对象。现在逐项与 baseline 深比较：tag source 的 Ordinal 内容相同复用 committed 数组；active effect 按 handle/instance 定位并全字段相同复用 committed 对象；journal 同 key 且记录数量一致时按序逐条比较，相同记录复用 committed 对象。
+- 新增、移除、内容变化仍独立克隆。tags、active effects、journal 的 candidate 容器继续独立创建；working page 的可变对象不进入 committed。`CopyTo` 仍深拷贝，排序、Ordinal 字符串、effect spec、prediction 记录和 canonical 语义不变。
+- 这补完 attributes 之后的三个嵌套分类。2.4 保持未勾选：CharacterState candidate 外壳、Equipment slot/pending 真实变更粒度、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做多效果叠加/抑制/过期、预测加入/确认/拒绝、tag source 先改后恢复、savepoint restore、rollback restore 和 Player 分配采样。
+
 ## 2026-09-23 Control状态恢复等价判定
 
 对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `4ee86d875`。

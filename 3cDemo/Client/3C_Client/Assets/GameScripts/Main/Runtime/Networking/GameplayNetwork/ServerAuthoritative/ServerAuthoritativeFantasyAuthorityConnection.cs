@@ -210,8 +210,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativeAuthorityReliableEventBatchOutput value)
         {
             RequireOperational();
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+            if (!value.IsValid)
+                throw new ArgumentException("Reliable event batch output is invalid.", nameof(value));
             using var message = W2G_ServerAuthoritativeReliableGameplayEventBatch.Create();
             message.RoomId = Process.RoomId.Value;
             message.SessionId = SessionId.Value;

@@ -189,7 +189,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public byte[] Payload { get; }
     }
 
-    public sealed class ServerAuthoritativeAuthorityReliableEventOutput
+    public readonly struct ServerAuthoritativeAuthorityReliableEventOutput
     {
         public ServerAuthoritativeAuthorityReliableEventOutput(
             ActorId recipientActorId,
@@ -209,9 +209,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ActorId SourceActorId { get; }
         public ServerAuthoritativeReliableEvent Value { get; }
         public byte[] Payload { get; }
+        public bool IsValid => RecipientActorId.IsValid && SourceActorId.IsValid &&
+            RecipientActorId != SourceActorId && Payload != null;
     }
 
-    public sealed class ServerAuthoritativeAuthorityReliableEventBatchOutput
+    public readonly struct ServerAuthoritativeAuthorityReliableEventBatchOutput
     {
         readonly ServerAuthoritativeAuthorityReliableEventOutput[] m_Events;
 
@@ -226,7 +228,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentException("Reliable event batch is empty.", nameof(events));
             for (int i = 0; i < events.Length; i++)
             {
-                if (events[i] == null || events[i].RecipientActorId != recipientActorId ||
+                if (!events[i].IsValid || events[i].RecipientActorId != recipientActorId ||
                     events[i].SourceActorId != sourceActorId)
                 {
                     throw new ArgumentException("Reliable event batch contains another route.", nameof(events));
@@ -240,6 +242,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ActorId RecipientActorId { get; }
         public ActorId SourceActorId { get; }
         public IReadOnlyList<ServerAuthoritativeAuthorityReliableEventOutput> Events => m_Events;
+        public bool IsValid => RecipientActorId.IsValid && SourceActorId.IsValid &&
+            RecipientActorId != SourceActorId && m_Events != null && m_Events.Length > 0;
     }
 
     public interface IServerAuthoritativeAuthorityControlTransport : IDisposable

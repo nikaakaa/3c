@@ -172,6 +172,7 @@
 - [x] 2.102 Fixed/Float32 CharacterRuntimeState 的 Abilities 快照改为精确数组并使用静态比较器；删除 List 与 ReadOnlyCollection 包装，排序和 Ability partition 校验不变
 - [x] 2.103 Fixed/Float32 CharacterRuntimeState 的 ActionActivationRequests／ActionInstances 快照改为精确数组；删除每次角色提交快照的两只 List，事务工作 List 和只读消费不变
 - [x] 2.104 Fixed/Float32 CharacterRuntimeState 的 InputRequests 快照改为 Ordinal 排序精确数组；事务 Capture 和 Codec Read 的新建数组由 owned 构造直接接管，删除 Codec 写入的临时 key List，事务字典查找和序列化键序不变
+- [x] 2.105 两数值域 Ability Layout 删除与排序 InputRequestIds 重复的 HashSet，HasInputRequest 改为 Ordinal 二分；状态 Codec 解码直接遍历 installations 校验，删除每次读取的 HashSet
 
 ## 3. Timeline和事件图
 

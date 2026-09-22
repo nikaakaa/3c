@@ -4777,3 +4777,14 @@
 - 扫描仍按 `_knownPhysicalAssets` 当前枚举顺序记录待删 identity，第二遍统一删除，避免边枚举边改集合；删除后 `Array.Clear` 清空本次有效区间，不把旧 identity 引用留在长期 scratch 中。
 - 用 Product 资源、诊断、启动合同和 ThirdPerson ProductStartup 合同源码子集做 `csc` 聚焦编译；0 错误，构建后 `dotnet build-server shutdown` 成功。Unity 序列化字段在脱离 Unity 编译上下文时产生既有 CS0649，不属于本链源码错误。
 - Unity MCP editor 仍 ping 未响应；本步没有 Unity 编译、Console、资源维护回放或 Player 分配采样证据。物理加载任务、completion source、lease record、scope cancellation source 和快照对象分配仍是 6.2 后续边界。
+
+## 2026-09-23 Ability InputRequest 索引和 Codec 查询去重
+
+对应 tasks.md 的 2.105；2.3 保持未勾选。
+
+- Fixed 与 Float32 `GameplayAbilityExecutionLayout` 原先为 InputRequest 同时持有准备期 `HashSet<string>` 和由它排序得到的 `string[]`。现在准备阶段仍用局部 HashSet 拒绝重复 identity，随后立即产出唯一排序数组；layout 不再保留第二份索引。
+- `HasInputRequest` 改为在 `string[]` 上做 `Array.BinarySearch`，比较器仍是 `StringComparer.Ordinal`。准备期排序、重复 InputRequest 拒绝、空请求 ID 映射到空串检查和查询结果不变。
+- 两个数值域 Character Runtime State Codec 的 `ReadInputRequests` 原先每次解码都新建 `HashSet<string>`，再遍历所有 installation layout 填充。现在直接遍历 installations，调用 layout 的排序数组查找；wire 计数上限、Ordinal 递增校验、值内 RequestId 一致性和异常文本不变。
+- 业务输入是 installation 准备数据和 wire 中的 InputRequest pair 序列，输出仍是最终 `KeyValuePair<string, SimulationInputRequestState>[]`。处理点从“layout 保留双索引、每次解码复制索引”改为“layout 唯一排序索引、解码直接查询”。
+- `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。构建后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做状态回放和 Player 分配采样。用户可运行包含 InputRequest 的角色状态保存、恢复和 rollback restore，确认请求顺序、非法 identity 拒绝和状态内容不变；分配采样应观察每次 Codec Read 的 HashSet 和 layout 重复索引消失，wire 字符串和最终数组仍是正式独立分配。

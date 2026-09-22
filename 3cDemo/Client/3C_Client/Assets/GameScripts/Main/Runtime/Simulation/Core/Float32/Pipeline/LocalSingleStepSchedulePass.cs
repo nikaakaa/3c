@@ -62,7 +62,7 @@ namespace ThirdPersonSimulation
             IFloat32CharacterRuntimePort characterRuntime,
             SimulationTickSourceKind expectedSourceKind)
         {
-            if (!canonical.IsValid || typed == null || characterRuntime == null)
+            if (!canonical.IsValid || !typed.IsValid || characterRuntime == null)
                 throw new ArgumentNullException("Single-step Schedule input is missing.");
             if (context.Source.Kind != expectedSourceKind || !canonical.Source.Equals(context.Source) ||
                 canonical.Inputs.Count != characterRuntime.Runtime.Roster.Count)

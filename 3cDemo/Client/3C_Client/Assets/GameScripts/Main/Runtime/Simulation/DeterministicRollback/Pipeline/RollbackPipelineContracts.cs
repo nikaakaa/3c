@@ -18,7 +18,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             Predicted = predicted ?? throw new ArgumentNullException(nameof(predicted));
             ConfirmedTick = confirmedTick;
-            TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
+            if (!typedIngress.IsValid)
+                throw new ArgumentException("Rollback typed ingress batch is invalid.", nameof(typedIngress));
+            TypedIngress = typedIngress;
             RollbackActorInputFrame[] explicitValues = relayedExplicitArrivals ?? Array.Empty<RollbackActorInputFrame>();
             Array.Sort(explicitValues, (left, right) =>
             {

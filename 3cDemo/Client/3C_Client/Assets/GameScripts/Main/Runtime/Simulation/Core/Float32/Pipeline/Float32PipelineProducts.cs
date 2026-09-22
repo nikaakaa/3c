@@ -44,49 +44,12 @@ namespace ThirdPersonSimulation
         public bool IsValid => Source.SourceTick != 0 && !string.IsNullOrEmpty(Source.ClockId) && m_Inputs != null;
     }
 
-    public sealed class Float32TypedIngressBatch
+    public readonly struct Float32TypedIngressBatch
     {
-        readonly IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
-
-        Float32TypedIngressBatch()
-        {
-            m_Ingress = Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
-        }
-
-        public Float32TypedIngressBatch(IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
-        {
-            var values = ingress == null
-                ? new List<SimulationPipelineTypedIngress<SimulationIngress>>()
-                : new List<SimulationPipelineTypedIngress<SimulationIngress>>(ingress);
-            values.Sort((left, right) =>
-            {
-                int actor = left.ActorId.CompareTo(right.ActorId);
-                if (actor != 0)
-                    return actor;
-                int source = left.Source.SourceTick.CompareTo(right.Source.SourceTick);
-                if (source != 0)
-                    return source;
-                int sequence = left.Sequence.CompareTo(right.Sequence);
-                return sequence != 0 ? sequence : string.CompareOrdinal(left.FactIdentity, right.FactIdentity);
-            });
-            for (int i = 0; i < values.Count; i++)
-            {
-                if (i > 0 && SameIdentity(values[i - 1], values[i]))
-                    throw new ArgumentException("Typed ingress batch contains a missing or duplicate fact.", nameof(ingress));
-            }
-            m_Ingress = values;
-        }
-
-        public static Float32TypedIngressBatch Empty { get; } = new Float32TypedIngressBatch();
-        public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress => m_Ingress;
-
-        static bool SameIdentity(
-            SimulationPipelineTypedIngress<SimulationIngress> left,
-            SimulationPipelineTypedIngress<SimulationIngress> right)
-        {
-            return left.ActorId.Equals(right.ActorId) && left.Source.Equals(right.Source) &&
-                   left.Sequence == right.Sequence && string.Equals(left.FactIdentity, right.FactIdentity, StringComparison.Ordinal);
-        }
+        public static Float32TypedIngressBatch Empty => default;
+        public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress =>
+            Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
+        public bool IsValid => Ingress != null;
     }
 
     public sealed class Float32SimulationStep : TargetSimulationPipelineStep<Float32StepInput, SimulationIngress>

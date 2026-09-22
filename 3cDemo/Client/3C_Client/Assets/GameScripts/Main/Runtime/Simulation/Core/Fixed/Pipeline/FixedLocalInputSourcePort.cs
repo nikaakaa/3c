@@ -136,7 +136,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!canonicalInputs.IsValid)
                 throw new ArgumentException("Canonical input batch is incomplete.", nameof(canonicalInputs));
-            TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
+            if (!typedIngress.IsValid)
+                throw new ArgumentException("Fixed typed ingress batch is invalid.", nameof(typedIngress));
+            TypedIngress = typedIngress;
             CanonicalInputs = canonicalInputs;
         }
 

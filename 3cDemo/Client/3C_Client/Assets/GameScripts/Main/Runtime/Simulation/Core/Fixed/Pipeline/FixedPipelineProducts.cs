@@ -45,49 +45,12 @@ namespace ThirdPersonSimulation.Fixed
         public bool IsValid => Source.SourceTick != 0 && !string.IsNullOrEmpty(Source.ClockId) && m_Inputs != null;
     }
 
-    public sealed class FixedTypedIngressBatch
+    public readonly struct FixedTypedIngressBatch
     {
-        readonly IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
-
-        FixedTypedIngressBatch()
-        {
-            m_Ingress = Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
-        }
-
-        public FixedTypedIngressBatch(IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
-        {
-            var values = ingress == null
-                ? new List<SimulationPipelineTypedIngress<SimulationIngress>>()
-                : new List<SimulationPipelineTypedIngress<SimulationIngress>>(ingress);
-            values.Sort((left, right) =>
-            {
-                int actor = left.ActorId.CompareTo(right.ActorId);
-                if (actor != 0)
-                    return actor;
-                int source = left.Source.SourceTick.CompareTo(right.Source.SourceTick);
-                if (source != 0)
-                    return source;
-                int sequence = left.Sequence.CompareTo(right.Sequence);
-                return sequence != 0 ? sequence : string.CompareOrdinal(left.FactIdentity, right.FactIdentity);
-            });
-            for (int i = 0; i < values.Count; i++)
-            {
-                if (i > 0 && SameIdentity(values[i - 1], values[i]))
-                    throw new ArgumentException("Typed ingress batch contains a missing or duplicate fact.", nameof(ingress));
-            }
-            m_Ingress = values;
-        }
-
-        public static FixedTypedIngressBatch Empty { get; } = new FixedTypedIngressBatch();
-        public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress => m_Ingress;
-
-        static bool SameIdentity(
-            SimulationPipelineTypedIngress<SimulationIngress> left,
-            SimulationPipelineTypedIngress<SimulationIngress> right)
-        {
-            return left.ActorId.Equals(right.ActorId) && left.Source.Equals(right.Source) &&
-                   left.Sequence == right.Sequence && string.Equals(left.FactIdentity, right.FactIdentity, StringComparison.Ordinal);
-        }
+        public static FixedTypedIngressBatch Empty => default;
+        public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress =>
+            Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
+        public bool IsValid => Ingress != null;
     }
 
     public sealed class FixedSimulationStep : TargetSimulationPipelineStep<FixedStepInput, SimulationIngress>

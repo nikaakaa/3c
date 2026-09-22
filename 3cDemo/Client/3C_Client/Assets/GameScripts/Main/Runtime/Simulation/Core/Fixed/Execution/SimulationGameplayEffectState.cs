@@ -713,8 +713,22 @@ namespace ThirdPersonSimulation.Fixed
 
         static List<PortableActiveEffectState> CloneChangedActiveEffects(
             IReadOnlyList<PortableActiveEffectState> source,
-            IReadOnlyList<PortableActiveEffectState> baseline)
+            List<PortableActiveEffectState> baseline)
         {
+            if (source != null && source.Count == baseline.Count)
+            {
+                bool matches = true;
+                for (int i = 0; i < source.Count; i++)
+                {
+                    if (FindMatchingActive(baseline, source[i]) == null)
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                    return baseline;
+            }
             var result = new List<PortableActiveEffectState>(source?.Count ?? 0);
             if (source == null)
                 return result;

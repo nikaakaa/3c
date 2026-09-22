@@ -5508,3 +5508,13 @@
 - 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 tag source 设置/移除、GE 提交、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。
+
+## 2026-09-23 GE规格标签数组共享
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `94bab432d`。
+
+- Fixed/Float32 `CloneSpec` 克隆 changed ActiveEffect 与 PredictionRecord 的 effect spec 时，`SourceTags` 和 `TargetTags` 改为共享原数组，不再每个 spec 克隆两份字符串数组；空数组继续复用 `Array.Empty`。
+- 所有权边界保持不变：source tags 在 admission 准备时生成、排序并整体赋值，之后只读；target tags 使用 owned tags snapshot，标签变化时重建新数组，不原地改写旧数组。tag 匹配、canonical 编码、active/journal 内容和回滚语义不变。
+- 2.4 保持未勾选：GE attributes、active effects、journal、periods 和 lifecycle revisions 的真实变化复制、Equipment 真实变化数组、CharacterState candidate 外壳、Timeline snapshot 外壳和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 GE application、tag snapshot 变化、savepoint restore、rollback restore、状态保存加载和 Player 分配采样。

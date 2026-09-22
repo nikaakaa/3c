@@ -85,8 +85,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             SnapshotDatagram snapshot,
             ActorId remoteActor)
         {
-            if (snapshot == null)
-                throw new ArgumentNullException(nameof(snapshot));
+            if (!snapshot.IsValid)
+                throw new ArgumentException("Snapshot datagram is invalid.", nameof(snapshot));
             if (!remoteActor.IsValid || remoteActor == m_OwnerActor)
                 throw new ArgumentException("Remote ActorId is invalid.", nameof(remoteActor));
             if (snapshot.SnapshotSequence <= m_LatestSnapshotSequence)

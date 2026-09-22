@@ -351,7 +351,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         }
     }
 
-    public sealed class SnapshotDatagram
+    public readonly struct SnapshotDatagram
     {
         readonly byte[] m_DeltaPayload;
 
@@ -390,6 +390,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong AuthorityTick { get; }
         public ulong AcknowledgedInputSequence { get; }
         public ulong ReliableEventHorizon { get; }
+        public bool IsValid => SnapshotSequence != 0 && AuthorityTick != 0 && m_DeltaPayload != null;
         public ReadOnlySpan<byte> DeltaPayload => m_DeltaPayload;
         public byte[] CopyDeltaPayload() => (byte[])m_DeltaPayload.Clone();
     }
@@ -472,8 +473,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public static byte[] Write(SnapshotDatagram value, CanonicalWriter writer)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
+            if (!value.IsValid)
+                throw new ArgumentException("Snapshot datagram is invalid.", nameof(value));
             Writer(writer, ServerAuthoritativeDatagramKind.Snapshot);
             writer.WriteUInt64(value.SnapshotSequence);
             writer.WriteUInt64(value.BaseSnapshotSequence);

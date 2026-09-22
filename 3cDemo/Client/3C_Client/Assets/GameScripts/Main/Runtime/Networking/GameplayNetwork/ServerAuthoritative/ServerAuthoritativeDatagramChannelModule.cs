@@ -176,7 +176,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                             m_PredictionEvents.Enqueue(new ServerAuthoritativePredictionDatagramEvent(
                                 ServerAuthoritativePredictionDatagramEventKind.DataPlaneReady,
                                 ack.AuthorityTick,
-                                null));
+                                default));
                             break;
                         }
                         case ServerAuthoritativeDatagramKind.Snapshot:

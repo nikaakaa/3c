@@ -1,29 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
     public sealed class SimulationActorRosterDescriptor
     {
-        readonly ReadOnlyCollection<ActorId> m_Actors;
+        readonly ActorId[] m_Actors;
 
-        public SimulationActorRosterDescriptor(IEnumerable<ActorId> actors)
+        public SimulationActorRosterDescriptor(ActorId[] ownedActors)
         {
-            var values = actors == null ? new List<ActorId>() : new List<ActorId>(actors);
-            values.Sort();
-            if (values.Count == 0)
-                throw new ArgumentException("Session roster must contain at least one Actor.", nameof(actors));
-            var identities = new string[values.Count + 1];
+            ActorId[] values = ownedActors ?? Array.Empty<ActorId>();
+            Array.Sort(values);
+            if (values.Length == 0)
+                throw new ArgumentException("Session roster must contain at least one Actor.", nameof(ownedActors));
+            var identities = new string[values.Length + 1];
             identities[0] = "simulation-roster/1";
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (!values[i].IsValid || i > 0 && values[i - 1].Equals(values[i]))
-                    throw new ArgumentException("Session roster contains an invalid or duplicate ActorId.", nameof(actors));
+                    throw new ArgumentException("Session roster contains an invalid or duplicate ActorId.", nameof(ownedActors));
                 identities[i + 1] = values[i].Value;
             }
-            m_Actors = values.AsReadOnly();
+            m_Actors = values;
             RosterHash = StableHash.Compute(identities);
         }
 

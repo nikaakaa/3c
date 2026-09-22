@@ -5358,3 +5358,13 @@
 - 2.4 保持未勾选：Control 候选外壳和 hash、GE/Equipment 真实变化嵌套复制、CharacterState 外壳和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做控制状态创建/修改/恢复回放、savepoint restore、rollback restore、状态 Codec 和 Player 分配采样。
+
+## 2026-09-23 Ability执行状态帧包装删除
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `17ffeb8fa`。
+
+- 共用的 `GameplayAbilityExecutionAggregate<TValue>` 构造原先接收 `IEnumerable`，即使 Clone 传入已有 `List` 也会走接口枚举，并且内部帧列表逐次扩容；每个 aggregate 还额外创建 `ReadOnlyCollection` 包装。现在构造接收 `IReadOnlyList`，按源 Count 一次准备容量，下标复制并继续逐帧 Clone，`Frames` 直接以只读接口暴露内部列表。
+- 新增、移除、按 ActionInstanceId 查找、重复拒绝、Clone 和 Equals 的顺序与语义不变。Fixed、Float32、角色状态 Codec 和 Clone 调用共用同一实现。frame 内部 `SortedDictionary` 的克隆分配仍在后续范围。
+- 2.4 保持未勾选：frame 值表克隆、pending 字典移交后的重建、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做技能进入/退出、状态写入、generation 绑定、savepoint restore、rollback restore 和 Player 分配采样。

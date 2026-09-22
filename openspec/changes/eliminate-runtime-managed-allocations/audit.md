@@ -5119,3 +5119,13 @@
 - 这只处理 tag source 分类；attribute、active effect、period、journal 和 lifecycle revision 的“改了又恢复”仍在后续小步。changed aggregate 自身及其嵌套对象的真实变化分配仍存在。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Gameplay Effect 标签先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。
+
+## 2026-09-23 GameplayEffect周期恢复等价
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。
+
+- Fixed/Float32 Gameplay Effect period 映射原先一旦写入或随 Active effect 移除，就永久置脏；先修改再恢复到 committed 等价内容时，`Freeze` 仍会重建 aggregate。现在 baseline aggregate 提供 period 内容比较，真实变更后按 baseline 重算 `PeriodsDirty`，恢复等价映射会清除该分类脏标记。
+- 比较覆盖 period 数量、instance key 和 next tick 值。`RemoveActive` 移除 period、`SetNextPeriod` 清除或写入 period 都走同一刷新入口；相同 next tick 直接返回的语义不变。
+- active effect 分类仍可能因增加后移除保持脏，attribute、journal、lifecycle revision 的恢复等价清理也未处理；真实变化时的 aggregate 和嵌套对象分配仍存在。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Gameplay Effect 周期先改后恢复回放、savepoint restore、rollback restore 和 Player 分配采样。2.4 保持未勾选。

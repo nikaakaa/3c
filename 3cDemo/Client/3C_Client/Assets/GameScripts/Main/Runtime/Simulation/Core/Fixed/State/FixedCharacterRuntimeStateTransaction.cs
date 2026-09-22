@@ -487,8 +487,7 @@ namespace ThirdPersonSimulation.Fixed
                 abilityExecutionState,
                 motionWarpStates);
             m_CommittedState = snapshot;
-            m_AbilityExecutionState = snapshot.AbilityExecutionState;
-            m_Disposed = true;
+            Clear();
             return snapshot;
         }
 

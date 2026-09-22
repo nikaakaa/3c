@@ -290,7 +290,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public Float32Scalar YawError { get; }
     }
 
-    public sealed class AcceptedAuthorityInput
+    public readonly struct AcceptedAuthorityInput
     {
         public AcceptedAuthorityInput(ActorId actorId, ulong inputSequence, SimulationInput input)
         {
@@ -306,6 +306,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ActorId ActorId { get; }
         public ulong InputSequence { get; }
         public SimulationInput Input { get; }
+        public bool IsValid => ActorId.IsValid && InputSequence != 0 && Input != null;
     }
 
     public sealed class AcceptedAuthorityInputBatch
@@ -321,8 +322,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             AuthorityTick = authorityTick;
             for (int i = 0; i < inputs.Length; i++)
             {
-                if (inputs[i] == null || !inputs[i].ActorId.IsValid)
-                    throw new ArgumentException("Authority input batch contains a missing or invalid ActorId.", nameof(inputs));
+                if (!inputs[i].IsValid)
+                    throw new ArgumentException("Authority input batch contains an invalid accepted input.", nameof(inputs));
             }
             Array.Sort(inputs, CompareByActor);
             for (int i = 1; i < inputs.Length; i++)

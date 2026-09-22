@@ -281,7 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5.graph45, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5_End2.graph46, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5_End.graph47, Array.Empty<string>());
-            BtsmtlSkillAuthoringCode.PruneBlackboard(attack.graph48, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(attack.graph48, new[] { "e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d", "e3b8d0e5f2c9467b1d5e8f9a0b1c2d3", "e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5_End2.graph49, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5_End2.graph50, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack5_End2.graph51, Array.Empty<string>());

@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
   m_Name: Decision Attack5End2 ComboAccept
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"e2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f","m_OwnerId":"e78e29077a9052e7920cc13d40a350ba"},"m_ValueType":0,"_UID":"d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6","_name":"Set
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"e2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"c0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f","m_OwnerId":"e78e2907-7a90-52e7-920c-c13d40a350ba"},"m_ValueType":0,"_UID":"d1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6","_name":"Set
     ComboAccept","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"f3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"a4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"ff0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"5f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
@@ -1901,7 +1901,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
   m_Name: Decision Attack5End2 RecoveryLate
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"cca3b4c5d6e7f8a9b0c1d2e3f4a5b6c7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"aae1f2a3b4c5d6e7f8a9b0c1d2e3f4a5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e3b8d0e5f2c9467b1d5e8f9a0b1c2d3","m_OwnerId":"e78e29077a9052e7920cc13d40a350ba"},"m_ValueType":0,"_UID":"bbf2a3b4c5d6e7f8a9b0c1d2e3f4a5b6","_name":"Set
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"cca3b4c5d6e7f8a9b0c1d2e3f4a5b6c7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"aae1f2a3b4c5d6e7f8a9b0c1d2e3f4a5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e3b8d0e5f2c9467b1d5e8f9a0b1c2d3","m_OwnerId":"e78e2907-7a90-52e7-920c-c13d40a350ba"},"m_ValueType":0,"_UID":"bbf2a3b4c5d6e7f8a9b0c1d2e3f4a5b6","_name":"Set
     RecoveryLate","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"ddb4c5d6e7f8a9b0c1d2e3f4a5b6c7d8","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"eec5d6e7f8a9b0c1d2e3f4a5b6c7d8e9","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"b78c9d0e1f2a3b4c5d6e7f8a9b0c1d2e","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"7b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
@@ -3947,7 +3947,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
   m_Name: Decision Attack5End2 RecoveryEarly
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"d7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"b5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d","m_OwnerId":"e78e29077a9052e7920cc13d40a350ba"},"m_ValueType":0,"_UID":"c6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1","_name":"Set
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"d7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"b5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d","m_OwnerId":"e78e2907-7a90-52e7-920c-c13d40a350ba"},"m_ValueType":0,"_UID":"c6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1","_name":"Set
     RecoveryEarly","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"e8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"f9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"d34e5f6a7b8c9d0e1f2a3b4c5d6e7f8a","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"6a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
@@ -4644,7 +4644,10 @@ MonoBehaviour:
   m_Name: Attack5 End2 State Body
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"91ad7a9f-8726-423a-89e5-baf7da4e6836","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"1dec5a76-a275-51ce-8020-51b59b54b0b9","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"_UID":"2d853300-b46d-575b-a19b-3c6de2d54c61","_name":"Play
-    Attack5 End2 Timeline","_position":{"x":340.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"fce7ab5b-e0f1-4f19-8dc9-cf3f87476c03","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"24217eb6-8935-5316-a8e9-9633ecbb10ce","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"e78e2907-7a90-52e7-920c-c13d40a350ba","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+    Attack5 End2 Timeline","_position":{"x":340.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"fce7ab5b-e0f1-4f19-8dc9-cf3f87476c03","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"24217eb6-8935-5316-a8e9-9633ecbb10ce","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RecoveryEarly":{"_name":"RecoveryEarly","_id":"e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"RecoveryLate":{"_name":"RecoveryLate","_id":"e3b8d0e5f2c9467b1d5e8f9a0b1c2d3","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"ComboAccept":{"_name":"ComboAccept","_id":"e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"Identity":"e78e2907-7a90-52e7-920c-c13d40a350ba","Role":4,"Declarations":[{"m_VariableId":"e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Attack/RecoveryEarly","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"RecoveryEarly","m_ActionWindowId":"Attack5End2RecoveryEarly","m_ActionWindowDigest":6004}},{"m_VariableId":"e3b8d0e5f2c9467b1d5e8f9a0b1c2d3","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Attack/RecoveryLate","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"RecoveryLate","m_ActionWindowId":"Attack5End2MoveCancel","m_ActionWindowDigest":6003}},{"m_VariableId":"e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Attack/ComboAccept","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"ComboAccept","m_ActionWindowId":"Attack5End2Cancel","m_ActionWindowDigest":6002}}],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences:
   - {fileID: 0}
   - {fileID: 6975740082067271334}
@@ -4658,7 +4661,40 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: e78e2907-7a90-52e7-920c-c13d40a350ba
   m_Role: 4
-  m_BlackboardDeclarations: []
+  m_BlackboardDeclarations:
+  - m_VariableId: e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d
+    m_Scope: 4
+    m_Lifetime: 4
+    m_Category: Action/Attack/RecoveryEarly
+    m_InputBinding:
+      m_InputValueId: 
+    m_FactProjection:
+      m_Kind: 0
+      m_ActionWindowType: RecoveryEarly
+      m_ActionWindowId: Attack5End2RecoveryEarly
+      m_ActionWindowDigest: 6004
+  - m_VariableId: e3b8d0e5f2c9467b1d5e8f9a0b1c2d3
+    m_Scope: 4
+    m_Lifetime: 4
+    m_Category: Action/Attack/RecoveryLate
+    m_InputBinding:
+      m_InputValueId: 
+    m_FactProjection:
+      m_Kind: 0
+      m_ActionWindowType: RecoveryLate
+      m_ActionWindowId: Attack5End2MoveCancel
+      m_ActionWindowDigest: 6003
+  - m_VariableId: e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f
+    m_Scope: 4
+    m_Lifetime: 4
+    m_Category: Action/Attack/ComboAccept
+    m_InputBinding:
+      m_InputValueId: 
+    m_FactProjection:
+      m_Kind: 0
+      m_ActionWindowType: ComboAccept
+      m_ActionWindowId: Attack5End2Cancel
+      m_ActionWindowDigest: 6002
 --- !u!114 &8823563092797898876
 MonoBehaviour:
   m_ObjectHideFlags: 0

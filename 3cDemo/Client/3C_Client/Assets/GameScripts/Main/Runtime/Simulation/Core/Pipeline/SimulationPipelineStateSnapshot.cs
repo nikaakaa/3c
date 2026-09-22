@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -442,31 +441,30 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationSessionRestoreTransaction : IDisposable
     {
-        readonly ReadOnlyCollection<ISimulationSessionRestoreParticipantTransaction> m_Participants;
+        readonly ISimulationSessionRestoreParticipantTransaction[] m_Participants;
         int m_AppliedCount;
         bool m_Validated;
         bool m_Completed;
 
-        public SimulationSessionRestoreTransaction(IEnumerable<ISimulationSessionRestoreParticipantTransaction> participants)
+        private SimulationSessionRestoreTransaction(ISimulationSessionRestoreParticipantTransaction[] ownedParticipants)
         {
-            var values = participants == null
-                ? new List<ISimulationSessionRestoreParticipantTransaction>()
-                : new List<ISimulationSessionRestoreParticipantTransaction>(participants);
-            for (int i = 0; i < values.Count; i++)
+            ISimulationSessionRestoreParticipantTransaction[] values = ownedParticipants ??
+                throw new ArgumentNullException(nameof(ownedParticipants));
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null)
-                    throw new ArgumentException("Session restore transaction contains a missing participant.", nameof(participants));
+                    throw new ArgumentException("Session restore transaction contains a missing participant.", nameof(ownedParticipants));
             }
-            values.Sort((left, right) => left.Kind.CompareTo(right.Kind));
-            if (values.Count != 3)
-                throw new ArgumentException("Session restore requires exactly Character, World and Pipeline transactions.", nameof(participants));
-            for (int i = 0; i < values.Count; i++)
+            Array.Sort(values, (left, right) => left.Kind.CompareTo(right.Kind));
+            if (values.Length != 3)
+                throw new ArgumentException("Session restore requires exactly Character, World and Pipeline transactions.", nameof(ownedParticipants));
+            for (int i = 0; i < values.Length; i++)
             {
                 SimulationSessionRestoreParticipantKind expected = (SimulationSessionRestoreParticipantKind)(i + 1);
                 if (values[i].Kind != expected || string.IsNullOrEmpty(values[i].Identity))
-                    throw new ArgumentException("Session restore participant set is incomplete or duplicated.", nameof(participants));
+                    throw new ArgumentException("Session restore participant set is incomplete or duplicated.", nameof(ownedParticipants));
             }
-            m_Participants = values.AsReadOnly();
+            m_Participants = values;
         }
 
         public void ApplyAndValidate()
@@ -477,12 +475,12 @@ namespace ThirdPersonSimulation
             m_Validated = false;
             try
             {
-                for (int i = 0; i < m_Participants.Count; i++)
+                for (int i = 0; i < m_Participants.Length; i++)
                 {
                     m_Participants[i].Apply();
                     m_AppliedCount++;
                 }
-                for (int i = 0; i < m_Participants.Count; i++)
+                for (int i = 0; i < m_Participants.Length; i++)
                     m_Participants[i].ValidateApplied();
                 m_Validated = true;
             }
@@ -496,9 +494,9 @@ namespace ThirdPersonSimulation
         public void CompleteAfterAtomicSessionPublish()
         {
             RequireOpen();
-            if (m_AppliedCount != m_Participants.Count || !m_Validated)
+            if (m_AppliedCount != m_Participants.Length || !m_Validated)
                 throw new InvalidOperationException("Session restore transaction is not fully applied and validated.");
-            for (int i = 0; i < m_Participants.Count; i++)
+            for (int i = 0; i < m_Participants.Length; i++)
                 m_Participants[i].CompleteAfterSessionPublish();
             m_Completed = true;
         }
@@ -517,7 +515,7 @@ namespace ThirdPersonSimulation
         {
             if (!m_Completed)
                 Rollback();
-            for (int i = m_Participants.Count - 1; i >= 0; i--)
+            for (int i = m_Participants.Length - 1; i >= 0; i--)
                 m_Participants[i].Dispose();
             m_Completed = true;
         }
@@ -527,6 +525,10 @@ namespace ThirdPersonSimulation
             if (m_Completed)
                 throw new ObjectDisposedException(nameof(SimulationSessionRestoreTransaction));
         }
+
+        public static SimulationSessionRestoreTransaction FromOwnedTransactions(
+            ISimulationSessionRestoreParticipantTransaction[] ownedParticipants) =>
+            new SimulationSessionRestoreTransaction(ownedParticipants);
     }
 
     public static class SimulationPipelineStateSnapshotCoordinator

@@ -187,7 +187,7 @@ namespace ThirdPersonSimulation
                 snapshot.Pipeline,
                 m_Services.StateParticipants);
             var working = new Float32PipelineWorkingState(m_StateStore.Current);
-            using var restore = new SimulationSessionRestoreTransaction(new ISimulationSessionRestoreParticipantTransaction[]
+            using var restore = SimulationSessionRestoreTransaction.FromOwnedTransactions(new ISimulationSessionRestoreParticipantTransaction[]
             {
                 new Float32CharacterRestoreTransaction(working, restored, m_CharacterRuntime.Roster, snapshot.World.WorldHash.ToString()),
                 new Float32WorldRestoreTransaction(working, m_Solver, restored, snapshot.World.WorldHash.ToString()),
@@ -292,7 +292,7 @@ namespace ThirdPersonSimulation
                 services.Plan,
                 snapshot.Pipeline,
                 services.StateParticipants);
-            var transaction = new SimulationSessionRestoreTransaction(new ISimulationSessionRestoreParticipantTransaction[]
+            var transaction = SimulationSessionRestoreTransaction.FromOwnedTransactions(new ISimulationSessionRestoreParticipantTransaction[]
             {
                 new Float32CharacterRestoreTransaction(workingState, restored, m_CharacterRuntime.Roster, snapshot.World.WorldHash.ToString()),
                 new Float32WorldRestoreTransaction(workingState, m_Solver, restored, snapshot.World.WorldHash.ToString()),

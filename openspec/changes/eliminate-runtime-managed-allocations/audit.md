@@ -5438,3 +5438,13 @@
 - 2.4 保持未勾选：active frame 内部的 `SortedDictionary` 克隆、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做连续技能进入/退出、状态写入、generation 绑定、多 frame 聚合、savepoint restore、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 Action待处理页按位更新
+
+对应 tasks.md 的 2.4；2.4 保持未勾选。代码提交为 `458fb939d`。
+
+- Fixed/Float32 `ActionStateStore` 的 `WriteState`、`StageRequest` 和 `ClearRequestAt` 原先每次都把长期 pending 页复制到临时 `List`，修改后调用整页 `Set` 再重灌。现在 Action Runtime State Port 改为提供 Action 实例按下标替换、精确添加、Activation Request 添加和按下标移除；store 直接更新长期页，删除临时 `List` 和整页重灌。
+- Layout 在准备期汇总所有 Action 的 `ActionInstanceCapacity`，作为两张 pending 页的正式容量上限。恢复路径仍用私有整页替换从 base 快照重灌；每次页内变更后继续与 base 逐项比较，dirty、快照、保存点和回滚语义不变。
+- 2.4 保持未勾选：Ability 变化路径仍需新页、CharacterState candidate 外壳、Equipment slot 真实变更数组和实际分配采样仍在后续范围。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Action 激活、实例容量替换、pending 清除、savepoint restore、rollback restore 和 Player 分配采样。

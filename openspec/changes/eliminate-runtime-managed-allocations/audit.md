@@ -4510,3 +4510,12 @@
 - 四个调用方都是装配期正式生产者：Fixed/Float32 Character Runtime 从 roster binding 的 `ActorId[]` 移交、Deterministic Rollback Session Source 移交精确数组、ServerAuthoritative correction roster 移交单元素数组。`Actors` 继续返回排序后的只读 identity 视图，`RosterHash` 和错误语义不变。
 - `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
 - 未刷新 Unity、未做网络联调和 Player 分配采样。用户可启动 Fixed/Float32 Session 或触发一次 ServerAuthoritative correction，确认锁定 roster、Step 校验和 correction identity 不变；分配采样应观察 roster 装配期的 List 和只读包装消失，但这只影响 Session/correction 装配边界，不表示每帧 Player 链路已零分配。
+
+## 2026-09-22 Pipeline Step trace 文本延迟构造
+
+对应 tasks.md 的 5.5，新增 5.274 作为独立小步；5.5 保持未勾选。
+
+- `PipelineTransactionCoordinator` 的每个 Simulation Step 完成点先检查 `DiagnosticsEnabled`，只在诊断开启时构造 `"Simulation Step x/y completed."` 插值字符串；诊断关闭时传给 `PublishPipeline` 的 detail 为 null，方法原有入口检查继续保持。
+- 开启诊断时的 detail 文本、`PipelineTransactionTraceKind.StepCompleted`、Step/Tick 来源、成功标记和发布顺序不变。错误路径和其他诊断文本保持原状，留给后续 typed diagnostics 边界处理。
+- `ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 和 `ThirdPersonSimulation.ServerAuthoritative.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误。每次编译后 `dotnet build-server shutdown` 成功。
+- 未刷新 Unity、未做网络联调和 Player 分配采样。用户可分别关闭和开启诊断运行同一固定输入，关闭时应观察每 Step 的 completed 字符串分配消失；开启后 Console/诊断 trace 中的 Step completed 文本应保持不变。

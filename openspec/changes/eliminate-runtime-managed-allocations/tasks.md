@@ -542,6 +542,7 @@
 - [x] 5.271 Pipeline restore transactions 使用 owned array 合同；PrepareRestore 删除 List 和 ReadOnlyCollection 中转，异常按已准备数量逆序释放
 - [x] 5.272 Session restore transactions 使用 owned array 合同；Fixed/Float32 立即与延迟 restore 删除 List 和 ReadOnlyCollection 中转
 - [x] 5.273 SimulationActorRosterDescriptor 使用 owned ActorId 数组；删除 IEnumerable 复制、List 和 ReadOnlyCollection 包装，装配调用方移交精确数组
+- [x] 5.274 Pipeline Step completed 文本只在诊断开启时构造；禁用诊断的每 Step 热路径删除插值字符串和格式化分配
 
 ## 6. UI、资源、渲染和生命周期
 

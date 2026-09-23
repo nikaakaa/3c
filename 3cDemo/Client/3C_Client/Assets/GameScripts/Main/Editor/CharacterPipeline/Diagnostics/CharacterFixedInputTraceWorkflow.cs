@@ -711,6 +711,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastStatus = RequiresFootSampling(s_ActiveReplayOperation)
                 ? $"{s_ActiveReplayOperation} completed. Schedule={s_LastPresentationSchedulePath}, Samples={CharacterFootDiagnosticSampling.LastSavedPath}, Manifest={CharacterFootDiagnosticSampling.LastManifestPath}, Presentation={CharacterGameplayDiagnosticCapture.Presentation?.LastManifestPath}."
                 : $"{s_ActiveReplayOperation} completed. Proof={s_LastReplayProofPath}.";
+            s_LastStatus += $" Comparison={s_LastReplayComparison}.";
             s_ActiveReplayOperation = StandardReplayOperation;
             Debug.Log(s_LastStatus);
         }
@@ -864,17 +865,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string baselinePath = FindLatestReplayProofPath(directory);
             if (!string.IsNullOrEmpty(baselinePath))
             {
-                ReplayProofDocument baseline = ReadReplayProof(
-                    baselinePath,
-                    document.schema,
-                    includeFootSample);
+                ReplayProofDocument baseline = ReadReplayProof(baselinePath);
                 document.comparison = CompareReplayProofs(
                     baseline,
                     document,
                     baselinePath);
-                s_LastReplayComparison = document.comparison.matched
-                    ? $"matched:{document.frame_count}:{baselinePath}"
-                    : $"mismatch:{document.comparison.divergent_frame_count}:{baselinePath}";
+                s_LastReplayComparison =
+                    $"{ReplayComparisonOutcome(document.comparison)}:{document.comparison.divergent_frame_count}:{baselinePath}";
             }
             else
             {
@@ -920,8 +917,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Fixed input replay runtime trace failed: {document.presentation_trace.failure}. Proof={path}");
             }
             if (!document.comparison.matched)
-                throw new InvalidDataException(
-                    DescribeReplayComparisonFailure(document.comparison, path));
+            {
+                string difference = DescribeReplayComparisonFailure(document.comparison, path);
+                if (ReplayComparisonOutcome(document.comparison) == "changed-version-review-required")
+                    Debug.LogWarning(difference);
+                else
+                    throw new InvalidDataException(difference);
+            }
             s_ActiveReplayDocument = null;
             s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
@@ -1009,6 +1011,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ReplayProofDocument current,
             string baselinePath)
         {
+            if (baseline.schema != current.schema)
+                throw new InvalidDataException("Replay proof schemas differ.");
             var aggregate = new List<ReplayMismatchDocument>();
             AddReplayMismatch(
                 aggregate,
@@ -1195,20 +1199,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"FirstFrameFields=[{firstFrameFields}].";
         }
 
-        static ReplayProofDocument ReadReplayProof(
-            string path,
-            string expectedSchema,
-            bool requireFootSample)
+        public static object CompareSavedReplayProofs(string baselinePath, string candidatePath)
+        {
+            ReplayProofDocument baseline = ReadReplayProof(baselinePath);
+            ReplayProofDocument candidate = ReadReplayProof(candidatePath);
+            ReplayComparisonDocument comparison = CompareReplayProofs(baseline, candidate, baselinePath);
+            return new
+            {
+                success = true,
+                data = new
+                {
+                    baseline_path = baselinePath,
+                    candidate_path = candidatePath,
+                    outcome = ReplayComparisonOutcome(comparison),
+                    comparison
+                }
+            };
+        }
+
+        static string ReplayComparisonOutcome(ReplayComparisonDocument comparison)
+        {
+            if (!comparison.baseline_available)
+                return "baseline-created";
+            if (comparison.matched)
+                return "matched";
+            bool versionChanged = false;
+            foreach (ReplayMismatchDocument mismatch in comparison.aggregate_mismatches)
+            {
+                switch (mismatch.field)
+                {
+                    case "runtime_content_hash":
+                    case "source_revision":
+                    case "semantic_hash":
+                        versionChanged = true;
+                        break;
+                    case "body_trajectory_hash":
+                    case "presentation_trace_hash":
+                        break;
+                    default:
+                        return "mismatch";
+                }
+            }
+            foreach (ReplayMismatchDocument mismatch in comparison.first_frame_mismatches)
+                if (mismatch.field != "body_hash")
+                    return "mismatch";
+            return versionChanged ? "changed-version-review-required" : "mismatch";
+        }
+
+        static ReplayProofDocument ReadReplayProof(string path)
         {
             ReplayProofDocument document =
                 JsonConvert.DeserializeObject<ReplayProofDocument>(
                     File.ReadAllText(path, Encoding.UTF8));
             if (document == null ||
-                document.schema != expectedSchema ||
+                document.schema != ReplayProofSchema && document.schema != DiagnosticReplayProofSchema ||
                 document.frame_count <= 0 ||
                 document.frames == null ||
                 document.frames.Length != document.frame_count ||
-                requireFootSample && (document.foot_sample == null || document.presentation_sample == null) ||
+                document.schema == DiagnosticReplayProofSchema && (document.foot_sample == null || document.presentation_sample == null) ||
                 document.presentation_trace == null ||
                 !document.presentation_trace.stream_complete ||
                 !document.presentation_trace.succeeded ||
@@ -1217,6 +1265,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     "Fixed input replay proof document is incomplete.");
             }
+            if (!string.Equals(document.proof_hash, ComputeReplayProofHash(document), StringComparison.Ordinal))
+                throw new InvalidDataException("Fixed input replay proof hash does not match its content.");
             return document;
         }
 

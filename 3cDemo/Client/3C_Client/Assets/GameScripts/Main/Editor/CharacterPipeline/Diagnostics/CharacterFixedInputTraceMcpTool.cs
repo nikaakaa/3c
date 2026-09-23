@@ -23,11 +23,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, diagnostic_replay_start, schedule_record_start, schedule_replay_start, list_traces, inspect_trace, status, or stop. Defaults to status.", Required = false)]
+            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, diagnostic_replay_start, schedule_record_start, schedule_replay_start, list_traces, inspect_trace, compare_replays, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Exact trace_id returned by record_stop or list_traces. Used by replay_start; omitted means latest.", Required = false)]
             public string trace_id { get; set; }
+
+            [ToolParameter("Exact saved baseline Proof path for compare_replays.", Required = false)]
+            public string baseline_proof_path { get; set; }
+
+            [ToolParameter("Exact saved candidate Proof path for compare_replays. Comparison is read-only and does not start a replay.", Required = false)]
+            public string candidate_proof_path { get; set; }
         }
 
         public static object HandleCommand(JObject @params)
@@ -76,6 +82,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         return Success("Canonical Fixed input traces listed.", true);
                     case "inspect_trace":
                         return InspectTrace(traceId);
+                    case "compare_replays":
+                        return CharacterFixedInputTraceWorkflow.CompareSavedReplayProofs(
+                            @params?["baseline_proof_path"]?.Value<string>(),
+                            @params?["candidate_proof_path"]?.Value<string>());
                     case "status":
                         return Success("Canonical Fixed input trace status.", false);
                     case "stop":

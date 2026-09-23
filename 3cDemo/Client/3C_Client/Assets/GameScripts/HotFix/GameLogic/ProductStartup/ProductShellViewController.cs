@@ -370,7 +370,7 @@ namespace GameLogic.ProductStartup
             }
 
             _productDiagnostics.Clear();
-            if (product == null)
+            if (!product.IsValid)
             {
                 _productDiagnostics.Append(WaitingForSnapshots);
             }

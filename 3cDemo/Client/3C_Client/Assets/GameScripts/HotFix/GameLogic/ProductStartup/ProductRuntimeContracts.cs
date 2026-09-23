@@ -134,10 +134,13 @@ namespace GameLogic.ProductStartup
         public IProductTagDownloadService TagDownloadService { get; }
     }
 
-    public sealed class ProductRuntimeSnapshot
+    public readonly struct ProductRuntimeSnapshot
     {
         public ProductRuntimeSnapshot(long sequence, DateTimeOffset capturedAt, ProductRuntimeStage stage, ProductAuthState authState, ProductHomeState homeState, ProductGameplayState gameplayState, string safeError)
         {
+            if (sequence <= 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+
             Sequence = sequence;
             CapturedAt = capturedAt;
             Stage = stage;
@@ -154,6 +157,7 @@ namespace GameLogic.ProductStartup
         public ProductHomeState HomeState { get; }
         public ProductGameplayState GameplayState { get; }
         public string SafeError { get; }
+        public bool IsValid => Sequence > 0;
     }
 
     public interface IProductRuntimeSnapshotSource

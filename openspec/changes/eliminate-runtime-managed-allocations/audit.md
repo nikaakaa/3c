@@ -5940,3 +5940,13 @@
 - 阶段、Auth/Home/Gameplay 状态、SafeError 归一化、发布顺序、历史容量和淘汰规则不变。本步消除产品阶段快照对象本体；`DateTimeOffset` 值、错误字符串和第三方状态机分配不在本步范围。
 - `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除。
 - 未刷新 Unity、未进 Play、未做启动阶段回放、失败恢复回放、历史窗口淘汰对比和 Player 分配采样。
+
+## 2026-09-23 启动进度快照值化
+
+对应 tasks.md 的 6.32；父项 6.2 保持未勾选。代码提交为 `c305bad7b`。
+
+- `ProductStartupSnapshot` 原先是 `class`，启动、缓存校验和核心包下载的每次阶段更新或进度回调都通过 `With` 新建快照对象；跨线程 store 再保存并发布该对象。现在改为 `readonly struct`，`With` 返回栈值，store 当前值和强类型事件不再分配外层快照。
+- 构造期要求 `Generation > 0`，default 实例通过 `IsValid == false` 表达未发布。Retry、ConfirmCoreDownload、bootstrap OnGUI 和 Shell startup 诊断从 null 或 `?.` 判断改为 `IsValid`；generation 匹配、单调递增、锁边界和事件发布时机不变。
+- 下载进度仍会因第三方 progress 的 `CurrentFile` 等字符串和 UI `StringBuilder`/格式化产生分配；`With` 的可选参数本身不作为热路径合同，当前消费链只使用 named override。
+- `ThirdPerson.ProductStartup` 用完整 Compile 清单聚焦编译通过，0 错误（仅既有 Unity 序列化字段 CS0649 和引用版本 CS1701 提示）。再用新产物引用编译 `GameLogic` 完整 Compile 清单，通过且 0 错误。临时脚本、response file 和检查产物已删除。
+- 完整依赖链继续被 `UnityEditor.UI` 包内既有 `DefaultControls.factory` 只读属性错误阻断，未到达本次源码；未刷新 Unity、未进 Play、未做启动/下载进度回放、retry/consent 对比和 Player 分配采样。

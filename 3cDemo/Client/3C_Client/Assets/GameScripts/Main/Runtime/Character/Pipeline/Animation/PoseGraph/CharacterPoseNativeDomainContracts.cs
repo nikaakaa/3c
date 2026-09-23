@@ -248,8 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         weight = candidate.Weight;
                     }
                 }
-                AnimationFootMotionRuntimeFrame motion = m_Services.WorldContext.SampleFootMotion(
-                    in dominant, lineage.CompletionIdentity);
+                AnimationFootMotionRuntimeFrame motion = m_Services.WorldContext.LastSampledFootMotion;
                 var frame = new Diagnostics.CharacterPoseDiagnosticFrame(in lineage);
                 Diagnostics.CharacterFootIkPhysicalCapture physical = m_Session.Role.CommittedPhysicalCapture;
                 AnimationFootMotionRuntimeSample left = motion.Left;

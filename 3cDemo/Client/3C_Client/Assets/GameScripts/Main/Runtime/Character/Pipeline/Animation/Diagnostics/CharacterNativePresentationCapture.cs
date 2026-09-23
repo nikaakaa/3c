@@ -99,8 +99,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             get
             {
                 AnimationPoseSourceContribution source = m_Contributions[index];
-                ClipSamplePlan clip = source.Kind == AnimationPoseContributionKind.Live
-                    ? m_World.ReadClipSample(in source, m_CompletionIdentity) : default;
+                ClipSamplePlan clip;
+                if (source.Kind != AnimationPoseContributionKind.Live ||
+                    !m_World.TryReadClipSample(in source, out clip))
+                    clip = default;
                 return new CharacterNativeSourceCaptureRow(in source, in clip);
             }
         }

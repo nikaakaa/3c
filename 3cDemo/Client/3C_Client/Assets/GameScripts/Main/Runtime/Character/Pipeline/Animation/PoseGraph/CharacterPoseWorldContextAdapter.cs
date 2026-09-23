@@ -39,6 +39,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<AnimationPoseSourceContribution, ClipSamplePlan,
             CharacterPoseFootMotionSource> m_FootMotionResolver;
         readonly AnimationPoseSourceContribution[] m_Contributions;
+        readonly ClipSamplePlan[] m_ClipSamples;
+        int m_ClipSampleCount;
+        AnimationFootMotionRuntimeFrame m_LastSampledFootMotion;
+        bool m_HasLastSampledFootMotion;
 
         internal CharacterPoseWorldContextAdapter(
             string posePlanHash,
@@ -74,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PosePlanHash = posePlanHash.Trim();
             m_Contributions = new AnimationPoseSourceContribution[
                 contributionCapacity];
+            m_ClipSamples = new ClipSamplePlan[contributionCapacity];
         }
 
         internal CharacterFootPlacementFrameInput BuildFootPlacement(
@@ -95,6 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Foot Placement Component Pose has no resolvable contributions.");
             }
             int contributionCount = ResolveContributions(in inputBinding);
+            m_ClipSampleCount = contributionCount;
+            m_HasLastSampledFootMotion = false;
             AnimationPoseSourceContribution contribution =
                 RequireFootMotionContribution(contributionCount);
             AnimationFootMotionRuntimeFrame footMotion = SampleFootMotion(in contribution, completionIdentity);
@@ -123,8 +130,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in pose);
         }
 
-        internal ClipSamplePlan ReadClipSample(in AnimationPoseSourceContribution contribution, ulong completionIdentity) =>
-            m_SourceModule.RequireDominantClipSample(contribution.SourceId, contribution.NodeId, completionIdentity);
+        internal bool TryReadClipSample(in AnimationPoseSourceContribution contribution, out ClipSamplePlan clipSample)
+        {
+            for (int i = 0; i < m_ClipSampleCount; i++)
+            {
+                AnimationPoseSourceContribution candidate = m_Contributions[i];
+                if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
+                {
+                    clipSample = m_ClipSamples[i];
+                    return clipSample.IsValid;
+                }
+            }
+            clipSample = default;
+            return false;
+        }
+
+        internal AnimationFootMotionRuntimeFrame LastSampledFootMotion =>
+            m_HasLastSampledFootMotion
+                ? m_LastSampledFootMotion
+                : throw new InvalidOperationException("Pose Foot Motion was not sampled at the evaluation barrier.");
 
         internal AnimationFootMotionRuntimeFrame SampleFootMotion(
             in AnimationPoseSourceContribution contribution,
@@ -137,9 +161,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseFootMotionSource source = m_FootMotionResolver(
                 contribution,
                 clipSample);
+            for (int i = 0; i < m_ClipSampleCount; i++)
+            {
+                AnimationPoseSourceContribution candidate = m_Contributions[i];
+                if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
+                {
+                    m_ClipSamples[i] = clipSample;
+                    break;
+                }
+            }
             int cycle = checked((int)Math.Floor(
                 clipSample.ContinuousClipTime / clipSample.DurationSeconds));
-            return new AnimationFootMotionRuntimeFrame(
+            AnimationFootMotionRuntimeFrame result = new AnimationFootMotionRuntimeFrame(
                     completionIdentity,
                     contribution.NodeId,
                     contribution.SourceId,
@@ -160,6 +193,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         cycle,
                         clipSample.DurationSeconds,
                         clipSample.IsLooping));
+            m_LastSampledFootMotion = result;
+            m_HasLastSampledFootMotion = true;
+            return result;
         }
 
         int ResolveContributions(

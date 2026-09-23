@@ -77,12 +77,13 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationTickResult result = batch.Steps[stepIndex].Result;
                     Array.Clear(m_StepDispositions, 0, m_StepDispositionCount);
                     m_StepDispositionCount = 0;
-                    EnsureStepDispositionCapacity(result.OutputEvents.Count);
-                    for (int i = 0; i < result.OutputEvents.Count; i++)
+                    int outputEventCount = CountOutputEvents(result);
+                    EnsureStepDispositionCapacity(outputEventCount);
+                    for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
                     {
-                        if (!m_DispositionsByEvent.TryGetValue(result.OutputEvents[i], out SimulationOutputDisposition disposition))
-                            throw new InvalidOperationException($"Commit batch has no disposition for EventId '{result.OutputEvents[i]}'.");
-                        m_StepDispositions[m_StepDispositionCount++] = disposition;
+                        SimulationActorTickResult actor = result.Actors[actorIndex];
+                        AppendStepDispositions(actor.GameplayFacts);
+                        AppendStepDispositions(actor.PresentationCommands);
                     }
                     m_CharacterCommitter.Commit(result, m_StepDispositions, m_StepDispositionCount);
                     for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
@@ -97,6 +98,38 @@ namespace ThirdPersonSimulation.Fixed
                 m_StepDispositionCount = 0;
                 m_DispositionsByEvent.Clear();
             }
+        }
+
+        void AppendStepDispositions(IReadOnlyList<GameplayFact> outputs)
+        {
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                EventId eventId = outputs[i].Header.EventId;
+                if (!m_DispositionsByEvent.TryGetValue(eventId, out SimulationOutputDisposition disposition))
+                    throw new InvalidOperationException($"Commit batch has no disposition for EventId '{eventId}'.");
+                m_StepDispositions[m_StepDispositionCount++] = disposition;
+            }
+        }
+
+        void AppendStepDispositions(IReadOnlyList<PresentationCommand> outputs)
+        {
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                EventId eventId = outputs[i].Header.EventId;
+                if (!m_DispositionsByEvent.TryGetValue(eventId, out SimulationOutputDisposition disposition))
+                    throw new InvalidOperationException($"Commit batch has no disposition for EventId '{eventId}'.");
+                m_StepDispositions[m_StepDispositionCount++] = disposition;
+            }
+        }
+
+        static int CountOutputEvents(SimulationTickResult result)
+        {
+            int count = 0;
+            for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
+                count = checked(count +
+                    result.Actors[actorIndex].GameplayFacts.Count +
+                    result.Actors[actorIndex].PresentationCommands.Count);
+            return count;
         }
 
         void EnsureStepDispositionCapacity(int count)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Buffers;
 
 namespace ThirdPersonSimulation
 {
@@ -39,25 +40,6 @@ namespace ThirdPersonSimulation
     public sealed class SimulationTickResult
     {
         readonly IReadOnlyList<SimulationActorTickResult> m_Actors;
-        readonly IReadOnlyList<EventId> m_OutputEvents;
-
-        public SimulationTickResult(
-            SimulationNumericProfile numericProfile,
-            GameplayContentHash gameplayContentHash,
-            SimulationTick tick,
-            IReadOnlyList<SimulationActorTickResult> actors,
-            WorldSolveBatchSummary worldSummary,
-            SimulationWorldSnapshot candidateSnapshot)
-            : this(
-                numericProfile,
-                gameplayContentHash,
-                tick,
-                CopySorted(actors),
-                worldSummary,
-                candidateSnapshot,
-                true)
-        {
-        }
 
         internal static SimulationTickResult FromSortedOwnedActors(
             SimulationNumericProfile numericProfile,
@@ -72,8 +54,7 @@ namespace ThirdPersonSimulation
                 tick,
                 actors ?? throw new ArgumentNullException(nameof(actors)),
                 worldSummary,
-                candidateSnapshot,
-                true);
+                candidateSnapshot);
 
         SimulationTickResult(
             SimulationNumericProfile numericProfile,
@@ -81,8 +62,7 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             SimulationActorTickResult[] actors,
             WorldSolveBatchSummary worldSummary,
-            SimulationWorldSnapshot candidateSnapshot,
-            bool _)
+            SimulationWorldSnapshot candidateSnapshot)
         {
             SimulationActorTickResult[] values = actors;
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !tick.IsValid)
@@ -117,35 +97,31 @@ namespace ThirdPersonSimulation
                 }
                 eventCount = checked(eventCount + values[i].GameplayFacts.Count + values[i].PresentationCommands.Count);
             }
-            EventId[] events = eventCount == 0 ? Array.Empty<EventId>() : new EventId[eventCount];
-            int eventIndex = 0;
-            for (int i = 0; i < values.Length; i++)
+            EventId[] events = eventCount == 0 ? Array.Empty<EventId>() : ArrayPool<EventId>.Shared.Rent(eventCount);
+            try
             {
-                for (int fact = 0; fact < values[i].GameplayFacts.Count; fact++)
-                    events[eventIndex++] = values[i].GameplayFacts[fact].Header.EventId;
-                for (int command = 0; command < values[i].PresentationCommands.Count; command++)
-                    events[eventIndex++] = values[i].PresentationCommands[command].Header.EventId;
+                int eventIndex = 0;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    for (int fact = 0; fact < values[i].GameplayFacts.Count; fact++)
+                        events[eventIndex++] = values[i].GameplayFacts[fact].Header.EventId;
+                    for (int command = 0; command < values[i].PresentationCommands.Count; command++)
+                        events[eventIndex++] = values[i].PresentationCommands[command].Header.EventId;
+                }
+                Array.Sort(events, 0, eventCount);
+                for (int i = 1; i < eventCount; i++)
+                {
+                    if (events[i - 1].Equals(events[i]))
+                        throw new ArgumentException($"Simulation result contains duplicate EventId '{events[i]}'.", nameof(actors));
+                }
             }
-            Array.Sort(events);
-            for (int i = 1; i < events.Length; i++)
+            finally
             {
-                if (events[i - 1].Equals(events[i]))
-                    throw new ArgumentException($"Simulation result contains duplicate EventId '{events[i]}'.", nameof(actors));
+                if (eventCount > 0)
+                    ArrayPool<EventId>.Shared.Return(events);
             }
             m_Actors = values;
-            m_OutputEvents = events;
             WorldSummary = worldSummary;
-        }
-
-        static SimulationActorTickResult[] CopySorted(IReadOnlyList<SimulationActorTickResult> actors)
-        {
-            if (actors == null || actors.Count == 0)
-                return Array.Empty<SimulationActorTickResult>();
-            var result = new SimulationActorTickResult[actors.Count];
-            for (int i = 0; i < result.Length; i++)
-                result[i] = actors[i];
-            Array.Sort(result, ActorIdComparer.Instance);
-            return result;
         }
 
         internal static void SortByActorId(SimulationActorTickResult[] actors)
@@ -172,7 +148,6 @@ namespace ThirdPersonSimulation
         public WorldSolveBatchSummary WorldSummary { get; }
         public bool HasCandidateSnapshot => CandidateSnapshot != null;
         public SimulationWorldSnapshot CandidateSnapshot { get; }
-        public IReadOnlyList<EventId> OutputEvents => m_OutputEvents;
     }
 
     public enum SimulationBoundaryTraceKind : byte

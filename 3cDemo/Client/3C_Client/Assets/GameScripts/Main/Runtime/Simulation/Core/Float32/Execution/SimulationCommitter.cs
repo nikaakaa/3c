@@ -51,7 +51,8 @@ namespace ThirdPersonSimulation
         {
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
-            if (dispositions == null || dispositionCount != result.OutputEvents.Count)
+            int expectedCount = CountOutputs(result);
+            if (dispositions == null || dispositionCount != expectedCount)
                 throw new ArgumentException("Simulation Committer received mismatched output dispositions.", nameof(dispositions));
 
             IndexDispositions(dispositions, dispositionCount);
@@ -94,6 +95,16 @@ namespace ThirdPersonSimulation
                     }
                 }
             }
+        }
+
+        static int CountOutputs(SimulationTickResult result)
+        {
+            int count = 0;
+            for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
+                count = checked(count +
+                    result.Actors[actorIndex].GameplayFacts.Count +
+                    result.Actors[actorIndex].PresentationCommands.Count);
+            return count;
         }
 
         void CommitGameplay(SimulationOutputDisposition disposition, GameplayFact fact)

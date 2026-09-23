@@ -98,6 +98,7 @@ namespace GameLogic.ProductStartup
             HomePreloadPlan = homePreloadPlan ?? throw new ArgumentNullException(nameof(homePreloadPlan));
             GameplayPreloadPlan = gameplayPreloadPlan ?? throw new ArgumentNullException(nameof(gameplayPreloadPlan));
             DiagnosticsHistoryCapacity = diagnosticsHistoryCapacity > 0 ? diagnosticsHistoryCapacity : throw new ArgumentOutOfRangeException(nameof(diagnosticsHistoryCapacity));
+            PreloadLeaseCapacity = CountPreloadItems(HomePreloadPlan) + CountPreloadItems(GameplayPreloadPlan);
         }
 
         public string ProductShellSceneLocation { get; }
@@ -105,6 +106,18 @@ namespace GameLogic.ProductStartup
         public PreloadPlan HomePreloadPlan { get; }
         public PreloadPlan GameplayPreloadPlan { get; }
         public int DiagnosticsHistoryCapacity { get; }
+        public int PreloadLeaseCapacity { get; }
+
+        private static int CountPreloadItems(PreloadPlan plan)
+        {
+            int count = 0;
+            foreach (PreloadBarrier barrier in plan.Barriers)
+            {
+                count += barrier.Items.Count;
+            }
+
+            return count;
+        }
 
         private static string Require(string value, string name)
         {

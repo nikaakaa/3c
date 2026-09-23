@@ -52,7 +52,7 @@ namespace GameLogic.ProductStartup
             _sceneModule = ModuleSystem.GetModule<ISceneModule>();
             IObjectPoolModule poolModule = ModuleSystem.GetModule<IObjectPoolModule>();
             int capacity = composition.RuntimeDefinition.DiagnosticsHistoryCapacity;
-            _resources = new ProductResourceRuntime(_resourceModule, poolModule, composition.Handoff.PackageName, capacity);
+            _resources = new ProductResourceRuntime(_resourceModule, poolModule, composition.Handoff.PackageName, capacity, composition.RuntimeDefinition.PreloadLeaseCapacity);
             _preloadExecutor = new PreloadPlanExecutor(_resources);
             _gameplayDelivery = new ProductGameplayDelivery(_resourceModule, _resources, composition.DiskSpaceProbe, composition.TagDownloadService, composition.Profile, composition.Handoff.PackageName);
             _memorySampler = new ProductMemorySampler();

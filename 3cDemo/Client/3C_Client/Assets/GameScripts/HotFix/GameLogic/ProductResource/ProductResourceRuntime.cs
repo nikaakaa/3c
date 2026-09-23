@@ -31,9 +31,9 @@ namespace GameLogic.ProductResource
         private readonly string _packageName;
         private readonly int _historyCapacity;
         private readonly Dictionary<ResourceScopeId, ResourceScope> _scopes = new Dictionary<ResourceScopeId, ResourceScope>();
-        private readonly Dictionary<long, LeaseRecord> _leases = new Dictionary<long, LeaseRecord>();
-        private readonly Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>> _inFlight = new Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>>();
-        private readonly Dictionary<ResourceIdentity, ResourceLifecycleRecord> _lifetimes = new Dictionary<ResourceIdentity, ResourceLifecycleRecord>();
+        private readonly Dictionary<long, LeaseRecord> _leases;
+        private readonly Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>> _inFlight;
+        private readonly Dictionary<ResourceIdentity, ResourceLifecycleRecord> _lifetimes;
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private string[] _preparedTagSnapshot = Array.Empty<string>();
         private readonly Stack<ResourceLifecycleRecord> _lifecycleRecordPool = new Stack<ResourceLifecycleRecord>();
@@ -57,13 +57,26 @@ namespace GameLogic.ProductResource
         private bool _disposed;
         private ResourceMaintenanceSnapshot _lastMaintenance;
 
-        public ProductResourceRuntime(IResourceModule resourceModule, IObjectPoolModule objectPoolModule, string packageName, int snapshotHistoryCapacity)
+        public ProductResourceRuntime(
+            IResourceModule resourceModule,
+            IObjectPoolModule objectPoolModule,
+            string packageName,
+            int snapshotHistoryCapacity,
+            int preloadLeaseCapacity)
         {
             _resourceModule = resourceModule ?? throw new ArgumentNullException(nameof(resourceModule));
             _objectPoolModule = objectPoolModule ?? throw new ArgumentNullException(nameof(objectPoolModule));
+            if (preloadLeaseCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(preloadLeaseCapacity));
+            }
+
             _poolMetricsBuffer = new List<ObjectPoolBase>(_objectPoolModule.Count);
             _packageName = string.IsNullOrWhiteSpace(packageName) ? throw new ArgumentException("Package name is required.", nameof(packageName)) : packageName.Trim();
             _historyCapacity = snapshotHistoryCapacity > 0 ? snapshotHistoryCapacity : throw new ArgumentOutOfRangeException(nameof(snapshotHistoryCapacity));
+            _leases = new Dictionary<long, LeaseRecord>(preloadLeaseCapacity);
+            _inFlight = new Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>>(preloadLeaseCapacity);
+            _lifetimes = new Dictionary<ResourceIdentity, ResourceLifecycleRecord>(preloadLeaseCapacity);
             _history = new BoundedHistory<ResourceRuntimeSnapshot>(_historyCapacity);
             GlobalScope = CreateScopeInternal(ResourceScopeKind.Global, "Global");
             Application.lowMemory += OnLowMemory;

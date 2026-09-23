@@ -347,12 +347,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new ObservedWorldConstraintFrame(Tick, constraints);
         }
 
-        public CharacterBodySample[] ToBodySamples()
+        public void CopyBodySamples(Span<CharacterBodySample> destination)
         {
-            var samples = new CharacterBodySample[m_Selections.Length];
-            for (int i = 0; i < samples.Length; i++)
-                samples[i] = m_Selections[i].ToBodySample();
-            return samples;
+            if (destination.Length != m_Selections.Length)
+                throw new ArgumentException("Remote body selection output length does not match its selections.", nameof(destination));
+            for (int i = 0; i < m_Selections.Length; i++)
+                destination[i] = m_Selections[i].ToBodySample();
         }
     }
 

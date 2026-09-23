@@ -373,7 +373,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 if (restore == null)
                     throw new InvalidOperationException("HardRecovery requires an explicit restore Tick for the remote visual reset anchor.");
-                selectedRemoteBodies = m_State.SelectRemoteBodyFrame(restore.Tick).ToBodySamples();
+                ServerAuthoritativeRemoteBodySelectionFrame recoverySelection =
+                    m_State.SelectRemoteBodyFrame(restore.Tick);
+                selectedRemoteBodies = new CharacterBodySample[recoverySelection.Selections.Count];
+                recoverySelection.CopyBodySamples(selectedRemoteBodies);
                 if (selectedRemoteBodies.Length == 0)
                     throw new InvalidOperationException("HardRecovery produced no selected remote Body reset anchor.");
             }
@@ -586,11 +589,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     i == 0);
                 var tick = new SimulationTick(tickValue);
                 ServerAuthoritativeRemoteBodySelectionFrame selection = m_State.SelectRemoteBodyFrame(tick);
-                CharacterBodySample[] samples = selection.ToBodySamples();
+                int sampleCount = selection.Selections.Count;
                 if (selectedBodies == null)
-                    selectedBodies = new CharacterBodySample[currentStepCount * samples.Length];
-                Array.Copy(samples, 0, selectedBodies, selectedBodyCount, samples.Length);
-                selectedBodyCount += samples.Length;
+                    selectedBodies = new CharacterBodySample[currentStepCount * sampleCount];
+                selection.CopyBodySamples(selectedBodies.AsSpan(selectedBodyCount, sampleCount));
+                selectedBodyCount += sampleCount;
                 ObservedWorldConstraintFrame observed = observedContactEnabled
                     ? selection.ToObservedWorldConstraints(contactShapeConfigurationHash)
                     : ObservedWorldConstraintFrame.Empty(tick);

@@ -5875,3 +5875,14 @@
 - `Capture` 仍按原 magic、版本、数量和 ActorId 升序写出 Sequence 与 EventId；`Restore` 清空旧槽位后校验 count 和 ActorId 严格升序，再原地重建。容量耗尽会显式失败，避免生成无法通过 64 上限 wire 校验的状态。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 authority replication Ack/Baseline 回放、可靠事件 horizon 推进回放、replication 状态 checkpoint 编解码恢复和 Player 分配采样。
+
+## 2026-09-23 权威源路由数组化
+
+对应 tasks.md 的 5.298；父项 2.5 保持未勾选。代码提交为 `b804bdb77`。
+
+- `ServerAuthoritativeAuthoritySourceRuntime` 在构造期校验并排序 expected Actor roster，同时为 roster entry、route actor、route 对象、latest checkpoint 和 checkpoint presence 准备精确容量数组。运行期不再维护 `List`、`SortedDictionary` 和 `Dictionary`，也不创建 `ReadOnlyCollection` 包装。
+- 控制通道锁 roster 前继续校验数量、顺序和 Actor 身份；通过后按 expected roster 顺序原地填充 route 数组并设置有效 count。后续 ticket、datagram、full checkpoint 请求都按 ActorId 二分查找。
+- `IsReady`、command liveness、`ReadAcceptedInputs`、snapshot 发送、pending checkpoint 扫描和 evidence 指标遍历改为数组区间；不再经过字典 Values 枚举器。
+- latest checkpoint 使用与 route 相同索引的 presence 标记，区分“尚未捕获”和 checkpoint 自身的正式内容；捕获未知 Actor 会显式失败。`Roster` 在锁定前仍返回空集合，Dispose 清理已使用槽位和引用。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 authority source 注册/锁 roster 回放、数据面 Hello/Command 回放、快照与可靠事件发送回放、Dispose 前后状态检查和 Player 分配采样。

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Schema: character-animation-blend-policy/v3
   m_PolicyId: corin.animation-rig.full-body-action
-  m_Revision: 3b9ad258d5ca446eb9c2988b2853c400
+  m_Revision: d397839b2669428280baadcb973b2e85
   m_StackPolicy:
     m_MaxActiveSourceEntries: 4
     m_StoredPosePolicy: 2
@@ -654,6 +654,16 @@ MonoBehaviour:
     m_Rule:
       m_BlendLogic: 2
       m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:cf8c408a-1d33-4368-ac5f-17c6bf4f1783:dc4fde81-bab5-405d-ad63-6bf864fd536d
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:65c2a50d-80a7-57f0-b531-b2dabda051dd:aef3a0e5-5b1d-5dab-b397-8424c7213b5c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}

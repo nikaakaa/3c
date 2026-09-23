@@ -53,18 +53,18 @@
 - **THEN** 创建逻辑 MUST 拒绝该节点
 - **AND** 系统 MUST NOT 把该节点加入正式节点集合
 
-### Requirement: BaseTreeAsset 保持资产和编辑器入口
-系统 MUST 保持 `BaseTreeAsset` 或等价 graph asset 类型作为 Unity Project、Inspector 和 BTSMTL 编辑器可打开入口。`BaseTreeAsset` MUST 作为 asset 外壳持有正式 `BaseTree` / `BaseGraph` 图数据，`BaseTree` 和 `BaseGraph` MUST NOT 混入 Unity asset 身份。直接打开 Graph asset MUST 继续通过 `OpenTree()` 或等价 `TreeWindowUtility` 入口打开，不新增并行 `BaseGraphWindow`。
+### Requirement: BaseTreeAsset 保持资产和 Graph Authoring Editor Shell 入口
+系统 MUST 保持 `BaseTreeAsset` 或等价 graph asset 类型作为 Unity Project、Inspector 和 Graph Authoring Editor Shell 可打开入口。`BaseTreeAsset` MUST 作为 asset 外壳持有正式 `BaseTree` / `BaseGraph` 图数据，`BaseTree` 和 `BaseGraph` MUST NOT 混入 Unity asset 身份。直接打开 Graph asset MUST 进入 Graph Authoring Editor Shell 的唯一正式入口，不新增并行 `BaseGraphWindow` 或旧 TreeDesigner 窗口路径。
 
 #### Scenario: 直接打开资产
 - **WHEN** 用户从 Project、Inspector 或 Tree Browser 打开 graph asset
 - **THEN** BTSMTL MUST 以该 asset 持有的 `BaseGraph` 数据作为当前编辑窗口的根 Graph
 - **AND** 打开流程 MUST NOT 需要来源节点上下文
-- **AND** 编辑器 MUST NOT 创建第二套 graph window 或 Workbench window
+- **AND** 编辑器 MUST NOT 创建第二套 graph window、Workbench window 或旧 TreeDesigner window
 
 ### Requirement: Graph 引用和页面栈保持 editor-only
 
-系统 MUST 让节点、边、模块、TimelineNode 和 Timeline Clip 通过正式 authoring reference 表达下钻内容。默认私有 Graph 和 Timeline MUST 支持 inline data，需要复用时才显式使用 shared asset。BaseTreeWindow 的作者页面栈 MUST 只支持 Graph page 和 TreeClip resolved Graph page；Timeline MUST 由独立 TimelineEditorWindow 编辑，不得进入 Graph breadcrumb。页面栈、窗口绑定、selection restore 和来源 identity MUST 保持 editor-only，不得参与 runtime 或序列化到业务数据。
+系统 MUST 让节点、边、模块、TimelineNode 和 Timeline Clip 通过正式 authoring reference 表达下钻内容。默认私有 Graph 和 Timeline MUST 支持 inline data，需要复用时才显式使用 shared asset。Graph Authoring Editor Shell 的作者页面栈 MUST 只支持 Graph page 和 TreeClip resolved Graph page；Timeline MUST 由独立 TimelineEditorWindow 编辑，不得进入 Graph breadcrumb。页面栈、窗口绑定、selection restore 和来源 identity MUST 保持 editor-only，不得参与 runtime 或序列化到业务数据。
 
 #### Scenario: 节点下钻到内联 Graph
 
@@ -228,17 +228,17 @@
 - **THEN** runtime MUST 从该 inline graph data 创建工作副本
 - **AND** runtime MUST NOT 直接修改 authoring graph data 的序列化字段
 
-### Requirement: TreeWindow 支持 editor-only authoring context
-系统 MUST 允许 `BaseTreeWindow` 持有 editor-only authoring context，用于 Tree Inspector 中依赖业务上下文的 authoring 区块展示当前打开入口提供的信息。该 context MUST NOT 序列化到 `BaseGraph`、`BaseTree`、`BaseTreeAsset`、节点、边或 property port 中。下钻 inline graph 或 shared graph 时，窗口 MUST 保持同一个 authoring context。
+### Requirement: Graph Authoring Editor Shell 支持 editor-only authoring context
+系统 MUST 允许 Graph Authoring Editor Shell 持有 editor-only authoring context，用于 Details 和 Navigator 中依赖业务上下文的 authoring 区块展示当前打开入口提供的信息。该 context MUST NOT 序列化到 `BaseGraph`、`BaseTree`、`BaseTreeAsset`、节点、边或 property port 中。下钻 inline graph 或 shared graph 时，窗口 MUST 保持同一个 authoring context。
 
 #### Scenario: 从业务定义打开 RootTree
 - **WHEN** editor 通过业务定义打开某个 `BaseTreeAsset`
-- **THEN** `BaseTreeWindow` MUST 接收该业务定义提供的 authoring context
+- **THEN** Graph Authoring Editor Shell MUST 接收该业务定义提供的 authoring context
 - **AND** Graph 数据本身 MUST NOT 保存该 context
 
 #### Scenario: 直接打开孤立 TreeAsset
 - **WHEN** 用户直接打开一个普通 `BaseTreeAsset`
-- **THEN** `BaseTreeWindow` MAY 没有业务 authoring context
+- **THEN** Graph Authoring Editor Shell MAY 没有业务 authoring context
 - **AND** Inspector 中依赖业务 context 的区块 MUST 显示缺失上下文状态，而不是写入 fallback 配置
 
 #### Scenario: 下钻 Graph
@@ -354,9 +354,9 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 - **THEN** 组合或编译校验 MUST 明确失败
 - **AND** 系统 MUST 不创建半初始化 Graph 或 fallback context
 
-### Requirement: TreeWindow runtime 状态必须通过只读 diagnostics overlay 表达
+### Requirement: Graph Authoring Editor Shell runtime 状态必须通过只读 diagnostics overlay 表达
 
-`BaseTreeWindow` MUST 继续绑定 authoring Graph，并通过 `RuntimeDebugSession` 和 source identity 显示选中 runtime instance 的 Node、Edge、StateMachine 和生命周期状态。TreeWindow MUST NOT 打开 runtime clone 作为 authoring page，也 MUST NOT 直接读取 authoring Node 的 runtime `State` 字段。
+Graph Authoring Editor Shell MUST 绑定 authoring Graph，并通过 `RuntimeDebugSession` 和 source identity 显示选中 runtime instance 的 Node、Edge、StateMachine 和生命周期状态。Shell MUST NOT 打开 runtime clone 作为 authoring page，也 MUST NOT 直接读取 authoring Node 的 runtime `State` 字段。
 
 #### Scenario: Live Debug 高亮运行节点
 

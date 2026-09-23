@@ -325,10 +325,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     restore = m_State.BuildRestore(baseline, decision, context.Pipeline);
                 }
             }
-            string observedBaselineDifference = DescribeObservedBaselineDifference(
-                baseline,
-                observations,
-                m_State);
             writePorts.Decision.Write(decision);
             SimulationSessionExecutionPlan<Float32SimulationStep> plan;
             CharacterBodySample[] selectedRemoteBodies;
@@ -433,6 +429,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 int replayCount = decision.ReplayStart.IsValid
                     ? checked((int)(decision.ReplayEnd.Value - decision.ReplayStart.Value + 1))
                     : 0;
+                string observedBaselineDifference = DescribeObservedBaselineDifference(
+                    baseline,
+                    observations,
+                    m_State);
                 readPorts.Diagnostics.Sink.PublishModel(new SimulationModelTraceRecord(
                     SimulationModelTraceKind.Correction,
                     "prediction_correction_decision",

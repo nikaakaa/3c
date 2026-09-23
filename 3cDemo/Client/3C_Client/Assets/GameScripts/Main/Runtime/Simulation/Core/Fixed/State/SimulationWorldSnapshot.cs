@@ -123,16 +123,13 @@ namespace ThirdPersonSimulation.Fixed
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
             Tick = tick;
-            SimulationActorSnapshot[] copied = actors ?? Array.Empty<SimulationActorSnapshot>();
+            SimulationActorSnapshot[] copied = actors ?? throw new ArgumentNullException(nameof(actors));
             for (int i = 0; i < copied.Length; i++)
                 if (copied[i] == null)
                     throw new ArgumentException("Simulation World Snapshot actor roster contains a null entry.", nameof(actors));
-            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
             if (copied.Length == 0)
                 throw new ArgumentException("Simulation World Snapshot actor roster cannot be empty.", nameof(actors));
-            for (int i = 1; i < copied.Length; i++)
-                if (copied[i - 1].ActorId == copied[i].ActorId)
-                    throw new ArgumentException("Simulation World Snapshot actor roster contains duplicate entries.", nameof(actors));
+            ValidatePreparedActors(copied);
             m_Actors = copied;
             m_WorldStateBytes = worldStateBytes ?? throw new ArgumentNullException(nameof(worldStateBytes));
             DeterministicValidity = deterministicValidity;
@@ -173,6 +170,25 @@ namespace ThirdPersonSimulation.Fixed
         public StableHash ComputeSolverStatePayloadHash() =>
             SimulationCanonicalPayloadHash.Compute(
                 WorldSimulationStateCodec.ReadSolverStatePayloadSegment(m_WorldStateBytes).AsSpan());
+
+        static void ValidatePreparedActors(SimulationActorSnapshot[] actors)
+        {
+            for (int i = 1; i < actors.Length; i++)
+                if (actors[i - 1].ActorId.CompareTo(actors[i].ActorId) >= 0)
+                    throw new ArgumentException("Simulation World Snapshot actor roster is not in a stable unique ActorId order.", nameof(actors));
+        }
+
+        sealed class ActorSnapshotComparer : IComparer<SimulationActorSnapshot>
+        {
+            public static readonly ActorSnapshotComparer Instance = new ActorSnapshotComparer();
+
+            ActorSnapshotComparer() { }
+
+            public int Compare(SimulationActorSnapshot left, SimulationActorSnapshot right)
+            {
+                return left.ActorId.CompareTo(right.ActorId);
+            }
+        }
     }
 
     public static class SimulationWorldSnapshotFactory
@@ -180,7 +196,7 @@ namespace ThirdPersonSimulation.Fixed
         public static SimulationWorldSnapshot Capture(
             FixedCharacterRuntime characterRuntime,
             SimulationTick tick,
-            IReadOnlyList<SimulationActorState> actorStates,
+            SimulationActorState[] actorStates,
             WorldSimulationState worldState,
             WorldCapability solverCapabilities)
         {
@@ -190,25 +206,19 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(worldState));
             if (characterRuntime.NumericProfile != worldState.NumericProfile)
                 throw new InvalidOperationException("Character Runtime and World state Numeric Profiles do not match.");
-            var actors = actorStates == null || actorStates.Count == 0
-                ? Array.Empty<SimulationActorState>()
-                : new SimulationActorState[actorStates.Count];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                actors[i] = actorStates[i];
-                if (actors[i].State == null)
-                    throw new InvalidOperationException("Character runtime state roster contains a null entry.");
-            }
-            Array.Sort(actors, (left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (actors.Length != worldState.Bodies.Count || actors.Length != characterRuntime.Roster.Count)
+            if (actorStates == null)
+                throw new ArgumentNullException(nameof(actorStates));
+            if (actorStates.Length == 0)
+                throw new InvalidOperationException("Character runtime state roster contains no entry.");
+            if (actorStates.Length != worldState.Bodies.Count || actorStates.Length != characterRuntime.Roster.Count)
                 throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters do not match.");
-            var snapshots = new SimulationActorSnapshot[actors.Length];
+            var snapshots = new SimulationActorSnapshot[actorStates.Length];
             bool abilitiesDeterministic = true;
-            for (int i = 0; i < actors.Length; i++)
+            for (int i = 0; i < actorStates.Length; i++)
             {
-                SimulationActorState actor = actors[i];
+                SimulationActorState actor = actorStates[i];
                 SimulationActorBinding binding = characterRuntime.Roster[i];
-                if (i > 0 && actors[i - 1].ActorId == actor.ActorId ||
+                if (actor.State == null || i > 0 && actorStates[i - 1].ActorId == actor.ActorId ||
                     worldState.Bodies[i].ActorId != actor.ActorId || binding.ActorId != actor.ActorId)
                 {
                     throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters are not the same stable ActorId order.");
@@ -252,7 +262,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationWorldStateSet
     {
-        readonly IReadOnlyList<SimulationActorState> m_Actors;
+        readonly SimulationActorState[] m_Actors;
 
         public SimulationWorldStateSet(ulong lastCompletedTick, IReadOnlyList<SimulationActorState> actors, WorldSimulationState worldState)
         {
@@ -292,6 +302,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<SimulationActorState> Actors => m_Actors;
+        internal SimulationActorState[] ActorArray => m_Actors;
         public WorldSimulationState WorldState { get; }
 
         static void ValidatePrepared(

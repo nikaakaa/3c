@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation
             SimulationWorldSnapshot world = SimulationWorldSnapshotFactory.Capture(
                 characterRuntime,
                 new SimulationTick(state.LastCompletedTick),
-                state.Actors,
+                state.ActorArray,
                 state.WorldState,
                 solverCapabilities);
             return new Float32SimulationSessionSnapshot(descriptor.Identity, world, pipelineState);

@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Control.Rules
         public static readonly CharacterControlStateId RunStopping = new CharacterControlStateId("RunStopping");
         public static readonly CharacterControlStateId MovingTurn = new CharacterControlStateId("MovingTurn");
         public static readonly CharacterSkillId Attack = new CharacterSkillId("Attack");
+        public static readonly CharacterSkillId RushAttack = new CharacterSkillId("RushAttack");
         public static readonly CharacterSkillId DodgeBack = new CharacterSkillId("DodgeBack");
         public static readonly CharacterSkillId DodgeForward = new CharacterSkillId("DodgeForward");
 
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly SimulationInputValueId s_MoveAxis = new SimulationInputValueId("MoveAxis");
         static readonly SimulationInputValueId s_LookAxis = new SimulationInputValueId("LookAxis");
         static readonly string s_AttackRequest = "Attack";
+        static readonly string s_RushRequest = "Rush";
         static readonly string s_DodgeRequest = "Dodge";
         static readonly string s_ActionTarget = "ActionTarget";
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
@@ -210,6 +212,15 @@ namespace ThirdPersonCharacter.Control.Rules
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
+            if (m_Read.HasInputRequest(s_RushRequest))
+            {
+                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
+                    source,
+                    RushAttack,
+                    s_RushRequest,
+                    true));
+                return;
+            }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
                 m_Output.SubmitAbility(new CharacterControlAbilityRequest(
@@ -315,7 +326,7 @@ namespace ThirdPersonCharacter.Control.Rules
                         100,
                         true)
                 },
-                new[] { Attack, DodgeBack, DodgeForward });
+                new[] { Attack, DodgeBack, DodgeForward, RushAttack });
         }
 
         static CharacterControlTransitionDescriptor Transition(

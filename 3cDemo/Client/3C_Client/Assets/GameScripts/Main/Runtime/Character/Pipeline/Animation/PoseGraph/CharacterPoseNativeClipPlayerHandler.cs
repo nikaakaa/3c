@@ -111,9 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     player.Backend,
                     player.ResourceCatalogIndex,
                     player.GroupClipIndex);
-            if (m_Source.TryDeferSource(in target))
+            if (m_Source.TryDeferSource(in target, out CharacterPoseSourceResourceResolution resolution))
                 throw new InvalidOperationException(
-                    $"Native Clip source '{player.NodeId}' is pending.");
+                    $"Clip source '{player.NodeId}' backend '{player.Backend}' resource '{player.ResourceCatalogIndex}/{player.GroupClipIndex}' is {(resolution.IsInvalid ? "invalid" : "pending")}: {resolution.Resource.FailureCode} {resolution.Resource.Message}");
             m_Binding = m_Source.PrepareNativeClipPlayer(
                 sourceLease,
                 player.SourceId,

@@ -5813,3 +5813,14 @@
 - Correction checkpoint 删除接受 `SortedDictionary` 的旧工厂，构造时要求 pending Sequence 严格升序。wire 解码先原地按 Sequence 排序，再检查重复，最后进入 owned 数组 checkpoint；Restore 校验数量、容量和 Sequence 升序后原地写入常驻轨道。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 prediction request 保留/消费回放、Ack/Baseline checkpoint 编解码恢复和 Player 分配采样。
+
+## 2026-09-23 预测disposition journal数组化
+
+对应 tasks.md 的 5.292；父项 2.5 保持未勾选。代码提交为 `23fa7f4d6`。
+
+- `ServerAuthoritativePredictionDispositionJournal` 原先用 `SortedDictionary<EventId, ServerAuthoritativeJournalEntry>` 保存 disposition。现在按正式容量 `historyCapacity * 64` 准备 EventId 和 Entry 平行数组，用显式 count 表示有效记录，查找全部改为 EventId 二分。
+- `Record` 不再通过 `PrepareRecord` 复制整表再 Restore。新 EventId 先按原条件裁剪过期记录，再按二分位置原地下移插入；已有 EventId 继续忽略 AuthorityConfirmed 或完全相同记录，其他 disposition 变更覆盖原记录并推进 cursor。容量检查使用正式 journal 容量，不使用 ArrayPool 租约长度。
+- `PrepareConfirmation` 和 `PreparePrune` 仍服务于 checkpoint 合同，先租用临时轨道生成最终 owned pair 数组，再归还临时空间；不再构造中间 `SortedDictionary`。`Restore` 校验 checkpoint 容量和 EventId 严格升序后原地写入常驻轨道。
+- Journal checkpoint 和 wire 解码改为 owned pair 数组。解码先原地按 EventId 排序，再检查重复；`WriteJournal` 的字段、版本和顺序不变，`ReadJournal` 不再构建排序字典。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 disposition 记录/确认/裁剪回放、checkpoint 编解码恢复、重复事件回放和 Player 分配采样。

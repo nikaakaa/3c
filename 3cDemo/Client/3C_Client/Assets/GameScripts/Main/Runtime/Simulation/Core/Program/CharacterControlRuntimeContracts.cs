@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison);
+        bool ReadInputBoolean(SimulationInputValueId input);
         bool CompareInputDirectionToBodyYaw(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,

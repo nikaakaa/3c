@@ -366,6 +366,7 @@ namespace ThirdPersonSimulation
                 }
 
                 int activeTargetCount = 0;
+                string activeTargetActionId = string.Empty;
                 ActionAdmissionActiveAction replacementSource = default;
                 bool hasReplacementSource = false;
                 for (int index = 0; index < m_Port.ActionCount; index++)
@@ -373,7 +374,10 @@ namespace ThirdPersonSimulation
                     if (!m_Port.TryReadActiveAction(index, out ActionAdmissionActiveAction active))
                         continue;
                     if (string.Equals(active.ActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
+                    {
                         activeTargetCount++;
+                        activeTargetActionId = active.ActionId;
+                    }
                     if (request.ReplacementActionInstanceId == active.InstanceId)
                     {
                         replacementSource = active;
@@ -397,7 +401,13 @@ namespace ThirdPersonSimulation
                 }
 
                 if (activeTargetCount >= request.TargetProfile.MaxConcurrentInstances)
+                {
+                    if (request.Mode == ActionAdmissionEvaluationMode.PreviewReplacement &&
+                        activeTargetCount == 1 &&
+                        string.Equals(activeTargetActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
+                        return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
                     return Reject(ActionAdmissionRejectReason.ActionCapacityExceeded, request.TargetProfile.ActionId, 0);
+                }
                 return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
             }
             finally

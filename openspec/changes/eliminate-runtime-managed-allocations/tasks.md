@@ -564,6 +564,7 @@
 - [x] 5.281 Fixed/Float32 Commit batch 输出覆盖校验复用 ArrayPool 缓冲；排序和比较改为精确范围与静态 comparer，删除临时数组和比较委托
 - [x] 5.282 Fixed/Float32 SimulationTickResult 删除派生 OutputEvents 数组；Pipeline 和 Simulation Committer 直接按 GameplayFacts 与 PresentationCommands 计数并匹配 disposition，EventId 唯一性校验改用 ArrayPool 临时空间
 - [x] 5.283 表现 Body 流合同改为精确数组加数量；Fixed/Rollback 提交使用准备期 scratch，ServerAuthoritative 远端使用 ArrayPool 同步租还，删除每次 List 或可增长只读包装
+- [x] 5.284 Fixed/Rollback 角色 pending Body/Trajectory/Equipment SortedDictionary 改为准备期有界有序数组加显式 count；同 tick 替换、容量检查和提交顺序不变，删除运行期树节点和 Equipment 选择小数组分配
 
 ## 6. UI、资源、渲染和生命周期
 

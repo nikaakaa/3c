@@ -5731,3 +5731,14 @@
 - ServerAuthoritative 远端表现按本批 Body sample 数量从 `ArrayPool` 租用区间数组，同步 Capture 后清理使用区间并归还；删除可增长 `BodyIntervalScratch` 和接口枚举路径。异常路径在 `finally` 归还。
 - Fixed/Rollback pending Body、trajectory 和 Equipment 的 `SortedDictionary` 仍在工作区后续治理；本步只收口 Capture Body 流合同。Selected stream 的 Reset 判断改为 `intervalCount` 后语义不变。
 - Client Runtime、Fixed Unity、DeterministicRollback Unity 和 ServerAuthoritative Unity 使用 Release 目标程序集编译通过，构建补齐 Unity Editor 定义；构建后执行 `dotnet build-server shutdown`。未刷新 Unity、未进 Play、未做 Body 表现回放、rollback restore和 Player 分配采样。
+
+## 2026-09-23 角色pending结果有界数组化
+
+对应 tasks.md 的 5.284；父项 2.5 保持未勾选。代码提交为 `8c443a031`。
+
+- Fixed 角色注册删除 Body、Trajectory 和 Equipment 三张 `SortedDictionary`；Rollback 角色注册删除 Body 和 Trajectory 两张 `SortedDictionary`。Body/Trajectory 改用共享的 Core Fixed `SortedTickResultBuffer`，Equipment 改用 Fixed 注册专用的有界 tick 行缓冲。
+- 缓冲容量来自现有 `maximumActivePresentationRecords`；Equipment 每条结果的 Slot 容量来自已装配 Ability Installation 的 Equipment Layout，新增 `EquipmentSlotCapacity` 只暴露该准备容量。`BeginResultCommit` 会拒绝超过 Body 展示缓冲容量的正式事务上限，避免原来拖到 Complete 才暴露。
+- 插入按 tick 二分定位，未命中时原地下移数组；命中同一 tick 时只替换值。`maximumBodySamples` 对新增 tick 的容量检查仍保留，同一 tick 重放替换不额外消耗容量。Complete、Abort 和 Dispose 继续清空 count，数组长期归注册持有，运行期不分配树节点、枚举器和 Equipment 选择小数组。
+- Body、Trajectory 和 Equipment 的提交顺序、trajectory 的 `AcceptsTrajectoryIntent` 条件、Selected Body 的 reset 判断、最终 Body 应用、异常拒绝和后续 Abort 语义不变。
+- `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed.Unity` 和 `ThirdPersonSimulation.DeterministicRollback.Unity` 使用 Release no-dependencies 目标编译通过，均 0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false`、`/p:UseSharedCompilation=false` 和 `--no-incremental`，构建后已执行 `dotnet build-server shutdown`。由于 `UnityEditor.UI` 包生成工程仍存在已知 Runtime/Editor define 矛盾，目标编译所需的缺失依赖 DLL 取自当前 Unity `Library/ScriptAssemblies`，未修改包源或仓库配置。
+- 未刷新 Unity、未进 Play、未做 Fixed/Rollback 输入回放、Body 表现回放、Equipment 选择回放、rollback restore 和 Player 分配采样。

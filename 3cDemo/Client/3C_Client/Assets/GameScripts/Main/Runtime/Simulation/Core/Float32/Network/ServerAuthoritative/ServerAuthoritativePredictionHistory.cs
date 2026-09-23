@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Buffers;
+using System.Linq;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.ServerAuthoritative
@@ -360,8 +362,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly int m_TickRate;
         readonly int m_MaximumExtrapolationTicks;
         readonly ActorId[] m_LockedActors;
-        readonly SortedDictionary<ActorId, SortedDictionary<ulong, CharacterBodySample>> m_Samples =
-            new SortedDictionary<ActorId, SortedDictionary<ulong, CharacterBodySample>>();
+        readonly ulong[][] m_TickTracks;
+        readonly CharacterBodySample[][] m_SampleTracks;
+        readonly int[] m_Counts;
         ulong m_EvictionCount;
 
         public ServerAuthoritativeRemoteBodyTimeline(
@@ -372,20 +375,27 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (capacityPerActor <= 0 || tickRate <= 0 || maximumExtrapolationTicks <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacityPerActor));
-            var actors = lockedActors == null ? new List<ActorId>() : new List<ActorId>(lockedActors);
-            actors.Sort((left, right) => left.CompareTo(right));
-            if (actors.Count == 0)
+            ActorId[] actors = lockedActors == null ? Array.Empty<ActorId>() : lockedActors.ToArray();
+            Array.Sort(actors);
+            if (actors.Length == 0)
                 throw new ArgumentException("Remote body timeline requires a locked remote Actor roster.", nameof(lockedActors));
-            for (int i = 0; i < actors.Count; i++)
+            for (int i = 0; i < actors.Length; i++)
             {
                 if (!actors[i].IsValid || i > 0 && actors[i - 1] == actors[i])
                     throw new ArgumentException("Remote body timeline Actor roster is invalid.", nameof(lockedActors));
-                m_Samples.Add(actors[i], new SortedDictionary<ulong, CharacterBodySample>());
             }
             m_CapacityPerActor = capacityPerActor;
             m_TickRate = tickRate;
             m_MaximumExtrapolationTicks = maximumExtrapolationTicks;
-            m_LockedActors = actors.ToArray();
+            m_LockedActors = actors;
+            m_TickTracks = new ulong[actors.Length][];
+            m_SampleTracks = new CharacterBodySample[actors.Length][];
+            m_Counts = new int[actors.Length];
+            for (int i = 0; i < actors.Length; i++)
+            {
+                m_TickTracks[i] = new ulong[capacityPerActor];
+                m_SampleTracks[i] = new CharacterBodySample[capacityPerActor];
+            }
         }
 
         public bool IsPrimed
@@ -394,7 +404,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 for (int i = 0; i < m_LockedActors.Length; i++)
                 {
-                    if (m_Samples[m_LockedActors[i]].Count == 0)
+                    if (m_Counts[i] == 0)
                         return false;
                 }
                 return true;
@@ -407,7 +417,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 int count = 0;
                 for (int i = 0; i < m_LockedActors.Length; i++)
-                    count = checked(count + m_Samples[m_LockedActors[i]].Count);
+                    count = checked(count + m_Counts[i]);
                 return count;
             }
         }
@@ -421,9 +431,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong tick = ulong.MaxValue;
                 for (int i = 0; i < m_LockedActors.Length; i++)
                 {
-                    SortedDictionary<ulong, CharacterBodySample> samples = m_Samples[m_LockedActors[i]];
-                    if (samples.Count > 0)
-                        tick = Math.Min(tick, First(samples).Key);
+                    if (m_Counts[i] > 0)
+                        tick = Math.Min(tick, m_TickTracks[i][0]);
                 }
                 return tick == ulong.MaxValue ? 0 : tick;
             }
@@ -436,9 +445,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong tick = 0;
                 for (int i = 0; i < m_LockedActors.Length; i++)
                 {
-                    SortedDictionary<ulong, CharacterBodySample> samples = m_Samples[m_LockedActors[i]];
-                    if (samples.Count > 0)
-                        tick = Math.Max(tick, Last(samples).Key);
+                    if (m_Counts[i] > 0)
+                        tick = Math.Max(tick, m_TickTracks[i][m_Counts[i] - 1]);
                 }
                 return tick;
             }
@@ -450,14 +458,44 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (!batch.IsValid)
                 throw new ArgumentException("Remote presentation batch is invalid.", nameof(batch));
-            if (!m_Samples.TryGetValue(batch.ActorId, out SortedDictionary<ulong, CharacterBodySample> samples))
+            int actorIndex = FindActor(batch.ActorId);
+            if (actorIndex < 0)
                 throw new InvalidOperationException($"Remote body sample targets unlocked Actor '{batch.ActorId}'.");
-            for (int i = 0; i < batch.BodySamples.Count; i++)
-                Add(samples, batch.BodySamples[i]);
-            while (samples.Count > m_CapacityPerActor)
+
+            int inputCount = batch.BodySamples.Count;
+            if (inputCount == 0)
+                return;
+
+            int mergedCapacity = m_Counts[actorIndex] + inputCount;
+            ulong[] mergedTicks = ArrayPool<ulong>.Shared.Rent(mergedCapacity);
+            CharacterBodySample[] mergedSamples = ArrayPool<CharacterBodySample>.Shared.Rent(mergedCapacity);
+            try
             {
-                samples.Remove(First(samples).Key);
-                m_EvictionCount = checked(m_EvictionCount + 1);
+                int mergedCount = m_Counts[actorIndex];
+                Array.Copy(m_TickTracks[actorIndex], mergedTicks, mergedCount);
+                Array.Copy(m_SampleTracks[actorIndex], mergedSamples, mergedCount);
+                for (int i = 0; i < inputCount; i++)
+                    Insert(mergedTicks, mergedSamples, ref mergedCount, batch.BodySamples[i]);
+
+                for (int i = 1; i < mergedCount; i++)
+                {
+                    if (mergedTicks[i - 1] + 1UL == mergedTicks[i] &&
+                        !WorldSolveBatchRequest.BodyEquals(mergedSamples[i - 1].FinalBody, mergedSamples[i].BeforeBody))
+                    {
+                        throw new InvalidOperationException("Remote body timeline contains a discontinuous consecutive BeforeBody.");
+                    }
+                }
+
+                int retainedCount = Math.Min(mergedCount, m_CapacityPerActor);
+                Array.Copy(mergedTicks, mergedCount - retainedCount, m_TickTracks[actorIndex], 0, retainedCount);
+                Array.Copy(mergedSamples, mergedCount - retainedCount, m_SampleTracks[actorIndex], 0, retainedCount);
+                m_Counts[actorIndex] = retainedCount;
+                m_EvictionCount = checked(m_EvictionCount + (ulong)(mergedCount - retainedCount));
+            }
+            finally
+            {
+                ArrayPool<ulong>.Shared.Return(mergedTicks);
+                ArrayPool<CharacterBodySample>.Shared.Return(mergedSamples);
             }
         }
 
@@ -471,7 +509,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ActorId actorId = m_LockedActors[i];
                 selections[i] = SelectActor(
                     actorId,
-                    m_Samples[actorId],
+                    m_TickTracks[i],
+                    m_SampleTracks[i],
+                    m_Counts[i],
                     targetTick);
             }
             return new ServerAuthoritativeRemoteBodySelectionFrame(targetTick, selections);
@@ -483,11 +523,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < m_LockedActors.Length; i++)
             {
                 ActorId actorId = m_LockedActors[i];
-                SortedDictionary<ulong, CharacterBodySample> samples = m_Samples[actorId];
-                var values = new CharacterBodySample[samples.Count];
-                int index = 0;
-                foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
-                    values[index++] = pair.Value;
+                var values = new CharacterBodySample[m_Counts[i]];
+                Array.Copy(m_SampleTracks[i], values, m_Counts[i]);
                 actors[i] = new ServerAuthoritativeRemoteBodyActorCheckpoint(actorId, values);
             }
             return new ServerAuthoritativeRemoteBodyTimelineCheckpoint(actors);
@@ -502,22 +539,78 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ServerAuthoritativeRemoteBodyActorCheckpoint actor = checkpoint.Actors[i];
                 if (actor.ActorId != m_LockedActors[i])
                     throw new InvalidOperationException("Remote body timeline checkpoint Actor order does not match the locked roster.");
-                var samples = new SortedDictionary<ulong, CharacterBodySample>();
-                for (int sampleIndex = 0; sampleIndex < actor.Samples.Count; sampleIndex++)
-                    Add(samples, actor.Samples[sampleIndex]);
-                if (samples.Count > m_CapacityPerActor)
+                if (actor.Samples.Count > m_CapacityPerActor)
                     throw new InvalidOperationException("Remote body timeline checkpoint exceeds its configured capacity.");
-                m_Samples[actor.ActorId] = samples;
+                for (int sampleIndex = 1; sampleIndex < actor.Samples.Count; sampleIndex++)
+                {
+                    if (actor.Samples[sampleIndex - 1].Tick.Value + 1 == actor.Samples[sampleIndex].Tick.Value &&
+                        !WorldSolveBatchRequest.BodyEquals(
+                            actor.Samples[sampleIndex - 1].FinalBody,
+                            actor.Samples[sampleIndex].BeforeBody))
+                    {
+                        throw new InvalidOperationException("Remote body timeline contains a discontinuous consecutive BeforeBody.");
+                    }
+                }
+                for (int sampleIndex = 0; sampleIndex < actor.Samples.Count; sampleIndex++)
+                {
+                    m_TickTracks[i][sampleIndex] = actor.Samples[sampleIndex].Tick.Value;
+                    m_SampleTracks[i][sampleIndex] = actor.Samples[sampleIndex];
+                }
+                m_Counts[i] = actor.Samples.Count;
             }
+        }
+
+        static void Insert(
+            ulong[] ticks,
+            CharacterBodySample[] samples,
+            ref int count,
+            CharacterBodySample sample)
+        {
+            int insertionIndex = Find(ticks, count, sample.Tick.Value);
+            if (insertionIndex >= 0)
+            {
+                if (!SampleEquals(samples[insertionIndex], sample))
+                    throw new InvalidOperationException($"Remote body timeline Tick '{sample.Tick}' changed canonical value.");
+                return;
+            }
+            insertionIndex = ~insertionIndex;
+            Array.Copy(ticks, insertionIndex, ticks, insertionIndex + 1, count - insertionIndex);
+            Array.Copy(samples, insertionIndex, samples, insertionIndex + 1, count - insertionIndex);
+            ticks[insertionIndex] = sample.Tick.Value;
+            samples[insertionIndex] = sample;
+            count++;
+        }
+
+        int FindActor(ActorId actorId) => Array.BinarySearch(m_LockedActors, actorId);
+
+        static int Find(ulong[] ticks, int count, ulong tick)
+        {
+            int left = 0;
+            int right = count - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                if (ticks[middle] == tick)
+                    return middle;
+                if (ticks[middle] < tick)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
         }
 
         ServerAuthoritativeRemoteBodySelection SelectActor(
             ActorId actorId,
-            SortedDictionary<ulong, CharacterBodySample> samples,
+            ulong[] ticks,
+            CharacterBodySample[] samples,
+            int count,
             SimulationTick targetTick)
         {
-            if (samples.TryGetValue(targetTick.Value, out CharacterBodySample exact))
+            int exactIndex = Find(ticks, count, targetTick.Value);
+            if (exactIndex >= 0)
             {
+                CharacterBodySample exact = samples[exactIndex];
                 return new ServerAuthoritativeRemoteBodySelection(
                     actorId,
                     targetTick,
@@ -528,8 +621,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     ObservedWorldConstraintSamplingKind.Exact);
             }
             ulong beforeTick = targetTick.Value > 1 ? targetTick.Value - 1 : targetTick.Value;
-            BodySelection before = ResolveBodyAt(actorId, samples, beforeTick, true);
-            BodySelection final = ResolveBodyAt(actorId, samples, targetTick.Value, false);
+            BodySelection before = ResolveBodyAt(actorId, ticks, samples, count, beforeTick, true);
+            BodySelection final = ResolveBodyAt(actorId, ticks, samples, count, targetTick.Value, false);
             ObservedWorldConstraintSamplingKind kind = before.Kind.CompareTo(final.Kind) >= 0
                 ? before.Kind
                 : final.Kind;
@@ -549,35 +642,26 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         BodySelection ResolveBodyAt(
             ActorId actorId,
-            SortedDictionary<ulong, CharacterBodySample> samples,
+            ulong[] ticks,
+            CharacterBodySample[] samples,
+            int count,
             ulong targetTick,
             bool allowFirstBefore)
         {
-            if (samples.TryGetValue(targetTick, out CharacterBodySample exact))
-                return new BodySelection(exact.FinalBody, exact.Tick, exact.Tick, ObservedWorldConstraintSamplingKind.Exact);
-            if (targetTick < ulong.MaxValue && samples.TryGetValue(targetTick + 1, out CharacterBodySample nextExact))
-                return new BodySelection(nextExact.BeforeBody, nextExact.Tick, nextExact.Tick, ObservedWorldConstraintSamplingKind.Exact);
-
-            CharacterBodySample lower = default;
-            CharacterBodySample upper = default;
-            bool hasLower = false;
-            bool hasUpper = false;
-            foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
+            int exactIndex = Find(ticks, count, targetTick);
+            if (exactIndex >= 0)
+                return new BodySelection(samples[exactIndex].FinalBody, samples[exactIndex].Tick, samples[exactIndex].Tick, ObservedWorldConstraintSamplingKind.Exact);
+            int insertionIndex = ~exactIndex;
+            if (targetTick < ulong.MaxValue && insertionIndex < count && ticks[insertionIndex] == targetTick + 1)
             {
-                CharacterBodySample sample = pair.Value;
-                if (sample.Tick.Value < targetTick)
-                {
-                    lower = sample;
-                    hasLower = true;
-                    continue;
-                }
-                if (sample.Tick.Value > targetTick)
-                {
-                    upper = sample;
-                    hasUpper = true;
-                    break;
-                }
+                CharacterBodySample nextExact = samples[insertionIndex];
+                return new BodySelection(nextExact.BeforeBody, nextExact.Tick, nextExact.Tick, ObservedWorldConstraintSamplingKind.Exact);
             }
+
+            bool hasLower = insertionIndex > 0;
+            bool hasUpper = insertionIndex < count;
+            CharacterBodySample lower = hasLower ? samples[insertionIndex - 1] : default;
+            CharacterBodySample upper = hasUpper ? samples[insertionIndex] : default;
             if (hasLower && hasUpper)
             {
                 Float32Scalar amount = Float32Scalar.FromDouble(
@@ -589,13 +673,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     upper.Tick,
                     ObservedWorldConstraintSamplingKind.Interpolation);
             }
-            if (!hasLower && allowFirstBefore)
+            if (!hasLower && allowFirstBefore && count > 0 && ticks[0] == targetTick + 1)
             {
-                KeyValuePair<ulong, CharacterBodySample> first = First(samples);
-                if (first.Key == targetTick + 1)
-                    return new BodySelection(first.Value.BeforeBody, first.Value.Tick, first.Value.Tick, ObservedWorldConstraintSamplingKind.Exact);
+                return new BodySelection(samples[0].BeforeBody, samples[0].Tick, samples[0].Tick, ObservedWorldConstraintSamplingKind.Exact);
             }
-            CharacterBodySample latest = Last(samples).Value;
+            if (count == 0)
+                throw new InvalidOperationException("Remote body timeline Actor track is empty.");
+            CharacterBodySample latest = samples[count - 1];
             if (targetTick < latest.Tick.Value)
                 throw new InvalidOperationException($"Remote Actor '{actorId}' has no observation interval for Tick '{targetTick}'.");
             ulong extrapolationTicks = targetTick - latest.Tick.Value;
@@ -637,68 +721,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 amount < Float32Scalar.FromDouble(0.5d) ? from.Collision : to.Collision);
         }
 
-        static void Add(
-            SortedDictionary<ulong, CharacterBodySample> samples,
-            CharacterBodySample sample)
-        {
-            if (samples.TryGetValue(sample.Tick.Value, out CharacterBodySample existing))
-            {
-                if (!SampleEquals(existing, sample))
-                    throw new InvalidOperationException($"Remote body timeline Tick '{sample.Tick}' changed canonical value.");
-                return;
-            }
-            KeyValuePair<ulong, CharacterBodySample>? previous = null;
-            KeyValuePair<ulong, CharacterBodySample>? next = null;
-            foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
-            {
-                if (pair.Key < sample.Tick.Value)
-                    previous = pair;
-                else
-                {
-                    next = pair;
-                    break;
-                }
-            }
-            if (previous.HasValue && previous.Value.Key + 1 == sample.Tick.Value &&
-                !WorldSolveBatchRequest.BodyEquals(previous.Value.Value.FinalBody, sample.BeforeBody))
-            {
-                throw new InvalidOperationException("Remote body timeline contains a discontinuous consecutive BeforeBody.");
-            }
-            if (next.HasValue && sample.Tick.Value + 1 == next.Value.Key &&
-                !WorldSolveBatchRequest.BodyEquals(sample.FinalBody, next.Value.Value.BeforeBody))
-            {
-                throw new InvalidOperationException("Remote body timeline contains a discontinuous consecutive FinalBody.");
-            }
-            samples.Add(sample.Tick.Value, sample);
-        }
-
         static bool SampleEquals(CharacterBodySample left, CharacterBodySample right) =>
             left.ActorId == right.ActorId && left.Tick == right.Tick &&
             WorldSolveBatchRequest.BodyEquals(left.BeforeBody, right.BeforeBody) &&
             WorldSolveBatchRequest.BodyEquals(left.FinalBody, right.FinalBody) &&
             left.AppliedDisplacement == right.AppliedDisplacement &&
             left.AppliedYawDegrees == right.AppliedYawDegrees;
-
-        static KeyValuePair<ulong, CharacterBodySample> First(
-            SortedDictionary<ulong, CharacterBodySample> samples)
-        {
-            foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
-                return pair;
-            throw new InvalidOperationException("Remote body timeline Actor track is empty.");
-        }
-
-        static KeyValuePair<ulong, CharacterBodySample> Last(
-            SortedDictionary<ulong, CharacterBodySample> samples)
-        {
-            KeyValuePair<ulong, CharacterBodySample> last = default;
-            bool found = false;
-            foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
-            {
-                last = pair;
-                found = true;
-            }
-            return found ? last : throw new InvalidOperationException("Remote body timeline Actor track is empty.");
-        }
 
         readonly struct BodySelection
         {

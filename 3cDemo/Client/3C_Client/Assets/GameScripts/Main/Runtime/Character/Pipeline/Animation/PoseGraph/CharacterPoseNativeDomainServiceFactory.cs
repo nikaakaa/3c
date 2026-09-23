@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> m_ClockPolicyFactory;
         readonly Dictionary<CharacterPresentationPoseSourceSlot, int> m_SourceIndexBySlot;
         readonly Dictionary<PoseNodeId, int> m_IndexByNode;
+        readonly int m_AnimationContributionCapacity;
         ulong m_NextSubgraphInstanceSequence = 1;
 
         internal CharacterPoseNativeDomainServiceFactory(
@@ -64,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PhysicsScene = physicsScene;
             m_SourceIndexBySlot = BuildSourceIndexes();
             m_IndexByNode = BuildNodeIndexes();
+            m_AnimationContributionCapacity = CalculateAnimationContributionCapacity();
             resources.RequireSourceCatalogComplete(profile);
             m_SourceCatalog = resources.CreateSourceCatalog(m_Rig, m_ResourceScope);
         }
@@ -122,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 source,
                 CollectPlayerNodeIds(),
                 ResolveFootMotion,
-                m_Resources.ContributionCount);
+                m_AnimationContributionCapacity);
             var constraintService = new CharacterPoseNativeConstraintServiceBinding(
                 constraints,
                 worldContext,
@@ -178,7 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 managedHandlers,
                 CompilePropertyBindings(),
                 CollectPlayerNodeIds(),
-                        m_Resources.ContributionCount),
+                        m_AnimationContributionCapacity),
                 constraints,
                 worldContext,
                 owned);
@@ -269,10 +271,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasNode node,
             CharacterPoseNativeInstanceContext context)
         {
-            int contributionCapacity = m_Resources.ContributionCount;
-            if (node.Kind == CharacterPoseNodeKind.AnimationSlot ||
-                node.Kind == CharacterPoseNodeKind.BlendStack)
+            return new CharacterPoseNativeNodePoseBuffer(
+                m_IndexByNode[node.NodeId],
+                m_Rig.PoseBoneCount,
+                Math.Max(1, m_InputContract.Parameters.Count),
+                m_AnimationContributionCapacity);
+        }
+
+        int CalculateAnimationContributionCapacity()
+        {
+            int capacity = 0;
+            foreach (CharacterPoseCanvasGraph graph in m_Profile.PoseGraph.EnumerateGraphs())
+            foreach (CharacterPoseCanvasNode node in graph.Nodes)
             {
+                if (node.Kind == CharacterPoseNodeKind.ClipPlayer ||
+                    node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+                    node.Kind == CharacterPoseNodeKind.SelectedPosePlayer)
+                {
+                    capacity = checked(capacity + 1);
+                    continue;
+                }
+                if (node.Kind != CharacterPoseNodeKind.AnimationSlot &&
+                    node.Kind != CharacterPoseNodeKind.BlendStack)
+                    continue;
                 CharacterAnimationSlotPosePayload slotPayload =
                     node.Payload as CharacterAnimationSlotPosePayload;
                 CharacterBlendStackPosePayload stackPayload =
@@ -287,13 +308,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (policy == null)
                     throw new InvalidOperationException(
                         $"Pose Blend Stack '{node.NodeId}' has no valid blend policy resource.");
-                contributionCapacity = checked(policy.StackPolicy.MaxActiveSourceEntries + 1);
+                capacity = checked(capacity + policy.StackPolicy.MaxActiveSourceEntries + 1);
             }
-            return new CharacterPoseNativeNodePoseBuffer(
-                m_IndexByNode[node.NodeId],
-                m_Rig.PoseBoneCount,
-                Math.Max(1, m_InputContract.Parameters.Count),
-                contributionCapacity);
+            if (capacity == 0)
+                throw new InvalidOperationException("Pose graph has no animation contribution sources.");
+            return capacity;
         }
 
         ulong AllocateSubgraphInstanceId(ulong parentInstanceId, string subgraphNodeId)

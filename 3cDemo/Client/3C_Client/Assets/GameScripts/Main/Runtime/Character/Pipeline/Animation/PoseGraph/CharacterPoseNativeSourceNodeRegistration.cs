@@ -485,9 +485,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         stack) ??
                         throw new InvalidOperationException(
                             $"Pose native Animation Slot factory returned no Action source for '{node.NodeId}'.");
-                    innerBuffer = m_BufferFactory(node, context) ??
+                    outputBuffer = m_BufferFactory(node, context) ??
                         throw new InvalidOperationException(
-                            $"Pose native slot buffer factory returned no inner buffer for '{node.NodeId}'.");
+                            $"Pose native slot buffer factory returned no output buffer for '{node.NodeId}'.");
+                    innerBuffer = new CharacterPoseNativeNodePoseBuffer(
+                        outputBuffer.PhysicalPlayerIndex,
+                        outputBuffer.BoneCount,
+                        outputBuffer.ParameterCount,
+                        checked(stack.SourceCapacity + 1));
                     slotSource = new CharacterPoseNativeAnimationSlotSourceBinding(
                         stack,
                         actionSource,
@@ -506,9 +511,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                     nodeId,
                                     sourceId)),
                         innerBuffer);
-                    outputBuffer = m_BufferFactory(node, context) ??
-                        throw new InvalidOperationException(
-                            $"Pose native slot buffer factory returned no output buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeAnimationSlotHandler(
                         node.NodeId,
                         node.AnimationSlotId,

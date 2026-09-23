@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using ThirdPersonSimulation;
@@ -70,7 +71,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             Array.Sort(actors);
             if (actors.Length == 0)
                 throw new ArgumentException("Authority Source expected Actor roster is empty.", nameof(expectedActors));
-            for (int i = 0; i < actors.Count; i++)
+            for (int i = 0; i < actors.Length; i++)
             {
                 if (!actors[i].IsValid || i > 0 && actors[i - 1] == actors[i])
                     throw new ArgumentException("Authority Source expected roster contains an invalid or duplicate ActorId.", nameof(expectedActors));
@@ -240,7 +241,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     continue;
                 if (roster.Roster.Count != m_ExpectedActors.Length)
                     Fail("authority_roster_count_mismatch", "Authority roster lock does not match the expected Actor count.");
-                for (int i = 0; i < m_ExpectedActors.Count; i++)
+                for (int i = 0; i < m_ExpectedActors.Length; i++)
                 {
                     if (roster.Roster[i].ActorId != m_ExpectedActors[i])
                         Fail("authority_roster_route_mismatch", "Authority roster lock does not match the expected Actor routes.");
@@ -258,7 +259,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
                 else
                 {
-                    for (int i = 0; i < m_Roster.Count; i++)
+                    for (int i = 0; i < m_Roster.Length; i++)
                     {
                         if (!m_Roster[i].Equals(roster.Roster[i]))
                             Fail("authority_roster_changed", "Authority roster changed after it was locked.");

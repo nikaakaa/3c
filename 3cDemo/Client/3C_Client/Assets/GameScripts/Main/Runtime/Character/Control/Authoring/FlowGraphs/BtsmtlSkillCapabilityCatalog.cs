@@ -860,6 +860,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return remove.EffectTagQuery;
                 case "providerOwnerId" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
                     return remove.ProviderOwnerId;
+                case "activationEntryId" when node is BtsmtlSkillActivationEntryFlowNode entry:
+                    return entry.ActivationEntryId;
                 case "windowType" when node is IActionWindowAuthoring window:
                     return window.WindowType;
                 case "admissionProfile" when node is BtsmtlSkillCanActivateActionFlowNode admission:

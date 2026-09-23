@@ -9,6 +9,17 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
+    [Name("技能激活入口"), Category("BTSMTL/动作条件")]
+    [BtsmtlSkillNodeKind("activation-entry")]
+    [BtsmtlSkillAuthoringField("activationEntryId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    public sealed class BtsmtlSkillActivationEntryFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] string m_ActivationEntryId = string.Empty;
+        public string ActivationEntryId => m_ActivationEntryId ?? string.Empty;
+        public void SetActivationEntryId(string entryId) => m_ActivationEntryId = entryId ?? string.Empty;
+        protected override void RegisterPorts() => AddValueOutput<bool>("入口匹配", RejectAuthoringValue<bool>, "m_Output");
+    }
+
     [Name("动作上下文激活中"), Category("BTSMTL/动作条件")]
     [BtsmtlSkillNodeKind("action-context-active")]
     [BtsmtlSkillNodeAuthoringReference(

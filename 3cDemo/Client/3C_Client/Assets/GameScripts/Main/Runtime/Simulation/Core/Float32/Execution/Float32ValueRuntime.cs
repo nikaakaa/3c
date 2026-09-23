@@ -51,7 +51,10 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.InputScalar:
 						result = AbilityStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
 						break;
-                case SimulationOperationCode.TimelineTime:
+                case SimulationOperationCode.ActivationEntry:
+                        result = AbilityStateValue.FromBoolean(m_Actions.IsActivationEntry(operation.Text0));
+                        break;
+                    case SimulationOperationCode.TimelineTime:
                         result = AbilityStateValue.FromScalar(Float32Scalar.FromSingle(m_Frame.TreeClipInvocation.Time.ToSingle()));
                         break;
                 case SimulationOperationCode.InputVector2:

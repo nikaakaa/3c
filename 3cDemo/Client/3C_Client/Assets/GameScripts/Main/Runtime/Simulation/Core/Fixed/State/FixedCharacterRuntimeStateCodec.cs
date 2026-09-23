@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation.Fixed
     internal static class FixedCharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 10;
-        const string HashIdentity = "fixed-character-runtime-state-hash/8";
-        public const string CodecIdentity = "fixed-character-runtime-state/8";
+        const int Version = 11;
+        const string HashIdentity = "fixed-character-runtime-state-hash/9";
+        public const string CodecIdentity = "fixed-character-runtime-state/9";
 
         public static byte[] Write(FixedCharacterRuntimeState state)
         {
@@ -535,6 +535,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationExecutionSourceCodec.Write(writer, request.Source);
                 WriteEquipmentContext(writer, request.EquipmentContext);
                 writer.WriteUInt64(request.ReplacementActionInstanceId);
+                writer.WriteString(request.ActivationEntryId);
             }
         }
 
@@ -562,10 +563,12 @@ namespace ThirdPersonSimulation.Fixed
                     ReadTarget(reader),
                     SimulationExecutionSourceCodec.Read(reader),
                     ReadEquipmentContext(reader, equipmentLayout),
-                    reader.ReadUInt64());
+                    reader.ReadUInt64(),
+                    reader.ReadString());
                 if (!request.IsValid)
                     throw new InvalidDataException("Fixed Action activation request identity is invalid.");
                 RequireSkillExecution(request.SkillId, request.SkillEntryOperation, installations);
+                RequireActivationEntry(request.SkillId, request.ActivationEntryId, installations);
                 requests[requestCount++] = request;
             }
             if (requestCount != count)
@@ -603,6 +606,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteString(action.Reason);
                 WriteEquipmentContext(writer, action.EquipmentContext);
                 writer.WriteUInt64(action.SegmentGeneration);
+                writer.WriteString(action.ActivationEntryId);
             }
         }
 
@@ -639,10 +643,12 @@ namespace ThirdPersonSimulation.Fixed
                     reader.ReadUInt64(),
                     reader.ReadString(),
                     ReadEquipmentContext(reader, equipmentLayout),
-                    reader.ReadUInt64());
+                    reader.ReadUInt64(),
+                    reader.ReadString());
                 if (!action.IsValid)
                     throw new InvalidDataException("Fixed Action instance identity is invalid.");
                 RequireSkillExecution(action.SkillId, action.SkillEntryOperation, installations);
+                RequireActivationEntry(action.SkillId, action.ActivationEntryId, installations);
                 actions[actionCount++] = action;
             }
             if (actionCount != count)
@@ -928,6 +934,21 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"Equipment Action Context '{context}' does not match the Equipment layout.");
             }
             return context;
+        }
+
+        static void RequireActivationEntry(
+            CharacterSkillId skillId,
+            string entryId,
+            FixedGameplayAbilityExecutionInstallationSet installations)
+        {
+            if (string.IsNullOrEmpty(entryId))
+                return;
+            var operations = installations.Require(skillId).Layout.Operations;
+            for (int i = 0; i < operations.Count; i++)
+                if (operations[i].Code == SimulationOperationCode.ActivationEntry &&
+                    string.Equals(operations[i].Text0, entryId, StringComparison.Ordinal))
+                    return;
+            throw new InvalidDataException($"Action activation entry '{entryId}' is absent from its installed Ability.");
         }
 
         static void RequireSkillExecution(

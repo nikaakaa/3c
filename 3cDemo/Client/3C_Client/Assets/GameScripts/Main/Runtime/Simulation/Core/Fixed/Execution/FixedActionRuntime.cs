@@ -131,6 +131,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool ActivateFromControl(CharacterControlAbilityRequest controlRequest)
         {
+            m_Actions.RequireActivationEntry(controlRequest.ActivationEntryId);
             if (controlRequest.EquipmentContext.IsValid &&
                 (m_EquipmentContext == null ||
                  !m_EquipmentContext.IsAbilityBinding(controlRequest.EquipmentContext, controlRequest.AbilityId)))
@@ -367,7 +368,8 @@ namespace ThirdPersonSimulation.Fixed
                     request.TargetSnapshot,
                     request.Source,
                     request.EquipmentContext,
-                    request.ReplacementActionInstanceId));
+                    request.ReplacementActionInstanceId,
+                    request.ActivationEntryId));
         }
 
         bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TryReadPendingRequest(
@@ -392,7 +394,8 @@ namespace ThirdPersonSimulation.Fixed
                 staged.TargetSnapshot,
                 staged.Source,
                 staged.EquipmentContext,
-                staged.ReplacementActionInstanceId);
+                staged.ReplacementActionInstanceId,
+                staged.ActivationEntryId);
             return true;
         }
 
@@ -442,7 +445,8 @@ namespace ThirdPersonSimulation.Fixed
                 request.StartTick,
                 0,
                 string.Empty,
-                request.EquipmentContext);
+                request.EquipmentContext,
+                activationEntryId: request.ActivationEntryId);
 
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>.WriteAction(
             FixedActionInstanceState action) => m_Actions.WriteState(action);

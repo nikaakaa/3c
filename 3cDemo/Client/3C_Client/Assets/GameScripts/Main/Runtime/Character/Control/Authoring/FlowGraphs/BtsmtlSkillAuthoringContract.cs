@@ -241,6 +241,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
             if (node is BtsmtlSkillActionContextActiveFlowNode contextActive && values.ContainsKey("actionContext"))
                 contextActive.SetActionContext((ActionContextSlot)values["actionContext"]);
+            if (node is BtsmtlSkillActivationEntryFlowNode activationEntry && values.ContainsKey("activationEntryId"))
+                activationEntry.SetActivationEntryId((string)values["activationEntryId"]);
             if (node is BtsmtlSkillActionWindowActiveFlowNode window && values.ContainsKey("windowType"))
                 window.SetWindowType((string)values["windowType"]);
             if (node is RequestCameraStateNode cameraState)

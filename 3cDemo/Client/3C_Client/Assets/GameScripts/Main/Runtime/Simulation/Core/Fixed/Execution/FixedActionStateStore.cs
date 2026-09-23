@@ -28,7 +28,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong lastTransitionSourceTick,
             string reason,
             EquipmentActionContext equipmentContext = default,
-            ulong segmentGeneration = 0)
+            ulong segmentGeneration = 0,
+            string activationEntryId = "")
         {
             ActionId = actionId ?? string.Empty;
             SkillId = skillId;
@@ -51,6 +52,7 @@ namespace ThirdPersonSimulation.Fixed
             Reason = reason ?? string.Empty;
             EquipmentContext = equipmentContext;
             SegmentGeneration = segmentGeneration;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
         public string ActionId { get; }
@@ -58,6 +60,7 @@ namespace ThirdPersonSimulation.Fixed
         public OperationHandle SkillEntryOperation { get; }
         public ulong SkillExecutionGeneration { get; }
         public ulong SegmentGeneration { get; }
+        public string ActivationEntryId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
@@ -79,6 +82,7 @@ namespace ThirdPersonSimulation.Fixed
             SkillId.Equals(other.SkillId) &&
             SkillEntryOperation.Equals(other.SkillEntryOperation) &&
             SkillExecutionGeneration == other.SkillExecutionGeneration &&
+            string.Equals(ActivationEntryId, other.ActivationEntryId, StringComparison.Ordinal) &&
             SegmentGeneration == other.SegmentGeneration &&
             string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
             InstanceId == other.InstanceId &&
@@ -142,7 +146,8 @@ namespace ThirdPersonSimulation.Fixed
                 sourceTick,
                 reason,
                 EquipmentContext,
-                SegmentGeneration);
+                SegmentGeneration,
+                ActivationEntryId);
         }
 
         public FixedActionInstanceState WithSegmentGeneration(ulong segmentGeneration)
@@ -168,7 +173,8 @@ namespace ThirdPersonSimulation.Fixed
                 LastTransitionSourceTick,
                 Reason,
                 EquipmentContext,
-                segmentGeneration);
+                segmentGeneration,
+                ActivationEntryId);
         }
 
         public FixedActionInstanceState WithSkillExecution(OperationHandle entryOperation, ulong generation)
@@ -194,7 +200,8 @@ namespace ThirdPersonSimulation.Fixed
                 LastTransitionSourceTick,
                 Reason,
                 EquipmentContext,
-                SegmentGeneration);
+                SegmentGeneration,
+                ActivationEntryId);
         }
     }
 
@@ -348,6 +355,23 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
+        public bool IsActivationEntry(string entryId) =>
+            TryGetCurrentSkillExecution(out FixedActionInstanceState action) &&
+            string.Equals(action.ActivationEntryId, entryId, StringComparison.Ordinal);
+
+        public void RequireActivationEntry(string entryId)
+        {
+            if (string.IsNullOrEmpty(entryId))
+                return;
+            for (int i = 0; i < m_Ability.Operations.Count; i++)
+            {
+                var operation = m_Ability.Operations[i];
+                if (operation.Code == SimulationOperationCode.ActivationEntry &&
+                    string.Equals(operation.Text0, entryId, StringComparison.Ordinal))
+                    return;
+            }
+            throw new InvalidOperationException($"Ability has no activation entry '{entryId}'.");
+        }
         public bool IsCurrentExecutionContextActive()
         {
             return TryGetCurrentSkillExecution(out FixedActionInstanceState action) && action.IsActive;

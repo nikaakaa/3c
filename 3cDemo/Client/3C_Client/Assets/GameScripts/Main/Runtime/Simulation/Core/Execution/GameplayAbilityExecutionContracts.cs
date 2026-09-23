@@ -37,7 +37,8 @@ namespace ThirdPersonSimulation
             TTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
             EquipmentActionContext equipmentContext = default,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            string activationEntryId = "")
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             SkillId = skillId;
@@ -53,6 +54,7 @@ namespace ThirdPersonSimulation
             Source = source;
             EquipmentContext = equipmentContext;
             ReplacementActionInstanceId = replacementActionInstanceId;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
         public string ActionId { get; }
@@ -67,6 +69,7 @@ namespace ThirdPersonSimulation
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public string ActivationEntryId { get; }
         public bool Equals(SimulationActionActivationRequestState<TTargetSnapshot> other) =>
             string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
             SkillId.Equals(other.SkillId) &&
@@ -79,7 +82,8 @@ namespace ThirdPersonSimulation
             TargetSnapshot.Equals(other.TargetSnapshot) &&
             Source.Equals(other.Source) &&
             EquipmentContext.Equals(other.EquipmentContext) &&
-            ReplacementActionInstanceId == other.ReplacementActionInstanceId;
+            ReplacementActionInstanceId == other.ReplacementActionInstanceId &&
+            string.Equals(ActivationEntryId, other.ActivationEntryId, StringComparison.Ordinal);
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
@@ -138,7 +142,8 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source,
             EquipmentActionContext equipmentContext,
             TOperation operation = null,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            string activationEntryId = "")
         {
             if (!source.IsValid)
                 throw new ArgumentException("Action activation source is invalid.", nameof(source));
@@ -153,6 +158,7 @@ namespace ThirdPersonSimulation
             EquipmentContext = equipmentContext;
             Operation = operation;
             ReplacementActionInstanceId = replacementActionInstanceId;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
         public CharacterSkillId SkillId { get; }
@@ -166,6 +172,7 @@ namespace ThirdPersonSimulation
         public EquipmentActionContext EquipmentContext { get; }
         public TOperation Operation { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public string ActivationEntryId { get; }
     }
 
     internal readonly struct ActionSkillActivationRequest<TTargetSnapshot>
@@ -183,7 +190,8 @@ namespace ThirdPersonSimulation
             TTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
             EquipmentActionContext equipmentContext,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            string activationEntryId = "")
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
@@ -202,6 +210,7 @@ namespace ThirdPersonSimulation
             Source = source;
             EquipmentContext = equipmentContext;
             ReplacementActionInstanceId = replacementActionInstanceId;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
         public string ActionId { get; }
@@ -216,6 +225,7 @@ namespace ThirdPersonSimulation
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public string ActivationEntryId { get; }
     }
 
     internal interface IActionSkillCommitPort<TTargetSnapshot, TActionState>

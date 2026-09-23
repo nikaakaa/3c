@@ -81,7 +81,8 @@ namespace ThirdPersonSimulation
             string targetInputValueId = "",
             string targetKey = "",
             EquipmentActionContext equipmentContext = default,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            string activationEntryId = "")
         {
             if (!source.IsCharacterControl || !abilityId.IsValid)
                 throw new ArgumentException("Character control Ability request identity is incomplete.");
@@ -93,6 +94,7 @@ namespace ThirdPersonSimulation
             TargetKey = targetKey ?? string.Empty;
             EquipmentContext = equipmentContext;
             ReplacementActionInstanceId = replacementActionInstanceId;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
         public SimulationExecutionSource Source { get; }
@@ -103,6 +105,7 @@ namespace ThirdPersonSimulation
         public string TargetKey { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public string ActivationEntryId { get; }
     }
 
     public enum CharacterControlAbilityStopMode : byte

@@ -27,7 +27,8 @@ namespace ThirdPersonSimulation
             ulong lastTransitionSourceTick,
             string reason,
             EquipmentActionContext equipmentContext = default,
-            ulong segmentGeneration = 0)
+            ulong segmentGeneration = 0,
+            string activationEntryId = "")
         {
 			ActionId = actionId ?? string.Empty;
 			SkillId = skillId;
@@ -50,6 +51,7 @@ namespace ThirdPersonSimulation
             Reason = reason ?? string.Empty;
             EquipmentContext = equipmentContext;
             SegmentGeneration = segmentGeneration;
+            ActivationEntryId = activationEntryId ?? string.Empty;
         }
 
 		public string ActionId { get; }
@@ -57,6 +59,7 @@ namespace ThirdPersonSimulation
 		public OperationHandle SkillEntryOperation { get; }
 		public ulong SkillExecutionGeneration { get; }
 		public ulong SegmentGeneration { get; }
+        public string ActivationEntryId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
@@ -79,6 +82,7 @@ namespace ThirdPersonSimulation
 			SkillEntryOperation.Equals(other.SkillEntryOperation) &&
 			SkillExecutionGeneration == other.SkillExecutionGeneration &&
 			SegmentGeneration == other.SegmentGeneration &&
+            string.Equals(ActivationEntryId, other.ActivationEntryId, StringComparison.Ordinal) &&
 			string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
 			InstanceId == other.InstanceId &&
 			PredictionKey == other.PredictionKey &&
@@ -141,7 +145,7 @@ namespace ThirdPersonSimulation
                 sourceTick,
                 reason,
 				EquipmentContext,
-            SegmentGeneration);
+            SegmentGeneration, ActivationEntryId);
 		}
 
 		public Float32ActionInstanceState WithSegmentGeneration(ulong segmentGeneration)
@@ -167,7 +171,7 @@ namespace ThirdPersonSimulation
 				LastTransitionSourceTick,
 				Reason,
 				EquipmentContext,
-				segmentGeneration);
+				segmentGeneration, ActivationEntryId);
 		}
 
 		public Float32ActionInstanceState WithSkillExecution(OperationHandle entryOperation, ulong generation)
@@ -193,7 +197,7 @@ namespace ThirdPersonSimulation
 				LastTransitionSourceTick,
 				Reason,
 				EquipmentContext,
-            SegmentGeneration);
+            SegmentGeneration, ActivationEntryId);
 		}
     }
 
@@ -347,6 +351,23 @@ namespace ThirdPersonSimulation
 			return false;
 		}
 
+        public bool IsActivationEntry(string entryId) =>
+            TryGetCurrentSkillExecution(out Float32ActionInstanceState action) &&
+            string.Equals(action.ActivationEntryId, entryId, StringComparison.Ordinal);
+
+        public void RequireActivationEntry(string entryId)
+        {
+            if (string.IsNullOrEmpty(entryId))
+                return;
+            for (int i = 0; i < m_Ability.Operations.Count; i++)
+            {
+                var operation = m_Ability.Operations[i];
+                if (operation.Code == SimulationOperationCode.ActivationEntry &&
+                    string.Equals(operation.Text0, entryId, StringComparison.Ordinal))
+                    return;
+            }
+            throw new InvalidOperationException($"Ability has no activation entry '{entryId}'.");
+        }
         public bool IsCurrentExecutionContextActive()
         {
             return TryGetCurrentSkillExecution(out Float32ActionInstanceState action) && action.IsActive;

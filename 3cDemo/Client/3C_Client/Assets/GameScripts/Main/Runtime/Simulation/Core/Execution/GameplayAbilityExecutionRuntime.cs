@@ -653,7 +653,8 @@ namespace ThirdPersonSimulation
                     targetSnapshot,
                     controlRequest.Source,
                     controlRequest.EquipmentContext,
-                    replacementActionInstanceId: controlRequest.ReplacementActionInstanceId),
+                    replacementActionInstanceId: controlRequest.ReplacementActionInstanceId,
+                    activationEntryId: controlRequest.ActivationEntryId),
                 profile);
         }
 
@@ -835,7 +836,8 @@ namespace ThirdPersonSimulation
                 targetSnapshot,
                 candidate.Source,
                 candidate.EquipmentContext,
-                candidate.ReplacementActionInstanceId);
+                candidate.ReplacementActionInstanceId,
+                candidate.ActivationEntryId);
             return true;
         }
 

@@ -399,8 +399,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 result.Motion.LocomotionTimeline,
                 resetSequence,
                 factLineage,
-                CharacterPresentationTrajectoryIntent.ResolvePoseDiscontinuityIdentity(
-                    in movementClock));
+                resetSequence);
         }
 
         bool RequiresSelectedPresentationReset(

@@ -84,10 +84,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public CharacterLocomotionPresentationFactLineage LocomotionFactLineage { get; }
         public ulong PoseDiscontinuityIdentity { get; }
 
-        public static ulong ResolvePoseDiscontinuityIdentity(
-            in CommittedMovementPlaybackClock movementPlaybackClock) =>
-            movementPlaybackClock.IsValid ? movementPlaybackClock.Generation : 1;
-
         public static string ResolveMovementModeId(
             string locomotionOwnerIdentity,
             string actionOwnerIdentity,

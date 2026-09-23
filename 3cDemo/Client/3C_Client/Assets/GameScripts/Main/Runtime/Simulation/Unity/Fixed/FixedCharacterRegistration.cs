@@ -373,8 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 result.Motion.LocomotionTimeline,
                 resetSequence,
                 factLineage,
-                CharacterPresentationTrajectoryIntent.ResolvePoseDiscontinuityIdentity(
-                    in movementClock));
+                resetSequence);
         }
 
         public void Dispose()

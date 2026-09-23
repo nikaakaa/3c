@@ -501,7 +501,7 @@ namespace ThirdPersonSimulation.Fixed
             string windowType = operation.Text0;
             if (string.IsNullOrWhiteSpace(windowType))
                 throw new InvalidOperationException($"ActionWindow query '{SourcePath(operation)}' has no WindowType.");
-            FixedActionInstanceState active = m_Actions.FindOnlyActive();
+            FixedActionInstanceState active = ResolveBlackboardActionContext(operation, false);
             if (!active.IsActive)
             {
                 if (m_Trace.Enabled)

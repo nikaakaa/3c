@@ -484,7 +484,7 @@ namespace ThirdPersonSimulation
             string windowType = operation.Text0;
             if (string.IsNullOrWhiteSpace(windowType))
                 throw new InvalidOperationException($"ActionWindow query '{SourcePath(operation)}' has no WindowType.");
-            Float32ActionInstanceState active = m_Actions.FindOnlyActive();
+            Float32ActionInstanceState active = ResolveBlackboardActionContext(operation, false);
             if (!active.IsActive)
             {
                 if (m_Trace.Enabled)

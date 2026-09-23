@@ -5753,3 +5753,14 @@
 - `ServerAuthoritativeRemoteBodyTimeline` 内部按 Actor 和 Tick 的 `SortedDictionary` 未在本步扩大范围；`GetReplayAfter` 输出数组属于对外 replay 结果，也未在本步改租约。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 Prediction 输入回放、journal seal、checkpoint 编解码、rollback/authority 恢复和 Player 分配采样。
+
+## 2026-09-23 远端Body时间线定容轨道化
+
+对应 tasks.md 的 5.286；父项 2.5 保持未勾选。代码提交为 `002d13104`。
+
+- `ServerAuthoritativeRemoteBodyTimeline` 原先用 `SortedDictionary<ActorId, SortedDictionary<ulong, CharacterBodySample>>` 保存远端 Body。锁定 roster 在准备期排序后不再变化，现在每个 Actor 都持有准备期定容的 `ulong` Tick 轨道和 `CharacterBodySample` 轨道，另有显式 count；运行期按二分定位 Actor 和 Tick。
+- `Observe` 继续按整批处理，不把“每条插入后立即淘汰”伪装成等价语义。它先用 `ArrayPool` 租用当前轨道加批次长度的临时合并轨道，插入重复 Tick 仍要求 canonical 值一致，合并完成后统一检查相邻 Tick 连续性，再淘汰最旧并写回常驻轨道。淘汰数量继续累加，`finally` 归还临时轨道。
+- `Select` 的插值、外推、first-before 和异常检查改为数组下标读取；`Capture` 按有效数量复制最终 checkpoint 数组；`Restore` 校验 roster、容量和相邻连续性后原地写入常驻轨道。外层 Actor 树、Tick 树、树节点和集合枚举器分配删除。
+- `ServerAuthoritativeRemoteBodySelectionFrame` 每次 `Select` 仍生成正式输出数组，checkpoint 的长期结果数组也仍按各自寿命分配；这两项不属于本步的临时中转。无效批次现在在写回前抛出，不再留下原实现中的半批插入。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做远端表现包回放、多 Actor 插值/外推对比、checkpoint 编解码恢复和 Player 分配采样。

@@ -566,6 +566,7 @@
 - [x] 5.283 表现 Body 流合同改为精确数组加数量；Fixed/Rollback 提交使用准备期 scratch，ServerAuthoritative 远端使用 ArrayPool 同步租还，删除每次 List 或可增长只读包装
 - [x] 5.284 Fixed/Rollback 角色 pending Body/Trajectory/Equipment SortedDictionary 改为准备期有界有序数组加显式 count；同 tick 替换、容量检查和提交顺序不变，删除运行期树节点和 Equipment 选择小数组分配
 - [x] 5.285 Float32 Prediction History 运行时记录改为准备期有界平行数组加显式 count；Add 删除整表复制和 checkpoint 往返，查找改用二分，checkpoint 与解码 Tick 数组合同保持严格升序
+- [x] 5.286 ServerAuthoritative 远端 Body Timeline 按锁定 roster 改为准备期定容 tick/sample 轨道；整批 Observe 用 ArrayPool 合并校验后统一淘汰，删除运行期 Actor/Tick 树和枚举器分配
 
 ## 6. UI、资源、渲染和生命周期
 

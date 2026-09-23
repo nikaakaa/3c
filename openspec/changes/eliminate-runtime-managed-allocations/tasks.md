@@ -571,6 +571,7 @@
 - [x] 5.288 RemoteBody Selection 输出改为 Span 填充；schedule 直接写入最终 selectedBodies 区间，HardRecovery 只生成最终 owned Body 数组，删除每 tick 中转数组
 - [x] 5.289 Prediction correction 诊断的 baseline 差异描述移入 sink 启用分支；关闭诊断的稳态帧不再执行历史匹配和哈希插值
 - [x] 5.290 Prediction BuildPlan 复用 Character Runtime 准备期 Roster Descriptor；replay clock 改为 RestoreReplay 路径构造，普通帧删除 roster 数组/哈希重建和无 replay 字符串
+- [x] 5.291 ServerAuthoritative Prediction pending request 改为准备期 request capacity 平行数组加显式 count；插入二分原地排序，checkpoint 和解码保持 Sequence 升序，删除 SortedDictionary 树节点
 
 ## 6. UI、资源、渲染和生命周期
 

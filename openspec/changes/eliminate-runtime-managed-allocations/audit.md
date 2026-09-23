@@ -5803,3 +5803,13 @@
 - `replayClock` 原先每帧都执行 `ClockId + ".replay"` 插值。现在只在 `RestoreReplay` 存在 replay 记录时构造；replay tick source 和 source mapping 的名称、顺序、Kind 不变。普通 current-only 稳态帧不再生成这个字符串。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 Prediction schedule 回放、RestoreReplay 回放、roster hash 对比和 Player 分配采样。
+
+## 2026-09-23 预测pending请求数组化
+
+对应 tasks.md 的 5.291；父项 2.5 保持未勾选。代码提交为 `465294626`。
+
+- `ServerAuthoritativePredictionConfirmationState` 原先用 `SortedDictionary<ulong, SimulationInputRequest>` 保存 pending request。现在按准备期 `requestCapacity` 创建 Sequence 数组和请求数组，用显式 count 表示有效数量；重复 Sequence 仍校验 RequestId、SourceTick、ExpireSimulationTick 和 Priority，新 Sequence 按二分位置原地下移插入，容量耗尽仍拒绝。
+- `ScheduleRequests` 继续先保留整批 incoming，再在消费时按有效数量复制出最终 owned 请求结果并清空 count。不消费路径继续返回共享空数组。Ack、Baseline 和 Capture 直接从常驻数组复制最终 checkpoint 请求结果，不再经过字典视图或中间树枚举。
+- Correction checkpoint 删除接受 `SortedDictionary` 的旧工厂，构造时要求 pending Sequence 严格升序。wire 解码先原地按 Sequence 排序，再检查重复，最后进入 owned 数组 checkpoint；Restore 校验数量、容量和 Sequence 升序后原地写入常驻轨道。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 prediction request 保留/消费回放、Ack/Baseline checkpoint 编解码恢复和 Player 分配采样。

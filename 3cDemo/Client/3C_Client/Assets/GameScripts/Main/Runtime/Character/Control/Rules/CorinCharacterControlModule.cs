@@ -29,8 +29,8 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly CharacterControlParameterId s_MovingTurnAngleThreshold = new CharacterControlParameterId("MovingTurnAngleThreshold");
         static readonly SimulationInputValueId s_MoveAxis = new SimulationInputValueId("MoveAxis");
         static readonly SimulationInputValueId s_LookAxis = new SimulationInputValueId("LookAxis");
-        static readonly SimulationInputValueId s_RushHeld = new SimulationInputValueId("RushHeld");
         static readonly string s_AttackRequest = "Attack";
+        static readonly string s_RushRequest = "Rush";
         static readonly string s_DodgeRequest = "Dodge";
         static readonly string s_ActionTarget = "ActionTarget";
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
@@ -104,8 +104,6 @@ namespace ThirdPersonCharacter.Control.Rules
             m_State.WriteInt32(s_MotionElapsed, 0);
             if (stateId == Idle)
                 m_State.WriteBoolean(s_DirectionalDodgeRunIntent, false);
-            else if (stateId == RunLoop)
-                m_State.WriteBoolean(s_DirectionalDodgeRunIntent, false);
             Trace(stateId, default, "control_state_entered", $"state={stateId.Value}:tick={m_Context.Tick.Value}", m_Context.Tick.Value);
         }
 
@@ -163,9 +161,8 @@ namespace ThirdPersonCharacter.Control.Rules
                 "WalkStoppingToWalkStart" => MoveAbove(m_Read),
                 "RunStoppingToRunLoop" => MoveAbove(m_Read),
                 "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveBelow(m_Read),
-                "WalkLoopToRunLoop" => (m_State.ReadBoolean(s_DirectionalDodgeRunIntent) || SprintHeld(m_Read)) && MoveAbove(m_Read),
-                "WalkStartToRunLoop" => (m_State.ReadBoolean(s_DirectionalDodgeRunIntent) || SprintHeld(m_Read)) && MoveAbove(m_Read),
-                "RunLoopToWalkLoop" => !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && !SprintHeld(m_Read) && MoveAbove(m_Read),
+                "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
@@ -207,14 +204,20 @@ namespace ThirdPersonCharacter.Control.Rules
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
-            if (m_Read.HasInputRequest(s_AttackRequest))
+            if (m_Read.HasInputRequest(s_RushRequest))
             {
-                CharacterSkillId skill = SprintHeld(m_Read) && MoveAbove(m_Read)
-                    ? RushAttack
-                    : Attack;
                 m_Output.SubmitAbility(new CharacterControlAbilityRequest(
                     source,
-                    skill,
+                    RushAttack,
+                    s_RushRequest,
+                    true));
+                return;
+            }
+            if (m_Read.HasInputRequest(s_AttackRequest))
+            {
+                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
+                    source,
+                    Attack,
                     s_AttackRequest,
                     true,
                     s_ActionTarget));
@@ -267,7 +270,6 @@ namespace ThirdPersonCharacter.Control.Rules
 
         bool MoveAbove(ICharacterControlReadPort read) => read.CompareInputVector2Magnitude(s_MoveAxis, s_StopThreshold, CharacterControlNumericComparison.Greater);
         bool MoveBelow(ICharacterControlReadPort read) => read.CompareInputVector2Magnitude(s_MoveAxis, s_StopThreshold, CharacterControlNumericComparison.Less);
-        bool SprintHeld(ICharacterControlReadPort read) => read.ReadInputBoolean(s_RushHeld);
         static int MotionElapsed(ICharacterControlStateReadPort state) => state.ReadInt32(s_MotionElapsed);
         static int Ticks(in CharacterControlTickContext context, double seconds) => checked((int)Math.Ceiling(seconds * context.TickRate));
 
@@ -294,7 +296,6 @@ namespace ThirdPersonCharacter.Control.Rules
                     Transition("WalkLoopToWalkStopping", WalkLoop, WalkStopping, 1, 2),
                     Transition("WalkStoppingToIdle", WalkStopping, Idle, 100, 3),
                     Transition("RunLoopToRunStopping", RunLoop, RunStopping, 0, 4),
-                    Transition("RunLoopToWalkLoop", RunLoop, WalkLoop, 0, 14),
                     Transition("RunStoppingToIdle", RunStopping, Idle, 100, 5),
                     Transition("MovingTurnToRunLoop", MovingTurn, RunLoop, 100, 6),
                     Transition("WalkStartToWalkStopping", WalkStart, WalkStopping, 1, 7),
@@ -319,7 +320,7 @@ namespace ThirdPersonCharacter.Control.Rules
                     new CharacterControlParameterDescriptor(s_StopThreshold, SemanticValueKind.Number, 0.05d),
                     new CharacterControlParameterDescriptor(s_MovingTurnAngleThreshold, SemanticValueKind.Number, 135d)
                 },
-                new[] { s_MoveAxis, s_LookAxis, s_RushHeld },
+                new[] { s_MoveAxis, s_LookAxis },
                 new[]
                 {
                     new CharacterControlMotionDescriptor(s_WalkStartMotion, s_MoveAxis, 4.592d, 720d, CharacterControlMotionExecutionMode.Timed, 1.1d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),

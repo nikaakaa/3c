@@ -321,9 +321,6 @@ namespace ThirdPersonSimulation
             return Compare(value.Magnitude, m_ReadParameter(threshold), comparison);
         }
 
-        public bool ReadInputBoolean(SimulationInputValueId input) =>
-            ReadValue(input, SimulationInputValueKind.Boolean).Boolean;
-
         public bool CompareInputDirectionToBodyYaw(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,

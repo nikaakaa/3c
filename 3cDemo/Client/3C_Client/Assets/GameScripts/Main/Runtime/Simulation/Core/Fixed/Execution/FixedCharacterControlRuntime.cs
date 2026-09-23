@@ -637,6 +637,8 @@ namespace ThirdPersonSimulation.Fixed
             m_Control.Tick(in context, m_Read, m_StatePort, m_Output);
         }
 
+        public void ResolveAbilityOutputs() => m_Control.ResolveAbilityOutputs();
+
         static bool HasInputRequest(IFixedInputRequestStatePort state, string requestId)
         {
             SimulationInputRequestState request = state.GetInputRequest(requestId);

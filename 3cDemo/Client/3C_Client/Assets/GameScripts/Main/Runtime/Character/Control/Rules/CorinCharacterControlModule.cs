@@ -25,7 +25,6 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly CharacterControlStateFieldId s_LastTransition = new CharacterControlStateFieldId("control:character.corin.control:last-transition");
         static readonly CharacterControlStateFieldId s_MotionElapsed = new CharacterControlStateFieldId("control:character.corin.control:motion-elapsed-ticks");
         static readonly CharacterControlStateFieldId s_DirectionalDodgeRunIntent = new CharacterControlStateFieldId("control:character.corin.control:directional-dodge-run-intent");
-        static readonly CharacterControlStateFieldId s_DodgeForwardCompletionInstance = new CharacterControlStateFieldId("control:character.corin.control:dodge-forward-completion-instance");
         static readonly CharacterControlParameterId s_StopThreshold = new CharacterControlParameterId("StopThreshold");
         static readonly CharacterControlParameterId s_MovingTurnAngleThreshold = new CharacterControlParameterId("MovingTurnAngleThreshold");
         static readonly SimulationInputValueId s_MoveAxis = new SimulationInputValueId("MoveAxis");
@@ -132,13 +131,6 @@ namespace ThirdPersonCharacter.Control.Rules
             if (stateId != Idle)
                 m_State.WriteInt32(s_MotionElapsed, checked(elapsed + 1));
 
-            ulong completedDodgeForward = m_Read.CompletedAbilityInstanceId(DodgeForward);
-            if (completedDodgeForward != 0 &&
-                m_State.ReadUInt64(s_DodgeForwardCompletionInstance) != completedDodgeForward)
-            {
-                m_State.WriteUInt64(s_DodgeForwardCompletionInstance, completedDodgeForward);
-                m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
-            }
             SubmitAbilityRequests(stateId);
         }
 
@@ -229,7 +221,29 @@ namespace ThirdPersonCharacter.Control.Rules
                     s_AttackRequest,
                     true,
                     s_ActionTarget));
+                return;
             }
+        }
+
+        public void ResolveAbilityOutputs()
+        {
+            if (MoveAbove(m_Read))
+            {
+                CharacterControlStateId stateId = m_State.ReadState(s_ActiveState);
+                ResumeRunningAfterDodge(stateId, DodgeForward);
+                ResumeRunningAfterDodge(stateId, DodgeBack);
+            }
+        }
+
+        void ResumeRunningAfterDodge(CharacterControlStateId stateId, CharacterSkillId ability)
+        {
+            if (!m_Read.TryGetActiveAbilityInstanceId(ability, out ulong instanceId) ||
+                !m_Read.IsAbilityWindowActive(ability, "RecoveryOpen"))
+                return;
+            m_Output.SubmitAbilityStop(new CharacterControlAbilityStopRequest(
+                Source(stateId), ability, CharacterControlAbilityStopMode.Graceful,
+                "DodgeRecoveryMovement", instanceId, "RecoveryOpen"));
+            m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
         }
 
         bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId) =>
@@ -299,8 +313,7 @@ namespace ThirdPersonCharacter.Control.Rules
                     new CharacterControlStateFieldDescriptor(s_EnteredTick, CharacterControlStateValueKind.UInt64, CharacterControlStateSemantic.EnteredTick),
                     new CharacterControlStateFieldDescriptor(s_LastTransition, CharacterControlStateValueKind.Identity, CharacterControlStateSemantic.Transition),
                     new CharacterControlStateFieldDescriptor(s_MotionElapsed, CharacterControlStateValueKind.Int32, CharacterControlStateSemantic.StateValue),
-                    new CharacterControlStateFieldDescriptor(s_DirectionalDodgeRunIntent, CharacterControlStateValueKind.Boolean, CharacterControlStateSemantic.StateValue),
-                    new CharacterControlStateFieldDescriptor(s_DodgeForwardCompletionInstance, CharacterControlStateValueKind.UInt64, CharacterControlStateSemantic.StateValue)
+                    new CharacterControlStateFieldDescriptor(s_DirectionalDodgeRunIntent, CharacterControlStateValueKind.Boolean, CharacterControlStateSemantic.StateValue)
                 },
                 new[]
                 {

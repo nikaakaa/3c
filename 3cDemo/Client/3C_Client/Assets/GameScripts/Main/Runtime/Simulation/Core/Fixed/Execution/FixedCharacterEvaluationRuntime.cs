@@ -144,6 +144,8 @@ namespace ThirdPersonSimulation.Fixed
                     invocation.CopyMotionContributionsTo(motionContributions);
                 }
 
+                control.ResolveAbilityOutputs();
+
                 for (int i = 0; i < timelineAdvances.Count; i++)
                 {
                     actor.TimelineMotionReader.CopyPendingMotion(

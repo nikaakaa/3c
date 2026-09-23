@@ -29,6 +29,8 @@ namespace ThirdPersonSimulation
             ICharacterControlReadPort read,
             ICharacterControlStatePort state,
             ICharacterControlOutputPort output);
+
+        void ResolveAbilityOutputs();
     }
 
     public interface ICharacterControlReadPort

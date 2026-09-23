@@ -248,6 +248,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.BlackboardGet:
                 case SimulationOperationCode.InputBoolean:
                 case SimulationOperationCode.InputScalar:
+                case SimulationOperationCode.TimelineTime:
                 case SimulationOperationCode.InputVector2:
                 case SimulationOperationCode.InputVector2Magnitude:
                 case SimulationOperationCode.InputRequest:

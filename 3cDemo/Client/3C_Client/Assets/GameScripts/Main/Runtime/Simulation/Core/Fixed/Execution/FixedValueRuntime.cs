@@ -155,6 +155,9 @@ namespace ThirdPersonSimulation.Fixed
 					case SimulationOperationCode.InputBoolean:
 						result = AbilityStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
 						break;
+                    case SimulationOperationCode.TimelineTime:
+                        result = AbilityStateValue.FromScalar(m_Frame.TreeClipInvocation.Time);
+                        break;
 					case SimulationOperationCode.InputScalar:
 						result = AbilityStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
 						break;

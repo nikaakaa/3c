@@ -75,6 +75,13 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 
+    [Name("读取Timeline时间"), Category("BTSMTL/Timeline")]
+    [BtsmtlSkillNodeKind("timelineTime", TimelineDomains = TimelineExecutionDomainMask.Logic)]
+    public sealed class BtsmtlSkillTimelineTimeFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        protected override void RegisterPorts() => AddValueOutput<float>("秒", RejectAuthoringValue<float>, "m_Output");
+    }
+
     [Name("结束片段"), Category("BTSMTL/Timeline")]
     [BtsmtlSkillNodeKind("timelineClipExitRequest", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillTimelineExitRequestFlowNode : BtsmtlSkillFlowNode

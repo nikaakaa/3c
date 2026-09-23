@@ -123,6 +123,7 @@ namespace ThirdPersonSimulation
         TimelineCameraResponse = 46,
         TimelineScenePresentationParameter = 50,
         TimelineClipExitRequest = 51,
+        TimelineTime = 52,
         BlackboardGet = 60,
         BlackboardSet = 61,
         InputBoolean = 70,
@@ -165,7 +166,7 @@ namespace ThirdPersonSimulation
     public static class GameplayAbilityOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/19");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/20");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -192,6 +193,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.TimelineCameraState,
                 SimulationOperationCode.TimelineCameraResponse,
                 SimulationOperationCode.TimelineClipExitRequest,
+                SimulationOperationCode.TimelineTime,
                 SimulationOperationCode.BlackboardGet,
                 SimulationOperationCode.BlackboardSet,
                 SimulationOperationCode.InputBoolean,

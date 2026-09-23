@@ -56,6 +56,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 return false;
             if (nodeType == typeof(BtsmtlSkillRootFlowNode))
                 return role == BtsmtlSkillFlowGraphRole.Skill || role == BtsmtlSkillFlowGraphRole.StateBody || role == BtsmtlSkillFlowGraphRole.TimelineBody;
+            if (nodeType == typeof(BtsmtlSkillTimelineTimeFlowNode))
+                return role == BtsmtlSkillFlowGraphRole.TimelineBody || role == BtsmtlSkillFlowGraphRole.ConditionRule;
             if (nodeType == typeof(BtsmtlSkillTimelineExitRequestFlowNode))
                 return role == BtsmtlSkillFlowGraphRole.TimelineBody;
             if (typeof(BtsmtlSkillTimelineHookFlowNode).IsAssignableFrom(nodeType))

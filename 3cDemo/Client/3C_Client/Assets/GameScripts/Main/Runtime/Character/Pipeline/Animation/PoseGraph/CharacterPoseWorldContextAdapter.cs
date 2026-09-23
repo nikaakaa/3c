@@ -208,6 +208,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     inputBinding.Contributions[i],
                     m_SourceModule,
                     m_PlayerNodeIds);
+                AnimationPoseSourceContribution source = m_Contributions[i];
+                m_ClipSamples[i] = source.Kind == AnimationPoseContributionKind.Live
+                    ? m_SourceModule.RequireDominantClipSample(source.SourceId, source.NodeId, inputBinding.CompletionIdentity)
+                    : default;
             }
             return count;
         }

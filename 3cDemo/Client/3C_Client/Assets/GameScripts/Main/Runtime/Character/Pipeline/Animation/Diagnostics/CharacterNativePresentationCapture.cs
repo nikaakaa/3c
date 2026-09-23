@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         [DiagnosticField, DiagnosticKey("pose-graph-id"), DiagnosticGroup("animation-identity")]
         public string PoseGraphId => m_PoseGraphId;
         [DiagnosticField, DiagnosticKey("pose-graph-revision"), DiagnosticGroup("animation-identity")]
-        public string PoseGraphRevision => m_PoseGraphId;
+        public string PoseGraphRevision => m_Frame.GraphRevision;
         [DiagnosticField, DiagnosticKey("input-contract-hash"), DiagnosticGroup("animation-identity")]
         public string InputContractHash => m_Frame.InputContractHash;
         [DiagnosticField, DiagnosticKey("instance-id"), DiagnosticGroup("animation-identity")]
@@ -137,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         [DiagnosticField, DiagnosticKey("right-foot-weight"), DiagnosticGroup("animation-output")]
         public float RightFootWeight => m_Source.RightFootWeight;
         [DiagnosticField, DiagnosticKey("has-clip-sample"), DiagnosticGroup("animation-output")]
-        public bool HasClipSample => m_Source.Kind == AnimationPoseContributionKind.Live;
+        public bool HasClipSample => m_Clip.IsValid;
         [DiagnosticField, DiagnosticKey("clip-binding-index"), DiagnosticGroup("animation-output")]
         public int ClipBindingIndex => m_Clip.ClipBindingIndex;
         [DiagnosticField, DiagnosticKey("resource-catalog-index"), DiagnosticGroup("animation-output")]

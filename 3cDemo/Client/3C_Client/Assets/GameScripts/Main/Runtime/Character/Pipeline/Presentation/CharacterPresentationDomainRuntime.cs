@@ -72,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         PoseParameterId[] m_PoseParameterIds;
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher m_PoseActionPublisher;
+        List<ActionAnimationPlaybackCommand> m_DiagnosticCommands;
 
         internal bool TryGetPoseCommittedPose(out ComposedAnimationPoseFrame frame)
         {
@@ -133,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void BindPoseActionPublisher(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher publisher)
         {
             m_PoseActionPublisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+            m_DiagnosticCommands = new List<ActionAnimationPlaybackCommand>(publisher.Inbox.Capacity);
         }
 
         internal void BindPoseDomain(
@@ -479,6 +481,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_PresentationClockCoordinator?.BeginFrame(actionCommands);
                     PublishAnimationCommands(actionCommands);
                 }
+#if KK_DIAGNOSTIC_SAMPLING
+                m_DiagnosticCommands?.Clear();
+                if (Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId))
+                    for (int i = 0; i < actionCommands.Count; i++)
+                        m_DiagnosticCommands.Add(actionCommands[i]);
+#endif
                 m_Camera?.ValidateFrame();
                 if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context, actionCommands))
                     return;
@@ -488,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera?.CommitFrame();
                 m_TimelinePresentationBridge?.CommitFrame();
                 m_Camera?.Present(bodyFrame, context);
-                PublishPresentationCapture(in bodyFrame, in factFrame, context, actionCommands);
+                PublishPresentationCapture(in bodyFrame, in factFrame, context, m_DiagnosticCommands);
             }
             finally
             {

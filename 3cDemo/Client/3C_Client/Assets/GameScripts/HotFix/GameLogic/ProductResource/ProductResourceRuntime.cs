@@ -18,6 +18,13 @@ namespace GameLogic.ProductResource
             public Object Asset;
         }
 
+        private sealed class ResourceLifecycleRecord
+        {
+            public bool KnownPhysical;
+            public int OwnedCount;
+            public int PendingCount;
+        }
+
         private readonly IResourceModule _resourceModule;
         private readonly IObjectPoolModule _objectPoolModule;
         private readonly List<ObjectPoolBase> _poolMetricsBuffer;
@@ -26,11 +33,10 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceScopeId, ResourceScope> _scopes = new Dictionary<ResourceScopeId, ResourceScope>();
         private readonly Dictionary<long, LeaseRecord> _leases = new Dictionary<long, LeaseRecord>();
         private readonly Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>> _inFlight = new Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>>();
-        private readonly HashSet<ResourceIdentity> _knownPhysicalAssets = new HashSet<ResourceIdentity>();
-        private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
-        private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
+        private readonly Dictionary<ResourceIdentity, ResourceLifecycleRecord> _lifetimes = new Dictionary<ResourceIdentity, ResourceLifecycleRecord>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private string[] _preparedTagSnapshot = Array.Empty<string>();
+        private readonly Stack<ResourceLifecycleRecord> _lifecycleRecordPool = new Stack<ResourceLifecycleRecord>();
         private ResourceScopeSnapshot[] _scopeSnapshot = Array.Empty<ResourceScopeSnapshot>();
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
         private ResourceIdentity[] _unownedIdentityScratch = Array.Empty<ResourceIdentity>();
@@ -107,7 +113,8 @@ namespace GameLogic.ProductResource
                 CancellationToken cancellation = linked == null ? scope.CancellationToken : linked.Token;
                 try
                 {
-                    bool knownPhysicalReuse = _knownPhysicalAssets.Contains(identity);
+                    _lifetimes.TryGetValue(identity, out ResourceLifecycleRecord lifecycle);
+                    bool knownPhysicalReuse = lifecycle != null && lifecycle.KnownPhysical;
                     await EnsurePhysicalAssetAsync(identity).AttachExternalCancellation(cancellation);
                     if (knownPhysicalReuse)
                     {
@@ -367,7 +374,7 @@ namespace GameLogic.ProductResource
 
         private UniTask<Object> EnsurePhysicalAssetAsync(ResourceIdentity identity)
         {
-            if (_knownPhysicalAssets.Contains(identity))
+            if (_lifetimes.TryGetValue(identity, out ResourceLifecycleRecord known) && known.KnownPhysical)
             {
                 return UniTask.FromResult<Object>(null);
             }
@@ -397,7 +404,7 @@ namespace GameLogic.ProductResource
                     throw new InvalidOperationException($"TEngine failed to load physical resource '{identity}'.");
                 }
 
-                _knownPhysicalAssets.Add(identity);
+                GetOrAddLifecycle(identity).KnownPhysical = true;
                 _resourceModule.UnloadAsset(asset);
                 completion.TrySetResult(asset);
             }
@@ -417,80 +424,112 @@ namespace GameLogic.ProductResource
 
         private void AddOwnedReference(ResourceIdentity identity)
         {
-            _ownedReferenceCounts.TryGetValue(identity, out int count);
-            _ownedReferenceCounts[identity] = count + 1;
+            GetOrAddLifecycle(identity).OwnedCount++;
         }
 
         private void RemoveOwnedReference(ResourceIdentity identity)
         {
-            if (!_ownedReferenceCounts.TryGetValue(identity, out int count))
+            if (!_lifetimes.TryGetValue(identity, out ResourceLifecycleRecord record) || record.OwnedCount == 0)
             {
                 return;
             }
 
-            if (count <= 1)
+            record.OwnedCount--;
+            if (record.OwnedCount == 0)
             {
-                _ownedReferenceCounts.Remove(identity);
-                if (!_pendingAcquireCounts.ContainsKey(identity))
-                {
-                    _knownPhysicalAssets.Remove(identity);
-                }
-            }
-            else
-            {
-                _ownedReferenceCounts[identity] = count - 1;
+                TryReturnEmptyLifecycle(identity, record);
             }
         }
 
         private void RemoveUnownedPhysicalKnowledge()
         {
             _unownedIdentityScratchCount = 0;
-            foreach (ResourceIdentity identity in _knownPhysicalAssets)
+            foreach (KeyValuePair<ResourceIdentity, ResourceLifecycleRecord> lifetime in _lifetimes)
             {
-                if (!_ownedReferenceCounts.ContainsKey(identity) && !_pendingAcquireCounts.ContainsKey(identity))
+                if (lifetime.Value.KnownPhysical && lifetime.Value.OwnedCount == 0 && lifetime.Value.PendingCount == 0)
                 {
-                    if (_unownedIdentityScratchCount == _unownedIdentityScratch.Length)
-                    {
-                        Array.Resize(ref _unownedIdentityScratch, Math.Max(_knownPhysicalAssets.Count, _unownedIdentityScratchCount + 1));
-                    }
-                    _unownedIdentityScratch[_unownedIdentityScratchCount++] = identity;
+                    AddUnownedIdentityToScratch(lifetime.Key);
                 }
             }
 
             for (int index = 0; index < _unownedIdentityScratchCount; index++)
             {
-                _knownPhysicalAssets.Remove(_unownedIdentityScratch[index]);
+                ResourceIdentity identity = _unownedIdentityScratch[index];
+                if (_lifetimes.TryGetValue(identity, out ResourceLifecycleRecord record))
+                {
+                    record.KnownPhysical = false;
+                    _lifetimes.Remove(identity);
+                    ReturnLifecycleRecord(record);
+                }
             }
 
             Array.Clear(_unownedIdentityScratch, 0, _unownedIdentityScratchCount);
             _unownedIdentityScratchCount = 0;
         }
 
+        private void AddUnownedIdentityToScratch(ResourceIdentity identity)
+        {
+            if (_unownedIdentityScratchCount == _unownedIdentityScratch.Length)
+            {
+                Array.Resize(ref _unownedIdentityScratch, Math.Max(_lifetimes.Count, _unownedIdentityScratchCount + 1));
+            }
+
+            _unownedIdentityScratch[_unownedIdentityScratchCount++] = identity;
+        }
+
         private void AddPendingAcquire(ResourceIdentity identity)
         {
-            _pendingAcquireCounts.TryGetValue(identity, out int count);
-            _pendingAcquireCounts[identity] = count + 1;
+            GetOrAddLifecycle(identity).PendingCount++;
         }
 
         private void RemovePendingAcquire(ResourceIdentity identity)
         {
-            if (!_pendingAcquireCounts.TryGetValue(identity, out int count))
+            if (!_lifetimes.TryGetValue(identity, out ResourceLifecycleRecord record) || record.PendingCount == 0)
             {
                 return;
             }
 
-            if (count <= 1)
+            record.PendingCount--;
+            if (record.PendingCount == 0)
             {
-                _pendingAcquireCounts.Remove(identity);
-                if (!_ownedReferenceCounts.ContainsKey(identity))
-                {
-                    _knownPhysicalAssets.Remove(identity);
-                }
+                TryReturnEmptyLifecycle(identity, record);
             }
-            else
+        }
+
+        private ResourceLifecycleRecord GetOrAddLifecycle(ResourceIdentity identity)
+        {
+            if (_lifetimes.TryGetValue(identity, out ResourceLifecycleRecord record))
             {
-                _pendingAcquireCounts[identity] = count - 1;
+                return record;
             }
+
+            record = RentLifecycleRecord();
+            _lifetimes.Add(identity, record);
+            return record;
+        }
+
+        private void TryReturnEmptyLifecycle(ResourceIdentity identity, ResourceLifecycleRecord record)
+        {
+            if (record.KnownPhysical || record.OwnedCount != 0 || record.PendingCount != 0)
+            {
+                return;
+            }
+
+            _lifetimes.Remove(identity);
+            ReturnLifecycleRecord(record);
+        }
+
+        private ResourceLifecycleRecord RentLifecycleRecord()
+        {
+            return _lifecycleRecordPool.Count > 0 ? _lifecycleRecordPool.Pop() : new ResourceLifecycleRecord();
+        }
+
+        private void ReturnLifecycleRecord(ResourceLifecycleRecord record)
+        {
+            record.KnownPhysical = false;
+            record.OwnedCount = 0;
+            record.PendingCount = 0;
+            _lifecycleRecordPool.Push(record);
         }
 
         private void PublishSnapshot()

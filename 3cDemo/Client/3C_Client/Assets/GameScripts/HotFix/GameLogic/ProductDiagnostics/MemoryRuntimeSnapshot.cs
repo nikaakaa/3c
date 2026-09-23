@@ -67,7 +67,7 @@ namespace GameLogic.ProductDiagnostics
 
         public MemoryRuntimeSnapshot Capture(ResourceRuntimeSnapshot resources, ProductMemoryBudgetProfile profile, ProductMemoryBudgetKind budgetKind)
         {
-            if (resources == null)
+            if (!resources.IsValid)
             {
                 throw new ArgumentNullException(nameof(resources));
             }

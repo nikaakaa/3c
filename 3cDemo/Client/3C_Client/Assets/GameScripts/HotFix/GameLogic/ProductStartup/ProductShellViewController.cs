@@ -392,7 +392,7 @@ namespace GameLogic.ProductStartup
             }
 
             _resourceDiagnostics.Clear();
-            if (resources == null)
+            if (!resources.IsValid)
             {
                 _resourceDiagnostics.Append(WaitingForSnapshots);
             }

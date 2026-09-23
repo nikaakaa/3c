@@ -10,7 +10,7 @@ namespace GameLogic.ProductDiagnostics
         {
             Checkpoint = string.IsNullOrWhiteSpace(checkpoint) ? throw new ArgumentException("Checkpoint is required.", nameof(checkpoint)) : checkpoint.Trim();
             CapturedAt = capturedAt;
-            Resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            Resources = resources.IsValid ? resources : throw new ArgumentNullException(nameof(resources));
             Memory = memory ?? throw new ArgumentNullException(nameof(memory));
             Network = network;
         }

@@ -22,7 +22,7 @@ namespace GameLogic.ProductDiagnostics
         public int LeaseCount { get; }
     }
 
-    public sealed class ResourceRuntimeSnapshot
+    public readonly struct ResourceRuntimeSnapshot
     {
         public ResourceRuntimeSnapshot(
             long sequence,
@@ -43,6 +43,9 @@ namespace GameLogic.ProductDiagnostics
             IReadOnlyList<ResourceScopeSnapshot> scopes,
             ResourceMaintenanceSnapshot lastMaintenance)
         {
+            if (sequence <= 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+
             Sequence = sequence;
             CapturedAt = capturedAt;
             LogicalLoadCount = logicalLoadCount;
@@ -79,6 +82,7 @@ namespace GameLogic.ProductDiagnostics
         public IReadOnlyList<string> PreparedTags { get; }
         public IReadOnlyList<ResourceScopeSnapshot> Scopes { get; }
         public ResourceMaintenanceSnapshot LastMaintenance { get; }
+        public bool IsValid => Sequence > 0;
     }
 
     public sealed class ResourceMaintenanceSnapshot

@@ -575,6 +575,7 @@
 - [x] 5.292 ServerAuthoritative Prediction disposition journal 改为准备期 EventId/Entry 平行数组加显式 count；Record 原地插入和裁剪，checkpoint 与解码保持 EventId 升序，删除运行时 SortedDictionary 和整表复制
 - [x] 5.293 Prediction Ack 与 NoCorrection 推进改为 confirmation/history/journal 原地应用；保留 BuildRestore checkpoint wire 合同，删除普通帧三轮 checkpoint 往返
 - [x] 5.294 Prediction Decide 改用 CountReplayAfter；baseline 存在的稳态决策不再分配 replay 数组，RestoreReplay 保留正式 replay 输出
+- [x] 5.295 ServerAuthoritative 空集合拷贝与 pending request 消费统一复用 Array.Empty；非空结果继续持有独立 owned array
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -5845,3 +5845,12 @@
 - `GetReplayAfter` 仍由 `RestoreReplay` 路径调用，用于生成 schedule 真正消费的 replay 列表；这不是死路径，也不在本步改成共享 scratch。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 NoCorrection 稳态回放、RestoreReplay 回放、决策结果对比和 Player 分配采样。
+
+## 2026-09-23 预测空数组复用
+
+对应 tasks.md 的 5.295；父项 2.5 保持未勾选。代码提交为 `efefd9f47`。
+
+- `ServerAuthoritativeProductOrder.CopyToArray` 原先对 `Count == 0` 的集合也每次新建零长度数组。现在空集合统一返回共享 `Array.Empty<T>`；null 仍显式失败，非空集合仍分配独立结果并逐项复制。Observation Ingress 每帧转发空 SampleCommands 或 ReliableEvents 时不再分配。
+- `ServerAuthoritativePredictionConfirmationState.ScheduleRequests` 在不消费或没有 pending request 时返回共享空数组；只有实际有待消费 request 时才复制出最终 owned 数组并清空常驻轨道。pending request 的顺序、容量和所有权不变。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 observation ingress 回放、pending request 消费回放和 Player 分配采样。

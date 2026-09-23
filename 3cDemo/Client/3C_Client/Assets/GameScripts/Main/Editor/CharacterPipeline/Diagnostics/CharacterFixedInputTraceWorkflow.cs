@@ -377,6 +377,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequirePoseMatchesBody(pose, initialBody);
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
+            host.PresentationRuntime.AdvancePoseResourcePreparation();
+            if (!host.PresentationRuntime.IsPoseResourceReady)
+                return;
             CaptureRecordedCameraHeading(host);
             FixedCharacterInputTraceModule.StartRecording();
             ClearPending();
@@ -425,6 +428,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     return;
                 }
+                host.PresentationRuntime.AdvancePoseResourcePreparation();
+                if (!host.PresentationRuntime.IsPoseResourceReady)
+                    return;
                 RequirePoseMatchesBody(current, initialBody);
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
@@ -579,7 +585,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StopPresentationScheduleRun();
                 CloseReplaySamplingWindow();
                 ReleaseReplayTickDrive();
-                throw new InvalidOperationException(status.Message);
+                string message = status.Message;
+                Stop();
+                throw new InvalidOperationException(message);
             }
             bool scheduled =
                 s_ActiveReplayOperation == ScheduleCaptureOperation ||
@@ -648,7 +656,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Canonical Fixed input replay completed. Foot Landing diagnostics are finalizing.";
                 return;
             }
-            PublishReplayCompletion();
+            try
+            {
+                PublishReplayCompletion();
+            }
+            catch
+            {
+                Stop();
+                throw;
+            }
         }
 
         static void TickReplayFinalization()
@@ -656,7 +672,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_ReplayFinalizing || CharacterGameplayDiagnosticCapture.IsFinalizing)
                 return;
             s_ReplayFinalizing = false;
-            PublishReplayCompletion();
+            try
+            {
+                PublishReplayCompletion();
+            }
+            catch
+            {
+                Stop();
+                throw;
+            }
         }
 
         static void PublishReplayCompletion()

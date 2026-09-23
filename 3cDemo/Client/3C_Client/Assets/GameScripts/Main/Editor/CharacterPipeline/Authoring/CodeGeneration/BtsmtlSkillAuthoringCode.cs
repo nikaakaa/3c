@@ -490,7 +490,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new InvalidOperationException($"Skill value port '{portId}' is missing.");
             if (input.type != null && value != null && !input.type.IsInstanceOfType(value))
                 throw new InvalidOperationException($"Skill value port '{portId}' type does not match.");
-            BtsmtlSkillFlowEditorMutation.Execute((FlowGraph)node.graph, "设置技能输入值", () => input.serializedValue = value);
+            BtsmtlSkillFlowEditorMutation.Execute((FlowGraph)node.graph, "设置技能输入值",
+                () => ((ValueInput)node.GetInputPort(portId)).serializedValue = value);
         }
 
         public static Variable EnsureBlackboardDeclaration(

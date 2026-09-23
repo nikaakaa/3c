@@ -256,6 +256,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             try
             {
                 mutation();
+                graph.SelfSerialize();
                 if (validateClosure)
                     BtsmtlSkillGraphClosure.Validate(graph, false);
                 if (validateClosure)

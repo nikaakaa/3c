@@ -82,7 +82,7 @@ namespace ThirdPerson.ProductStartup
                 }
 
                 var snapshot = m_SnapshotStore.Current;
-                if (snapshot == null || !snapshot.Retryable)
+                if (!snapshot.IsValid || !snapshot.Retryable)
                 {
                     return;
                 }
@@ -95,7 +95,8 @@ namespace ThirdPerson.ProductStartup
 
         public void ConfirmCoreDownload()
         {
-            if (m_SnapshotStore.Current?.Stage == ProductStartupStage.AwaitCoreDownloadConsent)
+            ProductStartupSnapshot current = m_SnapshotStore.Current;
+            if (current.IsValid && current.Stage == ProductStartupStage.AwaitCoreDownloadConsent)
             {
                 m_ConsentSource?.TrySetResult(true);
             }

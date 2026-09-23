@@ -74,7 +74,7 @@ namespace ThirdPerson.ProductStartup
 
         void OnGUI()
         {
-            if (m_Snapshot == null)
+            if (!m_Snapshot.IsValid)
             {
                 return;
             }

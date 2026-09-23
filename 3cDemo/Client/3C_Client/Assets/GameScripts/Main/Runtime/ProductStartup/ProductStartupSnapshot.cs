@@ -2,7 +2,7 @@ using System;
 
 namespace ThirdPerson.ProductStartup
 {
-    public sealed class ProductStartupSnapshot
+    public readonly struct ProductStartupSnapshot
     {
         public ProductStartupSnapshot(
             ProductStartupStage stage,
@@ -33,6 +33,9 @@ namespace ThirdPerson.ProductStartup
             string resourceTag,
             bool waitingForConsent)
         {
+            if (generation <= 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+
             Stage = stage;
             Generation = generation;
             ClientBuildVersion = clientBuildVersion ?? string.Empty;
@@ -90,6 +93,7 @@ namespace ThirdPerson.ProductStartup
         public string ResourceTag { get; }
         public bool WaitingForConsent { get; }
         public bool HasError => ErrorCode != ProductStartupErrorCode.None;
+        public bool IsValid => Generation > 0;
 
         public ProductStartupSnapshot With(
             ProductStartupStage? stage = null,
@@ -182,7 +186,7 @@ namespace ThirdPerson.ProductStartup
 
         internal void BeginGeneration(int generation, ProductStartupSnapshot snapshot)
         {
-            if (snapshot == null || snapshot.Generation != generation)
+            if (!snapshot.IsValid || snapshot.Generation != generation)
             {
                 throw new ArgumentException("Generation snapshot does not match the store generation.", nameof(snapshot));
             }
@@ -202,7 +206,7 @@ namespace ThirdPerson.ProductStartup
 
         internal bool TryPublish(int generation, ProductStartupSnapshot snapshot)
         {
-            if (snapshot == null || snapshot.Generation != generation)
+            if (!snapshot.IsValid || snapshot.Generation != generation)
             {
                 return false;
             }

@@ -346,7 +346,7 @@ namespace GameLogic.ProductStartup
             }
 
             _startupDiagnostics.Clear();
-            if (startup == null)
+            if (!startup.IsValid)
             {
                 _startupDiagnostics.Append(WaitingForSnapshots);
             }

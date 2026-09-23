@@ -5714,7 +5714,7 @@
 
 ## 2026-09-23 输出事件派生数组删除
 
-对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `85471da31`。
+对应 tasks.md 的 5.282；父项 2.5 保持未勾选。代码提交为 `85471da31`。
 
 - Fixed/Float32 `SimulationTickResult` 原先额外持有 `OutputEvents`，在 Complete 构造时从 Actor 的 GameplayFacts 和 PresentationCommands 复制出派生 `EventId[]`。现在删除该字段和属性，Pipeline Committer 用 `CountOutputEvents` 直接统计两类真实输出，再按事实和表现命令遍历查找 disposition；Simulation Committer 的数量校验也改用同一计数。
 - EventId 唯一性校验保留，但只用 `ArrayPool<EventId>` 租借临时空间排序查重，`finally` 归还；结果不再保留这份校验数组。删除无调用者的公开构造和 `CopySorted`，`FromSortedOwnedActors` 成为唯一正式构造入口。

@@ -548,7 +548,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ? Array.Empty<CharacterBodySample>()
                 : null;
             int selectedBodyCount = 0;
-            string replayClock = $"{context.Source.ClockId}.replay";
+            string replayClock = replay.Count == 0
+                ? null
+                : string.Concat(context.Source.ClockId, ".replay");
             ulong planSequence = 1;
             ulong nextTick = restore?.Tick.Value ?? context.CurrentCompletedTick;
             ulong inputSequenceFloor = Math.Max(lastPredictedInputSequence, m_State.ConfirmedInputSequence);
@@ -627,7 +629,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Source,
                 characterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
-                new SimulationActorRosterDescriptor(new[] { current.ActorId }),
+                characterRuntime.Runtime.RosterDescriptor,
                 mappings,
                 restore,
                 steps,

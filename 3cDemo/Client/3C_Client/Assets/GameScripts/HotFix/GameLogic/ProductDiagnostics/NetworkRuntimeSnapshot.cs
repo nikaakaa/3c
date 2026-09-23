@@ -2,7 +2,7 @@ using System;
 
 namespace GameLogic.ProductDiagnostics
 {
-    public sealed class NetworkRuntimeSnapshot
+    public readonly struct NetworkRuntimeSnapshot
     {
         public NetworkRuntimeSnapshot(DateTimeOffset capturedAt, string productId, string transport, bool tlsEnabled, string redactedEndpoint, string connectionState, string redactedAccountId, string redactedClientInstanceId, long sessionGeneration, DateTimeOffset? tokenExpiresAt, long roundTripMilliseconds, string lastErrorCode)
         {
@@ -32,6 +32,7 @@ namespace GameLogic.ProductDiagnostics
         public DateTimeOffset? TokenExpiresAt { get; }
         public long RoundTripMilliseconds { get; }
         public string LastErrorCode { get; }
+        public bool IsValid => CapturedAt != default;
     }
 
     public interface INetworkRuntimeSnapshotSource

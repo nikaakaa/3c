@@ -419,7 +419,7 @@ namespace GameLogic.ProductStartup
             }
 
             _networkDiagnostics.Clear();
-            if (network == null)
+            if (!network.IsValid)
             {
                 _networkDiagnostics.Append(WaitingForSnapshots);
             }

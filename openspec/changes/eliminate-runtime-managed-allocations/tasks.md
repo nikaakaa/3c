@@ -574,6 +574,7 @@
 - [x] 5.291 ServerAuthoritative Prediction pending request 改为准备期 request capacity 平行数组加显式 count；插入二分原地排序，checkpoint 和解码保持 Sequence 升序，删除 SortedDictionary 树节点
 - [x] 5.292 ServerAuthoritative Prediction disposition journal 改为准备期 EventId/Entry 平行数组加显式 count；Record 原地插入和裁剪，checkpoint 与解码保持 EventId 升序，删除运行时 SortedDictionary 和整表复制
 - [x] 5.293 Prediction Ack 与 NoCorrection 推进改为 confirmation/history/journal 原地应用；保留 BuildRestore checkpoint wire 合同，删除普通帧三轮 checkpoint 往返
+- [x] 5.294 Prediction Decide 改用 CountReplayAfter；baseline 存在的稳态决策不再分配 replay 数组，RestoreReplay 保留正式 replay 输出
 
 ## 6. UI、资源、渲染和生命周期
 

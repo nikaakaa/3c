@@ -5835,3 +5835,13 @@
 - Prediction State 的 `ApplyAck` 和 `NoCorrection` 的 `AdvanceConfirmation` 改为直接应用；删除 confirmation checkpoint、journal checkpoint、history checkpoint 三轮 Prepare/Restore。`BuildRestore` 继续走 `Prepare*` 和 checkpoint 合同，用于生成 correction/history/journal wire 快照并执行事务恢复。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 Ack/Baseline 推进回放、NoCorrection 稳态回放、RestoreReplay/HardRecovery 回放、checkpoint 编解码恢复和 Player 分配采样。
+
+## 2026-09-23 预测决策replay计数化
+
+对应 tasks.md 的 5.294；父项 2.5 保持未勾选。代码提交为 `9340b5584`。
+
+- `ServerAuthoritativePredictionHistory` 新增 `CountReplayAfter`，按原有 `InputSequence > confirmedInputSequence` 条件统计数量，不改变 replay 记录选择规则。
+- Prediction `Decide` 只需要 replay 数量给 reconciler。现在改用计数入口，即使每次都收到 baseline，也不会为了 `.Count` 先分配一个 `ServerAuthoritativePredictionHistoryRecord[]`。
+- `GetReplayAfter` 仍由 `RestoreReplay` 路径调用，用于生成 schedule 真正消费的 replay 列表；这不是死路径，也不在本步改成共享 scratch。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 NoCorrection 稳态回放、RestoreReplay 回放、决策结果对比和 Player 分配采样。

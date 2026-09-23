@@ -5824,3 +5824,14 @@
 - Journal checkpoint 和 wire 解码改为 owned pair 数组。解码先原地按 EventId 排序，再检查重复；`WriteJournal` 的字段、版本和顺序不变，`ReadJournal` 不再构建排序字典。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 disposition 记录/确认/裁剪回放、checkpoint 编解码恢复、重复事件回放和 Player 分配采样。
+
+## 2026-09-23 预测确认热路径原地化
+
+对应 tasks.md 的 5.293；父项 2.5 保持未勾选。代码提交为 `ce637c753`。
+
+- `ServerAuthoritativePredictionConfirmationState` 新增 `ApplyAck` 和 `ApplyBaseline`。原地应用继续拒绝回退的 Authority Ack，继续取较大的 confirmed sequence、合并 event horizon 并推进 ack/baseline cursor；pending request 表不变。
+- `ServerAuthoritativePredictionDispositionJournal` 新增 `ApplyConfirmation` 和 `ApplyPrune`。确认时按原条件更新或补入 AuthorityConfirmed/PredictedRejected，推进 cursor 和 LastRejectedCount；裁剪时按原 Tick 和 disposition 条件原地压缩。普通帧不再先生成 checkpoint 再 Restore。
+- `ServerAuthoritativePredictionHistory` 新增 `PruneConfirmedThrough`，按原过滤条件保留 sequence 大于确认线的记录，原地压缩并保持 Tick 升序，同时清空淘汰槽位。远端 Body 轨道不受影响。
+- Prediction State 的 `ApplyAck` 和 `NoCorrection` 的 `AdvanceConfirmation` 改为直接应用；删除 confirmation checkpoint、journal checkpoint、history checkpoint 三轮 Prepare/Restore。`BuildRestore` 继续走 `Prepare*` 和 checkpoint 合同，用于生成 correction/history/journal wire 快照并执行事务恢复。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 Ack/Baseline 推进回放、NoCorrection 稳态回放、RestoreReplay/HardRecovery 回放、checkpoint 编解码恢复和 Player 分配采样。

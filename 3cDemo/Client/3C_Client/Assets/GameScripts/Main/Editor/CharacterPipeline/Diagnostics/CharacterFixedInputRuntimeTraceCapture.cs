@@ -197,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     animationSamples++;
                     animationFrames.Add(trace.Position);
-                    string key = $"{payload.OwnerId}|{payload.Status}";
+                    string key = $"{payload.OwnerId}|{payload.Status}|{payload.RelatedElementId}";
                     if (animationCursors.TryGetValue(key, out SampleCursor previous) &&
                         Regressed(previous, payload.Cycle, payload.SecondaryTime))
                     {

@@ -568,6 +568,7 @@
 - [x] 5.285 Float32 Prediction History 运行时记录改为准备期有界平行数组加显式 count；Add 删除整表复制和 checkpoint 往返，查找改用二分，checkpoint 与解码 Tick 数组合同保持严格升序
 - [x] 5.286 ServerAuthoritative 远端 Body Timeline 按锁定 roster 改为准备期定容 tick/sample 轨道；整批 Observe 用 ArrayPool 合并校验后统一淘汰，删除运行期 Actor/Tick 树和枚举器分配
 - [x] 5.287 ServerAuthoritative RemoteBody Selection 使用 Timeline 常驻 per-Actor scratch；同步 schedule 消费者立刻转换独立 Body/Observed 结果，删除每次 Select 的 selection 数组分配
+- [x] 5.288 RemoteBody Selection 输出改为 Span 填充；schedule 直接写入最终 selectedBodies 区间，HardRecovery 只生成最终 owned Body 数组，删除每 tick 中转数组
 
 ## 6. UI、资源、渲染和生命周期
 

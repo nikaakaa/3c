@@ -5774,3 +5774,14 @@
 - `ToBodySamples` 和 `ToObservedWorldConstraints` 的最终结果数组仍按各自输出寿命分配；checkpoint 长期数组不变。本步只删除临时 selection 中转。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做多步 schedule 回放、HardRecovery 回放、插值/外推对比和 Player 分配采样。
+
+## 2026-09-23 远端Body选择输出直接填充
+
+对应 tasks.md 的 5.288；父项 2.5 保持未勾选。代码提交为 `dd08052d8`。
+
+- `ServerAuthoritativeRemoteBodySelectionFrame` 删除 `ToBodySamples` 每次返回新建数组的入口，改为 `CopyBodySamples(Span<CharacterBodySample>)`。目标长度必须等于 selection 数量，填充内容仍逐项调用 selection 的正式 `ToBodySample`，Tick、Actor、Before/After Body 和插值语义不变。
+- Prediction schedule 继续按 current step 数量准备最终 `selectedBodies`。每 tick 先读取固定 sampleCount，然后直接把 selection 填充到最终数组的目标区间，删除原来先创建每 tick 数组、再 `Array.Copy` 到最终数组的中转复制。
+- HardRecovery 只在需要 reset anchor 时创建一个最终 owned `CharacterBodySample[]`，填充后交给 `SelectedRemoteBodyBatch`。这是批次所有权要求的最终结果，不是中转数组。
+- 全仓搜索确认旧 `ToBodySamples` 没有剩余消费者，已直接删除，不保留兼容入口。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 schedule 多步回放、HardRecovery 回放、远端表现发包对比和 Player 分配采样。

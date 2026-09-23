@@ -5950,3 +5950,13 @@
 - 下载进度仍会因第三方 progress 的 `CurrentFile` 等字符串和 UI `StringBuilder`/格式化产生分配；`With` 的可选参数本身不作为热路径合同，当前消费链只使用 named override。
 - `ThirdPerson.ProductStartup` 用完整 Compile 清单聚焦编译通过，0 错误（仅既有 Unity 序列化字段 CS0649 和引用版本 CS1701 提示）。再用新产物引用编译 `GameLogic` 完整 Compile 清单，通过且 0 错误。临时脚本、response file 和检查产物已删除。
 - 完整依赖链继续被 `UnityEditor.UI` 包内既有 `DefaultControls.factory` 只读属性错误阻断，未到达本次源码；未刷新 Unity、未进 Play、未做启动/下载进度回放、retry/consent 对比和 Player 分配采样。
+
+## 2026-09-23 网络状态快照值化
+
+对应 tasks.md 的 6.33；父项 6.2 保持未勾选。代码提交为 `79041ead9`。
+
+- `NetworkRuntimeSnapshot` 原先是 `class`，认证连接、断开、失败、恢复和会话替换每次发布都新建外层快照对象。现在改为 `readonly struct`，store 当前值、强类型 `Changed` 和 checkpoint 组合只复制值。
+- default 实例的 `CapturedAt == default` 通过 `IsValid == false` 表达未发布状态；Shell 网络诊断从 null 判断改为 `IsValid` 判断。脱敏字段、连接状态、token 过期、RTT、错误码和发布时机不变。
+- `ProductCheckpointSnapshot` 原本允许未发布的 network 外壳；现在继续保存 default 值，不引入可空 struct 或兼容包装。本步消除网络快照对象本体，连接字符串、redaction 拼接和诊断输出字符串仍是后续边界。
+- `GameLogic` 用 Unity `ScriptAssemblies` 正式引用、新编译的 `ThirdPerson.ProductStartup.dll` 和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和检查产物已删除。
+- 未刷新 Unity、未进 Play、未做认证状态回放、checkpoint 快照对比和 Player 分配采样。

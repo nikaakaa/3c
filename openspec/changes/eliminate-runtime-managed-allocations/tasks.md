@@ -615,6 +615,7 @@
 - [x] 6.30 GameplayDownloadSnapshot 改为 readonly struct；Shell 用 IsValid 判断未发布状态，下载进度、文件开始和取消回调只替换当前值，不再新建快照对象
 - [x] 6.31 ProductRuntimeSnapshot 改为 readonly struct；启动历史环形槽位直接存储值，阶段变化事件和诊断不再新建外层快照对象
 - [x] 6.32 ProductStartupSnapshot 改为 readonly struct；启动/下载进度 With 拷贝和线程安全发布只替换当前值，bootstrap 视图和命令入口改用 IsValid
+- [x] 6.33 NetworkRuntimeSnapshot 改为 readonly struct；认证状态和 checkpoint 组合只复制当前值，Shell 用 IsValid 表达未发布状态
 
 ## 7. 诊断与正式性能交付
 

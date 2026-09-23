@@ -656,18 +656,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_ReplayFinalizing || CharacterGameplayDiagnosticCapture.IsFinalizing)
                 return;
             s_ReplayFinalizing = false;
-            if (!string.IsNullOrEmpty(CharacterGameplayDiagnosticCapture.LastFailure))
-            {
-                s_LastFailure = CharacterGameplayDiagnosticCapture.LastFailure;
-                s_LastStatus = $"Foot Landing finalization failed: {s_LastFailure}";
-                Debug.LogError(s_LastStatus);
-                return;
-            }
             PublishReplayCompletion();
         }
 
         static void PublishReplayCompletion()
         {
+            if (RequiresFootSampling(s_ActiveReplayOperation) &&
+                !string.IsNullOrEmpty(CharacterGameplayDiagnosticCapture.LastFailure))
+                throw new InvalidOperationException(
+                    $"Diagnostic replay capture failed: {CharacterGameplayDiagnosticCapture.LastFailure}");
             if (s_ActiveReplayOperation == ScheduleCaptureOperation)
             {
                 PublishPresentationSchedule();

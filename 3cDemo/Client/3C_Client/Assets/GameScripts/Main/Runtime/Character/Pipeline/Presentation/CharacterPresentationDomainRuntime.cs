@@ -365,16 +365,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PublishLocomotionDiagnostics();
         }
 
-        public CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics() =>
-            new(
-                0,
-                0,
-                m_Body.FollowerPositionCorrectionMeters,
-                m_Body.FollowerYawCorrectionDegrees,
-                new CharacterLocomotionPresentationDiagnosticSnapshot(
-                    m_LocomotionBinding.PlanIdentity,
-                    m_LocomotionBinding.ClockMode,
-                    m_LocomotionBinding.BodySource,
         public bool TryGetPoseDiagnosticTarget(out Animation.Diagnostics.CharacterPoseDiagnosticTarget target)
         {
             if (m_Disposed || m_PoseDomain == null || !m_PoseDomain.IsAdopted)
@@ -389,6 +379,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
+        public CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics() =>
+            new(
+                0,
+                0,
+                m_Body.FollowerPositionCorrectionMeters,
+                m_Body.FollowerYawCorrectionDegrees,
+                new CharacterLocomotionPresentationDiagnosticSnapshot(
+                    m_LocomotionBinding.PlanIdentity,
+                    m_LocomotionBinding.ClockMode,
+                    m_LocomotionBinding.BodySource,
                     m_LocomotionBinding.CorrectionMode,
                     m_LocomotionBinding.BodyProfileIdentity,
                     m_LastLocomotionFactLineage,
@@ -473,6 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera?.CommitFrame();
                 m_TimelinePresentationBridge?.CommitFrame();
                 m_Camera?.Present(bodyFrame, context);
+                PublishPresentationCapture(in bodyFrame, in factFrame, context, actionCommands);
             }
             finally
             {
@@ -486,22 +487,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        void PublishLocomotionDiagnostics()
-        {
-                PublishPresentationCapture(in bodyFrame, in factFrame, context, actionCommands);
-            if (!m_Diagnostics.ShouldPublish(
-                    RuntimeTraceChannel.Animation,
-                    RuntimeTraceEventKind.LocomotionPresentation))
-            {
-                return;
-            }
-            CharacterLocomotionPresentationFactLineage lineage = m_LastLocomotionFactLineage;
-            m_Diagnostics.Publish(
-                RuntimeTraceChannel.Animation,
-                RuntimeTraceDomain.Presentation,
-                RuntimeTraceEventKind.LocomotionPresentation,
-                RuntimeSourceElementHandle.Invalid,
-                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
         Animation.Diagnostics.CharacterPoseDiagnosticFrame m_CommittedDiagnosticFrame;
 
         void PublishPresentationCapture(in CharacterBodyPresentationFrame body,
@@ -536,6 +521,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 #endif
         }
 
+        void PublishLocomotionDiagnostics()
+        {
+            if (!m_Diagnostics.ShouldPublish(
+                    RuntimeTraceChannel.Animation,
+                    RuntimeTraceEventKind.LocomotionPresentation))
+            {
+                return;
+            }
+            CharacterLocomotionPresentationFactLineage lineage = m_LastLocomotionFactLineage;
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.LocomotionPresentation,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
                 new RuntimeTracePayload
                 {
                     Status = m_LocomotionFailureCode == LocomotionPresentationFailureCode.None
@@ -677,6 +677,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         {
                             m_PoseDomain.CommitFrame();
                             m_PresentationClockCoordinator?.CommitFrame();
+                            CharacterPoseNativeFrameLineage lineage = commit.Lineage;
+                            m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
+                            m_CommittedDiagnosticFrame = new Animation.Diagnostics.CharacterPoseDiagnosticFrame(in lineage);
                         }
                         else
                         {
@@ -692,9 +695,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             validation.FailureCode != CharacterPoseNativeFailureCode.None
                                 ? validation.FailureCode
                                 : CharacterPoseNativeFailureCode.FrameInvalid);
-                            CharacterPoseNativeFrameLineage lineage = commit.Lineage;
-                            m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
-                            m_CommittedDiagnosticFrame = new Animation.Diagnostics.CharacterPoseDiagnosticFrame(in lineage);
                         m_PoseDomain.DiscardFrame();
                         m_PresentationClockCoordinator?.DiscardFrame();
                         throw new InvalidOperationException(

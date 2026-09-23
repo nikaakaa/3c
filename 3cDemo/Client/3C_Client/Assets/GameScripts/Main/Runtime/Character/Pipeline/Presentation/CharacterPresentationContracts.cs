@@ -845,9 +845,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Reset();
         CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics();
         CharacterPresentationDomainObservation CaptureObservation();
+        bool TryGetPoseDiagnosticTarget(out Animation.Diagnostics.CharacterPoseDiagnosticTarget target);
         CharacterDomainRuntimeAssemblyFacts CaptureDomainFacts();
         bool SupportsCheckpointCapture { get; }
-        bool TryGetPoseDiagnosticTarget(out Animation.Diagnostics.CharacterPoseDiagnosticTarget target);
         bool SupportsCheckpointRestore { get; }
         bool TryCaptureCheckpoint(SimulationSessionCheckpoint checkpoint, out string error);
         bool TryRestoreCheckpoint(SimulationSessionCheckpoint checkpoint, out string error);

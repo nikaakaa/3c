@@ -830,13 +830,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 body_trajectory_hash = evidence.BodyTrajectoryHash.ToString(),
                 presentation_trace = runtimeTrace,
                 foot_sample = sample,
+                presentation_sample = includeFootSample ? ReadReplaySample(CharacterGameplayDiagnosticCapture.Presentation) : null,
                 frames = BuildReplayProofFrames(evidence)
             };
             string directory = ResolveReplayProofDirectory(
                 trace.trace_id,
                 includeFootSample);
             Directory.CreateDirectory(directory);
-                presentation_sample = includeFootSample ? ReadReplaySample(CharacterGameplayDiagnosticCapture.Presentation) : null,
             string baselinePath = FindLatestReplayProofPath(directory);
             if (!string.IsNullOrEmpty(baselinePath))
             {
@@ -941,13 +941,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     workflow.LastSavedSampleIdentity,
                 samples_path = samplesPath,
                 facts_path = manifestPath,
+                facts_sha256 = ComputeSha256(manifestPath),
                 samples_sha256 =
                     ComputeSha256(samplesPath),
                 sampling_relative_frame_count = frameCount
             };
         }
 
-                facts_sha256 = ComputeSha256(manifestPath),
         static ReplayProofFrameDocument[] BuildReplayProofFrames(
             FixedCharacterInputReplayEvidence evidence)
         {
@@ -1228,12 +1228,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     document.foot_sample.sampling_relative_frame_count.ToString(
                         CultureInfo.InvariantCulture));
                 AppendHash(hash, document.foot_sample.samples_sha256);
-            }
-            for (int i = 0; i < document.frames.Length; i++)
-            {
-                ReplayProofFrameDocument frame = document.frames[i];
-                AppendHash(
-                    hash,
                 AppendHash(hash, document.foot_sample.facts_sha256);
             }
             if (document.presentation_sample != null)
@@ -1241,6 +1235,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 AppendHash(hash, document.presentation_sample.sampling_relative_frame_count.ToString(CultureInfo.InvariantCulture));
                 AppendHash(hash, document.presentation_sample.samples_sha256);
                 AppendHash(hash, document.presentation_sample.facts_sha256);
+            }
+            for (int i = 0; i < document.frames.Length; i++)
+            {
+                ReplayProofFrameDocument frame = document.frames[i];
+                AppendHash(
+                    hash,
                     frame.relative_frame.ToString(
                         CultureInfo.InvariantCulture));
                 AppendHash(
@@ -2085,13 +2085,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string sample_identity;
             public string samples_path;
             public string facts_path;
+            public string facts_sha256;
             public string samples_sha256;
             public int sampling_relative_frame_count;
         }
 
         [Serializable]
         sealed class ReplayProofFrameDocument
-            public string facts_sha256;
         {
             public int relative_frame;
             public ulong recorded_tick;

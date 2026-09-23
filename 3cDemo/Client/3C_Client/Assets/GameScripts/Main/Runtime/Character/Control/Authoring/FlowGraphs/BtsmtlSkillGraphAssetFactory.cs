@@ -198,11 +198,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             string path = AssetDatabase.GetAssetPath(owner);
             if (owner is not IBtsmtlSkillFlowGraph || string.IsNullOrEmpty(path))
-                throw new InvalidOperationException("私有页面必须属于已保存的技能根或共享Macro资产。");
+                throw new InvalidOperationException("私有页面必须属于已保存的技能根、共享Macro、Ability或Timeline资产。");
             UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
             if (mainAsset is not IBtsmtlSkillFlowGraph &&
+                (mainAsset is not TimelineAsset timeline || !BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(owner, timeline)) &&
                 (mainAsset is not GameplayAbilityDefinition ability || !IsAbilityOwnedGraph(ability, owner, path)))
-                throw new InvalidOperationException("私有页面必须属于已保存的技能根或共享Macro资产。");
+                throw new InvalidOperationException("私有页面必须属于已保存的技能根、共享Macro、Ability或Timeline资产。");
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能私有页面", () =>
             {
                 T graph = create();

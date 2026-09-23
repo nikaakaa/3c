@@ -618,18 +618,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationHandle exitingState,
             OperationHandle targetState)
         {
-            if (!m_Actions.TryAdvanceSegmentGeneration(out ulong actionInstanceId))
-                return;
-            SimulationOperation operation = m_Access.Operation(machine.Handle);
-            SimulationEventHeader header = m_Presentation.Next(operation);
-            m_Presentation.Add(new PresentationCommand(
-                header,
-                PresentationCommandKind.DomainEvent,
-                "domain/action-segment-changed",
-                FixedScalar.Zero,
-                FixedScalar.Zero,
-                sourceActionInstanceId: actionInstanceId,
-                domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
+            m_Actions.TryAdvanceSegmentGeneration(out _);
         }
     }
     internal readonly struct FixedCameraProgramConstantReader : ICameraProgramConstantReader

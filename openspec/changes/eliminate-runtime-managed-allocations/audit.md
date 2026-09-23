@@ -5980,3 +5980,13 @@
 - 本步只消除执行器侧 barrier 数组重复分配；`UniTask.WhenAll` 的完成 promise、加载任务状态机、资源加载回调和第三方 downloader 分配仍在 6.2 后续边界。
 - `PreloadPlan.cs` 用 Unity 2022.3.62f2c1 的 `netstandard.ref`、`UnityEngine.CoreModule`、UniTask 和既有 `GameLogic.dll` 引用做 `csc` 聚焦编译，通过且 0 错误；`CS0436` 是同名源码与旧 `GameLogic.dll` 聚焦引用的预期冲突提示。执行后已关闭 .NET build server；聚焦产物保留在 Unity `Temp` 未跟踪目录，由 Unity 临时目录生命周期处理。
 - 未刷新 Unity、未进 Play、未做 Home/Gameplay 预加载回放、取消失败对比和 Player 分配采样。
+
+## 2026-09-23 资源生命周期状态表合一
+
+对应 tasks.md 的 6.36；父项 6.2 保持未勾选。
+
+- `ProductResourceRuntime` 原先用 `HashSet<ResourceIdentity>` 记录 known physical，再用两张 `Dictionary<ResourceIdentity, int>` 分别记录 pending acquire 和 owned reference。同一资源身份在一次加载周期里最多要同步三个容器的进入和移除。现在合并为一张 runtime 生命周期表，每个 identity 只有一个 `ResourceLifecycleRecord`，字段表达 `KnownPhysical`、`OwnedCount` 和 `PendingCount`。
+- 首载并发、重复 join、物理预检完成、外层 acquire 成功、scope 关闭释放、调用取消和维护清理都读写同一条生命周期状态。known 且无 pending/owned 的 identity 维护时先收集到 owner scratch，再统一删除 known；空记录移出表并清空字段后进入 owner record 池，避免保留 identity。
+- `ResourceRuntimeSnapshot` 的 logical/physical/join/cache/active lease 计数、TEngine 卸载时机、scope 关闭阻新请求和物理资源维护顺序不变。in-flight `UniTaskCompletionSource`、lease record、scope cancellation source、快照 scope 数组复制和诊断字符串仍在 6.2 后续边界。
+- `ProductResourceRuntime` 及资源契约、scope、诊断快照用 Unity 2022.3.62f2c1 正式引用和 `csc` 聚焦编译通过，0 错误；构建服务已关闭。
+- 未刷新 Unity、未进 Play、未做首载并发 join、acquire 取消、scope 关闭、维护清理和 Player 分配采样。

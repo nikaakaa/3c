@@ -618,6 +618,7 @@
 - [x] 6.33 NetworkRuntimeSnapshot 改为 readonly struct；认证状态和 checkpoint 组合只复制当前值，Shell 用 IsValid 表达未发布状态
 - [x] 6.34 BlockImpact VFX 池在 Awake 按 maxActiveInstances 精确实例化到数组；Active 只扫描租用和复用，删除 List 扩容与首次命中懒加载实例分配
 - [x] 6.35 PreloadPlan Executor 复用计划生命周期内的 barrier task buffer；每次 Home/Gameplay 预加载不再按 barrier 新建数组，barrier 顺序、并发加载、尾部 completed task 和错误传播保持不变
+- [x] 6.36 资源 identity 的 known physical、pending acquire 和 owned reference 合并为 runtime 生命周期表加 pooled record；首载、并发 join、取消、引用释放和维护扫描只读写同一状态，不变更物理预检、引用计数、资源维护和快照计数
 
 ## 7. 诊断与正式性能交付
 

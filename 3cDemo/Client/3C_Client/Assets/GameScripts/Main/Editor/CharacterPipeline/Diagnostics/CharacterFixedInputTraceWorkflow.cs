@@ -1394,13 +1394,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (state != PlayModeStateChange.ExitingPlayMode)
                 return;
+            if (s_ReplayFinalizing)
+                return;
             if (IsRecording)
             {
                 try { StopAndSaveRecording(); }
                 catch (Exception exception) { Fail(exception); }
             }
-            if (IsReplaying)
+            if (IsReplaying || s_ReplayOwnsTickDrive || s_ReplayOwnsSampling)
             {
+                FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
+                s_LastFailure = $"Replay interrupted by Play Mode exit after {status.ReplayedFrameCount}/{status.FrameCount} frames. {status.Message}";
+                s_LastStatus = s_LastFailure;
                 StopPresentationScheduleRun();
                 AbandonReplayTickDrive();
                 if (s_ReplayOwnsSampling)

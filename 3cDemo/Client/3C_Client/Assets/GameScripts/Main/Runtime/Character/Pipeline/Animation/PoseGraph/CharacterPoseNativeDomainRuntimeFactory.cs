@@ -50,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeDomainServiceSet services = null;
             try
             {
+                animancer.Graph.UpdateMode = UnityEngine.Playables.DirectorUpdateMode.Manual;
                 int nodeCount = CountNodes(profile);
                 source = CreateSource(
                     animancer,

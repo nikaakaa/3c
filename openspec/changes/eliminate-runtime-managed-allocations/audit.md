@@ -5886,3 +5886,14 @@
 - latest checkpoint 使用与 route 相同索引的 presence 标记，区分“尚未捕获”和 checkpoint 自身的正式内容；捕获未知 Actor 会显式失败。`Roster` 在锁定前仍返回空集合，Dispose 清理已使用槽位和引用。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 authority source 注册/锁 roster 回放、数据面 Hello/Command 回放、快照与可靠事件发送回放、Dispose 前后状态检查和 Player 分配采样。
+
+## 2026-09-23 权威中性输入数组复用
+
+对应 tasks.md 的 5.299；父项 2.5 保持未勾选。代码提交为 `577c8d55a`。
+
+- `AuthorityTickSchedulePassRuntime` 和 `ServerAuthoritativeAuthorityClientRoute` 原先在 stale/reuse 路径每 Tick 新建 `SimulationInputValue[]`；普通 `SimulationInput` 构造还会复制并排序 values/requests，且 lambda `Comparison` 每次产生比较委托分配。现在按 `InputId` 和 `Kind` 检查 neutral 布局，布局不变时跨 Tick 复用同一数组，布局变化才重建。
+- `SimulationInput.FromOwnedArrays` 成为 prepared/owned 数组的正式入口：调用方移交不再复制的精确数组，入口仍校验 null、profile、sequence、identity、排序和唯一性。`OwnedValues` 和 `OwnedRequests` 暴露底层精确数组；原 `IEnumerable` 构造继续复制、排序并拥有独立结果。
+- 值和请求排序改为静态 `IComparer<T>`，删除每次构造的 lambda 比较委托。Authority schedule 的 fresh 路径直接移交 held input 的 owned values/requests，不再为每次构造重新复制；checkpoint Restore 清理 neutral 缓存引用，插入时随 held 槽位移动。
+- 本步消除 stale/reuse 中性值数组、构造期 values/requests 复制和排序比较委托；`SimulationInput` 外壳、Authority schedule 的 actorInputs/actors 数组仍未迁移，不代表该路径整体零分配。
+- `ThirdPersonSimulation.ServerAuthoritative.Transport` Release 编译通过，依赖链包含 Core、Float32 和 ServerAuthoritative，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 stale/reuse input 回放、输入布局变化回放、checkpoint 恢复回放和 Player 分配采样。

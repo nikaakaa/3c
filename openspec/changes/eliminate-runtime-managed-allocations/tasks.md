@@ -579,6 +579,7 @@
 - [x] 5.296 Authority Tick Schedule 的 held 输入改为 64 容量 Actor/Record 平行数组加显式 count；Accept 二分原地插入，Capture/Restore 保持 ActorId 升序，删除 SortedDictionary
 - [x] 5.297 Authority Replication Egress 的确认 horizon 改为 64 容量 Actor/Horizon 平行数组加显式 count；按 ActorId 二分读取和原地插入，保留最大 Sequence 与升序 wire 语义
 - [x] 5.298 Authority Source 的 roster、route 和 latest checkpoint 改为 expected roster 定容数组；路由二分查找，锁定前空 roster 合同不变，删除运行期 List/SortedDictionary/Dictionary
+- [x] 5.299 Authority stale/reuse input 的 neutral values 按 InputId/Kind 布局缓存；SimulationInput 提供 owned array 入口和静态排序器，布局不变时跨 Tick 复用，布局变化才重建
 
 ## 6. UI、资源、渲染和生命周期
 

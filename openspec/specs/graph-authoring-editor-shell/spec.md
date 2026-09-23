@@ -134,7 +134,7 @@ Shell MUST只通过domain diagnostics adapter显示编译、validation或runtime
 
 - **WHEN** 用户双击BaseTreeAsset
 - **THEN** 正式入口 MUST打开基于Shell的BTSMTL document
-- **AND** MUST不同时打开旧BaseTreeWindow实现或Workbench
+- **AND** MUST不同时打开旧TreeDesigner窗口实现或Workbench
 
 #### Scenario: 直接打开Pose Graph asset
 

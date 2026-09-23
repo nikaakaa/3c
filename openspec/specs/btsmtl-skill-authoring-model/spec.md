@@ -88,13 +88,18 @@
 - **WHEN** 后续发现Edge与旧Step的条件或调度字段不一致
 - **THEN** 当前规划/迁移记录 MUST明确列出双方值及受影响对象
 - **AND** MUST不自动覆盖或为了继续执行创建临时兼容数据
+### Requirement: 共享定义不得依赖退役作者协议
 
-### Requirement: 共享定义不得依赖退役Agent协议
+共享作者定义、Capability、Mutation、Compiler 和正式 C# authoring API MUST 直接消费当前领域的类型化定义。已经没有合法消费者的 Agent Document、JSON binding、旧 exporter、reconciler、兼容 reader 和协议专属字段 MUST 删除，不得作为运行或编辑入口保留。
 
-共享metadata中已无合法消费者的Agent专属字段 MUST在对应调用者改接后删除。领域role、typed字段、真实owner和端口规则 MUST按实际用途保留，不能按类型名含Document或目录位置整体删除。旧Agent公共协议与JSON binding退役由其Owner实施，本模型 MUST不要求保留同义版本、旧reader或包往返作为前置条件。
+#### Scenario: 正式作者入口已接管
 
-#### Scenario: 领域创建代码已经脱离Agent
+- **WHEN** 领域的人工编辑、C# authoring 和 Compiler 已经使用正式类型化 API
+- **THEN** 旧协议字段、重复模型和旧入口 MUST 删除
+- **AND** 系统 MUST 不增加兼容包装、双写或旧新开关
 
-- **WHEN** 某共享协议字段的合法调用者均已改接正式API
-- **THEN** 该无用字段及重复声明 MUST删除
-- **AND** MUST不继续要求checkout、dry-run或整包apply才能使用节点定义
+#### Scenario: 仍有合法消费者
+
+- **WHEN** 旧协议对象仍被合法作者入口、资产序列化或编译产物引用
+- **THEN** 该对象 MUST 留在原 owner 或按有消费者的实施清单归位
+- **AND** MUST 记录具体消费者和迁移去向，不能只按名称或目录删除

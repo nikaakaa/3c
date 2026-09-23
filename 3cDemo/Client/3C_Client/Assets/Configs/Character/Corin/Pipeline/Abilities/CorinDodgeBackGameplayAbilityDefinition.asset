@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
   m_Name: Decision DodgeBackIFrame
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"3d9b2d59-0fee-42f8-8e53-246b538ecf33","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"f46d6c90-8f68-45ff-baab-be044b379d59","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"131816a77d7344d7b03d11917cb9c75d","m_OwnerId":"93e14509-b248-44cc-a263-78c434016564"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"c46a2985-824e-4035-8374-efd6ef392c96","_name":"Set
-    DodgeBackIFrame","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"fb5e08cb-e551-4c3d-9b1b-2a36e5b32b39","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"b3e23c3c-2686-43af-b85b-066bfed036c3","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"51e60cb8-d436-465c-b8cf-4ca33e8ee920","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"fa5685f170b175b6f28866f79fa0a083","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"3d9b2d59-0fee-42f8-8e53-246b538ecf33","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"f46d6c90-8f68-45ff-baab-be044b379d59","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Steps":[{"m_Id":"end","m_Name":"\u7ed3\u675f","m_Condition":1},{"m_Id":"body","m_Name":"\u6267\u884c"}],"_UID":"36ff032035f44c24b0eeb0cd150df97b","_name":"\u7a97\u53e3\u6267\u884c\u6216\u7ed3\u675f","_position":{"x":280.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillSelectorFlowNode","$id":"2"},{"_UID":"8b9ccd1a341349e1997872baf0b8d7a2","_name":"\u7ed3\u675f\u7247\u6bb5","_position":{"x":520.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineExitRequestFlowNode","$id":"3"},{"m_Variable":{"m_DeclarationId":"131816a77d7344d7b03d11917cb9c75d","m_OwnerId":"93e14509-b248-44cc-a263-78c434016564"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"c46a2985-824e-4035-8374-efd6ef392c96","_name":"Set
+    DodgeBackIFrame","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"4"},{"_UID":"fb5e08cb-e551-4c3d-9b1b-2a36e5b32b39","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"b3e23c3c-2686-43af-b85b-066bfed036c3","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"7c05230e2e2b47b2ad1ef2bee52f0d25","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"end","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"55e1311bb3a24f49b89941cae34c0345","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"body","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"4"},"_UID":"bad5919ff7dd4a3fb7a637f9ac66366a","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"fa5685f170b175b6f28866f79fa0a083","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -8146659154074728350}
   _graphSource:
     _version: 3.42
     _category: 
@@ -25,6 +27,34 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: fa5685f170b175b6f28866f79fa0a083
   m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &-8146659154074728350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: "Timeline\u8FBE\u5230\u7EC8\u6B62\u8FB9\u754C"
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"c8f912842c6447dbb541455157263359","_name":"Timeline\u65f6\u95f4","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineTimeFlowNode","$id":"0"},{"_simplexNode":{},"_inputPortValues":{"b":{"$content":2.35,"$type":"System.Single"}},"_UID":"0fd8f67fe6e64fc7a2a41061a9ff3566","_name":"\u5230\u8fbe\u7ed3\u675f\u65f6\u95f4","_position":{"x":-100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.FloatGreaterEqualThan,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_UID":"10eda577-904b-4576-8ef2-ae219cfb7c77","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"2"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"9c5982c2ca594fc3b0c934965063fa90","$type":"FlowCanvas.BinderConnection`1[[System.Single,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"c60900a6987c44ec8d93e99055f805a3","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"8e944bdc49df4f6d936d70a56e44609e","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 8e944bdc49df4f6d936d70a56e44609e
+  m_Role: 3
   m_BlackboardDeclarations: []
 --- !u!114 &-7785901064648054346
 MonoBehaviour:
@@ -38,9 +68,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
   m_Name: Decision RecoveryOpen
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"d52c4af5-4427-4a97-8234-518f2c15d57a","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"2c4bb2f9-dc4a-4d9e-98b5-835b1f42c0e5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"066d593b6cd64cdb9de608744b830ca3","m_OwnerId":"93e14509-b248-44cc-a263-78c434016564"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"14ae0b1b-d797-423a-ae5f-4e48a32b5ff1","_name":"Set
-    RecoveryOpen","_position":{"x":398.7067,"y":223.4471},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"bac2516e-ac8f-45a4-8e6d-da36c659c790","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"f6e4ecf3-e1b7-4e61-95da-c0abb154fa94","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"8f725471-ff0c-4f15-a97e-4874a314760d","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"32d315d4d581f2c38d90f506beb95c02","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"d52c4af5-4427-4a97-8234-518f2c15d57a","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"2c4bb2f9-dc4a-4d9e-98b5-835b1f42c0e5","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Steps":[{"m_Id":"end","m_Name":"\u7ed3\u675f","m_Condition":1},{"m_Id":"body","m_Name":"\u6267\u884c"}],"_UID":"0ca724f697c44a02895828446c945231","_name":"\u7a97\u53e3\u6267\u884c\u6216\u7ed3\u675f","_position":{"x":280.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillSelectorFlowNode","$id":"2"},{"_UID":"248adaf0e46e48b88f0f5bbbde349b7b","_name":"\u7ed3\u675f\u7247\u6bb5","_position":{"x":520.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineExitRequestFlowNode","$id":"3"},{"m_Variable":{"m_DeclarationId":"066d593b6cd64cdb9de608744b830ca3","m_OwnerId":"93e14509-b248-44cc-a263-78c434016564"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"14ae0b1b-d797-423a-ae5f-4e48a32b5ff1","_name":"Set
+    RecoveryOpen","_position":{"x":398.7067,"y":223.4471},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"4"},{"_UID":"bac2516e-ac8f-45a4-8e6d-da36c659c790","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"f6e4ecf3-e1b7-4e61-95da-c0abb154fa94","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"8c6c026b56c04e76a67ff587d998ba15","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"end","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"08ec4e53cdfb4163b2ccbded8ac1dfdc","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"body","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"4"},"_UID":"2b02e13ce02a4414aa4df24f710e46e7","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"32d315d4d581f2c38d90f506beb95c02","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -5850508654085207420}
   _graphSource:
     _version: 3.42
     _category: 
@@ -104,6 +136,34 @@ MonoBehaviour:
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 921c1fd2-8a23-431a-a49b-39a98e771e2f
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-5850508654085207420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: "Timeline\u8FBE\u5230\u7EC8\u6B62\u8FB9\u754C"
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"de79ea08c1224ee1a9f46276271b9b45","_name":"Timeline\u65f6\u95f4","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineTimeFlowNode","$id":"0"},{"_simplexNode":{},"_inputPortValues":{"b":{"$content":2.35,"$type":"System.Single"}},"_UID":"76adbe4f8ec9495b9e70f9260703dc9d","_name":"\u5230\u8fbe\u7ed3\u675f\u65f6\u95f4","_position":{"x":-100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.FloatGreaterEqualThan,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_UID":"b7268f50-070b-4f6c-b1fc-8a598449acf8","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"2"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"b5194d47191c4061b679e60da1b24f0e","$type":"FlowCanvas.BinderConnection`1[[System.Single,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"ce6b54d82409456f8b3b4ba10dc76675","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"e219e65dcbd34e7da425abb704ac2a51","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: e219e65dcbd34e7da425abb704ac2a51
   m_Role: 3
   m_BlackboardDeclarations: []
 --- !u!114 &-3861217214052714189

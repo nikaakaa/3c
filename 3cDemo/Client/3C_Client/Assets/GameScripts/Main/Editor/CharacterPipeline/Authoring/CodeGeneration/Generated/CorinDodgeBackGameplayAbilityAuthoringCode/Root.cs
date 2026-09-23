@@ -42,19 +42,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static void FinalizeAuthoring(RootParts rootParts, DodgeBackParts dodgeBack, BtsmtlAuthoringGenerationContext context)
         {
             BtsmtlSkillAuthoringCode.ConfigureNativeState((BtsmtlSkillNativeState)rootParts.state1, dodgeBack.graph1);
-            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge1, dodgeBack.graph4, 0, ProgramAbortPolicy.None, 0);
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge1, dodgeBack.graph6, 0, ProgramAbortPolicy.None, 0);
             BtsmtlSkillAuthoringCode.PruneFlowGraph(rootParts.graph, new[] { "37772f70-8c7f-4126-ac64-e32fcca47890", "c5122005-2d41-4e69-93e9-e6b33f6afc61" }, new[] { "9e42a23e-40ab-4c4f-9680-92be8536ccfa" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph1, new[] { "e3379cf4-a2a0-4288-b190-d9952dcd30ed", "f02da1e1-1177-4116-b3ed-766e3251db81", "61586c6f-c735-4125-8875-41f1ff5f93c7", "e6673554-94b0-4f98-a52e-01158c43b92c" }, new[] { "1d4bfe96-f332-4168-a910-fecb32dd4a43" });
-            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph2, new[] { "3d9b2d59-0fee-42f8-8e53-246b538ecf33", "f46d6c90-8f68-45ff-baab-be044b379d59", "c46a2985-824e-4035-8374-efd6ef392c96", "fb5e08cb-e551-4c3d-9b1b-2a36e5b32b39", "b3e23c3c-2686-43af-b85b-066bfed036c3" }, new[] { "51e60cb8-d436-465c-b8cf-4ca33e8ee920" });
-            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph3, new[] { "d52c4af5-4427-4a97-8234-518f2c15d57a", "2c4bb2f9-dc4a-4d9e-98b5-835b1f42c0e5", "14ae0b1b-d797-423a-ae5f-4e48a32b5ff1", "bac2516e-ac8f-45a4-8e6d-da36c659c790", "f6e4ecf3-e1b7-4e61-95da-c0abb154fa94" }, new[] { "8f725471-ff0c-4f15-a97e-4874a314760d" });
-            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph4, new[] { "b4b30de0-f2a9-4145-8a74-376a9fcb4ca8", "12d56e7c-5437-4a5f-bed0-c0c5c22ccb75" }, new[] { "797b1212-00ef-4290-9fb4-17258e039be7" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph2, new[] { "3d9b2d59-0fee-42f8-8e53-246b538ecf33", "f46d6c90-8f68-45ff-baab-be044b379d59", "36ff032035f44c24b0eeb0cd150df97b", "8b9ccd1a341349e1997872baf0b8d7a2", "c46a2985-824e-4035-8374-efd6ef392c96", "fb5e08cb-e551-4c3d-9b1b-2a36e5b32b39", "b3e23c3c-2686-43af-b85b-066bfed036c3" }, new[] { "7c05230e2e2b47b2ad1ef2bee52f0d25", "55e1311bb3a24f49b89941cae34c0345", "bad5919ff7dd4a3fb7a637f9ac66366a" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph3, new[] { "c8f912842c6447dbb541455157263359", "0fd8f67fe6e64fc7a2a41061a9ff3566", "10eda577-904b-4576-8ef2-ae219cfb7c77" }, new[] { "9c5982c2ca594fc3b0c934965063fa90", "c60900a6987c44ec8d93e99055f805a3" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph4, new[] { "d52c4af5-4427-4a97-8234-518f2c15d57a", "2c4bb2f9-dc4a-4d9e-98b5-835b1f42c0e5", "0ca724f697c44a02895828446c945231", "248adaf0e46e48b88f0f5bbbde349b7b", "14ae0b1b-d797-423a-ae5f-4e48a32b5ff1", "bac2516e-ac8f-45a4-8e6d-da36c659c790", "f6e4ecf3-e1b7-4e61-95da-c0abb154fa94" }, new[] { "8c6c026b56c04e76a67ff587d998ba15", "08ec4e53cdfb4163b2ccbded8ac1dfdc", "2b02e13ce02a4414aa4df24f710e46e7" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph5, new[] { "de79ea08c1224ee1a9f46276271b9b45", "76adbe4f8ec9495b9e70f9260703dc9d", "b7268f50-070b-4f6c-b1fc-8a598449acf8" }, new[] { "b5194d47191c4061b679e60da1b24f0e", "ce6b54d82409456f8b3b4ba10dc76675" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph6, new[] { "b4b30de0-f2a9-4145-8a74-376a9fcb4ca8", "12d56e7c-5437-4a5f-bed0-c0c5c22ccb75" }, new[] { "797b1212-00ef-4290-9fb4-17258e039be7" });
             BtsmtlSkillAuthoringCode.PruneNativeStateMachine(rootParts.stateMachine, new[] { "e376c542-fd18-4a79-bd6c-df249bc626e0" }, new[] { "027effc7-ec6b-453c-90a5-cedb9418730a", "56b68cd3-0249-4f8f-9af2-06c451584b84" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(rootParts.graph, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph1, new[] { "066d593b6cd64cdb9de608744b830ca3", "131816a77d7344d7b03d11917cb9c75d" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph2, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph3, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph4, Array.Empty<string>());
-            BtsmtlSkillAuthoringCode.PruneTimeline(dodgeBack.timelineData, new[] { "82f04395-f39f-487a-8112-e45882a37deb", "8f2a9050-893a-41e1-be05-57312ab21153", "a636f440-208c-47db-88c1-afe9792423df" }, new[] { "b0ee4319-922b-410e-8c0c-b4fe70eb7504", "ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d", "180ec5ff-8aca-43b2-93aa-32d2354b4851", "b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a" }, Array.Empty<string>(), Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph5, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph6, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneTimeline(dodgeBack.timelineData, new[] { "82f04395-f39f-487a-8112-e45882a37deb", "8f2a9050-893a-41e1-be05-57312ab21153", "a636f440-208c-47db-88c1-afe9792423df", "00890b6c-bfe3-bf86-4efa-bf6596ca43bd" }, new[] { "b0ee4319-922b-410e-8c0c-b4fe70eb7504", "ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d", "180ec5ff-8aca-43b2-93aa-32d2354b4851", "b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a" }, Array.Empty<string>(), Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneTimelineMarkers(dodgeBack.timelineData, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.BindAbilityRoot(context, rootParts.graph);
         }
 

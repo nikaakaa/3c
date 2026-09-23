@@ -97,6 +97,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return values;
         }
 
+        public int CountReplayAfter(ulong confirmedInputSequence)
+        {
+            int count = 0;
+            for (int i = 0; i < m_Count; i++)
+            {
+                if (m_Records[i].Input.InputSequence > confirmedInputSequence)
+                    count = checked(count + 1);
+            }
+            return count;
+        }
+
         public void Add(
             OwnerCanonicalInputBatch input,
             Float32CompletedSimulationStep completed,

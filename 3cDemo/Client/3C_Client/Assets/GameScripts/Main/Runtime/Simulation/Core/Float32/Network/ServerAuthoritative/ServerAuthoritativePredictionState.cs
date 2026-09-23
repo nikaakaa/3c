@@ -158,6 +158,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<ServerAuthoritativePredictionHistoryRecord> GetReplayAfter(
             ulong confirmedInputSequence) => m_History.GetReplayAfter(confirmedInputSequence);
 
+        public int CountReplayAfter(ulong confirmedInputSequence) =>
+            m_History.CountReplayAfter(confirmedInputSequence);
+
         public void AddHistory(OwnerCanonicalInputBatch input, Float32CompletedSimulationStep completed)
         {
             m_History.Add(
@@ -194,7 +197,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             m_History.TryGet(baseline.AuthorityTick, out ServerAuthoritativePredictionHistoryRecord local);
             int replayCount = local == null
                 ? 0
-                : m_History.GetReplayAfter(baseline.ConfirmedInputSequence).Count;
+                : m_History.CountReplayAfter(baseline.ConfirmedInputSequence);
             PredictionCorrectionDecision decision = m_Reconciler.Decide(baseline, local, replayCount, Policy);
             if (decision.Kind == PredictionCorrectionDecisionKind.NoCorrection)
                 AdvanceConfirmation(baseline);

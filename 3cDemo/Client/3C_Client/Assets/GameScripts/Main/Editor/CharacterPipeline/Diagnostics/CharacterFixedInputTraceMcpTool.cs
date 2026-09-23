@@ -148,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static object Success(string message, bool includeTraces)
         {
             FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
+            FixedCharacterInputTraceStatus stopped = FixedCharacterInputTraceModule.LastStoppedStatus;
             CharacterFixedInputTraceSummary[] traces = includeTraces
                 ? CharacterFixedInputTraceWorkflow.ListTraces().ToArray()
                 : Array.Empty<CharacterFixedInputTraceSummary>();
@@ -166,6 +167,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     actor_id = status.ActorId,
                     frame_count = status.FrameCount,
                     replayed_frame_count = status.ReplayedFrameCount,
+                    stopped_trace = new
+                    {
+                        mode = stopped.Mode.ToString(),
+                        trace_id = stopped.TraceId,
+                        frame_count = stopped.FrameCount,
+                        replayed_frame_count = stopped.ReplayedFrameCount,
+                        message = stopped.Message
+                    },
                     replay_tick_drive_owned =
                         CharacterFixedInputTraceWorkflow
                             .OwnsReplayTickDrive,

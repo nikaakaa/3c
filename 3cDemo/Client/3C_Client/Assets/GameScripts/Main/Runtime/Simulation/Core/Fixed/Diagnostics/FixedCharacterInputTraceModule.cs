@@ -246,6 +246,7 @@ namespace ThirdPersonSimulation.Fixed
         static string s_TraceId = string.Empty;
         static string s_ReplayInputSourceIdentity = string.Empty;
         static string s_Message = string.Empty;
+        static FixedCharacterInputTraceStatus s_LastStoppedStatus;
 
         public static FixedCharacterInputTraceStatus Status =>
             new FixedCharacterInputTraceStatus(
@@ -263,6 +264,7 @@ namespace ThirdPersonSimulation.Fixed
                 s_Message);
 
         public static FixedCharacterInputTrace LastCompletedTrace => s_LastCompletedTrace;
+        public static FixedCharacterInputTraceStatus LastStoppedStatus => s_LastStoppedStatus;
         public static bool IsRecording => s_Mode == FixedCharacterInputTraceMode.Recording;
         public static bool IsReplayActive =>
             s_Mode == FixedCharacterInputTraceMode.PreparingReplay ||
@@ -505,12 +507,16 @@ namespace ThirdPersonSimulation.Fixed
 
         public static void Stop()
         {
+            if (s_Mode == FixedCharacterInputTraceMode.Idle)
+                return;
+            FixedCharacterInputTraceStatus stoppedStatus = Status;
             ResetState();
+            s_LastStoppedStatus = stoppedStatus;
         }
 
         public static void ClearCompletedTrace()
         {
-            ResetState();
+            Stop();
             s_LastCompletedTrace = null;
         }
 
@@ -748,6 +754,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static void ResetState()
         {
+            s_LastStoppedStatus = default;
             s_Mode = FixedCharacterInputTraceMode.Idle;
             s_ActorId = default;
             s_TickRate = 0;

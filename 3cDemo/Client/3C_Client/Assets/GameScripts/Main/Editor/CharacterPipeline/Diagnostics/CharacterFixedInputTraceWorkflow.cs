@@ -1457,6 +1457,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (IsReplaying || s_ReplayOwnsTickDrive || s_ReplayOwnsSampling)
             {
                 FixedCharacterInputTraceStatus status = FixedCharacterInputTraceModule.Status;
+                if (status.Mode == FixedCharacterInputTraceMode.Idle)
+                    status = FixedCharacterInputTraceModule.LastStoppedStatus;
                 s_LastFailure = $"Replay interrupted by Play Mode exit after {status.ReplayedFrameCount}/{status.FrameCount} frames. {status.Message}";
                 s_LastStatus = s_LastFailure;
                 StopPresentationScheduleRun();

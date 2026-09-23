@@ -5908,3 +5908,14 @@
 - 本步消除外层快照对象本体；scope 变化时的 scope snapshot、lease record、每 scope cancellation source、UniTaskCompletionSource 和诊断字符串仍是 6.2 后续边界。
 - `GameLogic` Release 依赖链先被 `UnityEditor.UI` 包内既有 `DefaultControls.factory` 只读属性错误阻断，未到达本次源码；随后用 Unity `ScriptAssemblies` 正式引用和 GameLogic 完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误。过程中执行过 `dotnet build-server shutdown`，临时编译脚本和产物已删除。
 - 未刷新 Unity、未进 Play、未做资源 acquire/release/maintenance 回放、checkpoint 快照对比和 Player 分配采样。
+
+## 2026-09-23 资源scope快照值化
+
+对应 tasks.md 的 6.29；父项 6.2 保持未勾选。代码提交为 `4968293ac`。
+
+- `ResourceScopeSnapshot` 原先是 `class`，scope 的 State 或 LeaseCount 每次变化都会新建对象；全局、Home、Gameplay 和 Transient 中任一 scope 发生租约变化都会重复这条分配。现在改为 `readonly struct`，`PublishSnapshot` 的 scope 数组直接保存值。
+- 构造期校验 scope id；default 实例通过 `IsValid == false` 表达未发布。`ResourceScope` 用 `_hasSnapshot` 区分“尚未发布”和有效缓存，State/LeaseCount 变化时替换栈上缓存值，不再做 null 比较。
+- `PublishSnapshot` 的“scope 数组是否可共享”判断从引用相等改为 `Equals` 精确值比较，覆盖 Id、Kind、Name、State 和 LeaseCount；数组仍按 scope Id 升序排序，只有值变化或数量变化才重建外层数组。
+- scope 值快照删除后，资源事件不再分配 `ResourceScopeSnapshot` 本体；`ResourceScope` cancellation source、lease record、UniTaskCompletionSource、外层数组变化时的复制和诊断字符串仍是 6.2 后续边界。
+- `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除，执行结束后无 .NET build server 残留。
+- 未刷新 Unity、未进 Play、未做多 scope acquire/release/maintenance 回放、scope 快照数组共享对比和 Player 分配采样。

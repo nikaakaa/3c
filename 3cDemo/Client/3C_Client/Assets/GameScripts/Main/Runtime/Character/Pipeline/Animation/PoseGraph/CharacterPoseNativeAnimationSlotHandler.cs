@@ -633,7 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeAnimationSlotSourceBinding :
-        ICharacterPoseNativeAnimationSlotSource
+        ICharacterPoseNativeAnimationSlotSource, ICharacterPoseSourceRetirementOwner
     {
         readonly AnimationBlendStackRuntime m_Stack;
         readonly CharacterPoseNativeActionSlotSource m_ActionSource;
@@ -641,6 +641,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeBlendStackSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        readonly AnimationBlendStackSourceReleaseToken[] m_StackReleases;
+        readonly CharacterPoseSourceRetirementHandle[] m_Retirements;
+        int m_RetirementCount;
+        ulong m_CompletionIdentity;
         CharacterPoseNativeLocalPoseValue m_Output;
         AnimationScriptPlayable m_Playable;
         AnimationSlotBlendJob m_Job;
@@ -667,10 +671,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputBuffer = outputBuffer ??
                 throw new ArgumentNullException(nameof(outputBuffer));
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
+            m_StackReleases = new AnimationBlendStackSourceReleaseToken[stack.SourceCapacity + 1];
+            m_Retirements = new CharacterPoseSourceRetirementHandle[stack.SourceCapacity + 1];
+            m_Source.RegisterRetirementOwner(this);
         }
 
         public AnimationSelectionAvailabilityPolicy Availability =>
             m_Stack.OutputPolicy;
+
+        public void PrepareRetirements()
+        {
+            if (!m_EvaluationPrepared)
+                return;
+            int count = m_Stack.PendingPriorFrameReleaseCount(m_CompletionIdentity);
+            for (int i = 0; i < count; i++)
+            {
+                AnimationBlendStackSourceReleaseToken token =
+                    m_Stack.PrepareRelease(i, m_CompletionIdentity);
+                m_StackReleases[i] = token;
+                var permission = new CharacterPoseSourceRetirementPermission(
+                    token.Release.SourceId, token.Release.PoseNodeId, default);
+                m_Retirements[i] = m_Source.PrepareRetirement(in permission);
+                m_RetirementCount++;
+            }
+        }
+
+        public void CommitRetirements()
+        {
+            for (int i = 0; i < m_RetirementCount; i++)
+            {
+                m_Source.ApplyRetirement(in m_Retirements[i]);
+                m_Stack.ApplyPreparedRelease(in m_StackReleases[i]);
+            }
+            DiscardRetirements();
+        }
+
+        public void DiscardRetirements()
+        {
+            Array.Clear(m_StackReleases, 0, m_RetirementCount);
+            Array.Clear(m_Retirements, 0, m_RetirementCount);
+            m_RetirementCount = 0;
+        }
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
@@ -740,6 +781,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding,
                 m_Source);
             m_Stack.PrepareCompletion(lineage.CompletionIdentity);
+            m_CompletionIdentity = lineage.CompletionIdentity;
             if (!m_Playable.IsValid())
             {
                 m_Playable = runtime.InstanceContext.Animancer.Graph.InsertOutputJob(
@@ -844,6 +886,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Playable.IsValid())
                 AnimancerUtilities.RemovePlayable(m_Playable);
             m_ActionSource.Dispose();
+            m_Source.UnregisterRetirementOwner(this);
             m_Stack.Dispose();
             m_OutputBuffer.Dispose();
             m_SecondaryOutputBuffer.Dispose();

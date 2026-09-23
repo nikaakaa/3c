@@ -83,11 +83,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             state.Policy = CharacterFootInterpolationPolicy.SwingResidual;
             ClearPlant(ref state);
-            return EvaluateSwing(
+            CharacterFootInterpolationResult result = EvaluateSwing(
                 ref state,
                 in target,
                 in frame,
                 false);
+            state.EffectiveCorrection = default;
+            state.PendingReleaseResponseRebase = false;
+            ClearCorrectionResponse(
+                ref state,
+                CharacterFootCorrectionResponseInitializationReason.PolicyExited);
+            return result;
         }
 
         internal static void ApplyPostTransition(

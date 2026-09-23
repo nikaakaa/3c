@@ -365,6 +365,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly ulong[][] m_TickTracks;
         readonly CharacterBodySample[][] m_SampleTracks;
         readonly int[] m_Counts;
+        readonly ServerAuthoritativeRemoteBodySelection[] m_SelectionScratch;
         ulong m_EvictionCount;
 
         public ServerAuthoritativeRemoteBodyTimeline(
@@ -396,6 +397,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 m_TickTracks[i] = new ulong[capacityPerActor];
                 m_SampleTracks[i] = new CharacterBodySample[capacityPerActor];
             }
+            m_SelectionScratch = new ServerAuthoritativeRemoteBodySelection[actors.Length];
         }
 
         public bool IsPrimed
@@ -503,18 +505,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (!IsPrimed)
                 throw new InvalidOperationException("Remote body timeline has not completed observation priming.");
-            var selections = new ServerAuthoritativeRemoteBodySelection[m_LockedActors.Length];
             for (int i = 0; i < m_LockedActors.Length; i++)
             {
                 ActorId actorId = m_LockedActors[i];
-                selections[i] = SelectActor(
+                m_SelectionScratch[i] = SelectActor(
                     actorId,
                     m_TickTracks[i],
                     m_SampleTracks[i],
                     m_Counts[i],
                     targetTick);
             }
-            return new ServerAuthoritativeRemoteBodySelectionFrame(targetTick, selections);
+            return new ServerAuthoritativeRemoteBodySelectionFrame(targetTick, m_SelectionScratch);
         }
 
         public ServerAuthoritativeRemoteBodyTimelineCheckpoint Capture()

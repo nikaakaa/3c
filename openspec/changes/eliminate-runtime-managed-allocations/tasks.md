@@ -612,6 +612,7 @@
 - [x] 6.27 ProductResourceRuntime 的无主物理资源扫描改用 owner 生命周期数组 scratch 和精确有效长度；扫描顺序、删除集合和清空引用不变，删除每次维护 List 本体与扩容
 - [x] 6.28 ResourceRuntimeSnapshot 改为 readonly struct 并提供 Sequence==0 的 invalid 状态；资源历史环形槽位直接存储值，外层快照对象不再随每次发布分配
 - [x] 6.29 ResourceScopeSnapshot 改为 readonly struct；scope 用 hasSnapshot 区分未发布状态，PublishSnapshot 用值相等判断共享数组，状态变化时不再新建快照对象
+- [x] 6.30 GameplayDownloadSnapshot 改为 readonly struct；Shell 用 IsValid 判断未发布状态，下载进度、文件开始和取消回调只替换当前值，不再新建快照对象
 
 ## 7. 诊断与正式性能交付
 

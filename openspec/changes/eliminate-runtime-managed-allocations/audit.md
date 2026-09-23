@@ -5919,3 +5919,14 @@
 - scope 值快照删除后，资源事件不再分配 `ResourceScopeSnapshot` 本体；`ResourceScope` cancellation source、lease record、UniTaskCompletionSource、外层数组变化时的复制和诊断字符串仍是 6.2 后续边界。
 - `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除，执行结束后无 .NET build server 残留。
 - 未刷新 Unity、未进 Play、未做多 scope acquire/release/maintenance 回放、scope 快照数组共享对比和 Player 分配采样。
+
+## 2026-09-23 下载进度快照值化
+
+对应 tasks.md 的 6.30；父项 6.2 保持未勾选。代码提交为 `81ffabb0c`。
+
+- `GameplayDownloadSnapshot` 原先是 `class`；下载期间的每次进度更新、文件开始、取消和终态都会新建快照对象。现在改为 `readonly struct`，`Current` 只替换栈上值，强类型 `Changed` 调用不装箱。
+- default 实例的 `Generation == 0` 通过 `IsValid == false` 表达未发布状态；Shell 诊断从 null 判断改为 `IsValid` 判断。计划、下载、取消、失败和完成的字段来源与发布时机不变。
+- 构造期仍把 null CurrentFile/SafeError 归一为空串。下载计划、downloader 回调绑定、generation 检查、取消边界和 `RecordPreparedTag` 顺序不变。
+- 本步消除下载快照对象本体；下载计划对象、第三方 downloader、UniTask 状态机、`StringBuilder` 输出和错误字符串仍是 6.2/7.1 后续边界。
+- `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除。
+- 未刷新 Unity、未进 Play、未做下载进度回放、取消/换代对比和 Player 分配采样。

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -17,12 +16,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly IServerAuthoritativeAuthorityDataTransport m_Data;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
         readonly NetworkCheckpointLayout m_CheckpointLayout;
-        readonly ReadOnlyCollection<ActorId> m_ExpectedActors;
-        readonly List<ServerAuthoritativeRosterEntry> m_Roster = new List<ServerAuthoritativeRosterEntry>();
-        readonly SortedDictionary<ActorId, ServerAuthoritativeAuthorityClientRoute> m_Routes =
-            new SortedDictionary<ActorId, ServerAuthoritativeAuthorityClientRoute>();
-        readonly Dictionary<ActorId, NetworkCheckpoint> m_LatestCheckpoints =
-            new Dictionary<ActorId, NetworkCheckpoint>();
+        readonly ActorId[] m_ExpectedActors;
+        readonly ServerAuthoritativeRosterEntry[] m_Roster;
+        readonly ActorId[] m_RouteActors;
+        readonly ServerAuthoritativeAuthorityClientRoute[] m_Routes;
+        int m_RouteCount;
+        readonly NetworkCheckpoint[] m_LatestCheckpoints;
+        readonly bool[] m_HasLatestCheckpoints;
         readonly OutputRing<ServerAuthoritativeAuthorityReliableEventBatchOutput> m_ReliableOutput;
         readonly OutputRing<ServerAuthoritativeAuthorityFullCheckpointOutput> m_FullCheckpointOutput;
         readonly ThreadLocal<CanonicalWriter> m_PayloadWriter;
@@ -64,18 +64,23 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_CheckpointLayout = new NetworkCheckpointLayout(characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime)));
             m_PayloadWriter = new ThreadLocal<CanonicalWriter>(
                 () => new CanonicalWriter(new byte[policy.ModelPolicy.MaxGameplayDatagramBytes]));
-            var actors = expectedActors == null
-                ? new List<ActorId>()
-                : new List<ActorId>(expectedActors);
-            actors.Sort();
-            if (actors.Count == 0)
+            ActorId[] actors = expectedActors == null
+                ? Array.Empty<ActorId>()
+                : expectedActors.ToArray();
+            Array.Sort(actors);
+            if (actors.Length == 0)
                 throw new ArgumentException("Authority Source expected Actor roster is empty.", nameof(expectedActors));
             for (int i = 0; i < actors.Count; i++)
             {
                 if (!actors[i].IsValid || i > 0 && actors[i - 1] == actors[i])
                     throw new ArgumentException("Authority Source expected roster contains an invalid or duplicate ActorId.", nameof(expectedActors));
             }
-            m_ExpectedActors = actors.AsReadOnly();
+            m_ExpectedActors = actors;
+            m_Roster = new ServerAuthoritativeRosterEntry[actors.Length];
+            m_RouteActors = new ActorId[actors.Length];
+            m_Routes = new ServerAuthoritativeAuthorityClientRoute[actors.Length];
+            m_LatestCheckpoints = new NetworkCheckpoint[actors.Length];
+            m_HasLatestCheckpoints = new bool[actors.Length];
             var accepted = new AcceptedInputPort(this);
             var clock = new AuthorityClockPort(this);
             var baseline = new FullBaselineRequestPort(this);
@@ -95,7 +100,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public SimulationRuntimePortSet RuntimePorts { get; }
         public IFloat32SourceEgressOutputPort SourceEgress { get; }
         public NetworkCheckpointLayout CheckpointLayout => m_CheckpointLayout;
-        public IReadOnlyList<ServerAuthoritativeRosterEntry> Roster => m_Roster;
+        public IReadOnlyList<ServerAuthoritativeRosterEntry> Roster =>
+            m_RouteCount == 0 ? Array.Empty<ServerAuthoritativeRosterEntry>() : m_Roster;
         public ulong LatestAuthorityTick => m_LatestAuthorityTick;
         public bool IsReady
         {
@@ -104,9 +110,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 PumpTransport();
                 if (!m_RegistrationAccepted || !m_RosterLocked)
                     return false;
-                foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+                for (int i = 0; i < m_RouteCount; i++)
                 {
-                    if (!route.DataPlaneReady || !route.HasInput)
+                    if (!m_Routes[i].DataPlaneReady || !m_Routes[i].HasInput)
                         return false;
                 }
                 return true;
@@ -149,8 +155,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         {
             RequireAuthoritySource(source);
             Step(source);
-            foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+            for (int i = 0; i < m_RouteCount; i++)
             {
+                ServerAuthoritativeAuthorityClientRoute route = m_Routes[i];
                 if (route.DataPlaneReady && route.LastCommandSourceTick != 0 &&
                     source.SourceTick > route.LastCommandSourceTick + (ulong)m_Policy.CommandLivenessTimeoutTicks)
                 {
@@ -160,10 +167,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
             }
             ulong authorityTick = checked(m_LatestAuthorityTick + 1);
-            var values = new AcceptedAuthorityInput[m_Routes.Count];
+            var values = new AcceptedAuthorityInput[m_RouteCount];
             int valueIndex = 0;
-            foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
-                values[valueIndex++] = route.Select(authorityTick, m_Policy.ModelPolicy.MaximumInputLagTicks);
+            for (int i = 0; i < m_RouteCount; i++)
+                values[valueIndex++] = m_Routes[i].Select(authorityTick, m_Policy.ModelPolicy.MaximumInputLagTicks);
             return new AcceptedAuthorityInputBatch(new SimulationTick(authorityTick), values);
         }
 
@@ -231,7 +238,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 }
                 if (roster.Revision < m_RosterRevision)
                     continue;
-                if (roster.Roster.Count != m_ExpectedActors.Count)
+                if (roster.Roster.Count != m_ExpectedActors.Length)
                     Fail("authority_roster_count_mismatch", "Authority roster lock does not match the expected Actor count.");
                 for (int i = 0; i < m_ExpectedActors.Count; i++)
                 {
@@ -243,9 +250,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     for (int i = 0; i < roster.Roster.Count; i++)
                     {
                         ServerAuthoritativeRosterEntry entry = roster.Roster[i];
-                        m_Roster.Add(entry);
-                        m_Routes.Add(entry.ActorId, new ServerAuthoritativeAuthorityClientRoute(entry, m_Policy.CommandQueueCapacity));
+                        m_Roster[i] = entry;
+                        m_RouteActors[i] = entry.ActorId;
+                        m_Routes[i] = new ServerAuthoritativeAuthorityClientRoute(entry, m_Policy.CommandQueueCapacity);
                     }
+                    m_RouteCount = roster.Roster.Count;
                 }
                 else
                 {
@@ -267,8 +276,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             }
             while (m_Control.TryTakeFullCheckpointRequest(out ServerAuthoritativeAuthorityFullCheckpointRequest request))
             {
-                if (!m_Routes.TryGetValue(request.ActorId, out ServerAuthoritativeAuthorityClientRoute route) ||
-                    !route.Roster.PlayerId.Equals(request.PlayerId))
+                ServerAuthoritativeAuthorityClientRoute route = FindRoute(request.ActorId);
+                if (route == null || !route.Roster.PlayerId.Equals(request.PlayerId))
                 {
                     Fail("authority_full_checkpoint_route_unknown", "Full checkpoint request targets an unknown Authority route.");
                 }
@@ -285,8 +294,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 Fail("authority_data_ticket_invalid", "Authority received an invalid or expired data-plane ticket.");
             }
-            if (!m_Routes.TryGetValue(ticket.ActorId, out ServerAuthoritativeAuthorityClientRoute route) ||
-                !route.Roster.PlayerId.Equals(ticket.PlayerId))
+            ServerAuthoritativeAuthorityClientRoute route = FindRoute(ticket.ActorId);
+            if (route == null || !route.Roster.PlayerId.Equals(ticket.PlayerId))
             {
                 Fail("authority_data_ticket_route_unknown", "Authority data-plane ticket targets an Actor outside the locked roster.");
             }
@@ -302,8 +311,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         void ReceiveDatagram(ServerAuthoritativeReceivedDatagram received)
         {
             ServerAuthoritativeDatagramPacket packet = received.Packet;
-            if (!m_Routes.TryGetValue(packet.Header.Identity.ActorId, out ServerAuthoritativeAuthorityClientRoute route) ||
-                !route.Identity.Equals(packet.Header.Identity))
+            ServerAuthoritativeAuthorityClientRoute route = FindRoute(packet.Header.Identity.ActorId);
+            if (route == null || !route.Identity.Equals(packet.Header.Identity))
             {
                 return;
             }
@@ -375,20 +384,26 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             for (int i = 0; i < batch.Baselines.Count; i++)
             {
                 AuthoritativeActorBaseline baseline = batch.Baselines[i];
-                m_LatestCheckpoints[baseline.ActorId] = NetworkCheckpointCodec.Capture(m_CheckpointLayout, baseline);
+                int checkpointIndex = FindRouteIndex(baseline.ActorId);
+                if (checkpointIndex < 0)
+                    throw new InvalidOperationException("Authority checkpoint targets an unknown Authority route.");
+                m_LatestCheckpoints[checkpointIndex] = NetworkCheckpointCodec.Capture(m_CheckpointLayout, baseline);
+                m_HasLatestCheckpoints[checkpointIndex] = true;
             }
         }
 
         void SendSnapshots(AuthorityReplicationBatch batch)
         {
-            foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+            for (int i = 0; i < m_RouteCount; i++)
             {
-                if (!m_LatestCheckpoints.TryGetValue(route.Roster.ActorId, out NetworkCheckpoint target) ||
-                    target.Baseline.AuthorityTick != batch.AuthorityTick)
+                ServerAuthoritativeAuthorityClientRoute route = m_Routes[i];
+                if (!m_HasLatestCheckpoints[i] ||
+                    m_LatestCheckpoints[i].Baseline.AuthorityTick != batch.AuthorityTick)
                 {
                     m_FullBaselineRequested = true;
                     continue;
                 }
+                NetworkCheckpoint target = m_LatestCheckpoints[i];
                 RemotePresentationBatch remote = FindRemote(batch, route.Roster.ActorId);
                 if (route.PendingCheckpointRequest != 0)
                 {
@@ -493,8 +508,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 if (source.ReliableEvents.Count == 0)
                     continue;
                 ServerAuthoritativeAuthorityClientRoute recipient = null;
-                foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+                for (int routeIndex = 0; routeIndex < m_RouteCount; routeIndex++)
                 {
+                    ServerAuthoritativeAuthorityClientRoute route = m_Routes[routeIndex];
                     if (route.Roster.ActorId != source.ActorId)
                         recipient = recipient == null ? route : throw new InvalidOperationException("Authority has more than one remote event recipient.");
                 }
@@ -543,9 +559,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         bool HasPendingCheckpointRequest()
         {
-            foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+            for (int i = 0; i < m_RouteCount; i++)
             {
-                if (route.PendingCheckpointRequest != 0)
+                if (m_Routes[i].PendingCheckpointRequest != 0)
                     return true;
             }
             return false;
@@ -589,8 +605,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 : (batch.AuthorityTick.Value - m_LastEvidenceAuthorityTick) / (float)m_Policy.ModelPolicy.SimulationTickRate;
             m_LastEvidenceAuthorityTick = batch.AuthorityTick.Value;
             m_EvidenceRouteMetricCount = 0;
-            foreach (ServerAuthoritativeAuthorityClientRoute route in m_Routes.Values)
+            for (int i = 0; i < m_RouteCount; i++)
             {
+                ServerAuthoritativeAuthorityClientRoute route = m_Routes[i];
                 if (m_EvidenceRouteMetricCount == m_EvidenceRouteMetrics.Length)
                 {
                     int capacity = Math.Max(4, m_EvidenceRouteMetrics.Length * 2);
@@ -716,14 +733,41 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 failures.Add(exception);
             }
-            m_Routes.Clear();
-            m_Roster.Clear();
-            m_LatestCheckpoints.Clear();
+            Array.Clear(m_RouteActors, 0, m_RouteCount);
+            Array.Clear(m_Routes, 0, m_RouteCount);
+            m_RouteCount = 0;
+            Array.Clear(m_Roster, 0, m_Roster.Length);
+            Array.Clear(m_LatestCheckpoints, 0, m_LatestCheckpoints.Length);
+            Array.Clear(m_HasLatestCheckpoints, 0, m_HasLatestCheckpoints.Length);
             if (failures.Count != 0)
                 throw new AggregateException("Authority Source failed to release completely.", failures);
         }
 
         static long ClockMicros() => checked(Stopwatch.GetTimestamp() * 1000000L / Stopwatch.Frequency);
+
+        ServerAuthoritativeAuthorityClientRoute FindRoute(ActorId actorId)
+        {
+            int routeIndex = FindRouteIndex(actorId);
+            return routeIndex < 0 ? null : m_Routes[routeIndex];
+        }
+
+        int FindRouteIndex(ActorId actorId)
+        {
+            int left = 0;
+            int right = m_RouteCount - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                int comparison = m_RouteActors[middle].CompareTo(actorId);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
+        }
 
         sealed class AcceptedInputPort : IServerAuthoritativeAcceptedInputSourcePort
         {

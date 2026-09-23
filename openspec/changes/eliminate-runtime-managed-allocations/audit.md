@@ -5794,3 +5794,12 @@
 - 关闭诊断的稳态帧不再生成 `remoteFrameDifference` 及其哈希插值；诊断打开时的调用参数、比较顺序和输出文本不变。决策、计划、selected Bodies 和 correction 输出都不消费这个描述，生命周期只属于诊断记录。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做诊断开关前后回放、correction 决策回放和 Player 分配采样。
+
+## 2026-09-23 预测计划身份零重建
+
+对应 tasks.md 的 5.290；父项 2.5 保持未勾选。代码提交为 `b18835c75`。
+
+- `CorrectionScheduleRuntime.BuildPlan` 原先每次执行都用 `new[] { current.ActorId }` 新建 `SimulationActorRosterDescriptor`。该构造还会分配 identity string 数组并重算 roster hash。现在直接复用 `Float32CharacterRuntime.RosterDescriptor`；`BuildPlan` 已在入口校验 runtime roster 只有一个 Actor 且与 current Actor 一致，因此这是同一个 immutable 身份，不产生新的数据源。
+- `replayClock` 原先每帧都执行 `ClockId + ".replay"` 插值。现在只在 `RestoreReplay` 存在 replay 记录时构造；replay tick source 和 source mapping 的名称、顺序、Kind 不变。普通 current-only 稳态帧不再生成这个字符串。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 Prediction schedule 回放、RestoreReplay 回放、roster hash 对比和 Player 分配采样。

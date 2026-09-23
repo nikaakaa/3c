@@ -570,6 +570,7 @@
 - [x] 5.287 ServerAuthoritative RemoteBody Selection 使用 Timeline 常驻 per-Actor scratch；同步 schedule 消费者立刻转换独立 Body/Observed 结果，删除每次 Select 的 selection 数组分配
 - [x] 5.288 RemoteBody Selection 输出改为 Span 填充；schedule 直接写入最终 selectedBodies 区间，HardRecovery 只生成最终 owned Body 数组，删除每 tick 中转数组
 - [x] 5.289 Prediction correction 诊断的 baseline 差异描述移入 sink 启用分支；关闭诊断的稳态帧不再执行历史匹配和哈希插值
+- [x] 5.290 Prediction BuildPlan 复用 Character Runtime 准备期 Roster Descriptor；replay clock 改为 RestoreReplay 路径构造，普通帧删除 roster 数组/哈希重建和无 replay 字符串
 
 ## 6. UI、资源、渲染和生命周期
 

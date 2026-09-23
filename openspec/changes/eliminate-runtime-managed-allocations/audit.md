@@ -5990,3 +5990,13 @@
 - `ResourceRuntimeSnapshot` 的 logical/physical/join/cache/active lease 计数、TEngine 卸载时机、scope 关闭阻新请求和物理资源维护顺序不变。in-flight `UniTaskCompletionSource`、lease record、scope cancellation source、快照 scope 数组复制和诊断字符串仍在 6.2 后续边界。
 - `ProductResourceRuntime` 及资源契约、scope、诊断快照用 Unity 2022.3.62f2c1 正式引用和 `csc` 聚焦编译通过，0 错误；构建服务已关闭。
 - 未刷新 Unity、未进 Play、未做首载并发 join、acquire 取消、scope 关闭、维护清理和 Player 分配采样。
+
+## 2026-09-23 资源正式预加载容量前置
+
+对应 tasks.md 的 6.37；父项 6.2 保持未勾选。
+
+- `ProductRuntimeDefinition` 现在遍历正式 Home/Gameplay preload 计划的 barrier 条目，推导 `PreloadLeaseCapacity`。这是当前业务内容布局给出的准备期容量，不新增运行时 fallback 配置。
+- `ProductStartupCoordinator` 把该容量传给唯一资源 runtime。`ProductResourceRuntime` 构造期用同一定容量准备 `_leases`、`_inFlight` 和 `_lifetimes`，覆盖正式 preload 全量条目的上界，避免 Home/Gameplay 首次加载和后续同容量周期内的字典 bucket 扩容。
+- Fault Lab 的并发诊断路径超出正式 preload 上限时仍按原 Dictionary 增长；该路径不是正式运行负载。scope 表、lease record 池、外部资源加载器和第三方 downloader 内部容量不在本步声明范围。
+- `ProductRuntimeContracts`、preload 计划、资源 runtime、scope 和资源诊断快照用 Unity 2022.3.62f2c1 正式引用和 `csc` 聚焦编译通过，0 错误；构建服务已关闭。
+- 未刷新 Unity、未进 Play、未做 Home/Gameplay 预加载回放、Fault Lab 容量对比和 Player 分配采样。

@@ -260,6 +260,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ScheduleReplayOperation);
         }
 
+        public static FixedCharacterInputTrace ReadSavedTrace(string traceId) =>
+            ToRuntimeTrace(ReadDocument(ResolveTracePath(traceId), true));
+
         static string ResolveTracePath(string traceId)
         {
             string path;

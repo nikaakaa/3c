@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, diagnostic_replay_start, schedule_record_start, schedule_replay_start, list_traces, status, or stop. Defaults to status.", Required = false)]
+            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, diagnostic_replay_start, schedule_record_start, schedule_replay_start, list_traces, inspect_trace, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Exact trace_id returned by record_stop or list_traces. Used by replay_start; omitted means latest.", Required = false)]
@@ -74,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             false);
                     case "list_traces":
                         return Success("Canonical Fixed input traces listed.", true);
+                    case "inspect_trace":
+                        return InspectTrace(traceId);
                     case "status":
                         return Success("Canonical Fixed input trace status.", false);
                     case "stop":
@@ -89,6 +91,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "fixed_input_trace_failed",
                     new { action, trace_id = traceId, message = exception.Message });
             }
+        }
+
+        static object InspectTrace(string traceId)
+        {
+            if (string.IsNullOrWhiteSpace(traceId))
+                throw new ArgumentException("inspect_trace requires an exact trace_id.");
+            FixedCharacterInputTrace trace =
+                CharacterFixedInputTraceWorkflow.ReadSavedTrace(traceId);
+            return new
+            {
+                success = true,
+                message = "Canonical Fixed input trace coverage decoded.",
+                data = new
+                {
+                    trace_id = trace.TraceId,
+                    frame_count = trace.Frames.Count,
+                    tick_rate = trace.TickRate,
+                    values = trace.Frames.SelectMany(frame => frame.Input.Values)
+                        .GroupBy(value => new { value.InputId, value.Kind })
+                        .OrderBy(group => group.Key.InputId, StringComparer.Ordinal)
+                        .ThenBy(group => group.Key.Kind)
+                        .Select(group => new
+                        {
+                            input_id = group.Key.InputId,
+                            kind = group.Key.Kind.ToString(),
+                            frame_count = group.Count(),
+                            boolean_true_frame_count = group.Key.Kind ==
+                                SimulationInputValueKind.Boolean
+                                ? (int?)group.Count(value => value.Boolean) : null
+                        }).ToArray(),
+                    requests = trace.Frames.SelectMany(frame => frame.Input.Requests)
+                        .GroupBy(request => request.RequestId)
+                        .OrderBy(group => group.Key, StringComparer.Ordinal)
+                        .Select(group => new
+                        {
+                            request_id = group.Key,
+                            occurrence_count = group.Count(),
+                            distinct_sequence_count = group.Select(request =>
+                                request.Sequence).Distinct().Count()
+                        }).ToArray()
+                }
+            };
         }
 
         static object Success(string message, bool includeTraces)

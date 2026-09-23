@@ -72,6 +72,63 @@ namespace GameLogic.ProductStartup
         private static readonly Color AccentColor = new Color(0.15f, 0.55f, 0.95f, 1f);
         private static readonly Color TextColor = new Color(0.91f, 0.94f, 0.98f, 1f);
         private static ProductShellViewController _loaded;
+        private static readonly string[] ProductRuntimeStageNames =
+        {
+            nameof(ProductRuntimeStage.None), nameof(ProductRuntimeStage.LoadProductShell), nameof(ProductRuntimeStage.ConnectAuthGateway),
+            nameof(ProductRuntimeStage.AwaitGuestLogin), nameof(ProductRuntimeStage.PreloadHome), nameof(ProductRuntimeStage.HomeReady),
+            nameof(ProductRuntimeStage.PlanGameplayDownload), nameof(ProductRuntimeStage.DownloadGameplay), nameof(ProductRuntimeStage.PreloadGameplay),
+            nameof(ProductRuntimeStage.EnterGameplay), nameof(ProductRuntimeStage.GameplayReady), nameof(ProductRuntimeStage.ReturnHome),
+            nameof(ProductRuntimeStage.Failed), nameof(ProductRuntimeStage.Disposed)
+        };
+        private static readonly string[] ProductAuthStateNames =
+        {
+            nameof(ProductAuthState.Disconnected), nameof(ProductAuthState.Connecting), nameof(ProductAuthState.AwaitingGuestLogin),
+            nameof(ProductAuthState.Authenticating), nameof(ProductAuthState.Authenticated), nameof(ProductAuthState.Replaced), nameof(ProductAuthState.Failed)
+        };
+        private static readonly string[] ProductHomeStateNames =
+        {
+            nameof(ProductHomeState.Unavailable), nameof(ProductHomeState.Preloading), nameof(ProductHomeState.Ready),
+            nameof(ProductHomeState.Failed), nameof(ProductHomeState.Disposed)
+        };
+        private static readonly string[] ProductGameplayStateNames =
+        {
+            nameof(ProductGameplayState.Unavailable), nameof(ProductGameplayState.PlanningDownload), nameof(ProductGameplayState.AwaitingDownloadConsent),
+            nameof(ProductGameplayState.Downloading), nameof(ProductGameplayState.Preloading), nameof(ProductGameplayState.EnteringScene),
+            nameof(ProductGameplayState.Ready), nameof(ProductGameplayState.ReturningHome), nameof(ProductGameplayState.Failed)
+        };
+        private static readonly string[] DownloadStateNames =
+        {
+            nameof(GameplayDownloadState.None), nameof(GameplayDownloadState.Planned), nameof(GameplayDownloadState.Downloading),
+            nameof(GameplayDownloadState.Completed), nameof(GameplayDownloadState.Cancelled), nameof(GameplayDownloadState.Failed)
+        };
+        private static readonly string[] ResourceScopeKindNames =
+        {
+            nameof(ResourceScopeKind.Global), nameof(ResourceScopeKind.Home), nameof(ResourceScopeKind.Gameplay), nameof(ResourceScopeKind.Transient)
+        };
+        private static readonly string[] ResourceScopeStateNames =
+        {
+            nameof(ResourceScopeState.Active), nameof(ResourceScopeState.Closing), nameof(ResourceScopeState.Disposed)
+        };
+        private static readonly string[] ProductStartupStageNames =
+        {
+            nameof(ProductStartupStage.None), nameof(ProductStartupStage.Launch), nameof(ProductStartupStage.RequestStartupPolicy),
+            nameof(ProductStartupStage.InitializePackageAndVerifyCache), nameof(ProductStartupStage.RequestPackageVersion),
+            nameof(ProductStartupStage.UpdatePackageManifest), nameof(ProductStartupStage.PlanCoreDownload),
+            nameof(ProductStartupStage.AwaitCoreDownloadConsent), nameof(ProductStartupStage.DownloadCore),
+            nameof(ProductStartupStage.ClearObsoleteCache), nameof(ProductStartupStage.LoadHotUpdateAssemblies),
+            nameof(ProductStartupStage.EnterProductRuntime), nameof(ProductStartupStage.ClientUpdateRequired),
+            nameof(ProductStartupStage.Completed)
+        };
+        private static readonly int[] ProductStartupStageValues =
+        {
+            (int)ProductStartupStage.None, (int)ProductStartupStage.Launch, (int)ProductStartupStage.RequestStartupPolicy,
+            (int)ProductStartupStage.InitializePackageAndVerifyCache, (int)ProductStartupStage.RequestPackageVersion,
+            (int)ProductStartupStage.UpdatePackageManifest, (int)ProductStartupStage.PlanCoreDownload,
+            (int)ProductStartupStage.AwaitCoreDownloadConsent, (int)ProductStartupStage.DownloadCore,
+            (int)ProductStartupStage.ClearObsoleteCache, (int)ProductStartupStage.LoadHotUpdateAssemblies,
+            (int)ProductStartupStage.EnterProductRuntime, (int)ProductStartupStage.ClientUpdateRequired,
+            (int)ProductStartupStage.Completed
+        };
 
         private GameObject loginRoot;
         private GameObject homeRoot;
@@ -329,7 +386,7 @@ namespace GameLogic.ProductStartup
 
             _downloadDiagnostics.Clear();
             _downloadDiagnostics.AppendLine("GAMEPLAY PACKAGE");
-            _downloadDiagnostics.Append("State ").AppendLine(snapshot.State.ToString());
+            _downloadDiagnostics.Append("State ").AppendLine(DownloadStateNames[(int)snapshot.State]);
             _downloadDiagnostics.Append("Files ").Append(snapshot.CompletedFiles).Append('/').Append(snapshot.TotalFiles).AppendLine();
             _downloadDiagnostics.Append("Bytes "); AppendBytes(_downloadDiagnostics, snapshot.CompletedBytes); _downloadDiagnostics.Append('/'); AppendBytes(_downloadDiagnostics, snapshot.TotalBytes); _downloadDiagnostics.AppendLine();
             _downloadDiagnostics.Append("Disk required "); AppendBytes(_downloadDiagnostics, snapshot.RequiredDiskBytes); _downloadDiagnostics.Append("  Available "); AppendBytes(_downloadDiagnostics, snapshot.AvailableDiskBytes); _downloadDiagnostics.AppendLine();
@@ -353,7 +410,7 @@ namespace GameLogic.ProductStartup
             else
             {
                 _startupDiagnostics.AppendLine("STARTUP");
-                _startupDiagnostics.Append("Stage ").Append(startup.Stage).Append("  Gen ").Append(startup.Generation).AppendLine();
+                _startupDiagnostics.Append("Stage ").Append(ProductStartupStageName(startup.Stage)).Append("  Gen ").Append(startup.Generation).AppendLine();
                 _startupDiagnostics.Append("Client ").Append(startup.ClientBuildVersion).Append("  Resource ").Append(startup.ResourcePackageVersion).Append("  Protocol ").Append(startup.AuthProtocolVersion).AppendLine();
                 _startupDiagnostics.Append("Files ").Append(startup.CompletedFileCount).Append('/').Append(startup.TotalFileCount).Append("  Bytes "); AppendBytes(_startupDiagnostics, startup.CompletedBytes); _startupDiagnostics.Append('/'); AppendBytes(_startupDiagnostics, startup.TotalBytes); _startupDiagnostics.AppendLine();
                 _startupDiagnostics.Append("Security CRC High | HTTPS | Manifest signature: out of scope");
@@ -377,7 +434,8 @@ namespace GameLogic.ProductStartup
             else
             {
                 _productDiagnostics.AppendLine("PRODUCT");
-                _productDiagnostics.Append(product.Stage).Append(" | Auth ").Append(product.AuthState).Append(" | Home ").Append(product.HomeState).Append(" | Gameplay ").Append(product.GameplayState);
+                _productDiagnostics.Append(ProductRuntimeStageNames[(int)product.Stage]).Append(" | Auth ").Append(ProductAuthStateNames[(int)product.AuthState])
+                    .Append(" | Home ").Append(ProductHomeStateNames[(int)product.HomeState]).Append(" | Gameplay ").Append(ProductGameplayStateNames[(int)product.GameplayState]);
                 if (!string.IsNullOrEmpty(product.SafeError)) _productDiagnostics.AppendLine().Append("Error ").Append(product.SafeError);
             }
 
@@ -404,7 +462,8 @@ namespace GameLogic.ProductStartup
                 _resourceDiagnostics.Append("Package ").Append(resources.PackageName).Append(" @ ").Append(resources.PackageVersion);
                 foreach (ResourceScopeSnapshot scope in resources.Scopes)
                 {
-                    _resourceDiagnostics.AppendLine().Append('#').Append(scope.Id.Value).Append(' ').Append(scope.Kind).Append(' ').Append(scope.State).Append(" L").Append(scope.LeaseCount);
+                    _resourceDiagnostics.AppendLine().Append('#').Append(scope.Id.Value).Append(' ').Append(ResourceScopeKindNames[(int)scope.Kind])
+                        .Append(' ').Append(ResourceScopeStateNames[(int)scope.State]).Append(" L").Append(scope.LeaseCount);
                 }
             }
 
@@ -468,6 +527,19 @@ namespace GameLogic.ProductStartup
         private void OnGameplayDownloadChanged(GameplayDownloadSnapshot snapshot)
         {
             RefreshDownload(snapshot);
+        }
+
+        private static string ProductStartupStageName(ProductStartupStage stage)
+        {
+            for (int index = 0; index < ProductStartupStageValues.Length; index++)
+            {
+                if (ProductStartupStageValues[index] == (int)stage)
+                {
+                    return ProductStartupStageNames[index];
+                }
+            }
+
+            return stage.ToString();
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

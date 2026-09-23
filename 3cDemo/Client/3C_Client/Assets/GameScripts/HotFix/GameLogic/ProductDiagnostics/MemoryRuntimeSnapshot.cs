@@ -46,6 +46,15 @@ namespace GameLogic.ProductDiagnostics
         Gameplay = 1
     }
 
+    internal static class ProductMemoryBudgetKindNames
+    {
+        internal static readonly string[] All =
+        {
+            nameof(ProductMemoryBudgetKind.Home),
+            nameof(ProductMemoryBudgetKind.Gameplay)
+        };
+    }
+
     public sealed class ProductMemorySampler : IDisposable
     {
         private ProfilerRecorder _totalUsed;
@@ -74,7 +83,7 @@ namespace GameLogic.ProductDiagnostics
 
             string error = string.Empty;
             long budget = 0;
-            string budgetName = budgetKind.ToString();
+            string budgetName = ProductMemoryBudgetKindNames.All[(int)budgetKind];
             if (profile == null)
             {
                 error = "Product memory budget profile is missing.";

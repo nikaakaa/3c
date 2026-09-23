@@ -40,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseFootMotionSource> m_FootMotionResolver;
         readonly AnimationPoseSourceContribution[] m_Contributions;
         readonly ClipSamplePlan[] m_ClipSamples;
+        readonly ulong[] m_ClipSampleCompletionIdentities;
         int m_ClipSampleCount;
         AnimationFootMotionRuntimeFrame m_LastSampledFootMotion;
         bool m_HasLastSampledFootMotion;
@@ -79,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Contributions = new AnimationPoseSourceContribution[
                 contributionCapacity];
             m_ClipSamples = new ClipSamplePlan[contributionCapacity];
+            m_ClipSampleCompletionIdentities = new ulong[contributionCapacity];
         }
 
         internal CharacterFootPlacementFrameInput BuildFootPlacement(
@@ -130,7 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in pose);
         }
 
-        internal bool TryReadClipSample(in AnimationPoseSourceContribution contribution, out ClipSamplePlan clipSample)
+        internal bool TryReadClipSample(
+            in AnimationPoseSourceContribution contribution,
+            ulong completionIdentity,
+            out ClipSamplePlan clipSample)
         {
             for (int i = 0; i < m_ClipSampleCount; i++)
             {
@@ -138,7 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
                 {
                     clipSample = m_ClipSamples[i];
-                    return clipSample.IsValid;
+                    return m_ClipSampleCompletionIdentities[i] == completionIdentity && clipSample.IsValid;
                 }
             }
             clipSample = default;
@@ -167,6 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
                 {
                     m_ClipSamples[i] = clipSample;
+                    m_ClipSampleCompletionIdentities[i] = completionIdentity;
                     break;
                 }
             }

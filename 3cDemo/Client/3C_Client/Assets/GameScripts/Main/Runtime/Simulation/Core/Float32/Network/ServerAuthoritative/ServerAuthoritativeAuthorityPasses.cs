@@ -111,8 +111,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         ISimulationPipelineStateParticipant
     {
         readonly ServerAuthoritativeModelPolicy m_Policy;
-        readonly SortedDictionary<ActorId, HeldAuthorityInput> m_Held =
-            new SortedDictionary<ActorId, HeldAuthorityInput>();
+        const int MaximumHeldActors = 64;
+        readonly ActorId[] m_HeldActors = new ActorId[MaximumHeldActors];
+        readonly HeldAuthorityInput[] m_Held = new HeldAuthorityInput[MaximumHeldActors];
+        int m_HeldCount;
         HeldAuthorityInput[] m_HeldWorkspace = Array.Empty<HeldAuthorityInput>();
 
         public AuthorityTickSchedulePassRuntime(
@@ -162,12 +164,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < actorCount; i++)
             {
                 ActorId actorId = readPorts.CharacterRuntime.Runtime.Roster[i].ActorId;
-                if (!m_Held.TryGetValue(actorId, out HeldAuthorityInput held))
+                int heldIndex = FindHeld(actorId);
+                if (heldIndex < 0)
                 {
                     writePorts.ExecutionPlan.Write(Pending(context, readPorts.CharacterRuntime));
                     Array.Clear(m_HeldWorkspace, 0, actorCount);
                     return;
                 }
+                HeldAuthorityInput held = m_Held[heldIndex];
                 m_HeldWorkspace[i] = held;
             }
             var actorInputs = new SimulationPipelineActorInput<Float32StepInput>[actorCount];
@@ -220,13 +224,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     readPorts.Diagnostics.Sink.PublishModel(new SimulationModelTraceRecord(
                         SimulationModelTraceKind.Queue,
                         "authority_schedule",
-                        $"roster={actorInputs.Length};held={m_Held.Count};missingPolicy={m_Policy.MissingInputPolicy};maxLag={m_Policy.MaximumInputLagTicks}",
+                        $"roster={actorInputs.Length};held={m_HeldCount};missingPolicy={m_Policy.MissingInputPolicy};maxLag={m_Policy.MaximumInputLagTicks}",
                         actorInputs[i].ActorId,
                         context.Source.SourceTick,
                         authorityTick.Value,
                         actorInputs[i].Sequence,
                         0,
-                        m_Held.Count));
+                        m_HeldCount));
                 }
             }
         }
@@ -236,16 +240,53 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < batch.Inputs.Count; i++)
             {
                 AcceptedAuthorityInput input = batch.Inputs[i];
-                if (m_Held.TryGetValue(input.ActorId, out HeldAuthorityInput previous) &&
-                    input.InputSequence <= previous.InputSequence)
+                int heldIndex = FindHeld(input.ActorId);
+                if (heldIndex >= 0 && input.InputSequence <= m_Held[heldIndex].InputSequence)
                 {
                     continue;
                 }
-                if (previous == null)
-                    m_Held.Add(input.ActorId, new HeldAuthorityInput(input.ActorId, input.InputSequence, input.Input, authorityTick));
+                if (heldIndex < 0)
+                    AddHeld(input.ActorId, input.InputSequence, input.Input, authorityTick);
                 else
-                    previous.Reset(input.ActorId, input.InputSequence, input.Input, authorityTick);
+                    m_Held[heldIndex].Reset(input.ActorId, input.InputSequence, input.Input, authorityTick);
             }
+        }
+
+        void AddHeld(
+            ActorId actorId,
+            ulong inputSequence,
+            SimulationInput input,
+            SimulationTick acceptedTick)
+        {
+            int insertionIndex = FindHeld(actorId);
+            if (insertionIndex >= 0)
+                throw new InvalidOperationException($"Authority input hold Actor '{actorId}' already exists.");
+            insertionIndex = ~insertionIndex;
+            if (m_HeldCount >= MaximumHeldActors)
+                throw new InvalidOperationException("Authority input hold capacity is exhausted.");
+            Array.Copy(m_HeldActors, insertionIndex, m_HeldActors, insertionIndex + 1, m_HeldCount - insertionIndex);
+            Array.Copy(m_Held, insertionIndex, m_Held, insertionIndex + 1, m_HeldCount - insertionIndex);
+            m_HeldActors[insertionIndex] = actorId;
+            m_Held[insertionIndex] = new HeldAuthorityInput(actorId, inputSequence, input, acceptedTick);
+            m_HeldCount++;
+        }
+
+        int FindHeld(ActorId actorId)
+        {
+            int left = 0;
+            int right = m_HeldCount - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                int comparison = m_HeldActors[middle].CompareTo(actorId);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
         }
 
         SimulationInput BuildInput(
@@ -330,14 +371,14 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x48494153);
             writer.WriteInt32(1);
-            writer.WriteInt32(m_Held.Count);
-            foreach (KeyValuePair<ActorId, HeldAuthorityInput> pair in m_Held)
+            writer.WriteInt32(m_HeldCount);
+            for (int i = 0; i < m_HeldCount; i++)
             {
-                writer.WriteString(pair.Key.Value);
-                writer.WriteUInt64(pair.Value.InputSequence);
-                writer.WriteUInt64(pair.Value.AcceptedTick.Value);
-                writer.WriteUInt64(pair.Value.LastConsumedTick);
-                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, pair.Value.Input);
+                writer.WriteString(m_HeldActors[i].Value);
+                writer.WriteUInt64(m_Held[i].InputSequence);
+                writer.WriteUInt64(m_Held[i].AcceptedTick.Value);
+                writer.WriteUInt64(m_Held[i].LastConsumedTick);
+                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, m_Held[i].Input);
             }
             return writer.ToArray();
         }
@@ -350,7 +391,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             int count = reader.ReadInt32();
             if (count < 0 || count > 64)
                 throw new InvalidDataException("Authority input hold state count is invalid.");
-            m_Held.Clear();
+            Array.Clear(m_HeldActors, 0, m_HeldCount);
+            Array.Clear(m_Held, 0, m_HeldCount);
+            m_HeldCount = 0;
             for (int i = 0; i < count; i++)
             {
                 var actorId = new ActorId(reader.ReadString());
@@ -358,7 +401,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 var acceptedTick = new SimulationTick(reader.ReadUInt64());
                 ulong consumedTick = reader.ReadUInt64();
                 SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytesSegment());
-                m_Held.Add(actorId, new HeldAuthorityInput(actorId, sequence, input, acceptedTick, consumedTick));
+                if (i > 0 && m_HeldActors[i - 1].CompareTo(actorId) >= 0)
+                    throw new InvalidDataException("Authority input hold state Actor order is invalid.");
+                m_HeldActors[i] = actorId;
+                m_Held[i] = new HeldAuthorityInput(actorId, sequence, input, acceptedTick, consumedTick);
+                m_HeldCount++;
             }
             reader.RequireComplete();
         }

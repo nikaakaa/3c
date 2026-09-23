@@ -577,6 +577,7 @@
 - [x] 5.294 Prediction Decide 改用 CountReplayAfter；baseline 存在的稳态决策不再分配 replay 数组，RestoreReplay 保留正式 replay 输出
 - [x] 5.295 ServerAuthoritative 空集合拷贝与 pending request 消费统一复用 Array.Empty；非空结果继续持有独立 owned array
 - [x] 5.296 Authority Tick Schedule 的 held 输入改为 64 容量 Actor/Record 平行数组加显式 count；Accept 二分原地插入，Capture/Restore 保持 ActorId 升序，删除 SortedDictionary
+- [x] 5.297 Authority Replication Egress 的确认 horizon 改为 64 容量 Actor/Horizon 平行数组加显式 count；按 ActorId 二分读取和原地插入，保留最大 Sequence 与升序 wire 语义
 
 ## 6. UI、资源、渲染和生命周期
 

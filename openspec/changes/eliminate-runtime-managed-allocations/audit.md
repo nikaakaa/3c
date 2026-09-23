@@ -5865,3 +5865,13 @@
 - 每帧的 roster 查找、输入消费、MarkConsumed 和诊断 held 数量读取只访问常驻数组。`m_HeldWorkspace` 继续只作为同步临时引用区，使用区间按 actorCount 清理。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做权威输入 pending/executable schedule 回放、迟到大序列回放、schedule 状态 checkpoint 编解码恢复和 Player 分配采样。
+
+## 2026-09-23 权威确认线数组化
+
+对应 tasks.md 的 5.297；父项 2.5 保持未勾选。代码提交为 `140e8f1ef`。
+
+- `AuthorityReplicationEgressPassRuntime` 原先用 `SortedDictionary<ActorId, ServerAuthoritativeEventHorizon>` 保存每个 Actor 的确认线。现在按状态 wire 已有上限准备 64 个 Actor 和 Horizon 槽位，用显式 count 表示有效数量，ActorId 保持升序。
+- Ack、Baseline 和 `AdvanceHorizon` 通过 ActorId 二分读取；缺失时视为空 horizon，新 Actor 按二分位置原地下移插入，已有 Actor 仅在事件 Sequence 更大时替换。原确认线推进语义不变。
+- `Capture` 仍按原 magic、版本、数量和 ActorId 升序写出 Sequence 与 EventId；`Restore` 清空旧槽位后校验 count 和 ActorId 严格升序，再原地重建。容量耗尽会显式失败，避免生成无法通过 64 上限 wire 校验的状态。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 authority replication Ack/Baseline 回放、可靠事件 horizon 推进回放、replication 状态 checkpoint 编解码恢复和 Player 分配采样。

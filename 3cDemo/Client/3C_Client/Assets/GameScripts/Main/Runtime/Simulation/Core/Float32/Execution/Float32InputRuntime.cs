@@ -26,19 +26,12 @@ namespace ThirdPersonSimulation
 
         public bool HasRequest(string requestId, out SimulationInputRequestState state)
         {
-            if (!m_Frame.Layout.HasInputRequest(requestId))
-            {
-                state = default;
-                return false;
-            }
             state = m_Frame.InputRequests.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
         public void ClearRequest(string requestId)
         {
-            if (!m_Frame.Layout.HasInputRequest(requestId))
-                return;
             SimulationInputRequestState state = m_Frame.InputRequests.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
                 m_Frame.InputRequests.SetInputRequest(requestId, state.Consume());

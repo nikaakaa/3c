@@ -5701,3 +5701,13 @@
 - 每个数组的 null 合同、Numeric Profile、ActorId、Tick 一致性检查和异常文本不变。空数组继续由上游 `ToArray` 的共享空数组承接，不额外分配。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 输入回放、技能事件发布、rollback restore和 Player 分配采样。
+
+## 2026-09-23 WorldSnapshot捕获数组去复制
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `494621337`。
+
+- Fixed/Float32 `WorldSnapshotFactory.Capture` 原先把调用方的 actor roster 复制到新数组并用每次调用的 lambda 排序。现在正式输入改为已排序的 owned `SimulationActorState[]`：CompleteStep 传最终状态数组，Session snapshot 捕获传 `SimulationWorldStateSet.ActorArray`；Capture 只创建实际的 `SimulationActorSnapshot[]`，不再复制和重排 source roster。
+- `SimulationWorldSnapshot` 内部构造改为直接接管 prepared snapshot 数组，校验非空、非 null 和严格递增 ActorId；canonical reader、权威单 Actor 修正和 Capture 都满足 prepared 合同。公开构造仍复制任意输入并用静态 `ActorSnapshotComparer` 排序。
+- source roster 顺序、roster 数量、binding 身份、actor state 身份、World body 对齐、snapshot hash 和 canonical 编码不变。`SimulationWorldStateSet.Actors` 公开只读合同不变，新增内部 owned array 入口。
+- 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 快照保存加载、rollback restore、权威修正回放和 Player 分配采样。

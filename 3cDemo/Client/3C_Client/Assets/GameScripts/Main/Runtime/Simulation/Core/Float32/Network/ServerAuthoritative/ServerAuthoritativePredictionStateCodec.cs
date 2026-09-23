@@ -119,7 +119,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var reader = new CanonicalReader(bytes);
             RequireHeader(reader, HistoryMagic, HistoryVersion);
             int count = RequireCount(reader.ReadInt32(), historyCapacity);
-            var records = new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>();
+            var records = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[count];
             for (int i = 0; i < count; i++)
             {
                 var tick = new SimulationTick(reader.ReadUInt64());
@@ -140,9 +140,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     pipeline,
                     observed,
                     journalCursor);
-                if (record.Tick != tick || records.ContainsKey(tick.Value))
+                if (record.Tick != tick || i > 0 && records[i - 1].Key >= tick.Value)
                     throw new InvalidDataException("Prediction history payload Tick order is invalid.");
-                records.Add(tick.Value, record);
+                records[i] = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>(tick.Value, record);
             }
             int actorCount = RequireCount(reader.ReadInt32(), 64);
             var remoteActors = new ServerAuthoritativeRemoteBodyActorCheckpoint[actorCount];

@@ -7,8 +7,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     internal sealed class ServerAuthoritativePredictionHistory
     {
         readonly int m_Capacity;
-        SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord> m_Records =
-            new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>();
+        readonly ulong[] m_Ticks;
+        readonly ServerAuthoritativePredictionHistoryRecord[] m_Records;
+        int m_Count;
 
         readonly ServerAuthoritativeRemoteBodyTimeline m_RemoteBodies;
 
@@ -21,6 +22,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             m_Capacity = capacity;
+            m_Ticks = new ulong[capacity];
+            m_Records = new ServerAuthoritativePredictionHistoryRecord[capacity];
             m_RemoteBodies = new ServerAuthoritativeRemoteBodyTimeline(
                 checked(capacity * 4),
                 tickRate,
@@ -28,8 +31,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 lockedRemoteActors);
         }
 
-        public int Count => m_Records.Count;
-        public ulong FirstRetainedTick => m_Records.Count == 0 ? ulong.MaxValue : First().Key;
+        public int Count => m_Count;
+        public ulong FirstRetainedTick => m_Count == 0 ? ulong.MaxValue : m_Ticks[0];
         public bool IsRemoteObservationPrimed => m_RemoteBodies.IsPrimed;
         public int RemoteBodySampleCount => m_RemoteBodies.SampleCount;
         public int RemoteBodyCapacityPerActor => m_RemoteBodies.CapacityPerActor;
@@ -45,38 +48,49 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong GetLastPredictedInputSequence(ulong confirmedInputSequence)
         {
             ulong sequence = confirmedInputSequence;
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
-                sequence = Math.Max(sequence, pair.Value.Input.InputSequence);
+            for (int i = 0; i < m_Count; i++)
+                sequence = Math.Max(sequence, m_Records[i].Input.InputSequence);
             return sequence;
         }
 
-        public bool TryGet(SimulationTick tick, out ServerAuthoritativePredictionHistoryRecord record) =>
-            m_Records.TryGetValue(tick.Value, out record);
+        public bool TryGet(SimulationTick tick, out ServerAuthoritativePredictionHistoryRecord record)
+        {
+            int index = Find(tick.Value);
+            if (index < 0)
+            {
+                record = null;
+                return false;
+            }
+            record = m_Records[index];
+            return true;
+        }
 
-        public ServerAuthoritativePredictionHistoryRecord FirstRecord() => First().Value;
+        public ServerAuthoritativePredictionHistoryRecord FirstRecord() =>
+            m_Count == 0
+                ? throw new InvalidOperationException("Prediction history is empty.")
+                : m_Records[0];
 
         public ServerAuthoritativePredictionHistoryRecord LastRecord()
         {
-            ServerAuthoritativePredictionHistoryRecord last = null;
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
-                last = pair.Value;
-            return last ?? throw new InvalidOperationException("Hard recovery has no local Pipeline frame to reconstruct model-owned state.");
+            if (m_Count == 0)
+                throw new InvalidOperationException("Hard recovery has no local Pipeline frame to reconstruct model-owned state.");
+            return m_Records[m_Count - 1];
         }
 
         public IReadOnlyList<ServerAuthoritativePredictionHistoryRecord> GetReplayAfter(ulong confirmedInputSequence)
         {
             int count = 0;
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+            for (int i = 0; i < m_Count; i++)
             {
-                if (pair.Value.Input.InputSequence > confirmedInputSequence)
-                    count++;
+                if (m_Records[i].Input.InputSequence > confirmedInputSequence)
+                    count = checked(count + 1);
             }
             var values = new ServerAuthoritativePredictionHistoryRecord[count];
             int index = 0;
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+            for (int i = 0; i < m_Count; i++)
             {
-                if (pair.Value.Input.InputSequence > confirmedInputSequence)
-                    values[index++] = pair.Value;
+                if (m_Records[i].Input.InputSequence > confirmedInputSequence)
+                    values[index++] = m_Records[i];
             }
             return values;
         }
@@ -96,7 +110,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 throw new InvalidOperationException("Prediction history completed step does not match its owner input.");
             }
-            if (m_Records.ContainsKey(completed.Step.Tick.Value))
+            int insertionIndex = Find(completed.Step.Tick.Value);
+            if (insertionIndex >= 0)
                 throw new InvalidOperationException($"Prediction history already contains Tick '{completed.Step.Tick}'.");
             var record = new ServerAuthoritativePredictionHistoryRecord(
                 input,
@@ -105,23 +120,50 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 completed.StepSnapshot.PipelineProjection,
                 completed.Step.ObservedWorldConstraints,
                 journalCursor);
-            Restore(PrepareAdd(record, confirmedInputSequence, lastAuthorityAckTick, lastBaselineTick));
+
+            if (m_Count >= m_Capacity)
+            {
+                if (m_Records[0].Input.InputSequence > confirmedInputSequence)
+                {
+                    throw new InvalidOperationException(
+                        $"Prediction history capacity cannot discard unconfirmed input: firstTick={m_Ticks[0]};firstSequence={m_Records[0].Input.InputSequence};confirmedSequence={confirmedInputSequence};lastAckTick={lastAuthorityAckTick};lastBaselineTick={lastBaselineTick}.");
+                }
+                m_Count--;
+                Array.Copy(m_Ticks, 1, m_Ticks, 0, m_Count);
+                Array.Copy(m_Records, 1, m_Records, 0, m_Count);
+                if (insertionIndex > 0)
+                    insertionIndex--;
+            }
+
+            Array.Copy(m_Ticks, insertionIndex, m_Ticks, insertionIndex + 1, m_Count - insertionIndex);
+            Array.Copy(m_Records, insertionIndex, m_Records, insertionIndex + 1, m_Count - insertionIndex);
+            m_Ticks[insertionIndex] = completed.Step.Tick.Value;
+            m_Records[insertionIndex] = record;
+            m_Count++;
         }
 
         public void SealJournalCursor(SimulationTick tick, ulong journalCursor)
         {
-            if (!m_Records.TryGetValue(tick.Value, out ServerAuthoritativePredictionHistoryRecord record))
+            int index = Find(tick.Value);
+            if (index < 0)
                 throw new InvalidOperationException($"Prediction history has no Current Tick '{tick}' to seal its journal cursor.");
-            m_Records[tick.Value] = record.WithJournalCursor(journalCursor);
+            m_Records[index] = m_Records[index].WithJournalCursor(journalCursor);
         }
 
         public ServerAuthoritativePredictionHistoryCheckpoint PreparePruneConfirmedThrough(ulong inputSequence)
         {
-            var records = new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>();
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
+            int count = 0;
+            for (int i = 0; i < m_Count; i++)
             {
-                if (pair.Value.Input.InputSequence > inputSequence)
-                    records.Add(pair.Key, pair.Value);
+                if (m_Records[i].Input.InputSequence > inputSequence)
+                    count = checked(count + 1);
+            }
+            var records = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[count];
+            int outputIndex = 0;
+            for (int i = 0; i < m_Count; i++)
+            {
+                if (m_Records[i].Input.InputSequence > inputSequence)
+                    records[outputIndex++] = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>(m_Ticks[i], m_Records[i]);
             }
             return new ServerAuthoritativePredictionHistoryCheckpoint(records, m_RemoteBodies.Capture());
         }
@@ -129,55 +171,50 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativePredictionHistoryCheckpoint PrepareClear() =>
             ServerAuthoritativePredictionHistoryCheckpoint.Empty(m_RemoteBodies.Capture());
 
-        public ServerAuthoritativePredictionHistoryCheckpoint Capture() =>
-            new ServerAuthoritativePredictionHistoryCheckpoint(m_Records, m_RemoteBodies.Capture());
+        public ServerAuthoritativePredictionHistoryCheckpoint Capture()
+        {
+            var records = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[m_Count];
+            for (int i = 0; i < records.Length; i++)
+                records[i] = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>(m_Ticks[i], m_Records[i]);
+            return new ServerAuthoritativePredictionHistoryCheckpoint(records, m_RemoteBodies.Capture());
+        }
 
         public void Restore(ServerAuthoritativePredictionHistoryCheckpoint checkpoint)
         {
             if (checkpoint == null)
                 throw new ArgumentNullException(nameof(checkpoint));
-            var records = new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>();
+            if (checkpoint.Records.Count > m_Capacity)
+                throw new InvalidOperationException("Prediction history checkpoint exceeds its configured capacity.");
             for (int i = 0; i < checkpoint.Records.Count; i++)
             {
                 KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair = checkpoint.Records[i];
-                records.Add(pair.Key, pair.Value);
+                if (pair.Value == null || pair.Value.Tick.Value != pair.Key ||
+                    i > 0 && checkpoint.Records[i - 1].Key >= pair.Key)
+                {
+                    throw new InvalidOperationException("Prediction history checkpoint Tick order is invalid.");
+                }
+                m_Ticks[i] = pair.Key;
+                m_Records[i] = pair.Value;
             }
-            m_Records = records;
+            m_Count = checkpoint.Records.Count;
             m_RemoteBodies.Restore(checkpoint.RemoteBodies);
         }
 
-        ServerAuthoritativePredictionHistoryCheckpoint PrepareAdd(
-            ServerAuthoritativePredictionHistoryRecord record,
-            ulong confirmedInputSequence,
-            ulong lastAuthorityAckTick,
-            ulong lastBaselineTick)
+        int Find(ulong tick)
         {
-            var records = CopyRecords();
-            while (records.Count >= m_Capacity)
+            int left = 0;
+            int right = m_Count - 1;
+            while (left <= right)
             {
-                KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> first = First(records);
-                if (first.Value.Input.InputSequence > confirmedInputSequence)
-                {
-                    throw new InvalidOperationException(
-                        $"Prediction history capacity cannot discard unconfirmed input: firstTick={first.Key};firstSequence={first.Value.Input.InputSequence};confirmedSequence={confirmedInputSequence};lastAckTick={lastAuthorityAckTick};lastBaselineTick={lastBaselineTick}.");
-                }
-                records.Remove(first.Key);
+                int middle = left + (right - left) / 2;
+                if (m_Ticks[middle] == tick)
+                    return middle;
+                if (m_Ticks[middle] < tick)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
             }
-            records.Add(record.Tick.Value, record);
-            return new ServerAuthoritativePredictionHistoryCheckpoint(records, m_RemoteBodies.Capture());
-        }
-
-        SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord> CopyRecords() =>
-            new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>(m_Records);
-
-        KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> First() => First(m_Records);
-
-        static KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> First(
-            SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord> records)
-        {
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in records)
-                return pair;
-            throw new InvalidOperationException("Prediction history is empty.");
+            return ~left;
         }
     }
 
@@ -186,23 +223,20 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[] m_Records;
 
         public ServerAuthoritativePredictionHistoryCheckpoint(
-            SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord> records,
-            ServerAuthoritativeRemoteBodyTimelineCheckpoint remoteBodies)
-        {
-            if (records == null)
-                throw new ArgumentNullException(nameof(records));
-            m_Records = new KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[records.Count];
-            int index = 0;
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in records)
-                m_Records[index++] = pair;
-            RemoteBodies = remoteBodies ?? throw new ArgumentNullException(nameof(remoteBodies));
-        }
-
-        ServerAuthoritativePredictionHistoryCheckpoint(
             KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[] records,
             ServerAuthoritativeRemoteBodyTimelineCheckpoint remoteBodies)
         {
-            m_Records = records;
+            KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord>[] values = records ??
+                throw new ArgumentNullException(nameof(records));
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i].Value == null || values[i].Value.Tick.Value != values[i].Key ||
+                    i > 0 && values[i - 1].Key >= values[i].Key)
+                {
+                    throw new ArgumentException("Prediction history checkpoint Tick order is invalid.", nameof(records));
+                }
+            }
+            m_Records = values;
             RemoteBodies = remoteBodies ?? throw new ArgumentNullException(nameof(remoteBodies));
         }
 

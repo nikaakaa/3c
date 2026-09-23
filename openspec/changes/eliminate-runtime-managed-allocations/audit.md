@@ -5742,3 +5742,14 @@
 - Body、Trajectory 和 Equipment 的提交顺序、trajectory 的 `AcceptsTrajectoryIntent` 条件、Selected Body 的 reset 判断、最终 Body 应用、异常拒绝和后续 Abort 语义不变。
 - `ThirdPersonSimulation.Core`、`ThirdPersonSimulation.Fixed.Unity` 和 `ThirdPersonSimulation.DeterministicRollback.Unity` 使用 Release no-dependencies 目标编译通过，均 0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false`、`/p:UseSharedCompilation=false` 和 `--no-incremental`，构建后已执行 `dotnet build-server shutdown`。由于 `UnityEditor.UI` 包生成工程仍存在已知 Runtime/Editor define 矛盾，目标编译所需的缺失依赖 DLL 取自当前 Unity `Library/ScriptAssemblies`，未修改包源或仓库配置。
 - 未刷新 Unity、未进 Play、未做 Fixed/Rollback 输入回放、Body 表现回放、Equipment 选择回放、rollback restore 和 Player 分配采样。
+
+## 2026-09-23 预测历史有界数组化
+
+对应 tasks.md 的 5.285；父项 2.5 保持未勾选。代码提交为 `a9931e2c4`。
+
+- Float32 Server Authoritative 的 `ServerAuthoritativePredictionHistory` 原先用 `SortedDictionary<ulong, Record>` 保存预测历史，`Add` 每次先复制整张表，再构造包含 Remote Body Capture 的 checkpoint，最后通过 `Restore` 写回。现在准备期按 `HistoryCapacity` 创建 Tick 数组和 Record 数组，用显式 count 表示有效记录，`TryGet` 和插入位置都用二分定位。
+- `Add` 满容量时继续检查最旧记录是否已确认；未确认仍抛出带 firstTick、confirmedSequence、lastAckTick 和 lastBaselineTick 的原语义异常。确认后原地下移数组和记录并插入新 tick，不再创建 checkpoint、不再复制 `SortedDictionary`、不再分配树节点和枚举器。
+- `SealJournalCursor` 继续通过不可变 Record 的 `WithJournalCursor` 替换槽位，这条路径的一次 Record 替换仍保留。`Capture`、`PreparePruneConfirmedThrough`、`PrepareClear` 和网络写入格式继续使用 checkpoint 数组合同；`ReadHistory` 现在直接生成严格升序 pair 数组，不再经过 `SortedDictionary`。Restore 校验数量、Tick 匹配、严格升序和容量后写入常驻数组。
+- `ServerAuthoritativeRemoteBodyTimeline` 内部按 Actor 和 Tick 的 `SortedDictionary` 未在本步扩大范围；`GetReplayAfter` 输出数组属于对外 replay 结果，也未在本步改租约。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做 Prediction 输入回放、journal seal、checkpoint 编解码、rollback/authority 恢复和 Player 分配采样。

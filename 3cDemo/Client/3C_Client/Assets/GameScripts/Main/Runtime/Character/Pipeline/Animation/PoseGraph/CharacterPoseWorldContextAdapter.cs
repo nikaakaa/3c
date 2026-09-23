@@ -39,9 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<AnimationPoseSourceContribution, ClipSamplePlan,
             CharacterPoseFootMotionSource> m_FootMotionResolver;
         readonly AnimationPoseSourceContribution[] m_Contributions;
-        readonly ClipSamplePlan[] m_ClipSamples;
-        readonly ulong[] m_ClipSampleCompletionIdentities;
-        int m_ClipSampleCount;
         AnimationFootMotionRuntimeFrame m_LastSampledFootMotion;
         bool m_HasLastSampledFootMotion;
 
@@ -79,8 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PosePlanHash = posePlanHash.Trim();
             m_Contributions = new AnimationPoseSourceContribution[
                 contributionCapacity];
-            m_ClipSamples = new ClipSamplePlan[contributionCapacity];
-            m_ClipSampleCompletionIdentities = new ulong[contributionCapacity];
         }
 
         internal CharacterFootPlacementFrameInput BuildFootPlacement(
@@ -102,7 +97,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Foot Placement Component Pose has no resolvable contributions.");
             }
             int contributionCount = ResolveContributions(in inputBinding);
-            m_ClipSampleCount = contributionCount;
             m_HasLastSampledFootMotion = false;
             AnimationPoseSourceContribution contribution =
                 RequireFootMotionContribution(contributionCount);
@@ -132,24 +126,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in pose);
         }
 
-        internal bool TryReadClipSample(
-            in AnimationPoseSourceContribution contribution,
-            ulong completionIdentity,
-            out ClipSamplePlan clipSample)
-        {
-            for (int i = 0; i < m_ClipSampleCount; i++)
-            {
-                AnimationPoseSourceContribution candidate = m_Contributions[i];
-                if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
-                {
-                    clipSample = m_ClipSamples[i];
-                    return m_ClipSampleCompletionIdentities[i] == completionIdentity && clipSample.IsValid;
-                }
-            }
-            clipSample = default;
-            return false;
-        }
-
         internal AnimationFootMotionRuntimeFrame LastSampledFootMotion =>
             m_HasLastSampledFootMotion
                 ? m_LastSampledFootMotion
@@ -166,16 +142,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseFootMotionSource source = m_FootMotionResolver(
                 contribution,
                 clipSample);
-            for (int i = 0; i < m_ClipSampleCount; i++)
-            {
-                AnimationPoseSourceContribution candidate = m_Contributions[i];
-                if (candidate.NodeId == contribution.NodeId && candidate.SourceId == contribution.SourceId)
-                {
-                    m_ClipSamples[i] = clipSample;
-                    m_ClipSampleCompletionIdentities[i] = completionIdentity;
-                    break;
-                }
-            }
             int cycle = checked((int)Math.Floor(
                 clipSample.ContinuousClipTime / clipSample.DurationSeconds));
             AnimationFootMotionRuntimeFrame result = new AnimationFootMotionRuntimeFrame(
@@ -214,10 +180,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     inputBinding.Contributions[i],
                     m_SourceModule,
                     m_PlayerNodeIds);
-                AnimationPoseSourceContribution source = m_Contributions[i];
-                m_ClipSamples[i] = source.Kind == AnimationPoseContributionKind.Live
-                    ? m_SourceModule.RequireDominantClipSample(source.SourceId, source.NodeId, inputBinding.CompletionIdentity)
-                    : default;
             }
             return count;
         }

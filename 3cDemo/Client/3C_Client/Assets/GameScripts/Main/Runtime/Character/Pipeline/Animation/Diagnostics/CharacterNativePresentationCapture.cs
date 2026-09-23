@@ -11,28 +11,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly string m_PoseGraphId;
         readonly CharacterPoseDiagnosticFrame m_Frame;
         readonly AnimationPoseAvailability m_Availability;
-        readonly ulong m_CompletionIdentity;
         readonly ulong m_ContinuityIdentity;
         readonly AnimationReadOnlyBuffer<float> m_PoseParameters;
         readonly AnimationReadOnlyBuffer<byte> m_PoseParameterAvailability;
         readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> m_Contributions;
         readonly CharacterAnimationInputContract m_Contract;
-        readonly CharacterPoseWorldContextAdapter m_World;
+        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_ClipSamples;
         readonly CharacterNativeStateCapturePage m_States;
         internal CharacterNativePoseCaptureFrame(in ComposedAnimationPoseFrame pose,
             in CharacterPoseDiagnosticFrame frame, CharacterAnimationInputContract contract,
-            CharacterPoseWorldContextAdapter world, CharacterNativeStateCapturePage states)
+            AnimationReadOnlyBuffer<ClipSamplePlan> clipSamples, CharacterNativeStateCapturePage states)
         {
             m_PoseGraphId = pose.PoseGraphId;
             m_Frame = frame;
             m_Availability = pose.Availability;
-            m_CompletionIdentity = pose.CompletionIdentity;
             m_ContinuityIdentity = pose.ContinuityIdentity;
             m_PoseParameters = pose.PoseParameters;
             m_PoseParameterAvailability = pose.PoseParameterAvailability;
             m_Contributions = pose.Contributions;
             m_Contract = contract;
-            m_World = world;
+            m_ClipSamples = clipSamples;
             m_States = states;
         }
         [DiagnosticField, DiagnosticKey("presentation-frame"), DiagnosticGroup("animation-frame")]
@@ -62,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         [DiagnosticTable("parameters", 1, 128), DiagnosticGroup("animation-parameters")]
         public CharacterNativeParameterCapturePage Parameters => new CharacterNativeParameterCapturePage(m_PoseParameters, m_PoseParameterAvailability, m_Contract);
         [DiagnosticTable("sources", 1, 128), DiagnosticGroup("animation-output")]
-        public CharacterNativeSourceCapturePage Sources => new CharacterNativeSourceCapturePage(m_Contributions, m_CompletionIdentity, m_World);
+        public CharacterNativeSourceCapturePage Sources => new CharacterNativeSourceCapturePage(m_Contributions, m_ClipSamples);
     }
 
     public readonly struct CharacterNativeParameterCapturePage
@@ -89,20 +87,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     public readonly struct CharacterNativeSourceCapturePage
     {
         readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> m_Contributions;
-        readonly ulong m_CompletionIdentity;
-        readonly CharacterPoseWorldContextAdapter m_World;
-        internal CharacterNativeSourceCapturePage(AnimationReadOnlyBuffer<AnimationPoseSourceContribution> contributions, ulong completionIdentity, CharacterPoseWorldContextAdapter world)
-        { m_Contributions = contributions; m_CompletionIdentity = completionIdentity; m_World = world; }
+        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_ClipSamples;
+        internal CharacterNativeSourceCapturePage(AnimationReadOnlyBuffer<AnimationPoseSourceContribution> contributions, AnimationReadOnlyBuffer<ClipSamplePlan> clipSamples)
+        { m_Contributions = contributions; m_ClipSamples = clipSamples; }
         public int Count => m_Contributions.Count;
         public CharacterNativeSourceCaptureRow this[int index]
         {
             get
             {
                 AnimationPoseSourceContribution source = m_Contributions[index];
-                ClipSamplePlan clip;
-                if (source.Kind != AnimationPoseContributionKind.Live ||
-                    !m_World.TryReadClipSample(in source, m_CompletionIdentity, out clip))
-                    clip = default;
+                ClipSamplePlan clip = m_ClipSamples[index];
                 return new CharacterNativeSourceCaptureRow(in source, in clip);
             }
         }

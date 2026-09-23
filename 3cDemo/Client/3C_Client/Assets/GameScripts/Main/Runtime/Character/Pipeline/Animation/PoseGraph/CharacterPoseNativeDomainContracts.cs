@@ -211,7 +211,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_Session.TryObserveFinalPose(out ComposedAnimationPoseFrame pose))
                 throw new InvalidOperationException("Committed Pose is unavailable for capture.");
             return new Diagnostics.CharacterNativePoseCaptureFrame(in pose, in frame,
-                m_Session.Role.Graph.PreparedBinding.InputContract, m_Services.WorldContext, m_Session.Role.Graph.StateCapture);
+                m_Session.Role.Graph.PreparedBinding.InputContract,
+                m_Session.Role.Publication.RequireCommittedClipSamples(pose.CompletionIdentity),
+                m_Session.Role.Graph.StateCapture);
         }
 
         internal CharacterPoseNativePreparationResult BeginFrame(

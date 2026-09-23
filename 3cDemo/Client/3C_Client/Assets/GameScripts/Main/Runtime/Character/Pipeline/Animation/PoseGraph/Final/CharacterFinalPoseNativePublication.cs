@@ -111,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly float[] m_PoseParameters;
         readonly byte[] m_PoseParameterAvailability;
         readonly AnimationPoseSourceContribution[] m_Contributions;
+        readonly ClipSamplePlan[] m_ClipSamples;
         readonly float[] m_DenseContributionWeights;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases =
         {
@@ -198,6 +199,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseParameterAvailability = new byte[checked(2 * m_ParameterCount)];
             m_Contributions = new AnimationPoseSourceContribution[
                 checked(2 * m_ContributionCapacity)];
+            m_ClipSamples = new ClipSamplePlan[m_Contributions.Length];
             m_DenseContributionWeights = new float[
                 checked(2 * m_ContributionCapacity * m_BoneCount)];
             m_PhysicalWriter = new CharacterFinalPosePhysicalWriter(
@@ -306,6 +308,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         output.Contributions[contribution],
                         m_SourceModule,
                         m_PlayerNodeIds);
+                AnimationPoseSourceContribution source = m_Contributions[contributionOffset + contribution];
+                m_ClipSamples[contributionOffset + contribution] = source.Kind == AnimationPoseContributionKind.Live
+                    ? m_SourceModule.RequireDominantClipSample(source.SourceId, source.NodeId, output.CompletionIdentity)
+                    : default;
                 for (int bone = 0; bone < m_BoneCount; bone++)
                 {
                     float weight = output.DenseContributionWeights[
@@ -461,6 +467,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterFootIkPhysicalCapture CommittedPhysicalCapture =>
             m_CommittedPhysicalWrite.FootIkCapture;
+
+        internal AnimationReadOnlyBuffer<ClipSamplePlan> RequireCommittedClipSamples(ulong completionIdentity)
+        {
+            if (!m_HasCommitted || m_CommittedFrame.CompletionIdentity != completionIdentity)
+                throw new InvalidOperationException("Pose clip samples do not belong to the requested committed frame.");
+            return new AnimationReadOnlyBuffer<ClipSamplePlan>(m_ClipSamples,
+                m_CommittedPage * m_ContributionCapacity, m_CommittedFrame.Contributions.Count,
+                m_PageLeases[m_CommittedPage], completionIdentity);
+        }
 
         internal void ResetToDefaults()
         {

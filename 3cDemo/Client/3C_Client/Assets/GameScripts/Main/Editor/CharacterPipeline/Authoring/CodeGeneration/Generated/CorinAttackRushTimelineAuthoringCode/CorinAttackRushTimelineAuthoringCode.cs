@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 new CorinRushTimelineAuthoringBuilder.Boundary { WindowType = "RushRelease", WindowId = "RushReleaseOpen", Digest = 8101UL, SourceFrame = 13 }
             };
-            var timeline = CorinRushTimelineAuthoringBuilder.Build(context, "Attack_Rush", "Rush", "Assets/AssetArt/Animation/ZZZ/可琳/dump/Avatar_Female_Size01_Corin_Ani_Attack_Rush.anim", 70, boundaries);
+            var timeline = CorinRushTimelineAuthoringBuilder.Build(context, "Attack_Rush", "Rush", "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/Generated/InPlaceTargets/Avatar_Female_Size01_Corin_Ani_Attack_Rush_FootMotionTarget.anim", 70, boundaries);
             return context.Complete(timeline);
         }
     }

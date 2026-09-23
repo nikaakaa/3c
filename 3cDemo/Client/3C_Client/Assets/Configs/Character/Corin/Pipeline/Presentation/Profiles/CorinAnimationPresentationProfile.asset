@@ -93,9 +93,9 @@ MonoBehaviour:
   m_SourceResourceBindings:
   - m_AuthoringClip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 16c681fc2af3cc3419198f418b99e6db, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: 4f79fc3e8a7bd9142af680a36edd82a4, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 16f38330684ce314189be68cc86fadc1, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: 90cb63fbf5dc2a444a320430dc07026a, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 4b7a6729d30a44e4182952a81816caf2, type: 2}
     m_Backend: 2
@@ -107,7 +107,7 @@ MonoBehaviour:
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 4ef82b85767cffe4883132371252902e, type: 2}
     m_Backend: 2
-  - m_AuthoringClip: {fileID: 7400000, guid: 56dc445e7347ede4b84c0bba50500ed1, type: 2}
+  - m_AuthoringClip: {fileID: 7400000, guid: 9e243e525a661e94da0b56bd96b640a6, type: 2}
     m_Backend: 2
   - m_AuthoringClip: {fileID: 7400000, guid: 5bc3f78b966fa364583dc0e7af8cd0c8, type: 2}
     m_Backend: 2

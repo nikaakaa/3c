@@ -114,6 +114,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const int MaximumHeldActors = 64;
         readonly ActorId[] m_HeldActors = new ActorId[MaximumHeldActors];
         readonly HeldAuthorityInput[] m_Held = new HeldAuthorityInput[MaximumHeldActors];
+        readonly SimulationInputValue[][] m_NeutralValues = new SimulationInputValue[MaximumHeldActors][];
+        readonly int[] m_HeldIndices = new int[MaximumHeldActors];
         int m_HeldCount;
         HeldAuthorityInput[] m_HeldWorkspace = Array.Empty<HeldAuthorityInput>();
 
@@ -173,6 +175,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 }
                 HeldAuthorityInput held = m_Held[heldIndex];
                 m_HeldWorkspace[i] = held;
+                m_HeldIndices[i] = heldIndex;
             }
             var actorInputs = new SimulationPipelineActorInput<Float32StepInput>[actorCount];
             var actors = new ActorId[actorCount];
@@ -180,7 +183,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 HeldAuthorityInput held = m_HeldWorkspace[i];
                 ActorId actorId = held.ActorId;
-                SimulationInput input = BuildInput(held, authoritySource, authorityTick);
+                SimulationInput input = BuildInput(m_HeldIndices[i], held, authoritySource, authorityTick);
                 actorInputs[i] = new SimulationPipelineActorInput<Float32StepInput>(
                     actorId,
                     held.InputSequence,
@@ -266,6 +269,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidOperationException("Authority input hold capacity is exhausted.");
             Array.Copy(m_HeldActors, insertionIndex, m_HeldActors, insertionIndex + 1, m_HeldCount - insertionIndex);
             Array.Copy(m_Held, insertionIndex, m_Held, insertionIndex + 1, m_HeldCount - insertionIndex);
+            Array.Copy(m_NeutralValues, insertionIndex, m_NeutralValues, insertionIndex + 1, m_HeldCount - insertionIndex);
+            m_NeutralValues[insertionIndex] = null;
             m_HeldActors[insertionIndex] = actorId;
             m_Held[insertionIndex] = new HeldAuthorityInput(actorId, inputSequence, input, acceptedTick);
             m_HeldCount++;
@@ -290,6 +295,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         SimulationInput BuildInput(
+            int heldIndex,
             HeldAuthorityInput held,
             SimulationTickSourceIdentity source,
             SimulationTick authorityTick)
@@ -298,13 +304,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             int age = checked((int)(authorityTick.Value - held.AcceptedTick.Value));
             bool reuse = fresh || m_Policy.MissingInputPolicy == ServerAuthoritativeMissingInputPolicy.ReuseLastCanonicalInput &&
                 age <= m_Policy.MaximumInputLagTicks;
-            IReadOnlyList<SimulationInputValue> values = reuse
-                ? held.Input.Values
-                : NeutralValues(held.Input.Values);
-            IReadOnlyList<SimulationInputRequest> requests = fresh
-                ? held.Input.Requests
+            SimulationInputValue[] values = reuse
+                ? GetNeutralValues(heldIndex, held.Input.Values)
+                : held.Input.OwnedValues;
+            SimulationInputRequest[] requests = fresh
+                ? held.Input.OwnedRequests
                 : Array.Empty<SimulationInputRequest>();
-            return new SimulationInput(
+            return SimulationInput.FromOwnedArrays(
                 held.Input.NumericProfile,
                 source,
                 held.Input.InputSourceIdentity,
@@ -313,8 +319,32 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 requests);
         }
 
-        static SimulationInputValue[] NeutralValues(IReadOnlyList<SimulationInputValue> values)
+        SimulationInputValue[] GetNeutralValues(int heldIndex, IReadOnlyList<SimulationInputValue> values)
         {
+            if (!HasNeutralLayout(m_NeutralValues[heldIndex], values))
+                m_NeutralValues[heldIndex] = BuildNeutralValues(values);
+            return m_NeutralValues[heldIndex];
+        }
+
+        static bool HasNeutralLayout(IReadOnlyList<SimulationInputValue> cache, IReadOnlyList<SimulationInputValue> values)
+        {
+            if (cache == null || cache.Count != values.Count)
+                return false;
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!string.Equals(cache[i].InputId, values[i].InputId, StringComparison.Ordinal) ||
+                    cache[i].Kind != values[i].Kind)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static SimulationInputValue[] BuildNeutralValues(IReadOnlyList<SimulationInputValue> values)
+        {
+            if (values.Count == 0)
+                return Array.Empty<SimulationInputValue>();
             var result = new SimulationInputValue[values.Count];
             for (int i = 0; i < values.Count; i++)
             {
@@ -393,6 +423,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidDataException("Authority input hold state count is invalid.");
             Array.Clear(m_HeldActors, 0, m_HeldCount);
             Array.Clear(m_Held, 0, m_HeldCount);
+            Array.Clear(m_NeutralValues, 0, m_HeldCount);
             m_HeldCount = 0;
             for (int i = 0; i < count; i++)
             {

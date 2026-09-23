@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using ThirdPersonSimulation;
 
@@ -16,6 +17,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         int m_SentSequenceCount;
         CanonicalInputSample m_Held;
         ulong m_HeldAcceptedTick;
+        SimulationInputValue[] m_NeutralValues;
         ulong m_LastEnqueuedInputSequence;
         ulong m_SendPacketSequence;
         ulong m_SnapshotSequence;
@@ -247,13 +249,48 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return $"{Roster.ActorId}:commands={CommandPacketCount}/{CommandPayloadBytes}@{commandPacketsPerSecond:0.##}pps/{commandBytesPerSecond:0.##}Bps,packetGaps={PacketSequenceGaps},duplicates={DuplicatePackets},outOfOrder={OutOfOrderPackets},exact={ExactInputCount},held={HeldInputCount},neutral={NeutralInputCount},late={LateInputCount},lead={LastCommandLead},delta={DeltaSnapshotCount}@{snapshotPacketsPerSecond:0.##}pps/{snapshotBytesPerSecond:0.##}Bps,full={FullCheckpointCount},oversize={DeltaMtuExceededCount},lastBytes={LastDeltaPayloadBytes}";
         }
 
-        static SimulationInput Neutral(SimulationInput source, ulong authorityTick)
+        SimulationInput Neutral(SimulationInput source, ulong authorityTick)
         {
-            var values = new SimulationInputValue[source.Values.Count];
-            for (int i = 0; i < values.Length; i++)
+            return SimulationInput.FromOwnedArrays(
+                source.NumericProfile,
+                new SimulationTickSourceIdentity(SimulationTickSourceKind.Authoritative, source.TickSource.ClockId, authorityTick),
+                source.InputSourceIdentity,
+                source.Sequence,
+                BuildNeutralValues(source.Values),
+                Array.Empty<SimulationInputRequest>());
+        }
+
+        SimulationInputValue[] BuildNeutralValues(IReadOnlyList<SimulationInputValue> values)
+        {
+            if (!HasNeutralLayout(m_NeutralValues, values))
+                m_NeutralValues = CreateNeutralValues(values);
+            return m_NeutralValues;
+        }
+
+        static bool HasNeutralLayout(IReadOnlyList<SimulationInputValue> cache, IReadOnlyList<SimulationInputValue> values)
+        {
+            if (cache == null || cache.Count != values.Count)
+                return false;
+            for (int i = 0; i < values.Count; i++)
             {
-                SimulationInputValue value = source.Values[i];
-                values[i] = value.Kind switch
+                if (!string.Equals(cache[i].InputId, values[i].InputId, StringComparison.Ordinal) ||
+                    cache[i].Kind != values[i].Kind)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        static SimulationInputValue[] CreateNeutralValues(IReadOnlyList<SimulationInputValue> values)
+        {
+            if (values.Count == 0)
+                return Array.Empty<SimulationInputValue>();
+            var result = new SimulationInputValue[values.Count];
+            for (int i = 0; i < values.Count; i++)
+            {
+                SimulationInputValue value = values[i];
+                result[i] = value.Kind switch
                 {
                     SimulationInputValueKind.Boolean => SimulationInputValue.FromBoolean(value.InputId, false),
                     SimulationInputValueKind.Scalar => SimulationInputValue.FromScalar(value.InputId, Float32Scalar.Zero),
@@ -264,13 +301,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     _ => throw new InvalidDataException($"Unsupported input value kind '{value.Kind}'.")
                 };
             }
-            return new SimulationInput(
-                source.NumericProfile,
-                new SimulationTickSourceIdentity(SimulationTickSourceKind.Authoritative, source.TickSource.ClockId, authorityTick),
-                source.InputSourceIdentity,
-                source.Sequence,
-                values,
-                Array.Empty<SimulationInputRequest>());
+            return result;
         }
 
         void EnqueueSentSequence(ulong sequence, NetworkCheckpoint checkpoint)

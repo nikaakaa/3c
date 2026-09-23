@@ -95,17 +95,42 @@ namespace ThirdPersonSimulation
             m_Requests = SortRequests(requests);
         }
 
+        public static SimulationInput FromOwnedArrays(
+            SimulationNumericProfile numericProfile,
+            SimulationTickSourceIdentity tickSource,
+            string inputSourceIdentity,
+            ulong sequence,
+            SimulationInputValue[] values,
+            SimulationInputRequest[] requests)
+        {
+            if (values == null)
+                throw new ArgumentNullException(nameof(values));
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
+            ValidateValues(values);
+            ValidateRequests(requests);
+            return new SimulationInput(
+                numericProfile,
+                tickSource,
+                inputSourceIdentity,
+                sequence,
+                values,
+                requests);
+        }
+
         public SimulationNumericProfile NumericProfile { get; }
         public SimulationTickSourceIdentity TickSource { get; }
         public string InputSourceIdentity { get; }
         public ulong Sequence { get; }
         public IReadOnlyList<SimulationInputValue> Values => m_Values;
         public IReadOnlyList<SimulationInputRequest> Requests => m_Requests;
+        public SimulationInputValue[] OwnedValues => m_Values;
+        public SimulationInputRequest[] OwnedRequests => m_Requests;
 
         static SimulationInputValue[] SortValues(IEnumerable<SimulationInputValue> values)
         {
             SimulationInputValue[] result = Copy(values);
-            Array.Sort(result, (left, right) => string.CompareOrdinal(left.InputId, right.InputId));
+            Array.Sort(result, s_ValueComparer);
             for (int i = 1; i < result.Length; i++)
             {
                 if (string.Equals(result[i - 1].InputId, result[i].InputId, StringComparison.Ordinal))
@@ -117,11 +142,7 @@ namespace ThirdPersonSimulation
         static SimulationInputRequest[] SortRequests(IEnumerable<SimulationInputRequest> requests)
         {
             SimulationInputRequest[] result = Copy(requests);
-            Array.Sort(result, (left, right) =>
-            {
-                int bySequence = left.Sequence.CompareTo(right.Sequence);
-                return bySequence != 0 ? bySequence : string.CompareOrdinal(left.RequestId, right.RequestId);
-            });
+            Array.Sort(result, s_RequestComparer);
             for (int i = 1; i < result.Length; i++)
             {
                 if (result[i - 1].Sequence == result[i].Sequence)
@@ -143,6 +164,65 @@ namespace ThirdPersonSimulation
                 return result;
             }
             return new List<T>(source).ToArray();
+        }
+
+        static void ValidateValues(SimulationInputValue[] values)
+        {
+            for (int i = 1; i < values.Length; i++)
+            {
+                if (string.CompareOrdinal(values[i - 1].InputId, values[i].InputId) >= 0)
+                    throw new ArgumentException("Simulation input owned values must be sorted by unique InputId.", nameof(values));
+            }
+        }
+
+        static void ValidateRequests(SimulationInputRequest[] requests)
+        {
+            for (int i = 1; i < requests.Length; i++)
+            {
+                int bySequence = requests[i - 1].Sequence.CompareTo(requests[i].Sequence);
+                if (bySequence > 0 || (bySequence == 0 && string.CompareOrdinal(
+                        requests[i - 1].RequestId,
+                        requests[i].RequestId) >= 0))
+                {
+                    throw new ArgumentException("Simulation input owned requests must be sorted by unique Sequence and RequestId.", nameof(requests));
+                }
+            }
+        }
+
+        SimulationInput(
+            SimulationNumericProfile numericProfile,
+            SimulationTickSourceIdentity tickSource,
+            string inputSourceIdentity,
+            ulong sequence,
+            SimulationInputValue[] values,
+            SimulationInputRequest[] requests)
+        {
+            if (!numericProfile.IsValid || sequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+            NumericProfile = numericProfile;
+            TickSource = tickSource;
+            InputSourceIdentity = SimulationIdentity.Require(inputSourceIdentity, nameof(inputSourceIdentity));
+            Sequence = sequence;
+            m_Values = values;
+            m_Requests = requests;
+        }
+
+        static readonly SimulationInputValueComparer s_ValueComparer = new();
+        static readonly SimulationInputRequestComparer s_RequestComparer = new();
+
+        sealed class SimulationInputValueComparer : IComparer<SimulationInputValue>
+        {
+            public int Compare(SimulationInputValue left, SimulationInputValue right) =>
+                string.CompareOrdinal(left.InputId, right.InputId);
+        }
+
+        sealed class SimulationInputRequestComparer : IComparer<SimulationInputRequest>
+        {
+            public int Compare(SimulationInputRequest left, SimulationInputRequest right)
+            {
+                int bySequence = left.Sequence.CompareTo(right.Sequence);
+                return bySequence != 0 ? bySequence : string.CompareOrdinal(left.RequestId, right.RequestId);
+            }
         }
     }
 

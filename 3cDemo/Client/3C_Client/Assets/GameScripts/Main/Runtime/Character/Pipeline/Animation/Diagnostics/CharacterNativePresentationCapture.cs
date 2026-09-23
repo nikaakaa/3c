@@ -8,8 +8,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
     public readonly struct CharacterNativePoseCaptureFrame
     {
-        readonly ComposedAnimationPoseFrame m_Pose;
+        readonly string m_PoseGraphId;
         readonly CharacterPoseDiagnosticFrame m_Frame;
+        readonly AnimationPoseAvailability m_Availability;
+        readonly ulong m_CompletionIdentity;
+        readonly ulong m_ContinuityIdentity;
+        readonly AnimationReadOnlyBuffer<float> m_PoseParameters;
+        readonly AnimationReadOnlyBuffer<byte> m_PoseParameterAvailability;
+        readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> m_Contributions;
         readonly CharacterAnimationInputContract m_Contract;
         readonly CharacterPoseWorldContextAdapter m_World;
         readonly CharacterNativeStateCapturePage m_States;
@@ -17,8 +23,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseDiagnosticFrame frame, CharacterAnimationInputContract contract,
             CharacterPoseWorldContextAdapter world, CharacterNativeStateCapturePage states)
         {
-            m_Pose = pose;
+            m_PoseGraphId = pose.PoseGraphId;
             m_Frame = frame;
+            m_Availability = pose.Availability;
+            m_CompletionIdentity = pose.CompletionIdentity;
+            m_ContinuityIdentity = pose.ContinuityIdentity;
+            m_PoseParameters = pose.PoseParameters;
+            m_PoseParameterAvailability = pose.PoseParameterAvailability;
+            m_Contributions = pose.Contributions;
             m_Contract = contract;
             m_World = world;
             m_States = states;
@@ -34,34 +46,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         [DiagnosticField, DiagnosticKey("has-snapshot"), DiagnosticGroup("animation-frame")]
         public bool HasSnapshot => m_Frame.CompletionIdentity != 0;
         [DiagnosticField, DiagnosticKey("pose-graph-id"), DiagnosticGroup("animation-identity")]
-        public string PoseGraphId => m_Frame.GraphId;
+        public string PoseGraphId => m_PoseGraphId;
         [DiagnosticField, DiagnosticKey("pose-graph-revision"), DiagnosticGroup("animation-identity")]
-        public string PoseGraphRevision => m_Frame.GraphRevision;
+        public string PoseGraphRevision => m_PoseGraphId;
         [DiagnosticField, DiagnosticKey("input-contract-hash"), DiagnosticGroup("animation-identity")]
         public string InputContractHash => m_Frame.InputContractHash;
         [DiagnosticField, DiagnosticKey("instance-id"), DiagnosticGroup("animation-identity")]
         public ulong InstanceId => m_Frame.InstanceId;
         [DiagnosticField, DiagnosticKey("final-availability"), DiagnosticGroup("animation-output")]
-        public AnimationPoseAvailability FinalAvailability => m_Pose.Availability;
+        public AnimationPoseAvailability FinalAvailability => m_Availability;
         [DiagnosticField, DiagnosticKey("continuity-identity"), DiagnosticGroup("animation-output")]
-        public ulong ContinuityIdentity => m_Pose.ContinuityIdentity;
+        public ulong ContinuityIdentity => m_ContinuityIdentity;
         [DiagnosticTable("state-machines", 1, 64), DiagnosticGroup("animation-state")]
         public CharacterNativeStateCapturePage StateMachines => m_States;
         [DiagnosticTable("parameters", 1, 128), DiagnosticGroup("animation-parameters")]
-        public CharacterNativeParameterCapturePage Parameters => new CharacterNativeParameterCapturePage(m_Pose, m_Contract);
+        public CharacterNativeParameterCapturePage Parameters => new CharacterNativeParameterCapturePage(m_PoseParameters, m_PoseParameterAvailability, m_Contract);
         [DiagnosticTable("sources", 1, 128), DiagnosticGroup("animation-output")]
-        public CharacterNativeSourceCapturePage Sources => new CharacterNativeSourceCapturePage(m_Pose, m_World);
+        public CharacterNativeSourceCapturePage Sources => new CharacterNativeSourceCapturePage(m_Contributions, m_CompletionIdentity, m_World);
     }
 
     public readonly struct CharacterNativeParameterCapturePage
     {
-        readonly ComposedAnimationPoseFrame m_Pose;
+        readonly AnimationReadOnlyBuffer<float> m_Parameters;
+        readonly AnimationReadOnlyBuffer<byte> m_Availability;
         readonly CharacterAnimationInputContract m_Contract;
-        internal CharacterNativeParameterCapturePage(ComposedAnimationPoseFrame pose, CharacterAnimationInputContract contract)
-        { m_Pose = pose; m_Contract = contract; }
-        public int Count => m_Pose.PoseParameters.Count;
+        internal CharacterNativeParameterCapturePage(AnimationReadOnlyBuffer<float> parameters, AnimationReadOnlyBuffer<byte> availability, CharacterAnimationInputContract contract)
+        { m_Parameters = parameters; m_Availability = availability; m_Contract = contract; }
+        public int Count => m_Parameters.Count;
         public CharacterNativeParameterCaptureRow this[int index] => new CharacterNativeParameterCaptureRow(
-            m_Contract.Parameters[index].ParameterId.Value, m_Pose.PoseParameters[index], m_Pose.PoseParameterAvailability[index] != 0);
+            m_Contract.Parameters[index].ParameterId.Value, m_Parameters[index], m_Availability[index] != 0);
     }
 
     public readonly struct CharacterNativeParameterCaptureRow
@@ -75,18 +88,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
     public readonly struct CharacterNativeSourceCapturePage
     {
-        readonly ComposedAnimationPoseFrame m_Pose;
+        readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> m_Contributions;
+        readonly ulong m_CompletionIdentity;
         readonly CharacterPoseWorldContextAdapter m_World;
-        internal CharacterNativeSourceCapturePage(ComposedAnimationPoseFrame pose, CharacterPoseWorldContextAdapter world)
-        { m_Pose = pose; m_World = world; }
-        public int Count => m_Pose.Contributions.Count;
+        internal CharacterNativeSourceCapturePage(AnimationReadOnlyBuffer<AnimationPoseSourceContribution> contributions, ulong completionIdentity, CharacterPoseWorldContextAdapter world)
+        { m_Contributions = contributions; m_CompletionIdentity = completionIdentity; m_World = world; }
+        public int Count => m_Contributions.Count;
         public CharacterNativeSourceCaptureRow this[int index]
         {
             get
             {
-                AnimationPoseSourceContribution source = m_Pose.Contributions[index];
+                AnimationPoseSourceContribution source = m_Contributions[index];
                 ClipSamplePlan clip = source.Kind == AnimationPoseContributionKind.Live
-                    ? m_World.ReadClipSample(in source, m_Pose.CompletionIdentity) : default;
+                    ? m_World.ReadClipSample(in source, m_CompletionIdentity) : default;
                 return new CharacterNativeSourceCaptureRow(in source, in clip);
             }
         }

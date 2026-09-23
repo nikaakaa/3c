@@ -335,7 +335,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             DiagnosticCaptureFailure? failure = s_Controller.Failure;
             if (s_CaptureException != null)
                 failure = new DiagnosticCaptureFailure(DiagnosticCaptureFailureStage.Capture,
-                    CharacterFootIkDiagnosticIdentity.CapabilityId, string.Empty, s_ActiveSamplerId,
+                    CharacterFootIkDiagnosticIdentity.CapabilityId,
+                    string.Equals(s_ActiveSamplerId, CharacterFootIkDiagnosticIdentity.CoreSamplerId, StringComparison.Ordinal)
+                        ? CharacterFootIkDiagnosticIdentity.CoreProgramId
+                        : CharacterFootIkDiagnosticIdentity.FullProgramId,
+                    s_ActiveSamplerId,
                     CharacterPoseFootDiagnosticEvent.EventId, s_CaptureException.Message);
             if (!failure.HasValue)
                 return;

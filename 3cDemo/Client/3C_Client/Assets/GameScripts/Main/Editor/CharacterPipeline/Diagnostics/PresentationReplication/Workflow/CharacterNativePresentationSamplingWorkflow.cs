@@ -298,7 +298,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             DiagnosticCaptureFailure? failure = s_Controller.Failure;
             if (s_CaptureException != null)
                 failure = new DiagnosticCaptureFailure(DiagnosticCaptureFailureStage.Capture,
-                    CharacterPresentationReplicationDiagnosticIdentity.CapabilityId, string.Empty, s_ActiveSamplerId,
+                    CharacterPresentationReplicationDiagnosticIdentity.CapabilityId,
+                    string.Equals(s_ActiveSamplerId, CharacterPresentationReplicationDiagnosticIdentity.CoreSamplerId, StringComparison.Ordinal)
+                        ? CharacterPresentationReplicationDiagnosticIdentity.CoreProgramId
+                        : CharacterPresentationReplicationDiagnosticIdentity.FullProgramId,
+                    s_ActiveSamplerId,
                     CharacterNativePresentationDiagnosticEvent.EventId, s_CaptureException.Message);
             if (!failure.HasValue)
                 return;

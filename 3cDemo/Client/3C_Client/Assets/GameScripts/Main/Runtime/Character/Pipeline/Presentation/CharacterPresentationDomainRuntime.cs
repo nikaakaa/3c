@@ -157,6 +157,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool AcceptsTrajectoryIntent => true;
         public ulong BodyResetSequence => m_Body.ResetSequence;
         public CharacterLocomotionBodySource LocomotionBodySource => m_LocomotionBinding.BodySource;
+        public bool IsPoseResourceReady => m_PoseDomain == null ||
+            !m_PoseDomain.IsAdopted ||
+            (m_PoseResourceScope?.IsReady ?? false);
+
+        public void AdvancePoseResourcePreparation()
+        {
+            if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
+                m_PoseResourceScope.AdvancePreparation();
+        }
+
         public bool SupportsCheckpointCapture => false;
         public bool SupportsCheckpointRestore => false;
 
@@ -427,6 +437,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera?.BeginFrame();
                 m_TimelinePresentationBridge?.BeginFrame();
                 m_TimelineBridge?.BeginFrame();
+                if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
+                {
+                    m_PoseResourceScope.AdvancePreparation();
+                    if (!IsPoseResourceReady)
+                        return;
+                }
                 CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
                 CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                     in factFrame,
@@ -457,7 +473,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IReadOnlyList<ActionAnimationPlaybackCommand> actionCommands = Array.Empty<ActionAnimationPlaybackCommand>();
                 if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
                 {
-                    m_PoseResourceScope.AdvancePreparation();
                     m_PoseDomain.BeginFrame(context.RenderFrame);
                     if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out actionCommands))
                         throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
@@ -608,7 +623,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         OwnerId = command.PlaybackId.ToString(),
                         RelatedElementId = command.EventId.IsValid
                             ? command.EventId.ToString()
-                            : string.Empty,
+                            : command.ProjectedSample.IsValid && command.ProjectedSample.AuthoringClipIdentity
+                                ? $"{command.ProjectedSample.AuthoringClipIdentity.name}#{command.ProjectedSample.AuthoringClipIdentity.GetInstanceID()}"
+                                : string.Empty,
                         AnimationChannelId = command.AnimationChannelId.Value,
                         ActionInstanceId = command.ActionInstanceId,
                         ActivationGeneration = command.Generation,

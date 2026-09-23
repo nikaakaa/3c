@@ -5764,3 +5764,13 @@
 - `ServerAuthoritativeRemoteBodySelectionFrame` 每次 `Select` 仍生成正式输出数组，checkpoint 的长期结果数组也仍按各自寿命分配；这两项不属于本步的临时中转。无效批次现在在写回前抛出，不再留下原实现中的半批插入。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做远端表现包回放、多 Actor 插值/外推对比、checkpoint 编解码恢复和 Player 分配采样。
+
+## 2026-09-23 远端Body选择scratch复用
+
+对应 tasks.md 的 5.287；父项 2.5 保持未勾选。代码提交为 `60c438a51`。
+
+- `ServerAuthoritativeRemoteBodyTimeline` 在准备期按锁定 Actor 数量创建一份 `ServerAuthoritativeRemoteBodySelection[]` scratch。`Select` 每次按 Actor 顺序原地覆盖并返回包含这份 scratch 的 readonly frame，删除每次选择新建 selection 数组的路径。
+- 全仓只发现 Prediction schedule 和 HardRecovery 两类调用方。HardRecovery 立即调用 `ToBodySamples`；schedule 在同一循环内先复制 Body samples，再按开关生成独立 `ObservedWorldConstraintFrame`，都不会跨下一次 `Select` 读取旧 scratch。因此 scratch 归 Timeline 所有、输出结果归调用方的寿命边界保持清晰。
+- `ToBodySamples` 和 `ToObservedWorldConstraints` 的最终结果数组仍按各自输出寿命分配；checkpoint 长期数组不变。本步只删除临时 selection 中转。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做多步 schedule 回放、HardRecovery 回放、插值/外推对比和 Player 分配采样。

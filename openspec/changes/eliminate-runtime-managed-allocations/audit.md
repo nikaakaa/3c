@@ -5930,3 +5930,13 @@
 - 本步消除下载快照对象本体；下载计划对象、第三方 downloader、UniTask 状态机、`StringBuilder` 输出和错误字符串仍是 6.2/7.1 后续边界。
 - `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除。
 - 未刷新 Unity、未进 Play、未做下载进度回放、取消/换代对比和 Player 分配采样。
+
+## 2026-09-23 产品阶段快照值化
+
+对应 tasks.md 的 6.31；父项 6.2 保持未勾选。代码提交为 `e8376fb9d`。
+
+- `ProductRuntimeSnapshot` 原先是 `class`，每次产品阶段切换、失败、恢复等待和 Dispose 发布都新建外层快照对象；`ProductRuntimeSnapshotStore` 的环形历史继续保留旧对象。现在改为 `readonly struct`，历史直接在预分配槽位中保存值。
+- 构造期要求 `Sequence > 0`，default 实例通过 `IsValid == false` 表达未发布状态。Shell 产品诊断从 null 判断改为 `IsValid` 判断；`Changed` 仍是强类型委托，struct 调用不装箱。
+- 阶段、Auth/Home/Gameplay 状态、SafeError 归一化、发布顺序、历史容量和淘汰规则不变。本步消除产品阶段快照对象本体；`DateTimeOffset` 值、错误字符串和第三方状态机分配不在本步范围。
+- `GameLogic` 用 Unity `ScriptAssemblies` 正式引用和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和产物已删除。
+- 未刷新 Unity、未进 Play、未做启动阶段回放、失败恢复回放、历史窗口淘汰对比和 Player 分配采样。

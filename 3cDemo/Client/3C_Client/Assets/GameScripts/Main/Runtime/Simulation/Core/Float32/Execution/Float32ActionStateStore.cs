@@ -629,7 +629,7 @@ namespace ThirdPersonSimulation
 				m_Frame.ActionState.ReplaceActionInstanceAt(index, action);
 			}
 			else
-				m_Frame.ActionState.AddActionInstance(action, m_Layout.ActionInstanceCapacity);
+				m_Frame.ActionState.AddActionInstance(action);
         }
 
 		void ReplaceAction(int index, Float32ActionInstanceState action)
@@ -654,7 +654,7 @@ namespace ThirdPersonSimulation
 					count++;
 			if (count >= m_Layout.ActionCapacity(state.ActionId))
 				throw new InvalidOperationException($"Action '{state.ActionId}' has no free activation request capacity.");
-            m_Frame.ActionState.AddActivationRequest(state, m_Layout.ActionInstanceCapacity);
+            m_Frame.ActionState.AddActivationRequest(state);
         }
 
 		public int FindPendingSkill(

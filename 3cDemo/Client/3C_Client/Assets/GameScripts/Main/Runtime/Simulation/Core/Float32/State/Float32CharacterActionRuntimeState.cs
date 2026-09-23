@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
     {
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<Float32ActionInstanceState> m_ActionInstances;
+        readonly int m_Capacity;
         bool m_ActivationRequestsDirty;
         bool m_InstancesDirty;
         ulong m_ActionEventSequence;
@@ -15,10 +16,11 @@ namespace ThirdPersonSimulation
         IReadOnlyList<Float32ActionInstanceState> m_BaseActionInstances;
         bool m_Disposed;
 
-        public Float32CharacterActionRuntimeState()
+        public Float32CharacterActionRuntimeState(int capacity)
         {
-            m_ActionActivationRequests = new List<SimulationActionActivationRequestState>();
-            m_ActionInstances = new List<Float32ActionInstanceState>();
+            m_Capacity = capacity;
+            m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(capacity);
+            m_ActionInstances = new List<Float32ActionInstanceState>(capacity);
         }
 
         public Float32CharacterActionRuntimeState Restart(
@@ -68,24 +70,20 @@ namespace ThirdPersonSimulation
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
-        public void AddActionInstance(Float32ActionInstanceState action, int capacity)
+        public void AddActionInstance(Float32ActionInstanceState action)
         {
             RequireActive();
-            if (capacity < m_ActionInstances.Count + 1)
-                throw new ArgumentOutOfRangeException(nameof(capacity));
-            if (m_ActionInstances.Capacity < capacity)
-                m_ActionInstances.Capacity = capacity;
+            if (m_ActionInstances.Count >= m_Capacity)
+                throw new InvalidOperationException("Character action state capacity is exhausted.");
             m_ActionInstances.Add(action);
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
-        public void AddActivationRequest(SimulationActionActivationRequestState request, int capacity)
+        public void AddActivationRequest(SimulationActionActivationRequestState request)
         {
             RequireActive();
-            if (capacity < m_ActionActivationRequests.Count + 1)
-                throw new ArgumentOutOfRangeException(nameof(capacity));
-            if (m_ActionActivationRequests.Capacity < capacity)
-                m_ActionActivationRequests.Capacity = capacity;
+            if (m_ActionActivationRequests.Count >= m_Capacity)
+                throw new InvalidOperationException("Character action state capacity is exhausted.");
             m_ActionActivationRequests.Add(request);
             m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
         }
@@ -131,8 +129,8 @@ namespace ThirdPersonSimulation
             m_ActionActivationRequests.Clear();
             if (requests != null)
             {
-                if (m_ActionActivationRequests.Capacity < requests.Count)
-                    m_ActionActivationRequests.Capacity = requests.Count;
+                if (requests.Count > m_Capacity)
+                    throw new InvalidOperationException("Restored character action state exceeds capacity.");
                 m_ActionActivationRequests.AddRange(requests);
             }
             m_ActivationRequestsDirty = !Same(m_ActionActivationRequests, m_BaseActionActivationRequests);
@@ -146,8 +144,8 @@ namespace ThirdPersonSimulation
             m_ActionInstances.Clear();
             if (actions != null)
             {
-                if (m_ActionInstances.Capacity < actions.Count)
-                    m_ActionInstances.Capacity = actions.Count;
+                if (actions.Count > m_Capacity)
+                    throw new InvalidOperationException("Restored character action state exceeds capacity.");
                 m_ActionInstances.AddRange(actions);
             }
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);

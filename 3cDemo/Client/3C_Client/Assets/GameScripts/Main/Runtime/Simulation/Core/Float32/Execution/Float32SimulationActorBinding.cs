@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterTraceSink m_CharacterTraceSink;
         readonly Float32AbilityExecutionInput m_AbilityExecutionInput = new Float32AbilityExecutionInput();
         readonly Float32CharacterInputRequestState m_InputRequestState = new Float32CharacterInputRequestState();
-        readonly Float32CharacterActionRuntimeState m_ActionState = new Float32CharacterActionRuntimeState();
+        readonly Float32CharacterActionRuntimeState m_ActionState;
         readonly CharacterControlRuntimeStateTransaction m_ControlState = new CharacterControlRuntimeStateTransaction();
         readonly Float32CharacterEventSequenceState m_EventSequenceState = new Float32CharacterEventSequenceState();
         readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState = new Float32CharacterHandleAllocatorState();
@@ -100,6 +100,10 @@ namespace ThirdPersonSimulation
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 timelineMotionWarpCatalog);
+            int actionCapacity = 0;
+            for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
+                actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
+            m_ActionState = new Float32CharacterActionRuntimeState(actionCapacity);
             m_Invocations = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);

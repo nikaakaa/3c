@@ -70,7 +70,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterTraceSink m_CharacterTraceSink;
         readonly FixedAbilityExecutionInput m_AbilityExecutionInput = new FixedAbilityExecutionInput();
         readonly FixedCharacterInputRequestState m_InputRequestState = new FixedCharacterInputRequestState();
-        readonly FixedCharacterActionRuntimeState m_ActionState = new FixedCharacterActionRuntimeState();
+        readonly FixedCharacterActionRuntimeState m_ActionState;
         readonly CharacterControlRuntimeStateTransaction m_ControlState = new CharacterControlRuntimeStateTransaction();
         readonly FixedCharacterEventSequenceState m_EventSequenceState = new FixedCharacterEventSequenceState();
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState = new FixedCharacterHandleAllocatorState();
@@ -102,6 +102,10 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 timelineMotionWarpCatalog);
+            int actionCapacity = 0;
+            for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
+                actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
+            m_ActionState = new FixedCharacterActionRuntimeState(actionCapacity);
             m_Invocations = new FixedAbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);

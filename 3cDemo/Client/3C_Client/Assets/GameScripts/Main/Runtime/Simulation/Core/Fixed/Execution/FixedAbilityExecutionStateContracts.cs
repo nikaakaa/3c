@@ -29,11 +29,11 @@ namespace ThirdPersonSimulation.Fixed
     {
         ulong NextActionEventSequence();
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
-        void AddActivationRequest(SimulationActionActivationRequestState request, int capacity);
+        void AddActivationRequest(SimulationActionActivationRequestState request);
         void RemoveActivationRequestAt(int index);
         IReadOnlyList<FixedActionInstanceState> GetActionInstances();
         void ReplaceActionInstanceAt(int index, FixedActionInstanceState action);
-        void AddActionInstance(FixedActionInstanceState action, int capacity);
+        void AddActionInstance(FixedActionInstanceState action);
     }
 
     internal interface IFixedHandleAllocatorStatePort

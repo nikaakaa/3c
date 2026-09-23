@@ -575,6 +575,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(contributionIndex);
                 if (entry.Kind != AnimationPoseContributionKind.Live)
                     continue;
+                if (!TryGetFootSource(entry, out _, out _, out bool sourceHasFeatures, out _))
+                    return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
+                if (!sourceHasFeatures)
+                    continue;
                 if (entry.LeftFootWeight > 0f && entry.LeftFootWeight >= leftPredictionWeight)
                 {
                     leftPredictionContribution = contributionIndex;

@@ -99,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 slots.Add(clipBinding.Slot);
             }
             List<CharacterActionAnimationSourcePlan> actionPlans =
-                CompileActionPlans(profile, catalogEntries);
+                CompileActionPlans(profile, analysisSource, catalogEntries);
             resourceSet.ReplaceAnimationSources(
                 plans,
                 slots,
@@ -114,6 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static List<CharacterActionAnimationSourcePlan> CompileActionPlans(
             CharacterAnimationPresentationProfile profile,
+            CharacterFootPlacementAnalysisSource analysisSource,
             IReadOnlyDictionary<AnimationClip, CharacterAnimationBuildCatalogEntry>
                 catalogEntries)
         {
@@ -136,7 +137,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     identity.SourceDurationSeconds,
                     identity.Loop,
                     entry.ResourceCatalogIndex,
-                    entry.GroupClipIndex));
+                    entry.GroupClipIndex,
+                    CharacterPresentationFootEventCompiler.CompileFootStepObservation(
+                        binding.AuthoringClip,
+                        identity.SourceDurationSeconds,
+                        AnimationFootAnalysisArtifactBuilder.Build(binding.AuthoringClip, analysisSource).MotionData)));
             }
             return result;
         }

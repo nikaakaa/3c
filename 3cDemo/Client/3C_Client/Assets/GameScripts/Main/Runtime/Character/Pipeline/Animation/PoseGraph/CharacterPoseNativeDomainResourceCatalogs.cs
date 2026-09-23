@@ -89,6 +89,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterActionAnimationSourcePlan RequireActionPlan(
+            ClipSamplePlan sample)
+        {
+            if (!sample.IsAcl)
+                return RequireActionPlan(sample.Clip);
+            foreach (CharacterActionAnimationSourcePlan plan in m_ActionPlans.Values)
+                if (plan.Backend == CharacterAnimationSamplingBackendKind.Acl &&
+                    plan.ResourceCatalogIndex == sample.ResourceCatalogIndex &&
+                    plan.GroupClipIndex == sample.GroupClipIndex)
+                    return plan;
+            throw new InvalidOperationException("Action ACL sample has no compiled source plan.");
+        }
+
+        internal CharacterActionAnimationSourcePlan RequireActionPlan(
             AnimationClip authoringClipIdentity)
         {
             if (!authoringClipIdentity ||

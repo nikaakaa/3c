@@ -216,6 +216,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseSourceContribution contribution,
             ClipSamplePlan clipSample)
         {
+            if (contribution.SourceId.SourceKind == AnimationPoseSourceKind.Timeline)
+            {
+                CharacterActionAnimationSourcePlan action = m_SourceCatalog.RequireActionPlan(clipSample);
+                return new CharacterPoseFootMotionSource(
+                    action.ClipIdentity,
+                    (ulong)action.FullDependencyHash.GetHashCode(),
+                    action.FootStepObservation);
+            }
             CharacterPresentationPoseSourcePlan plan =
                 m_SourceCatalog.RequirePlan(contribution.SourceId.PresentationPoseSourceIndex);
             return new CharacterPoseFootMotionSource(

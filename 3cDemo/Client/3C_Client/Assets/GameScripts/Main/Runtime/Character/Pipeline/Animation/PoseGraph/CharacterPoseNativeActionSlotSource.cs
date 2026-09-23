@@ -295,10 +295,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPoseParameterDeclaration declaration =
                     m_InputContract.Parameters[i];
-                if (!parameters.TryRead(declaration.ParameterId, out EventGraphValue value))
-                    continue;
                 row.PoseParameters[row.ParameterOffset + i] =
-                    ReadParameter(in value, declaration);
+                    declaration.Usage == CharacterPoseParameterUsage.AnimatedProperty
+                        ? declaration.DefaultValue
+                        : ReadParameter(parameters.RequireValue(declaration.ParameterId), declaration);
                 row.PoseParameterAvailability[row.ParameterOffset + i] = 1;
             }
             PresentationPoseSampleTime time = state.Sample.Time;

@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] bool m_Looping;
         [SerializeField] int m_ResourceCatalogIndex = -1;
         [SerializeField] int m_GroupClipIndex = -1;
+        [SerializeField] AnimationFootStepObservationCurvePair m_FootStepObservation;
 
         internal CharacterActionAnimationSourcePlan(
             AnimationClip authoringClipIdentity,
@@ -23,7 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float durationSeconds,
             bool looping,
             int resourceCatalogIndex,
-            int groupClipIndex)
+            int groupClipIndex,
+            AnimationFootStepObservationCurvePair footStepObservation)
         {
             m_AuthoringClipIdentity = authoringClipIdentity;
             m_ClipIdentity = clipIdentity?.Trim() ?? string.Empty;
@@ -31,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Backend = backend;
             m_DurationSeconds = durationSeconds;
             m_Looping = looping;
+            m_FootStepObservation = footStepObservation;
             m_ResourceCatalogIndex = backend == CharacterAnimationSamplingBackendKind.Acl
                 ? resourceCatalogIndex
                 : -1;
@@ -48,9 +51,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool Looping => m_Looping;
         public int ResourceCatalogIndex => m_ResourceCatalogIndex;
         public int GroupClipIndex => m_GroupClipIndex;
+        public AnimationFootStepObservationCurvePair FootStepObservation => m_FootStepObservation;
 
         public void RequireValid()
         {
+            if (m_FootStepObservation == null)
+                throw new InvalidOperationException("Action animation source has no compiled Foot Motion observation.");
+            m_FootStepObservation.RequireValid();
             if (!AuthoringClipIdentity ||
                 string.IsNullOrWhiteSpace(ClipIdentity) ||
                 string.IsNullOrWhiteSpace(FullDependencyHash) ||

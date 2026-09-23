@@ -503,10 +503,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     in writeBinding);
                 return runtime;
             }
-            catch
+            finally
             {
                 stackBuffer.Dispose();
-                throw;
             }
         }
 

@@ -29,12 +29,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly int m_MaximumActivePresentationRecords;
-        readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
-            new SortedDictionary<ulong, FixedCharacterBodySample>();
-        readonly SortedDictionary<ulong, EquipmentVisualSelection[]> m_PendingEquipmentSelections =
-            new SortedDictionary<ulong, EquipmentVisualSelection[]>();
-        readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
-            new SortedDictionary<ulong, FixedSimulationActorTickResult>();
+        readonly SortedTickResultBuffer<FixedCharacterBodySample> m_PendingBodySamples;
+        readonly SortedTickResultBuffer<FixedSimulationActorTickResult> m_PendingTrajectoryResults;
+        readonly PendingEquipmentSelectionBuffer m_PendingEquipmentSelections;
         readonly CharacterPresentationBodyInterval[] m_BodyIntervalScratch;
 
         bool m_Activated;
@@ -73,6 +70,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentException("Fixed Actor registration body identity does not match ActorId.", nameof(initialBody));
             if (maximumActivePresentationRecords <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumActivePresentationRecords));
+            int equipmentSelectionCapacity = 0;
+            for (int i = 0; i < actorBinding.AbilityInstallations.Installations.Count; i++)
+            {
+                equipmentSelectionCapacity = Math.Max(
+                    equipmentSelectionCapacity,
+                    actorBinding.AbilityInstallations.Installations[i].EquipmentSlotCapacity);
+            }
+
             OwnerInstanceId = ownerInstanceId;
             OwnerName = ownerName.Trim();
             ActorId = actorId;
@@ -88,6 +93,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             InitialBody = initialBody;
             m_MaximumActivePresentationRecords = maximumActivePresentationRecords;
             m_BodyIntervalScratch = new CharacterPresentationBodyInterval[maximumActivePresentationRecords];
+            m_PendingBodySamples = new SortedTickResultBuffer<FixedCharacterBodySample>(
+                maximumActivePresentationRecords,
+                $"Fixed Actor '{ActorId}' pending Body result");
+            m_PendingTrajectoryResults = new SortedTickResultBuffer<FixedSimulationActorTickResult>(
+                maximumActivePresentationRecords,
+                $"Fixed Actor '{ActorId}' pending Trajectory result");
+            m_PendingEquipmentSelections = new PendingEquipmentSelectionBuffer(
+                maximumActivePresentationRecords,
+                equipmentSelectionCapacity);
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
@@ -222,6 +236,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Actor '{ActorId}' Body result commit is already active.");
             if (maximumBodySamples <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumBodySamples));
+            if (maximumBodySamples > m_PendingBodySamples.Capacity)
+                throw new ArgumentOutOfRangeException(nameof(maximumBodySamples));
             m_PendingBodySamples.Clear();
             m_PendingEquipmentSelections.Clear();
             m_PendingTrajectoryResults.Clear();
@@ -247,21 +263,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 GameplayTickSystem.RequestCurrentFrameLogicStop();
             }
-            m_PendingBodySamples[sample.Tick.Value] = sample;
-            if (m_PresentationRuntime.AcceptsTrajectoryIntent)
-                m_PendingTrajectoryResults[sample.Tick.Value] = result;
-            if (result.State.TryGetEquipmentState(out EquipmentStateAggregate equipment))
-            {
-                var selections = new EquipmentVisualSelection[equipment.Slots.Count];
-                for (int i = 0; i < selections.Length; i++)
-                    selections[i] = equipment.Slots[i].CreateVisualSelection(ActorId, result.Tick.Value);
-                m_PendingEquipmentSelections[result.Tick.Value] = selections;
-            }
-            if (m_PendingBodySamples.Count > m_MaximumBodySamples)
+            bool replacedBody = m_PendingBodySamples.Set(sample.Tick.Value, sample);
+            if (!replacedBody && m_PendingBodySamples.Count > m_MaximumBodySamples)
             {
                 throw new InvalidOperationException(
                     $"Fixed Actor '{ActorId}' Body transaction exceeds capacity '{m_MaximumBodySamples}'.");
             }
+            if (m_PresentationRuntime.AcceptsTrajectoryIntent)
+                m_PendingTrajectoryResults.Set(sample.Tick.Value, result);
+            if (result.State.TryGetEquipmentState(out EquipmentStateAggregate equipment))
+                m_PendingEquipmentSelections.Set(ActorId, result.Tick.Value, equipment);
         }
 
         public void CompleteResultCommit()
@@ -274,8 +285,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     return;
                 int intervalCount = 0;
                 FixedCharacterBodySample finalSample = default;
-                foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
+                for (int i = 0; i < m_PendingBodySamples.Count; i++)
                 {
+                    FixedCharacterBodySample sample = m_PendingBodySamples.GetValue(i);
                     finalSample = sample;
                     float yawVelocityDegreesPerSecond =
 							 sample.AppliedYawDegrees.ToSingle() * m_CharacterRuntime.TickRate;
@@ -287,8 +299,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         yawVelocityDegreesPerSecond);
                 }
                 m_PresentationRuntime.CaptureBodyStream(m_BodyIntervalScratch, intervalCount);
-                foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
+                for (int i = 0; i < m_PendingTrajectoryResults.Count; i++)
                 {
+                    FixedSimulationActorTickResult result = m_PendingTrajectoryResults.GetValue(i);
                     LocomotionPresentationFailureCode failureCode =
                         m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(
@@ -301,8 +314,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             $"Fixed Actor '{ActorId}' locomotion presentation rejected Fact: {failureCode}.");
                     }
                 }
-                foreach (EquipmentVisualSelection[] selections in m_PendingEquipmentSelections.Values)
-                    m_PresentationRuntime.CaptureEquipmentSelections(selections);
+                m_PendingEquipmentSelections.Capture(m_PresentationRuntime);
                 CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
                 m_RootHierarchy.ApplyLogicPose(finalBody.Position, finalBody.Rotation);
             }
@@ -426,4 +438,81 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 
+    internal sealed class PendingEquipmentSelectionBuffer
+    {
+        readonly ulong[] m_Ticks;
+        readonly int[] m_Counts;
+        readonly EquipmentVisualSelection[][] m_Rows;
+        readonly int m_SelectionCapacity;
+
+        public PendingEquipmentSelectionBuffer(int transactionCapacity, int selectionCapacity)
+        {
+            if (transactionCapacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(transactionCapacity));
+            if (selectionCapacity < 0)
+                throw new ArgumentOutOfRangeException(nameof(selectionCapacity));
+            m_Ticks = new ulong[transactionCapacity];
+            m_Counts = new int[transactionCapacity];
+            m_Rows = new EquipmentVisualSelection[transactionCapacity][];
+            for (int i = 0; i < m_Rows.Length; i++)
+                m_Rows[i] = new EquipmentVisualSelection[selectionCapacity];
+            m_SelectionCapacity = selectionCapacity;
+        }
+
+        public int Count { get; private set; }
+
+        public void Clear() => Count = 0;
+
+        public void Set(ActorId actorId, ulong tick, EquipmentStateAggregate equipment)
+        {
+            int index = BinarySearch(tick);
+            if (index < 0)
+            {
+                if (Count == m_Ticks.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Pending Equipment selection exceeds storage capacity '{m_Ticks.Length}'.");
+                }
+                index = ~index;
+                Array.Copy(m_Ticks, index, m_Ticks, index + 1, Count - index);
+                Array.Copy(m_Counts, index, m_Counts, index + 1, Count - index);
+                Array.Copy(m_Rows, index, m_Rows, index + 1, Count - index);
+                Count++;
+            }
+            int selectionCount = equipment.Slots.Count;
+            if (selectionCount > m_SelectionCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"Pending Equipment selection exceeds slot capacity '{m_SelectionCapacity}'.");
+            }
+            m_Ticks[index] = tick;
+            m_Counts[index] = selectionCount;
+            for (int i = 0; i < selectionCount; i++)
+                m_Rows[index][i] = equipment.Slots[i].CreateVisualSelection(actorId, tick);
+        }
+
+        public void Capture(ICharacterPresentationDomainRuntime presentationRuntime)
+        {
+            for (int i = 0; i < Count; i++)
+                presentationRuntime.CaptureEquipmentSelections(m_Rows[i]);
+        }
+
+        int BinarySearch(ulong tick)
+        {
+            int left = 0;
+            int right = Count - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                int comparison = m_Ticks[middle].CompareTo(tick);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
+        }
+    }
 }

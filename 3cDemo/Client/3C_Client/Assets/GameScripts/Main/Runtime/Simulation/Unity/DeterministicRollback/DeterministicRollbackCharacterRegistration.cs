@@ -31,10 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly FixedCharacterRuntime m_CharacterRuntime;
         readonly FixedSimulationActorBinding m_CharacterBinding;
-        readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
-            new SortedDictionary<ulong, FixedCharacterBodySample>();
-        readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
-            new SortedDictionary<ulong, FixedSimulationActorTickResult>();
+        readonly SortedTickResultBuffer<FixedCharacterBodySample> m_PendingBodySamples;
+        readonly SortedTickResultBuffer<FixedSimulationActorTickResult> m_PendingTrajectoryResults;
         readonly CharacterPresentationBodyInterval[] m_BodyIntervalScratch;
 
         bool m_HasSelectedPresentationTail;
@@ -100,6 +98,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             InitialBody = initialBody;
             m_LocalInput = localInput;
             m_BodyIntervalScratch = new CharacterPresentationBodyInterval[maximumActivePresentationRecords];
+            m_PendingBodySamples = new SortedTickResultBuffer<FixedCharacterBodySample>(
+                maximumActivePresentationRecords,
+                $"Rollback Actor '{ActorId}' pending Body result");
+            m_PendingTrajectoryResults = new SortedTickResultBuffer<FixedSimulationActorTickResult>(
+                maximumActivePresentationRecords,
+                $"Rollback Actor '{ActorId}' pending Trajectory result");
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
             m_DomainFacts = domainFacts ?? throw new ArgumentNullException(nameof(domainFacts));
@@ -260,6 +264,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Actor '{ActorId}' Body result commit is already active.");
             if (maximumBodySamples <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumBodySamples));
+            if (maximumBodySamples > m_PendingBodySamples.Capacity)
+                throw new ArgumentOutOfRangeException(nameof(maximumBodySamples));
             m_PendingBodySamples.Clear();
             m_PendingTrajectoryResults.Clear();
             m_MaximumBodySamples = maximumBodySamples;
@@ -274,14 +280,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             if (result == null || result.ActorId != ActorId)
                 throw new ArgumentException("Rollback published result targets another Actor.", nameof(result));
             FixedCharacterBodySample sample = result.BodySample;
-            m_PendingBodySamples[sample.Tick.Value] = sample;
-            if (m_PresentationRuntime.AcceptsTrajectoryIntent)
-                m_PendingTrajectoryResults[sample.Tick.Value] = result;
-            if (m_PendingBodySamples.Count > m_MaximumBodySamples)
+            bool replacedBody = m_PendingBodySamples.Set(sample.Tick.Value, sample);
+            if (!replacedBody && m_PendingBodySamples.Count > m_MaximumBodySamples)
             {
                 throw new InvalidOperationException(
                     $"Rollback Actor '{ActorId}' Body transaction exceeds rollback history capacity '{m_MaximumBodySamples}'.");
             }
+            if (m_PresentationRuntime.AcceptsTrajectoryIntent)
+                m_PendingTrajectoryResults.Set(sample.Tick.Value, result);
         }
 
         public void CompleteResultCommit()
@@ -296,8 +302,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 FixedCharacterBodySample finalSample = default;
                 bool selectedStream = m_PresentationRuntime.LocomotionBodySource ==
                     CharacterLocomotionBodySource.SelectedStream;
-                foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
+                for (int i = 0; i < m_PendingBodySamples.Count; i++)
                 {
+                    FixedCharacterBodySample sample = m_PendingBodySamples.GetValue(i);
                     finalSample = sample;
                     float yawVelocityDegreesPerSecond =
                         sample.AppliedYawDegrees.ToSingle() * m_CharacterRuntime.TickRate;
@@ -322,8 +329,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
                 if (selectedStream)
                     CaptureSelectedPresentationTail(finalSample.Tick.Value, in finalBody);
-                foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
+                for (int i = 0; i < m_PendingTrajectoryResults.Count; i++)
                 {
+                    FixedSimulationActorTickResult result = m_PendingTrajectoryResults.GetValue(i);
                     LocomotionPresentationFailureCode failureCode =
                         m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(

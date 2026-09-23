@@ -437,5 +437,68 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteVector3(plan.RequestedDisplacement);
         }
     }
+
+    internal sealed class SortedTickResultBuffer<TValue>
+    {
+        readonly ulong[] m_Keys;
+        readonly TValue[] m_Values;
+        readonly string m_Owner;
+
+        public SortedTickResultBuffer(int capacity, string owner)
+        {
+            if (capacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            m_Keys = new ulong[capacity];
+            m_Values = new TValue[capacity];
+            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        }
+
+        public int Capacity => m_Keys.Length;
+        public int Count { get; private set; }
+
+        public TValue GetValue(int index) => m_Values[index];
+
+        public void Clear() => Count = 0;
+
+        public bool Set(ulong key, TValue value)
+        {
+            int index = BinarySearch(key);
+            if (index >= 0)
+            {
+                m_Values[index] = value;
+                return true;
+            }
+            if (Count == Capacity)
+            {
+                throw new InvalidOperationException(
+                    $"{m_Owner} exceeds storage capacity '{Capacity}'.");
+            }
+            index = ~index;
+            Array.Copy(m_Keys, index, m_Keys, index + 1, Count - index);
+            Array.Copy(m_Values, index, m_Values, index + 1, Count - index);
+            m_Keys[index] = key;
+            m_Values[index] = value;
+            Count++;
+            return false;
+        }
+
+        int BinarySearch(ulong key)
+        {
+            int left = 0;
+            int right = Count - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                int comparison = m_Keys[middle].CompareTo(key);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
+        }
+    }
 }
 

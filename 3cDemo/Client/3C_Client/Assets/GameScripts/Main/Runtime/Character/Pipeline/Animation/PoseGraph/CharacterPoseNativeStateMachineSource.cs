@@ -171,6 +171,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool m_EvaluationPrepared;
         bool m_Disposed;
 
+        public int StateCaptureCount
+        {
+            get
+            {
+                if (!m_CommittedInitialized)
+                    return 0;
+                int count = 1;
+                foreach (StateRuntime state in m_States.Values)
+                    if (IsCommittedState(state) && state.Graph != null)
+                        count += state.Graph.StateCapture.Count;
+                return count;
+            }
+        }
+        bool IsCommittedState(StateRuntime state) => state.Definition.StateId == m_CommittedState ||
+            m_CommittedTransition != null && state.Definition.StateId == m_CommittedTransition.TargetStateId;
+        public Diagnostics.CharacterNativeStateCaptureRow ReadStateCapture(int index)
+        {
+            if (index == 0 && m_CommittedInitialized)
+                return new Diagnostics.CharacterNativeStateCaptureRow(m_NodeId.Value, m_CommittedState.Value,
+                    m_CommittedTransition?.TargetStateId.Value ?? string.Empty,
+                    m_CommittedTransition?.TransitionId.Value ?? string.Empty,
+                    m_CommittedTime, m_CommittedTransitionElapsed, m_CommittedTransition?.DurationSeconds ?? 0f);
+            index--;
+            foreach (StateRuntime state in m_States.Values)
+            {
+                if (!IsCommittedState(state) || state.Graph == null)
+                    continue;
+                var page = state.Graph.StateCapture;
+                if (index < page.Count)
+                    return page[index];
+                index -= page.Count;
+            }
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
         internal CharacterPoseNativeStateMachineSource(
             CharacterPoseCanvasNode node,
             in CharacterPoseNativePreparedBinding preparedBinding,

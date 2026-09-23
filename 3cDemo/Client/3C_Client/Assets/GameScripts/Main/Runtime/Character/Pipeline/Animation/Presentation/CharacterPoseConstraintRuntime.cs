@@ -78,7 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             internal void Begin(
                 in CharacterPoseConstraintFrameLease lease,
-                Bank committed)
+                Bank committed,
+                bool captureDiagnostics)
             {
                 Lease = lease;
                 SolverOutcome = default;
@@ -95,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     BendHistory = committed.BendHistory;
                 FootPlacement?.Begin(
                     committed?.FootPlacement,
-                    false);
+                    captureDiagnostics);
             }
 
             internal void ClearPending()
@@ -143,6 +144,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_CandidateResetOwnerState;
         bool m_HasTuningCandidate;
         bool m_HasCommitted;
+        internal bool CaptureDiagnostics { get; set; }
+        internal CharacterFootLandingPredictionDiagnostics CommittedFootLandingPrediction =>
+            m_Committed.FootPlacement.Diagnostics.Value;
+        internal CharacterFullBodyIkSolverDiagnostics CommittedFullBodyIkSolver => m_Solver.Diagnostics;
+        internal int CommittedSolverEffectorCount => m_Solver.DiagnosticEffectorCount;
+        internal int CommittedSolverLimbCount => m_Solver.DiagnosticLimbCount;
+        internal CharacterFullBodyIkEffectorDiagnostics GetCommittedSolverEffector(int index) =>
+            m_Solver.GetDiagnosticEffector(index);
+        internal CharacterFullBodyIkLimbDiagnostics GetCommittedSolverLimb(int index) =>
+            m_Solver.GetDiagnosticLimb(index);
         bool m_HasPending;
         bool m_Disposed;
 
@@ -280,7 +291,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 : m_First;
             m_Pending.Begin(
                 in lease,
-                m_HasCommitted ? m_Committed : null);
+                m_HasCommitted ? m_Committed : null,
+                CaptureDiagnostics);
             m_PendingResult = default;
             m_HasPending = true;
             return lease;
@@ -455,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ref m_Pending.BendHistory,
                 frameSequence,
                 completionIdentity,
-                false);
+                CaptureDiagnostics);
             m_Pending.SolverOutcome = new CharacterFullBodyIkSolverOutcome(
                 frameSequence,
                 completionIdentity,

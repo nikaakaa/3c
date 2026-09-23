@@ -203,8 +203,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong InstanceId => m_Session.InstanceId;
         internal ulong ResetGeneration => m_Session.ResetGeneration;
 
-        internal CharacterPoseNativePreparationResult BeginFrame(in CharacterPoseNativeFrameInput input) =>
-            m_Session.Frame.BeginFrame(in input);
+        internal bool CaptureFootDiagnostics => m_Services.Constraints.CaptureDiagnostics;
+
+        internal Diagnostics.CharacterNativePoseCaptureFrame CapturePresentationDiagnostics(
+            in Diagnostics.CharacterPoseDiagnosticFrame frame)
+        {
+            if (!m_Session.TryObserveFinalPose(out ComposedAnimationPoseFrame pose))
+                throw new InvalidOperationException("Committed Pose is unavailable for capture.");
+            return new Diagnostics.CharacterNativePoseCaptureFrame(in pose, in frame,
+                m_Session.Role.Graph.PreparedBinding.InputContract, m_Services.WorldContext, m_Session.Role.Graph.StateCapture);
+        }
+
+        internal CharacterPoseNativePreparationResult BeginFrame(
+            in CharacterPoseNativeFrameInput input,
+            Guid diagnosticRuntimeId)
+        {
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_Services.Constraints.CaptureDiagnostics =
+                Diagnostics.CharacterPoseFootDiagnosticEvent.IsInterested(diagnosticRuntimeId);
+#endif
+            return m_Session.Frame.BeginFrame(in input);
+        }
+
+        internal void PublishFootDiagnostics(
+            Guid diagnosticRuntimeId,
+            in CharacterPoseNativeFrameLineage lineage)
+        {
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            if (!CaptureFootDiagnostics)
+                return;
+            try
+            {
+                if (!m_Session.TryObserveFinalPose(out ComposedAnimationPoseFrame pose))
+                    throw new InvalidOperationException("Pose diagnostic publication has no committed pose.");
+                AnimationPoseSourceContribution dominant = default;
+                float weight = -1f;
+                var contributions = pose.Contributions;
+                for (int i = 0; i < contributions.Count; i++)
+                {
+                    AnimationPoseSourceContribution candidate = contributions[i];
+                    if (candidate.Kind == AnimationPoseContributionKind.Live && candidate.Weight > weight)
+                    {
+                        dominant = candidate;
+                        weight = candidate.Weight;
+                    }
+                }
+                AnimationFootMotionRuntimeFrame motion = m_Services.WorldContext.SampleFootMotion(
+                    in dominant, lineage.CompletionIdentity);
+                var frame = new Diagnostics.CharacterPoseDiagnosticFrame(in lineage);
+                Diagnostics.CharacterFootIkPhysicalCapture physical = m_Session.Role.CommittedPhysicalCapture;
+                AnimationFootMotionRuntimeSample left = motion.Left;
+                AnimationFootMotionRuntimeSample right = motion.Right;
+                Diagnostics.CharacterPoseFootDiagnosticEvent.Publish(
+                    diagnosticRuntimeId, in frame, m_Services.Constraints, in physical, in left, in right);
+            }
+            catch (Exception exception)
+            {
+                Diagnostics.CharacterPoseCaptureFailure.Report(diagnosticRuntimeId,
+                    Diagnostics.CharacterPoseFootDiagnosticEvent.EventId, exception);
+            }
+#endif
+        }
 
         internal void PrepareEvaluation(ulong barrierIdentity) =>
             m_Session.Frame.PrepareEvaluation(barrierIdentity);
@@ -319,7 +378,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsFailure => FailureCode != CharacterPoseNativeFailureCode.None;
     }
 }
-
-
 
 

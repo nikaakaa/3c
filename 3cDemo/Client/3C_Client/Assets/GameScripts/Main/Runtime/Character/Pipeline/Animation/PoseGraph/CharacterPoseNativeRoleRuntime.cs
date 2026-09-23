@@ -104,6 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Publication.TryGetCommittedFrame(out frame);
         internal void ResetPublicationToDefaults() =>
             m_Publication.ResetToDefaults();
+        internal ThirdPersonCharacter.Pipeline.Animation.Diagnostics.CharacterFootIkPhysicalCapture
+            CommittedPhysicalCapture => m_Publication.CommittedPhysicalCapture;
         internal void RestoreInitialPublication() =>
             m_Publication.RestoreInitialAndInvalidate();
 

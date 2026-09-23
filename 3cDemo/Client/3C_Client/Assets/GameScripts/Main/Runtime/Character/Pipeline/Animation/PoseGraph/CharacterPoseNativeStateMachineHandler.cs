@@ -5,7 +5,7 @@ using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal interface ICharacterPoseNativeStateMachineSource : IDisposable
+    internal interface ICharacterPoseNativeStateMachineSource : IDisposable, Diagnostics.ICharacterNativeStateCaptureSource
     {
         IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeStateMachineHandler :
-        ICharacterPoseNativeNodeHandler
+        ICharacterPoseNativeNodeHandler, Diagnostics.ICharacterNativeStateCaptureSource
     {
         readonly PoseNodeId m_NodeId;
         readonly ICharacterPoseNativeStateMachineSource m_Source;
@@ -62,6 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
         }
 
+        public int StateCaptureCount => m_Source.StateCaptureCount;
+        public Diagnostics.CharacterNativeStateCaptureRow ReadStateCapture(int index) => m_Source.ReadStateCapture(index);
         public PoseNodeId NodeId => m_NodeId;
         public CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseStateMachine;
 

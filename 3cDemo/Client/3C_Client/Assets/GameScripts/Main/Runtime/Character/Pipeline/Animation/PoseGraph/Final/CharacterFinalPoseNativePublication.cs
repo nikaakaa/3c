@@ -459,6 +459,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
+        internal CharacterFootIkPhysicalCapture CommittedPhysicalCapture =>
+            m_CommittedPhysicalWrite.FootIkCapture;
+
         internal void ResetToDefaults()
         {
             RequireAlive();

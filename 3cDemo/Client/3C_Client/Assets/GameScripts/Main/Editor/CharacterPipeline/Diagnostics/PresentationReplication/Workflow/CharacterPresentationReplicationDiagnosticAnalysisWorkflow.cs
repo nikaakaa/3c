@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         public static void AnalyzeLastCapture()
         {
             string manifest =
-                CharacterPresentationReplicationGeneratedSamplingWorkflow
+                CharacterNativePresentationSamplingWorkflow
                     .LastManifestPath;
             if (!File.Exists(manifest))
                 throw new FileNotFoundException(
@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         static bool CanAnalyzeLast() =>
             !s_IsAnalyzing &&
             File.Exists(
-                CharacterPresentationReplicationGeneratedSamplingWorkflow
+                CharacterNativePresentationSamplingWorkflow
                     .LastManifestPath);
 
         [MenuItem(AnalyzeExistingMenu)]

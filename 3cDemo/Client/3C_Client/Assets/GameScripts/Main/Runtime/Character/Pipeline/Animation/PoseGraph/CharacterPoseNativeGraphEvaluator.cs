@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeGraphEvaluator :
-        ICharacterPoseNativeNodeEvaluator
+        ICharacterPoseNativeNodeEvaluator, Diagnostics.ICharacterNativeStateCaptureSource
     {
         readonly Dictionary<PoseNodeId, ICharacterPoseNativeNodeHandler>
             m_Handlers =
@@ -78,6 +78,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new List<CharacterPoseNativeSourceRequest>(handlers.Count);
             for (int i = 0; i < handlers.Count; i++)
                 Register(handlers[i]);
+        }
+
+        public Diagnostics.ICharacterNativeStateCaptureSource StateCapture => this;
+        public int StateCaptureCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < m_HandlerOrder.Count; i++)
+                    if (m_HandlerOrder[i] is Diagnostics.ICharacterNativeStateCaptureSource source)
+                        count += source.StateCaptureCount;
+                return count;
+            }
+        }
+        public Diagnostics.CharacterNativeStateCaptureRow ReadStateCapture(int index)
+        {
+            for (int i = 0; i < m_HandlerOrder.Count; i++)
+            {
+                if (!(m_HandlerOrder[i] is Diagnostics.ICharacterNativeStateCaptureSource source))
+                    continue;
+                if (index < source.StateCaptureCount)
+                    return source.ReadStateCapture(index);
+                index -= source.StateCaptureCount;
+            }
+            throw new ArgumentOutOfRangeException(nameof(index));
         }
 
         void Register(ICharacterPoseNativeNodeHandler handler)

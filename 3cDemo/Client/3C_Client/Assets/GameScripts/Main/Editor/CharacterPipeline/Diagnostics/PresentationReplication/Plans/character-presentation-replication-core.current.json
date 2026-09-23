@@ -29,9 +29,9 @@
           "key": "character-presentation-replication/main/animation/pose-graph-revision"
         },
         {
-          "slot": "pose-plan-hash",
+          "slot": "input-contract-hash",
           "dataset": "presentation",
-          "key": "character-presentation-replication/main/animation/pose-plan-hash"
+          "key": "character-presentation-replication/main/animation/input-contract-hash"
         },
         {
           "slot": "completion-identity",
@@ -42,11 +42,6 @@
           "slot": "final-availability",
           "dataset": "presentation",
           "key": "character-presentation-replication/main/animation/final-availability"
-        },
-        {
-          "slot": "invalid-operation-index",
-          "dataset": "presentation",
-          "key": "character-presentation-replication/main/animation/invalid-operation-index"
         }
       ],
       "parameters": {},
@@ -210,6 +205,21 @@
           "slot": "basis-valid",
           "dataset": "presentation",
           "key": "character-presentation-replication/main/camera/basis-valid"
+        },
+        {
+          "slot": "reset-reason",
+          "dataset": "presentation",
+          "key": "character-presentation-replication/main/camera/reset-reason"
+        },
+        {
+          "slot": "collision-status",
+          "dataset": "presentation",
+          "key": "character-presentation-replication/main/camera/collision-status"
+        },
+        {
+          "slot": "collision-correction-distance",
+          "dataset": "presentation",
+          "key": "character-presentation-replication/main/camera/collision-correction-distance"
         }
       ],
       "parameters": {
@@ -225,7 +235,7 @@
         "maximumSequenceGap": 0
       },
       "filters": []
-    },
+    }
   ],
   "correlations": [],
   "scores": []

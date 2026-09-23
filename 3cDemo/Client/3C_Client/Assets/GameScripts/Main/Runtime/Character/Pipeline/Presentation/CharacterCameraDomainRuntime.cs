@@ -503,8 +503,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Projection.Input.PitchLimit.y);
             plan = m_EnvironmentSolver.Apply(plan, in frameInput);
             m_Rig.Apply(in plan);
+            AppliedPlan = plan;
+            AppliedTargetValid = resolvedTarget.Valid;
+            AppliedResetReason = resetReason;
             PublishSnapshotDiagnostics(in plan, resetReason);
         }
+
+        internal CameraFramePlan AppliedPlan { get; private set; }
+        internal bool AppliedTargetValid { get; private set; }
+        internal CameraResetReason AppliedResetReason { get; private set; }
 
         void PublishRequestDiagnostics(CharacterPresentationCommand command, string status)
         {

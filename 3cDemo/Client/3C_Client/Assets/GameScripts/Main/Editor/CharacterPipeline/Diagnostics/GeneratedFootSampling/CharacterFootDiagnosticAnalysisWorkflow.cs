@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         public static void AnalyzeLast()
         {
             string manifest =
-                CharacterFootIkGeneratedSamplingWorkflow.LastManifestPath;
+                CharacterPoseFootSamplingWorkflow.LastManifestPath;
             if (!File.Exists(manifest))
             {
                 throw new FileNotFoundException(
@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static bool CanAnalyzeLast() =>
             !s_IsAnalyzing &&
             File.Exists(
-                CharacterFootIkGeneratedSamplingWorkflow.LastManifestPath);
+                CharacterPoseFootSamplingWorkflow.LastManifestPath);
 
         [MenuItem(AnalyzeExistingMenu)]
         static void AnalyzeExistingFromMenu()

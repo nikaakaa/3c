@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseNativeSubgraphHandler :
-        ICharacterPoseNativeNodeHandler
+        ICharacterPoseNativeNodeHandler, Diagnostics.ICharacterNativeStateCaptureSource
     {
         readonly PoseNodeId m_NodeId;
         readonly ulong m_RequestId;
@@ -43,6 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Factory = factory;
         }
 
+        public int StateCaptureCount => m_Child?.StateCapture.Count ?? 0;
+        public Diagnostics.CharacterNativeStateCaptureRow ReadStateCapture(int index) => m_Child.StateCapture[index];
         public PoseNodeId NodeId => m_NodeId;
         public CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseSubgraph;
 

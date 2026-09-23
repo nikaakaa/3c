@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
     {
         public const string CapabilityId =
             "character-presentation-replication";
-        public const int CapabilityRevision = 1;
+        public const int CapabilityRevision = 2;
         public const string MainDimensionId =
             "character-presentation-replication/main";
         public const string CoreSamplerId =
@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         public CharacterPresentationReplicationCaptureMetadata(
             Guid sampleIdentity,
             DateTime startedUtc,
-            in AnimationPresentationIdentity presentation,
+            in CharacterPoseDiagnosticTarget presentation,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId,
             string referenceProfileId)
@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
             SampleIdentity = sampleIdentity.ToString("N");
             StartedUtcTicks = startedUtc.Ticks;
             PresentationIdentity =
-                $"{presentation.ProjectionRevision}|{presentation.PosePlanHash}";
+                $"{presentation.GraphRevision}|{presentation.ResourceRevision}";
             ReferenceProfileId = referenceProfileId.Trim();
             TargetRuntimeInstanceId = targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
@@ -83,13 +83,14 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         typeof(CharacterPresentationReplicationCaptureMetadata))]
     [DiagnosticFactRoot(
         "animation",
-        typeof(CharacterAnimationPresentationCaptureFrame))]
+        typeof(CharacterNativePoseCaptureFrame))]
+    [DiagnosticFactRoot("camera", typeof(CharacterNativeCameraCaptureFrame))]
     [DiagnosticFactRoot(
         "facts",
-        typeof(CharacterPresentationFactCaptureFrame))]
+        typeof(CharacterNativeBodyCaptureFrame))]
     [DiagnosticFactRoot(
         "commands",
-        typeof(CharacterPresentationCommandCaptureFacts))]
+        typeof(CharacterNativeCommandCaptureFrame))]
     internal static class CharacterPresentationReplicationDiagnosticCapability
     {
     }
@@ -125,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
     [DiagnosticCaptureProgram(
         CharacterPresentationReplicationDiagnosticIdentity.CoreProgramId,
         CharacterPresentationReplicationDiagnosticIdentity.CapabilityId,
-        CharacterPresentationReplicationDiagnosticEvent.EventId,
+        CharacterNativePresentationDiagnosticEvent.EventId,
         new[]
         {
             CharacterPresentationReplicationDiagnosticIdentity.MainDimensionId
@@ -138,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
     [DiagnosticCaptureProgram(
         CharacterPresentationReplicationDiagnosticIdentity.FullProgramId,
         CharacterPresentationReplicationDiagnosticIdentity.CapabilityId,
-        CharacterPresentationReplicationDiagnosticEvent.EventId,
+        CharacterNativePresentationDiagnosticEvent.EventId,
         new[]
         {
             CharacterPresentationReplicationDiagnosticIdentity.MainDimensionId

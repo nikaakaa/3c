@@ -15,13 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         const string Delta = "delta-seconds";
         const string ResetTracking = "reset-tracking";
         const string ResetReason = "reset-reason";
-        const string SequenceRetiring = "sequence-retiring";
-        const string SequenceStopReason = "sequence-stop-reason";
         const string PlanValid = "plan-valid";
         const string TargetValid = "target-valid";
-        const string TargetRetired = "target-retired";
-        const string TargetStopReason = "target-stop-reason";
-        const string TargetRetiredKey = "target-retired-key";
         const string FinalOutput = "final-output-available";
         const string FinalPosition = "final-position";
         const string FinalRotation = "final-rotation";
@@ -47,13 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     Main(Delta, DiagnosticValueKind.Float32),
                     Main(ResetTracking, DiagnosticValueKind.Boolean),
                     Main(ResetReason, DiagnosticValueKind.Int32),
-                    Main(SequenceRetiring, DiagnosticValueKind.Boolean),
-                    Main(SequenceStopReason, DiagnosticValueKind.Int32),
                     Main(PlanValid, DiagnosticValueKind.Boolean),
                     Main(TargetValid, DiagnosticValueKind.Boolean),
-                    Main(TargetRetired, DiagnosticValueKind.Boolean),
-                    Main(TargetStopReason, DiagnosticValueKind.Int32),
-                    Main(TargetRetiredKey, DiagnosticValueKind.Identity),
                     Main(FinalOutput, DiagnosticValueKind.Boolean),
                     Main(FinalPosition, DiagnosticValueKind.Vector3),
                     Main(FinalRotation, DiagnosticValueKind.Quaternion),
@@ -106,13 +96,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                                 inputs.Delta,
                                 inputs.ResetTracking,
                                 inputs.ResetReason,
-                                inputs.SequenceRetiring,
-                                inputs.SequenceStopReason,
                                 inputs.PlanValid,
                                 inputs.TargetValid,
-                                inputs.TargetRetired,
-                                inputs.TargetStopReason,
-                                inputs.TargetRetiredKey,
                                 inputs.FinalOutput,
                                 inputs.FinalPosition,
                                 inputs.FinalRotation,
@@ -133,13 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     row.GetUInt64(inputs.Reset.Handle),
                     row.GetBoolean(inputs.ResetTracking.Handle),
                     row.GetInt32(inputs.ResetReason.Handle),
-                    row.GetBoolean(inputs.SequenceRetiring.Handle),
-                    row.GetInt32(inputs.SequenceStopReason.Handle),
                     row.GetBoolean(inputs.PlanValid.Handle),
                     row.GetBoolean(inputs.TargetValid.Handle),
-                    row.GetBoolean(inputs.TargetRetired.Handle),
-                    row.GetInt32(inputs.TargetStopReason.Handle),
-                    row.GetIdentity(inputs.TargetRetiredKey.Handle),
                     row.GetBoolean(inputs.FinalOutput.Handle),
                     row.GetVector3(inputs.FinalPosition.Handle),
                     row.GetQuaternion(inputs.FinalRotation.Handle),
@@ -152,16 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     reasons.Add("presentation-frame-missing");
                 if (current.ResetReason < 0 || current.ResetReason > 4)
                     reasons.Add("reset-reason-invalid");
-                if (current.SequenceRetiring &&
-                    (current.SequenceStopReason < 1 || current.SequenceStopReason > 4))
-                    reasons.Add("sequence-stop-reason-invalid");
                 if (!current.PlanValid)
                     reasons.Add("plan-invalid");
                 if (!current.TargetValid)
                     reasons.Add("target-invalid");
-                if (current.TargetRetired &&
-                    (current.TargetStopReason != 4 || string.IsNullOrEmpty(current.TargetRetiredKey)))
-                    reasons.Add("target-retirement-invalid");
                 if (!current.FinalOutput)
                     reasons.Add("final-output-unavailable");
                 if (!current.BasisValid && current.FinalOutput)
@@ -209,8 +183,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                             context,
                             reasons.Contains("plan-invalid") ||
                             reasons.Contains("target-invalid") ||
-                            reasons.Contains("sequence-stop-reason-invalid") ||
-                            reasons.Contains("target-retirement-invalid") ||
                             reasons.Contains("final-output-unavailable") ||
                             reasons.Contains("field-of-view-out-of-range")
                                 ? DiagnosticSeverity.Error
@@ -301,13 +273,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 ulong resetSequence,
                 bool resetTracking,
                 int resetReason,
-                bool sequenceRetiring,
-                int sequenceStopReason,
                 bool planValid,
                 bool targetValid,
-                bool targetRetired,
-                int targetStopReason,
-                string targetRetiredKey,
                 bool finalOutput,
                 in DiagnosticVector3 finalPosition,
                 in DiagnosticQuaternion finalRotation,
@@ -327,13 +294,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 FieldOfView = fieldOfView;
                 BasisValid = basisValid;
                 ResetReason = resetReason;
-                SequenceRetiring = sequenceRetiring;
-                SequenceStopReason = sequenceStopReason;
                 CollisionStatus = collisionStatus;
                 CollisionCorrection = collisionCorrection;
-                TargetRetired = targetRetired;
-                TargetStopReason = targetStopReason;
-                TargetRetiredKey = targetRetiredKey ?? string.Empty;
             }
 
             public ulong Frame { get; }
@@ -347,13 +309,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public float FieldOfView { get; }
             public bool BasisValid { get; }
             public int ResetReason { get; }
-            public bool SequenceRetiring { get; }
-            public int SequenceStopReason { get; }
             public int CollisionStatus { get; }
             public float CollisionCorrection { get; }
-            public bool TargetRetired { get; }
-            public int TargetStopReason { get; }
-            public string TargetRetiredKey { get; }
         }
 
         sealed class Inputs
@@ -366,13 +323,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 Delta = context.Input("delta-seconds");
                 ResetTracking = context.Input("reset-tracking");
                 ResetReason = context.Input("reset-reason");
-                SequenceRetiring = context.Input("sequence-retiring");
-                SequenceStopReason = context.Input("sequence-stop-reason");
                 PlanValid = context.Input("plan-valid");
                 TargetValid = context.Input("target-valid");
-                TargetRetired = context.Input("target-retired");
-                TargetStopReason = context.Input("target-stop-reason");
-                TargetRetiredKey = context.Input("target-retired-key");
                 FinalOutput = context.Input("final-output-available");
                 FinalPosition = context.Input("final-position");
                 FinalRotation = context.Input("final-rotation");
@@ -388,13 +340,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public DiagnosticBoundInput Delta { get; }
             public DiagnosticBoundInput ResetTracking { get; }
             public DiagnosticBoundInput ResetReason { get; }
-            public DiagnosticBoundInput SequenceRetiring { get; }
-            public DiagnosticBoundInput SequenceStopReason { get; }
             public DiagnosticBoundInput PlanValid { get; }
             public DiagnosticBoundInput TargetValid { get; }
-            public DiagnosticBoundInput TargetRetired { get; }
-            public DiagnosticBoundInput TargetStopReason { get; }
-            public DiagnosticBoundInput TargetRetiredKey { get; }
             public DiagnosticBoundInput FinalOutput { get; }
             public DiagnosticBoundInput FinalPosition { get; }
             public DiagnosticBoundInput FinalRotation { get; }

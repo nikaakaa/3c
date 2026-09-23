@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     public static class CharacterFootIkDiagnosticIdentity
     {
         public const string CapabilityId = "character-foot-ik";
-        public const int CapabilityRevision = 1;
+        public const int CapabilityRevision = 2;
         public const string LeftDimensionId = "character-foot-ik/left";
         public const string RightDimensionId = "character-foot-ik/right";
         public const string CoreSamplerId = "character-foot-ik/core";
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         public CharacterFootIkCaptureMetadata(
             Guid sampleIdentity,
             DateTime startedUtc,
-            in AnimationPresentationIdentity presentation,
+            in CharacterPoseDiagnosticTarget presentation,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId)
         {
@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             SampleIdentity = sampleIdentity.ToString("N");
             StartedUtcTicks = startedUtc.Ticks;
             PresentationIdentity =
-                $"{presentation.ProjectionRevision}|{presentation.PosePlanHash}";
+                $"{presentation.GraphRevision}|{presentation.ResourceRevision}";
             TargetRuntimeInstanceId = targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
         }
@@ -72,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticFactRoot("foot", typeof(CharacterFootLandingPredictionFootDiagnostics))]
     [DiagnosticFactRoot("formal-input", typeof(AnimationFootMotionRuntimeSample))]
     [DiagnosticFactRoot("formal-output", typeof(AnimationFootMotionRuntimeSample))]
-    [DiagnosticFactRoot("frame", typeof(CharacterPoseFrameLineage))]
+    [DiagnosticFactRoot("frame", typeof(CharacterPoseDiagnosticFrame))]
     [DiagnosticFactRoot("input", typeof(CharacterFootLandingPredictionInputDiagnostics))]
     [DiagnosticFactRoot("leg", typeof(CharacterFullBodyIkLimbDiagnostics))]
     [DiagnosticFactRoot("pelvis", typeof(CharacterFullBodyIkEffectorDiagnostics))]

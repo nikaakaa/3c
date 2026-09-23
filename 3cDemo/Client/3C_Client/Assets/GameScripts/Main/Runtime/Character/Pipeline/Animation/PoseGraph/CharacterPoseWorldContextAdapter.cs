@@ -97,37 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int contributionCount = ResolveContributions(in inputBinding);
             AnimationPoseSourceContribution contribution =
                 RequireFootMotionContribution(contributionCount);
-            ClipSamplePlan clipSample = m_SourceModule.RequireDominantClipSample(
-                contribution.SourceId,
-                contribution.NodeId,
-                completionIdentity);
-            CharacterPoseFootMotionSource source = m_FootMotionResolver(
-                contribution,
-                clipSample);
-            int cycle = checked((int)Math.Floor(
-                clipSample.ContinuousClipTime / clipSample.DurationSeconds));
-            AnimationFootMotionRuntimeFrame footMotion =
-                new AnimationFootMotionRuntimeFrame(
-                    completionIdentity,
-                    contribution.NodeId,
-                    contribution.SourceId,
-                    contribution.ContributionContinuityIdentity,
-                    source.SourceIdentity,
-                    source.SourceSampleIdentity,
-                    clipSample.ClipBindingIndex,
-                    cycle,
-                    contribution.Weight,
-                    clipSample.NormalizedTime,
-                    source.Observation.Left.Sample(
-                        clipSample.NormalizedTime,
-                        cycle,
-                        clipSample.DurationSeconds,
-                        clipSample.IsLooping),
-                    source.Observation.Right.Sample(
-                        clipSample.NormalizedTime,
-                        cycle,
-                        clipSample.DurationSeconds,
-                        clipSample.IsLooping));
+            AnimationFootMotionRuntimeFrame footMotion = SampleFootMotion(in contribution, completionIdentity);
             var pose = new CharacterFootPlacementPoseInput(
                 m_PosePlanHash,
                 in inputBinding,
@@ -151,6 +121,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in factFrame,
                 in parameterFrame,
                 in pose);
+        }
+
+        internal ClipSamplePlan ReadClipSample(in AnimationPoseSourceContribution contribution, ulong completionIdentity) =>
+            m_SourceModule.RequireDominantClipSample(contribution.SourceId, contribution.NodeId, completionIdentity);
+
+        internal AnimationFootMotionRuntimeFrame SampleFootMotion(
+            in AnimationPoseSourceContribution contribution,
+            ulong completionIdentity)
+        {
+            ClipSamplePlan clipSample = m_SourceModule.RequireDominantClipSample(
+                contribution.SourceId,
+                contribution.NodeId,
+                completionIdentity);
+            CharacterPoseFootMotionSource source = m_FootMotionResolver(
+                contribution,
+                clipSample);
+            int cycle = checked((int)Math.Floor(
+                clipSample.ContinuousClipTime / clipSample.DurationSeconds));
+            return new AnimationFootMotionRuntimeFrame(
+                    completionIdentity,
+                    contribution.NodeId,
+                    contribution.SourceId,
+                    contribution.ContributionContinuityIdentity,
+                    source.SourceIdentity,
+                    source.SourceSampleIdentity,
+                    clipSample.ClipBindingIndex,
+                    cycle,
+                    contribution.Weight,
+                    clipSample.NormalizedTime,
+                    source.Observation.Left.Sample(
+                        clipSample.NormalizedTime,
+                        cycle,
+                        clipSample.DurationSeconds,
+                        clipSample.IsLooping),
+                    source.Observation.Right.Sample(
+                        clipSample.NormalizedTime,
+                        cycle,
+                        clipSample.DurationSeconds,
+                        clipSample.IsLooping));
         }
 
         int ResolveContributions(

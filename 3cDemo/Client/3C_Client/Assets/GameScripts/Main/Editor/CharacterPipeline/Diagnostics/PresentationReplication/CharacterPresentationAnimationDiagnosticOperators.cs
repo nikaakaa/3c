@@ -12,10 +12,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         const string Snapshot = "has-snapshot";
         const string PoseGraphId = "pose-graph-id";
         const string PoseGraphRevision = "pose-graph-revision";
-        const string PosePlanHash = "pose-plan-hash";
+        const string InputContractHash = "input-contract-hash";
         const string Completion = "completion-identity";
         const string Availability = "final-availability";
-        const string InvalidOperation = "invalid-operation-index";
 
         public DiagnosticOperatorDescriptor Descriptor { get; } =
             new DiagnosticOperatorDescriptor(
@@ -26,10 +25,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     Main(Snapshot, DiagnosticValueKind.Boolean),
                     Main(PoseGraphId, DiagnosticValueKind.Identity),
                     Main(PoseGraphRevision, DiagnosticValueKind.Identity),
-                    Main(PosePlanHash, DiagnosticValueKind.Identity),
+                    Main(InputContractHash, DiagnosticValueKind.Identity),
                     Main(Completion, DiagnosticValueKind.UInt64),
-                    Main(Availability, DiagnosticValueKind.UInt32),
-                    Main(InvalidOperation, DiagnosticValueKind.Int32)
+                    Main(Availability, DiagnosticValueKind.UInt32)
                 },
                 Array.Empty<DiagnosticOperatorParameter>());
 
@@ -42,10 +40,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 inputs.Snapshot,
                 inputs.PoseGraphId,
                 inputs.PoseGraphRevision,
-                inputs.PosePlanHash,
+                inputs.InputContractHash,
                 inputs.Completion,
-                inputs.Availability,
-                inputs.InvalidOperation
+                inputs.Availability
             };
             var missing = new HashSet<string>(StringComparer.Ordinal);
             var findings = new List<DiagnosticFinding>();
@@ -77,10 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 bool valid =
                     !string.IsNullOrEmpty(row.GetIdentity(inputs.PoseGraphId.Handle)) &&
                     !string.IsNullOrEmpty(row.GetIdentity(inputs.PoseGraphRevision.Handle)) &&
-                    !string.IsNullOrEmpty(row.GetIdentity(inputs.PosePlanHash.Handle)) &&
+                    !string.IsNullOrEmpty(row.GetIdentity(inputs.InputContractHash.Handle)) &&
                     row.GetUInt64(inputs.Completion.Handle) != 0 &&
-                    row.GetUInt32(inputs.Availability.Handle) == 1 &&
-                    row.GetInt32(inputs.InvalidOperation.Handle) < 0;
+                    row.GetUInt32(inputs.Availability.Handle) == 1;
                 if (valid)
                 {
                     continue;
@@ -101,20 +97,15 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                                 in row,
                                 row.GetIdentity(inputs.PoseGraphId.Handle)),
                             CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
-                                "pose-plan-hash",
-                                inputs.PosePlanHash,
+                                "input-contract-hash",
+                                inputs.InputContractHash,
                                 in row,
-                                row.GetIdentity(inputs.PosePlanHash.Handle)),
+                                row.GetIdentity(inputs.InputContractHash.Handle)),
                             CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
                                 "final-availability",
                                 inputs.Availability,
                                 in row,
-                                row.GetUInt32(inputs.Availability.Handle).ToString(CultureInfo.InvariantCulture)),
-                            CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
-                                "invalid-operation-index",
-                                inputs.InvalidOperation,
-                                in row,
-                                row.GetInt32(inputs.InvalidOperation.Handle).ToString(CultureInfo.InvariantCulture))
+                                row.GetUInt32(inputs.Availability.Handle).ToString(CultureInfo.InvariantCulture))
                         }));
             }
             if (missing.Count != 0)
@@ -153,19 +144,17 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 Snapshot = context.Input("has-snapshot");
                 PoseGraphId = context.Input("pose-graph-id");
                 PoseGraphRevision = context.Input("pose-graph-revision");
-                PosePlanHash = context.Input("pose-plan-hash");
+                InputContractHash = context.Input("input-contract-hash");
                 Completion = context.Input("completion-identity");
                 Availability = context.Input("final-availability");
-                InvalidOperation = context.Input("invalid-operation-index");
             }
 
             public DiagnosticBoundInput Snapshot { get; }
             public DiagnosticBoundInput PoseGraphId { get; }
             public DiagnosticBoundInput PoseGraphRevision { get; }
-            public DiagnosticBoundInput PosePlanHash { get; }
+            public DiagnosticBoundInput InputContractHash { get; }
             public DiagnosticBoundInput Completion { get; }
             public DiagnosticBoundInput Availability { get; }
-            public DiagnosticBoundInput InvalidOperation { get; }
         }
     }
 

@@ -1,5 +1,5 @@
 using KK.GeneratedDiagnosticSampling;
-using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticCaptureProgram(
         CharacterFootIkDiagnosticIdentity.CoreProgramId,
         CharacterFootIkDiagnosticIdentity.CapabilityId,
-        CharacterFootIkCommitDiagnosticEvent.EventId,
+        CharacterPoseFootDiagnosticEvent.EventId,
         new[]
         {
             CharacterFootIkDiagnosticIdentity.LeftDimensionId,
@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticCaptureProgram(
         CharacterFootIkDiagnosticIdentity.FullProgramId,
         CharacterFootIkDiagnosticIdentity.CapabilityId,
-        CharacterFootIkCommitDiagnosticEvent.EventId,
+        CharacterPoseFootDiagnosticEvent.EventId,
         new[]
         {
             CharacterFootIkDiagnosticIdentity.LeftDimensionId,

@@ -604,13 +604,15 @@ namespace ThirdPersonSimulation
         public ActionAdmissionDecision Preview(
             TOperation operation,
             ActionAdmissionProfile profile,
-            TTargetSnapshot targetSnapshot)
+            TTargetSnapshot targetSnapshot,
+            ulong executingActionInstanceId)
         {
             targetSnapshot = NormalizeTarget(profile, targetSnapshot);
             ActionAdmissionDecision decision = Evaluate(
                 profile,
                 targetSnapshot,
-                ActionAdmissionEvaluationMode.PreviewReplacement);
+                ActionAdmissionEvaluationMode.PreviewReplacement,
+                executingActionInstanceId: executingActionInstanceId);
             if (m_Port.TraceEnabled)
             {
                 m_Port.Trace(
@@ -788,13 +790,15 @@ namespace ThirdPersonSimulation
             ActionAdmissionProfile profile,
             TTargetSnapshot targetSnapshot,
             ActionAdmissionEvaluationMode mode,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            ulong executingActionInstanceId = 0)
         {
             return m_Admission.Evaluate(new ActionAdmissionRequest(
                 profile,
                 new ActionAdmissionTargetCandidate(m_Port.TargetId(targetSnapshot)),
                 mode,
-                replacementActionInstanceId));
+                replacementActionInstanceId,
+                executingActionInstanceId));
         }
 
         bool TryCreateRequest(

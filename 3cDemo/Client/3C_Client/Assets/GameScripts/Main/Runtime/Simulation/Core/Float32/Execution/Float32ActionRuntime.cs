@@ -123,7 +123,9 @@ namespace ThirdPersonSimulation
 			where TTarget : struct, IOperationControlTarget<TTarget>
 		{
 			ActionAdmissionProfile profile = RequireAdmissionProfile(operation);
-			return m_Activation.Preview(operation, profile, ReadActionTargetSnapshot(cursor, operation));
+			ulong executingInstanceId = m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action)
+				? action.InstanceId : 0;
+			return m_Activation.Preview(operation, profile, ReadActionTargetSnapshot(cursor, operation), executingInstanceId);
 		}
 
         public bool ActivateFromControl(CharacterControlAbilityRequest controlRequest)

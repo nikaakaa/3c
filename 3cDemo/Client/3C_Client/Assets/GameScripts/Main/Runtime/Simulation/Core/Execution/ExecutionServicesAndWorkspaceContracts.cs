@@ -128,18 +128,21 @@ namespace ThirdPersonSimulation
             ActionAdmissionProfile targetProfile,
             ActionAdmissionTargetCandidate targetCandidate,
             ActionAdmissionEvaluationMode mode,
-            ulong replacementActionInstanceId = 0)
+            ulong replacementActionInstanceId = 0,
+            ulong executingActionInstanceId = 0)
         {
             TargetProfile = targetProfile ?? throw new ArgumentNullException(nameof(targetProfile));
             TargetCandidate = targetCandidate;
             Mode = mode;
             ReplacementActionInstanceId = replacementActionInstanceId;
+            ExecutingActionInstanceId = executingActionInstanceId;
         }
 
         public ActionAdmissionProfile TargetProfile { get; }
         public ActionAdmissionTargetCandidate TargetCandidate { get; }
         public ActionAdmissionEvaluationMode Mode { get; }
         public ulong ReplacementActionInstanceId { get; }
+        public ulong ExecutingActionInstanceId { get; }
     }
 
     internal readonly struct ActionAdmissionDecision
@@ -366,7 +369,7 @@ namespace ThirdPersonSimulation
                 }
 
                 int activeTargetCount = 0;
-                string activeTargetActionId = string.Empty;
+                ulong activeTargetInstanceId = 0;
                 ActionAdmissionActiveAction replacementSource = default;
                 bool hasReplacementSource = false;
                 for (int index = 0; index < m_Port.ActionCount; index++)
@@ -376,7 +379,7 @@ namespace ThirdPersonSimulation
                     if (string.Equals(active.ActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
                     {
                         activeTargetCount++;
-                        activeTargetActionId = active.ActionId;
+                        activeTargetInstanceId = active.InstanceId;
                     }
                     if (request.ReplacementActionInstanceId == active.InstanceId)
                     {
@@ -404,7 +407,8 @@ namespace ThirdPersonSimulation
                 {
                     if (request.Mode == ActionAdmissionEvaluationMode.PreviewReplacement &&
                         activeTargetCount == 1 &&
-                        string.Equals(activeTargetActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
+                        request.ExecutingActionInstanceId != 0 &&
+                        activeTargetInstanceId == request.ExecutingActionInstanceId)
                         return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
                     return Reject(ActionAdmissionRejectReason.ActionCapacityExceeded, request.TargetProfile.ActionId, 0);
                 }

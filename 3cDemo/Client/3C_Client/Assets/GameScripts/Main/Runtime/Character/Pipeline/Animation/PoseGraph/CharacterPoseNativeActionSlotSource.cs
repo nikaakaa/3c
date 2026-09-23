@@ -176,15 +176,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PushOrder[insert] = i;
                 count++;
             }
+            int targetIndex = -1;
+            bool currentSourceEnded = false;
             for (int i = 0; i < count; i++)
             {
                 ActionAnimationPlaybackLifecycleFrame frame = frames[m_PushOrder[i]];
                 AnimationPoseSourceId sourceId = SourceId(in frame);
                 if (frame.EndReason != ActionPlaybackEndReason.None)
                 {
-                    if (stack.IsCurrentSource(sourceId))
-                        stack.PushSourcePose(NextRequestSequence(),
-                            stack.RequireTransitionTo(-1, AnimationBlendTransitionEndpointKind.SourcePose), false);
+                    currentSourceEnded |= stack.IsCurrentSource(sourceId);
                     continue;
                 }
                 if (frame.FirstSampleReadiness != ActionFirstSampleReadiness.Ready)
@@ -204,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     };
                 }
                 ref SampleCache cache = ref m_Pending[index];
+                targetIndex = index;
                 if (cache.Plan.AuthoringClipIdentity != frame.ProjectedSample.AuthoringClipIdentity)
                     throw new InvalidOperationException($"Timeline producer '{frame.ProgramProducerId}' changed Clip within one selection.");
                 if (cache.CommandSequence == frame.LatestCommandSequence)
@@ -212,9 +213,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 cache.Sample = frame.ProjectedSample;
                 cache.RequestSequence = NextRequestSequence();
                 Materialize(index, in input);
-                AnimationPoseSampleRequest request = m_Resolved[index].Request;
+            }
+            if (targetIndex >= 0)
+            {
+                Materialize(targetIndex, in input);
+                AnimationPoseSampleRequest request = m_Resolved[targetIndex].Request;
                 stack.PushPoseRequest(in request,
                     stack.RequireTransitionTo(request.SourceOwnerIndex, AnimationBlendTransitionEndpointKind.SourceOwner), false);
+            }
+            else if (currentSourceEnded)
+            {
+                stack.PushSourcePose(NextRequestSequence(),
+                    stack.RequireTransitionTo(-1, AnimationBlendTransitionEndpointKind.SourcePose), false);
             }
         }
 

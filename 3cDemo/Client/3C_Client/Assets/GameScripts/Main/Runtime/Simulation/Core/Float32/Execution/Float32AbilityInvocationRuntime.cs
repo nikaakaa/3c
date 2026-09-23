@@ -115,7 +115,9 @@ namespace ThirdPersonSimulation
             if (m_Begun)
             {
                 if (!m_Completed)
-                    throw new InvalidOperationException("Float32 Ability invocation evaluation is already active.");
+                    throw new InvalidOperationException(
+                        $"Float32 Ability invocation evaluation is already active for '{AbilityId}' " +
+                        $"at '{m_Frame.Tick.Value}' while beginning '{context.Tick.Value}'.");
                 m_Begun = false;
                 m_Completed = false;
                 m_Accepted = false;
@@ -156,7 +158,6 @@ namespace ThirdPersonSimulation
                 m_AssemblyBuilt = true;
             }
 
-            m_Begun = true;
             m_Beginning = false;
             m_Completed = false;
             m_Accepted = false;
@@ -210,7 +211,9 @@ namespace ThirdPersonSimulation
             bool captureControlFlow)
         {
             if (m_Begun)
-                throw new InvalidOperationException("Float32 Ability invocation evaluation is already active.");
+                throw new InvalidOperationException(
+                    $"Float32 Ability invocation evaluation is already active for '{AbilityId}' " +
+                    $"at tick '{m_Frame.Tick.Value}'.");
             m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
             m_Begun = true;
         }

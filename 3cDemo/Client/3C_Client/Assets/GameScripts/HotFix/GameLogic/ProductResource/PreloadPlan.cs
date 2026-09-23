@@ -142,6 +142,7 @@ namespace GameLogic.ProductResource
     public sealed class PreloadPlanExecutor
     {
         private readonly ProductResourceRuntime _resources;
+        private UniTask[] _taskBuffer = Array.Empty<UniTask>();
 
         public PreloadPlanExecutor(ProductResourceRuntime resources)
         {
@@ -157,18 +158,23 @@ namespace GameLogic.ProductResource
 
             foreach (PreloadBarrier barrier in plan.Barriers)
             {
-                var tasks = new UniTask[plan.MaxBarrierItemCount];
+                if (_taskBuffer.Length < plan.MaxBarrierItemCount)
+                {
+                    Array.Resize(ref _taskBuffer, plan.MaxBarrierItemCount);
+                }
+
                 for (int index = 0; index < barrier.Items.Count; index++)
                 {
-                    tasks[index] = ExecuteItemAsync(barrier.Items[index], scope, cancellationToken);
+                    _taskBuffer[index] = ExecuteItemAsync(barrier.Items[index], scope, cancellationToken);
                 }
 
-                for (int index = barrier.Items.Count; index < tasks.Length; index++)
+                for (int index = barrier.Items.Count; index < _taskBuffer.Length; index++)
                 {
-                    tasks[index] = UniTask.CompletedTask;
+                    _taskBuffer[index] = UniTask.CompletedTask;
                 }
 
-                await UniTask.WhenAll(tasks);
+                await UniTask.WhenAll(_taskBuffer);
+                Array.Clear(_taskBuffer, 0, _taskBuffer.Length);
             }
         }
 

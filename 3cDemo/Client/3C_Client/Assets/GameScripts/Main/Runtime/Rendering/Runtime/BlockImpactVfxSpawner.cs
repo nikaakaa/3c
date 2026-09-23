@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 namespace ThirdPersonRendering
@@ -8,10 +8,26 @@ namespace ThirdPersonRendering
         [SerializeField] BlockImpactVfxController prefab;
         [SerializeField] int maxActiveInstances = 8;
 
-        readonly List<BlockImpactVfxController> instances = new List<BlockImpactVfxController>();
+        BlockImpactVfxController[] instances = Array.Empty<BlockImpactVfxController>();
 
         public int MaxActiveInstances => Mathf.Max(1, maxActiveInstances);
-        public int InstanceCount => instances.Count;
+        public int InstanceCount => instances.Length;
+
+        void Awake()
+        {
+            if (prefab == null)
+                throw new InvalidOperationException("BlockImpactVfxSpawner requires BlockImpactVfx prefab.");
+
+            maxActiveInstances = Mathf.Max(1, maxActiveInstances);
+            instances = new BlockImpactVfxController[maxActiveInstances];
+            for (int i = 0; i < instances.Length; i++)
+            {
+                BlockImpactVfxController instance = Instantiate(prefab, transform);
+                instance.PlayOnEnable = false;
+                instance.gameObject.SetActive(false);
+                instances[i] = instance;
+            }
+        }
 
         public BlockImpactVfxController Spawn(BlockImpactVfxRequest request)
         {
@@ -30,19 +46,12 @@ namespace ThirdPersonRendering
 
         BlockImpactVfxController GetInstance()
         {
-            for (int i = 0; i < instances.Count; i++)
+            for (int i = 0; i < instances.Length; i++)
             {
                 if (!instances[i].IsPlaying)
                     return instances[i];
             }
-
-            if (instances.Count >= MaxActiveInstances)
-                return instances[0];
-
-            BlockImpactVfxController instance = Instantiate(prefab, transform);
-            instance.PlayOnEnable = false;
-            instances.Add(instance);
-            return instance;
+            return instances[0];
         }
     }
 }

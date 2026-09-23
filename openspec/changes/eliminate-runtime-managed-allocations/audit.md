@@ -5970,3 +5970,13 @@
 - 本步消除池 List、扩容数组和首次命中的 GameObject/组件实例分配；Particle System native/GPU 资源、播放期 Unity 内部分配和 PostProcess 仍不在本步范围。
 - BlockImpact VFX 相关六个源文件用 Assembly-CSharp 的 Unity 引用做 `csc` 聚焦编译，通过且 0 错误（仅既有 Unity 序列化字段 CS0649 提示）。完整 `Assembly-CSharp` 编译被 `Assets/Ref/BBB/Character/Core/ik/Source/UAR/IKAutoBinder.cs:174` 的既有 `Editor` 命名空间错误阻断，未到达本次源码。临时脚本和产物已删除。
 - 未刷新 Unity、未进 Play、未做格挡特效触发回放、池满复用对比和 Player 分配采样。
+
+## 2026-09-23 预加载 barrier 缓冲复用
+
+对应 tasks.md 的 6.35；父项 6.2 保持未勾选。
+
+- `PreloadPlanExecutor.ExecuteAsync` 原先每个 barrier 都新建 `UniTask[MaxBarrierItemCount]`；Home 和 Gameplay 预加载执行多条 barrier 时重复分配同容量数组。现在 executor 持有正式 barrier task buffer，容量不足时扩展到当前计划的正式上限，后续 barrier 复用同一存储。
+- 每个 barrier 先覆盖有效任务槽，尾部继续填充 `UniTask.CompletedTask`；`WhenAll` 完成后清空 buffer 引用再进入下一条 barrier。barrier 顺序、同 barrier 并发加载、取消令牌传递、场景校验和异常传播不变。
+- 本步只消除执行器侧 barrier 数组重复分配；`UniTask.WhenAll` 的完成 promise、加载任务状态机、资源加载回调和第三方 downloader 分配仍在 6.2 后续边界。
+- `PreloadPlan.cs` 用 Unity 2022.3.62f2c1 的 `netstandard.ref`、`UnityEngine.CoreModule`、UniTask 和既有 `GameLogic.dll` 引用做 `csc` 聚焦编译，通过且 0 错误；`CS0436` 是同名源码与旧 `GameLogic.dll` 聚焦引用的预期冲突提示。执行后已关闭 .NET build server；聚焦产物保留在 Unity `Temp` 未跟踪目录，由 Unity 临时目录生命周期处理。
+- 未刷新 Unity、未进 Play、未做 Home/Gameplay 预加载回放、取消失败对比和 Player 分配采样。

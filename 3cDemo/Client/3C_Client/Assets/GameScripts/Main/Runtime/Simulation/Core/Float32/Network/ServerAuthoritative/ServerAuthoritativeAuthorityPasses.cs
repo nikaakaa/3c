@@ -527,8 +527,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         readonly ServerAuthoritativeModelPolicy m_Policy;
         readonly ServerAuthoritativeReplicationPolicy m_ReplicationPolicy;
-        readonly SortedDictionary<ActorId, ServerAuthoritativeEventHorizon> m_Horizons =
-            new SortedDictionary<ActorId, ServerAuthoritativeEventHorizon>();
+        const int MaximumHorizonActors = 64;
+        readonly ActorId[] m_HorizonActors = new ActorId[MaximumHorizonActors];
+        readonly ServerAuthoritativeEventHorizon[] m_Horizons = new ServerAuthoritativeEventHorizon[MaximumHorizonActors];
+        int m_HorizonCount;
         AuthoritativeActorBaseline[] m_Baselines = Array.Empty<AuthoritativeActorBaseline>();
         AuthoritativeInputAck[] m_Acks = Array.Empty<AuthoritativeInputAck>();
         RemotePresentationBatch[] m_Remote = Array.Empty<RemotePresentationBatch>();
@@ -599,9 +601,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     Float32CharacterRuntime characterRuntime = readPorts.CharacterRuntime.Runtime;
                     m_Remote[i] = BuildRemote(actor, characterRuntime, m_Dispositions, ref dispositionIndex);
                     int acceptedIndex = FindAcceptedInput(accepted, actor.ActorId);
-                    ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon currentHorizon)
-                        ? currentHorizon
-                        : ServerAuthoritativeEventHorizon.Empty;
+                    ServerAuthoritativeEventHorizon horizon = GetHorizon(actor.ActorId);
                     m_Acks[i] = new AuthoritativeInputAck(
                         actor.ActorId,
                         completed.Step.Tick,
@@ -720,9 +720,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             int actorIndex = FindActorInput(completed.Step, actor.ActorId);
             ulong inputSequence = completed.Step.Inputs[actorIndex].Sequence;
-            ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon value)
-                ? value
-                : ServerAuthoritativeEventHorizon.Empty;
+            ServerAuthoritativeEventHorizon horizon = GetHorizon(actor.ActorId);
             return new AuthoritativeActorBaseline(
                 actor.ActorId,
                 completed.Step.Tick,
@@ -764,11 +762,50 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         void AdvanceHorizon(ActorId actorId, SimulationEventHeader header)
         {
-            if (!m_Horizons.TryGetValue(actorId, out ServerAuthoritativeEventHorizon current) ||
-                header.Sequence > current.Sequence)
+            int horizonIndex = FindHorizon(actorId);
+            if (horizonIndex < 0)
+                InsertHorizon(actorId, new ServerAuthoritativeEventHorizon(header.Sequence, header.EventId));
+            else if (header.Sequence > m_Horizons[horizonIndex].Sequence)
+                m_Horizons[horizonIndex] = new ServerAuthoritativeEventHorizon(header.Sequence, header.EventId);
+        }
+
+        ServerAuthoritativeEventHorizon GetHorizon(ActorId actorId)
+        {
+            int horizonIndex = FindHorizon(actorId);
+            return horizonIndex < 0 ? ServerAuthoritativeEventHorizon.Empty : m_Horizons[horizonIndex];
+        }
+
+        int FindHorizon(ActorId actorId)
+        {
+            int left = 0;
+            int right = m_HorizonCount - 1;
+            while (left <= right)
             {
-                m_Horizons[actorId] = new ServerAuthoritativeEventHorizon(header.Sequence, header.EventId);
+                int middle = left + (right - left) / 2;
+                int comparison = m_HorizonActors[middle].CompareTo(actorId);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
             }
+            return ~left;
+        }
+
+        void InsertHorizon(ActorId actorId, ServerAuthoritativeEventHorizon horizon)
+        {
+            int insertionIndex = FindHorizon(actorId);
+            if (insertionIndex >= 0)
+                throw new InvalidOperationException($"Authority replication horizon Actor '{actorId}' already exists.");
+            insertionIndex = ~insertionIndex;
+            if (m_HorizonCount >= MaximumHorizonActors)
+                throw new InvalidOperationException("Authority replication horizon capacity is exhausted.");
+            Array.Copy(m_HorizonActors, insertionIndex, m_HorizonActors, insertionIndex + 1, m_HorizonCount - insertionIndex);
+            Array.Copy(m_Horizons, insertionIndex, m_Horizons, insertionIndex + 1, m_HorizonCount - insertionIndex);
+            m_HorizonActors[insertionIndex] = actorId;
+            m_Horizons[insertionIndex] = horizon;
+            m_HorizonCount++;
         }
 
         public SimulationPipelinePassStateSnapshot CaptureState()
@@ -795,12 +832,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(0x52494153);
             writer.WriteInt32(1);
-            writer.WriteInt32(m_Horizons.Count);
-            foreach (KeyValuePair<ActorId, ServerAuthoritativeEventHorizon> pair in m_Horizons)
+            writer.WriteInt32(m_HorizonCount);
+            for (int i = 0; i < m_HorizonCount; i++)
             {
-                writer.WriteString(pair.Key.Value);
-                writer.WriteUInt64(pair.Value.Sequence);
-                writer.WriteEventId(pair.Value.EventId);
+                writer.WriteString(m_HorizonActors[i].Value);
+                writer.WriteUInt64(m_Horizons[i].Sequence);
+                writer.WriteEventId(m_Horizons[i].EventId);
             }
             return writer.ToArray();
         }
@@ -813,13 +850,19 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             int count = reader.ReadInt32();
             if (count < 0 || count > 64)
                 throw new InvalidDataException("Authority replication state count is invalid.");
-            m_Horizons.Clear();
+            Array.Clear(m_HorizonActors, 0, m_HorizonCount);
+            Array.Clear(m_Horizons, 0, m_HorizonCount);
+            m_HorizonCount = 0;
             for (int i = 0; i < count; i++)
             {
                 var actorId = new ActorId(reader.ReadString());
                 ulong sequence = reader.ReadUInt64();
                 var eventId = reader.ReadEventId();
-                m_Horizons.Add(actorId, new ServerAuthoritativeEventHorizon(sequence, eventId));
+                if (i > 0 && m_HorizonActors[i - 1].CompareTo(actorId) >= 0)
+                    throw new InvalidDataException("Authority replication state Actor order is invalid.");
+                m_HorizonActors[i] = actorId;
+                m_Horizons[i] = new ServerAuthoritativeEventHorizon(sequence, eventId);
+                m_HorizonCount++;
             }
             reader.RequireComplete();
         }

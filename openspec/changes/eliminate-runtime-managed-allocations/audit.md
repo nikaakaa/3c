@@ -5785,3 +5785,12 @@
 - 全仓搜索确认旧 `ToBodySamples` 没有剩余消费者，已直接删除，不保留兼容入口。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 schedule 多步回放、HardRecovery 回放、远端表现发包对比和 Player 分配采样。
+
+## 2026-09-23 预测差异诊断延迟构造
+
+对应 tasks.md 的 5.289；父项 2.5 保持未勾选。代码提交为 `6b1d752a1`。
+
+- `ServerAuthoritativePredictionIngressAndSchedulePasses` 原先在每帧 schedule 前都调用 `DescribeObservedBaselineDifference`，即使诊断 sink 关闭也会执行本地 history 查找、baseline 匹配、Body 比较，并在 need/hash 分支生成插值字符串。现在这次描述只在 `prediction_correction_decision` 诊断块内调用。
+- 关闭诊断的稳态帧不再生成 `remoteFrameDifference` 及其哈希插值；诊断打开时的调用参数、比较顺序和输出文本不变。决策、计划、selected Bodies 和 correction 输出都不消费这个描述，生命周期只属于诊断记录。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做诊断开关前后回放、correction 决策回放和 Player 分配采样。

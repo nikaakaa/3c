@@ -14,6 +14,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint JournalMagic = 0x4a524153;
         static readonly Comparison<SimulationInputRequest> s_CompareRequestsBySequence =
             (left, right) => left.Sequence.CompareTo(right.Sequence);
+        static readonly Comparison<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>> s_CompareJournalEntries =
+            (left, right) => left.Key.CompareTo(right.Key);
 
         public static byte[] WriteCorrection(ServerAuthoritativePredictionCorrectionCheckpoint checkpoint)
         {
@@ -195,7 +197,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             RequireHeader(reader, JournalMagic, ServerAuthoritativePredictionPassIds.JournalStateSchemaVersion);
             ulong cursor = reader.ReadUInt64();
             int count = RequireCount(reader.ReadInt32(), checked(historyCapacity * 64));
-            var entries = new SortedDictionary<EventId, ServerAuthoritativeJournalEntry>();
+            var entries = new KeyValuePair<EventId, ServerAuthoritativeJournalEntry>[count];
             for (int i = 0; i < count; i++)
             {
                 var eventId = reader.ReadEventId();
@@ -203,12 +205,19 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong sequence = reader.ReadUInt64();
                 var disposition = (ServerAuthoritativeEventDisposition)reader.ReadByte();
                 if (!eventId.IsValid || !tick.IsValid || sequence == 0 ||
-                    !ServerAuthoritativeJournalEntry.IsValidDisposition(disposition) ||
-                    entries.ContainsKey(eventId))
+                    !ServerAuthoritativeJournalEntry.IsValidDisposition(disposition))
                 {
                     throw new InvalidDataException("Prediction disposition journal payload is invalid.");
                 }
-                entries.Add(eventId, new ServerAuthoritativeJournalEntry(eventId, tick, sequence, disposition));
+                entries[i] = new KeyValuePair<EventId, ServerAuthoritativeJournalEntry>(
+                    eventId,
+                    new ServerAuthoritativeJournalEntry(eventId, tick, sequence, disposition));
+            }
+            Array.Sort(entries, s_CompareJournalEntries);
+            for (int i = 1; i < entries.Length; i++)
+            {
+                if (entries[i - 1].Key.Equals(entries[i].Key))
+                    throw new InvalidDataException("Prediction disposition journal payload contains a duplicate EventId.");
             }
             reader.RequireComplete();
             return new ServerAuthoritativePredictionJournalCheckpoint(entries, cursor, 0);

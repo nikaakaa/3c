@@ -44,7 +44,7 @@ namespace ThirdPersonCamera
             Vector2 look = response.Apply(lookInput);
             m_YawOffset = Mathf.Repeat(m_YawOffset + look.x * m_Projection.Input.Sensitivity.x, 360f);
             m_PitchOffset = Mathf.Clamp(
-                m_PitchOffset + look.y * m_Projection.Input.Sensitivity.y,
+                m_PitchOffset - look.y * m_Projection.Input.Sensitivity.y,
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);
             return look;

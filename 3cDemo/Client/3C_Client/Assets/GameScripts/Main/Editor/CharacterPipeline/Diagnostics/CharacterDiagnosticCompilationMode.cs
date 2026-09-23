@@ -28,6 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void SetFootCapture(bool enabled)
         {
+            if (EditorApplication.isCompiling)
+                throw new InvalidOperationException("请等待当前编译完成后再切换采样开关。");
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Foot diagnostic compilation mode can only change outside Play Mode.");
 

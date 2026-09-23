@@ -43,6 +43,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         int m_SelectedInputTraceIndex = -1;
         string m_LastObservedInputTraceId = string.Empty;
         string m_InputTraceCatalogError = string.Empty;
+        string m_SamplingTargetError = string.Empty;
 
         string SelectedInputTracePath => m_SelectedInputTraceIndex < 0
             ? string.Empty
@@ -66,8 +67,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void OnInspectorUpdate()
         {
+            string previousTargetError = m_SamplingTargetError;
+            m_SamplingTargetError = string.Empty;
+            if (EditorApplication.isPlaying && !EditorApplication.isCompiling)
+            {
+                try { CharacterPoseSamplingTarget.Require("fixed-player"); }
+                catch (Exception exception) { m_SamplingTargetError = exception.Message; }
+            }
+            if (previousTargetError != m_SamplingTargetError)
+                Repaint();
             bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
-            bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
+            bool finalizing = CharacterGameplayDiagnosticCapture.IsFinalizing || CharacterFootDiagnosticSampling.IsFinalizing;
             bool analyzing = CharacterFootDiagnosticSampling.IsAnalyzing;
             string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
             string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
@@ -122,7 +132,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (m_AutoSampleStopTime != 0d &&
                 CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootDiagnosticSampling.StopAndSaveSampling();
+                CharacterGameplayDiagnosticCapture.StopAndSave();
             }
             m_AutoSampleStopTime = 0d;
         }
@@ -220,7 +230,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void DrawFootLandingSampling()
         {
             bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
-            bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
+            bool finalizing = CharacterGameplayDiagnosticCapture.IsFinalizing || CharacterFootDiagnosticSampling.IsFinalizing;
             string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
             string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
             string sampleDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
@@ -243,8 +253,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
             }
             EditorGUILayout.LabelField(
-                "Foot Landing Sampling",
+                "Gameplay Sampling / Animation + Foot",
                 capturing ? "Recording" : finalizing ? "Finalizing" : "Idle");
+            if (EditorApplication.isCompiling)
+                EditorGUILayout.HelpBox("正在编译，完成后采样入口会自动更新。", MessageType.Info);
+            else if (!captureCompilation)
+                EditorGUILayout.HelpBox(EditorApplication.isPlayingOrWillChangePlaymode
+                    ? "采样尚未启用。请先退出 Play，再点 Enable Foot Capture；运行中不能修改编译开关。"
+                    : "先点 Enable Foot Capture，等编译完成，再记录输入或启动采样。", MessageType.Info);
+            else if (!CharacterGameplayDiagnosticCapture.IsAvailable)
+                EditorGUILayout.HelpBox("采样开关已启用，但 Foot 或 Presentation 工作流未注册。请检查 Console 编译错误。", MessageType.Error);
+            else if (!string.IsNullOrEmpty(m_SamplingTargetError))
+                EditorGUILayout.HelpBox(m_SamplingTargetError, MessageType.Warning);
             if (!EditorApplication.isPlaying)
             {
                 EditorGUILayout.HelpBox(
@@ -258,7 +278,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ? 0
                 : 1;
             using (new EditorGUI.DisabledScope(
-                       !CharacterFootDiagnosticSampling.IsAvailable ||
+                       !CharacterGameplayDiagnosticCapture.IsAvailable ||
                        capturing ||
                        finalizing))
             {
@@ -279,7 +299,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
-                           !CharacterFootDiagnosticSampling.IsAvailable ||
+                           !string.IsNullOrEmpty(m_SamplingTargetError) ||
+                           !CharacterGameplayDiagnosticCapture.IsAvailable ||
                            capturing ||
                            finalizing))
                 {
@@ -306,7 +327,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
-                           !CharacterFootDiagnosticSampling.IsAvailable ||
+                           !string.IsNullOrEmpty(m_SamplingTargetError) ||
+                           !CharacterGameplayDiagnosticCapture.IsAvailable ||
                            capturing ||
                            finalizing ||
                            m_AutoSampleStopTime > 0d))
@@ -417,11 +439,33 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void DrawFixedInputTrace()
         {
+            var presentation = CharacterGameplayDiagnosticCapture.Presentation;
+            if (presentation != null)
+            {
+                EditorGUILayout.LabelField("Animation / Action / Camera",
+                    presentation.IsCapturing ? "Recording" : presentation.IsFinalizing ? "Finalizing" : "Idle");
+                if (!string.IsNullOrEmpty(presentation.LastFailure))
+                    EditorGUILayout.HelpBox(presentation.LastFailure, MessageType.Error);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(!Directory.Exists(presentation.LastSavedDirectory)))
+                        if (GUILayout.Button("Reveal Animation Samples"))
+                            EditorUtility.RevealInFinder(presentation.LastSavedDirectory);
+                    bool hasAnalysis = DiagnosticAnalysisWorkflowRegistry.TryGet(
+                        CharacterGameplayDiagnosticCapture.PresentationCapabilityId, out var analysis);
+                    using (new EditorGUI.DisabledScope(!hasAnalysis || analysis.IsAnalyzing ||
+                               presentation.IsCapturing || presentation.IsFinalizing || !File.Exists(presentation.LastManifestPath)))
+                        if (GUILayout.Button("Analyze Animation Samples"))
+                            ExecuteSampling(analysis.AnalyzeLast);
+                    using (new EditorGUI.DisabledScope(!hasAnalysis || !File.Exists(analysis.LastReportPath)))
+                        if (GUILayout.Button("Open Animation Report"))
+                            ExecuteSampling(analysis.OpenLastReport);
+                }
+            }
             bool recording = CharacterFixedInputTraceWorkflow.IsRecording;
             bool replaying = CharacterFixedInputTraceWorkflow.IsReplaying;
             bool pending = CharacterFixedInputTraceWorkflow.IsPending;
-            bool sampling = CharacterFootDiagnosticSampling.IsCapturing ||
-                            CharacterFootDiagnosticSampling.IsFinalizing;
+            bool sampling = CharacterGameplayDiagnosticCapture.HasActiveCapture;
             string state = recording
                 ? "Recording"
                 : replaying
@@ -457,10 +501,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling || recording || replaying || pending || sampling ||
-                           !CharacterFootDiagnosticSampling.IsAvailable ||
+                           !CharacterGameplayDiagnosticCapture.IsAvailable ||
                            m_SelectedInputTraceIndex < 0))
                 {
-                    if (GUILayout.Button("Replay Selected + Foot Diagnostics"))
+                    if (GUILayout.Button("Replay Selected + Diagnostics"))
                         ReplaySelectedInputTrace(true);
                 }
                 using (new EditorGUI.DisabledScope(!replaying && !pending))
@@ -869,7 +913,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             try
             {
-                CharacterFootDiagnosticSampling.StartSampling();
+                CharacterGameplayDiagnosticCapture.StartManual();
                 m_AutoSampleStopTime =
                     EditorApplication.timeSinceStartup + 8d;
                 m_DiagnosticSummary =
@@ -894,7 +938,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             EditorApplication.update -= TickAutoSample;
             m_AutoSampleStopTime = 0d;
-            ExecuteSampling(CharacterFootDiagnosticSampling.StopAndSaveSampling);
+            ExecuteSampling(CharacterGameplayDiagnosticCapture.StopAndSave);
             ShowLastDiagnostics();
             Repaint();
         }
@@ -916,13 +960,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void StartManualSample()
         {
             m_DiagnosticSummary = string.Empty;
-            ExecuteSampling(CharacterFootDiagnosticSampling.StartSampling);
+            ExecuteSampling(CharacterGameplayDiagnosticCapture.StartManual);
             Repaint();
         }
 
         void StopManualSample()
         {
-            ExecuteSampling(CharacterFootDiagnosticSampling.StopAndSaveSampling);
+            ExecuteSampling(() =>
+            {
+                if (CharacterGameplayDiagnosticCapture.OwnsCapture)
+                    CharacterGameplayDiagnosticCapture.StopAndSave();
+                else
+                    CharacterFootDiagnosticSampling.StopAndSaveSampling();
+            });
             if (!string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastSavedPath))
                 ShowLastDiagnostics();
         }

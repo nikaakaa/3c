@@ -4,10 +4,13 @@ using GameLogic.ProductResource;
 
 namespace GameLogic.ProductDiagnostics
 {
-    public sealed class ResourceScopeSnapshot
+    public readonly struct ResourceScopeSnapshot : IEquatable<ResourceScopeSnapshot>
     {
         public ResourceScopeSnapshot(ResourceScopeId id, ResourceScopeKind kind, string name, ResourceScopeState state, int leaseCount)
         {
+            if (id.Value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(id));
+
             Id = id;
             Kind = kind;
             Name = name;
@@ -20,6 +23,16 @@ namespace GameLogic.ProductDiagnostics
         public string Name { get; }
         public ResourceScopeState State { get; }
         public int LeaseCount { get; }
+        public bool IsValid => Id.Value > 0;
+
+        public bool Equals(ResourceScopeSnapshot other)
+        {
+            return Id == other.Id &&
+                   Kind == other.Kind &&
+                   string.Equals(Name, other.Name, StringComparison.Ordinal) &&
+                   State == other.State &&
+                   LeaseCount == other.LeaseCount;
+        }
     }
 
     public readonly struct ResourceRuntimeSnapshot

@@ -503,7 +503,7 @@ namespace GameLogic.ProductResource
             foreach (ResourceScope scope in _scopes.Values)
             {
                 ResourceScopeSnapshot snapshot = scope.GetSnapshot();
-                if (scopeSnapshotsUnchanged && !ReferenceEquals(previousScopeSnapshots[scopeIndex], snapshot))
+                if (scopeSnapshotsUnchanged && !previousScopeSnapshots[scopeIndex].Equals(snapshot))
                 {
                     scopeSnapshotsUnchanged = false;
                 }

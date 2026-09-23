@@ -322,7 +322,7 @@ namespace GameLogic.ProductStartup
 
         private void RefreshDownload(GameplayDownloadSnapshot snapshot)
         {
-            if (!_downloadText || snapshot == null)
+            if (!_downloadText || !snapshot.IsValid)
             {
                 return;
             }

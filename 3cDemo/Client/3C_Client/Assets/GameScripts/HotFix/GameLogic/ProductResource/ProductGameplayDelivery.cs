@@ -17,7 +17,7 @@ namespace GameLogic.ProductResource
         Failed = 5
     }
 
-    public sealed class GameplayDownloadSnapshot
+    public readonly struct GameplayDownloadSnapshot
     {
         public GameplayDownloadSnapshot(int generation, GameplayDownloadState state, int totalFiles, int completedFiles, long totalBytes, long completedBytes, long requiredDiskBytes, long availableDiskBytes, string currentFile, string safeError)
         {
@@ -43,6 +43,7 @@ namespace GameLogic.ProductResource
         public long AvailableDiskBytes { get; }
         public string CurrentFile { get; }
         public string SafeError { get; }
+        public bool IsValid => Generation > 0;
     }
 
     public interface IGameplayDownloadSnapshotSource

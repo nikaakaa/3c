@@ -5897,3 +5897,14 @@
 - 本步消除 stale/reuse 中性值数组、构造期 values/requests 复制和排序比较委托；`SimulationInput` 外壳、Authority schedule 的 actorInputs/actors 数组仍未迁移，不代表该路径整体零分配。
 - `ThirdPersonSimulation.ServerAuthoritative.Transport` Release 编译通过，依赖链包含 Core、Float32 和 ServerAuthoritative，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 stale/reuse input 回放、输入布局变化回放、checkpoint 恢复回放和 Player 分配采样。
+
+## 2026-09-23 资源外层快照值化
+
+对应 tasks.md 的 6.28；父项 6.2 保持未勾选。代码提交为 `5ea90a0e2`。
+
+- `ResourceRuntimeSnapshot` 原先是 `class`，每次资源获取、pending acquire、释放、缓存命中或维护发布都会新建外层快照对象；`BoundedHistory<ResourceRuntimeSnapshot>` 环形槽位替换后仍继续持有旧托管外壳。现在改为 `readonly struct`，历史直接在预分配槽位中保存值。
+- 构造期要求 `Sequence > 0`，default 实例通过 `IsValid == false` 表达未发布状态。`ProductCheckpointSnapshot`、`ProductMemorySampler.Capture` 和 Shell 资源诊断从 null 判断改为 `IsValid` 判断；不存在兼容包装或分裂路径。
+- `ResourceScopeSnapshot` 仍为独立 class，只在 scope State/LeaseCount 变化时重建；PreparedTags 和 scope 数组复用规则不变。`Changed` 委托仍是强类型 `Action<ResourceRuntimeSnapshot>`，不会因 struct 装箱产生额外分配。
+- 本步消除外层快照对象本体；scope 变化时的 scope snapshot、lease record、每 scope cancellation source、UniTaskCompletionSource 和诊断字符串仍是 6.2 后续边界。
+- `GameLogic` Release 依赖链先被 `UnityEditor.UI` 包内既有 `DefaultControls.factory` 只读属性错误阻断，未到达本次源码；随后用 Unity `ScriptAssemblies` 正式引用和 GameLogic 完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误。过程中执行过 `dotnet build-server shutdown`，临时编译脚本和产物已删除。
+- 未刷新 Unity、未进 Play、未做资源 acquire/release/maintenance 回放、checkpoint 快照对比和 Player 分配采样。

@@ -6000,3 +6000,14 @@
 - Fault Lab 的并发诊断路径超出正式 preload 上限时仍按原 Dictionary 增长；该路径不是正式运行负载。scope 表、lease record 池、外部资源加载器和第三方 downloader 内部容量不在本步声明范围。
 - `ProductRuntimeContracts`、preload 计划、资源 runtime、scope 和资源诊断快照用 Unity 2022.3.62f2c1 正式引用和 `csc` 聚焦编译通过，0 错误；构建服务已关闭。
 - 未刷新 Unity、未进 Play、未做 Home/Gameplay 预加载回放、Fault Lab 容量对比和 Player 分配采样。
+
+## 2026-09-23 产品诊断枚举文本前置
+
+对应 tasks.md 的 6.38；父项 6.2 保持未勾选。
+
+- `ProductShellViewController` 原先在每次诊断刷新时通过 `StringBuilder.Append(enum)` 和 `ToString()` 渲染 product、auth、home、gameplay、resource scope 和 download 状态；这些有效路径会产生枚举装箱和新字符串。现在所有连续枚举在类型准备期生成固定名称数组，渲染按下标取常量文本。
+- `ProductStartupStage` 的正式值不是连续布局，改用 value/name 平行表查找；命中正式 stage 时复用固定文本，未知值保留原 `ToString` 语义并显式暴露异常配置。
+- `ProductMemorySampler.Capture` 的 budget 名称也改为固定表文本，checkpoint 采样不再为 `Home/Gameplay` 调用 `Enum.ToString`。诊断输出的业务文本、事件时机和 UI 可见状态不变。
+- 最终 `Text.text = StringBuilder.ToString()` 仍需要一次 UI 字符串；下载进度、网络时间和错误文本里的第三方字符串、日期格式化和错误构造仍是 6.2/7.1 后续边界。
+- Product Shell、startup snapshot、资源诊断和资源运行时用 Unity 2022.3.62f2c1 正式引用和 `csc` 聚焦编译通过，0 错误；`CS0436` 聚焦冲突已显式抑制，构建服务已关闭。
+- 未刷新 Unity、未进 Play、未做 Product Shell 显示快照对比、下载进度刷新和 Player 分配采样。

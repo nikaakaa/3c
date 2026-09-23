@@ -534,7 +534,7 @@ namespace BTSMTL.Timeline.Runtime
                 State == TimelineRuntimePlaybackState.Stopped ||
                 State == TimelineRuntimePlaybackState.Failed)
                 return false;
-            if (m_StopPending || m_PendingAdvance.IsValid)
+            if (m_StopPending)
                 return false;
             m_StopSequence = checked(m_StopSequence + 1);
             m_PendingStopContext = context;
@@ -556,7 +556,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool DiscardStop()
         {
-            if (!m_StopPending || m_PendingAdvance.IsValid)
+            if (!m_StopPending)
                 return false;
             m_StopPending = false;
             return true;

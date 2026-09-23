@@ -841,6 +841,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 bool committed = command.Kind == ActionAnimationPlaybackCommandKind.Sample;
                 if (committed && entry.ProjectedSample.IsValid || !committed && entry.HasCommittedRawSample)
                     throw new InvalidOperationException("Action playback cannot change sample ownership within one generation.");
+                if (!committed && entry.ProjectedSample.IsValid &&
+                    entry.ProjectedSample.AuthoringClipIdentity != command.ProjectedSample.AuthoringClipIdentity)
+                    entry.SourcePoseContinuityIdentity = NextSourcePoseContinuityIdentity();
                 entry.LatestCommittedRawSample = command.CommittedRawSample;
                 entry.HasCommittedRawSample = committed;
                 entry.ProjectedSample = command.ProjectedSample;

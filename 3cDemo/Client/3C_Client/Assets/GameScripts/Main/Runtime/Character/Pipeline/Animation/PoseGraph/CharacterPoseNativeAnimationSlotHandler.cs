@@ -527,8 +527,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float factor,
             ref int outputCount)
         {
-            if (factor <= 0f)
-                return;
             int inputCount = input.ContributionCount[0];
             int boneCount = m_WriteBinding.DenseLocalPoses.Length;
             NativeSlice<AnimationPrimitivePoseContribution> output =

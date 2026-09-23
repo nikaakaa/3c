@@ -576,6 +576,7 @@
 - [x] 5.293 Prediction Ack 与 NoCorrection 推进改为 confirmation/history/journal 原地应用；保留 BuildRestore checkpoint wire 合同，删除普通帧三轮 checkpoint 往返
 - [x] 5.294 Prediction Decide 改用 CountReplayAfter；baseline 存在的稳态决策不再分配 replay 数组，RestoreReplay 保留正式 replay 输出
 - [x] 5.295 ServerAuthoritative 空集合拷贝与 pending request 消费统一复用 Array.Empty；非空结果继续持有独立 owned array
+- [x] 5.296 Authority Tick Schedule 的 held 输入改为 64 容量 Actor/Record 平行数组加显式 count；Accept 二分原地插入，Capture/Restore 保持 ActorId 升序，删除 SortedDictionary
 
 ## 6. UI、资源、渲染和生命周期
 

@@ -5854,3 +5854,14 @@
 - `ServerAuthoritativePredictionConfirmationState.ScheduleRequests` 在不消费或没有 pending request 时返回共享空数组；只有实际有待消费 request 时才复制出最终 owned 数组并清空常驻轨道。pending request 的顺序、容量和所有权不变。
 - `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未进 Play、未做 observation ingress 回放、pending request 消费回放和 Player 分配采样。
+
+## 2026-09-23 权威输入保持数组化
+
+对应 tasks.md 的 5.296；父项 2.5 保持未勾选。代码提交为 `e13d030dc`。
+
+- `AuthorityTickSchedulePassRuntime` 原先用 `SortedDictionary<ActorId, HeldAuthorityInput>` 保持每个 Actor 的最新权威输入。现在按状态 wire 已有上限准备 64 个 Actor 槽位和 Hold 记录槽位，用显式 count 表示有效数量；ActorId 保持升序，查找改为二分。
+- `Accept` 对同一 Actor 仍只接受更大的 InputSequence，并对已有记录调用 Reset；新 Actor 按二分位置原地下移插入。容量耗尽现在在热路径显式失败，避免生成无法通过 64 上限 wire 校验的状态。
+- `Capture` 仍按 ActorId 升序写出字段、版本和数量；`Restore` 在读取前清空旧槽位，校验 wire count、ActorId 严格升序后原地重建。旧排序字典和树节点删除。
+- 每帧的 roster 查找、输入消费、MarkConsumed 和诊断 held 数量读取只访问常驻数组。`m_HeldWorkspace` 继续只作为同步临时引用区，使用区间按 actorCount 清理。
+- `ThirdPersonSimulation.ServerAuthoritative` Release 编译通过，0 警告 0 错误；构建参数含 `--disable-build-servers`、`/nr:false` 和 `/p:UseSharedCompilation=false`，构建后已执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未进 Play、未做权威输入 pending/executable schedule 回放、迟到大序列回放、schedule 状态 checkpoint 编解码恢复和 Player 分配采样。

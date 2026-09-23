@@ -295,8 +295,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPoseParameterDeclaration declaration =
                     m_InputContract.Parameters[i];
+                if (!parameters.TryRead(declaration.ParameterId, out EventGraphValue value))
+                    continue;
                 row.PoseParameters[row.ParameterOffset + i] =
-                    ReadParameter(in parameters, declaration);
+                    ReadParameter(in value, declaration);
                 row.PoseParameterAvailability[row.ParameterOffset + i] = 1;
             }
             PresentationPoseSampleTime time = state.Sample.Time;
@@ -383,11 +385,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static float ReadParameter(
-            in CharacterAnimationPoseInputFrame frame,
+            in EventGraphValue value,
             CharacterPoseParameterDeclaration declaration)
         {
-            EventGraphValue value = frame.RequireValue(
-                declaration.ParameterId);
             return declaration.ValueType switch
             {
                 PoseParameterValueType.Float

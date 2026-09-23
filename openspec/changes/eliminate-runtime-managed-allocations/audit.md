@@ -5721,3 +5721,13 @@
 - 修复 Float32 构造器中事件计数 `for` 循环被误写成 `finally` 导致的语法错误。输出事件覆盖、事件排序要求、Complete 身份校验、Actor 顺序校验和异常语义不变。
 - 四个工程使用 `dotnet build --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，构建输出无警告无错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 提交回放、事件发布回放、rollback restore和 Player 分配采样。
+
+## 2026-09-23 表现Body流数组合同化
+
+对应 tasks.md 的 5.283；父项 2.5 保持未勾选。代码提交为 `95813f0a1`。
+
+- `ICharacterPresentationDomainRuntime.CaptureBodyStream` 原先接收 `IReadOnlyList<CharacterPresentationBodyInterval>`，Fixed、Rollback 和 ServerAuthoritative 远端都先构造 List 或只读包装。现在合同改为 `CharacterPresentationBodyInterval[] + count`，Body 展示层按精确数量校验、比较、写分支和存储。
+- Fixed 和 Rollback 角色注册在准备期按 `maximumActivePresentationRecords` 创建常驻区间 scratch；`CompleteResultCommit` 直接填充同一数组并移交展示层，删除每次提交的 `List`。容量上限仍来自现有 presentation 记录配置，`ObservePublished` 的上限检查不变。
+- ServerAuthoritative 远端表现按本批 Body sample 数量从 `ArrayPool` 租用区间数组，同步 Capture 后清理使用区间并归还；删除可增长 `BodyIntervalScratch` 和接口枚举路径。异常路径在 `finally` 归还。
+- Fixed/Rollback pending Body、trajectory 和 Equipment 的 `SortedDictionary` 仍在工作区后续治理；本步只收口 Capture Body 流合同。Selected stream 的 Reset 判断改为 `intervalCount` 后语义不变。
+- Client Runtime、Fixed Unity、DeterministicRollback Unity 和 ServerAuthoritative Unity 使用 Release 目标程序集编译通过，构建补齐 Unity Editor 定义；构建后执行 `dotnet build-server shutdown`。未刷新 Unity、未进 Play、未做 Body 表现回放、rollback restore和 Player 分配采样。

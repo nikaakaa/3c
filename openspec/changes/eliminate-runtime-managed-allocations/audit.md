@@ -5711,3 +5711,13 @@
 - source roster 顺序、roster 数量、binding 身份、actor state 身份、World body 对齐、snapshot hash 和 canonical 编码不变。`SimulationWorldStateSet.Actors` 公开只读合同不变，新增内部 owned array 入口。
 - 四个工程使用 `dotnet build --no-restore --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；构建后执行 `dotnet build-server shutdown`。
 - 未刷新 Unity、未做 Fixed/Float32 快照保存加载、rollback restore、权威修正回放和 Player 分配采样。
+
+## 2026-09-23 输出事件派生数组删除
+
+对应 tasks.md 的 2.5；2.5 保持未勾选。代码提交为 `85471da31`。
+
+- Fixed/Float32 `SimulationTickResult` 原先额外持有 `OutputEvents`，在 Complete 构造时从 Actor 的 GameplayFacts 和 PresentationCommands 复制出派生 `EventId[]`。现在删除该字段和属性，Pipeline Committer 用 `CountOutputEvents` 直接统计两类真实输出，再按事实和表现命令遍历查找 disposition；Simulation Committer 的数量校验也改用同一计数。
+- EventId 唯一性校验保留，但只用 `ArrayPool<EventId>` 租借临时空间排序查重，`finally` 归还；结果不再保留这份校验数组。删除无调用者的公开构造和 `CopySorted`，`FromSortedOwnedActors` 成为唯一正式构造入口。
+- 修复 Float32 构造器中事件计数 `for` 循环被误写成 `finally` 导致的语法错误。输出事件覆盖、事件排序要求、Complete 身份校验、Actor 顺序校验和异常语义不变。
+- 四个工程使用 `dotnet build --disable-build-servers -c Release --no-incremental /nr:false /p:UseSharedCompilation=false` 编译成功，构建输出无警告无错误；构建后执行 `dotnet build-server shutdown`。
+- 未刷新 Unity、未做 Fixed/Float32 提交回放、事件发布回放、rollback restore和 Player 分配采样。

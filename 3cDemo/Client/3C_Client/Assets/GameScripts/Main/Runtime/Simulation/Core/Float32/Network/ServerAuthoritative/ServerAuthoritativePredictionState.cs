@@ -176,13 +176,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 return;
             if (m_History.Count > 0 && m_History.FirstRecord().Input.ActorId != ack.ActorId)
                 throw new InvalidOperationException("Authority input ack targets another Prediction owner.");
-            ServerAuthoritativePredictionCorrectionCheckpoint confirmation = m_Confirmation.PrepareAck(ack);
-            ServerAuthoritativePredictionJournalCheckpoint journal = m_Journal.PrepareConfirmation(
+            m_Confirmation.ApplyAck(ack);
+            m_Journal.ApplyConfirmation(
                 ack.AuthorityTick,
-                confirmation.ConfirmedEventHorizon,
+                ack.ConfirmedEventHorizon,
                 m_History.FirstRetainedTick);
-            m_Journal.Restore(journal);
-            m_Confirmation.Restore(confirmation);
         }
 
         public PredictionCorrectionDecision Decide(AuthoritativeActorBaseline baseline)
@@ -306,18 +304,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         void AdvanceConfirmation(AuthoritativeActorBaseline baseline)
         {
-            ServerAuthoritativePredictionCorrectionCheckpoint confirmation = m_Confirmation.PrepareBaseline(baseline);
-            ServerAuthoritativePredictionJournalCheckpoint reconciledJournal = m_Journal.PrepareConfirmation(
+            m_Confirmation.ApplyBaseline(baseline);
+            m_Journal.ApplyConfirmation(
                 baseline.AuthorityTick,
-                confirmation.ConfirmedEventHorizon,
+                m_Confirmation.ConfirmedEventHorizon,
                 m_History.FirstRetainedTick);
-            ServerAuthoritativePredictionHistoryCheckpoint history =
-                m_History.PreparePruneConfirmedThrough(baseline.ConfirmedInputSequence);
-            ServerAuthoritativePredictionJournalCheckpoint journal =
-                m_Journal.PreparePrune(reconciledJournal, history.FirstRetainedTick);
-            m_Journal.Restore(journal);
-            m_History.Restore(history);
-            m_Confirmation.Restore(confirmation);
+            m_History.PruneConfirmedThrough(baseline.ConfirmedInputSequence);
+            m_Journal.ApplyPrune(m_History.FirstRetainedTick);
         }
     }
 

@@ -65,6 +65,20 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 LastAuthorityClockEstimate);
         }
 
+        public void ApplyAck(AuthoritativeInputAck ack)
+        {
+            if (!ack.IsValid)
+                throw new ArgumentException("Authority input ack is incomplete.", nameof(ack));
+            if (ack.AuthorityTick.Value < LastAuthorityAckTick)
+            {
+                throw new InvalidOperationException(
+                    $"Authority input ack cursor regressed: actor={ack.ActorId};incomingTick={ack.AuthorityTick.Value};lastTick={LastAuthorityAckTick};incomingSequence={ack.ConfirmedInputSequence};confirmedSequence={ConfirmedInputSequence}.");
+            }
+            ConfirmedInputSequence = Math.Max(ConfirmedInputSequence, ack.ConfirmedInputSequence);
+            ConfirmedEventHorizon = MergeConfirmationHorizon(ConfirmedEventHorizon, ack.ConfirmedEventHorizon);
+            LastAuthorityAckTick = ack.AuthorityTick.Value;
+        }
+
         public ServerAuthoritativePredictionCorrectionCheckpoint PrepareBaseline(AuthoritativeActorBaseline baseline)
         {
             if (!baseline.IsValid)
@@ -75,6 +89,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 LastAuthorityAckTick,
                 Math.Max(LastBaselineTick, baseline.AuthorityTick.Value),
                 LastAuthorityClockEstimate);
+        }
+
+        public void ApplyBaseline(AuthoritativeActorBaseline baseline)
+        {
+            if (!baseline.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(baseline));
+            ConfirmedInputSequence = Math.Max(ConfirmedInputSequence, baseline.ConfirmedInputSequence);
+            ConfirmedEventHorizon = MergeConfirmationHorizon(ConfirmedEventHorizon, baseline.ConfirmedEventHorizon);
+            LastBaselineTick = Math.Max(LastBaselineTick, baseline.AuthorityTick.Value);
         }
 
         public ServerAuthoritativePredictionCorrectionCheckpoint Capture() =>

@@ -170,6 +170,25 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new ServerAuthoritativePredictionHistoryCheckpoint(records, m_RemoteBodies.Capture());
         }
 
+        public void PruneConfirmedThrough(ulong inputSequence)
+        {
+            int outputIndex = 0;
+            for (int i = 0; i < m_Count; i++)
+            {
+                if (m_Records[i].Input.InputSequence <= inputSequence)
+                    continue;
+                if (outputIndex != i)
+                {
+                    m_Ticks[outputIndex] = m_Ticks[i];
+                    m_Records[outputIndex] = m_Records[i];
+                }
+                outputIndex++;
+            }
+            Array.Clear(m_Ticks, outputIndex, m_Count - outputIndex);
+            Array.Clear(m_Records, outputIndex, m_Count - outputIndex);
+            m_Count = outputIndex;
+        }
+
         public ServerAuthoritativePredictionHistoryCheckpoint PrepareClear() =>
             ServerAuthoritativePredictionHistoryCheckpoint.Empty(m_RemoteBodies.Capture());
 

@@ -42,6 +42,64 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public void Prune(ulong firstRetainedHistoryTick) =>
             Prune(m_Keys, m_Entries, ref m_Count, firstRetainedHistoryTick);
 
+        public void ApplyConfirmation(
+            SimulationTick authorityTick,
+            ServerAuthoritativeEventHorizon horizon,
+            ulong firstRetainedHistoryTick)
+        {
+            ulong cursor = Cursor;
+            int rejectedCount = 0;
+            for (int i = 0; i < m_Count; i++)
+            {
+                ServerAuthoritativeJournalEntry entry = m_Entries[i];
+                if (entry.Tick.Value > authorityTick.Value ||
+                    entry.Disposition == ServerAuthoritativeEventDisposition.AuthorityConfirmed ||
+                    entry.Disposition == ServerAuthoritativeEventDisposition.PredictedRejected)
+                {
+                    continue;
+                }
+                bool confirmed = !horizon.IsEmpty &&
+                    (entry.Sequence < horizon.Sequence ||
+                     entry.Sequence == horizon.Sequence && entry.EventId.Equals(horizon.EventId));
+                if (!confirmed)
+                    rejectedCount++;
+                Record(
+                    m_Keys,
+                    m_Entries,
+                    ref m_Count,
+                    ref cursor,
+                    new ServerAuthoritativeJournalEntry(
+                        entry.EventId,
+                        entry.Tick,
+                        entry.Sequence,
+                        confirmed
+                            ? ServerAuthoritativeEventDisposition.AuthorityConfirmed
+                            : ServerAuthoritativeEventDisposition.PredictedRejected),
+                    firstRetainedHistoryTick,
+                    m_Capacity);
+            }
+            if (!horizon.IsEmpty && Find(horizon.EventId) < 0)
+            {
+                Record(
+                    m_Keys,
+                    m_Entries,
+                    ref m_Count,
+                    ref cursor,
+                    new ServerAuthoritativeJournalEntry(
+                        horizon.EventId,
+                        authorityTick,
+                        horizon.Sequence,
+                        ServerAuthoritativeEventDisposition.AuthorityConfirmed),
+                    firstRetainedHistoryTick,
+                    m_Capacity);
+            }
+            Cursor = cursor;
+            LastRejectedCount = rejectedCount;
+        }
+
+        public void ApplyPrune(ulong firstRetainedHistoryTick) =>
+            Prune(m_Keys, m_Entries, ref m_Count, firstRetainedHistoryTick);
+
         public ServerAuthoritativePredictionJournalCheckpoint PrepareConfirmation(
             SimulationTick authorityTick,
             ServerAuthoritativeEventHorizon horizon,

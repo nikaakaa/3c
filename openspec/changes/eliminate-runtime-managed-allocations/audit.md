@@ -5960,3 +5960,13 @@
 - `ProductCheckpointSnapshot` 原本允许未发布的 network 外壳；现在继续保存 default 值，不引入可空 struct 或兼容包装。本步消除网络快照对象本体，连接字符串、redaction 拼接和诊断输出字符串仍是后续边界。
 - `GameLogic` 用 Unity `ScriptAssemblies` 正式引用、新编译的 `ThirdPerson.ProductStartup.dll` 和完整 Compile 清单做 `csc` 聚焦编译，通过且 0 错误；临时脚本、response file 和检查产物已删除。
 - 未刷新 Unity、未进 Play、未做认证状态回放、checkpoint 快照对比和 Player 分配采样。
+
+## 2026-09-23 格挡特效池准备期预分配
+
+对应 tasks.md 的 6.34；父项 6.2 保持未勾选。代码提交为 `6ba2e172d`。
+
+- `BlockImpactVfxSpawner` 原先用 `List` 懒加载实例；首次命中和容量增长会在 Active 战斗中 `Instantiate`、`Add` 并触发集合扩容。现在 `Awake` 校验 prefab，按 `maxActiveInstances` 一次性精确实例化到数组并禁用全部实例。
+- Active `Spawn` 只扫描未播放实例；全部播放中时仍按原业务复用最旧实例。`InstanceCount` 从 pooled List 数量改为固定池容量，数组是正式 owner 存储，不外借。
+- 本步消除池 List、扩容数组和首次命中的 GameObject/组件实例分配；Particle System native/GPU 资源、播放期 Unity 内部分配和 PostProcess 仍不在本步范围。
+- BlockImpact VFX 相关六个源文件用 Assembly-CSharp 的 Unity 引用做 `csc` 聚焦编译，通过且 0 错误（仅既有 Unity 序列化字段 CS0649 提示）。完整 `Assembly-CSharp` 编译被 `Assets/Ref/BBB/Character/Core/ik/Source/UAR/IKAutoBinder.cs:174` 的既有 `Editor` 命名空间错误阻断，未到达本次源码。临时脚本和产物已删除。
+- 未刷新 Unity、未进 Play、未做格挡特效触发回放、池满复用对比和 Player 分配采样。

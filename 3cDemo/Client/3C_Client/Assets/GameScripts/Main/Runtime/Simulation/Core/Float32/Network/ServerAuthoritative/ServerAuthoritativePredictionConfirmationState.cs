@@ -7,14 +7,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     internal sealed class ServerAuthoritativePredictionConfirmationState
     {
         readonly int m_RequestCapacity;
-        SortedDictionary<ulong, SimulationInputRequest> m_PendingRequests =
-            new SortedDictionary<ulong, SimulationInputRequest>();
+        readonly ulong[] m_RequestSequences;
+        readonly SimulationInputRequest[] m_Requests;
+        int m_RequestCount;
 
         public ServerAuthoritativePredictionConfirmationState(int requestCapacity)
         {
             if (requestCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(requestCapacity));
             m_RequestCapacity = requestCapacity;
+            m_RequestSequences = new ulong[requestCapacity];
+            m_Requests = new SimulationInputRequest[requestCapacity];
         }
 
         public ulong ConfirmedInputSequence { get; private set; }
@@ -22,7 +25,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ulong LastAuthorityAckTick { get; private set; }
         public ulong LastBaselineTick { get; private set; }
         public ulong LastAuthorityClockEstimate { get; private set; }
-        public int PendingRequestCount => m_PendingRequests.Count;
+        public int PendingRequestCount => m_RequestCount;
 
         public void ObserveAuthorityClock(ulong authorityTickEstimate)
         {
@@ -39,11 +42,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 RetainRequest(incoming[i]);
             if (!consume)
                 return Array.Empty<SimulationInputRequest>();
-            var result = new SimulationInputRequest[m_PendingRequests.Count];
-            int index = 0;
-            foreach (KeyValuePair<ulong, SimulationInputRequest> pair in m_PendingRequests)
-                result[index++] = pair.Value;
-            m_PendingRequests.Clear();
+            var result = new SimulationInputRequest[m_RequestCount];
+            Array.Copy(m_Requests, result, m_RequestCount);
+            m_RequestCount = 0;
             return result;
         }
 
@@ -56,53 +57,59 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidOperationException(
                     $"Authority input ack cursor regressed: actor={ack.ActorId};incomingTick={ack.AuthorityTick.Value};lastTick={LastAuthorityAckTick};incomingSequence={ack.ConfirmedInputSequence};confirmedSequence={ConfirmedInputSequence}.");
             }
-            return ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
+            return CreateCheckpoint(
                 Math.Max(ConfirmedInputSequence, ack.ConfirmedInputSequence),
                 MergeConfirmationHorizon(ConfirmedEventHorizon, ack.ConfirmedEventHorizon),
                 ack.AuthorityTick.Value,
                 LastBaselineTick,
-                LastAuthorityClockEstimate,
-                m_PendingRequests);
+                LastAuthorityClockEstimate);
         }
 
         public ServerAuthoritativePredictionCorrectionCheckpoint PrepareBaseline(AuthoritativeActorBaseline baseline)
         {
             if (!baseline.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(baseline));
-            return ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
+            return CreateCheckpoint(
                 Math.Max(ConfirmedInputSequence, baseline.ConfirmedInputSequence),
                 MergeConfirmationHorizon(ConfirmedEventHorizon, baseline.ConfirmedEventHorizon),
                 LastAuthorityAckTick,
                 Math.Max(LastBaselineTick, baseline.AuthorityTick.Value),
-                LastAuthorityClockEstimate,
-                m_PendingRequests);
+                LastAuthorityClockEstimate);
         }
 
         public ServerAuthoritativePredictionCorrectionCheckpoint Capture() =>
-            ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
+            CreateCheckpoint(
                 ConfirmedInputSequence,
                 ConfirmedEventHorizon,
                 LastAuthorityAckTick,
                 LastBaselineTick,
-                LastAuthorityClockEstimate,
-                m_PendingRequests);
+                LastAuthorityClockEstimate);
 
         public void Restore(ServerAuthoritativePredictionCorrectionCheckpoint checkpoint)
         {
             if (checkpoint == null)
                 throw new ArgumentNullException(nameof(checkpoint));
-            var requests = new SortedDictionary<ulong, SimulationInputRequest>();
+            if (checkpoint.PendingRequests.Count > m_RequestCapacity)
+                throw new InvalidOperationException("Prediction pending request checkpoint exceeds its configured capacity.");
+            for (int i = 1; i < checkpoint.PendingRequests.Count; i++)
+            {
+                if (checkpoint.PendingRequests[i - 1].Sequence >= checkpoint.PendingRequests[i].Sequence)
+                    throw new InvalidOperationException("Prediction pending request checkpoint sequence order is invalid.");
+            }
+            Array.Clear(m_RequestSequences, 0, m_RequestCount);
+            Array.Clear(m_Requests, 0, m_RequestCount);
             for (int i = 0; i < checkpoint.PendingRequests.Count; i++)
             {
                 SimulationInputRequest request = checkpoint.PendingRequests[i];
-                requests.Add(request.Sequence, request);
+                m_RequestSequences[i] = request.Sequence;
+                m_Requests[i] = request;
             }
             ConfirmedInputSequence = checkpoint.ConfirmedInputSequence;
             ConfirmedEventHorizon = checkpoint.ConfirmedEventHorizon;
             LastAuthorityAckTick = checkpoint.LastAuthorityAckTick;
             LastBaselineTick = checkpoint.LastBaselineTick;
             LastAuthorityClockEstimate = checkpoint.LastAuthorityClockEstimate;
-            m_PendingRequests = requests;
+            m_RequestCount = checkpoint.PendingRequests.Count;
         }
 
         static ServerAuthoritativeEventHorizon MergeConfirmationHorizon(
@@ -118,57 +125,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return current;
         }
 
-        void RetainRequest(SimulationInputRequest request)
-        {
-            if (m_PendingRequests.TryGetValue(request.Sequence, out SimulationInputRequest existing))
-            {
-                if (!string.Equals(existing.RequestId, request.RequestId, StringComparison.Ordinal) ||
-                    existing.SourceTick != request.SourceTick ||
-                    existing.ExpireSimulationTick != request.ExpireSimulationTick ||
-                    existing.Priority != request.Priority)
-                {
-                    throw new InvalidOperationException($"Prediction request sequence '{request.Sequence}' changed while pending.");
-                }
-                return;
-            }
-            if (m_PendingRequests.Count >= m_RequestCapacity)
-                throw new InvalidOperationException("Prediction pending request capacity is exhausted.");
-            m_PendingRequests.Add(request.Sequence, request);
-        }
-    }
-
-    internal sealed class ServerAuthoritativePredictionCorrectionCheckpoint
-    {
-        public ServerAuthoritativePredictionCorrectionCheckpoint(
+        ServerAuthoritativePredictionCorrectionCheckpoint CreateCheckpoint(
             ulong confirmedInputSequence,
             ServerAuthoritativeEventHorizon confirmedEventHorizon,
             ulong lastAuthorityAckTick,
             ulong lastBaselineTick,
-            ulong lastAuthorityClockEstimate,
-            SimulationInputRequest[] pendingRequests)
+            ulong lastAuthorityClockEstimate)
         {
-            ConfirmedInputSequence = confirmedInputSequence;
-            ConfirmedEventHorizon = confirmedEventHorizon;
-            LastAuthorityAckTick = lastAuthorityAckTick;
-            LastBaselineTick = lastBaselineTick;
-            LastAuthorityClockEstimate = lastAuthorityClockEstimate;
-            PendingRequests = pendingRequests ?? Array.Empty<SimulationInputRequest>();
-        }
-
-        public static ServerAuthoritativePredictionCorrectionCheckpoint FromPendingRequests(
-            ulong confirmedInputSequence,
-            ServerAuthoritativeEventHorizon confirmedEventHorizon,
-            ulong lastAuthorityAckTick,
-            ulong lastBaselineTick,
-            ulong lastAuthorityClockEstimate,
-            SortedDictionary<ulong, SimulationInputRequest> pendingRequests)
-        {
-            if (pendingRequests == null)
-                throw new ArgumentNullException(nameof(pendingRequests));
-            var requests = new SimulationInputRequest[pendingRequests.Count];
-            int index = 0;
-            foreach (KeyValuePair<ulong, SimulationInputRequest> pair in pendingRequests)
-                requests[index++] = pair.Value;
+            var requests = new SimulationInputRequest[m_RequestCount];
+            Array.Copy(m_Requests, requests, m_RequestCount);
             return new ServerAuthoritativePredictionCorrectionCheckpoint(
                 confirmedInputSequence,
                 confirmedEventHorizon,
@@ -178,11 +143,80 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 requests);
         }
 
+        void RetainRequest(SimulationInputRequest request)
+        {
+            int requestIndex = Find(request.Sequence);
+            if (requestIndex >= 0)
+            {
+                SimulationInputRequest existing = m_Requests[requestIndex];
+                if (!string.Equals(existing.RequestId, request.RequestId, StringComparison.Ordinal) ||
+                    existing.SourceTick != request.SourceTick ||
+                    existing.ExpireSimulationTick != request.ExpireSimulationTick ||
+                    existing.Priority != request.Priority)
+                {
+                    throw new InvalidOperationException($"Prediction request sequence '{request.Sequence}' changed while pending.");
+                }
+                return;
+            }
+            if (m_RequestCount >= m_RequestCapacity)
+                throw new InvalidOperationException("Prediction pending request capacity is exhausted.");
+            int insertionIndex = ~requestIndex;
+            Array.Copy(m_RequestSequences, insertionIndex, m_RequestSequences, insertionIndex + 1, m_RequestCount - insertionIndex);
+            Array.Copy(m_Requests, insertionIndex, m_Requests, insertionIndex + 1, m_RequestCount - insertionIndex);
+            m_RequestSequences[insertionIndex] = request.Sequence;
+            m_Requests[insertionIndex] = request;
+            m_RequestCount++;
+        }
+
+        int Find(ulong sequence)
+        {
+            int left = 0;
+            int right = m_RequestCount - 1;
+            while (left <= right)
+            {
+                int middle = left + (right - left) / 2;
+                if (m_RequestSequences[middle] == sequence)
+                    return middle;
+                if (m_RequestSequences[middle] < sequence)
+                    left = middle + 1;
+                else
+                    right = middle - 1;
+            }
+            return ~left;
+        }
+    }
+
+    internal sealed class ServerAuthoritativePredictionCorrectionCheckpoint
+    {
+        readonly SimulationInputRequest[] m_PendingRequests;
+
+        public ServerAuthoritativePredictionCorrectionCheckpoint(
+            ulong confirmedInputSequence,
+            ServerAuthoritativeEventHorizon confirmedEventHorizon,
+            ulong lastAuthorityAckTick,
+            ulong lastBaselineTick,
+            ulong lastAuthorityClockEstimate,
+            SimulationInputRequest[] pendingRequests)
+        {
+            SimulationInputRequest[] requests = pendingRequests ?? Array.Empty<SimulationInputRequest>();
+            for (int i = 1; i < requests.Length; i++)
+            {
+                if (requests[i - 1].Sequence >= requests[i].Sequence)
+                    throw new ArgumentException("Prediction pending request checkpoint sequence order is invalid.", nameof(pendingRequests));
+            }
+            ConfirmedInputSequence = confirmedInputSequence;
+            ConfirmedEventHorizon = confirmedEventHorizon;
+            LastAuthorityAckTick = lastAuthorityAckTick;
+            LastBaselineTick = lastBaselineTick;
+            LastAuthorityClockEstimate = lastAuthorityClockEstimate;
+            m_PendingRequests = requests;
+        }
+
         public ulong ConfirmedInputSequence { get; }
         public ServerAuthoritativeEventHorizon ConfirmedEventHorizon { get; }
         public ulong LastAuthorityAckTick { get; }
         public ulong LastBaselineTick { get; }
         public ulong LastAuthorityClockEstimate { get; }
-        public IReadOnlyList<SimulationInputRequest> PendingRequests { get; }
+        public IReadOnlyList<SimulationInputRequest> PendingRequests => m_PendingRequests;
     }
 }

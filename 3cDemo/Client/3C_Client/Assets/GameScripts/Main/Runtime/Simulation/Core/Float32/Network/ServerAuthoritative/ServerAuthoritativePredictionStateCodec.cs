@@ -12,6 +12,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint HistoryMagic = 0x48524153;
         const int HistoryVersion = 3;
         const uint JournalMagic = 0x4a524153;
+        static readonly Comparison<SimulationInputRequest> s_CompareRequestsBySequence =
+            (left, right) => left.Sequence.CompareTo(right.Sequence);
 
         public static byte[] WriteCorrection(ServerAuthoritativePredictionCorrectionCheckpoint checkpoint)
         {
@@ -55,7 +57,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ulong lastBaselineTick = reader.ReadUInt64();
             ulong lastAuthorityClockEstimate = reader.ReadUInt64();
             int pendingCount = RequireCount(reader.ReadInt32(), requestCapacity);
-            var pending = new SortedDictionary<ulong, SimulationInputRequest>();
+            var pending = new SimulationInputRequest[pendingCount];
             for (int i = 0; i < pendingCount; i++)
             {
                 var request = new SimulationInputRequest(
@@ -64,12 +66,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     reader.ReadUInt64(),
                     reader.ReadUInt64(),
                     reader.ReadInt32());
-                if (pending.ContainsKey(request.Sequence))
+                pending[i] = request;
+            }
+            Array.Sort(pending, s_CompareRequestsBySequence);
+            for (int i = 1; i < pending.Length; i++)
+            {
+                if (pending[i - 1].Sequence == pending[i].Sequence)
                     throw new InvalidDataException("Prediction pending request payload contains a duplicate sequence.");
-                pending.Add(request.Sequence, request);
             }
             reader.RequireComplete();
-            return ServerAuthoritativePredictionCorrectionCheckpoint.FromPendingRequests(
+            return new ServerAuthoritativePredictionCorrectionCheckpoint(
                 confirmedInputSequence,
                 horizon,
                 lastAuthorityAckTick,

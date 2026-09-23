@@ -29,8 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (frame == null || parameterIds == null)
                 throw new ArgumentException(
                     "Animation Event Graph variable frame is incomplete.");
-            var ids = new PoseParameterId[parameterIds.Count];
-            for (int i = 0; i < ids.Length; i++)
+            for (int i = 0; i < parameterIds.Count; i++)
             {
                 PoseParameterId parameterId = parameterIds[i];
                 if (!parameterId.IsValid ||
@@ -41,11 +40,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 for (int prior = 0; prior < i; prior++)
                 {
-                    if (ids[prior].Equals(parameterId))
+                    if (parameterIds[prior].Equals(parameterId))
                         throw new ArgumentException(
                             $"Animation Event Graph variable frame contains duplicate '{parameterId}'.");
                 }
-                ids[i] = parameterId;
             }
             return new CharacterAnimationPoseInputFrame(frame);
         }

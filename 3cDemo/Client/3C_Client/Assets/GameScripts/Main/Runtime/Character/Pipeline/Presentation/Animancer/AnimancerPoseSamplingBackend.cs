@@ -635,6 +635,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
+            if (m_FramePhase == SourceFramePhase.EvaluateBarrier)
+            {
+                RollbackAppliedFrame(lease);
+                return;
+            }
             if (m_FramePhase != SourceFramePhase.Preparing &&
                 m_FramePhase != SourceFramePhase.Validated)
             {

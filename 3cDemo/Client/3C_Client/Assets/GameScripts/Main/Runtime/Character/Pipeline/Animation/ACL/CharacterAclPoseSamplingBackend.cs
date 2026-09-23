@@ -332,6 +332,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         public void DiscardFrame(CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
+            if (m_FramePhase == FramePhase.EvaluateBarrier)
+            {
+                RollbackAppliedFrame(lease);
+                return;
+            }
             if ((m_FramePhase != FramePhase.Preparing && m_FramePhase != FramePhase.Validated) ||
                 m_FrameIdentity != lease.FrameIdentity)
                 throw new InvalidOperationException("ACL pose source frame cannot be discarded.");

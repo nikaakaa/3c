@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(incoming));
             for (int i = 0; i < incoming.Count; i++)
                 RetainRequest(incoming[i]);
-            if (!consume)
+            if (!consume || m_RequestCount == 0)
                 return Array.Empty<SimulationInputRequest>();
             var result = new SimulationInputRequest[m_RequestCount];
             Array.Copy(m_Requests, result, m_RequestCount);

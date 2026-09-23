@@ -617,6 +617,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
+            if (source.Count == 0)
+                return Array.Empty<T>();
             var values = new T[source.Count];
             for (int i = 0; i < values.Length; i++)
                 values[i] = source[i];

@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             new SortedDictionary<ulong, EquipmentVisualSelection[]>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
             new SortedDictionary<ulong, FixedSimulationActorTickResult>();
+        readonly CharacterPresentationBodyInterval[] m_BodyIntervalScratch;
 
         bool m_Activated;
         bool m_InputActivated;
@@ -86,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
             m_MaximumActivePresentationRecords = maximumActivePresentationRecords;
+            m_BodyIntervalScratch = new CharacterPresentationBodyInterval[maximumActivePresentationRecords];
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
@@ -270,21 +272,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 if (m_PendingBodySamples.Count == 0)
                     return;
-                var intervals = new List<CharacterPresentationBodyInterval>(m_PendingBodySamples.Count);
+                int intervalCount = 0;
                 FixedCharacterBodySample finalSample = default;
                 foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
                 {
                     finalSample = sample;
                     float yawVelocityDegreesPerSecond =
 							 sample.AppliedYawDegrees.ToSingle() * m_CharacterRuntime.TickRate;
-                    intervals.Add(new CharacterPresentationBodyInterval(
+                    m_BodyIntervalScratch[intervalCount++] = new CharacterPresentationBodyInterval(
                         sample.Tick.Value - 1,
                         FixedUnityPresentationBoundary.Convert(sample.BeforeBody),
                         sample.Tick.Value,
                         FixedUnityPresentationBoundary.Convert(sample.FinalBody),
-                        yawVelocityDegreesPerSecond));
+                        yawVelocityDegreesPerSecond);
                 }
-                m_PresentationRuntime.CaptureBodyStream(intervals);
+                m_PresentationRuntime.CaptureBodyStream(m_BodyIntervalScratch, intervalCount);
                 foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
                 {
                     LocomotionPresentationFailureCode failureCode =

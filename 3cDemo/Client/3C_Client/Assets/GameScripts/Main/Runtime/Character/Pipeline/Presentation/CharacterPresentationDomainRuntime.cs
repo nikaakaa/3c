@@ -224,8 +224,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterDomainRuntimeAssemblyFacts(facts);
         }
 
-        public void CaptureBodyStream(IReadOnlyList<CharacterPresentationBodyInterval> intervals) =>
-            m_Body.CaptureStreamTransaction(intervals);
+        public void CaptureBodyStream(CharacterPresentationBodyInterval[] intervals, int count) =>
+            m_Body.CaptureStreamTransaction(intervals, count);
 
         public CharacterLocomotionPresentationFactLineage CreateLocomotionFactLineage(
             in CommittedMovementPlaybackClock movementClock) =>

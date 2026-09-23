@@ -832,7 +832,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool TryGetCameraBasis(out CameraBasisSnapshot basis);
         void SetCameraInitialState(in CameraInitialState state);
         bool TryGetLatestBody(out CharacterPresentationBodyState body);
-        void CaptureBodyStream(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
+        void CaptureBodyStream(CharacterPresentationBodyInterval[] intervals, int count);
         CharacterLocomotionPresentationFactLineage CreateLocomotionFactLineage(
             in CommittedMovementPlaybackClock movementClock);
         LocomotionPresentationFailureCode CaptureTrajectoryIntent(

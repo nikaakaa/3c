@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Buffers;
 using Animancer;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline;
@@ -277,7 +277,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly Action<ServerAuthoritativeRemotePresentationTarget> m_Release;
         readonly TickQueue<PresentationCommand> m_Commands = new TickQueue<PresentationCommand>();
         readonly TickQueue<ServerAuthoritativeReliableEvent> m_Reliable = new TickQueue<ServerAuthoritativeReliableEvent>();
-        readonly BodyIntervalScratch m_BodyIntervals = new BodyIntervalScratch();
         readonly Action<PresentationCommand> m_PublishCommand;
         readonly Action<ServerAuthoritativeReliableEvent> m_PublishReliable;
 
@@ -353,23 +352,37 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Gameplay.BeginTick();
             CharacterPresentationBodyState finalBody = default;
             bool hasFinalBody = false;
-            m_BodyIntervals.Clear();
-            for (int i = 0; i < batch.BodySamples.Count; i++)
+            int intervalCount = batch.BodySamples.Count;
+            CharacterPresentationBodyInterval[] intervals = Array.Empty<CharacterPresentationBodyInterval>();
+            bool intervalsRented = intervalCount != 0;
+            if (intervalsRented)
+                intervals = ArrayPool<CharacterPresentationBodyInterval>.Shared.Rent(intervalCount);
+            try
             {
-                CharacterBodySample sample = batch.BodySamples[i];
-                m_BodyIntervals.Add(CharacterPresentationBodyInterval.FromFloat32(
-                    sample,
-                    m_TickRate,
-                    batch.ResetBodyStream && i == 0
-                        ? CharacterPresentationBodyStreamUpdateKind.Reset
-                        : CharacterPresentationBodyStreamUpdateKind.Append));
-                finalBody = CharacterPresentationBodyState.FromFloat32(sample.FinalBody);
-                hasFinalBody = true;
-                m_SelectedTick = sample.Tick.Value;
+                for (int i = 0; i < intervalCount; i++)
+                {
+                    CharacterBodySample sample = batch.BodySamples[i];
+                    intervals[i] = CharacterPresentationBodyInterval.FromFloat32(
+                        sample,
+                        m_TickRate,
+                        batch.ResetBodyStream && i == 0
+                            ? CharacterPresentationBodyStreamUpdateKind.Reset
+                            : CharacterPresentationBodyStreamUpdateKind.Append);
+                    finalBody = CharacterPresentationBodyState.FromFloat32(sample.FinalBody);
+                    hasFinalBody = true;
+                    m_SelectedTick = sample.Tick.Value;
+                }
+                if (intervalCount != 0)
+                    m_Runtime.CaptureBodyStream(intervals, intervalCount);
             }
-            if (m_BodyIntervals.Count != 0)
-                m_Runtime.CaptureBodyStream(m_BodyIntervals);
-            m_BodyIntervals.Clear();
+            finally
+            {
+                if (intervalsRented)
+                {
+                    Array.Clear(intervals, 0, intervalCount);
+                    ArrayPool<CharacterPresentationBodyInterval>.Shared.Return(intervals);
+                }
+            }
             for (int i = 0; i < batch.SampleCommands.Count; i++)
                 Enqueue(m_Commands, batch.SampleCommands[i].Header.Tick.Value, batch.SampleCommands[i]);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)
@@ -552,40 +565,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new ObjectDisposedException(nameof(ServerAuthoritativeRemotePresentationTarget));
         }
 
-        sealed class BodyIntervalScratch : IReadOnlyList<CharacterPresentationBodyInterval>
-        {
-            CharacterPresentationBodyInterval[] m_Items = Array.Empty<CharacterPresentationBodyInterval>();
-
-            public int Count { get; private set; }
-
-            public CharacterPresentationBodyInterval this[int index] => m_Items[index];
-
-            public void Add(CharacterPresentationBodyInterval interval)
-            {
-                if (Count == m_Items.Length)
-                {
-                    int capacity = Math.Max(4, m_Items.Length * 2);
-                    var values = new CharacterPresentationBodyInterval[capacity];
-                    Array.Copy(m_Items, values, Count);
-                    m_Items = values;
-                }
-                m_Items[Count++] = interval;
-            }
-
-            public void Clear()
-            {
-                Array.Clear(m_Items, 0, Count);
-                Count = 0;
-            }
-
-            public IEnumerator<CharacterPresentationBodyInterval> GetEnumerator()
-            {
-                for (int i = 0; i < Count; i++)
-                    yield return m_Items[i];
-            }
-
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
     }
 
     internal sealed class ServerAuthoritativeRemotePresentationFrameTarget : IGameplayPresentationFrameTarget

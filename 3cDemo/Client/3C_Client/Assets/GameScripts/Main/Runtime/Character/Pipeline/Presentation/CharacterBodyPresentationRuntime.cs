@@ -208,35 +208,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return false;
         }
 
-        public void CaptureStreamTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        public void CaptureStreamTransaction(CharacterPresentationBodyInterval[] intervals, int count)
         {
             RequireAlive();
-            if (intervals == null || intervals.Count == 0)
+            if (intervals == null || count == 0)
                 throw new ArgumentException("Presentation Body transaction requires at least one interval.", nameof(intervals));
             if (m_SourceMode == CharacterBodyPresentationSourceMode.SelectedStream)
             {
-                ValidateSelectedTransaction(intervals);
-                for (int i = 0; i < intervals.Count; i++)
+                ValidateSelectedTransaction(intervals, count);
+                for (int i = 0; i < count; i++)
                     CaptureSelected(intervals[i]);
                 return;
             }
-            ValidateCommittedTransaction(intervals);
+            ValidateCommittedTransaction(intervals, count);
             bool replacesBranch = ReplacesCommittedBranch(intervals[0]);
-            bool changesBranch = replacesBranch && ChangesCommittedBranch(intervals);
+            bool changesBranch = replacesBranch && ChangesCommittedBranch(intervals, count);
             if (!replacesBranch && intervals[0].PreviousTick != m_LatestTick)
             {
                 throw new InvalidOperationException(
                     $"Committed Presentation Body transaction starts at Tick '{intervals[0].PreviousTick}' but latest Tick is '{m_LatestTick}'.");
             }
             if (replacesBranch && m_CommittedClockInitialized &&
-                intervals[intervals.Count - 1].CurrentTick < m_CommittedPresentationTick)
+                intervals[count - 1].CurrentTick < m_CommittedPresentationTick)
             {
                 throw new InvalidOperationException(
                     "Committed Presentation branch replacement does not cover the current Presentation cursor.");
             }
             if (replacesBranch)
                 RemoveCommittedBranchFrom(intervals[0].PreviousTick);
-            for (int i = 0; i < intervals.Count; i++)
+            for (int i = 0; i < count; i++)
                 StoreCommitted(intervals[i]);
             if (changesBranch)
             {
@@ -245,9 +245,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        void ValidateSelectedTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        void ValidateSelectedTransaction(CharacterPresentationBodyInterval[] intervals, int count)
         {
-            for (int i = 0; i < intervals.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 CharacterPresentationBodyInterval interval = intervals[i];
                 if (interval.ActorId != m_ActorId)
@@ -332,9 +332,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        void ValidateCommittedTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        void ValidateCommittedTransaction(CharacterPresentationBodyInterval[] intervals, int count)
         {
-            for (int i = 0; i < intervals.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 CharacterPresentationBodyInterval interval = intervals[i];
                 ValidateCommittedInterval(interval);
@@ -370,11 +370,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (interval.PreviousTick < m_LatestTick || interval.CurrentTick <= m_LatestTick || replacesLatestPrevious);
         }
 
-        bool ChangesCommittedBranch(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        bool ChangesCommittedBranch(CharacterPresentationBodyInterval[] intervals, int count)
         {
-            if (intervals[intervals.Count - 1].CurrentTick < m_LatestTick)
+            if (intervals[count - 1].CurrentTick < m_LatestTick)
                 return true;
-            for (int i = 0; i < intervals.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 CharacterPresentationBodyInterval interval = intervals[i];
                 if (DiffersFromCommitted(interval.PreviousTick, interval.PreviousBody) ||

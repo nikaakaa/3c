@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
             new SortedDictionary<ulong, FixedSimulationActorTickResult>();
+        readonly CharacterPresentationBodyInterval[] m_BodyIntervalScratch;
 
         bool m_HasSelectedPresentationTail;
         ulong m_SelectedPresentationTailTick;
@@ -98,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new ArgumentException("Rollback Actor registration world binding does not match the Character Runtime binding.", nameof(characterBinding));
             InitialBody = initialBody;
             m_LocalInput = localInput;
+            m_BodyIntervalScratch = new CharacterPresentationBodyInterval[maximumActivePresentationRecords];
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
             m_DomainFacts = domainFacts ?? throw new ArgumentNullException(nameof(domainFacts));
@@ -290,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             {
                 if (m_PendingBodySamples.Count == 0)
                     return;
-                var intervals = new List<CharacterPresentationBodyInterval>(m_PendingBodySamples.Count);
+                int intervalCount = 0;
                 FixedCharacterBodySample finalSample = default;
                 bool selectedStream = m_PresentationRuntime.LocomotionBodySource ==
                     CharacterLocomotionBodySource.SelectedStream;
@@ -303,20 +305,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         FixedUnityPresentationBoundary.Convert(sample.BeforeBody);
                     CharacterPresentationBodyState currentBody =
                         FixedUnityPresentationBoundary.Convert(sample.FinalBody);
-                    intervals.Add(new CharacterPresentationBodyInterval(
+                    m_BodyIntervalScratch[intervalCount++] = new CharacterPresentationBodyInterval(
                         sample.Tick.Value - 1,
                         previousBody,
                         sample.Tick.Value,
                         currentBody,
                         yawVelocityDegreesPerSecond,
-                        selectedStream && intervals.Count == 0 &&
+                        selectedStream && intervalCount == 0 &&
                         RequiresSelectedPresentationReset(
                             sample.Tick.Value - 1,
                             in previousBody)
                             ? CharacterPresentationBodyStreamUpdateKind.Reset
-                            : CharacterPresentationBodyStreamUpdateKind.Append));
+                            : CharacterPresentationBodyStreamUpdateKind.Append);
                 }
-                m_PresentationRuntime.CaptureBodyStream(intervals);
+                m_PresentationRuntime.CaptureBodyStream(m_BodyIntervalScratch, intervalCount);
                 CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
                 if (selectedStream)
                     CaptureSelectedPresentationTail(finalSample.Tick.Value, in finalBody);

@@ -110,7 +110,7 @@ namespace ZZZ.Rendering.Restored
             command.SetGlobalVector("_PostOutlineTint", outline.PostTint);
             command.SetGlobalVector("_BloomThreshold", outline.BloomThreshold);
             command.SetGlobalVector("_AlphaBlendAlphaParams", outline.AlphaBlend);
-            command.SetGlobalFloat("_GlobalMipBias", outline.GlobalMipBias);
+            command.SetGlobalFloat("_CorinGlobalMipBias", outline.GlobalMipBias);
             command.SetGlobalMatrix("_SceneWeatherParamsPart1", sceneWeatherParamsPart1);
             command.SetGlobalMatrix("_SceneFogParamsPart1", sceneFogParamsPart1);
             command.SetGlobalMatrix("_SceneFogParamsPart2", sceneFogParamsPart2);

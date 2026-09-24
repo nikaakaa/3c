@@ -1,5 +1,5 @@
 
-    float _GlobalMipBias;
+    float _CorinGlobalMipBias;
 
 
 
@@ -52,8 +52,8 @@ ShaderOutput main(float4 input0 : TEXCOORD0, float4 input1 : TEXCOORD1, float3 i
         r0.xy = ((r0.xx != 0u) ? v1.xy : v0.xy);
         r0.zw = asuint(mad(asfloat(r0.xy), asfloat(asuint((float2(_TransitionTex_ST.x, _TransitionTex_ST.y)))), asfloat(asuint((float2(_TransitionTex_ST.z, _TransitionTex_ST.w))))));
         r0.xy = asuint(mad(asfloat(r0.xy), asfloat(asuint((float2(_OverrideOutlineTex_ST.x, _OverrideOutlineTex_ST.y)))), asfloat(asuint((float2(_OverrideOutlineTex_ST.z, _OverrideOutlineTex_ST.w))))));
-        r0.z = asuint(_TransitionTex.SampleBias(sampler_TransitionTex, asfloat(r0.zw), asfloat(asuint((_GlobalMipBias)))).x);
-        r0.x = asuint(_OverrideOutlineTex.SampleBias(sampler_OverrideOutlineTex, asfloat(r0.xy), asfloat(asuint((_GlobalMipBias)))).x);
+        r0.z = asuint(_TransitionTex.SampleBias(sampler_TransitionTex, asfloat(r0.zw), asfloat(asuint((_CorinGlobalMipBias)))).x);
+        r0.x = asuint(_OverrideOutlineTex.SampleBias(sampler_OverrideOutlineTex, asfloat(r0.xy), asfloat(asuint((_CorinGlobalMipBias)))).x);
         r0.y = asuint((asfloat(asuint((_TransitionWidth))) + asfloat(0x3f800000u)));
         r0.y = asuint(mad(asfloat(asuint((_TransitionCompletion))), asfloat(r0.y), asfloat((asuint((_TransitionWidth)) ^ 0x80000000u))));
         r0.x = asuint(mad(asfloat(r0.z), asfloat(r0.x), asfloat((r0.y ^ 0x80000000u))));

@@ -21,7 +21,7 @@
     float4 _MainLightPosition;
     float4 _MainLightColor;
     float3 _WorldSpaceCameraPos;
-    float _GlobalMipBias;
+    float _CorinGlobalMipBias;
     int _RenderedEntityCount;
     float4 _AvatarMainLightColor;
     float _CharacterSampleTextureBias;
@@ -108,7 +108,7 @@ ShaderOutput main(float4 input0 : TEXCOORD0, float4 input1 : TEXCOORD1, float3 i
     v7.xyz = asuint(input8);
     v8.xyzw = asuint(input9);
     v9.x = (input10 ? 0xffffffffu : 0u);
-    r0.x = asuint((asfloat(asuint((_GlobalMipBias))) + asfloat(asuint((_CharacterSampleTextureBias)))));
+    r0.x = asuint((asfloat(asuint((_CorinGlobalMipBias))) + asfloat(asuint((_CharacterSampleTextureBias)))));
     r1.xyzw = asuint(_MainTex.SampleBias(zzz_linear_repeat_sampler, asfloat(v0.xy), asfloat(r0.x)).xyzw);
     r0.yzw = asuint((asfloat(r1.xyz) * asfloat(asuint((float3(_Color.x, _Color.y, _Color.z))))));
     r2.xyz = asuint(_LightTex.SampleBias(zzz_linear_repeat_sampler, asfloat(v0.zy), asfloat(r0.x)).xyw);

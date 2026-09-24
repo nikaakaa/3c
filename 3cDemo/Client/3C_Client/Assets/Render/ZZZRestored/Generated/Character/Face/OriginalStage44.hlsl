@@ -9,7 +9,7 @@
     float _is_apply_lut_character_on;
     float _PerObjectShadowOnFace;
     float _IsBlackCanvasOn;
-    float _GlobalMipBias;
+    float _CorinGlobalMipBias;
     float4 _AlphaBlendAlphaParams;
     int _RenderedEntityCount;
     float4 _AvatarMainLightColor;
@@ -119,7 +119,7 @@ ShaderOutput main(float4 input0 : SV_POSITION0, float4 input1 : TEXCOORD0, float
     r0.x = (((r0.y << 0x00000000u) & (0x00000001u << 0x00000000u)) | (r0.x & ~(0x00000001u << 0x00000000u)));
     r0.x = asuint((float)(r0.x));
     o2.z = asuint((asfloat(r0.x) * asfloat(0x3b808081u)));
-    r0.x = asuint((asfloat(asuint((_GlobalMipBias))) + asfloat(asuint((_CharacterSampleTextureBias)))));
+    r0.x = asuint((asfloat(asuint((_CorinGlobalMipBias))) + asfloat(asuint((_CharacterSampleTextureBias)))));
     r0.xyzw = asuint(_MainTex.SampleBias(zzz_linear_repeat_sampler, asfloat(v1.xy), asfloat(r0.x)).xyzw);
     r1.xy = ((asfloat(v6.ww) < asfloat(uint2(0x3f19999au, 0x3f4ccccdu))) ? 0xffffffffu : 0u);
     r2.xyzw = ((r1.yyyy != 0u) ? asuint((float4(_OutlineColor2.x, _OutlineColor2.y, _OutlineColor2.z, _OutlineColor2.w))) : asuint((float4(_OutlineColor.x, _OutlineColor.y, _OutlineColor.z, _OutlineColor.w))));

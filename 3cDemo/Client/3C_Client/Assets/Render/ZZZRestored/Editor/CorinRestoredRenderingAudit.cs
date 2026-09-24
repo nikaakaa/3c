@@ -131,7 +131,7 @@ namespace ZZZ.Rendering.Restored.Editor
             globals["_AvatarMainLightPosition"] = Vector(Shader.GetGlobalVector("_AvatarMainLightPosition"));
             foreach (var name in new[] { "_CharStyleParams", "_PostOutlineTint", "_BloomThreshold", "_AlphaBlendAlphaParams" })
                 globals[name] = Vector(Shader.GetGlobalVector(name));
-            globals["_GlobalMipBias"] = Shader.GetGlobalFloat("_GlobalMipBias");
+            globals["_CorinGlobalMipBias"] = Shader.GetGlobalFloat("_CorinGlobalMipBias");
             var entityRows = new JArray();
             foreach (var entity in entities)
             {

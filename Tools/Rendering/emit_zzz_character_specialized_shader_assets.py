@@ -8,6 +8,7 @@ from recover_zzz_shader import sha256
 
 def specialized_stage(source, entry):
     source = adapt_stage(source, entry)
+    source = source.replace("_GlobalMipBias", "_CorinGlobalMipBias")
     source = source.replace("SamplerState ZZZSampler_85 : register(s0);", "SamplerState zzz_linear_clamp_sampler;")
     source = source.replace("ZZZSampler_85", "zzz_linear_clamp_sampler")
     if entry == 2946:

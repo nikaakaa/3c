@@ -159,17 +159,19 @@ namespace ThirdPersonCharacter.Control.Rules
                 "WalkStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
                 "RunLoopToRunStopping" => MoveBelow(m_Read),
                 "RunStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
-                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 64d / 60d) && MoveAbove(m_Read),
                 "WalkStartToWalkStopping" => MoveBelow(m_Read),
                 "WalkStoppingToWalkStart" => MoveAbove(m_Read),
                 "RunStoppingToRunLoop" => MoveAbove(m_Read),
-                "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveBelow(m_Read),
+                "MovingTurnToRunStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 34d / 60d) && MoveBelow(m_Read),
                 "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
-                "MovingTurnToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "MovingTurnToMovingTurn" => MotionElapsed(m_State) >= Ticks(m_Context, 40d / 60d) && MoveAbove(m_Read) &&
+                    m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
+                    !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
                 _ => throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.")
             };
             Trace(
@@ -351,11 +353,11 @@ namespace ThirdPersonCharacter.Control.Rules
                     Transition("WalkStartToWalkStopping", WalkStart, WalkStopping, 1, 7),
                     Transition("WalkStoppingToWalkStart", WalkStopping, WalkStart, 1, 8),
                     Transition("RunStoppingToRunLoop", RunStopping, RunLoop, 1, 9),
-                    Transition("MovingTurnToWalkStopping", MovingTurn, WalkStopping, 0, 10),
+                    Transition("MovingTurnToRunStopping", MovingTurn, RunStopping, 0, 10),
                     Transition("WalkLoopToRunLoop", WalkLoop, RunLoop, 0, 11),
                     Transition("WalkStartToRunLoop", WalkStart, RunLoop, 100, 12),
                     Transition("RunLoopToMovingTurn", RunLoop, MovingTurn, 2, 13),
-                    Transition("MovingTurnToWalkLoop", MovingTurn, WalkLoop, 100, 14)
+                    Transition("MovingTurnToMovingTurn", MovingTurn, MovingTurn, 1, 14)
                 },
                 new[]
                 {

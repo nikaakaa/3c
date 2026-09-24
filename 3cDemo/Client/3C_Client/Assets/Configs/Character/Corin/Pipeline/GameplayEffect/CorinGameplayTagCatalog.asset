@@ -73,3 +73,9 @@ MonoBehaviour:
     m_ParentTag:
       m_Value:
     m_DebugCategory: Action
+  - m_TagId:
+      m_Value: Branch
+    m_DisplayName: Branch
+    m_ParentTag:
+      m_Value:
+    m_DebugCategory: Action

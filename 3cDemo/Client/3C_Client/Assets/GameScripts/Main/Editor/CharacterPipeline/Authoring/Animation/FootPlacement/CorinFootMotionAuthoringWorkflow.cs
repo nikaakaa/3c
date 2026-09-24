@@ -398,7 +398,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 target = AnimationClipNormalizationAuthoringService.CreateRootOffsetNormalizedCopy(
                     source,
-                    destinationPath);
+                    destinationPath,
+                    source.name == "Avatar_Female_Size01_Corin_Ani_TurnBack"
+                        ? LoadRuntimeCurveSource(source)
+                        : source);
                 AssetDatabase.SaveAssets();
             }
             if (binding.Clip != target)

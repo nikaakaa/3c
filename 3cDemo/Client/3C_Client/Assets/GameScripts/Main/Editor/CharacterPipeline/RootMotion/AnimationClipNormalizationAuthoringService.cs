@@ -9,10 +9,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.RootMotion
     {
         const string RootPath = "Bip001";
 
-        public static AnimationClip CreateRootOffsetNormalizedCopy(AnimationClip source, string assetPath)
+        public static AnimationClip CreateRootOffsetNormalizedCopy(
+            AnimationClip source,
+            string assetPath,
+            AnimationClip rootRotationSource)
         {
             if (!source)
                 throw new ArgumentNullException(nameof(source));
+            if (!rootRotationSource)
+                throw new ArgumentNullException(nameof(rootRotationSource));
             if (string.IsNullOrWhiteSpace(assetPath))
                 throw new ArgumentException("Animation output path is required.", nameof(assetPath));
             if (AssetDatabase.LoadMainAssetAtPath(assetPath))
@@ -46,8 +51,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.RootMotion
                 AnimationUtility.SetEditorCurve(destination, binding, curve);
             }
 
+            if (rootRotationSource != source)
+                CopyRootRotationCurves(rootRotationSource, destination);
             EditorUtility.SetDirty(destination);
             return destination;
+        }
+
+        public static void CopyRootRotationCurves(AnimationClip source, AnimationClip destination)
+        {
+            EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(source);
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                EditorCurveBinding binding = bindings[i];
+                if (binding.path != RootPath ||
+                    !binding.propertyName.StartsWith("m_LocalRotation.", StringComparison.Ordinal))
+                    continue;
+                AnimationUtility.SetEditorCurve(
+                    destination,
+                    binding,
+                    AnimationUtility.GetEditorCurve(source, binding));
+            }
+            EditorUtility.SetDirty(destination);
         }
     }
 }

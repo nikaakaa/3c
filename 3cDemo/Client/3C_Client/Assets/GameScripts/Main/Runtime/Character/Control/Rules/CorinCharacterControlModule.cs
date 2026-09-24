@@ -215,12 +215,17 @@ namespace ThirdPersonCharacter.Control.Rules
             }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
+                bool fromRush = m_Read.TryGetActiveAbilityInstanceId(RushAttack, out ulong rushInstanceId);
+                if (fromRush && !m_Read.IsAbilityWindowActive(RushAttack, "RushAttackHandoff"))
+                    return;
                 m_Output.SubmitAbility(new CharacterControlAbilityRequest(
                     source,
                     Attack,
                     s_AttackRequest,
                     true,
-                    s_ActionTarget));
+                    s_ActionTarget,
+                    replacementActionInstanceId: fromRush ? rushInstanceId : 0,
+                    activationEntryId: fromRush ? "Attack4" : string.Empty));
                 return;
             }
         }

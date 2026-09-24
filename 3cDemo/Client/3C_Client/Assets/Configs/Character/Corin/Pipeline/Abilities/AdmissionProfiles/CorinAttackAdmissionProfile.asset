@@ -30,6 +30,7 @@ MonoBehaviour:
     m_Any:
     - m_Value: Attack
     - m_Value: Dodge
+    - m_Value: Rush
     m_None: []
   m_TargetRequirement: 2
   m_MaxConcurrentInstances: 1

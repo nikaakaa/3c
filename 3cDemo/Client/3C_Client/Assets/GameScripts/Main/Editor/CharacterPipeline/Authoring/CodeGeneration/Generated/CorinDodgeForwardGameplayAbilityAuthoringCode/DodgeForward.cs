@@ -23,6 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.graph4 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph1, "49c3ae7850d26f945fc7ef1aed38c456", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.TimelineBody, "Decision RecoveryOpen");
             parts.graph5 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph4, "d01db78358894d4eb3ddc83d71fb61e8", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Timeline达到终止边界");
             parts.graph6 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "21b0165d-bd54-40f4-8610-9f8852be4e1a", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "DodgeForward State Body/StateRootCompleted");
+            parts.graph7 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph1, "3a0d9e26-ea37-44dc-9e90-32c354d7b786", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.TimelineBody, "Decision RushFollowup");
+            parts.graph8 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph7, "046f3890-7f48-403c-b963-d6dc1062c481", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "RushFollowup End");
             var node5 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillStateOnExitFlowNode), "4a1648fa-c157-43c8-a5a0-272ee43a87aa", "退出状态", new Vector2(120f, 460f));
             var node2 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillStateOnEnterFlowNode), "555d035e-3251-417d-83ac-c0b9c5d72314", "进入状态", new Vector2(120f, 60f));
             var node3 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillRootFlowNode), "a757928f-ae8b-489d-9f8e-bf586374e90a", "技能入口", new Vector2(120f, 260f));
@@ -49,6 +51,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var node25 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph5, typeof(BtsmtlSkillConditionResultFlowNode), "ae0d291d-cd16-422e-9e2e-d6df6f9a1a4a", null, new Vector2(600f, 180f));
             var node26 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph6, typeof(BtsmtlSkillStateRootCompletedFlowNode), "2eaafbfa-a850-4809-9fdd-e22b00780718", "状态主体已完成", new Vector2(-360f, 0f));
             var node27 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph6, typeof(BtsmtlSkillConditionResultFlowNode), "3f7f717a-3ccb-4fca-a0b1-f2011e236a0a", "条件结果", new Vector2(600f, 180f));
+            var rushRoot = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph7, typeof(BtsmtlSkillRootFlowNode), "2f674f08-df32-4f91-990e-fa649fb575f3", "技能入口", new Vector2(120f, 260f));
+            var rushSelector = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph7, typeof(BtsmtlSkillSelectorFlowNode), "a857d034-5232-4fd7-b862-392f4bf7b481", "窗口执行或结束", new Vector2(280f, 260f));
+            var rushSet = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph7, typeof(BtsmtlSkillBlackboardSetFlowNode), "4b47ec21-2e99-4a55-aa52-ed3cd2f6a158", "Set RushFollowup", new Vector2(360f, 260f));
+            var rushExit = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph7, typeof(BtsmtlSkillTimelineExitRequestFlowNode), "97e22dff-29da-4ca9-b988-ac65c8a22951", "结束片段", new Vector2(520f, 260f));
+            var rushTime = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph8, typeof(BtsmtlSkillTimelineTimeFlowNode), "305c199e-8041-4a93-9480-6478158ee98b", "Timeline时间", new Vector2(-360f, 0f));
+            var rushEnd = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph8, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), "91abbb22-f7b0-4ca5-8033-217d16956ba4", "到达结束时间", new Vector2(-100f, 0f));
+            var rushResult = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph8, typeof(BtsmtlSkillConditionResultFlowNode), "7dbde062-cd4f-4947-b623-5b8f713e70a9", "条件结果", new Vector2(600f, 180f));
             var timeline = BtsmtlSkillAuthoringCode.EnsureTimeline(parts.graph1, "b871bfc9-f182-473b-8c7f-be176b620394", "CorinDodgeForwardTimeline");
             parts.timelineData = timeline.Data;
             var timelineCatalog = TimelineTreeContractComposition.Create();
@@ -60,8 +69,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var clip2 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData, timelineCatalog, track2, "e9d429f1-595e-475a-b647-444a6e069c92", 0m, asset1);
             var track3 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData, timelineCatalog, typeof(MotionCurveTrack), "a0c961a6-0179-4f4d-8b75-76fa3a8bcd0a", "Motion Curve", TimelineExecutionDomain.Logic);
             var clip3 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData, timelineCatalog, track3, "ea9a052b-5407-4a22-b1c2-f5bbce6e31bc", 0m, asset2, 2.3500000000931322574615478516m, 0m, 0m, 0m);
+            var rushTrack = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData, timelineCatalog, typeof(TreeTrack), "6c30f307-83d1-4e59-8190-0a8374383fac", "Logic / Decision / RushFollowup", TimelineExecutionDomain.Logic);
+            var rushClip = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData, timelineCatalog, rushTrack, "24fbe662-062a-4790-886e-1dcbb01abd4b", 0.0666666666511446237564086914m, parts.graph7, 0.4m, 0m, 0m, 0m);
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph1, "4a7a79cd9fc14a8f807d3d9580548cc1", "RecoveryOpen", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Dodge/RecoveryOpen", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryOpen", "DodgeForwardRecoveryOpen", 7003UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph1, "d9ecf57b06514746a1eed7a5a7217a6b", "DodgeForwardIFrame", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Windows", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "IFrame", "DodgeForwardIFrame", 2UL));
+            BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph1, "74848fd0-786e-4874-8ac7-9baa039f1363", "RushFollowupOpen", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Dodge/RushFollowup", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RushFollowup", "DodgeForwardRushFollowup", 7004UL));
             BtsmtlSkillAuthoringContract.Apply(node4, new[] { new BtsmtlSkillAuthoringFieldValue("actionContext", null), new BtsmtlSkillAuthoringFieldValue("timelineId", timeline) });
             BtsmtlSkillAuthoringContract.Apply(node10, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "d9ecf57b06514746a1eed7a5a7217a6b"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "01974466-06fd-4295-a76e-74a85e118390"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringCode.SetValue(node10, "m_Value", true);
@@ -71,6 +83,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.SetValue(node20, "m_Value", true);
             BtsmtlSkillAuthoringContract.Apply(node18, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("end", "结束", parts.graph5, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("body", "执行", null, 0, ProgramAbortPolicy.None) }) });
             BtsmtlSkillAuthoringCode.SetValue(node24, "b", 2.35000014f);
+            BtsmtlSkillAuthoringContract.Apply(rushSet, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "74848fd0-786e-4874-8ac7-9baa039f1363"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "01974466-06fd-4295-a76e-74a85e118390"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
+            BtsmtlSkillAuthoringCode.SetValue(rushSet, "m_Value", true);
+            BtsmtlSkillAuthoringContract.Apply(rushSelector, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("end", "结束", parts.graph8, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("body", "执行", null, 0, ProgramAbortPolicy.None) }) });
+            BtsmtlSkillAuthoringCode.SetValue(rushEnd, "b", 0.4f);
             TimelineAuthoringPropertyContract.Apply(parts.timelineData, clip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, parts.graph2) });
             TimelineAuthoringPropertyContract.Apply(parts.timelineData, clip1, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, parts.graph4) });
             ((AnimationTrack)track2).SetAnimationChannelId(new AnimationChannelId("FullBodyAction"));
@@ -80,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineCurveChannelCatalog.Require("animation.ease-in").Replace(clip2, new AnimationCurve(new[] { new Keyframe(0f, 0f, 0f, 1.00000274f, 0f, 0f) { weightedMode = WeightedMode.None }, new Keyframe(0.9999977f, 1f, 1.00000274f, 0f, 0f, 0f) { weightedMode = WeightedMode.None } }) { preWrapMode = WrapMode.ClampForever, postWrapMode = WrapMode.ClampForever });
             TimelineCurveChannelCatalog.Require("animation.ease-out").Replace(clip2, new AnimationCurve(new[] { new Keyframe(0f, 0f, 0f, 1.00000274f, 0f, 0f) { weightedMode = WeightedMode.None }, new Keyframe(0.9999977f, 1f, 1.00000274f, 0f, 0f, 0f) { weightedMode = WeightedMode.None } }) { preWrapMode = WrapMode.ClampForever, postWrapMode = WrapMode.ClampForever });
             TimelineAuthoringPropertyContract.Apply(parts.timelineData, clip3, new[] { new TimelineAuthoringPropertyValue("curveId", TimelineAuthoringPropertyKind.Text, "DodgeForward"), new TimelineAuthoringPropertyValue("sourceCurve", TimelineAuthoringPropertyKind.Object, asset2), new TimelineAuthoringPropertyValue("sourceEndTime", TimelineAuthoringPropertyKind.Float, 2.35f) });
+            TimelineAuthoringPropertyContract.Apply(parts.timelineData, rushClip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, parts.graph7) });
             var edge1 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph1, node3, "Output", node4, "Input", "1823df30-39a2-4088-9b6d-6e4f2a55cf53");
             var edge2 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph2, node7, "Output", node8, "Input", "07c227aa25aa434ca1dd5d7b3d8faf81");
             var edge3 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph2, node8, "end", node9, "Input", "bed077f00df14bd8b9610cfb9f7b7ca0");
@@ -92,6 +109,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var edge10 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph5, node23, "m_Output", node24, "a", "f5fb71f193504ab8b71932ca274c1bea");
             var edge11 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph5, node24, "Value", node25, "m_Result", "dd2625a662174d599a2e812ea5001f00");
             var edge12 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph6, node26, "m_Output", node27, "m_Result", "308a15ae-b5f5-49ab-ac56-3c070dea8130");
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph7, rushRoot, "Output", rushSelector, "Input", "3c90d638-bf76-4f17-9f96-35270e8cc02b");
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph7, rushSelector, "body", rushSet, "Input", "70ccc846-181f-435b-93b5-f2b34e6de9fa");
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph7, rushSelector, "end", rushExit, "Input", "8db9bd6f-e8f0-4a51-a0bd-4e714ef449c9");
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph8, rushTime, "m_Output", rushEnd, "a", "02108c25-595d-44f0-9cd7-a7dec2ce5cbb");
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph8, rushEnd, "Value", rushResult, "m_Result", "d9e333a4-a954-44ff-81de-2a2e63bc8750");
             return parts;
         }
 
@@ -103,6 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             internal BtsmtlSkillFlowGraph graph4;
             internal BtsmtlSkillFlowGraph graph5;
             internal BtsmtlSkillFlowGraph graph6;
+            internal BtsmtlSkillFlowGraph graph7;
+            internal BtsmtlSkillFlowGraph graph8;
             internal TimelineData timelineData;
         }
     }

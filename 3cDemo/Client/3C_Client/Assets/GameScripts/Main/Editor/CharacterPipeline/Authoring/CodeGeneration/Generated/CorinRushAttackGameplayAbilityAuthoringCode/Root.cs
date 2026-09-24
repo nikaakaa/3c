@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             endRule1.Configure(GameplayAbilityEndTrigger.InterruptRequested, ActionLifecycleTransitionType.Interrupt, "", "TreeInterrupt");
             var endRule2 = new GameplayAbilityEndRule();
             endRule2.Configure(GameplayAbilityEndTrigger.ExecutionCompleted, ActionLifecycleTransitionType.Complete, "", "TimelineCompleted");
-            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), asset3, new[] { parts.asset, asset1, asset2 }, new[] { endRule, endRule1, endRule2 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Rush", true, "", "", false);
+            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), asset3, new[] { parts.asset, asset1, asset2 }, new[] { endRule, endRule1, endRule2 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Attack", true, "", "", false);
             BtsmtlSkillAuthoringContract.Apply(node1, new[] { new BtsmtlSkillAuthoringFieldValue("graphId", parts.stateMachine) });
             var edge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph, node, "Output", node1, "Input", "af4c2a98-eee8-05c5-2abf-0c7134d5c2bc");
             parts.stateEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)state, (BtsmtlSkillNativeState)parts.state1, "d1668a05-e3af-b894-ddfb-9e848b7ce014");
@@ -45,18 +45,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return parts;
         }
 
-        static void FinalizeAuthoring(RootParts rootParts, Attack_RushParts attack_Rush, RushAttackParts rushAttack, Attack_Rush_ExplodeParts attack_Rush_Explode, Attack_Rush_EndParts attack_Rush_End, BtsmtlAuthoringGenerationContext context)
+        static void FinalizeAuthoring(RootParts rootParts, RushAttackParts rushAttack, Attack_Rush_ExplodeParts attack_Rush_Explode, Attack_Rush_EndParts attack_Rush_End, BtsmtlAuthoringGenerationContext context)
         {
             BtsmtlSkillAuthoringCode.ConfigureNativeState((BtsmtlSkillNativeState)rootParts.state1, rushAttack.graph2);
             BtsmtlSkillAuthoringCode.ConfigureNativeState((BtsmtlSkillNativeState)rootParts.state2, rushAttack.graph5);
             BtsmtlSkillAuthoringCode.ConfigureNativeState((BtsmtlSkillNativeState)rootParts.state3, rushAttack.graph7);
-            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge, attack_Rush.graph1, 0, ProgramAbortPolicy.None, 0);
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge, null, 0, ProgramAbortPolicy.None, 0);
             BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge1, attack_Rush_Explode.graph3, 0, ProgramAbortPolicy.None, 0);
             BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge2, attack_Rush_Explode.graph4, 0, ProgramAbortPolicy.None, 1);
             BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge3, attack_Rush_End.graph6, 0, ProgramAbortPolicy.None, 1);
             BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge4, attack_Rush_End.graph8, 0, ProgramAbortPolicy.None, 0);
             BtsmtlSkillAuthoringCode.PruneFlowGraph(rootParts.graph, new[] { "bb92e55c-4056-69fd-25aa-353be1336431", "39ade2b9-4e24-a29e-abfb-a81e84db5277" }, new[] { "af4c2a98-eee8-05c5-2abf-0c7134d5c2bc" });
-            BtsmtlSkillAuthoringCode.PruneFlowGraph(attack_Rush.graph1, new[] { "b939103e-8e47-3d2e-ad8f-39f34479975d", "2d98c02f-cc3a-7814-4bc1-7b199da0119d" }, new[] { "32a058e4-3e89-1366-edf0-31e3ff555bbd" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(rushAttack.graph2, new[] { "446e389c-c5c9-4f32-8214-84ef547b42d4", "2632c6ba-e2dc-f9df-7bd3-71336f057a46", "55b9f2ca-8bd1-2e45-b52f-33fed7e4aaaa", "3ec211ee-05cc-4ef4-a5fb-9024caae0dd6" }, new[] { "a63a8eab-4b5b-6407-3239-83270dbf9e41" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(attack_Rush_Explode.graph3, new[] { "b68ce95b-79e9-c12c-17ed-73c7105d4405", "bcf27c63-c7dd-6f20-8e3a-6d0ced1f17c8", "f8591ee3-7002-f816-c60e-39f0a20a6c1b", "1914af7e-8470-7b2c-1945-ec3689ec90f1", "ccdc4afe-9a1a-c18a-f109-3c6b1aa8534e" }, new[] { "c6c5c063-cad9-40c7-82dc-a2fd35fbaeda", "6a4c65f0-062b-2154-92d8-87d2a68a20bb", "039e56d0-1b64-91ed-095b-2019f6cf8c7e", "85c2dfc3-df48-aa7e-8462-c2b1c0bd50c8" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(attack_Rush_Explode.graph4, new[] { "fb3bb13e-f4f3-65e2-234c-6848c7709a1c", "02412cb7-edc0-80ef-224d-487968aa253f" }, new[] { "6ada550c-6e77-a300-675b-1857c7dd1c6b" });
@@ -66,7 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneFlowGraph(attack_Rush_End.graph8, new[] { "988af7b5-38ee-e0d0-0196-1811845991c9", "df2e016c-4ec6-02b6-c354-49e0386285b5" }, new[] { "df7a33bd-8f2d-9a7f-fcd4-13a9a2247d11" });
             BtsmtlSkillAuthoringCode.PruneNativeStateMachine(rootParts.stateMachine, new[] { "4b7150eb-050a-2929-3660-b52314306ed3", "1ff0e67d-fb55-144e-29a5-cd3187254d75", "ed6a3eba-d3f2-0d8d-c8c4-a874e9f5f731" }, new[] { "d1668a05-e3af-b894-ddfb-9e848b7ce014", "64c2c918-d608-8b33-5233-48f2aadde1af", "c9ccc511-57a1-4c24-0673-13688d712861", "242990af-270b-4fb3-efe6-cea7e6daa02c", "a7a9a9b4-bfe5-8bac-3dd3-2c8cad0d8df9" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(rootParts.graph, Array.Empty<string>());
-            BtsmtlSkillAuthoringCode.PruneBlackboard(attack_Rush.graph1, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(rushAttack.graph2, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack_Rush_Explode.graph3, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(attack_Rush_Explode.graph4, Array.Empty<string>());

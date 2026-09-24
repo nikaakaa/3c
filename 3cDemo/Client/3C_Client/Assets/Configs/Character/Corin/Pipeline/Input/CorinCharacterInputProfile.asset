@@ -24,10 +24,10 @@ MonoBehaviour:
     m_ValueType: 2
     m_Vector2ConflictPolicy: 0
     m_SourceAction: {fileID: 11400000, guid: 50ae9dbcb8b780942864fce5bf43a906, type: 2}
-  - m_InputValueId: RushHeld
+  - m_InputValueId: AttackHeld
     m_ValueType: 0
     m_Vector2ConflictPolicy: 0
-    m_SourceAction: {fileID: 11400000, guid: b05734b8439b44cb8fba86324a242f65, type: 2}
+    m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
   m_ActionRequests:
   - m_RequestId: Attack
     m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
@@ -36,11 +36,6 @@ MonoBehaviour:
     m_TimingClass: 2
   - m_RequestId: Dodge
     m_SourceAction: {fileID: 11400000, guid: 7f4d7ad1b0794b64aa322b392f77bdb1, type: 2}
-    m_BufferSeconds: 0.2
-    m_Priority: 100
-    m_TimingClass: 1
-  - m_RequestId: Rush
-    m_SourceAction: {fileID: 11400000, guid: b05734b8439b44cb8fba86324a242f65, type: 2}
     m_BufferSeconds: 0.2
     m_Priority: 100
     m_TimingClass: 1

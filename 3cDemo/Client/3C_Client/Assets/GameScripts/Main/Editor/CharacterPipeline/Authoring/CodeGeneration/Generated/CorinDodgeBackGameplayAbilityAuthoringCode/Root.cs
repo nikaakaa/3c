@@ -50,15 +50,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph4, new[] { "d52c4af5-4427-4a97-8234-518f2c15d57a", "2c4bb2f9-dc4a-4d9e-98b5-835b1f42c0e5", "0ca724f697c44a02895828446c945231", "248adaf0e46e48b88f0f5bbbde349b7b", "14ae0b1b-d797-423a-ae5f-4e48a32b5ff1", "bac2516e-ac8f-45a4-8e6d-da36c659c790", "f6e4ecf3-e1b7-4e61-95da-c0abb154fa94" }, new[] { "8c6c026b56c04e76a67ff587d998ba15", "08ec4e53cdfb4163b2ccbded8ac1dfdc", "2b02e13ce02a4414aa4df24f710e46e7" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph5, new[] { "de79ea08c1224ee1a9f46276271b9b45", "76adbe4f8ec9495b9e70f9260703dc9d", "b7268f50-070b-4f6c-b1fc-8a598449acf8" }, new[] { "b5194d47191c4061b679e60da1b24f0e", "ce6b54d82409456f8b3b4ba10dc76675" });
             BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph6, new[] { "b4b30de0-f2a9-4145-8a74-376a9fcb4ca8", "12d56e7c-5437-4a5f-bed0-c0c5c22ccb75" }, new[] { "797b1212-00ef-4290-9fb4-17258e039be7" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph7, new[] { "6c9c458e-ecf3-4b27-81c3-5aebaad59b1f", "72f78e09-f3eb-4255-a886-9b33ee5a6162", "0269e24a-8e68-4980-beeb-0ecb8df591a9", "7518ce30-03c3-4ef8-a2bb-328e0bcdc9fb" }, new[] { "e708a2d6-e6f3-4a31-9866-ba275d1b79e0", "e56e5624-71d5-48ae-9258-4a4fea95b49a", "cadfaf92-a0a6-412e-a889-d7b80ca24cca" });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(dodgeBack.graph8, new[] { "8ec17d83-4a59-4e68-8a69-193808b0d4a9", "263412d3-f806-4d94-8fd7-5a9b601bee65", "a811fd97-9cb9-4612-9c19-1f2f78da8377" }, new[] { "f6ac3c52-2d35-47e3-b251-2c3504ee9b86", "387e40f2-9f86-45d9-99bb-0b2255a6584e" });
             BtsmtlSkillAuthoringCode.PruneNativeStateMachine(rootParts.stateMachine, new[] { "e376c542-fd18-4a79-bd6c-df249bc626e0" }, new[] { "027effc7-ec6b-453c-90a5-cedb9418730a", "56b68cd3-0249-4f8f-9af2-06c451584b84" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(rootParts.graph, Array.Empty<string>());
-            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph1, new[] { "066d593b6cd64cdb9de608744b830ca3", "131816a77d7344d7b03d11917cb9c75d" });
+            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph1, new[] { "066d593b6cd64cdb9de608744b830ca3", "131816a77d7344d7b03d11917cb9c75d", "03fdc83e-30b7-45c7-b70e-95f739be6a84" });
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph2, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph3, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph4, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph5, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph6, Array.Empty<string>());
-            BtsmtlSkillAuthoringCode.PruneTimeline(dodgeBack.timelineData, new[] { "82f04395-f39f-487a-8112-e45882a37deb", "8f2a9050-893a-41e1-be05-57312ab21153", "a636f440-208c-47db-88c1-afe9792423df", "00890b6c-bfe3-bf86-4efa-bf6596ca43bd" }, new[] { "b0ee4319-922b-410e-8c0c-b4fe70eb7504", "ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d", "180ec5ff-8aca-43b2-93aa-32d2354b4851", "b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a" }, Array.Empty<string>(), Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph7, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneBlackboard(dodgeBack.graph8, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneTimeline(dodgeBack.timelineData, new[] { "82f04395-f39f-487a-8112-e45882a37deb", "8f2a9050-893a-41e1-be05-57312ab21153", "a636f440-208c-47db-88c1-afe9792423df", "00890b6c-bfe3-bf86-4efa-bf6596ca43bd", "3fc035a9-ca95-4341-9a1e-0c66c3862515" }, new[] { "b0ee4319-922b-410e-8c0c-b4fe70eb7504", "ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d", "180ec5ff-8aca-43b2-93aa-32d2354b4851", "b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a", "40c2fb5b-80c8-4413-af51-59ddbc8ad1ad" }, Array.Empty<string>(), Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimelineMarkers(dodgeBack.timelineData, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.BindAbilityRoot(context, rootParts.graph);
         }

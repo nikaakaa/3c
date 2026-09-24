@@ -44,7 +44,7 @@ MonoBehaviour:
     m_TargetInputValueId: 
     m_TargetKey: 
   - m_Ability: {fileID: 11400000, guid: e615f6e3ef8925c40ae7da95042b346a, type: 2}
-    m_SourceInputRequestId: Rush
+    m_SourceInputRequestId: Attack
     m_ConsumeSourceInputRequest: 1
     m_TargetInputValueId: 
     m_TargetKey: 

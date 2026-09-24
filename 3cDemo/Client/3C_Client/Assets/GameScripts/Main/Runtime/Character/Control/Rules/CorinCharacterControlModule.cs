@@ -30,9 +30,9 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly SimulationInputValueId s_MoveAxis = new SimulationInputValueId("MoveAxis");
         static readonly SimulationInputValueId s_LookAxis = new SimulationInputValueId("LookAxis");
         static readonly string s_AttackRequest = "Attack";
-        static readonly string s_RushRequest = "Rush";
         static readonly string s_DodgeRequest = "Dodge";
         static readonly string s_ActionTarget = "ActionTarget";
+        static readonly string s_DodgeRushFollowupWindow = "RushFollowup";
         static readonly string s_RushHandoffWindow = "RushAttackHandoff";
         static readonly string s_RushHandoffEntry = "Attack4";
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
@@ -206,18 +206,11 @@ namespace ThirdPersonCharacter.Control.Rules
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
-            if (m_Read.HasInputRequest(s_RushRequest))
-            {
-                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
-                    source,
-                    RushAttack,
-                    s_RushRequest,
-                    true));
-                return;
-            }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
-                if (m_Read.IsAbilityActive(RushAttack))
+                if (m_Read.IsAbilityActive(RushAttack) ||
+                    m_Read.IsAbilityActive(DodgeForward) ||
+                    m_Read.IsAbilityActive(DodgeBack))
                     return;
                 SubmitAttack(stateId, 0, string.Empty);
                 return;
@@ -226,6 +219,16 @@ namespace ThirdPersonCharacter.Control.Rules
 
         public void ResolveAbilityOutputs()
         {
+            if (m_Read.HasInputRequest(s_AttackRequest))
+            {
+                CharacterControlStateId stateId = m_State.ReadState(s_ActiveState);
+                if (m_Read.TryGetActiveAbilityInstanceId(DodgeForward, out ulong forwardInstanceId) &&
+                    m_Read.IsAbilityWindowActive(DodgeForward, s_DodgeRushFollowupWindow))
+                    SubmitRushAttack(stateId, forwardInstanceId);
+                else if (m_Read.TryGetActiveAbilityInstanceId(DodgeBack, out ulong backInstanceId) &&
+                         m_Read.IsAbilityWindowActive(DodgeBack, s_DodgeRushFollowupWindow))
+                    SubmitRushAttack(stateId, backInstanceId);
+            }
             if (MoveAbove(m_Read))
             {
                 CharacterControlStateId stateId = m_State.ReadState(s_ActiveState);
@@ -252,6 +255,14 @@ namespace ThirdPersonCharacter.Control.Rules
                 s_ActionTarget,
                 replacementActionInstanceId: replacementActionInstanceId,
                 activationEntryId: activationEntryId));
+
+        void SubmitRushAttack(CharacterControlStateId stateId, ulong dodgeInstanceId) =>
+            m_Output.SubmitAbility(new CharacterControlAbilityRequest(
+                Source(stateId),
+                RushAttack,
+                s_AttackRequest,
+                true,
+                replacementActionInstanceId: dodgeInstanceId));
 
         void ResumeRunningAfterDodge(CharacterControlStateId stateId, CharacterSkillId ability)
         {

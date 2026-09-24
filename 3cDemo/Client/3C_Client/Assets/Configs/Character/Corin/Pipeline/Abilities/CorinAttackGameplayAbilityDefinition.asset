@@ -4446,7 +4446,7 @@ MonoBehaviour:
         m_SelfEaseInTimeRaw: 0
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
-        Clip: {fileID: 7400000, guid: 6437129dbd005054ba50336a44c4d4e3, type: 2}
+        Clip: {fileID: 7400000, guid: cd250c0fc9eb27a4080dd34b0122573d, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2

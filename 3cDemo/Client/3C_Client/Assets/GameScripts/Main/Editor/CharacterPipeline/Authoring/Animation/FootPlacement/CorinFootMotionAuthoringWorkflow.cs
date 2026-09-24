@@ -245,9 +245,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPlacementAnalysisSource source,
             IReadOnlyList<CorinFootMotionPair> pairs)
         {
-            CharacterFootMotionReferenceBinding[] bindings = pairs
-                .Select(value => Pair(value.Target, value.MotionReference))
-                .ToArray();
+            var bindings = new List<CharacterFootMotionReferenceBinding>(source.MotionReferences.Count + pairs.Count);
+            var targets = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                CorinFootMotionPair pair = pairs[i];
+                targets.Add(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(pair.Target)));
+                bindings.Add(Pair(pair.Target, pair.MotionReference));
+            }
+            for (int i = 0; i < source.MotionReferences.Count; i++)
+            {
+                CharacterFootMotionReferenceBinding binding = source.MotionReferences[i];
+                if (!targets.Contains(binding.TargetClipAssetGuid))
+                    bindings.Add(binding);
+            }
             AnimationClip calibrationPreview = pairs
                 .SingleOrDefault(value => string.Equals(
                     value.MotionReference.name,

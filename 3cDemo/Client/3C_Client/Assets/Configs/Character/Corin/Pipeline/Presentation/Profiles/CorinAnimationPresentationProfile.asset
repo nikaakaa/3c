@@ -469,7 +469,7 @@ MonoBehaviour:
     m_TransformPrecision: 0.01
     m_ScalePrecision: 0.01
     m_RotationPrecisionDegrees: 0.5
-    m_ScalarPrecision: 0.001
+    m_ScalarPrecision: 0.04
     m_ShellDistance: 3
     m_OptimizeLoops: 0
     m_EnableDatabase: 1

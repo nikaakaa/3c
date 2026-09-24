@@ -87,9 +87,6 @@ MonoBehaviour:
   - m_Slot: {fileID: -5849264378725478179, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}
-  - m_Slot: {fileID: 2906013293782627653, guid: 00531e79abbeb524ebc08428efbd0a88,
-      type: 2}
-    m_Resource: {fileID: 11400000, guid: e66d749fe12369343a053c527dbf5aaa, type: 2}
   m_SourceResourceBindings:
   - m_AuthoringClip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
     m_Backend: 2

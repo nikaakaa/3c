@@ -141,14 +141,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string type = BtsmtlAuthoringCodeSyntax.TypeName(slot.GetType());
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
-                    $"var {variable} = BtsmtlPoseAuthoringCode.CreateSourceSlot<{type}>({BtsmtlAuthoringCodeSyntax.StringLiteral(slot.name)});");
+                    $"var {variable} = BtsmtlPoseAuthoringCode.CreateSourceSlot<{type}>(context, {BtsmtlAuthoringCodeSyntax.StringLiteral(slot.name)});");
             }
             foreach (CharacterPoseResourceSlot slot in resourceSlots)
             {
                 string variable = context.RequireVariable(slot, slot.name);
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
-                    $"var {variable} = BtsmtlPoseAuthoringCode.CreateResourceSlot({EnumLiteral(typeof(CharacterPoseResourceKind), slot.Kind)}, {BtsmtlAuthoringCodeSyntax.StringLiteral(slot.name)});");
+                    $"var {variable} = BtsmtlPoseAuthoringCode.CreateResourceSlot(context, {EnumLiteral(typeof(CharacterPoseResourceKind), slot.Kind)}, {BtsmtlAuthoringCodeSyntax.StringLiteral(slot.name)});");
             }
             foreach (CharacterPoseCanvasGraph graph in graphs)
             {

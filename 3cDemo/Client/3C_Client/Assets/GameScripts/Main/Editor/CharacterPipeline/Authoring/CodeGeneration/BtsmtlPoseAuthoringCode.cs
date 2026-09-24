@@ -12,11 +12,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     public static class BtsmtlPoseAuthoringCode
     {
-        public static T CreateSourceSlot<T>(string name)
+        public static T CreateSourceSlot<T>(
+            BtsmtlAuthoringGenerationContext context,
+            string name)
             where T : CharacterPresentationPoseSourceSlot
         {
             if (typeof(T).IsAbstract)
                 throw new InvalidOperationException($"Pose Source Slot type '{typeof(T).FullName}' is abstract.");
+            CharacterPresentationPoseGraphAsset asset =
+                AssetDatabase.LoadAssetAtPath<CharacterPresentationPoseGraphAsset>(context.OutputAssetPath);
+            CharacterPresentationPoseSourceSlot existing = asset?.SourceSlots
+                .SingleOrDefault(value => value && string.Equals(value.name, name, StringComparison.Ordinal));
+            if (existing)
+                return existing as T ?? throw new InvalidOperationException(
+                    $"Pose Source Slot '{name}' has a different type.");
             T slot = ScriptableObject.CreateInstance<T>();
             slot.name = string.IsNullOrWhiteSpace(name) ? typeof(T).Name : name.Trim();
             slot.RequireValid();
@@ -24,9 +33,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         }
 
         public static CharacterPoseResourceSlot CreateResourceSlot(
+            BtsmtlAuthoringGenerationContext context,
             CharacterPoseResourceKind kind,
             string name)
         {
+            CharacterPresentationPoseGraphAsset asset =
+                AssetDatabase.LoadAssetAtPath<CharacterPresentationPoseGraphAsset>(context.OutputAssetPath);
+            CharacterPoseResourceSlot existing = asset?.ResourceSlots
+                .SingleOrDefault(value => value && string.Equals(value.name, name, StringComparison.Ordinal));
+            if (existing)
+            {
+                if (existing.Kind != kind)
+                    throw new InvalidOperationException($"Pose Resource Slot '{name}' has a different kind.");
+                return existing;
+            }
             CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
             slot.name = string.IsNullOrWhiteSpace(name) ? kind.ToString() : name.Trim();
             slot.RequireValid();
@@ -115,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
             else
             {
-                owner.ReplacePoseGraph(graphValues[0]);
+                UpdateGraph(asset.Graph, graphValues[0]);
             }
 
             foreach (CharacterPoseCanvasGraph current in asset.GraphCatalog.ToArray())
@@ -126,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             foreach (CharacterPoseCanvasGraph graph in graphValues.Skip(1))
             {
                 if (asset.TryGetGraph(graph.GraphId, out CharacterPoseCanvasGraph current))
-                    owner.ReplacePoseGraph(graph);
+                    UpdateGraph(current, graph);
                 else
                 {
                     Undo.RegisterCreatedObjectUndo(graph, "创建 Pose 子图");
@@ -136,23 +156,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             foreach (CharacterPresentationPoseSourceSlot slot in sourceValues)
             {
+                if (asset.SourceSlots.Contains(slot))
+                    continue;
                 Undo.RegisterCreatedObjectUndo(slot, "创建 Pose Source Slot");
                 owner.ApplyGraphCatalogMutation(new CreatePoseSourceSlotMutation(outputPath, slot));
             }
             foreach (CharacterPoseResourceSlot slot in resourceValues)
             {
+                if (asset.ResourceSlots.Contains(slot))
+                    continue;
                 Undo.RegisterCreatedObjectUndo(slot, "创建 Pose Resource Slot");
                 owner.ApplyGraphCatalogMutation(new CreatePoseResourceSlotMutation(outputPath, slot));
             }
 
             RebindSourceSlots(profile, sourceValues, sourceIndices);
             RebindResourceSlots(profile, resourceValues, resourceIndices);
+            var desiredResourceSlots = new HashSet<CharacterPoseResourceSlot>(resourceValues);
+            foreach (CharacterPoseResourceSlot slot in asset.ResourceSlots.ToArray())
+            {
+                if (!desiredResourceSlots.Contains(slot))
+                    owner.ApplyGraphCatalogMutation(new DeletePoseResourceSlotMutation(outputPath, slot));
+            }
             profile.SetPresentationGraph(asset, profile.RigDefinition);
             EditorUtility.SetDirty(profile);
 
             ApplyStateMachineLayouts(owner, asset, stateMachineLayouts);
             EditorUtility.SetDirty(asset);
             return asset;
+        }
+
+        static void UpdateGraph(
+            CharacterPoseCanvasGraph current,
+            CharacterPoseCanvasGraph candidate)
+        {
+            if (!string.Equals(current.ContentRevision, candidate.ContentRevision, StringComparison.Ordinal))
+            {
+                current.ApplyAuthoringState(candidate);
+                current.SelfSerialize();
+                EditorUtility.SetDirty(current);
+            }
+            UnityEngine.Object.DestroyImmediate(candidate);
         }
 
         static void RebindSourceSlots(
@@ -169,7 +212,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 if ((uint)index >= (uint)bindings.Length)
                     throw new InvalidOperationException($"Pose Source Slot '{slots[i].name}' binding index {index} is invalid.");
                 CharacterPresentationPoseSourceBinding binding = bindings[index];
-                ConfigureSourceBinding(binding, slots[i]);
+                if (!ReferenceEquals(binding.Slot, slots[i]))
+                    ConfigureSourceBinding(binding, slots[i]);
                 next.Add(binding);
             }
             profile.SetPoseSourceBindings(next.ToArray());
@@ -221,7 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 CharacterPoseResourceBinding binding = bindings[index];
                 if (binding == null)
                     throw new InvalidOperationException($"Pose Resource Slot '{slots[i].name}' binding is missing.");
-                binding.Configure(slots[i], binding.Resource);
+                if (!ReferenceEquals(binding.Slot, slots[i]))
+                    binding.Configure(slots[i], binding.Resource);
                 next.Add(binding);
             }
             profile.SetPoseResourceBindings(next.ToArray());

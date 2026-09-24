@@ -90,6 +90,10 @@ MonoBehaviour:
     m_TransitionType: 2
     m_ActionWindowType: 
     m_Reason: TimelineCompleted
+  - m_Trigger: 4
+    m_TransitionType: 3
+    m_ActionWindowType: RushMoveExit
+    m_Reason: RushMovement
   m_SubgraphDependencies: []
   m_AllowedFollowUpAbilityIds: []
   m_AbilityGraph: {fileID: -5152829814013750154}

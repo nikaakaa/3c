@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_DodgeRushFollowupWindow = "RushFollowup";
         static readonly string s_RushHandoffWindow = "RushAttackHandoff";
         static readonly string s_RushHandoffEntry = "Attack4";
+        static readonly string s_RushMoveExitWindow = "RushMoveExit";
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
         static readonly string s_WalkLoopMotion = "locomotion:corin:walk-loop";
         static readonly string s_RunLoopMotion = "locomotion:corin:run-loop";
@@ -236,17 +237,19 @@ namespace ThirdPersonCharacter.Control.Rules
                          m_Read.IsAbilityWindowActive(DodgeBack, s_DodgeRushFollowupWindow))
                     SubmitRushAttack(stateId, backInstanceId);
             }
-            if (MoveAbove(m_Read))
-            {
-                CharacterControlStateId stateId = m_State.ReadState(s_ActiveState);
-                ResumeRunningAfterDodge(stateId, DodgeForward);
-                ResumeRunningAfterDodge(stateId, DodgeBack);
-            }
             if (m_Read.HasInputRequest(s_AttackRequest) &&
                 m_Read.TryGetActiveAbilityInstanceId(RushAttack, out ulong rushInstanceId) &&
                 m_Read.IsAbilityWindowActive(RushAttack, s_RushHandoffWindow))
             {
                 SubmitAttack(m_State.ReadState(s_ActiveState), rushInstanceId, s_RushHandoffEntry);
+                return;
+            }
+            if (MoveAbove(m_Read))
+            {
+                CharacterControlStateId stateId = m_State.ReadState(s_ActiveState);
+                ResumeRunningAfterDodge(stateId, DodgeForward);
+                ResumeRunningAfterDodge(stateId, DodgeBack);
+                ResumeRunningAfterRush(stateId);
             }
         }
 
@@ -279,6 +282,17 @@ namespace ThirdPersonCharacter.Control.Rules
             m_Output.SubmitAbilityStop(new CharacterControlAbilityStopRequest(
                 Source(stateId), ability, CharacterControlAbilityStopMode.Graceful,
                 "DodgeRecoveryMovement", instanceId, "RecoveryOpen"));
+            m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
+        }
+
+        void ResumeRunningAfterRush(CharacterControlStateId stateId)
+        {
+            if (!m_Read.TryGetActiveAbilityInstanceId(RushAttack, out ulong instanceId) ||
+                !m_Read.IsAbilityWindowActive(RushAttack, s_RushMoveExitWindow))
+                return;
+            m_Output.SubmitAbilityStop(new CharacterControlAbilityStopRequest(
+                Source(stateId), RushAttack, CharacterControlAbilityStopMode.Graceful,
+                "RushMovement", instanceId, s_RushMoveExitWindow));
             m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
         }
 

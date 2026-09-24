@@ -34,7 +34,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             endRule1.Configure(GameplayAbilityEndTrigger.InterruptRequested, ActionLifecycleTransitionType.Interrupt, "", "TreeInterrupt");
             var endRule2 = new GameplayAbilityEndRule();
             endRule2.Configure(GameplayAbilityEndTrigger.ExecutionCompleted, ActionLifecycleTransitionType.Complete, "", "TimelineCompleted");
-            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), asset3, new[] { parts.asset, asset1, asset2 }, new[] { endRule, endRule1, endRule2 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Attack", true, "", "", false);
+            var endRule3 = new GameplayAbilityEndRule();
+            endRule3.Configure(GameplayAbilityEndTrigger.ActionWindowClosed, ActionLifecycleTransitionType.Cancel, "RushMoveExit", "RushMovement");
+            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), asset3, new[] { parts.asset, asset1, asset2 }, new[] { endRule, endRule1, endRule2, endRule3 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Attack", true, "", "", false);
             BtsmtlSkillAuthoringContract.Apply(node1, new[] { new BtsmtlSkillAuthoringFieldValue("graphId", parts.stateMachine) });
             var edge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph, node, "Output", node1, "Input", "af4c2a98-eee8-05c5-2abf-0c7134d5c2bc");
             parts.stateEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)state, (BtsmtlSkillNativeState)parts.state1, "d1668a05-e3af-b894-ddfb-9e848b7ce014");

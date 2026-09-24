@@ -585,6 +585,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     PrepareTimelineMutation(timeline);
                     timeline.ApplyModify(() => timeline.MoveClip(catalog, existing, track), "移动Timeline片段到目标轨道");
                 }
+                if (existing is BTSMTL.Timeline.AnimationClip animation &&
+                    referenceObject is UnityEngine.AnimationClip source &&
+                    animation.Clip != source)
+                {
+                    PrepareTimelineMutation(timeline);
+                    timeline.ApplyModify(() =>
+                    {
+                        animation.Clip = source;
+                        timeline.Init();
+                    }, "更新Timeline动画片段素材");
+                }
                 ConfigureClipSegment(existing, startSeconds, TimelineAuthoringPropertyContract.DefaultEndTime(existing, FixedScalar.FromDecimal(startSeconds), referenceObject).Raw / (decimal)FixedScalar.OneRaw, 0, 0, 0);
                 ConfigureClipExecution(track, existing);
                 return existing;

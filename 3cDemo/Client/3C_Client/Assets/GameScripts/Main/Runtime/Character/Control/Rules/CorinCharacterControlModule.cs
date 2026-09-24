@@ -128,7 +128,10 @@ namespace ThirdPersonCharacter.Control.Rules
             }
             else if (stateId == MovingTurn)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_MovingTurnMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                string motion = elapsed < Ticks(m_Context, 28d / 60d)
+                    ? s_MovingTurnMotion
+                    : s_RunLoopMotion;
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), motion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
 
             if (stateId != Idle)
@@ -159,18 +162,18 @@ namespace ThirdPersonCharacter.Control.Rules
                 "WalkStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
                 "RunLoopToRunStopping" => MoveBelow(m_Read),
                 "RunStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
-                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveAbove(m_Read) &&
+                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 64d / 60d) && MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.Less),
                 "WalkStartToWalkStopping" => MoveBelow(m_Read),
                 "WalkStoppingToWalkStart" => MoveAbove(m_Read),
                 "RunStoppingToRunLoop" => MoveAbove(m_Read),
-                "MovingTurnToRunStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveBelow(m_Read),
+                "MovingTurnToRunStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 64d / 60d) && MoveBelow(m_Read),
                 "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
-                "MovingTurnToMovingTurn" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveAbove(m_Read) &&
+                "MovingTurnToMovingTurn" => MotionElapsed(m_State) >= Ticks(m_Context, 64d / 60d) && MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
                 _ => throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.")

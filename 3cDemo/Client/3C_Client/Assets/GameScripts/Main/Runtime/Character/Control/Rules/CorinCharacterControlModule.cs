@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Control.Rules
         public static readonly CharacterControlStateId RunStopping = new CharacterControlStateId("RunStopping");
         public static readonly CharacterControlStateId MovingTurn = new CharacterControlStateId("MovingTurn");
         public static readonly CharacterSkillId Attack = new CharacterSkillId("Attack");
+        public static readonly CharacterSkillId BranchAttack = new CharacterSkillId("BranchAttack");
         public static readonly CharacterSkillId RushAttack = new CharacterSkillId("RushAttack");
         public static readonly CharacterSkillId DodgeBack = new CharacterSkillId("DodgeBack");
         public static readonly CharacterSkillId DodgeForward = new CharacterSkillId("DodgeForward");
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly SimulationInputValueId s_MoveAxis = new SimulationInputValueId("MoveAxis");
         static readonly SimulationInputValueId s_LookAxis = new SimulationInputValueId("LookAxis");
         static readonly string s_AttackRequest = "Attack";
+        static readonly string s_BranchRequest = "Branch";
         static readonly string s_DodgeRequest = "Dodge";
         static readonly string s_ActionTarget = "ActionTarget";
         static readonly string s_DodgeRushFollowupWindow = "RushFollowup";
@@ -213,9 +215,24 @@ namespace ThirdPersonCharacter.Control.Rules
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
+            if (m_Read.HasInputRequest(s_BranchRequest))
+            {
+                if (m_Read.IsAbilityActive(BranchAttack))
+                    return;
+                ulong replacementActionInstanceId = 0;
+                TryGetActiveAttackInstance(m_Read, out replacementActionInstanceId);
+                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
+                    source,
+                    BranchAttack,
+                    s_BranchRequest,
+                    true,
+                    replacementActionInstanceId: replacementActionInstanceId));
+                return;
+            }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
-                if (m_Read.IsAbilityActive(RushAttack) ||
+                if (m_Read.IsAbilityActive(BranchAttack) ||
+                    m_Read.IsAbilityActive(RushAttack) ||
                     m_Read.IsAbilityActive(DodgeForward) ||
                     m_Read.IsAbilityActive(DodgeBack))
                     return;
@@ -303,6 +320,7 @@ namespace ThirdPersonCharacter.Control.Rules
         }
 
         bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId) =>
+            read.TryGetActiveAbilityInstanceId(BranchAttack, out instanceId) ||
             read.TryGetActiveAbilityInstanceId(Attack, out instanceId);
 
         bool IsAttackActive(ICharacterControlReadPort read) => read.IsAbilityActive(Attack);
@@ -395,7 +413,7 @@ namespace ThirdPersonCharacter.Control.Rules
                         100,
                         true)
                 },
-                new[] { Attack, DodgeBack, DodgeForward, RushAttack });
+                new[] { Attack, BranchAttack, DodgeBack, DodgeForward, RushAttack });
         }
 
         static CharacterControlTransitionDescriptor Transition(

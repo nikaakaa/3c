@@ -28,6 +28,10 @@ MonoBehaviour:
     m_ValueType: 0
     m_Vector2ConflictPolicy: 0
     m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
+  - m_InputValueId: BranchHeld
+    m_ValueType: 0
+    m_Vector2ConflictPolicy: 0
+    m_SourceAction: {fileID: 11400000, guid: a2732fef872647b5b18c381c525c9275, type: 2}
   m_ActionRequests:
   - m_RequestId: Attack
     m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
@@ -39,4 +43,9 @@ MonoBehaviour:
     m_BufferSeconds: 0.2
     m_Priority: 100
     m_TimingClass: 1
+  - m_RequestId: Branch
+    m_SourceAction: {fileID: 11400000, guid: a2732fef872647b5b18c381c525c9275, type: 2}
+    m_BufferSeconds: 0.2
+    m_Priority: 10
+    m_TimingClass: 2
 

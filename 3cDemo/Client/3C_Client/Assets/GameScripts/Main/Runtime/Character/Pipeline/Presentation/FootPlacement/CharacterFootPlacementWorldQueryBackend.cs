@@ -83,19 +83,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PhysicsScene physicsScene,
             CharacterFootPlacementPoseRig rig,
             int landingHitCapacity,
+            int currentSupportHitCapacity,
             int groundPathSegmentHitCapacity)
         {
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
             if (landingHitCapacity < 4 || landingHitCapacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(landingHitCapacity));
+            if (currentSupportHitCapacity < 4 || currentSupportHitCapacity > 32)
+                throw new ArgumentOutOfRangeException(nameof(currentSupportHitCapacity));
             if (groundPathSegmentHitCapacity < 4 || groundPathSegmentHitCapacity > 32)
                 throw new ArgumentOutOfRangeException(nameof(groundPathSegmentHitCapacity));
             m_PhysicsScene = physicsScene;
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_LandingHits = new RaycastHit[landingHitCapacity];
             m_GroundPathHits = new RaycastHit[groundPathSegmentHitCapacity];
-            m_CurrentSupportHits = new RaycastHit[landingHitCapacity];
+            m_CurrentSupportHits = new RaycastHit[currentSupportHitCapacity];
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;

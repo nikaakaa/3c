@@ -834,8 +834,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootCurrentSupportObservationPage pending =
                 pool.AcquireWritable(committed);
-            CharacterFootLandingPredictionSettings settings =
-                m_Settings.LandingPrediction;
+            CharacterFootCurrentSupportQuerySettings settings =
+                m_Settings.CurrentSupportQuery;
             var heelRequest = new CharacterFootCurrentSupportProbeRequest(
                 side,
                 CharacterFootCurrentSupportProbeKind.Heel,
@@ -843,7 +843,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 settings.CastAbove,
                 settings.CastBelow,
-                settings.SphereRadius,
+                m_Settings.LandingPrediction.SphereRadius,
                 settings.GroundLayerMask,
                 settings.MinimumGroundNormalDot,
                 settings.HitCapacity);
@@ -854,7 +854,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 settings.CastAbove,
                 settings.CastBelow,
-                settings.SphereRadius,
+                m_Settings.LandingPrediction.SphereRadius,
                 settings.GroundLayerMask,
                 settings.MinimumGroundNormalDot,
                 settings.HitCapacity);

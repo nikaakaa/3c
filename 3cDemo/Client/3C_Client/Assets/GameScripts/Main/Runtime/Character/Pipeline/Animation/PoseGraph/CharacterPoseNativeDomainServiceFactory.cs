@@ -102,7 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_Rig,
                         rigBinding,
                         m_World),
-                    m_Resources.FootPlacementProfile.GroundDetection.Build().ContactCapacity,
+                    m_Resources.FootPlacementProfile.LandingPrediction.Build().HitCapacity,
+                    m_Resources.FootPlacementProfile.CurrentSupportQuery.Build().HitCapacity,
                     m_Resources.FootPlacementProfile.GroundDetection.Build().SegmentHitCapacity));
             CharacterFootPlacementModule footPlacement = footResource.CreateModule(
                 actorId,

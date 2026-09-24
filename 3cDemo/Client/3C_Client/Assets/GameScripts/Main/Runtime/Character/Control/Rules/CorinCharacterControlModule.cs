@@ -212,6 +212,13 @@ namespace ThirdPersonCharacter.Control.Rules
                     m_Read.IsAbilityActive(DodgeForward) ||
                     m_Read.IsAbilityActive(DodgeBack))
                     return;
+                if (!m_Read.IsAbilityActive(Attack) &&
+                    MoveAbove(m_Read) &&
+                    (stateId == RunLoop || stateId == MovingTurn))
+                {
+                    SubmitRushAttack(stateId, 0);
+                    return;
+                }
                 SubmitAttack(stateId, 0, string.Empty);
                 return;
             }
@@ -256,13 +263,13 @@ namespace ThirdPersonCharacter.Control.Rules
                 replacementActionInstanceId: replacementActionInstanceId,
                 activationEntryId: activationEntryId));
 
-        void SubmitRushAttack(CharacterControlStateId stateId, ulong dodgeInstanceId) =>
+        void SubmitRushAttack(CharacterControlStateId stateId, ulong replacementActionInstanceId) =>
             m_Output.SubmitAbility(new CharacterControlAbilityRequest(
                 Source(stateId),
                 RushAttack,
                 s_AttackRequest,
                 true,
-                replacementActionInstanceId: dodgeInstanceId));
+                replacementActionInstanceId: replacementActionInstanceId));
 
         void ResumeRunningAfterDodge(CharacterControlStateId stateId, CharacterSkillId ability)
         {

@@ -33,6 +33,8 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_RushRequest = "Rush";
         static readonly string s_DodgeRequest = "Dodge";
         static readonly string s_ActionTarget = "ActionTarget";
+        static readonly string s_RushHandoffWindow = "RushAttackHandoff";
+        static readonly string s_RushHandoffEntry = "Attack4";
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
         static readonly string s_WalkLoopMotion = "locomotion:corin:walk-loop";
         static readonly string s_RunLoopMotion = "locomotion:corin:run-loop";
@@ -215,17 +217,9 @@ namespace ThirdPersonCharacter.Control.Rules
             }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
-                bool fromRush = m_Read.TryGetActiveAbilityInstanceId(RushAttack, out ulong rushInstanceId);
-                if (fromRush && !m_Read.IsAbilityWindowActive(RushAttack, "RushAttackHandoff"))
+                if (m_Read.IsAbilityActive(RushAttack))
                     return;
-                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
-                    source,
-                    Attack,
-                    s_AttackRequest,
-                    true,
-                    s_ActionTarget,
-                    replacementActionInstanceId: fromRush ? rushInstanceId : 0,
-                    activationEntryId: fromRush ? "Attack4" : string.Empty));
+                SubmitAttack(stateId, 0, string.Empty);
                 return;
             }
         }
@@ -238,7 +232,26 @@ namespace ThirdPersonCharacter.Control.Rules
                 ResumeRunningAfterDodge(stateId, DodgeForward);
                 ResumeRunningAfterDodge(stateId, DodgeBack);
             }
+            if (m_Read.HasInputRequest(s_AttackRequest) &&
+                m_Read.TryGetActiveAbilityInstanceId(RushAttack, out ulong rushInstanceId) &&
+                m_Read.IsAbilityWindowActive(RushAttack, s_RushHandoffWindow))
+            {
+                SubmitAttack(m_State.ReadState(s_ActiveState), rushInstanceId, s_RushHandoffEntry);
+            }
         }
+
+        void SubmitAttack(
+            CharacterControlStateId stateId,
+            ulong replacementActionInstanceId,
+            string activationEntryId) =>
+            m_Output.SubmitAbility(new CharacterControlAbilityRequest(
+                Source(stateId),
+                Attack,
+                s_AttackRequest,
+                true,
+                s_ActionTarget,
+                replacementActionInstanceId: replacementActionInstanceId,
+                activationEntryId: activationEntryId));
 
         void ResumeRunningAfterDodge(CharacterControlStateId stateId, CharacterSkillId ability)
         {

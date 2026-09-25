@@ -106,6 +106,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void Close() => s_Current?.Dispose();
 
+        internal static void ExpectTimelineOpening(BtsmtlSkillTimelineFlowNode node) =>
+            s_Current?.OnTimelineOpening(node);
+
         static void OpenScope(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, Scope scope)
         {
             bool capture = s_Current?.m_Observation?.CaptureValues ?? false;

@@ -61,6 +61,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
+            => Open(definition, source, instance, default);
+
+        static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source,
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback)
         {
             if (!definition || !source.IsValid)
                 return false;
@@ -75,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .Where(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == source.GraphAuthoringId)
                     .ToArray();
                 if (nativeGraphs.Length != 0)
-                    return nativeGraphs.Length == 1 && OpenSkillGraph(definition, nativeGraphs[0], source, instance);
+                    return nativeGraphs.Length == 1 && OpenSkillGraph(definition, nativeGraphs[0], source, instance, playback);
             }
             return false;
         }
@@ -91,15 +95,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
+            var instances = new List<RuntimeInstanceKey>();
+            RuntimeDebugSession.Shared.ViewModel.CopyGraphInstances(provenance.SourceGraphAuthoringId, instances);
+            RuntimeInstanceKey graphInstance = default;
+            for (int i = 0; i < instances.Count; i++)
+            {
+                RuntimeInstanceKey candidate = instances[i];
+                if (candidate.Kind != RuntimeInstanceKind.SkillExecution ||
+                    candidate.CharacterRuntimeId != instance.CharacterRuntimeId ||
+                    candidate.ActionInstanceId != instance.ActionInstanceId ||
+                    (provenance.SourceGraphRuntimeId != Guid.Empty &&
+                     candidate.GraphRuntimeId != provenance.SourceGraphRuntimeId) ||
+                    candidate.ActivationGeneration != provenance.SkillExecutionGeneration ||
+                    candidate.InvocationGeneration != provenance.SourceActivationGeneration ||
+                    !string.Equals(candidate.CallSiteId, provenance.SourceInvocationPath, StringComparison.Ordinal))
+                    continue;
+                if (graphInstance.IsValid)
+                    return false;
+                graphInstance = candidate;
+            }
+            if (!graphInstance.IsValid)
+                return false;
             return Open(
                 definition,
                 RuntimeSourceElementKey.Node(
                     provenance.SourceGraphAuthoringId,
                     provenance.SourceNodeAuthoringId),
+                graphInstance,
                 instance);
         }
 
-        static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
+        static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source,
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback)
         {
             NodeCanvas.Framework.IGraphElement element = null;
             if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
@@ -134,25 +161,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             window.Focus();
             if (element != null)
                 GraphEditor.FocusElement(element, true);
+            if (UnityEngine.Application.isPlaying && instance.Kind == RuntimeInstanceKind.SkillExecution)
+                BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             if (element is BtsmtlSkillTimelineFlowNode timelineNode)
             {
+                BtsmtlSkillObservationSession.ExpectTimelineOpening(timelineNode);
                 TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(
                     timelineNode.TimelineAsset,
                     ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
                     timelineNode.UID);
-                if (timelineWindow != null && UnityEngine.Application.isPlaying && instance.IsValid)
+                BtsmtlSkillObservationSession.ExpectTimelineOpening(null);
+                if (timelineWindow != null && UnityEngine.Application.isPlaying)
                 {
                     timelineWindow.SetRuntimeObservationReadOnly(true);
-                    RuntimeInstanceKey playback = ResolveTimelinePlayback(instance);
-                    if (playback.IsValid)
-                        timelineWindow.SelectRuntimeObservationPlayback(playback);
+                    RuntimeInstanceKey selected = playback.IsValid ? playback : ResolveTimelinePlayback(instance);
+                    if (selected.IsValid)
+                        timelineWindow.SelectRuntimeObservationPlayback(selected);
                 }
                 return timelineWindow != null && timelineWindow.FocusSource(
                     source.Kind == RuntimeSourceElementKind.Timeline ? string.Empty : source.TrackAuthoringId,
                     source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);
             }
-            if (UnityEngine.Application.isPlaying && instance.IsValid)
-                BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             return true;
         }
 

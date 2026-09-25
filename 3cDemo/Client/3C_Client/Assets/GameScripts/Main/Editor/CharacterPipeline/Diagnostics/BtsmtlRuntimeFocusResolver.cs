@@ -102,7 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (graph.CharacterRuntimeId != timeline.Event.RuntimeInstance.CharacterRuntimeId ||
                     graph.ActionInstanceId != timeline.Event.RuntimeInstance.ActionInstanceId ||
-                    graph.GraphRuntimeId != provenance.SourceGraphRuntimeId ||
+                    (provenance.SourceGraphRuntimeId != Guid.Empty &&
+                     graph.GraphRuntimeId != provenance.SourceGraphRuntimeId) ||
                     graph.ActivationGeneration != provenance.SkillExecutionGeneration ||
                     !view.TryGetParentGeneration(graph, out ulong parent) || parent != provenance.SourceActivationGeneration ||
                     !view.TryGetInvocation(graph, graph.CallSiteId, out RuntimeGraphInvocation invocation))
@@ -118,7 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool BelongsToGraph(RuntimeInstanceKey playback, RuntimeTimelinePlaybackProvenance provenance, RuntimeInstanceKey graph) =>
             playback.CharacterRuntimeId == graph.CharacterRuntimeId &&
             playback.ActionInstanceId == graph.ActionInstanceId &&
-            provenance.SourceGraphRuntimeId == graph.GraphRuntimeId &&
+            (provenance.SourceGraphRuntimeId == Guid.Empty ||
+             provenance.SourceGraphRuntimeId == graph.GraphRuntimeId) &&
             provenance.SkillExecutionGeneration == graph.ActivationGeneration &&
             provenance.SourceActivationGeneration == graph.InvocationGeneration &&
             string.Equals(provenance.SourceInvocationPath, graph.CallSiteId, StringComparison.Ordinal);

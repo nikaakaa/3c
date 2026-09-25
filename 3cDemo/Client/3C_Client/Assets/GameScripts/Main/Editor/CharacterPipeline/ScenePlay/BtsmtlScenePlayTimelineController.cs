@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             RuntimeDiagnosticsTargetRegistry.TargetUnregistered += s_Controller.OnTargetChanged;
             EditorApplication.update += s_Controller.UpdateSessionState;
             TimelineEditorWindow.AuthoringRevisionChanged += s_Controller.OnAuthoringRevisionChanged;
+            TimelineEditorWindow.AssetOpened += s_Controller.OnTimelineAssetOpened;
         }
 
         sealed class Controls
@@ -59,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             readonly object m_InterestOwner = new object();
             readonly List<Controls> m_Controls = new List<Controls>();
             readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = new();
-            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.Authoring;
+            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.RuntimeDebug;
             BtsmtlScenePlayProfile m_Profile;
             CharacterTimelineContentExport m_ExportedContent;
             CharacterTimelineContentAdoptionPlan m_PendingPlan;
@@ -78,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             public Controller()
             {
-                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Authoring);
+                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.RuntimeDebug);
                 TimelineWorkspaceMode persistedMode = (TimelineWorkspaceMode)mode;
                 m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode)
                     ? persistedMode
@@ -144,7 +145,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 if (!window)
                     return;
-                window.SetRuntimeObservationReadOnly(m_Mode == TimelineWorkspaceMode.RuntimeDebug);
+                window.SetRuntimeObservationReadOnly(
+                    m_Mode == TimelineWorkspaceMode.RuntimeDebug && EditorApplication.isPlaying);
                 window.SetRuntimeObservationStatus(m_Status);
             }
 
@@ -170,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void RefreshConnection()
             {
                 m_ConnectionRefreshQueued = false;
-                if (m_Controls.Count == 0 || !EditorApplication.isPlaying)
+                if (!EditorApplication.isPlaying)
                     return;
                 if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
                     AttachRuntimeDebug();
@@ -180,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void UpdateSessionState()
             {
-                if (m_Mode == TimelineWorkspaceMode.Authoring || m_Controls.Count == 0 || !m_ObservedSession)
+                if (m_Mode == TimelineWorkspaceMode.Authoring || !m_ObservedSession)
                     return;
                 if (m_ObservedLifecycle == m_ObservedSession.LifecycleState &&
                     m_ObservedGeneration == m_ObservedSession.SessionGeneration)
@@ -194,6 +196,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 if (state == PlayModeStateChange.EnteredPlayMode)
                 {
+                    if (m_Profile != null && m_Profile.IsValid)
+                    {
+                        m_Mode = TimelineWorkspaceMode.RuntimeDebug;
+                        SessionState.SetInt(ModeStateKey, (int)m_Mode);
+                        TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
+                    }
                     QueueConnectionRefresh();
                 }
                 if (state == PlayModeStateChange.ExitingPlayMode)
@@ -201,10 +209,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     m_ObservedSession = null;
                     ReleaseRuntimeInterest();
                     ClearContentWorkflow();
-                    m_Mode = TimelineWorkspaceMode.Authoring;
-                    SessionState.SetInt(ModeStateKey, (int)m_Mode);
                     TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
-                    SetStatus("Authoring");
+                    SetStatus(m_Mode == TimelineWorkspaceMode.RuntimeDebug
+                        ? FormatRuntimeDebugStatus("已退出 Play。")
+                        : "Authoring");
                 }
                 Refresh();
             }
@@ -212,6 +220,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal void OnAuthoringRevisionChanged(TimelineEditorWindow window)
             {
                 OnContentChanged();
+            }
+
+            internal void OnTimelineAssetOpened(TimelineAsset asset)
+            {
+                if (!EditorApplication.isPlaying || m_Mode != TimelineWorkspaceMode.RuntimeDebug)
+                    return;
+                TimelineEditorWindow window = TimelineEditorWindow.FindOpen(asset);
+                if (window == null)
+                    return;
+                window.SetRuntimeObservationReadOnly(true);
+                TimelineRuntimeObservationBridge.RefreshWindow(window);
             }
 
             internal void OnContentChanged()
@@ -237,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void Refresh()
             {
-                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug && m_Controls.Count != 0)
+                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
                 {
                     m_RuntimeFocus.Refresh(RuntimeDebugSession.Shared.ViewModel);
                     QueueRuntimeNavigation();
@@ -442,7 +461,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void FollowRuntime()
             {
                 m_NavigationQueued = false;
-                if (!m_FollowRuntime || m_Mode != TimelineWorkspaceMode.RuntimeDebug || m_Controls.Count == 0)
+                if (!m_FollowRuntime || m_Mode != TimelineWorkspaceMode.RuntimeDebug)
                     return;
                 RuntimeDebugViewModel view = RuntimeDebugSession.Shared.ViewModel;
                 m_RuntimeFocus.Refresh(view);

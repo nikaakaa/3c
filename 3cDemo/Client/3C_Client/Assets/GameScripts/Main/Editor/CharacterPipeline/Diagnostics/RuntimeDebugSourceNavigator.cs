@@ -23,10 +23,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeTraceEvent trace = eventView.Event;
             RuntimeInstanceKey instance = trace.RuntimeInstance;
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
-            if (!instance.IsValid || !eventView.Source.IsValid ||
-                !RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out RuntimeDiagnosticsTarget target))
+            bool historical = session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
+            if (!instance.IsValid || !eventView.Source.IsValid)
                 return false;
-            if (session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
+            RuntimeDiagnosticsTarget target = null;
+            RuntimeDebugTargetInfo targetInfo = session.ViewModel.Target;
+            if (historical)
             {
                 if (!session.TryResolveHistoricalSource(
                         trace.ContentRevision,
@@ -37,17 +39,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !historicalEntry.Source.Equals(eventView.Source))
                     return false;
             }
-            else if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
-                     !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
-                     !entry.Source.Equals(eventView.Source))
+            else
             {
-                return false;
+                if (!RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out target) ||
+                    target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
+                    !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
+                    !entry.Source.Equals(eventView.Source))
+                    return false;
+                targetInfo = new RuntimeDebugTargetInfo(target);
             }
-            CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(target.HostInstanceId));
+            if (targetInfo.CharacterRuntimeId != instance.CharacterRuntimeId)
+                return false;
+            CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(targetInfo.HostInstanceId));
             if (!definition)
                 return false;
-            if (session.AttachmentState is not RuntimeDebugAttachmentState.CaptureHistory and
-                not RuntimeDebugAttachmentState.Ended &&
+            if (!historical &&
                 !session.AttachToTarget(instance.CharacterRuntimeId))
                 return false;
             if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or

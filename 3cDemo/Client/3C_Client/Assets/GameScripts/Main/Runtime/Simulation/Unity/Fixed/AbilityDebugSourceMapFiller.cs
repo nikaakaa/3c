@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
@@ -8,6 +9,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         public static void Fill(DebugSourceMap sourceMap, int targetIndexOffset, IReadOnlyList<ProgramSourceMapEntry> sources)
         {
+            var graphByPath = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (ProgramSourceMapEntry source in sources)
+            {
+                if (source.TargetKind != ProgramSourceTargetKind.GraphInvocation)
+                    continue;
+                graphByPath.TryAdd(source.SourceInvocationPath, source.GraphId);
+                graphByPath.TryAdd(source.GraphInvocationPath, source.GraphId);
+            }
             foreach (ProgramSourceMapEntry source in sources)
             {
                 if (source.TargetKind == ProgramSourceTargetKind.OptimizedAway)
@@ -22,9 +31,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     sourceMap.AddGraphInvocation(new RuntimeGraphInvocation(
                         source.GraphInvocationPath, source.GraphId, source.ParentInvocationPath,
-                        key, source.InvocationCallerClipId, source.InvocationCallerId));
+                        Caller(source, graphByPath), source.InvocationCallerClipId, source.InvocationCallerId));
                 }
             }
+        }
+
+        static RuntimeSourceElementKey Caller(ProgramSourceMapEntry invocation,
+            Dictionary<string, string> graphByPath)
+        {
+            if (string.IsNullOrEmpty(invocation.ParentInvocationPath))
+                return RuntimeSourceElementKey.Graph(invocation.GraphId);
+            if (!graphByPath.TryGetValue(invocation.ParentInvocationPath, out string parentGraphId))
+                throw new InvalidOperationException("技能子图调用缺少父图来源。");
+            return invocation.InvocationCallerKind switch
+            {
+                ProgramInvocationCallerKind.Node =>
+                    RuntimeSourceElementKey.Node(parentGraphId, invocation.InvocationCallerId),
+                ProgramInvocationCallerKind.Edge =>
+                    RuntimeSourceElementKey.Edge(parentGraphId, invocation.InvocationCallerId),
+                ProgramInvocationCallerKind.TimelineClip or
+                ProgramInvocationCallerKind.PresentationMarker or
+                ProgramInvocationCallerKind.PresentationTreeClip =>
+                    RuntimeSourceElementKey.Node(parentGraphId, TimelineCallerNode(invocation.SourceInvocationPath)),
+                _ => RuntimeSourceElementKey.Graph(parentGraphId)
+            };
+        }
+
+        static string TimelineCallerNode(string path)
+        {
+            int timeline = path.LastIndexOf("/timeline:", StringComparison.Ordinal);
+            int node = timeline < 0 ? -1 : path.LastIndexOf("/node:", timeline, StringComparison.Ordinal);
+            int start = node + "/node:".Length;
+            if (node < 0 || start >= timeline)
+                throw new InvalidOperationException("Timeline 子图调用路径缺少作者节点。");
+            return path.Substring(start, timeline - start);
         }
 
         internal static RuntimeSourceElementKey SourceKey(ProgramSourceMapEntry source)

@@ -28,13 +28,15 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 目标仍以本 change 的 spec 为准：Profile 选定正式 Scene、Session 和 Actor 后，RuntimeDebug 应沿该 Actor 的实际技能调用栈在 FlowCanvas 与 Slate 间切换；子调用返回时恢复父路径。唯一明确的活动调用自动 Follow，并行调用由作者显式 Pin。
 
-当前代码已有 Profile 到 Actor 的精确解析、Diagnostics target 附着、Live interest、调用候选解析和来源导航入口。但 `BtsmtlScenePlayTimelineController.FollowRuntime` 只有在候选数恰好为一时才导航；候选数为零或大于一时不跳转。并行时要求 Pin 符合设计，短调用结束后没有可跟随候选则无法满足作者触发技能后直接查看的使用预期。`TimelineEditorWindow.GetRuntimeObservationSummaries` 按 Timeline 与来源 Graph identity 精确过滤；独立打开 Timeline 资产时没有来源 Graph identity，当前结果可能为空，零结果也没有明确的未绑定提示。
+当前代码已有 Profile 到 Actor 的精确解析、Diagnostics target 附着、Live interest、调用候选解析和来源导航入口。`BtsmtlScenePlayTimelineController.FollowRuntime` 只有在候选数恰好为一时才导航；并行调用由作者 Pin。编辑器现已在没有活跃候选时保留最近完成的短调用，并排除同一调用链的父子重复候选；这只修复候选选择，不能产生缺失的技能事实。`TimelineEditorWindow.GetRuntimeObservationSummaries` 按 Timeline 与来源 Graph identity 精确过滤；独立打开 Timeline 资产时没有来源 Graph identity，当前结果可能为空，零结果的未绑定状态已另行补充。
 
 继续沿正式来源核对发现：默认 Fixed 角色在 `FixedCharacterRegistration` 中将 `SimulationDiagnostics` 设为 `NullSimulationDiagnosticsSink`；`CharacterControlFlowDiagnostics` 和 `CharacterPortValueDiagnostics` 有映射技能执行事实的代码，但当前没有创建或接入点。编辑器 `BtsmtlRuntimeFocusResolver` 只把 `SkillExecution` 实例的节点事件当作技能图候选，当前正式技能执行链没有向它提供这种事件。Timeline Host 的诊断发布是另一条已存在的正式领域出口，不能拿它反推未执行 Timeline 的技能调用，也不能在编辑器直接读取可变 Simulation 状态补齐。
 
-作者已报告运行时 RuntimeDebug 一直看不到有效内容。当前只完成静态代码链路核对，尚未取得能确认该现场全部现象的运行记录；但正式技能事实与编辑器候选之间的缺口已由代码确认。任务 5.2、5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。当前并行任务正在使用 Unity 和运行时资源，本目标不修改其文件；在仅允许编辑器改动的边界内，不增加绕过正式诊断出口的第二条技能观察路径。
+作者已报告运行时 RuntimeDebug 一直看不到有效内容。尚未取得能确认该现场全部现象的运行记录；正式技能事实与编辑器候选之间的缺口已由代码确认。任务 5.2、5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。当前并行任务正在使用 Unity 和运行时资源，本目标不修改其文件；不增加绕过正式诊断出口的第二条技能观察路径。
 
 编辑器提交 `fc019a287` 已让独立 Timeline 缺少来源图、Timeline 无匹配调用、角色已附着但无可导航事实分别显示明确状态；它没有提供缺失的技能执行事实，也不改变 5.2、5.3 的未完成状态。
+
+编辑器提交 `3ab0b56d2` 将 Ability Timeline 的来源图与技能执行实例按动作实例、技能代数和调用路径对应，打开 Slate 时同时绑定已有 FlowCanvas 观察会话；`93313a61a` 保留最近完成的短调用作为 Follow 候选；`db9f553fc` 保留仅有正式 Timeline 事实时的现有导航。这些改动没有接通 Fixed Simulation 的技能诊断，也没有完成作者运行时验收。
 
 ## 代码入口
 
@@ -54,7 +56,7 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 ## 验证边界
 
-- 当轮未新增测试、未启动 Play 或进行端到端验收，保留主 Editor。2026-09-25 作者反馈 RuntimeDebug 运行时未显示有效内容；本次状态更正没有执行 Play 或修改代码。
+- 当轮未新增测试、未启动 Play 或进行端到端验收，保留主 Editor。2026-09-25 作者反馈 RuntimeDebug 运行时未显示有效内容；编辑器导航修改已做程序集独立编译，0 个错误，但不证明运行时已有技能事实。
 - Center 改动：`e7c0a8207336464ea127d6569dff9343`，名称“完成原Timeline的作者预览与运行观察”。正式 compile 请求返回 `WorkspaceEditorInUse`，没有产生可引用的成功 Run。
 - 使用现有 Unity 实例 `e852139597e42532` 的正式脚本刷新；首次等待就绪超时后，仅查询原实例，确认重载完成、新类型已加载且 Console 无错误。后续修改继续使用同一实例编译。
 - 多任务同时修改主目录，因此编辑器编译结果只说明当时的脚本加载状态，不是 Center 固定版本对比或运行功能验收。

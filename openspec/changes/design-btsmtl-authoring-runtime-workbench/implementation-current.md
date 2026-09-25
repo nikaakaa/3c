@@ -40,7 +40,7 @@ Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDia
 
 ## 2026-09-25 运行验收阻塞
 
-使用 Unity 实例 `e852139597e42532` 按正式 ScenePlay 场景进入 Play；实例在 PlayMode transition 长时间未完成，随后由现有 `TEngine.PlayModeErrorAutoExit` 自动退出。`Editor-prev.log` 记录当时分页内存约为 `60.8/65.1 GB`（93%），并出现 `The system is running out of memory`。这次运行没有注册 `RuntimeDiagnosticsTarget`，因此没有角色、技能、子图或 Timeline 诊断事实，不能用它证明 RuntimeDebug 自动导航失败或成功。
+使用 Unity 实例 `e852139597e42532` 尝试进入正式 ScenePlay 场景的 Play；本轮实例长时间停在 PlayMode transition，MCP 读状态多次超时，没有观察到已注册的 `RuntimeDiagnosticsTarget`，之后通过 CLI 退出 Play。`Editor-prev.log` 中另有较早运行的 `TEngine.PlayModeErrorAutoExit` 和分页内存约 `60.8/65.1 GB`（93%）的记录，但不能据此认定本轮切换未完成的原因。本轮没有取得角色、技能、子图或 Timeline 诊断事实，不能用它证明 RuntimeDebug 自动导航失败或成功。
 
 当前结论仍是：代码链已完成到运行时接线，5.2、5.3 仍未验收。需要在 Unity 能完成同一 ScenePlay 启动并保持 Play 的环境下重新检查角色绑定、唯一技能 Follow、子图返回父路径、并行 Pin 和 Timeline 显示；在获得这些运行事实前，不更新为完成。
 

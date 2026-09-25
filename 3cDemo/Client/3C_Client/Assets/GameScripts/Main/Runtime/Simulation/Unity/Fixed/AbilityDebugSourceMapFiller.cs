@@ -12,18 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 if (source.TargetKind == ProgramSourceTargetKind.OptimizedAway)
                     continue;
-                RuntimeSourceElementKind kind =
-                    source.TargetKind == ProgramSourceTargetKind.GraphInvocation
-                        ? RuntimeSourceElementKind.Graph
-                        : !string.IsNullOrEmpty(source.ClipId)
-                            ? RuntimeSourceElementKind.Clip
-                            : !string.IsNullOrEmpty(source.TrackId)
-                                ? RuntimeSourceElementKind.Track
-                                : !string.IsNullOrEmpty(source.TimelineId)
-                                    ? RuntimeSourceElementKind.Timeline
-                                    : RuntimeSourceElementKind.Node;
-                string elementId = kind == RuntimeSourceElementKind.Graph ? source.GraphId : source.NodeId;
-                var key = new RuntimeSourceElementKey(kind, source.GraphId, elementId, source.TimelineId, source.TrackId, source.ClipId);
+                RuntimeSourceElementKey key = SourceKey(source);
                 var target = source.TargetKind == ProgramSourceTargetKind.OperationPort
                     || source.TargetKind == ProgramSourceTargetKind.GraphInvocation
                         ? RuntimeSourceTarget.Source
@@ -36,6 +25,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         key, source.InvocationCallerClipId, source.InvocationCallerId));
                 }
             }
+        }
+
+        internal static RuntimeSourceElementKey SourceKey(ProgramSourceMapEntry source)
+        {
+            if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation)
+                return RuntimeSourceElementKey.Graph(source.GraphId);
+            if (source.TargetKind == ProgramSourceTargetKind.OperationPort &&
+                !string.IsNullOrEmpty(source.NodeId) && !string.IsNullOrEmpty(source.PortId))
+                return RuntimeSourceElementKey.Port(source.GraphId, source.NodeId, source.PortId);
+            if (!string.IsNullOrEmpty(source.EdgeId))
+                return RuntimeSourceElementKey.Edge(source.GraphId, source.EdgeId);
+            if (!string.IsNullOrEmpty(source.DeclarationId))
+                return RuntimeSourceElementKey.Declaration(source.GraphId, source.DeclarationId);
+            if (!string.IsNullOrEmpty(source.NodeId))
+                return RuntimeSourceElementKey.Node(source.GraphId, source.NodeId);
+            if (!string.IsNullOrEmpty(source.ClipId))
+                return RuntimeSourceElementKey.Clip(source.TimelineId, source.TrackId, source.ClipId, graphId: source.GraphId);
+            if (!string.IsNullOrEmpty(source.TrackId))
+                return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId, source.GraphId);
+            return !string.IsNullOrEmpty(source.TimelineId)
+                ? RuntimeSourceElementKey.Timeline(source.TimelineId, source.GraphId)
+                : RuntimeSourceElementKey.Graph(source.GraphId);
         }
 
         static RuntimeSourceTargetKind MapTargetKind(ProgramSourceTargetKind kind)

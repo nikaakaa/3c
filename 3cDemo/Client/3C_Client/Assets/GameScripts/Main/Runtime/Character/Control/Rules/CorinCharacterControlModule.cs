@@ -41,6 +41,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_WalkStartMotion = "locomotion:corin:walk-start";
         static readonly string s_WalkLoopMotion = "locomotion:corin:walk-loop";
         static readonly string s_RunLoopMotion = "locomotion:corin:run-loop";
+        static readonly string s_RunStoppingMotion = "locomotion:corin:run-stopping";
         static readonly string s_MovingTurnMotion = "locomotion:corin:moving-turn";
         static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/track:9b2e235b-266b-47ef-8ecd-c2fa8a4207fc/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         const double MovingTurnMotionSeconds = 28d / 60d;
@@ -128,6 +129,10 @@ namespace ThirdPersonCharacter.Control.Rules
             else if (stateId == RunLoop)
             {
                 m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+            }
+            else if (stateId == RunStopping)
+            {
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunStoppingMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == MovingTurn)
             {
@@ -396,6 +401,7 @@ namespace ThirdPersonCharacter.Control.Rules
                     new CharacterControlMotionDescriptor(s_WalkStartMotion, s_MoveAxis, 4.592d, 720d, CharacterControlMotionExecutionMode.Timed, 1.1d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
                     new CharacterControlMotionDescriptor(s_WalkLoopMotion, s_MoveAxis, 6d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
                     new CharacterControlMotionDescriptor(s_RunLoopMotion, s_MoveAxis, 7.36d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
+                    new CharacterControlMotionDescriptor(s_RunStoppingMotion, s_MoveAxis, 0d, 0d, CharacterControlMotionExecutionMode.Once, 0d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
                     new CharacterControlMotionDescriptor(
                         s_MovingTurnMotion,
                         s_MoveAxis,

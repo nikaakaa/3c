@@ -327,9 +327,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  m_PendingTransitionElapsed >= m_PendingTransition.DurationSeconds))
             {
                 m_PendingState = m_PendingTransition.TargetStateId;
+                m_PendingTime = m_PendingTransitionElapsed;
                 m_PendingTransition = null;
                 m_PendingTransitionElapsed = 0f;
-                m_PendingTime = 0f;
                 m_ContinuityIdentity = AllocateContinuityIdentity();
             }
 

@@ -4617,7 +4617,7 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 9d9e0f1a-2b3c-4d5e-6f7a-8b9c0d1e2f3a
-        m_StartTimeRaw: 2147483648
+        m_StartTimeRaw: 0
         m_EndTimeRaw: 13242816512
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0

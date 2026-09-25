@@ -631,13 +631,14 @@ namespace ThirdPersonSimulation.Fixed
             if (generation == 0)
                 generation = 1;
             var activation = new ActivationId(source, generation);
-            var eventId = EventId.Create(
-                new GameplayContentHash(m_Frame.Identity.ContentHash),
-                m_Frame.ActorId,
-                activation,
-                m_Frame.Tick,
-                sequence,
-                "Trace");
+            AbilityTreeClipInvocation? treeClipInvocation = m_Frame.HasTreeClipInvocation
+                ? m_Frame.TreeClipInvocation
+                : null;
+            GameplayContentHash contentHash = new GameplayContentHash(m_Frame.Identity.ContentHash);
+            EventId eventId = treeClipInvocation.HasValue
+                ? EventId.CreateTreeClip(contentHash, m_Frame.ActorId, activation, m_Frame.Tick,
+                    sequence, "Trace", treeClipInvocation.Value)
+                : EventId.Create(contentHash, m_Frame.ActorId, activation, m_Frame.Tick, sequence, "Trace");
             return new SimulationEventHeader(
                 m_Frame.NumericProfile,
                 eventId,
@@ -645,7 +646,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.Tick,
                 activation,
                 sequence,
-                "Trace");
+                "Trace",
+                treeClipInvocation);
         }
     }
 

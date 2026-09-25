@@ -38,6 +38,8 @@ Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDia
 
 编辑器提交 `facb9e41d` 修正 Capture History / Ended 状态的来源导航：角色从 live registry 注销后，导航改用冻结 ViewModel 的 Host 信息和历史 SourceMap，不再在入口处直接失败。
 
+编辑器提交 `bb6ceac63` 将 RuntimeDebug 配置为 Profile 角色进入 Play 后自动接管；自动接入不再依赖先打开 Timeline 窗口，技能 Canvas 和已打开 Timeline 都沿现有 RuntimeDebug 观察链处理。窗口只在 Play 中进入只读运行观察。
+
 ## 2026-09-25 运行验收阻塞
 
 使用 Unity 实例 `e852139597e42532` 尝试进入正式 ScenePlay 场景的 Play；本轮实例长时间停在 PlayMode transition，MCP 读状态多次超时，没有观察到已注册的 `RuntimeDiagnosticsTarget`，之后通过 CLI 退出 Play。`Editor-prev.log` 中另有较早运行的 `TEngine.PlayModeErrorAutoExit` 和分页内存约 `60.8/65.1 GB`（93%）的记录，但不能据此认定本轮切换未完成的原因。本轮没有取得角色、技能、子图或 Timeline 诊断事实，不能用它证明 RuntimeDebug 自动导航失败或成功。

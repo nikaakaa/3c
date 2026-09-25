@@ -38,7 +38,7 @@
 ## 5. RuntimeDebug 形态
 
 - [x] 5.1 RuntimeDebug 只消费 RuntimeDebugSession、SourceMap、Trace、Playback、Snapshot、Capture/History 和正式提交事实
-- [x] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
+- [ ] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
 - [ ] 5.3 绑定角色后跟随其正式技能调用栈，在 FlowCanvas 与 Slate 之间自动切换，并在子调用返回时恢复父路径；并行调用保持显式 Pin
 - [x] 5.4 未执行的 Graph、Timeline、Track 和 Clip 不提前显示；并发 playback 使用 identity、调用点和 generation 隔离
 - [x] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据

@@ -30,7 +30,9 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 当前代码已有 Profile 到 Actor 的精确解析、Diagnostics target 附着、Live interest、调用候选解析和来源导航入口。但 `BtsmtlScenePlayTimelineController.FollowRuntime` 只有在候选数恰好为一时才导航；候选数为零或大于一时不跳转。并行时要求 Pin 符合设计，短调用结束后没有可跟随候选则无法满足作者触发技能后直接查看的使用预期。`TimelineEditorWindow.GetRuntimeObservationSummaries` 按 Timeline 与来源 Graph identity 精确过滤；独立打开 Timeline 资产时没有来源 Graph identity，当前结果可能为空，零结果也没有明确的未绑定提示。
 
-作者已报告运行时 RuntimeDebug 一直看不到有效内容。当前只完成静态代码链路核对，尚未取得能确认该现场具体断点的运行记录；因此不能把以上静态缺口当成唯一根因，也不能宣称角色绑定后的所有正常技能调用已可自动导航。任务 5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。
+继续沿正式来源核对发现：默认 Fixed 角色在 `FixedCharacterRegistration` 中将 `SimulationDiagnostics` 设为 `NullSimulationDiagnosticsSink`；`CharacterControlFlowDiagnostics` 和 `CharacterPortValueDiagnostics` 有映射技能执行事实的代码，但当前没有创建或接入点。编辑器 `BtsmtlRuntimeFocusResolver` 只把 `SkillExecution` 实例的节点事件当作技能图候选，当前正式技能执行链没有向它提供这种事件。Timeline Host 的诊断发布是另一条已存在的正式领域出口，不能拿它反推未执行 Timeline 的技能调用，也不能在编辑器直接读取可变 Simulation 状态补齐。
+
+作者已报告运行时 RuntimeDebug 一直看不到有效内容。当前只完成静态代码链路核对，尚未取得能确认该现场全部现象的运行记录；但正式技能事实与编辑器候选之间的缺口已由代码确认。任务 5.2、5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。当前并行任务正在使用 Unity 和运行时资源，本目标不修改其文件；在仅允许编辑器改动的边界内，不增加绕过正式诊断出口的第二条技能观察路径。
 
 ## 代码入口
 

@@ -34,6 +34,8 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 作者已报告运行时 RuntimeDebug 一直看不到有效内容。当前只完成静态代码链路核对，尚未取得能确认该现场全部现象的运行记录；但正式技能事实与编辑器候选之间的缺口已由代码确认。任务 5.2、5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。当前并行任务正在使用 Unity 和运行时资源，本目标不修改其文件；在仅允许编辑器改动的边界内，不增加绕过正式诊断出口的第二条技能观察路径。
 
+编辑器提交 `fc019a287` 已让独立 Timeline 缺少来源图、Timeline 无匹配调用、角色已附着但无可导航事实分别显示明确状态；它没有提供缺失的技能执行事实，也不改变 5.2、5.3 的未完成状态。
+
 ## 代码入口
 
 - `Editor/CharacterPipeline/ScenePlay/BtsmtlScenePlayTimelineController.cs`：模式、Session 菜单、精确目标、准备/采用状态与导航请求。

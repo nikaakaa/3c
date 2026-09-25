@@ -2,7 +2,7 @@
 
 本清单只定义 Authoring Runtime Workbench 的三种产品形态和接入边界，不把手动验收写成任务。Preview 只是其中一种形态。历史实现记录保留在 `implementation-audit.md`，其中的旧任务勾选不代表本次三种产品形态已经实现。
 
-2026-09-20 继续实施：重新核对并补齐六项曾过度勾选的实现缺口，见 [本轮实施记录](implementation-current.md)。三种形态的入口仍在原 Timeline 窗口，Timeline 始终复用原 Slate 面板。完成勾选表达代码实现，不代表用户端到端验收或已经归档。
+2026-09-20 继续实施：重新核对六项曾过度勾选的实现缺口，见 [实施记录](implementation-current.md)。三种形态的入口仍在原 Timeline 窗口，Timeline 始终复用原 Slate 面板。2026-09-25 对照代码和作者反馈后，5.3 重新标为未完成；完成勾选只表达对应代码已有实现，不代表整个工作台已经可用或已经归档。
 
 ## 1. 产品形态与术语
 
@@ -39,7 +39,7 @@
 
 - [x] 5.1 RuntimeDebug 只消费 RuntimeDebugSession、SourceMap、Trace、Playback、Snapshot、Capture/History 和正式提交事实
 - [x] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
-- [x] 5.3 调用栈变化时在 FlowCanvas 与 Slate 之间自动切换，返回父调用方时恢复父路径
+- [ ] 5.3 绑定角色后跟随其正式技能调用栈，在 FlowCanvas 与 Slate 之间自动切换，并在子调用返回时恢复父路径；并行调用保持显式 Pin
 - [x] 5.4 未执行的 Graph、Timeline、Track 和 Clip 不提前显示；并发 playback 使用 identity、调用点和 generation 隔离
 - [x] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据
 

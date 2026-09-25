@@ -21,9 +21,16 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 | 2.3 | 最后一个 Timeline 窗口关闭时释放控制器与图观察的 interest；不调用 Session Stop | 关闭工具面不停止角色运行，不遗留该窗口的观察订阅 |
 | 4.1 | Profile 按 Scene → ContextId/Composition.SessionId → ActorId 精确解析；监听目标注册和已绑定 Session 生命周期变化 | 显示未连接、准备中、正式失败或实际就绪；同名 Context 不跨场景混用 |
 | 4.4 | 只有正式 Actor/Timeline Host 已初始化且返回有效作者与采用版本时才比较；作者修改、Undo 和项目变化重查冻结导出 | 不把空版本显示为已采用，过期 Export/Plan/Publication 作废；当前 playback 保持原内容 |
-| 5.3 | 从正式节点状态、Timeline summary、父调用 generation 与 SourceMap 解析活动叶调用；Follow 唯一目标，Pin 指定实例 | 在原 Graph/Timeline 面板间导航，返回仍活动的父调用；并行调用要求选择，不按列表顺序猜测 |
 | 5.5 | 执行实例保存记录对应的 SourceMap；观察位置变化重新建立运行投影；同一 Clip 取最新事件 | 较晚 Clip 不污染较早历史，旧历史不使用当前调用表；开放 TreeClip 使用实际退出位置，退出不再显示 open |
 | 8.2 | 逐项对照现行 spec 与 project.md，删除已经退役或被现行规范替代的 delta | 不恢复 Document v5、Pose Image、整角色 Projection 或独立 Fixture；保留正式领域 owner |
+
+## 2026-09-25 状态更正：RuntimeDebug 导航未闭环
+
+目标仍以本 change 的 spec 为准：Profile 选定正式 Scene、Session 和 Actor 后，RuntimeDebug 应沿该 Actor 的实际技能调用栈在 FlowCanvas 与 Slate 间切换；子调用返回时恢复父路径。唯一明确的活动调用自动 Follow，并行调用由作者显式 Pin。
+
+当前代码已有 Profile 到 Actor 的精确解析、Diagnostics target 附着、Live interest、调用候选解析和来源导航入口。但 `BtsmtlScenePlayTimelineController.FollowRuntime` 只有在候选数恰好为一时才导航；候选数为零或大于一时不跳转。并行时要求 Pin 符合设计，短调用结束后没有可跟随候选则无法满足作者触发技能后直接查看的使用预期。`TimelineEditorWindow.GetRuntimeObservationSummaries` 按 Timeline 与来源 Graph identity 精确过滤；独立打开 Timeline 资产时没有来源 Graph identity，当前结果可能为空，零结果也没有明确的未绑定提示。
+
+作者已报告运行时 RuntimeDebug 一直看不到有效内容。当前只完成静态代码链路核对，尚未取得能确认该现场具体断点的运行记录；因此不能把以上静态缺口当成唯一根因，也不能宣称角色绑定后的所有正常技能调用已可自动导航。任务 5.3 保持未完成。此前表格将 5.3 列为已补齐、把导航效果写成既成事实，现予更正。
 
 ## 代码入口
 
@@ -39,11 +46,11 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 - 首批预览代码曾进入暂存区，原提交因共享 index 锁失败；另一任务随后在 `efa7eaeaf` 中一并提交了这些文件。该提交同时包含另一任务的 Pose/Timeline 改动，不能把整个提交归为本轮预览工作，也不重写共享历史。
 - `d515212a2` 独立提交记录 SourceMap、历史投影、最新状态与开放 TreeClip 退出显示修正。
-- `implementation-audit.md` 原有未提交改动来自其它工作，本轮没有覆盖或一并提交；其中 9 月 18 日“跨页面切换未完成”是历史状态，以本记录描述本轮增量。
+- `implementation-audit.md` 的 9 月 18 日记录只作为历史状态；跨页面自动导航以本文件 2026-09-25 状态更正为准。
 
 ## 验证边界
 
-- 未新增测试，未启动 Play 或进行端到端验收，保留主 Editor。
+- 当轮未新增测试、未启动 Play 或进行端到端验收，保留主 Editor。2026-09-25 作者反馈 RuntimeDebug 运行时未显示有效内容；本次状态更正没有执行 Play 或修改代码。
 - Center 改动：`e7c0a8207336464ea127d6569dff9343`，名称“完成原Timeline的作者预览与运行观察”。正式 compile 请求返回 `WorkspaceEditorInUse`，没有产生可引用的成功 Run。
 - 使用现有 Unity 实例 `e852139597e42532` 的正式脚本刷新；首次等待就绪超时后，仅查询原实例，确认重载完成、新类型已加载且 Console 无错误。后续修改继续使用同一实例编译。
 - 多任务同时修改主目录，因此编辑器编译结果只说明当时的脚本加载状态，不是 Center 固定版本对比或运行功能验收。

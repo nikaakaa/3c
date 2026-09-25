@@ -432,17 +432,14 @@ namespace ThirdPersonSimulation
         AbilityTimelineInvocationSource CreateTimelineInvocationSource(SimulationOperation operation)
         {
             ProgramSourceMapEntry source = m_Access.RequireOperationSource(operation);
-            int generationSlot = m_Access.RequireOperationSlot(
-                operation.Handle,
-                ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = m_ControlState.Get(generationSlot).UInt64;
+            ulong generation = m_Trace.ReadInvocationGeneration(operation.Handle);
             if (generation == 0)
                 throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no active invocation generation.");
             return new AbilityTimelineInvocationSource(
                 operation.Handle.Value,
                 source.GraphId,
                 source.NodeId,
-                source.GraphInvocationPath,
+                m_Trace.ReadInvocationPath(operation.Handle),
                 m_Access.SourcePath(operation),
                 generation);
         }

@@ -925,6 +925,11 @@ namespace ThirdPersonSimulation.Fixed
 
         internal ulong ReadInvocationGeneration(OperationHandle operation) => InvocationGeneration(operation);
 
+        internal string ReadInvocationPath(OperationHandle operation) =>
+            m_Frame.Presentation.HasTreeClipInvocation
+                ? m_Invocations.InvocationPath(operation, m_Frame.Presentation.TreeClipInvocation)
+                : m_Invocations.InvocationPath(operation);
+
         internal ulong ReadParentInvocationGeneration(OperationHandle operation) => ParentGeneration(operation);
 
         ulong InvocationGeneration(OperationHandle operation)

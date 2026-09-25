@@ -79,6 +79,12 @@ namespace ThirdPersonSimulation
 
         public ProgramSourceMapEntry Invocation(string path) => m_Invocations[path];
 
+        public string InvocationPath(OperationHandle operation) =>
+            ResolveOperationInvocation(operation, null).GraphInvocationPath;
+
+        public string InvocationPath(OperationHandle operation, in AbilityTreeClipInvocation treeClipInvocation) =>
+            ResolveOperationInvocation(operation, treeClipInvocation).GraphInvocationPath;
+
         int ResolveGenerationSlot(OperationHandle operation, AbilityTreeClipInvocation? treeClipInvocation)
         {
             ProgramSourceMapEntry invocation = ResolveOperationInvocation(operation, treeClipInvocation);

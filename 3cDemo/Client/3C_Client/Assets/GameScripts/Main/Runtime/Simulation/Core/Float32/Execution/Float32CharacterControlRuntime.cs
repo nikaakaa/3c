@@ -333,15 +333,6 @@ namespace ThirdPersonSimulation
             return Compare(angle, m_ReadParameter(threshold), comparison);
         }
 
-        public bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input)
-        {
-            Float32Vector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
-            if (value == Float32Vector2.Zero)
-                return false;
-            Float32Scalar angle = Float32Scalar.Abs(Float32Angle.Delta(m_Body.Yaw, Float32Angle.FromPlanarDirection(value)));
-            return angle >= Float32Scalar.FromInt64(90);
-        }
-
         SimulationInputValue ReadValue(SimulationInputValueId input, SimulationInputValueKind kind)
         {
             for (int i = 0; i < m_Input.Values.Count; i++)

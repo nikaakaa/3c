@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Control.Rules
             SimulationExecutionSource source = Source(stateId);
             if (m_Read.HasInputRequest(s_DodgeRequest))
             {
-                CharacterSkillId skill = m_Read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
+                CharacterSkillId skill = MoveAbove(m_Read) ? DodgeForward : DodgeBack;
                 ulong replacementActionInstanceId = 0;
                 TryGetActiveAttackInstance(m_Read, out replacementActionInstanceId);
                 m_Output.SubmitAbility(new CharacterControlAbilityRequest(

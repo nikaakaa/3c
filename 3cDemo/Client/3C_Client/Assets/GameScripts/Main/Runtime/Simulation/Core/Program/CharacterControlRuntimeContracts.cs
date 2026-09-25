@@ -50,7 +50,6 @@ namespace ThirdPersonSimulation
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison);
-        bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input);
     }
 
     public interface ICharacterControlStateReadPort

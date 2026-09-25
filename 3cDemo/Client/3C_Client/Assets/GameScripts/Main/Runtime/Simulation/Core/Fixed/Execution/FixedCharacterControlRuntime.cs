@@ -331,15 +331,6 @@ namespace ThirdPersonSimulation.Fixed
             return Compare(angle, m_ReadParameter(threshold), comparison);
         }
 
-        public bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input)
-        {
-            FixedVector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
-            if (value == FixedVector2.Zero)
-                return false;
-            FixedScalar angle = FixedScalar.Abs(FixedAngle.Delta(m_Body.Yaw, FixedAngle.FromPlanarDirection(value)));
-            return angle >= FixedScalar.FromInt64(90);
-        }
-
         SimulationInputValue ReadValue(SimulationInputValueId input, SimulationInputValueKind kind)
         {
             for (int i = 0; i < m_Input.Values.Count; i++)

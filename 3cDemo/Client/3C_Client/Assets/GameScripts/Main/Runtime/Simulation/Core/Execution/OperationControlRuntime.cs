@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
         public OperationExecutionResult Wait(OperationExecutionDescriptor operation, OperationWaitReason reason)
         {
             if (ControlTraceEnabled)
-                m_Target.EmitTrace(operation, "operation_waiting", OperationControlTraceSeverity.Detail, reason.ToString());
+                m_Target.EmitTrace(operation, "operation_waiting", OperationControlTraceSeverity.Detail, OperationTraceText.Wait(reason));
             return OperationExecutionResult.Running;
         }
         public void BeginEvaluation()

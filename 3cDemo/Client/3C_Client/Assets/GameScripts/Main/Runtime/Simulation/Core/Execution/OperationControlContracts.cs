@@ -68,6 +68,43 @@ namespace ThirdPersonSimulation
         Error = 2
     }
 
+    internal static class OperationTraceText
+    {
+        public static string Wait(OperationWaitReason reason) => reason switch
+        {
+            OperationWaitReason.ChildCompletion => "ChildCompletion",
+            OperationWaitReason.ChildStop => "ChildStop",
+            OperationWaitReason.SubgraphCompletion => "SubgraphCompletion",
+            OperationWaitReason.PriorityReplacement => "PriorityReplacement",
+            OperationWaitReason.ParallelCompletion => "ParallelCompletion",
+            OperationWaitReason.ParallelStop => "ParallelStop",
+            OperationWaitReason.NextIteration => "NextIteration",
+            OperationWaitReason.StateEnter => "StateEnter",
+            OperationWaitReason.StateExit => "StateExit",
+            _ => throw new ArgumentOutOfRangeException(nameof(reason))
+        };
+
+        public static string Result(OperationExecutionResult result) => result switch
+        {
+            OperationExecutionResult.Success => "Success",
+            OperationExecutionResult.Failure => "Failure",
+            _ => throw new ArgumentOutOfRangeException(nameof(result))
+        };
+
+        public static string StopCause(OperationStopCause cause) => cause switch
+        {
+            OperationStopCause.None => "None",
+            OperationStopCause.SelfAbort => "SelfAbort",
+            OperationStopCause.LowerPriorityAbort => "LowerPriorityAbort",
+            OperationStopCause.ParentStop => "ParentStop",
+            OperationStopCause.StateTransition => "StateTransition",
+            OperationStopCause.Reset => "Reset",
+            OperationStopCause.Shutdown => "Shutdown",
+            OperationStopCause.ActionContextEnded => "ActionContextEnded",
+            _ => throw new ArgumentOutOfRangeException(nameof(cause))
+        };
+    }
+
     public enum OperationStateLifecyclePhase : byte
     {
         Entered = 1,

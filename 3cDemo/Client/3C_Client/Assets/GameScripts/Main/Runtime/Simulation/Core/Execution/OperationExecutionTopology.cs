@@ -256,6 +256,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(code), $"Operation code '{(ushort)code}' is not supported by the current operation set.");
             Handle = handle;
             Code = code;
+            CodeName = code.ToString();
             Integer0 = integer0;
             Integer1 = integer1;
             Unsigned0 = unsigned0;
@@ -272,6 +273,7 @@ namespace ThirdPersonSimulation
 
         public OperationHandle Handle { get; }
         public SimulationOperationCode Code { get; }
+        public string CodeName { get; }
         public int Integer0 { get; }
         public int Integer1 { get; }
         public ulong Unsigned0 { get; }

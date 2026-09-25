@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation
                 m_Host.ActivateScopes(m_Host.Cursor, operation, generation);
                 m_Host.WriteInt32(lifecycleSlot, (int)OperationRunnableStatus.Running);
                 if (m_Host.DiagnosticsEnabled)
-                    m_Host.EmitTrace(operation, "operation_enter", OperationControlTraceSeverity.Detail, operation.Code.ToString());
+                    m_Host.EmitTrace(operation, "operation_enter", OperationControlTraceSeverity.Detail, operation.CodeName);
             }
             if (!entering && m_Host.ControlTraceEnabled)
                 m_Host.EmitTrace(operation, "operation_running", OperationControlTraceSeverity.Detail, string.Empty);
@@ -72,7 +72,7 @@ namespace ThirdPersonSimulation
                         : (int)OperationRunnableStatus.Failure);
                 m_Host.CompleteScopes(operation);
                 if (m_Host.DiagnosticsEnabled)
-                    m_Host.EmitTrace(operation, "operation_complete", OperationControlTraceSeverity.Detail, result.ToString());
+                    m_Host.EmitTrace(operation, "operation_complete", OperationControlTraceSeverity.Detail, OperationTraceText.Result(result));
             }
             return result;
         }
@@ -113,7 +113,7 @@ namespace ThirdPersonSimulation
                 m_Host.WriteInt32(lifecycle, (int)OperationRunnableStatus.Stopping);
                 WriteStopContext(operation, context);
                 if (m_Host.DiagnosticsEnabled)
-                    m_Host.EmitTrace(operation, "operation_stop_requested", OperationControlTraceSeverity.Detail, context.Cause.ToString());
+                    m_Host.EmitTrace(operation, "operation_stop_requested", OperationControlTraceSeverity.Detail, OperationTraceText.StopCause(context.Cause));
             }
             else if (context.IsValid)
             {
@@ -157,7 +157,7 @@ namespace ThirdPersonSimulation
                     operation,
                     "operation_stopped",
                     status == OperationStopStatus.Failed ? OperationControlTraceSeverity.Error : OperationControlTraceSeverity.Detail,
-                    context.Cause.ToString());
+                    OperationTraceText.StopCause(context.Cause));
             }
             m_Host.ResetOperationState(operation);
             return status;
@@ -232,7 +232,7 @@ namespace ThirdPersonSimulation
                 }
             }
             if (active && m_Host.DiagnosticsEnabled)
-                m_Host.EmitTrace(operation, "operation_force_stopped", OperationControlTraceSeverity.Detail, context.Cause.ToString());
+                m_Host.EmitTrace(operation, "operation_force_stopped", OperationControlTraceSeverity.Detail, OperationTraceText.StopCause(context.Cause));
             m_Host.CompleteScopes(operation);
             m_Host.ResetOperationState(operation);
         }

@@ -214,6 +214,9 @@ namespace BTSMTL.Diagnostics
             m_Changes = new Queue<RuntimeLiveStateChange>(maxChanges + 1);
             m_RecencyNodes = new Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>>(maxChanges + 1);
             m_RecencyNodePool = new LinkedListNode<RuntimeLiveStateKey>[m_MaxChanges];
+            for (int i = 0; i < m_RecencyNodePool.Length; i++)
+                m_RecencyNodePool[i] = new LinkedListNode<RuntimeLiveStateKey>(default);
+            m_RecencyNodePoolCount = m_RecencyNodePool.Length;
         }
 
         public long Version => m_Version;

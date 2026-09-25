@@ -156,9 +156,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.track38 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData5, parts.timelineCatalog5, typeof(TreeTrack), "665bbb18-9088-7be8-ffbf-f7c570f8749a", "Logic / Commit / Decision Attack5End2 RecoveryEarly", TimelineExecutionDomain.Logic);
             parts.track39 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData5, parts.timelineCatalog5, typeof(TreeTrack), "a666d2e2-ea9f-7239-d36c-7159d95d2e2e", "Logic / Commit / Decision Attack5End2 RecoveryLate", TimelineExecutionDomain.Logic);
             parts.timelineData6 = timeline6.Data;
-            var timelineCatalog6 = TimelineTreeContractComposition.Create();
-            var track40 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData6, timelineCatalog6, typeof(AnimationTrack), "ea50e9bc-c50a-5078-9696-f90c067f8acf", "Animation", TimelineExecutionDomain.Presentation);
-            var clip49 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData6, timelineCatalog6, track40, "1d561824-cad4-54eb-86e8-19de5dffbd81", 0m, asset40);
+            parts.timelineCatalog6 = TimelineTreeContractComposition.Create();
+            var track40 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData6, parts.timelineCatalog6, typeof(AnimationTrack), "ea50e9bc-c50a-5078-9696-f90c067f8acf", "Animation", TimelineExecutionDomain.Presentation);
+            var clip49 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData6, parts.timelineCatalog6, track40, "1d561824-cad4-54eb-86e8-19de5dffbd81", 0m, asset40);
+            parts.track41 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData6, parts.timelineCatalog6, typeof(TreeTrack), "b7c8d9e0-f1a2-4354-b6c7-d8e9f0a1b2c3", "Logic / Commit / Decision Attack5End ComboAccept", TimelineExecutionDomain.Logic);
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph3, "7862fb9d08504eb5803abe60861e6b79", "RecoveryEarly", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryEarly", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryEarly", "Attack1RecoveryEarly", 1004UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph3, "86e50267d98f4ae8976bd806cb96a2d7", "ComboAccept", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/ComboAccept", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "ComboAccept", "Attack1Cancel", 1002UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph3, "cfd05565ebbd49129a54cf1e838ceb45", "RecoveryLate", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryLate", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryLate", "Attack1MoveCancel", 1003UL));
@@ -181,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph70, "e2a7c9d4f1b8356a0c4d7e8f9a0b1c2d", "RecoveryEarly", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryEarly", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryEarly", "Attack5End2RecoveryEarly", 6004UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph70, "e3b8d0e5f2c9467b1d5e8f9a0b1c2d3", "RecoveryLate", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryLate", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryLate", "Attack5End2MoveCancel", 6003UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph70, "e4c9e1f6a3d0578c2e6f9a0b1c2d3e4f", "ComboAccept", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/ComboAccept", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "ComboAccept", "Attack5End2Cancel", 6002UL));
+            BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph78, "f4a6b8c0-d2e4-4618-a0b2-c4d6e8f0a2b4", "ComboAccept", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/ComboAccept", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "ComboAccept", "Attack5EndCancel", 5002UL));
             BtsmtlSkillAuthoringContract.Apply(node338, new[] { new BtsmtlSkillAuthoringFieldValue("actionContext", null), new BtsmtlSkillAuthoringFieldValue("timelineId", timeline5) });
             BtsmtlSkillAuthoringContract.Apply(node374, new[] { new BtsmtlSkillAuthoringFieldValue("actionContext", null), new BtsmtlSkillAuthoringFieldValue("timelineId", timeline6) });
             BtsmtlSkillAuthoringCode.EnsureSection(parts.timelineData, "c196a52f-4b06-4310-8a8a-8699ef6a5620", "Attack", 0m, "");
@@ -319,12 +321,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             internal Track track39;
             internal Clip clip48;
             internal TimelineData timelineData6;
+            internal Track track41;
+            internal Clip clip50;
             internal TimelineContractCatalog timelineCatalog;
             internal TimelineContractCatalog timelineCatalog1;
             internal TimelineContractCatalog timelineCatalog2;
             internal TimelineContractCatalog timelineCatalog3;
             internal TimelineContractCatalog timelineCatalog4;
             internal TimelineContractCatalog timelineCatalog5;
+            internal TimelineContractCatalog timelineCatalog6;
         }
     }
 }

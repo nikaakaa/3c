@@ -36,6 +36,12 @@ Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDia
 
 编辑器提交 `fc019a287` 已让独立 Timeline 缺少来源图、Timeline 无匹配调用、角色已附着但无可导航事实分别显示明确状态；它没有提供缺失的技能执行事实，也不改变 5.2、5.3 的未完成状态。
 
+## 2026-09-25 运行验收阻塞
+
+使用 Unity 实例 `e852139597e42532` 按正式 ScenePlay 场景进入 Play；实例在 PlayMode transition 长时间未完成，随后由现有 `TEngine.PlayModeErrorAutoExit` 自动退出。`Editor-prev.log` 记录当时分页内存约为 `60.8/65.1 GB`（93%），并出现 `The system is running out of memory`。这次运行没有注册 `RuntimeDiagnosticsTarget`，因此没有角色、技能、子图或 Timeline 诊断事实，不能用它证明 RuntimeDebug 自动导航失败或成功。
+
+当前结论仍是：代码链已完成到运行时接线，5.2、5.3 仍未验收。需要在 Unity 能完成同一 ScenePlay 启动并保持 Play 的环境下重新检查角色绑定、唯一技能 Follow、子图返回父路径、并行 Pin 和 Timeline 显示；在获得这些运行事实前，不更新为完成。
+
 编辑器提交 `3ab0b56d2` 将 Ability Timeline 的来源图与技能执行实例按动作实例、技能代数和调用路径对应，打开 Slate 时同时绑定已有 FlowCanvas 观察会话；`93313a61a` 保留最近完成的短调用作为 Follow 候选；`db9f553fc` 保留仅有正式 Timeline 事实时的现有导航。`33f47fbb0`、`297dd8e66`、`75bf029ab`、`f3fbffda6`、`c1ea75756` 接通 Fixed 诊断来源、TreeClip 入口和提交后发布；`a33e48729` 修正子图父调用匹配与返回；`c06bfc115` 将本次诊断热路径的链表节点和枚举文本分配移至装配阶段；`51fef1cd8` 统一 Fixed/Float32 嵌套 Timeline 的实际调用入口。以上是代码与编译进度，不是运行时验收结论。
 
 ## 代码入口

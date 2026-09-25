@@ -32,7 +32,7 @@ Authoring、Preview、RuntimeDebug 始终从原 TimelineEditorWindow 切换。Ti
 
 Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDiagnosticsAdapter`，不再接空诊断接收器。编译 SourceMap 在装配时建立操作、节点、边、图调用和 TreeClip 入口映射；候选 Trace 留在正式 Step 结果中，`FixedSimulationOutputAggregate` 等所有角色提交完成后才向现有 `RuntimeDiagnosticsStore` 发布，提交中止则丢弃。编辑器 `BtsmtlRuntimeFocusResolver` 按 `SkillExecution` 节点事件识别技能图，Timeline 仍由 Timeline Host 的正式播放事实提供；两者按动作实例、技能代数和调用路径对应，不从作者资产反推运行结果。
 
-作者已报告运行时 RuntimeDebug 一直看不到有效内容。正式技能事实与编辑器候选之间的代码缺口现已接通，但尚未取得本版运行记录来确认角色绑定后的技能、子图、Timeline、返回父路径和并行 Pin 在 Unity 中实际显示正确。任务 5.2、5.3 保持未完成，直到作者运行时观察能证明这些场景成立。当前并行闭环任务明确确认未修改本目标的诊断文件；双方不同时触发 Unity 刷新、编译或回放。
+作者已报告运行时 RuntimeDebug 一直看不到有效内容。正式技能节点事实与编辑器候选之间的代码缺口已接通；但静态核对仍发现嵌套 Timeline 来源不一致：`FixedAbilityOperationControlRuntime.CreateTimelineInvocationSource` 写入编译基础图路径及 Timeline 节点自身代数，编辑器却按实际 TreeClip 入口路径及图调用代数匹配。此处未修前，嵌套 Timeline 不能算已实现自动跟随。尚未取得本版运行记录来确认角色绑定后的技能、子图、Timeline、返回父路径和并行 Pin 在 Unity 中实际显示正确。任务 5.2、5.3 保持未完成。当前并行闭环任务明确确认未修改本目标的诊断文件；双方不同时触发 Unity 刷新、编译或回放。
 
 编辑器提交 `fc019a287` 已让独立 Timeline 缺少来源图、Timeline 无匹配调用、角色已附着但无可导航事实分别显示明确状态；它没有提供缺失的技能执行事实，也不改变 5.2、5.3 的未完成状态。
 

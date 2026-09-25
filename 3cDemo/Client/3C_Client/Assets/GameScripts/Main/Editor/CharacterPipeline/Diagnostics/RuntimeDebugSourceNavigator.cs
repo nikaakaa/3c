@@ -114,14 +114,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return false;
                 graphInstance = candidate;
             }
-            if (!graphInstance.IsValid)
-                return false;
             return Open(
                 definition,
                 RuntimeSourceElementKey.Node(
                     provenance.SourceGraphAuthoringId,
                     provenance.SourceNodeAuthoringId),
-                graphInstance,
+                graphInstance.IsValid ? graphInstance : instance,
                 instance);
         }
 

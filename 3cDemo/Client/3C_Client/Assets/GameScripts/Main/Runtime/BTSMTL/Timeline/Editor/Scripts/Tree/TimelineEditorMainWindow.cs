@@ -177,7 +177,11 @@ namespace BTSMTL.Timeline.Editor
             summary = default;
             message = summaries.Count > 1
                 ? "当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。"
-                : string.Empty;
+                : m_Timeline == null
+                    ? "当前未打开 Timeline。"
+                    : string.IsNullOrEmpty(SourceGraphAuthoringId)
+                        ? "当前 Timeline 没有来源图绑定。"
+                        : "当前 Timeline 没有匹配的运行调用。";
             return false;
         }
 

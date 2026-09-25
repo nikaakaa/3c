@@ -446,6 +446,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     return;
                 RuntimeDebugViewModel view = RuntimeDebugSession.Shared.ViewModel;
                 m_RuntimeFocus.Refresh(view);
+                if (!view.Attached)
+                    return;
+                if (!view.Valid)
+                {
+                    PublishNavigationStatus(view.Error);
+                    return;
+                }
                 if (view.HasCoverageGap)
                 {
                     PublishNavigationStatus("运行记录不完整，已停止自动跟随。");
@@ -454,7 +461,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (m_RuntimeFocus.Candidates.Count != 1)
                 {
                     PublishNavigationStatus(m_RuntimeFocus.Candidates.Count == 0
-                        ? "当前没有活动调用。"
+                        ? "当前角色没有可导航的技能或 Timeline 运行事实。"
                         : "存在并行调用，请在 Session / RuntimeDebug / Pin 中选择具体实例。");
                     return;
                 }

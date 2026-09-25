@@ -157,7 +157,10 @@ namespace ThirdPersonSimulation
                     }
                 }
                 if (action.SkillExecutionGeneration != 0 && status == OperationRunnableStatus.Dormant)
-                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance lost its EntryOperation state.");
+                {
+                    Resolve(action, skill, false);
+                    return;
+                }
                 if (action.SkillExecutionGeneration != 0 &&
                     m_Control.ReadGeneration(skill.EntryOperation) != action.SkillExecutionGeneration)
                     throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance generation does not match its EntryOperation.");

@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new ArgumentException("Gameplay Ability root identity is incomplete.");
             string outputPath = context.OutputAssetPath;
             GameplayAbilityDefinition ability = AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(outputPath);
+            bool rootChanged = false;
             if (!ability)
             {
                 if (AssetDatabase.LoadMainAssetAtPath(outputPath) != null)
@@ -46,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 ability.name = string.IsNullOrWhiteSpace(name) ? abilityId : name;
                 ability.ConfigureIdentity(abilityId, name);
                 AssetDatabase.CreateAsset(ability, outputPath);
+                rootChanged = true;
             }
             else if (!string.Equals(ability.AbilityId, abilityId, StringComparison.Ordinal))
             {
@@ -60,17 +62,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     .OfType<BtsmtlSkillFlowGraph>()
                     .SingleOrDefault(value => string.Equals(value.AuthoringId, graphIdentity, StringComparison.Ordinal));
                 if (graph != null)
+                {
                     ability.SetAbilityGraph(graph);
+                    rootChanged = true;
+                }
             }
             if (graph == null)
             {
                 graph = BtsmtlSkillGraphAssetFactory.CreatePrivateAbilityGraph(ability, graphIdentity, name);
+                rootChanged = true;
             }
             else if (!string.Equals(graph.AuthoringId, graphIdentity, StringComparison.Ordinal) ||
                      graph.Role != BtsmtlSkillFlowGraphRole.Skill)
             {
                 throw new InvalidOperationException($"Gameplay Ability '{abilityId}' graph identity or role is invalid.");
             }
+            if (!rootChanged)
+                return graph;
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(graph);
             AssetDatabase.SaveAssets();

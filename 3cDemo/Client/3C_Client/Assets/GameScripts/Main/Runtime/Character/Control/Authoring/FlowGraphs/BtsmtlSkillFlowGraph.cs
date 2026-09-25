@@ -124,6 +124,10 @@ namespace ThirdPersonCharacter.Control.Authoring
                 throw new InvalidOperationException("技能Graph节点类型不属于当前正式作者域。");
             if (string.IsNullOrWhiteSpace(identity))
                 throw new ArgumentException("技能Graph节点identity不能为空。", nameof(identity));
+            FlowNode unchanged = ResolveNode(graph, identity);
+            if (unchanged != null && unchanged.GetType() == nodeType &&
+                unchanged.name == name && unchanged.position == position)
+                return unchanged;
             return BtsmtlSkillFlowEditorMutation.Execute(graph, "配置技能Graph节点", () =>
             {
                 FlowNode node = ResolveNode(graph, identity);
@@ -161,6 +165,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (sourcePort == null || targetPort == null)
                 throw new InvalidOperationException($"技能Graph连线identity '{identity}'引用了不存在的端口。");
             BinderConnection existing = ResolveConnection(graph, identity);
+            if (existing != null && existing.sourcePort == sourcePort && existing.targetPort == targetPort)
+                return existing;
             if (existing != null &&
                 (sourcePort.type != targetPort.type || sourcePort.IsFlowPort() != targetPort.IsFlowPort()))
                 throw new InvalidOperationException($"技能Graph连线identity '{identity}'的端口类型不一致。");

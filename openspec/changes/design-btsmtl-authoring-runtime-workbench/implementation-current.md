@@ -36,6 +36,8 @@ Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDia
 
 编辑器提交 `fc019a287` 已让独立 Timeline 缺少来源图、Timeline 无匹配调用、角色已附着但无可导航事实分别显示明确状态；它没有提供缺失的技能执行事实，也不改变 5.2、5.3 的未完成状态。
 
+编辑器提交 `facb9e41d` 修正 Capture History / Ended 状态的来源导航：角色从 live registry 注销后，导航改用冻结 ViewModel 的 Host 信息和历史 SourceMap，不再在入口处直接失败。
+
 ## 2026-09-25 运行验收阻塞
 
 使用 Unity 实例 `e852139597e42532` 按正式 ScenePlay 场景进入 Play；实例在 PlayMode transition 长时间未完成，随后由现有 `TEngine.PlayModeErrorAutoExit` 自动退出。`Editor-prev.log` 记录当时分页内存约为 `60.8/65.1 GB`（93%），并出现 `The system is running out of memory`。这次运行没有注册 `RuntimeDiagnosticsTarget`，因此没有角色、技能、子图或 Timeline 诊断事实，不能用它证明 RuntimeDebug 自动导航失败或成功。
@@ -64,6 +66,7 @@ Fixed 角色已在 `FixedCharacterRegistration` 装配 `FixedCharacterRuntimeDia
 ## 验证边界
 
 - 当轮未新增测试、未启动 Play 或进行端到端验收，保留主 Editor。Fixed Core、Fixed Unity、Diagnostics 与 Editor 的相关程序集独立编译均为 0 个错误；这只能证明当前代码可编译，不能证明作者运行时已经看到有效技能事实。
+- `facb9e41d` 后尝试按项目规定编译 `ThirdPersonClient.Editor.csproj`；Unity 生成的 `Temp/obj/ThirdPersonClient.Editor/project.assets.json` 当前缺失，命令以 `NETSDK1004` 结束，随后已执行 `dotnet build-server shutdown`。这次没有把依赖文件缺失误判为源码错误。
 - Center 改动：`e7c0a8207336464ea127d6569dff9343`，名称“完成原Timeline的作者预览与运行观察”。正式 compile 请求返回 `WorkspaceEditorInUse`，没有产生可引用的成功 Run。
 - 使用现有 Unity 实例 `e852139597e42532` 的正式脚本刷新；首次等待就绪超时后，仅查询原实例，确认重载完成、新类型已加载且 Console 无错误。后续修改继续使用同一实例编译。
 - 多任务同时修改主目录，因此编辑器编译结果只说明当时的脚本加载状态，不是 Center 固定版本对比或运行功能验收。

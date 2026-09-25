@@ -10,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly List<RuntimeDebugEventView> m_Events = new();
         readonly Dictionary<(RuntimeInstanceKey, RuntimeSourceElementKey), RuntimeDebugEventView> m_Nodes = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_Graphs = new();
+        readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_CompletedGraphs = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_Timelines = new();
         readonly List<RuntimeDebugEventView> m_Candidates = new();
 
@@ -20,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Candidates.Clear();
             m_Nodes.Clear();
             m_Graphs.Clear();
+            m_CompletedGraphs.Clear();
             m_Timelines.Clear();
             if (!view.Valid || view.HasCoverageGap)
                 return;
@@ -51,12 +53,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (RuntimeDebugEventView item in m_Nodes.Values)
             {
                 RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation);
-                if (observation.IsTerminal)
-                    continue;
                 RuntimeInstanceKey instance = item.Event.RuntimeInstance;
-                if (!m_Graphs.TryGetValue(instance, out RuntimeDebugEventView previous) ||
+                Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> destination = observation.IsTerminal
+                    ? m_CompletedGraphs
+                    : m_Graphs;
+                if (!destination.TryGetValue(instance, out RuntimeDebugEventView previous) ||
                     item.Event.Sequence > previous.Event.Sequence)
-                    m_Graphs[instance] = item;
+                    destination[instance] = item;
             }
             foreach (RuntimeDebugEventView item in m_Graphs.Values)
                 if (!HasActiveChildGraph(view, item.Event.RuntimeInstance) &&
@@ -65,6 +68,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (RuntimeDebugEventView item in m_Timelines.Values)
                 if (IsActiveTimeline(view, item) && !HasActiveTimelineGraph(view, item))
                     m_Candidates.Add(item);
+            if (m_Candidates.Count == 0)
+                AddLatestCompleted(view);
+        }
+
+        void AddLatestCompleted(RuntimeDebugViewModel view)
+        {
+            RuntimeDebugEventView latest = default;
+            foreach (RuntimeDebugEventView item in m_CompletedGraphs.Values)
+                if (!m_Graphs.ContainsKey(item.Event.RuntimeInstance) &&
+                    item.Event.Sequence > latest.Event.Sequence)
+                    latest = item;
+            foreach (RuntimeDebugEventView item in m_Timelines.Values)
+                if (!IsActiveTimeline(view, item) && item.Event.Sequence > latest.Event.Sequence)
+                    latest = item;
+            if (latest.Event.Sequence == 0)
+                return;
+            foreach (RuntimeDebugEventView item in m_CompletedGraphs.Values)
+            {
+                if (m_Graphs.ContainsKey(item.Event.RuntimeInstance) ||
+                    item.Event.Domain != latest.Event.Domain ||
+                    item.Event.Position != latest.Event.Position ||
+                    HasCompletedChildGraph(view, item.Event.RuntimeInstance) ||
+                    HasCompletedTimeline(view, item.Event.RuntimeInstance))
+                    continue;
+                m_Candidates.Add(item);
+            }
+            foreach (RuntimeDebugEventView item in m_Timelines.Values)
+                if (!IsActiveTimeline(view, item) &&
+                    item.Event.Domain == latest.Event.Domain &&
+                    item.Event.Position == latest.Event.Position)
+                    m_Candidates.Add(item);
+        }
+
+        bool HasCompletedChildGraph(RuntimeDebugViewModel view, RuntimeInstanceKey parent)
+        {
+            foreach (RuntimeInstanceKey child in m_CompletedGraphs.Keys)
+                if (!child.Equals(parent) && IsChild(view, child, parent))
+                    return true;
+            return false;
+        }
+
+        bool HasCompletedTimeline(RuntimeDebugViewModel view, RuntimeInstanceKey graph)
+        {
+            foreach (RuntimeDebugEventView item in m_Timelines.Values)
+                if (!IsActiveTimeline(view, item) &&
+                    BelongsToGraph(item.Event.RuntimeInstance, item.Event.Payload.TimelinePlayback, graph))
+                    return true;
+            return false;
         }
 
         bool HasActiveChildGraph(RuntimeDebugViewModel view, RuntimeInstanceKey parent)

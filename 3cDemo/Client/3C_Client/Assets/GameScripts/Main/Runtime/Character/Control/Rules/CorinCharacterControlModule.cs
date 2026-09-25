@@ -236,10 +236,10 @@ namespace ThirdPersonCharacter.Control.Rules
                 if (m_Read.IsAbilityActive(BranchAttack) ||
                     m_Read.IsAbilityActive(RushAttack) ||
                     m_Read.IsAbilityActive(DodgeForward) ||
-                    m_Read.IsAbilityActive(DodgeBack))
+                    m_Read.IsAbilityActive(DodgeBack) ||
+                    m_Read.IsAbilityActive(Attack))
                     return;
-                if (!m_Read.IsAbilityActive(Attack) &&
-                    MoveAbove(m_Read) &&
+                if (MoveAbove(m_Read) &&
                     (stateId == RunLoop || stateId == MovingTurn))
                 {
                     SubmitRushAttack(stateId, 0);

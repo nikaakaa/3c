@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly RuntimeDebugSession m_Session;
         readonly FlowGraph m_RootGraph;
         readonly Scope m_RootScope;
+        readonly List<RuntimeInstanceKey> m_ParentInstances = new();
         Scope m_PageScope;
         string m_PageGraphAuthoringId = string.Empty;
         BtsmtlSkillFlowObservation m_Observation;
@@ -148,7 +149,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     IGraphElement caller = graph.GetCurrentChildGraphSource();
                     RuntimeSourceElementKind kind = caller is Connection ? RuntimeSourceElementKind.Edge : RuntimeSourceElementKind.Node;
                     RuntimeGraphInvocation[] matches = m_Session.ViewModel.GetGraphInvocations(scope.Root).Where(value =>
-                        value.ParentPath == scope.Path && value.GraphId == childAuthoring.AuthoringId &&
+                        BtsmtlRuntimeInvocationPath.MatchesParent(m_Session.ViewModel, scope.Root,
+                            value.ParentPath, scope.Path) && value.GraphId == childAuthoring.AuthoringId &&
                         value.Caller.Kind == kind && value.Caller.ElementAuthoringId == caller.UID &&
                         string.IsNullOrEmpty(value.CallerClipId)).ToArray();
                     if (matches.Length != 1)
@@ -216,18 +218,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void NavigateParent()
         {
             RuntimeDebugViewModel view = m_Session.ViewModel;
-            if (!CanNavigateParent() || !view.TryGetInvocation(m_PageScope.Root, m_PageScope.Path, out RuntimeGraphInvocation invocation) ||
-                !view.TryGetInvocation(m_PageScope.Root, invocation.ParentPath, out RuntimeGraphInvocation parent))
+            if (!CanNavigateParent() ||
+                !view.TryGetInvocation(m_PageScope.Root, m_PageScope.Path, out RuntimeGraphInvocation invocation))
                 return;
             Scope scope;
+            RuntimeGraphInvocation parent;
             if (m_PageScope.Calls.Length != 0)
+            {
                 scope = m_PageScope.Parent();
+                if (!BtsmtlRuntimeInvocationPath.MatchesParent(view, scope.Root, invocation.ParentPath, scope.Path) ||
+                    !view.TryGetInvocation(scope.Root, scope.Path, out parent))
+                    return;
+            }
             else
             {
-                view.TryGetParentGeneration(m_PageScope.Root, out ulong generation);
-                RuntimeInstanceKey root = m_PageScope.Root;
-                scope = new Scope(RuntimeInstanceKey.SkillExecution(root.CharacterRuntimeId, root.GraphRuntimeId, root.StateId,
-                    root.ActionInstanceId, parent.Path, root.ActivationGeneration, generation), Array.Empty<string>());
+                if (!TryResolveParent(view, invocation, out RuntimeInstanceKey instance, out parent))
+                    return;
+                scope = new Scope(instance, Array.Empty<string>());
             }
             FlowGraph graph = FindGraph(parent.GraphId);
             graph.SetCurrentChildGraphAssignable(null);
@@ -262,6 +269,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
+        bool TryResolveParent(RuntimeDebugViewModel view, RuntimeGraphInvocation child,
+            out RuntimeInstanceKey parentInstance, out RuntimeGraphInvocation parentInvocation)
+        {
+            parentInstance = default;
+            parentInvocation = default;
+            RuntimeInstanceKey root = m_PageScope.Root;
+            if (!view.TryGetParentGeneration(root, out ulong generation) || generation == 0)
+                return false;
+            foreach (RuntimeGraphInvocation candidate in view.GetGraphInvocations(root))
+            {
+                if (!BtsmtlRuntimeInvocationPath.MatchesParent(view, root, child.ParentPath, candidate.Path))
+                    continue;
+                view.CopyGraphInstances(candidate.GraphId, m_ParentInstances);
+                for (int i = 0; i < m_ParentInstances.Count; i++)
+                {
+                    RuntimeInstanceKey instance = m_ParentInstances[i];
+                    if (!SameRelease(instance, root) ||
+                        instance.InvocationGeneration != generation ||
+                        !string.Equals(instance.CallSiteId, candidate.Path, StringComparison.Ordinal))
+                        continue;
+                    if (parentInstance.IsValid)
+                        return false;
+                    parentInstance = instance;
+                    parentInvocation = candidate;
+                }
+            }
+            return parentInstance.IsValid;
+        }
+
         void OnTimelineAssetOpened(TimelineAsset asset)
         {
             ClearTimelineOverlay();
@@ -283,7 +319,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_ActiveTimeline == null || m_ActiveTimeline.Asset != asset || clip.AssetTree is not BtsmtlSkillFlowGraph graph)
                 return;
             RuntimeGraphInvocation[] matches = m_Session.ViewModel.GetGraphInvocations(m_ActiveTimeline.Scope.Root).Where(value =>
-                value.ParentPath == m_ActiveTimeline.Scope.Path && value.GraphId == graph.AuthoringId &&
+                BtsmtlRuntimeInvocationPath.MatchesParent(m_Session.ViewModel,
+                    m_ActiveTimeline.Scope.Root, value.ParentPath, m_ActiveTimeline.Scope.Path) &&
                 value.Caller.ElementAuthoringId == m_ActiveTimeline.NodeId && value.CallerClipId == clip.AuthoringId &&
                 value.CallerId == "Root").ToArray();
             if (matches.Length != 1)

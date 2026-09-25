@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             child.ActivationGeneration == parent.ActivationGeneration &&
             view.TryGetParentGeneration(child, out ulong generation) && generation == parent.InvocationGeneration &&
             view.TryGetInvocation(child, child.CallSiteId, out RuntimeGraphInvocation invocation) &&
-            string.Equals(invocation.ParentPath, parent.CallSiteId, StringComparison.Ordinal);
+            BtsmtlRuntimeInvocationPath.MatchesParent(view, child, invocation.ParentPath, parent.CallSiteId);
 
         bool HasActiveTimeline(RuntimeDebugViewModel view, RuntimeInstanceKey graph)
         {
@@ -160,7 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !view.TryGetInvocation(graph, graph.CallSiteId, out RuntimeGraphInvocation invocation))
                     continue;
                 if (!string.IsNullOrEmpty(invocation.CallerClipId) &&
-                    string.Equals(invocation.ParentPath, provenance.SourceInvocationPath, StringComparison.Ordinal) &&
+                    BtsmtlRuntimeInvocationPath.MatchesParent(view, graph, invocation.ParentPath,
+                        provenance.SourceInvocationPath) &&
                     string.Equals(invocation.Caller.ElementAuthoringId, provenance.SourceNodeAuthoringId, StringComparison.Ordinal))
                     return true;
             }
@@ -182,5 +183,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 item.Event.RuntimeInstance,
                 out RuntimeTimelinePlaybackDebugSummary summary,
                 item.Event.Payload.TimelinePlayback.SourceGraphAuthoringId) && !summary.IsTerminal;
+    }
+
+    static class BtsmtlRuntimeInvocationPath
+    {
+        public static bool MatchesParent(RuntimeDebugViewModel view, RuntimeInstanceKey instance,
+            string declaredPath, string actualPath)
+        {
+            if (string.Equals(declaredPath, actualPath, StringComparison.Ordinal))
+                return true;
+            return !string.IsNullOrEmpty(declaredPath) &&
+                   actualPath != null && actualPath.Length > declaredPath.Length &&
+                   actualPath[declaredPath.Length] == '/' &&
+                   actualPath.StartsWith(declaredPath, StringComparison.Ordinal) &&
+                   view.TryGetInvocation(instance, actualPath, out RuntimeGraphInvocation parent) &&
+                   !string.IsNullOrEmpty(parent.CallerClipId);
+        }
     }
 }

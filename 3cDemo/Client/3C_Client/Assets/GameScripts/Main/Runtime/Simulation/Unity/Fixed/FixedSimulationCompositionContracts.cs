@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
+using FixedSimulationActorTickResult = ThirdPersonSimulation.Fixed.SimulationActorTickResult;
 using FixedWorldSolver = ThirdPersonSimulation.Fixed.ICharacterWorldSolver;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
@@ -46,6 +47,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public interface IFixedLocalSimulationActorRegistration : IFixedCharacterRuntimeRegistration
     {
         IFixedCharacterControlSourceRuntime FixedControlSource { get; }
+    }
+
+    internal interface IFixedCommittedDiagnosticsPublisher
+    {
+        void PublishCommitted(FixedSimulationActorTickResult result);
     }
 
     public interface IFixedSimulationPreparedSource : ISimulationSessionPreparedSource
@@ -110,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         ISimulationSessionOutputLifecycle
     {
         readonly Dictionary<ActorId, IFixedSimulationActorRegistration> m_ByActor;
+        readonly Dictionary<ActorId, SortedTickResultBuffer<FixedSimulationActorTickResult>> m_PendingDiagnostics;
         readonly IFixedSimulationActorRegistration[] m_Ordered;
         readonly int m_MaximumBodySamplesPerActor;
 
@@ -123,6 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentOutOfRangeException(nameof(maximumBodySamplesPerActor));
             m_MaximumBodySamplesPerActor = maximumBodySamplesPerActor;
             m_ByActor = new Dictionary<ActorId, IFixedSimulationActorRegistration>();
+            m_PendingDiagnostics = new Dictionary<ActorId, SortedTickResultBuffer<FixedSimulationActorTickResult>>();
             m_Ordered = new IFixedSimulationActorRegistration[registrations.Count];
             for (int i = 0; i < registrations.Count; i++)
             {
@@ -130,6 +138,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     throw new ArgumentException("Fixed output aggregate contains a missing registration.", nameof(registrations));
                 if (!m_ByActor.TryAdd(registration.ActorId, registration))
                     throw new ArgumentException($"Fixed output aggregate contains duplicate ActorId '{registration.ActorId}'.", nameof(registrations));
+                m_PendingDiagnostics.Add(registration.ActorId,
+                    new SortedTickResultBuffer<FixedSimulationActorTickResult>(maximumBodySamplesPerActor,
+                        $"Fixed Actor '{registration.ActorId}' pending diagnostics"));
                 m_Ordered[i] = registration;
             }
             Array.Sort(m_Ordered, (left, right) => left.ActorId.CompareTo(right.ActorId));
@@ -145,6 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             for (int i = 0; i < m_Ordered.Length; i++)
             {
+                m_PendingDiagnostics[m_Ordered[i].ActorId].Clear();
                 m_Ordered[i].BeginResultCommit(m_MaximumBodySamplesPerActor);
                 m_Ordered[i].PresentationOutput.BeginCommit();
             }
@@ -157,6 +169,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_Ordered[i].PresentationOutput.CompleteCommit(confirmedTick);
                 m_Ordered[i].CompleteResultCommit();
             }
+            for (int i = 0; i < m_Ordered.Length; i++)
+            {
+                IFixedSimulationActorRegistration registration = m_Ordered[i];
+                SortedTickResultBuffer<FixedSimulationActorTickResult> pending = m_PendingDiagnostics[registration.ActorId];
+                if (registration.SimulationDiagnostics is IFixedCommittedDiagnosticsPublisher publisher)
+                    for (int resultIndex = 0; resultIndex < pending.Count; resultIndex++)
+                        publisher.PublishCommitted(pending.GetValue(resultIndex));
+                pending.Clear();
+            }
         }
 
         public void AbortCommit()
@@ -165,6 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 m_Ordered[i].PresentationOutput.AbortCommit();
                 m_Ordered[i].AbortResultCommit();
+                m_PendingDiagnostics[m_Ordered[i].ActorId].Clear();
             }
         }
 
@@ -184,7 +206,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
-            Route(result.ActorId).ObservePublished(result);
+            IFixedSimulationActorRegistration registration = Route(result.ActorId);
+            registration.ObservePublished(result);
+            if (registration.SimulationDiagnostics is IFixedCommittedDiagnosticsPublisher)
+                m_PendingDiagnostics[result.ActorId].Set(result.Tick.Value, result);
         }
 
         IFixedSimulationActorRegistration Route(ActorId actorId)

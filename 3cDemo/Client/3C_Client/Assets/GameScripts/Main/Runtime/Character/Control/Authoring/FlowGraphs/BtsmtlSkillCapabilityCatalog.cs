@@ -864,6 +864,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return entry.ActivationEntryId;
                 case "windowType" when node is IActionWindowAuthoring window:
                     return window.WindowType;
+                case "eventId" when node is BtsmtlSkillActionEventReceivedFlowNode actionEvent:
+                    return actionEvent.EventId;
                 case "admissionProfile" when node is BtsmtlSkillCanActivateActionFlowNode admission:
                     return admission.AdmissionProfile;
                 case "targetSnapshot" when node is BtsmtlSkillCanActivateActionFlowNode admission:

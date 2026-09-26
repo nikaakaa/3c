@@ -155,12 +155,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 FixedSimulationTraceRecord record = records[i];
                 if (record.ActionInstanceId == 0 || !record.Header.Activation.Source.IsSkillOperation)
                     continue;
+                bool isNode = TryNodeKind(record.Code, out RuntimeTraceEventKind kind);
+                if (!isNode && record.ControlFlow == null)
+                    continue;
                 if (!m_Abilities.TryGetValue(record.SkillId, out AbilitySources ability))
                     throw new InvalidOperationException("Fixed 技能 Trace 不属于已装配的技能。");
                 if (!ability.TryGetOperation(record.Header.Activation.Source.Operation.Value, out OperationSource operation))
                     continue;
+                RuntimeSourceElementHandle edge = default;
+                if (!isNode && !ability.TryGetEdge(record.ControlFlow.Identity, out edge))
+                    continue;
                 if (record.SkillExecutionGeneration == 0 || record.GraphInvocationGeneration == 0)
-                    throw new InvalidOperationException("Fixed 技能 Trace 缺少释放或图调用代数。");
+                    throw new InvalidOperationException(
+                        $"Fixed 技能图 Trace '{record.Code}' 缺少释放或图调用代数 ({record.SkillExecutionGeneration}/{record.GraphInvocationGeneration})。");
                 string path = operation.ResolvePath(record.Header.TreeClipInvocation);
                 RuntimeInstanceKey instance = RuntimeInstanceKey.SkillExecution(
                     m_Context.CharacterRuntimeId,
@@ -181,28 +188,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     GraphInvocationGeneration = record.GraphInvocationGeneration,
                     ParentInvocationGeneration = record.ParentInvocationGeneration
                 };
-                if (TryNodeKind(record.Code, out RuntimeTraceEventKind kind))
+                if (isNode)
                 {
                     m_Context.Publish(RuntimeTraceChannel.Graph, RuntimeTraceDomain.Logic,
                         kind, operation.Handle, instance, payload);
                     continue;
                 }
-                if (record.ControlFlow != null &&
-                    ability.TryGetEdge(record.ControlFlow.Identity, out RuntimeSourceElementHandle edge))
-                {
-                    ProgramControlFlowEdge flow = record.ControlFlow;
-                    bool transition = flow.Kind == ProgramControlFlowKind.Transition;
-                    payload.Name = flow.Kind == ProgramControlFlowKind.Value ? "Value" : "Flow";
-                    payload.Status = record.ControlFlowSelected ? "Selected" :
-                        record.ControlFlowPassed ? "Passed" : "Rejected";
-                    payload.Flag = record.ControlFlowPassed;
-                    m_Context.Publish(transition ? RuntimeTraceChannel.StateMachine : RuntimeTraceChannel.Graph,
-                        RuntimeTraceDomain.Logic,
-                        transition
-                            ? record.ControlFlowSelected ? RuntimeTraceEventKind.StateTransitionSelected : RuntimeTraceEventKind.StateTransitionEvaluated
-                            : record.ControlFlowSelected ? RuntimeTraceEventKind.EdgeSelected : RuntimeTraceEventKind.EdgeEvaluated,
-                        edge, instance, payload);
-                }
+                ProgramControlFlowEdge flow = record.ControlFlow;
+                bool transition = flow.Kind == ProgramControlFlowKind.Transition;
+                payload.Name = flow.Kind == ProgramControlFlowKind.Value ? "Value" : "Flow";
+                payload.Status = record.ControlFlowSelected ? "Selected" :
+                    record.ControlFlowPassed ? "Passed" : "Rejected";
+                payload.Flag = record.ControlFlowPassed;
+                m_Context.Publish(transition ? RuntimeTraceChannel.StateMachine : RuntimeTraceChannel.Graph,
+                    RuntimeTraceDomain.Logic,
+                    transition
+                        ? record.ControlFlowSelected ? RuntimeTraceEventKind.StateTransitionSelected : RuntimeTraceEventKind.StateTransitionEvaluated
+                        : record.ControlFlowSelected ? RuntimeTraceEventKind.EdgeSelected : RuntimeTraceEventKind.EdgeEvaluated,
+                    edge, instance, payload);
             }
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -416,18 +417,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         void OnEnable()
         {
-            RuntimeDebugSession.Shared.Changed += Repaint;
+            RuntimeDebugSession.Shared.Changed += OnRuntimeDebugChanged;
+            TimelineWorkspaceModeBridge.RuntimeDebugEnabledChanged += OnRuntimeDebugEnabledChanged;
         }
 
         void OnDisable()
         {
-            RuntimeDebugSession.Shared.Changed -= Repaint;
+            RuntimeDebugSession.Shared.Changed -= OnRuntimeDebugChanged;
+            TimelineWorkspaceModeBridge.RuntimeDebugEnabledChanged -= OnRuntimeDebugEnabledChanged;
             RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
+        }
+
+        void OnRuntimeDebugChanged()
+        {
+            if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                Repaint();
+        }
+
+        void OnRuntimeDebugEnabledChanged()
+        {
+            if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
+            Repaint();
         }
 
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
+            if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                return;
             FixedCharacterHost host = target as FixedCharacterHost;
             if (host == null)
                 return;

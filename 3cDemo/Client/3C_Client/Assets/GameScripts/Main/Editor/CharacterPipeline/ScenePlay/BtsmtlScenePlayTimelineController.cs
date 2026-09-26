@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorApplication.playModeStateChanged += s_Controller.OnPlayModeChanged;
             EditorApplication.projectChanged += s_Controller.OnContentChanged;
             Undo.undoRedoPerformed += s_Controller.OnContentChanged;
-            RuntimeDebugSession.Shared.Changed += s_Controller.Refresh;
+            RuntimeDebugSession.Shared.Changed += s_Controller.OnRuntimeDebugChanged;
             RuntimeDiagnosticsTargetRegistry.TargetRegistered += s_Controller.OnTargetChanged;
             RuntimeDiagnosticsTargetRegistry.TargetUnregistered += s_Controller.OnTargetChanged;
             EditorApplication.update += s_Controller.UpdateSessionState;
@@ -268,6 +268,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 RefreshControls();
                 for (int i = 0; i < m_Controls.Count; i++)
                     ApplyToWindow(m_Controls[i].Window);
+            }
+
+            internal void OnRuntimeDebugChanged()
+            {
+                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                    Refresh();
             }
 
             void AddModeActions(ToolbarMenu menu)

@@ -823,6 +823,8 @@ namespace BTSMTL.Timeline.Editor
 
         static void Refresh()
         {
+            if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                return;
             TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
             for (int index = 0; index < windows.Length; index++)
                 Refresh(windows[index]);

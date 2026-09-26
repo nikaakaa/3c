@@ -55,8 +55,10 @@ namespace BTSMTL.Timeline.Editor
                 else if (sourceKey.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
                     changed |= EnsureClip(sourceKey.TrackAuthoringId, sourceKey.ClipAuthoringId);
             }
+            if (changed)
+                m_Runtime.Init();
             StructureChanged = reset || changed;
-            if (UpdateOpenClipEnds(events, summary) || changed)
+            if (UpdateOpenClipEnds(events, summary))
                 m_Runtime.Init();
             return m_Runtime;
         }

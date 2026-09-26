@@ -12,6 +12,20 @@ namespace ThirdPersonCharacter.Control.Authoring
 {
     public static class BtsmtlSkillOwnedAssets
     {
+        public static HashSet<UnityEngine.Object> SnapshotPrivateSubAssets(UnityEngine.Object owner)
+        {
+            string path = AssetDatabase.GetAssetPath(owner);
+            var result = new HashSet<UnityEngine.Object>();
+            if (string.IsNullOrEmpty(path))
+                return result;
+            UnityEngine.Object root = AssetDatabase.LoadMainAssetAtPath(path);
+            foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
+                if (asset != root && (asset is FlowGraph && asset is IBtsmtlSkillFlowGraph ||
+                                      asset is BtsmtlSkillNativeStateMachine || asset is TimelineAsset))
+                    result.Add(asset);
+            return result;
+        }
+
         public static HashSet<UnityEngine.Object> Collect(UnityEngine.Object owner)
         {
             string path = AssetDatabase.GetAssetPath(owner);
@@ -68,16 +82,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public static void ReleaseOrphaned(UnityEngine.Object owner)
         {
-            var previous = new HashSet<UnityEngine.Object>();
-            string path = AssetDatabase.GetAssetPath(owner);
-            UnityEngine.Object root = AssetDatabase.LoadMainAssetAtPath(path);
-            foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
-            {
-                if (asset != root && (asset is BtsmtlSkillFlowGraph ||
-                    asset is BtsmtlSkillNativeStateMachine || asset is TimelineAsset))
-                    previous.Add(asset);
-            }
-            ReleaseUnreferenced(owner, previous);
+            ReleaseUnreferenced(owner, SnapshotPrivateSubAssets(owner));
         }
 
         public static void ReleaseUnreferenced(UnityEngine.Object owner, HashSet<UnityEngine.Object> previous)

@@ -239,10 +239,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     definitionPath,
                     outputPath);
                 var context = new BtsmtlUnityAuthoringGenerationContext(request);
-                BtsmtlAuthoringGenerationResult result =
-                    BtsmtlAuthoringGenerationService.Execute(request, entry, context);
+                BtsmtlAuthoringGenerationResult result;
+                try
+                {
+                    result = BtsmtlAuthoringGenerationService.Execute(request, entry, context);
+                }
+                catch
+                {
+                    context.Rollback();
+                    throw;
+                }
                 if (!result.Success)
+                {
+                    try
+                    {
+                        context.Rollback();
+                    }
+                    catch (Exception error)
+                    {
+                        return new ErrorResponse("authoring_code_generation_rollback_failed", new
+                        {
+                            operation,
+                            message = error.Message,
+                            diagnostics = Diagnostics(result.Diagnostics)
+                        });
+                    }
                     return Failure(operation, result.Diagnostics);
+                }
                 return new
                 {
                     success = true,

@@ -502,6 +502,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (connection == null)
                     throw new InvalidOperationException($"技能FSM转移identity '{identity}'创建失败。");
                 connection.ConfigureAuthoringIdentity(identity);
+                int order = source.outConnections.OfType<BtsmtlSkillNativeConnection>()
+                    .Where(value => value != connection)
+                    .Select(value => value.Order)
+                    .DefaultIfEmpty(-1)
+                    .Max() + 1;
+                connection.Configure(null, 0, ProgramAbortPolicy.None, order);
                 return connection;
             });
         }

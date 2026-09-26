@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             Undo.RegisterCreatedObjectUndo(graph, "创建Gameplay Ability图");
             ability.SetAbilityGraph(graph);
             EditorUtility.SetDirty(ability);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(path));
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             ability = AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(path);
             graph = AssetDatabase.LoadAllAssetsAtPath(path)
@@ -104,7 +104,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 ability.SetAbilityGraph(graph);
                 EditorUtility.SetDirty(ability);
-                AssetDatabase.SaveAssets();
+                AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(path));
             }
             BtsmtlSkillFlowEditorMutation.Apply(
                 graph,
@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 false);
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(graph);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(path));
             return graph;
         }
 
@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             Undo.RegisterCreatedObjectUndo(graph, "创建共享技能Macro");
             BtsmtlSkillFlowEditorMutation.Apply(graph, "初始化共享技能Macro", () => PopulateAnchors(graph), false);
             EditorUtility.SetDirty(graph);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(path));
             return graph;
         }
 

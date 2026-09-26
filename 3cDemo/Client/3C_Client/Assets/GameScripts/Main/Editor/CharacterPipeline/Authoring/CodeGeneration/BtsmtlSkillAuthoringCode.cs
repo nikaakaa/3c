@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 return graph;
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(graph);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(outputPath));
             AssetDatabase.ImportAsset(outputPath, ImportAssetOptions.ForceUpdate);
             GameplayAbilityDefinition persistedAbility =
                 AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(outputPath);
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 persistedAbility.SetAbilityGraph(persistedGraph);
                 EditorUtility.SetDirty(persistedAbility);
-                AssetDatabase.SaveAssets();
+                AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(outputPath));
             }
             return persistedGraph;
         }
@@ -118,7 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillOwnedAssets.ReleaseOrphaned(ability);
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(definition);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(outputPath));
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(context.DefinitionAssetPath));
             AssetDatabase.ForceReserializeAssets(new[] { context.DefinitionAssetPath });
         }
 
@@ -171,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (!string.IsNullOrEmpty(retiredAssetPath) &&
                 !string.Equals(retiredAssetPath, outputPath, StringComparison.Ordinal))
                 context.DeleteAsset(retiredAssetPath);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(outputPath));
             return AssetDatabase.LoadAssetAtPath<GameplayAbilityAdmissionProfile>(outputPath);
         }
 

@@ -4,6 +4,12 @@
 
 尚未闭环。本文不是完成通知；早期交接约定保留为历史，其他任务是否开展整理不代表这里的运行验收已经通过。
 
+## 2026-09-26 作者事务修复与 Attack 发布
+
+- `130ef04fb` 将 BTSMTL 生成失败回退限定在输出、Definition 和明确删除的资产；失败时恢复资产文件及 meta，私有子资产快照不要求旧图先通过校验，新 FSM 边在事务校验前取得唯一顺序。作者链按资产保存，不写入其它窗口的脏资产。
+- `b6fa900b6` 保存第五段重切后的作者源码、Attack 技能图、两份位移曲线及 Fixed/Float32 产物。正式 `btsmtl.generate_assets` 在保存后切换 MCP 会话，未取得成功响应；磁盘图的全部 FSM 同源出边顺序已核对无重复，Attack5 到 Attack1 的边为 `order=4`。正式 `PublishSelected(..., "Attack")` 返回成功；两份产物的 `SourceRevision=e5a0d87b755239f3534ec242a13e9d591fa2c78de6d6e6f30be6fde2b20f8773`、`SemanticHash=5d421740fa34783b692d23ad24ce696e3bb5ab9eea4781b19ff7a00edf7de9f8` 一致。
+- 完整 `ThirdPersonClient.Editor.csproj` 编译 0 错误，随后关闭 build server。目标 Unity 编辑器重新加载后处于 Edit/idle，Console 错误为 0。控制请求在 Rush 的 `RushAttackHandoff` 窗口携带原实例替换并指定 `Attack4` 入口；第五段的再次 Attack 请求与 `ComboAccept` 条件接回 Attack1。以上是静态和发布证据。按用户此前决定，本轮未重跑录制，Rush 实际交接、第五段循环/退出及动画表现尚无新版运行验收结论。
+
 ## 2026-09-26 第五段重切与接续
 
 - 第五段主段/普通 End 的六层衍生动画已在当前 Unity 工作区按 dump 的 `91/121` 帧重新切分；两份 RootMotionCurveAsset 也已同步重排。`CorinAttackGameplayAbilityDefinition.asset` 的首次正式生成已落盘，主段/End MotionCurve 源区间分别为 `1.5167/2.0167s`，编辑器内该 Timeline 的 Clip 归属完整。生成请求在保存后的 MCP 会话重连阶段没有返回成功响应，因此只认落盘数据，不把这次调用记为完整生成验收。

@@ -14,6 +14,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     public sealed class BtsmtlSkillFlowObservation : IGraphEditorObservation, IBtsmtlSkillObservationControls, IDisposable
     {
+        const double ConnectionPulseSeconds = 0.5d;
+        const double RepaintIntervalSeconds = 1d / 30d;
+
         readonly FlowGraph m_Graph;
         readonly string m_GraphId;
         readonly RuntimeDebugSession m_Session;
@@ -23,9 +26,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
         readonly List<RuntimeElementDebugState> m_States = new List<RuntimeElementDebugState>();
+        readonly List<RuntimeDebugEventView> m_ConnectionEvents = new List<RuntimeDebugEventView>();
         readonly List<RuntimeNodeExecutionObservation> m_ExecutionStates = new List<RuntimeNodeExecutionObservation>();
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeElementDebugState> m_Edges = new(StringComparer.Ordinal);
+        readonly Dictionary<string, (ulong Sequence, double Until)> m_ConnectionPulses = new(StringComparer.Ordinal);
         readonly HashSet<(string Node, string Port)> m_ValuePortIds;
         readonly Dictionary<(string Node, string Port), RuntimeDebugEventView> m_Values = new();
         bool m_CaptureValues;
@@ -39,6 +44,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool m_Dirty = true;
         bool m_Disposed;
         ulong m_LatestLogicTick;
+        RuntimeInstanceKey m_PulseInstance;
+        double m_PulseUntil;
+        double m_NextRepaintTime;
+        bool m_RepaintPending;
 
         public BtsmtlSkillFlowObservation(FlowGraph graph, RuntimeDebugSession session,
             RuntimeDebugTargetRequest request, RuntimeInstanceKey instance)
@@ -158,11 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public Status GetConnectionStatus(string connectionId)
         {
-            if (!m_Edges.TryGetValue(connectionId, out RuntimeElementDebugState state) || state.Position != m_LatestLogicTick)
-                return Status.Resting;
-            return state.Kind is RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.StateTransitionSelected
-                ? Status.Running
-                : Status.Resting;
+            return m_CanReadSnapshot && m_ConnectionPulses.TryGetValue(connectionId, out var pulse) &&
+                   pulse.Until > EditorApplication.timeSinceStartup ? Status.Running : Status.Resting;
         }
 
         public string GetPortText(string nodeId, string portId)
@@ -197,8 +203,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Dispose();
                 return;
             }
+            double now = EditorApplication.timeSinceStartup;
             if (!m_Dirty)
+            {
+                RepaintIfNeeded(now);
                 return;
+            }
             m_Dirty = false;
             m_Nodes.Clear();
             m_Edges.Clear();
@@ -220,8 +230,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_CanReadSnapshot = m_Binding.CanReadSelectedInstance && view.Valid;
             if (!m_CanReadSnapshot)
             {
-                GraphEditor.current?.Repaint();
+                ClearConnectionPulses();
+                m_RepaintPending = true;
+                RepaintIfNeeded(now);
                 return;
+            }
+            if (!m_PulseInstance.Equals(Instance))
+            {
+                ClearConnectionPulses();
+                m_PulseInstance = Instance;
             }
             m_LatestLogicTick = view.LatestLogicTick;
             view.CopyGraphExecutionStates(m_GraphId, Instance, m_ExecutionStates);
@@ -238,6 +255,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (state.Source.Kind == RuntimeSourceElementKind.Edge && m_EdgeIds.Contains(state.Source.ElementAuthoringId))
                     m_Edges[state.Source.ElementAuthoringId] = state;
             }
+            view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine, m_ConnectionEvents);
+            for (int i = 0; i < m_ConnectionEvents.Count; i++)
+            {
+                RuntimeDebugEventView item = m_ConnectionEvents[i];
+                if (!item.Event.RuntimeInstance.Equals(Instance) ||
+                    !string.Equals(item.Source.GraphAuthoringId, m_GraphId, StringComparison.Ordinal) ||
+                    item.Source.Kind != RuntimeSourceElementKind.Edge ||
+                    item.Event.Kind is not (RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.StateTransitionSelected) ||
+                    item.Event.Position > m_LatestLogicTick ||
+                    m_LatestLogicTick - item.Event.Position > 1 ||
+                    !m_EdgeIds.Contains(item.Source.ElementAuthoringId))
+                    continue;
+                string edgeId = item.Source.ElementAuthoringId;
+                if (m_ConnectionPulses.TryGetValue(edgeId, out var pulse) && pulse.Sequence == item.Event.Sequence)
+                    continue;
+                double until = now + ConnectionPulseSeconds;
+                m_ConnectionPulses[edgeId] = (item.Event.Sequence, until);
+                m_PulseUntil = Math.Max(m_PulseUntil, until);
+            }
             if (m_CaptureValues)
                 foreach (RuntimeDebugEventView sample in view.GetCurrentEvents(RuntimeTraceChannel.Values))
                 {
@@ -251,7 +287,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         sample.Event.Kind == RuntimeTraceEventKind.ValueSampled && m_ValuePortIds.Contains(key))
                         m_Values.TryAdd(key, sample);
                 }
+            m_RepaintPending = true;
+            RepaintIfNeeded(now);
+        }
+
+        void RepaintIfNeeded(double now)
+        {
+            if (m_PulseUntil != 0d && now >= m_PulseUntil)
+            {
+                m_PulseUntil = 0d;
+                m_RepaintPending = true;
+            }
+            if ((!m_RepaintPending && m_PulseUntil <= now) || now < m_NextRepaintTime)
+                return;
             GraphEditor.current?.Repaint();
+            m_RepaintPending = false;
+            m_NextRepaintTime = now + RepaintIntervalSeconds;
+        }
+
+        void ClearConnectionPulses()
+        {
+            m_ConnectionPulses.Clear();
+            m_PulseInstance = default;
+            m_PulseUntil = 0d;
         }
 
         void OnPlayModeChanged(PlayModeStateChange state)
@@ -273,6 +331,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Graph.editorObservation = null;
             m_Nodes.Clear();
             m_Edges.Clear();
+            m_ConnectionEvents.Clear();
+            ClearConnectionPulses();
             m_Values.Clear();
         }
     }

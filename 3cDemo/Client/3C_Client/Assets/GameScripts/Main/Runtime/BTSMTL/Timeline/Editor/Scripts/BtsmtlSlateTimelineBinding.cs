@@ -732,7 +732,6 @@ namespace BTSMTL.Timeline.Editor
 
         public void RefreshRuntimeTimeline()
         {
-            m_Timeline.Init();
             RequestRepaint();
         }
 

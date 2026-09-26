@@ -55,15 +55,15 @@ namespace BTSMTL.Timeline.Editor
                 else if (sourceKey.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
                     changed |= EnsureClip(sourceKey.TrackAuthoringId, sourceKey.ClipAuthoringId);
             }
-            if (changed)
-                m_Runtime.Init();
             StructureChanged = reset || changed;
-            UpdateOpenClipEnds(events, summary);
+            if (UpdateOpenClipEnds(events, summary) || changed)
+                m_Runtime.Init();
             return m_Runtime;
         }
 
-        void UpdateOpenClipEnds(IReadOnlyList<RuntimeDebugEventView> events, RuntimeTimelinePlaybackDebugSummary summary)
+        bool UpdateOpenClipEnds(IReadOnlyList<RuntimeDebugEventView> events, RuntimeTimelinePlaybackDebugSummary summary)
         {
+            bool changed = false;
             foreach (Track track in m_RuntimeTracks.Values)
             {
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
@@ -90,9 +90,14 @@ namespace BTSMTL.Timeline.Editor
                             ? item.Event.Payload.Time : presentation ? summary.VisualTime : summary.LogicTime;
                     }
                     FixedScalar endTime = FixedScalar.FromDouble(Math.Max(0d, end));
-                    clip.ConfigureTimeRange(clip.StartTime, endTime < clip.StartTime ? clip.StartTime : endTime);
+                    endTime = endTime < clip.StartTime ? clip.StartTime : endTime;
+                    if (clip.EndTime == endTime)
+                        continue;
+                    clip.ConfigureTimeRange(clip.StartTime, endTime);
+                    changed = true;
                 }
             }
+            return changed;
         }
 
         void Reset(TimelineData source, RuntimeInstanceKey playback)

@@ -110,7 +110,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static bool IsObserving(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeInstanceKey instance) =>
             s_Current != null && !s_Current.m_Disposed && ReferenceEquals(s_Current.m_Definition, definition) &&
             ReferenceEquals(s_Current.m_RootGraph, graph) && s_Current.m_RootScope.Root.Equals(instance) &&
-            s_Current.m_Observation != null && ReferenceEquals(graph.editorObservation, s_Current.m_Observation);
+            s_Current.m_Observation != null &&
+            ReferenceEquals(GraphEditor.currentGraph?.editorObservation, s_Current.m_Observation);
 
         internal static void ExpectTimelineOpening(BtsmtlSkillTimelineFlowNode node) =>
             s_Current?.OnTimelineOpening(node);
@@ -149,10 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (!m_NavigationDirty)
-            {
-                UpdateTimelineOverlay();
                 return;
-            }
             m_NavigationDirty = false;
             m_CaptureValues = m_Observation?.CaptureValues ?? m_CaptureValues;
             m_Observation?.Dispose();
@@ -205,10 +203,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : m_ActiveTimeline.Scope?.Resolve(m_Session.ViewModel) ?? default;
             if (!scope.IsValid)
             {
-                window.ClearRuntimeTimelineObservation();
+                if (window.RuntimeObservationScope.IsValid)
+                    window.SetRuntimeObservationScope(default);
                 window.SetRuntimeObservationStatus("当前 Timeline 缺少唯一的运行调用路径。");
                 return;
             }
+            if (window.RuntimeObservationScope.Equals(scope))
+                return;
             window.SetRuntimeObservationScope(scope);
             TimelineRuntimeObservationBridge.RefreshWindow(window);
         }

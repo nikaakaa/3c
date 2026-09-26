@@ -76,7 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             bool m_NavigationQueued;
             RuntimeInstanceKey m_LastFocusInstance;
             string m_LastFocusGraph;
-            RuntimeSourceElementKey m_LastFocusSource;
 
             public Controller()
             {
@@ -486,9 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 RuntimeDebugEventView candidate = m_RuntimeFocus.Candidates[0];
                 if (m_LastFocusInstance.Equals(candidate.Event.RuntimeInstance) &&
-                    string.Equals(m_LastFocusGraph, candidate.Source.GraphAuthoringId, StringComparison.Ordinal) &&
-                    (candidate.Event.RuntimeInstance.Kind == RuntimeInstanceKind.TimelinePlayback ||
-                     m_LastFocusSource.Equals(candidate.Source)))
+                    string.Equals(m_LastFocusGraph, candidate.Source.GraphAuthoringId, StringComparison.Ordinal))
                     return;
                 NavigateRuntime(candidate);
             }
@@ -502,7 +499,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 m_LastFocusInstance = candidate.Event.RuntimeInstance;
                 m_LastFocusGraph = candidate.Source.GraphAuthoringId;
-                m_LastFocusSource = candidate.Source;
                 PublishNavigationStatus($"{(m_FollowRuntime ? "跟随" : "固定")} {candidate.SourceName} · 动作 {m_LastFocusInstance.ActionInstanceId}");
             }
 
@@ -636,7 +632,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 BtsmtlSkillObservationSession.Close();
                 m_LastFocusInstance = default;
                 m_LastFocusGraph = null;
-                m_LastFocusSource = default;
                 if (!m_RuntimeInterest)
                     return;
                 RuntimeDebugSession.Shared.ReleaseLiveInterest(m_InterestOwner);

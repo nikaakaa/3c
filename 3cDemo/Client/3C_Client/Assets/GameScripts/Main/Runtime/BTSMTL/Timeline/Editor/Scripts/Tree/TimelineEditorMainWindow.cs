@@ -783,8 +783,8 @@ namespace BTSMTL.Timeline.Editor
     [InitializeOnLoad]
     public static class TimelineRuntimeObservationBridge
     {
-        static readonly Dictionary<TimelineEditorWindow, Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>> s_Projections =
-            new Dictionary<TimelineEditorWindow, Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>>();
+        static readonly Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection> s_Projections =
+            new Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection>();
 
         static TimelineRuntimeObservationBridge()
         {
@@ -877,7 +877,7 @@ namespace BTSMTL.Timeline.Editor
                     activeClips.TryAdd(source.ClipAuthoringId, status);
                 }
             }
-            RuntimeTimelinePlaybackProjection projection = GetProjection(window, summary.Playback);
+            RuntimeTimelinePlaybackProjection projection = GetProjection(window);
             TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel, summary);
             MarkOpenTreeClips(runtimeTimeline, activeClips);
             if (RuntimeDebugSession.Shared.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
@@ -886,19 +886,12 @@ namespace BTSMTL.Timeline.Editor
                 window.ApplyRuntimeTimelineObservation(runtimeTimeline, projection.StructureChanged, summary.VisualTime, activeTracks, activeClips);
         }
 
-        static RuntimeTimelinePlaybackProjection GetProjection(
-            TimelineEditorWindow window,
-            RuntimeInstanceKey playback)
+        static RuntimeTimelinePlaybackProjection GetProjection(TimelineEditorWindow window)
         {
-            if (!s_Projections.TryGetValue(window, out Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection> byPlayback))
-            {
-                byPlayback = new Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>();
-                s_Projections.Add(window, byPlayback);
-            }
-            if (!byPlayback.TryGetValue(playback, out RuntimeTimelinePlaybackProjection projection))
+            if (!s_Projections.TryGetValue(window, out RuntimeTimelinePlaybackProjection projection))
             {
                 projection = new RuntimeTimelinePlaybackProjection();
-                byPlayback.Add(playback, projection);
+                s_Projections.Add(window, projection);
             }
             return projection;
         }

@@ -386,20 +386,21 @@ namespace BTSMTL.Diagnostics.Editor
             return false;
         }
 
-        public IReadOnlyList<RuntimeDebugEventView> GetTimelineCurrentEvents(
+        public void CopyTimelineCurrentEvents(
             string timelineAuthoringId,
             RuntimeInstanceKey playback,
+            List<RuntimeDebugEventView> destination,
             string graphAuthoringId = "")
         {
+            destination.Clear();
             if (!m_PlaybackEvents.TryGetValue(playback, out Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> events))
-                return Array.Empty<RuntimeDebugEventView>();
+                return;
             if (!m_TimelinePlayback.TryGetValue(playback, out TimelinePlaybackSummaryBuilder builder) ||
                 !MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
-                return Array.Empty<RuntimeDebugEventView>();
+                return;
 
-            var result = new List<RuntimeDebugEventView>(events.Values);
-            result.Sort((left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence));
-            return result;
+            destination.AddRange(events.Values);
+            destination.Sort((left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence));
         }
 
         static bool MatchesTimeline(
@@ -621,6 +622,14 @@ namespace BTSMTL.Diagnostics.Editor
             if (!string.Equals(previousTimelineAuthoringId, builder.TimelineAuthoringId, StringComparison.Ordinal) ||
                 !string.Equals(previousGraphAuthoringId, graphAuthoringId, StringComparison.Ordinal))
                 RegisterTimelinePlayback(builder.TimelineAuthoringId, graphAuthoringId, playback);
+            if (traceEvent.Kind is (RuntimeTraceEventKind.TimelineCompleted or
+                RuntimeTraceEventKind.TimelineCancelled or RuntimeTraceEventKind.TimelineStopped) &&
+                !string.IsNullOrEmpty(builder.TimelineAuthoringId))
+            {
+                var revisionKey = new TimelineSourceKey(builder.TimelineAuthoringId, graphAuthoringId);
+                m_TimelinePlaybackRevisions[revisionKey] = GetTimelinePlaybackRevision(
+                    builder.TimelineAuthoringId, graphAuthoringId) + 1;
+            }
 
             if (!m_PlaybackEvents.TryGetValue(playback, out Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> events))
             {

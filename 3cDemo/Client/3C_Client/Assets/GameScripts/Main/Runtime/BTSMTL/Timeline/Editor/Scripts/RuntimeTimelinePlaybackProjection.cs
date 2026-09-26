@@ -17,6 +17,9 @@ namespace BTSMTL.Timeline.Editor
         RuntimeDebugViewModel m_Observation;
         ulong m_LastEventSequence;
 
+        internal List<RuntimeDebugEventView> EventBuffer { get; } = new List<RuntimeDebugEventView>();
+        internal Dictionary<string, string> ActiveTracks { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+        internal Dictionary<string, string> ActiveClips { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
         public bool StructureChanged { get; private set; }
 
         public bool Matches(TimelineData source, RuntimeInstanceKey playback) =>

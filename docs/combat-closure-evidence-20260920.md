@@ -6,6 +6,7 @@
 
 ## 2026-09-26 接招候选核对
 
+- 新录制的首次正式回放请求在启动 Fixed 会话时超过 60 秒等待期，Console 报 `Canonical Fixed input replay timed out while starting the Fixed session`，未生成 Proof。目标实例重新连接、Editor 在 Edit 模式完成刷新后，第二次以同一 trace ID 回放成功：`run_id=6d95faa08c104b3083d6e0d414efcb45`，Proof 为 `Temp/CharacterInputReplayProofs/v6/757f243033414fc7b123c97e2fcb0d70/20260926-183059-778-6d95faa08c104b3083d6e0d414efcb45.json`。正式状态为 `Completed`，2716/2716 帧，`presentation_trace.succeeded=true`，动画选择 20 次、动画采样 1609 帧。Proof 的 Attack `SourceRevision=52fe626f80a5169f845057466297b1af537d761676bbeedb27d1b6de0a411f5e`，与当前 Attack Fixed/Float32 产物一致；该 Proof 不含技能状态序列，不能单独证明 Rush 接到 Attack4 或第五段循环。首次失败没有覆盖或删除。
 - 新录制 `757f243033414fc7b123c97e2fcb0d70` 有 2716 帧、60 Hz；正式 `inspect_trace` 确认 `Attack` 请求 60 次、`Branch` 请求 3 次、`Dodge` 请求 3 次，`AttackHeld` 为真 251 帧、`BranchHeld` 为真 164 帧。这仅证明输入覆盖，尚未运行回放或证明 Rush 窗口内接到 Attack4。
 - 当前 Attack 作者图只有 `Attack5 End -> Attack1` 和 `Attack5 End2 -> Attack1`，没有 `Attack5` 主状态直接回第一段的边。普通 End 的 `ComboAccept` TreeClip 从 End 本地 `75/60s` 才开始，而 End Timeline 终止时间为 `1.45s`，接招有效时长最多约 `0.2s`；这与第五段像其他段一样接续的手感问题相符，但仍需运行证据确认实际失败点。End2 的接招 TreeClip 从本地 `1/60s` 开始，两个分支不能混为一谈。
 - 目标 Unity 实例 `e852139597e42532` 当前处于 Play、录制器 Idle，Console 错误查询为 0 条。正式 `replay_start` 实现会先 `ExitPlaymode` 再重启 Fixed 会话，因此本轮没有打断当前 Play，也没有在 Play 内刷新、构建或修改 Unity 资产。

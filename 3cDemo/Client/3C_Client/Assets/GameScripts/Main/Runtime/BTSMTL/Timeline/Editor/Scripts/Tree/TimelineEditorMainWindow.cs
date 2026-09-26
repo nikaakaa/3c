@@ -209,6 +209,9 @@ namespace BTSMTL.Timeline.Editor
                 ClearRuntimeTimelineObservation();
                 return true;
             }
+            m_RuntimeObservationPlayback = playback;
+            ClearRuntimeTimelineObservation();
+            SetRuntimeObservationStatus("当前 Timeline 播放实例与作者来源不一致。");
             return false;
         }
 

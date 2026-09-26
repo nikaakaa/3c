@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly List<RuntimeDebugEventView> m_Candidates = new();
 
         public IReadOnlyList<RuntimeDebugEventView> Candidates => m_Candidates;
+        public int ActiveCandidateCount { get; private set; }
 
         public void Refresh(RuntimeDebugViewModel view)
         {
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Graphs.Clear();
             m_CompletedGraphs.Clear();
             m_Timelines.Clear();
+            ActiveCandidateCount = 0;
             if (!view.Valid || view.HasCoverageGap)
                 return;
             view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.Timeline, m_Events);
@@ -53,6 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (RuntimeDebugEventView item in m_Nodes.Values)
             {
                 RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation);
+                if (!observation.IsTerminal && item.Event.Position != view.LatestLogicTick)
+                    continue;
                 RuntimeInstanceKey instance = item.Event.RuntimeInstance;
                 Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> destination = observation.IsTerminal
                     ? m_CompletedGraphs
@@ -68,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (RuntimeDebugEventView item in m_Timelines.Values)
                 if (IsActiveTimeline(view, item) && !HasActiveTimelineGraph(view, item))
                     m_Candidates.Add(item);
+            ActiveCandidateCount = m_Candidates.Count;
             if (m_Candidates.Count == 0)
                 AddLatestCompleted(view);
         }

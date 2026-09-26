@@ -19,8 +19,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_Dirty = true;
         static bool s_InterestActive;
         static bool s_Opening;
+        static double s_NextResolveTime;
         static FlowGraph s_Graph;
         static RuntimeDebugTargetRequest s_Request;
+        static readonly BtsmtlRuntimeFocusResolver s_Focus = new BtsmtlRuntimeFocusResolver();
         static readonly List<RuntimeInstanceKey> s_Instances = new List<RuntimeInstanceKey>();
 
         static BtsmtlSkillRuntimeObservationAutoBinder()
@@ -34,7 +36,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update += Update;
         }
 
-        static void OnCurrentGraphChanged(NodeCanvas.Framework.Graph graph) => MarkDirty();
+        static void OnCurrentGraphChanged(NodeCanvas.Framework.Graph graph)
+        {
+            s_NextResolveTime = 0d;
+            MarkDirty();
+        }
 
         static void OnEditorClosed()
         {
@@ -43,7 +49,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Request = default;
         }
 
-        static void OnTargetChanged(RuntimeDiagnosticsTarget target) => MarkDirty();
+        static void OnTargetChanged(RuntimeDiagnosticsTarget target)
+        {
+            s_NextResolveTime = 0d;
+            MarkDirty();
+        }
 
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
@@ -62,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (TimelineWorkspaceModeBridge.ActiveMode != TimelineWorkspaceMode.RuntimeDebug ||
                 !Application.isPlaying || GraphEditor.current == null ||
                 GraphEditor.rootGraph is not BtsmtlSkillFlowGraph graph ||
+                GraphEditor.currentGraph != graph ||
                 graph.Role != BtsmtlSkillFlowGraphRole.Skill)
             {
                 ReleaseInterest();
@@ -81,7 +92,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new BtsmtlSkillGraphFingerprint().Compute(graph));
             }
 
-            if (graph.editorObservation != null || !s_Request.IsValid)
+            double now = EditorApplication.timeSinceStartup;
+            if (now < s_NextResolveTime)
+            {
+                s_Dirty = true;
+                return;
+            }
+            s_NextResolveTime = now + 0.1d;
+
+            IGraphEditorObservation currentObservation = GraphEditor.currentGraph?.editorObservation;
+            if (!s_Request.IsValid || currentObservation != null &&
+                currentObservation is not BtsmtlSkillFlowObservation)
             {
                 ReleaseInterest();
                 return;
@@ -95,7 +116,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
 
-            if (!s_InterestActive)
+            if (currentObservation != null)
+                ReleaseInterest();
+            else if (!s_InterestActive)
             {
                 session.EnsureLiveInterest(
                     s_InterestOwner,
@@ -110,27 +133,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             RuntimeDebugViewModel view = session.ViewModel;
-            view.CopyGraphInstances(authoring.AuthoringId, s_Instances);
+            s_Focus.Refresh(view);
             RuntimeInstanceKey instance = default;
             int matchCount = 0;
-            for (int i = 0; i < s_Instances.Count; i++)
+            for (int i = 0; i < s_Focus.ActiveCandidateCount; i++)
             {
-                RuntimeInstanceKey candidate = s_Instances[i];
-                if (candidate.Kind != RuntimeInstanceKind.SkillExecution ||
-                    candidate.CharacterRuntimeId != target.CharacterRuntimeId)
+                RuntimeDebugEventView focus = s_Focus.Candidates[i];
+                RuntimeInstanceKey candidate = focus.Event.RuntimeInstance;
+                if (candidate.CharacterRuntimeId != target.CharacterRuntimeId)
                     continue;
-
+                if (candidate.Kind == RuntimeInstanceKind.SkillExecution)
+                {
+                    if (!string.Equals(focus.Source.GraphAuthoringId, authoring.AuthoringId, StringComparison.Ordinal))
+                        continue;
+                }
+                else if (candidate.Kind == RuntimeInstanceKind.TimelinePlayback)
+                {
+                    RuntimeTimelinePlaybackProvenance provenance = focus.Event.Payload.TimelinePlayback;
+                    if (!string.Equals(provenance.SourceGraphAuthoringId, authoring.AuthoringId, StringComparison.Ordinal) ||
+                        !RuntimeDebugSourceNavigator.TryResolveTimelineGraphInstance(
+                            view, candidate, provenance, s_Instances, out RuntimeInstanceKey graphInstance))
+                        continue;
+                    candidate = graphInstance;
+                }
+                else
+                    continue;
+                if (instance.Equals(candidate))
+                    continue;
                 instance = candidate;
                 matchCount++;
             }
 
             if (matchCount != 1)
                 return;
+            if (BtsmtlSkillObservationSession.IsObserving(definition, graph, instance))
+                return;
 
             s_Opening = true;
             try
             {
                 ReleaseInterest();
+                if (currentObservation is BtsmtlSkillFlowObservation previous)
+                    previous.Dispose();
                 BtsmtlSkillObservationSession.Open(definition, graph, session, instance);
             }
             finally

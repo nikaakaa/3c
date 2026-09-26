@@ -464,7 +464,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (!m_FollowRuntime || m_Mode != TimelineWorkspaceMode.RuntimeDebug)
                     return;
                 RuntimeDebugViewModel view = RuntimeDebugSession.Shared.ViewModel;
-                m_RuntimeFocus.Refresh(view);
                 if (!view.Attached)
                     return;
                 if (!view.Valid)

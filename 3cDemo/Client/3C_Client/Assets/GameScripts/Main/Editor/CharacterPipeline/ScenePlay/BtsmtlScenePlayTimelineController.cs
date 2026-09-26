@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
         sealed class Controller : ITimelineWorkspaceModeController
         {
-            const string ModeStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.Mode";
+            const string ModeStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.WorkspaceMode";
             const string ProfileGuidStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.ProfileGuid";
             const string DefaultProfileGuid = "f6a23791f8784a9f9ee35efd2ecbfcb7";
             const RuntimeTraceChannel TraceChannels =
@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             readonly object m_InterestOwner = new object();
             readonly List<Controls> m_Controls = new List<Controls>();
             readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = new();
-            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.Preview;
+            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.Authoring;
             BtsmtlScenePlayProfile m_Profile;
             CharacterTimelineContentExport m_ExportedContent;
             CharacterTimelineContentAdoptionPlan m_PendingPlan;
@@ -80,16 +80,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             public Controller()
             {
-                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Preview);
+                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Authoring);
                 TimelineWorkspaceMode persistedMode = (TimelineWorkspaceMode)mode;
-                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode) &&
-                         persistedMode != TimelineWorkspaceMode.RuntimeDebug
+                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode)
                     ? persistedMode
-                    : TimelineWorkspaceMode.Preview;
+                    : TimelineWorkspaceMode.Authoring;
                 string profileGuid = SessionState.GetString(ProfileGuidStateKey, DefaultProfileGuid);
                 m_Profile = AssetDatabase.LoadAssetAtPath<BtsmtlScenePlayProfile>(
                     AssetDatabase.GUIDToAssetPath(profileGuid));
-                TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
             }
 
             public VisualElement CreateControls(TimelineEditorWindow window)
@@ -117,11 +115,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     BtsmtlScenePlayProfile profile = evt.newValue as BtsmtlScenePlayProfile;
                     if (!ReferenceEquals(m_Profile, profile))
                     {
+                        TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                         ReleaseRuntimeInterest();
                         ClearContentWorkflow();
                         m_Mode = TimelineWorkspaceMode.Authoring;
                         SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                        TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
                     }
                     m_Profile = profile;
                     string path = AssetDatabase.GetAssetPath(m_Profile);
@@ -131,8 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetStatus(m_Profile == null ? "未选择 ScenePlay Profile。" : m_Profile.IsValid ? "Profile 已选择。" : "ScenePlay Profile 配置无效。");
                 });
                 controls.RuntimeDebug.tooltip = "开启运行时诊断、自动跳转和 Timeline 覆盖显示。";
-                controls.RuntimeDebug.RegisterValueChangedCallback(evt =>
-                    SetMode(evt.newValue ? TimelineWorkspaceMode.RuntimeDebug : TimelineWorkspaceMode.Preview));
+                controls.RuntimeDebug.RegisterValueChangedCallback(evt => SetRuntimeDebug(evt.newValue));
                 AddModeActions(controls.Mode);
                 AddSessionActions(controls);
                 var container = new VisualElement();
@@ -153,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (!window)
                     return;
                 window.SetRuntimeObservationReadOnly(
-                    m_Mode == TimelineWorkspaceMode.RuntimeDebug && EditorApplication.isPlaying);
+                    TimelineWorkspaceModeBridge.RuntimeDebugEnabled && EditorApplication.isPlaying);
                 window.SetRuntimeObservationStatus(m_Status);
             }
 
@@ -163,7 +160,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     if (m_Controls[i].Window == window)
                         m_Controls.RemoveAt(i);
                 if (m_Controls.Count == 0)
+                {
+                    TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
+                }
             }
 
             internal void OnTargetChanged(RuntimeDiagnosticsTarget target) => QueueConnectionRefresh();
@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 m_ConnectionRefreshQueued = false;
                 if (!EditorApplication.isPlaying)
                     return;
-                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                     AttachRuntimeDebug();
                 else if (m_Mode == TimelineWorkspaceMode.Preview)
                     SetStatus(FormatPreviewContentStatus(string.Empty));
@@ -189,7 +189,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void UpdateSessionState()
             {
-                if (m_Mode == TimelineWorkspaceMode.Authoring || !m_ObservedSession)
+                if ((!TimelineWorkspaceModeBridge.RuntimeDebugEnabled &&
+                     m_Mode == TimelineWorkspaceMode.Authoring) || !m_ObservedSession)
                     return;
                 if (m_ObservedLifecycle == m_ObservedSession.LifecycleState &&
                     m_ObservedGeneration == m_ObservedSession.SessionGeneration)
@@ -206,26 +207,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     m_FollowRuntime = true;
                     m_LastFocusInstance = default;
                     m_LastFocusGraph = null;
-                    if (m_Profile != null && m_Profile.IsValid)
-                    {
-                        m_Mode = TimelineWorkspaceMode.Preview;
-                        SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                        TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
-                    }
+                    TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     QueueConnectionRefresh();
                 }
                 if (state == PlayModeStateChange.ExitingPlayMode)
                 {
                     m_ObservedSession = null;
+                    TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
                     ClearContentWorkflow();
-                    if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
-                    {
-                        m_Mode = TimelineWorkspaceMode.Preview;
-                        SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                    }
-                    TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
-                    SetStatus("已退出 Play。");
+                    SetStatus(m_Mode == TimelineWorkspaceMode.Authoring ? "Authoring" : "已退出 Play。");
                 }
                 Refresh();
             }
@@ -237,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnTimelineAssetOpened(TimelineAsset asset)
             {
-                if (!EditorApplication.isPlaying || m_Mode != TimelineWorkspaceMode.RuntimeDebug)
+                if (!EditorApplication.isPlaying || !TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                     return;
                 TimelineEditorWindow window = TimelineEditorWindow.FindOpen(asset);
                 if (window == null)
@@ -269,7 +260,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void Refresh()
             {
-                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                 {
                     m_RuntimeFocus.Refresh(RuntimeDebugSession.Shared.ViewModel);
                     QueueRuntimeNavigation();
@@ -351,7 +342,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                             ? DropdownMenuAction.Status.Normal
                             : DropdownMenuAction.Status.Disabled);
                 }
-                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                 {
                     AddRuntimePlaybackActions(menu, controls.Window);
                     AddRuntimeDebugActions(menu);
@@ -473,7 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void FollowRuntime()
             {
                 m_NavigationQueued = false;
-                if (!m_FollowRuntime || m_Mode != TimelineWorkspaceMode.RuntimeDebug)
+                if (!m_FollowRuntime || !TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                     return;
                 RuntimeDebugViewModel view = RuntimeDebugSession.Shared.ViewModel;
                 if (!view.Attached)
@@ -525,11 +516,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 if (mode == TimelineWorkspaceMode.Authoring)
                 {
-                    ReleaseRuntimeInterest();
                     m_Mode = mode;
                     SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                    TimelineWorkspaceModeBridge.SetActiveMode(mode);
-                    SetStatus("Authoring");
+                    SetStatus(TimelineWorkspaceModeBridge.RuntimeDebugEnabled
+                        ? FormatRuntimeDebugStatus("当前 Timeline 只读。")
+                        : "Authoring");
                     return;
                 }
                 if (m_Profile == null || !m_Profile.IsValid)
@@ -539,23 +530,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 if (mode == TimelineWorkspaceMode.Preview)
                 {
-                    ReleaseRuntimeInterest();
                     m_Mode = mode;
                     SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                    TimelineWorkspaceModeBridge.SetActiveMode(mode);
                     if (!EditorApplication.isPlaying)
                         StartPreview();
                     else
-                        SetStatus(FormatPreviewContentStatus(string.Empty));
+                        SetStatus(TimelineWorkspaceModeBridge.RuntimeDebugEnabled
+                            ? FormatRuntimeDebugStatus("当前 Timeline 只读。")
+                            : FormatPreviewContentStatus(string.Empty));
                     return;
                 }
-                m_Mode = mode;
-                SessionState.SetInt(ModeStateKey, (int)m_Mode);
-                TimelineWorkspaceModeBridge.SetActiveMode(mode);
-                if (!EditorApplication.isPlaying)
-                    StartPreview();
-                else
+            }
+
+            void SetRuntimeDebug(bool enabled)
+            {
+                if (!EditorApplication.isPlaying || m_Profile == null || !m_Profile.IsValid)
+                {
+                    RefreshControls();
+                    return;
+                }
+                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled == enabled)
+                    return;
+                TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(enabled);
+                if (enabled)
+                {
+                    m_FollowRuntime = true;
+                    m_LastFocusInstance = default;
+                    m_LastFocusGraph = null;
                     AttachRuntimeDebug();
+                }
+                else
+                {
+                    ReleaseRuntimeInterest();
+                    SetStatus(m_Mode == TimelineWorkspaceMode.Preview
+                        ? FormatPreviewContentStatus(string.Empty)
+                        : "Authoring");
+                }
             }
 
             void StartPreview()
@@ -954,7 +964,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         continue;
                     }
                     controls.Mode.text = ModeLabel(m_Mode);
-                    controls.RuntimeDebug.SetValueWithoutNotify(m_Mode == TimelineWorkspaceMode.RuntimeDebug);
+                    controls.RuntimeDebug.SetValueWithoutNotify(TimelineWorkspaceModeBridge.RuntimeDebugEnabled);
                     controls.RuntimeDebug.SetEnabled(EditorApplication.isPlaying && m_Profile != null && m_Profile.IsValid);
                     controls.Profile.SetValueWithoutNotify(m_Profile);
                     AddSessionActions(controls);
@@ -975,7 +985,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             static string ModeLabel(TimelineWorkspaceMode mode) => mode switch
             {
                 TimelineWorkspaceMode.Preview => "Preview",
-                TimelineWorkspaceMode.RuntimeDebug => "RuntimeDebug",
                 _ => "Authoring"
             };
         }

@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeDiagnosticsTargetRegistry.TargetRegistered += OnTargetChanged;
             RuntimeDiagnosticsTargetRegistry.TargetUnregistered += OnTargetChanged;
             RuntimeDebugSession.Shared.Changed += MarkDirty;
+            TimelineWorkspaceModeBridge.RuntimeDebugEnabledChanged += MarkDirty;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             EditorApplication.update += Update;
         }
@@ -69,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_Dirty || s_Opening)
                 return;
             s_Dirty = false;
-            if (TimelineWorkspaceModeBridge.ActiveMode != TimelineWorkspaceMode.RuntimeDebug ||
+            if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled ||
                 !Application.isPlaying || GraphEditor.current == null ||
                 GraphEditor.rootGraph is not BtsmtlSkillFlowGraph graph ||
                 GraphEditor.currentGraph != graph ||

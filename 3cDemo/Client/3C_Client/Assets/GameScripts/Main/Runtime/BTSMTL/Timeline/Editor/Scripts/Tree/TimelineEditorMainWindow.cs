@@ -15,8 +15,7 @@ namespace BTSMTL.Timeline.Editor
     public enum TimelineWorkspaceMode : byte
     {
         Authoring = 0,
-        Preview = 1,
-        RuntimeDebug = 2
+        Preview = 1
     }
 
     public interface ITimelineWorkspaceModeController
@@ -30,16 +29,20 @@ namespace BTSMTL.Timeline.Editor
     {
         static ITimelineWorkspaceModeController s_Controller;
 
-        public static TimelineWorkspaceMode ActiveMode { get; private set; } = TimelineWorkspaceMode.Authoring;
+        public static bool RuntimeDebugEnabled { get; private set; }
+        public static event Action RuntimeDebugEnabledChanged;
 
         public static void Register(ITimelineWorkspaceModeController controller)
         {
             s_Controller = controller;
         }
 
-        public static void SetActiveMode(TimelineWorkspaceMode mode)
+        public static void SetRuntimeDebugEnabled(bool enabled)
         {
-            ActiveMode = mode;
+            if (RuntimeDebugEnabled == enabled)
+                return;
+            RuntimeDebugEnabled = enabled;
+            RuntimeDebugEnabledChanged?.Invoke();
         }
 
         public static VisualElement CreateControls(TimelineEditorWindow window) =>

@@ -4,6 +4,12 @@
 
 尚未闭环。本文不是完成通知；早期交接约定保留为历史，其他任务是否开展整理不代表这里的运行验收已经通过。
 
+## 2026-09-26 第五段重切与接续
+
+- 第五段主段/普通 End 的六层衍生动画已在当前 Unity 工作区按 dump 的 `91/121` 帧重新切分；两份 RootMotionCurveAsset 也已同步重排。`CorinAttackGameplayAbilityDefinition.asset` 的首次正式生成已落盘，主段/End MotionCurve 源区间分别为 `1.5167/2.0167s`，编辑器内该 Timeline 的 Clip 归属完整。生成请求在保存后的 MCP 会话重连阶段没有返回成功响应，因此只认落盘数据，不把这次调用记为完整生成验收。
+- 原始 `D:\ZZZ_Dump\output\corin_replication\replication-guide\data\transitions.json` 显示：Attack5 主段在第 47 帧按点击/按住及命中条件可进入 End/End2，第 71 帧再次普攻有转移，第 90 帧无条件进入 End；普通 End 第 75 帧、End2 第 30 帧允许普攻转移。旧作者图第 47 帧无条件打开 End 边界，且主段恢复节点从第 119/149 帧才开始，晚于重切后的主段。当前作者源码已按上述帧点设置主段接续、早退、普通 End 和 End2 窗口，尚未生成新资产。
+- 作者新增的 AttackHeld 条件节点在分散事务中失去 Graph 归属，正式生成报错；源码已改为在同一正式 Graph 作者事务中创建、配置和接线。`ThirdPersonClient.Editor.csproj` 不构建项目引用的局部编译为 0 错误；完整编译被 `BTSMTL.Timeline.Tree.Editor.csproj` 中 `TimelineEditorMainWindow.cs` 对 `RuntimeTimelinePlaybackProjection.ActiveTracks/ActiveClips/EventBuffer` 的四处引用挡住。本窗口不修改该并行链路。当前 Unity 加载的 Editor DLL 早于最新 Attack5_End.cs，不能用它重跑正式生成或发布 Fixed/Float32；本版第五段仍不可交付手测。
+
 ## 2026-09-26 接招候选核对
 
 - 新录制的首次正式回放请求在启动 Fixed 会话时超过 60 秒等待期，Console 报 `Canonical Fixed input replay timed out while starting the Fixed session`，未生成 Proof。目标实例重新连接、Editor 在 Edit 模式完成刷新后，第二次以同一 trace ID 回放成功：`run_id=6d95faa08c104b3083d6e0d414efcb45`，Proof 为 `Temp/CharacterInputReplayProofs/v6/757f243033414fc7b123c97e2fcb0d70/20260926-183059-778-6d95faa08c104b3083d6e0d414efcb45.json`。正式状态为 `Completed`，2716/2716 帧，`presentation_trace.succeeded=true`，动画选择 20 次、动画采样 1609 帧。Proof 的 Attack `SourceRevision=52fe626f80a5169f845057466297b1af537d761676bbeedb27d1b6de0a411f5e`，与当前 Attack Fixed/Float32 产物一致；该 Proof 不含技能状态序列，不能单独证明 Rush 接到 Attack4 或第五段循环。首次失败没有覆盖或删除。

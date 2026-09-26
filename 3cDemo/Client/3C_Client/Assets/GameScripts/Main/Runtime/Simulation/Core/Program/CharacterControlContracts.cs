@@ -496,7 +496,8 @@ namespace ThirdPersonSimulation
             CharacterControlModuleId moduleId,
             int semanticVersion,
             CharacterControlParameterSet parameters,
-            CharacterControlMotionBindingCatalog motionBindings)
+            CharacterControlMotionBindingCatalog motionBindings,
+            IEnumerable<string> inputRequestIds)
         {
             if (!moduleId.IsValid || semanticVersion <= 0)
                 throw new ArgumentException("Character control runtime binding identity is incomplete.");
@@ -504,18 +505,30 @@ namespace ThirdPersonSimulation
             SemanticVersion = semanticVersion;
             Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             MotionBindings = motionBindings ?? throw new ArgumentNullException(nameof(motionBindings));
-            BindingHash = StableHash.Compute(
-                "character-control-runtime-binding/2",
+            var requests = new List<string>(inputRequestIds ?? throw new ArgumentNullException(nameof(inputRequestIds)));
+            requests.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < requests.Count; i++)
+                if (string.IsNullOrWhiteSpace(requests[i]) ||
+                    i > 0 && string.Equals(requests[i - 1], requests[i], StringComparison.Ordinal))
+                    throw new ArgumentException("Character control input request identities are invalid or duplicated.", nameof(inputRequestIds));
+            InputRequestIds = requests.AsReadOnly();
+            var hashParts = new List<string>(requests.Count + 5)
+            {
+                "character-control-runtime-binding/3",
                 moduleId.Value,
                 semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 parameters.ContentHash.ToString(),
-                motionBindings.ContentHash.ToString());
+                motionBindings.ContentHash.ToString()
+            };
+            hashParts.AddRange(requests);
+            BindingHash = StableHash.Compute(hashParts.ToArray());
         }
 
         public CharacterControlModuleId ModuleId { get; }
         public int SemanticVersion { get; }
         public CharacterControlParameterSet Parameters { get; }
         public CharacterControlMotionBindingCatalog MotionBindings { get; }
+        public IReadOnlyList<string> InputRequestIds { get; }
         public StableHash BindingHash { get; }
 
         public void RequireContract(CharacterControlModuleContract contract)

@@ -90,7 +90,7 @@ namespace ThirdPersonSimulation.Fixed
                 ReadActionActivationRequests(reader, installations, equipmentLayout);
             FixedActionInstanceState[] actionInstances =
                 ReadActionInstances(reader, installations, equipmentLayout);
-            KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, installations);
+            KeyValuePair<string, SimulationInputRequestState>[] inputRequests = ReadInputRequests(reader, actor);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -478,7 +478,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static KeyValuePair<string, SimulationInputRequestState>[] ReadInputRequests(
             CanonicalReader reader,
-            FixedGameplayAbilityExecutionInstallationSet installations)
+            SimulationActorBinding actor)
         {
             int count = ReadCount(reader, 1000000, "Fixed Character Input request");
             if (count == 0)
@@ -489,7 +489,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 string requestId = SimulationIdentity.Require(reader.ReadString(), "InputRequestId");
                 if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 ||
-                    !ContainsInputRequest(installations, requestId))
+                    !ContainsInputRequest(actor, requestId))
                     throw new InvalidDataException("Fixed Character Input request identities are invalid or not canonically ordered.");
                 SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
                 if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
@@ -501,9 +501,13 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static bool ContainsInputRequest(
-            FixedGameplayAbilityExecutionInstallationSet installations,
+            SimulationActorBinding actor,
             string requestId)
         {
+            for (int i = 0; i < actor.ControlRuntimeBinding.InputRequestIds.Count; i++)
+                if (string.Equals(actor.ControlRuntimeBinding.InputRequestIds[i], requestId, StringComparison.Ordinal))
+                    return true;
+            FixedGameplayAbilityExecutionInstallationSet installations = actor.AbilityInstallations;
             for (int i = 0; i < installations.Installations.Count; i++)
             {
                 if (installations.Installations[i].Layout.HasInputRequest(requestId))

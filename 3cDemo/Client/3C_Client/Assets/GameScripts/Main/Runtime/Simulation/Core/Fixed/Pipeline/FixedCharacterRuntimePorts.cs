@@ -102,6 +102,9 @@ namespace ThirdPersonSimulation.Fixed
             }
             RequiredWorldCapabilities = requiredWorldCapabilities;
             var requestIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int actorIndex = 0; actorIndex < values.Count; actorIndex++)
+                for (int requestIndex = 0; requestIndex < values[actorIndex].ControlRuntimeBinding.InputRequestIds.Count; requestIndex++)
+                    requestIds.Add(values[actorIndex].ControlRuntimeBinding.InputRequestIds[requestIndex]);
             for (int i = 0; i < m_Abilities.Count; i++)
             {
                 GameplayAbilityExecutionLayout layout = FixedGameplayAbilityExecutionLayoutFactory.Create(

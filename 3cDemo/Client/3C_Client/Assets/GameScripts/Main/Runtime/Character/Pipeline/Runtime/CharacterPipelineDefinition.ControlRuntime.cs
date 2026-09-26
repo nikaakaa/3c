@@ -33,11 +33,15 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new InvalidOperationException(string.Join(" ", errors));
             CharacterControlMotionBindingCatalog motionBindings =
                 CharacterControlMotionRuntimeBindingBuilder.Build(this, module.Contract);
+            var inputRequestIds = new List<string>(InputProfile.ActionRequests.Count);
+            for (int i = 0; i < InputProfile.ActionRequests.Count; i++)
+                inputRequestIds.Add(InputProfile.ActionRequests[i].RequestId);
             return new CharacterControlRuntimeBinding(
                 moduleId,
                 module.Contract.SemanticVersion,
                 parameters,
-                motionBindings);
+                motionBindings,
+                inputRequestIds);
         }
     }
 }

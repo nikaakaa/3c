@@ -49,10 +49,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             const string ModeStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.WorkspaceMode";
             const string ProfileGuidStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.ProfileGuid";
             const string DefaultProfileGuid = "f6a23791f8784a9f9ee35efd2ecbfcb7";
-            const RuntimeTraceChannel TraceChannels =
+            const RuntimeTraceChannel LiveTraceChannels =
                 RuntimeTraceChannel.Graph |
                 RuntimeTraceChannel.StateMachine |
-                RuntimeTraceChannel.Timeline |
+                RuntimeTraceChannel.Timeline;
+            const RuntimeTraceChannel CaptureTraceChannels =
+                LiveTraceChannels |
                 RuntimeTraceChannel.Blackboard |
                 RuntimeTraceChannel.Animation |
                 RuntimeTraceChannel.Motion |
@@ -656,7 +658,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetStatus("Profile 对应 Actor 尚未注册 RuntimeDebug target。");
                     return;
                 }
-                RuntimeDebugSession.Shared.EnsureLiveInterest(m_InterestOwner, TraceChannels);
+                RuntimeDebugSession.Shared.EnsureLiveInterest(m_InterestOwner, LiveTraceChannels);
                 m_RuntimeInterest = true;
                 SetStatus(FormatRuntimeDebugStatus("当前 Timeline 只读。"));
             }
@@ -909,7 +911,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void BeginRuntimeDebugCapture()
             {
                 RuntimeDebugSession debug = RuntimeDebugSession.Shared;
-                bool started = debug.BeginCapture(TraceChannels, RuntimeDiagnosticsCaptureDetail.Continuous);
+                bool started = debug.BeginCapture(CaptureTraceChannels, RuntimeDiagnosticsCaptureDetail.Continuous);
                 SetStatus(FormatRuntimeDebugStatus(started ? "Capture 已开始。" : "Capture 无法开始。"));
             }
 

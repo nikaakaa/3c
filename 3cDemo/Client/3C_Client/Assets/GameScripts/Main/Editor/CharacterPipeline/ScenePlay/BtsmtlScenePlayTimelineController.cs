@@ -109,6 +109,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     Session = new ToolbarMenu { text = "Session" }
                 };
                 controls.Profile.style.width = 170f;
+                controls.Session.RegisterCallback<PointerDownEvent>(
+                    _ => AddSessionActions(controls), TrickleDown.TrickleDown);
+                controls.Session.RegisterCallback<NavigationSubmitEvent>(
+                    _ => AddSessionActions(controls), TrickleDown.TrickleDown);
                 controls.Profile.tooltip = "唯一 ScenePlay Profile；详细 Scene / Context / Actor 配置在 Profile Inspector。";
                 controls.Profile.RegisterValueChangedCallback(evt =>
                 {
@@ -272,8 +276,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnRuntimeDebugChanged()
             {
-                if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
-                    Refresh();
+                if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                    return;
+                m_RuntimeFocus.Refresh(RuntimeDebugSession.Shared.ViewModel);
+                QueueRuntimeNavigation();
             }
 
             void AddModeActions(ToolbarMenu menu)

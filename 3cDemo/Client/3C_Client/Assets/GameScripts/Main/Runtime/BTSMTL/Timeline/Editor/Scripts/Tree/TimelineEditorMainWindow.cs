@@ -813,21 +813,60 @@ namespace BTSMTL.Timeline.Editor
     {
         static readonly Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection> s_Projections =
             new Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection>();
+        static RuntimeDebugViewModel s_ObservedView;
+        static RuntimeDebugAttachmentState s_ObservedAttachmentState;
 
         static TimelineRuntimeObservationBridge()
         {
             RuntimeDebugSession.Shared.Changed += Refresh;
+            TimelineWorkspaceModeBridge.RuntimeDebugEnabledChanged += OnRuntimeDebugEnabledChanged;
             TimelineEditorWindow.WindowOpened += RefreshWindow;
             TimelineEditorWindow.WindowClosed += ReleaseWindow;
+        }
+
+        static void OnRuntimeDebugEnabledChanged()
+        {
+            if (TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                EditorApplication.delayCall += RefreshAfterEnabled;
+        }
+
+        static void RefreshAfterEnabled()
+        {
+            s_ObservedView = null;
+            Refresh();
         }
 
         static void Refresh()
         {
             if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
                 return;
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            RuntimeDebugViewModel view = session.ViewModel;
+            bool refreshAll = !ReferenceEquals(s_ObservedView, view) ||
+                              s_ObservedAttachmentState != session.AttachmentState;
+            s_ObservedView = view;
+            s_ObservedAttachmentState = session.AttachmentState;
+            if (!refreshAll)
+            {
+                bool timelineChanged = false;
+                foreach (RuntimeSourceElementKey source in view.Changes.Sources)
+                {
+                    if (string.IsNullOrEmpty(source.TimelineAuthoringId))
+                        continue;
+                    timelineChanged = true;
+                    break;
+                }
+                if (!timelineChanged)
+                    return;
+            }
             TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
             for (int index = 0; index < windows.Length; index++)
-                Refresh(windows[index]);
+            {
+                TimelineEditorWindow window = windows[index];
+                if (refreshAll || window && window.Timeline != null &&
+                    view.Changes.AffectsTimeline(window.Timeline.AuthoringId, default))
+                    Refresh(window);
+            }
         }
 
         public static void RefreshWindow(TimelineEditorWindow window)

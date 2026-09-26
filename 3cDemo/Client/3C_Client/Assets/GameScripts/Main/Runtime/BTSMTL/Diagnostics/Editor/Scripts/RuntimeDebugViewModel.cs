@@ -849,11 +849,12 @@ namespace BTSMTL.Diagnostics.Editor
 
             string[][] hashBuffers = new string[hashCounts.Count][];
             int[] hashCursors = new int[hashCounts.Count];
+            var hashSlots = new Dictionary<RuntimeSourceElementKey, int>();
             int hashSlot = 0;
             foreach (KeyValuePair<RuntimeSourceElementKey, int> count in hashCounts)
             {
                 hashBuffers[hashSlot] = new string[count.Value];
-                hashCounts[count.Key] = hashSlot;
+                hashSlots.Add(count.Key, hashSlot);
                 hashSlot++;
             }
 
@@ -862,13 +863,13 @@ namespace BTSMTL.Diagnostics.Editor
                 DebugSourceMapEntry entry = sourceEntries[i];
                 if (!entry.Source.IsValid)
                     continue;
-                int slot = hashCounts[entry.Source];
+                int slot = hashSlots[entry.Source];
                 hashBuffers[slot][hashCursors[slot]++] = entry.ContentHash ?? string.Empty;
             }
 
             var frozen = new Dictionary<RuntimeSourceElementKey, string[]>();
             foreach (KeyValuePair<RuntimeSourceElementKey, int> pair in hashCounts)
-                frozen.Add(pair.Key, hashBuffers[pair.Value]);
+                frozen.Add(pair.Key, hashBuffers[hashSlots[pair.Key]]);
             IReadOnlyList<RuntimeGraphInvocation> sourceInvocations = sourceMap.GraphInvocations;
             RuntimeGraphInvocation[] invocations = sourceInvocations.Count == 0
                 ? Array.Empty<RuntimeGraphInvocation>()

@@ -557,7 +557,7 @@ namespace NodeCanvas.Editor
             }
 
             //repaint?
-            if ( willRepaint || rootGraph.isRunning ) {
+            if ( willRepaint || rootGraph.isRunning || currentGraph?.editorObservation != null ) {
                 Repaint();
             }
 

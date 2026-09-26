@@ -154,27 +154,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
                 return false;
 
-            BtsmtlSkillObservationSession.Close();
-            if (graph.editorObservation is BtsmtlSkillFlowObservation existing)
-                existing.Dispose();
-            if (GraphEditor.currentGraph?.editorObservation is BtsmtlSkillFlowObservation previous)
-                previous.Dispose();
-            graph.SetCurrentChildGraphAssignable(null);
-            GraphEditor window = GraphEditor.OpenWindow(graph);
-            window.Show();
-            window.Focus();
-            if (element != null)
+            bool graphAlreadyOpen = GraphEditor.current != null &&
+                                    ReferenceEquals(GraphEditor.rootGraph, graph) &&
+                                    ReferenceEquals(GraphEditor.currentGraph, graph);
+            bool observationAlreadyOpen = graphAlreadyOpen &&
+                                          BtsmtlSkillObservationSession.IsObserving(definition, graph, instance);
+            if (!observationAlreadyOpen)
+            {
+                BtsmtlSkillObservationSession.Close();
+                if (graph.editorObservation is BtsmtlSkillFlowObservation existing)
+                    existing.Dispose();
+            }
+            if (!graphAlreadyOpen)
+            {
+                if (GraphEditor.currentGraph?.editorObservation is BtsmtlSkillFlowObservation previous)
+                    previous.Dispose();
+                graph.SetCurrentChildGraphAssignable(null);
+                GraphEditor window = GraphEditor.OpenWindow(graph);
+                window.Show();
+                window.Focus();
+            }
+            if (element != null && !graphAlreadyOpen)
                 GraphEditor.FocusElement(element, true);
-            if (UnityEngine.Application.isPlaying && instance.Kind == RuntimeInstanceKind.SkillExecution)
+            if (!observationAlreadyOpen && UnityEngine.Application.isPlaying &&
+                instance.Kind == RuntimeInstanceKind.SkillExecution)
                 BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             if (element is BtsmtlSkillTimelineFlowNode timelineNode)
             {
-                BtsmtlSkillObservationSession.ExpectTimelineOpening(timelineNode);
-                TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(
-                    timelineNode.TimelineAsset,
-                    ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
-                    timelineNode.UID);
-                BtsmtlSkillObservationSession.ExpectTimelineOpening(null);
+                TimelineEditorWindow timelineWindow = TimelineEditorWindow.FindOpen(timelineNode.TimelineAsset);
+                if (timelineWindow == null ||
+                    !string.Equals(timelineWindow.SourceGraphAuthoringId, ((IBtsmtlSkillFlowGraph)graph).AuthoringId, StringComparison.Ordinal) ||
+                    !string.Equals(timelineWindow.SourceNodeAuthoringId, timelineNode.UID, StringComparison.Ordinal))
+                {
+                    BtsmtlSkillObservationSession.ExpectTimelineOpening(timelineNode);
+                    timelineWindow = TimelineEditorWindow.Open(
+                        timelineNode.TimelineAsset,
+                        ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
+                        timelineNode.UID);
+                    BtsmtlSkillObservationSession.ExpectTimelineOpening(null);
+                }
+                else
+                    BtsmtlSkillObservationSession.BindOpenTimeline(timelineNode);
                 if (timelineWindow != null && UnityEngine.Application.isPlaying)
                 {
                     timelineWindow.SetRuntimeObservationReadOnly(true);
@@ -182,9 +202,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (selected.IsValid)
                         timelineWindow.SelectRuntimeObservationPlayback(selected);
                 }
-                return timelineWindow != null && timelineWindow.FocusSource(
-                    source.Kind == RuntimeSourceElementKind.Timeline ? string.Empty : source.TrackAuthoringId,
-                    source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);
+                if (timelineWindow == null)
+                    return false;
+                if (source.Kind is RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
+                    timelineWindow.FocusSource(
+                        source.TrackAuthoringId,
+                        source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);
+                return true;
             }
             return true;
         }

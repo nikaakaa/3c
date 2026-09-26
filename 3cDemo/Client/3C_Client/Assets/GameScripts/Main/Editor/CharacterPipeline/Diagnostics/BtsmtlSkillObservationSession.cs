@@ -107,8 +107,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void Close() => s_Current?.Dispose();
 
+        internal static bool IsObserving(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeInstanceKey instance) =>
+            s_Current != null && !s_Current.m_Disposed && ReferenceEquals(s_Current.m_Definition, definition) &&
+            ReferenceEquals(s_Current.m_RootGraph, graph) && s_Current.m_RootScope.Root.Equals(instance) &&
+            s_Current.m_Observation != null && ReferenceEquals(graph.editorObservation, s_Current.m_Observation);
+
         internal static void ExpectTimelineOpening(BtsmtlSkillTimelineFlowNode node) =>
             s_Current?.OnTimelineOpening(node);
+
+        internal static void BindOpenTimeline(BtsmtlSkillTimelineFlowNode node)
+        {
+            if (s_Current == null || node == null)
+                return;
+            TimelineCaller active = s_Current.m_ActiveTimeline;
+            if (active?.Asset == node.TimelineAsset && active.NodeId == node.UID &&
+                active.GraphInstance.Equals(s_Current.m_Observation?.Instance ?? default))
+                return;
+            s_Current.OnTimelineOpening(node);
+            s_Current.OnTimelineAssetOpened(node.TimelineAsset);
+        }
 
         static void OpenScope(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, Scope scope)
         {

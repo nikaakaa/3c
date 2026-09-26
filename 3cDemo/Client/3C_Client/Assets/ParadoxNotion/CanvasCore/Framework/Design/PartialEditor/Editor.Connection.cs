@@ -263,31 +263,28 @@ namespace NodeCanvas.Framework
         ///<summary>Updates the blink status</summary>
         void UpdateBlinkStatus(Vector2 fromPos, Vector2 toPos) {
 
-            if (graph.editorObservation != null) {
-                size = defaultSize + (editorStatus == Status.Running ? STATUS_BLINK_SIZE_ADD : 0f);
-                color = StyleSheet.GetStatusColor(editorStatus);
-                return;
-            }
+            var observed = graph.editorObservation != null;
+            if ( !observed ) { OnBeforeUpdateBlinkStatus(); }
 
-            OnBeforeUpdateBlinkStatus();
-
-            if ( !graph.isRunning ) {
+            if ( !observed && !graph.isRunning ) {
                 size = defaultSize;
                 color = defaultColor;
                 return;
             }
 
-            if ( status != lastStatus ) {
-                lastStatus = status;
-                statusChangeTime = graph.elapsedTime;
+            var currentStatus = editorStatus;
+            var now = observed ? (float)EditorApplication.timeSinceStartup : graph.elapsedTime;
+            if ( currentStatus != lastStatus ) {
+                lastStatus = currentStatus;
+                statusChangeTime = now;
             }
 
-            var deltaTimeSinceChange = ( graph.elapsedTime - statusChangeTime );
-            if ( status != Status.Resting || size != defaultSize ) {
+            var deltaTimeSinceChange = now - statusChangeTime;
+            if ( currentStatus != Status.Resting || size != defaultSize ) {
                 size = Mathf.Lerp(defaultSize + STATUS_BLINK_SIZE_ADD, defaultSize, deltaTimeSinceChange / STATUS_BLINK_DURATION);
             }
 
-            if ( status != Status.Resting || size == defaultSize ) {
+            if ( currentStatus != Status.Resting || size == defaultSize ) {
                 color = defaultColor;
             }
 

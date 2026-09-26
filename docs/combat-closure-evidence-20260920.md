@@ -9,7 +9,7 @@
 - 当前 Control 在移动攻击或闪避接招时提交 `RushAttack`；爆发段 `RushAttackHandoff` 打开且再次收到 `Attack` 请求时，以 Rush 实例为替换源提交普通 `Attack` 的 `Attack4` 入口。当前 Attack Ability 资产包含 `Attack4 Activation Entry`，Rush Timeline 资产包含 `RushAttackHandoff` 和 `RushMoveExit` 投影。以上只证明静态接线。
 - 当前五份技能的 Fixed 产物 `SourceRevision` 均与对应作者资产一致。Attack 作者资产此前已更新而产物仍为旧版本；本轮通过正式 `PublishSelected(..., "Attack")` 只重发 Attack 的 Fixed/Float32。两份产物的 `AbilityGuid`、`SourceRevision`、`SemanticHash` 和 `ContentIdentity` 成对一致；Attack 当前 `SourceRevision=8ef6a1edb2e274cee7c61c36c1c0218d5ceaa8c8f1555480070d40e9f96adf2b`，`SemanticHash=fc0c65bcf2cb7541b89d0a149dcf8ae5b2258985f977fd9244856d3401559db4`。Rush、DodgeBack、DodgeForward、BranchAttack 的作者资产与 Fixed 产物版本也已逐一对照。这些发布证据不证明动作已经运行通过。
 - `ThirdPersonClient.Editor.csproj` 以 `/m:1`、禁用共享编译和 build server 的正式参数完成编译，0 错误；随后关闭了 build server。3C Editor 在 Edit 模式刷新后重新编译 `ThirdPersonSimulation.Fixed.Unity.dll`，Console 当前 0 错误。旧 Console 堆栈对应刷新前的 Trace 代码，不能当成本版运行结果。
-- 按用户此前要求，本轮不运行旧回放。当前缺少包含 Rush 接招输入且对应本版源码的运行证据；从 Attack4 起招、Attack5 循环及退出、E 持续攻击和退出移动的实际表现均待端到端确认。
+- 按用户此前要求，本轮不运行旧回放。只读解码现有录制 `11fa0cf23ef84252b4aee9ee86905411`：共 2691 帧，包含多组闪避后普攻，以及第 932～1407 Tick 的连续普攻输入。输入本身不能证明第二次普攻落在 `RushAttackHandoff` 窗口；本版尚无运行证据确认从 Attack4 起招、Attack5 循环及退出、E 持续攻击或退出移动。
 
 ## 2026-09-22 运动采样与测试资产清理
 

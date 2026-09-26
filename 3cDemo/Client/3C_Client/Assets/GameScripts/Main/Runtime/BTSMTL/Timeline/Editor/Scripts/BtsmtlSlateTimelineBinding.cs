@@ -725,9 +725,14 @@ namespace BTSMTL.Timeline.Editor
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             m_Timeline.Init();
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
-            m_ViewTimeMax = Mathf.Max(MinimumViewDuration, m_Timeline.Duration);
             m_CurrentTime = Mathf.Clamp(m_CurrentTime, 0f, m_Timeline.Duration);
             Rebuild();
+            RequestRepaint();
+        }
+
+        public void RefreshRuntimeTimeline()
+        {
+            m_Timeline.Init();
             RequestRepaint();
         }
 

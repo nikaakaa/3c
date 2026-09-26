@@ -17,6 +17,8 @@ namespace BTSMTL.Timeline.Editor
         RuntimeDebugViewModel m_Observation;
         ulong m_LastEventSequence;
 
+        public bool StructureChanged { get; private set; }
+
         public bool Matches(TimelineData source, RuntimeInstanceKey playback) =>
             ReferenceEquals(m_Source, source) && m_Playback.Equals(playback);
 
@@ -32,7 +34,9 @@ namespace BTSMTL.Timeline.Editor
             ulong latestSequence = 0;
             for (int index = 0; index < events.Count; index++)
                 latestSequence = Math.Max(latestSequence, events[index].Event.Sequence);
-            if (!Matches(source, playback) || !ReferenceEquals(m_Observation, observation) || latestSequence < m_LastEventSequence)
+            bool reset = !Matches(source, playback) || !ReferenceEquals(m_Observation, observation) ||
+                         latestSequence < m_LastEventSequence;
+            if (reset)
             {
                 Reset(source, playback);
                 m_Observation = observation;
@@ -53,6 +57,7 @@ namespace BTSMTL.Timeline.Editor
             }
             if (changed)
                 m_Runtime.Init();
+            StructureChanged = reset || changed;
             UpdateOpenClipEnds(events, summary);
             return m_Runtime;
         }

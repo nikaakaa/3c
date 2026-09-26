@@ -139,7 +139,6 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
-        string m_RuntimeTimelineRevision = string.Empty;
         readonly Action m_ExternalRepaint;
 
         static BtsmtlSlateTimelineProjection s_Current;
@@ -385,50 +384,65 @@ namespace BTSMTL.Timeline.Editor
         {
             m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
             m_HistoryVisualTime = null;
+            FollowRuntimeTime(m_RuntimeVisualTime.Value);
             SetRuntimeState(activeTracks, activeClips);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
+        void FollowRuntimeTime(float time)
+        {
+            float width = m_Binding.ViewTimeMax - m_Binding.ViewTimeMin;
+            if (time < m_Binding.ViewTimeMin)
+            {
+                float minimum = Mathf.Max(0f, time - width * 0.1f);
+                m_Binding.ViewTimeMin = minimum;
+                m_Binding.ViewTimeMax = minimum + width;
+            }
+            else if (time > m_Binding.ViewTimeMin + width * 0.9f)
+            {
+                float minimum = time - width * 0.9f;
+                m_Binding.ViewTimeMax = minimum + width;
+                m_Binding.ViewTimeMin = minimum;
+            }
+        }
+
         public void ApplyRuntimeTimeline(
             TimelineData runtimeTimeline,
+            bool structureChanged,
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
             if (runtimeTimeline == null)
                 return;
-            string revision = TimelineAuthoringFingerprint.Compute(runtimeTimeline);
-            if (!string.Equals(m_RuntimeTimelineRevision, revision, StringComparison.Ordinal))
-            {
+            if (structureChanged || !ReferenceEquals(m_Binding.Timeline, runtimeTimeline))
                 m_Binding.ReplaceTimeline(runtimeTimeline);
-                m_RuntimeTimelineRevision = revision;
-            }
+            else
+                m_Binding.RefreshRuntimeTimeline();
             ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
         }
 
         public void ApplyHistoryTimeline(
             TimelineData runtimeTimeline,
+            bool structureChanged,
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
             if (runtimeTimeline == null)
                 return;
-            string revision = TimelineAuthoringFingerprint.Compute(runtimeTimeline);
-            if (!string.Equals(m_RuntimeTimelineRevision, revision, StringComparison.Ordinal))
-            {
+            if (structureChanged || !ReferenceEquals(m_Binding.Timeline, runtimeTimeline))
                 m_Binding.ReplaceTimeline(runtimeTimeline);
-                m_RuntimeTimelineRevision = revision;
-            }
+            else
+                m_Binding.RefreshRuntimeTimeline();
             ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
         }
 
         public void ClearRuntimeTimeline()
         {
-            if (string.IsNullOrEmpty(m_RuntimeTimelineRevision))
+            if (ReferenceEquals(m_Binding.Timeline, m_Request.Timeline))
                 return;
             m_Binding.ReplaceTimeline(m_Request.Timeline);
-            m_RuntimeTimelineRevision = string.Empty;
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
@@ -449,6 +463,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_HistoryVisualTime = Mathf.Max(0f, visualTime);
             m_RuntimeVisualTime = null;
+            FollowRuntimeTime(m_HistoryVisualTime.Value);
             SetRuntimeState(activeTracks, activeClips);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }

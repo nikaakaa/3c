@@ -313,24 +313,26 @@ namespace BTSMTL.Timeline.Editor
 
         public void ApplyRuntimeTimelineObservation(
             TimelineData runtimeTimeline,
+            bool structureChanged,
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
             if (!m_RuntimeObservationReadOnly)
                 return;
-            m_SlateProjection?.ApplyRuntimeTimeline(runtimeTimeline, visualTime, activeTracks, activeClips);
+            m_SlateProjection?.ApplyRuntimeTimeline(runtimeTimeline, structureChanged, visualTime, activeTracks, activeClips);
         }
 
         public void ApplyHistoryTimelineObservation(
             TimelineData runtimeTimeline,
+            bool structureChanged,
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
             if (!m_RuntimeObservationReadOnly)
                 return;
-            m_SlateProjection?.ApplyHistoryTimeline(runtimeTimeline, visualTime, activeTracks, activeClips);
+            m_SlateProjection?.ApplyHistoryTimeline(runtimeTimeline, structureChanged, visualTime, activeTracks, activeClips);
         }
 
         public void ClearRuntimeTimelineObservation()
@@ -341,6 +343,8 @@ namespace BTSMTL.Timeline.Editor
 
         public void SetRuntimeObservationReadOnly(bool readOnly)
         {
+            if (m_RuntimeObservationReadOnly == readOnly)
+                return;
             m_RuntimeObservationReadOnly = readOnly;
             m_SlateProjection?.SetRuntimeReadOnly(readOnly);
             if (!readOnly)
@@ -874,9 +878,9 @@ namespace BTSMTL.Timeline.Editor
             TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel, summary);
             MarkOpenTreeClips(runtimeTimeline, activeClips);
             if (RuntimeDebugSession.Shared.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
-                window.ApplyHistoryTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
+                window.ApplyHistoryTimelineObservation(runtimeTimeline, projection.StructureChanged, summary.VisualTime, activeTracks, activeClips);
             else
-                window.ApplyRuntimeTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
+                window.ApplyRuntimeTimelineObservation(runtimeTimeline, projection.StructureChanged, summary.VisualTime, activeTracks, activeClips);
         }
 
         static RuntimeTimelinePlaybackProjection GetProjection(

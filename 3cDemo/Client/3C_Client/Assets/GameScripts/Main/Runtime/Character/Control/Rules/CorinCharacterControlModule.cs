@@ -111,7 +111,8 @@ namespace ThirdPersonCharacter.Control.Rules
             m_State.WriteInt32(s_MotionElapsed, 0);
             if (stateId == Idle)
                 m_State.WriteBoolean(s_DirectionalDodgeRunIntent, false);
-            Trace(stateId, default, "control_state_entered", $"state={stateId.Value}:tick={m_Context.Tick.Value}", m_Context.Tick.Value);
+            if (m_Output.TraceEnabled)
+                Trace(stateId, default, "control_state_entered", $"state={stateId.Value}:tick={m_Context.Tick.Value}", m_Context.Tick.Value);
         }
 
         void OnStateLogic(CharacterControlStateId stateId)
@@ -150,12 +151,13 @@ namespace ThirdPersonCharacter.Control.Rules
 
         void OnStateExit(CharacterControlStateId stateId)
         {
-            Trace(
-                stateId,
-                default,
-                "control_state_exited",
-                $"state={stateId.Value}:tick={m_Context.Tick.Value}",
-                m_State.ReadUInt64(s_EnteredTick));
+            if (m_Output.TraceEnabled)
+                Trace(
+                    stateId,
+                    default,
+                    "control_state_exited",
+                    $"state={stateId.Value}:tick={m_Context.Tick.Value}",
+                    m_State.ReadUInt64(s_EnteredTick));
         }
 
         bool EvaluateTransition(string transitionId, CharacterControlTransitionDescriptor descriptor)
@@ -182,21 +184,23 @@ namespace ThirdPersonCharacter.Control.Rules
                     !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
                 _ => throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.")
             };
-            Trace(
-                descriptor.Source,
-                descriptor.Id,
-                "control_transition_evaluated",
-                $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:result={result}",
-                enteredTick);
-            if (result)
-            {
-                m_State.WriteTransition(s_LastTransition, descriptor.Id);
+            if (m_Output.TraceEnabled)
                 Trace(
                     descriptor.Source,
                     descriptor.Id,
-                    "control_transition_selected",
-                    $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:tick={m_Context.Tick.Value}",
-                    m_Context.Tick.Value);
+                    "control_transition_evaluated",
+                    $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:result={result}",
+                    enteredTick);
+            if (result)
+            {
+                m_State.WriteTransition(s_LastTransition, descriptor.Id);
+                if (m_Output.TraceEnabled)
+                    Trace(
+                        descriptor.Source,
+                        descriptor.Id,
+                        "control_transition_selected",
+                        $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:tick={m_Context.Tick.Value}",
+                        m_Context.Tick.Value);
             }
             return result;
         }

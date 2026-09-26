@@ -193,6 +193,8 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_Sequence;
         bool m_Enabled;
 
+        public bool Enabled => m_Enabled;
+
         public FixedCharacterTraceSink(
             List<SimulationTraceRecord> records)
         {
@@ -502,6 +504,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterControlMotionRuntime m_Motion;
         readonly IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_Actions;
         readonly FixedCharacterTraceSink m_Trace;
+
+        public bool TraceEnabled => m_Trace.Enabled;
 
         public FixedCharacterControlOutputPort(
             CharacterControlModuleContract controlModule,

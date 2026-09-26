@@ -175,6 +175,7 @@ namespace ThirdPersonSimulation
 
     public interface ICharacterControlOutputPort
     {
+        bool TraceEnabled { get; }
         void SubmitMotion(CharacterControlMotionRequest request);
         bool SubmitAbility(CharacterControlAbilityRequest request);
         void SubmitAbilityStop(CharacterControlAbilityStopRequest request);

@@ -195,6 +195,8 @@ namespace ThirdPersonSimulation
         ulong m_Sequence;
         bool m_Enabled;
 
+        public bool Enabled => m_Enabled;
+
         public Float32CharacterTraceSink(
             List<SimulationTraceRecord> records)
         {
@@ -504,6 +506,8 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterControlMotionRuntime m_Motion;
         readonly IReadOnlyDictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_Actions;
         readonly Float32CharacterTraceSink m_Trace;
+
+        public bool TraceEnabled => m_Trace.Enabled;
 
         public Float32CharacterControlOutputPort(
             CharacterControlModuleContract controlModule,

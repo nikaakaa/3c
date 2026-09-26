@@ -18,22 +18,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
         const string OutputFolder = "Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties";
         const string EffectProfilePath = "Assets/Configs/Character/Corin/Pipeline/GameplayEffect/CorinCharacterGameplayEffectProfile.asset";
         const string KeyPrefix = "Corin_Attack_";
-        const string RushEnhancePrefix = "Corin_Attack_Rush_Enhance_AttackProperty_";
-
         [MenuItem("3C/Character/Gameplay/Import Corin Attack Properties")]
-        public static void Import() => Import(KeyPrefix);
-
-        [MenuItem("3C/Character/Gameplay/Import Corin Rush Enhance Attack Properties")]
-        public static void ImportRushEnhance() => Import(RushEnhancePrefix);
-
-        static void Import(string prefix)
+        public static void Import()
         {
             if (!File.Exists(SourceJsonPath))
                 throw new FileNotFoundException("Corin AttackProperty source is missing.", SourceJsonPath);
             JObject source = JObject.Parse(File.ReadAllText(SourceJsonPath, Encoding.UTF8));
             List<string> keys = source.Properties()
                 .Select(property => property.Name)
-                .Where(name => name.StartsWith(prefix, StringComparison.Ordinal))
+                .Where(name => name.StartsWith(KeyPrefix, StringComparison.Ordinal))
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToList();
             if (keys.Count == 0)

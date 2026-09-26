@@ -6,6 +6,10 @@
 
 ## 2026-09-26 接招候选核对
 
+- 新录制 `757f243033414fc7b123c97e2fcb0d70` 有 2716 帧、60 Hz；正式 `inspect_trace` 确认 `Attack` 请求 60 次、`Branch` 请求 3 次、`Dodge` 请求 3 次，`AttackHeld` 为真 251 帧、`BranchHeld` 为真 164 帧。这仅证明输入覆盖，尚未运行回放或证明 Rush 窗口内接到 Attack4。
+- 当前 Attack 作者图只有 `Attack5 End -> Attack1` 和 `Attack5 End2 -> Attack1`，没有 `Attack5` 主状态直接回第一段的边。普通 End 的 `ComboAccept` TreeClip 从 End 本地 `75/60s` 才开始，而 End Timeline 终止时间为 `1.45s`，接招有效时长最多约 `0.2s`；这与第五段像其他段一样接续的手感问题相符，但仍需运行证据确认实际失败点。End2 的接招 TreeClip 从本地 `1/60s` 开始，两个分支不能混为一谈。
+- 目标 Unity 实例 `e852139597e42532` 当前处于 Play、录制器 Idle，Console 错误查询为 0 条。正式 `replay_start` 实现会先 `ExitPlaymode` 再重启 Fixed 会话，因此本轮没有打断当前 Play，也没有在 Play 内刷新、构建或修改 Unity 资产。
+- 当前 Editor 的一次 FrameTiming 读取为 CPU 帧 `126.94ms`、主线程 `57.55ms`、GPU `18.95ms`；三次 Memory counter 读取约 `7.86MB`、`5550` 次 GC 分配/帧。Scripts counter 中编辑器 Repaint、OnGUI、TimelineEditorWindow 居前。MCP 计数读取本身也会在 Editor 帧内执行，这些数值不能单独证明 Gameplay 分配来源，性能修复需要独立正式采样。
 - 当前 Control 在移动攻击或闪避接招时提交 `RushAttack`；爆发段 `RushAttackHandoff` 打开且再次收到 `Attack` 请求时，以 Rush 实例为替换源提交普通 `Attack` 的 `Attack4` 入口。当前 Attack Ability 资产包含 `Attack4 Activation Entry`，Rush Timeline 资产包含 `RushAttackHandoff` 和 `RushMoveExit` 投影。以上只证明静态接线。
 - 此前已核对 Rush、DodgeBack、DodgeForward、BranchAttack 的作者资产与 Fixed 产物版本；这些资产在当前工作区有其它在途改动，本轮不重新声明其当前一致性。`5c191f83f` 将 Attack5 主段重复的 End 动画和位移移入独立 End Timeline 后，通过正式 `PublishSelected(..., "Attack")` 只重发 Attack 的 Fixed/Float32。两份产物的 `AbilityGuid`、`SourceRevision`、`SemanticHash` 和 `ContentIdentity` 成对一致；Attack 当前 `SourceRevision=52fe626f80a5169f845057466297b1af537d761676bbeedb27d1b6de0a411f5e`，`SemanticHash=f5861f4edb037bf91a00841aca7ba67568bdc0549f840e6e82793c87e796ed8b`。这些发布证据不证明动作已经运行通过。
 - `ThirdPersonClient.Editor.csproj` 以 `/m:1`、禁用共享编译和 build server 的正式参数完成编译，0 错误；随后关闭了 build server。3C Editor 在 Edit 模式刷新后重新编译 `ThirdPersonSimulation.Fixed.Unity.dll`，Console 当前 0 错误。旧 Console 堆栈对应刷新前的 Trace 代码，不能当成本版运行结果。

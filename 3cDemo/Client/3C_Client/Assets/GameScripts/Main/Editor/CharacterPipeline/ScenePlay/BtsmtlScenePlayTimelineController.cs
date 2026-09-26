@@ -40,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal TimelineEditorWindow Window;
             internal ObjectField Profile;
             internal ToolbarMenu Mode;
+            internal ToolbarToggle RuntimeDebug;
             internal ToolbarMenu Session;
         }
 
@@ -60,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             readonly object m_InterestOwner = new object();
             readonly List<Controls> m_Controls = new List<Controls>();
             readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = new();
-            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.RuntimeDebug;
+            TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.Preview;
             BtsmtlScenePlayProfile m_Profile;
             CharacterTimelineContentExport m_ExportedContent;
             CharacterTimelineContentAdoptionPlan m_PendingPlan;
@@ -79,11 +80,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             public Controller()
             {
-                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.RuntimeDebug);
+                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Preview);
                 TimelineWorkspaceMode persistedMode = (TimelineWorkspaceMode)mode;
-                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode)
+                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode) &&
+                         persistedMode != TimelineWorkspaceMode.RuntimeDebug
                     ? persistedMode
-                    : TimelineWorkspaceMode.Authoring;
+                    : TimelineWorkspaceMode.Preview;
                 string profileGuid = SessionState.GetString(ProfileGuidStateKey, DefaultProfileGuid);
                 m_Profile = AssetDatabase.LoadAssetAtPath<BtsmtlScenePlayProfile>(
                     AssetDatabase.GUIDToAssetPath(profileGuid));
@@ -105,6 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         value = m_Profile
                     },
                     Mode = new ToolbarMenu { text = ModeLabel(m_Mode) },
+                    RuntimeDebug = new ToolbarToggle { text = "RuntimeDebug" },
                     Session = new ToolbarMenu { text = "Session" }
                 };
                 controls.Profile.style.width = 170f;
@@ -127,12 +130,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
                     SetStatus(m_Profile == null ? "未选择 ScenePlay Profile。" : m_Profile.IsValid ? "Profile 已选择。" : "ScenePlay Profile 配置无效。");
                 });
+                controls.RuntimeDebug.tooltip = "开启运行时诊断、自动跳转和 Timeline 覆盖显示。";
+                controls.RuntimeDebug.RegisterValueChangedCallback(evt =>
+                    SetMode(evt.newValue ? TimelineWorkspaceMode.RuntimeDebug : TimelineWorkspaceMode.Preview));
                 AddModeActions(controls.Mode);
                 AddSessionActions(controls);
                 var container = new VisualElement();
                 container.style.flexDirection = FlexDirection.Row;
                 container.Add(controls.Profile);
                 container.Add(controls.Mode);
+                container.Add(controls.RuntimeDebug);
                 container.Add(controls.Session);
                 m_Controls.Add(controls);
                 RefreshControls();
@@ -201,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     m_LastFocusGraph = null;
                     if (m_Profile != null && m_Profile.IsValid)
                     {
-                        m_Mode = TimelineWorkspaceMode.RuntimeDebug;
+                        m_Mode = TimelineWorkspaceMode.Preview;
                         SessionState.SetInt(ModeStateKey, (int)m_Mode);
                         TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
                     }
@@ -212,10 +219,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     m_ObservedSession = null;
                     ReleaseRuntimeInterest();
                     ClearContentWorkflow();
+                    if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                    {
+                        m_Mode = TimelineWorkspaceMode.Preview;
+                        SessionState.SetInt(ModeStateKey, (int)m_Mode);
+                    }
                     TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
-                    SetStatus(m_Mode == TimelineWorkspaceMode.RuntimeDebug
-                        ? FormatRuntimeDebugStatus("已退出 Play。")
-                        : "Authoring");
+                    SetStatus("已退出 Play。");
                 }
                 Refresh();
             }
@@ -273,7 +283,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 AppendModeAction(menu, TimelineWorkspaceMode.Authoring);
                 AppendModeAction(menu, TimelineWorkspaceMode.Preview);
-                AppendModeAction(menu, TimelineWorkspaceMode.RuntimeDebug);
             }
 
             void AppendModeAction(ToolbarMenu menu, TimelineWorkspaceMode mode)
@@ -945,6 +954,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         continue;
                     }
                     controls.Mode.text = ModeLabel(m_Mode);
+                    controls.RuntimeDebug.SetValueWithoutNotify(m_Mode == TimelineWorkspaceMode.RuntimeDebug);
+                    controls.RuntimeDebug.SetEnabled(EditorApplication.isPlaying && m_Profile != null && m_Profile.IsValid);
                     controls.Profile.SetValueWithoutNotify(m_Profile);
                     AddSessionActions(controls);
                 }

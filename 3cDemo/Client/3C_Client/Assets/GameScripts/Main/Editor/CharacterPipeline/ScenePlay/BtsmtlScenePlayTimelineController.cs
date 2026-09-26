@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             bool m_NavigationQueued;
             RuntimeInstanceKey m_LastFocusInstance;
             string m_LastFocusGraph;
+            RuntimeSourceElementKey m_LastFocusSource;
 
             public Controller()
             {
@@ -485,20 +486,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 RuntimeDebugEventView candidate = m_RuntimeFocus.Candidates[0];
                 if (m_LastFocusInstance.Equals(candidate.Event.RuntimeInstance) &&
-                    string.Equals(m_LastFocusGraph, candidate.Source.GraphAuthoringId, StringComparison.Ordinal))
+                    string.Equals(m_LastFocusGraph, candidate.Source.GraphAuthoringId, StringComparison.Ordinal) &&
+                    (candidate.Event.RuntimeInstance.Kind == RuntimeInstanceKind.TimelinePlayback ||
+                     m_LastFocusSource.Equals(candidate.Source)))
                     return;
                 NavigateRuntime(candidate);
             }
 
             void NavigateRuntime(RuntimeDebugEventView candidate)
             {
-                if (!RuntimeDebugSourceNavigator.Open(candidate, followGraph: true))
+                if (!RuntimeDebugSourceNavigator.Open(candidate))
                 {
                     PublishNavigationStatus("当前调用缺少匹配版本的作者来源，无法导航。");
                     return;
                 }
                 m_LastFocusInstance = candidate.Event.RuntimeInstance;
                 m_LastFocusGraph = candidate.Source.GraphAuthoringId;
+                m_LastFocusSource = candidate.Source;
                 PublishNavigationStatus($"{(m_FollowRuntime ? "跟随" : "固定")} {candidate.SourceName} · 动作 {m_LastFocusInstance.ActionInstanceId}");
             }
 
@@ -632,6 +636,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 BtsmtlSkillObservationSession.Close();
                 m_LastFocusInstance = default;
                 m_LastFocusGraph = null;
+                m_LastFocusSource = default;
                 if (!m_RuntimeInterest)
                     return;
                 RuntimeDebugSession.Shared.ReleaseLiveInterest(m_InterestOwner);

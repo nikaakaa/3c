@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
-        public static bool Open(RuntimeDebugEventView eventView, bool followGraph = false)
+        public static bool Open(RuntimeDebugEventView eventView)
         {
             RuntimeTraceEvent trace = eventView.Event;
             RuntimeInstanceKey instance = trace.RuntimeInstance;
@@ -61,9 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback);
             }
-            return Open(definition, followGraph
-                ? RuntimeSourceElementKey.Graph(eventView.Source.GraphAuthoringId)
-                : eventView.Source, instance);
+            return Open(definition, eventView.Source, instance);
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
@@ -197,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 window.Show();
                 window.Focus();
             }
-            if (element != null && !graphAlreadyOpen)
+            if (element != null)
                 GraphEditor.FocusElement(element, true);
             if (!observationAlreadyOpen && UnityEngine.Application.isPlaying &&
                 instance.Kind == RuntimeInstanceKind.SkillExecution)

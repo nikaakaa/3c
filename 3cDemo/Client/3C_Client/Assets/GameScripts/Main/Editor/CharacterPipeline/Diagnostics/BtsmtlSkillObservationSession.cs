@@ -219,8 +219,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_ActiveTimeline?.Asset != null)
             {
                 TimelineEditorWindow window = TimelineEditorWindow.FindOpen(m_ActiveTimeline.Asset);
-                window?.ClearRuntimeTimelineObservation();
-                window?.SetRuntimeObservationReadOnly(false);
+                if (window != null)
+                {
+                    window.SetRuntimeObservationScope(default);
+                    window.ClearRuntimeTimelineObservation();
+                    window.SetRuntimeObservationReadOnly(false);
+                }
             }
         }
 

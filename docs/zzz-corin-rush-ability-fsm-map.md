@@ -16,9 +16,9 @@
 
 ## 输入合同
 
-- `Rush` 是一次性动作请求，由输入动作的 `WasPressedThisFrame()` 产生；Ability 入口消费该请求。
-- `RushHeld` 是同一输入动作的连续布尔值，由 `IsPressed()` 每帧锁存；它只决定蓄力段何时释放，不承担 Ability 激活。
-- `Attack` 保留为普通攻击请求；Rush 爆发段只读取它，不提前消费，退出 Rush 后由普通攻击链继续处理。
+- 移动中或闪避接招窗口内的 `Attack` 请求由 Control 提交为 `RushAttack`，使用现有普攻输入，不设独立 `Rush` 请求。
+- `MoveAxis` 有方向输入时维持 `Attack_Rush`；`RushRelease` 打开后松开方向输入进入爆发段。普攻按住值 `AttackHeld` 不决定 Rush 的长度。
+- 爆发段的 `RushAttackHandoff` 窗口内再次收到 `Attack` 请求时，Control 以当前 Rush 实例为替换源激活普通攻击的 `Attack4` 入口。
 
 ## 状态与转移
 
@@ -28,24 +28,24 @@
 
 | 来源 | 目标 | 条件 |
 |---|---|---|
-| Entry | `Attack_Rush` | 存在 `Rush` 请求 |
-| `Attack_Rush` | `Attack_Rush_Explode` | `RushRelease` 窗口打开且 `RushHeld=false` |
+| Entry | `Attack_Rush` | Control 已从移动攻击或闪避接招提交 RushAttack |
+| `Attack_Rush` | `Attack_Rush_Explode` | `RushRelease` 窗口打开且 `MoveAxis` 无方向输入 |
 | `Attack_Rush` | `Attack_Rush_Explode` | 当前 Timeline 完成 |
-| `Attack_Rush_Explode` | Exit | `RushAttackHandoff` 窗口打开且存在 `Attack` 请求 |
 | `Attack_Rush_Explode` | `Attack_Rush_End` | 当前 Timeline 完成 |
 | `Attack_Rush_End` | Exit | 当前 Timeline 完成 |
 
-每个状态的 State Body 只播放对应 shared Timeline，播放模式为 Once。旧的 `RushSelected`、`RushEnhanceSelected`、`RushHoldReleased`、`RushSawExplode` 和五段强化 Rush 状态已经删除。
+`RushAttackHandoff` 内的普通攻击由 Control 走动作替换，不是 Rush FSM 内部的 Exit 边。第 44 帧后的 `RushMoveExit` 打开时，若仍有移动输入，Control 可结束 Rush 并继续跑动。每个状态的 State Body 只播放对应 shared Timeline，播放模式为 Once。旧的 `RushSelected`、`RushEnhanceSelected`、`RushHoldReleased`、`RushSawExplode` 和五段强化 Rush 状态已经删除。
 
 ## 结束规则
 
-Ability 只保留三条宿主结束规则：
+Ability 的宿主结束规则为：
 
 - `AbortRequested -> Abort`
 - `InterruptRequested -> Interrupt`
 - `ExecutionCompleted -> Complete`
+- `ActionWindowClosed(RushMoveExit) -> Cancel`
 
-释放和普通攻击交接由状态机条件负责，不再复制成 Ability EndRule。
+释放由状态机条件负责，普通攻击交接由 Control 的替换请求负责；移动退出通过 `RushMoveExit` 结束规则收口。
 
 ## Effect 依赖
 

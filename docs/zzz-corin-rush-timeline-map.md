@@ -1,6 +1,6 @@
 # ZZZ Corin RushAttack Timeline 对照
 
-本文登记 RushAttack 三段正式 Timeline 的动画输出和状态窗口。帧号使用 ZZZ 状态本地 1 基 SourceFrame；Timeline clip 时间为 `(SourceFrame - 1) / 60`。
+本文登记 RushAttack 三段正式 Timeline 的动画输出和状态窗口。帧号使用 ZZZ 状态本地 1 基 SourceFrame。`RushRelease` 的 TreeClip 按 `(SourceFrame - 1) / 60` 起播；爆发接招 TreeClip 为避免首帧条件尚未满足就结束，按当前作者链从 `14 / 60` 起播。
 
 ## 资产与身份
 
@@ -24,12 +24,13 @@
 
 ## ActionWindow
 
-| StateId | SourceFrame | TimelineFrame | WindowType | WindowId | Digest |
+| StateId | SourceFrame | Timeline 起点或开启帧 | WindowType | WindowId | Digest |
 |---|---:|---:|---|---|---:|
 | `Attack_Rush` | 13 | 12 | `RushRelease` | `RushReleaseOpen` | 8101 |
-| `Attack_Rush_Explode` | 14 | 13 | `RushAttackHandoff` | `RushAttackHandoffOpen` | 8102 |
+| `Attack_Rush_Explode` | 14 | 14 | `RushAttackHandoff` | `RushAttackHandoffOpen` | 8102 |
+| `Attack_Rush_Explode` | - | 44 | `RushMoveExit` | `RushMoveExitOpen` | 8103 |
 
-每个窗口由独立 Logic `TreeTrack` 在目标帧运行一次。TreeClip 的 TimelineBody graph 写入一个 Frame scope、Frame lifetime 的布尔声明，并通过 `PipelineBlackboardFactProjectionKind.ActionWindow` 投影给状态机条件。声明 owner 使用实际 graph id，生成后由正式 authoring 诊断校验。
+`RushAttackHandoff` 与 `RushMoveExit` 由同一 Logic TreeClip 发布：前者从起点至第 44 帧，后者从第 44 帧起，边界帧允许两者重叠。TreeClip 的 TimelineBody graph 写入 Frame scope、Frame lifetime 的布尔声明，并通过 `PipelineBlackboardFactProjectionKind.ActionWindow` 投影给 Control。声明 owner 使用实际 graph id，生成后由正式 authoring 诊断校验。
 
 `Attack_Rush_End` 没有窗口 TreeClip；它只播放 80 帧结束动画，完成后由状态机 terminal 条件退出。
 

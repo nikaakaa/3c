@@ -118,6 +118,7 @@ namespace BTSMTL.Timeline.Editor
         bool m_RuntimeObservationReadOnly;
         RuntimeInstanceKey m_RuntimeObservationScope;
         RuntimeInstanceKey m_RuntimeObservationPlayback;
+        bool m_RuntimeObservationPinned;
 
         public TimelineData Timeline => m_Timeline;
         public UnityEngine.Object SourceGraphWindow => m_SourceGraphWindow;
@@ -154,6 +155,23 @@ namespace BTSMTL.Timeline.Editor
             out string message)
         {
             IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
+            if (!m_RuntimeObservationPinned)
+            {
+                RuntimeInstanceKey activePlayback = default;
+                int activeCount = 0;
+                for (int index = 0; index < summaries.Count; index++)
+                {
+                    if (summaries[index].IsTerminal || !summaries[index].Playback.IsValid)
+                        continue;
+                    activePlayback = summaries[index].Playback;
+                    activeCount++;
+                }
+                if (activeCount == 1 && !m_RuntimeObservationPlayback.Equals(activePlayback))
+                {
+                    m_RuntimeObservationPlayback = activePlayback;
+                    ClearRuntimeTimelineObservation();
+                }
+            }
             if (m_RuntimeObservationPlayback.IsValid)
             {
                 for (int index = 0; index < summaries.Count; index++)
@@ -191,10 +209,11 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_RuntimeObservationScope = scope;
             m_RuntimeObservationPlayback = default;
+            m_RuntimeObservationPinned = false;
             ClearRuntimeTimelineObservation();
         }
 
-        public bool SelectRuntimeObservationPlayback(RuntimeInstanceKey playback)
+        public bool SelectRuntimeObservationPlayback(RuntimeInstanceKey playback, bool pin = false)
         {
             if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
                 return false;
@@ -204,12 +223,17 @@ namespace BTSMTL.Timeline.Editor
                 if (!summaries[index].Playback.Equals(playback))
                     continue;
                 if (m_RuntimeObservationPlayback.Equals(playback))
+                {
+                    m_RuntimeObservationPinned = pin;
                     return true;
+                }
                 m_RuntimeObservationPlayback = playback;
+                m_RuntimeObservationPinned = pin;
                 ClearRuntimeTimelineObservation();
                 return true;
             }
             m_RuntimeObservationPlayback = playback;
+            m_RuntimeObservationPinned = pin;
             ClearRuntimeTimelineObservation();
             SetRuntimeObservationStatus("当前 Timeline 播放实例与作者来源不一致。");
             return false;
@@ -219,6 +243,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_RuntimeObservationScope = default;
             m_RuntimeObservationPlayback = default;
+            m_RuntimeObservationPinned = false;
         }
 
         IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> FilterRuntimeScope(

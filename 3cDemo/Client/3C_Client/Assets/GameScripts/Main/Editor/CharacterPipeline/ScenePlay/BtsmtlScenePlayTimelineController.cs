@@ -196,6 +196,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 if (state == PlayModeStateChange.EnteredPlayMode)
                 {
+                    m_FollowRuntime = true;
+                    m_LastFocusInstance = default;
+                    m_LastFocusGraph = null;
                     if (m_Profile != null && m_Profile.IsValid)
                     {
                         m_Mode = TimelineWorkspaceMode.RuntimeDebug;
@@ -369,7 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         label,
                         _ =>
                         {
-                            if (window.SelectRuntimeObservationPlayback(playback))
+                            if (window.SelectRuntimeObservationPlayback(playback, pin: true))
                             {
                                 m_FollowRuntime = false;
                                 Refresh();
@@ -492,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             void NavigateRuntime(RuntimeDebugEventView candidate)
             {
-                if (!RuntimeDebugSourceNavigator.Open(candidate))
+                if (!RuntimeDebugSourceNavigator.Open(candidate, pin: !m_FollowRuntime))
                 {
                     PublishNavigationStatus("当前调用缺少匹配版本的作者来源，无法导航。");
                     return;

@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
-        public static bool Open(RuntimeDebugEventView eventView)
+        public static bool Open(RuntimeDebugEventView eventView, bool pin = false)
         {
             RuntimeTraceEvent trace = eventView.Event;
             RuntimeInstanceKey instance = trace.RuntimeInstance;
@@ -59,16 +59,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or
                 RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
             {
-                return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback);
+                return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback, pin);
             }
-            return Open(definition, eventView.Source, instance);
+            return Open(definition, eventView.Source, instance, default, string.Empty, pin);
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
-            => Open(definition, source, instance, default, string.Empty);
+            => Open(definition, source, instance, default, string.Empty, false);
 
         static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source,
-            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId)
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId, bool pin)
         {
             if (!definition || !source.IsValid)
                 return false;
@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .ToArray();
                 if (nativeGraphs.Length != 0)
                     return nativeGraphs.Length == 1 && OpenSkillGraph(
-                        definition, nativeGraphs[0], source, instance, playback, expectedTimelineId);
+                        definition, nativeGraphs[0], source, instance, playback, expectedTimelineId, pin);
             }
             return false;
         }
@@ -93,7 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPipelineDefinition definition,
             RuntimeSourceElementKey source,
             RuntimeInstanceKey instance,
-            RuntimeTimelinePlaybackProvenance provenance)
+            RuntimeTimelinePlaybackProvenance provenance,
+            bool pin)
         {
             if (!provenance.IsValid || string.IsNullOrEmpty(source.TimelineAuthoringId) ||
                 string.IsNullOrEmpty(provenance.SourceGraphAuthoringId) ||
@@ -115,7 +116,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     provenance.SourceNodeAuthoringId),
                 graphInstance,
                 instance,
-                source.TimelineAuthoringId);
+                source.TimelineAuthoringId,
+                pin);
         }
 
         internal static bool TryResolveTimelineGraphInstance(
@@ -147,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source,
-            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId)
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId, bool pin)
         {
             NodeCanvas.Framework.IGraphElement element = null;
             if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
@@ -222,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RuntimeInstanceKey selected = playback.IsValid ? playback : ResolveTimelinePlayback(instance);
                     if (selected.IsValid)
                     {
-                        if (!timelineWindow.SelectRuntimeObservationPlayback(selected))
+                        if (!timelineWindow.SelectRuntimeObservationPlayback(selected, pin))
                             return false;
                         TimelineRuntimeObservationBridge.RefreshWindow(timelineWindow);
                     }

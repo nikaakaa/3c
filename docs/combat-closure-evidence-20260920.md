@@ -16,6 +16,7 @@
 - `ThirdPersonClient.Editor.csproj` 以 `/m:1`、禁用共享编译和 build server 的正式参数完成编译，0 错误；随后关闭了 build server。3C Editor 在 Edit 模式刷新后重新编译 `ThirdPersonSimulation.Fixed.Unity.dll`，Console 当前 0 错误。旧 Console 堆栈对应刷新前的 Trace 代码，不能当成本版运行结果。
 - 按用户此前要求，本轮不运行旧回放。只读解码现有录制 `11fa0cf23ef84252b4aee9ee86905411`：共 2691 帧，包含多组闪避后普攻，以及第 932～1407 Tick 的连续普攻输入。输入本身不能证明第二次普攻落在 `RushAttackHandoff` 窗口；本版尚无运行证据确认从 Attack4 起招、Attack5 循环及退出、E 持续攻击或退出移动。
 - Unity 动画 API 只读读取：解包 `Attack_Normal_05` / `Attack_Normal_05_End` 的实际 Clip 长度为 `1.51666677s` / `2.016667s`；当前 `Corin_Pipeline_Attack5_Inplace` / `Corin_Pipeline_Attack5_End_Inplace` 为 `2.08333349s` / `1.45s`。两组总长近似相同，但主段与 End 的切点相差约 34 帧。两组 Clip 均包含武器曲线。现有 Attack5 作者资产在 `47/60s` 打开 `Attack5EndBoundary`，仅凭静态对照不能证明第 47 帧切换后动画连续；足部与动画资源链有其它在途修改，本轮未重切 Clip、重烘曲线或声明第五段表现已修复。
+- 2026-09-26 进一步用目标 Unity 实例只读核对源链：`WithWeaponRootmotion`、`WithWeaponInplace`、`CorinWeapon` 和 `PipelineInplace` 的第五段主段/普通 End 均为 `2.08333349s / 1.45s`，而 dump 原始 Clip 为 `1.51666677s / 2.016667s`。`WithWeaponInplace` 普通 End 有 2068 条曲线，Pipeline End 有 2091 条，多出的 23 条包含足部曲线；直接把 Pipeline 引用换成 dump 原始 Clip 会丢失衍生曲线。抽查脊柱旋转：dump End 第 34 帧为 `0.04504266`，衍生 End 第 0 帧为 `0.04505907`，印证衍生源链把 End 前约 34 帧划进了主段。修复需统一重切源动画、武器和 Pipeline，并同步位移/足部曲线及技能 Timeline 时间；只延长技能图会留下表现错位。相关足部和 Pose 资产有其他窗口未提交改动，尚未执行重切。
 
 ## 2026-09-22 运动采样与测试资产清理
 

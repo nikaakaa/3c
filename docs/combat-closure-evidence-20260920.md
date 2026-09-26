@@ -10,6 +10,7 @@
 - 此前已核对 Rush、DodgeBack、DodgeForward、BranchAttack 的作者资产与 Fixed 产物版本；这些资产在当前工作区有其它在途改动，本轮不重新声明其当前一致性。`5c191f83f` 将 Attack5 主段重复的 End 动画和位移移入独立 End Timeline 后，通过正式 `PublishSelected(..., "Attack")` 只重发 Attack 的 Fixed/Float32。两份产物的 `AbilityGuid`、`SourceRevision`、`SemanticHash` 和 `ContentIdentity` 成对一致；Attack 当前 `SourceRevision=52fe626f80a5169f845057466297b1af537d761676bbeedb27d1b6de0a411f5e`，`SemanticHash=f5861f4edb037bf91a00841aca7ba67568bdc0549f840e6e82793c87e796ed8b`。这些发布证据不证明动作已经运行通过。
 - `ThirdPersonClient.Editor.csproj` 以 `/m:1`、禁用共享编译和 build server 的正式参数完成编译，0 错误；随后关闭了 build server。3C Editor 在 Edit 模式刷新后重新编译 `ThirdPersonSimulation.Fixed.Unity.dll`，Console 当前 0 错误。旧 Console 堆栈对应刷新前的 Trace 代码，不能当成本版运行结果。
 - 按用户此前要求，本轮不运行旧回放。只读解码现有录制 `11fa0cf23ef84252b4aee9ee86905411`：共 2691 帧，包含多组闪避后普攻，以及第 932～1407 Tick 的连续普攻输入。输入本身不能证明第二次普攻落在 `RushAttackHandoff` 窗口；本版尚无运行证据确认从 Attack4 起招、Attack5 循环及退出、E 持续攻击或退出移动。
+- Unity 动画 API 只读读取：解包 `Attack_Normal_05` / `Attack_Normal_05_End` 的实际 Clip 长度为 `1.51666677s` / `2.016667s`；当前 `Corin_Pipeline_Attack5_Inplace` / `Corin_Pipeline_Attack5_End_Inplace` 为 `2.08333349s` / `1.45s`。两组总长近似相同，但主段与 End 的切点相差约 34 帧。两组 Clip 均包含武器曲线。现有 Attack5 作者资产在 `47/60s` 打开 `Attack5EndBoundary`，仅凭静态对照不能证明第 47 帧切换后动画连续；足部与动画资源链有其它在途修改，本轮未重切 Clip、重烘曲线或声明第五段表现已修复。
 
 ## 2026-09-22 运动采样与测试资产清理
 

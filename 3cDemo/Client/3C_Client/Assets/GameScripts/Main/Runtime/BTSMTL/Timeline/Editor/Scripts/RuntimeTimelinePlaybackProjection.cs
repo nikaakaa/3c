@@ -4,6 +4,8 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using ThirdPersonSimulation.Fixed;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BTSMTL.Timeline.Tree.Editor")]
+
 namespace BTSMTL.Timeline.Editor
 {
     public sealed class RuntimeTimelinePlaybackProjection

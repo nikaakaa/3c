@@ -783,6 +783,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             int count = 0;
+            int terminalIndex = -1;
             for (int i = 0; i < actions.Count; i++)
             {
                 FixedActionInstanceState action = actions[i];
@@ -790,8 +791,12 @@ namespace ThirdPersonSimulation.Fixed
                     count++;
                 if (action.ActionId == actionId && action.IsTerminal)
                     return i;
+                if (terminalIndex < 0 && action.IsTerminal)
+                    terminalIndex = i;
             }
-            return count < m_Layout.ActionCapacity(actionId) ? actions.Count : -1;
+            return count < m_Layout.ActionCapacity(actionId)
+                ? terminalIndex >= 0 ? terminalIndex : actions.Count
+                : -1;
         }
 
         public ulong NextSequence()

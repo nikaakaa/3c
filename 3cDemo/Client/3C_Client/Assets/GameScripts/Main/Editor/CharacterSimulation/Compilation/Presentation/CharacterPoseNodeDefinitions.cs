@@ -389,7 +389,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.ClipPlayer;
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterClipPlayerPosePayload>(CharacterPoseNodeKind.ClipPlayer, RootAndStateWithLinkedEntry, "Clip Player", "Sources", SourceColor,
-                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), BoolField("locomotion-participant", "Locomotion Participant", false)),
+                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), BoolField("locomotion-participant", "Locomotion Participant", false),
+                    FloatField("phase-entry-start-seconds", "相位允许入口开始（秒）", 0f), FloatField("phase-entry-end-seconds", "相位允许入口结束（秒）", 0f)),
                 Ports(Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture);
@@ -413,7 +414,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 input.Require<float>("play-rate"),
                 input.Require<float>("initial-time"),
                 input.Require<bool>("loop-animation"),
-                input.Require<bool>("locomotion-participant"));
+                input.Require<bool>("locomotion-participant"),
+                input.Require<float>("phase-entry-start-seconds"),
+                input.Require<float>("phase-entry-end-seconds"));
 
         protected override object ReadField(
             CharacterClipPlayerPosePayload payload,
@@ -425,6 +428,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "initial-time" => payload.InitialTime,
                 "loop-animation" => payload.LoopAnimation,
                 "locomotion-participant" => payload.IsLocomotionParticipant,
+                "phase-entry-start-seconds" => payload.PhaseEntryStartSeconds,
+                "phase-entry-end-seconds" => payload.PhaseEntryEndSeconds,
                 _ => base.ReadField(payload, field)
             };
 

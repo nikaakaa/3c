@@ -65,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal interface ICharacterPoseNativeNodeEvaluator : IDisposable
     {
         Diagnostics.ICharacterNativeStateCaptureSource StateCapture { get; }
+        ICharacterPoseNativePhaseSource PhaseSources { get; }
         void Initialize(CharacterPoseNativeGraphRuntime runtime);
         void Start(CharacterPoseNativeGraphRuntime runtime);
         void Reset(
@@ -167,6 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal Diagnostics.CharacterNativeStateCapturePage StateCapture => new Diagnostics.CharacterNativeStateCapturePage(m_Evaluator.StateCapture);
+        internal ICharacterPoseNativePhaseSource PhaseSources => m_Evaluator.PhaseSources;
         internal CharacterPoseCanvasGraph Graph => m_Graph;
         internal CharacterPoseNativePreparedBinding PreparedBinding => m_PreparedBinding;
         internal CharacterPoseNativeInstanceContext InstanceContext => m_CreateRequest.Context;

@@ -152,19 +152,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float m_InitialTime;
         [SerializeField] bool m_LoopAnimation = true;
         [SerializeField] bool m_IsLocomotionParticipant;
+        [SerializeField] float m_PhaseEntryStartSeconds;
+        [SerializeField] float m_PhaseEntryEndSeconds;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ClipPlayer;
         public CharacterClipPoseSourceSlot SourceSlot => m_SourceSlot;
         public float PlayRate => m_PlayRate;
         public float InitialTime => m_InitialTime;
         public bool LoopAnimation => m_LoopAnimation;
         public bool IsLocomotionParticipant => m_IsLocomotionParticipant;
+        public float PhaseEntryStartSeconds => m_PhaseEntryStartSeconds;
+        public float PhaseEntryEndSeconds => m_PhaseEntryEndSeconds;
         public CharacterClipPlayerPosePayload() { }
         public CharacterClipPlayerPosePayload(
             CharacterClipPoseSourceSlot sourceSlot,
             float playRate,
             float initialTime,
             bool loopAnimation,
-            bool isLocomotionParticipant)
+            bool isLocomotionParticipant,
+            float phaseEntryStartSeconds = 0f,
+            float phaseEntryEndSeconds = 0f)
         {
             if (!sourceSlot)
                 throw new ArgumentNullException(nameof(sourceSlot));
@@ -175,6 +181,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_InitialTime = initialTime;
             m_LoopAnimation = loopAnimation;
             m_IsLocomotionParticipant = isLocomotionParticipant;
+            if (!float.IsFinite(phaseEntryStartSeconds) || !float.IsFinite(phaseEntryEndSeconds) ||
+                phaseEntryStartSeconds < 0f || phaseEntryEndSeconds < phaseEntryStartSeconds)
+                throw new ArgumentOutOfRangeException(nameof(phaseEntryEndSeconds));
+            m_PhaseEntryStartSeconds = phaseEntryStartSeconds;
+            m_PhaseEntryEndSeconds = phaseEntryEndSeconds;
         }
 
     }

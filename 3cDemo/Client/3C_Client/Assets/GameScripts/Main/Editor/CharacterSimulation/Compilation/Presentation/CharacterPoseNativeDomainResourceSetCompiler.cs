@@ -95,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clipBinding,
                     rig,
                     analysisSource,
+                    profile.FindLocomotionSyncGroup(clipBinding.Clip),
                     catalogEntries));
                 slots.Add(clipBinding.Slot);
             }
@@ -110,6 +111,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Debug.Log(
                 $"Animation Domain Resource Set '{resourceSet.name}' compiled " +
                 $"{plans.Count} Pose sources and {actionPlans.Count} Action sources from profile '{profile.name}'.");
+        }
+
+        static void CompileLocomotionPhasePlan(
+            AnimationClip clip,
+            CharacterLocomotionSyncGroup group,
+            AnimationFootAnalysisArtifact artifact,
+            CharacterPresentationPoseSourcePlan plan)
+        {
+            if (group == null)
+                return;
+            AnimationCurve curve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                clip,
+                CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase);
+            CharacterLocomotionPhaseAuthoringService.ValidateRegisteredCurve(clip, artifact, curve);
+            Keyframe[] keys = curve.keys;
+            var knots = new AnimationPhaseKnot[keys.Length];
+            for (int keyIndex = 0; keyIndex < keys.Length; keyIndex++)
+                knots[keyIndex] = new AnimationPhaseKnot(keys[keyIndex].time, keys[keyIndex].value);
+            plan.SetPhase(
+                group.GroupId,
+                new AnimationClipPhasePlan(
+                    plan.ClipIdentity,
+                    plan.FullClipDependencyHash,
+                    plan.AnalysisInputHash,
+                    plan.RegisteredCurveHash,
+                    artifact.Identity.IdentityHash.Value,
+                    plan.SourceDurationSeconds,
+                    new AnimationPhaseCoverage(keys[0].time, keys[keys.Length - 1].time),
+                    plan.IsLooping,
+                    knots));
         }
 
         static List<CharacterActionAnimationSourcePlan> CompileActionPlans(
@@ -141,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CharacterPresentationFootEventCompiler.CompileFootStepObservation(
                         binding.AuthoringClip,
                         identity.SourceDurationSeconds,
-                        AnimationFootAnalysisArtifactBuilder.Build(binding.AuthoringClip, analysisSource).MotionData)));
+                        RequireAnalysisArtifact(binding.AuthoringClip, analysisSource).MotionData)));
             }
             return result;
         }
@@ -151,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterClipPoseSourceBinding binding,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisSource analysisSource,
+            CharacterLocomotionSyncGroup syncGroup,
             IReadOnlyDictionary<AnimationClip, CharacterAnimationBuildCatalogEntry>
                 catalogEntries)
         {
@@ -171,14 +203,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clip,
                     CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
             AnimationFootAnalysisArtifact artifact =
-                AnimationFootAnalysisArtifactBuilder.Build(clip, analysisSource);
+                RequireAnalysisArtifact(clip, analysisSource);
             AnimationFootStepObservationCurvePair footStepObservation =
                 CharacterPresentationFootEventCompiler.CompileFootStepObservation(
                     clip,
                     identity.SourceDurationSeconds,
                     artifact.MotionData);
             string identityKey = $"{identity.AssetGuid}:{identity.LocalFileId}";
-            return new CharacterPresentationPoseSourcePlan(
+            var plan = new CharacterPresentationPoseSourcePlan(
                 sourceIndex,
                 $"clip:{identityKey}",
                 clip,
@@ -198,6 +230,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 catalogEntry.NativeScalarPage,
                 catalogEntry.ResourceCatalogIndex,
                 catalogEntry.GroupClipIndex);
+            CompileLocomotionPhasePlan(clip, syncGroup, artifact, plan);
+            return plan;
+        }
+
+        static AnimationFootAnalysisArtifact RequireAnalysisArtifact(
+            AnimationClip clip,
+            CharacterFootPlacementAnalysisSource source)
+        {
+            AnimationFootAnalysisArtifactInspection inspection =
+                AnimationFootAnalysisArtifactBuilder.Inspect(clip, source);
+            if (inspection.Status != AnimationFootAnalysisArtifactStatus.Ready)
+                throw new InvalidOperationException(
+                    $"Clip '{clip.name}' Foot Analysis artifact is {inspection.Status}: {inspection.Error}. Rebuild its analysis before compiling animation resources.");
+            return inspection.Artifact;
         }
 
         static CharacterFootPlacementAnalysisSource ResolveAnalysisSource(

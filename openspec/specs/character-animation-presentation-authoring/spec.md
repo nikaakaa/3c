@@ -280,15 +280,39 @@ Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segmen
 #### Scenario: 有限Clip无法通过关系质量门槛
 
 - **WHEN** Start或Turn的Landing锚点合法但有限出口与目标Loop的Plant或脚部运动不相容
-- **THEN** Profile MUST保持该Clip为普通Direct Clip并从Sync Group移除
-- **AND** Clip MUST删除无消费Locomotion Phase曲线且Transition MUST只执行显式Blend
+- **THEN** 同步关系 MUST 报告有限区间、两侧 Clip 和不相容的脚部证据，阻止该同步配置发布
+- **AND** 系统 MUST 不通过自动移出同步组、删除相位或退回普通 Blend 掩盖失败；普通 Blend 只能作为作者明确选择的另一种行为，不能声明脚相位已对齐
 
 ### Requirement: Presentation Projection必须保存per-clip Phase与可达relation计划
 
-Presentation binding owner MUST 为每个 Locomotion Group 成员准备固定容量 forward/inverse Phase plan，把 Direct Clip 或 Blend Space 映射为 `AnimationSourcePhasePlan`，并只为 PoseState 实际可达 edge 保存 source-to-source relation。Direct Clip endpoint MUST 引用自身 Clip plan；Blend Space endpoint MUST 引用显式 Phase Reference Sample 作为 clock carrier 和全部 Dynamic Sample 的 per-clip inverse plan。Relation MUST 包含 RelationIdentity、TransitionId、两侧 source plan identity、固定 leader、正式 clock authority、实际有限秒域 coverage 与 Artifact validation identity。Foot Analysis 质量门槛不通过 MUST 阻止该表现 binding 采用。表现 binding MUST 不保存 Editor AnimationCurve、Phase Validation samples、Marker occurrence、pairwise warp knot 或 Sequence identity。
+动画领域资源编译 MUST 为每个已绑定的 Locomotion Group 成员保存自身固定容量 forward/inverse Clip Phase plan、GroupId、精确 Clip identity、分析输入身份、注册曲线身份和实际秒域 coverage。原生 Clip Player MUST 消费该 source-local 数据；实际状态切换的关联 MUST 在原生 StateMachine 与 Player 帧事务内维护，不恢复 `AnimationSourcePhasePlan` 或旧编译状态机 IR 作为第二条执行路径。当前原生资源编译只支持正式 Direct Clip；未实现的 Blend Space 同步 MUST 明确报告不支持，不得因为旧合同存在对应类型就宣称可以运行。Foot Analysis 质量门槛不通过 MUST 阻止该表现 binding 采用；Phase plan MUST 不保存 Editor AnimationCurve、Phase Validation samples、Marker occurrence、pairwise warp knot 或 Sequence identity。
 
-#### Scenario: MovingTurn实际只播放28帧
+#### Scenario: 有限状态退出后仍参与混合
 
-- **WHEN** MovingTurn Clip长度为71帧但Gameplay committed clock只覆盖0至28帧
-- **THEN** relation compiler MUST只校验和编译0至28帧实际coverage
-- **AND** MUST不使用28帧后的Phase或Foot样本证明出口合法
+- **WHEN** 有限状态在第28帧请求退出，且源 Player 在后续混合中继续采样
+- **THEN** 关系校验 MUST 包括源 Player 从退出开始到权重归零的实际可见秒域，并区分玩法退出时刻与动画采样结束时刻
+- **AND** MUST 不把整段素材存在等同于覆盖有效，也不得用没有实际采样的尾部数据证明出口合法
+
+### Requirement: 跨状态同步必须由通用原生播放器链路执行
+
+同步 MUST 使用正式 Clip 注册相位曲线、Profile 同步组和独立动画资源编译；原生 PoseStateMachine MUST 在源时钟推进之后、Pose／Foot／属性采样之前解析有效时间。同步 MUST 不依赖角色名、State 名或写死帧数，不恢复旧 Pose IR 或另一套播放器。每个角色、子图与 Transition generation MUST 隔离同步状态，Commit／Discard MUST 与播放器帧事务一致，稳定运行 MUST 不产生托管分配。
+
+循环目标 MAY 在等价周期中选择连续采样点；有限目标 MUST 限定允许的入口及完整混合覆盖，不得为了匹配支撑脚跳过未授权动作区间。不存在合法对应点 MUST 明确失败，不得隐式重定位当前全权重源、退回 normalized time 或普通 crossfade。
+
+每次切换 MUST 以当前 outgoing 为不变的时间基准，只允许调整 incoming 的有效采样时间。该规则 MUST 不因 CommittedMovement、FreeRun 等时钟类型而反转。有限 outgoing 到达素材末尾后，匹配 MUST 使用它实际保持的末帧时间；有限相位曲线本身覆盖不足仍 MUST 报告错误。
+
+有限动作中的双脚支撑是合法动作内容。系统 MUST 区分循环步态的周期闭合与有限动作的出入混合，不得因有限动作出现同脚连续 Landing 或双脚同时支撑，直接判定素材不可同步。入口与出口 MUST 分别使用实际参与混合的时间和脚部证据；没有其他状态参与混合的中段 MUST 按原有播放时钟继续，不为满足循环步态假设强行改变动作。
+
+“没有对应点” MUST 是对当前素材、正确同步配置和允许入口区间实际求解后的结果，不得从双脚支撑、未入组、曲线缺失或运行时未消费同步配置直接推断。未证明该结果前 MUST 不要求作者改变转身响应方式。
+
+#### Scenario: TurnBack 中间包含双脚支撑
+
+- **WHEN** 有限转身中间出现双脚支撑，进入与退出需要同组动画的左右脚相位匹配
+- **THEN** 系统 MUST 保留该支撑段，分别处理进入混合和退出混合
+- **AND** MUST 不把整段转身解释成必须左右脚交替且周期闭合的走跑循环
+
+#### Scenario: 烘焙文件存在但同步尚不可用
+
+- **WHEN** 资源包含 FootStepObservation，但正式相位曲线、版本身份、关系覆盖或运行时消费者缺失
+- **THEN** 系统 MUST 将对应同步能力报告为未就绪
+- **AND** MUST 不把文件存在、静态编译通过或普通脚接触曲线当作精准进入／退出已经完成的证据

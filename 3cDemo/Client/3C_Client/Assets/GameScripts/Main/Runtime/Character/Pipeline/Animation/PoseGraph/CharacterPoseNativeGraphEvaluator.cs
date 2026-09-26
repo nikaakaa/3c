@@ -2,9 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.EventGraphs;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal interface ICharacterPoseNativePhaseSource
+    {
+        int PhasePlayerCount { get; }
+        AnimationClipPlayerRuntime ReadPhasePlayer(int index);
+    }
+
     internal interface ICharacterPoseNativeNodeHandler : IDisposable
     {
         PoseNodeId NodeId { get; }
@@ -54,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeGraphEvaluator :
-        ICharacterPoseNativeNodeEvaluator, Diagnostics.ICharacterNativeStateCaptureSource
+        ICharacterPoseNativeNodeEvaluator, Diagnostics.ICharacterNativeStateCaptureSource, ICharacterPoseNativePhaseSource
     {
         readonly Dictionary<PoseNodeId, ICharacterPoseNativeNodeHandler>
             m_Handlers =
@@ -81,6 +88,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public Diagnostics.ICharacterNativeStateCaptureSource StateCapture => this;
+        public ICharacterPoseNativePhaseSource PhaseSources => this;
+        public int PhasePlayerCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < m_HandlerOrder.Count; i++)
+                    if (m_ReachableNodeIds.Contains(m_HandlerOrder[i].NodeId) &&
+                        m_HandlerOrder[i] is ICharacterPoseNativePhaseSource source)
+                        count += source.PhasePlayerCount;
+                return count;
+            }
+        }
+        public AnimationClipPlayerRuntime ReadPhasePlayer(int index)
+        {
+            for (int i = 0; i < m_HandlerOrder.Count; i++)
+            {
+                if (!m_ReachableNodeIds.Contains(m_HandlerOrder[i].NodeId) ||
+                    !(m_HandlerOrder[i] is ICharacterPoseNativePhaseSource source))
+                    continue;
+                int count = source.PhasePlayerCount;
+                if (index < count)
+                    return source.ReadPhasePlayer(index);
+                index -= count;
+            }
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
         public int StateCaptureCount
         {
             get

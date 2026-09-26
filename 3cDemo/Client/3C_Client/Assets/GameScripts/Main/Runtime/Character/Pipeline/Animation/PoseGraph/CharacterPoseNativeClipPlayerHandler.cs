@@ -143,7 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeClipPlayerHandler :
-        ICharacterPoseNativeNodeHandler
+        ICharacterPoseNativeNodeHandler, ICharacterPoseNativePhaseSource
     {
         readonly AnimationClipPlayerRuntime m_Player;
         IActionPresentationClockPolicy m_ClockPolicy = FreeRunPresentationClockPolicy.Shared;
@@ -159,6 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeDiscontinuityValue m_Discontinuity;
         AnimationPoseSourceCaptureBinding m_Capture;
         bool m_CapturePrepared;
+        float m_DeltaSeconds;
         bool m_EvaluationPrepared;
         bool m_FrameOpen;
         int m_CommittedPageIndex = -1;
@@ -182,12 +183,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public PoseNodeId NodeId => m_Player.NodeId;
+        public int PhasePlayerCount => m_Player.PhasePlan == null ? 0 : 1;
+        public AnimationClipPlayerRuntime ReadPhasePlayer(int index) =>
+            index == 0 && PhasePlayerCount != 0 ? m_Player : throw new ArgumentOutOfRangeException(nameof(index));
         public CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ClipPlayer;
 
         public void Initialize(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
             CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
+            CharacterClipPlayerPosePayload payload = node.RequirePayload<CharacterClipPlayerPosePayload>();
+            m_Player.ConfigurePhaseEntry(payload.PhaseEntryStartSeconds, payload.PhaseEntryEndSeconds);
             if (node.Kind != Kind ||
                 !(node.PresentationPoseSourceSlot is CharacterClipPoseSourceSlot))
             {
@@ -256,10 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 input.PresentationSampleTick,
                 in factFrame,
                 input.DeltaSeconds);
-            m_Capture = m_Player.PrepareCapture(
-                input.DeltaSeconds,
-                m_Player.PlayRate);
-            m_CapturePrepared = true;
+            m_DeltaSeconds = input.DeltaSeconds;
             m_SourceRequests[0] = new CharacterPoseNativeSourceRequest(
                 NodeId,
                 node.PresentationPoseSourceSlot,
@@ -300,13 +303,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (!m_CapturePrepared ||
+            if (m_CapturePrepared ||
                 demand.Lineage != runtime.CurrentLineage ||
                 barrierIdentity == 0)
             {
                 throw new InvalidOperationException(
                     $"Clip Player '{NodeId}' source capture is not ready for evaluation.");
             }
+            m_Capture = m_Player.PrepareCapture(m_DeltaSeconds, m_Player.PlayRate);
+            m_CapturePrepared = true;
             m_SourceBinding.Prepare(runtime, m_Player, in m_Capture);
             CharacterPoseSourceBinding source =
                 m_SourceBinding.RequireBinding(runtime, m_Player);

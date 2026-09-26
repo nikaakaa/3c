@@ -172,7 +172,7 @@ Runtime MUST支持Cyclic与Finite source之间的显式同组映射。Cyclic sou
 
 ### Requirement: Locomotion Phase映射必须编入source-local计划
 
-Locomotion Phase MUST继续使用来源明确的 forward／inverse 资源数据与可达 relation。每个 relation MUST保留 TransitionId、固定 leader、秒域 coverage 和有效性身份；实例绑定建立 source-local 关联，运行按 relation／transition／generation 和 continuation 计算有效采样时间。系统 MUST不因取消图编译退回 normalized time、旧 Marker 或逐帧搜索／重建关系；资源数据预处理独立于 Pose 图执行。
+Locomotion Phase MUST 使用来源明确的 forward／inverse Clip 资源数据。Profile 的精确 Clip 同步组成员身份与 Phase plan MUST 随正式动画领域资源编译。原生 PoseStateMachine MUST 仅在实际发生的状态切换内，把同组 outgoing 与 incoming Player 建立关联；关联随播放器实例、来源 generation 和当前帧事务隔离，连续周期偏移在进入时确定。系统 MUST 不恢复旧 Pose 编译 IR、不用 normalized time 或旧 Marker 代替相位，也不得在每帧重算脚部分析或按混合权重更换基准。资源数据预处理独立于 Pose 图执行。
 
 Locomotion Phase的正式来源只能是AnimationClip注册曲线与Profile／Source binding；Runtime不得读取Editor曲线、Foot Analysis artifact、窗口游标或显示名现场推导Phase。
 
@@ -184,7 +184,7 @@ Locomotion Phase的正式来源只能是AnimationClip注册曲线与Profile／So
 
 ### Requirement: Locomotion Phase relation必须服从Transition generation与Player continuation
 
-Phase 关联准备 MUST按既有规则固定 leader：不同 clock authority 时 CommittedMovement 优先，同 authority 时 outgoing 优先；候选覆盖完整可见混合窗口，合法备选按正式规则选择，两侧不足必须明确拒绝关系。一个 generation 内不得按权重或时间动态更换 leader。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、分支或图替换、Reset 与 Dispose MUST保持原独立 relation 和 continuation 清理规则。
+Phase 关联准备 MUST 固定当前 outgoing 为 leader，无论两侧使用什么 clock authority。当前动画 MUST 保持原来的播放时间与速度；incoming MUST 通过自身 Phase inverse 选择匹配入口，并在混合期间跟随 outgoing 的相位。混合结束后 incoming MUST 从最后一次匹配时间继续按自己的原有时钟推进。候选 MUST 覆盖完整可见混合窗口，两侧不足必须明确报告；一个 generation 内不得按权重或时间动态更换 leader。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、分支或图替换、Reset 与 Dispose MUST 清理旧关联，Commit／Discard MUST 保持帧事务一致。
 
 #### Scenario: 同authority的Turn进入RunLoop
 

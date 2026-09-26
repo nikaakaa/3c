@@ -344,7 +344,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     BtsmtlAuthoringCodeSyntax.FloatLiteral(clip.PlayRate),
                     BtsmtlAuthoringCodeSyntax.FloatLiteral(clip.InitialTime),
                     clip.LoopAnimation ? "true" : "false",
-                    clip.IsLocomotionParticipant ? "true" : "false");
+                    clip.IsLocomotionParticipant ? "true" : "false",
+                    BtsmtlAuthoringCodeSyntax.FloatLiteral(clip.PhaseEntryStartSeconds),
+                    BtsmtlAuthoringCodeSyntax.FloatLiteral(clip.PhaseEntryEndSeconds));
             if (payload is CharacterPoseStateMachineNodePayload stateMachine)
                 return New(
                     typeof(CharacterPoseStateMachineNodePayload),

@@ -215,6 +215,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         struct State
         {
+            internal AnimationClipPlayerRuntime PhaseLeader;
+            internal AnimationPoseSourceId PhaseLeaderSourceId;
+            internal double PhaseCycleOffset;
             internal double RawContinuousTime;
             internal double ContinuousTime;
             internal double ContinuationAnchorRawTime;
@@ -252,6 +255,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationPlayerReleaseJournal m_Releases;
         State m_CommittedState;
         State m_PendingState;
+        AnimationPhaseCoverage m_PhaseEntryCoverage;
+        bool m_PhaseResolved;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -343,6 +348,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal PoseNodeId NodeId => m_Descriptor.NodeId;
+        internal string SyncGroupId => m_Source.SyncGroupId;
+        internal AnimationClipPhasePlan PhasePlan => m_Source.PhasePlan;
         internal int PlayerIndex => m_Descriptor.PlayerIndex;
         internal PresentationPoseSourceIndex SourceIndex => m_Source.SourceIndex;
         internal CharacterAnimationSamplingBackendKind Backend => m_Source.Backend;
@@ -360,6 +367,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float RemainingTime => Math.Max(0f, m_Source.SourceDurationSeconds - m_SampleTime);
         internal float Duration => m_Source.SourceDurationSeconds;
         internal float PlayRate => m_Descriptor.PlayRate;
+
+        internal void ConfigurePhaseEntry(float start, float end)
+        {
+            if (PhasePlan == null)
+                return;
+            if (PhasePlan.Loop != m_Descriptor.LoopAnimation)
+                throw new InvalidOperationException($"Clip Player '{NodeId}' loop setting differs from its Phase resource.");
+            if (PhasePlan.Loop)
+                return;
+            m_PhaseEntryCoverage = new AnimationPhaseCoverage(start, end);
+            if (!PhasePlan.CurveCoverage.Contains(start) || !PhasePlan.CurveCoverage.Contains(end))
+                throw new InvalidOperationException($"Clip Player '{NodeId}' Phase entry interval is outside its measured coverage.");
+        }
+
+        internal void SynchronizePhase(AnimationClipPlayerRuntime leader)
+        {
+            RequireOpenFrame();
+            if (m_PhaseResolved)
+                return;
+            if (leader == null || ReferenceEquals(leader, this) || PhasePlan == null ||
+                leader.PhasePlan == null || !string.Equals(SyncGroupId, leader.SyncGroupId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Clip Player '{NodeId}' Phase relation is invalid.");
+            bool entering = !ReferenceEquals(m_PendingState.PhaseLeader, leader) ||
+                !m_PendingState.PhaseLeaderSourceId.Equals(leader.SourceId);
+            double time = AnimationPhaseSynchronization.Map(
+                leader.PhasePlan, leader.PhasePlan.Loop ? leader.ContinuousTime : leader.SampleTime,
+                PhasePlan, ContinuousTime,
+                m_PhaseEntryCoverage, entering, ref m_PendingState.PhaseCycleOffset);
+            SetSynchronizedTime(time);
+            m_PendingState.PhaseLeader = leader;
+            m_PendingState.PhaseLeaderSourceId = leader.SourceId;
+            m_PhaseResolved = true;
+        }
         internal void CreateFootMotionSamples(
             float sourceWeight,
             out AnimationFootMotionRuntimeSample left,
@@ -408,6 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException($"Clip Player '{NodeId}' frame is already open.");
             m_PendingState = m_CommittedState;
             m_Releases.BeginFrame();
+            m_PhaseResolved = false;
             m_FrameOpen = true;
         }
 
@@ -428,6 +469,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             if (!m_FrameOpen)
                 throw new InvalidOperationException($"Clip Player '{NodeId}' frame is not open.");
+            if (!m_PhaseResolved)
+                ClearPhaseRelation();
             m_CommittedState = m_PendingState;
             m_Releases.CommitFrame();
             m_FrameOpen = false;
@@ -493,6 +536,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AllocateContinuityIdentity();
             m_ResetSequence = AllocateResetSequence();
             m_PendingResetReason = reason;
+            ClearPhaseRelation();
             ClearMovementClockOrigin();
             SetRawClock(m_Descriptor.InitialTime);
             m_SourceWorkspace.ResetContinuity();
@@ -501,6 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void ResetForStateEntry()
         {
             RequireAlive();
+            ClearPhaseRelation();
             ClearMovementClockOrigin();
             SetRawClock(m_Descriptor.InitialTime);
             m_HasCompletedFrame = false;
@@ -512,13 +557,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceWorkspace.ResetContinuity();
         }
 
+        void ClearPhaseRelation()
+        {
+            ActiveState.PhaseLeader = null;
+            ActiveState.PhaseLeaderSourceId = default;
+            ActiveState.PhaseCycleOffset = 0d;
+        }
+
         internal void SetSynchronizedTime(double continuousTime)
         {
             RequireAlive();
             RequireOpenFrame();
             if (!m_Relevant)
                 throw new InvalidOperationException($"Clip Player '{NodeId}' is not relevant.");
-            if (continuousTime < m_ContinuousTime)
+            if (m_CommittedState.HasCompletedFrame &&
+                m_CommittedState.SourceId.Equals(m_SourceId) &&
+                continuousTime < m_CommittedState.ContinuousTime)
             {
                 m_HasCompletedFrame = false;
                 m_ContinuityIdentity = AllocateContinuityIdentity();

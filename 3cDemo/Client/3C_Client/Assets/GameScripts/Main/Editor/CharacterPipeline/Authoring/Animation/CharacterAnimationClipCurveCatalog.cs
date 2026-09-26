@@ -530,7 +530,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"AnimationClip '{clip.name}' Curve '{descriptor.ChannelId}' does not allow weighted tangents.");
                 }
             }
-            if (descriptor.RequireFullSourceCoverage &&
+            bool finitePhase = descriptor.ValueDomain == CharacterAnimationClipRegisteredCurveValueDomain.UnwrappedPhase &&
+                               !clip.isLooping;
+            if (descriptor.RequireFullSourceCoverage && !finitePhase &&
                 (Mathf.Abs(keys[0].time) > TimeTolerance ||
                  Mathf.Abs(keys[keys.Length - 1].time - sourceDuration) > TimeTolerance))
             {

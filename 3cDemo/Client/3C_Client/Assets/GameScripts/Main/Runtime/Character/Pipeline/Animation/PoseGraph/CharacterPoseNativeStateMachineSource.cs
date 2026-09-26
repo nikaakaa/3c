@@ -171,6 +171,59 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool m_EvaluationPrepared;
         bool m_Disposed;
 
+        public int PhasePlayerCount
+        {
+            get
+            {
+                if (!m_FrameOpen)
+                    return 0;
+                int count = 0;
+                int stateCount = CollectActiveStates();
+                for (int i = 0; i < stateCount; i++)
+                    if (m_ActiveStates[i].FrameOpen)
+                        count += m_ActiveStates[i].Graph.PhaseSources.PhasePlayerCount;
+                return count;
+            }
+        }
+
+        public Presentation.AnimationClipPlayerRuntime ReadPhasePlayer(int index)
+        {
+            int stateCount = CollectActiveStates();
+            for (int i = 0; i < stateCount; i++)
+            {
+                StateRuntime state = m_ActiveStates[i];
+                if (!state.FrameOpen)
+                    continue;
+                int count = state.Graph.PhaseSources.PhasePlayerCount;
+                if (index < count)
+                    return state.Graph.PhaseSources.ReadPhasePlayer(index);
+                index -= count;
+            }
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        void SynchronizeTransition()
+        {
+            if (m_PendingTransition == null || CollectActiveStates() != 2)
+                return;
+            ICharacterPoseNativePhaseSource outgoing = m_ActiveStates[0].Graph.PhaseSources;
+            ICharacterPoseNativePhaseSource incoming = m_ActiveStates[1].Graph.PhaseSources;
+            int outgoingCount = outgoing.PhasePlayerCount;
+            int incomingCount = incoming.PhasePlayerCount;
+            for (int targetIndex = 0; targetIndex < incomingCount; targetIndex++)
+            {
+                Presentation.AnimationClipPlayerRuntime target = incoming.ReadPhasePlayer(targetIndex);
+                for (int sourceIndex = 0; sourceIndex < outgoingCount; sourceIndex++)
+                {
+                    Presentation.AnimationClipPlayerRuntime source = outgoing.ReadPhasePlayer(sourceIndex);
+                    if (!string.Equals(source.SyncGroupId, target.SyncGroupId, StringComparison.Ordinal))
+                        continue;
+                    target.SynchronizePhase(source);
+                    break;
+                }
+            }
+        }
+
         public int StateCaptureCount
         {
             get
@@ -382,6 +435,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
+            SynchronizeTransition();
             int activeStateCount = CollectActiveStates();
             for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {

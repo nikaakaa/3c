@@ -34,11 +34,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             List<LandingEvent> anchors = SelectCoverageAnchors(
                 PrepareCoverageEvents(events, coverageStart, coverageEnd, loop),
                 coverageStart,
-                coverageEnd);
+                coverageEnd,
+                loop);
             var phases = new float[anchors.Count];
             phases[0] = anchors[0].Right ? 0f : 0.5f;
             for (int i = 1; i < phases.Length; i++)
-                phases[i] = phases[i - 1] + 0.5f;
+                phases[i] = phases[i - 1] + (anchors[i].Right == anchors[i - 1].Right ? 1f : 0.5f);
             if (loop)
                 NormalizeCyclicPhase(anchors, phases, coverageStart);
 
@@ -123,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Mathf.Abs(events[i + 1].Time - events[i].Time) <= EventTimeTolerance)
                 {
                     if (events[i + 1].Right == events[i].Right ||
-                        Mathf.Abs(events[i].Time - start) > EventTimeTolerance)
+                        loop && Mathf.Abs(events[i].Time - start) > EventTimeTolerance)
                     {
                         throw new InvalidOperationException("Locomotion Phase candidate contains simultaneous Landing onsets inside its source.");
                     }
@@ -152,7 +153,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static List<LandingEvent> SelectCoverageAnchors(
             IReadOnlyList<LandingEvent> events,
             float start,
-            float end)
+            float end,
+            bool loop)
         {
             if (events.Count < 2)
                 throw new InvalidOperationException("Locomotion Phase coverage requires Landing onset anchors.");
@@ -172,12 +174,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 LandingEvent candidate = events[i];
                 LandingEvent previous = result[result.Count - 1];
-                if (candidate.Right == previous.Right)
-                {
-                    if (candidate.Time <= end + EventTimeTolerance)
-                        throw new InvalidOperationException("Locomotion Phase coverage contains repeated same-side Landing onsets.");
-                    continue;
-                }
+                if (loop && candidate.Right == previous.Right)
+                    throw new InvalidOperationException("Cyclic Locomotion Phase contains repeated same-side Landing anchors.");
                 result.Add(candidate);
                 if (candidate.Time >= end - EventTimeTolerance)
                     break;

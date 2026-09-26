@@ -34,6 +34,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public static class CharacterLocomotionPhaseAuthoringService
     {
+        public static void ValidateRegisteredCurve(
+            AnimationClip clip,
+            AnimationFootAnalysisArtifact artifact,
+            AnimationCurve curve)
+        {
+            CharacterAnimationClipRegisteredCurveCatalog.Validate(
+                clip, CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase, curve);
+            Keyframe[] keys = curve.keys;
+            CharacterLocomotionPhaseCandidate candidate = BuildCandidate(
+                clip, artifact, keys[0].time, keys[keys.Length - 1].time);
+            Keyframe[] expected = candidate.Curve.keys;
+            float offset = Mathf.Round(curve.Evaluate(expected[0].time) - expected[0].value);
+            for (int i = 0; i < expected.Length; i++)
+            {
+                float actual = curve.Evaluate(expected[i].time);
+                if (Mathf.Abs(actual - expected[i].value - offset) > 0.0001f)
+                    throw new InvalidOperationException(
+                        $"Clip '{clip.name}' Locomotion Phase at {expected[i].time} seconds disagrees with measured Landing anchors: {actual}, expected {expected[i].value + offset}.");
+            }
+        }
+
         public static CharacterLocomotionPhaseCandidate BuildCandidate(
             AnimationClip clip,
             AnimationFootAnalysisArtifact artifact,

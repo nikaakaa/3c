@@ -203,6 +203,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_SourceIndexBySlot.TryGetValue(payload.SourceSlot, out int sourceIndex))
                 throw new InvalidOperationException($"Pose Clip Player '{node.NodeId}' has no source binding.");
             var plan = m_SourceCatalog.RequirePlan(new PresentationPoseSourceIndex(sourceIndex));
+            var binding = (CharacterClipPoseSourceBinding)m_Profile.FindPoseSourceBinding(payload.SourceSlot);
+            CharacterLocomotionSyncGroup group = m_Profile.FindLocomotionSyncGroup(binding.Clip);
+            if (!string.Equals(group?.GroupId ?? string.Empty, plan.SyncGroupId, StringComparison.Ordinal) ||
+                group != null && plan.PhasePlan == null)
+                throw new InvalidOperationException($"Pose Clip Player '{node.NodeId}' Phase resource does not match its Profile Sync Group. Recompile Animation Domain Resources.");
             var descriptor = new CharacterPresentationClipPlayerDescriptor(
                 m_IndexByNode[node.NodeId],
                 node.NodeId,

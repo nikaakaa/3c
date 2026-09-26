@@ -61,6 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
         [SerializeReference] CharacterAnimationScalarCurvePage m_ScalarPage;
         [SerializeField] string m_ContentRevision = string.Empty;
+        [SerializeField] string m_SyncGroupId = string.Empty;
+        [SerializeReference] AnimationClipPhasePlan m_PhasePlan;
 
         internal CharacterPresentationPoseSourcePlan(
             PresentationPoseSourceIndex sourceIndex,
@@ -200,6 +202,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
         public CharacterAnimationScalarCurvePage ScalarPage => m_ScalarPage;
         public string ContentRevision => m_ContentRevision ?? string.Empty;
+        public string SyncGroupId => m_SyncGroupId ?? string.Empty;
+        public AnimationClipPhasePlan PhasePlan => m_PhasePlan;
+
+        internal void SetPhase(string groupId, AnimationClipPhasePlan phase)
+        {
+            if (string.IsNullOrWhiteSpace(groupId) || phase == null ||
+                phase.ClipIdentity != ClipIdentity ||
+                phase.FullClipDependencyHash != FullClipDependencyHash)
+                throw new ArgumentException("Pose source Phase identity does not match its animation resource.");
+            phase.RequireValid();
+            m_SyncGroupId = groupId;
+            m_PhasePlan = phase;
+        }
 
         public void RequireValid()
         {
@@ -224,6 +239,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Compiled Presentation Clip source '{DisplayName}' is invalid.");
             }
             m_FootStepObservation.RequireValid();
+            if (PhasePlan != null)
+            {
+                PhasePlan.RequireValid();
+                if (string.IsNullOrWhiteSpace(SyncGroupId) ||
+                    PhasePlan.ClipIdentity != ClipIdentity ||
+                    PhasePlan.FullClipDependencyHash != FullClipDependencyHash ||
+                    PhasePlan.RegisteredCurveHash != RegisteredCurveHash ||
+                    PhasePlan.AnalysisInputHash != AnalysisInputHash ||
+                    PhasePlan.SourceDurationSeconds != SourceDurationSeconds ||
+                    PhasePlan.Loop != IsLooping)
+                    throw new InvalidOperationException($"Pose source '{DisplayName}' Phase resource is stale.");
+            }
+            else if (!string.IsNullOrEmpty(SyncGroupId))
+                throw new InvalidOperationException($"Pose source '{DisplayName}' Phase resource is missing.");
             if (ScalarPage != null)
                 ScalarPage.RequireValid();
         }

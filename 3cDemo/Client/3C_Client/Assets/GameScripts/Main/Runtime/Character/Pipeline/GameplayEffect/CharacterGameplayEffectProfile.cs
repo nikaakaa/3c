@@ -22,6 +22,11 @@ namespace ThirdPersonCharacter.Pipeline.GameplayEffect
         public IReadOnlyList<GameplayTagId> InitialTags => m_InitialTags ?? Array.Empty<GameplayTagId>();
         public IReadOnlyList<GameplayEffectDefinition> EffectDefinitions => m_EffectDefinitions ?? Array.Empty<GameplayEffectDefinition>();
 
+        public void ConfigureInitialTags(IEnumerable<GameplayTagId> tags)
+        {
+            m_InitialTags = tags == null ? Array.Empty<GameplayTagId>() : new List<GameplayTagId>(tags).ToArray();
+        }
+
         public bool CollectConfigurationErrors(
             out GameplayTagCatalogRuntimeData tagCatalog,
             List<string> errors)

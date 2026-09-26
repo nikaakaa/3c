@@ -71,11 +71,17 @@ MonoBehaviour:
       m_Value: Rush
     m_DisplayName: Rush
     m_ParentTag:
-      m_Value:
+      m_Value: 
     m_DebugCategory: Action
   - m_TagId:
       m_Value: Branch
     m_DisplayName: Branch
     m_ParentTag:
-      m_Value:
+      m_Value: 
     m_DebugCategory: Action
+  - m_TagId:
+      m_Value: Badge_S01
+    m_DisplayName: Badge S01
+    m_ParentTag:
+      m_Value: 
+    m_DebugCategory: Badge

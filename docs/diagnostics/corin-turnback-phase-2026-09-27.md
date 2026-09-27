@@ -79,3 +79,13 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转，没有 `AttackHeld` 为真的帧。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。
 
 本次请求被正式工作流接受，但在启动 Fixed 会话阶段超时：`Canonical Fixed input diagnostic-replay timed out while starting the Fixed session.` 没有生成新的脚部／表现采样目录，也没有取得回放完成证明。此失败不能计为 TurnBack 效果通过或失败；截至此记录，相位代码、正式作者配置和运行资源采用已完成，真实切换检查尚未完成。没有重复启动同一次未确定状态的回放，没有修改启动超时阈值或绕过正式场景启动链。
+
+## Package Manager 启动错误定位
+
+2026-09-27 用户报告每次启动出现 `[Package Manager Window] The "path" argument must be of type string. Received undefined`。Editor 日志确认错误来自 `GetRegistriesRequest`，UPM 的 `project:list-packages` 与 `config:project:get-registries` 返回 500。日志中的 `params: {}` 不是项目路径丢失的证据：项目路径经请求头传递。
+
+只读检查 Unity 2022.3.62f2c1 内置 UPM 的 `server/app.js`，在独立 Node 进程内调用原模块 `getRegistries`，使用当前项目 Packages 路径，复现相同异常。堆栈定位到 `getDeprecatedGlobalConfigRoot`：Windows 分支执行 `path.join(process.env.ALLUSERSPROFILE, "Unity/config")`。只读检查 Unity PID 40472 与其原 UPM PID 151872 的进程环境，二者均缺少 `ALLUSERSPROFILE`，但 `ProgramData=C:\ProgramData` 正常。
+
+同一原模块、同一项目配置，只将诊断进程的 `ALLUSERSPROFILE` 补为 `C:\ProgramData`，调用立即成功，返回默认 Unity 仓库与项目 OpenUPM 仓库。没有修改 manifest、包锁、Unity 安装文件或项目代码。这一对照确认本条错误来自启动进程继承的环境变量缺失，不能据此认定此前所有回放超时都由它造成。
+
+已确认用户级 `ALLUSERSPROFILE=C:\ProgramData` 并广播环境更新。修复前日志保留在 `tmp/turnback-mcp-recovery/upm-path-20260927/`。以正确环境、原可执行文件和同一 IPC 参数重启了本项目 UPM 子进程（新 PID 88600）；Unity Editor 保持打开。新 UPM 已监听，但截至记录时未收到编辑器请求，编辑器状态调用仍超时。现有进程不会自动继承用户环境更新；仍需保存工作并从正确环境重新启动 Unity，确认真实包列表／仓库请求成功后再继续 TurnBack 回放。当前不能声明 Package Manager 窗口恢复或相位同步视觉验收通过。

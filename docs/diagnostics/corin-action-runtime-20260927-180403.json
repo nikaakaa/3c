@@ -1,0 +1,197 @@
+{
+  "schema": "corin-action-runtime-review/1",
+  "source_commit": "7f3f2ebf8",
+  "trace_id": "757f243033414fc7b123c97e2fcb0d70",
+  "run_id": "f812d9c94a8c4054a1f0a6099ef2f911",
+  "frame_count": 2716,
+  "runtime_identity": {
+    "runtime_id": "fixed-character-runtime/fixed-player",
+    "runtime_content_hash": "58df0b43064027565915f5e6d90afc7cc458c776821148ac091e490e3b2a8e36",
+    "source_revision": "68d243b806655bcb28e49126860d1ea86a5ba698c1bda5deb22e9ffc43d95fd0",
+    "semantic_hash": "56e113710efc1473d4865da7ad85f660c6037712c7fa801a9846845d78942e86",
+    "tick_rate": 60,
+    "world_revision": "corin-gameplay-lab-world-v1"
+  },
+  "presentation_trace": {
+    "schema": "character-fixed-input-runtime-trace-evidence/1",
+    "capture_id": "348020ce37704ed4bd17adc1c375e00d",
+    "event_count": 21700,
+    "timeline_visual_sample_count": 1518,
+    "timeline_visual_frame_count": 1515,
+    "timeline_time_regression_count": 0,
+    "animation_selection_count": 29,
+    "animation_sample_count": 1496,
+    "animation_terminal_count": 28,
+    "animation_frame_count": 1496,
+    "animation_same_frame_selection_conflict_count": 0,
+    "animation_sample_time_regression_count": 0,
+    "camera_snapshot_count": 2716,
+    "camera_frame_count": 2716,
+    "camera_invalid_snapshot_count": 0,
+    "camera_reset_count": 1,
+    "camera_request_count": 0,
+    "evicted_event_count": 20162,
+    "stream_complete": true,
+    "succeeded": true,
+    "failure": "",
+    "evidence_hash": "95dcdb1c68ee75c352ed2a09b10588e369adcbb2148d40c25e1edba812933f3e"
+  },
+  "comparison": {
+    "baseline_available": true,
+    "matched": false,
+    "baseline_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v6\\757f243033414fc7b123c97e2fcb0d70\\20260927-171133-598-2acfe0596753407697dd5bf6f0d3005a.json",
+    "compared_frame_count": 2716,
+    "aggregate_mismatches": [
+      {
+        "field": "runtime_content_hash",
+        "baseline": "a05772fd84f45d0cb68a3b4332d16d080715c40929d99084dd6bda6f635d52c9",
+        "candidate": "58df0b43064027565915f5e6d90afc7cc458c776821148ac091e490e3b2a8e36"
+      },
+      {
+        "field": "source_revision",
+        "baseline": "e523984464954b83f951357b229ed0c5cead94137aedfb374fee5ea90dad3f70",
+        "candidate": "68d243b806655bcb28e49126860d1ea86a5ba698c1bda5deb22e9ffc43d95fd0"
+      },
+      {
+        "field": "semantic_hash",
+        "baseline": "b9ee2abec06ca94a1d7ae67fcfa8a2d1bcc64321d048d4138508fcdda6bdfeef",
+        "candidate": "56e113710efc1473d4865da7ad85f660c6037712c7fa801a9846845d78942e86"
+      },
+      {
+        "field": "body_trajectory_hash",
+        "baseline": "cdecf30b695bc9f40218a4b7ea79d40a04620e1f942cb922a9f7c623b6da141f",
+        "candidate": "8487099bc091d4fc69a57231c2c21107f1eb57c7685585169bf9726fae50704a"
+      },
+      {
+        "field": "presentation_trace_hash",
+        "baseline": "d87c61f21d0e7be5aafca0bd5e2a46c385841cc9b43a1edc665fc9100acdc712",
+        "candidate": "95dcdb1c68ee75c352ed2a09b10588e369adcbb2148d40c25e1edba812933f3e"
+      }
+    ],
+    "divergent_frame_count": 1941,
+    "first_divergent_relative_frame": 775,
+    "first_frame_mismatches": [
+      {
+        "field": "body_hash",
+        "baseline": "1cf0e087c4f61947a26f4bbd453170d53cc1ef8c910ff78c850d2ee458ac5396",
+        "candidate": "52b983324c7a29da5162d526d83dca51190f8e9401ca51d1041ff99bbac2f011"
+      }
+    ]
+  },
+  "timeline_observation": {
+    "playbacks": [
+      {
+        "playback": 6,
+        "name": "CorinAttack1Timeline"
+      },
+      {
+        "playback": 7,
+        "name": "CorinAttack2Timeline"
+      },
+      {
+        "playback": 8,
+        "name": "CorinAttack3Timeline"
+      },
+      {
+        "playback": 9,
+        "name": "CorinAttack4Timeline"
+      },
+      {
+        "playback": 10,
+        "name": "CorinAttack5Timeline"
+      },
+      {
+        "playback": 11,
+        "name": "CorinAttack1Timeline"
+      },
+      {
+        "playback": 12,
+        "name": "CorinAttack2Timeline"
+      },
+      {
+        "playback": 13,
+        "name": "CorinAttack3Timeline"
+      },
+      {
+        "playback": 14,
+        "name": "CorinDodgeForwardTimeline"
+      },
+      {
+        "playback": 15,
+        "name": "CorinAttack_Rush_EnhanceTimeline"
+      },
+      {
+        "playback": 16,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline"
+      },
+      {
+        "playback": 17,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline"
+      },
+      {
+        "playback": 18,
+        "name": "CorinDodgeForwardTimeline"
+      },
+      {
+        "playback": 19,
+        "name": "CorinAttack_Rush_EnhanceTimeline"
+      },
+      {
+        "playback": 20,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline"
+      },
+      {
+        "playback": 21,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline"
+      },
+      {
+        "playback": 22,
+        "name": "CorinAttack_Rush_EnhanceTimeline"
+      },
+      {
+        "playback": 23,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline"
+      },
+      {
+        "playback": 24,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline"
+      },
+      {
+        "playback": 25,
+        "name": "CorinBranchStartTimeline"
+      },
+      {
+        "playback": 26,
+        "name": "CorinBranchExplodeTimeline"
+      },
+      {
+        "playback": 27,
+        "name": "CorinBranchEndTimeline"
+      },
+      {
+        "playback": 28,
+        "name": "CorinBranchStartTimeline"
+      },
+      {
+        "playback": 29,
+        "name": "CorinBranchExplodeTimeline"
+      },
+      {
+        "playback": 30,
+        "name": "CorinBranchEndTimeline"
+      }
+    ],
+    "coverage": "Observer attached after replay began; sequence only, creation event position 0 cannot establish transition timing"
+  },
+  "verified": [
+    "2716帧全部完成，无运行失败",
+    "观察到Attack1→2→3→4→5→1连段循环",
+    "观察到两次Branch起手→爆发→收招"
+  ],
+  "unverified": [
+    "该录制未进入Branch Loop或Walk，按住E持续行走未覆盖",
+    "未对新版强化Rush双腿姿态和位移进行视觉确认",
+    "Attack5不输入时自然退出的视觉衔接未覆盖",
+    "TurnBack和性能问题未在本轮验收"
+  ]
+}

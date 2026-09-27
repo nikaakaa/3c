@@ -37,3 +37,4 @@
 `PublishSelected` 同时生成 RushAttack Fixed/Float32 产物。动画源已在正式 Profile、Blend Policy 和动画 Domain Resource Set 注册。
 
 2026-09-27，录制 `757f243033414fc7b123c97e2fcb0d70` 在本轮强化退出修正之前已完成 2716 帧，消除了原第 776 帧的运行阻断。它包含 60 次 Attack、3 次 Branch、3 次 Dodge，AttackHeld 为真 251 帧、BranchHeld 为真 164 帧。输入存在只证明有覆盖候选，不能证明每个状态分支和视觉退出都正确。
+2026-09-27 17:11，强化退出修正后的同输入回放完成 2716 帧，运行证据 `docs/diagnostics/corin-rush-runtime-20260927-171133.json`。实际观察到强化起手→循环→松手End→普通RushEnd，以及普通1→2→3→4→5→5End→1。动画时间倒退和同帧选择冲突均为0。新旧输入一致，角色轨迹有1644帧变化，最早为录制相对帧1072；这是行为版本变化，不据此声称所有普攻表现无回归。Rush窗口接招、强化爆发事件分支、E循环行走仍缺运行完成证据。

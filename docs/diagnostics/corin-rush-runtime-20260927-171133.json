@@ -1,0 +1,288 @@
+{
+  "schema": "corin-rush-runtime-review/1",
+  "trace_id": "757f243033414fc7b123c97e2fcb0d70",
+  "run_id": "2acfe0596753407697dd5bf6f0d3005a",
+  "source_commit": "71f3afee3",
+  "frame_count": 2716,
+  "runtime_identity": {
+    "runtime_id": "fixed-character-runtime/fixed-player",
+    "runtime_content_hash": "a05772fd84f45d0cb68a3b4332d16d080715c40929d99084dd6bda6f635d52c9",
+    "source_revision": "e523984464954b83f951357b229ed0c5cead94137aedfb374fee5ea90dad3f70",
+    "semantic_hash": "b9ee2abec06ca94a1d7ae67fcfa8a2d1bcc64321d048d4138508fcdda6bdfeef",
+    "tick_rate": 60,
+    "world_revision": "corin-gameplay-lab-world-v1"
+  },
+  "presentation_trace": {
+    "schema": "character-fixed-input-runtime-trace-evidence/1",
+    "capture_id": "1c54a8cd6e964fae905c690ad72df903",
+    "event_count": 21625,
+    "timeline_visual_sample_count": 1582,
+    "timeline_visual_frame_count": 1579,
+    "timeline_time_regression_count": 0,
+    "animation_selection_count": 24,
+    "animation_sample_count": 1562,
+    "animation_terminal_count": 23,
+    "animation_frame_count": 1562,
+    "animation_same_frame_selection_conflict_count": 0,
+    "animation_sample_time_regression_count": 0,
+    "camera_snapshot_count": 2716,
+    "camera_frame_count": 2716,
+    "camera_invalid_snapshot_count": 0,
+    "camera_reset_count": 1,
+    "camera_request_count": 0,
+    "evicted_event_count": 19919,
+    "stream_complete": true,
+    "succeeded": true,
+    "failure": "",
+    "evidence_hash": "d87c61f21d0e7be5aafca0bd5e2a46c385841cc9b43a1edc665fc9100acdc712"
+  },
+  "comparison": {
+    "first_body_changed_frame": 1072,
+    "input_changed_frames": 0,
+    "body_changed_frame_count": 1644
+  },
+  "timeline_observation": {
+    "gap": false,
+    "complete": true,
+    "position_kind": "runtime diagnostic Position; not input relative_frame",
+    "playbacks": [
+      {
+        "tick": 202,
+        "playback": 1,
+        "name": "CorinDodgeForwardTimeline",
+        "source": "CorinDodgeForwardTimeline",
+        "state": "",
+        "path": "ability:DodgeForward/graph:12fd389b09dc017facc9250c3f9a4ff3/node:47098806-a9db-43fb-894a-783c38491e8c/call:StateMachine/fsm:dc99afc8-813d-4957-a166-df4b28dc46a4/state:c41e85f4-dacc-49e3-b1b0-bb33b502eba6/body:01974466-06fd-4295-a76e-74a85e118390/c41e85f4-dacc-49e3-b1b0-bb33b502eba6",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 782,
+        "playback": 2,
+        "name": "CorinAttack_Rush_EnhanceTimeline",
+        "source": "CorinAttack_Rush_EnhanceTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:0be1a129-b4d5-cea1-0cd8-849e1e5cb91e/body:749a1d8e-5dfb-ac35-8eaf-377c261ee5bc/0be1a129-b4d5-cea1-0cd8-849e1e5cb91e",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 821,
+        "playback": 3,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "source": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:934f6ef3-060f-2f88-a3a6-47ee56b62fa7/body:6fe93f8b-9abc-09d5-0471-ad04ab77fce5/934f6ef3-060f-2f88-a3a6-47ee56b62fa7",
+        "time": 0.0
+      },
+      {
+        "tick": 822,
+        "playback": 4,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline",
+        "source": "CorinAttack_Rush_Enhance_EndTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:dd0ed881-b81c-95ee-d717-889c03a67b26/body:f2e97280-b30b-59a0-7ee2-e0cba8f4a321/dd0ed881-b81c-95ee-d717-889c03a67b26",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 894,
+        "playback": 5,
+        "name": "CorinAttackRushEndTimeline",
+        "source": "CorinAttackRushEndTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:ed6a3eba-d3f2-0d8d-c8c4-a874e9f5f731/body:7ac0154f-bf12-b3f4-0a68-11664a6292ed/ed6a3eba-d3f2-0d8d-c8c4-a874e9f5f731",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1079,
+        "playback": 6,
+        "name": "CorinAttack1Timeline",
+        "source": "CorinAttack1Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:d3001aa8-96db-411a-b429-8c09b3c565a3/body:894a4cd14e8db8f49003b0660b7660ed/d3001aa8-96db-411a-b429-8c09b3c565a3",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1130,
+        "playback": 7,
+        "name": "CorinAttack2Timeline",
+        "source": "CorinAttack2Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:3b40c9a3-218d-41e9-b3a2-cd939eceb3f1/body:ef6ea798d23cbb42daa656723c5263b2/3b40c9a3-218d-41e9-b3a2-cd939eceb3f1",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1180,
+        "playback": 8,
+        "name": "CorinAttack3Timeline",
+        "source": "CorinAttack3Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:2c8d7abf-437b-46e4-84bc-60cc10df6878/body:ab4f75a3dbba67da55dbf4a46872eadd/2c8d7abf-437b-46e4-84bc-60cc10df6878",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1263,
+        "playback": 9,
+        "name": "CorinAttack4Timeline",
+        "source": "CorinAttack4Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:5ff3f6e6-75e0-4746-b29e-a020c002628d/body:b2fa5183fe82ae10d37b83f3d03c931c/5ff3f6e6-75e0-4746-b29e-a020c002628d",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1354,
+        "playback": 10,
+        "name": "CorinAttack5Timeline",
+        "source": "CorinAttack5Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:d16b7e79-b26c-4949-9fb0-59c92675d7d2/body:d0c0d504787f8e6989ba2bae6aa1a49a/d16b7e79-b26c-4949-9fb0-59c92675d7d2",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1402,
+        "playback": 11,
+        "name": "CorinAttack5EndTimeline",
+        "source": "CorinAttack5EndTimeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:91b6171a-6602-5eda-bb79-9efb643eb7fa/body:f6145a5e-1e4e-51a4-aee5-9c71a99ac525/91b6171a-6602-5eda-bb79-9efb643eb7fa",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1478,
+        "playback": 12,
+        "name": "CorinAttack1Timeline",
+        "source": "CorinAttack1Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:d3001aa8-96db-411a-b429-8c09b3c565a3/body:894a4cd14e8db8f49003b0660b7660ed/d3001aa8-96db-411a-b429-8c09b3c565a3",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1529,
+        "playback": 13,
+        "name": "CorinAttack2Timeline",
+        "source": "CorinAttack2Timeline",
+        "state": "",
+        "path": "ability:Attack/graph:00ec42f6d5ede195dcf13e4e27fe7933/node:09a906ca-f0e7-467a-a0e2-4d7b47cd0896/call:StateMachine/fsm:afcdf84a5a348d0ec306739cfdcaa294/state:3b40c9a3-218d-41e9-b3a2-cd939eceb3f1/body:ef6ea798d23cbb42daa656723c5263b2/3b40c9a3-218d-41e9-b3a2-cd939eceb3f1",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1599,
+        "playback": 14,
+        "name": "CorinDodgeForwardTimeline",
+        "source": "CorinDodgeForwardTimeline",
+        "state": "",
+        "path": "ability:DodgeForward/graph:12fd389b09dc017facc9250c3f9a4ff3/node:47098806-a9db-43fb-894a-783c38491e8c/call:StateMachine/fsm:dc99afc8-813d-4957-a166-df4b28dc46a4/state:c41e85f4-dacc-49e3-b1b0-bb33b502eba6/body:01974466-06fd-4295-a76e-74a85e118390/c41e85f4-dacc-49e3-b1b0-bb33b502eba6",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1612,
+        "playback": 15,
+        "name": "CorinAttack_Rush_EnhanceTimeline",
+        "source": "CorinAttack_Rush_EnhanceTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:0be1a129-b4d5-cea1-0cd8-849e1e5cb91e/body:749a1d8e-5dfb-ac35-8eaf-377c261ee5bc/0be1a129-b4d5-cea1-0cd8-849e1e5cb91e",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1651,
+        "playback": 16,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "source": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:934f6ef3-060f-2f88-a3a6-47ee56b62fa7/body:6fe93f8b-9abc-09d5-0471-ad04ab77fce5/934f6ef3-060f-2f88-a3a6-47ee56b62fa7",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1696,
+        "playback": 17,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline",
+        "source": "CorinAttack_Rush_Enhance_EndTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:dd0ed881-b81c-95ee-d717-889c03a67b26/body:f2e97280-b30b-59a0-7ee2-e0cba8f4a321/dd0ed881-b81c-95ee-d717-889c03a67b26",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1837,
+        "playback": 18,
+        "name": "CorinDodgeForwardTimeline",
+        "source": "CorinDodgeForwardTimeline",
+        "state": "",
+        "path": "ability:DodgeForward/graph:12fd389b09dc017facc9250c3f9a4ff3/node:47098806-a9db-43fb-894a-783c38491e8c/call:StateMachine/fsm:dc99afc8-813d-4957-a166-df4b28dc46a4/state:c41e85f4-dacc-49e3-b1b0-bb33b502eba6/body:01974466-06fd-4295-a76e-74a85e118390/c41e85f4-dacc-49e3-b1b0-bb33b502eba6",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1858,
+        "playback": 19,
+        "name": "CorinAttack_Rush_EnhanceTimeline",
+        "source": "CorinAttack_Rush_EnhanceTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:0be1a129-b4d5-cea1-0cd8-849e1e5cb91e/body:749a1d8e-5dfb-ac35-8eaf-377c261ee5bc/0be1a129-b4d5-cea1-0cd8-849e1e5cb91e",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 1897,
+        "playback": 20,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "source": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:934f6ef3-060f-2f88-a3a6-47ee56b62fa7/body:6fe93f8b-9abc-09d5-0471-ad04ab77fce5/934f6ef3-060f-2f88-a3a6-47ee56b62fa7",
+        "time": 0.0
+      },
+      {
+        "tick": 1898,
+        "playback": 21,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline",
+        "source": "CorinAttack_Rush_Enhance_EndTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:dd0ed881-b81c-95ee-d717-889c03a67b26/body:f2e97280-b30b-59a0-7ee2-e0cba8f4a321/dd0ed881-b81c-95ee-d717-889c03a67b26",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 2036,
+        "playback": 22,
+        "name": "CorinAttack_Rush_EnhanceTimeline",
+        "source": "CorinAttack_Rush_EnhanceTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:0be1a129-b4d5-cea1-0cd8-849e1e5cb91e/body:749a1d8e-5dfb-ac35-8eaf-377c261ee5bc/0be1a129-b4d5-cea1-0cd8-849e1e5cb91e",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 2075,
+        "playback": 23,
+        "name": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "source": "CorinAttack_Rush_Enhance_LoopTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:934f6ef3-060f-2f88-a3a6-47ee56b62fa7/body:6fe93f8b-9abc-09d5-0471-ad04ab77fce5/934f6ef3-060f-2f88-a3a6-47ee56b62fa7",
+        "time": 0.0
+      },
+      {
+        "tick": 2076,
+        "playback": 24,
+        "name": "CorinAttack_Rush_Enhance_EndTimeline",
+        "source": "CorinAttack_Rush_Enhance_EndTimeline",
+        "state": "",
+        "path": "ability:RushAttack/graph:9152ca92-afdd-f163-b9e3-404a8c2b96aa/node:39ade2b9-4e24-a29e-abfb-a81e84db5277/call:StateMachine/fsm:4413153b-fb40-eabd-22e2-22ad05775e03/state:dd0ed881-b81c-95ee-d717-889c03a67b26/body:f2e97280-b30b-59a0-7ee2-e0cba8f4a321/dd0ed881-b81c-95ee-d717-889c03a67b26",
+        "time": 0.0166666657
+      },
+      {
+        "tick": 2223,
+        "playback": 25,
+        "name": "CorinBranchStartTimeline",
+        "source": "CorinBranchStartTimeline",
+        "state": "",
+        "path": "ability:BranchAttack/graph:d1855f22-91dd-43e5-738f-4ccabc5606f5/node:beb74dec-4552-c8e7-aa56-ef3335a1f9e7/call:StateMachine/fsm:94f9c009-2c28-ace7-1c42-ba0f8e9ba5fd/state:2ca9e5a5-0889-426e-8c20-d5108fc32767/body:00f20065-267d-9b0f-3b16-3671c867525f/2ca9e5a5-0889-426e-8c20-d5108fc32767",
+        "time": 0.0166666657
+      }
+    ]
+  },
+  "confirmed": [
+    "增强Rush起手→循环→松手End→普通RushEnd实际发生",
+    "普通Attack1→2→3→4→5→5End→1实际发生",
+    "2716帧回放完成，presentation_trace.succeeded=true"
+  ],
+  "not_covered": [
+    "Rush窗口再次普攻直接进入Attack4：本条实际播放序列没有发生",
+    "强化SawExplode事件分支：本条未进入",
+    "Badge_S03按住自动接招未实现等价输入",
+    "E技能循环和行走：本条只观察到BranchStart，不能证明通过",
+    "TurnBack脚相位与视觉对齐、性能未由本记录证明"
+  ]
+}

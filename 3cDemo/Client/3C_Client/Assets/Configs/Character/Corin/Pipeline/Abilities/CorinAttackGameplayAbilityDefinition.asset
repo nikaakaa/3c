@@ -505,6 +505,31 @@ MonoBehaviour:
       m_ActionWindowType: ComboAccept
       m_ActionWindowId: Attack5MainCancel
       m_ActionWindowDigest: 5005
+--- !u!114 &-7888284734310015321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_04_CamShake_E_02
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"116b7e86-d47e-1e80-72b2-4bd86d4f0cd7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"116b15c9b1904c0fbe9841174463fbef","m_ResourceId":"Corin_Attack_Normal_04_CamShake_E_02","_UID":"f004385c-ed42-8230-2c63-4149e4008e90","_name":"Corin_Attack_Normal_04_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"05cd3d0b-1dc3-b25e-31ad-1ba6429b080a","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"6ec9f1e8-1195-409b-bf5d-9311d5e17d97","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"89e40f39-6844-4978-b3de-858d8b967b73","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"93a76912-8d21-003f-232d-0a958919a49b","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"949fa5ed-d032-eb20-5fe8-d80401da8366","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 949fa5ed-d032-eb20-5fe8-d80401da8366
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &-6974262216350880372
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -704,7 +729,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f92920026e2f4970a5ab365c6d48da89, type: 3}
   m_Name: Attack Combo StateMachine
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine","nodes":[{"_UID":"e15e7a22-d08d-4aad-bf6c-d7b7b1f3862b","_name":"\u72b6\u6001\u673a\u5165\u53e3","_position":{"x":-299.200592041016,"y":109.779998779297},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeEntryState","$id":"0"},{"m_Body":1,"_UID":"d3001aa8-96db-411a-b429-8c09b3c565a3","_name":"Attack1","_position":{"x":-94.0,"y":-119.333297729492},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"1"},{"_UID":"4ed6453a-cb73-4782-b764-b076a8030a60","_name":"\u72b6\u6001\u673a\u51fa\u53e3","_position":{"x":1121.52697753906,"y":328.016204833984},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeExitState","$id":"2"},{"m_Body":2,"_UID":"3b40c9a3-218d-41e9-b3a2-cd939eceb3f1","_name":"Attack2","_position":{"x":143.333297729492,"y":-101.34839630127},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"3"},{"m_Body":3,"_UID":"2c8d7abf-437b-46e4-84bc-60cc10df6878","_name":"Attack3","_position":{"x":412.0,"y":-72.6666564941406},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"4"},{"m_Body":4,"_UID":"5ff3f6e6-75e0-4746-b29e-a020c002628d","_name":"Attack4","_position":{"x":725.333312988281,"y":-16.0000305175781},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"5"},{"m_Body":5,"_UID":"d16b7e79-b26c-4949-9fb0-59c92675d7d2","_name":"Attack5","_position":{"x":1103.3330078125,"y":-38.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"6"},{"m_Body":6,"_UID":"6765dbc5-4a61-5602-931b-f3ab00ef5f4c","_name":"Attack5End2","_position":{"x":1420.0,"y":30.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"7"},{"m_Body":7,"_UID":"91b6171a-6602-5eda-bb79-9efb643eb7fa","_name":"Attack5End","_position":{"x":1420.0,"y":-90.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"8"},{"_UID":"1a9b7ff7-0035-4684-bc92-a327e4c73217","_name":"\u4efb\u610f\u72b6\u6001","_position":{"x":69.3333129882813,"y":236.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeAnyState"}],"connections":[{"m_Payload":{"m_Condition":8},"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"2c359c8b-c840-4888-b8db-fe22fe16df63","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":9,"m_Order":1},"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"5"},"_UID":"94739973a06d4e2992583020d88fb30d","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":10,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"3e6b88e8-c8f0-41d5-ac0d-77dc29a592b9","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":11,"m_Order":1},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"_UID":"641dc384-2d87-4d0f-ba38-076bab6c78b5","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":12},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"73140f95-528c-4cc5-b1e8-947d2596afeb","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":13,"m_Priority":3,"m_Order":3},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"fb88bcbd-e42c-4a0b-a86d-06e0c602f106","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":14,"m_Priority":1,"m_Order":2},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"_UID":"0c121dd0-c265-4721-94fd-91a2d9cc2674","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":15,"m_Priority":3,"m_Order":1},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"220c8a86-0d82-4c72-96b4-3f2041c0df51","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":16,"m_Priority":2},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"2613a616-1314-4ac6-990f-fa30cb1f8fc8","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":17,"m_Order":3},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"92ab613a-3c48-4eee-b7b1-7aeac7cdf8d3","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":18,"m_Priority":3,"m_Order":1},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"786375ce-ba99-420c-8d57-b5668a869fd1","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":19,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"c04f286e-6c94-488a-ac45-55b03490c5f4","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":20,"m_Order":3},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"_UID":"de873cd0-55ab-4559-a9a8-514e1313aa7f","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":21,"m_Priority":1},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"e3c4ea07-47e3-4bcf-bbc3-23d7e0cb0185","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":22,"m_Priority":3,"m_Order":3},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"0b1ece10-364a-42c2-8b21-5b34a53581a7","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":23},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"6"},"_UID":"8a1d55db-124c-43f0-b582-2301eb03621e","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":24,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"ba0efb48-a438-4b29-82e2-8b0e2a19de31","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":25,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"bc2aff7f-a50a-400d-96c1-569f8c5a975b","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":26,"m_Priority":1},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"7a855bee-07c4-45e9-96ad-a4febc847046","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":27,"m_Order":1},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"8e50ef17-01e6-4707-9d83-4834a41f79ef","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":28,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"db010573-67c3-4700-989f-12f0ba9ca6af","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":29,"m_Order":5},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"7"},"_UID":"91e43c90-53c4-5279-9636-0d1d920e85bd","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":30,"m_Priority":1,"m_Order":6},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"8"},"_UID":"21425917-50fa-5f8f-805a-fc9c4158e640","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":31,"m_Order":4},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"1"},"_UID":"287da4e2-f528-4640-ace5-19262cdb425e","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":32,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"7"},"_targetNode":{"$ref":"2"},"_UID":"925adf64-da6c-53d4-adf9-164269ee4e5f","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":33},"_sourceNode":{"$ref":"7"},"_targetNode":{"$ref":"1"},"_UID":"a38f4fc5-67e5-47d3-9898-f92e0502fc46","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":34,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"8"},"_targetNode":{"$ref":"2"},"_UID":"970529d4-d0f8-55c4-8ef3-06c26ddce921","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":31},"_sourceNode":{"$ref":"8"},"_targetNode":{"$ref":"1"},"_UID":"78cb489b-8b4a-468f-9ad3-fc7f4d313439","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"afcdf84a5a348d0ec306739cfdcaa294","OwnerGraphId":"00ec42f6d5ede195dcf13e4e27fe7933","OwnerNodeId":"09a906ca-f0e7-467a-a0e2-4d7b47cd0896","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine+AuthoringData"}}'
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine","nodes":[{"_UID":"e15e7a22-d08d-4aad-bf6c-d7b7b1f3862b","_name":"\u72b6\u6001\u673a\u5165\u53e3","_position":{"x":-299.200592041016,"y":109.779998779297},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeEntryState","$id":"0"},{"m_Body":1,"_UID":"d3001aa8-96db-411a-b429-8c09b3c565a3","_name":"Attack1","_position":{"x":-94.0,"y":-119.333297729492},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"1"},{"_UID":"4ed6453a-cb73-4782-b764-b076a8030a60","_name":"\u72b6\u6001\u673a\u51fa\u53e3","_position":{"x":1121.52697753906,"y":328.016204833984},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeExitState","$id":"2"},{"m_Body":2,"_UID":"3b40c9a3-218d-41e9-b3a2-cd939eceb3f1","_name":"Attack2","_position":{"x":143.333297729492,"y":-101.34839630127},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"3"},{"m_Body":3,"_UID":"2c8d7abf-437b-46e4-84bc-60cc10df6878","_name":"Attack3","_position":{"x":412.0,"y":-72.6666564941406},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"4"},{"m_Body":4,"_UID":"5ff3f6e6-75e0-4746-b29e-a020c002628d","_name":"Attack4","_position":{"x":725.333312988281,"y":-16.0000305175781},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"5"},{"m_Body":5,"_UID":"d16b7e79-b26c-4949-9fb0-59c92675d7d2","_name":"Attack5","_position":{"x":1103.3330078125,"y":-38.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"6"},{"m_Body":6,"_UID":"91b6171a-6602-5eda-bb79-9efb643eb7fa","_name":"Attack5End","_position":{"x":1420.0,"y":-90.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"7"},{"m_Body":7,"_UID":"6765dbc5-4a61-5602-931b-f3ab00ef5f4c","_name":"Attack5End2","_position":{"x":1420.0,"y":30.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"8"},{"_UID":"1a9b7ff7-0035-4684-bc92-a327e4c73217","_name":"\u4efb\u610f\u72b6\u6001","_position":{"x":69.3333129882813,"y":236.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeAnyState"}],"connections":[{"m_Payload":{"m_Condition":8},"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"2c359c8b-c840-4888-b8db-fe22fe16df63","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":9,"m_Order":1},"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"5"},"_UID":"94739973a06d4e2992583020d88fb30d","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":10,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"3e6b88e8-c8f0-41d5-ac0d-77dc29a592b9","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":11,"m_Order":1},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"_UID":"641dc384-2d87-4d0f-ba38-076bab6c78b5","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":12},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"73140f95-528c-4cc5-b1e8-947d2596afeb","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":13,"m_Priority":3,"m_Order":3},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"fb88bcbd-e42c-4a0b-a86d-06e0c602f106","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":14,"m_Priority":1,"m_Order":2},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"_UID":"0c121dd0-c265-4721-94fd-91a2d9cc2674","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":15,"m_Priority":3,"m_Order":1},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"220c8a86-0d82-4c72-96b4-3f2041c0df51","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":16,"m_Priority":2},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"2613a616-1314-4ac6-990f-fa30cb1f8fc8","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":17,"m_Order":3},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"2"},"_UID":"92ab613a-3c48-4eee-b7b1-7aeac7cdf8d3","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":18,"m_Priority":3,"m_Order":1},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"786375ce-ba99-420c-8d57-b5668a869fd1","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":19,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"c04f286e-6c94-488a-ac45-55b03490c5f4","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":20,"m_Order":3},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"_UID":"de873cd0-55ab-4559-a9a8-514e1313aa7f","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":21,"m_Priority":1},"_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"e3c4ea07-47e3-4bcf-bbc3-23d7e0cb0185","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":22,"m_Priority":3,"m_Order":3},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"0b1ece10-364a-42c2-8b21-5b34a53581a7","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":23},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"6"},"_UID":"8a1d55db-124c-43f0-b582-2301eb03621e","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":24,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"ba0efb48-a438-4b29-82e2-8b0e2a19de31","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":25,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"bc2aff7f-a50a-400d-96c1-569f8c5a975b","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":26,"m_Priority":1},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"7a855bee-07c4-45e9-96ad-a4febc847046","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":27,"m_Order":1},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"7"},"_UID":"8e50ef17-01e6-4707-9d83-4834a41f79ef","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":28,"m_Priority":2,"m_Order":2},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"db010573-67c3-4700-989f-12f0ba9ca6af","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":29,"m_Order":5},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"8"},"_UID":"91e43c90-53c4-5279-9636-0d1d920e85bd","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":30,"m_Priority":1,"m_Order":6},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"7"},"_UID":"21425917-50fa-5f8f-805a-fc9c4158e640","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":31,"m_Order":4},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"1"},"_UID":"287da4e2-f528-4640-ace5-19262cdb425e","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":32,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"7"},"_targetNode":{"$ref":"2"},"_UID":"970529d4-d0f8-55c4-8ef3-06c26ddce921","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":31},"_sourceNode":{"$ref":"7"},"_targetNode":{"$ref":"1"},"_UID":"78cb489b-8b4a-468f-9ad3-fc7f4d313439","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":33,"m_Priority":1,"m_Order":1},"_sourceNode":{"$ref":"8"},"_targetNode":{"$ref":"2"},"_UID":"925adf64-da6c-53d4-adf9-164269ee4e5f","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":34},"_sourceNode":{"$ref":"8"},"_targetNode":{"$ref":"1"},"_UID":"a38f4fc5-67e5-47d3-9898-f92e0502fc46","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"afcdf84a5a348d0ec306739cfdcaa294","OwnerGraphId":"00ec42f6d5ede195dcf13e4e27fe7933","OwnerNodeId":"09a906ca-f0e7-467a-a0e2-4d7b47cd0896","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine+AuthoringData"}}'
   _objectReferences:
   - {fileID: 0}
   - {fileID: -5122221337931708517}
@@ -712,8 +737,8 @@ MonoBehaviour:
   - {fileID: -1438220457213337947}
   - {fileID: -8407935113678400079}
   - {fileID: -8050025828599323964}
-  - {fileID: 8258917246633668251}
   - {fileID: 5399298497991884491}
+  - {fileID: 8258917246633668251}
   - {fileID: 9122084121426555973}
   - {fileID: 7555430015525060214}
   - {fileID: 6135505880154380116}
@@ -738,9 +763,9 @@ MonoBehaviour:
   - {fileID: 6915058177781095197}
   - {fileID: -6774096073864219790}
   - {fileID: -3076682090573396958}
+  - {fileID: -6480159411076192458}
   - {fileID: 7518220594006462817}
   - {fileID: -8236068870102926431}
-  - {fileID: -6480159411076192458}
   _graphSource:
     _version: 3.42
     _category: 
@@ -779,31 +804,6 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: d72b91e1447945aca7ee0fe19503e797
   m_Role: 3
-  m_BlackboardDeclarations: []
---- !u!114 &-5718452750892914017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_05_CamShake_E_02
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"2ad7237a-a4ef-00dd-d531-c190ccbc9e2a","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"94dc02ce68984a2a929cebc3a81363ac","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_02","_UID":"50817c8b-15da-7010-ea0d-b61844092705","_name":"Corin_Attack_Normal_05_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"4cd917e5-a245-8981-07d5-3392fa95551a","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"9d027953-8052-4edf-bebd-654d7a4ea793","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"7fb2681f-f3c8-400e-9cd8-5fd91afb6f0c","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5fb42a50-1f0d-6f3b-929f-14fbcca07360","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"61625e1e-baa0-b9b0-9594-2ce6003ce74e","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 61625e1e-baa0-b9b0-9594-2ce6003ce74e
-  m_Role: 5
   m_BlackboardDeclarations: []
 --- !u!114 &-5122221337931708517
 MonoBehaviour:
@@ -869,6 +869,31 @@ MonoBehaviour:
       m_ActionWindowType: RecoveryLate
       m_ActionWindowId: Attack1MoveCancel
       m_ActionWindowDigest: 1003
+--- !u!114 &-5070735542402509811
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_05_CamShake_E_02
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"2ad7237a-a4ef-00dd-d531-c190ccbc9e2a","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"94dc02ce68984a2a929cebc3a81363ac","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_02","_UID":"50817c8b-15da-7010-ea0d-b61844092705","_name":"Corin_Attack_Normal_05_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"4cd917e5-a245-8981-07d5-3392fa95551a","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"f0137aec-b07c-45d6-9193-4c6c45886c07","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"a7f887ee-6e9e-435b-9704-17f28922424e","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5fb42a50-1f0d-6f3b-929f-14fbcca07360","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"61625e1e-baa0-b9b0-9594-2ce6003ce74e","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 61625e1e-baa0-b9b0-9594-2ce6003ce74e
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &-4812538147775276677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1024,7 +1049,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: 1d561824-cad4-54eb-86e8-19de5dffbd81
         m_StartTimeRaw: 0
-        m_EndTimeRaw: 6227702784
+        m_EndTimeRaw: 8661518336
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -1120,7 +1145,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: c7d8e9f0-a1b2-4365-c7d8-e9f0a1b2c3d4
         m_StartTimeRaw: 5368709120
-        m_EndTimeRaw: 8661517312
+        m_EndTimeRaw: 8661518336
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -1247,7 +1272,7 @@ MonoBehaviour:
       data:
         m_AuthoringId: 14c5cc1e-1e9d-4b15-9987-4a164f61d581
         m_StartTimeRaw: 2648563166
-        m_EndTimeRaw: 8661517312
+        m_EndTimeRaw: 8661518336
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -1282,6 +1307,31 @@ MonoBehaviour:
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 8a91fee1d77efbcc4fa651519191735d
+  m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &-3158262086821252263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_05_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"22abee3a-ae7c-7944-6af6-9579ff19b1dd","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"81c03e6246af4a42bcd7d1033bad93a2","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_01","_UID":"fdfaacf0-629e-fc16-56e2-fce7f0697a4c","_name":"Corin_Attack_Normal_05_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"9566d57c-ff22-635e-dd83-e6402a4aabe1","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"3f2d8936-1c4b-4e72-91e3-2061794e0b05","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"20d057d7-f0ef-4a2b-90bb-14fb0c21d9b6","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"54f19d45-6d37-c880-1ac1-f38a0b406a20","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"ef050bb8-6577-0676-c6de-5ce94f30cbcc","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: ef050bb8-6577-0676-c6de-5ce94f30cbcc
   m_Role: 5
   m_BlackboardDeclarations: []
 --- !u!114 &-3076682090573396958
@@ -1376,6 +1426,31 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: f528693519b24154b89e43252df005ba
   m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-2678387029281378517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_02_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"ed3fa7cf-3415-7203-6c3e-d506d220beb3","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"78774fce67cc40bcbae9c6170598515b","m_ResourceId":"Corin_Attack_Normal_02_CamShake_E_01","_UID":"868229a7-b1b2-7d08-3da3-9509ad06dc8a","_name":"Corin_Attack_Normal_02_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"17906ee3-debb-17d0-d9ae-ce22bd5fcf0b","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"b6f891ac-b4d9-42b5-be22-cba941acc399","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"89622335-3a89-46a9-9998-145e65325c99","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"b359509e-ce32-e54b-00dd-3cf07c395133","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"0590ee38-35ce-e746-a594-ae390b346441","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 0590ee38-35ce-e746-a594-ae390b346441
+  m_Role: 5
   m_BlackboardDeclarations: []
 --- !u!114 &-2484288986480383195
 MonoBehaviour:
@@ -1710,56 +1785,6 @@ MonoBehaviour:
       m_ActionWindowType: RecoveryEarly
       m_ActionWindowId: Attack3RecoveryEarly
       m_ActionWindowDigest: 3004
---- !u!114 &-1420170681144953084
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_04_CamShake_E_02
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"116b7e86-d47e-1e80-72b2-4bd86d4f0cd7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"116b15c9b1904c0fbe9841174463fbef","m_ResourceId":"Corin_Attack_Normal_04_CamShake_E_02","_UID":"f004385c-ed42-8230-2c63-4149e4008e90","_name":"Corin_Attack_Normal_04_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"05cd3d0b-1dc3-b25e-31ad-1ba6429b080a","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"512d602a-38a7-4b1a-8a90-b1eb08f18c8a","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"2eb10197-33d5-4101-8dd5-625c7af4eada","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"93a76912-8d21-003f-232d-0a958919a49b","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"949fa5ed-d032-eb20-5fe8-d80401da8366","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 949fa5ed-d032-eb20-5fe8-d80401da8366
-  m_Role: 5
-  m_BlackboardDeclarations: []
---- !u!114 &-858286480016472666
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_04_CamShake_E_01
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"7386a9ad-cbf6-4cb2-3ec3-97dbc0f3d610","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"6044070d385347ab814df65bcafb26df","m_ResourceId":"Corin_Attack_Normal_04_CamShake_E_01","_UID":"4ae7b997-1f0f-103f-94bd-7dec5b3bdf7e","_name":"Corin_Attack_Normal_04_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"fe2323d0-a04f-bf78-eeca-b52b84a6f413","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"da42e665-5ca8-4a14-9d42-135124b5dcfa","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"5417f27a-44d2-46ca-9eab-d39596c0dc93","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"328b9228-bdf6-8d24-ea05-a3b287e98fa5","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"dadb4dfc-ad0e-bfa2-6b40-86cc9f6b088a","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: dadb4dfc-ad0e-bfa2-6b40-86cc9f6b088a
-  m_Role: 5
-  m_BlackboardDeclarations: []
 --- !u!114 &-844766001340286067
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2833,7 +2858,7 @@ MonoBehaviour:
     - rid: 207050633030402074
     - rid: 207050633030402075
     - rid: 207050633030402076
-    - rid: 207050751823839323
+    - rid: 207050751823839345
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -3416,7 +3441,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050438612877371
         m_Markers: []
-    - rid: 207050751823839323
+    - rid: 207050751823839345
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 73bb42d2-3a6c-87b4-1bd2-c834a946df1e
@@ -3424,9 +3449,9 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839324
+        - rid: 207050751823839346
         m_Markers: []
-    - rid: 207050751823839324
+    - rid: 207050751823839346
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 973cf0a9-f7a7-2268-9d21-f8a2ee923c0f
@@ -3439,7 +3464,7 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: 5506533503464850885}
+        m_AssetTree: {fileID: -2678387029281378517}
 --- !u!114 &1397379463908874345
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3764,6 +3789,31 @@ MonoBehaviour:
   m_AuthoringId: 357215ab6c584638b7d2e4a2ff47c28f
   m_Role: 3
   m_BlackboardDeclarations: []
+--- !u!114 &3728552339483530217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_04_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"7386a9ad-cbf6-4cb2-3ec3-97dbc0f3d610","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"6044070d385347ab814df65bcafb26df","m_ResourceId":"Corin_Attack_Normal_04_CamShake_E_01","_UID":"4ae7b997-1f0f-103f-94bd-7dec5b3bdf7e","_name":"Corin_Attack_Normal_04_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"fe2323d0-a04f-bf78-eeca-b52b84a6f413","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"257cf0f0-5bd0-45d1-bf5c-75640ca9b128","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"eb079fdc-206f-4558-93bb-41d24c955714","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"328b9228-bdf6-8d24-ea05-a3b287e98fa5","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"dadb4dfc-ad0e-bfa2-6b40-86cc9f6b088a","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: dadb4dfc-ad0e-bfa2-6b40-86cc9f6b088a
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &4195809031538708240
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3818,31 +3868,6 @@ MonoBehaviour:
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: c1fda7608ebd58824cf60b93566ccd3a
-  m_Role: 5
-  m_BlackboardDeclarations: []
---- !u!114 &4615465004522782492
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_05_CamShake_E_03
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"7efdc5e4-6eb5-05a2-98a9-faa31316b1ff","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"852f9df220cc4571b4ce70745d4b8343","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_03","_UID":"2e53bdce-1d1e-2e93-b85f-4479dd97a77e","_name":"Corin_Attack_Normal_05_CamShake_E_03","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"93ffe130-86e5-c4e2-8f36-fc2ca242d682","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"508520ee-72ee-4ef2-8298-efc5c3dec99a","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"67750732-451d-4e7a-be12-e6f69a61aae7","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5d38a2fc-7e64-8f80-3080-3940e6ce1491","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1f3150b2-7fa0-97e6-c7b3-769249fca694","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 1f3150b2-7fa0-97e6-c7b3-769249fca694
   m_Role: 5
   m_BlackboardDeclarations: []
 --- !u!114 &4704593153309712251
@@ -3950,56 +3975,6 @@ MonoBehaviour:
       m_ActionWindowType: RecoveryLate
       m_ActionWindowId: Attack5EndMoveCancel
       m_ActionWindowDigest: 5003
---- !u!114 &5506533503464850885
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_02_CamShake_E_01
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"ed3fa7cf-3415-7203-6c3e-d506d220beb3","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"78774fce67cc40bcbae9c6170598515b","m_ResourceId":"Corin_Attack_Normal_02_CamShake_E_01","_UID":"868229a7-b1b2-7d08-3da3-9509ad06dc8a","_name":"Corin_Attack_Normal_02_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"17906ee3-debb-17d0-d9ae-ce22bd5fcf0b","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"540e9b16-bd07-4f8b-b982-4a8d28ced620","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"6f5e3775-1288-4ed8-849b-2a3744fa2579","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"b359509e-ce32-e54b-00dd-3cf07c395133","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"0590ee38-35ce-e746-a594-ae390b346441","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: 0590ee38-35ce-e746-a594-ae390b346441
-  m_Role: 5
-  m_BlackboardDeclarations: []
---- !u!114 &5657080128786416583
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Corin_Attack_Normal_05_CamShake_E_01
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"22abee3a-ae7c-7944-6af6-9579ff19b1dd","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"81c03e6246af4a42bcd7d1033bad93a2","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_01","_UID":"fdfaacf0-629e-fc16-56e2-fce7f0697a4c","_name":"Corin_Attack_Normal_05_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"9566d57c-ff22-635e-dd83-e6402a4aabe1","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"aed7d69e-1e3d-4293-b267-78a1a4ef54f0","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"3c23919c-1b9c-45a4-aed6-3bd5683f4486","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"54f19d45-6d37-c880-1ac1-f38a0b406a20","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"ef050bb8-6577-0676-c6de-5ce94f30cbcc","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_AuthoringId: ef050bb8-6577-0676-c6de-5ce94f30cbcc
-  m_Role: 5
-  m_BlackboardDeclarations: []
 --- !u!114 &5931008367243061332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4218,8 +4193,8 @@ MonoBehaviour:
     - rid: 207050633030402084
     - rid: 207050633030402085
     - rid: 207050438612877369
-    - rid: 207050751823839331
-    - rid: 207050751823839334
+    - rid: 207050751823839353
+    - rid: 207050751823839356
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -4621,7 +4596,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050555325416035
         m_Markers: []
-    - rid: 207050751823839331
+    - rid: 207050751823839353
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 7d2c11a0-9552-dbbc-8580-fb407de0101b
@@ -4629,10 +4604,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839332
-        - rid: 207050751823839333
+        - rid: 207050751823839354
+        - rid: 207050751823839355
         m_Markers: []
-    - rid: 207050751823839332
+    - rid: 207050751823839354
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 625470f7-aa6e-3523-ed07-9ebce165124a
@@ -4645,8 +4620,8 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: 5657080128786416583}
-    - rid: 207050751823839333
+        m_AssetTree: {fileID: -3158262086821252263}
+    - rid: 207050751823839355
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: de3cefc8-fb58-8e00-b779-d8df965f15b6
@@ -4659,8 +4634,8 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: -5718452750892914017}
-    - rid: 207050751823839334
+        m_AssetTree: {fileID: -5070735542402509811}
+    - rid: 207050751823839356
       type: {class: CameraEffectTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 89f0ed0a-39c4-8d7e-c5eb-b36353f337f0
@@ -4668,10 +4643,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839335
-        - rid: 207050751823839336
+        - rid: 207050751823839357
+        - rid: 207050751823839358
         m_Markers: []
-    - rid: 207050751823839335
+    - rid: 207050751823839357
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 678dc314-4cb0-ca2d-0c09-0df75b62c9d2
@@ -4755,7 +4730,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
-    - rid: 207050751823839336
+    - rid: 207050751823839358
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 79c5e639-f1ad-05cb-b2ba-601b57b38d69
@@ -5000,8 +4975,8 @@ MonoBehaviour:
     - rid: 207050633030402050
     - rid: 207050633030402086
     - rid: 207050633030402087
-    - rid: 207050751823839337
-    - rid: 207050751823839339
+    - rid: 207050751823839359
+    - rid: 207050751823839361
     m_Sections:
     - m_AuthoringId: 24d05f02-b27e-554e-b3a6-8f79c1a44820
       m_Name: Attack_Normal_05_End_2
@@ -5183,7 +5158,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050633030402053
         m_Markers: []
-    - rid: 207050751823839337
+    - rid: 207050751823839359
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 1e97cd88-9be7-d467-eadd-6d63b10ab1c0
@@ -5191,9 +5166,9 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839338
+        - rid: 207050751823839360
         m_Markers: []
-    - rid: 207050751823839338
+    - rid: 207050751823839360
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: f77f1330-a5f0-7793-723a-f4a8d5f52ceb
@@ -5206,8 +5181,8 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: 4615465004522782492}
-    - rid: 207050751823839339
+        m_AssetTree: {fileID: 9070769459740960875}
+    - rid: 207050751823839361
       type: {class: CameraEffectTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b00fa111-536d-664d-f4ab-e51a5b30b5ce
@@ -5215,10 +5190,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839340
-        - rid: 207050751823839341
+        - rid: 207050751823839362
+        - rid: 207050751823839363
         m_Markers: []
-    - rid: 207050751823839340
+    - rid: 207050751823839362
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2d3388df-c8ed-c4b4-7079-380e3019687b
@@ -5302,7 +5277,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
-    - rid: 207050751823839341
+    - rid: 207050751823839363
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1bab8fcb-b1bf-79ba-e70a-c01d0863954f
@@ -5560,7 +5535,7 @@ MonoBehaviour:
     - rid: 207050633030402077
     - rid: 207050633030402078
     - rid: 207050633030402079
-    - rid: 207050751823839325
+    - rid: 207050751823839347
     m_Sections:
     - m_AuthoringId: d31a7f2e-1c84-4a76-9f0a-3f0d59e2a7b1
       m_Name: Attack_Normal_03_Explode
@@ -6148,7 +6123,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050438612877372
         m_Markers: []
-    - rid: 207050751823839325
+    - rid: 207050751823839347
       type: {class: CameraEffectTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 347a255d-4834-0c6c-df49-cd9a1ae23bff
@@ -6156,10 +6131,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839326
-        - rid: 207050751823839327
+        - rid: 207050751823839348
+        - rid: 207050751823839349
         m_Markers: []
-    - rid: 207050751823839326
+    - rid: 207050751823839348
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1a65d892-3e1b-41bf-58ab-39f919ca872f
@@ -6243,7 +6218,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
-    - rid: 207050751823839327
+    - rid: 207050751823839349
       type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: f8f4c61e-fd1b-4c49-8a92-728b4295b8c8
@@ -6475,6 +6450,31 @@ MonoBehaviour:
   m_AuthoringId: 5bc2802ca36ef90431c4b88514935ae8
   m_Role: 5
   m_BlackboardDeclarations: []
+--- !u!114 &9070769459740960875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Normal_05_CamShake_E_03
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"7efdc5e4-6eb5-05a2-98a9-faa31316b1ff","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"852f9df220cc4571b4ce70745d4b8343","m_ResourceId":"Corin_Attack_Normal_05_CamShake_E_03","_UID":"2e53bdce-1d1e-2e93-b85f-4479dd97a77e","_name":"Corin_Attack_Normal_05_CamShake_E_03","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"93ffe130-86e5-c4e2-8f36-fc2ca242d682","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"52184061-40e2-480f-b502-cfee60cb9da6","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"6d4464d6-3d61-4c3c-ad11-ed5b85493470","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5d38a2fc-7e64-8f80-3080-3940e6ce1491","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1f3150b2-7fa0-97e6-c7b3-769249fca694","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 1f3150b2-7fa0-97e6-c7b3-769249fca694
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &9108236439009699323
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6498,7 +6498,7 @@ MonoBehaviour:
     - rid: 207050633030402081
     - rid: 207050633030402082
     - rid: 207050438612877355
-    - rid: 207050751823839328
+    - rid: 207050751823839350
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -7081,7 +7081,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050438612877351
         m_Markers: []
-    - rid: 207050751823839328
+    - rid: 207050751823839350
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 10bb9786-87cf-f479-c15a-ed50faf1152d
@@ -7089,10 +7089,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050751823839329
-        - rid: 207050751823839330
+        - rid: 207050751823839351
+        - rid: 207050751823839352
         m_Markers: []
-    - rid: 207050751823839329
+    - rid: 207050751823839351
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: b99fc503-537e-c7e6-3090-ca382a843c7f
@@ -7105,8 +7105,8 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: -858286480016472666}
-    - rid: 207050751823839330
+        m_AssetTree: {fileID: 3728552339483530217}
+    - rid: 207050751823839352
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 03fd799d-f800-55f2-b654-69f15dd3582e
@@ -7119,7 +7119,7 @@ MonoBehaviour:
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
-        m_AssetTree: {fileID: -1420170681144953084}
+        m_AssetTree: {fileID: -7888284734310015321}
 --- !u!114 &9122084121426555973
 MonoBehaviour:
   m_ObjectHideFlags: 0

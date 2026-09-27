@@ -1,9 +1,11 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -45,13 +47,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 source.MotionRootBoneId);
             CharacterAnimationClipContentIdentity motionReferenceIdentity =
                 CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(motionReference.MotionReference);
+            CharacterAnimationClipContentIdentity calibrationPreviewIdentity =
+                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(source.CalibrationPreviewClip);
+            StableHash samplingHash = StableHash.Compute(
+                "animation-foot-analysis-source-sampling/v1",
+                source.MotionRootBoneId.Value,
+                calibrationPreviewIdentity.AssetGuid,
+                calibrationPreviewIdentity.AnalysisInputHash,
+                BitConverter.SingleToInt32Bits(source.CalibrationPreviewTimeSeconds)
+                    .ToString("x8", CultureInfo.InvariantCulture));
             return new AnimationFootAnalysisArtifactIdentity(
                 clipIdentity.AssetGuid,
                 clipIdentity.AnalysisInputHash,
                 motionReferenceIdentity.AssetGuid,
                 motionReferenceIdentity.AnalysisInputHash,
                 AssetDatabase.AssetPathToGUID(sourcePath),
-                AssetDatabase.GetAssetDependencyHash(sourcePath).ToString(),
+                samplingHash.Value,
                 source.AnalysisSourceId.Value,
                 source.AnalysisVersion,
                 AssetDatabase.AssetPathToGUID(rigDefinitionPath),

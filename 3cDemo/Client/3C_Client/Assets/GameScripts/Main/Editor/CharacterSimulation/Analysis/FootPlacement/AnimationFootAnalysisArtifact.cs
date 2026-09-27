@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string motionReferenceClipAssetGuid,
             string motionReferenceClipAnalysisInputHash,
             string analysisSourceAssetGuid,
-            string analysisSourceDependencyHash,
+            string analysisSourceSamplingHash,
             string analysisSourceId,
             int analysisVersion,
             string rigAssetGuid,
@@ -122,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             MotionReferenceClipAssetGuid = RequireGuid(motionReferenceClipAssetGuid, nameof(motionReferenceClipAssetGuid));
             MotionReferenceClipAnalysisInputHash = RequireHash(motionReferenceClipAnalysisInputHash, nameof(motionReferenceClipAnalysisInputHash));
             AnalysisSourceAssetGuid = RequireGuid(analysisSourceAssetGuid, nameof(analysisSourceAssetGuid));
-            AnalysisSourceDependencyHash = RequireHash(analysisSourceDependencyHash, nameof(analysisSourceDependencyHash));
+            AnalysisSourceSamplingHash = RequireHash(analysisSourceSamplingHash, nameof(analysisSourceSamplingHash));
             AnalysisSourceId = RequireText(analysisSourceId, nameof(analysisSourceId));
             if (analysisVersion <= 0)
                 throw new ArgumentOutOfRangeException(nameof(analysisVersion));
@@ -164,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string MotionReferenceClipAssetGuid { get; }
         public string MotionReferenceClipAnalysisInputHash { get; }
         public string AnalysisSourceAssetGuid { get; }
-        public string AnalysisSourceDependencyHash { get; }
+        public string AnalysisSourceSamplingHash { get; }
         public string AnalysisSourceId { get; }
         public int AnalysisVersion { get; }
         public string RigAssetGuid { get; }
@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string.Equals(MotionReferenceClipAssetGuid, other.MotionReferenceClipAssetGuid, StringComparison.Ordinal) &&
             string.Equals(MotionReferenceClipAnalysisInputHash, other.MotionReferenceClipAnalysisInputHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceAssetGuid, other.AnalysisSourceAssetGuid, StringComparison.Ordinal) &&
-            string.Equals(AnalysisSourceDependencyHash, other.AnalysisSourceDependencyHash, StringComparison.Ordinal) &&
+            string.Equals(AnalysisSourceSamplingHash, other.AnalysisSourceSamplingHash, StringComparison.Ordinal) &&
             string.Equals(AnalysisSourceId, other.AnalysisSourceId, StringComparison.Ordinal) &&
             AnalysisVersion == other.AnalysisVersion &&
             string.Equals(RigAssetGuid, other.RigAssetGuid, StringComparison.Ordinal) &&
@@ -235,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 "animation-foot-analysis-artifact/v23", ClipAssetGuid, ClipAnalysisInputHash,
                 MotionReferenceClipAssetGuid, MotionReferenceClipAnalysisInputHash,
-                AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
+                AnalysisSourceAssetGuid, AnalysisSourceSamplingHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,
                 SamplingRigAssetGuid, SamplingRigDependencyHash, CalibrationAssetGuid, CalibrationId,

@@ -104,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteString(writer, value.MotionReferenceClipAssetGuid);
             WriteString(writer, value.MotionReferenceClipAnalysisInputHash);
             WriteString(writer, value.AnalysisSourceAssetGuid);
-            WriteString(writer, value.AnalysisSourceDependencyHash);
+            WriteString(writer, value.AnalysisSourceSamplingHash);
             WriteString(writer, value.AnalysisSourceId);
             writer.Write(value.AnalysisVersion);
             WriteString(writer, value.RigAssetGuid);

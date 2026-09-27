@@ -1347,7 +1347,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!ReadEntry(i).IsSourcePose)
                     outputWeight += m_EntryScalarWeights[i];
             }
-            RequireNormalized(outputWeight);
+            outputWeight = ResolveAccumulatedWeight(outputWeight);
 
             bool hasDenseOutput = false;
             for (int boneIndex = 0; boneIndex < m_Rig.PoseBoneCount; boneIndex++)
@@ -1374,7 +1374,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 }
                 float storedWeight = usesStored ? residual * storedBoneWeights[boneIndex] : 0f;
                 boneOutputWeight += storedWeight;
-                RequireNormalized(boneOutputWeight);
+                boneOutputWeight = ResolveAccumulatedWeight(boneOutputWeight, boneIndex);
                 hasDenseOutput |= boneOutputWeight > 0f;
                 m_PlannedStoredMaximumWeight = Mathf.Max(m_PlannedStoredMaximumWeight, storedWeight);
             }
@@ -1533,8 +1533,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 float weight = 0f;
                 for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
                     weight += output.DenseContributionWeights[contributionIndex * m_PendingLastBoneOutputWeights.Length + boneIndex];
-                RequireNormalized(weight);
-                m_PendingLastBoneOutputWeights[boneIndex] = weight;
+                m_PendingLastBoneOutputWeights[boneIndex] = ResolveAccumulatedWeight(weight, boneIndex);
             }
             m_LastOutputWeight = outputWeight;
         }
@@ -1778,10 +1777,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float residual = 1f;
             for (int i = m_EntryCount - 1; i >= 0; i--)
                 residual -= m_EntryBoneWeights[i * m_Rig.PoseBoneCount + boneIndex];
-            if (residual < 0f && residual > -0.0001f)
-                residual = 0f;
-            RequireNormalized(residual);
-            return residual;
+            return ResolveAccumulatedWeight(residual, boneIndex);
         }
 
         ulong RequireStoredContributionIdentity()
@@ -2151,6 +2147,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (m_LastContributionContinuityIdentity == ulong.MaxValue)
                 throw new InvalidOperationException("Animation contribution continuity identity overflowed.");
             return ++m_LastContributionContinuityIdentity;
+        }
+
+        static float ResolveAccumulatedWeight(float value, int boneIndex = -1)
+        {
+            if (!AnimationSlotBlendJobMath.TryResolveAccumulatedWeight(value, out float weight))
+                throw new InvalidOperationException($"Animation Blend accumulated weight exceeds its rounding tolerance: value={value:R}, boneIndex={boneIndex}.");
+            return weight;
         }
 
         static void RequireNormalized(float value)

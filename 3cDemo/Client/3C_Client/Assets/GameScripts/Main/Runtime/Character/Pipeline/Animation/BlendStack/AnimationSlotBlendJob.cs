@@ -11,8 +11,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
     [BurstCompile]
     internal struct AnimationSlotBlendJob : IAnimationJob
     {
-        const float WeightTolerance = 0.0001f;
-
         [ReadOnly]
         readonly AnimationSlotBlendFramePlan m_FramePlan;
 
@@ -474,7 +472,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_ScratchLinearVelocitySums[boneIndex] = linearVelocitySum;
                 m_ScratchAngularVelocitySums[boneIndex] = angularVelocitySum;
                 m_ScratchScaleVelocitySums[boneIndex] = scaleVelocitySum;
-                m_ScratchPoseWeightSums[boneIndex] = poseWeight;
+                if (!TryResolveAccumulatedWeight(poseWeight, out float outputWeight))
+                    return AnimationPoseNativeInvalidReason.SlotContributionInvalid;
+                m_ScratchPoseWeightSums[boneIndex] = outputWeight;
                 if (poseWeight <= 0f)
                 {
                     if (!TryGetCrossFadeCarrierBone(

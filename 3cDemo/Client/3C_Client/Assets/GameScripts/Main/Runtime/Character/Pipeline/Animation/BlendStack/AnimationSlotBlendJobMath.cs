@@ -5,7 +5,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
     internal static class AnimationSlotBlendJobMath
     {
+        internal const float WeightTolerance = 0.0001f;
         const float QuaternionTolerance = 0.0000001f;
+
+        internal static bool TryResolveAccumulatedWeight(float value, out float weight)
+        {
+            weight = 0f;
+            if (!float.IsFinite(value) || value < -WeightTolerance || value > 1f + WeightTolerance)
+                return false;
+            weight = Mathf.Clamp01(value);
+            return true;
+        }
 
         internal static bool TryResolveWeightedPose(
             Vector3 positionSum,

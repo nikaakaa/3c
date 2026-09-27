@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
     internal sealed class AnimationSlotBlendPoseWorkspace : IDisposable
     {
-        const float WeightTolerance = 0.0001f;
+        const float WeightTolerance = AnimationSlotBlendJobMath.WeightTolerance;
 
         readonly int m_PhysicalPlayerIndex;
         readonly int m_MaxActiveSourceEntries;

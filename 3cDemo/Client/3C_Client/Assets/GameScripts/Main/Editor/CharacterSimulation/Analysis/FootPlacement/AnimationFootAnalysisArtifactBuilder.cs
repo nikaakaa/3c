@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return AnimationFootAnalysisArtifactIdentityBuilder.Build(
                 clip,
                 source,
-                contactSchedule ?? AnimationFootContactSchedule.Inferred);
+                contactSchedule ?? source.RequireContactSchedule(clip));
         }
 
         public static AnimationFootAnalysisArtifactInspection Inspect(
@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(clip));
             if (!source)
                 throw new ArgumentNullException(nameof(source));
-            AnimationFootContactSchedule schedule = contactSchedule ?? AnimationFootContactSchedule.Inferred;
+            AnimationFootContactSchedule schedule = contactSchedule ?? source.RequireContactSchedule(clip);
             AnimationFootAnalysisArtifactIdentity identity = GetExpectedIdentity(clip, source, schedule);
             CharacterFootMotionReference motionReference = source.RequireMotionReference(clip);
             AnimationFootAnalysisBuildResult result = CharacterFootPlacementAnimationAnalyzer.Analyze(

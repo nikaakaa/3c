@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public float DurationSeconds;
         public float GroundReferenceHeight;
         public bool Loop;
+        public bool NoContactLoop;
         public Vector3[] RootPositions;
         public Quaternion[] RootRotations;
         public CharacterFootPlacementAnalysisThresholds Thresholds;
@@ -206,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 supportExtensionRatioMax = Mathf.Max(supportExtensionRatioMax, supportExtensionRatio);
             }
             AnimationFootMotionEvent[] events = BuildEvents(input, source, contact);
-            if (MovingLoop(input) &&
+            if (MovingLoop(input) && !input.NoContactLoop &&
                 !events.Any(value => value.Kind == AnimationFootMotionEventKind.Landing))
             {
                 throw new InvalidOperationException(
@@ -263,7 +264,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             FootWork left,
             FootWork right)
         {
-            if (!MovingLoop(input))
+            if (!MovingLoop(input) || input.NoContactLoop)
                 return;
             int activeCount = left.Contact.Length - 1;
             int shift = ResolveOpposingPhaseShift(
@@ -702,7 +703,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int unavailable = 0;
             if (landings.Length == 0)
             {
-                if (MovingLoop(input))
+                if (MovingLoop(input) && !input.NoContactLoop)
                     throw new InvalidOperationException("Cyclic Foot Motion data has no Landing Event.");
                 diagnostic = string.Empty;
                 diagnostics = new[]
@@ -794,7 +795,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             ValidateFoot(input, left, "Left");
             ValidateFoot(input, right, "Right");
-            if (input.Loop)
+            if (input.Loop && !input.NoContactLoop)
             {
                 if (!left.Support.Any(value => value > 0.0001f) ||
                     !right.Support.Any(value => value > 0.0001f))
@@ -859,7 +860,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"{side} Foot Motion Height Above Path mismatch at sample {i}: " +
                         $"Expected={expectedAbovePath:R}; Actual={step.HeightAbovePath:R}.");
             }
-            if (!MovingLoop(input))
+            if (!MovingLoop(input) || input.NoContactLoop)
                 return;
             if (!foot.Contact.Any(value => value >= 0.5f))
                 throw new InvalidOperationException($"{side} Cyclic Foot Motion Contact is always zero.");

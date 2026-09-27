@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentNullException(nameof(clip));
             if (!source)
                 throw new ArgumentNullException(nameof(source));
-            AnimationFootContactSchedule resolvedSchedule = schedule ?? AnimationFootContactSchedule.Inferred;
+            AnimationFootContactSchedule resolvedSchedule = schedule ?? source.RequireContactSchedule(clip);
             AnimationFootAnalysisArtifactIdentity expected =
                 AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(clip, source, resolvedSchedule);
             AnimationFootAnalysisArtifactInspection inspection =

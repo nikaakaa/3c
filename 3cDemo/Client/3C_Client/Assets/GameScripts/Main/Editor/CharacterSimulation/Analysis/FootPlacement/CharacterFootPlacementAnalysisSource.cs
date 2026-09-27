@@ -13,6 +13,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         [SerializeField] string m_TargetClipAssetGuid = string.Empty;
         [SerializeField] string m_MotionReferenceClipAssetGuid = string.Empty;
+        [SerializeField] bool m_HasAuthoredContactSchedule;
+        [SerializeField] float[] m_LeftLandingPhases = Array.Empty<float>();
+        [SerializeField] float[] m_RightLandingPhases = Array.Empty<float>();
 
         public string TargetClipAssetGuid => m_TargetClipAssetGuid ?? string.Empty;
         public string MotionReferenceClipAssetGuid => m_MotionReferenceClipAssetGuid ?? string.Empty;
@@ -35,6 +38,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public AnimationClip RequireTargetClip() => RequireClip(TargetClipAssetGuid, "Target");
         public AnimationClip RequireMotionReferenceClip() => RequireClip(MotionReferenceClipAssetGuid, "Motion Reference");
 
+        public void ConfigureContactSchedule(AnimationFootContactSchedule schedule)
+        {
+            if (schedule == null)
+                throw new ArgumentNullException(nameof(schedule));
+            m_HasAuthoredContactSchedule = !schedule.InferLandingEvents;
+            m_LeftLandingPhases = schedule.LeftLandingPhases.ToArray();
+            m_RightLandingPhases = schedule.RightLandingPhases.ToArray();
+        }
+
+        public AnimationFootContactSchedule ContactSchedule => m_HasAuthoredContactSchedule
+            ? AnimationFootContactSchedule.Authored(m_LeftLandingPhases, m_RightLandingPhases)
+            : AnimationFootContactSchedule.Inferred;
+
         public void RequireValid()
         {
             if (!CharacterFootPlacementAnalysisSource.IsAssetGuid(TargetClipAssetGuid) ||
@@ -43,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException("Foot Motion reference binding identity or usage is invalid.");
             _ = RequireTargetClip();
             _ = RequireMotionReferenceClip();
+            _ = ContactSchedule;
         }
 
         static AnimationClip RequireClip(string guid, string role)
@@ -248,6 +265,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new CharacterFootMotionReference(
                 binding.RequireTargetClip(),
                 binding.RequireMotionReferenceClip());
+        }
+
+        public AnimationFootContactSchedule RequireContactSchedule(AnimationClip target)
+        {
+            if (!target)
+                throw new ArgumentNullException(nameof(target));
+            string targetGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(target));
+            CharacterFootMotionReferenceBinding binding = m_MotionReferences?.SingleOrDefault(value =>
+                value != null && string.Equals(value.TargetClipAssetGuid, targetGuid, StringComparison.Ordinal));
+            if (binding == null)
+                throw new InvalidOperationException($"Foot Analysis Target '{target.name}' has no Contact Schedule owner.");
+            return binding.ContactSchedule;
         }
 
         public void RequireValid()

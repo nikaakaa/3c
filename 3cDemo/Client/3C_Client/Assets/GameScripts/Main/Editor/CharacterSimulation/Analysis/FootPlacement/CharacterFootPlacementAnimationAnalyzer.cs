@@ -502,8 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 clip.isLooping,
                 step);
             if (!contactSchedule.InferLandingEvents &&
-                (clip.isLooping ||
-                 leftLandingSamples.Count > 0 && rightLandingSamples.Count > 0))
+                (leftLandingSamples.Count > 0 || rightLandingSamples.Count > 0))
             {
                 ValidateAuthoredLandingPair(
                     leftLandingSamples,
@@ -534,7 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 in motionReference,
                 sourceDuration,
                 left.SolePositions,
-                right.SolePositions);
+                right.SolePositions,
+                contactSchedule);
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootPhaseValidationDescriptor(
@@ -557,7 +557,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             in CharacterFootMotionReference motionReference,
             float sourceDuration,
             Vector3[] targetLeftRootLocalSolePositions,
-            Vector3[] targetRightRootLocalSolePositions)
+            Vector3[] targetRightRootLocalSolePositions,
+            AnimationFootContactSchedule contactSchedule)
         {
             AnimationClip motionClip = motionReference.MotionReference;
             AnimationClip samplingClip = CreateMotionSamplingClip(motionClip);
@@ -594,6 +595,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         DurationSeconds = sourceDuration,
                         GroundReferenceHeight = samplingContext.GroundReferenceHeight,
                         Loop = motionClip.isLooping,
+                        NoContactLoop = motionClip.isLooping &&
+                            !contactSchedule.InferLandingEvents &&
+                            contactSchedule.LeftLandingPhases.Count == 0 &&
+                            contactSchedule.RightLandingPhases.Count == 0,
                         RootPositions = rootPositions,
                         RootRotations = rootRotations,
                         Thresholds = source.Thresholds,

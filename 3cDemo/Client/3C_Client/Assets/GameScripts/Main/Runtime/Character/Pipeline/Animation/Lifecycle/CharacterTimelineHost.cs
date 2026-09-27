@@ -2363,7 +2363,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 binding = candidate;
             }
             if (matched == null)
-                throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry.");
+                throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry. parent={active.Provenance.SourceInvocationPath};timeline={active.Provenance.SourceNodeAuthoringId};graph={graphId};revision={revision}");
             return matched.Evaluate(binding, m_PresentationFacts, m_GraphFrame.Generation, this);
         }
 

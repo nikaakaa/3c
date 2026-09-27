@@ -1,0 +1,78 @@
+{
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\replication-guide\\data\\variants\\shake-0.json",
+  "resources": [
+    {
+      "resource": "Corin_Attack_Branch_02_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamShake_E_02",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamShake_E_03",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_01_CamShake_A_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_02_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_04_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_04_CamShake_E_02",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamShake_E_02",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamShake_E_03",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Rush_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Rush_CamShake_E_02",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    },
+    {
+      "resource": "Corin_Attack_Rush_Enhance_CamShake_E_01",
+      "compared_numeric_fields": 18,
+      "mismatches": []
+    }
+  ],
+  "unverified_semantics": [
+    "ShakeCenterSpace maps null attach point to Camera",
+    "PlayStackingType maps raw 0 to Replace",
+    "ShakeType and property config consumers",
+    "DissipationMode and CustomCurveKey consumers",
+    "waveform, phase and rotational frequency coefficients",
+    "StandardConfigKey runtime participation"
+  ]
+}

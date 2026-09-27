@@ -11,6 +11,9 @@ using FixedSimulationModelTraceRecord = ThirdPersonSimulation.Fixed.SimulationMo
 using FixedSimulationPipelineTraceRecord = ThirdPersonSimulation.Fixed.SimulationPipelineTraceRecord;
 using FixedSimulationTraceRecord = ThirdPersonSimulation.Fixed.SimulationTraceRecord;
 using FixedSimulationWorldTraceRecord = ThirdPersonSimulation.Fixed.SimulationWorldTraceRecord;
+using AbilityStateValue = ThirdPersonSimulation.Fixed.AbilityStateValue;
+using GameplayFact = ThirdPersonSimulation.Fixed.GameplayFact;
+using GameplayFactKind = ThirdPersonSimulation.Fixed.GameplayFactKind;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
@@ -129,12 +132,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         public bool IsEnabled =>
-            (m_Context.Store.EffectiveChannels & (RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine)) != 0;
+            (m_Context.Store.EffectiveChannels & (RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine |
+                RuntimeTraceChannel.Blackboard | RuntimeTraceChannel.GameplayEffect | RuntimeTraceChannel.Values)) != 0;
 
         public bool IsControlCaptureRequested(ActorId actorId) =>
             (m_Context.Store.EffectiveChannels & (RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine)) != 0;
 
-        public bool IsValueCaptureRequested(ActorId actorId) => false;
+        public bool IsValueCaptureRequested(ActorId actorId) =>
+            (m_Context.Store.EffectiveChannels & RuntimeTraceChannel.Values) != 0;
 
         public void PublishBoundary(FixedSimulationBoundaryTraceRecord record) { }
         public void PublishPipeline(FixedSimulationPipelineTraceRecord record) { }
@@ -146,13 +151,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
-            if (result.TraceRecords.Count == 0)
-                return;
             m_Context.BeginLogicTick(result.Tick.Value);
+            PublishFacts(result.GameplayFacts);
             IReadOnlyList<FixedSimulationTraceRecord> records = result.TraceRecords;
             for (int i = 0; i < records.Count; i++)
             {
                 FixedSimulationTraceRecord record = records[i];
+                if (PublishObservation(in record))
+                    continue;
                 if (record.ActionInstanceId == 0 || !record.Header.Activation.Source.IsSkillOperation)
                     continue;
                 bool isNode = TryNodeKind(record.Code, out RuntimeTraceEventKind kind);
@@ -206,6 +212,140 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         ? record.ControlFlowSelected ? RuntimeTraceEventKind.StateTransitionSelected : RuntimeTraceEventKind.StateTransitionEvaluated
                         : record.ControlFlowSelected ? RuntimeTraceEventKind.EdgeSelected : RuntimeTraceEventKind.EdgeEvaluated,
                     edge, instance, payload);
+            }
+        }
+
+        bool PublishObservation(in FixedSimulationTraceRecord record)
+        {
+            RuntimeTraceChannel channel;
+            RuntimeTraceEventKind kind;
+            if (record.ValueTrace != null)
+            {
+                channel = RuntimeTraceChannel.Values;
+                kind = RuntimeTraceEventKind.ValueSampled;
+            }
+            else if (record.Code == "value_sampling_limit")
+            {
+                channel = RuntimeTraceChannel.Values;
+                kind = RuntimeTraceEventKind.ValueSamplingLimited;
+            }
+            else if (record.Code == "action_result")
+            {
+                channel = RuntimeTraceChannel.StateMachine;
+                kind = RuntimeTraceEventKind.ActionResultSubmitted;
+            }
+            else if (record.Code == "blackboard_action_window_projected")
+            {
+                channel = RuntimeTraceChannel.Blackboard;
+                kind = RuntimeTraceEventKind.BlackboardProjected;
+            }
+            else if (record.Code == "action_window_active" || record.Code == "action_window_inactive")
+            {
+                channel = RuntimeTraceChannel.Blackboard;
+                kind = RuntimeTraceEventKind.ActionWindowSampled;
+            }
+            else
+                return false;
+            if (!m_Context.ShouldPublish(channel, kind))
+                return true;
+            RuntimeSourceElementHandle source = RuntimeSourceElementHandle.Invalid;
+            if (record.Header.Activation.Source.IsSkillOperation && m_Abilities.TryGetValue(record.SkillId, out var ability) &&
+                ability.TryGetOperation(record.Header.Activation.Source.Operation.Value, out var operation))
+                source = operation.Handle;
+            var payload = new RuntimeTracePayload
+            {
+                Name = record.ActionId, Status = record.Code, Detail = record.Detail,
+                SkillId = record.SkillId, ActionInstanceId = record.ActionInstanceId,
+                InputSequence = record.InputSequence, ActivationGeneration = record.Header.Activation.Generation,
+                SkillExecutionGeneration = record.SkillExecutionGeneration,
+                GraphInvocationGeneration = record.GraphInvocationGeneration,
+                ParentInvocationGeneration = record.ParentInvocationGeneration,
+                Flag = record.Code == "action_window_active", ActionResult = (int)record.ActionResult,
+                CallSiteId = record.Header.Activation.Source.ExecutionPath
+            };
+            if (record.ValueTrace != null)
+            {
+                payload.Name = record.ValueTrace.PortId;
+                payload.Status = record.ValueTrace.Direction == ProgramValuePortDirection.Input ? "Input" : "Output";
+                payload.Value = CaptureValue(record.ValueTrace.Value);
+            }
+            m_Context.Publish(channel, RuntimeTraceDomain.Logic, kind, source,
+                RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId), payload);
+            return true;
+        }
+
+        static DebugValueSnapshot CaptureValue(AbilityStateValue value) => value.Kind switch
+        {
+            ProgramStateValueKind.Boolean => new DebugValueSnapshot(DebugValueKind.Boolean, value.Boolean, 0, 0, 0, "Boolean", default),
+            ProgramStateValueKind.Int32 => new DebugValueSnapshot(DebugValueKind.Int64, false, value.Int32, 0, 0, "Int32", default),
+            ProgramStateValueKind.UInt64 => new DebugValueSnapshot(DebugValueKind.UInt64, false, 0, value.UInt64, 0, "UInt64", default),
+            ProgramStateValueKind.Scalar => new DebugValueSnapshot(DebugValueKind.Double, false, value.Scalar.Raw, 0, value.Scalar.ToDouble(), "FixedQ32.32", default),
+            ProgramStateValueKind.Yaw => new DebugValueSnapshot(DebugValueKind.Double, false, value.Yaw.Degrees.Raw, 0, value.Yaw.Degrees.ToDouble(), "FixedYawDegrees", default),
+            ProgramStateValueKind.Identity => new DebugValueSnapshot(DebugValueKind.String, false, 0, 0, 0, value.Identity, default),
+            ProgramStateValueKind.Vector2 => new DebugValueSnapshot(DebugValueKind.Vector2, false, 0, 0, 0, "FixedVector2", new UnityEngine.Vector4((float)value.Vector2.X.ToDouble(), (float)value.Vector2.Y.ToDouble(), 0, 0)),
+            ProgramStateValueKind.Vector3 => new DebugValueSnapshot(DebugValueKind.Vector3, false, 0, 0, 0, "FixedVector3", new UnityEngine.Vector4((float)value.Vector3.X.ToDouble(), (float)value.Vector3.Y.ToDouble(), (float)value.Vector3.Z.ToDouble(), 0)),
+            _ => new DebugValueSnapshot(DebugValueKind.TypeOnly, false, (int)value.Kind, 0, 0, "ProgramStateValueKind", default)
+        };
+
+        void PublishFacts(IReadOnlyList<GameplayFact> facts)
+        {
+            for (int index = 0; index < facts.Count; index++)
+            {
+                GameplayFact fact = facts[index];
+                RuntimeTraceChannel channel;
+                RuntimeTraceEventKind kind;
+                var payload = new RuntimeTracePayload { Name = fact.SubjectId, Status = fact.StateId };
+                switch (fact.Kind)
+                {
+                    case GameplayFactKind.Action:
+                        channel = RuntimeTraceChannel.StateMachine;
+                        kind = RuntimeTraceEventKind.ActionLifecycleTransitioned;
+                        payload.Name = fact.Action.ActionId;
+                        payload.SkillId = fact.Action.SkillId.Value;
+                        payload.ActionInstanceId = fact.Action.ActionInstanceId;
+                        payload.InputSequence = fact.Action.InputSequence;
+                        payload.Cause = fact.Action.Reason;
+                        payload.ActionPhase = (int)fact.Action.Phase;
+                        payload.ActionState = (int)fact.Action.State;
+                        payload.LifecycleOperation = (int)fact.Action.TransitionType;
+                        break;
+                    case GameplayFactKind.ActionWindow:
+                        channel = RuntimeTraceChannel.Blackboard;
+                        kind = RuntimeTraceEventKind.ActionWindowSampled;
+                        payload.Name = fact.ActionWindow.WindowId;
+                        payload.Status = fact.ActionWindow.WindowType;
+                        payload.OwnerId = fact.ActionWindow.ActionId;
+                        payload.ActionInstanceId = fact.ActionWindow.ActionInstanceId;
+                        payload.StartTick = fact.ActionWindow.StartTick;
+                        payload.EndTick = fact.ActionWindow.EndTick;
+                        payload.Revision = fact.ActionWindow.Digest;
+                        payload.Flag = true;
+                        break;
+                    case GameplayFactKind.Effect:
+                        channel = RuntimeTraceChannel.GameplayEffect;
+                        kind = RuntimeTraceEventKind.GameplayEffectLifecycle;
+                        payload.Name = fact.Effect.EffectId;
+                        payload.ActivationGeneration = fact.Effect.InstanceId;
+                        payload.LifecycleOperation = (int)fact.Effect.Operation;
+                        payload.StackCount = fact.Effect.StackCount;
+                        payload.StartTick = fact.Effect.StartTick;
+                        payload.EndTick = fact.Effect.EndTick;
+                        payload.Revision = fact.Effect.LifecycleRevision;
+                        break;
+                    case GameplayFactKind.Attribute:
+                        channel = RuntimeTraceChannel.GameplayEffect;
+                        kind = RuntimeTraceEventKind.GameplayAttributeChanged;
+                        payload.Name = fact.Attribute.AttributeId;
+                        payload.Cause = fact.Attribute.CauseEffectId;
+                        payload.Value = CaptureValue(AbilityStateValue.FromScalar(fact.Attribute.CurrentValue));
+                        payload.Revision = fact.Attribute.ValueRevision;
+                        break;
+                    default:
+                        continue;
+                }
+                if (m_Context.ShouldPublish(channel, kind))
+                    m_Context.Publish(channel, RuntimeTraceDomain.Logic, kind, RuntimeSourceElementHandle.Invalid,
+                        RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId), payload);
             }
         }
 

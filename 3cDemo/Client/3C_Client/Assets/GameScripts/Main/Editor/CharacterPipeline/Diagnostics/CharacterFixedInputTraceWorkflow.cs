@@ -104,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string PendingTraceIdKey = "ThirdPerson.CharacterInputTrace.PendingTraceId.v2";
         const string PendingDeadlineKey = "ThirdPerson.CharacterInputTrace.PendingDeadline.v1";
         const string PendingLaunchPhaseKey = "ThirdPerson.CharacterInputTrace.PendingLaunchPhase.v1";
-        const double PendingSeconds = 60d;
+        const double PendingSeconds = 600d;
         const float PositionTolerance = 0.1f;
         const float YawTolerance = 2f;
 
@@ -117,6 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static bool s_ReplayOwnsSampling;
+        static bool s_RecordingOwnsSampling;
         static bool s_ReplayWaitingForSampling;
         static bool s_ReplayFinalizing;
         static bool s_ReplayOwnsTickDrive;
@@ -165,6 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string LastStatus => s_LastStatus;
         public static string LastFailure => s_LastFailure;
         public static string LastReplayProofPath => s_LastReplayProofPath;
+        public static string LastRuntimeTraceSummaryPath => s_LastRuntimeTraceEvidence?.summary_path ?? string.Empty;
         public static string LastReplayComparison => s_LastReplayComparison;
         public static string LastPresentationSchedulePath =>
             s_LastPresentationSchedulePath;
@@ -175,6 +177,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void StartRecording()
         {
             RequireAvailable();
+            if (!CharacterGameplayDiagnosticCapture.IsAvailable)
+                throw new InvalidOperationException("Input recording requires Foot and Presentation diagnostic sampling capabilities.");
             FixedCharacterInputTraceModule.PrepareRecording(
                 new ActorId(PlayerActorId));
             s_LastFailure = string.Empty;
@@ -198,6 +202,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string path = SaveDocument(document);
             s_LastTracePath = path;
             s_LastTraceId = trace.TraceId;
+            if (s_RecordingOwnsSampling)
+            {
+                CharacterGameplayDiagnosticCapture.StopAndSave();
+                s_RecordingOwnsSampling = false;
+            }
+            if (s_RuntimeTraceCapture != null)
+            {
+                var capture = s_RuntimeTraceCapture;
+                s_RuntimeTraceCapture = null;
+                using (capture)
+                {
+                    capture.BindInputPath(path);
+                    s_LastRuntimeTraceEvidence = capture.Complete();
+                }
+            }
             s_LastStatus = $"Saved {trace.Frames.Count} canonical Fixed input frames.";
             Debug.Log($"Canonical Fixed input trace saved. Trace={trace.TraceId}, Frames={trace.Frames.Count}, Path={path}");
             return path;
@@ -380,10 +399,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequirePoseMatchesBody(pose, initialBody);
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
+            CharacterInputStartupCapture.Mark("actor-session-ready");
             host.PresentationRuntime.AdvancePoseResourcePreparation();
             if (!host.PresentationRuntime.IsPoseResourceReady)
                 return;
             CaptureRecordedCameraHeading(host);
+            CharacterInputStartupCapture.Mark("pose-resources-ready");
+            CharacterFootDiagnosticSampling.SelectSampler(CharacterFootDiagnosticSampling.FullSamplerId);
+            CharacterGameplayDiagnosticCapture.StartManual();
+            s_RecordingOwnsSampling = true;
+            string traceId = FixedCharacterInputTraceModule.Status.TraceId;
+            CharacterInputStartupCapture.BindTrace(traceId);
+            s_RuntimeTraceCapture = CharacterFixedInputRuntimeTraceCapture.Start(host, traceId, "record", string.Empty);
+            s_RuntimeTraceCapture.BindSampling();
+            CharacterInputStartupCapture.Mark("capture-ready");
             FixedCharacterInputTraceModule.StartRecording();
             ClearPending();
             EditorApplication.isPaused = false;
@@ -431,10 +460,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     return;
                 }
+                CharacterInputStartupCapture.Mark("actor-session-ready");
                 host.PresentationRuntime.AdvancePoseResourcePreparation();
                 if (!host.PresentationRuntime.IsPoseResourceReady)
                     return;
                 RequirePoseMatchesBody(current, initialBody);
+                CharacterInputStartupCapture.Mark("pose-resources-ready");
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
                 ApplyRecordedCameraHeading(document, host);
@@ -442,7 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     operation == DiagnosticReplayOperation)
                 {
                     s_RuntimeTraceCapture =
-                        CharacterFixedInputRuntimeTraceCapture.Start(host);
+                        CharacterFixedInputRuntimeTraceCapture.Start(host, document.trace_id, operation, ResolveTracePath(document.trace_id));
                 }
                 ResetPendingDeadline();
                 if (captureFoot)
@@ -454,6 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                     CharacterGameplayDiagnosticCapture.Start(
                         trace.Frames.Count);
+                    s_RuntimeTraceCapture?.BindSampling();
                     s_ReplayOwnsSampling = true;
                     s_ReplayWaitingForSampling = true;
                 }
@@ -462,6 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? $"Current canonical start body registered. Waiting for Foot diagnostics before replaying {trace.Frames.Count} Fixed input frames."
                     : $"Current canonical start body registered. Replaying {trace.Frames.Count} Fixed input frames.";
             }
+            CharacterInputStartupCapture.Mark("capture-ready");
             if (captureFoot &&
                 !CharacterGameplayDiagnosticCapture.IsCapturing)
             {
@@ -1385,7 +1418,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ReplayProofDocument document =
                     JsonConvert.DeserializeObject<ReplayProofDocument>(
                         File.ReadAllText(path, Encoding.UTF8));
-                return document?.presentation_trace?.succeeded == true;
+                return document?.presentation_trace?.succeeded == true &&
+                    string.Equals(document.presentation_trace.schema, CharacterFixedInputRuntimeTraceCapture.Schema, StringComparison.Ordinal);
             }
             catch
             {
@@ -1493,6 +1527,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             s_LastFailure = exception.Message;
             s_LastStatus = $"Canonical Fixed input trace failed: {exception.Message}";
+            CharacterInputStartupCapture.Fail(exception.ToString());
             ClearPending();
             s_ReplayWaitingForSampling = false;
             s_PendingReplayDocument = null;
@@ -1503,10 +1538,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             StopPresentationScheduleRun();
             CloseReplaySamplingWindow();
             ReleaseReplayTickDrive();
-            if (s_ReplayOwnsSampling)
+            if (s_ReplayOwnsSampling || s_RecordingOwnsSampling)
             {
                 CharacterGameplayDiagnosticCapture.StopAndSave();
             }
+            s_RecordingOwnsSampling = false;
             ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
             EditorApplication.isPaused = false;
@@ -1515,9 +1551,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ClearReplayOwnership()
         {
-            s_RuntimeTraceCapture?.Dispose();
-            s_RuntimeTraceCapture = null;
-            s_LastRuntimeTraceEvidence = null;
+            if (s_RuntimeTraceCapture != null)
+            {
+                var capture = s_RuntimeTraceCapture;
+                s_RuntimeTraceCapture = null;
+                using (capture)
+                    s_LastRuntimeTraceEvidence = capture.Abort(s_LastFailure);
+            }
             s_ReplayOwnsSampling = false;
             s_ReplayWaitingForSampling = false;
             s_ReplayFinalizing = false;
@@ -1948,6 +1988,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ArmPending(string operation, string traceId)
         {
+            CharacterInputStartupCapture.Begin(operation, traceId);
             SessionState.SetString(PendingOperationKey, operation);
             SessionState.SetString(PendingTraceIdKey, traceId ?? string.Empty);
             WritePendingLaunchPhase(
@@ -2063,8 +2104,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return phase;
         }
 
-        static void WritePendingLaunchPhase(PendingLaunchPhase phase) =>
+        static void WritePendingLaunchPhase(PendingLaunchPhase phase)
+        {
             SessionState.SetInt(PendingLaunchPhaseKey, (int)phase);
+            CharacterInputStartupCapture.Mark(phase.ToString());
+        }
 
         static void ResetPendingDeadline() => SessionState.SetString(
             PendingDeadlineKey,
@@ -2089,6 +2133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void AbortPendingInitialization(Exception exception)
         {
+            CharacterInputStartupCapture.Fail(exception.ToString());
             s_LastFailure = exception.Message;
             s_LastStatus =
                 $"Canonical Fixed input pending operation was aborted: {exception.Message}";

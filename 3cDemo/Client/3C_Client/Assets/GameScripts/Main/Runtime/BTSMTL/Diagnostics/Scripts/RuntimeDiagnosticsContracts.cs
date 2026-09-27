@@ -467,7 +467,7 @@ namespace BTSMTL.Diagnostics
 
     public readonly struct DebugValueSnapshot
     {
-        DebugValueSnapshot(DebugValueKind kind, bool boolean, long signed, ulong unsigned, double number, string text, Vector4 vector)
+        public DebugValueSnapshot(DebugValueKind kind, bool boolean, long signed, ulong unsigned, double number, string text, Vector4 vector)
         {
             Kind = kind;
             Boolean = boolean;
@@ -646,6 +646,14 @@ namespace BTSMTL.Diagnostics
         public ulong SkillExecutionGeneration;
         public ulong GraphInvocationGeneration;
         public ulong ParentInvocationGeneration;
+        public ulong StartTick;
+        public ulong EndTick;
+        public ulong Revision;
+        public int ActionPhase;
+        public int ActionState;
+        public int ActionResult;
+        public int LifecycleOperation;
+        public int StackCount;
         public float Time;
         public float SecondaryTime;
         public float NormalizedTime;

@@ -358,6 +358,14 @@ namespace BTSMTL.Diagnostics
                    left.SkillExecutionGeneration == right.SkillExecutionGeneration &&
                    left.GraphInvocationGeneration == right.GraphInvocationGeneration &&
                    left.ParentInvocationGeneration == right.ParentInvocationGeneration &&
+                   left.StartTick == right.StartTick &&
+                   left.EndTick == right.EndTick &&
+                   left.Revision == right.Revision &&
+                   left.ActionPhase == right.ActionPhase &&
+                   left.ActionState == right.ActionState &&
+                   left.ActionResult == right.ActionResult &&
+                   left.LifecycleOperation == right.LifecycleOperation &&
+                   left.StackCount == right.StackCount &&
                    left.Time.Equals(right.Time) &&
                    left.SecondaryTime.Equals(right.SecondaryTime) &&
                    left.NormalizedTime.Equals(right.NormalizedTime) &&

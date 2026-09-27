@@ -193,6 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             .LastPresentationSchedulePath,
                     replay_proof_path =
                         CharacterFixedInputTraceWorkflow.LastReplayProofPath,
+                    runtime_trace_summary_path = CharacterFixedInputTraceWorkflow.LastRuntimeTraceSummaryPath,
                     replay_comparison =
                         CharacterFixedInputTraceWorkflow.LastReplayComparison,
                     foot_sampling_available = CharacterFootDiagnosticSampling.IsAvailable,

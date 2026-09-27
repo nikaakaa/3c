@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace TreeDesigner
 {
-    [TreeWindow("OpenSubTreeWindow")]
     public partial class SubTree : OneRootTree
     {
         [SerializeField]

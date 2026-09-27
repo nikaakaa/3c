@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorMagnitude")]
     [NodePath("Base/Value/Operate/VectorMagnitude")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorMagnitudeNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Vector", typeof(Vector2), typeof(Vector3))]

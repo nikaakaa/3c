@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorCombine")]
     [NodePath("Base/Value/Operate/VectorCombine")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class VectorCombineNode : ValueNode
     {
         public enum VectorType { Vector3, Vector2 }

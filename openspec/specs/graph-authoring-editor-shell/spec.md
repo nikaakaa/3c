@@ -6,23 +6,23 @@
 ## Requirements
 ### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
 
-唯一`GraphAuthoringEditorShell` MUST提供Toolbar、Navigator、Graph Canvas、Details与可折叠Bottom Dock五个通用区域。Shell MUST继续通过显式domain adapter取得各区域内容，不得按BTSMTL Node、Pose Node、AnimationChannel、Blackboard或Runtime Trace类型构造领域UI。Graph Canvas MUST继续承载唯一GraphView、selection、breadcrumb、搜索、clipboard和Undo链路；其它区域 MUST不保存第二份node、edge或selection集合。Behavior Designer不注册为该Shell的Graph domain。
+共享编辑集成 MUST 保留当前正式入口使用的 Toolbar、Navigator、原生 Graph Canvas、Details 与 Bottom Dock 业务能力，通过领域 adapter 装配内容，不按领域节点或 Runtime Trace 类型硬编码业务字段。画布与节点/端口交互 MUST 由所属领域的正式原生编辑器提供，不要求使用 GraphAuthoringCanvasView、旧 GraphView 或统一旧窗口类。其它区域 MUST 不保存第二份 node、edge 或可写 selection 模型。Behavior Designer 继续使用插件自己的入口；本次 MUST 不重新设计区域布局或另建总窗口。
 
 #### Scenario: 打开BTSMTL Gameplay Graph
 
-- **WHEN** 作者通过正式入口打开非Skill的BTSMTL Gameplay Graph
-- **THEN** Shell MUST在Navigator装配当前Graph Data Catalog、在Graph Canvas装配唯一`GraphAuthoringCanvasView`的BTSMTL domain adapter、在Details装配BTSMTL capability presenter
-- **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
+- **WHEN** 作者通过正式入口打开仍受支持的 Gameplay 图内容
+- **THEN** 领域入口 MUST 装配其正式画布、有效 Data Catalog 和 Details，不为复用区域合同创建旧 TreeDesigner 画布
+- **AND** 如果合法内容尚无正式编辑去向，旧入口删除切片 MUST 报告缺口，不创建兼容窗口或静默隐藏内容
 
 #### Scenario: 打开Character Pose Graph
 
-- **WHEN** 作者从显式CharacterAnimationPresentationProfile上下文打开Pose Graph
-- **THEN** 同一Shell MUST装配Pose domain Navigator、同一`GraphAuthoringCanvasView`、Details与Bottom Dock
-- **AND** MUST不创建BaseGraph、BaseNode或第二套GraphView
+- **WHEN** 作者从明确的动画表现上下文打开 Pose Graph
+- **THEN** 入口 MUST 使用 NodeCanvas/FlowCanvas 原生画布并保留 Pose Navigator、Details 与当前有效 Bottom Dock 能力
+- **AND** MUST 不实例化 GraphAuthoringCanvasView、BaseGraph 或第二套 GraphView
 
 ### Requirement: Workspace布局状态必须是editor-only且不污染authoring
 
-Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、搜索、分组与Preview面板布局 MUST只保存为window-local或Editor view-state。任何布局变化 MUST不修改Graph、Timeline、Profile、Definition、Rig、Program或Projection revision。窗口尺寸不足时区域 MAY按确定规则折叠，但 MUST不切换到旧Data/Inspector互斥写路径。
+Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、搜索、分组与Preview面板布局 MUST只保存为window-local或Editor view-state。任何布局变化 MUST不修改Graph、Timeline、Profile、Definition、Rig、技能执行内容或领域资源 revision。窗口尺寸不足时区域 MAY按确定规则折叠，但 MUST不切换到旧Data/Inspector互斥写路径。
 
 #### Scenario: 折叠Bottom Dock
 
@@ -38,7 +38,7 @@ Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、�
 
 ### Requirement: Shell必须保持重操作的显式触发边界
 
-Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Graph artifact、领域 binding、Foot Analysis或Motion Matching Database构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。Behavior Designer内容由插件自己的生命周期管理。
+Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Graph artifact、领域 binding、Foot Analysis或Motion Matching Database构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。Behavior Designer内容由插件自己的生命周期管理；Skill 编译、Pose 资源准备和 Timeline 播放也 MUST 由各自正式入口显式触发。
 
 #### Scenario: 修改Pose Graph连线
 
@@ -52,25 +52,15 @@ Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Ins
 - **THEN** Shell MUST只调用该domain唯一正式命令入口
 - **AND** MUST不复制compiler、发布事务或AssetDatabase保存逻辑
 
-### Requirement: 旧固定两栏布局必须原子迁移
-
-BTSMTL Gameplay Graph与Pose Graph正式窗口 MUST迁移到同一Workspace region合同。Behavior Designer窗口不并入该Shell。系统 MUST删除旧固定`left-panel Inspector + right-panel Graph`装配、旧Data/Inspector互斥页签和重复selection projection；不得保留旧UXML入口、布局兼容开关、Pose Graph专用Shell或临时reparent桥接。
-
-#### Scenario: 迁移后直接打开旧BTSMTL资产
-
-- **WHEN** 作者双击任意现有BaseTreeAsset
-- **THEN** 正式入口 MUST只打开新Workspace Shell
-- **AND** MUST不同时创建旧TreeWindow布局或第二Inspector
-
 ### Requirement: Graph Authoring Editor Shell必须只拥有通用编辑交互
 
-系统 MUST提供唯一`GraphAuthoringEditorShell`，只拥有窗口生命周期、GraphView画布、selection、搜索、创建菜单、clipboard、复制粘贴、Undo/Redo、breadcrumb、Inspector宿主、dirty owner协调和只读diagnostics overlay。Shell MUST通过显式domain adapter取得document、node catalog、port policy、mutation、Inspector和diagnostics，不得读取BTSMTL State、ConditionRule、Blackboard、Pose Bone Mask或动画业务字段。
+系统 MUST提供唯一共享编辑集成，只拥有窗口生命周期、当前领域原生 Graph 画布、selection、搜索、创建菜单、clipboard、复制粘贴、Undo/Redo、breadcrumb、Inspector宿主、dirty owner协调和只读diagnostics overlay。Shell MUST通过显式domain adapter取得document、node catalog、port policy、mutation、Inspector和diagnostics，不得拥有 BTSMTL、Skill、Pose 或 Timeline 的业务字段与运行规则。
 
 #### Scenario: 打开BTSMTL Graph
 
-- **WHEN** BaseTree asset通过正式入口打开
+- **WHEN** 当前正式原生技能图或技能 FSM 通过所属领域入口打开
 - **THEN** Shell MUST装配BTSMTL domain adapters并显示原有作者交互
-- **AND** Shell MUST不包含按BaseNode subtype硬编码的创建或连接规则
+- **AND** Shell MUST 从领域能力读取创建和连接规则，不按旧节点基类硬编码
 
 #### Scenario: 打开Pose Graph
 
@@ -80,7 +70,7 @@ BTSMTL Gameplay Graph与Pose Graph正式窗口 MUST迁移到同一Workspace regi
 
 ### Requirement: 每个Graph领域必须拥有独立数据与端口合同
 
-BTSMTL MUST继续唯一使用`BaseGraph`、`BaseNode`、`BaseEdge`、`PropertyPort`与`PropertyEdge`表达Gameplay authoring。Pose Graph MUST使用独立Pose Graph data、Pose Node、typed Pose Port与Pose Edge表达Presentation pose composition。Shell MUST不要求两个领域继承同一runtime node或共享序列化edge；跨领域拖线、复制节点或粘贴payload MUST被拒绝。
+Gameplay Graph MUST使用其当前正式原生图与端口合同表达 authoring。Pose Graph MUST使用独立Pose Graph data、Pose Node、typed Pose Port与Pose Edge表达Presentation pose composition。Shell MUST不要求两个领域继承同一 runtime node 或共享序列化 edge；跨领域拖线、复制节点或粘贴payload MUST被拒绝。
 
 #### Scenario: 从BTSMTL复制节点到Pose Graph
 
@@ -92,17 +82,17 @@ BTSMTL MUST继续唯一使用`BaseGraph`、`BaseNode`、`BaseEdge`、`PropertyPo
 
 - **WHEN** 作者连接两个Pose domain ports
 - **THEN** Shell MUST调用Pose port policy和mutation adapter
-- **AND** MUST不调用BTSMTL PropertyPort兼容规则
+- **AND** MUST不调用Gameplay Graph 端口规则
 
 ### Requirement: Graph Shell mutation必须落到真实Domain Owner
 
-所有create/delete/connect/disconnect/paste/rename/subgraph reference mutation MUST通过当前domain adapter作用于真实serialized owner，并进入同一Undo组。Shell、GraphView元素和diagnostics model MUST不保存第二份node/edge集合。Inline和shared document切换 MUST保持各自真实dirty owner。
+所有create/delete/connect/disconnect/paste/rename/subgraph reference mutation MUST通过当前domain adapter作用于真实serialized owner，并进入同一Undo组。Shell、画布元素和 diagnostics model MUST不保存第二份node/edge集合。私有和 shared document 切换 MUST保持各自真实dirty owner。
 
 #### Scenario: 删除Pose节点
 
 - **WHEN** 作者在Pose Graph画布删除一个节点及其edge
 - **THEN** Pose mutation adapter MUST原子修改Pose Graph asset或inline owner
-- **AND** GraphView MUST只从修改后的domain document重建显示
+- **AND** 原生画布 MUST 从修改后的真实 owner 更新显示，不维护旧 GraphView 数据副本
 
 #### Scenario: Undo shared subgraph切换
 
@@ -112,32 +102,32 @@ BTSMTL MUST继续唯一使用`BaseGraph`、`BaseNode`、`BaseEdge`、`PropertyPo
 
 ### Requirement: Graph Shell diagnostics必须只读且来自领域正式结果
 
-Shell MUST只通过domain diagnostics adapter显示编译、validation或runtime snapshot的只读source mapping。Shell MUST不自行运行Gameplay Interpreter、Pose Evaluator、curve evaluator或状态选择来重建diagnostics。没有合法runtime target或artifact时 MUST显示明确Unavailable/Stale，而不是使用authoring默认值。
+Shell MUST只通过领域 diagnostics adapter显示编译、validation或runtime snapshot的只读source mapping。Shell MUST不自行运行Gameplay、Pose、Timeline 运行器或状态选择来重建diagnostics。没有合法runtime target或artifact时 MUST显示明确Unavailable/Stale，而不是使用作者默认值。
 
 #### Scenario: Pose Runtime Live Debug
 
-- **WHEN** 当前Pose Graph有匹配ProjectionRevision的runtime snapshot
+- **WHEN** Pose owner 提供与作者图版本、所选角色实例和 ResetGeneration 匹配的已完成观察结果
 - **THEN** overlay MAY按PoseNodeId显示availability与contribution
-- **AND** 显示数据 MUST来自正式FinalAnimationPoseFrame/Trace
+- **AND** 显示数据 MUST 来自 Pose 正式已完成结果和 source mapping，不读取尚未接受的中间状态
 
 #### Scenario: Projection已Stale
 
-- **WHEN** Pose Graph修改后Projection尚未重建
-- **THEN** overlay MUST显示Stale并停止绑定旧node source map
-- **AND** MUST不在Editor内临时编译一份未发布runtime program冒充Live结果
+- **WHEN** 作者图版本、正式资源绑定或实例代次与观察结果不一致
+- **THEN** overlay MUST 显示 Stale 并停止绑定旧来源映射
+- **AND** MUST 等待领域正式绑定与新完成结果，不生成 Pose IR、隐藏编译程序或独立预览求值器
 
-### Requirement: 旧BTSMTL窗口路径必须迁移而不是并存
+### Requirement: 原生图编辑器是唯一画布入口
 
-现有BTSMTL Graph作者入口 MUST迁移到Graph Authoring Editor Shell和BTSMTL domain adapter。系统 MUST删除Shell已经接管的旧window/view交互实现、领域外公共静态入口和重复clipboard/Undo/Inspector路径。Pose Graph MUST通过同一Shell基础设施获得独立asset入口；不得新增Workbench或复制一套GraphView框架。
+技能、技能 FSM 和 Pose Graph MUST 通过各自正式原生编辑器保存和编辑节点、端口、连接与布局。共享作者集成只提供领域装配、Details、Navigator、Selection、Undo、Clipboard 与只读诊断合同，MUST 不创建第二套 GraphView、节点集合或可写文档。
 
-#### Scenario: 直接打开BaseTreeAsset
+#### Scenario: 打开技能图
 
-- **WHEN** 用户双击BaseTreeAsset
-- **THEN** 正式入口 MUST打开基于Shell的BTSMTL document
-- **AND** MUST不同时打开旧TreeDesigner窗口实现或Workbench
+- **WHEN** 作者从技能定义打开 FlowCanvas 图
+- **THEN** 编辑器 MUST 直接绑定该图的真实 owner
+- **AND** MUST 不创建 BaseGraph 或旧 TreeDesigner 画布副本
 
-#### Scenario: 直接打开Pose Graph asset
+#### Scenario: 打开 Pose 图
 
-- **WHEN** 用户双击Pose Graph asset
-- **THEN** 正式入口 MUST打开基于Shell的Pose domain document
-- **AND** BTSMTL breadcrumb和runtime context MUST不被写入Pose asset
+- **WHEN** 作者从 Pose 资源打开原生 Pose 图
+- **THEN** 编辑器 MUST 绑定 Pose 真实数据与领域适配
+- **AND** MUST 不装配技能图数据、旧 GraphView 或第二状态机模型

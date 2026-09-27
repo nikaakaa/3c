@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("ToString")]
     [NodePath("Base/Value/Operate/ToString")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class ToStringNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Value")]

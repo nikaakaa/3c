@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Valid")]
     [NodePath("Base/Value/Operate/Valid")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class ValidNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Value", "AcceptableTypes"), ReadOnly]

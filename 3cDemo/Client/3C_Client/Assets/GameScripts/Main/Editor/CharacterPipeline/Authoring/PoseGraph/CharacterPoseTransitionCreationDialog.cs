@@ -3,7 +3,6 @@ using System;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 

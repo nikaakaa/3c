@@ -5,7 +5,6 @@ using System.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonSimulation;
-using TreeDesigner.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {

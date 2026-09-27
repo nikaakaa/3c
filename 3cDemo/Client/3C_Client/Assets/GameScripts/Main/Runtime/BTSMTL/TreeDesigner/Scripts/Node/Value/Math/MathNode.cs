@@ -4,7 +4,6 @@ using UnityEngine;
 namespace TreeDesigner
 {
     [Serializable]
-    [NodeView("VariablePropertyNodeView")]
     public abstract partial class MathNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Value1", typeof(int), typeof(float))]

@@ -1,0 +1,2358 @@
+{
+  "recordedDate": "2026-09-28",
+  "pathBase": "3cDemo/Client/3C_Client/Assets/GameScripts/Main",
+  "publicTypes": [
+    {
+      "type": "PipelineBlackboardFactProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardFactProjection.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Editor/CharacterSimulation/Compilation/Skills/GameplayAbilityAuthoringBlackboardContracts.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCode.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/CorinRushTimelineAuthoringBuilder.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinBranchTimelineAuthoring.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Attack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Root.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushExplodeTimelineAuthoringCode/Open_RushAttackHandoff__14.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushTimelineAuthoringCode/Open_RushRelease__13.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeBackGameplayAbilityAuthoringCode/DodgeBack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeForwardGameplayAbilityAuthoringCode/DodgeForward.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardFactProjectionKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardFactProjectionKind.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/Blackboard/PipelineBlackboardDeclarationPolicy.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardFactProjection.cs",
+        "Editor/CharacterSimulation/Compilation/Semantic/GameplayAbilitySemanticBlackboardEmitter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/CorinRushTimelineAuthoringBuilder.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinBranchTimelineAuthoring.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Attack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Root.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushExplodeTimelineAuthoringCode/Open_RushAttackHandoff__14.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushTimelineAuthoringCode/Open_RushRelease__13.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeBackGameplayAbilityAuthoringCode/DodgeBack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeForwardGameplayAbilityAuthoringCode/DodgeForward.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardInputBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardInputBinding.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Editor/CharacterSimulation/Compilation/Skills/GameplayAbilityAuthoringBlackboardContracts.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCode.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Root.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardVariableLifetime",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariableLifetime.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardEditorAdapter.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/Blackboard/PipelineBlackboardDeclarationPolicy.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariablePolicy.cs",
+        "Editor/CharacterSimulation/Compilation/Semantic/GameplayAbilitySemanticBlackboardEmitter.cs",
+        "Editor/CharacterSimulation/Compilation/Skills/GameplayAbilityAuthoringBlackboardContracts.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCode.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/CorinRushTimelineAuthoringBuilder.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinBranchTimelineAuthoring.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Attack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Root.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushExplodeTimelineAuthoringCode/Open_RushAttackHandoff__14.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushTimelineAuthoringCode/Open_RushRelease__13.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeBackGameplayAbilityAuthoringCode/DodgeBack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeForwardGameplayAbilityAuthoringCode/DodgeForward.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardVariablePolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariablePolicy.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardVariableReference",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariableReference.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Graph/ActionRuntimeNodes.cs",
+        "Runtime/Character/Pipeline/Input/CharacterInputValueNodes.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/Blackboard/IPipelineBlackboardRuntimeAccess.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/Node/Custom/ExposedPropertyNode.cs",
+        "Editor/CharacterSimulation/Compilation/Semantic/GameplayAbilitySemanticBlackboardEmitter.cs",
+        "Editor/CharacterSimulation/Compilation/Semantic/GameplayAbilitySemanticDomainBindingEmitter.cs"
+      ]
+    },
+    {
+      "type": "PipelineBlackboardVariableScope",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "namespace": "TreeDesigner",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariableScope.cs",
+        "namespace": "BTSMTL.Authoring.Blackboard",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardDeclaration.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardEditorAdapter.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/Blackboard/PipelineBlackboardDeclarationPolicy.cs",
+        "Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty.cs",
+        "Runtime/BTSMTL/Authoring/Blackboard/PipelineBlackboardVariablePolicy.cs",
+        "Editor/CharacterSimulation/Compilation/Semantic/GameplayAbilitySemanticBlackboardEmitter.cs",
+        "Editor/CharacterSimulation/Compilation/Skills/GameplayAbilityAuthoringBlackboardContracts.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCode.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/CorinRushTimelineAuthoringBuilder.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinBranchTimelineAuthoring.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Attack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackGameplayAbilityAuthoringCode/Root.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushExplodeTimelineAuthoringCode/Open_RushAttackHandoff__14.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinAttackRushTimelineAuthoringCode/Open_RushRelease__13.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeBackGameplayAbilityAuthoringCode/DodgeBack.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/CorinDodgeForwardGameplayAbilityAuthoringCode/DodgeForward.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNodePresentationKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCommandPresentationKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCommandDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterFullBodyIkNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringChildSurfaceDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCapabilityDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterFullBodyIkNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterLinkedPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterMotionMatchingPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasNodeEditorHooks.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCapabilityCatalog",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCapabilityRegistrationRoot",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringClipboardEnvelope",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/Animation/BlendSpace/BlendSpaceClipboardBinding.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringIdentity",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDomainId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseGraphAuthoringCapabilities.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDocumentRoleId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseGraphAuthoringCapabilities.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseGraphProjectionValidator.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasEditorWriteSession.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTuningAuthoringService.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringElementId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionCreationDialog.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTuningAuthoringService.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCapabilityId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseGraphAuthoringCapabilities.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTuningAuthoringService.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringCommandId",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseGraphAuthoringCapabilities.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortDirection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasMutationPreflight.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortCapacity",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringSelectionKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringMutationKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTuningAuthoringService.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDiagnosticSeverity",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": []
+    },
+    {
+      "type": "GraphAuthoringPageProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDynamicPortProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/CharacterPoseCanvasAuthoringView.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPayloadCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNodeProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasDefinitionProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringEdgeProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringSelection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringMutationRequest",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasEditorMutationAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTuningAuthoringService.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDiagnosticProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": []
+    },
+    {
+      "type": "GraphAuthoringRuntimeTraceProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasObservation.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringDocumentProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/IGraphAuthoringReadOnlyPanel.cs",
+        "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasEditorMutationAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseReadOnlyPanel.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringDomainMutation",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasEditorMutationAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringConnectionPolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringDomainDiagnostics",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringDomainContracts.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/DomainContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldValueKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Pipeline/Graph/CameraRuntimeNodes.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlAuthoringFieldValueValidation.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillActionFlowNodes.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillBlackboardFlowNodes.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillFlowNode.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillLocomotionFlowNode.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillNodeInspector.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillStructuralFlowNodes.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillTimelineFlowNodes.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillValueFlowNodes.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterFullBodyIkNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterLinkedPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseGraphCapabilityProjector.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPayloadCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasNodeEditorHooks.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldAccess",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDetailsSection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldInteractionPolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldApplyTiming",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldStatePolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldTuningMetadata",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldConstraint",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldVisibilityCondition",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlAuthoringFieldValueValidation.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillAuthoringContract.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterFullBodyIkNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterMotionMatchingPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPayloadCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasNodeEditorHooks.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldValue",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillAuthoringContract.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillCapabilityCatalog.cs",
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlSkillAuthoringCodeAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringTypedPropertyValue",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/FieldContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDynamicPortPolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterFullBodyIkNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterLinkedPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDynamicPortSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterLinkedPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseNodeDefinitions.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseCapabilityDeclarations.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortVariantCondition",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortVariantDescriptor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Runtime/BTSMTL/Authoring/Graph/CapabilityCatalog.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringPortShapeException",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseAuthoringPortProjection.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNodePortShapeProjector",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs",
+        "namespace": "TreeDesigner.Authoring",
+        "assembly": "BTSMTL.TreeDesigner"
+      },
+      "after": {
+        "file": "Runtime/BTSMTL/Authoring/Graph/PortContracts.cs",
+        "namespace": "BTSMTL.Authoring.Graph",
+        "assembly": "BTSMTL.Authoring"
+      },
+      "consumers": [
+        "Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillGraphAuthoringMetadata.cs",
+        "Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/Definitions/CharacterPoseNodeDefinitionModule.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringClipboardCodec",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasGraphClipboardCodec.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringProjectionCanvasBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringProjectionContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasCommands.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasEditorWriteSession.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateMachineBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineProjection.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateMachineSemanticKind",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringTransitionPayload",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringStatePayload",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateMachineEntryProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateAliasProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringTransitionProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseDocumentCanvas.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringStateMachineProjection",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs",
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringStateMachinePolicy",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateMachineProjectionValidator",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineContracts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Contracts/GraphAuthoringStateMachineBinding.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDetailsMutation",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringReadOnlyDetail",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringFieldOption",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseCanvasNodeEditorHooks.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringFieldOptionSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringDetailsDataSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseTransitionRuleAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringAppliedValuesDataSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDetailsCommandRequest",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringDetailsFieldEditor",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": []
+    },
+    {
+      "type": "GraphAuthoringDetailsBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDetailsRegion",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringDetailsPresenter",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": []
+    },
+    {
+      "type": "GraphAuthoringDetailsHostView",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeInspectorView.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringPanelHosts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNavigatorHostView",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeInspectorView.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringPanelHosts.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringStateMachineDetailsDataSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs",
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterStateMachineAuthoringAdapters.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringStateMachineDetailsPresenter",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/GraphAuthoringStateMachineDetailsPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/GraphAuthoring/Details/GraphAuthoringDetailsPresenter.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringReadOnlyPanel",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringBottomDockPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Details/IGraphAuthoringReadOnlyPanel.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseReadOnlyPanel.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringUndoBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringEditorShell.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Interaction/GraphAuthoringEditorBindings.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/Animation/BlendSpace/BlendSpaceWorkspaceWindow.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringSelectionBinding",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringEditorShell.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Interaction/GraphAuthoringEditorBindings.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs",
+        "Editor/CharacterPipeline/Authoring/Animation/BlendSpace/BlendSpaceWorkspaceWindow.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNavigatorItem",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "IGraphAuthoringNavigatorDataSource",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    },
+    {
+      "type": "GraphAuthoringNavigatorPresenter",
+      "before": {
+        "file": "Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "TreeDesigner.Editor",
+        "assembly": "BTSMTL.TreeDesigner.Editor"
+      },
+      "after": {
+        "file": "Editor/GraphAuthoring/Navigation/GraphAuthoringNavigatorPresenter.cs",
+        "namespace": "BTSMTL.Authoring.Editor",
+        "assembly": "BTSMTL.Authoring.Editor"
+      },
+      "consumers": [
+        "Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs"
+      ]
+    }
+  ],
+  "domainMoves": [
+    [
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringEditorShell.cs",
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Animation/BlendSpace/BlendSpaceWorkspaceWindow.cs"
+    ],
+    [
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringClipboardController.cs",
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Animation/BlendSpace/BlendSpaceClipboardBinding.cs"
+    ],
+    [
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/BaseTreeWindow.uxml",
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Animation/BlendSpace/Resources/BlendSpace/Workspace.uxml"
+    ],
+    [
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeWindow.uss",
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Animation/BlendSpace/Resources/BlendSpace/Workspace.uss"
+    ],
+    [
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseTree.uss",
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Animation/BlendSpace/Resources/BlendSpace/Canvas.uss"
+    ]
+  ],
+  "blendSpaceTypeMapping": {
+    "GraphAuthoringNodeCatalogEntry": "BlendSpaceNodeCatalogEntry",
+    "GraphAuthoringBreadcrumbEntry": "BlendSpaceBreadcrumbEntry",
+    "IGraphAuthoringDocument": "IBlendSpaceDocument",
+    "IGraphAuthoringNodeCatalog": "IBlendSpaceNodeCatalog",
+    "IGraphAuthoringPortPolicy": "IBlendSpacePortPolicy",
+    "IGraphAuthoringMutationAdapter": "IBlendSpaceMutationAdapter",
+    "IGraphAuthoringInspectorAdapter": "IBlendSpaceInspectorAdapter",
+    "IGraphAuthoringDiagnosticsAdapter": "IBlendSpaceDiagnosticsAdapter",
+    "GraphAuthoringToolbarCommandKind": "BlendSpaceToolbarCommandKind",
+    "GraphAuthoringToolbarCommandDescriptor": "BlendSpaceToolbarCommandDescriptor",
+    "GraphAuthoringWorkspaceDescriptor": "BlendSpaceWorkspaceDescriptor",
+    "GraphAuthoringWorkspaceRegionDescriptor": "BlendSpaceWorkspaceRegionDescriptor",
+    "GraphAuthoringWorkspaceLayoutState": "BlendSpaceWorkspaceLayoutState",
+    "IGraphAuthoringWorkspaceRegionAdapter": "IBlendSpaceWorkspaceRegionAdapter",
+    "IGraphAuthoringWorkspacePageAdapter": "IBlendSpaceWorkspacePageAdapter",
+    "GraphAuthoringDomainAdapters": "BlendSpaceDomainAdapters",
+    "IGraphAuthoringDomainView": "IBlendSpaceDomainView",
+    "GraphAuthoringBreadcrumbHost": "BlendSpaceBreadcrumbHost",
+    "GraphAuthoringNodeSearchProvider": "BlendSpaceNodeSearchProvider",
+    "GraphAuthoringEditorShell": "BlendSpaceWorkspaceWindow",
+    "GraphAuthoringClipboardController": "BlendSpaceClipboardBinding"
+  },
+  "removedLegacyFiles": [
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineAuthoringContext.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineAuthoringContext.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineDefinitionTreeWindowUtility.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineDefinitionTreeWindowUtility.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringRoles.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringRoles.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlSharedGraphAuthoringAdapters.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlSharedGraphAuthoringAdapters.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/CharacterInputGraphDataCatalogSource.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/CharacterInputGraphDataCatalogSource.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineAuthoringCommands.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineAuthoringCommands.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/CurrentSelectedTree.asset",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/CurrentSelectedTree.asset.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/NodeFields.data",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/NodeFields.data.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/TreeLocations 1.asset",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/TreeLocations 1.asset.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/TreeLocations.asset",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default/TreeLocations.asset.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/Default.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseNode.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseNode.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorOutside.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorOutside.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/ExposedPropertyNode.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/ExposedPropertyNode.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodeGroup.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodeGroup.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodeInputFieldContainer.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodeInputFieldContainer.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodePanel.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodePanel.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodePortContainer.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/NodePortContainer.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/StackNode.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/StackNode.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/SubTreeNode.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/SubTreeNode.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/TreeBrowserWindow.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/TreeBrowserWindow.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/TreeLocationInfo.uss",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/TreeLocationInfo.uss.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/BaseNode.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/BaseNode.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/BaseTreeInspectorOutside.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/BaseTreeInspectorOutside.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/ExposedPropertyNode.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/ExposedPropertyNode.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodeGroup.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodeGroup.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodeInputFieldContainer.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodeInputFieldContainer.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodePanel.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodePanel.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodePortContainer.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/NodePortContainer.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/StackNode.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/StackNode.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/SubTreeNode.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/SubTreeNode.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/TreeBrowserWindow.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/TreeBrowserWindow.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/TreeLocationInfo.uxml",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree/TreeLocationInfo.uxml.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/VisualTree.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Authoring/PropertyPortAuthoringService.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Authoring/PropertyPortAuthoringService.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Authoring.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/BTSMTL.TreeDesigner.Editor.asmdef",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/BTSMTL.TreeDesigner.Editor.asmdef.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Drawer/ExposedPropertyDrawer.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Drawer/ExposedPropertyDrawer.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Drawer.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Input/InputActionNodeDragFactory.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Input/InputActionNodeDragFactory.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Input.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Inspector/BaseTreeInspector.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Inspector/BaseTreeInspector.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Inspector.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/CustomContextualMenuManipulator.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/CustomContextualMenuManipulator.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/TreeRectangleSelector.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/TreeRectangleSelector.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/CurrentSelectedTree.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/CurrentSelectedTree.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeDesignerUtility.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeDesignerUtility.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeLocations.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeLocations.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeModificationProcessor.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeModificationProcessor.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreePostProcessor.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreePostProcessor.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeWindowUtility.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeWindowUtility.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeInspectorView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeInspectorView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BlackboardGraphDataCatalogSource.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BlackboardGraphDataCatalogSource.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/BaseEdgeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/BaseEdgeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/PropertyEdgeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/PropertyEdgeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/EnumMenuView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/EnumMenuView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineProjection.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineProjection.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalog.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalog.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogEntryView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogEntryView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogViewState.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogViewState.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/IGroupable.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/IGroupable.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/BaseNodeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/BaseNodeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/ExposedPropertyNodeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/ExposedPropertyNodeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeGroupView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeGroupView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeInputFieldContainerView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeInputFieldContainerView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePanelView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePanelView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePortContainerView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePortContainerView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/StackNodeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/StackNodeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/SubTreeNodeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/SubTreeNodeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/VariablePropertyNodeView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/VariablePropertyNodeView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/BasePortView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/BasePortView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PortHandle.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PortHandle.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PropertyPortView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PropertyPortView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/VariablePropertyPortView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/VariablePropertyPortView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/SubTreeInspectorView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/SubTreeInspectorView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/TreeLocationInfoView.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/TreeLocationInfoView.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BaseTreeWindow.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BaseTreeWindow.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlGraphAuthoringAdapters.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlGraphAuthoringAdapters.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlSharedAuthoringWorkspaceRegistry.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlSharedAuthoringWorkspaceRegistry.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeFieldProcessorWindow.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeFieldProcessorWindow.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeReferenceWindow.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeReferenceWindow.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/SubTreeWindow.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/SubTreeWindow.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeBrowserWindow.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeBrowserWindow.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeGraphReferenceAuthoring.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeGraphReferenceAuthoring.cs.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor.meta",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Scripts/Graph/GraphAssetMenu.cs",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Scripts/Graph/GraphAssetMenu.cs.meta"
+  ],
+  "removedLegacyTypes": {
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineAuthoringContext.cs": [
+      "CharacterPipelineAuthoringContext",
+      "PipelineBlackboardValueNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/Definition/CharacterPipelineDefinitionTreeWindowUtility.cs": [
+      "CharacterPipelineDefinitionTreeWindowUtility"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs": [
+      "BtsmtlGraphAuthoringCapabilities"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlGraphAuthoringRoles.cs": [
+      "BtsmtlGraphAuthoringRoles"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/BtsmtlSharedGraphAuthoringAdapters.cs": [
+      "BtsmtlSharedAuthoringWorkspaceInstallation",
+      "BtsmtlSharedAuthoringWorkspaceFactory",
+      "BtsmtlSharedGraphNavigatorDataSource",
+      "BtsmtlSharedGraphDiagnosticsProjection",
+      "BtsmtlSharedGraphDocument",
+      "BtsmtlSharedGraphConnectionPolicy",
+      "BtsmtlSharedGraphMutation",
+      "BtsmtlSharedNodeCreationPayload",
+      "BtsmtlSharedFlowEdgeCreationPayload",
+      "BtsmtlSharedGraphClipboardCodec",
+      "BtsmtlSharedNodeFieldBinding",
+      "BtsmtlSharedNodeCommandBinding",
+      "BtsmtlSharedGraphDetailsDataSource"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/SharedGraph/CharacterInputGraphDataCatalogSource.cs": [
+      "CharacterGraphDataCatalogRegistration",
+      "CharacterInputGraphDataCatalogSourceProvider",
+      "CharacterInputGraphDataCatalogSource"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineAuthoringCommands.cs": [
+      "TimelineAuthoringCommands"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Authoring/PropertyPortAuthoringService.cs": [
+      "PropertyPortCollectionDescriptor",
+      "PropertyPortAuthoringDescriptor",
+      "PropertyPortAuthoringService"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Drawer/ExposedPropertyDrawer.cs": [
+      "ExposedPropertyDrawer"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Input/InputActionNodeDragFactory.cs": [
+      "InputActionNodeDragFactory"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Inspector/BaseTreeInspector.cs": [
+      "BaseTreeInspector"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/CustomContextualMenuManipulator.cs": [
+      "CustomContextualMenuManipulator"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Manipulator/TreeRectangleSelector.cs": [
+      "TreeRectangleSelector"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/CurrentSelectedTree.cs": [
+      "CurrentSelectedTree"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeDesignerUtility.cs": [
+      "TreeDesignerUtility"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeLocations.cs": [
+      "TreeLocations"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeModificationProcessor.cs": [
+      "TreeModificationProcessor"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreePostProcessor.cs": [
+      "TreePostProcessor"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Utility/TreeWindowUtility.cs": [
+      "TreeWindowUtilityInstance",
+      "TreeWindowUtility"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeInspectorView.cs": [
+      "TreeSelectionInspectorController",
+      "BaseTreeNavigatorView",
+      "BaseTreeInspectorView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BaseTreeView.cs": [
+      "IGraphAuthoringReadOnlyView",
+      "GraphAuthoringCanvasView",
+      "TreeGraphMutationService",
+      "BaseTreeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/BlackboardGraphDataCatalogSource.cs": [
+      "ITreeInspectorBlackboardAuthoringContext",
+      "BlackboardGraphDataCatalogSource"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/BaseEdgeView.cs": [
+      "GraphAuthoringEdgeViewBase",
+      "BaseEdgeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Edge/PropertyEdgeView.cs": [
+      "PropertyEdgeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/EnumMenuView.cs": [
+      "EnumMenuView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs": [
+      "GraphAuthoringProjectedPortView",
+      "GraphAuthoringProjectedNodeView",
+      "GraphAuthoringProjectedEdgeView",
+      "GraphAuthoringCanvasView",
+      "GraphAuthoringSearchEntry"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringStateMachineProjection.cs": [
+      "IGraphAuthoringProjectedStateMachineMovable",
+      "GraphAuthoringProjectedStateMachinePortView",
+      "GraphAuthoringProjectedStateMachineEntryView",
+      "GraphAuthoringProjectedStateMachineStateView",
+      "GraphAuthoringProjectedStateMachineAliasView",
+      "GraphAuthoringProjectedStateMachineTransitionView",
+      "GraphAuthoringCanvasView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalog.cs": [
+      "GraphDataCatalogViewState",
+      "GraphDataCatalogSourceFilter",
+      "PipelineBlackboardScopeFilter",
+      "PipelineBlackboardContextFilter",
+      "GraphDataCatalogSourceKind",
+      "GraphDataCatalogEntryKind",
+      "GraphDataCatalogOwnership",
+      "GraphDataCatalogCapability",
+      "GraphDataCatalogContext",
+      "GraphDataCatalogEntry",
+      "IGraphDataCatalogSource",
+      "IGraphDataCatalogSourceProvider",
+      "GraphDataCatalogCreationOption",
+      "GraphDataCatalogCreateRequest",
+      "IGraphDataCatalogCreationSource",
+      "GraphDataCatalogSourceRegistry",
+      "GraphDataCatalogController",
+      "IBlackboardGraphDataNodeFactory",
+      "BlackboardGraphDataNodeFactoryRegistry",
+      "GraphDataCatalogDetails"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogEntryView.cs": [
+      "GraphDataCatalogEntryView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphDataCatalogViewState.cs": [
+      "GraphDataCatalogExpandedEntrySet",
+      "GraphDataCatalogController"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/IGroupable.cs": [
+      "IGroupable"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/BaseNodeView.cs": [
+      "GraphAuthoringNodeViewBase",
+      "BaseNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/ExposedPropertyNodeView.cs": [
+      "ExposedPropertyNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeGroupView.cs": [
+      "NodeGroupView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodeInputFieldContainerView.cs": [
+      "NodeInputFieldContainerView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePanelView.cs": [
+      "NodePanelView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/NodePortContainerView.cs": [
+      "NodePortContainerView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/StackNodeView.cs": [
+      "StackNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/SubTreeNodeView.cs": [
+      "SubTreeNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Node/VariablePropertyNodeView.cs": [
+      "VariablePropertyNodeView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/BasePortView.cs": [
+      "GraphAuthoringPortViewBase",
+      "BasePortView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PortHandle.cs": [
+      "PortHandle"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/PropertyPortView.cs": [
+      "PropertyPortView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/Port/VariablePropertyPortView.cs": [
+      "VariablePropertyPortView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/SubTreeInspectorView.cs": [
+      "SubTreeInspectorView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/TreeLocationInfoView.cs": [
+      "TreeLocationInfoView"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BaseTreeWindow.cs": [
+      "AuthoringPageKind",
+      "TreeWindowMode",
+      "PendingNavigationRootKind",
+      "TreeWindowNavigationController",
+      "TreeWindowRuntimeOverlayController",
+      "BaseTreeWindow",
+      "AuthoringDetailsCommandRegistry",
+      "AuthoringPageOpenRegistry"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlGraphAuthoringAdapters.cs": [
+      "BtsmtlGraphAuthoringDocumentAdapter",
+      "BtsmtlGraphAuthoringNodeCatalogAdapter",
+      "BtsmtlGraphAuthoringPortPolicyAdapter",
+      "BtsmtlGraphAuthoringMutationAdapter",
+      "BtsmtlGraphAuthoringInspectorAdapter",
+      "BtsmtlGraphAuthoringNavigatorAdapter",
+      "BtsmtlGraphAuthoringDiagnosticsAdapter"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BtsmtlSharedAuthoringWorkspaceRegistry.cs": [
+      "IBtsmtlSharedClipboardCodec",
+      "IBtsmtlNodeCreationPayload",
+      "BtsmtlTransitionMutation",
+      "BtsmtlNodeGroupMutationPayload",
+      "BtsmtlStackMutationPayload",
+      "BtsmtlSharedGraphPort",
+      "BtsmtlSharedAuthoringWorkspaceBinding",
+      "IBtsmtlSharedAuthoringWorkspaceFactory",
+      "BtsmtlSharedAuthoringWorkspaceRegistry"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeFieldProcessorWindow.cs": [
+      "NodeFieldProcessorWindow"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/NodeReferenceWindow.cs": [
+      "NodeReferenceWindow"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/SubTreeWindow.cs": [
+      "SubTreeWindow"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeBrowserWindow.cs": [
+      "TreeBrowserWindow"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/TreeGraphReferenceAuthoring.cs": [
+      "TreeGraphReferenceDescriptor",
+      "TreeGraphReferenceAuthoring"
+    ],
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Scripts/Graph/GraphAssetMenu.cs": [
+      "BaseTree"
+    ]
+  },
+  "removedMixedStateTypes": [
+    "BtsmtlGameplayStatePayload",
+    "BtsmtlGameplayTransitionPayload",
+    "BtsmtlGameplayTransitionCreation",
+    "BtsmtlStateMachineAuthoringCapabilities",
+    "BtsmtlStateMachineDocument",
+    "BtsmtlStateMachineMutationAdapter",
+    "BtsmtlStateMachinePolicy",
+    "BtsmtlStateMachineDetailsDataSource"
+  ],
+  "additionalRemovedSharedTypes": [
+    "GraphAuthoringPageStack",
+    "GraphAuthoringBottomDockTabDescriptor",
+    "GraphAuthoringBottomDockCatalog",
+    "GraphAuthoringBottomDockPresenter"
+  ],
+  "assetEvidence": {
+    "baseTreeAssetCount": 0,
+    "deletedMetaGuidsChecked": 99,
+    "remainingDeletedGuidReferences": 0
+  },
+  "preservedRuntimeTypes": [
+    "BaseGraph",
+    "BaseNode",
+    "PropertyPort",
+    "PropertyEdge",
+    "BaseExposedProperty",
+    "TimelinePlaybackRequest",
+    "ITimelinePlaybackService"
+  ],
+  "identityRules": [
+    "原声明序列化字段、默认值、owner、generation、provenance 不变",
+    "原文件归位保留 meta GUID，拆分新文件分配新 GUID",
+    "未增加兼容类型、MovedFrom 或运行迁移器"
+  ]
+}

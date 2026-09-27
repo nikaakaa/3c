@@ -7,7 +7,6 @@ namespace TreeDesigner
         public const int CurrentRevision = 1;
     }
 
-    [TreeWindow("OpenBaseTreeWindow")]
     [AcceptableNodePaths("Base")]
     [Serializable]
     public partial class BaseTree : BaseGraph

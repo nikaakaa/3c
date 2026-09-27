@@ -1,5 +1,15 @@
 ## ADDED Requirements
 
+### Requirement: 正式图资产必须通过所属领域原生入口打开
+
+Skill、技能 FSM 与 Pose 图 MUST 通过各自正式原生资产入口打开，Timeline MUST 保持正式 Slate 入口。Project、Inspector、业务导航和运行来源定位 MUST 指向同一真实 owner，不创建旧 BaseTreeWindow、Tree Browser 或第二 GraphView。仍有数据/运行职责的 BaseTreeAsset/BaseGraph 类型 MUST 保持唯一实现；它们的存在 MUST 不自动恢复已退役的旧编辑器。删除旧入口前 MUST 确认没有合法内容失去编辑去向。
+
+#### Scenario: 直接打开正式图资产
+
+- **WHEN** 作者从 Project 或业务定义打开当前正式 Skill/Pose 资产
+- **THEN** 领域 MUST 使用其原生图与真实 owner 打开唯一正式入口
+- **AND** MUST 不要求旧 TreeDesigner 窗口或旧画布副本
+
 ### Requirement: 图代码归位必须以真实职责和消费者为界
 
 图代码整理 MUST 保留有效数据、端口和求值语义，仅移动或拆分混合文件并调整直接引用。BaseGraph、BaseNode、PropertyPort、BaseExposedProperty MUST 不因旧 UI 退出而被预定删除。删除 MUST 有代码、注册、生成内容和资产引用证据，确认不再拥有有效消费者与独有语义；仍在使用的实现保留或归位不属于兼容路径。
@@ -30,6 +40,68 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Graph 引用和页面栈保持 editor-only
+
+节点、引用和 TreeClip 的导航 MUST 通过所属领域的正式作者引用和原生编辑入口定位真实内容。导航历史、窗口绑定、selection restore 和来源 identity MUST 保持 editor-only，不参与运行状态或保存成第二份业务数据。Timeline MUST 由其正式独立编辑入口显示，不能因删除旧 TreeDesigner 页栈改变内容、调用身份或调度协议。系统 MUST 不为沿用旧页面实现创建 TimelineRunningTree 或 BaseGraph 编辑副本。
+
+#### Scenario: 节点下钻到内联 Graph
+
+- **WHEN** 作者打开正式节点拥有的私有子图
+- **THEN** 所属领域 MUST 定位原子图 owner，并记录来源节点和引用身份用于导航
+- **AND** MUST 不复制节点或图数据
+
+#### Scenario: 节点下钻到 shared Graph
+
+- **WHEN** 作者打开节点显式引用的共享图
+- **THEN** 原生入口 MUST 定位该真实共享资产
+- **AND** 作者界面 MUST 保留共享关系和来源导航
+
+#### Scenario: TimelineNode 下钻到 inline Timeline
+
+- **WHEN** 作者从正式图节点打开其私有 Timeline 内容
+- **THEN** Timeline 正式入口 MUST 使用实际内容 owner 与来源身份，来源图导航保持
+- **AND** MUST 不把 Timeline 转成旧 Graph 页或修改运行内容
+
+#### Scenario: TimelineNode 下钻到 shared Timeline
+
+- **WHEN** 作者从正式图节点打开共享 TimelineAsset
+- **THEN** Timeline 正式入口 MUST 绑定该资产与节点来源
+- **AND** TreeClip 下钻 MUST 继续使用真实作者引用
+
+#### Scenario: Timeline 下钻到 TreeClip
+
+- **WHEN** 作者从 Timeline 打开 TreeClip 图
+- **THEN** MUST 通过现有正式原生图入口定位该 Clip 的内容和来源
+- **AND** Timeline 窗口保持当前内容，不恢复旧 TreeDesigner 页栈或隐式创建另一运行实例
+
+#### Scenario: 保存双窗口内容
+
+- **WHEN** 作者修改正式图或 Timeline 内容
+- **THEN** dirty 与 Undo MUST 作用于对应真实 owner
+- **AND** 窗口导航、preview state 和返回位置 MUST 不进入业务资产
+
+### Requirement: Graph Authoring Editor Shell 支持 editor-only authoring context
+
+正式原生编辑入口及共享面板 MUST 使用所属领域明确提供的作者上下文定位 Details、Navigator 和资源选择。该上下文 MUST 不写入节点、端口或图运行数据；子图/规则导航按现有领域规则保留来源关系。系统 MUST 不依赖已删除的 CharacterPipelineAuthoringContext、BaseTreeWindow 或旧 Shell 类提供上下文。
+
+#### Scenario: 从业务定义打开 RootTree
+
+- **WHEN** 作者从业务定义打开当前正式技能或 Pose 图
+- **THEN** 所属入口 MUST 使用定义与实际图 owner 提供作者上下文
+- **AND** MUST 不因历史场景名称恢复旧 RootTree
+
+#### Scenario: 直接打开孤立 TreeAsset
+
+- **WHEN** 作者直接打开缺少业务上下文的受支持原生图资产
+- **THEN** 依赖上下文的面板 MUST 明确显示缺失状态
+- **AND** MUST 不猜测角色或写入 fallback 配置
+
+#### Scenario: 下钻 Graph
+
+- **WHEN** 作者从正式图进入私有、共享或规则内容
+- **THEN** 原生入口 MUST 按领域已有规则保持实际来源上下文
+- **AND** 子图 MUST 不保存另一份窗口状态
+
 ### Requirement: 不新增 Graph 分裂路径
 
 仍由 BaseGraph 表达且有有效消费者的 BTSMTL 内容 MUST 继续使用唯一数据、PropertyPort/PropertyEdge 语义与正式 owner，不新增 Workbench、并行端口协议、旧数据 fallback 或重复序列化集合。本次整理 MUST 不把其它已采用原生图的领域改回 BaseGraph，也不因原生图存在就删除仍有独有语义的旧类型。Pose MUST 保持现行原生图、typed 端口、领域校验和唯一运行方式，不继承 BTSMTL runtime node/edge 语义。跨领域 MUST 共享公共作者描述与有效编辑合同，画布与 Node/Port 交互由各自正式原生编辑器提供，不再要求同一旧 GraphView 或窗口类。共享层只消费 document、Capability、typed payload、port policy、mutation 与观察合同，不拥有第二套业务数据或执行器。
@@ -51,3 +123,11 @@
 - **WHEN** 不同领域需要搜索、clipboard、Undo 与 Details 宿主
 - **THEN** MUST 复用有效编辑合同和所属正式原生交互，不为复用创建旧 GraphView
 - **AND** 每个领域 MUST 只修改自己的正式 serialized owner
+
+## REMOVED Requirements
+
+### Requirement: BaseTreeAsset 保持资产和 Graph Authoring Editor Shell 入口
+
+**Reason**: 该条款要求已经被原生入口替代的 TreeDesigner 专用窗口与 Tree Browser。实施盘点中，Unity AssetDatabase 的 BaseTreeAsset 资产数为零，现行 Skill/Pose/Timeline 已使用自己的正式入口。
+
+**Migration**: 保留仍有职责的 BaseTreeAsset/BaseGraph 数据与运行类型；删除无合法资产消费者的旧 Inspector、浏览器、打开回调和创建菜单。当前正式图的打开要求由“正式图资产必须通过所属领域原生入口打开”承接，不重建旧图 UI。

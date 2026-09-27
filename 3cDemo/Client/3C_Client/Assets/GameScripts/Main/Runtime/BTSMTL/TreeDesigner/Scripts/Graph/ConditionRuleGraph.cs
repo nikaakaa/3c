@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace TreeDesigner
 {
-    [TreeWindow("OpenBaseTreeWindow")]
     [AcceptableNodePaths("Base")]
     public sealed class ConditionRuleGraph : BaseTree
     {

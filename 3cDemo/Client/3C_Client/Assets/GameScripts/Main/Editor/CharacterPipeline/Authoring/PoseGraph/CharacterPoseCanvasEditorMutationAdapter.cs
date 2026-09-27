@@ -1,7 +1,6 @@
 using BTSMTL.Authoring.Graph;
 using System;
 using System.Collections.Generic;
-using TreeDesigner.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {

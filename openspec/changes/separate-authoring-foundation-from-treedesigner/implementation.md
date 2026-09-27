@@ -65,3 +65,41 @@ PropertyPort、PropertyEdge、BaseAttributes、BaseNode、BaseGraphAuthoring 的
 目标 Unity 完成此次编译和 Domain Reload，Edit/idle，Console error 为 0 条。B 阶段外部 Pose 参数错误在此时已不再阻挡编译，本次未修改它的业务代码。没有运行 Play/replay 或新增测试。
 
 旧 GraphDataCatalog 的使用链仅进入旧窗口及其源注册；旧 UI 清理时连同无消费者附属代码收口。Blend Space 仍使用窗口装配与自己的 GraphView，这部分移交动画编辑领域，避免误删有效样本编辑；目前尚未执行这部分旧窗口清理。
+
+## 2026-09-28：C5/C6 旧 UI 清理与最终交付
+
+### 最终业务链路
+
+公共 Runtime 为 `BTSMTL.Authoring`：输入仍是原有黑板值、字段、端口和能力定义，输出是供具体图、技能作者、编译器和 Editor 读取的同一份数据。它没有项目程序集依赖，不引用 TreeDesigner 或 UnityEditor。具体声明仍由 BaseExposedProperty 拥有；BaseGraph 参数、PropertyPort 连接与求值、技能编译、原生 Pose 执行和 Timeline 协议没有改写。
+
+公共 Editor 为 `BTSMTL.Authoring.Editor`，唯一项目引用是 BTSMTL.Authoring。原生 Pose 的绑定和领域 adapter 读取公共合同，Details、状态机 Details、Navigator、Selection、Undo 和只读面板合同继续服务现有工作区；写入仍进入原有领域 mutation 和真实 owner。没有新增运行器、包装数据、兼容窗口或备用配置。
+
+Blend Space 仍编辑原来的样本坐标与资产。它实际使用的窗口布局、资源选择、搜索、剪贴板和生命周期装配归入 `Editor/CharacterPipeline/Authoring/Animation/BlendSpace`，正式类型为 `BlendSpaceWorkspaceWindow`、`BlendSpaceClipboardBinding`。其专有 GraphView 接口和资源随领域归位，不进入公共 Editor；原有脚本和资源 GUID 保留。未使用的工具栏扩展注册表删除。
+
+### 删除对象与入口证据
+
+完整公共类型映射、当前消费者、领域迁名、保留运行类型及旧文件/类型删除清单保存在同目录 `migration-map.json`，覆盖 93 个公共类型。清单以当前代码为准；前述 A/B/C 为阶段记录，不代表已删除代码仍存在。
+
+| 原对象 | 原消费者/注册 | 最终处理 |
+| --- | --- | --- |
+| BaseTreeWindow、SubTreeWindow、TreeBrowserWindow、NodeReferenceWindow、TreeWindowUtility | 旧窗口互相调用，旧资产 Inspector、打开回调与菜单 | 目标项目 BaseTreeAsset 资产查询为 0；全部旧入口及其专有资源删除，原生技能/Pose/Timeline 打开链保持 |
+| RuntimeDebugSourceNavigator 的两个 OpenGraph 重载 | 方法以 BaseTree/BaseGraph 打开旧窗口，无现行调用者 | 删除两方法；原生技能定位和 Timeline 定位保留 |
+| GraphAuthoringCanvasView 及 Projection/StateMachine partial、节点/端口/边视图 | 旧 TreeDesigner 窗口 | 合同迁出后删除全部旧画布实现，不换目录保存 |
+| PropertyPortAuthoringService、BtsmtlSharedGraphAuthoringAdapters、旧 capability/role/context/source | 仅旧窗口与旧数据目录注册 | B 阶段服务先归位，最终随唯一消费者删除；混合状态机 adapter 文件只删除 8 个旧 Btsmtl 类型，保留 Pose 类型 |
+| GraphDataCatalog 及源、旧 Bottom Dock 的 descriptor/catalog/presenter、GraphAuthoringPageStack | 已删除旧工作区，没有有效原生消费者 | 删除；保留现行工作区依赖的 IGraphAuthoringReadOnlyPanel、DetailsHost 和 NavigatorHost |
+| NodeViewAttribute、TreeWindowAttribute 与其注册 | 为旧节点视图和旧窗口选择 UI 类型 | 删除定义及注册标记；运行节点、图和端口实现保持 |
+| BTSMTL.TreeDesigner.Editor | 剩余内容均为上述旧 UI | 迁出有效能力后删除程序集、目录及全部直接引用 |
+
+删除批次的 99 个 .meta GUID 在现有资产、Prefab、场景、UXML、USS、JSON 和 asmdef 中没有残留引用。公共定义没有检出显式旧 namespace/assembly 序列化身份引用；原有内联字段、VariableId、端口身份、默认值、owner、generation、provenance 和 fact projection 保持。没有批量重建资产或加入 MovedFrom。
+
+### 编译、资源与规格结果
+
+目标 Unity 实例 `e852139597e42532` 完成本次正式编译及 Domain Reload，返回 Edit/idle，Console error 为 0。运行时反射确认公共 Runtime/Editor 类型分别属于 BTSMTL.Authoring、BTSMTL.Authoring.Editor，旧 BTSMTL.TreeDesigner.Editor 未加载；BlendSpaceWorkspaceWindow 位于动画 Editor。GraphAuthoringDetails、GraphAuthoringNavigator、BlendSpace/Workspace 三个 UXML 均成功加载和克隆，BlendSpace/Canvas 样式成功加载。
+
+本次没有运行 Play、replay 或新增测试；上述证据覆盖编译、程序集与资源接线，不替代用户端到端操作。运行层仅拆定义与既有规则，变量引用仍是原字段 struct；未增加运行热路径分配，不把此次整理声称为全项目 0 GC 证明。
+
+八份直接受影响主规格已同步，移除强制依赖旧资产窗口、旧 GraphView 和旧页面栈的条款，保留实际原生入口与项目面板合同。更广的 BaseGraph 唯一结构措辞，以及 graph-authoring-domain-framework 中 Pose IR/Compiler 与 native-flowcanvas-pose-runtime 的历史冲突，继续明确记录在 design.md；本次没有切换 Pose 执行方式，也不替其它 change 归档。
+
+### 共享文件与提交
+
+A、B、C 已分别提交为 `7ff71c785`、`921e73ead`、`36d33dcb6`。C5/C6 与规格收口作为第四个切片提交。共享的 CharacterPoseNodeDefinitionModule、CharacterPoseGraphProjectionValidator、CharacterPoseGraphAuthoringAdapter、CharacterPoseAuthoringPortProjection 只移除旧 Editor namespace 引用；已有业务修改保持，提交只包含本次差异。其它窗口产生的编译错误和改动没有纳入本次修复。

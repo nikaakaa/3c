@@ -6,7 +6,6 @@ using System.Linq;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.Pipeline.Animation;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;

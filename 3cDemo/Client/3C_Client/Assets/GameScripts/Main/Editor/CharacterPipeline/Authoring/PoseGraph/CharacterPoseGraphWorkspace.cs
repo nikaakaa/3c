@@ -12,7 +12,6 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;

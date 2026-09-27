@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +9,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Contains")]
     [NodePath("Base/Value/Operate/Contains")]
-    [NodeView("VariablePropertyNodeView")]
     public class ContainsNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "List", "AcceptableTypes")]

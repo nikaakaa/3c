@@ -94,18 +94,6 @@ namespace TreeDesigner
         }
     }
 
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
-    public class NodeViewAttribute : Attribute
-    {
-        string m_NodeViewTypeName;
-        public string NodeViewTypeName => m_NodeViewTypeName;
-
-        public NodeViewAttribute(string nodeViewTypeName)
-        {
-            m_NodeViewTypeName = nodeViewTypeName;
-        }
-    }
-
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     public class InputAttribute : Attribute
     {
@@ -274,18 +262,6 @@ namespace TreeDesigner
     #endregion
 
     #region Tree
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
-    public class TreeWindowAttribute : Attribute
-    {
-        string m_Label;
-        public string Label => m_Label;
-
-        public TreeWindowAttribute(string label)
-        {
-            m_Label = label;
-        }
-    }
-
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
     public class AcceptableNodePathsAttribute : Attribute
     {

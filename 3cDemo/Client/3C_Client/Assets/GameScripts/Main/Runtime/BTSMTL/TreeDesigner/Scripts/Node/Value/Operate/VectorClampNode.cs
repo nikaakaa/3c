@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorClamp")]
     [NodePath("Base/Value/Operate/VectorClamp")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorClampNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Value", typeof(Vector2), typeof(Vector3))]

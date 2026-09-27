@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Equal")]
     [NodePath("Base/Value/Operate/Equal")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class EqualNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Value1", "AcceptableTypes")]

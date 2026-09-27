@@ -7,7 +7,6 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
 using BTSMTL.Authoring.Graph;
-using TreeDesigner.Editor;
 using UnityEngine;
 using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 

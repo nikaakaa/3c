@@ -7,7 +7,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("ToList")]
     [NodePath("Base/Value/Operate/ToList")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class ToListNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Element", "AcceptableTypes")]

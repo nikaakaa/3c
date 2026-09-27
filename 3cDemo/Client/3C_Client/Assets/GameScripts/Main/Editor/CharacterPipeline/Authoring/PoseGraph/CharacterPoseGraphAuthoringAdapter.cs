@@ -10,7 +10,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 

@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("ExposedProperty")]
     [NodePath("Base/Custom/ExposedProperty")]
-    [NodeView("ExposedPropertyNodeView")]
     [NodeAuthoringCapability(NodeAuthoringCapability.SharedBlackboard)]
     public partial class ExposedPropertyNode : RunnableNode
     {

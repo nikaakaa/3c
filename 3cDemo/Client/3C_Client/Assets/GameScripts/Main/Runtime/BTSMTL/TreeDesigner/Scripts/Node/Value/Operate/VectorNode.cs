@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorProjectOnPlane")]
     [NodePath("Base/Value/Operate/VectorProjectOnPlane")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorProjectOnPlaneNode : TwoVectorNode
     {
         protected override void OutputValue()
@@ -33,7 +32,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("RandomVectorInCircle")]
     [NodePath("Base/Value/Operate/RandomVectorInCircle")]
-    [NodeView("VariablePropertyNodeView")]
     public class RandomVectorInCircleNode : ValueNode
     {
         [SerializeReference, PropertyPort(PortDirection.Output, "OutputVector"), ReadOnly]
@@ -49,7 +47,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("RandomVectorInSphere")]
     [NodePath("Base/Value/Operate/RandomVectorInSphere")]
-    [NodeView("VariablePropertyNodeView")]
     public class RandomVectorInSphereNode : ValueNode
     {
         [SerializeReference, PropertyPort(PortDirection.Output, "OutputVector"), ReadOnly]
@@ -65,7 +62,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Vector3Multiply")]
     [NodePath("Base/Value/Operate/Vector3Multiply")]
-    [NodeView("VariablePropertyNodeView")]
     public class Vector3MultiplyNode : ValueNode
     {
         [SerializeReference, PropertyPort(PortDirection.Input, "Vector1")]

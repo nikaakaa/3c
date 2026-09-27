@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Abs")]
     [NodePath("Base/Value/Math/Abs")]
-    [NodeView("VariablePropertyNodeView")]
     public class AbsNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Value", typeof(int), typeof(float))]

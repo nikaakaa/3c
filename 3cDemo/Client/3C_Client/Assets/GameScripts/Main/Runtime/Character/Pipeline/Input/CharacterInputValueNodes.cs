@@ -127,7 +127,6 @@ namespace ThirdPersonCharacter.Pipeline.Input
     }
 
     [Serializable]
-    [NodeView("PipelineBlackboardValueNodeView")]
     public abstract class PipelineBlackboardValueInfoNode : ValueNode, ICharacterBlackboardAuthoring
     {
         [SerializeField]

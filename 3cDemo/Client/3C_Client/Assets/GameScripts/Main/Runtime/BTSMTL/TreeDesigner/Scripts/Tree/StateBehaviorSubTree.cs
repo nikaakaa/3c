@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using UnityEngine;
 
 namespace TreeDesigner
 {
-    [TreeWindow("OpenSubTreeWindow")]
     public sealed class StateBehaviorSubTree : SubTree
     {
         [SerializeField]

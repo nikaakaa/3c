@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace TreeDesigner
 {
-    [TreeWindow("OpenBaseTreeWindow")]
     [AcceptableNodePaths("Base")]
     public class StateMachineGraph : BaseTree
     {

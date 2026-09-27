@@ -1,7 +1,6 @@
 using BTSMTL.Authoring.Editor;
 using System;
 using BTSMTL.Authoring.Graph;
-using TreeDesigner.Editor;
 using UnityEngine.UIElements;
 
 namespace ThirdPersonCharacter.Pipeline.Editor

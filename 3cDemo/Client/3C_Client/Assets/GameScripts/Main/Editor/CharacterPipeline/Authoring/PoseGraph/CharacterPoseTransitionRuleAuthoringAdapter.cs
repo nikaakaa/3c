@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
-using TreeDesigner.Editor;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using UnityEngine;
 

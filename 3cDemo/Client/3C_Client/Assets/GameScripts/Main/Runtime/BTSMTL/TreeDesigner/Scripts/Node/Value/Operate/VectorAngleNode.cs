@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorAngle")]
     [NodePath("Base/Value/Operate/VectorAngle")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorAngleNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "VectorA", typeof(Vector2), typeof(Vector3))]

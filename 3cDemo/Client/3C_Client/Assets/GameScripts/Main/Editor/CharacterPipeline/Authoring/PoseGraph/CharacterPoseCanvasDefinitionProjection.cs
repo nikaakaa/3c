@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
-using TreeDesigner.Editor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor

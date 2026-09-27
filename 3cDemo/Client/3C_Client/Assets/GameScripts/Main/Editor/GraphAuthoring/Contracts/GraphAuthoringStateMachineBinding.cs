@@ -30,42 +30,4 @@ namespace BTSMTL.Authoring.Editor
         public IGraphAuthoringDomainMutation Mutation { get; }
         public IGraphAuthoringStateMachinePolicy Policy { get; }
     }
-
-    public sealed class GraphAuthoringPageStack
-    {
-        readonly List<GraphAuthoringPageProjection> m_Pages = new List<GraphAuthoringPageProjection>();
-
-        public IReadOnlyList<GraphAuthoringPageProjection> Pages => m_Pages;
-        public GraphAuthoringPageProjection Current => m_Pages.Count == 0 ? default : m_Pages[m_Pages.Count - 1];
-
-        public void Reset(GraphAuthoringPageProjection root)
-        {
-            m_Pages.Clear();
-            m_Pages.Add(root);
-        }
-
-        public void Push(GraphAuthoringPageProjection page)
-        {
-            int existing = m_Pages.FindIndex(value => value.PageId.Equals(page.PageId));
-            if (existing >= 0)
-                m_Pages.RemoveRange(existing, m_Pages.Count - existing);
-            m_Pages.Add(page);
-        }
-
-        public bool Pop()
-        {
-            if (m_Pages.Count <= 1)
-                return false;
-            m_Pages.RemoveAt(m_Pages.Count - 1);
-            return true;
-        }
-
-        public void NavigateTo(int index)
-        {
-            if (index < 0 || index >= m_Pages.Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            if (index + 1 < m_Pages.Count)
-                m_Pages.RemoveRange(index + 1, m_Pages.Count - index - 1);
-        }
-    }
 }

@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "BTSMTL.Timeline.Tree",
     "rootNamespace": "",
     "references": [
@@ -8,8 +8,7 @@
         "GUID:86c5ca7848482b044b178731a524146c",
         "GUID:8f6e9e98d8b94eb8a793b692eaf18b6b",
         "ThirdPersonCharacter.Pipeline.RootMotion",
-        "GUID:dbcec5c5c83b92c40956750ad4235b10",
-        "GUID:d64301999c8636b4c8ec42e0c4f9cad9"
+        "GUID:dbcec5c5c83b92c40956750ad4235b10"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

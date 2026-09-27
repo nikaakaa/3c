@@ -7,7 +7,6 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,7 +17,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         static CharacterGraphAuthoringCapabilityBootstrap()
         {
-            _ = new BtsmtlGraphAuthoringCapabilities();
             CharacterPoseGraphCapabilityProjector.EnsureRegistered();
         }
     }

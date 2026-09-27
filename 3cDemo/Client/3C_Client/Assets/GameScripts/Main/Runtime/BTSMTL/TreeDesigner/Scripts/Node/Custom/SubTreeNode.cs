@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +9,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeColor(255, 209, 102)]
     [NodePath("Base/Custom/SubTree")]
-    [NodeView("SubTreeNodeView")]
     [Input("Input"), Output("Output", PortCapacity.Single)]
     public partial class SubTreeNode : RunnableNode
     {

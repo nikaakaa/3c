@@ -1,4 +1,3 @@
-using BTSMTL.Authoring.Graph;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +9,6 @@ using FlowCanvas;
 using NodeCanvas.Editor;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
-using TreeDesigner;
-using TreeDesigner.Editor;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -252,75 +249,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     instance.ActionInstanceId)
                 : default;
         }
-
-        public static bool OpenGraph(BaseTree graph, string elementAuthoringId, object authoringContext = null)
-        {
-            RuntimeSourceElementKey source = string.IsNullOrEmpty(elementAuthoringId)
-                ? RuntimeSourceElementKey.Graph(graph?.GraphAuthoringId)
-                : RuntimeSourceElementKey.Node(graph?.GraphAuthoringId, elementAuthoringId);
-            if (OpenGraph(graph, source, authoringContext))
-                return true;
-            if (string.IsNullOrEmpty(elementAuthoringId))
-                return false;
-            return OpenGraph(graph, RuntimeSourceElementKey.Edge(graph?.GraphAuthoringId, elementAuthoringId), authoringContext);
-        }
-
-        static bool OpenGraph(BaseTree graph, RuntimeSourceElementKey source, object authoringContext)
-        {
-            if (graph == null)
-                return false;
-            BaseTreeWindow window = TreeWindowUtility.TreeWindowUtilityInstance.OpenBaseTreeWindow();
-            window.ReplaceNavigationRoot(graph, authoringContext);
-            bool resolved = true;
-            if (source.Kind == RuntimeSourceElementKind.Node)
-            {
-                resolved = graph.Nodes.Exists(value =>
-                    value != null &&
-                    string.Equals(
-                        value.GUID,
-                        source.ElementAuthoringId,
-                        StringComparison.Ordinal));
-                if (resolved)
-                {
-                    window.FocusSharedElement(
-                        new GraphAuthoringElementId(
-                            source.ElementAuthoringId));
-                }
-            }
-            else if (source.Kind == RuntimeSourceElementKind.Edge)
-            {
-                resolved = graph.Edges.Exists(value =>
-                               value != null &&
-                               string.Equals(
-                                   value.GUID,
-                                   source.ElementAuthoringId,
-                                   StringComparison.Ordinal)) ||
-                           graph.PropertyEdges.Exists(value =>
-                               value != null &&
-                               string.Equals(
-                                   value.GUID,
-                                   source.ElementAuthoringId,
-                                   StringComparison.Ordinal));
-                if (resolved)
-                {
-                    window.FocusSharedElement(
-                        new GraphAuthoringElementId(
-                            source.ElementAuthoringId));
-                }
-            }
-            else if (source.Kind == RuntimeSourceElementKind.BlackboardDeclaration)
-                resolved = window.FocusBlackboardDeclaration(source.GraphAuthoringId, source.ElementAuthoringId);
-            else if (source.Kind != RuntimeSourceElementKind.Graph)
-                resolved = false;
-            if (!resolved)
-            {
-                window.Close();
-                return false;
-            }
-            window.Show();
-            window.Focus();
-            return true;
-        }
-
     }
 }

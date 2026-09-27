@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Compare")]
     [NodePath("Base/Value/Math/Compare")]
-    [NodeView("VariablePropertyNodeView")]
     [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public partial class CompareNode : ValueNode
     {

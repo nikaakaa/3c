@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorCalculate")]
     [NodePath("Base/Value/Operate/VectorCalculate")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorCalculateNode : ValueNode
     {
         public enum CalculateType

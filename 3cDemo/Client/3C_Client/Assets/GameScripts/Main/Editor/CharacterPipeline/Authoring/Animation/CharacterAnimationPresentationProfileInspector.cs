@@ -11,7 +11,6 @@ using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using TreeDesigner;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 

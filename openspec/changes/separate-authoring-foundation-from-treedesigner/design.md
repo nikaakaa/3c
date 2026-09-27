@@ -1,6 +1,6 @@
 ## Context
 
-2026-09-27 范围更新：把真正独立的公共数据定义和编辑能力从 TreeDesigner 中分出，具体运行实现各归其位，删除被原生入口替代的旧 UI。目标包含模块依赖归位，不止是在 TreeDesigner 内拆小文件。完整退出旧图执行类型、重写技能/Pose/Timeline 运行逻辑仍不属于本次。当前只更新文档，未开始代码整理。
+2026-09-27 范围更新：把真正独立的公共数据定义和编辑能力从 TreeDesigner 中分出，具体运行实现各归其位，删除被原生入口替代的旧 UI。目标包含模块依赖归位，不止是在 TreeDesigner 内拆小文件。完整退出旧图执行类型、重写技能/Pose/Timeline 运行逻辑仍不属于本次。2026-09-28 已完成 A/B/C/C5-C6 实施及直接受影响主规格同步；最终类型映射、删除证据和实际结果见 migration-map.json 与 implementation.md。
 
 ### 已确认的代码事实
 
@@ -128,9 +128,9 @@ Timeline 仅更新本次迁出类型的引用；仍有真实消费者的 BaseGra
 | unity-simulation-assembly-ownership | 公共 Runtime 与公共 Editor 建立真实单向程序集边界，具体图适配留在所属领域；只对本次列入清单的自有类型允许精确迁名，仍有有效类型的旧程序集保留 |
 | native-flowcanvas-pose-runtime、character-presentation-pose-graph | 保持原生 Pose 实例和正式观察，不恢复 Pose IR 或独立预览执行器 |
 
-本次不替其它 change 完成或归档，不沿用旧文档对它们“未归档”的状态判断。本轮只修改 change 与 delta，主规格在实施与正式同步前保持原状。下面这些历史冲突仍需明确指出：
+本次不替其它 change 完成或归档，不沿用旧文档对它们“未归档”的状态判断。实施完成后，本 change 的 delta 已同步到直接受影响的八份主规格；本 change 尚未归档。下面这些历史冲突仍需明确指出：
 
-- `btsmtl-graph-core` 的“BaseGraph 承载唯一图结构数据”及旧 asset 入口适用范围仍覆盖过宽；本次没有全量旧图消费者及合法资产迁移方案，不能借整理整体删除该运行合同。跨领域共享旧 Canvas 的要求已在本次 delta 中修订。
+- `btsmtl-graph-core` 的“BaseGraph 承载唯一图结构数据”适用范围仍覆盖过宽；本次保留具体图运行类型，不借整理整体删除该运行合同。目标项目中 BaseTreeAsset 资产数量为零，旧资产菜单、Inspector 和打开回调已删除，对应旧入口要求也已从主规格移除；跨领域共享旧 Canvas 的要求已修订。
 - `graph-authoring-domain-framework` 的“Authoring节点与Runtime执行描述必须分离”仍要求 Pose 编译为 IR 并拒绝直接执行作者图，与 `native-flowcanvas-pose-runtime` 的原生执行要求冲突；Capability 条款也仍含 Pose lowering/Compiler 描述。本次保留现有原生 Pose 执行及领域定义，不把解决历史运行合同算作文件归位成果。
 - `character-pipeline-blackboard` 的 `BaseExposedProperty` 唯一声明表面说法不能被解释为所有公共黑板值定义都必须留在 TreeDesigner；本次不改变声明 owner 和存储实现，也不据此引入第二套声明。
 
@@ -148,9 +148,9 @@ Timeline 仅更新本次迁出类型的引用；仍有真实消费者的 BaseGra
 | A2 | `Runtime/BTSMTL/TreeDesigner/Scripts/ExposedProperty/ExposedProperty_Extension.cs`、`Scripts/Utility/ExposedPropertyUtility.cs` | 声明查找、类型映射和运行辅助 | 只依赖公共值的规则随 A1 迁出；具体对象读取、类型映射及声明校验留在 TreeDesigner 对应目录 | 按成员依赖分配，保持唯一方法与调用语义，不通过复制或反射消除引用 |
 | B1 | `Runtime/BTSMTL/TreeDesigner/Scripts/Authoring/GraphAuthoringCapabilityCatalog.cs`、`GraphAuthoringDomainContracts.cs` | 字段、端口、能力、文档描述、命令和显示描述 | 独立定义进入 `Runtime/BTSMTL/Authoring/Graph` 下的 `FieldContracts.cs`、`PortContracts.cs`、`CapabilityCatalog.cs`、`DomainContracts.cs` | 公共定义闭包一起迁出；具体领域提供者保留原领域，Editor 实现不进入 Runtime，类型身份精确迁移 |
 | B2 | `Runtime/BTSMTL/TreeDesigner/Scripts/PropertyPort/PropertyPort.cs`、`Scripts/Attribute/BaseAttributes.cs` | 运行端口、端口身份、连接状态和声明特性 | 原 Runtime 目录的 `PropertyPort` 与 `Attribute` | 不迁出运行语义；只清楚标明编辑器读取点，禁止把它们复制到 Editor |
-| B3 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/PropertyPortAuthoringService.cs` | 具体端口声明读取、编辑描述和连接查找 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Authoring/PropertyPortAuthoringService.cs` | 属于具体图的 Editor 适配；读取 B2 并使用公共描述，不把 TreeDesigner 依赖带入共享 Editor |
+| B3 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/PropertyPortAuthoringService.cs` | 具体端口声明读取、编辑描述和连接查找 | B 切片先归入具体 Editor，C5/C6 随唯一旧 UI 消费者删除 | 不把 TreeDesigner 依赖带入共享 Editor；最终没有有效消费者，不保留空服务 |
 | C1 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringProjectionCanvas.cs`、`GraphAuthoringStateMachineProjection.cs` | 有效绑定合同与旧 GraphView 视图/partial 实现混放 | 有效合同进入 `Editor/GraphAuthoring/Contracts`；旧视图进入 C5 删除清单 | 提取 Clipboard、Projection/StateMachine binding 和有效页面合同；不搬迁保留旧 Canvas 与 Projected View |
-| C2 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs`、`GraphAuthoringStateMachineDetailsPresenter.cs`、`GraphAuthoringNavigatorPresenter.cs`、`GraphAuthoringBottomDockPresenter.cs`、`GraphDataCatalog.cs` | 面板显示与数据源接入 | 独立面板进入 `Editor/GraphAuthoring/Details`、`Navigation`、`Catalog`；具体数据源留在领域 Editor | 按实际依赖提取，保留正式入口使用的行为；未被使用的附属显示直接清理 |
+| C2 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/View/GraphAuthoringDetailsPresenter.cs`、`GraphAuthoringStateMachineDetailsPresenter.cs`、`GraphAuthoringNavigatorPresenter.cs`、`GraphAuthoringBottomDockPresenter.cs`、`GraphDataCatalog.cs` | 面板显示与数据源接入 | Details、状态机 Details、Navigator 和只读面板合同进入共享 Editor；具体数据源留在领域 Editor | 无有效消费者的旧 Data Catalog、Bottom Dock presenter/catalog/descriptor 和 PageStack 已删除，原生工作区继续使用自己的装配 |
 | C3 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringEditorShell.cs`、`GraphAuthoringStateMachineContracts.cs`、`BtsmtlGraphAuthoringAdapters.cs`、`BtsmtlSharedAuthoringWorkspaceRegistry.cs`、`GraphAuthoringClipboardController.cs` | 公共编辑合同、具体适配、旧窗口装配 | 公共合同/交互进入 `Editor/GraphAuthoring/Contracts`、`Interaction`；具体图适配留领域 Editor；旧窗口装配进入 C5 | 不整文件迁移 Shell；逐项处理 Selection、Undo、Clipboard、资源选择和注册释放，解除有效能力对旧窗口的依赖 |
 | C4 | `Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.cs`、`CharacterPoseCanvas*`、`CharacterPoseGraphAuthoringAdapter.cs` | 当前原生 Pose 编辑入口的实际消费者 | 原路径保留，引用 C1/C2/C3 的归位类型 | 这是共享集成文件，只允许集成人修改，不能由 A/B/C 各自改一份 |
 | C5 | `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/BaseTreeWindow.cs`、`SubTreeWindow.cs`、`TreeBrowserWindow.cs`、`NodeReferenceWindow.cs`、相关 `TreeWindowUtility.cs` | 旧 TreeDesigner 窗口、浏览器和节点引用界面 | 删除确认无消费者的窗口和回调 | 必须先完成 C1-C4；任何仍被当前编辑入口使用的功能先迁出，不能整目录删除 |

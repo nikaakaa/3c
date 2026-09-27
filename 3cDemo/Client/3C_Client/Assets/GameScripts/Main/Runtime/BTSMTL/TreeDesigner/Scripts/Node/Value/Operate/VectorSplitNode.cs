@@ -6,7 +6,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorSplit")]
     [NodePath("Base/Value/Operate/VectorSplit")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class VectorSplitNode : ValueNode
     {
         public enum VectorType { Vector3, Vector2 }

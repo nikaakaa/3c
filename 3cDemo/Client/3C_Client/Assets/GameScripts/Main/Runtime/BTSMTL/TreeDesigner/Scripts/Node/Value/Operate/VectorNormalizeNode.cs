@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("VectorNormalize")]
     [NodePath("Base/Value/Operate/VectorNormalize")]
-    [NodeView("VariablePropertyNodeView")]
     public class VectorNormalizeNode : ValueNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "Vector", typeof(Vector2), typeof(Vector3))]

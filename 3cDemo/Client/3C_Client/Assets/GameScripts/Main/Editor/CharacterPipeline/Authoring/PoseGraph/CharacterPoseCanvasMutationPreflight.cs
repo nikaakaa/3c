@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
-using TreeDesigner.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {

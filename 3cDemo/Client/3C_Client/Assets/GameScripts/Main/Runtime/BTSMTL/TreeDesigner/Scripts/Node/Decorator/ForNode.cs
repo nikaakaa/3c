@@ -8,7 +8,6 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("For")]
     [NodePath("Base/Decorator/For")]
-    [NodeView("VariablePropertyNodeView")]
     public partial class ForNode : DecoratorNode
     {
         [SerializeReference, VariablePropertyPort(PortDirection.Input, "List", "AcceptableTypes")]

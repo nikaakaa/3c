@@ -55,7 +55,7 @@ Data Catalog MUST 提供文本搜索和 All、Input、Blackboard 分类。Blackb
 - **THEN** Catalog MUST 只显示当前上下文可见的 Skill Local 声明
 - **AND** MUST 按稳定 declaration identity 和 owner 区分同名变量
 
-### Requirement: TreeWindow 运行时模式必须保持窗口级边界
+### Requirement: Graph Authoring Editor Shell 运行时模式必须保持窗口级边界
 
 Authoring 与 Live Debug MUST 是整个编辑窗口的模式。Live Debug 下所有作者 mutation MUST 被拒绝；窗口只绑定自己的 runtime target 和 capture position，并从共享 diagnostics/provider 读取状态。导航、Timeline 播放和其它窗口的 binding MUST 不因 selection 或局部面板变化而改变。
 
@@ -72,7 +72,7 @@ Authoring 与 Live Debug MUST 是整个编辑窗口的模式。Live Debug 下所
 - **THEN** 图窗口 MUST 只更新自己的 debug binding
 - **AND** Timeline playback binding MUST 保持不变；观察同一 Session 时，两窗口 MUST 从同一正式 provider 和 Capture history position 获取各自结果
 
-#### Scenario: 创建TreeWindow
+#### Scenario: 创建Graph Authoring Editor Shell
 
 - **WHEN** Editor 创建当前正式原生图编辑入口及项目业务面板
 - **THEN** 面板 MUST 使用当前 Unity 支持的样式；创建过程 MUST 不产生 stylesheet parser error
@@ -84,7 +84,7 @@ Authoring 与 Live Debug MUST 是整个编辑窗口的模式。Live Debug 下所
 - **THEN** MUST 按已保存 serialized owner、property path 和 GraphAuthoringId 恢复作者对象，并建立新的窗口本地运行绑定
 - **AND** 定位缺失或不一致时 MUST 停止恢复，不恢复旧运行实例或按名称、窗口顺序猜测对象
 
-### Requirement: Tree Editor内部职责必须由独立模块拥有
+### Requirement: Graph Authoring Editor Shell内部职责必须由独立模块拥有
 
 作者集成 MUST 将 navigation、Data Catalog、Details、mutation、selection 和 runtime overlay 分成独立职责。唯一 mutation owner MUST 负责创建、连接、删除、粘贴和 Undo；Data Catalog 与 Details MUST 不互相保存可写副本；runtime overlay MUST 只读取正式 diagnostics。系统 MUST 不依赖旧 TreeWindow、TreeView 或按名称近似恢复作为业务数据入口。
 

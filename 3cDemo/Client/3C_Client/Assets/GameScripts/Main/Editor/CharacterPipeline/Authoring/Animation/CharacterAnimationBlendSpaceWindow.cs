@@ -10,7 +10,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
@@ -250,7 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    sealed class BlendSpaceGraphView : GraphView, IGraphAuthoringDomainView
+    sealed class BlendSpaceGraphView : GraphView, IBlendSpaceDomainView
     {
         internal const float CanvasLeft = 80f;
         internal const float CanvasTop = 80f;
@@ -262,15 +261,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new Dictionary<CharacterAnimationBlendSpaceSampleId, BlendSpaceSampleNodeView>();
         readonly BlendSpaceCanvasOverlay m_CanvasOverlay;
         readonly VisualElement m_PreviewPoint;
-        IGraphAuthoringDocument m_Document;
-        IGraphAuthoringMutationAdapter m_Mutation;
+        IBlendSpaceDocument m_Document;
+        IBlendSpaceMutationAdapter m_Mutation;
         bool m_Rebuilding;
         bool m_DraggingPreview;
 
         internal BlendSpaceGraphView(CharacterAnimationBlendSpaceEditorWindow window)
         {
             m_Window = window;
-            StyleSheet style = Resources.Load<StyleSheet>("StyleSheet/BaseTree");
+            StyleSheet style = Resources.Load<StyleSheet>("BlendSpace/Canvas");
             if (style)
                 styleSheets.Add(style);
             Insert(0, new GridBackground());
@@ -301,9 +300,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public void BindAdapters(
-            IGraphAuthoringDocument document,
-            IGraphAuthoringPortPolicy portPolicy,
-            IGraphAuthoringMutationAdapter mutation)
+            IBlendSpaceDocument document,
+            IBlendSpacePortPolicy portPolicy,
+            IBlendSpaceMutationAdapter mutation)
         {
             m_Document = document;
             m_Mutation = mutation;
@@ -449,7 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    sealed class BlendSpaceDocumentAdapter : IGraphAuthoringDocument
+    sealed class BlendSpaceDocumentAdapter : IBlendSpaceDocument
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         internal BlendSpaceDocumentAdapter(CharacterAnimationBlendSpaceEditorWindow window) { m_Window = window; }
@@ -460,15 +459,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public UnityEngine.Object SerializedOwner => m_Window.Asset;
     }
 
-    sealed class BlendSpaceNodeCatalogAdapter : IGraphAuthoringNodeCatalog
+    sealed class BlendSpaceNodeCatalogAdapter : IBlendSpaceNodeCatalog
     {
-        public IReadOnlyList<GraphAuthoringNodeCatalogEntry> GetEntries(IGraphAuthoringDocument document) =>
-            new[] { new GraphAuthoringNodeCatalogEntry("Samples/Sample", "sample") };
+        public IReadOnlyList<BlendSpaceNodeCatalogEntry> GetEntries(IBlendSpaceDocument document) =>
+            new[] { new BlendSpaceNodeCatalogEntry("Samples/Sample", "sample") };
     }
 
-    sealed class BlendSpacePortPolicyAdapter : IGraphAuthoringPortPolicy
+    sealed class BlendSpacePortPolicyAdapter : IBlendSpacePortPolicy
     {
-        public bool CanConnect(IGraphAuthoringDocument document, Port startPort, Port endPort) => false;
+        public bool CanConnect(IBlendSpaceDocument document, Port startPort, Port endPort) => false;
     }
 
     [Serializable]
@@ -478,13 +477,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public Vector2 center;
     }
 
-    sealed class BlendSpaceMutationAdapter : IGraphAuthoringMutationAdapter
+    sealed class BlendSpaceMutationAdapter : IBlendSpaceMutationAdapter
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         internal BlendSpaceMutationAdapter(CharacterAnimationBlendSpaceEditorWindow window) { m_Window = window; }
         public bool ReadOnly => false;
 
-        public void CreateNode(IGraphAuthoringDocument document, string typeId, Vector2 graphPosition)
+        public void CreateNode(IBlendSpaceDocument document, string typeId, Vector2 graphPosition)
         {
             if (!string.Equals(typeId, "sample", StringComparison.Ordinal))
                 throw new InvalidOperationException($"Blend Space node type '{typeId}' is unknown.");
@@ -493,7 +492,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Window.GraphView.ToParameter(graphPosition)));
         }
 
-        public GraphViewChange ApplyGraphViewChange(IGraphAuthoringDocument document, GraphViewChange change)
+        public GraphViewChange ApplyGraphViewChange(IBlendSpaceDocument document, GraphViewChange change)
         {
             if (change.elementsToRemove != null)
             {
@@ -518,7 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return change;
         }
 
-        public string SerializeSelection(IGraphAuthoringDocument document, IEnumerable<GraphElement> elements)
+        public string SerializeSelection(IBlendSpaceDocument document, IEnumerable<GraphElement> elements)
         {
             BlendSpaceSampleNodeView[] nodes = elements?.OfType<BlendSpaceSampleNodeView>().ToArray() ?? Array.Empty<BlendSpaceSampleNodeView>();
             return JsonUtility.ToJson(new BlendSpaceClipboardPayload
@@ -528,7 +527,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        public bool CanPaste(IGraphAuthoringDocument document, string payload)
+        public bool CanPaste(IBlendSpaceDocument document, string payload)
         {
             try
             {
@@ -542,7 +541,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        public void Paste(IGraphAuthoringDocument document, string operationName, string payload)
+        public void Paste(IBlendSpaceDocument document, string operationName, string payload)
         {
             if (!CanPaste(document, payload))
                 throw new InvalidOperationException("Blend Space clipboard payload is invalid for this asset.");
@@ -560,10 +559,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        public void Reload(IGraphAuthoringDocument document) => m_Window.RefreshWorkspace();
+        public void Reload(IBlendSpaceDocument document) => m_Window.RefreshWorkspace();
     }
 
-    sealed class BlendSpaceInspectorAdapter : IGraphAuthoringInspectorAdapter, IGraphAuthoringWorkspacePageAdapter
+    sealed class BlendSpaceInspectorAdapter : IBlendSpaceInspectorAdapter, IBlendSpaceWorkspacePageAdapter
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         readonly VisualElement m_Root = new VisualElement();
@@ -588,7 +587,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public VisualElement View => m_Root;
         public string ActivePageId => m_Page;
-        public void Bind(IGraphAuthoringDocument document) => Rebuild();
+        public void Bind(IBlendSpaceDocument document) => Rebuild();
 
         public void Inspect(IReadOnlyList<ISelectable> selection)
         {
@@ -903,13 +902,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    sealed class BlendSpaceNavigatorAdapter : IGraphAuthoringWorkspaceRegionAdapter
+    sealed class BlendSpaceNavigatorAdapter : IBlendSpaceWorkspaceRegionAdapter
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         readonly ScrollView m_Root = new ScrollView();
         internal BlendSpaceNavigatorAdapter(CharacterAnimationBlendSpaceEditorWindow window) { m_Window = window; }
         public VisualElement View => m_Root;
-        public void Bind(IGraphAuthoringDocument document) => Refresh();
+        public void Bind(IBlendSpaceDocument document) => Refresh();
         public void Clear() => m_Root.Clear();
 
         public void Refresh()
@@ -949,7 +948,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    sealed class BlendSpaceBottomDockAdapter : IGraphAuthoringWorkspaceRegionAdapter, IGraphAuthoringWorkspacePageAdapter
+    sealed class BlendSpaceBottomDockAdapter : IBlendSpaceWorkspaceRegionAdapter, IBlendSpaceWorkspacePageAdapter
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         readonly VisualElement m_Root = new VisualElement();
@@ -973,7 +972,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public VisualElement View => m_Root;
         public string ActivePageId => m_Page;
-        public void Bind(IGraphAuthoringDocument document) => Refresh();
+        public void Bind(IBlendSpaceDocument document) => Refresh();
         public void Clear() => m_Content.Clear();
 
         public void RestorePage(string pageId)
@@ -1091,13 +1090,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    sealed class BlendSpaceDiagnosticsAdapter : IGraphAuthoringDiagnosticsAdapter
+    sealed class BlendSpaceDiagnosticsAdapter : IBlendSpaceDiagnosticsAdapter
     {
         readonly CharacterAnimationBlendSpaceEditorWindow m_Window;
         Label m_Status;
         internal BlendSpaceDiagnosticsAdapter(CharacterAnimationBlendSpaceEditorWindow window) { m_Window = window; }
 
-        public void Bind(IGraphAuthoringDocument document, GraphView graphView, VisualElement toolbar)
+        public void Bind(IBlendSpaceDocument document, GraphView graphView, VisualElement toolbar)
         {
             if (m_Status == null)
             {
@@ -1148,7 +1147,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    public sealed class CharacterAnimationBlendSpaceEditorWindow : GraphAuthoringEditorShell
+    public sealed class CharacterAnimationBlendSpaceEditorWindow : BlendSpaceWorkspaceWindow
     {
         [SerializeField] CharacterAnimationBlendSpaceAsset m_Asset;
         [SerializeField] CharacterAnimationPresentationProfile m_Profile;
@@ -1200,25 +1199,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return m_Inspector.View;
         }
 
-        protected override GraphAuthoringDomainAdapters CreateGraphAuthoringAdapters()
+        protected override BlendSpaceDomainAdapters CreateGraphAuthoringAdapters()
         {
             m_Navigator = new BlendSpaceNavigatorAdapter(this);
             m_BottomDock = new BlendSpaceBottomDockAdapter(this);
             var commands = new[]
             {
-                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection)
+                new BlendSpaceToolbarCommandDescriptor("compile", "Compile", BlendSpaceToolbarCommandKind.ExplicitOperation, CompilePoseProjection)
             };
-            return new GraphAuthoringDomainAdapters(
+            return new BlendSpaceDomainAdapters(
                 new BlendSpaceDocumentAdapter(this),
                 new BlendSpaceNodeCatalogAdapter(),
                 new BlendSpacePortPolicyAdapter(),
                 m_Mutation,
                 m_Inspector,
                 new BlendSpaceDiagnosticsAdapter(this),
-                new GraphAuthoringWorkspaceDescriptor(
-                    new GraphAuthoringWorkspaceRegionDescriptor("Navigator", true, 220f, 280f),
-                    new GraphAuthoringWorkspaceRegionDescriptor("Details", true, 260f, 380f),
-                    new GraphAuthoringWorkspaceRegionDescriptor("Preview / Diagnostics", true, 170f, 280f),
+                new BlendSpaceWorkspaceDescriptor(
+                    new BlendSpaceWorkspaceRegionDescriptor("Navigator", true, 220f, 280f),
+                    new BlendSpaceWorkspaceRegionDescriptor("Details", true, 260f, 380f),
+                    new BlendSpaceWorkspaceRegionDescriptor("Preview / Diagnostics", true, 170f, 280f),
                     commands),
                 m_Navigator,
                 m_BottomDock);
@@ -1233,8 +1232,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RenderGraphAuthoringNavigation(
                 new[]
                 {
-                    new GraphAuthoringBreadcrumbEntry("Character Animation", "Character Animation Authoring Workspace"),
-                    new GraphAuthoringBreadcrumbEntry(m_Asset ? m_Asset.name : "Blend Space", "Blend Space asset mode")
+                    new BlendSpaceBreadcrumbEntry("Character Animation", "Character Animation Authoring Workspace"),
+                    new BlendSpaceBreadcrumbEntry(m_Asset ? m_Asset.name : "Blend Space", "Blend Space asset mode")
                 },
                 null);
             RefreshWorkspace();

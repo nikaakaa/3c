@@ -5,7 +5,6 @@ using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
-using TreeDesigner.Editor;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor

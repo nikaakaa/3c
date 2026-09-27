@@ -32,4 +32,4 @@
 - 无窗口的状态不生成空逻辑轨道；重复生成清理旧空 Boundary 图。
 - Timeline / Section / AnimationClip 播放身份沿用原 stable seed，窗口使用各自状态与窗口名生成身份。
 
-本轮不改动画曲线、不重做足部分析、不重新压缩 ACL；已有动画资源由当前正式资源目录复用。
+2026-09-27 后续根位移修正：强化五段已增加正式 MotionCurveTrack，引用 `CorinActionMotion` 中从对应 MotionReference 的 Bip001 X/Z 提取的平面位移。Y 与旋转保留在原地动画表现中。强化循环动画登记 `FootPlacementWeight=0`，保留悬空腿姿；这次实际动画标量曲线变更已发布 ACL 并编译 Domain Resource Set，足部分析结果复用。运行证据见 `diagnostics/corin-action-runtime-20260927-180403.json`；不能以该回放成功代替悬空姿态和位移视觉验收。

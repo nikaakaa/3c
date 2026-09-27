@@ -1,0 +1,93 @@
+{
+  "schema": "corin-existing-input-coverage/1",
+  "method": "Read-only offline decode following RollbackInputCodec version 3 and FixedCanonicalData; each decoded frame consumed all payload bytes",
+  "runtime_evidence": "corin-action-runtime-20260927-180403.json",
+  "traces": [
+    {
+      "trace_id": "757f243033414fc7b123c97e2fcb0d70",
+      "frames": 2716,
+      "attack_held_present_frames": 2716,
+      "branch_held_present_frames": 2716,
+      "branch_ticks": [
+        2234,
+        2374,
+        2558
+      ],
+      "branch_hold_runs": [
+        {
+          "start": 2234,
+          "end": 2266,
+          "frames": 32,
+          "moving_frames": 0
+        },
+        {
+          "start": 2374,
+          "end": 2462,
+          "frames": 88,
+          "moving_frames": 36
+        },
+        {
+          "start": 2558,
+          "end": 2602,
+          "frames": 44,
+          "moving_frames": 44
+        }
+      ],
+      "decode_error": null
+    },
+    {
+      "trace_id": "11fa0cf23ef84252b4aee9ee86905411",
+      "frames": 2691,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    },
+    {
+      "trace_id": "c311858d6b2742c396da8ba3493163cd",
+      "frames": 3930,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    },
+    {
+      "trace_id": "92695eab609c4de4abf0fdd9006bdd85",
+      "frames": 3870,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    },
+    {
+      "trace_id": "dc91fc0cf0e74a5885adc6356d0d750e",
+      "frames": 1604,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    },
+    {
+      "trace_id": "f169da25c67742aaafa0e9860ae4a230",
+      "frames": 1492,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    },
+    {
+      "trace_id": "43357ff3cd384e5cba75d2c31175b116",
+      "frames": 1044,
+      "attack_held_present_frames": 0,
+      "branch_held_present_frames": 0,
+      "branch_ticks": [],
+      "branch_hold_runs": [],
+      "decode_error": null
+    }
+  ]
+}

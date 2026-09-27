@@ -1,0 +1,326 @@
+{
+  "partial_capture": true,
+  "capture_frames": 1206,
+  "reason_incomplete": "Recorded input omitted AttackHeld; replay stopped after 1207/2691 frames",
+  "transitions": [
+    {
+      "frame": 380,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.1736468013119731,
+      "max_step_frame": 386,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 408,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.13763522934888725,
+      "max_step_frame": 416,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 427,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.11483218006769906,
+      "max_step_frame": 430,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 450,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.129862317241874,
+      "max_step_frame": 460,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 469,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.15046894641913544,
+      "max_step_frame": 475,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 496,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.11210693078394954,
+      "max_step_frame": 507,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 518,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.17084424415772753,
+      "max_step_frame": 519,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 546,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.0981281957779419,
+      "max_step_frame": 550,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 565,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.18043817588257818,
+      "max_step_frame": 566,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 578,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.12340677549883863,
+      "max_step_frame": 596,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 597,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.12623441829012103,
+      "max_step_frame": 604,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 617,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.17787601175468526,
+      "max_step_frame": 622,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 636,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.12927030245395535,
+      "max_step_frame": 643,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 647,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.15821945430840648,
+      "max_step_frame": 665,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 666,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.09891521486116754,
+      "max_step_frame": 666,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 681,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.14851534085274123,
+      "max_step_frame": 683,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 700,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.14481556500955906,
+      "max_step_frame": 701,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 710,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.1689889714978964,
+      "max_step_frame": 712,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 729,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.11617618606820362,
+      "max_step_frame": 730,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 739,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.15887691138722618,
+      "max_step_frame": 757,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 758,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.139879004624741,
+      "max_step_frame": 758,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 768,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.14440964847798599,
+      "max_step_frame": 786,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 787,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.10345200578295836,
+      "max_step_frame": 787,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 809,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.16162999107393133,
+      "max_step_frame": 812,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 828,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.1324551993856983,
+      "max_step_frame": 828,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 838,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.17447860686786587,
+      "max_step_frame": 841,
+      "max_step_side": "left",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 857,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.13684436636978778,
+      "max_step_frame": 858,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 867,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.15658590832470076,
+      "max_step_frame": 877,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 886,
+      "entry": true,
+      "duration": 0.12,
+      "max_local_ankle_step_m": 0.14580009562988858,
+      "max_step_frame": 887,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    },
+    {
+      "frame": 896,
+      "entry": false,
+      "duration": 0.3,
+      "max_local_ankle_step_m": 0.16238664975052777,
+      "max_step_frame": 906,
+      "max_step_side": "right",
+      "leader_delta_min": 0.01666666753590107,
+      "leader_delta_max": 0.01666666753590107
+    }
+  ],
+  "phase_check": {
+    "mixed_frames": 360,
+    "double_support_frames": 186,
+    "ordinary_phase_frames": 174,
+    "maximum_phase_error": 0.039057054378725864,
+    "time_regressions": [],
+    "expected_mapping": {
+      "mapped_frames": 325,
+      "natural_double_support_frames": 35,
+      "maximum_error": 1.1293200730122521e-07,
+      "mismatches_above_1e_5": 0,
+      "definition": "Exit from double support uses the next half-cycle support anchor until the outgoing phase catches up. This verifies configured mapping, not pose compatibility."
+    }
+  },
+  "unity_mono_map_allocation": {
+    "calls": 324400,
+    "allocated_bytes": 0,
+    "scope": "Actual compiled phase plans, warmed Map loop in Unity Editor Mono; not whole-frame allocation"
+  }
+}

@@ -76,7 +76,7 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 
 ## 正式运行检查
 
-选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转，没有 `AttackHeld` 为真的帧。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。
+选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转。后续确认这份旧录制的全部帧均缺少 `AttackHeld` 字段；此前只统计为真的帧数，不能证明字段存在且为 false。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。
 
 本次请求被正式工作流接受，但在启动 Fixed 会话阶段超时：`Canonical Fixed input diagnostic-replay timed out while starting the Fixed session.` 没有生成新的脚部／表现采样目录，也没有取得回放完成证明。此失败不能计为 TurnBack 效果通过或失败；截至此记录，相位代码、正式作者配置和运行资源采用已完成，真实切换检查尚未完成。没有重复启动同一次未确定状态的回放，没有修改启动超时阈值或绕过正式场景启动链。
 
@@ -89,3 +89,28 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 同一原模块、同一项目配置，只将诊断进程的 `ALLUSERSPROFILE` 补为 `C:\ProgramData`，调用立即成功，返回默认 Unity 仓库与项目 OpenUPM 仓库。没有修改 manifest、包锁、Unity 安装文件或项目代码。这一对照确认本条错误来自启动进程继承的环境变量缺失，不能据此认定此前所有回放超时都由它造成。
 
 已确认用户级 `ALLUSERSPROFILE=C:\ProgramData` 并广播环境更新。修复前日志保留在 `tmp/turnback-mcp-recovery/upm-path-20260927/`。以正确环境、原可执行文件和同一 IPC 参数重启了本项目 UPM 子进程（新 PID 88600）；Unity Editor 保持打开。新 UPM 已监听，但截至记录时未收到编辑器请求，编辑器状态调用仍超时。现有进程不会自动继承用户环境更新；仍需保存工作并从正确环境重新启动 Unity，确认真实包列表／仓库请求成功后再继续 TurnBack 回放。当前不能声明 Package Manager 窗口恢复或相位同步视觉验收通过。
+
+后续恢复：11:35 在实例恢复响应后，先退出暂停的 Play，确认 Edit/idle，再通过正式 `SaveOpenScenes` 与 `SaveAssets` 保存，正常执行 File/Exit。确认旧 PID 123480 退出后，在启动进程内显式设置 `ALLUSERSPROFILE` 为 Windows `CommonApplicationData`，启动相同项目和相同 Unity 版本，新 PID 45756。11:36:14 的 `config:project:get-registries` 返回 200，11:36:16 的 `project:list-packages` 返回 200；这次是实际编辑器请求成功，不只是独立模块验证。新编辑器的环境回读为 `C:\ProgramData`。只修改用户环境变量后从旧父进程启动仍可能继承旧环境，因此本次启动显式传入该标准变量；没有增加 UPM 专用配置或修改安装代码。
+
+11:38 编辑器完成加载并确认 Edit/idle 后，通过原 `ReplayTraceWithDiagnostics` 重新启动同一份 2691 帧输入。请求已接受，后续在 Play 期间只读取磁盘日志与报告，不发送执行代码查询。回放完成与腿部表现仍需以新产物确认。
+
+## 真实转身窗口采样结果
+
+本次旧录制实际运行 1207/2691 帧后，遇到 `Tick input does not contain required value 'AttackHeld'`。退出 Play 后，正式诊断流程保存了已采到的数据。前 1207 帧内有 15 次 Run→TurnBack 和 15 次 TurnBack→Run，30 个混合窗口均已完整结束；不把整份录制算作成功。
+
+- 表现采样：`3cDemo/Client/3C_Client/Diagnostics/GeneratedPresentationSampling/20260927-034009-acfa5ce2cf864a33b1eefef071405783/`。
+- 脚部采样：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260927-034009-b33a806852324f46beb9e7f83bf12354/`。
+- 汇总数据：[corin-turnback-runtime-20260927.json](corin-turnback-runtime-20260927.json)。按原生 lineage 对齐脚部与表现记录，不能用脚部表的左右脚行号直接匹配表现帧。
+- 曲线图：[corin-turnback-runtime-20260927.png](corin-turnback-runtime-20260927.png)。展示普通入口、双脚支撑入口、双脚支撑出口三个完整窗口；脚踝曲线来自实际角色最终物理采样。
+
+30 个窗口中，切出播放器相邻采样时间增量均为 `0.01666666753590107` 秒。同步没有改写切出时间。切入播放器在同一来源身份内没有时间倒退。普通入口实际发生在不同动画时间；双脚支撑入口首个非零权重采样时间为约 `0.18333335` 秒，这是从合法入口 `0.166666687` 秒推进一帧后的结果，不能把非零权重第一帧误当成初始入口。
+
+两个播放器同时有权重的 360 帧中，35 帧处于有限切入的自然双脚支撑分支；其余 325 帧符合相位映射规则，最大周期相位误差约 `1.13e-7`，没有超过 `1e-5` 的不符帧。有限切出在双脚支撑内起混合时，切入 Run 使用接下来的半周期支撑锚点；因此这段时间不要求两个原始相位数值相等。直接比较原始相位会在 11 帧得到最大约 0.0391 的差异，不能混称为普通单脚相位精确相等。
+
+脚踝世界位移的单帧 95 分位数：正常 Run 约 0.2149 米，转身混合约 0.2007 米。扣除根平移后分别约 0.1321／0.1284 米。该比较来自同一次运行的不同时间段，不是同输入修改前后的 A/B；不能单独证明所有腿部摇摆、拉扯已消失。曲线与时间映射证明同步进入真实运行链路，最终画面质量仍不能用这些统计替代。
+
+随后选用现有新录制 `757f243033414fc7b123c97e2fcb0d70`：2716 帧均存在 `AttackHeld`，其中 251 帧按下，1418 帧有移动、8 次相邻方向反转。同一正式入口运行至 776/2716 帧时遇到 `Camera presentation requires an active TreeClip invocation`，已退出 Play，pending=false。没有给旧录制补默认输入，没有修改攻击或相机逻辑，也没有将这次完整战斗回放宣称通过。
+
+Unity Mono 分配补充：在 Edit 模式直接加载正式运行资源中的 Run、Walk、TurnBack 相位计划，预热后调用实际 `AnimationPhaseSynchronization.Map` 共 324400 次，覆盖两种步态的整圈入口、混合持续帧及有限动画出口，当前线程新增托管分配为 0 字节。没有复制算法或写测试文件。这是 Unity Mono 下同步计算的分配证据，不是整场景、整帧或诊断采样器的零分配结论。
+
+最终回读运行资源仍为 `Locomotion.Gait` 三个成员，TurnBack 4 个相位键和 1 个双脚支撑区间，Run／Walk 各 3 个相位键，三份计划 `RequireValid` 均成功。针对当前实例重新执行正式包列表查询，任务 `3a5a3464463b41afaae80f92487e7eca` 成功返回 65 个包，结果保存于 `tmp/turnback-mcp-recovery/upm-path-20260927/packages-after.json`；默认 UPM 日志有其它编辑器并发写入，不能把其中其它请求的 500 当成本项目这次请求失败。

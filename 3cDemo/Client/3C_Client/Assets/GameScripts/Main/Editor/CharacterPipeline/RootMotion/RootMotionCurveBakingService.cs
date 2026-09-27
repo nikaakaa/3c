@@ -8,6 +8,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor.RootMotion
 {
     public static class RootMotionCurveBakingService
     {
+        public static void BakePlanarBoneTranslation(AnimationClip clip, string bonePath, RootMotionCurveAsset target)
+        {
+            if (!clip || !target || string.IsNullOrWhiteSpace(bonePath) || clip.frameRate <= 0f)
+                throw new ArgumentException("Planar motion requires a source clip, explicit bone path and target asset.");
+            AnimationCurve x = ReadTranslation(clip, bonePath, "m_LocalPosition.x");
+            AnimationCurve z = ReadTranslation(clip, bonePath, "m_LocalPosition.z");
+            float duration = clip.length;
+            var times = new SortedSet<float> { 0f, duration };
+            foreach (Keyframe key in x.keys)
+                times.Add(key.time);
+            foreach (Keyframe key in z.keys)
+                times.Add(key.time);
+            var distance = new AnimationCurve();
+            Vector2 previous = new Vector2(x.Evaluate(0f), z.Evaluate(0f));
+            float totalDistance = 0f;
+            foreach (float time in times)
+            {
+                Vector2 position = new Vector2(x.Evaluate(time), z.Evaluate(time));
+                totalDistance += Vector2.Distance(previous, position);
+                distance.AddKey(time, totalDistance);
+                previous = position;
+            }
+            target.SetBakedData(clip, duration, clip.frameRate, RootMotionCurveEvaluationMode.FullLocalDelta,
+                x, AnimationCurve.Constant(0f, duration, 0f), z, distance,
+                AnimationCurve.Constant(0f, duration, 0f),
+                new Vector3(x.Evaluate(duration), 0f, z.Evaluate(duration)), totalDistance, 0f);
+            EditorUtility.SetDirty(target);
+        }
+
+        static AnimationCurve ReadTranslation(AnimationClip clip, string bonePath, string property)
+        {
+            AnimationCurve curve = AnimationUtility.GetEditorCurve(
+                clip, EditorCurveBinding.FloatCurve(bonePath, typeof(Transform), property));
+            if (curve == null || curve.length == 0)
+                throw new InvalidOperationException($"Clip '{clip.name}' has no {bonePath}/{property} curve.");
+            Keyframe[] keys = curve.keys;
+            float origin = curve.Evaluate(0f);
+            for (int i = 0; i < keys.Length; i++)
+                keys[i].value -= origin;
+            return new AnimationCurve(keys) { preWrapMode = WrapMode.ClampForever, postWrapMode = WrapMode.ClampForever };
+        }
+
         public static void Bake(
             AnimationClip clip,
             GameObject sampleObject,

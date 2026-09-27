@@ -32,7 +32,15 @@
 - **AND** 该资产 MUST NOT 产生 sample、delta 或 motion contribution
 
 ### Requirement: 编辑器烘焙器只生成正式曲线资产
-系统 MUST 提供正式编辑器工具，从指定 `AnimationClip` 和采样对象烘焙 root motion 曲线。工具 MUST 要求作者显式选择完整本地位移或前向距离模式；未选择或非法模式时 MUST 拒绝烘焙。工具 MUST 参考 Animator root motion 采样结果，但 MUST NOT 递归扫描 `PlayerSO`、旧 SO/config 或 `Ref` 中 BBB 数据并写回。
+系统 MUST 提供正式编辑器工具，从指定 `AnimationClip` 和采样对象烘焙 root motion 曲线。Animator 烘焙入口 MUST 要求作者显式选择完整本地位移或前向距离模式；未选择或非法模式时 MUST 拒绝烘焙。该入口 MUST 参考 Animator root motion 采样结果，但 MUST NOT 递归扫描 `PlayerSO`、旧 SO/config 或 `Ref` 中 BBB 数据并写回。
+
+已经显式将骨骼 X/Z 位移分离为原地表现动画的素材，MAY 通过同一正式烘焙服务的 `BakePlanarBoneTranslation` 入口生成曲线。调用 MUST 明确给出未原地化的参考动画、骨骼路径和目标资产；MUST 保留 X/Z 曲线关键帧与切线并减去起始偏移；Y 和 yaw 继续由表现动画拥有，运动资产中的对应分量 MUST 为零，避免重复应用。该入口 MUST 输出同一种 `RootMotionCurveAsset`，使用 `FullLocalDelta` 模式，记录源动画、时长和帧率；MUST NOT 在缺少 Animator 条件时被自动调用为 fallback。
+
+#### Scenario: 从已明确分离的骨骼平移创建正式运动源
+- **WHEN** 作者对已做原地化分离的动画明确选择骨骼平移入口
+- **THEN** 工具 MUST 从指定参考动画的指定骨骼 X/Z 曲线生成累计位移
+- **AND** 缺少任意一条源曲线时 MUST 报错
+- **AND** Timeline MUST 仍只引用正式 RootMotionCurveAsset，不增加运行时动画骨骼读取路径
 
 #### Scenario: 使用采样对象烘焙完整本地位移
 - **WHEN** 用户指定 `AnimationClip`、采样对象、输出位置和完整本地位移模式

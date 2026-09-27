@@ -319,27 +319,60 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterModifyBonePosePayload : CharacterPoseNodePayload
     {
         [SerializeField] string m_BoneId = string.Empty;
-        [SerializeField] ModifyBoneReferenceSpace m_ReferenceSpace = ModifyBoneReferenceSpace.Local;
-        [SerializeField] ModifyBoneOperationMask m_Operations;
+        [SerializeField] ModifyBoneReferenceSpace m_ReferenceSpace = ModifyBoneReferenceSpace.ParentLocal;
+        [SerializeField] ModifyBoneMode m_PositionMode;
+        [SerializeField] ModifyBoneMode m_RotationMode = ModifyBoneMode.Add;
+        [SerializeField] ModifyBoneMode m_ScaleMode;
+        [SerializeField] ModifyBoneInputSource m_PositionSource;
+        [SerializeField] ModifyBoneInputSource m_RotationSource;
+        [SerializeField] ModifyBoneInputSource m_ScaleSource;
         [SerializeField] Vector3 m_Position;
-        [SerializeField] Vector3 m_RotationEuler;
+        [SerializeField] Quaternion m_Rotation = Quaternion.identity;
         [SerializeField] Vector3 m_Scale = Vector3.one;
+        [SerializeField] bool m_PropagateToChildren = true;
+        [SerializeField] float m_Weight = 1f;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ModifyBone;
         public AnimationBoneId BoneId => string.IsNullOrWhiteSpace(m_BoneId) ? default : new AnimationBoneId(m_BoneId);
         public ModifyBoneReferenceSpace ReferenceSpace => m_ReferenceSpace;
-        public ModifyBoneOperationMask Operations => m_Operations;
+        public ModifyBoneMode PositionMode => m_PositionMode;
+        public ModifyBoneMode RotationMode => m_RotationMode;
+        public ModifyBoneMode ScaleMode => m_ScaleMode;
+        public ModifyBoneInputSource PositionSource => m_PositionSource;
+        public ModifyBoneInputSource RotationSource => m_RotationSource;
+        public ModifyBoneInputSource ScaleSource => m_ScaleSource;
         public Vector3 Position => m_Position;
-        public Quaternion Rotation => Quaternion.Euler(m_RotationEuler);
+        public Quaternion Rotation => m_Rotation;
         public Vector3 Scale => m_Scale;
+        public bool PropagateToChildren => m_PropagateToChildren;
+        public float Weight => m_Weight;
+        public bool UsesPort(string port) => port switch
+        {
+            "position" => PositionMode != ModifyBoneMode.Ignore && PositionSource == ModifyBoneInputSource.Port,
+            "rotation" => RotationMode != ModifyBoneMode.Ignore && RotationSource == ModifyBoneInputSource.Port,
+            "scale" => ScaleMode != ModifyBoneMode.Ignore && ScaleSource == ModifyBoneInputSource.Port,
+            _ => false
+        };
+
         public CharacterModifyBonePosePayload() { }
-        public CharacterModifyBonePosePayload(AnimationBoneId boneId, ModifyBoneReferenceSpace referenceSpace, ModifyBoneOperationMask operations, Vector3 position, Vector3 rotationEuler, Vector3 scale)
+        public CharacterModifyBonePosePayload(
+            AnimationBoneId boneId, ModifyBoneReferenceSpace referenceSpace,
+            ModifyBoneMode positionMode, ModifyBoneMode rotationMode, ModifyBoneMode scaleMode,
+            ModifyBoneInputSource positionSource, ModifyBoneInputSource rotationSource, ModifyBoneInputSource scaleSource,
+            Vector3 position, Quaternion rotation, Vector3 scale, bool propagateToChildren = true, float weight = 1f)
         {
             m_BoneId = boneId.IsValid ? boneId.Value : throw new ArgumentException("Animation Bone identity is invalid.", nameof(boneId));
             m_ReferenceSpace = referenceSpace;
-            m_Operations = operations;
+            m_PositionMode = positionMode;
+            m_RotationMode = rotationMode;
+            m_ScaleMode = scaleMode;
+            m_PositionSource = positionSource;
+            m_RotationSource = rotationSource;
+            m_ScaleSource = scaleSource;
             m_Position = position;
-            m_RotationEuler = rotationEuler;
+            m_Rotation = rotation;
             m_Scale = scale;
+            m_PropagateToChildren = propagateToChildren;
+            m_Weight = weight;
         }
     }
 

@@ -372,7 +372,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             ValidateGoalSlots(graph, byId, activeNodes);
-            ValidateModifyBoneConflicts(graph, byId, activeNodes, connections);
         }
 
         static void ValidateGoalSlots(
@@ -393,53 +392,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             CharacterPoseNativeFailureCode.GraphInvalid,
                             $"{graph.GraphId}/{nodeId}",
                             $"Pose Full Body Ik Goal Slot '{binding.EffectorSlot}' is already supplied.");
-                    }
-                }
-            }
-        }
-
-        static void ValidateModifyBoneConflicts(
-            CharacterPoseCanvasGraph graph,
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> byId,
-            HashSet<PoseNodeId> activeNodes,
-            IReadOnlyList<CharacterPoseCanvasConnection> connections)
-        {
-            var writersByBone = new Dictionary<AnimationBoneId, List<(PoseNodeId NodeId, ModifyBoneOperationMask Operations)>>();
-            foreach (PoseNodeId nodeId in activeNodes)
-            {
-                if (byId[nodeId].Payload is not CharacterModifyBonePosePayload payload ||
-                    payload.Operations == ModifyBoneOperationMask.None)
-                    continue;
-                if (!writersByBone.TryGetValue(payload.BoneId, out var writers))
-                {
-                    writers = new List<(PoseNodeId, ModifyBoneOperationMask)>();
-                    writersByBone.Add(payload.BoneId, writers);
-                }
-                writers.Add((nodeId, payload.Operations));
-            }
-
-            foreach (KeyValuePair<AnimationBoneId, List<(PoseNodeId NodeId, ModifyBoneOperationMask Operations)>> pair in writersByBone)
-            {
-                for (int left = 0; left < pair.Value.Count; left++)
-                {
-                    for (int right = left + 1; right < pair.Value.Count; right++)
-                    {
-                        ModifyBoneOperationMask overlap =
-                            pair.Value[left].Operations & pair.Value[right].Operations;
-                        if (overlap == ModifyBoneOperationMask.None)
-                            continue;
-                        HashSet<PoseNodeId> leftOutputs = CollectReachable(
-                            CreateForwardConnections(connections), pair.Value[left].NodeId);
-                        if (leftOutputs.Contains(pair.Value[right].NodeId))
-                            continue;
-                        HashSet<PoseNodeId> rightOutputs = CollectReachable(
-                            CreateForwardConnections(connections), pair.Value[right].NodeId);
-                        if (rightOutputs.Contains(pair.Value[left].NodeId))
-                            continue;
-                        Fail(
-                            CharacterPoseNativeFailureCode.GraphInvalid,
-                            $"{graph.GraphId}/{pair.Key}",
-                            $"Pose Modify Bone nodes '{pair.Value[left].NodeId}' and '{pair.Value[right].NodeId}' write conflicting operations on '{pair.Key}'.");
                     }
                 }
             }

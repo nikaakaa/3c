@@ -158,6 +158,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     break;
                 case CharacterPoseNodeKind.ModifyBone:
                     AddUnaryComponentPose(ports);
+                    var modification = (CharacterModifyBonePosePayload)node.Payload;
+                    if (modification.UsesPort("position"))
+                        ports.Add(In("position", "Position (Vector3)", CharacterPosePortKind.Parameter));
+                    if (modification.UsesPort("rotation"))
+                        ports.Add(In("rotation", "Rotation (Quaternion)", CharacterPosePortKind.Parameter));
+                    if (modification.UsesPort("scale"))
+                        ports.Add(In("scale", "Scale (Vector3)", CharacterPosePortKind.Parameter));
                     break;
                 case CharacterPoseNodeKind.RootOrientationWarp:
                     ports.Add(In("pose", "Local Pose", CharacterPosePortKind.LocalPose));

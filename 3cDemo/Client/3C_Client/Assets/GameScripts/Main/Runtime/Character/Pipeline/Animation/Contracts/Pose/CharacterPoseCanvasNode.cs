@@ -149,18 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             global::ThirdPersonCharacter.Pipeline.Animation.AdditiveScalePolicy.Multiply;
         public AnimationBoneId BoneId =>
             (m_Payload as CharacterModifyBonePosePayload)?.BoneId ?? default;
-        public ModifyBoneReferenceSpace ModifyBoneReferenceSpace =>
-            (m_Payload as CharacterModifyBonePosePayload)?.ReferenceSpace ??
-            global::ThirdPersonCharacter.Pipeline.Animation.ModifyBoneReferenceSpace.Local;
-        public ModifyBoneOperationMask ModifyBoneOperations =>
-            (m_Payload as CharacterModifyBonePosePayload)?.Operations ??
-            ModifyBoneOperationMask.None;
-        public Vector3 ModifyPosition =>
-            (m_Payload as CharacterModifyBonePosePayload)?.Position ?? Vector3.zero;
-        public Quaternion ModifyRotation =>
-            (m_Payload as CharacterModifyBonePosePayload)?.Rotation ?? Quaternion.identity;
-        public Vector3 ModifyScale =>
-            (m_Payload as CharacterModifyBonePosePayload)?.Scale ?? Vector3.one;
         public CharacterPoseResourceSlot RootOrientationYawCurveSlot =>
             (m_Payload as CharacterRootOrientationWarpPosePayload)?.YawCurveSlot;
         public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>

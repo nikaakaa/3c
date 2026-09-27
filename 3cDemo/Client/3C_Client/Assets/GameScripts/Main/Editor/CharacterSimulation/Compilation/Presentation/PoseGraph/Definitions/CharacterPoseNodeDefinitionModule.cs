@@ -242,10 +242,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentException(
                     "Pose node does not match Node Definition.",
                     nameof(node));
-            return GraphAuthoringNodePortShapeProjector.ProjectComplete(
-                Capability,
-                ProjectTypedProperties(node.Payload),
-                node.DynamicPorts.Select(ProjectDynamicPort).ToArray());
+            return ProjectDeclaredPortShape(node.Payload)
+                .Concat(node.DynamicPorts.Select(ProjectDynamicPort)).ToArray();
         }
 
         public IReadOnlyList<GraphAuthoringDynamicPortProjection>
@@ -261,7 +259,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 node.DynamicPorts.Select(ProjectDynamicPort).ToArray());
         }
 
-        public IReadOnlyList<GraphAuthoringDynamicPortProjection>
+        public virtual IReadOnlyList<GraphAuthoringDynamicPortProjection>
             ProjectDeclaredPortShape(CharacterPoseNodePayload payload) =>
             GraphAuthoringNodePortShapeProjector.ProjectComplete(
                 Capability,

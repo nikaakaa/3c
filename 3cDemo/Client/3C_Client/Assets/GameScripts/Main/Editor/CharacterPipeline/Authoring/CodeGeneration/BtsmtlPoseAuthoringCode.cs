@@ -12,6 +12,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     public static class BtsmtlPoseAuthoringCode
     {
+        public static CharacterPoseNodePayload CreatePayload(CharacterPoseNodeKind kind,
+            IReadOnlyDictionary<string, object> fields) =>
+            CharacterPoseAuthoringPayloadCodec.Create(kind,
+                new CharacterPoseAuthoringPayloadInput((field, type) => fields[field]));
+
         public static T CreateSourceSlot<T>(
             BtsmtlAuthoringGenerationContext context,
             string name)

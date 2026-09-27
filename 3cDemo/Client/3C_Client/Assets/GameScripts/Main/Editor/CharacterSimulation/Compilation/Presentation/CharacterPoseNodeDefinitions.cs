@@ -890,82 +890,95 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal sealed class CharacterModifyBonePoseNodeDefinition :
         CharacterPoseNodeDefinition<CharacterModifyBonePosePayload>
     {
-        public override CharacterPoseNodeKind Kind =>
-            CharacterPoseNodeKind.ModifyBone;
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ModifyBone;
         public override GraphAuthoringCapabilityDescriptor Declare() =>
-            Node<CharacterModifyBonePosePayload>(CharacterPoseNodeKind.ModifyBone, AllPoseGraphs, "Modify Bone", "Constraints", ConstraintColor,
-                Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
-                UnaryComponentPoseWithWeight());
+            Node<CharacterModifyBonePosePayload>(Kind, AllPoseGraphs, "Modify Bone", "Constraints", ConstraintColor,
+                Fields(
+                    Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"),
+                    EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)),
+                    EnumField("position-mode", "Position Mode", typeof(ModifyBoneMode)),
+                    EnumField("position-source", "Position Source", typeof(ModifyBoneInputSource)),
+                    Vector3Field("position", "Position"),
+                    EnumField("rotation-mode", "Rotation Mode", typeof(ModifyBoneMode)),
+                    EnumField("rotation-source", "Rotation Source", typeof(ModifyBoneInputSource)),
+                    Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""),
+                    EnumField("scale-mode", "Scale Mode", typeof(ModifyBoneMode)),
+                    EnumField("scale-source", "Scale Source", typeof(ModifyBoneInputSource)),
+                    Vector3Field("scale", "Scale", Vector3.one),
+                    BoolField("propagate-to-children", "Propagate To Children", true),
+                    FloatField("weight", "Weight", 1f, 0f, 1f)),
+                Ports(In("pose", "Component Pose", "pose.component"),
+                    OptionalIn("weight", "Weight", "pose.parameter"),
+                    In("position", "Position (Vector3)", "pose.parameter"),
+                    In("rotation", "Rotation (Quaternion)", "pose.parameter"),
+                    In("scale", "Scale (Vector3)", "pose.parameter"),
+                    Out("result", "Component Pose", "pose.component")));
 
-        protected override void Validate(
-            CharacterModifyBonePosePayload payload,
-            string sourcePath)
+        public override IReadOnlyList<GraphAuthoringDynamicPortProjection> ProjectDeclaredPortShape(CharacterPoseNodePayload payload)
+        {
+            var modification = (CharacterModifyBonePosePayload)payload;
+            return base.ProjectDeclaredPortShape(payload).Where(port =>
+                port.PortId.Value != "position" && port.PortId.Value != "rotation" && port.PortId.Value != "scale" ||
+                modification.UsesPort(port.PortId.Value)).ToArray();
+        }
+
+        protected override float GetWeight(CharacterModifyBonePosePayload payload) => payload.Weight;
+
+        protected override void Validate(CharacterModifyBonePosePayload payload, string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
                 payload.BoneId.IsValid &&
-                Enum.IsDefined(
-                    typeof(ModifyBoneReferenceSpace),
-                    payload.ReferenceSpace) &&
-                payload.Operations !=
-                ModifyBoneOperationMask.None &&
-                CharacterPoseNodeDefinitionValidation.Finite(
-                    payload.Position) &&
-                CharacterPoseNodeDefinitionValidation.Finite(
-                    payload.Rotation) &&
-                CharacterPoseNodeDefinitionValidation.Finite(
-                    payload.Scale),
-                sourcePath,
-                "Modify Bone configuration is invalid.");
+                Enum.IsDefined(typeof(ModifyBoneReferenceSpace), payload.ReferenceSpace) &&
+                Enum.IsDefined(typeof(ModifyBoneMode), payload.PositionMode) &&
+                Enum.IsDefined(typeof(ModifyBoneMode), payload.RotationMode) &&
+                Enum.IsDefined(typeof(ModifyBoneMode), payload.ScaleMode) &&
+                Enum.IsDefined(typeof(ModifyBoneInputSource), payload.PositionSource) &&
+                Enum.IsDefined(typeof(ModifyBoneInputSource), payload.RotationSource) &&
+                Enum.IsDefined(typeof(ModifyBoneInputSource), payload.ScaleSource) &&
+                CharacterPoseNodeDefinitionValidation.Finite(payload.Position) &&
+                CharacterPoseNodeDefinitionValidation.Finite(payload.Rotation) &&
+                Quaternion.Dot(payload.Rotation, payload.Rotation) > 0f &&
+                CharacterPoseConstraintMath.IsUsableScale(payload.Scale),
+                sourcePath, "Modify Bone configuration is invalid.");
+            CharacterPoseNodeDefinitionValidation.RequireWeight(payload.Weight, sourcePath);
         }
 
-        protected override void ValidateRig(
-            CharacterModifyBonePosePayload payload,
-            CharacterAnimationRigDefinition rig,
-            string sourcePath)
+        protected override void ValidateRig(CharacterModifyBonePosePayload payload, CharacterAnimationRigDefinition rig, string sourcePath)
         {
-            try
-            {
-                rig.RequirePhysicalBoneIndex(payload.BoneId);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
+            try { rig.RequirePhysicalBoneIndex(payload.BoneId); }
+            catch (Exception exception) { throw new InvalidOperationException($"{sourcePath}: {exception.Message}", exception); }
         }
 
-        public override CharacterPoseNodePayload CreatePayload(
-            CharacterPoseAuthoringPayloadInput input) =>
+        public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterModifyBonePosePayload(
-                new AnimationBoneId(
-                    input.Require<string>("bone-id")),
-                Enum.Parse<ModifyBoneReferenceSpace>(
-                    input.Require<string>("reference-space"),
-                    false),
-                Enum.Parse<ModifyBoneOperationMask>(
-                    input.Require<string>("operations"),
-                    false),
-                input.Require<Vector3>("position"),
-                input.Require<Quaternion>("rotation")
-                    .eulerAngles,
-                input.Require<Vector3>("scale"));
+                new AnimationBoneId(input.Require<string>("bone-id")),
+                Enum.Parse<ModifyBoneReferenceSpace>(input.Require<string>("reference-space")),
+                Enum.Parse<ModifyBoneMode>(input.Require<string>("position-mode")),
+                Enum.Parse<ModifyBoneMode>(input.Require<string>("rotation-mode")),
+                Enum.Parse<ModifyBoneMode>(input.Require<string>("scale-mode")),
+                Enum.Parse<ModifyBoneInputSource>(input.Require<string>("position-source")),
+                Enum.Parse<ModifyBoneInputSource>(input.Require<string>("rotation-source")),
+                Enum.Parse<ModifyBoneInputSource>(input.Require<string>("scale-source")),
+                input.Require<Vector3>("position"), input.Require<Quaternion>("rotation"), input.Require<Vector3>("scale"),
+                input.Require<bool>("propagate-to-children"), input.Require<float>("weight"));
 
-        protected override object ReadField(
-            CharacterModifyBonePosePayload payload,
-            string field) =>
-            field switch
-            {
-                "bone-id" => payload.BoneId.Value,
-                "reference-space" =>
-                    payload.ReferenceSpace.ToString(),
-                "operations" =>
-                    payload.Operations.ToString(),
-                "position" => payload.Position,
-                "rotation" => payload.Rotation,
-                "scale" => payload.Scale,
-                _ => base.ReadField(payload, field)
-            };
+        protected override object ReadField(CharacterModifyBonePosePayload payload, string field) => field switch
+        {
+            "bone-id" => payload.BoneId.Value,
+            "reference-space" => payload.ReferenceSpace.ToString(),
+            "position-mode" => payload.PositionMode.ToString(),
+            "rotation-mode" => payload.RotationMode.ToString(),
+            "scale-mode" => payload.ScaleMode.ToString(),
+            "position-source" => payload.PositionSource.ToString(),
+            "rotation-source" => payload.RotationSource.ToString(),
+            "scale-source" => payload.ScaleSource.ToString(),
+            "position" => payload.Position,
+            "rotation" => payload.Rotation,
+            "scale" => payload.Scale,
+            "propagate-to-children" => payload.PropagateToChildren,
+            "weight" => payload.Weight,
+            _ => base.ReadField(payload, field)
+        };
     }
 
     internal sealed class CharacterRootOrientationWarpPoseNodeDefinition :

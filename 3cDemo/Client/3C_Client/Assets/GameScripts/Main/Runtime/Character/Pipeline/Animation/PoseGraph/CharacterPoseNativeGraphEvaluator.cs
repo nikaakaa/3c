@@ -580,7 +580,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_ValueType == PoseParameterValueType.Int &&
                     value.Kind != EventGraphValueKind.Int32 ||
                     m_ValueType == PoseParameterValueType.Bool &&
-                    value.Kind != EventGraphValueKind.Bool)
+                    value.Kind != EventGraphValueKind.Bool ||
+                    m_ValueType == PoseParameterValueType.Vector3 && value.Kind != EventGraphValueKind.Vector3 ||
+                    m_ValueType == PoseParameterValueType.Quaternion && value.Kind != EventGraphValueKind.Quaternion)
                 {
                     throw new InvalidOperationException(
                         $"Pose parameter '{node.ParameterId}' EventGraph value type does not match its declaration.");

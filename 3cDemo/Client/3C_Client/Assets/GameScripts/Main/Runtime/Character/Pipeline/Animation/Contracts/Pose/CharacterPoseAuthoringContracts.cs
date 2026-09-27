@@ -335,7 +335,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         Float = 1,
         Int = 2,
-        Bool = 3
+        Bool = 3,
+        Vector3 = 4,
+        Quaternion = 5
     }
 
     public enum CharacterPoseParameterUsage : byte
@@ -467,17 +469,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public enum ModifyBoneReferenceSpace : byte
     {
-        Local = 1,
-        Mesh = 2
+        ParentLocal = 1,
+        Component = 2
     }
 
-    [Flags]
-    public enum ModifyBoneOperationMask : byte
+    public enum ModifyBoneMode : byte
     {
-        None = 0,
-        Position = 1,
-        Rotation = 2,
-        Scale = 4
+        Ignore = 0,
+        Add = 1,
+        Replace = 2
+    }
+
+    public enum ModifyBoneInputSource : byte
+    {
+        Constant = 0,
+        Port = 1
     }
 
     [Serializable]

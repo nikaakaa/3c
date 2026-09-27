@@ -15,6 +15,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly CharacterComponentBonePose[] m_ComponentScratch;
+        readonly AnimationLocalBonePose[] m_LocalScratch;
+        CharacterModifyBonePosePayload m_Modification;
+        int[] m_Descendants;
+        int[] m_AffectedVirtualBones;
         int m_BoneIndex = -1;
         int m_PageIndex = -1;
         CharacterPoseNativeComponentPoseValue m_Output;
@@ -39,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
             m_ComponentScratch = new CharacterComponentBonePose[
                 m_Rig.PoseBoneCount];
+            m_LocalScratch = new AnimationLocalBonePose[m_Rig.PhysicalBoneCount];
         }
 
         public PoseNodeId NodeId => m_NodeId;
@@ -48,13 +53,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
-            if (node.Kind != Kind || !node.BoneId.IsValid ||
-                node.ModifyBoneOperations == ModifyBoneOperationMask.None)
+            if (node.Kind != Kind || node.Payload is not CharacterModifyBonePosePayload modification)
+                throw new InvalidOperationException($"Modify Bone handler '{NodeId}' has invalid node configuration.");
+            m_Modification = modification;
+            m_BoneIndex = m_Rig.RequirePoseBoneIndex(modification.BoneId);
+            if (m_BoneIndex >= m_Rig.PhysicalBoneCount)
+                throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot target a virtual bone.");
+            var affected = new bool[m_Rig.PhysicalBoneCount];
+            var descendants = new List<int>();
+            affected[m_BoneIndex] = true;
+            for (int i = m_BoneIndex + 1; i < m_Rig.PhysicalBoneCount; i++)
             {
-                throw new InvalidOperationException(
-                    $"Modify Bone handler '{NodeId}' has invalid node configuration.");
+                int parent = m_Rig.GetPoseParentIndex(i);
+                if (modification.PropagateToChildren && parent >= 0 && affected[parent])
+                {
+                    affected[i] = true;
+                    descendants.Add(i);
+                }
             }
-            m_BoneIndex = m_Rig.RequirePoseBoneIndex(node.BoneId);
+            m_Descendants = descendants.ToArray();
+            var virtualBones = new List<int>();
+            for (int i = 0; i < m_Rig.VirtualBoneCount; i++)
+            {
+                CharacterAnimationVirtualBonePayload bone = m_Rig.VirtualBones[i];
+                if (affected[bone.SourcePhysicalBoneIndex] || affected[bone.TargetPhysicalBoneIndex])
+                    virtualBones.Add(i);
+            }
+            m_AffectedVirtualBones = virtualBones.ToArray();
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -110,7 +135,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePoseReadBinding input = inputValue.Native;
             if (!input.IsValid ||
                 input.Space != CharacterPoseSpace.Component ||
-                input.Availability[0] != AnimationPoseAvailability.Pose ||
                 input.CompletedAt[0] != input.CompletionIdentity)
             {
                 throw new InvalidOperationException(
@@ -124,27 +148,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePoseBufferCopy.CopyMetadata(
                 in input,
                 in m_WriteBinding);
-            for (int i = 0; i < m_Rig.PoseBoneCount; i++)
+            if (input.Availability[0] == AnimationPoseAvailability.Pose)
             {
-                AnimationLocalBonePose value = input.DenseLocalPoses[i];
-                if (!value.IsValid)
-                    throw new InvalidOperationException(
-                        $"Modify Bone '{NodeId}' received invalid Component bone #{i}.");
-                m_ComponentScratch[i] = new CharacterComponentBonePose(
-                    value.Position,
-                    value.Rotation,
-                    value.Scale);
+                for (int i = 0; i < m_Rig.PoseBoneCount; i++)
+                {
+                    AnimationLocalBonePose value = input.DenseLocalPoses[i];
+                    if (!value.IsValid)
+                        throw new InvalidOperationException(
+                            $"Modify Bone '{NodeId}' received invalid Component bone #{i}.");
+                    m_ComponentScratch[i] = new CharacterComponentBonePose(
+                        value.Position,
+                        value.Rotation,
+                        value.Scale);
+                }
+                ApplyModification(runtime, node, weight);
+                NativeSlice<AnimationLocalBonePose> outputPoses =
+                    m_WriteBinding.DenseLocalPoses;
+                for (int i = 0; i < m_ComponentScratch.Length; i++)
+                {
+                    CharacterComponentBonePose value = m_ComponentScratch[i];
+                    outputPoses[i] = new AnimationLocalBonePose(
+                        value.Position,
+                        value.Rotation,
+                        value.Scale);
+                }
             }
-            ApplyModification(node, weight);
-            NativeSlice<AnimationLocalBonePose> outputPoses =
-                m_WriteBinding.DenseLocalPoses;
-            for (int i = 0; i < m_ComponentScratch.Length; i++)
+            else
             {
-                CharacterComponentBonePose value = m_ComponentScratch[i];
-                outputPoses[i] = new AnimationLocalBonePose(
-                    value.Position,
-                    value.Rotation,
-                    value.Scale);
+                NativeSlice<AnimationLocalBonePose> emptyOutput = m_WriteBinding.DenseLocalPoses;
+                for (int i = 0; i < emptyOutput.Length; i++)
+                    emptyOutput[i] = input.DenseLocalPoses[i];
             }
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(
@@ -188,7 +221,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             if (m_Output.Native.CompletionIdentity != lineage.CompletionIdentity ||
                 m_Output.Native.Space != CharacterPoseSpace.Component ||
-                m_Output.Native.Availability[0] != AnimationPoseAvailability.Pose ||
                 m_Output.Native.CompletedAt[0] != lineage.CompletionIdentity)
             {
                 throw new InvalidOperationException(
@@ -239,7 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 node.GetInputPort("weight") as
                 ValueInput<CharacterPoseNativeParameterValue>;
             if (input == null || !input.isConnected)
-                return node.Weight;
+                return ((CharacterModifyBonePosePayload)node.Payload).Weight;
             CharacterPoseNativeParameterValue value = runtime.ReadInput<
                 CharacterPoseNativeParameterValue>(node, "weight");
             if (value.Value.Kind != EventGraphValueKind.Float32 ||
@@ -253,46 +285,88 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return value.Value.Float32Value;
         }
 
-        void ApplyModification(CharacterPoseCanvasNode node, float weight)
+        void ApplyModification(CharacterPoseNativeGraphRuntime runtime, CharacterPoseCanvasNode node, float weight)
         {
-            CharacterComponentBonePose value = m_ComponentScratch[m_BoneIndex];
-            int parentIndex = m_Rig.GetPoseParentIndex(m_BoneIndex);
-            CharacterComponentBonePose parent = parentIndex >= 0
-                ? m_ComponentScratch[parentIndex]
-                : default;
-            bool local = node.ModifyBoneReferenceSpace ==
-                ModifyBoneReferenceSpace.Local;
-            ModifyBoneOperationMask operations = node.ModifyBoneOperations;
-            Vector3 position = value.Position;
-            Quaternion rotation = value.Rotation;
-            Vector3 scale = value.Scale;
-            if ((operations & ModifyBoneOperationMask.Position) != 0)
+            Vector3 position = m_Modification.Position;
+            Quaternion rotation = m_Modification.Rotation;
+            Vector3 scale = m_Modification.Scale;
+            if (m_Modification.UsesPort("position"))
+                position = ReadTransform(runtime, node, "position", EventGraphValueKind.Vector3).Vector3Value;
+            if (m_Modification.UsesPort("rotation"))
+                rotation = ReadTransform(runtime, node, "rotation", EventGraphValueKind.Quaternion).QuaternionValue;
+            if (m_Modification.UsesPort("scale"))
+                scale = ReadTransform(runtime, node, "scale", EventGraphValueKind.Vector3).Vector3Value;
+            if (!CharacterPoseConstraintMath.IsFinite(position) ||
+                !CharacterPoseConstraintMath.IsFinite(rotation) || Quaternion.Dot(rotation, rotation) <= 0f ||
+                !CharacterPoseConstraintMath.IsUsableScale(scale))
+                throw new InvalidOperationException($"Modify Bone '{NodeId}' received an invalid transform.");
+            if (weight == 0f)
+                return;
+            for (int i = 0; i < m_Descendants.Length; i++)
             {
-                Vector3 delta = node.ModifyPosition * weight;
-                position += local && parentIndex >= 0
-                    ? parent.Rotation * Vector3.Scale(parent.Scale, delta)
-                    : delta;
+                int bone = m_Descendants[i];
+                if (!CharacterPoseConstraintMath.TryCreateLocal(m_ComponentScratch[bone],
+                        m_ComponentScratch[m_Rig.GetPoseParentIndex(bone)], out m_LocalScratch[bone]))
+                    throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot preserve local bone #{bone}.");
             }
-            if ((operations & ModifyBoneOperationMask.Rotation) != 0)
+            CharacterComponentBonePose original = m_ComponentScratch[m_BoneIndex];
+            int parent = m_Rig.GetPoseParentIndex(m_BoneIndex);
+            bool parentLocal = m_Modification.ReferenceSpace == ModifyBoneReferenceSpace.ParentLocal && parent >= 0;
+            if (parentLocal)
             {
-                Quaternion delta = Quaternion.Slerp(
-                    Quaternion.identity,
-                    node.ModifyRotation,
-                    weight);
-                rotation = local
-                    ? (rotation * delta).normalized
-                    : (delta * rotation).normalized;
+                if (!CharacterPoseConstraintMath.TryCreateLocal(original, m_ComponentScratch[parent], out var local))
+                    throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot resolve parent space.");
+                original = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
             }
-            if ((operations & ModifyBoneOperationMask.Scale) != 0)
+            Vector3 targetPosition = m_Modification.PositionMode switch
             {
-                scale = Vector3.Scale(
-                    scale,
-                    Vector3.Lerp(Vector3.one, node.ModifyScale, weight));
+                ModifyBoneMode.Add => original.Position + position,
+                ModifyBoneMode.Replace => position,
+                _ => original.Position
+            };
+            Quaternion targetRotation = m_Modification.RotationMode switch
+            {
+                ModifyBoneMode.Add => (rotation * original.Rotation).normalized,
+                ModifyBoneMode.Replace => rotation.normalized,
+                _ => original.Rotation
+            };
+            Vector3 targetScale = m_Modification.ScaleMode switch
+            {
+                ModifyBoneMode.Add => Vector3.Scale(original.Scale, scale),
+                ModifyBoneMode.Replace => scale,
+                _ => original.Scale
+            };
+            var blended = new AnimationLocalBonePose(
+                Vector3.Lerp(original.Position, targetPosition, weight),
+                Quaternion.Slerp(original.Rotation, targetRotation, weight),
+                Vector3.Lerp(original.Scale, targetScale, weight));
+            if (!blended.IsValid || !CharacterPoseConstraintMath.IsUsableScale(blended.Scale) ||
+                !CharacterPoseConstraintMath.TryCreateComponent(blended, parentLocal ? parent : -1,
+                    m_ComponentScratch, 0, out m_ComponentScratch[m_BoneIndex]))
+                throw new InvalidOperationException($"Modify Bone '{NodeId}' produced an invalid target transform.");
+            for (int i = 0; i < m_Descendants.Length; i++)
+            {
+                int bone = m_Descendants[i];
+                if (!CharacterPoseConstraintMath.TryCreateComponent(m_LocalScratch[bone], m_Rig.GetPoseParentIndex(bone),
+                        m_ComponentScratch, 0, out m_ComponentScratch[bone]))
+                    throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot rebuild descendant #{bone}.");
             }
-            m_ComponentScratch[m_BoneIndex] = new CharacterComponentBonePose(
-                position,
-                rotation,
-                scale);
+            for (int i = 0; i < m_AffectedVirtualBones.Length; i++)
+            {
+                int index = m_AffectedVirtualBones[i];
+                CharacterAnimationVirtualBonePayload bone = m_Rig.VirtualBones[index];
+                m_ComponentScratch[m_Rig.PhysicalBoneCount + index] = CharacterPoseConstraintMath.CreateVirtualComponent(
+                    m_ComponentScratch[bone.SourcePhysicalBoneIndex], m_ComponentScratch[bone.TargetPhysicalBoneIndex]);
+            }
+        }
+
+        static EventGraphValue ReadTransform(CharacterPoseNativeGraphRuntime runtime, CharacterPoseCanvasNode node,
+            string port, EventGraphValueKind kind)
+        {
+            CharacterPoseNativeParameterValue value = runtime.ReadInput<CharacterPoseNativeParameterValue>(node, port);
+            if (value.CompletionIdentity != runtime.CurrentLineage.CompletionIdentity || value.Value.Kind != kind)
+                throw new InvalidOperationException($"Modify Bone '{runtime.Graph.GraphId}/{node.NodeId}/{port}' requires a same-frame {kind}.");
+            return value.Value;
         }
 
         void ClearFrame()

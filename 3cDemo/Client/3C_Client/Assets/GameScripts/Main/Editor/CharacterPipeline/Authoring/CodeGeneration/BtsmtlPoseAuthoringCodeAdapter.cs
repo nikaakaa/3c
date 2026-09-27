@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonSimulation;
@@ -408,7 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     typeof(CharacterPoseSubgraphPayload),
                     $"BtsmtlPoseAuthoringCode.CreateSubgraphReference({BtsmtlAuthoringCodeSyntax.StringLiteral(subgraph.Subgraph.PoseGraphId.Value)})");
             }
-            if (payload is CharacterModifyBonePosePayload || payload is CharacterPoseBoneIkGoalsPayload)
+            if (payload is CharacterPoseBoneIkGoalsPayload)
             {
                 context.ReportError(
                     "pose_payload_readback_incomplete",
@@ -416,6 +417,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"Pose payload '{payload.GetType().Name}' 当前正式读取合同没有保留可逆的 Euler 字段，拒绝不完整导出。");
                 return "null";
             }
+
+            CharacterPoseNodeDefinition definition = CharacterPoseNodeDefinitionModule.Shared.Require(payload.Kind);
+            var fieldExpressions = new List<string>();
+            foreach (var field in definition.Capability.Fields)
+            {
+                if (!field.AuthoringWritable)
+                    continue;
+                object value = definition.ReadField(payload, field.FieldId.Value);
+                string expression = BtsmtlAuthoringCodeValues.Value(context, value, value?.GetType(), subject + "/" + field.FieldId.Value);
+                fieldExpressions.Add("{ " + BtsmtlAuthoringCodeSyntax.StringLiteral(field.FieldId.Value) + ", " + expression + " }");
+            }
+            if (fieldExpressions.Count != 0)
+                return "BtsmtlPoseAuthoringCode.CreatePayload(" + EnumLiteral(typeof(CharacterPoseNodeKind), payload.Kind) +
+                    ", new System.Collections.Generic.Dictionary<string, object> { " + string.Join(", ", fieldExpressions) + " })";
 
             context.ReportError(
                 "pose_payload_unsupported",

@@ -261,7 +261,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!parameterId.IsValid ||
                 (value.Kind != EventGraphValueKind.Bool &&
                  value.Kind != EventGraphValueKind.Int32 &&
-                 value.Kind != EventGraphValueKind.Float32))
+                 value.Kind != EventGraphValueKind.Float32 &&
+                 value.Kind != EventGraphValueKind.Vector3 &&
+                 value.Kind != EventGraphValueKind.Quaternion))
             {
                 throw new ArgumentException("Pose native parameter value is invalid.");
             }
@@ -304,7 +306,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!parameterId.IsValid ||
                 parameterValue.Kind != EventGraphValueKind.Bool &&
                 parameterValue.Kind != EventGraphValueKind.Int32 &&
-                parameterValue.Kind != EventGraphValueKind.Float32)
+                parameterValue.Kind != EventGraphValueKind.Float32 &&
+                parameterValue.Kind != EventGraphValueKind.Vector3 &&
+                parameterValue.Kind != EventGraphValueKind.Quaternion)
             {
                 throw new ArgumentException("Pose native parameter value is invalid.");
             }

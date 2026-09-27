@@ -1,14 +1,14 @@
 ## 1. 通用骨骼变换合同与作者入口
 
-- [ ] 1.1 按最新工作区盘点 Modify Bone 实际使用点，在现有 payload 中统一逐通道 Ignore／Add／Replace、Constant／Port、ParentLocal／Component 和后代传播配置，交付单一正式配置结构并清除旧字段；出现已确认行为冲突时列明具体节点交由用户决定。
-- [ ] 1.2 接通动态 Vector3 位置、Quaternion 旋转、Vector3 缩放和既有 Float32 权重的声明、端口、参数生产与读取，交付完整同帧 typed 链路及缺失／错类型的节点定位错误。
-- [ ] 1.3 同步当前节点定义、Capability、Mutation、详情面板与 C# 作者导出／生成，交付可直接配置和往返保存的通用节点，不新增编辑窗口或旧文档入口。
+- [x] 1.1 按最新工作区盘点 Modify Bone 实际使用点，在现有 payload 中统一逐通道 Ignore／Add／Replace、Constant／Port、ParentLocal／Component 和后代传播配置，交付单一正式配置结构并清除旧字段；出现已确认行为冲突时列明具体节点交由用户决定。
+- [x] 1.2 接通动态 Vector3 位置、Quaternion 旋转、Vector3 缩放和既有 Float32 权重的声明、端口、参数生产与读取，交付完整同帧 typed 链路及缺失／错类型的节点定位错误。
+- [x] 1.3 同步当前节点定义、Capability、Mutation、详情面板与 C# 作者导出／生成，交付可直接配置和往返保存的通用节点，不新增编辑窗口或旧文档入口。
 
 ## 2. 当前原生运行链中的变换与传播
 
-- [ ] 2.1 在现有 Modify Bone Handler 中实现所选空间的逐通道目标计算与权重插值，交付无业务特判的 Component Pose 输入输出，保留正式 NoPose 和失败行为。
-- [ ] 2.2 在实例准备时形成目标及后代索引，实现传播开启时按原局部 TRS 重建后代、关闭时保留后代组件姿势，交付父先子后的统一传播计算。
-- [ ] 2.3 复用现有虚拟骨骼派生规则更新受影响结果，并接齐输入只读、实例双缓冲、同帧复用和 Commit／Discard／Reset／Dispose，交付运行时零托管分配且只进入原最终写回的实现。
+- [x] 2.1 在现有 Modify Bone Handler 中实现所选空间的逐通道目标计算与权重插值，交付无业务特判的 Component Pose 输入输出，保留正式 NoPose 和失败行为。
+- [x] 2.2 在实例准备时形成目标及后代索引，实现传播开启时按原局部 TRS 重建后代、关闭时保留后代组件姿势，交付父先子后的统一传播计算。
+- [x] 2.3 复用现有虚拟骨骼派生规则更新受影响结果，并接齐输入只读、实例双缓冲、同帧复用和 Commit／Discard／Reset／Dispose，交付运行时零托管分配且只进入原最终写回的实现。
 
 ## 3. Corin 动画图中的侧倾计算
 
@@ -23,3 +23,5 @@
 - [ ] 4.2 在 Corin Run Start、Run Loop 状态子图接入该组合并连接同帧 lean 输出，交付实际生效的作者图；保留 Idle／Walk／Run End／TurnBack、原状态混合及 FullBody Action Slot 的现有职责和身份。
 - [ ] 4.3 使正式 Profile／Graph 资产、资源引用与现有 C# 作者生成入口一致，完成当前领域所需的内容准备；交付继续使用原 Foot／Goal／FullBodyIK／Final Publication 的单一角色链。
 - [ ] 4.4 清理本功能取代的作者字段和运行消费者，把新输入及输出接入既有只读观察，按通用合同、运行实现、Corin 内容做中文小步提交；交付不依赖旧 pose-correction worktree 的完整功能。
+
+- [ ] 4.5 按追加要求把 lean 的运动输入、适用条件、转向速度、目标倾角、平滑倾角和旋转输出接入现有正式采样器，并准备测试时可直接选择的采样入口；不执行 replay。

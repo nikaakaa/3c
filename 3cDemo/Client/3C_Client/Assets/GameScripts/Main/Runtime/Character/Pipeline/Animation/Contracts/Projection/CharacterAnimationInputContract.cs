@@ -303,6 +303,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PoseParameterValueType.Float => EventGraphValueKind.Float32,
                 PoseParameterValueType.Int => EventGraphValueKind.Int32,
                 PoseParameterValueType.Bool => EventGraphValueKind.Bool,
+                PoseParameterValueType.Vector3 => EventGraphValueKind.Vector3,
+                PoseParameterValueType.Quaternion => EventGraphValueKind.Quaternion,
                 _ => throw new InvalidOperationException(
                     $"Pose parameter type '{valueType}' is unsupported by the Character Animation Event Graph.")
             };
@@ -339,6 +341,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             new PoseParameterId(variable.Reference.VariableId),
                             PoseParameterValueType.Bool,
                             variable.InitialValue.BoolValue ? 1f : 0f,
+                            displayName: variable.Name),
+                        EventGraphValueKind.Vector3 => new CharacterPoseParameterDeclaration(
+                            new PoseParameterId(variable.Reference.VariableId), PoseParameterValueType.Vector3, 0f,
+                            displayName: variable.Name),
+                        EventGraphValueKind.Quaternion => new CharacterPoseParameterDeclaration(
+                            new PoseParameterId(variable.Reference.VariableId), PoseParameterValueType.Quaternion, 0f,
                             displayName: variable.Name),
                         _ => null
                     };

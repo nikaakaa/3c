@@ -1,0 +1,455 @@
+{
+  "trace_id": "757f243033414fc7b123c97e2fcb0d70",
+  "foot_sample_id": "0f4b6f11cc9b4025934f3766741026b6",
+  "presentation_sample_id": "57b944631c19425aa14717b79f0bd5e9",
+  "capture_time": "2026-09-27T12:44:39Z",
+  "frame_definition": "sample.lineage.low: committed pose completion; presentation frame is stored separately",
+  "foot_source": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260927-124439-0f4b6f11cc9b4025934f3766741026b6/character-foot-ik%2Ffull.csv",
+  "examples": [
+    {
+      "side": "left",
+      "from_sample_frame": 1200,
+      "to_sample_frame": 1201,
+      "original_ankle_component_delta_m": 0.07349786553409708,
+      "solved_ankle_component_delta_m": 0.5254725128518998,
+      "root_translation_delta_m": 0.017402523042645255,
+      "before": {
+        "frame": 1200,
+        "frame/presentation-frame": "1206",
+        "frame/body-tick": "1200",
+        "leg/leg-pose/original-ankle": [
+          0.08683355,
+          0.536637664,
+          0.3194525
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.0868335441,
+          0.5366378,
+          0.319452375
+        ],
+        "physical/ankle-world-position": [
+          41.7010956,
+          0.546637654,
+          -5.43036747
+        ],
+        "foot/foot-motion/core/original-sole": [
+          41.6145477,
+          0.5652682,
+          -5.439727
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          41.6145477,
+          0.5652682,
+          -5.439727
+        ],
+        "foot/foot-motion/core/position-weight": "0",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          42.0095062,
+          0.009999886,
+          -5.55066729
+        ],
+        "input/foot-step-observation/source-id": "c5761f3c-7517-4803-9e3b-019b66f52d41/c1c596d2-39fd-4c8b-825e-149b852e700c@8/Timeline/9/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.3333333"
+      },
+      "after": {
+        "frame": 1201,
+        "frame/presentation-frame": "1207",
+        "frame/body-tick": "1201",
+        "leg/leg-pose/original-ankle": [
+          0.0179901719,
+          0.5206487,
+          0.299281269
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.0183015857,
+          0.016477555,
+          0.290159851
+        ],
+        "physical/ankle-world-position": [
+          41.7068024,
+          0.0264772326,
+          -5.50818348
+        ],
+        "foot/foot-motion/core/original-sole": [
+          41.61633,
+          0.5527122,
+          -5.5361166
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          41.61633,
+          0.0230452418,
+          -5.5361166
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          41.9933777,
+          0.009999886,
+          -5.55720329
+        ],
+        "input/foot-step-observation/source-id": "c5761f3c-7517-4803-9e3b-019b66f52d41/c1c596d2-39fd-4c8b-825e-149b852e700c@8/Timeline/9/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.345679015"
+      }
+    },
+    {
+      "side": "right",
+      "from_sample_frame": 859,
+      "to_sample_frame": 860,
+      "original_ankle_component_delta_m": 0.012935380166616021,
+      "solved_ankle_component_delta_m": 0.44427875742011863,
+      "root_translation_delta_m": 0.0018476906899813827,
+      "before": {
+        "frame": 859,
+        "frame/presentation-frame": "865",
+        "frame/body-tick": "859",
+        "leg/leg-pose/original-ankle": [
+          0.157679453,
+          0.5612939,
+          -0.6283182
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.147158444,
+          0.133504033,
+          -0.5658624
+        ],
+        "physical/ankle-world-position": [
+          41.0166359,
+          0.143496692,
+          -1.95531845
+        ],
+        "foot/foot-motion/core/original-sole": [
+          40.8851852,
+          0.5347915,
+          -2.01773024
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          40.8851852,
+          0.03791517,
+          -2.01773024
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          41.4998627,
+          0.009992782,
+          -1.62615728
+        ],
+        "input/foot-step-observation/source-id": "a8e1b908-009a-6920-2a28-13cb003dafe2/793211ed-ee3c-093b-6583-02c0d927b3ac@4/Timeline/3/ActionInstance:2",
+        "input/foot-step-observation/normalized-time": "0.6197183"
+      },
+      "after": {
+        "frame": 860,
+        "frame/presentation-frame": "866",
+        "frame/body-tick": "860",
+        "leg/leg-pose/original-ankle": [
+          0.158225462,
+          0.573721051,
+          -0.6247697
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.158225432,
+          0.5737211,
+          -0.6247697
+        ],
+        "physical/ankle-world-position": [
+          40.9636,
+          0.583712637,
+          -1.98689675
+        ],
+        "foot/foot-motion/core/original-sole": [
+          40.8872337,
+          0.5491862,
+          -2.02014661
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          40.8872337,
+          0.5491862,
+          -2.02014661
+        ],
+        "foot/foot-motion/core/position-weight": "0",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          41.4985657,
+          0.009991703,
+          -1.62747324
+        ],
+        "input/foot-step-observation/source-id": "a8e1b908-009a-6920-2a28-13cb003dafe2/793211ed-ee3c-093b-6583-02c0d927b3ac@4/Timeline/3/ActionInstance:2",
+        "input/foot-step-observation/normalized-time": "0.6338028"
+      }
+    },
+    {
+      "side": "right",
+      "from_sample_frame": 870,
+      "to_sample_frame": 871,
+      "original_ankle_component_delta_m": 0.024730218905264202,
+      "solved_ankle_component_delta_m": 0.46037513321786006,
+      "root_translation_delta_m": 0.0032489016026741534,
+      "before": {
+        "frame": 870,
+        "frame/presentation-frame": "876",
+        "frame/body-tick": "870",
+        "leg/leg-pose/original-ankle": [
+          0.199935228,
+          0.565803647,
+          -0.5264505
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.1999352,
+          0.5658037,
+          -0.5264505
+        ],
+        "physical/ankle-world-position": [
+          41.05913,
+          0.5757967,
+          -2.00940681
+        ],
+        "foot/foot-motion/core/original-sole": [
+          40.98897,
+          0.5575904,
+          -2.063446
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          40.98897,
+          0.5575904,
+          -2.063446
+        ],
+        "foot/foot-motion/core/position-weight": "0",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          41.4874725,
+          0.00999294,
+          -1.64382827
+        ],
+        "input/foot-step-observation/source-id": "a8e1b908-009a-6920-2a28-13cb003dafe2/793211ed-ee3c-093b-6583-02c0d927b3ac@4/Timeline/3/ActionInstance:2",
+        "input/foot-step-observation/normalized-time": "0.7746479"
+      },
+      "after": {
+        "frame": 871,
+        "frame/presentation-frame": "877",
+        "frame/body-tick": "871",
+        "leg/leg-pose/original-ankle": [
+          0.204053819,
+          0.5441544,
+          -0.5152286
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.190188929,
+          0.108956248,
+          -0.470408738
+        ],
+        "physical/ankle-world-position": [
+          41.1063538,
+          0.1189468,
+          -1.98368514
+        ],
+        "foot/foot-motion/core/original-sole": [
+          40.9999,
+          0.5361026,
+          -2.06756067
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          40.9999,
+          0.0363236666,
+          -2.06756067
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          41.48521,
+          0.009991056,
+          -1.64615989
+        ],
+        "input/foot-step-observation/source-id": "a8e1b908-009a-6920-2a28-13cb003dafe2/793211ed-ee3c-093b-6583-02c0d927b3ac@4/Timeline/3/ActionInstance:2",
+        "input/foot-step-observation/normalized-time": "0.78873235"
+      }
+    },
+    {
+      "side": "left",
+      "from_sample_frame": 1424,
+      "to_sample_frame": 1425,
+      "original_ankle_component_delta_m": 0.8239885031988421,
+      "solved_ankle_component_delta_m": 0.8013318077029279,
+      "root_translation_delta_m": 0.06897024896458415,
+      "before": {
+        "frame": 1424,
+        "frame/presentation-frame": "1430",
+        "frame/body-tick": "1424",
+        "leg/leg-pose/original-ankle": [
+          -0.345074,
+          0.09186813,
+          -0.1435059
+        ],
+        "leg/leg-pose/solved-ankle": [
+          -0.223394513,
+          0.08445148,
+          -0.222202808
+        ],
+        "physical/ankle-world-position": [
+          36.5809364,
+          0.09445099,
+          -5.323421
+        ],
+        "foot/foot-motion/core/original-sole": [
+          36.4897766,
+          0.0225547962,
+          -5.47738171
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          36.5803146,
+          0.01513816,
+          -5.3642354
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0.95",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          36.38233,
+          0.009999851,
+          -5.07880831
+        ],
+        "input/foot-step-observation/source-id": "10f4cb90-8b9a-4944-b77c-14efc9a3124d/0811fba7-c4c7-4cc3-9714-f93b9da4d4ab@11/Timeline/14/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.102040812"
+      },
+      "after": {
+        "frame": 1425,
+        "frame/presentation-frame": "1431",
+        "frame/body-tick": "1425",
+        "leg/leg-pose/original-ankle": [
+          0.3934292,
+          0.127137229,
+          0.220260739
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.476219535,
+          0.122091115,
+          0.166713774
+        ],
+        "physical/ankle-world-position": [
+          36.2053833,
+          0.132090777,
+          -4.623987
+        ],
+        "foot/foot-motion/core/original-sole": [
+          36.1335068,
+          0.05433608,
+          -4.669499
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          36.19511,
+          0.0492898375,
+          -4.59251451
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0.95",
+        "formal-input/lock-weight": "0",
+        "input/visible-body-position": [
+          36.32335,
+          0.00999985,
+          -5.114561
+        ],
+        "input/foot-step-observation/source-id": "10f4cb90-8b9a-4944-b77c-14efc9a3124d/0811fba7-c4c7-4cc3-9714-f93b9da4d4ab@11/Timeline/14/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.122448973"
+      }
+    },
+    {
+      "side": "right",
+      "from_sample_frame": 1424,
+      "to_sample_frame": 1425,
+      "original_ankle_component_delta_m": 0.5237312104181061,
+      "solved_ankle_component_delta_m": 0.12327265122349025,
+      "root_translation_delta_m": 0.06897024896458415,
+      "before": {
+        "frame": 1424,
+        "frame/presentation-frame": "1430",
+        "frame/body-tick": "1424",
+        "leg/leg-pose/original-ankle": [
+          0.1601233,
+          0.0962397456,
+          0.31033653
+        ],
+        "leg/leg-pose/solved-ankle": [
+          0.04067032,
+          0.0590804219,
+          0.182572082
+        ],
+        "physical/ankle-world-position": [
+          36.2047768,
+          0.06908009,
+          -5.01997948
+        ],
+        "foot/foot-motion/core/original-sole": [
+          36.041935,
+          0.0377938822,
+          -4.924242
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          36.1580048,
+          0.0,
+          -5.056
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0.9796593",
+        "formal-input/lock-weight": "0.0332899727",
+        "input/visible-body-position": [
+          36.38233,
+          0.009999851,
+          -5.07880831
+        ],
+        "input/foot-step-observation/source-id": "10f4cb90-8b9a-4944-b77c-14efc9a3124d/0811fba7-c4c7-4cc3-9714-f93b9da4d4ab@11/Timeline/14/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.102040812"
+      },
+      "after": {
+        "frame": 1425,
+        "frame/presentation-frame": "1431",
+        "frame/body-tick": "1425",
+        "leg/leg-pose/original-ankle": [
+          -0.25279212,
+          0.0379594862,
+          -0.006520927
+        ],
+        "leg/leg-pose/solved-ankle": [
+          -0.0673090145,
+          0.06456861,
+          0.123356462
+        ],
+        "physical/ankle-world-position": [
+          36.1938477,
+          0.07456837,
+          -5.16912031
+        ],
+        "foot/foot-motion/core/original-sole": [
+          36.31993,
+          -0.0393349975,
+          -5.3469696
+        ],
+        "foot/foot-motion/core/corrected-sole": [
+          36.20976,
+          -0.0125716608,
+          -5.1489954
+        ],
+        "foot/foot-motion/core/position-weight": "1",
+        "formal-input/contact": "0.9911788",
+        "formal-input/lock-weight": "0.033681415",
+        "input/visible-body-position": [
+          36.32335,
+          0.00999985,
+          -5.114561
+        ],
+        "input/foot-step-observation/source-id": "10f4cb90-8b9a-4944-b77c-14efc9a3124d/0811fba7-c4c7-4cc3-9714-f93b9da4d4ab@11/Timeline/14/ActionInstance:3",
+        "input/foot-step-observation/normalized-time": "0.122448973"
+      }
+    }
+  ],
+  "limits": [
+    "Existing replay captured before the later Blend weight rounding fix; not a recording of the latest user operation.",
+    "Raw leg pose coordinates are component space; sole and physical ankle coordinates are world space.",
+    "Observed discontinuities identify pipeline stages, not every underlying cause."
+  ]
+}

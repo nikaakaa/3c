@@ -1,3 +1,4 @@
+using System;
 using FlowCanvas.Nodes;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Control.Authoring;
@@ -24,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.bodyExplodeEnd = BuildTimelineBody(rootParts, rootParts.enhanceExplodeEnd, "Attack_Rush_Enhance_Explode_End", explodeEnd, TimelinePlaybackMode.Once);
             parts.badge = BuildBadgeCondition(rootParts, rootParts.enhanceEntryEdge, true);
             parts.noBadge = BuildBadgeCondition(rootParts, rootParts.stateEdge, false);
-            parts.startComplete = BuildTimelineTimeCondition(rootParts, rootParts.enhanceStartEdge, "enhance.start-complete", 38f / 60f);
+            parts.startComplete = BuildCompletedCondition(rootParts, rootParts.enhanceStartEdge, "enhance.start-complete");
             parts.loopReleased = BuildHeldCondition(rootParts, rootParts.enhanceLoopEndEdge, false);
             parts.sawExplode = BuildActionEventCondition(rootParts, rootParts.enhanceLoopExplodeEdge, "enhance.saw-explode", "SawExplode");
             parts.complete = BuildCompletedCondition(rootParts, rootParts.enhanceEndEdge, "enhance.complete");
@@ -198,25 +199,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 edges);
         }
 
-        static RushGraphPart BuildTimelineTimeCondition(
-            RootParts rootParts,
-            BtsmtlSkillNativeConnection connection,
-            string seed,
-            float seconds)
-        {
-            var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(
-                rootParts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph),
-                BtsmtlSkillFlowGraphRole.ConditionRule, "Timeline达到指定时间");
-            BtsmtlSkillAuthoringContract.ConfigureConnection(connection, graph, 0, ProgramAbortPolicy.None, 0);
-            var time = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillTimelineTimeFlowNode), RushId($"node:{seed}:time"), "Timeline时间", new Vector2(-360f, 0f));
-            var reached = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), RushId($"node:{seed}:reached"), "到达指定时间", new Vector2(-100f, 0f));
-            var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
-            BtsmtlSkillAuthoringCode.SetValue(reached, "b", seconds);
-            var edge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, time, "m_Output", reached, "a", RushId($"edge:{seed}:time"));
-            var resultEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, reached, "Value", result, "m_Result", RushId($"edge:{seed}:result"));
-            return new RushGraphPart(graph, new[] { time.UID, reached.UID, result.UID }, new[] { edge.UID, resultEdge.UID });
-        }
-
         static RushGraphPart BuildActionEventCondition(
             RootParts rootParts,
             BtsmtlSkillNativeConnection connection,
@@ -248,6 +230,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringContract.ConfigureConnection(connection, graph, 0, ProgramAbortPolicy.None, 0);
             var completed = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillStateRootCompletedFlowNode), RushId($"node:{seed}:completed"), "状态主体已完成", new Vector2(-360f, 0f));
             var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { completed.UID, result.UID }, Array.Empty<string>());
             var edge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, completed, "m_Output", result, "m_Result", RushId($"edge:{seed}"));
             return new RushGraphPart(graph, new[] { completed.UID, result.UID }, new[] { edge.UID });
         }

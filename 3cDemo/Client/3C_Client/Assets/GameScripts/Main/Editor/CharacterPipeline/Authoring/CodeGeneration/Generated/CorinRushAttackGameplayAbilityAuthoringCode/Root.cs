@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.enhanceStartEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceStart, parts.enhanceLoop, RushId("edge.enhance-start-loop"));
             parts.enhanceLoopExplodeEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceLoop, parts.enhanceExplode, RushId("edge.enhance-loop-explode"));
             parts.enhanceLoopEndEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceLoop, parts.enhanceEnd, RushId("edge.enhance-loop-end"));
-            parts.enhanceEndEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceEnd, exit, RushId("edge.enhance-end-exit"));
+            parts.enhanceEndEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceEnd, parts.state3, RushId("edge.enhance-end-exit"));
             parts.enhanceExplodeEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceExplode, parts.enhanceExplodeEnd, RushId("edge.enhance-explode-end"));
             parts.enhanceExplodeEndEdge = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, parts.enhanceExplodeEnd, exit, RushId("edge.enhance-explode-end-exit"));
             return parts;

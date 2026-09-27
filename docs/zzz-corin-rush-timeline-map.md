@@ -1,51 +1,35 @@
 # ZZZ Corin RushAttack Timeline 对照
 
-本文登记 RushAttack 三段正式 Timeline 的动画输出和状态窗口。帧号使用 ZZZ 状态本地 1 基 SourceFrame。`RushRelease` 的 TreeClip 按 `(SourceFrame - 1) / 60` 起播；爆发接招 TreeClip 为避免首帧条件尚未满足就结束，按当前作者链从 `14 / 60` 起播。
+原始证据：`D:/ZZZ_Dump/output/corin_replication/20260903_controller_structured_v6/Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json`。状态启用 `m_UseFrameCount`，有退出时间的边使用 `m_FrameCount`；不能用旧 `m_ExitTime × 总帧数` 反推代替。例如强化起手的原始值为 38 帧，不是 35 帧。
 
-## 资产与身份
+## 强化状态的正式配置
 
-| StateId | Timeline 资产 | TimelineId | SectionId | Source TotalFrames |
-|---|---|---|---|---:|
-| `Attack_Rush` | `Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushTimeline.asset` | `606351d5-2e51-5730-3083-9e61df7814be` | `86b751b3-24d8-fc3c-3f0c-1d6dfa88f07e` | 70 |
-| `Attack_Rush_Explode` | `Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushExplodeTimeline.asset` | `e25bc128-d9c4-0448-b708-cf1a0c8b8830` | `866672da-8a24-aa7c-d040-bc8f3df58e6a` | 70 |
-| `Attack_Rush_End` | `Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/CorinAttackRushEndTimeline.asset` | `8c852140-8ed0-ae2b-b3b3-654743e1e6ee` | `bcd0c997-0211-5653-03de-2e1f13f88e29` | 80 |
+下表时间为 Timeline 轴帧数，窗口为左闭右开区间。动画都引用正式生成的 FootMotionTarget，素材完整长度与状态提前退出时间分开。
 
-三段 Section 的 `BranchId` 都是 `Rush`。每段各有一条 Presentation `AnimationTrack`，channel 为 `FullBodyAction`，slot 为 `corin.full-body-action`，blend profile 为 `corin.animation-rig.action-blend-profile`。
+| 状态 | 实际 Motion | Timeline 时长 | 接招窗口 | 移动退出窗口 |
+|---|---|---:|---|---|
+| `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | 38 | 无 | 无 |
+| `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | 80，循环 | 无 | 无 |
+| `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | 70 | `[0,40)` | `[12,70)` |
+| `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | 63 | `[16,44)` | `[24,63)` |
+| `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | 118 | 无 | `[16,118)` |
 
-## 动画资源
+强化 End 的按键接招条件只有 `FrameCount < 40`，没有最早第 14 帧的 FrameCount 条件。强化 Explode 的按键接招条件为 `FrameCount >= 16 && FrameCount < 44`。移动退出分别取实际条件中的 12 / 24 帧；无显式 FrameCount 条件的恢复段按原始转移字段保留 16 帧。
 
-| StateId | AnimationClip |
-|---|---|
-| `Attack_Rush` | `Avatar_Female_Size01_Corin_Ani_Attack_Rush.anim` |
-| `Attack_Rush_Explode` | `Avatar_Female_Size01_Corin_Ani_Attack_Rush_Explode.anim` |
-| `Attack_Rush_End` | `Avatar_Female_Size01_Corin_Ani_Attack_Rush_End.anim` |
+`Badge_S03 + HoldAttackA` 的自动续接条件尚需独立输入/Control 证据；当前窗口消费的是 Attack 请求，不把按住自动当成重复按键。
 
-动画轨道只负责表现输出。状态迁移由 Ability FSM 读取 Timeline 投影出的 ActionWindow，不由 Timeline 直接跳转状态。
+## 普通分支
 
-## ActionWindow
+普通三段继续保留独立 Timeline 和既有作者源码。当前 `Attack_Rush_Explode` 正式长度为 63 帧，接招从第 14 帧开放，移动退出仍按当前作者配置的 44 帧。原始 JSON 的移动条件是 42 帧；这是尚待处理的参数差异，不混同为本轮强化修正已经覆盖。
 
-| StateId | SourceFrame | Timeline 起点或开启帧 | WindowType | WindowId | Digest |
-|---|---:|---:|---|---|---:|
-| `Attack_Rush` | 13 | 12 | `RushRelease` | `RushReleaseOpen` | 8101 |
-| `Attack_Rush_Explode` | 14 | 14 | `RushAttackHandoff` | `RushAttackHandoffOpen` | 8102 |
-| `Attack_Rush_Explode` | - | 44 | `RushMoveExit` | `RushMoveExitOpen` | 8103 |
+## 生成链
 
-`RushAttackHandoff` 与 `RushMoveExit` 由同一 Logic TreeClip 发布：前者从起点至第 44 帧，后者从第 44 帧起，边界帧允许两者重叠。TreeClip 的 TimelineBody graph 写入 Frame scope、Frame lifetime 的布尔声明，并通过 `PipelineBlackboardFactProjectionKind.ActionWindow` 投影给 Control。声明 owner 使用实际 graph id，生成后由正式 authoring 诊断校验。
+强化五段入口调用 `CorinRushTimelineAuthoringBuilder`，输入为状态身份、分支身份、AnimationClip、状态时长和 ActionWindow 区间。
 
-`Attack_Rush_End` 没有窗口 TreeClip；它只播放 80 帧结束动画，完成后由状态机 terminal 条件退出。
+- 动画轨道输出 `FullBodyAction`，slot 为 `corin.full-body-action`。
+- 每个窗口有真实 TimelineBody 图、Frame Blackboard 投影和结束条件。
+- `TimelineTime` 只在所属 TreeClip 内消费。
+- 无窗口的状态不生成空逻辑轨道；重复生成清理旧空 Boundary 图。
+- Timeline / Section / AnimationClip 播放身份沿用原 stable seed，窗口使用各自状态与窗口名生成身份。
 
-## 删除内容
-
-以下五段强化 Rush Timeline、对应 authoring 目录和 Definition catalog 引用已经删除：
-
-- `Attack_Rush_Enhance`
-- `Attack_Rush_Enhance_Loop`
-- `Attack_Rush_Enhance_End`
-- `Attack_Rush_Enhance_Explode`
-- `Attack_Rush_Enhance_Explode_End`
-
-旧文档中的 93 个 AttackProperty cue 并不存在于正式 builder 或当前资产中。当前 Timeline 只表达动画与两个 ActionWindow；Effect 依赖登记在 Ability，命中应用需要独立的 GameplayEffect 应用节点，不能由文档假定。
-
-## 稳定身份
-
-Timeline、Section、Track、Clip、graph、declaration、node 和 edge 的身份均由 `BtsmtlSkillGraphAssetFactory.StableIdentity` 从 `corin.rush.*` seed 生成。重复执行 `btsmtl.generate_assets` 必须复用这些身份，并清理不在当前闭包内的旧轨道、Clip、子图和状态。
+本轮不改动画曲线、不重做足部分析、不重新压缩 ACL；已有动画资源由当前正式资源目录复用。

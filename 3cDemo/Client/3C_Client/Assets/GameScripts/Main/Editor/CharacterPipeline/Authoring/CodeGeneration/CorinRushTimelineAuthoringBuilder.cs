@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
+using FlowCanvas.Nodes;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
+using TreeDesigner;
 using UnityAnimationClip = UnityEngine.AnimationClip;
 using UnityEngine;
 
@@ -10,11 +12,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     internal static class CorinRushTimelineAuthoringBuilder
     {
-        internal sealed class Boundary
+        internal readonly struct Window
         {
-            internal string Target;
-            internal string Condition;
-            internal int Frame;
+            internal Window(string id, int startFrame, int endFrame, ulong digest)
+            {
+                Id = id;
+                StartFrame = startFrame;
+                EndFrame = endFrame;
+                Digest = digest;
+            }
+
+            internal string Id { get; }
+            internal int StartFrame { get; }
+            internal int EndFrame { get; }
+            internal ulong Digest { get; }
         }
 
         internal static TimelineAsset Build(
@@ -23,45 +34,74 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string branchId,
             string animationPath,
             int totalFrame,
-            IReadOnlyList<Boundary> boundaries)
+            params Window[] windows)
         {
-            string timelineId = BtsmtlRushStableIdentity($"corin.rush.timeline:{stateId}");
-            string sectionId = BtsmtlRushStableIdentity($"corin.rush.section:{stateId}");
-            string animationTrackId = BtsmtlRushStableIdentity($"corin.rush.track.animation:{stateId}");
-            string treeTrackId = BtsmtlRushStableIdentity($"corin.rush.track.decision:{stateId}");
-            string animationClipId = BtsmtlRushStableIdentity($"corin.rush.clip.animation:{stateId}");
+            string timelineId = Id($"corin.rush.timeline:{stateId}");
+            string sectionId = Id($"corin.rush.section:{stateId}");
+            string animationTrackId = Id($"corin.rush.track.animation:{stateId}");
+            string treeTrackId = Id($"corin.rush.track.decision:{stateId}");
+            string animationClipId = Id($"corin.rush.clip.animation:{stateId}");
             var animation = context.ResolveExternalAsset<UnityAnimationClip>(animationPath, 7400000L);
             var timeline = BtsmtlSkillAuthoringCode.EnsureTimelineRoot(context, timelineId, $"Corin{stateId}Timeline");
             var catalog = TimelineTreeContractComposition.Create();
             var section = BtsmtlSkillAuthoringCode.EnsureSection(timeline.Data, sectionId, stateId, 0, string.Empty);
             section.ConfigureBranch(branchId);
             var animationTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(AnimationTrack), animationTrackId, "Animation", TimelineExecutionDomain.Presentation);
-            decimal durationSeconds = Seconds(totalFrame);
-            var animationClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, animationTrack, animationClipId, 0, animation, durationSeconds, 0, 0, 0);
+            var animationClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, animationTrack, animationClipId, 0, animation, Seconds(totalFrame), 0, 0, 0);
             ((AnimationTrack)animationTrack).SetAnimationChannelId(new AnimationChannelId("FullBodyAction"));
             ((AnimationTrack)animationTrack).SetAnimationSlotId("corin.full-body-action");
             TimelineAuthoringPropertyContract.Apply(timeline.Data, animationClip, new[] { new TimelineAuthoringPropertyValue("blendProfileId", TimelineAuthoringPropertyKind.Text, "corin.animation-rig.action-blend-profile") });
-            var treeTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(TreeTrack), treeTrackId, "StateBoundary", TimelineExecutionDomain.Logic);
-            var treeClipIds = new List<string>();
-            foreach (var boundary in boundaries)
-            {
-                string graphId = BtsmtlRushStableIdentity($"corin.rush.decision.graph:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.Frame}");
-                string graphName = $"Boundary {stateId} {boundary.Target} {boundary.Condition} @{boundary.Frame}";
-                string treeClipId = BtsmtlRushStableIdentity($"corin.rush.decision.clip:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.Frame}");
-                var graph = BtsmtlSkillAuthoringCode.EnsureTimelineGraph(timeline, graphId, graphName);
-                var treeClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, treeTrack, treeClipId, Seconds(boundary.Frame - 1), graph);
-                TimelineAuthoringPropertyContract.Apply(timeline.Data, treeClip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, graph) });
-                treeClipIds.Add(treeClipId);
-            }
-            var trackIds = new[] { animationTrackId, treeTrackId };
+            var trackIds = new List<string> { animationTrackId };
             var clipIds = new List<string> { animationClipId };
-            clipIds.AddRange(treeClipIds);
+            if (windows.Length > 0)
+            {
+                var track = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(TreeTrack), treeTrackId, "Action Windows", TimelineExecutionDomain.Logic);
+                trackIds.Add(treeTrackId);
+                foreach (Window window in windows)
+                    clipIds.Add(AddWindow(timeline, catalog, track, stateId, window));
+            }
             BtsmtlSkillAuthoringCode.PruneTimeline(timeline.Data, trackIds, clipIds, new[] { sectionId }, Array.Empty<string>());
+            BtsmtlSkillAuthoringCode.PruneTimelineMarkers(timeline.Data, Array.Empty<string>());
+            BtsmtlSkillOwnedAssets.ReleaseOrphaned(timeline);
             return timeline;
         }
 
-        static decimal Seconds(int frame) => frame / (decimal)TimelineUtility.FrameRate;
+        static string AddWindow(TimelineAsset timeline, TimelineContractCatalog catalog, Track track, string state, Window window)
+        {
+            string seed = $"corin.rush.window:{state}:{window.Id}";
+            string ownerId = Id(seed + ":graph");
+            string variableId = Id(seed + ":declaration");
+            string clipId = Id(seed + ":clip");
+            var graph = BtsmtlSkillAuthoringCode.EnsureTimelineGraph(timeline, ownerId, window.Id, BtsmtlSkillFlowGraphRole.TimelineBody);
+            var clip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, track, clipId, Seconds(window.StartFrame), graph);
+            TimelineAuthoringPropertyContract.Apply(timeline.Data, clip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, graph) });
+            var endRule = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(graph, Id(seed + ":end-rule"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "窗口结束");
+            var root = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillRootFlowNode), Id(seed + ":root"), "技能入口", new Vector2(0f, 0f));
+            var selector = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillSelectorFlowNode), Id(seed + ":selector"), "窗口执行或结束", new Vector2(200f, 0f));
+            var set = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillBlackboardSetFlowNode), Id(seed + ":set"), window.Id, new Vector2(400f, 80f));
+            var exit = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillTimelineExitRequestFlowNode), Id(seed + ":exit"), "结束片段", new Vector2(400f, -80f));
+            var time = BtsmtlSkillAuthoringCode.EnsureFlowNode(endRule, typeof(BtsmtlSkillTimelineTimeFlowNode), Id(seed + ":time"), "Timeline时间", new Vector2(0f, 0f));
+            var reached = BtsmtlSkillAuthoringCode.EnsureFlowNode(endRule, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), Id(seed + ":reached"), "结束时间", new Vector2(200f, 0f));
+            var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(endRule, typeof(BtsmtlSkillConditionResultFlowNode), Id(seed + ":result"), "条件结果", new Vector2(400f, 0f));
+            BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(graph, variableId, window.Id, typeof(bool), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Rush/Windows", null,
+                new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, window.Id, window.Id, window.Digest));
+            BtsmtlSkillAuthoringContract.Apply(set, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", variableId), new BtsmtlSkillAuthoringFieldValue("ownerId", ownerId), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
+            BtsmtlSkillAuthoringCode.SetValue(set, "m_Value", true);
+            BtsmtlSkillAuthoringCode.SetValue(reached, "b", (float)Seconds(window.EndFrame));
+            BtsmtlSkillAuthoringContract.Apply(selector, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("end", "结束", endRule, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("body", "执行", null, 0, ProgramAbortPolicy.None) }) });
+            var entryEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, root, "Output", selector, "Input", Id(seed + ":entry"));
+            var endEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, selector, "end", exit, "Input", Id(seed + ":end"));
+            var bodyEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, selector, "body", set, "Input", Id(seed + ":body"));
+            var timeEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(endRule, time, "m_Output", reached, "a", Id(seed + ":time-edge"));
+            var resultEdge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(endRule, reached, "Value", result, "m_Result", Id(seed + ":result-edge"));
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { root.UID, selector.UID, set.UID, exit.UID }, new[] { entryEdge.UID, endEdge.UID, bodyEdge.UID });
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(endRule, new[] { time.UID, reached.UID, result.UID }, new[] { timeEdge.UID, resultEdge.UID });
+            BtsmtlSkillAuthoringCode.PruneBlackboard(graph, new[] { variableId });
+            BtsmtlSkillAuthoringCode.PruneBlackboard(endRule, Array.Empty<string>());
+            return clipId;
+        }
 
-        static string BtsmtlRushStableIdentity(string seed) => new Guid(BtsmtlSkillGraphAssetFactory.StableIdentity(seed)).ToString("D");
+        static decimal Seconds(int frame) => frame / (decimal)TimelineUtility.FrameRate;
+        static string Id(string seed) => new Guid(BtsmtlSkillGraphAssetFactory.StableIdentity(seed)).ToString("D");
     }
 }

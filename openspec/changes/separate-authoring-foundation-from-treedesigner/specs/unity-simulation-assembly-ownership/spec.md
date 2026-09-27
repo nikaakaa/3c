@@ -2,7 +2,7 @@
 
 ### Requirement: 作者合同程序集与编辑集成保持单向依赖
 
-此次迁出的项目自有声明与业务定义 MUST 不依赖旧 UI 或编辑程序集；必要框架适配保留在原领域。MUST 优先沿用现有模块，仅为真实依赖边界建立必要程序集，不为消除目录名字而重写有效类型。编辑集成 MAY 依赖共享合同和领域 runtime，但共享 runtime/Simulation/Core MUST 不依赖 Editor、窗口、GraphView 或 UI 描述。原生框架适配只能在对应领域或编辑程序集拥有。
+独立公共定义 MUST 由 `Runtime/BTSMTL/Authoring` 中的 `BTSMTL.Authoring` 程序集拥有，不引用 TreeDesigner、具体领域运行器或 Editor。公共编辑合同和独立面板 MUST 由 `Editor/GraphAuthoring` 中的 `BTSMTL.Authoring.Editor` 程序集拥有，不因目录继承进入 Character Editor，也不反向引用具体领域 Editor 或旧窗口。公共编辑集成 MAY 引用公共定义及必要原生编辑框架；读取 BaseGraph、PropertyPort 等具体类型的服务 MUST 留在对应领域 Editor，由具体实现单向引用公共定义/编辑集成。Simulation/Core MUST 不为文件整理新增不需要的 Unity 作者层依赖。MUST 不用包装层、反射或重复类型绕过真实依赖。
 
 #### Scenario: 编译运行时核心
 
@@ -15,6 +15,12 @@
 - **WHEN** Unity Editor 打开 Skill 或 Pose 图
 - **THEN** Editor MUST 沿用当前正式入口装配领域原生编辑器和面板，只更新迁出类型的直接引用
 - **AND** 领域合同程序集 MUST 不引用窗口实现
+
+#### Scenario: 公共层仍依赖旧具体实现
+
+- **WHEN** 搬迁后的公共定义或公共编辑面板仍需要引用 TreeDesigner 实现或高层 Character Editor
+- **THEN** MUST 按成员依赖重新划分公共定义、具体对象读取及领域装配
+- **AND** MUST 不把改目录视为完成，不新增兼容壳消除编译错误
 
 ### Requirement: 作者代码归位涉及的运行热路径必须保持零托管分配
 

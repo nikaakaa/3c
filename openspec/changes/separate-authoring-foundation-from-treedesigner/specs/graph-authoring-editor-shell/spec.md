@@ -18,6 +18,22 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
+
+共享编辑集成 MUST 保留当前正式入口使用的 Toolbar、Navigator、原生 Graph Canvas、Details 与 Bottom Dock 业务能力，通过领域 adapter 装配内容，不按领域节点或 Runtime Trace 类型硬编码业务字段。画布与节点/端口交互 MUST 由所属领域的正式原生编辑器提供，不要求使用 GraphAuthoringCanvasView、旧 GraphView 或统一旧窗口类。其它区域 MUST 不保存第二份 node、edge 或可写 selection 模型。Behavior Designer 继续使用插件自己的入口；本次 MUST 不重新设计区域布局或另建总窗口。
+
+#### Scenario: 打开BTSMTL Gameplay Graph
+
+- **WHEN** 作者通过正式入口打开仍受支持的 Gameplay 图内容
+- **THEN** 领域入口 MUST 装配其正式画布、有效 Data Catalog 和 Details，不为复用区域合同创建旧 TreeDesigner 画布
+- **AND** 如果合法内容尚无正式编辑去向，旧入口删除切片 MUST 报告缺口，不创建兼容窗口或静默隐藏内容
+
+#### Scenario: 打开Character Pose Graph
+
+- **WHEN** 作者从明确的动画表现上下文打开 Pose Graph
+- **THEN** 入口 MUST 使用 NodeCanvas/FlowCanvas 原生画布并保留 Pose Navigator、Details 与当前有效 Bottom Dock 能力
+- **AND** MUST 不实例化 GraphAuthoringCanvasView、BaseGraph 或第二套 GraphView
+
 ### Requirement: Workspace布局状态必须是editor-only且不污染authoring
 
 Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、搜索、分组与Preview面板布局 MUST只保存为window-local或Editor view-state。任何布局变化 MUST不修改Graph、Timeline、Profile、Definition、Rig、技能执行内容或领域资源 revision。窗口尺寸不足时区域 MAY按确定规则折叠，但 MUST不切换到旧Data/Inspector互斥写路径。

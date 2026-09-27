@@ -258,7 +258,12 @@ namespace BTSMTL.EventGraphs
         {
             string inputId = null;
             Type valueType = null;
-            if (node is EventGraphFloatInputNode floatInput)
+            if (node is EventGraphStringInputNode stringInput)
+            {
+                inputId = stringInput.InputId;
+                valueType = typeof(string);
+            }
+            else if (node is EventGraphFloatInputNode floatInput)
             {
                 inputId = floatInput.InputId;
                 valueType = typeof(float);

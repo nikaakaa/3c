@@ -624,6 +624,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
 
         static string GetHostInputId(Node node)
         {
+            if (node is EventGraphStringInputNode stringInput)
+                return stringInput.InputId;
             if (node is EventGraphFloatInputNode floatInput)
                 return floatInput.InputId;
             if (node is EventGraphIntInputNode intInput)

@@ -517,7 +517,9 @@ namespace BTSMTL.EventGraphs
             inputId = RequireIdentity(inputId, "inputId");
             Apply(graph, "Configure Event Graph Host Input", () =>
             {
-                if (node is EventGraphFloatInputNode floatInput)
+                if (node is EventGraphStringInputNode stringInput)
+                    stringInput.ConfigureInput(inputId);
+                else if (node is EventGraphFloatInputNode floatInput)
                     floatInput.ConfigureInput(inputId);
                 else if (node is EventGraphIntInputNode intInput)
                     intInput.ConfigureInput(inputId);

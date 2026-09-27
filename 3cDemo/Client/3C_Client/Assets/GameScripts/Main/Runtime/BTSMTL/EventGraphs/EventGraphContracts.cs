@@ -13,14 +13,17 @@ namespace BTSMTL.EventGraphs
         Vector2 = 4,
         Vector3 = 5,
         Quaternion = 6,
-        Enum = 7
+        Enum = 7,
+        String = 8
     }
 
     public static class EventGraphValueKinds
     {
         public static bool TryGet(Type type, out EventGraphValueKind kind)
         {
-            if (type == typeof(bool))
+            if (type == typeof(string))
+                kind = EventGraphValueKind.String;
+            else if (type == typeof(bool))
                 kind = EventGraphValueKind.Bool;
             else if (type == typeof(int))
                 kind = EventGraphValueKind.Int32;
@@ -44,6 +47,7 @@ namespace BTSMTL.EventGraphs
 
         public static Type RequireType(EventGraphValueKind kind) => kind switch
         {
+            EventGraphValueKind.String => typeof(string),
             EventGraphValueKind.Bool => typeof(bool),
             EventGraphValueKind.Int32 => typeof(int),
             EventGraphValueKind.Float32 => typeof(float),
@@ -59,6 +63,7 @@ namespace BTSMTL.EventGraphs
 
     public readonly struct EventGraphValue
     {
+        readonly string m_StringValue;
         readonly bool m_BoolValue;
         readonly int m_IntValue;
         readonly float m_FloatValue;
@@ -97,8 +102,10 @@ namespace BTSMTL.EventGraphs
             UnityEngine.Vector3 vector3Value,
             UnityEngine.Quaternion quaternionValue,
             Type enumType,
-            int enumValue)
+            int enumValue,
+            string stringValue = null)
         {
+            m_StringValue = stringValue;
             Kind = kind;
             m_BoolValue = boolValue;
             m_IntValue = intValue;
@@ -111,6 +118,15 @@ namespace BTSMTL.EventGraphs
         }
 
         public EventGraphValueKind Kind { get; }
+
+        public string StringValue
+        {
+            get { RequireKind(EventGraphValueKind.String); return m_StringValue; }
+        }
+
+        public static EventGraphValue FromString(string value) =>
+            new EventGraphValue(EventGraphValueKind.String, false, 0, 0f, default, default, default, null, 0,
+                value ?? throw new ArgumentNullException(nameof(value)));
 
         public bool BoolValue
         {
@@ -248,6 +264,8 @@ namespace BTSMTL.EventGraphs
 
         public static EventGraphValue FromObject(object value)
         {
+            if (value is string stringValue)
+                return FromString(stringValue);
             if (value is bool boolValue)
                 return FromBool(boolValue);
             if (value is int intValue)
@@ -269,6 +287,7 @@ namespace BTSMTL.EventGraphs
 
         public object ToObject() => Kind switch
         {
+            EventGraphValueKind.String => m_StringValue,
             EventGraphValueKind.Bool => m_BoolValue,
             EventGraphValueKind.Int32 => m_IntValue,
             EventGraphValueKind.Float32 => m_FloatValue,
@@ -281,6 +300,8 @@ namespace BTSMTL.EventGraphs
 
         public T As<T>()
         {
+            if (typeof(T) == typeof(string) && Kind == EventGraphValueKind.String)
+                return (T)(object)m_StringValue;
             if (typeof(T) == typeof(bool) && Kind == EventGraphValueKind.Bool)
                 return Reinterpret<bool, T>(m_BoolValue);
             if (typeof(T) == typeof(int) && Kind == EventGraphValueKind.Int32)

@@ -42,6 +42,12 @@ namespace BTSMTL.EventGraphs
         static readonly Dictionary<Type, string> s_PureIdentities =
             new Dictionary<Type, string>
             {
+                { typeof(EventGraphStringEqualNode), "value.string.equal" },
+                { typeof(EventGraphFloatAbsNode), "value.float.abs" },
+                { typeof(EventGraphFloatClampNode), "value.float.clamp" },
+                { typeof(EventGraphFloatMoveTowardsNode), "value.float.move-towards" },
+                { typeof(EventGraphFloatSelectNode), "value.float.select" },
+                { typeof(EventGraphQuaternionAngleAxisNode), "value.quaternion.angle-axis" },
                 { typeof(FloatAdd), "value.float.add" },
                 { typeof(FloatSubtract), "value.float.subtract" },
                 { typeof(FloatMultiply), "value.float.multiply" },
@@ -161,7 +167,8 @@ namespace BTSMTL.EventGraphs
                     "graph.macro-port");
                 return true;
             }
-            if (nodeType == typeof(EventGraphFloatInputNode) ||
+            if (nodeType == typeof(EventGraphStringInputNode) ||
+                nodeType == typeof(EventGraphFloatInputNode) ||
                 nodeType == typeof(EventGraphIntInputNode) ||
                 nodeType == typeof(EventGraphBoolInputNode) ||
                  nodeType == typeof(EventGraphVector2InputNode) ||

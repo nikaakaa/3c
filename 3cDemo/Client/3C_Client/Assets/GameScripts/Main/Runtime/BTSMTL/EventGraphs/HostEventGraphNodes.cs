@@ -170,4 +170,50 @@ namespace BTSMTL.EventGraphs
     {
         public override Vector3 Invoke(Quaternion value) => value * Vector3.forward;
     }
+    [Name("Read Host String")]
+    [Category("Host/Input")]
+    public sealed class EventGraphStringInputNode : EventGraphHostInputNode<string> { }
+
+    [Name("String Equal")]
+    [Category("Values/String")]
+    public sealed class EventGraphStringEqualNode : PureFunctionNode<bool, string, string>
+    {
+        public override bool Invoke(string a, string b) => string.Equals(a, b, System.StringComparison.Ordinal);
+    }
+
+    [Name("Float Absolute")]
+    [Category("Values/Float")]
+    public sealed class EventGraphFloatAbsNode : PureFunctionNode<float, float>
+    {
+        public override float Invoke(float value) => Mathf.Abs(value);
+    }
+
+    [Name("Float Clamp")]
+    [Category("Values/Float")]
+    public sealed class EventGraphFloatClampNode : PureFunctionNode<float, float, float, float>
+    {
+        public override float Invoke(float value, float minimum, float maximum) => Mathf.Clamp(value, minimum, maximum);
+    }
+
+    [Name("Float Move Towards")]
+    [Category("Values/Float")]
+    public sealed class EventGraphFloatMoveTowardsNode : PureFunctionNode<float, float, float, float>
+    {
+        public override float Invoke(float current, float target, float maxDelta) => Mathf.MoveTowards(current, target, maxDelta);
+    }
+
+    [Name("Select Float")]
+    [Category("Values/Float")]
+    public sealed class EventGraphFloatSelectNode : PureFunctionNode<float, bool, float, float>
+    {
+        public override float Invoke(bool condition, float whenTrue, float whenFalse) => condition ? whenTrue : whenFalse;
+    }
+
+    [Name("Quaternion Angle Axis")]
+    [Category("Values/Quaternion")]
+    public sealed class EventGraphQuaternionAngleAxisNode : PureFunctionNode<Quaternion, float, Vector3>
+    {
+        public override Quaternion Invoke(float angle, Vector3 axis) => Quaternion.AngleAxis(angle, axis);
+    }
+
 }

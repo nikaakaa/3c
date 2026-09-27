@@ -128,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             var inputs = new List<EventGraphInputDescriptor>
             {
+                new EventGraphInputDescriptor(CharacterPresentationFactSchema.MovementMode.Value, typeof(string)),
                 new EventGraphInputDescriptor(
                     EventGraphHostInputIds.DeltaSeconds,
                     typeof(float)),
@@ -220,6 +221,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         expectedKind,
                         EventGraphValue.FromVector3(m_Fact.Velocity),
                         out value);
+                if (string.Equals(inputId, CharacterPresentationFactSchema.MovementMode.Value, StringComparison.Ordinal))
+                    return Read(EventGraphValueKind.String, expectedKind,
+                        EventGraphValue.FromString(m_Fact.MovementModeId), out value);
                 if (string.Equals(
                         inputId,
                         CharacterPresentationFactSchema.Rotation.Value,

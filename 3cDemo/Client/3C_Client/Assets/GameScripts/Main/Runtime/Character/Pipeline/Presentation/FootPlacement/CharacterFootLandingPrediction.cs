@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootLandingObservationRefreshMode : byte
     {
         Thresholded = 1,
-        ChangedSlidingAdmissionInput = 2,
+        ChangedContactApproachInput = 2,
         ForcedPlantVerification = 3
     }
 
@@ -1393,7 +1393,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(pool));
             if (refreshMode != CharacterFootLandingObservationRefreshMode.Thresholded &&
                 refreshMode != CharacterFootLandingObservationRefreshMode
-                    .ChangedSlidingAdmissionInput &&
+                    .ChangedContactApproachInput &&
                 refreshMode != CharacterFootLandingObservationRefreshMode
                     .ForcedPlantVerification)
             {
@@ -1469,7 +1469,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         .ComponentUpAngleExceeded;
                 }
                 if (refreshMode == CharacterFootLandingObservationRefreshMode
-                        .ChangedSlidingAdmissionInput &&
+                        .ChangedContactApproachInput &&
                     committedKey.Identity != key.Identity)
                 {
                     queryReason |= CharacterFootLandingObservationQueryReason

@@ -1217,10 +1217,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentContact
                     ? CharacterFootLandingObservationRefreshMode
                         .ForcedPlantVerification
-                    : footMotion.LockMode ==
-                      AnimationFootStepObservationLockMode.Sliding
+                    : footMotion.InApproachContactToLanding ||
+                      footMotion.LockMode == AnimationFootStepObservationLockMode.Sliding
                         ? CharacterFootLandingObservationRefreshMode
-                            .ChangedSlidingAdmissionInput
+                            .ChangedContactApproachInput
                         : CharacterFootLandingObservationRefreshMode.Thresholded;
             CharacterFootLandingObservationResult observation =
                 CharacterFootLandingPredictor.ResolveObservation(

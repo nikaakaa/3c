@@ -14,6 +14,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveSwingCorrection(
                     frame.AnimatedFoot,
                     frame.SwingMotion);
+            if (context.Discrete.State == CharacterFootConstraintState.Releasing)
+            {
+                swingCorrection = CharacterFootConstraintMath.RaiseToMinimum(
+                    swingCorrection, default, frame.ComponentUp);
+            }
             CharacterFootSupportIntent supportIntent =
                 ResolveSupportIntent(in frame);
             if (transition.SuppressOutput)

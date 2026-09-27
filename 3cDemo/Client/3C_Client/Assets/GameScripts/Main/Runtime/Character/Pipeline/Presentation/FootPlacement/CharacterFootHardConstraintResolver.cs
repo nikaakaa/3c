@@ -44,6 +44,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
             switch (context.Discrete.State)
             {
+                case CharacterFootConstraintState.Swing when swing.Accepted:
+                case CharacterFootConstraintState.UnlockedSupport
+                    when swing.Accepted:
+                {
+                    Vector3 minimum =
+                        CharacterFootConstraintMath.ResolvePointMinimumCorrection(
+                        frame.AnimatedFoot,
+                        swing.EnvelopeSample,
+                        frame.ComponentUp);
+                    return Result(
+                        true,
+                        true,
+                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
+                        0,
+                        swing.GroundPathInputIdentity,
+                        correction,
+                        minimum,
+                        frame.ComponentUp,
+                        true);
+                }
                 case CharacterFootConstraintState.Swing
                     when frame.PreparedPlantActive:
                 case CharacterFootConstraintState.UnlockedSupport
@@ -65,26 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         frame.ComponentUp,
                         false);
                 }
-                case CharacterFootConstraintState.Swing when swing.Accepted:
-                case CharacterFootConstraintState.UnlockedSupport
-                    when swing.Accepted:
-                {
-                    Vector3 minimum =
-                        CharacterFootConstraintMath.ResolvePointMinimumCorrection(
-                        frame.AnimatedFoot,
-                        swing.EnvelopeSample,
-                        frame.ComponentUp);
-                    return Result(
-                        true,
-                        true,
-                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
-                        0,
-                        swing.GroundPathInputIdentity,
-                        correction,
-                        minimum,
-                        frame.ComponentUp,
-                        true);
-                }
                 case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
                 {
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         correction,
                         minimum,
                         frame.ComponentUp,
-                        false);
+                        true);
                 }
                 default:
                     return new CharacterFootHardConstraintResult(

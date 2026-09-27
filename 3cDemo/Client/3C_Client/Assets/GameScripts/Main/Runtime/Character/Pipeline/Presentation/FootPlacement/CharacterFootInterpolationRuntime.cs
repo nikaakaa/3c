@@ -137,6 +137,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 
+        internal static void ApplyHardConstraint(
+            ref CharacterFootInterpolationState state,
+            in CharacterFootHardConstraintResult constraint)
+        {
+            Vector3 adjustment = constraint.OutputCorrection - constraint.InputCorrection;
+            if (!constraint.Available || adjustment.sqrMagnitude == 0f)
+                return;
+            state.EffectiveCorrection = constraint.OutputCorrection;
+            if (state.HasPreviousResponseOutputPoint)
+                state.PreviousResponseOutputPoint += adjustment;
+            if (!state.ResponseHistory.HasValue)
+                return;
+            CharacterFootCorrectionResponseHistory history = state.ResponseHistory;
+            if (history.Domain == CharacterFootCorrectionResponseDomain.ContactWorldResidual)
+            {
+                state.PlantWorldResidual += adjustment;
+                state.PlantWorldResidualTransitionActive =
+                    state.PlantWorldResidual.sqrMagnitude >
+                    CharacterFootConstraintMath.GeometryEpsilon *
+                    CharacterFootConstraintMath.GeometryEpsilon;
+            }
+            else
+            {
+                state.ResponseHistory = new CharacterFootCorrectionResponseHistory(
+                    history.Scalar + Vector3.Dot(adjustment, history.AppliedDirection),
+                    history.Domain,
+                    history.AppliedDirection);
+            }
+        }
+
         static CharacterFootInterpolationResult EvaluatePlant(
             ref CharacterFootInterpolationState state,
             in CharacterFootStateTarget target,
@@ -636,7 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Vector3.Dot(swingPath.LandingPoint, up)
                 : 0f;
             float rawTargetCorrectionAlongUp = hasPath
-                ? Mathf.Max(0f, rawTargetHeightAlongUp - originalSoleHeight)
+                ? rawTargetHeightAlongUp - originalSoleHeight
                 : 0f;
             float landingPointDelta = comparablePath
                 ? Vector3.Distance(
@@ -764,9 +794,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : rawTargetHeightAlongUp
                 : 0f;
             Vector3 swingTargetCorrection = hasPath
-                ? up * Mathf.Max(
-                    0f,
-                    filteredTargetHeightAlongUp - originalSoleHeight)
+                ? up * (filteredTargetHeightAlongUp - originalSoleHeight)
                 : target.Correction;
             float targetDelta = comparablePath
                 ? Vector3.Distance(

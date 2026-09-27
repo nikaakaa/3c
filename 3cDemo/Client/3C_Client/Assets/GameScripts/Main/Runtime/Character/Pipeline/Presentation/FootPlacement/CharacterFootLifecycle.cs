@@ -78,6 +78,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in frame,
                         context.Interpolation.EffectiveCorrection);
+                CharacterFootInterpolationRuntime.ApplyHardConstraint(
+                    ref context.Interpolation,
+                    in hardConstraint);
                 CharacterFootPathContinuityFact continuityFact =
                     CompleteContinuity(
                         in interpolationContinuity,
@@ -258,6 +261,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in context,
                         in frame,
                         context.Interpolation.EffectiveCorrection);
+            CharacterFootInterpolationRuntime.ApplyHardConstraint(
+                ref context.Interpolation,
+                in hardConstraint);
             CharacterFootPathContinuityFact continuityFact =
                 interpolation.ContinuityFact;
             lifecycleTransition = lifecycleTransition.Complete(

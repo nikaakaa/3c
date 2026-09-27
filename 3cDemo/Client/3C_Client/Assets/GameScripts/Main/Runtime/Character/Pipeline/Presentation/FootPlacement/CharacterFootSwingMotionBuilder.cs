@@ -2267,7 +2267,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groundPath.InputIdentity,
                     originalSole,
                     originalAnkle);
-            if (!TryResolveSwingPhaseWeight(in step, out float trajectoryProgress))
+            if (!step.HasPredictiveLanding || !float.IsFinite(step.SwingProgress))
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidSwingPhase,
                     landingEventIdentity,
@@ -2325,7 +2325,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     originalSole,
                     originalAnkle);
 
-            float progress = trajectoryProgress;
+            float progress = Mathf.Clamp01(Vector3.Dot(
+                originalSole - groundPath.LastLanding,
+                horizontal) / horizontal.sqrMagnitude);
             float distance = pathLength * progress;
             Vector3 baselineSample = Vector3.Lerp(
                 groundPath.LastLanding,
@@ -2334,6 +2336,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!TrySampleEnvelope(
                     groundPath,
                     progress,
+                    up,
                     out Vector3 envelopeSample,
                     out CharacterFootSwingMotionRejectReason sampleRejectReason))
                 return Rejected(
@@ -2367,9 +2370,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     progress,
                     baselineSample,
                     envelopeSample);
-            float verticalCorrection = Mathf.Max(
-                0f,
-                formalTargetCorrection);
+            float verticalCorrection = formalTargetCorrection;
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;
@@ -2534,95 +2535,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.LandingReachAvailable,
                 lifecycleTransition);
 
-        static bool TryResolveSwingPhaseWeight(
-            in AnimationFootMotionRuntimeSample step,
-            out float weight)
-        {
-            if (!step.HasPredictiveLanding ||
-                !float.IsFinite(step.SwingProgress))
-            {
-                weight = 0f;
-                return false;
-            }
-            weight = Mathf.SmoothStep(0f, 1f, step.SwingProgress);
-            return float.IsFinite(weight);
-        }
-
         static bool TrySampleEnvelope(
             in CharacterFootGroundPathResult groundPath,
             float progress,
+            Vector3 up,
             out Vector3 sample,
             out CharacterFootSwingMotionRejectReason rejectReason)
         {
+            Vector3 start = groundPath.LastLanding;
+            Vector3 axis = Vector3.ProjectOnPlane(
+                groundPath.NextSwingLanding - start, up);
+            float pathLength = axis.magnitude;
+            axis /= pathLength;
+            float targetDistance = Mathf.Clamp01(progress) * pathLength;
             Vector3 previous = groundPath.EnvelopeVertexAt(0).Position;
-            if (!Finite(previous))
-            {
-                sample = default;
-                rejectReason = CharacterFootSwingMotionRejectReason.InvalidEnvelope;
-                return false;
-            }
-            float totalLength = 0f;
+            float previousDistance = Vector3.Dot(previous - start, axis);
             for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
             {
                 Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
-                if (!Finite(current))
+                float currentDistance = Vector3.Dot(current - start, axis);
+                if (!Finite(previous) || !Finite(current) ||
+                    currentDistance < previousDistance - GeometryEpsilon)
                 {
                     sample = default;
                     rejectReason = CharacterFootSwingMotionRejectReason.InvalidEnvelope;
                     return false;
                 }
-                float segmentLength = Vector3.Distance(previous, current);
-                if (!float.IsFinite(segmentLength))
+                if (targetDistance <= currentDistance)
                 {
-                    sample = default;
-                    rejectReason = CharacterFootSwingMotionRejectReason.InvalidEnvelope;
-                    return false;
+                    float span = currentDistance - previousDistance;
+                    sample = span > GeometryEpsilon
+                        ? Vector3.Lerp(previous, current,
+                            Mathf.Clamp01((targetDistance - previousDistance) / span))
+                        : Vector3.Dot(previous, up) >= Vector3.Dot(current, up)
+                            ? previous : current;
+                    rejectReason = CharacterFootSwingMotionRejectReason.None;
+                    return true;
                 }
-                totalLength += segmentLength;
                 previous = current;
+                previousDistance = currentDistance;
             }
-            if (!float.IsFinite(totalLength) || totalLength <= GeometryEpsilon)
-            {
-                sample = default;
-                rejectReason = CharacterFootSwingMotionRejectReason.DegeneratePath;
-                return false;
-            }
-
-            float targetDistance = Mathf.Clamp01(progress) * totalLength;
-            if (targetDistance >= totalLength - GeometryEpsilon)
-            {
-                sample = groundPath.EnvelopeVertexAt(
-                    groundPath.EnvelopeVertexCount - 1).Position;
-                rejectReason = CharacterFootSwingMotionRejectReason.None;
-                return true;
-            }
-
-            float accumulatedLength = 0f;
-            previous = groundPath.EnvelopeVertexAt(0).Position;
-            for (int i = 1; i < groundPath.EnvelopeVertexCount; i++)
-            {
-                Vector3 current = groundPath.EnvelopeVertexAt(i).Position;
-                float segmentLength = Vector3.Distance(previous, current);
-                if (segmentLength <= GeometryEpsilon)
-                {
-                    previous = current;
-                    continue;
-                }
-                if (targetDistance <= accumulatedLength + segmentLength)
-                {
-                    float t = Mathf.Clamp01(
-                        (targetDistance - accumulatedLength) / segmentLength);
-                    sample = Vector3.Lerp(previous, current, t);
-                    rejectReason = Finite(sample)
-                        ? CharacterFootSwingMotionRejectReason.None
-                        : CharacterFootSwingMotionRejectReason.InvalidEnvelope;
-                    return rejectReason == CharacterFootSwingMotionRejectReason.None;
-                }
-                accumulatedLength += segmentLength;
-                previous = current;
-            }
-            sample = groundPath.EnvelopeVertexAt(
-                groundPath.EnvelopeVertexCount - 1).Position;
+            sample = previous;
             rejectReason = CharacterFootSwingMotionRejectReason.None;
             return true;
         }

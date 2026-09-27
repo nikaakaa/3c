@@ -100,7 +100,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if ((!frame.SwingMotion.Accepted || currentContactOwnsTarget) &&
                 frame.CurrentSupport.Available)
             {
-                correction = frame.CurrentSupport.Target.Position - originalSole;
+                Vector3 supportCorrection =
+                    frame.CurrentSupport.Target.Position - originalSole;
+                correction = frame.LockRequest.Contact > 0f
+                    ? supportCorrection
+                    : CharacterFootConstraintMath.RaiseToMinimum(
+                        swingCorrection,
+                        supportCorrection,
+                        frame.ComponentUp);
             }
             bool targetAvailable = TryResolveSupportTarget(
                 in frame,

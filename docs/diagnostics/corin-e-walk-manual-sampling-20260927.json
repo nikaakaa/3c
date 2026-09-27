@@ -1,0 +1,152 @@
+{
+  "foot_capture_id": "70dd90c3350c4492a5554e53fbefa891",
+  "presentation_capture_id": "edd557280cbc4615b5bf50899a2adbf4",
+  "capture_kind": "用户手动采样，无新增回放",
+  "analyzed_ranges_inclusive": [
+    [
+      16160,
+      16640
+    ],
+    [
+      17030,
+      17420
+    ]
+  ],
+  "foot_sample_count": 1744,
+  "next_landing_available_count": 0,
+  "ground_path_rejections": {
+    "2": 1744
+  },
+  "ground_path_reject_2": "NextLandingUnavailable",
+  "all_contact_phase": true,
+  "all_ik_position_weights_one": true,
+  "contact_curve_min": 0.809787631,
+  "walk_published_events": {
+    "left": {
+      "normalized_time": 0,
+      "has_swing_boundaries": false
+    },
+    "right": {
+      "normalized_time": 0,
+      "has_swing_boundaries": false
+    }
+  },
+  "target_solved_ankle_error_max_m": 0.020247451448241676,
+  "near_probe_plane_clearance_examples": [
+    {
+      "frame": 17227,
+      "side": "left",
+      "part": "toe",
+      "clearance_to_probe_plane_m": -0.1519391024935942,
+      "probe_horizontal_separation_m": 0.012555852977793483,
+      "state": "0",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 17252,
+      "side": "left",
+      "part": "toe",
+      "clearance_to_probe_plane_m": -0.14608700000000008,
+      "probe_horizontal_separation_m": 0.016869145232943427,
+      "state": "0",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 17371,
+      "side": "left",
+      "part": "toe",
+      "clearance_to_probe_plane_m": -0.14466942000000005,
+      "probe_horizontal_separation_m": 0.015433139552594144,
+      "state": "0",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 16335,
+      "side": "left",
+      "part": "heel",
+      "clearance_to_probe_plane_m": -0.13403467130153726,
+      "probe_horizontal_separation_m": 0.017231649999999377,
+      "state": "4",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 16336,
+      "side": "left",
+      "part": "heel",
+      "clearance_to_probe_plane_m": -0.12618699999999983,
+      "probe_horizontal_separation_m": 0.0,
+      "state": "4",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 17252,
+      "side": "left",
+      "part": "heel",
+      "clearance_to_probe_plane_m": -0.12428251999999995,
+      "probe_horizontal_separation_m": 0.016868652502498773,
+      "state": "0",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 16335,
+      "side": "left",
+      "part": "toe",
+      "clearance_to_probe_plane_m": -0.12271112545782678,
+      "probe_horizontal_separation_m": 0.017231410000000835,
+      "state": "4",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 16180,
+      "side": "left",
+      "part": "heel",
+      "clearance_to_probe_plane_m": -0.12229649000000009,
+      "probe_horizontal_separation_m": 0.0,
+      "state": "4",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 17371,
+      "side": "left",
+      "part": "heel",
+      "clearance_to_probe_plane_m": -0.11972653999999983,
+      "probe_horizontal_separation_m": 0.015433142212205653,
+      "state": "0",
+      "rotation_weight": "0"
+    },
+    {
+      "frame": 16622,
+      "side": "right",
+      "part": "toe",
+      "clearance_to_probe_plane_m": -0.11410100000000067,
+      "probe_horizontal_separation_m": 0.01782805820189142,
+      "state": "0",
+      "rotation_weight": "0"
+    }
+  ],
+  "plane_clearance_limit": "只表示最终足部目标相对当前探测命中平面的距离，不等同于对实际脚网格再次碰撞检测。",
+  "target_stage_examples": [
+    {
+      "sample.lineage.low": "16336",
+      "sample.dimension": "character-foot-ik/left",
+      "foot/current-support/available": "true",
+      "foot/current-support/target/position.y": "2.52730942",
+      "foot/foot-motion/core/corrected-sole.y": "2.40112233",
+      "foot/foot-motion/core/constraint-state": "4",
+      "foot/foot-motion/output-stages/safety-floor-available": "false",
+      "foot/foot-motion/output-stages/correction-before-safety-floor.y": "0.06718135",
+      "formal-input/contact": "0.8717051"
+    },
+    {
+      "sample.lineage.low": "17227",
+      "sample.dimension": "character-foot-ik/left",
+      "foot/current-support/available": "true",
+      "foot/current-support/target/position.y": "3.61090255",
+      "foot/foot-motion/core/corrected-sole.y": "3.42118335",
+      "foot/foot-motion/core/constraint-state": "0",
+      "foot/foot-motion/output-stages/safety-floor-available": "false",
+      "foot/foot-motion/output-stages/correction-before-safety-floor.y": "0.0110943317",
+      "formal-input/contact": "0.8549868"
+    }
+  ]
+}

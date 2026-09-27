@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
     {
         public const string CapabilityId =
             "character-presentation-replication";
-        public const int CapabilityRevision = 2;
+        public const int CapabilityRevision = 3;
         public const string MainDimensionId =
             "character-presentation-replication/main";
         public const string CoreSamplerId =
@@ -107,6 +107,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "animation-state",
         "camera-frame",
         "camera-output",
+        "camera-clock",
+        "camera-binding",
+        "camera-effects",
         "presentation-commands",
         "capture-metadata")]
     internal static class CharacterPresentationReplicationCoreSamplerDefinition

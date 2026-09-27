@@ -1,6 +1,7 @@
 using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -11,6 +12,7 @@ namespace ThirdPersonCamera
         readonly CameraEffectRuntimeStateStore m_States;
         readonly ICameraEffectOwner[] m_Owners;
         readonly List<CameraEffectContribution> m_Contributions;
+        readonly ReadOnlyCollection<CameraEffectContribution> m_ContributionView;
         readonly List<PendingRetirement> m_PendingRetirements;
         readonly List<CameraEffectRuntimeState> m_VisibleStates;
         readonly HashSet<CameraEffectEventKey> m_CompletedEvents;
@@ -27,6 +29,7 @@ namespace ThirdPersonCamera
             m_Capacity = capacity;
             m_States = new CameraEffectRuntimeStateStore(capacity);
             m_Contributions = new List<CameraEffectContribution>(capacity);
+            m_ContributionView = m_Contributions.AsReadOnly();
             m_PendingRetirements = new List<PendingRetirement>(capacity);
             m_VisibleStates = new List<CameraEffectRuntimeState>(capacity);
             m_CompletedEvents = new HashSet<CameraEffectEventKey>(capacity);
@@ -41,7 +44,7 @@ namespace ThirdPersonCamera
             };
         }
 
-        public IReadOnlyList<CameraEffectContribution> Contributions => m_Contributions;
+        public ReadOnlyCollection<CameraEffectContribution> Contributions => m_ContributionView;
 
         public bool IsComplete(EventId eventId, ulong generation, string sourceId,
             ulong sourceActionInstanceId, int cycle) =>

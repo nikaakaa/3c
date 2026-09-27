@@ -517,6 +517,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PublishSnapshotDiagnostics(in plan, resetReason);
         }
 
+        internal System.Collections.ObjectModel.ReadOnlyCollection<CameraEffectContribution> EffectContributions => m_EffectEvaluator.Contributions;
+        internal string ProfileId => m_Binding.ProfileId;
+        internal string ProfileRevision => m_Binding.ProfileRevision;
         internal CameraFramePlan AppliedPlan { get; private set; }
         internal bool AppliedTargetValid { get; private set; }
         internal CameraResetReason AppliedResetReason { get; private set; }

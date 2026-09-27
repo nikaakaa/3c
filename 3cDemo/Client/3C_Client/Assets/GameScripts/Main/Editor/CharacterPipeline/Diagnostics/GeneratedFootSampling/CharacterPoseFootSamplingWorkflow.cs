@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
     {
         sealed class Workflow : IDiagnosticSamplingWorkflow
         {
+            public string CurrentCaptureDirectory => s_OutputRoot;
             public string CapabilityId =>
                 CharacterFootIkDiagnosticIdentity.CapabilityId;
             public System.Collections.Generic.IReadOnlyList<string>
@@ -370,6 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                         CompleteFailure(s_Controller.Failure.Value.Message);
                     return;
                 }
+                RememberCapture(result);
                 if (!completed)
                 {
                     CompleteFailure(
@@ -377,7 +379,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                         "Foot IK Host finalization failed.");
                     return;
                 }
-                RememberCapture(result);
                 CompleteController();
                 Debug.Log(
                     $"Foot IK generated sampling completed: {s_LastManifestPath}");
@@ -502,8 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     DiagnosticArtifactIntegrity.ComputeSha256(content));
                 DiagnosticCapabilityManifest manifest =
                     DiagnosticCapabilityCodec.DecodeCapabilityManifest(document);
-                if (manifest.Status != DiagnosticCaptureStatus.Completed ||
-                    manifest.Samplers.Count != 1)
+                if (manifest.Samplers.Count != 1)
                 {
                     return;
                 }
@@ -578,7 +578,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     s_Controller.Stop(in outcome);
                 }
                 var result = s_Controller.FinalizeBeforeReload(s_OutputRoot);
-                if (result != null && result.Manifest.Status == DiagnosticCaptureStatus.Completed)
+                if (result != null)
                     RememberCapture(result);
             }
             catch (Exception exception)

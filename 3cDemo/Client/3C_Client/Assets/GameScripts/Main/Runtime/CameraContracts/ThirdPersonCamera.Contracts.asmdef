@@ -3,7 +3,8 @@
   "rootNamespace": "ThirdPersonCamera",
   "references": [
     "Cinemachine",
-    "ThirdPersonSimulation.Core"
+    "ThirdPersonSimulation.Core",
+    "KK.GeneratedDiagnosticSampling.Annotations"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

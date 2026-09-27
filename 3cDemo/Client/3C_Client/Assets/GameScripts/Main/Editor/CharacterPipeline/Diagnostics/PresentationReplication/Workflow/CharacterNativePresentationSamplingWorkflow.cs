@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
     {
         sealed class Workflow : IDiagnosticSamplingWorkflow
         {
+            public string CurrentCaptureDirectory => s_OutputRoot;
             public string CapabilityId =>
                 CharacterPresentationReplicationDiagnosticIdentity.CapabilityId;
             public IReadOnlyList<string> SamplerIds => s_SamplerIds;
@@ -330,6 +331,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                         CompleteFailure(s_Controller.Failure.Value.Message);
                     return;
                 }
+                RememberCapture(result);
                 if (!completed)
                 {
                     CompleteFailure(
@@ -337,7 +339,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                         "Presentation replication Host finalization failed.");
                     return;
                 }
-                RememberCapture(result);
                 CompleteController();
                 Debug.Log(
                     $"Presentation replication generated sampling completed: {s_LastManifestPath}");
@@ -382,9 +383,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                      artifactIndex++)
                 {
                     string path = sampler.Artifacts[artifactIndex].Path;
-                    string artifactId = artifactIndex == 0
+                    string name = Uri.UnescapeDataString(Path.GetFileNameWithoutExtension(path));
+                    string artifactId = string.Equals(name, samplerId, StringComparison.Ordinal)
                         ? "main"
-                        : Path.GetFileNameWithoutExtension(path);
+                        : name.Substring(samplerId.Length + 1);
                     s_LastArtifacts[artifactId] = path;
                 }
                 break;
@@ -436,8 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     DiagnosticArtifactIntegrity.ComputeSha256(content));
                 DiagnosticCapabilityManifest manifest =
                     DiagnosticCapabilityCodec.DecodeCapabilityManifest(document);
-                if (manifest.Status != DiagnosticCaptureStatus.Completed ||
-                    manifest.Samplers.Count != 1)
+                if (manifest.Samplers.Count != 1)
                 {
                     return;
                 }
@@ -516,7 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     s_Controller.Stop(in outcome);
                 }
                 var result = s_Controller.FinalizeBeforeReload(s_OutputRoot);
-                if (result != null && result.Manifest.Status == DiagnosticCaptureStatus.Completed)
+                if (result != null)
                     RememberCapture(result);
             }
             catch (Exception exception)

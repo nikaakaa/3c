@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool IsControlledCaptureWindow { get; }
         bool IsCaptureWindowOpen { get; }
         string CurrentSampleIdentity { get; }
+        string CurrentCaptureDirectory { get; }
         string LastSavedSampleIdentity { get; }
         string LastSavedPath { get; }
         string LastSavedDirectory { get; }

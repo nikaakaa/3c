@@ -498,6 +498,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera?.Present(bodyFrame, context);
                 PublishPresentationCapture(in bodyFrame, in factFrame, context, m_DiagnosticCommands);
             }
+            catch (Exception exception)
+            {
+#if KK_DIAGNOSTIC_SAMPLING
+                Animation.Diagnostics.CharacterPoseCaptureFailure.Report(m_Diagnostics.CharacterRuntimeId,
+                    Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.EventId, exception);
+#endif
+                throw;
+            }
             finally
             {
                 m_PoseDomain?.DiscardFrame();
@@ -530,7 +538,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     var plan = m_Camera.AppliedPlan;
                     var basis = m_Camera.BasisSnapshot;
                     camera = new Animation.Diagnostics.CharacterNativeCameraCaptureFrame(
-                        context.RenderFrame, body.ResetSequence, context.PresentationDeltaSeconds, in plan, in basis, m_Camera.AppliedTargetValid, m_Camera.AppliedResetReason);
+                        context.RenderFrame, body.ResetSequence, context.PresentationDeltaSeconds, in plan, in basis, m_Camera.AppliedTargetValid, m_Camera.AppliedResetReason,
+                        in context, m_Camera.EffectContributions, m_Camera.ProfileId, m_Camera.ProfileRevision);
                 }
                 Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.Publish(
                     m_Diagnostics.CharacterRuntimeId, in m_CommittedDiagnosticFrame,

@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using ThirdPersonGameplay.Tick;
 using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -232,9 +235,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         readonly CameraFramePlan m_Plan;
         readonly CameraBasisSnapshot m_Basis;
+        readonly GameplayPresentationFrameContext m_Time;
+        readonly ReadOnlyCollection<CameraEffectContribution> m_Effects;
+        static readonly ReadOnlyCollection<CameraEffectContribution> s_NoEffects = Array.AsReadOnly(Array.Empty<CameraEffectContribution>());
         internal CharacterNativeCameraCaptureFrame(ulong frame, ulong reset, float deltaSeconds,
-            in CameraFramePlan plan, in CameraBasisSnapshot basis, bool targetValid, CameraResetReason resetReason)
-        { PresentationFrame = frame; ResetSequence = reset; DeltaSeconds = deltaSeconds; m_Plan = plan; m_Basis = basis; TargetValid = targetValid; ResetReason = (int)resetReason; }
+            in CameraFramePlan plan, in CameraBasisSnapshot basis, bool targetValid, CameraResetReason resetReason,
+            in GameplayPresentationFrameContext time, ReadOnlyCollection<CameraEffectContribution> effects,
+            string profileId, string profileRevision)
+        { PresentationFrame = frame; ResetSequence = reset; DeltaSeconds = deltaSeconds; m_Plan = plan; m_Basis = basis; TargetValid = targetValid; ResetReason = (int)resetReason;
+            m_Time = time; m_Effects = effects; ProfileId = profileId; ProfileRevision = profileRevision; }
+        [DiagnosticField, DiagnosticGroup("camera-binding")] public string ProfileId { get; }
+        [DiagnosticField, DiagnosticGroup("camera-binding")] public string ProfileRevision { get; }
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public ulong LogicTick => m_Time.LocalLogicTick;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public float ScaledDeltaSeconds => m_Time.ScaledDeltaSeconds;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public float UnscaledDeltaSeconds => m_Time.UnscaledDeltaSeconds;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public bool Paused => m_Time.Paused;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public GameplayPresentationDebugClockMode ClockMode => m_Time.PresentationClockMode;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public GameplayPresentationTimeScaleSource TimeScaleSource => m_Time.TimeScaleSource;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public bool HasOwnerTimeScale => m_Time.HasOwnerTimeScale;
+        [DiagnosticField, DiagnosticGroup("camera-clock")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasOwnerTimeScale))]
+        public float OwnerTimeScale => m_Time.OwnerTimeScale;
+        [DiagnosticField, DiagnosticGroup("camera-clock")] public bool HasLocalAvatarTimeScale => m_Time.HasLocalAvatarTimeScale;
+        [DiagnosticField, DiagnosticGroup("camera-clock")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasLocalAvatarTimeScale))]
+        public float LocalAvatarTimeScale => m_Time.LocalAvatarTimeScale;
+        [DiagnosticTable("camera-effects", 1, 256), DiagnosticGroup("camera-effects")]
+        public ReadOnlyCollection<CameraEffectContribution> Effects => m_Effects ?? s_NoEffects;
         [DiagnosticField, DiagnosticKey("presentation-frame"), DiagnosticGroup("camera-frame")] public ulong PresentationFrame { get; }
         [DiagnosticField, DiagnosticKey("reset-sequence"), DiagnosticGroup("camera-frame")] public ulong ResetSequence { get; }
         [DiagnosticField, DiagnosticKey("delta-seconds"), DiagnosticGroup("camera-frame")] public float DeltaSeconds { get; }

@@ -29,8 +29,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var node8 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), "3a8a532cfb6d7ed1ea5e92c196ae49a7", "到达结束时间", new Vector2(-100f, 0f));
             var node9 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillConditionResultFlowNode), "e189c371-2e75-4a25-acc6-ab53aca233a6", null, new Vector2(600f, 180f));
             var bothTime = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillTimelineTimeFlowNode), "46bdd9b2-d2ba-472e-89f5-20438ce04d72", "Timeline时间", new Vector2(-360f, 0f));
-            var moveOpen = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), "4c5f1f8a-d0fe-45e6-9f01-6f3f1db1fd98", "到达44帧", new Vector2(-100f, -100f));
-            var handoffOpen = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillNativeNodeWrapper<FloatLessEqualThan>), "260b1692-cc72-4166-9675-dbdf6dcb57f7", "不超过44帧", new Vector2(-100f, 100f));
+            var moveOpen = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), "4c5f1f8a-d0fe-45e6-9f01-6f3f1db1fd98", "到达42帧", new Vector2(-100f, -100f));
+            var handoffOpen = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillNativeNodeWrapper<FloatLessThan>), "3cd379ba-56b5-45a0-8263-c68ae419031e", "小于44帧", new Vector2(-100f, 100f));
             var overlap = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillNativeNodeWrapper<AND>), "6980fcde-3e7d-4206-8f05-7974840ddbeb", "AND", new Vector2(220f, 0f));
             var bothResult = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillConditionResultFlowNode), "e609ad94-75de-4278-a042-e967a78291eb", null, new Vector2(600f, 180f));
             var moveTime = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph4, typeof(BtsmtlSkillTimelineTimeFlowNode), "c33a6537-daeb-41f1-b894-97bf215371f0", "Timeline时间", new Vector2(-360f, 0f));
@@ -45,8 +45,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringContract.Apply(node2, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("end", "结束", parts.graph1, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("both", "接招与移动", parts.graph3, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("move", "移动", parts.graph4, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("body", "接招", null, 0, ProgramAbortPolicy.None) }) });
             BtsmtlSkillAuthoringContract.Apply(both, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("handoff", "接招", null, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("move", "移动", null, 0, ProgramAbortPolicy.None) }) });
             BtsmtlSkillAuthoringCode.SetValue(node8, "b", 1.05f);
-            BtsmtlSkillAuthoringCode.SetValue(moveOpen, "b", 44f / 60f);
-            BtsmtlSkillAuthoringCode.SetValue(handoffOpen, "b", 0.733333349f);
+            BtsmtlSkillAuthoringCode.SetValue(moveOpen, "b", 42f / 60f);
+            BtsmtlSkillAuthoringCode.SetValue(handoffOpen, "b", 44f / 60f);
             BtsmtlSkillAuthoringCode.SetValue(afterHandoff, "b", 44f / 60f);
             var edge = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph, node1, "Output", node2, "Input", "2eac3e9583703345c834bbccace2ddef");
             var edge2 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph, node2, "body", node4, "Input", "4e848d73d047062d9ecd44457dbb1f33");

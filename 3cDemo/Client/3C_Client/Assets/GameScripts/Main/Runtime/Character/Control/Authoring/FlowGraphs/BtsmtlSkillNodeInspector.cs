@@ -421,8 +421,8 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("读取Gameplay Tag"), Category("BTSMTL/Ability")]
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.GameplayEffectProfile)]
     [BtsmtlSkillNodeKind("gameplay-tag-has")]
-    [BtsmtlSkillAuthoringField("tagId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String, NonEmpty = true)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("tagId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String, NonEmpty = true)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillGameplayTagFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IGameplayTagAuthoring
     {
         [SerializeField] GameplayTagId m_Tag;
@@ -447,9 +447,9 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("查询Gameplay Tags"), Category("BTSMTL/Ability")]
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.GameplayEffectProfile)]
     [BtsmtlSkillNodeKind("gameplay-tag-query")]
-    [BtsmtlSkillAuthoringField("query", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
+    [BtsmtlSkillAuthoringField("query", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillGameplayTagQueryFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IGameplayTagQueryAuthoring
     {
         [SerializeField] GameplayTagQuery m_Query = new GameplayTagQuery();
@@ -474,8 +474,8 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("读取Ability Attribute"), Category("BTSMTL/Ability")]
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.GameplayEffectProfile)]
     [BtsmtlSkillNodeKind("gameplay-attribute-read")]
-    [BtsmtlSkillAuthoringField("attributeId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String, NonEmpty = true)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("attributeId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String, NonEmpty = true)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillGameplayAttributeFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IGameplayAttributeAuthoring
     {
         [SerializeField] GameplayAttributeId m_Attribute;
@@ -517,12 +517,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         "Skill Action Context引用无法解析。",
         typeof(ActionContextSlot),
         Optional = true)]
-    [BtsmtlSkillAuthoringField("effect", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
-    [BtsmtlSkillAuthoringField("actionContext", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+    [BtsmtlSkillAuthoringField("effect", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("actionContext", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("predicted", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean,
+    [BtsmtlSkillAuthoringField("predicted", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Boolean,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillApplyGameplayEffectFlowNode : BtsmtlSkillFlowNode, IGameplayEffectApplicationAuthoring
     {
         [SerializeField] GameplayEffectDefinition m_Effect;
@@ -565,11 +565,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         typeof(GameplayEffectDefinition),
         Optional = true)]
     [BtsmtlSkillAuthoringField("selector", typeof(GameplayEffectRemoveSelector))]
-    [BtsmtlSkillAuthoringField("effect", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+    [BtsmtlSkillAuthoringField("effect", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("query", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
+    [BtsmtlSkillAuthoringField("query", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillRemoveGameplayEffectFlowNode : BtsmtlSkillFlowNode, IGameplayEffectRemovalAuthoring
     {
         [SerializeField] GameplayEffectRemoveSelector m_Selector = GameplayEffectRemoveSelector.EffectId;

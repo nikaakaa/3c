@@ -109,7 +109,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillGraphReference("graphId", BtsmtlSkillFlowGraphRole.StateMachine)]
     [BtsmtlSkillAuthoringField(
         "graphId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     public sealed class BtsmtlSkillStateMachineFlowNode : BtsmtlSkillFlowNode, IGraphAssignable
     {
         [SerializeField] BtsmtlSkillNativeStateMachine m_NativeStateMachine;
@@ -143,7 +143,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillGraphReference("bodyGraphId", BtsmtlSkillFlowGraphRole.StateBody)]
     [BtsmtlSkillAuthoringField(
         "bodyGraphId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     public sealed class BtsmtlSkillStateFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillStateStructureNode, IGraphAssignable
     {
         [SerializeField] BtsmtlSkillFlowGraph m_Body;

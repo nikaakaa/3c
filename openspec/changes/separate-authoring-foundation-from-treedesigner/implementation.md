@@ -41,3 +41,17 @@ B 的公共依赖闭包为 GraphAuthoringCapabilityCatalog.cs 与 GraphAuthoring
 ### A 编译结果
 
 目标 Unity 完成本次脚本编译及 Domain Reload，回到 Edit/idle，Console error 查询为 0 条。公共程序集与四个直接程序集引用已由 Unity 编译接收。本切片没有运行 Play、replay 或测试。
+
+## 2026-09-28：B 作者字段与端口描述
+
+`GraphAuthoringCapabilityCatalog.cs` 的 26 个现有类型按字段（12）、端口及端口组合（7）、能力/命令/子面板目录（7）拆入 `Runtime/BTSMTL/Authoring/Graph`，分别由 FieldContracts.cs、PortContracts.cs、CapabilityCatalog.cs 拥有。GraphAuthoringDomainContracts.cs 的领域身份、文档、节点/边描述和 mutation 合同完整归入 DomainContracts.cs。全部类型从 `TreeDesigner.Authoring` 迁至 `BTSMTL.Authoring.Graph`，所属程序集从 BTSMTL.TreeDesigner 改为 BTSMTL.Authoring，字段、枚举值、显示描述和方法主体保持。
+
+原 Catalog 与 DomainContracts 脚本 .meta GUID 随主要文件保留；新拆字段、端口文件使用新 GUID。扫描 Assets 未发现旧 namespace 的显式资产类型引用，因此没有重写资产。65 个原有使用文件切换 namespace，Timeline.Tree.Editor 补直接公共程序集引用。PropertyPortAuthoringService 连同原 .meta 进入 TreeDesigner/Editor/Scripts/Authoring，继续服务具体图的 BaseNode/PropertyPort，不让公共 Editor 依赖它。
+
+PropertyPort、PropertyEdge、BaseAttributes、BaseNode、BaseGraphAuthoring 的运行实现未修改。公共程序集没有 TreeDesigner、BaseGraph、BaseNode、PropertyPort 或 UnityEditor 引用。原有字段、端口组合、Capability 注册方法直接迁移，没有新增运行包装或另一份端口规则。
+
+### B 编译与共享改动
+
+`dotnet build BTSMTL.Authoring.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false` 成功，0 警告、0 错误；结束后已执行 `dotnet build-server shutdown`。首次使用 --no-restore 时缺少该新项目的 NuGet assets，按正式项目执行正常 restore/build 后成功。
+
+目标 Unity 全量编译在另一工作的 CharacterAnimationInputContract.cs 两处新增 Vector3/Quaternion 参数声明中报 CS7036，缺少 defaultValue 参数；本次未修改该文件或参数业务。此时不能宣称全项目编译通过，后续切片仍需核对目标编译。共享文件只修改 namespace 引用；提交按 HEAD 应用相同 namespace 替换，其余原有未提交业务改动保留在工作区，不纳入本次提交。

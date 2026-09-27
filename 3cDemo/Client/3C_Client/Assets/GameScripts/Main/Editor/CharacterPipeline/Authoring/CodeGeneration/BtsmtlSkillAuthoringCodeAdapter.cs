@@ -15,7 +15,7 @@ using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
-using TreeDesigner.Authoring;
+using BTSMTL.Authoring.Graph;
 using UnityEditor;
 using UnityEngine;
 using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;

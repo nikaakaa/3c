@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 {
     [Name("技能激活入口"), Category("BTSMTL/动作条件")]
     [BtsmtlSkillNodeKind("activation-entry")]
-    [BtsmtlSkillAuthoringField("activationEntryId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("activationEntryId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillActivationEntryFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
         [SerializeField] string m_ActivationEntryId = string.Empty;
@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         typeof(ActionContextSlot))]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     public sealed class BtsmtlSkillActionContextActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IActionContextAuthoring
     {
         [SerializeField] ActionContextSlot m_ActionContext;
@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeKind("action-window-active")]
     [BtsmtlSkillAuthoringField(
         "windowType",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String,
         NonEmpty = true)]
     public sealed class BtsmtlSkillActionWindowActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IActionWindowAuthoring
     {
@@ -64,11 +64,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         typeof(GameplayAbilityAdmissionProfile))]
     [BtsmtlSkillAuthoringField(
         "admissionProfile",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "targetSnapshot",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object,
         Optional = true)]
     public sealed class BtsmtlSkillCanActivateActionFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, ICanActivateActionAuthoring
     {
@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.CharacterControlModule)]
     [BtsmtlSkillAuthoringField(
         "providerOwnerId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public sealed class BtsmtlSkillMoveFacingAngleFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
         [SerializeField] string m_ProviderOwnerId;
@@ -126,10 +126,10 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.CharacterControlModule)]
     [BtsmtlSkillAuthoringField(
         "fieldId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     [BtsmtlSkillAuthoringField(
         "providerOwnerId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public abstract class BtsmtlSkillCharacterStateFlowNode<T> :
         BtsmtlSkillFlowNode,
         IBtsmtlSkillPureValueNode,

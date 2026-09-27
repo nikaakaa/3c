@@ -14,7 +14,7 @@ using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner.Authoring;
+using BTSMTL.Authoring.Graph;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring

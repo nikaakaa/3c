@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using TreeDesigner.Authoring;
+using BTSMTL.Authoring.Graph;
 using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation

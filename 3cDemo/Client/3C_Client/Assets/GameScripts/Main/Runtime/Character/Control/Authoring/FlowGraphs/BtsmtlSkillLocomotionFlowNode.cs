@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeKind("locomotion-input-motion")]
     [BtsmtlSkillAuthoringField(
         "moveSpeed",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         Finite = true,
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultDisplacementModeText)]
     [BtsmtlSkillAuthoringField(
         "turnSpeedDegrees",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         Finite = true,
@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultTurnSpeedDegreesText)]
     [BtsmtlSkillAuthoringField(
         "cameraRelative",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Boolean,
         HasDefaultValue = true,
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultCameraRelativeText)]
     [BtsmtlSkillAuthoringField(
@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultExecutionModeText)]
     [BtsmtlSkillAuthoringField(
         "durationSeconds",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         Finite = true,
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultDurationSecondsText)]
     [BtsmtlSkillAuthoringField(
         "actionMotionCurve",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.AssetReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.AssetReference,
         Optional = true)]
     [BtsmtlSkillNodeAuthoringReference(
         "actionMotionCurve",

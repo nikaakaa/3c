@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.TimelineReference, "timelineId")]
     [BtsmtlSkillAuthoringField(
         "timelineId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     [BtsmtlSkillNodeAuthoringReference(
         "timelineId",
         BtsmtlSkillNodeAuthoringReferenceKind.Asset,
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField("playbackMode", typeof(TimelinePlaybackMode))]
     public sealed class BtsmtlSkillTimelineFlowNode : BtsmtlSkillFlowNode, IActionContextAuthoring

@@ -18,11 +18,11 @@
 
 ## 2. 作者字段、能力与端口分离（B）
 
-- [ ] 2.1 将 `GraphAuthoringCapabilityCatalog.cs`、`GraphAuthoringDomainContracts.cs` 中的独立定义及其依赖闭包迁入 `Runtime/BTSMTL/Authoring/Graph`，按字段、端口、能力和文档合同拆文件；具体提供者留所属领域
-- [ ] 2.2 同步自有类型的正式 namespace、assembly、直接引用和实际受影响的序列化映射；保留字段顺序、显示名、颜色、端口身份、排序、动态端口策略及唯一语义来源
-- [ ] 2.3 保持 `PropertyPort`、`PropertyEdge`、`BaseAttributes`、`BaseNode` 和 `BaseGraphAuthoring` 的具体连接与求值职责，不把具体运行端口搬入公共描述层或复制到 Editor
-- [ ] 2.4 将 `PropertyPortAuthoringService.cs` 归位到 `TreeDesigner/Editor/Scripts/Authoring`，作为具体图的 Editor 读取服务消费公共描述；不让共享 Editor 为此反向依赖 TreeDesigner
-- [ ] 2.5 更新 `BtsmtlSharedGraphAuthoringAdapters`、Pose capability projector、技能 Graph authoring、C#作者入口和能力目录消费者，保持原领域业务规则与正式写入入口
+- [x] 2.1 将 `GraphAuthoringCapabilityCatalog.cs`、`GraphAuthoringDomainContracts.cs` 中的独立定义及其依赖闭包迁入 `Runtime/BTSMTL/Authoring/Graph`，按字段、端口、能力和文档合同拆文件；具体提供者留所属领域
+- [x] 2.2 同步自有类型的正式 namespace、assembly、直接引用和实际受影响的序列化映射；保留字段顺序、显示名、颜色、端口身份、排序、动态端口策略及唯一语义来源
+- [x] 2.3 保持 `PropertyPort`、`PropertyEdge`、`BaseAttributes`、`BaseNode` 和 `BaseGraphAuthoring` 的具体连接与求值职责，不把具体运行端口搬入公共描述层或复制到 Editor
+- [x] 2.4 将 `PropertyPortAuthoringService.cs` 归位到 `TreeDesigner/Editor/Scripts/Authoring`，作为具体图的 Editor 读取服务消费公共描述；不让共享 Editor 为此反向依赖 TreeDesigner
+- [x] 2.5 更新 `BtsmtlSharedGraphAuthoringAdapters`、Pose capability projector、技能 Graph authoring、C#作者入口和能力目录消费者，保持原领域业务规则与正式写入入口
 
 ## 3. 有效编辑合同与面板迁出（C）
 
@@ -51,6 +51,6 @@
 ## 6. 小步提交
 
 - [x] 6.1 A 黑板公共定义、具体接入及其直接消费者作为完整切片提交，中文说明范围与身份处理
-- [ ] 6.2 B 作者字段/端口定义及具体 Editor 服务归位单独提交
+- [x] 6.2 B 作者字段/端口定义及具体 Editor 服务归位单独提交
 - [ ] 6.3 C 公共编辑合同、面板和原生入口接线单独提交
 - [ ] 6.4 C5/C6 旧 UI 删除及规格收口单独提交；实际共享文件冲突或业务去向缺失停在受影响切片，不用临时桥接继续

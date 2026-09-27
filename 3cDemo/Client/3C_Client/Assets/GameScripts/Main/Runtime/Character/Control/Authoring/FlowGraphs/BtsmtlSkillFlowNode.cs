@@ -109,7 +109,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField(
         "steps",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillSequenceFlowNode : BtsmtlSkillCompositeFlowNode
     {
     }
@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField(
         "steps",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillSelectorFlowNode : BtsmtlSkillCompositeFlowNode
     {
     }
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillAuthoringField("mode", typeof(BtsmtlSkillParallelMode), Optional = true)]
     [BtsmtlSkillAuthoringField(
         "steps",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillParallelFlowNode : BtsmtlSkillCompositeFlowNode
     {
         [SerializeField] BtsmtlSkillParallelMode m_Mode;

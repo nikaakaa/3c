@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
-using TreeDesigner.Authoring;
+using BTSMTL.Authoring.Graph;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation

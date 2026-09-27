@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TreeDesigner.Authoring
+namespace BTSMTL.Authoring.Graph
 {
     [Serializable]
     public sealed class GraphAuthoringClipboardEnvelope

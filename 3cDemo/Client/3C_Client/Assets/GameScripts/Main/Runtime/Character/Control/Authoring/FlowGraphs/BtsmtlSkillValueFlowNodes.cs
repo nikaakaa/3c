@@ -14,8 +14,8 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [BtsmtlSkillProvider(BtsmtlSkillProviderKind.InputProfile)]
-    [BtsmtlSkillAuthoringField("inputId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
-    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("inputId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String)]
     public abstract class BtsmtlSkillInputFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillInputNode
     {
         [SerializeField] string m_InputId = string.Empty;

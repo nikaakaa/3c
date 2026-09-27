@@ -26,12 +26,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "FreeLook")]
     [BtsmtlSkillAuthoringField(
         "sequenceId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         NonEmpty = true)]
-    [BtsmtlSkillAuthoringField("priority", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer)]
+    [BtsmtlSkillAuthoringField("priority", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Integer)]
     [BtsmtlSkillAuthoringField(
         "weight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "1")]
     [BtsmtlSkillAuthoringField(
         "blendInSeconds",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         Finite = true,
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "0.15")]
     [BtsmtlSkillAuthoringField(
         "blendOutSeconds",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         Finite = true,
@@ -57,11 +57,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "0.2")]
     [BtsmtlSkillAuthoringField(
         "targetKey",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "interruptPolicy",
@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "requestId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         NonEmpty = true,
         HasDefaultValue = true,
         DefaultValue = "CameraEffect")]
@@ -138,11 +138,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "Shake")]
     [BtsmtlSkillAuthoringField(
         "resourceId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         NonEmpty = true)]
     [BtsmtlSkillAuthoringField(
         "weight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -150,10 +150,10 @@ namespace ThirdPersonCharacter.Control.Authoring
         Finite = true,
         HasDefaultValue = true,
         DefaultValue = "1")]
-    [BtsmtlSkillAuthoringField("priority", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer)]
+    [BtsmtlSkillAuthoringField("priority", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Integer)]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     public sealed class RequestCameraEffectNode : BtsmtlSkillFlowNode, IActionContextAuthoring
     {
@@ -203,7 +203,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillAuthoringField("lookResponse", typeof(CameraLookResponseMode))]
     [BtsmtlSkillAuthoringField(
         "manualOrbitWeight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "1")]
     [BtsmtlSkillAuthoringField(
         "pitchResponseWeight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -223,7 +223,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "1")]
     [BtsmtlSkillAuthoringField(
         "yawResponseWeight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -231,10 +231,10 @@ namespace ThirdPersonCharacter.Control.Authoring
         Finite = true,
         HasDefaultValue = true,
         DefaultValue = "1")]
-    [BtsmtlSkillAuthoringField("priority", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer)]
+    [BtsmtlSkillAuthoringField("priority", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Integer)]
     [BtsmtlSkillAuthoringField(
         "weight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "1")]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     public sealed class SetCameraResponseNode : BtsmtlSkillFlowNode, IActionContextAuthoring
     {
@@ -297,24 +297,24 @@ namespace ThirdPersonCharacter.Control.Authoring
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "targetKey",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "anchorKey",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "aimPointKey",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField(
         "preferredBoneKey",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("priority", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer)]
+    [BtsmtlSkillAuthoringField("priority", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Integer)]
     [BtsmtlSkillAuthoringField(
         "weight",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
         HasMaximum = true,
@@ -324,7 +324,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         DefaultValue = "1")]
     [BtsmtlSkillAuthoringField(
         "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     public sealed class SetCameraTargetNode : BtsmtlSkillFlowNode, IActionContextAuthoring
     {

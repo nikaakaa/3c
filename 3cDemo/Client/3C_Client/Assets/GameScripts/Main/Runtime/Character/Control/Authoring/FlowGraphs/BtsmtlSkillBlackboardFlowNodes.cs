@@ -39,11 +39,11 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     [BtsmtlSkillAuthoringField(
         "declarationId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     [BtsmtlSkillAuthoringField(
         "ownerId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
-    [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("valueType", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Enum,
         "bool", "int", "ulong", "float", "string", "vector2", "vector3")]
     public abstract class BtsmtlSkillBlackboardReadFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillBlackboardReadNode
     {
@@ -91,17 +91,17 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     [BtsmtlSkillAuthoringField(
         "declarationId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
     [BtsmtlSkillAuthoringField(
         "ownerId",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
-    [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("valueType", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Enum,
         "bool", "int", "ulong", "float", "string", "vector2", "vector3")]
-    [BtsmtlSkillAuthoringField("accessMode", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+    [BtsmtlSkillAuthoringField("accessMode", BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.Enum,
         "get", "set")]
     [BtsmtlSkillAuthoringField(
         "factContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.AssetReference,
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.AssetReference,
         Optional = true)]
     [BtsmtlSkillNodeAuthoringReference(
         "factContext",

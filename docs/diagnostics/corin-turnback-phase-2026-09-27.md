@@ -6,7 +6,7 @@
 
 ## 当前资源与运行链
 
-`CorinAnimationPresentationProfile.asset` 的 `Locomotion.Gait` 当前只包含 Run 与 Walk。TurnBack 尚未进入该组；本次已通过正式作者服务保存并回读其 `m_GaitPhase`。已有 Foot Motion Target、相位曲线和 Ready 的脚部分析缓存不等于同步配置完成。
+`CorinAnimationPresentationProfile.asset` 的 `Locomotion.Gait` 当前包含战斗 Run、Walk、TurnBack 三个成员。TurnBack 的 `m_GaitPhase`、Clip Player 入口和运行 Phase plan 已通过正式作者与编译入口保存并回读。作者配置完成与运行画面确认分别记录。
 
 原生 Clip Player 之前没有消费同步组；原生 StateMachine 直接混合两个各自推进的播放器。本次接入的链路为：Profile 同步组 → 动画领域资源中的 Clip Phase plan → StateMachine 的当前源和切入目标 → Player 有效时间 → 同一时间的 Pose、脚特征和属性采样。原始时钟不被重写。Reset、退出同步和帧丢弃不保留失效关联。
 
@@ -31,7 +31,7 @@ dump 还存在 MainCity_Run_End_L／R 与 MainCity_Walk_End_L／R。能证明原
 
 MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本的自动等价替换。需要核对持械姿势、转身时序、正式 Motion Reference 与控制层运动时间；不能仅因为起步脚相反就切入现有战斗状态。当前控制层 MovingTurn 的运动时间为 28/60 秒，出口混合约 0.3 秒，二者也不能被当作素材全长。
 
-本次没有扩大 TurnBack 的允许入口、替换为 MainCity 动画或增加响应等待。TurnBack 相位曲线和正式入口已经保存，同步组尚未写入。通用代码编译通过不能作为腿部拉扯消失的证据；尚未完成真实运行效果验收。
+本次没有扩大 TurnBack 的允许入口、替换为 MainCity 动画或增加响应等待。TurnBack 相位曲线、正式入口、同步组和运行资源已经保存。通用代码编译通过不能作为腿部拉扯消失的证据；真实运行效果另行记录。
 
 当前范围按作者要求只处理战斗素材，城市素材不作为修复方案。
 
@@ -49,7 +49,7 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 
 该次发布失败意味着不能据此宣称运行资源已采用新的相位计划。攻击资源由其它任务处理，不是本任务继续修改同步代码、保存战斗 TurnBack 正式作者配置或独立检查相位映射的前置条件。本任务不修复攻击素材、不放宽其质量门槛，也不反复发布整组 ACL。
 
-作者配置、相位计划编译、运行资源采用和实际画面效果分别记录。当前 TurnBack 正式入口已经完成，同步组配置尚未完成，不能称为已闭环。
+作者配置、相位计划编译、运行资源采用和实际画面效果分别记录。旧发布失败不是当前资源采用状态：本次同步组保存后，正式 `Compile Animation Domain Resources` 已完成 7 个 Pose source 和 28 个 Action source 的编译；运行资源回读包含 TurnBack、Run、Walk 的三份 v3 相位计划。没有再次发布整组 ACL，也没有处理攻击资源错误。
 
 ## 双脚支撑处理进展
 
@@ -61,7 +61,7 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 
 随后 PoseGraph 只读导出一度未成功返回，编辑器状态读取连续超时，目标 Unity 进程报告无响应。连接恢复后正式只读导出成功；对比现有源码，保留当前有效配置，仅修改 TurnBack 构造参数及其子图内容版本。最终源码编译 0 错误、32 警告，构建服务器已关闭。Unity 完成程序集加载后，正式 `btsmtl.generate_assets` 成功保存资产，没有创建或删除资产。
 
-保存后的 `corin.locomotion.turn.sequence` 入口为 `0–0.166666687` 秒，`corin.locomotion.turn.graph` 内容版本为 `fe3179c25b674435a555a5bf3adde634`。与执行前资产对比，仅入口值和该版本号变化。没有重启 Editor，也没有重发整组资源发布。后续同步组保存请求因连接中断未获得成功结果，文件回读仍未包含 TurnBack，因此暂不宣称同步组已配置。
+保存后的 `corin.locomotion.turn.sequence` 入口为 `0–0.166666687` 秒，`corin.locomotion.turn.graph` 内容版本为 `fe3179c25b674435a555a5bf3adde634`。与执行前资产对比，仅入口值和该版本号变化。没有重启 Editor，也没有重发整组资源发布。后续同步组请求一度因连接中断失败；用户明确授权重启共享 MCP 服务后恢复连接，通过 `SetLocomotionSyncGroups` 保存并确认组内三个成员。
 
 ## 已执行的独立映射检查
 
@@ -72,4 +72,8 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 - 0.466666667 秒退出时，Run 映射时间在退出后 0、0.1、0.2、0.3 秒依次约为 `0、0.01159、0.08116、0.15072` 秒。这显示双脚支撑出口会先保持切入的支撑姿态，再继续推进；是否造成可见停顿仍需画面确认。
 - 在 .NET 10.0.11 下直接加载 Unity 已编译的同一运行程序集，预热后执行 440000 次 `Map`，包括单脚相位入口、双脚支撑入口和有限动画出口，当前线程新增托管分配为 0 字节。测量循环在内存中编译，没有新增测试文件或产品运行入口；该结果不替代 Unity Mono／Player 的整帧分配检查。
 
-这些结果仅确认指定数据的时间映射，不覆盖实际 PoseGraph 调用、骨骼混合、脚部空间位置或运行时 GC。正式同步组、运行资源采用和实际画面仍未闭环，不能据此宣称腿部拉扯已经消除。
+这些独立检查仅确认指定数据的时间映射和算法分配，不覆盖实际 PoseGraph 调用、骨骼混合或脚部空间位置，不能据此宣称腿部拉扯已经消除。
+
+## 正式运行检查
+
+选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转，没有 `AttackHeld` 为真的帧。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。实际结果在回放完成后记录。

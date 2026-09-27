@@ -602,6 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         RootPositions = rootPositions,
                         RootRotations = rootRotations,
                         Thresholds = source.Thresholds,
+                        ContactMotionPolicy = contactSchedule.MotionPolicy,
                         Left = left,
                         Right = right
                     });

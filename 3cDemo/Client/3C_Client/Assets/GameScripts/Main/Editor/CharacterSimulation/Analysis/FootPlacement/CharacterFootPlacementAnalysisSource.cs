@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         [SerializeField] string m_TargetClipAssetGuid = string.Empty;
         [SerializeField] string m_MotionReferenceClipAssetGuid = string.Empty;
         [SerializeField] bool m_HasAuthoredContactSchedule;
+        [SerializeField] AnimationFootContactMotionPolicy m_ContactMotionPolicy;
         [SerializeField] float[] m_LeftLandingPhases = Array.Empty<float>();
         [SerializeField] float[] m_RightLandingPhases = Array.Empty<float>();
 
@@ -43,13 +44,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (schedule == null)
                 throw new ArgumentNullException(nameof(schedule));
             m_HasAuthoredContactSchedule = !schedule.InferLandingEvents;
+            m_ContactMotionPolicy = schedule.MotionPolicy;
             m_LeftLandingPhases = schedule.LeftLandingPhases.ToArray();
             m_RightLandingPhases = schedule.RightLandingPhases.ToArray();
         }
 
-        public AnimationFootContactSchedule ContactSchedule => m_HasAuthoredContactSchedule
+        public AnimationFootContactSchedule ContactSchedule => (m_HasAuthoredContactSchedule
             ? AnimationFootContactSchedule.Authored(m_LeftLandingPhases, m_RightLandingPhases)
-            : AnimationFootContactSchedule.Inferred;
+            : AnimationFootContactSchedule.Inferred).WithMotionPolicy(m_ContactMotionPolicy);
 
         public void RequireValid()
         {

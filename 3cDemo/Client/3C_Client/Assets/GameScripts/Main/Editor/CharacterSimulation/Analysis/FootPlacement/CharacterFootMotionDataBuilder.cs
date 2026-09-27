@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public float GroundReferenceHeight;
         public bool Loop;
         public bool NoContactLoop;
+        public AnimationFootContactMotionPolicy ContactMotionPolicy;
         public Vector3[] RootPositions;
         public Quaternion[] RootRotations;
         public CharacterFootPlacementAnalysisThresholds Thresholds;
@@ -163,11 +164,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 float heelScore = ContactPointScore(
                     heelHeight,
                     heelVelocity[i],
-                    input.Thresholds);
+                    input.Thresholds,
+                    input.ContactMotionPolicy);
                 float toeScore = ContactPointScore(
                     toeHeight[i],
                     toeVelocity[i],
-                    input.Thresholds);
+                    input.Thresholds,
+                    input.ContactMotionPolicy);
                 float positionScore = 1f - Mathf.InverseLerp(
                     input.Thresholds.PlantEnterHeight,
                     input.Thresholds.PlantExitHeight,
@@ -207,6 +210,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 supportExtensionRatioMax = Mathf.Max(supportExtensionRatioMax, supportExtensionRatio);
             }
             AnimationFootMotionEvent[] events = BuildEvents(input, source, contact);
+            if (input.ContactMotionPolicy == AnimationFootContactMotionPolicy.StationarySupport &&
+                MovingLoop(input) && !input.NoContactLoop &&
+                !events.Any(value => value.Kind == AnimationFootMotionEventKind.LiftOff))
+                throw new InvalidOperationException("Stepping Foot Motion has no LiftOff event.");
             if (MovingLoop(input) && !input.NoContactLoop &&
                 !events.Any(value => value.Kind == AnimationFootMotionEventKind.Landing))
             {
@@ -572,7 +579,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static float ContactPointScore(
             float height,
             Vector3 velocity,
-            CharacterFootPlacementAnalysisThresholds thresholds)
+            CharacterFootPlacementAnalysisThresholds thresholds,
+            AnimationFootContactMotionPolicy motionPolicy)
         {
             float heightScore = 1f - Mathf.InverseLerp(
                 thresholds.PlantEnterHeight,
@@ -588,7 +596,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 velocity.magnitude);
             return heightScore *
                    Mathf.Lerp(0.85f, 1f, verticalScore) *
-                   Mathf.Lerp(0.9f, 1f, motionScore);
+                   (motionPolicy == AnimationFootContactMotionPolicy.StationarySupport
+                       ? motionScore
+                       : Mathf.Lerp(0.9f, 1f, motionScore));
         }
 
         static float[] ContactWithHysteresis(

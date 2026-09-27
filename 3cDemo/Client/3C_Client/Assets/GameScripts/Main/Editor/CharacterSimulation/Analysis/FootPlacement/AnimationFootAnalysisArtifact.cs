@@ -9,6 +9,12 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
+    public enum AnimationFootContactMotionPolicy : byte
+    {
+        GroundProximity = 0,
+        StationarySupport = 1
+    }
+
     public sealed class AnimationFootContactSchedule
     {
         public const string LeftMarkerId = "LeftFootContact";
@@ -17,9 +23,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly float[] m_LeftLandingPhases;
         readonly float[] m_RightLandingPhases;
 
-        AnimationFootContactSchedule(bool inferLandingEvents, IEnumerable<float> left, IEnumerable<float> right)
+        AnimationFootContactSchedule(bool inferLandingEvents, IEnumerable<float> left, IEnumerable<float> right,
+            AnimationFootContactMotionPolicy motionPolicy = AnimationFootContactMotionPolicy.GroundProximity)
         {
+            if (!Enum.IsDefined(typeof(AnimationFootContactMotionPolicy), motionPolicy))
+                throw new ArgumentOutOfRangeException(nameof(motionPolicy));
             InferLandingEvents = inferLandingEvents;
+            MotionPolicy = motionPolicy;
             m_LeftLandingPhases = Normalize(left, nameof(left));
             m_RightLandingPhases = Normalize(right, nameof(right));
             var parts = new List<string>
@@ -29,6 +39,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             Append(parts, LeftMarkerId, m_LeftLandingPhases);
             Append(parts, RightMarkerId, m_RightLandingPhases);
+            if (motionPolicy != AnimationFootContactMotionPolicy.GroundProximity)
+                parts.Add("motion-policy/" + motionPolicy);
             IdentityHash = StableHash.Compute(parts.ToArray());
         }
 
@@ -44,6 +56,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             new AnimationFootContactSchedule(false, leftLandingPhases, rightLandingPhases);
 
         public bool InferLandingEvents { get; }
+        public AnimationFootContactMotionPolicy MotionPolicy { get; }
+        public AnimationFootContactSchedule WithMotionPolicy(AnimationFootContactMotionPolicy policy) =>
+            policy == MotionPolicy ? this : new AnimationFootContactSchedule(
+                InferLandingEvents, m_LeftLandingPhases, m_RightLandingPhases, policy);
         public IReadOnlyList<float> LeftLandingPhases => m_LeftLandingPhases;
         public IReadOnlyList<float> RightLandingPhases => m_RightLandingPhases;
         public StableHash IdentityHash { get; }

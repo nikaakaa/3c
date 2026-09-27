@@ -106,6 +106,7 @@ MonoBehaviour:
     m_Tracks:
     - rid: 207050555325416075
     - rid: 207050638220591106
+    - rid: 207050751823839310
     m_Sections:
     - m_AuthoringId: 866672da-8a24-aa7c-d040-bc8f3df58e6a
       m_Name: Attack_Rush_Explode
@@ -239,6 +240,55 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: -4971423278103499887}
+    - rid: 207050751823839310
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 3496fd80-0a8e-d7b1-9168-a5d99c5fa407
+        Name: Camera Triggers
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839311
+        m_Markers: []
+    - rid: 207050751823839311
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 99d61459-1028-b536-7c25-dc9a63e88769
+        m_StartTimeRaw: 71582788
+        m_EndTimeRaw: 143165577
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 413937206182977211}
+--- !u!114 &413937206182977211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_02
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"e4729273-598d-1483-53e7-af3e4bb563fe","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"47d440cddaae4e0a9857fd8e15f9ef26","m_ResourceId":"Corin_Attack_Rush_CamShake_E_02","_UID":"34134f8d-02a2-1506-fd62-9078bbbc9d0f","_name":"Corin_Attack_Rush_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"81d12b3e-a3fa-c166-8197-615f6897e991","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"4dede53a-bacb-44cb-8b21-de2f61285431","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"013df1d3-8ed3-4622-b19d-980dca8859a7","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"03c47eb1-e534-82ad-9887-e9f695d53b20","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"7db645ac-3ab0-01b0-e794-9dd6303bb909","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 7db645ac-3ab0-01b0-e794-9dd6303bb909
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &6087584683495625692
 MonoBehaviour:
   m_ObjectHideFlags: 0

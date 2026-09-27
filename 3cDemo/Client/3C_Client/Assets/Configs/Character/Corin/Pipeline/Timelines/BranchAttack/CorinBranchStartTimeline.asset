@@ -59,6 +59,8 @@ MonoBehaviour:
     - rid: 207050703806922752
     - rid: 207050716001075200
     - rid: 207050751823839262
+    - rid: 207050751823839294
+    - rid: 207050751823839296
     m_Sections:
     - m_AuthoringId: f0165367-71ea-1d2b-f406-773e924b706e
       m_Name: Attack_Branch_02_Start
@@ -295,6 +297,234 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 207050751823839294
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: f0500e62-f340-cea9-c31b-199606077561
+        Name: Camera Triggers
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839295
+        m_Markers: []
+    - rid: 207050751823839295
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 364c4fca-0610-95e0-5675-9e096082f2b8
+        m_StartTimeRaw: 715827883
+        m_EndTimeRaw: 787410671
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 2823690351151888459}
+    - rid: 207050751823839296
+      type: {class: CameraEffectTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b57e0b30-085b-02ba-6dbe-04efde3ee8be
+        Name: Camera Effects
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839297
+        - rid: 207050751823839298
+        m_Markers: []
+    - rid: 207050751823839297
+      type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e113b356-137c-8789-0cc3-8a812dff5294
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 4724464026
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        Effect: {fileID: 11400000, guid: 34ad9270c6174dd18933705d4f39d0b5, type: 2}
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 207050751823839298
+      type: {class: CameraEffectClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 98466951-99db-f8e7-1b46-18999145c1c0
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 4724464026
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        Effect: {fileID: 11400000, guid: 646202ba81874aa9b4b44b3ccd42ee30, type: 2}
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+--- !u!114 &2823690351151888459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Branch_02_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"754bdd42-9f10-022d-f593-70850d200138","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"0402de0f1aab47a5a388bc1f809d66bc","m_ResourceId":"Corin_Attack_Branch_02_CamShake_E_01","_UID":"a478bbcd-93fd-ff4e-6ee6-763c51e4db85","_name":"Corin_Attack_Branch_02_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"b69eea7e-172a-55d4-61cd-b9fba87c0b88","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"7daf819d-5aa6-43d7-9861-dd3bde0ae040","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"569a98b3-4b47-42a7-bbca-0dd2e8d53644","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5a56b4d4-cc67-633f-08ee-4be3c958fb30","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"c818dc0f-ad73-ca26-f90a-36eb2bcee749","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: c818dc0f-ad73-ca26-f90a-36eb2bcee749
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &6440626794951193254
 MonoBehaviour:
   m_ObjectHideFlags: 0

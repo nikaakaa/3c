@@ -1,5 +1,30 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6884642746795800981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"22677920-f939-e5c6-70a2-3bb9297a49de","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"99f66ecc95ad45f9a442d8281c5be9e0","m_ResourceId":"Corin_Attack_Rush_CamShake_E_01","_UID":"7e7372d8-3855-5653-5de1-fe518b1f804e","_name":"Corin_Attack_Rush_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"ffea03cf-4f6a-6103-a18d-7edb6b63423e","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"eb9dde8a-4d0a-4ac7-b5f0-fc9551d93507","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"8beab8de-ef02-4e75-a094-2106adb641cc","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"d11d6392-9d00-927a-e51a-5b4c9e42257b","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"903fdd6a-8055-02a2-68cc-91d60bddbe65","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 903fdd6a-8055-02a2-68cc-91d60bddbe65
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18,6 +43,7 @@ MonoBehaviour:
     m_Tracks:
     - rid: 207050555325416036
     - rid: 207050638220591104
+    - rid: 207050751823839305
     m_Sections:
     - m_AuthoringId: 86b751b3-24d8-fc3c-3f0c-1d6dfa88f07e
       m_Name: Attack_Rush
@@ -151,6 +177,75 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: 9084835193978509098}
+    - rid: 207050751823839305
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: e61b344f-07a7-cc70-8699-53e94fbef4cf
+        Name: Camera Triggers
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839306
+        - rid: 207050751823839307
+        - rid: 207050751823839308
+        - rid: 207050751823839309
+        m_Markers: []
+    - rid: 207050751823839306
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 56831f22-ceb3-c8c2-f56a-e778a5b80b89
+        m_StartTimeRaw: 572662306
+        m_EndTimeRaw: 644245094
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 5553689674987997503}
+    - rid: 207050751823839307
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 22b62699-b954-9c6b-01d7-85a137844e58
+        m_StartTimeRaw: 1574821342
+        m_EndTimeRaw: 1646404130
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: -6884642746795800981}
+    - rid: 207050751823839308
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 7fa0ae52-8784-f77c-7578-412329dcacf9
+        m_StartTimeRaw: 2720145954
+        m_EndTimeRaw: 2791728742
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 792687655134547337}
+    - rid: 207050751823839309
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 93357c47-c723-4d69-0e9d-9b22ab198ee6
+        m_StartTimeRaw: 3865470566
+        m_EndTimeRaw: 3937053355
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 1336116209099678013}
 --- !u!114 &318319184885570077
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -178,6 +273,81 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: ff9bb48b0a86fdeb587468c8a64a0135
   m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &792687655134547337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"6ce19b42-5e9f-2fbd-fa45-1b2c2f0a4cdd","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"bb271ce3d52c4c8792ec5201ea48d453","m_ResourceId":"Corin_Attack_Rush_CamShake_E_01","_UID":"9fe45e8c-70fc-b9bf-71d2-ba978d4349d7","_name":"Corin_Attack_Rush_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"388d278d-70e2-2549-9a42-992ca9dbf386","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"c3e7f001-44f0-421b-af43-a3e77224b162","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"4267d576-c00f-4f3f-8391-d9a4c752df26","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"29cfd37c-f349-155b-9866-7df6062b2060","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"bf5d35a2-8b8e-69c9-84b0-60e7f5b3def1","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: bf5d35a2-8b8e-69c9-84b0-60e7f5b3def1
+  m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &1336116209099678013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"f19c7a3e-dbfd-119b-a13b-5c592d87f856","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"ce1c5c57d28e404db380538d0001fe19","m_ResourceId":"Corin_Attack_Rush_CamShake_E_01","_UID":"118770cc-a637-f401-32c6-db5910133e4e","_name":"Corin_Attack_Rush_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"b4adb882-a4da-08e6-dcdb-4c116c1321a0","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"4f3b565b-be74-4402-be62-7c5e7371edbd","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"18cefd00-a29c-4b7f-ab72-c30bc6ee9bc0","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"9cd95102-5e96-4dd3-c0d4-025df1a9e741","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"9c65d36d-408c-c5fd-f54c-e64c78f227a9","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 9c65d36d-408c-c5fd-f54c-e64c78f227a9
+  m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &5553689674987997503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_01
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"202b8259-91b1-9d35-d581-68bc3d0fe3c4","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"c499d8c7db1140bd8575fba4b2755b2f","m_ResourceId":"Corin_Attack_Rush_CamShake_E_01","_UID":"cdbffe94-a856-9297-8935-b1bfc2746bf5","_name":"Corin_Attack_Rush_CamShake_E_01","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"0c2ffdf9-fc1e-2fd6-536b-d485d3fdd56c","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"660d3958-8c3b-4645-bddf-ea25abb94522","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"1e12267f-8472-4690-a488-7f32162b2e8a","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"a7da3379-ca62-ad46-a61f-b5a4aa15c5f5","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"e6697a88-2b1a-8c0f-a50f-20534592c2d1","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: e6697a88-2b1a-8c0f-a50f-20534592c2d1
+  m_Role: 5
   m_BlackboardDeclarations: []
 --- !u!114 &9084835193978509098
 MonoBehaviour:

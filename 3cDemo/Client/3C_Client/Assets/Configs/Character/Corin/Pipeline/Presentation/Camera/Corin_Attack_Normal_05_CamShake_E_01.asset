@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 69e7758d6cdf44d2ba88711821334cc7, type: 3}
-  m_Name: Corin_Attack_Normal_01_CamShake_A_01
+  m_Name: Corin_Attack_Normal_05_CamShake_E_01
   m_EditorClassIdentifier: 
   m_Schema: character-camera-shake/v1
-  m_ShakeId: Corin_Attack_Normal_01_CamShake_A_01
+  m_ShakeId: Corin_Attack_Normal_05_CamShake_E_01
   m_ShakeType: 0
   m_CameraShakePropertyConfig: 1
-  m_AngleVertical: -20
+  m_AngleVertical: 90
   m_NoiseAngle: 10
-  m_RadiusLength: 0.025
+  m_RadiusLength: 0.1
   m_DistanceToPlane: 0
   m_NoiseRatio: 0
   m_ShakeTotalTime: 0.6
-  m_Frequency: 12
+  m_Frequency: 20
   m_RollAmplitude: 0
   m_PitchAmplitude: 0
   m_YawAmplitude: 0
@@ -37,8 +37,8 @@ MonoBehaviour:
   m_FadeOutDuration: 0
   m_FadeOutCurve: {fileID: 0}
   m_Curve: {fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}
-  m_IgnoreTimeScale: 1
+  m_IgnoreTimeScale: 0
   m_PlayStackingType: 1
   m_PlayPriority: 0
   m_DataPriority: 0
-  m_StandardConfigKey: CamShake_A_01
+  m_StandardConfigKey: CamShake_E_01

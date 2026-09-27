@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: CorinCharacterCameraProfile
   m_EditorClassIdentifier: 
   m_Schema: character-camera-profile/v2
-  m_ProfileId: corin.camera.profile
   m_RequestCapacity: 128
+  m_ProfileId: corin.camera.profile
   m_DefaultSequence: {fileID: 11400000, guid: b3351f824e49467c893d83d326b392b3, type: 2}
   m_Sequences: []
   m_OverrideTracks: []
@@ -58,11 +58,26 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bccc68648e194901bbd09d174895d5ae, type: 2}
   m_Shakes:
   - {fileID: 11400000, guid: 4f18a92c63b74d0e8a25c7f61b93e0d4, type: 2}
+  - {fileID: 11400000, guid: 3924c5bf504414845a055db13df3ab01, type: 2}
+  - {fileID: 11400000, guid: 8742285c52a6dbe459644942422827fc, type: 2}
+  - {fileID: 11400000, guid: f80376ac6a52a6547a767aa7db2c1310, type: 2}
+  - {fileID: 11400000, guid: ca188fe0c5b8e4d4e8dcfda65307d991, type: 2}
+  - {fileID: 11400000, guid: 141dd4e71a79f1d4299304e3c0f5ae65, type: 2}
+  - {fileID: 11400000, guid: 81c47f60d78b3c74c8c80c10b89b2180, type: 2}
+  - {fileID: 11400000, guid: 8f10ff7460b60cc4fa3af973c5069aa7, type: 2}
+  - {fileID: 11400000, guid: 089e0a06ad5def44e8f8988d8cbf1d25, type: 2}
+  - {fileID: 11400000, guid: 392da70400c440d45a7dc6631d66a981, type: 2}
+  - {fileID: 11400000, guid: 486354ba3a0967c4b9831307d0c532dd, type: 2}
+  - {fileID: 11400000, guid: 47904d07d48eacf48ba141d67c777169, type: 2}
+  - {fileID: 11400000, guid: eb3648e10f97d3e4f89a828569d7a5ac, type: 2}
   m_Shots: []
   m_Curves:
   - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}
   - {fileID: 11400000, guid: c6b42d6548944e6e82c6b6f6f4611871, type: 2}
   - {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
+  - {fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}
+  - {fileID: 11400000, guid: 22724fc8bbc34854faf0c062bb09a89d, type: 2}
+  - {fileID: 11400000, guid: 4ffe049d648bb824394862140894a0b2, type: 2}
   m_NearClipPlane: 0.1
   m_FarClipPlane: 2000
   m_CameraLocateRadius: 3.75
@@ -76,7 +91,9 @@ MonoBehaviour:
     m_YawResponseWeight: 1
   m_Collision:
     m_Enabled: 0
-    m_LayerMask: -1
+    m_LayerMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
     m_Radius: 0.2
     m_NearClipPlane: 0.05
     m_SmoothTime: 0.08

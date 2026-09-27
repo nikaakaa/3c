@@ -57,8 +57,9 @@ MonoBehaviour:
     m_Tracks:
     - rid: 207050738426183710
     - rid: 207050738426183712
-    - rid: 207050751823839259
+    - rid: 207050751823839320
     - rid: 207050751823839257
+    - rid: 207050751823839321
     m_Sections:
     - m_AuthoringId: d33002d9-8bfb-578a-8c7d-c2878aa366c6
       m_Name: Attack_Rush_Enhance_Explode
@@ -309,7 +310,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
-    - rid: 207050751823839259
+    - rid: 207050751823839320
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 4be9fda1-354c-7841-fb5d-b4d90f56cc0d
@@ -319,6 +320,30 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050751823839247
         m_Markers: []
+    - rid: 207050751823839321
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 4a0b5f93-0251-310a-4fae-7c8b42e18760
+        Name: Camera Triggers
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839322
+        m_Markers: []
+    - rid: 207050751823839322
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: e26eb63e-0bf0-3591-c3bc-45ff8c19527d
+        m_StartTimeRaw: 71582788
+        m_EndTimeRaw: 143165577
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 1
+        m_ExitSource: 0
+        m_AssetTree: {fileID: 6643107245341668940}
 --- !u!114 &2907149759862500975
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -413,4 +438,29 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 6184189f-4dfc-eeb2-4683-27983d563fa9
   m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &6643107245341668940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_E_02
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"b19ad106-3846-c3fe-1c5e-41a2f82e53f2","_name":"\u7247\u6bb5\u542f\u7528","_position":{"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode","$id":"0"},{"m_RequestId":"47d440cddaae4e0a9857fd8e15f9ef26","m_ResourceId":"Corin_Attack_Rush_CamShake_E_02","_UID":"442164a1-974e-c750-d965-c6e83e26c72f","_name":"Corin_Attack_Rush_CamShake_E_02","_position":{"x":220.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode","$id":"1"},{"_UID":"f6a4c3b6-dabd-147e-5241-c6f700162d12","_name":"\u6301\u7eed\u6267\u884c","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"dab66851-2f42-4716-a0ba-ffb1d1447ef0","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"a7b8bd6d-bbb7-4083-96c3-014717783044","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"69ad20a6-7c41-246b-d22d-b0df82c4dda7","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"87013632-fccb-4d87-1866-888d882e2be4","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 87013632-fccb-4d87-1866-888d882e2be4
+  m_Role: 5
   m_BlackboardDeclarations: []

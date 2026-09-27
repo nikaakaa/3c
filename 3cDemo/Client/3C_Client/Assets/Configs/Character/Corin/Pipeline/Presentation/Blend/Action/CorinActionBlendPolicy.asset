@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Schema: character-animation-blend-policy/v3
   m_PolicyId: corin.animation-rig.full-body-action
-  m_Revision: 1cd5f4009eae4bbd865b616a7e5312c7
+  m_Revision: d53590ed06f5413699b7402d0ff26a39
   m_StackPolicy:
     m_MaxActiveSourceEntries: 4
     m_StoredPosePolicy: 2
@@ -27,7 +27,7 @@ MonoBehaviour:
     m_CustomBlendCurve: {fileID: 0}
     m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
   m_Overrides:
-  - m_SourceOwnerIdentity: ''
+  - m_SourceOwnerIdentity: 
     m_SourceEndpointKind: 2
     m_TargetOwnerIdentity: producer:606351d5-2e51-5730-3083-9e61df7814be:96b6f5ae-9018-e3a7-4bb9-06cb7613ce62
     m_TargetEndpointKind: 1
@@ -37,7 +37,7 @@ MonoBehaviour:
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
-  - m_SourceOwnerIdentity: ''
+  - m_SourceOwnerIdentity: 
     m_SourceEndpointKind: 2
     m_TargetOwnerIdentity: producer:e25bc128-d9c4-0448-b708-cf1a0c8b8830:28aa1f10-a087-95bd-2af1-8963b056c918
     m_TargetEndpointKind: 1
@@ -47,7 +47,7 @@ MonoBehaviour:
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
-  - m_SourceOwnerIdentity: ''
+  - m_SourceOwnerIdentity: 
     m_SourceEndpointKind: 2
     m_TargetOwnerIdentity: producer:8c852140-8ed0-ae2b-b3b3-654743e1e6ee:9f5299c4-bc66-a805-1449-1268f10a3fbf
     m_TargetEndpointKind: 1
@@ -694,6 +694,116 @@ MonoBehaviour:
     m_Rule:
       m_BlendLogic: 2
       m_DurationSeconds: 0.1
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:6b6bda6e-be52-5ca5-c54a-dccbedf7338e:39489022-a308-66f6-26f6-f5888b9e3075
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:262f4cc3-9ad0-e572-aba8-4d133b32bf80:9f818205-3225-8862-14ea-f557459f6b66
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:5f5b8561-2490-a6dd-2f8c-195d830242f4:f1c4978f-7784-f927-b8ab-a2f871957401
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:b011652c-fe6a-cf58-340a-97e7b7fd0bc0:5eb4e806-c0c8-69f6-c111-7fd06434d45f
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:7bf8c586-06eb-00ff-1f88-f4030c3e41c9:6c10882e-f0d7-f092-9437-fbc2b1baaf81
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:a35691a4-9f77-8559-628a-bcfa4adfabfd:7b7a68c6-9478-966a-af3a-64f5749f882f
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:a8e1b908-009a-6920-2a28-13cb003dafe2:793211ed-ee3c-093b-6583-02c0d927b3ac
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:c255d747-8381-27cc-9a61-7d9b64a6c4f4:e55385b7-70e5-70fd-3fbc-042997c24905
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:dd7314a9-4fcc-26c0-ca7c-1abc4fc6e7ce:0a0f6328-40b3-6e77-574a-3ded9c09d101
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:fa50d379-5509-1650-85ca-6bc5c062faa3:918912fa-40c9-d1d3-b6d1-02cb8f08356e
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:fafc1039-2302-5930-8a14-4039f95bc786:ea50e9bc-c50a-5078-9696-f90c067f8acf
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}

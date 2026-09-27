@@ -38,47 +38,161 @@ MonoBehaviour:
   m_MotionReferences:
   - m_TargetClipAssetGuid: 6149a312e589f154f972a457f3976c42
     m_MotionReferenceClipAssetGuid: 6674eb01f68f4da47b688480dd99704f
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: c951d5ebb89abba4ea0dfa17d4ed55ab
     m_MotionReferenceClipAssetGuid: 7ad6920eafd5b82438baa3ecf8f613a8
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4e613663635adb8428d84960c297d5d7
     m_MotionReferenceClipAssetGuid: b583d9ad4ddaa874b836cb35122a8de3
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4b7a6729d30a44e4182952a81816caf2
     m_MotionReferenceClipAssetGuid: 5358cf9ed306b984a8a2653124b5b969
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 7bd5e9c109acf4744b50901ed2675c3c
     m_MotionReferenceClipAssetGuid: 1ab976a5db96d7a42b0f2351f036ff7a
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 5bc3f78b966fa364583dc0e7af8cd0c8
     m_MotionReferenceClipAssetGuid: f586072cba5c3e14eb166f9557ab559b
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: ac3b96331bba6754aa9bc13302762790
     m_MotionReferenceClipAssetGuid: 057d3ae1b7bd9fc42b67f0ff583c444f
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 1085463043eec484c9173b05b7037f92
     m_MotionReferenceClipAssetGuid: 08c05185bb09a3647b3da79cc6b2f56a
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4bd2aa40793a8a5449b6ef7f4de23426
     m_MotionReferenceClipAssetGuid: 1904ba76fb9f1d641ab5a0fa2a9bb2fd
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4cfdcca827720544e9b01db0507ad2bf
-    m_MotionReferenceClipAssetGuid: 87dd6dd9714ff9149925c60997dd4cbf
+    m_MotionReferenceClipAssetGuid: 9fac4f2e5d088f140ba7a991c1a1b088
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4ef82b85767cffe4883132371252902e
     m_MotionReferenceClipAssetGuid: 26b1ac1be0b44544ead0abc44821f90b
-  - m_TargetClipAssetGuid: cd250c0fc9eb27a4080dd34b0122573d
-    m_MotionReferenceClipAssetGuid: 3250585951378684f82d0e1f6e5ab8ef
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 67587c79547407b4a9fb97cadcf2b6e6
     m_MotionReferenceClipAssetGuid: a683d2a9bea64f449af8dc370faf6a3c
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 69b4dda2a99b8c441833d55ec2229928
     m_MotionReferenceClipAssetGuid: b7ac3b8dbe535e24999765c3b4726e4d
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 6f9dc7e23ba63244e95d8f8d7142c5a2
     m_MotionReferenceClipAssetGuid: 745f96fadb990ba43bfbaa525b0189da
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 928dc4fc54458fe488f6ee2bd52054a7
     m_MotionReferenceClipAssetGuid: f8a96dad2f30f8343b93b61aaa164475
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: c0186e9f72ed34e4dae58f9f7de9ffa0
     m_MotionReferenceClipAssetGuid: 08762f17d6295334680c7bf8653dcaa0
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: cacfffd6d16755a40bd024ab1cfd8438
     m_MotionReferenceClipAssetGuid: 3ab201dfdbc940640aa27cf5901e042b
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: edd7c59a8dbf622489dcbd2692cd2ecd
     m_MotionReferenceClipAssetGuid: e86a9edcf2a6c1f48af52b2f32b17207
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: fe89c3755a34cf64ca6ec99408ab55d6
     m_MotionReferenceClipAssetGuid: af44669b7a9694840b6519d553270e39
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4f79fc3e8a7bd9142af680a36edd82a4
     m_MotionReferenceClipAssetGuid: 16c681fc2af3cc3419198f418b99e6db
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 90cb63fbf5dc2a444a320430dc07026a
     m_MotionReferenceClipAssetGuid: 16f38330684ce314189be68cc86fadc1
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 9e243e525a661e94da0b56bd96b640a6
     m_MotionReferenceClipAssetGuid: 56dc445e7347ede4b84c0bba50500ed1
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: ce6912760a46b374c8ea6a3d302a1ecd
+    m_MotionReferenceClipAssetGuid: 9b9effcaee7b38a42a5df44f7c28009d
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: bd4b375b01871ea46987ff52d9924871
+    m_MotionReferenceClipAssetGuid: 61ce80c921ce9eb4bba93580098cc408
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: b44ef817701d48b45908aa56ec34c2a4
+    m_MotionReferenceClipAssetGuid: 71995fa858a83cd4e9b49d4a71ce7a56
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 2711e16427bcce54f96446ec29d36dea
+    m_MotionReferenceClipAssetGuid: d6dd34eb9dda79841a21aadbcd5e9a68
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 600533f0187f6904682e3fcd894f844c
+    m_MotionReferenceClipAssetGuid: 91c39a8a1194db444a8eadb38b76cb40
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 195674b0850204b45b955111907ef6bc
+    m_MotionReferenceClipAssetGuid: 3250585951378684f82d0e1f6e5ab8ef
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 2b31c803453f8ae4990ce32a2abadf7f
+    m_MotionReferenceClipAssetGuid: cb8b38d388d554542996b512c459e523
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 1f671c6231f05184a9f1c0b2464f75bc
+    m_MotionReferenceClipAssetGuid: f7752a7bb9171584894ab6cd5e2dfeb2
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 4d0ffa3f92358e0489e5c8bf84b0e071
+    m_MotionReferenceClipAssetGuid: fbdca388edc9011438e3ecde5b3436b4
+    m_HasAuthoredContactSchedule: 1
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []
+  - m_TargetClipAssetGuid: 122473249c778fb49aa583ed0d45bc65
+    m_MotionReferenceClipAssetGuid: 09cc935a02719d54dab13685552d356e
+    m_HasAuthoredContactSchedule: 0
+    m_LeftLandingPhases: []
+    m_RightLandingPhases: []

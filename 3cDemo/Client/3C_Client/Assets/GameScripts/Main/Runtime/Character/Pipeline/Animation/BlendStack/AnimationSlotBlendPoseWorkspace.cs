@@ -63,6 +63,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<float> DenseBoneOutputWeights { get; }
     }
 
+    internal struct AnimationSlotBlendRotationHistory
+    {
+        internal ulong ContributionContinuityIdentity;
+        internal Quaternion Rotation;
+    }
+
     internal readonly struct AnimationSlotBlendHistoryWorkspaceBinding
     {
         internal AnimationSlotBlendHistoryWorkspaceBinding(
@@ -70,17 +76,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationLocalBonePose> denseLocalPoses,
             NativeArray<AnimationBlendBoneVelocity> denseVelocities,
             NativeArray<float> poseParameters,
-            NativeArray<float> denseBoneOutputWeights)
+            NativeArray<float> denseBoneOutputWeights,
+            NativeArray<AnimationSlotBlendRotationHistory> sourceRotations)
         {
             States = states;
             DenseLocalPoses = denseLocalPoses;
             DenseVelocities = denseVelocities;
             PoseParameters = poseParameters;
             DenseBoneOutputWeights = denseBoneOutputWeights;
+            SourceRotations = sourceRotations;
         }
 
         internal NativeArray<AnimationSlotBlendHistoryNativeState> States { get; }
         internal NativeArray<AnimationLocalBonePose> DenseLocalPoses { get; }
+        internal NativeArray<AnimationSlotBlendRotationHistory> SourceRotations { get; }
         internal NativeArray<AnimationBlendBoneVelocity> DenseVelocities { get; }
         internal NativeArray<float> PoseParameters { get; }
         internal NativeArray<float> DenseBoneOutputWeights { get; }
@@ -193,6 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationBlendBoneVelocity> m_HistoryVelocities;
         NativeArray<float> m_HistoryParameters;
         NativeArray<float> m_HistoryBoneOutputWeights;
+        NativeArray<AnimationSlotBlendRotationHistory> m_HistorySourceRotations;
 
         NativeArray<AnimationSlotBlendScratchNativeState> m_ScratchState;
         NativeArray<AnimationLocalBonePose> m_ScratchPose;
@@ -260,6 +270,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryVelocities = Allocate<AnimationBlendBoneVelocity>(checked(m_BoneCount * 2));
                 m_HistoryParameters = Allocate<float>(checked(m_ParameterCount * 2));
                 m_HistoryBoneOutputWeights = Allocate<float>(checked(m_BoneCount * 2));
+                m_HistorySourceRotations = Allocate<AnimationSlotBlendRotationHistory>(
+                    checked(m_ContributionCapacity * m_BoneCount * 2));
 
                 m_ScratchState = Allocate<AnimationSlotBlendScratchNativeState>(1);
                 m_ScratchPose = Allocate<AnimationLocalBonePose>(m_BoneCount);
@@ -501,7 +513,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     m_HistoryPoses,
                     m_HistoryVelocities,
                     m_HistoryParameters,
-                    m_HistoryBoneOutputWeights),
+                    m_HistoryBoneOutputWeights,
+                    m_HistorySourceRotations),
                 new AnimationSlotBlendScratchWorkspaceBinding(
                     m_ScratchState,
                     m_ScratchPose,
@@ -537,6 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Clear(m_HistoryVelocities);
             Clear(m_HistoryParameters);
             Clear(m_HistoryBoneOutputWeights);
+            Clear(m_HistorySourceRotations);
             Clear(m_ScratchState);
             Clear(m_ScratchPose);
             Clear(m_ScratchVelocity);
@@ -815,6 +829,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DisposeArray(ref m_ScratchPose);
             DisposeArray(ref m_ScratchState);
             DisposeArray(ref m_HistoryBoneOutputWeights);
+            DisposeArray(ref m_HistorySourceRotations);
             DisposeArray(ref m_HistoryParameters);
             DisposeArray(ref m_HistoryVelocities);
             DisposeArray(ref m_HistoryPoses);

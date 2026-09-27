@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationBlendBoneVelocity> m_HistoryVelocities;
         NativeArray<float> m_HistoryParameters;
         NativeArray<float> m_HistoryBoneOutputWeights;
+        NativeArray<AnimationSlotBlendRotationHistory> m_HistorySourceRotations;
 
         NativeArray<AnimationSlotBlendScratchNativeState> m_ScratchState;
         NativeArray<AnimationLocalBonePose> m_ScratchPose;
@@ -141,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_HistoryVelocities = workspace.History.DenseVelocities;
             m_HistoryParameters = workspace.History.PoseParameters;
             m_HistoryBoneOutputWeights = workspace.History.DenseBoneOutputWeights;
+            m_HistorySourceRotations = workspace.History.SourceRotations;
 
             m_ScratchState = workspace.Scratch.State;
             m_ScratchPose = workspace.Scratch.DenseLocalPose;
@@ -432,6 +434,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         AnimationPoseNativeInvalidReason BlendCrossFade(float deltaSeconds)
         {
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
+            int rotationPageLength = header.ContributionCapacity * m_BoneCount;
+            int rotationWriteOffset = header.HistoryWritePageIndex * rotationPageLength;
+            for (int i = 0; i < rotationPageLength; i++)
+                m_HistorySourceRotations[rotationWriteOffset + i] = default;
             for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
             {
                 Vector3 positionSum = Vector3.zero;
@@ -440,8 +446,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 Vector3 angularVelocitySum = Vector3.zero;
                 Vector3 scaleVelocitySum = Vector3.zero;
                 Vector4 rotationSum = Vector4.zero;
-                Quaternion rotationReference = default;
-                bool hasRotationReference = false;
+                bool hasRotationReference = header.HistoryReadPageIndex >= 0;
+                Quaternion rotationReference = hasRotationReference
+                    ? m_HistoryPoses[header.HistoryReadPageIndex * m_BoneCount + boneIndex].Rotation
+                    : default;
                 float poseWeight = 0f;
 
                 for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
@@ -462,7 +470,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     linearVelocitySum += velocity.Linear * weight;
                     angularVelocitySum += velocity.Angular * weight;
                     scaleVelocitySum += velocity.Scale * weight;
-                    rotationSum += AnimationPoseMath.AlignAndScale(pose.Rotation, rotationReference, weight);
+                    int rotationIndex = contributionIndex * m_BoneCount + boneIndex;
+                    Quaternion sourceReference = rotationReference;
+                    if (header.HistoryReadPageIndex >= 0)
+                    {
+                        int readOffset = header.HistoryReadPageIndex * rotationPageLength + boneIndex;
+                        for (int source = 0; source < header.ContributionCapacity; source++)
+                        {
+                            AnimationSlotBlendRotationHistory history =
+                                m_HistorySourceRotations[readOffset + source * m_BoneCount];
+                            if (history.ContributionContinuityIdentity != entry.ContributionContinuityIdentity)
+                                continue;
+                            sourceReference = history.Rotation;
+                            break;
+                        }
+                    }
+                    Vector4 alignedRotation = AnimationPoseMath.AlignAndScale(
+                        pose.Rotation, sourceReference, 1f);
+                    m_HistorySourceRotations[rotationWriteOffset + rotationIndex] =
+                        new AnimationSlotBlendRotationHistory
+                        {
+                            ContributionContinuityIdentity = entry.ContributionContinuityIdentity,
+                            Rotation = new Quaternion(alignedRotation.x, alignedRotation.y,
+                                alignedRotation.z, alignedRotation.w)
+                        };
+                    rotationSum += alignedRotation * weight;
                     poseWeight += weight;
                 }
 
@@ -1229,6 +1261,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.History.DenseVelocities, checked(header.BoneCount * 2));
             RequireLength(binding.History.PoseParameters, checked(header.ParameterCount * 2));
             RequireLength(binding.History.DenseBoneOutputWeights, checked(header.BoneCount * 2));
+            RequireLength(binding.History.SourceRotations,
+                checked(header.ContributionCapacity * header.BoneCount * 2));
 
             RequireLength(binding.Scratch.State, 1);
             RequireLength(binding.Scratch.DenseLocalPose, header.BoneCount);

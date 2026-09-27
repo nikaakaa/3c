@@ -1,0 +1,153 @@
+{
+  "说明": "抬脚修复已在用户要求停止后续回放之前完成的一轮录制中核对；混合旋转修复仅编译，交由用户回放。",
+  "trace_id": "757f243033414fc7b123c97e2fcb0d70",
+  "ik_capture_id": "f8f5abde8fb741e0a9007d07ff05d956",
+  "ik_replay_frames": 2716,
+  "ik_runtime_errors": [],
+  "ik_frame_comparison": [
+    {
+      "side": "right",
+      "frame": 860,
+      "leg/leg-pose/original-ankle": 0.012935380166616021,
+      "leg/leg-pose/solved-ankle": 0.012935615491166704
+    },
+    {
+      "side": "right",
+      "frame": 871,
+      "leg/leg-pose/original-ankle": 0.024730218905264202,
+      "leg/leg-pose/solved-ankle": 0.024729728103368206
+    },
+    {
+      "side": "left",
+      "frame": 1201,
+      "leg/leg-pose/original-ankle": 0.07349786553409708,
+      "leg/leg-pose/solved-ankle": 0.0734978231904147
+    },
+    {
+      "side": "left",
+      "frame": 1425,
+      "leg/leg-pose/original-ankle": 0.8239885031988421,
+      "leg/leg-pose/solved-ankle": 0.801331807702928
+    }
+  ],
+  "rotation_reproduction": {
+    "method": "使用 Pipeline Attack5 在 1.18333328 秒和 Attack1 对应采样时间最近的导出四元数关键帧、既有录制混合权重复算；这是离线定位证据，不是修复后运行数据。",
+    "bone": "Bip001",
+    "old_stored_reference": [
+      {
+        "frame": 1420,
+        "weight": 0.0,
+        "stored_live_dot": -0.6108126577887443,
+        "old_step_degrees": 0.0
+      },
+      {
+        "frame": 1421,
+        "weight": 0.0302915256,
+        "stored_live_dot": -0.6368905234674571,
+        "old_step_degrees": 2.7053596986188015
+      },
+      {
+        "frame": 1422,
+        "weight": 0.112123854,
+        "stored_live_dot": -0.6050425511765153,
+        "old_step_degrees": 7.971336498296252
+      },
+      {
+        "frame": 1423,
+        "weight": 0.231933638,
+        "stored_live_dot": -0.45426842663554123,
+        "old_step_degrees": 15.999893482218717
+      },
+      {
+        "frame": 1424,
+        "weight": 0.376157433,
+        "stored_live_dot": -0.2145339959732897,
+        "old_step_degrees": 28.62107801409317
+      },
+      {
+        "frame": 1425,
+        "weight": 0.531232,
+        "stored_live_dot": 0.001933320374047082,
+        "old_step_degrees": 152.00724464823787
+      },
+      {
+        "frame": 1426,
+        "weight": 0.68359375,
+        "stored_live_dot": 0.13424945204367567,
+        "old_step_degrees": 21.886704343956815
+      },
+      {
+        "frame": 1427,
+        "weight": 0.819679558,
+        "stored_live_dot": 0.3049219279920773,
+        "old_step_degrees": 17.15649057706591
+      },
+      {
+        "frame": 1428,
+        "weight": 0.92592597,
+        "stored_live_dot": 0.3049219279920773,
+        "old_step_degrees": 13.709347248474488
+      },
+      {
+        "frame": 1429,
+        "weight": 0.988769531,
+        "stored_live_dot": 0.37855107420733647,
+        "old_step_degrees": 8.037106928206393
+      },
+      {
+        "frame": 1430,
+        "weight": 1.0,
+        "stored_live_dot": 0.438386536966065,
+        "old_step_degrees": 10.528888508870272
+      }
+    ],
+    "per_source_rotation_history": [
+      {
+        "frame": 1420,
+        "step_degrees": 0.0
+      },
+      {
+        "frame": 1421,
+        "step_degrees": 2.7053596986188015
+      },
+      {
+        "frame": 1422,
+        "step_degrees": 7.971336498296252
+      },
+      {
+        "frame": 1423,
+        "step_degrees": 15.999893482218717
+      },
+      {
+        "frame": 1424,
+        "step_degrees": 28.62107801409317
+      },
+      {
+        "frame": 1425,
+        "step_degrees": 42.45655413172164
+      },
+      {
+        "frame": 1426,
+        "step_degrees": 46.58626067058317
+      },
+      {
+        "frame": 1427,
+        "step_degrees": 50.54164679291424
+      },
+      {
+        "frame": 1428,
+        "step_degrees": 16.383704451982723
+      },
+      {
+        "frame": 1429,
+        "step_degrees": 18.563897258446765
+      },
+      {
+        "frame": 1430,
+        "step_degrees": 12.154664585166907
+      }
+    ],
+    "runtime_replay_after_rotation_fix": "未运行，按用户要求交由用户自行回放"
+  },
+  "rotation_compile": "Unity 刷新编译完成，Edit 模式，compiling=false，错误控制台0条。"
+}

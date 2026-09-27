@@ -76,4 +76,6 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 
 ## 正式运行检查
 
-选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转，没有 `AttackHeld` 为真的帧。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。实际结果在回放完成后记录。
+选用已保存输入 `11fa0cf23ef84252b4aee9ee86905411`，共 2691 帧、1965 帧移动输入、16 次相邻移动输入方向反转，没有 `AttackHeld` 为真的帧。通过 `CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics` 启动真实角色回放与现有脚部、表现诊断采样；不是新建测试文件或替换运行入口。
+
+本次请求被正式工作流接受，但在启动 Fixed 会话阶段超时：`Canonical Fixed input diagnostic-replay timed out while starting the Fixed session.` 没有生成新的脚部／表现采样目录，也没有取得回放完成证明。此失败不能计为 TurnBack 效果通过或失败；截至此记录，相位代码、正式作者配置和运行资源采用已完成，真实切换检查尚未完成。没有重复启动同一次未确定状态的回放，没有修改启动超时阈值或绕过正式场景启动链。

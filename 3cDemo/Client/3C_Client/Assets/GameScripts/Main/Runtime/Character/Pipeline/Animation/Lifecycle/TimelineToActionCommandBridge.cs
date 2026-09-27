@@ -727,7 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         for (int index = 0; index < m_Retired.Count; index++)
         {
             CameraEventState state = m_Events[m_Retired[index]];
-            if (!state.Suspended)
+            if (!state.Suspended && (withdrawn || !state.ResourceTimed))
                 m_Runtime.Retire(withdrawn ? state.Activation : state.Retirement);
             if (retainForCorrection && state.Key.Marker != null &&
                 state.Activation.CameraRequest.Kind != PresentationCameraRequestKind.Effect)

@@ -43,6 +43,11 @@ namespace ThirdPersonCamera
 
         public IReadOnlyList<CameraEffectContribution> Contributions => m_Contributions;
 
+        public bool IsComplete(EventId eventId, ulong generation, string sourceId,
+            ulong sourceActionInstanceId, int cycle) =>
+            m_CompletedEvents.Contains(new CameraEffectEventKey(
+                eventId, generation, sourceId, sourceActionInstanceId, cycle));
+
         public void Reset()
         {
             m_States.Reset();

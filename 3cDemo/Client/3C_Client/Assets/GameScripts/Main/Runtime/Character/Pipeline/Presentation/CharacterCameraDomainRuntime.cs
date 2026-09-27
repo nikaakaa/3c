@@ -498,6 +498,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in sequence,
                 in response);
             plan = m_EffectEvaluator.Resolve(plan, m_EffectRequests, in frameInput);
+            for (int index = m_ActiveRequests.Count - 1; index >= 0; index--)
+            {
+                CharacterPresentationCommand command = m_ActiveRequests[index].Command;
+                if (command.CameraRequest.Kind == PresentationCameraRequestKind.Effect &&
+                    m_EffectEvaluator.IsComplete(command.Header.EventId, command.ProducerGeneration,
+                        command.ProducerId, command.SourceActionInstanceId, command.Cycle))
+                    m_ActiveRequests.RemoveAt(index);
+            }
             plan = plan.WithPitchClamped(
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);

@@ -80,6 +80,7 @@ namespace ThirdPersonSimulation
     public sealed class Float32PresentationGraphRuntime
     {
         readonly Float32GameplayAbilityExecutionData m_Data;
+        readonly Dictionary<string, string> m_InvocationSources = new(StringComparer.Ordinal);
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly ProgramSourceMapEntry[] m_Entries;
         readonly string[] m_GraphIds;
@@ -108,10 +109,14 @@ namespace ThirdPersonSimulation
             m_Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(data, AbilityTimelineMotionWarpCatalog.Empty);
             var entries = new List<ProgramSourceMapEntry>();
             foreach (ProgramSourceMapEntry source in data.SourceMap)
-                if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation &&
-                    (source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
-                     source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip))
+            {
+                if (source.TargetKind != ProgramSourceTargetKind.GraphInvocation)
+                    continue;
+                m_InvocationSources.Add(source.GraphInvocationPath, source.SourceInvocationPath);
+                if (source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
+                    source.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip)
                     entries.Add(source);
+            }
             if (entries.Count == 0)
                 throw new InvalidOperationException("The program contains no Presentation graph entry.");
             m_Entries = entries.ToArray();
@@ -159,11 +164,14 @@ namespace ThirdPersonSimulation
         public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision,
             ProgramInvocationCallerKind callerKind, AbilityTreeClipHook hook, out int binding)
         {
+            binding = -1;
+            if (!m_InvocationSources.TryGetValue(parentInvocationPath, out string parentSourcePath))
+                return false;
             int match = -1;
             for (int index = 0; index < m_Entries.Length; index++)
             {
                 ProgramSourceMapEntry entry = m_Entries[index];
-                if (entry.ParentInvocationPath != parentInvocationPath || m_Callers[index] != timelineNodeId ||
+                if (entry.ParentInvocationPath != parentSourcePath || m_Callers[index] != timelineNodeId ||
                     entry.InvocationCallerKind != callerKind || m_Hooks[index] != hook ||
                     entry.InvocationCallerClipId != markerId || m_GraphIds[index] != graphId || entry.ContentHash != revision)
                     continue;

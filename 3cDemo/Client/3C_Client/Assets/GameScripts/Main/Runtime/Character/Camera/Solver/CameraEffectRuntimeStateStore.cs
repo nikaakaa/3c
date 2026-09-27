@@ -127,8 +127,6 @@ namespace ThirdPersonCamera
                     !matchesIdentity ||
                     !matchesScope)
                     continue;
-                if (effect.Request.Kind == CameraEffectKind.Shake && reason == CameraPresentationStopReason.NaturalComplete)
-                    continue;
                 if (effect.Retired)
                     continue;
                 effect.Retired = true;

@@ -713,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             m_PresentationClockCoordinator?.CommitFrame();
                             CharacterPoseNativeFrameLineage lineage = commit.Lineage;
                             m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
-                            m_CommittedDiagnosticFrame = new Animation.Diagnostics.CharacterPoseDiagnosticFrame(in lineage);
+                            m_CommittedDiagnosticFrame = new Animation.Diagnostics.CharacterPoseDiagnosticFrame(in lineage, m_EventFrame);
                         }
                         else
                         {

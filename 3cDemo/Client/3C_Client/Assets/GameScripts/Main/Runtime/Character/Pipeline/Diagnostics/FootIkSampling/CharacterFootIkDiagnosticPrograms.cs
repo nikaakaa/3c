@@ -6,10 +6,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticSampler(
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         CharacterFootIkDiagnosticIdentity.CoreSamplerId,
-        1,
+        2,
         DiagnosticOutputFormat.Csv,
         "body-correction",
         "lifecycle",
+        "lean",
         "motion-core",
         "physical",
         "resolved-core",
@@ -21,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticSampler(
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         CharacterFootIkDiagnosticIdentity.FullSamplerId,
-        1,
+        2,
         DiagnosticOutputFormat.Csv,
         IncludeAll = true)]
     internal static class CharacterFootIkFullSamplerDefinition

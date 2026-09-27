@@ -324,6 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public readonly struct AnimationFootPhaseValidationSample
     {
+        public const float SupportThreshold = 0.5f;
         public AnimationFootPhaseValidationSample(
             float normalizedTime,
             Vector2 rootLocalSolePlanarPosition,
@@ -347,6 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public Vector3 SoleLocalVelocity { get; }
         public float PlantConfidence { get; }
         public bool LandingOnset { get; }
+        public bool IsSupporting => PlantConfidence >= SupportThreshold;
 
         public void RequireValid()
         {

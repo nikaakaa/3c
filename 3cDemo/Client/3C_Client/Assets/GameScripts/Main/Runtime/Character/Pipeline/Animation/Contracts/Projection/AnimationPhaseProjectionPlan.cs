@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class AnimationClipPhasePlan
     {
-        public const string SchemaVersion = "animation-clip-phase-plan/v2";
+        public const string SchemaVersion = "animation-clip-phase-plan/v3";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_ClipIdentity = string.Empty;
@@ -69,6 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationPhaseCoverage m_CurveCoverage;
         [SerializeField] bool m_Loop;
         [SerializeField] AnimationPhaseKnot[] m_Knots = Array.Empty<AnimationPhaseKnot>();
+        [SerializeField] AnimationPhaseCoverage[] m_DoubleSupportIntervals = Array.Empty<AnimationPhaseCoverage>();
 
         public AnimationClipPhasePlan(
             string clipIdentity,
@@ -79,7 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceDurationSeconds,
             AnimationPhaseCoverage curveCoverage,
             bool loop,
-            AnimationPhaseKnot[] knots)
+            AnimationPhaseKnot[] knots,
+            AnimationPhaseCoverage[] doubleSupportIntervals)
         {
             m_ClipIdentity = clipIdentity?.Trim() ?? string.Empty;
             m_FullClipDependencyHash = fullClipDependencyHash?.Trim() ?? string.Empty;
@@ -90,6 +92,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CurveCoverage = curveCoverage;
             m_Loop = loop;
             m_Knots = knots == null ? Array.Empty<AnimationPhaseKnot>() : (AnimationPhaseKnot[])knots.Clone();
+            m_DoubleSupportIntervals = doubleSupportIntervals == null
+                ? Array.Empty<AnimationPhaseCoverage>()
+                : (AnimationPhaseCoverage[])doubleSupportIntervals.Clone();
             RequireValid();
         }
 
@@ -105,6 +110,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float PhaseStart => Knots[0].UnwrappedPhase;
         public float PhaseEnd => Knots[Knots.Count - 1].UnwrappedPhase;
         public float PhaseSpan => PhaseEnd - PhaseStart;
+        public IReadOnlyList<AnimationPhaseCoverage> DoubleSupportIntervals => m_DoubleSupportIntervals;
+
+        public bool IsDoubleSupported(double time)
+        {
+            for (int i = 0; i < m_DoubleSupportIntervals.Length; i++)
+                if (m_DoubleSupportIntervals[i].Contains(time))
+                    return true;
+            return false;
+        }
 
         public void RequireValid()
         {
@@ -129,6 +143,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     throw new InvalidOperationException($"Animation Clip Phase knot #{i} is invalid.");
                 }
+            }
+            for (int i = 0; i < m_DoubleSupportIntervals.Length; i++)
+            {
+                AnimationPhaseCoverage interval = m_DoubleSupportIntervals[i];
+                if (Loop || !interval.IsValid ||
+                    !CurveCoverage.Contains(interval.StartSeconds) || !CurveCoverage.Contains(interval.EndSeconds) ||
+                    i > 0 && interval.StartSeconds <= m_DoubleSupportIntervals[i - 1].EndSeconds)
+                    throw new InvalidOperationException("Finite Animation Phase double-support coverage is invalid.");
             }
             if (Mathf.Abs(Knots[0].TimeSeconds - CurveCoverage.StartSeconds) > 0.00001f ||
                 Mathf.Abs(Knots[Knots.Count - 1].TimeSeconds - CurveCoverage.EndSeconds) > 0.00001f ||

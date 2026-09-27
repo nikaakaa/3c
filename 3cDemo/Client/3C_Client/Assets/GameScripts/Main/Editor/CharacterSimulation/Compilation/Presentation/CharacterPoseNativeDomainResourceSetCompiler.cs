@@ -121,26 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (group == null)
                 return;
-            AnimationCurve curve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
-                clip,
-                CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase);
-            CharacterLocomotionPhaseAuthoringService.ValidateRegisteredCurve(clip, artifact, curve);
-            Keyframe[] keys = curve.keys;
-            var knots = new AnimationPhaseKnot[keys.Length];
-            for (int keyIndex = 0; keyIndex < keys.Length; keyIndex++)
-                knots[keyIndex] = new AnimationPhaseKnot(keys[keyIndex].time, keys[keyIndex].value);
-            plan.SetPhase(
-                group.GroupId,
-                new AnimationClipPhasePlan(
-                    plan.ClipIdentity,
-                    plan.FullClipDependencyHash,
-                    plan.AnalysisInputHash,
-                    plan.RegisteredCurveHash,
-                    artifact.Identity.IdentityHash.Value,
-                    plan.SourceDurationSeconds,
-                    new AnimationPhaseCoverage(keys[0].time, keys[keys.Length - 1].time),
-                    plan.IsLooping,
-                    knots));
+            plan.SetPhase(group.GroupId,
+                CharacterLocomotionPhaseAuthoringService.CompilePhasePlan(clip, artifact));
         }
 
         static List<CharacterActionAnimationSourcePlan> CompileActionPlans(

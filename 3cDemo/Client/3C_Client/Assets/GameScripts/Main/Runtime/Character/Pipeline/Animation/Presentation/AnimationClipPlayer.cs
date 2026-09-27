@@ -217,7 +217,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             internal AnimationClipPlayerRuntime PhaseLeader;
             internal AnimationPoseSourceId PhaseLeaderSourceId;
-            internal double PhaseCycleOffset;
+            internal ulong PhaseLeaderContinuityIdentity;
+            internal AnimationPhaseSynchronizationState PhaseSynchronization;
             internal double RawContinuousTime;
             internal double ContinuousTime;
             internal double ContinuationAnchorRawTime;
@@ -381,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException($"Clip Player '{NodeId}' Phase entry interval is outside its measured coverage.");
         }
 
-        internal void SynchronizePhase(AnimationClipPlayerRuntime leader)
+        internal void SynchronizePhase(AnimationClipPlayerRuntime leader, float remainingBlendSeconds)
         {
             RequireOpenFrame();
             if (m_PhaseResolved)
@@ -390,14 +391,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 leader.PhasePlan == null || !string.Equals(SyncGroupId, leader.SyncGroupId, StringComparison.Ordinal))
                 throw new InvalidOperationException($"Clip Player '{NodeId}' Phase relation is invalid.");
             bool entering = !ReferenceEquals(m_PendingState.PhaseLeader, leader) ||
-                !m_PendingState.PhaseLeaderSourceId.Equals(leader.SourceId);
+                !m_PendingState.PhaseLeaderSourceId.Equals(leader.SourceId) ||
+                m_PendingState.PhaseLeaderContinuityIdentity != leader.m_ContinuityIdentity;
             double time = AnimationPhaseSynchronization.Map(
                 leader.PhasePlan, leader.PhasePlan.Loop ? leader.ContinuousTime : leader.SampleTime,
                 PhasePlan, ContinuousTime,
-                m_PhaseEntryCoverage, entering, ref m_PendingState.PhaseCycleOffset);
+                m_PhaseEntryCoverage, remainingBlendSeconds, PlayRate,
+                entering, ref m_PendingState.PhaseSynchronization);
             SetSynchronizedTime(time);
             m_PendingState.PhaseLeader = leader;
             m_PendingState.PhaseLeaderSourceId = leader.SourceId;
+            m_PendingState.PhaseLeaderContinuityIdentity = leader.m_ContinuityIdentity;
             m_PhaseResolved = true;
         }
         internal void CreateFootMotionSamples(
@@ -561,7 +565,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             ActiveState.PhaseLeader = null;
             ActiveState.PhaseLeaderSourceId = default;
-            ActiveState.PhaseCycleOffset = 0d;
+            ActiveState.PhaseLeaderContinuityIdentity = 0;
+            ActiveState.PhaseSynchronization = default;
         }
 
         internal void SetSynchronizedTime(double continuousTime)

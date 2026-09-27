@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
@@ -34,6 +36,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public static class CharacterLocomotionPhaseAuthoringService
     {
+        public static AnimationClipPhasePlan CompilePhasePlan(
+            AnimationClip clip,
+            AnimationFootAnalysisArtifact artifact)
+        {
+            CharacterAnimationClipContentIdentity identity = CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
+            AnimationCurve curve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                clip, CharacterAnimationClipRegisteredCurveChannels.LocomotionPhase);
+            ValidateRegisteredCurve(clip, artifact, curve);
+            Keyframe[] keys = curve.keys;
+            var coverage = new AnimationPhaseCoverage(keys[0].time, keys[keys.Length - 1].time);
+            var knots = new AnimationPhaseKnot[keys.Length];
+            for (int i = 0; i < keys.Length; i++)
+                knots[i] = new AnimationPhaseKnot(keys[i].time, keys[i].value);
+            return new AnimationClipPhasePlan(
+                identity.AssetGuid + ":" + identity.LocalFileId.ToString(CultureInfo.InvariantCulture),
+                identity.FullDependencyHash,
+                identity.AnalysisInputHash,
+                identity.RegisteredCurveHash,
+                artifact.Identity.IdentityHash.Value,
+                identity.SourceDurationSeconds,
+                coverage,
+                identity.Loop,
+                knots,
+                BuildDoubleSupportCoverage(clip, artifact, coverage));
+        }
+
+        public static AnimationPhaseCoverage[] BuildDoubleSupportCoverage(
+            AnimationClip clip,
+            AnimationFootAnalysisArtifact artifact,
+            AnimationPhaseCoverage coverage)
+        {
+            if (clip.isLooping)
+                return Array.Empty<AnimationPhaseCoverage>();
+            var left = artifact.PhaseValidation.Left.Samples;
+            var right = artifact.PhaseValidation.Right.Samples;
+            var intervals = new List<AnimationPhaseCoverage>();
+            int start = -1;
+            for (int i = 0; i <= left.Count; i++)
+            {
+                bool supporting = i < left.Count && left[i].IsSupporting && right[i].IsSupporting;
+                if (supporting && start < 0)
+                    start = i;
+                if (supporting || start < 0)
+                    continue;
+                float from = Math.Max(coverage.StartSeconds, left[start].NormalizedTime * clip.length);
+                float to = Math.Min(coverage.EndSeconds, left[i - 1].NormalizedTime * clip.length);
+                if (to > from)
+                    intervals.Add(new AnimationPhaseCoverage(from, to));
+                start = -1;
+            }
+            return intervals.ToArray();
+        }
+
         public static void ValidateRegisteredCurve(
             AnimationClip clip,
             AnimationFootAnalysisArtifact artifact,

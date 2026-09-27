@@ -1276,18 +1276,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 for (int i = 0; i < intervals; i++)
                 {
-                    bool current = foot.PlantConfidence[i] >= 0.5f;
+                    bool current = foot.PlantConfidence[i] >= AnimationFootPhaseValidationSample.SupportThreshold;
                     bool previous = i > 0
-                        ? foot.PlantConfidence[i - 1] >= 0.5f
-                        : loop && foot.PlantConfidence[intervals - 1] >= 0.5f;
+                        ? foot.PlantConfidence[i - 1] >= AnimationFootPhaseValidationSample.SupportThreshold
+                        : loop && foot.PlantConfidence[intervals - 1] >= AnimationFootPhaseValidationSample.SupportThreshold;
                     if (!current || previous)
                         continue;
                     int count = CountPlantedSamples(foot.PlantConfidence, i, intervals, loop);
                     if (count >= minimumSamples)
                         starts.Add(i);
                 }
-                if (!loop && foot.PlantConfidence[intervals] >= 0.5f &&
-                    foot.PlantConfidence[intervals - 1] < 0.5f)
+                if (!loop && foot.PlantConfidence[intervals] >= AnimationFootPhaseValidationSample.SupportThreshold &&
+                    foot.PlantConfidence[intervals - 1] < AnimationFootPhaseValidationSample.SupportThreshold)
                 {
                     starts.Add(intervals);
                 }
@@ -1734,7 +1734,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     index %= intervals;
                 else if (index >= intervals)
                     break;
-                if (plantConfidence[index] < 0.5f)
+                if (plantConfidence[index] < AnimationFootPhaseValidationSample.SupportThreshold)
                     break;
                 count++;
             }
@@ -1925,7 +1925,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 int index = loop
                     ? ((sample % intervals) + intervals) % intervals
                     : Mathf.Clamp(sample, 0, intervals);
-                if (plantConfidence[index] < 0.5f)
+                if (plantConfidence[index] < AnimationFootPhaseValidationSample.SupportThreshold)
                     return sample;
             }
             return next;

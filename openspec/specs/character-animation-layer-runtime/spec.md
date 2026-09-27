@@ -184,7 +184,7 @@ Locomotion Phase的正式来源只能是AnimationClip注册曲线与Profile／So
 
 ### Requirement: Locomotion Phase relation必须服从Transition generation与Player continuation
 
-Phase 关联准备 MUST 固定当前 outgoing 为 leader，无论两侧使用什么 clock authority。当前动画 MUST 保持原来的播放时间与速度；incoming MUST 通过自身 Phase inverse 选择匹配入口，并在混合期间跟随 outgoing 的相位。混合结束后 incoming MUST 从最后一次匹配时间继续按自己的原有时钟推进。候选 MUST 覆盖完整可见混合窗口，两侧不足必须明确报告；一个 generation 内不得按权重或时间动态更换 leader。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、分支或图替换、Reset 与 Dispose MUST 清理旧关联，Commit／Discard MUST 保持帧事务一致。
+Phase 关联准备 MUST 固定当前 outgoing 为 leader，无论两侧使用什么 clock authority。当前动画 MUST 保持原来的播放时间与速度；incoming MUST 通过自身 Phase inverse 或正式双脚支撑区间选择匹配入口。具有唯一相位的区间 MUST 在混合期间跟随 outgoing 的相位；选中完整覆盖混合的双脚支撑区间时，incoming MUST 在该区间自然播放，不强行把停留解释成走跑周期。混合结束后 incoming MUST 从最后一次有效时间继续按自己的原有时钟推进。候选 MUST 覆盖完整可见混合窗口，两侧不足必须明确报告；一个 generation 内不得按权重或时间动态更换 leader。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、分支或图替换、Reset 与 Dispose MUST 清理旧关联，Commit／Discard MUST 保持帧事务一致。
 
 #### Scenario: 同authority的Turn进入RunLoop
 

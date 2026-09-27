@@ -218,7 +218,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     Presentation.AnimationClipPlayerRuntime source = outgoing.ReadPhasePlayer(sourceIndex);
                     if (!string.Equals(source.SyncGroupId, target.SyncGroupId, StringComparison.Ordinal))
                         continue;
-                    target.SynchronizePhase(source);
+                    target.SynchronizePhase(source,
+                        Math.Max(0f, m_PendingTransition.DurationSeconds - m_PendingTransitionElapsed));
                     break;
                 }
             }

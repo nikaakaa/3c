@@ -1,0 +1,97 @@
+{
+  "scope": "仅 E Branch Walk 足步数据；无运行回放",
+  "policy": "StationarySupport",
+  "raw_evidence": "已有运动参考缓存显示：支撑阶段脚速约0.02～0.17m/s，摆动阶段超过2～4m/s。原接触评分速度项仅贡献0.9～1，不能识别低抬脚摆动。",
+  "runtime_changes": false,
+  "foot_analysis": {
+    "source_asset_path": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/CorinFootPlacementAnalysisSource.asset",
+    "target_asset_path": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/Generated/InPlaceTargets/Avatar_Female_Size01_Corin_Ani_Attack_Branch_Walk_FootMotionTarget.anim",
+    "motion_reference_asset_path": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/Generated/MotionReferences/Corin_Attack_Branch_Walk_WithWeaponRootmotion_FootMotionReference.anim",
+    "state": "Same",
+    "plan_hash": "2aa353f7fe2820ed465b6f8ffc7d1654efc6df91f812ee34fafc509a5b611036",
+    "registered_curve_hash": "85a02bcd4649e020dc22080865cb2487d85aecbcf9f7c1d20d14cd63e349dd92",
+    "artifact_identity_hash": "055f3927a164e0cc57dfdfd7e97cbfe6b30073526f9e309d9014f92bb5b9d2fc",
+    "artifact_content_hash": "b9f680dc60c7463a33d46a7b6d918bbbffc065194a8fa2a5b6295e7eefa9c58b",
+    "algorithm_version": "animation-foot-analysis/v82",
+    "requires_replace": false,
+    "no_change": true,
+    "applied": true,
+    "metrics": {
+      "sample_count": 66,
+      "active_sample_count": 65,
+      "both_contact_false_count": 0,
+      "zero_support_count": 0,
+      "maximum_support_sum": 0.9648521,
+      "maximum_support_when_both_contact_false": 0,
+      "left": {
+        "landing_count": 1,
+        "lift_off_count": 1,
+        "landing_samples": [
+          28
+        ],
+        "lift_off_samples": [
+          1
+        ],
+        "contact_sample_count": 38,
+        "locked_sample_count": 28,
+        "maximum_step_time": 1.06666672,
+        "maximum_step_distance": 1.16644335,
+        "maximum_foot_height": 0.0307477452,
+        "maximum_foot_height_sample": 15,
+        "maximum_foot_height_baseline": 0.009970552,
+        "maximum_foot_height_animation": 0.0407183,
+        "minimum_heel_height": -0.00193875283,
+        "maximum_heel_height": 0.0521825552,
+        "minimum_sole_height": -0.00141515722,
+        "maximum_sole_height": 0.0409806632,
+        "minimum_toe_height": -0.0008915616,
+        "maximum_toe_height": 0.0351010337,
+        "maximum_toe_speed": 4.05385971,
+        "minimum_position_error": 0.00117399334,
+        "maximum_position_error": 0.0599968247,
+        "minimum_rotation_error": 0.715454936,
+        "maximum_rotation_error": 29.106472,
+        "maximum_lock_weight": 0.9999999,
+        "maximum_support_candidate": 0.9648521,
+        "maximum_support": 0.9648521
+      },
+      "right": {
+        "landing_count": 1,
+        "lift_off_count": 1,
+        "landing_samples": [
+          59
+        ],
+        "lift_off_samples": [
+          32
+        ],
+        "contact_sample_count": 38,
+        "locked_sample_count": 28,
+        "maximum_step_time": 1.06666672,
+        "maximum_step_distance": 1.16644335,
+        "maximum_foot_height": 0.0352994576,
+        "maximum_foot_height_sample": 42,
+        "maximum_foot_height_baseline": 0.0179186948,
+        "maximum_foot_height_animation": 0.0532181524,
+        "minimum_heel_height": -0.0007863045,
+        "maximum_heel_height": 0.0838587,
+        "minimum_sole_height": -0.00150169921,
+        "maximum_sole_height": 0.0534805171,
+        "minimum_toe_height": -0.00400503166,
+        "maximum_toe_height": 0.0327710956,
+        "maximum_toe_speed": 3.382743,
+        "minimum_position_error": 0.00131853274,
+        "maximum_position_error": 0.125324041,
+        "minimum_rotation_error": 1.21690106,
+        "maximum_rotation_error": 54.526226,
+        "maximum_lock_weight": 0.9999999,
+        "maximum_support_candidate": 0.9648521,
+        "maximum_support": 0.9648521
+      },
+      "samples": null
+    },
+    "changed_channels": []
+  },
+  "publication": "ACL资源组已通过正式入口发布，动画域资源已编译并保存。只对E Walk执行足部分析；所属32动画ACL组按现有发布粒度重建。",
+  "compiled_observation_check": {"dirty":false,"leftPhase":"Swing","leftNext":true,"leftSwing":true,"leftLanding":0.430769235,"leftApproach":0.03333333,"rightPhase":"Swing","rightNext":true,"rightSwing":true,"rightLanding":0.9076924,"rightApproach":0.03333336},
+  "verification_limit": "只确认正式曲线、编译事件及资源发布；未执行Play/replay，不宣称实际楼梯穿透已消除。"
+}

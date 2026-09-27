@@ -62,6 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 hasReleaseWindow ? new[] { Id(stage, "animation-clip"), Id(stage, "motion-clip"), Id(stage, "release-clip") } : new[] { Id(stage, "animation-clip"), Id(stage, "motion-clip") },
                 new[] { Id(stage, "section") }, System.Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimelineMarkers(data, System.Array.Empty<string>());
+            string pattern = stage == "Start" ? "Corin_Attack_Branch_02" : "Corin_Attack_Branch_02_" + stage;
+            CorinCameraTimelineAuthoring.Apply(data, pattern, 0m, duration);
             return context.Complete(timeline);
         }
 

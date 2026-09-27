@@ -41,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneBlackboard(open_RushAttackHandoff__14.graph4, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimeline(rootParts.timelineData, new[] { "28aa1f10-a087-95bd-2af1-8963b056c918", "1bf4b743-1d2b-a12e-4bcf-f5fb5a4d2ca6" }, new[] { "977432d8-2f56-cac2-8f6b-f01f8c03c53c", "e1786aa0-8844-0d5b-f435-599b31ebef46" }, new[] { "866672da-8a24-aa7c-d040-bc8f3df58e6a" }, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimelineMarkers(rootParts.timelineData, Array.Empty<string>());
+            CorinCameraTimelineAuthoring.Apply(rootParts.timelineData, "Corin_Attack_Rush_Explode", 0m, (decimal)rootParts.timelineData.DurationTime.Raw / ThirdPersonSimulation.Fixed.FixedScalar.OneRaw);
             BtsmtlSkillOwnedAssets.ReleaseOrphaned(rootParts.timeline);
         }
 

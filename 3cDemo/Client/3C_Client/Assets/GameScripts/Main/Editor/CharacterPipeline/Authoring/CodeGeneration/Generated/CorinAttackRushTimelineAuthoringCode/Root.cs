@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneBlackboard(open_RushRelease__13.graph1, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimeline(rootParts.timelineData, new[] { "96b6f5ae-9018-e3a7-4bb9-06cb7613ce62", "a1c374d2-f94a-8eeb-0b57-aef78168d0e9" }, new[] { "a00919f2-e3a4-c306-f4d8-a6ffaa805aa7", "afd9b28a-5319-5f6a-37d7-7d1600dda9da" }, new[] { "86b751b3-24d8-fc3c-3f0c-1d6dfa88f07e" }, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimelineMarkers(rootParts.timelineData, Array.Empty<string>());
+            CorinCameraTimelineAuthoring.Apply(rootParts.timelineData, "Corin_Attack_Rush", 0m, (decimal)rootParts.timelineData.DurationTime.Raw / ThirdPersonSimulation.Fixed.FixedScalar.OneRaw);
         }
 
         sealed class RootParts

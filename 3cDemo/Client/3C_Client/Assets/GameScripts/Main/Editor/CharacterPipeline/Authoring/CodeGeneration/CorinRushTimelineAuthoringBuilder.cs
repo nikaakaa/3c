@@ -82,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.PruneTimeline(timeline.Data, trackIds, clipIds, new[] { sectionId }, Array.Empty<string>());
             BtsmtlSkillAuthoringCode.PruneTimelineMarkers(timeline.Data, Array.Empty<string>());
             BtsmtlSkillOwnedAssets.ReleaseOrphaned(timeline);
+            CorinCameraTimelineAuthoring.Apply(timeline.Data, "Corin_" + stateId, 0m, Seconds(totalFrame));
             return timeline;
         }
 

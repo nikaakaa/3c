@@ -1,0 +1,508 @@
+{
+  "capture_id": "70dd90c3350c4492a5554e53fbefa891",
+  "source_csv": "3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260927-134717-70dd90c3350c4492a5554e53fbefa891/character-foot-ik%2Ffull.csv",
+  "source_sha256": "da6ab146019b0369a50c774dd7d269c2d04f12a2ba9a64d77ae227d143ff7a78",
+  "animation": "Corin Walk Start",
+  "side": "left",
+  "frame_range": [
+    15300,
+    15353
+  ],
+  "method": "冻结原始采样中每帧期望修正，逐帧复算现有末级标量响应与带落地期限的响应；不是Unity运行或replay。",
+  "rows": [
+    {
+      "frame": 15300,
+      "time_to_landing_seconds": 0.344142973,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.0011029519999999904,
+      "candidate_response_lag_m": 0.0011029359999999988,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008390475000000001
+    },
+    {
+      "frame": 15301,
+      "time_to_landing_seconds": 0.336380184,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.0,
+      "candidate_response_lag_m": 0.0,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0061105839999999745
+    },
+    {
+      "frame": 15302,
+      "time_to_landing_seconds": 0.330733836,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.002294420999999991,
+      "candidate_response_lag_m": 0.002294409999999969,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.00846945
+    },
+    {
+      "frame": 15303,
+      "time_to_landing_seconds": 0.3231058,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.006196796999999976,
+      "candidate_response_lag_m": 0.006196798499999989,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0114421125
+    },
+    {
+      "frame": 15304,
+      "time_to_landing_seconds": 0.317379862,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.01007154999999993,
+      "candidate_response_lag_m": 0.010071562499999964,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008588924999999999
+    },
+    {
+      "frame": 15305,
+      "time_to_landing_seconds": 0.312070578,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.013593600000000094,
+      "candidate_response_lag_m": 0.01359356249999999,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.007963950000000001
+    },
+    {
+      "frame": 15306,
+      "time_to_landing_seconds": 0.3042734,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.019955933999999953,
+      "candidate_response_lag_m": 0.01995592749999986,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0116958
+    },
+    {
+      "frame": 15307,
+      "time_to_landing_seconds": 0.298580885,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.024893399999999954,
+      "candidate_response_lag_m": 0.024893424999999914,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0085386375
+    },
+    {
+      "frame": 15308,
+      "time_to_landing_seconds": 0.291376,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.031283914999999995,
+      "candidate_response_lag_m": 0.031283919999999965,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.01080735
+    },
+    {
+      "frame": 15309,
+      "time_to_landing_seconds": 0.286097467,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.03633017500000002,
+      "candidate_response_lag_m": 0.036330187499999944,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0079178625
+    },
+    {
+      "frame": 15310,
+      "time_to_landing_seconds": 0.280687243,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.041829528999999976,
+      "candidate_response_lag_m": 0.0418295414999999,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0081153
+    },
+    {
+      "frame": 15311,
+      "time_to_landing_seconds": 0.273212969,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.049788770999999954,
+      "candidate_response_lag_m": 0.04978877099999984,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0112114125
+    },
+    {
+      "frame": 15312,
+      "time_to_landing_seconds": 0.2675535,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.05625680099999997,
+      "candidate_response_lag_m": 0.05625678599999984,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008489175
+    },
+    {
+      "frame": 15313,
+      "time_to_landing_seconds": 0.2619368,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.06120198900000001,
+      "candidate_response_lag_m": 0.061201973499999895,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008425087500000001
+    },
+    {
+      "frame": 15314,
+      "time_to_landing_seconds": 0.2537177,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.077262622,
+      "candidate_response_lag_m": 0.07726258449999984,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.012328575000000001
+    },
+    {
+      "frame": 15315,
+      "time_to_landing_seconds": 0.247468233,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.078109979,
+      "candidate_response_lag_m": 0.07810996449999985,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.00937425
+    },
+    {
+      "frame": 15316,
+      "time_to_landing_seconds": 0.24005647,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.08589282599999998,
+      "candidate_response_lag_m": 0.08589281599999982,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0111176625
+    },
+    {
+      "frame": 15317,
+      "time_to_landing_seconds": 0.234284937,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.09506104999999998,
+      "candidate_response_lag_m": 0.09506104999999981,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.00865725
+    },
+    {
+      "frame": 15318,
+      "time_to_landing_seconds": 0.228438765,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.10058492499999999,
+      "candidate_response_lag_m": 0.10058489999999981,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008769224999999999
+    },
+    {
+      "frame": 15319,
+      "time_to_landing_seconds": 0.220934838,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.10971558000000003,
+      "candidate_response_lag_m": 0.10971554999999983,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.011255925
+    },
+    {
+      "frame": 15320,
+      "time_to_landing_seconds": 0.215005219,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.11854660500000003,
+      "candidate_response_lag_m": 0.1185465814999998,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0088944375
+    },
+    {
+      "frame": 15321,
+      "time_to_landing_seconds": 0.207861826,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.12644838400000002,
+      "candidate_response_lag_m": 0.1264483589999998,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0107151375
+    },
+    {
+      "frame": 15322,
+      "time_to_landing_seconds": 0.20205842,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.13354165899999998,
+      "candidate_response_lag_m": 0.13354161249999974,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008705062500000001
+    },
+    {
+      "frame": 15323,
+      "time_to_landing_seconds": 0.196657047,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.139134407,
+      "candidate_response_lag_m": 0.13913436449999975,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008102025
+    },
+    {
+      "frame": 15324,
+      "time_to_landing_seconds": 0.189437509,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.146717965,
+      "candidate_response_lag_m": 0.14671792749999973,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.010829325
+    },
+    {
+      "frame": 15325,
+      "time_to_landing_seconds": 0.183599457,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.15717115899999998,
+      "candidate_response_lag_m": 0.15717110899999973,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0087571125
+    },
+    {
+      "frame": 15326,
+      "time_to_landing_seconds": 0.1775025,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.15687903799999997,
+      "candidate_response_lag_m": 0.1568789924999997,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0091455375
+    },
+    {
+      "frame": 15327,
+      "time_to_landing_seconds": 0.1700768,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.16515061899999997,
+      "candidate_response_lag_m": 0.16515057499999972,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0111384375
+    },
+    {
+      "frame": 15328,
+      "time_to_landing_seconds": 0.1641775,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.17146090000000003,
+      "candidate_response_lag_m": 0.17146084999999972,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.008849025
+    },
+    {
+      "frame": 15329,
+      "time_to_landing_seconds": 0.156995744,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.01882207800000002,
+      "candidate_response_lag_m": 0.018822024999999742,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.010772625
+    },
+    {
+      "frame": 15330,
+      "time_to_landing_seconds": 0.150882542,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.04724662099999999,
+      "candidate_response_lag_m": 0.0472465624999997,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.009169762500000001
+    },
+    {
+      "frame": 15331,
+      "time_to_landing_seconds": 0.144868508,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.06977784599999998,
+      "candidate_response_lag_m": 0.06977779399999973,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0090210375
+    },
+    {
+      "frame": 15332,
+      "time_to_landing_seconds": 0.136963367,
+      "deadline_eligible": false,
+      "old_response_lag_m": 0.09607485000000002,
+      "candidate_response_lag_m": 0.09607479099999974,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.011857725
+    },
+    {
+      "frame": 15333,
+      "time_to_landing_seconds": 0.1304418,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.11405167,
+      "candidate_response_lag_m": 0.11405162249999978,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.009782362499999999
+    },
+    {
+      "frame": 15334,
+      "time_to_landing_seconds": 0.122540608,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.024930122,
+      "candidate_response_lag_m": 0.024930059499999768,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.011851800000000001
+    },
+    {
+      "frame": 15335,
+      "time_to_landing_seconds": 0.116142787,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.058558762000000014,
+      "candidate_response_lag_m": 0.05855869349999973,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.009596625
+    },
+    {
+      "frame": 15336,
+      "time_to_landing_seconds": 0.11039377,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.08663891300000001,
+      "candidate_response_lag_m": 0.08663885349999975,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.00862365
+    },
+    {
+      "frame": 15337,
+      "time_to_landing_seconds": 0.103367351,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.09714984899999998,
+      "candidate_response_lag_m": 0.09714979649999972,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0105396
+    },
+    {
+      "frame": 15338,
+      "time_to_landing_seconds": 0.09756715,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.10767727399999999,
+      "candidate_response_lag_m": 0.10767722499999974,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0087003375
+    },
+    {
+      "frame": 15339,
+      "time_to_landing_seconds": 0.09066389,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.121065512,
+      "candidate_response_lag_m": 0.12106545749999974,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.0103547625
+    },
+    {
+      "frame": 15340,
+      "time_to_landing_seconds": 0.0845313147,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.1312725548,
+      "candidate_response_lag_m": 0.13028043354393737,
+      "candidate_selected_speed_mps": 1.661768526829735,
+      "candidate_scalar_delta_m": -0.010191044756062374
+    },
+    {
+      "frame": 15341,
+      "time_to_landing_seconds": 0.07882253,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.13763511209999998,
+      "candidate_response_lag_m": 0.13468949817279952,
+      "candidate_selected_speed_mps": 1.8421909553516915,
+      "candidate_scalar_delta_m": -0.010516653671137853
+    },
+    {
+      "frame": 15342,
+      "time_to_landing_seconds": 0.07167683,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.1437351172,
+      "candidate_response_lag_m": 0.13640368723007923,
+      "candidate_selected_speed_mps": 2.1137664887356142,
+      "candidate_scalar_delta_m": -0.015104394042720298
+    },
+    {
+      "frame": 15343,
+      "time_to_landing_seconds": 0.06606565,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.142038003,
+      "candidate_response_lag_m": 0.13096739591523016,
+      "candidate_selected_speed_mps": 2.166380502274317,
+      "candidate_scalar_delta_m": -0.01215594011484909
+    },
+    {
+      "frame": 15344,
+      "time_to_landing_seconds": 0.0599626526,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.139267878,
+      "candidate_response_lag_m": 0.12337210398242834,
+      "candidate_selected_speed_mps": 2.290621978174964,
+      "candidate_scalar_delta_m": -0.013979665932801805
+    },
+    {
+      "frame": 15345,
+      "time_to_landing_seconds": 0.05288102,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.13500871,
+      "candidate_response_lag_m": 0.11236170630774442,
+      "candidate_selected_speed_mps": 2.4533447725181614,
+      "candidate_scalar_delta_m": -0.017373667674683926
+    },
+    {
+      "frame": 15346,
+      "time_to_landing_seconds": 0.0469177254,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.13114490569999998,
+      "candidate_response_lag_m": 0.10251571996393355,
+      "candidate_selected_speed_mps": 2.5031658718848377,
+      "candidate_scalar_delta_m": -0.014927129043810853
+    },
+    {
+      "frame": 15347,
+      "time_to_landing_seconds": 0.0399567969,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.12525007100000002,
+      "candidate_response_lag_m": 0.0884109237012463,
+      "candidate_selected_speed_mps": 2.6794479930880937,
+      "candidate_scalar_delta_m": -0.018651235562687257
+    },
+    {
+      "frame": 15348,
+      "time_to_landing_seconds": 0.0343838371,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.1210911661,
+      "candidate_response_lag_m": 0.07760085482953843,
+      "candidate_selected_speed_mps": 2.693460608596424,
+      "candidate_scalar_delta_m": -0.01501065597170787
+    },
+    {
+      "frame": 15349,
+      "time_to_landing_seconds": 0.02890371,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.114568102,
+      "candidate_response_lag_m": 0.06426304960773008,
+      "candidate_selected_speed_mps": 2.743524818424293,
+      "candidate_scalar_delta_m": -0.015034996121808352
+    },
+    {
+      "frame": 15350,
+      "time_to_landing_seconds": 0.0212825853,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.10615785450000001,
+      "candidate_response_lag_m": 0.04319050184785696,
+      "candidate_selected_speed_mps": 3.161479216894297,
+      "candidate_scalar_delta_m": -0.024093949259873126
+    },
+    {
+      "frame": 15351,
+      "time_to_landing_seconds": 0.0155312587,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.09967722770000001,
+      "candidate_response_lag_m": 0.02854833229543001,
+      "candidate_selected_speed_mps": 2.919072170747948,
+      "candidate_scalar_delta_m": -0.016788532752426942
+    },
+    {
+      "frame": 15352,
+      "time_to_landing_seconds": 0.008623005,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.0915428991,
+      "candidate_response_lag_m": 0.006120135361588808,
+      "candidate_selected_speed_mps": 3.569101919276402,
+      "candidate_scalar_delta_m": -0.024656248333841203
+    },
+    {
+      "frame": 15353,
+      "time_to_landing_seconds": 0.00284902775,
+      "deadline_eligible": true,
+      "old_response_lag_m": 0.0844898208,
+      "candidate_response_lag_m": 0.0,
+      "candidate_selected_speed_mps": 1.5,
+      "candidate_scalar_delta_m": -0.007728060061588809
+    }
+  ],
+  "maximum_candidate_selected_speed_mps": 3.569101919276402,
+  "maximum_candidate_scalar_step_m": 0.024656248333841203,
+  "remaining_upstream_goal_gap_at_15353_m": 0.11076678300000004,
+  "limitations": [
+    "未重算路径修订对残差历史的反馈、地面查询、接触交接或最终骨骼。",
+    "原始最后摆动帧的前级目标仍比预测落点高约11.1厘米；本次没有放开历史已失败的全局负向Swing修正。",
+    "未执行Play或replay，最终下坡接触效果由用户手测确认。"
+  ]
+}

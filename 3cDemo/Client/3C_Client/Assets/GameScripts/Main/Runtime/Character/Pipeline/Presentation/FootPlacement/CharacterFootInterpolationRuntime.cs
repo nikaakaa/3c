@@ -434,6 +434,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportNormal,
                 CharacterFootCorrectionResponseDomain.ContactWorldResidual,
                 captureTransition,
+                0f,
                 in frame);
             Vector3 responseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -576,6 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.SupportTarget.SupportNormal,
                 CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                 target.StateEntered,
+                0f,
                 in frame);
             Vector3 releaseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -843,12 +845,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCorrectionResponseFact correctionResponseFact = default;
             if (applyCorrectionResponse)
             {
+                float responseDeadlineSeconds = hasPath &&
+                    frame.PreparedPlantActive &&
+                    frame.PreparedPlantTarget.LandingEventIdentity ==
+                        swing.LandingEventIdentity &&
+                    Vector3.Dot(
+                        swingPath.LandingPoint - swing.BaselineSample,
+                        up) < -CharacterFootConstraintMath.GeometryEpsilon
+                    ? target.TimeToLandingSeconds
+                    : 0f;
                 CharacterFootCorrectionResponseResult response = ApplyCorrectionResponse(
                     ref state,
                     originalSole + swingCorrection,
                     target.SupportTarget.SupportNormal,
                     CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                     false,
+                    responseDeadlineSeconds,
                     in frame);
                 Vector3 responseOutputPoint = response.OutputPoint;
                 correctionResponseFact = response.Fact;
@@ -945,6 +957,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 responseDirection,
             CharacterFootCorrectionResponseDomain domain,
             bool targetContinuityCaptured,
+            float responseDeadlineSeconds,
             in CharacterFootStateFrame frame)
         {
             if ((domain != CharacterFootCorrectionResponseDomain.AnimationRelativeScalar &&
@@ -1058,6 +1071,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSpeed = delta > 0f
                         ? frame.Settings.CorrectionResponseIncreaseSpeed
                         : frame.Settings.CorrectionResponseDecreaseSpeed;
+                    if (delta < 0f && responseDeadlineSeconds > 0f &&
+                        frame.DeltaSeconds > 0f)
+                    {
+                        selectedSpeed = Mathf.Max(
+                            selectedSpeed,
+                            -delta / Mathf.Max(
+                                responseDeadlineSeconds,
+                                frame.DeltaSeconds));
+                    }
                     float maximumDelta = selectedSpeed * frame.DeltaSeconds;
                     appliedDelta = Mathf.Clamp(
                         delta,

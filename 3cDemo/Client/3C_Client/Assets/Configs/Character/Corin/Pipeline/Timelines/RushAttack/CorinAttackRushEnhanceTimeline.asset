@@ -17,6 +17,7 @@ MonoBehaviour:
     m_Name: CorinAttack_Rush_EnhanceTimeline
     m_Tracks:
     - rid: 207050738426183690
+    - rid: 207050751823839250
     m_Sections:
     - m_AuthoringId: 017fe590-4234-5099-420e-794651345f58
       m_Name: Attack_Rush_Enhance
@@ -126,3 +127,106 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
+    - rid: 207050751823839250
+      type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 5fc38dcd-8db4-c11e-31c2-909f6f2d78ad
+        Name: Motion Curve
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839251
+        m_Markers: []
+    - rid: 207050751823839251
+      type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b59713fa-52bb-e615-cf2e-42422136de74
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 2720145954
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        CurveId: Attack_Rush_Enhance
+        Space: 0
+        Channel: 1
+        BlendMode: 2
+        Priority: 100
+        ConsumeLowerChannels: 1
+        m_SourceCurve: {fileID: 11400000, guid: 6becb49785858f84aa3fd2495cded91e,
+          type: 2}
+        m_SourceStartTime: 0
+        m_SourceEndTime: 0.6333333
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4

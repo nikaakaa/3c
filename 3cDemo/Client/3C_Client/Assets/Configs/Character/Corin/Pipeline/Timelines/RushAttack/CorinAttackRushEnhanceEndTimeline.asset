@@ -124,7 +124,8 @@ MonoBehaviour:
     m_Tracks:
     - rid: 207050738426183702
     - rid: 207050738426183704
-    - rid: 207050751823839245
+    - rid: 207050751823839256
+    - rid: 207050751823839254
     m_Sections:
     - m_AuthoringId: 43a899a3-042c-644d-130e-673ca2a9d5d3
       m_Name: Attack_Rush_Enhance_End
@@ -272,7 +273,110 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: -1316327546636352395}
-    - rid: 207050751823839245
+    - rid: 207050751823839254
+      type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 48855bd7-6f6f-5e97-45a2-2dd5b2cbc4dc
+        Name: Motion Curve
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839255
+        m_Markers: []
+    - rid: 207050751823839255
+      type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 50de4831-18d8-a8e0-acaa-8b563d4f8b68
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 5010795179
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        CurveId: Attack_Rush_Enhance_End
+        Space: 0
+        Channel: 1
+        BlendMode: 2
+        Priority: 100
+        ConsumeLowerChannels: 1
+        m_SourceCurve: {fileID: 11400000, guid: 7edfa752218302f44abfb77efa685108,
+          type: 2}
+        m_SourceStartTime: 0
+        m_SourceEndTime: 1.1666666
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 207050751823839256
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: c4ba676f-4a6a-1ac5-aea8-56f575b676a5

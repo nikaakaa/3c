@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using FlowCanvas.Nodes;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityAnimationClip = UnityEngine.AnimationClip;
@@ -53,6 +54,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineAuthoringPropertyContract.Apply(timeline.Data, animationClip, new[] { new TimelineAuthoringPropertyValue("blendProfileId", TimelineAuthoringPropertyKind.Text, "corin.animation-rig.action-blend-profile") });
             var trackIds = new List<string> { animationTrackId };
             var clipIds = new List<string> { animationClipId };
+            string motionName = System.IO.Path.GetFileNameWithoutExtension(animationPath);
+            var motion = context.ResolveExternalAsset<RootMotionCurveAsset>(
+                "Assets/Configs/Character/Corin/Pipeline/Motion/RootMotion/CorinActionMotion/" + motionName + ".asset", 11400000L);
+            string motionTrackId = Id($"corin.rush.track.motion:{stateId}");
+            string motionClipId = Id($"corin.rush.clip.motion:{stateId}");
+            var motionTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(MotionCurveTrack), motionTrackId, "Motion Curve", TimelineExecutionDomain.Logic);
+            var motionClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, motionTrack, motionClipId, 0m, motion, Seconds(totalFrame), 0m, 0m, 0m);
+            float sourceEndTime = (float)Seconds(totalFrame);
+            if ((double)sourceEndTime > (double)Seconds(totalFrame))
+                sourceEndTime = BitConverter.Int32BitsToSingle(BitConverter.SingleToInt32Bits(sourceEndTime) - 1);
+            TimelineAuthoringPropertyContract.Apply(timeline.Data, motionClip, new[]
+            {
+                new TimelineAuthoringPropertyValue("curveId", TimelineAuthoringPropertyKind.Text, stateId),
+                new TimelineAuthoringPropertyValue("sourceCurve", TimelineAuthoringPropertyKind.Object, motion),
+                new TimelineAuthoringPropertyValue("sourceEndTime", TimelineAuthoringPropertyKind.Float, sourceEndTime)
+            });
+            trackIds.Add(motionTrackId);
+            clipIds.Add(motionClipId);
             if (windows.Length > 0)
             {
                 var track = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(TreeTrack), treeTrackId, "Action Windows", TimelineExecutionDomain.Logic);

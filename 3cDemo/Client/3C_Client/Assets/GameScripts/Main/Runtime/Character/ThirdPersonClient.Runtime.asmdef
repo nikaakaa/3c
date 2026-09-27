@@ -1,7 +1,8 @@
-﻿{
+{
     "name": "ThirdPersonClient.Runtime",
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
+        "BTSMTL.Authoring",
         "KK.GeneratedDiagnosticSampling.Annotations",
         "KK.GeneratedDiagnosticSampling",
         "ThirdPerson.Performance.Instrumentation.Core",

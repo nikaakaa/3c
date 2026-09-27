@@ -1,3 +1,4 @@
+using BTSMTL.Authoring.Blackboard;
 using System;
 using UnityAnimationClip = UnityEngine.AnimationClip;
 using BTSMTL.Timeline;

@@ -5,16 +5,16 @@
 - [ ] 0.1 按 design.md 的 A1-C6 建立类型/成员清单，记录职责、原位置、目标位置、程序集、直接消费者、注册和资产/生成引用；按当前 diff 列出实际共享文件冲突
 - [ ] 0.2 明确公共定义、具体运行实现和编辑功能三类归属，记录公共定义的完整依赖闭包，排除具体图类型、领域运行器和 Editor 反向依赖
 - [ ] 0.3 为迁移类型建立 namespace/assembly 精确映射，保留脚本 GUID、序列化字段、VariableId、端口身份、默认值、owner、generation、provenance 和 fact projection；没有完整去向的合法内容不得进入删除批次
-- [ ] 0.4 列明必须保持的业务边界：BaseGraph 运行参数、PropertyPort 求值、技能编译、原生 Pose 执行与 Timeline 调用协议；需要改变这些合同的对象单独报告
+- [x] 0.4 列明必须保持的业务边界：BaseGraph 运行参数、PropertyPort 求值、技能编译、原生 Pose 执行与 Timeline 调用协议；需要改变这些合同的对象单独报告
 
 ## 1. 黑板公共定义与具体实现分离（A）
 
-- [ ] 1.1 在 `Runtime/BTSMTL/Authoring` 建立 `BTSMTL.Authoring` 公共程序集与职责命名空间，将 scope/lifetime、输入绑定、事实投射数据等独立定义移入 `Blackboard`，具体消费者单向引用公共层
-- [ ] 1.2 将 `PipelineBlackboardVariableReference` 的字段与值规则移入公共层；从 `BaseExposedProperty` 读取字段的创建职责留在具体声明侧，统一切换调用并删除旧耦合构造入口，不新增第二份 reference
-- [ ] 1.3 按成员拆分 policy：只依赖公共值的规则进入公共层，具体声明校验与对象读取留在 TreeDesigner；规则结果和字段含义保持不变
-- [ ] 1.4 将 `IPipelineBlackboardRuntimeAccess` 归入 `TreeDesigner/Scripts/Blackboard` 的具体运行接入文件，保留现有签名语义；`BaseExposedProperty` 及泛型实现继续唯一拥有原声明存储
-- [ ] 1.5 按依赖拆分 `ExposedProperty_Extension.cs` 和 `ExposedPropertyUtility.cs`，具体声明查找和类型映射留在具体实现，独立规则随公共定义归位，不复制同名方法
-- [ ] 1.6 更新 `BaseGraphAuthoring`、`NestedGraphValidation`、黑板 Editor adapter、`CharacterPipelineAuthoringContext`、技能编译器及生成 authoring 的直接引用，并在本切片完成实际受影响的序列化身份迁移
+- [x] 1.1 在 `Runtime/BTSMTL/Authoring` 建立 `BTSMTL.Authoring` 公共程序集与职责命名空间，将 scope/lifetime、输入绑定、事实投射数据等独立定义移入 `Blackboard`，具体消费者单向引用公共层
+- [x] 1.2 将 `PipelineBlackboardVariableReference` 的字段与值规则移入公共层；从 `BaseExposedProperty` 读取字段的创建职责留在具体声明侧，统一切换调用并删除旧耦合构造入口，不新增第二份 reference
+- [x] 1.3 按成员拆分 policy：只依赖公共值的规则进入公共层，具体声明校验与对象读取留在 TreeDesigner；规则结果和字段含义保持不变
+- [x] 1.4 将 `IPipelineBlackboardRuntimeAccess` 归入 `TreeDesigner/Scripts/Blackboard` 的具体运行接入文件，保留现有签名语义；`BaseExposedProperty` 及泛型实现继续唯一拥有原声明存储
+- [x] 1.5 按依赖拆分 `ExposedProperty_Extension.cs` 和 `ExposedPropertyUtility.cs`，具体声明查找和类型映射留在具体实现，独立规则随公共定义归位，不复制同名方法
+- [x] 1.6 更新 `BaseGraphAuthoring`、`NestedGraphValidation`、黑板 Editor adapter、`CharacterPipelineAuthoringContext`、技能编译器及生成 authoring 的直接引用，并在本切片完成实际受影响的序列化身份迁移
 
 ## 2. 作者字段、能力与端口分离（B）
 
@@ -50,7 +50,7 @@
 
 ## 6. 小步提交
 
-- [ ] 6.1 A 黑板公共定义、具体接入及其直接消费者作为完整切片提交，中文说明范围与身份处理
+- [x] 6.1 A 黑板公共定义、具体接入及其直接消费者作为完整切片提交，中文说明范围与身份处理
 - [ ] 6.2 B 作者字段/端口定义及具体 Editor 服务归位单独提交
 - [ ] 6.3 C 公共编辑合同、面板和原生入口接线单独提交
 - [ ] 6.4 C5/C6 旧 UI 删除及规格收口单独提交；实际共享文件冲突或业务去向缺失停在受影响切片，不用临时桥接继续

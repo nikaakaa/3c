@@ -1,3 +1,4 @@
+using BTSMTL.Authoring.Blackboard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,7 +103,7 @@ namespace TreeDesigner.Editor
                 AddEditableField(details, declaration, "m_InputBinding.m_InputValueId", "Input Value Id", requestRefresh);
                 AddPayloadButton(details, declaration, "Remove Input Binding", declaration.ClearInputBinding, requestRefresh);
             }
-            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
+            if (!PipelineBlackboardDeclarationPolicy.TryValidateInputBinding(declaration, out string inputError))
                 GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
 
             AddSection(details, "Fact Projection");
@@ -116,7 +117,7 @@ namespace TreeDesigner.Editor
                 AddEditableField(details, declaration, "m_FactProjection.m_ActionWindowDigest", "Digest", requestRefresh);
                 AddPayloadButton(details, declaration, "Remove Fact Projection", declaration.ClearFactProjection, requestRefresh);
             }
-            if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
+            if (!PipelineBlackboardDeclarationPolicy.TryValidateFactProjection(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
             return details;
         }
@@ -303,9 +304,9 @@ namespace TreeDesigner.Editor
                 GraphDataCatalogDetails.AddRow(details, "Window Id", declaration.FactProjection.ActionWindowId);
                 GraphDataCatalogDetails.AddRow(details, "Digest", declaration.FactProjection.ActionWindowDigest.ToString());
             }
-            if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
+            if (!PipelineBlackboardDeclarationPolicy.TryValidateFactProjection(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
-            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
+            if (!PipelineBlackboardDeclarationPolicy.TryValidateInputBinding(declaration, out string inputError))
                 GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
         }
 

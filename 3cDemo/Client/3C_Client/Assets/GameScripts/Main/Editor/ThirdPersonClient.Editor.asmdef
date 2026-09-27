@@ -2,6 +2,7 @@
     "name": "ThirdPersonClient.Editor",
     "rootNamespace": "ThirdPersonCharacter.Editor",
     "references": [
+        "BTSMTL.Authoring",
         "ThirdPerson.Development.Gm.Contracts",
         "ThirdPerson.NetworkTest.Contracts",
         "ThirdPersonPerformance.Contracts",

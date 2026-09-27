@@ -1,3 +1,4 @@
+using BTSMTL.Authoring.Blackboard;
 using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;

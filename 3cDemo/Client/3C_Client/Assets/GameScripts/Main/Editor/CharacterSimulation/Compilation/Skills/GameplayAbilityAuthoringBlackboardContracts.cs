@@ -1,3 +1,4 @@
+using BTSMTL.Authoring.Blackboard;
 using System;
 using FlowCanvas;
 using NodeCanvas.Framework;

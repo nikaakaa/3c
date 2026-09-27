@@ -1,12 +1,7 @@
 {
-    "name": "BTSMTL.TreeDesigner",
-    "rootNamespace": "",
-    "references": [
-        "BTSMTL.Authoring",
-        "GUID:3af8e02729705434aa5c2d77c4a5103a",
-        "GUID:349d62e8ffbe48b8ad6e03ccd8cbaf71",
-        "Unity.InputSystem"
-    ],
+    "name": "BTSMTL.Authoring",
+    "rootNamespace": "BTSMTL.Authoring",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

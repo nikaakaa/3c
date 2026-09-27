@@ -1,3 +1,4 @@
+using BTSMTL.Authoring.Blackboard;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             context.AddUsing("ThirdPersonGameplay.Tags");
             context.AddUsing("ThirdPersonSimulation");
             context.AddUsing("TreeDesigner");
+            context.AddUsing("BTSMTL.Authoring.Blackboard");
             context.AddUsing("UnityEngine");
         }
 

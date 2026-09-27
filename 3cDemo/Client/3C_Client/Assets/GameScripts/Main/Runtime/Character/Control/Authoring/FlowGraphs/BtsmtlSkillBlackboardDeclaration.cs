@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using BTSMTL.Authoring.Blackboard;
 using System;
 using System.Collections.Generic;
 using System.Linq;

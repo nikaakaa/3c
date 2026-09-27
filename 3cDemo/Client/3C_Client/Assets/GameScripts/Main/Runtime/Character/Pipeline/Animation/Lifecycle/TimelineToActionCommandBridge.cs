@@ -366,6 +366,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Suspended = suspended;
         }
 
+        internal bool ResourceTimed => Activation.CameraRequest.Kind == PresentationCameraRequestKind.Effect &&
+            Activation.CameraRequest.EffectKind == (int)CameraEffectKind.Shake;
         internal bool Suspended { get; }
         internal CameraEventState WithSuspended(bool suspended) =>
             new CameraEventState(Key, PlaybackHandle, Activation, Retirement, Generation, MarkerTime, MarkerCycle, suspended);
@@ -462,6 +464,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (entry.Key.Marker != null || entry.Key.Handle != frame.Handle.Value || entry.Key.Generation != frame.Generation)
                 continue;
+            if (entry.Value.ResourceTimed && entry.Key.Cycle == frame.Cycle && entry.Value.MarkerTime <= frame.Time.Raw)
+            {
+                m_Alive.Add(entry.Key);
+                continue;
+            }
             for (int index = 0; index < frame.Operations.ActiveTreeClips.Count; index++)
             {
                 TimelineRuntimeTreeClipRequest tree = frame.Operations.ActiveTreeClips[index];
@@ -487,6 +494,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
         {
             if (entry.Key.Marker != null || entry.Key.Handle != frame.Handle.Value || entry.Key.Generation != frame.Generation)
+                continue;
+            if (entry.Value.ResourceTimed)
                 continue;
             for (int index = 0; index < frame.Operations.TreeClips.Count; index++)
             {

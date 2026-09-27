@@ -141,12 +141,13 @@ namespace ThirdPersonCamera
                 !float.IsFinite(ImpactRadius) || ImpactRadius < 0f ||
                 !float.IsFinite(DissipationDistance) || DissipationDistance < 0f || !float.IsFinite(FadeInDuration) ||
                 FadeInDuration < 0f || !float.IsFinite(FadeOutDuration) || FadeOutDuration < 0f ||
-                FadeInCurve == null || FadeOutCurve == null || Curve == null ||
+                FadeInDuration > 0f && FadeInCurve == null ||
+                FadeOutDuration > 0f && FadeOutCurve == null || Curve == null ||
                 (byte)PlayStackingType < (byte)CameraEffectStackingType.Replace ||
                 (byte)PlayStackingType > (byte)CameraEffectStackingType.HighestPriority)
                 throw new InvalidOperationException($"{source} contains an invalid Camera Shake payload.");
-            FadeInCurve.RequireValid(source + ".FadeInCurve");
-            FadeOutCurve.RequireValid(source + ".FadeOutCurve");
+            FadeInCurve?.RequireValid(source + ".FadeInCurve");
+            FadeOutCurve?.RequireValid(source + ".FadeOutCurve");
             Curve.RequireValid(source + ".Curve");
         }
     }

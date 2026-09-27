@@ -47,13 +47,16 @@ namespace ThirdPersonCamera
                 float phase = ResolvePhase(state.Request);
                 float time = state.Elapsed * payload.Frequency * Mathf.PI * 2f + phase;
                 float noise = Mathf.Sin(time * Mathf.Max(0f, payload.NoiseRatio));
-                float pitch = (Mathf.Sin(time + payload.NoiseAngle) * payload.PitchAmplitude + payload.AngleVertical) * weight;
-                float yaw = Mathf.Cos(time * 1.07f + payload.NoiseAngle) * payload.YawAmplitude * weight;
-                float roll = Mathf.Sin(time * 1.13f + payload.NoiseAngle) * payload.RollAmplitude * weight;
+                float noiseAngle = payload.NoiseAngle * Mathf.Deg2Rad;
+                float direction = payload.AngleVertical * Mathf.Deg2Rad + noise * noiseAngle;
+                float pitch = Mathf.Sin(time + noiseAngle) * payload.PitchAmplitude * weight;
+                float yaw = Mathf.Cos(time * 1.07f + noiseAngle) * payload.YawAmplitude * weight;
+                float roll = Mathf.Sin(time * 1.13f + noiseAngle) * payload.RollAmplitude * weight;
+                float displacement = Mathf.Sin(time) * payload.RadiusLength * weight;
                 Vector3 localPosition = new Vector3(
-                    Mathf.Sin(time) * payload.RadiusLength * weight,
-                    noise * payload.RadiusLength * weight,
-                    Mathf.Cos(time) * payload.RadiusLength * weight);
+                    Mathf.Sin(direction) * displacement,
+                    Mathf.Cos(direction) * displacement,
+                    0f);
                 Vector3 worldPosition;
                 Quaternion rotationDelta;
                 switch (payload.ShakeCenterSpace)

@@ -53,6 +53,13 @@ namespace ThirdPersonCamera
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlot> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlot>();
 
+        public void ConfigureShakeResources(CameraShakeAsset[] shakes, CameraCurveAsset[] curves)
+        {
+            m_Shakes = (CameraShakeAsset[])shakes.Clone();
+            m_Curves = (CameraCurveAsset[])curves.Clone();
+            RequireValid();
+        }
+
         public bool HasSequence(string sequenceId)
         {
             if (string.IsNullOrWhiteSpace(sequenceId))

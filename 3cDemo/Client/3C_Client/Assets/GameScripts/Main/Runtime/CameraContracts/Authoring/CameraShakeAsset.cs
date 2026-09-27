@@ -74,6 +74,70 @@ namespace ThirdPersonCamera
         public int DataPriority => m_DataPriority;
         public string StandardConfigKey => m_StandardConfigKey ?? string.Empty;
 
+        public void Configure(
+            string shakeId,
+            int shakeType,
+            int cameraShakePropertyConfig,
+            float angleVertical,
+            float noiseAngle,
+            float radiusLength,
+            float distanceToPlane,
+            float noiseRatio,
+            float shakeTotalTime,
+            float frequency,
+            float rollAmplitude,
+            float pitchAmplitude,
+            float yawAmplitude,
+            CameraSpace shakeCenterSpace,
+            bool realtimeVibration,
+            int dissipationMode,
+            float impactRadius,
+            float dissipationDistance,
+            string customCurveKey,
+            float fadeInDuration,
+            CameraCurveAsset fadeInCurve,
+            float fadeOutDuration,
+            CameraCurveAsset fadeOutCurve,
+            CameraCurveAsset curve,
+            bool ignoreTimeScale,
+            CameraEffectStackingType playStackingType,
+            int playPriority,
+            int dataPriority,
+            string standardConfigKey)
+        {
+            m_Schema = SchemaVersion;
+            m_ShakeId = shakeId ?? string.Empty;
+            m_ShakeType = shakeType;
+            m_CameraShakePropertyConfig = cameraShakePropertyConfig;
+            m_AngleVertical = angleVertical;
+            m_NoiseAngle = noiseAngle;
+            m_RadiusLength = radiusLength;
+            m_DistanceToPlane = distanceToPlane;
+            m_NoiseRatio = noiseRatio;
+            m_ShakeTotalTime = shakeTotalTime;
+            m_Frequency = frequency;
+            m_RollAmplitude = rollAmplitude;
+            m_PitchAmplitude = pitchAmplitude;
+            m_YawAmplitude = yawAmplitude;
+            m_ShakeCenterSpace = shakeCenterSpace;
+            m_RealtimeVibration = realtimeVibration;
+            m_DissipationMode = dissipationMode;
+            m_ImpactRadius = impactRadius;
+            m_DissipationDistance = dissipationDistance;
+            m_CustomCurveKey = customCurveKey ?? string.Empty;
+            m_FadeInDuration = fadeInDuration;
+            m_FadeInCurve = fadeInCurve;
+            m_FadeOutDuration = fadeOutDuration;
+            m_FadeOutCurve = fadeOutCurve;
+            m_Curve = curve;
+            m_IgnoreTimeScale = ignoreTimeScale;
+            m_PlayStackingType = playStackingType;
+            m_PlayPriority = playPriority;
+            m_DataPriority = dataPriority;
+            m_StandardConfigKey = standardConfigKey ?? string.Empty;
+            RequireValid();
+        }
+
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ShakeId) ||
@@ -85,11 +149,12 @@ namespace ThirdPersonCamera
                 !Enum.IsDefined(typeof(CameraSpace), ShakeCenterSpace) || !float.IsFinite(ImpactRadius) ||
                 ImpactRadius < 0f || !float.IsFinite(DissipationDistance) || DissipationDistance < 0f ||
                 !float.IsFinite(FadeInDuration) || FadeInDuration < 0f || !float.IsFinite(FadeOutDuration) ||
-                FadeOutDuration < 0f || !FadeInCurve || !FadeOutCurve || !Curve ||
+                FadeOutDuration < 0f || FadeInDuration > 0f && !FadeInCurve ||
+                FadeOutDuration > 0f && !FadeOutCurve || !Curve ||
                 !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType))
                 throw new InvalidOperationException($"Camera Shake Asset '{name}' is incomplete.");
-            FadeInCurve.RequireValid();
-            FadeOutCurve.RequireValid();
+            if (FadeInCurve) FadeInCurve.RequireValid();
+            if (FadeOutCurve) FadeOutCurve.RequireValid();
             Curve.RequireValid();
         }
     }

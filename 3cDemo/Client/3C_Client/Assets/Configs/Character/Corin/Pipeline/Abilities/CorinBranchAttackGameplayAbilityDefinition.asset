@@ -1,0 +1,446 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8540597265506634578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Moving Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"m_InputId":"MoveAxis","m_ProviderOwnerId":"asset:be650df85b1e49ab9d1cefc91c6cc809","_UID":"607f4707-fa09-ede1-34fd-cb0673e8a8b2","_name":"MoveAxis
+    Magnitude","_position":{"x":-520.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillInputMagnitudeFlowNode","$id":"0"},{"_simplexNode":{},"_inputPortValues":{"b":{"$content":0.0500000007450581,"$type":"System.Single"}},"_UID":"cc505aaa-fa75-6c4c-8a19-800ea845d82e","_name":">","_position":{"x":-240.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.FloatGreaterThan,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_UID":"e9a363c8-c22e-203f-01a7-391d4eb19d1e","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"2"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"a5f6bcf4-d262-841e-17e8-98013080011a","$type":"FlowCanvas.BinderConnection`1[[System.Single,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"7fd3af54-12fc-4222-dc62-3a6929531082","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"8d679b99-05ed-69d1-cb44-e913b1796b2a","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 8d679b99-05ed-69d1-cb44-e913b1796b2a
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-8435652022366852655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: StartComplete Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"9bb194e4-b643-fee7-b32d-246d6202d865","_name":"\u72b6\u6001\u4e3b\u4f53\u5df2\u5b8c\u6210","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateRootCompletedFlowNode","$id":"0"},{"_UID":"dfb451d9-5b14-938f-0253-2df754df8b65","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"1"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"m_Result","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"98b2b443-0615-8c6a-6d3a-f5b81c1d78d3","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"e8f0f092-9c10-9e40-4b44-9689d6730599","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: e8f0f092-9c10-9e40-4b44-9689d6730599
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-4996865233061483675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: EndComplete Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"960931a1-c06d-088f-8e6f-4c1d53cca96c","_name":"\u72b6\u6001\u4e3b\u4f53\u5df2\u5b8c\u6210","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateRootCompletedFlowNode","$id":"0"},{"_UID":"39f055ab-f09a-4d45-18d1-bb92b0bfedcf","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"1"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"m_Result","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"141066df-9138-91bd-3c5b-c2441039b12e","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"bfd4da16-db48-e661-9a5a-fa1f4a1471cc","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: bfd4da16-db48-e661-9a5a-fa1f4a1471cc
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-3147699660607930234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Release Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"m_InputId":"BranchHeld","m_ProviderOwnerId":"asset:be650df85b1e49ab9d1cefc91c6cc809","_UID":"e903d461-7f42-01ae-0822-70eb70f8a75d","_name":"BranchHeld","_position":{"x":-520.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBooleanInputFlowNode","$id":"0"},{"_simplexNode":{},"_UID":"d22eecb4-b437-7576-0b21-4bb28ad5c613","_name":"NOT","_position":{"x":-240.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.NOT,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_UID":"14e58aaa-f7f4-de6e-ee9d-3b9808fe8f30","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"2"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"value","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"d2f8057e-c7f8-afa5-d25a-f6648f40fc09","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"d2610220-29d4-7f04-841e-4500f5164d19","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"14146bd4-eb66-78cb-9321-8b3f39bccad8","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 14146bd4-eb66-78cb-9321-8b3f39bccad8
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &-2345177739941281223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Walk State Body
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"8d8e9bde-769d-7406-f256-5ce338bb39fe","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"568bbb9f-a3e8-8ac4-1dd2-640635d10c29","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"m_Ownership":1,"m_PlaybackMode":1,"_UID":"d3f48f1e-be9f-1cc4-7146-452193f95e76","_name":"Play
+    Walk","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"61549d03-9c96-e380-2df9-175723a111ca","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"d7220402-f48c-b4c1-814d-6fc7fba13aad","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"d4dc4405-5666-3cd9-7877-d776f1aefe5a","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 1ea69314cf61a114b893fff507498642, type: 2}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: d4dc4405-5666-3cd9-7877-d776f1aefe5a
+  m_Role: 4
+  m_BlackboardDeclarations: []
+--- !u!114 &-1676275811832277427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: StartRelease Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"m_InputId":"BranchHeld","m_ProviderOwnerId":"asset:be650df85b1e49ab9d1cefc91c6cc809","_UID":"03f3919f-1ae9-11dd-3bb6-1b317fd53755","_name":"BranchHeld","_position":{"x":-520.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBooleanInputFlowNode","$id":"0"},{"_simplexNode":{},"_UID":"86908c72-bc7f-6759-9380-6045b8e17c75","_name":"NOT","_position":{"x":-240.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.NOT,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_simplexNode":{},"_UID":"7a4e9072-0daf-449c-3623-85a81e4fa46a","_name":"AND","_position":{"x":200.0,"y":100.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.AND,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"2"},{"_UID":"dda5eda1-c952-a2b3-fbe7-81f7889baf57","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"3"},{"m_WindowType":"BranchRelease","_UID":"e56fe5a0-3a42-074c-0550-8aa11971acb1","_name":"Branch
+    Release Window","_position":{"x":-240.0,"y":160.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillActionWindowActiveFlowNode","$id":"4"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"value","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"6e0ae88a-496b-8b2d-d2ae-01c205807825","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"b","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"14444ac7-47df-6187-7608-33c85ed67cc6","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"ce0dfb9c-179c-6fda-bf67-0da72c42f1cb","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"2"},"_UID":"5167cf1e-05c8-d34e-28d8-3c6eddf0f1ab","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"df4ce173-d799-01fd-09d6-3ccf61ee49f1","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: df4ce173-d799-01fd-09d6-3ccf61ee49f1
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 730638d2b1ae40d29ab5514a568e2b2c, type: 3}
+  m_Name: CorinBranchAttackGameplayAbilityDefinition
+  m_EditorClassIdentifier: 
+  m_AbilityId: BranchAttack
+  m_DisplayName: BranchAttack
+  m_DebugCategory: 
+  m_Tags: []
+  m_AdmissionProfile: {fileID: 11400000, guid: a08176d11d1d44e98eabf30f46cffc14, type: 2}
+  m_Effects:
+  - {fileID: 11400000, guid: 933e275b14a02d2458556a891d1c5494, type: 2}
+  - {fileID: 11400000, guid: 86bc824ada611454f90a825d831f50e6, type: 2}
+  - {fileID: 11400000, guid: 1d1ad279d7569bd43ad8f92b3518c863, type: 2}
+  - {fileID: 11400000, guid: d9c1670fb2ee8504fbb79a3237ce0d14, type: 2}
+  - {fileID: 11400000, guid: 425f04d8e2976fe43b0d8d2cbbb8ab63, type: 2}
+  - {fileID: 11400000, guid: 21d646a5144e2db41afd71151a386480, type: 2}
+  m_EndRules:
+  - m_Trigger: 3
+    m_TransitionType: 7
+    m_ActionWindowType: 
+    m_Reason: TreeAbort
+  - m_Trigger: 2
+    m_TransitionType: 4
+    m_ActionWindowType: 
+    m_Reason: TreeInterrupt
+  - m_Trigger: 0
+    m_TransitionType: 2
+    m_ActionWindowType: 
+    m_Reason: TimelineCompleted
+  m_SubgraphDependencies: []
+  m_AllowedFollowUpAbilityIds: []
+  m_AbilityGraph: {fileID: 4983658988982047867}
+--- !u!114 &1557811709640231582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: End State Body
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"c59593cb-5b5f-9eb0-98aa-bee7b7db48ed","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"9308ee5d-14d9-26a2-e137-2f99a1cde280","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"m_Ownership":1,"_UID":"f4681b0d-4709-c76f-2e56-b3a98d3c5b11","_name":"Play
+    End","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"3cd61447-d6a9-42ac-0a1d-7d15ef647bb5","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"7cbcc729-974f-bdd0-556e-e666a072ef20","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"5eb55018-0efe-f2bf-fa7d-84438caf8433","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 81af72973551d614fb2d92701c5ca4de, type: 2}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 5eb55018-0efe-f2bf-fa7d-84438caf8433
+  m_Role: 4
+  m_BlackboardDeclarations: []
+--- !u!114 &2151157240263113823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Loop State Body
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"a138d90c-ee37-801b-a065-4030bfaae9c4","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"e7154d3b-e27f-f722-e04e-52ad6c85d128","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"m_Ownership":1,"m_PlaybackMode":1,"_UID":"c5ad3a8c-a13e-1a37-ea35-97e58edeea2c","_name":"Play
+    Loop","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"43ba89d0-ddb2-8b41-95e5-cba7e67c5c0d","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"0e634d85-e8ff-0d8b-5278-67310a4df75e","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"f919f518-17f1-3b53-9319-8e1edba3f827","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: e4a93a78c1f15ba48ae9a880ffc90e88, type: 2}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: f919f518-17f1-3b53-9319-8e1edba3f827
+  m_Role: 4
+  m_BlackboardDeclarations: []
+--- !u!114 &3125412216577296360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Stopped Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"m_InputId":"MoveAxis","m_ProviderOwnerId":"asset:be650df85b1e49ab9d1cefc91c6cc809","_UID":"401922e5-0787-ebd2-ae51-88acca8b7a29","_name":"MoveAxis
+    Magnitude","_position":{"x":-520.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillInputMagnitudeFlowNode","$id":"0"},{"_simplexNode":{},"_inputPortValues":{"b":{"$content":0.0500000007450581,"$type":"System.Single"}},"_UID":"4f2908f7-a69e-c374-6ff5-294175de1bb5","_name":">","_position":{"x":-240.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.FloatGreaterThan,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_simplexNode":{},"_UID":"69f6f4f6-df03-7193-5979-e4ed08a292ae","_name":"NOT","_position":{"x":40.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.NOT,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"2"},{"_UID":"8762b35e-8d26-6af4-0a0a-b48d7a2e409f","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"3"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"3673d22e-103c-634b-1402-d7a81895f71a","$type":"FlowCanvas.BinderConnection`1[[System.Single,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"value","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"a6224092-96f3-deb3-90b1-db663311e63b","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"31760954-157f-7fb3-a6cc-e8822eb6776d","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"8da8fb68-9dc1-3646-a3d1-d3a4162f959f","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 8da8fb68-9dc1-3646-a3d1-d3a4162f959f
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &3354020436307766088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Explode State Body
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"0951c9ea-e5aa-f6a3-640b-e08fa7a6fac1","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"8646c812-da6e-a522-354b-60f141efb11e","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"m_Ownership":1,"_UID":"255985ff-8069-fca6-6605-ae73735ce75e","_name":"Play
+    Explode","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"716e7788-28b8-d0db-77a4-f8955d3f800d","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"2c6d744a-d773-05a8-d134-418406e3d4cf","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"dba3170e-4eeb-d46a-75d5-da4bc64fc6b2","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 9ecdfe6e91bf13147a5232e6d85277bb, type: 2}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: dba3170e-4eeb-d46a-75d5-da4bc64fc6b2
+  m_Role: 4
+  m_BlackboardDeclarations: []
+--- !u!114 &4840054490531916248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Start State Body
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"4ab87d0d-e5a7-4e50-e2df-544301e7f0fc","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"95386920-cebd-2d3c-f221-a2f33bba5f76","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"m_Ownership":1,"_UID":"cf1b257e-1739-5c84-d043-c195b28a2eaa","_name":"Play
+    Start","_position":{"x":360.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"29fb343e-c67c-2f9c-d218-b1ad2df26835","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"226c5af3-0b41-abcc-6ae8-157c0a389bae","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"00f20065-267d-9b0f-3b16-3671c867525f","Role":4,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 6298d2478f8df6b48a4b731722f9e36c, type: 2}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 00f20065-267d-9b0f-3b16-3671c867525f
+  m_Role: 4
+  m_BlackboardDeclarations: []
+--- !u!114 &4983658988982047867
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: BranchAttack
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"161dca04-66b6-20aa-1a31-2458affda431","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"0"},{"m_NativeStateMachine":1,"_UID":"beb74dec-4552-c8e7-aa56-ef3335a1f9e7","_name":"BranchAttack
+    StateMachine","_position":{"x":240.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateMachineFlowNode","$id":"1"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"5e95652e-c784-bef7-7cff-b42497f25ac2","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"d1855f22-91dd-43e5-738f-4ccabc5606f5","Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 7041791209847954475}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: d1855f22-91dd-43e5-738f-4ccabc5606f5
+  m_Role: 0
+  m_BlackboardDeclarations: []
+--- !u!114 &5108612317791867000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: ExplodeComplete Condition
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"c14c347d-5d46-9afa-8328-042449d0ffac","_name":"\u72b6\u6001\u4e3b\u4f53\u5df2\u5b8c\u6210","_position":{"x":-360.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateRootCompletedFlowNode","$id":"0"},{"_UID":"8b6167f3-dba9-4215-33a6-12a02c05cc15","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":600.0,"y":180.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"1"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"m_Result","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"554c1966-3b23-5c06-85a1-d93e8b55c886","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"a4b4718d-7de3-3f0a-2503-a5e11098eb21","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: a4b4718d-7de3-3f0a-2503-a5e11098eb21
+  m_Role: 3
+  m_BlackboardDeclarations: []
+--- !u!114 &7041791209847954475
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f92920026e2f4970a5ab365c6d48da89, type: 3}
+  m_Name: BranchAttack StateMachine
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine","nodes":[{"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"4f90016f-9304-be29-76a8-8f4bca65b209","_name":"Entry","_position":{"x":-320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeEntryState","$id":"0"},{"m_Body":1,"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"2ca9e5a5-0889-426e-8c20-d5108fc32767","_name":"Start","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"1"},{"m_Body":2,"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"adb77609-5157-54af-01e2-6fcc78e85436","_name":"Explode","_position":{"x":900.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"2"},{"m_Body":3,"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"7e2bb0a1-d298-8ef2-da8d-7f525b6d9f75","_name":"End","_position":{"x":1200.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"3"},{"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"9be835b8-1874-0035-bea1-369fc2f6b622","_name":"Exit","_position":{"x":1500.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeExitState","$id":"4"},{"m_Body":4,"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"f17cd26a-29b1-9025-146b-800e04319a7f","_name":"Loop","_position":{"x":300.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"5"},{"m_Body":5,"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"8d987d48-dbfa-e391-df49-5825bfe74678","_name":"Walk","_position":{"x":600.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeState","$id":"6"},{"_color":{"r":1.0,"g":0.419999986886978,"b":0.319999992847443,"a":1.0},"_UID":"cef13446-f781-40f4-9e0a-f9589ba53645","_position":{"x":80.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeAnyState"}],"connections":[{"m_Payload":{},"_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"beaeb642-3a96-c44e-929c-f4e108f9ed43","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":6,"m_Priority":100},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"46525b6a-143d-9c6a-8504-2c9ac97ab255","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":7,"m_Order":1},"_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"5"},"_UID":"9cdd9ef6-a2a2-3f2b-8287-cc68a5ebc037","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":8},"_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"471d0c01-4355-b5c6-507c-2e9c18495d5b","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":9},"_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"_UID":"997dae0e-196e-9968-aa75-aefeb2c84148","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":10,"m_Priority":100},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"5240b3e6-f608-746d-bdde-c6230964fbd0","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":11,"m_Order":1},"_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"6"},"_UID":"337bbd17-6450-4911-6bd9-e0b42c35526a","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":10,"m_Priority":100},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"2"},"_UID":"c3ed9e6a-e055-d9c2-28e7-0558d95747b9","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"},{"m_Payload":{"m_Condition":12,"m_Order":1},"_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"5"},"_UID":"faf5737e-7d61-7bdd-aeff-7f1281f0b7c4","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"94f9c009-2c28-ace7-1c42-ba0f8e9ba5fd","OwnerGraphId":"d1855f22-91dd-43e5-738f-4ccabc5606f5","OwnerNodeId":"beb74dec-4552-c8e7-aa56-ef3335a1f9e7","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeStateMachine+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 4840054490531916248}
+  - {fileID: 3354020436307766088}
+  - {fileID: 1557811709640231582}
+  - {fileID: 2151157240263113823}
+  - {fileID: -2345177739941281223}
+  - {fileID: -1676275811832277427}
+  - {fileID: -8435652022366852655}
+  - {fileID: 5108612317791867000}
+  - {fileID: -4996865233061483675}
+  - {fileID: -3147699660607930234}
+  - {fileID: -8540597265506634578}
+  - {fileID: 3125412216577296360}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 94f9c009-2c28-ace7-1c42-ba0f8e9ba5fd
+  m_OwnerGraphId: d1855f22-91dd-43e5-738f-4ccabc5606f5
+  m_OwnerNodeId: beb74dec-4552-c8e7-aa56-ef3335a1f9e7

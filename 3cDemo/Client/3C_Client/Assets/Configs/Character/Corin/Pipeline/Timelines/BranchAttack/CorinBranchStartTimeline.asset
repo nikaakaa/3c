@@ -1,0 +1,325 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5640057006250619223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Branch Release Window
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"42cab1d2-1c08-4f0e-a1d7-87fae9e1c9a8","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"dc7b3393-ff63-4759-271b-4130d0af5642","_name":"\u6280\u80fd\u5165\u53e3","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Steps":[{"m_Id":"end","m_Name":"\u7ed3\u675f","m_Condition":1},{"m_Id":"body","m_Name":"\u6267\u884c"}],"_UID":"5a054e09-4e58-7bb2-05d7-3eab16ed528f","_name":"\u7a97\u53e3\u6267\u884c\u6216\u7ed3\u675f","_position":{"x":200.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillSelectorFlowNode","$id":"2"},{"_UID":"3ad7a2c9-813f-c445-7041-89a55df20ded","_name":"\u7ed3\u675f\u7247\u6bb5","_position":{"x":400.0,"y":-80.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineExitRequestFlowNode","$id":"3"},{"m_Variable":{"m_DeclarationId":"8253d70c-2187-afdf-2057-8805682fd389","m_OwnerId":"bb481e4b-436e-3343-2edb-50137d4bb1e2"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"4a7f4ef0-e213-83ca-e368-356a789aa8f5","_name":"Open
+    BranchRelease","_position":{"x":400.0,"y":80.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"4"},{"_UID":"646a00f5-3b57-4c5b-8239-3a163e429ff5","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"65677a73-3269-4d58-bbee-19358e887343","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"646715ea-fd58-5c23-8e58-2bafc854f101","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"end","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"_UID":"0d43a83a-2ea0-f922-6631-e71fdf3ef065","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"body","_targetPortName":"Input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"4"},"_UID":"e095dc9c-49a3-8c0a-f56b-5c0b67bc6162","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"BranchRelease":{"_name":"BranchRelease","_id":"8253d70c-2187-afdf-2057-8805682fd389","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"Identity":"bb481e4b-436e-3343-2edb-50137d4bb1e2","Role":5,"Declarations":[{"m_VariableId":"8253d70c-2187-afdf-2057-8805682fd389","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Branch/Windows","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"BranchRelease","m_ActionWindowId":"BranchRelease","m_ActionWindowDigest":9001}}],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 6440626794951193254}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: bb481e4b-436e-3343-2edb-50137d4bb1e2
+  m_Role: 5
+  m_BlackboardDeclarations:
+  - m_VariableId: 8253d70c-2187-afdf-2057-8805682fd389
+    m_Scope: 4
+    m_Lifetime: 4
+    m_Category: Action/Branch/Windows
+    m_InputBinding:
+      m_InputValueId: 
+    m_FactProjection:
+      m_Kind: 0
+      m_ActionWindowType: BranchRelease
+      m_ActionWindowId: BranchRelease
+      m_ActionWindowDigest: 9001
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5ae3c048510ba4bb65d1cfb507eb53, type: 3}
+  m_Name: CorinBranchStartTimeline
+  m_EditorClassIdentifier: 
+  m_Data:
+    m_AuthoringId: b011652c-fe6a-cf58-340a-97e7b7fd0bc0
+    m_Name: CorinBranchStartTimeline
+    m_Tracks:
+    - rid: 207050703806922752
+    - rid: 207050716001075200
+    - rid: 207050751823839262
+    m_Sections:
+    - m_AuthoringId: f0165367-71ea-1d2b-f406-773e924b706e
+      m_Name: Attack_Branch_02_Start
+      m_TimeRaw: 0
+      m_NextSectionId: 
+      m_BranchId: 
+    m_ExternalBindings: []
+    m_Loop: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 207050703806922752
+      type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 5eb4e806-c0c8-69f6-c111-7fd06434d45f
+        Name: Animation
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050703806922753
+        m_Markers: []
+        m_AnimationChannelId: FullBodyAction
+        m_AnimationSlotId: corin.full-body-action
+    - rid: 207050703806922753
+      type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ef5e9c89-341a-5e85-b931-e9d0ce45dab3
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 4724464026
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        Clip: {fileID: 7400000, guid: ce6912760a46b374c8ea6a3d302a1ecd, type: 2}
+        ExtraPolationMode: 0
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        BlendProfileId: corin.animation-rig.action-blend-profile
+    - rid: 207050716001075200
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 8dc1c45e-4c50-d274-bb1f-140f34d61be4
+        Name: Branch Release
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050716001075201
+        m_Markers: []
+    - rid: 207050716001075201
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 30bae1bb-860d-e73d-97ce-c53da5f56185
+        m_StartTimeRaw: 4581298449
+        m_EndTimeRaw: 4724464026
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: -5640057006250619223}
+    - rid: 207050751823839262
+      type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 0d1c90bf-ce93-d9ab-d217-49e0e639376b
+        Name: Motion Curve
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839263
+        m_Markers: []
+    - rid: 207050751823839263
+      type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: fdce0b22-e9ee-804e-4071-e9ea13042ca1
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 4724464026
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        CurveId: BranchStart
+        Space: 0
+        Channel: 1
+        BlendMode: 2
+        Priority: 100
+        ConsumeLowerChannels: 1
+        m_SourceCurve: {fileID: 11400000, guid: 19f3d712379b5a642b9480e92e64107e,
+          type: 2}
+        m_SourceStartTime: 0
+        m_SourceEndTime: 1.0999999
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+--- !u!114 &6440626794951193254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Release Window End
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"522ee7fa-5aed-53d1-5b3a-720d09f3d847","_name":"Timeline\u65f6\u95f4","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineTimeFlowNode","$id":"0"},{"_simplexNode":{},"_inputPortValues":{"b":{"$content":1.10000002384186,"$type":"System.Single"}},"_UID":"8f5667e3-92d3-0007-eab3-57ad3f28297f","_name":"\u7ed3\u675f\u65f6\u95f4","_position":{"x":200.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillNativeNodeWrapper`1[[FlowCanvas.Nodes.FloatGreaterEqualThan,
+    FlowCanvas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]","$id":"1"},{"_UID":"cd129aa0-f07c-6a18-1b00-a73c7fc47eb7","_name":"\u6761\u4ef6\u7ed3\u679c","_position":{"x":400.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillConditionResultFlowNode","$id":"2"}],"connections":[{"_sourcePortName":"m_Output","_targetPortName":"a","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"d7679108-7a17-f7c2-3fa7-7d83ea48215c","$type":"FlowCanvas.BinderConnection`1[[System.Single,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},{"_sourcePortName":"Value","_targetPortName":"m_Result","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"9943d62c-5a44-394b-2e62-7ac8d79cadfb","$type":"FlowCanvas.BinderConnection`1[[System.Boolean,
+    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"082ca2e5-2cdf-9ac2-9839-d10962564a01","Role":3,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 082ca2e5-2cdf-9ac2-9839-d10962564a01
+  m_Role: 3
+  m_BlackboardDeclarations: []

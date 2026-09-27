@@ -167,3 +167,13 @@ Handler 只对同一 completion identity 求值一次，输入页保持只读；
 | `character-animation-event-graph` | “已有动画数学与阶段语义必须保持”原文把迁移约束写成笼统禁止新增平滑；本次 delta 只允许独立新增 lean，保留旧计算与历史顺序 |
 | `character-foot-placement-presentation` | 不修改 Foot/Goal/FBBIK owner、脚部校准数据或求解公式，不创建额外事务 |
 | 旧 `add-character-pose-correction` | 位于另一个 worktree 的未完成方案，不是主线现行能力，不作为本变更依赖或交付依据 |
+
+## 实施补充
+
+- 现行 Gameplay 使用字符串形式的 MovementMode 身份，跑步起步与跑步循环姿势都消费 RunLoop 运动状态。EventGraph 正式宿主增加该既有事实的字符串类型输入，并用通用字符串相等节点判定；不新增控制状态枚举或运行分支。
+- Pose 变量合同补齐 Vector3 与 Quaternion；实际运行值由 EventGraph 当帧输出提供，不以原标量默认值替代旋转。
+- Modify Bone 的 C# 导出从正式节点字段描述读取全部作者字段，再经正式 Payload Codec 重建；导出器不维护新的骨骼字段清单。
+- 2026-09-28 用户追加要求准备采样器。沿用既有 Foot IK Generated Sampling 的 Core/Full 程序，在正式帧增加 lean 字段组，包含可用性、适用条件、水平速度、运动方向、有符号转速、目标倾角、平滑倾角和输出 Quaternion。只读同帧事件结果，不重算公式，不执行 replay。
+- 原规范中的平滑条款本意是迁移时保留原表现，本次增量澄清其范围，不能将它描述为底层不支持平滑。
+- 普通 Subgraph 的复用在现有作者校验中曾被“全部子图恰好一次引用”限制阻止。实现将纯 Subgraph 调用引用与独占所有权分开；仅普通 Subgraph 允许多个纯调用，根图、状态子图、Control Rig 仍保留原约束，运行层沿用每个 Handler 独占的子实例。
+- 导出往返检查发现通用 C# 输出规划器在判定延后执行语句之前就归类了外部资源，导致 Definition/Profile 未写入跨步骤结果。正式规划器在确定延后语句后提升这些外部引用，再生成共享结果；不在角色生成代码中保留手工补引用。

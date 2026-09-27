@@ -135,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePoseReadBinding input = inputValue.Native;
             if (!input.IsValid ||
                 input.Space != CharacterPoseSpace.Component ||
+                (input.Availability[0] != AnimationPoseAvailability.Pose && input.Availability[0] != AnimationPoseAvailability.NoPose) ||
                 input.CompletedAt[0] != input.CompletionIdentity)
             {
                 throw new InvalidOperationException(

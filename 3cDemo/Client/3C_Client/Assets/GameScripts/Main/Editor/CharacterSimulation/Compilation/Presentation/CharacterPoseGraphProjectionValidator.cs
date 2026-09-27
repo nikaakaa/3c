@@ -166,7 +166,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             var catalogIds = new HashSet<PoseGraphId>();
-            var ownerCounts = new Dictionary<PoseGraphId, int>();
+            var referenceCounts = new Dictionary<PoseGraphId, int>();
+            var subgraphCallCounts = new Dictionary<PoseGraphId, int>();
             foreach (CharacterPoseCanvasGraph graph in
                      asset.EnumerateGraphs())
             {
@@ -199,21 +200,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         CharacterPoseGraphDependency dependency =
                             dependencies[dependencyIndex];
                         if (dependency.GraphId.IsValid)
-                            AddOwner(dependency.GraphId);
+                        {
+                            referenceCounts.TryGetValue(dependency.GraphId, out int count);
+                            referenceCounts[dependency.GraphId] = count + 1;
+                            if (dependency.Kind == CharacterPoseGraphDependencyKind.Subgraph)
+                            {
+                                subgraphCallCounts.TryGetValue(dependency.GraphId, out int calls);
+                                subgraphCallCounts[dependency.GraphId] = calls + 1;
+                            }
+                        }
                     }
                 }
             }
             foreach (PoseGraphId graphId in catalogIds)
             {
                 int expected = asset.Graph.GraphId == graphId ? 0 : 1;
-                ownerCounts.TryGetValue(graphId, out int actual);
-                if (actual != expected)
+                referenceCounts.TryGetValue(graphId, out int actual);
+                subgraphCallCounts.TryGetValue(graphId, out int calls);
+                bool reusable = expected == 1 && asset.TryGetGraph(graphId, out CharacterPoseCanvasGraph referenced) &&
+                    referenced.Role == CharacterPoseAuthoringGraphRole.Subgraph && actual == calls;
+                if (reusable ? actual == 0 : actual != expected)
                 {
                     Report(
                         report,
                         CharacterPoseGraphValidationCode
                             .SubgraphOwnershipInvalid,
-                        $"Pose Graph catalog record '{graphId}' has {actual} owner references; expected {expected}.",
+                        $"Pose Graph catalog record '{graphId}' has {actual} references; expected {(reusable ? "at least one subgraph call" : expected.ToString())}.",
                         graphId.Value);
                 }
             }
@@ -315,11 +327,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             return report;
 
-            void AddOwner(PoseGraphId graphId)
-            {
-                ownerCounts.TryGetValue(graphId, out int count);
-                ownerCounts[graphId] = count + 1;
-            }
+
         }
 
         static void ValidateGraph(

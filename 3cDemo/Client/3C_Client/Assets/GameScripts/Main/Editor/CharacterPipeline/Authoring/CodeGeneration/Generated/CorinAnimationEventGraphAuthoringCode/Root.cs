@@ -170,6 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             parts.eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.acceleration-delta", node44, "Delta", node30, "b");
             parts.eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.previous-planar", node45, "Value", node28, "b");
             parts.eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.has-previous", node46, "Value", node10, "Condition");
+            BuildLean(parts.eventGraph, (Split)node4);
             return parts;
         }
 

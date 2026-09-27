@@ -310,6 +310,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     owners.Add(owner);
             }
 
+            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
+            {
+                if (!plan.Statements.Any(statement => statement.Deferred && ContainsIdentifier(statement.Text, asset.VariableName)))
+                    continue;
+                plan.SharedAssets.Add(asset.VariableName);
+                plan.VariableOwners[asset.VariableName] = "Root";
+            }
+
             foreach (string variableName in context.VariableTypeNames.Keys)
             {
                 if (!context.IsVariableUsed(variableName) ||

@@ -1,0 +1,30 @@
+{
+  "status": "success",
+  "result": {
+    "success": true,
+    "message": "Code executed successfully.",
+    "data": {
+      "result": [
+        {
+          "ability": "Attack",
+          "bound_entry_count": 24,
+          "failures": [],
+          "execution_data_hash": "50db9e7c120b13ef82fb95f8257ae6a950464e8e76a2a5adc618bba70ea3b66c"
+        },
+        {
+          "ability": "RushAttack",
+          "bound_entry_count": 48,
+          "failures": [],
+          "execution_data_hash": "d2acf7554b013e7c6d787b3d231d3d0d51ab1d6d6894aca48c630b109efa2d57"
+        },
+        {
+          "ability": "BranchAttack",
+          "bound_entry_count": 12,
+          "failures": [],
+          "execution_data_hash": "0664fe166396e84cdfda25e1fbd724e419c6b250f761353ee2f49f2ae9f6e938"
+        }
+      ],
+      "compiler": "codedom"
+    }
+  }
+}

@@ -446,15 +446,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Pose Blend Stack '{node.NodeId}' blend policy resource is not a CharacterAnimationBlendPolicy.");
             var stackPolicyPayload = new AnimationBlendStackPolicyPayload(policy.StackPolicy);
             var transitions = new List<AnimationBlendTransitionPayload>();
-            var curveEntries = new List<AnimationBlendCurveCatalogEntry>();
-            var profileEntries = new List<AnimationBlendProfileCatalogEntry>();
+            var catalog = new BlendTransitionCatalog(m_Profile.RigDefinition, m_Rig);
             if (slotPayload != null)
             {
                 BuildActionSlotTransitions(
                     policy,
                     transitions,
-                    curveEntries,
-                    profileEntries);
+                    catalog);
             }
             else
             {
@@ -462,16 +460,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     policy.DefaultTransition,
                     0,
                     transitions,
-                    curveEntries,
-                    profileEntries);
+                    catalog);
                 for (int i = 0; i < policy.Overrides.Count; i++)
                 {
                     BuildTransition(
                         policy.Overrides[i].Rule,
                         i + 1,
                         transitions,
-                        curveEntries,
-                        profileEntries);
+                        catalog);
                 }
             }
             var slotPayload2 = new AnimationBlendNodePayload(
@@ -481,8 +477,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 stackPolicyPayload,
                 transitions.ToArray(),
                 null);
-            var curveCatalog = new AnimationBlendCurveCatalogPayload(curveEntries.ToArray());
-            var profileCatalog = new AnimationBlendProfileCatalogPayload(profileEntries.ToArray());
+            var curveCatalog = new AnimationBlendCurveCatalogPayload(catalog.Curves.ToArray());
+            var profileCatalog = new AnimationBlendProfileCatalogPayload(catalog.Profiles.ToArray());
             AnimationSelectionAvailabilityPolicy availability = slotPayload != null
                 ? slotPayload.SelectionAvailability
                 : AnimationSelectionAvailabilityPolicy.RequireSelection;
@@ -519,8 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationBlendTransitionRule rule,
             int index,
             List<AnimationBlendTransitionPayload> transitions,
-            List<AnimationBlendCurveCatalogEntry> curveEntries,
-            List<AnimationBlendProfileCatalogEntry> profileEntries)
+            BlendTransitionCatalog catalog)
         {
             BuildTransition(
                 rule,
@@ -531,15 +526,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationBlendTransitionEndpointKind.SourceOwner,
                 $"owner/{index + 1}",
                 transitions,
-                curveEntries,
-                profileEntries);
+                catalog);
         }
 
         void BuildActionSlotTransitions(
             CharacterAnimationBlendPolicy policy,
             List<AnimationBlendTransitionPayload> transitions,
-            List<AnimationBlendCurveCatalogEntry> curveEntries,
-            List<AnimationBlendProfileCatalogEntry> profileEntries)
+            BlendTransitionCatalog catalog)
         {
             var ownerIdentities = new List<string>();
             for (int i = 0; i < policy.Overrides.Count; i++)
@@ -609,8 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         targetKind,
                         targetOwnerIdentity,
                         transitions,
-                        curveEntries,
-                        profileEntries);
+                        catalog);
                 }
             }
         }
@@ -624,21 +616,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationBlendTransitionEndpointKind targetEndpointKind,
             string targetOwnerIdentity,
             List<AnimationBlendTransitionPayload> transitions,
-            List<AnimationBlendCurveCatalogEntry> curveEntries,
-            List<AnimationBlendProfileCatalogEntry> profileEntries)
+            BlendTransitionCatalog catalog)
         {
-            AnimationBlendCurvePayload curvePayload = BuildCurvePayload(rule);
-            int curveIndex = RequireOrAddCurve(curveEntries, curvePayload);
-            var profilePayload = new AnimationBlendProfilePayload(
-                rule.BlendProfile, m_Profile.RigDefinition);
-            if (!string.Equals(profilePayload.RigId, m_Rig.RigId, StringComparison.Ordinal) ||
-                !string.Equals(profilePayload.RigRevision, m_Rig.RigRevision, StringComparison.Ordinal) ||
-                profilePayload.DenseDurationMultipliers.Count != m_Rig.PoseBoneCount)
-            {
-                throw new InvalidOperationException(
-                    $"Animation Blend Profile '{profilePayload.ProfileId}' does not match the runtime Rig.");
-            }
-            int profileIndex = RequireOrAddProfile(profileEntries, profilePayload);
+            (int curveIndex, int profileIndex) = catalog.RequireRule(rule);
             var transition = new AnimationBlendTransitionPayload(
                 sourceOwnerIndex,
                 sourceEndpointKind,
@@ -650,8 +630,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rule.DurationSeconds,
                 curveIndex,
                 profileIndex);
-            transition.RequireValid(curveEntries.Count, profileEntries.Count);
+            transition.RequireValid(catalog.Curves.Count, catalog.Profiles.Count);
             transitions.Add(transition);
+        }
+
+        sealed class BlendTransitionCatalog
+        {
+            readonly CharacterAnimationRigDefinition m_RigDefinition;
+            readonly CharacterAnimationRigPayload m_Rig;
+            readonly Dictionary<CharacterAnimationBlendTransitionRule, (int CurveIndex, int ProfileIndex)> m_Rules = new();
+            readonly Dictionary<CharacterAnimationBlendProfile, int> m_ProfileIndexes = new();
+
+            internal readonly List<AnimationBlendCurveCatalogEntry> Curves = new();
+            internal readonly List<AnimationBlendProfileCatalogEntry> Profiles = new();
+
+            internal BlendTransitionCatalog(CharacterAnimationRigDefinition rigDefinition, CharacterAnimationRigPayload rig)
+            {
+                m_RigDefinition = rigDefinition;
+                m_Rig = rig;
+            }
+
+            internal (int CurveIndex, int ProfileIndex) RequireRule(CharacterAnimationBlendTransitionRule rule)
+            {
+                if (m_Rules.TryGetValue(rule, out var indices))
+                    return indices;
+                int curveIndex = RequireOrAddCurve(Curves, BuildCurvePayload(rule));
+                if (!m_ProfileIndexes.TryGetValue(rule.BlendProfile, out int profileIndex))
+                {
+                    var profile = new AnimationBlendProfilePayload(rule.BlendProfile, m_RigDefinition);
+                    if (!string.Equals(profile.RigId, m_Rig.RigId, StringComparison.Ordinal) ||
+                        !string.Equals(profile.RigRevision, m_Rig.RigRevision, StringComparison.Ordinal) ||
+                        profile.DenseDurationMultipliers.Count != m_Rig.PoseBoneCount)
+                    {
+                        throw new InvalidOperationException(
+                            $"Animation Blend Profile '{profile.ProfileId}' does not match the runtime Rig.");
+                    }
+                    profileIndex = RequireOrAddProfile(Profiles, profile);
+                    m_ProfileIndexes.Add(rule.BlendProfile, profileIndex);
+                }
+                indices = (curveIndex, profileIndex);
+                m_Rules.Add(rule, indices);
+                return indices;
+            }
         }
 
         static void AddOwnerIdentity(

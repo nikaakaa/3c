@@ -1988,7 +1988,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ArmPending(string operation, string traceId)
         {
-            CharacterInputStartupCapture.Begin(operation, traceId);
+            CharacterInputStartupCapture.Begin(operation, traceId, PlayerActorId);
             SessionState.SetString(PendingOperationKey, operation);
             SessionState.SetString(PendingTraceIdKey, traceId ?? string.Empty);
             WritePendingLaunchPhase(

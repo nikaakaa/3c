@@ -11,6 +11,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class CharacterPoseNativeDomainRuntimeFactory
     {
+#if UNITY_EDITOR
+        internal static event Action<string, string, long> StartupMilestone;
+
+        internal static void MarkStartup(ActorId actorId, string phase)
+        {
+            var listener = StartupMilestone;
+            if (listener != null)
+                listener(actorId.Value, phase, System.Diagnostics.Stopwatch.GetTimestamp());
+        }
+#endif
         internal static CharacterPoseNativeDomainCreateResult Create(
             ulong requestId,
             ActorId actorId,
@@ -60,6 +70,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     inputContract,
                     nodeCount,
                     serviceFactory);
+#if UNITY_EDITOR
+                MarkStartup(actorId, "pose-source-created");
+#endif
                 services = serviceFactory.Create(
                     actorId,
                     rigBinding,
@@ -68,6 +81,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     resetGeneration,
                     source,
                     () => source.CurrentLease);
+#if UNITY_EDITOR
+                MarkStartup(actorId, "pose-services-created");
+#endif
                 var context = new CharacterPoseNativeInstanceContext(
                     actorId,
                     animancer,
@@ -95,6 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         services.Services.PlayerNodeIds,
                         services.Services.ContributionCapacity,
                         out CharacterPoseNativeRoleSession roleSession);
+#if UNITY_EDITOR
+                MarkStartup(actorId, "pose-role-created");
+#endif
                 if (!adopted.IsAdopted)
                 {
                     services.Dispose();

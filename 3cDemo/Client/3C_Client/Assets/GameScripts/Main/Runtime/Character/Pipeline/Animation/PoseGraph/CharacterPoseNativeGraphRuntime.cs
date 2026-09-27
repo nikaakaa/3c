@@ -165,6 +165,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ResetGeneration = createRequest.ResetGeneration;
             m_Evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
             m_Graph = NodeCanvas.Framework.Graph.Clone(createRequest.PreparedBinding.Graph, null);
+#if UNITY_EDITOR
+            if (m_PreparedBinding.Boundary == CharacterPoseNativeGraphBoundary.Root)
+                CharacterPoseNativeDomainRuntimeFactory.MarkStartup(m_PreparedBinding.ActorId, "pose-root-graph-cloned");
+#endif
         }
 
         internal Diagnostics.CharacterNativeStateCapturePage StateCapture => new Diagnostics.CharacterNativeStateCapturePage(m_Evaluator.StateCapture);
@@ -400,11 +404,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             m_Graph.AttachNativeRuntime(this);
+#if UNITY_EDITOR
+            if (m_PreparedBinding.Boundary == CharacterPoseNativeGraphBoundary.Root)
+                CharacterPoseNativeDomainRuntimeFactory.MarkStartup(m_PreparedBinding.ActorId, "pose-root-runtime-attached");
+#endif
             m_Graph.StartGraph(
                 m_CreateRequest.Context.Animancer,
                 null,
                 NodeCanvas.Framework.Graph.UpdateMode.Manual,
                 null);
+#if UNITY_EDITOR
+            if (m_PreparedBinding.Boundary == CharacterPoseNativeGraphBoundary.Root)
+                CharacterPoseNativeDomainRuntimeFactory.MarkStartup(m_PreparedBinding.ActorId, "pose-root-graph-started");
+#endif
         }
 
         void InitializeGraph()

@@ -20,6 +20,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     sealed class FixedSimulationSessionCompositionPreparation : ISimulationSessionCompositionPreparation
     {
+#if UNITY_EDITOR
+        void MarkStartup(string phase)
+        {
+            SimulationSessionHost.ReportStartupMilestone(m_Definition.SessionId, phase);
+        }
+#endif
         const string CommitterId = "thirdperson.simulation.committer.fixed-session";
         const string DiagnosticsId = "thirdperson.simulation.diagnostics.fixed-session";
 
@@ -41,19 +47,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             m_Registrations = FreezeRoster(registrations);
+#if UNITY_EDITOR
+            MarkStartup("fixed-roster-frozen");
+#endif
             SimulationExecutionTargetManifest target = m_Definition.ExecutionTarget;
             m_CharacterRuntime = BuildCharacterRuntime(m_Definition, m_Registrations, target);
+#if UNITY_EDITOR
+            MarkStartup("fixed-session-character-runtime-created");
+#endif
             m_CharacterRuntimeDescriptor = new SimulationCharacterRuntimeDescriptor(
                 target,
                 m_CharacterRuntime.GameplayContentHash,
                 m_CharacterRuntime.StateSchemaHash,
                 m_CharacterRuntime.RosterDescriptor);
             m_WorldSolverDescriptor = m_Definition.WorldSolver.BuildDescriptor(m_Definition.TickRate);
+#if UNITY_EDITOR
+            MarkStartup("fixed-world-solver-descriptor-created");
+#endif
             m_WorldIdentity = m_Definition.WorldSolver.BuildWorldIdentity(
                 m_Definition.TickRate,
                 new SimulationWorldId(m_Definition.WorldId),
                 m_Definition.MapId,
                 new WorldRevision(m_Definition.WorldRevision));
+#if UNITY_EDITOR
+            MarkStartup("fixed-world-identity-created");
+#endif
             m_SourcePreparation = m_Definition.SessionSource.CreatePreparation(
                 new SimulationSessionSourcePreparationContext(
                     new SimulationSessionId(m_Definition.SessionId),
@@ -64,6 +82,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_WorldSolverDescriptor,
                     m_WorldIdentity,
                     m_Registrations));
+#if UNITY_EDITOR
+            MarkStartup("fixed-source-preparation-created");
+#endif
         }
 
         public SimulationSessionPreparationStatus Status { get; private set; } = SimulationSessionPreparationStatus.Pending;

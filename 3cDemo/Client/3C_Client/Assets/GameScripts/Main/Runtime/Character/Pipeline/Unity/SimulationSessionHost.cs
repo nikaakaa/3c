@@ -14,6 +14,21 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget,
         ICharacterFutureBodyTranslationSource
     {
+#if UNITY_EDITOR
+        public static event Action<string, string, long> StartupMilestone;
+
+        public static void ReportStartupMilestone(string sessionId, string phase)
+        {
+            var listener = StartupMilestone;
+            if (listener != null)
+                listener(sessionId, phase, System.Diagnostics.Stopwatch.GetTimestamp());
+        }
+
+        void MarkStartup(string phase)
+        {
+            ReportStartupMilestone(m_Composition.SessionId, phase);
+        }
+#endif
         [SerializeField] SimulationSessionCompositionDefinition m_Composition;
 
         readonly List<ISimulationActorRegistration> m_Registrations =
@@ -444,6 +459,9 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 if (m_State == SimulationSessionLifecycleState.Uninitialized)
                 {
+#if UNITY_EDITOR
+                    MarkStartup("session-first-logic-tick");
+#endif
                     BeginPreparation();
                     StepPreparation(context);
                     return;
@@ -810,10 +828,16 @@ namespace ThirdPersonCharacter.Pipeline
             }
             try
             {
+#if UNITY_EDITOR
+                MarkStartup("session-preparation-start");
+#endif
                 m_Composition.RequireComplete();
                 if (GameplayTickSystem.Current.Settings.LocalLogicTickRate != m_Composition.TickRate)
                     throw new InvalidOperationException("Session Composition TickRate does not match GameplayTickSystem LocalLogic TickRate.");
                 m_Preparation = m_Composition.CreatePreparation(m_Registrations);
+#if UNITY_EDITOR
+                MarkStartup("session-preparation-created");
+#endif
                 m_State = SimulationSessionLifecycleState.Preparing;
             }
             catch (Exception exception)
@@ -830,6 +854,9 @@ namespace ThirdPersonCharacter.Pipeline
         {
             if (m_State != SimulationSessionLifecycleState.Preparing || m_Preparation == null)
                 return;
+#if UNITY_EDITOR
+            MarkStartup("session-first-step-start");
+#endif
             SimulationSessionLogicTickContext preparationContext = new SimulationSessionLogicTickContext(
                 new SimulationTickSourceIdentity(
                     m_Preparation.SourceDescriptor.OuterTickKind,
@@ -839,7 +866,12 @@ namespace ThirdPersonCharacter.Pipeline
                 ToElapsedTicks(context.FixedDeltaSeconds));
             SimulationSessionPreparationStatus status = m_Preparation.Step(preparationContext);
             if (status == SimulationSessionPreparationStatus.Pending)
+            {
+#if UNITY_EDITOR
+                MarkStartup("session-first-pending-step-returned");
+#endif
                 return;
+            }
             if (status == SimulationSessionPreparationStatus.Failed)
             {
                 Fail(m_Preparation.Failure ?? new SimulationSessionFailure(
@@ -849,6 +881,9 @@ namespace ThirdPersonCharacter.Pipeline
                     m_Composition.name));
                 return;
             }
+#if UNITY_EDITOR
+            MarkStartup("session-preparation-step-ready");
+#endif
             SimulationSessionPreparedRuntime prepared = m_Preparation.TakePreparedRuntime();
             m_LaunchPlan = prepared.LaunchPlan;
             m_Runtime = prepared.RuntimeHandle;
@@ -863,6 +898,9 @@ namespace ThirdPersonCharacter.Pipeline
             ActivateActorPorts();
             CaptureActorInputs(context.RenderFrame);
             m_State = SimulationSessionLifecycleState.Active;
+#if UNITY_EDITOR
+            MarkStartup("session-active");
+#endif
             RegisterDebugControlPort();
         }
 

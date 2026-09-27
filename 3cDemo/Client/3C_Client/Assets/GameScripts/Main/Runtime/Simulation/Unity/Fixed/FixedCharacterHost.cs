@@ -27,6 +27,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     [DisallowMultipleComponent]
     public sealed class FixedCharacterHost : MonoBehaviour, ISimulationSessionActorHost
     {
+#if UNITY_EDITOR
+        public static event Action<string, string, string, long> StartupMilestone;
+
+        void MarkStartup(string phase)
+        {
+            var listener = StartupMilestone;
+            if (listener != null)
+                listener(m_ActorId, m_SessionHost.Composition.SessionId, phase,
+                    System.Diagnostics.Stopwatch.GetTimestamp());
+        }
+#endif
         [SerializeField] SimulationSessionHost m_SessionHost;
         [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
         [SerializeField] FixedCharacterControlSource m_ControlSource;
@@ -200,6 +211,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int tickRate = sessionHost.Composition
                 ? sessionHost.Composition.TickRate
                 : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an explicit Composition Definition.");
+#if UNITY_EDITOR
+            MarkStartup("character-registration-start");
+#endif
             if (characterDefinition.SimulationTickRate != tickRate)
                 throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Session Composition TickRate must match.");
             CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
@@ -210,11 +224,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
                 characterDefinition.LoadFixedAbilitySet();
+#if UNITY_EDITOR
+            MarkStartup("fixed-abilities-loaded");
+#endif
             m_TimelineHost?.Dispose();
             m_TimelineHost = new CharacterTimelineHost($"character-timeline/{name}");
             for (int i = 0; i < abilityData.Data.Count; i++)
                 m_TimelineHost.InstallAbilitySources(abilityData.Data[i].SourceMap);
             m_TimelineHost.InstallPresentationPrograms(characterDefinition.LoadFloat32AbilitySet().Data);
+#if UNITY_EDITOR
+            MarkStartup("timeline-programs-installed");
+#endif
             var timelineRuntime = new CharacterTimelineAbilityRuntime(m_TimelineHost, characterDefinition.ControlMotionTimelines);
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,
@@ -232,6 +252,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 tickRate,
                 target.OperationSetVersion,
                 controlModules);
+#if UNITY_EDITOR
+            MarkStartup("character-runtime-created");
+#endif
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
             ICharacterPresentationDomainRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
@@ -263,6 +286,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterTimelineDebugSourceMapFiller.Fill(
                     debugSourceMap,
                     characterDefinition.ControlMotionTimelines);
+#if UNITY_EDITOR
+                MarkStartup("debug-source-map-built");
+#endif
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
@@ -273,8 +299,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
                 m_TimelineHost.AttachRuntimeDiagnostics(diagnosticsContext);
                 animationRigBinding.RequireValid(animationRig);
+#if UNITY_EDITOR
+                MarkStartup("control-source-start");
+#endif
                 controlSource = controlSourceDefinition.Create(
                     new FixedCharacterControlSourceContext(this, characterDefinition, controlModule));
+#if UNITY_EDITOR
+                MarkStartup("control-source-created");
+#endif
                 IUnityFixedCharacterControlSourceRuntime presentationControlSource = controlSource;
                 presentation = CreatePresentationRuntime(
                     animationPresentationProfile,
@@ -287,7 +319,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     tickRate,
                     true,
                     m_TimelineHost);
+#if UNITY_EDITOR
+                MarkStartup("presentation-runtime-created");
+#endif
                 timelineRuntime.Install();
+#if UNITY_EDITOR
+                MarkStartup("timeline-runtime-installed");
+#endif
                 CharacterDomainRuntimeAssemblyFacts domainFacts =
                     new CharacterDomainRuntimeAssemblyFacts(new[]
                     {
@@ -331,6 +369,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 sessionHost.RegisterActor(registration);
                 m_Registration = registration;
                 registration = null;
+#if UNITY_EDITOR
+                MarkStartup("character-registered");
+#endif
             }
             catch
             {

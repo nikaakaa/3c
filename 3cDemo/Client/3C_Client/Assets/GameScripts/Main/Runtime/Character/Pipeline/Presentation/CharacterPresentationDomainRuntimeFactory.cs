@@ -20,6 +20,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public static class CharacterPresentationDomainRuntimeFactory
     {
         static ulong m_NextRequestId = 1;
+#if UNITY_EDITOR
+        public static event Action<string, string, long> StartupMilestone;
+
+        static void MarkStartup(ActorId actorId, string phase)
+        {
+            var listener = StartupMilestone;
+            if (listener != null)
+                listener(actorId.Value, phase, System.Diagnostics.Stopwatch.GetTimestamp());
+        }
+#endif
 
         public static ICharacterPresentationDomainRuntime Create(
             int tickRate,
@@ -110,6 +120,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     diagnostics,
                     initializeExternalState)
                 : null;
+#if UNITY_EDITOR
+            MarkStartup(actorId, "presentation-camera-created");
+#endif
             bool hasEquipmentProfile = equipmentPresentationProfile;
             bool hasEquipmentCatalog = equipmentRigBindings;
             if (hasEquipmentProfile != hasEquipmentCatalog)
@@ -149,6 +162,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 camera,
                 presentationClockCoordinator,
                 diagnostics);
+#if UNITY_EDITOR
+            MarkStartup(actorId, "presentation-body-created");
+#endif
             try
             {
                 if (poseResources)
@@ -179,6 +195,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             : node.AnimationChannelId.IsValid
                                 ? presentationClockCoordinator.CreatePolicy()
                                 : FreeRunPresentationClockPolicy.Shared);
+#if UNITY_EDITOR
+                    MarkStartup(actorId, "pose-service-factory-created");
+#endif
                     var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(
                         NextRequestId(),
                         actorId,
@@ -194,6 +213,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         "presentation-domain-create",
                         serviceFactory,
                         out CharacterPoseNativeDomainSession session);
+#if UNITY_EDITOR
+                    MarkStartup(actorId, "pose-domain-created");
+#endif
                     if (!createResult.IsAdopted)
                         throw new InvalidOperationException(
                             $"Pose Native Domain creation failed: {createResult.FailureCode} {createResult.Source} {createResult.Message}");
@@ -202,6 +224,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 if (characterTimelineHost != null)
                     runtime.InitializeTimelineHost(characterTimelineHost, sessionHost.TimelineNumericTarget, sessionHost.TickRate);
+#if UNITY_EDITOR
+                MarkStartup(actorId, "presentation-timeline-initialized");
+#endif
                 return runtime;
             }
             catch

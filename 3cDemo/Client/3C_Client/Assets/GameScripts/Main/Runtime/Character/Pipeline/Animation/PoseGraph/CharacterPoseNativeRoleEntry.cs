@@ -84,6 +84,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     rig,
                     inputContract,
                     resourceRevision);
+#if UNITY_EDITOR
+            CharacterPoseNativeDomainRuntimeFactory.MarkStartup(actorId, "pose-graph-prepared");
+#endif
             CharacterPoseNativeRoleDependencies dependencies = null;
             if (!preparation.IsReady)
             {
@@ -108,6 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationProperties,
                 playerNodeIds,
                 contributionCapacity);
+#if UNITY_EDITOR
+            CharacterPoseNativeDomainRuntimeFactory.MarkStartup(actorId, "pose-role-dependencies-created");
+#endif
             CharacterPoseNativeAdoptedResult adopted =
                 CharacterPoseNativeRoleRuntime.Create(
                     in preparation,
@@ -117,6 +123,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     reason,
                     dependencies,
                     out CharacterPoseNativeRoleRuntime role);
+#if UNITY_EDITOR
+            CharacterPoseNativeDomainRuntimeFactory.MarkStartup(actorId, "pose-role-runtime-created");
+#endif
             if (!adopted.IsAdopted)
             {
                 dependencies.Dispose();

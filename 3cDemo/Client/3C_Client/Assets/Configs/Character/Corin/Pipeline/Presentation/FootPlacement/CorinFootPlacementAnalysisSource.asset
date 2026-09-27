@@ -91,7 +91,7 @@ MonoBehaviour:
     m_LeftLandingPhases: []
     m_RightLandingPhases: []
   - m_TargetClipAssetGuid: 4cfdcca827720544e9b01db0507ad2bf
-    m_MotionReferenceClipAssetGuid: 9fac4f2e5d088f140ba7a991c1a1b088
+    m_MotionReferenceClipAssetGuid: b376aaad61175d141b11255a9b9b3625
     m_HasAuthoredContactSchedule: 0
     m_ContactMotionPolicy: 0
     m_LeftLandingPhases: []

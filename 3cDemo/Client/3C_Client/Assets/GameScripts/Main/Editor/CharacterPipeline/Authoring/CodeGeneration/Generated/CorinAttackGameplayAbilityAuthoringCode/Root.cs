@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.stateEdge17 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state5, (BtsmtlSkillNativeState)state2, "bc2aff7f-a50a-400d-96c1-569f8c5a975b");
             parts.stateEdge22 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, (BtsmtlSkillNativeState)parts.state8, "21425917-50fa-5f8f-805a-fc9c4158e640");
             parts.stateEdge18 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, (BtsmtlSkillNativeState)state2, "7a855bee-07c4-45e9-96ad-a4febc847046");
-            parts.stateEdge19 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, (BtsmtlSkillNativeState)state2, "8e50ef17-01e6-4707-9d83-4834a41f79ef");
+            parts.stateEdge19 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, parts.state8, "8e50ef17-01e6-4707-9d83-4834a41f79ef");
             parts.stateEdge21 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, (BtsmtlSkillNativeState)parts.state7, "91e43c90-53c4-5279-9636-0d1d920e85bd");
             parts.stateEdge20 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state6, (BtsmtlSkillNativeState)state2, "db010573-67c3-4700-989f-12f0ba9ca6af");
             parts.stateEdge23 = BtsmtlSkillAuthoringCode.EnsureNativeConnection(parts.stateMachine, (BtsmtlSkillNativeState)parts.state7, (BtsmtlSkillNativeState)state2, "925adf64-da6c-53d4-adf9-164269ee4e5f");

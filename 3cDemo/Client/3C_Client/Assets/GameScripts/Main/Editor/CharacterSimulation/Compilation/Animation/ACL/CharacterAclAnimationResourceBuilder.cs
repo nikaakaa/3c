@@ -56,19 +56,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
                     $"[ACL] Read/sample clip {i + 1}/{requests.Count}: " +
                     $"{request.AuthoringRequest.ClipIdentity.AssetPath}");
                 sources[i] = CharacterAnimationAuthoringReader.Read(request.AuthoringRequest);
-                CharacterAnimationSampleGrid grid = CharacterAnimationSampleGrid.Create(
-                    sources[i].DurationSeconds,
-                    settings.SampleRate,
-                    sources[i].Looping);
-                samples[i] = CharacterAnimationSourceSampler.Sample(sources[i], grid);
-                samplingQuality[i] = CharacterAnimationSamplingQualityEvaluator.Evaluate(
+                samples[i] = CharacterAnimationSourceSampler.SampleToPrecision(
                     sources[i],
-                    samples[i],
+                    settings.SampleRate,
                     new CharacterAnimationSamplingQualitySettings(
                         settings.TransformPrecision,
                         settings.ScalePrecision,
                         settings.RotationPrecisionDegrees,
-                        settings.ScalarPrecision));
+                        settings.ScalarPrecision - settings.NativeScalarPrecision),
+                    out samplingQuality[i]);
+                if (!samplingQuality[i].Report.publishable)
+                    throw new InvalidOperationException(
+                        $"Animation source sampling failed for '{sources[i].ClipIdentity.AssetPath}': " +
+                        string.Join(" | ", samplingQuality[i].Report.errors));
                 if (i > 0 &&
                     (sources[i].SourceRig.RigId != sources[0].SourceRig.RigId ||
                      sources[i].SourceRig.RigRevision != sources[0].SourceRig.RigRevision ||

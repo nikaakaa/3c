@@ -7,6 +7,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
 {
     internal static class CharacterAnimationSourceSampler
     {
+        internal static CharacterAnimationSampleSet SampleToPrecision(
+            CharacterAnimationAuthoringSource source,
+            float requestedSampleRate,
+            CharacterAnimationSamplingQualitySettings settings,
+            out CharacterAnimationSamplingQualityEvaluation quality)
+        {
+            for (int refinement = 0; ; refinement++)
+            {
+                CharacterAnimationSampleGrid grid = CharacterAnimationSampleGrid.Create(
+                    source.DurationSeconds, requestedSampleRate, source.Looping);
+                CharacterAnimationSampleSet samples = Sample(source, grid);
+                quality = CharacterAnimationSamplingQualityEvaluator.Evaluate(source, samples, settings);
+                if (quality.Report.publishable || refinement == 3)
+                    return samples;
+                requestedSampleRate *= 2f;
+            }
+        }
+
         internal static CharacterAnimationSampleSet Sample(
             CharacterAnimationAuthoringSource source,
             CharacterAnimationSampleGrid grid)

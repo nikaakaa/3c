@@ -836,28 +836,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pool.AcquireWritable(committed);
             CharacterFootCurrentSupportQuerySettings settings =
                 m_Settings.CurrentSupportQuery;
-            var heelRequest = new CharacterFootCurrentSupportProbeRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.Heel,
-                foot.HeelPosition,
-                componentUp,
-                settings.CastAbove,
-                settings.CastBelow,
-                m_Settings.LandingPrediction.SphereRadius,
-                settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot,
-                settings.HitCapacity);
-            var toeRequest = new CharacterFootCurrentSupportProbeRequest(
-                side,
-                CharacterFootCurrentSupportProbeKind.Toe,
-                foot.ToePosition,
-                componentUp,
-                settings.CastAbove,
-                settings.CastBelow,
-                m_Settings.LandingPrediction.SphereRadius,
-                settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot,
-                settings.HitCapacity);
+            CharacterFootCurrentSupportProbeRequest heelRequest =
+                CharacterFootCurrentSupportProbeRequest.Create(
+                    side,
+                    CharacterFootCurrentSupportProbeKind.Heel,
+                    foot.HeelPosition,
+                    componentUp,
+                    in settings,
+                    m_Settings.LandingPrediction);
+            CharacterFootCurrentSupportProbeRequest toeRequest =
+                CharacterFootCurrentSupportProbeRequest.Create(
+                    side,
+                    CharacterFootCurrentSupportProbeKind.Toe,
+                    foot.ToePosition,
+                    componentUp,
+                    in settings,
+                    m_Settings.LandingPrediction);
             CharacterFootCurrentSupportObservation observation;
             if (!grounded)
             {

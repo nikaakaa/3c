@@ -112,11 +112,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingQuerySelectionDiagnostics(
             CharacterFootLandingQueryCandidateSelectionState state,
             int validCandidateCount,
-            CharacterFootLandingQueryCandidateDiagnostics selected)
+            CharacterFootLandingQueryCandidateDiagnostics selected,
+            CharacterFootSupportQueryDiagnostics coverage)
         {
             State = state;
             ValidCandidateCount = validCandidateCount;
             Selected = selected;
+            Coverage = coverage;
         }
 
         [DiagnosticField]
@@ -126,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("landing-observation")]
         public int ValidCandidateCount { get; }
         public CharacterFootLandingQueryCandidateDiagnostics Selected { get; }
+        public CharacterFootSupportQueryDiagnostics Coverage { get; }
     }
 
     internal readonly struct CharacterFootLandingQueryResult

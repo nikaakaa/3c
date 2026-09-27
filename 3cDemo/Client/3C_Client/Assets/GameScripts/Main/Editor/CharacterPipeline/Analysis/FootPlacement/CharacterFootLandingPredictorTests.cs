@@ -694,7 +694,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var selection = new CharacterFootLandingQuerySelectionDiagnostics(
                     CharacterFootLandingQueryCandidateSelectionState.Selected,
                     1,
-                    selected);
+                    selected,
+                    default);
                 return new CharacterFootLandingQueryResult(
                     CharacterFootLandingQueryRejectReason.None,
                     support,

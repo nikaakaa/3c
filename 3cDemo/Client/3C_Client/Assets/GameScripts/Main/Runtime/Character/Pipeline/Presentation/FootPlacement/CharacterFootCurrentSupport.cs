@@ -72,6 +72,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HitCapacity = hitCapacity;
         }
 
+        internal static CharacterFootCurrentSupportProbeRequest Create(
+            CharacterFootSide side,
+            CharacterFootCurrentSupportProbeKind kind,
+            Vector3 probePosition,
+            Vector3 componentUp,
+            in CharacterFootCurrentSupportQuerySettings support,
+            in CharacterFootLandingPredictionSettings landing) =>
+            new CharacterFootCurrentSupportProbeRequest(
+                side, kind, probePosition, componentUp,
+                support.CastAbove, support.CastBelow, landing.SphereRadius,
+                support.GroundLayerMask, support.MinimumGroundNormalDot,
+                support.HitCapacity);
+
         internal CharacterFootSide Side { get; }
         internal CharacterFootCurrentSupportProbeKind Kind { get; }
         internal Vector3 ProbePosition { get; }
@@ -87,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 Origin => ProbePosition + ComponentUp.normalized * CastAbove;
         internal Vector3 Direction => -ComponentUp.normalized;
         internal float MaximumDistance => CastAbove + CastBelow;
+        internal float SupportMaximumDistance => MaximumDistance + Radius;
         internal bool IsValid =>
             (Side == CharacterFootSide.Left || Side == CharacterFootSide.Right) &&
             (Kind == CharacterFootCurrentSupportProbeKind.Heel ||
@@ -113,6 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportProbeState state,
             CharacterFootCurrentSupportProbeRejectReason rejectReason,
             int candidateCount,
+            CharacterFootSupportQueryDiagnostics coverage,
             int surfaceIdentity,
             Vector3 point,
             Vector3 normal,
@@ -124,6 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             State = state;
             RejectReason = rejectReason;
             CandidateCount = candidateCount;
+            Coverage = coverage;
             SurfaceIdentity = surfaceIdentity;
             Point = point;
             Normal = normal;
@@ -136,6 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCurrentSupportProbeState State { get; }
         internal CharacterFootCurrentSupportProbeRejectReason RejectReason { get; }
         internal int CandidateCount { get; }
+        internal CharacterFootSupportQueryDiagnostics Coverage { get; }
         internal int SurfaceIdentity { get; }
         internal Vector3 Point { get; }
         internal Vector3 Normal { get; }
@@ -151,12 +168,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportProbeKind kind,
             CharacterFootCurrentSupportProbeRejectReason reason,
             ulong worldRevision,
-            bool sphereCastExecuted) =>
+            bool sphereCastExecuted,
+            CharacterFootSupportQueryDiagnostics coverage) =>
             new CharacterFootCurrentSupportProbeResult(
                 kind,
                 CharacterFootCurrentSupportProbeState.Rejected,
                 reason,
                 0,
+                coverage,
                 0,
                 default,
                 default,
@@ -173,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootCurrentSupportProbeState.NotExecuted,
                 reason,
                 0,
+                default,
                 0,
                 default,
                 default,
@@ -713,11 +733,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Origin = request.Origin;
             Direction = request.Direction;
             MaximumDistance = request.MaximumDistance;
+            SupportMaximumDistance = request.SupportMaximumDistance;
             Radius = request.Radius;
             LayerMask = request.LayerMask;
             MinimumGroundNormalDot = request.MinimumGroundNormalDot;
             HitCapacity = request.HitCapacity;
             CandidateCount = result.CandidateCount;
+            Coverage = result.Coverage;
             SurfaceIdentity = result.SurfaceIdentity;
             Point = result.Point;
             Normal = result.Normal;
@@ -765,6 +787,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         [DiagnosticField]
         [DiagnosticGroup("current-support-probe")]
+        public float SupportMaximumDistance { get; }
+
+        [DiagnosticField]
+        [DiagnosticGroup("current-support-probe")]
         public float Radius { get; }
 
         [DiagnosticField]
@@ -782,6 +808,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("current-support-probe")]
         public int CandidateCount { get; }
+
+        public CharacterFootSupportQueryDiagnostics Coverage { get; }
 
         [DiagnosticField]
         [DiagnosticGroup("current-support-probe")]

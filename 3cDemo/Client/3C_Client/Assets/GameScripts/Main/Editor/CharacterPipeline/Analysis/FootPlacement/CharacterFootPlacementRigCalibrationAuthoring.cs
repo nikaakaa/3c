@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RigMapping = 0,
             SoleCalibration = 1,
-            CurrentSupportFootprint = 2
+            SupportQuery = 2
         }
 
         enum RigSemanticSlot : byte
@@ -40,14 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ToeContact = 1
         }
 
-        enum CurrentSupportFootprintEditMode : byte
-        {
-            Base = 0,
-            Heel = 1,
-            PositiveLateral = 2,
-            NegativeLateral = 3,
-            ToeTip = 4
-        }
+
 
         static CharacterFootPlacementAnalysisSource s_Source;
         static CharacterFootPlacementPoseRig s_Rig;
@@ -60,18 +53,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_CurrentSupportFootprint;
         static CharacterFootSide s_Side = CharacterFootSide.Left;
         static CalibrationEditMode s_EditMode;
-        static CurrentSupportFootprintEditMode s_CurrentSupportFootprintEditMode;
+        static CharacterFootPlacementProfile s_QueryProfile;
         static CharacterFootPlacementRigGeometryReport s_Report;
         static string s_Error = string.Empty;
         static readonly Dictionary<int, string> s_LastValidation = new Dictionary<int, string>();
-        static readonly Vector2[] s_QueryLabelOffsets =
-        {
-            new Vector2(-0.1f, 0.11f),
-            new Vector2(-0.12f, -0.09f),
-            new Vector2(0.09f, 0.13f),
-            new Vector2(0.1f, -0.12f),
-            new Vector2(0.05f, 0.09f)
-        };
+
         static bool s_PreviousToolsHidden;
         static bool s_HasToolsHiddenState;
         static AnimationModeDriver s_AnimationModeDriver;
@@ -154,7 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Sampling Rig Authoring", EditorStyles.boldLabel);
             s_Page = (AuthoringPage)GUILayout.Toolbar(
                 (int)s_Page,
-                new[] { "Rig Mapping", "Sole Calibration", "Support Query Bases" });
+                new[] { "Rig Mapping", "Sole Calibration", "Support Query" });
             using (new EditorGUI.DisabledScope(true))
             {
                 EditorGUILayout.ObjectField(
@@ -178,123 +164,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DrawCalibrationPage();
                 return;
             }
-            DrawCurrentSupportFootprintPage();
+            DrawSupportQueryPage();
         }
 
-        static void DrawCurrentSupportFootprintPage()
+        static void DrawSupportQueryPage()
         {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Toggle(
-                        s_Side == CharacterFootSide.Left,
-                        "Left Foot",
-                        EditorStyles.miniButtonLeft))
-                {
-                    s_Side = CharacterFootSide.Left;
-                }
-                if (GUILayout.Toggle(
-                        s_Side == CharacterFootSide.Right,
-                        "Right Foot",
-                        EditorStyles.miniButtonRight))
-                {
-                    s_Side = CharacterFootSide.Right;
-                }
-            }
-            s_CurrentSupportFootprintEditMode =
-                (CurrentSupportFootprintEditMode)GUILayout.Toolbar(
-                    (int)s_CurrentSupportFootprintEditMode,
-                    new[] { "P1 Rear", "P2 Rear Lower", "P3 Rear +R", "P4 Rear -R", "P5 Toe" });
-            if (GUILayout.Button("Frame Active Query Base"))
-                FrameActiveCurrentSupportPoint();
-
+            s_Side = (CharacterFootSide)EditorGUILayout.EnumPopup("Foot", s_Side);
             EditorGUI.BeginChangeCheck();
-            Vector3 baseOffset = EditorGUILayout.Vector3Field(
-                "P1 Rear · Foot Local",
-                s_CurrentSupportFootprint.BaseFootLocalOffset);
-            Vector3 heelOffset = EditorGUILayout.Vector3Field(
-                "P2 Rear Lower · Foot Local",
-                s_CurrentSupportFootprint.HeelFootLocalOffset);
-            Vector3 positiveLateralOffset = EditorGUILayout.Vector3Field(
-                "P3 Rear +Right · Foot Local",
-                s_CurrentSupportFootprint.PositiveLateralFootLocalOffset);
-            Vector3 negativeLateralOffset = EditorGUILayout.Vector3Field(
-                "P4 Rear -Right · Foot Local",
-                s_CurrentSupportFootprint.NegativeLateralFootLocalOffset);
-            Vector3 toeTipOffset = EditorGUILayout.Vector3Field(
-                "P5 Toe Tip · Foot Axes",
-                s_CurrentSupportFootprint.ToeTipOffsetInFootAxes);
+            s_QueryProfile = (CharacterFootPlacementProfile)EditorGUILayout.ObjectField(
+                "Foot Placement Profile", s_QueryProfile,
+                typeof(CharacterFootPlacementProfile), false);
             if (EditorGUI.EndChangeCheck())
-            {
-                s_CurrentSupportFootprint =
-                    new CharacterFootPlacementCurrentSupportFootprintCalibration(
-                        baseOffset,
-                        heelOffset,
-                        positiveLateralOffset,
-                        negativeLateralOffset,
-                        toeTipOffset);
-                EvaluateDraft();
                 SceneView.RepaintAll();
-            }
-
-            DrawCurrentSupportCoordinateAudit();
             EditorGUILayout.HelpBox(
-                "P1-P5 are bone-relative Ray query bases, not ground contacts. Corin Foot local +X is sole-up, +Y is forward and +Z is right. P1 is the rear base, P2 lowers it along -X, P3/P4 offset it along +/-Z, P5 advances from the Toe pivot along +Y, and conditional P6 is the Foot pivot. The Profile raises each actual Ray origin before casting down to a surface hit.",
-                MessageType.None);
-            if (!string.IsNullOrEmpty(s_Error))
-                EditorGUILayout.HelpBox(s_Error, MessageType.Error);
-            else if (s_Report != null)
-                DrawDraftDiagnostics();
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Discard Unapplied Changes"))
-                    LoadDraft();
-                using (new EditorGUI.DisabledScope(s_Report == null || !s_Report.IsValid))
-                {
-                    if (GUILayout.Button("Apply Calibration Asset"))
-                        Apply();
-                }
-            }
-        }
-
-        static void DrawCurrentSupportCoordinateAudit()
-        {
-            Transform foot = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftAnkle
-                : s_Rig.RightAnkle;
-            Transform toe = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftToe
-                : s_Rig.RightToe;
-            CharacterFootPlacementFootCalibration sole =
-                s_Side == CharacterFootSide.Left ? s_Left : s_Right;
-            CharacterFootPlacementCurrentSupportFootprintPose footprint =
-                s_CurrentSupportFootprint.Resolve(
-                    foot.position,
-                    foot.rotation,
-                    toe.position);
-            Vector3 toePivot = foot.InverseTransformPoint(toe.position);
-            Vector3 soleHeel = sole.HeelContactLocalOffset;
-            Vector3 soleToe = foot.InverseTransformPoint(
-                toe.TransformPoint(sole.ToeContactLocalOffset));
-            Vector3 p5 = foot.InverseTransformPoint(footprint.ToeTipPoint);
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Resolved Foot Coordinate Audit", EditorStyles.boldLabel);
+                "The Heel and Toe points from Sole Calibration define the support probes. " +
+                "Spheres collect nearby colliders; the green line confirms a supporting face " +
+                "directly below each calibrated point. Select the profile used by your Pose Graph.",
+                MessageType.Info);
+            if (!s_QueryProfile)
+                return;
+            CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
+            CharacterFootLandingPredictionSettings landing = s_QueryProfile.LandingPrediction.Build();
             using (new EditorGUI.DisabledScope(true))
             {
-                EditorGUILayout.Vector3Field("Foot → Toe Pivot · Foot Local", toePivot);
-                EditorGUILayout.Vector3Field("Sole Heel · Foot Local", soleHeel);
-                EditorGUILayout.Vector3Field("Sole Toe · Foot Local", soleToe);
-                EditorGUILayout.Vector3Field("Resolved P5 · Foot Local", p5);
-                EditorGUILayout.FloatField(
-                    "P1 ↔ P5 Span · Metres",
-                    Vector3.Distance(footprint.BasePoint, footprint.ToeTipPoint));
-                EditorGUILayout.FloatField(
-                    "P3 ↔ P4 Span · Metres",
-                    Vector3.Distance(
-                        footprint.PositiveLateralPoint,
-                        footprint.NegativeLateralPoint));
+                EditorGUILayout.FloatField("Candidate Search Radius", landing.SphereRadius);
+                EditorGUILayout.FloatField("Cast Above", support.CastAbove);
+                EditorGUILayout.FloatField("Cast Below", support.CastBelow);
+                EditorGUILayout.FloatField("Maximum Surface Slope", support.MaximumSurfaceSlopeDegrees);
+            }
+            if (GUILayout.Button("Frame Support Probes"))
+            {
+                Transform ankle = s_Side == CharacterFootSide.Left ? s_Rig.LeftAnkle : s_Rig.RightAnkle;
+                SceneView.lastActiveSceneView?.Frame(new Bounds(ankle.position, Vector3.one), false);
             }
         }
+
+
 
         static void DrawCalibrationPage()
         {
@@ -816,9 +721,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DrawRigMappingScene();
                 return;
             }
-            if (s_Page == AuthoringPage.CurrentSupportFootprint)
+            if (s_Page == AuthoringPage.SupportQuery)
             {
-                DrawCurrentSupportFootprintScene();
+                DrawSupportQueryScene();
                 return;
             }
             CharacterFootPlacementFootCalibration draft = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
@@ -920,159 +825,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SceneView.lastActiveSceneView.LookAt(position, SceneView.lastActiveSceneView.rotation, Mathf.Max(0.25f, legLength * 0.65f));
         }
 
-        static void DrawCurrentSupportFootprintScene()
+        static void DrawSupportQueryScene()
         {
-            Transform foot = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftAnkle
-                : s_Rig.RightAnkle;
-            Transform toe = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftToe
-                : s_Rig.RightToe;
-            CharacterFootPlacementCurrentSupportFootprintPose footprint =
-                s_CurrentSupportFootprint.Resolve(
-                    foot.position,
-                    foot.rotation,
-                    toe.position);
-            Vector3[] points =
-            {
-                footprint.BasePoint,
-                footprint.HeelPoint,
-                footprint.PositiveLateralPoint,
-                footprint.NegativeLateralPoint,
-                footprint.ToeTipPoint
-            };
-            Color color = s_Side == CharacterFootSide.Left
-                ? new Color(0.2f, 0.75f, 1f)
-                : new Color(1f, 0.55f, 0.2f);
-            Handles.color = color;
-            Handles.DrawAAPolyLine(
-                3f,
-                footprint.HeelPoint,
-                footprint.BasePoint,
-                footprint.ToeTipPoint);
-            Handles.DrawAAPolyLine(
-                3f,
-                footprint.NegativeLateralPoint,
-                footprint.BasePoint,
-                footprint.PositiveLateralPoint);
-            for (int i = 0; i < points.Length; i++)
-            {
-                bool active = i == (int)s_CurrentSupportFootprintEditMode;
-                DrawContact(points[i], active, color);
-                DrawQueryBaseLabel(points[i], $"P{i + 1}", s_QueryLabelOffsets[i], color);
-            }
-            DrawContact(footprint.FootPivot, false, Color.gray);
-            DrawQueryBaseLabel(
-                footprint.FootPivot,
-                "P6 Foot Pivot",
-                new Vector2(0.15f, 0.03f),
-                Color.gray);
-            CharacterFootPlacementFootCalibration sole =
-                s_Side == CharacterFootSide.Left ? s_Left : s_Right;
-            Vector3 soleHeel = foot.TransformPoint(sole.HeelContactLocalOffset);
-            Vector3 soleToe = toe.TransformPoint(sole.ToeContactLocalOffset);
-            DrawContact(soleHeel, false, Color.yellow);
-            DrawContact(soleToe, false, Color.yellow);
-            Handles.Label(soleHeel, "Sole Heel Contact");
-            Handles.Label(soleToe, "Sole Toe Contact");
-
-            int activeIndex = (int)s_CurrentSupportFootprintEditMode;
-            EditorGUI.BeginChangeCheck();
-            Vector3 next = Handles.PositionHandle(points[activeIndex], Quaternion.identity);
-            if (!EditorGUI.EndChangeCheck())
+            if (!s_QueryProfile)
                 return;
-            Vector3 baseOffset = s_CurrentSupportFootprint.BaseFootLocalOffset;
-            Vector3 heelOffset = s_CurrentSupportFootprint.HeelFootLocalOffset;
-            Vector3 positiveLateralOffset =
-                s_CurrentSupportFootprint.PositiveLateralFootLocalOffset;
-            Vector3 negativeLateralOffset =
-                s_CurrentSupportFootprint.NegativeLateralFootLocalOffset;
-            Vector3 toeTipOffset = s_CurrentSupportFootprint.ToeTipOffsetInFootAxes;
-            switch (s_CurrentSupportFootprintEditMode)
-            {
-                case CurrentSupportFootprintEditMode.Base:
-                    baseOffset = foot.InverseTransformPoint(next);
-                    break;
-                case CurrentSupportFootprintEditMode.Heel:
-                    heelOffset = foot.InverseTransformPoint(next);
-                    break;
-                case CurrentSupportFootprintEditMode.PositiveLateral:
-                    positiveLateralOffset = foot.InverseTransformPoint(next);
-                    break;
-                case CurrentSupportFootprintEditMode.NegativeLateral:
-                    negativeLateralOffset = foot.InverseTransformPoint(next);
-                    break;
-                case CurrentSupportFootprintEditMode.ToeTip:
-                    toeTipOffset = Quaternion.Inverse(foot.rotation) *
-                                   (next - toe.position);
-                    break;
-            }
-            s_CurrentSupportFootprint =
-                new CharacterFootPlacementCurrentSupportFootprintCalibration(
-                    baseOffset,
-                    heelOffset,
-                    positiveLateralOffset,
-                    negativeLateralOffset,
-                    toeTipOffset);
-            EvaluateDraft();
-            SceneView.RepaintAll();
+            Transform ankle = s_Side == CharacterFootSide.Left ? s_Rig.LeftAnkle : s_Rig.RightAnkle;
+            Transform toe = s_Side == CharacterFootSide.Left ? s_Rig.LeftToe : s_Rig.RightToe;
+            CharacterFootPlacementFootCalibration foot = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
+            CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
+            CharacterFootLandingPredictionSettings landing = s_QueryProfile.LandingPrediction.Build();
+            CharacterFootCurrentSupportProbeRequest heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
+                s_Side, CharacterFootCurrentSupportProbeKind.Heel,
+                ankle.TransformPoint(foot.HeelContactLocalOffset), s_Rig.PoseRoot.up,
+                in support, in landing);
+            CharacterFootCurrentSupportProbeRequest toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
+                s_Side, CharacterFootCurrentSupportProbeKind.Toe,
+                toe.TransformPoint(foot.ToeContactLocalOffset), s_Rig.PoseRoot.up,
+                in support, in landing);
+            DrawSupportProbe(in heelRequest, "Heel");
+            DrawSupportProbe(in toeRequest, "Toe");
         }
 
-        static void DrawQueryBaseLabel(
-            Vector3 point,
-            string label,
-            Vector2 offset,
-            Color color)
+        static void DrawSupportProbe(in CharacterFootCurrentSupportProbeRequest request, string label)
         {
-            SceneView sceneView = SceneView.currentDrawingSceneView ?? SceneView.lastActiveSceneView;
-            Camera camera = sceneView ? sceneView.camera : null;
-            if (!camera)
-            {
-                Handles.Label(point, label);
-                return;
-            }
-            float size = HandleUtility.GetHandleSize(point);
-            Vector3 anchor = point +
-                             camera.transform.right * (offset.x * size) +
-                             camera.transform.up * (offset.y * size);
-            Handles.color = new Color(color.r, color.g, color.b, 0.65f);
-            Handles.DrawDottedLine(point, anchor, 2f);
-            Handles.Label(anchor, label);
+            Vector3 up = request.ComponentUp.normalized;
+            Vector3 side = Vector3.Cross(up, Vector3.forward);
+            if (side.sqrMagnitude < 0.0001f)
+                side = Vector3.Cross(up, Vector3.right);
+            side = side.normalized * request.Radius;
+            Vector3 origin = request.Origin;
+            Vector3 end = origin + request.Direction * request.MaximumDistance;
+            Handles.color = new Color(1f, 0.65f, 0.15f, 0.7f);
+            Handles.DrawWireDisc(origin, up, request.Radius);
+            Handles.DrawWireDisc(end, up, request.Radius);
+            Handles.DrawWireDisc(origin, side.normalized, request.Radius);
+            Handles.DrawWireDisc(end, side.normalized, request.Radius);
+            Handles.DrawLine(origin + side, end + side);
+            Handles.DrawLine(origin - side, end - side);
+            Handles.color = Color.green;
+            Handles.DrawLine(origin, origin + request.Direction * request.SupportMaximumDistance);
+            DrawContact(request.ProbePosition, false, Color.green);
+            Handles.Label(request.ProbePosition, label + " Support Point");
         }
 
-        static void FrameActiveCurrentSupportPoint()
-        {
-            if (s_Rig == null || SceneView.lastActiveSceneView == null)
-                return;
-            Transform foot = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftAnkle
-                : s_Rig.RightAnkle;
-            Transform toe = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftToe
-                : s_Rig.RightToe;
-            CharacterFootPlacementCurrentSupportFootprintPose footprint =
-                s_CurrentSupportFootprint.Resolve(
-                    foot.position,
-                    foot.rotation,
-                    toe.position);
-            Vector3 point = s_CurrentSupportFootprintEditMode switch
-            {
-                CurrentSupportFootprintEditMode.Base => footprint.BasePoint,
-                CurrentSupportFootprintEditMode.Heel => footprint.HeelPoint,
-                CurrentSupportFootprintEditMode.PositiveLateral =>
-                    footprint.PositiveLateralPoint,
-                CurrentSupportFootprintEditMode.NegativeLateral =>
-                    footprint.NegativeLateralPoint,
-                _ => footprint.ToeTipPoint
-            };
-            float legLength = s_Side == CharacterFootSide.Left
-                ? s_Rig.LeftLegLength
-                : s_Rig.RightLegLength;
-            SceneView.lastActiveSceneView.LookAt(
-                point,
-                SceneView.lastActiveSceneView.rotation,
-                Mathf.Max(0.25f, legLength * 0.65f));
-        }
+
+
+
 
         static CharacterFootPlacementFootCalibration DeriveSoleFrame(
             CharacterFootPlacementFootCalibration source,
@@ -1303,6 +1101,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Tools.hidden = s_PreviousToolsHidden;
                 s_HasToolsHiddenState = false;
             }
+            s_QueryProfile = null;
             s_Source = null;
             s_Rig = null;
             s_RigBinding = null;
@@ -1327,23 +1126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.TextField("Calibration Id", calibration.CalibrationId.Value);
                 EditorGUILayout.IntField("Schema Version", calibration.SchemaVersion);
                 EditorGUILayout.TextField("Content Revision", calibration.ContentRevision);
-                CharacterFootPlacementCurrentSupportFootprintCalibration footprint =
-                    calibration.CurrentSupportFootprint;
-                EditorGUILayout.Vector3Field(
-                    "Query P1 Base · Foot Local",
-                    footprint.BaseFootLocalOffset);
-                EditorGUILayout.Vector3Field(
-                    "Query P2 Heel · Foot Local",
-                    footprint.HeelFootLocalOffset);
-                EditorGUILayout.Vector3Field(
-                    "Query P3 +Lateral · Foot Local",
-                    footprint.PositiveLateralFootLocalOffset);
-                EditorGUILayout.Vector3Field(
-                    "Query P4 -Lateral · Foot Local",
-                    footprint.NegativeLateralFootLocalOffset);
-                EditorGUILayout.Vector3Field(
-                    "Query P5 Toe Tip · Foot Axes",
-                    footprint.ToeTipOffsetInFootAxes);
+
             }
             CharacterFootPlacementRigGeometryValidationIdentity geometry = calibration.GeometryValidation;
             if (geometry == null)

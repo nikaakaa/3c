@@ -60,6 +60,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MaximumDistance { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
+        public float SupportMaximumDistance => MaximumDistance + Radius;
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public float Radius { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
@@ -67,6 +70,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
         public float MinimumGroundNormalDot { get; }
+    }
+
+    public readonly struct CharacterFootSupportQueryDiagnostics
+    {
+        internal CharacterFootSupportQueryDiagnostics(
+            int searchHitCount,
+            int supportHitCount,
+            int outsideSupportRayCount,
+            int steepSurfaceCount)
+        {
+            SearchHitCount = searchHitCount;
+            SupportHitCount = supportHitCount;
+            OutsideSupportRayCount = outsideSupportRayCount;
+            SteepSurfaceCount = steepSurfaceCount;
+        }
+
+        [DiagnosticField]
+        [DiagnosticGroup("support-query")]
+        public int SearchHitCount { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("support-query")]
+        public int SupportHitCount { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("support-query")]
+        public int OutsideSupportRayCount { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("support-query")]
+        public int SteepSurfaceCount { get; }
     }
 
     internal sealed class CharacterFootPlacementWorldQueryBackend :
@@ -108,7 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementQueryRequest request)
         {
             bool requestValid = IsGroundRequestValid(in request);
-            int count = QueryAll(in request, out bool capacityExceeded);
+            int count = QueryAll(in request, out bool capacityExceeded,
+                out CharacterFootSupportQueryDiagnostics coverage);
             if (capacityExceeded)
             {
                 return new CharacterFootLandingQueryResult(
@@ -118,7 +150,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterFootLandingQueryCandidateSelectionState
                             .CapacityExceeded,
                         0,
-                        default));
+                        default,
+                        coverage));
             }
             if (count <= 0)
             {
@@ -134,7 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             : CharacterFootLandingQueryCandidateSelectionState
                                 .InvalidRequest,
                         0,
-                        default));
+                        default,
+                        coverage));
             }
             RaycastHit hit = m_LandingHits[0];
             CharacterFootLandingQueryCandidateDiagnostics selected =
@@ -149,14 +183,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new CharacterFootLandingQuerySelectionDiagnostics(
                     CharacterFootLandingQueryCandidateSelectionState.Selected,
                     count,
-                    selected));
+                    selected,
+                    coverage));
         }
 
         internal int QueryAll(
             in CharacterFootPlacementQueryRequest request,
-            out bool capacityExceeded)
+            out bool capacityExceeded,
+            out CharacterFootSupportQueryDiagnostics coverage)
         {
             capacityExceeded = false;
+            coverage = default;
             if (!IsGroundRequestValid(in request))
                 return 0;
             int count = m_PhysicsScene.SphereCast(
@@ -172,38 +209,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 capacityExceeded = true;
                 return 0;
             }
-            Vector3 supportUp = -request.Direction.normalized;
-            int hitCount = count;
-            int validCount = 0;
-            for (int i = 0; i < hitCount; i++)
-            {
-                RaycastHit candidate = m_LandingHits[i];
-                if (!candidate.collider ||
-                    m_Rig.IsSelfCollider(candidate.collider) ||
-                    IsInitialOverlap(in candidate) ||
-                    !IsFinite(candidate.point) ||
-                    !IsFinite(candidate.normal) ||
-                    candidate.normal.sqrMagnitude <= 0.000001f ||
-                    Vector3.Dot(candidate.normal.normalized, supportUp) < request.MinimumGroundNormalDot ||
-                    !float.IsFinite(candidate.distance) ||
-                    candidate.distance < 0f)
-                {
-                    continue;
-                }
-                m_LandingHits[validCount++] = candidate;
-            }
-            for (int i = 1; i < validCount; i++)
-            {
-                RaycastHit value = m_LandingHits[i];
-                int insertion = i;
-                while (insertion > 0 && CompareLanding(value, m_LandingHits[insertion - 1]) < 0)
-                {
-                    m_LandingHits[insertion] = m_LandingHits[insertion - 1];
-                    insertion--;
-                }
-                m_LandingHits[insertion] = value;
-            }
-            return validCount;
+            return ResolveSupportCandidates(
+                m_LandingHits,
+                count,
+                request.Origin,
+                request.Direction.normalized,
+                request.SupportMaximumDistance,
+                request.MinimumGroundNormalDot,
+                out coverage);
         }
 
         public CharacterFootGroundPathQueryResult Query(
@@ -361,7 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     request.Kind,
                     CharacterFootCurrentSupportProbeRejectReason.InvalidRequest,
                     queryRevision,
-                    false);
+                    false,
+                    default);
             }
             int count = m_PhysicsScene.SphereCast(
                 request.Origin,
@@ -377,50 +391,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     request.Kind,
                     CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded,
                     queryRevision,
-                    true);
+                    true,
+                    default);
             }
-            Vector3 up = request.ComponentUp.normalized;
-            int validCount = 0;
-            for (int i = 0; i < count; i++)
-            {
-                RaycastHit candidate = m_CurrentSupportHits[i];
-                if (!candidate.collider ||
-                    m_Rig.IsSelfCollider(candidate.collider) ||
-                    IsInitialOverlap(in candidate) ||
-                    !IsFinite(candidate.point) ||
-                    !IsFinite(candidate.normal) ||
-                    candidate.normal.sqrMagnitude <= 0.000001f ||
-                    Vector3.Dot(candidate.normal.normalized, up) <
-                    request.MinimumGroundNormalDot ||
-                    !float.IsFinite(candidate.distance) ||
-                    candidate.distance < 0f)
-                {
-                    continue;
-                }
-                m_CurrentSupportHits[validCount++] = candidate;
-            }
-            for (int i = 1; i < validCount; i++)
-            {
-                RaycastHit value = m_CurrentSupportHits[i];
-                int insertion = i;
-                while (insertion > 0 &&
-                       CompareCurrentSupport(
-                           value,
-                           m_CurrentSupportHits[insertion - 1]) < 0)
-                {
-                    m_CurrentSupportHits[insertion] =
-                        m_CurrentSupportHits[insertion - 1];
-                    insertion--;
-                }
-                m_CurrentSupportHits[insertion] = value;
-            }
+            int validCount = ResolveSupportCandidates(
+                m_CurrentSupportHits,
+                count,
+                request.Origin,
+                request.Direction,
+                request.SupportMaximumDistance,
+                request.MinimumGroundNormalDot,
+                out CharacterFootSupportQueryDiagnostics coverage);
             if (validCount == 0)
             {
                 return CharacterFootCurrentSupportProbeResult.Rejected(
                     request.Kind,
                     CharacterFootCurrentSupportProbeRejectReason.NoHit,
                     queryRevision,
-                    true);
+                    true,
+                    coverage);
             }
             RaycastHit selected = m_CurrentSupportHits[0];
             return new CharacterFootCurrentSupportProbeResult(
@@ -428,12 +417,66 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootCurrentSupportProbeState.Accepted,
                 CharacterFootCurrentSupportProbeRejectReason.None,
                 validCount,
+                coverage,
                 selected.collider.GetInstanceID(),
                 selected.point,
                 selected.normal.normalized,
                 selected.distance,
                 queryRevision,
                 true);
+        }
+
+        int ResolveSupportCandidates(
+            RaycastHit[] hits,
+            int count,
+            Vector3 origin,
+            Vector3 direction,
+            float maximumDistance,
+            float minimumGroundNormalDot,
+            out CharacterFootSupportQueryDiagnostics coverage)
+        {
+            var supportRay = new Ray(origin, direction);
+            Vector3 up = -direction;
+            int validCount = 0;
+            int outsideSupportRayCount = 0;
+            int steepSurfaceCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit candidate = hits[i];
+                Collider collider = candidate.collider;
+                if (!collider || m_Rig.IsSelfCollider(collider) ||
+                    IsInitialOverlap(in candidate))
+                    continue;
+                if (!collider.Raycast(supportRay, out RaycastHit support, maximumDistance))
+                {
+                    outsideSupportRayCount++;
+                    continue;
+                }
+                if (!IsFinite(support.point) || !IsFinite(support.normal) ||
+                    support.normal.sqrMagnitude <= 0.000001f ||
+                    !float.IsFinite(support.distance) || support.distance < 0f)
+                    continue;
+                if (Vector3.Dot(support.normal.normalized, up) < minimumGroundNormalDot)
+                {
+                    steepSurfaceCount++;
+                    continue;
+                }
+                hits[validCount++] = support;
+            }
+            for (int i = 1; i < validCount; i++)
+            {
+                RaycastHit value = hits[i];
+                int insertion = i;
+                while (insertion > 0 && CompareCurrentSupport(value, hits[insertion - 1]) < 0)
+                {
+                    hits[insertion] = hits[insertion - 1];
+                    insertion--;
+                }
+                hits[insertion] = value;
+            }
+            coverage = new CharacterFootSupportQueryDiagnostics(
+                count, validCount, outsideSupportRayCount, steepSurfaceCount);
+            return validCount;
         }
 
         static int CompareCurrentSupport(RaycastHit left, RaycastHit right)

@@ -50,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal void InstallPresentationGraph(string graphId) => m_PresentationGraphs.Add("tree:" + graphId);
         readonly Dictionary<string, string> m_CurveRevisions = new(StringComparer.Ordinal);
+        readonly Dictionary<string, string> m_CameraEffectRevisions = new(StringComparer.Ordinal);
         readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Handles = new(StringComparer.Ordinal);
         TimelineRuntimeNumericTarget m_NumericTarget;
 
@@ -71,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             m_NumericTarget = numericTarget;
             m_CurveRevisions.Clear();
+            m_CameraEffectRevisions.Clear();
             m_Handles.Clear();
             foreach (TimelineData timeline in timelines)
             {
@@ -89,6 +91,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         if (track.ExecutionDomain == TimelineExecutionDomain.Presentation && track.Clips[clipIndex] is TreeClip tree &&
                             (tree.AssetTree is not ITimelineTreeGraphAsset treeGraph || !m_PresentationGraphs.Contains("tree:" + treeGraph.AuthoringId)))
                             throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' TreeClip '{tree.AuthoringId}' has no installed Presentation graph.");
+                        if (track.Clips[clipIndex] is CameraEffectClip camera)
+                        {
+                            if (!camera.Effect)
+                                throw new InvalidOperationException($"Timeline camera effect '{camera.AuthoringId}' has no resource.");
+                            string identity = $"camera:{TimelineContractKinds.CameraEffectClip}:{camera.Effect.EffectId}";
+                            string cameraRevision = SourceContentHasher.Hash(JsonUtility.ToJson(camera.Effect));
+                            if (m_CameraEffectRevisions.TryGetValue(identity, out string installed) && installed != cameraRevision)
+                                throw new InvalidOperationException($"Timeline camera effect '{identity}' has conflicting revisions.");
+                            m_CameraEffectRevisions[identity] = cameraRevision;
+                        }
                         if (track.Clips[clipIndex] is not MotionCurveClip motion)
                             continue;
                         if (!motion.SourceCurve || !motion.SourceCurve.TryValidate(out string error))
@@ -101,6 +113,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             foreach (string identity in m_GraphRevisions.Keys)
                 m_Handles.Add(identity, new TimelineRuntimeDependencyHandle(m_Handles.Count + 1));
             foreach (string identity in m_CurveRevisions.Keys)
+                m_Handles.Add(identity, new TimelineRuntimeDependencyHandle(m_Handles.Count + 1));
+            foreach (string identity in m_CameraEffectRevisions.Keys)
                 m_Handles.Add(identity, new TimelineRuntimeDependencyHandle(m_Handles.Count + 1));
         }
 
@@ -115,6 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 "timeline.tree" => m_GraphRevisions,
                 "timeline.motion-curve" => m_CurveRevisions,
+                TimelineContractKinds.CameraEffectClip => m_CameraEffectRevisions,
                 _ => null
             };
             if (numericTarget != m_NumericTarget || revisions == null ||

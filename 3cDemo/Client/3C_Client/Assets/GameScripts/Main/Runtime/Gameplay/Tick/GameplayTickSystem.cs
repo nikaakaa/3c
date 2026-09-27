@@ -376,11 +376,12 @@ namespace ThirdPersonGameplay.Tick
                 RenderFrame,
                 LocalLogicTick,
                 m_InterpolationAlpha,
-                0f,
-                0f,
-                false,
-                false,
-                m_DrivePolicy.Mode == GameplayTickDriveMode.Paused);
+                1f,
+                1f,
+                true,
+                true,
+                m_DrivePolicy.Mode == GameplayTickDriveMode.Paused,
+                GameplayPresentationTimeScaleSource.SharedTickClock);
             for (int i = 0; i < m_PresentationTargets.Count; i++)
             {
                 IGameplayPresentationFrameTarget target =

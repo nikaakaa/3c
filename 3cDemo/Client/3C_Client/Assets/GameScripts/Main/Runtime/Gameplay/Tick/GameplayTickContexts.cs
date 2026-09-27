@@ -31,6 +31,13 @@ namespace ThirdPersonGameplay.Tick
         }
     }
 
+    public enum GameplayPresentationTimeScaleSource : byte
+    {
+        Unavailable = 0,
+        SharedTickClock = 1,
+        IndependentClocks = 2
+    }
+
     public readonly struct GameplayPresentationFrameContext
     {
         public GameplayPresentationFrameContext(
@@ -51,7 +58,8 @@ namespace ThirdPersonGameplay.Tick
                 0f,
                 false,
                 false,
-                false)
+                false,
+                GameplayPresentationTimeScaleSource.Unavailable)
         {
         }
 
@@ -75,7 +83,8 @@ namespace ThirdPersonGameplay.Tick
                 0f,
                 false,
                 false,
-                false)
+                false,
+                GameplayPresentationTimeScaleSource.Unavailable)
         {
         }
 
@@ -91,7 +100,8 @@ namespace ThirdPersonGameplay.Tick
             float localAvatarTimeScale,
             bool ownerTimeScaleAvailable,
             bool localAvatarTimeScaleAvailable,
-            bool paused)
+            bool paused,
+            GameplayPresentationTimeScaleSource timeScaleSource)
         {
             if (!float.IsFinite(scaledDeltaSeconds) || scaledDeltaSeconds < 0f ||
                 !float.IsFinite(unscaledDeltaSeconds) || unscaledDeltaSeconds < 0f ||
@@ -112,6 +122,7 @@ namespace ThirdPersonGameplay.Tick
             HasOwnerTimeScale = ownerTimeScaleAvailable;
             HasLocalAvatarTimeScale = localAvatarTimeScaleAvailable;
             Paused = paused;
+            TimeScaleSource = timeScaleSource;
         }
 
         public float ScaledDeltaSeconds { get; }
@@ -126,5 +137,6 @@ namespace ThirdPersonGameplay.Tick
         public bool HasOwnerTimeScale { get; }
         public bool HasLocalAvatarTimeScale { get; }
         public bool Paused { get; }
+        public GameplayPresentationTimeScaleSource TimeScaleSource { get; }
     }
 }

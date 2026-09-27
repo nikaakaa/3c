@@ -6,7 +6,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace TreeDesigner.Editor
+namespace BTSMTL.Authoring.Editor
 {
     internal static class GraphAuthoringDetailsMutation
     {

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TreeDesigner.Editor
+namespace BTSMTL.Authoring.Editor
 {
     public enum GraphAuthoringStateMachineSemanticKind : byte
     {

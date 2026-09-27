@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-namespace TreeDesigner.Editor
+namespace BTSMTL.Authoring.Editor
 {
     public interface IGraphAuthoringReadOnlyPanel
     {

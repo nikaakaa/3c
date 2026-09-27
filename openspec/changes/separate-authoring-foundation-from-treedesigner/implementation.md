@@ -55,3 +55,13 @@ PropertyPort、PropertyEdge、BaseAttributes、BaseNode、BaseGraphAuthoring 的
 `dotnet build BTSMTL.Authoring.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false` 成功，0 警告、0 错误；结束后已执行 `dotnet build-server shutdown`。首次使用 --no-restore 时缺少该新项目的 NuGet assets，按正式项目执行正常 restore/build 后成功。
 
 目标 Unity 全量编译在另一工作的 CharacterAnimationInputContract.cs 两处新增 Vector3/Quaternion 参数声明中报 CS7036，缺少 defaultValue 参数；本次未修改该文件或参数业务。此时不能宣称全项目编译通过，后续切片仍需核对目标编译。共享文件只修改 namespace 引用；提交按 HEAD 应用相同 namespace 替换，其余原有未提交业务改动保留在工作区，不纳入本次提交。
+
+## 2026-09-28：C 公共编辑合同与原生消费者
+
+建立 `Editor/GraphAuthoring/BTSMTL.Authoring.Editor.asmdef`，唯一项目引用为 BTSMTL.Authoring。Details、状态机 Details、Navigator、Bottom Dock、状态机合同迁入对应目录，Projection/StateMachine binding、Clipboard 合同、Undo/Selection 绑定和面板宿主从混合文件中提取。38 个迁出类型改用 `BTSMTL.Authoring.Editor`，没有 TreeDesigner、BaseTree/BaseGraph/BaseNode 或 GraphView 依赖。24 个原有引用文件同步，其中公共源文件随 .meta 迁移、提取的新文件单独分配 GUID。
+
+共享 Details/Navigator 的 UXML 与 USS 随原 GUID 迁至新 Editor 资源目录，资源名改为 GraphAuthoringDetails/GraphAuthoringNavigator，更新正式加载路径和样式引用。Pose workspace、Canvas binding、命令、Clipboard、状态机与 Details adapter 消费同一迁出合同，没有复制节点、资产或 mutation。
+
+目标 Unity 完成此次编译和 Domain Reload，Edit/idle，Console error 为 0 条。B 阶段外部 Pose 参数错误在此时已不再阻挡编译，本次未修改它的业务代码。没有运行 Play/replay 或新增测试。
+
+旧 GraphDataCatalog 的使用链仅进入旧窗口及其源注册；旧 UI 清理时连同无消费者附属代码收口。Blend Space 仍使用窗口装配与自己的 GraphView，这部分移交动画编辑领域，避免误删有效样本编辑；目前尚未执行这部分旧窗口清理。

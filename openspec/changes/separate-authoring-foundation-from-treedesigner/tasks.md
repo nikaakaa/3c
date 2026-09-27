@@ -26,12 +26,12 @@
 
 ## 3. 有效编辑合同与面板迁出（C）
 
-- [ ] 3.1 在 `Editor/GraphAuthoring` 建立独立 `BTSMTL.Authoring.Editor` 程序集，避免归入父目录 Character Editor；公共集成只引用公共定义及必要原生框架，具体领域 Editor 单向消费它
-- [ ] 3.2 从 `GraphAuthoringProjectionCanvas.cs` 提取 `IGraphAuthoringClipboardCodec`、`GraphAuthoringProjectionCanvasBinding` 及有效描述到 `Contracts`；旧 `GraphAuthoringProjected*View` 与 Canvas partial 进入删除清单，不搬迁保留
-- [ ] 3.3 从 `GraphAuthoringStateMachineProjection.cs`、`GraphAuthoringStateMachineContracts.cs` 提取有效绑定和页面合同；旧状态机视图与 GraphView partial 进入删除清单，原生状态机编辑行为保持
+- [x] 3.1 在 `Editor/GraphAuthoring` 建立独立 `BTSMTL.Authoring.Editor` 程序集，避免归入父目录 Character Editor；公共集成只引用公共定义及必要原生框架，具体领域 Editor 单向消费它
+- [x] 3.2 从 `GraphAuthoringProjectionCanvas.cs` 提取 `IGraphAuthoringClipboardCodec`、`GraphAuthoringProjectionCanvasBinding` 及有效描述到 `Contracts`；旧 `GraphAuthoringProjected*View` 与 Canvas partial 进入删除清单，不搬迁保留
+- [x] 3.3 从 `GraphAuthoringStateMachineProjection.cs`、`GraphAuthoringStateMachineContracts.cs` 提取有效绑定和页面合同；旧状态机视图与 GraphView partial 进入删除清单，原生状态机编辑行为保持
 - [ ] 3.4 将正式入口仍使用的 Details、状态机 Details、Navigator、Bottom Dock 和 Data Catalog 的独立面板归入共享 Editor；具体业务数据源保留所属领域，清理无消费者的附属显示
 - [ ] 3.5 按成员拆分 `GraphAuthoringEditorShell`、共享工作区注册、Clipboard controller 与具体 adapters，迁出有效 Selection、Undo、资源选择、Clipboard、生命周期和租约释放能力；不把旧窗口装配整文件保留
-- [ ] 3.6 同步 `CharacterPoseGraphWorkspace`、`CharacterPoseCanvasBinding`、`CharacterPoseCanvasCommands`、`CharacterPoseCanvasEditorWriteSession`、`CharacterPoseDocumentCanvas`、`CharacterPoseGraphAuthoringAdapter` 及其它原生入口；共享消费者统一修改，继续写入真实 owner
+- [x] 3.6 同步 `CharacterPoseGraphWorkspace`、`CharacterPoseCanvasBinding`、`CharacterPoseCanvasCommands`、`CharacterPoseCanvasEditorWriteSession`、`CharacterPoseDocumentCanvas`、`CharacterPoseGraphAuthoringAdapter` 及其它原生入口；共享消费者统一修改，继续写入真实 owner
 
 ## 4. 旧窗口、画布与入口清理（C5/C6）
 
@@ -52,5 +52,5 @@
 
 - [x] 6.1 A 黑板公共定义、具体接入及其直接消费者作为完整切片提交，中文说明范围与身份处理
 - [x] 6.2 B 作者字段/端口定义及具体 Editor 服务归位单独提交
-- [ ] 6.3 C 公共编辑合同、面板和原生入口接线单独提交
+- [x] 6.3 C 公共编辑合同、面板和原生入口接线单独提交
 - [ ] 6.4 C5/C6 旧 UI 删除及规格收口单独提交；实际共享文件冲突或业务去向缺失停在受影响切片，不用临时桥接继续

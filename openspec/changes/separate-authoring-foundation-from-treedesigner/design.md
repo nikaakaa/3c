@@ -85,6 +85,8 @@ FlowCanvas/NodeCanvas 原生画布及 Slate 保留。Details、Navigator、资�
 
 旧窗口文件中的注册表、打开入口、资源加载和回调必须分开记录。有效的 Inspector、资产打开、调试定位和下钻请求接入对应正式入口；确实无业务消费者的旧入口删除。若合法内容仍只能由旧窗口编辑且缺少等价去向，停止该删除切片并列出缺失功能，不删入口隐藏内容，不新建兼容窗口。
 
+2026-09-28 实施补查：`CharacterAnimationBlendSpaceEditorWindow` 是旧 Shell 布局、搜索、Clipboard、Undo 装配的真实消费者，使用自己的 `BlendSpaceGraphView` 展示样本坐标。该画布并非被原生 Pose 图替代的 TreeDesigner 图画布。本次保留其既有业务行为，将只有 Blend Space 使用的窗口装配、GraphView 接口和 Clipboard 实现归入动画 Editor 并准确命名；Undo/Selection 等跨入口有效能力进入共享 Editor。不得以删除 TreeDesigner UI 为由删除 Blend Space 样本编辑，也不为统一画布重写该功能。共享 Editor 不接收这些 GraphView 专用实现。
+
 只用插件默认面板会丢失项目业务编辑；保留旧窗口又继续维护两个入口。本次保留有效面板实现、删除已替代画布，不重做交互或业务规则。OnInspectorGUI、重绘和选择回调不得新增编译、构建或资源加工。
 
 ### 3. 删除以消费者和语义证据为准

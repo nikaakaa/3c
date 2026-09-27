@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-namespace TreeDesigner.Editor
+namespace BTSMTL.Authoring.Editor
 {
     public readonly struct GraphAuthoringNavigatorItem
     {
@@ -51,7 +51,7 @@ namespace TreeDesigner.Editor
         IGraphAuthoringNavigatorDataSource m_DataSource;
 
         public GraphAuthoringNavigatorPresenter() :
-            base("BaseTreeNavigator")
+            base("GraphAuthoringNavigator")
         {
             AddToClassList("graph-authoring-navigator");
             m_Search = this.Q<ToolbarSearchField>(

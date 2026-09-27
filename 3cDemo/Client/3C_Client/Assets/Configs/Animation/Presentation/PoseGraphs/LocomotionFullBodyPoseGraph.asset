@@ -43,7 +43,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
-    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.333309173584},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
+    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"m_PhaseEntryEndSeconds":0.166666686534882,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.333309173584},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":280.666687011719,"y":20.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -57,7 +57,7 @@ MonoBehaviour:
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_GraphId: corin.locomotion.turn.graph
-  m_ContentRevision: c98ae23663b34b98bb4d52dd51d4e712
+  m_ContentRevision: fe3179c25b674435a555a5bf3adde634
   m_Role: 1
   m_Parameters: []
 --- !u!114 &-5849264378725478179

@@ -1,0 +1,16 @@
+{
+  "schema": "corin-branch-start-boundary/1",
+  "cause": "Start Timeline duration 1.1m quantizes to Fixed raw 4724464026; former float completion threshold quantizes to raw 4724464128 and cannot be reached while holding Branch",
+  "fix": "Reuse sourceEndTime rounded within the Timeline duration for the release TreeClip completion threshold",
+  "verification": {
+    "published": "BranchAttack Fixed/Float32",
+    "frame65CanComplete": false,
+    "frame66CanComplete": true,
+    "thresholdRaw": 4724463616,
+    "endRaw": 4724464026,
+    "walkDuration": 1.08333337,
+    "walkDistance": 1.16644335,
+    "walkAverageMetersPerSecond": 1.0767169
+  },
+  "runtime_coverage": "Numeric boundary and publication checked; sustained E Loop/Walk visual and movement are awaiting user manual verification; no new replay claimed"
+}

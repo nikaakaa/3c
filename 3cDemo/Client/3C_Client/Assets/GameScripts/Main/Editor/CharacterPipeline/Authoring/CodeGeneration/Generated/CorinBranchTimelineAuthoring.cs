@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             });
             bool hasReleaseWindow = stage == "Start";
             if (hasReleaseWindow)
-                AddReleaseWindow(timeline, catalog, stage, duration);
+                AddReleaseWindow(timeline, catalog, stage, duration, sourceEndTime);
             BtsmtlSkillAuthoringCode.PruneTimeline(
                 data, hasReleaseWindow ? new[] { Id(stage, "animation-track"), Id(stage, "motion-track"), Id(stage, "release-track") } : new[] { Id(stage, "animation-track"), Id(stage, "motion-track") },
                 hasReleaseWindow ? new[] { Id(stage, "animation-clip"), Id(stage, "motion-clip"), Id(stage, "release-clip") } : new[] { Id(stage, "animation-clip"), Id(stage, "motion-clip") },
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return context.Complete(timeline);
         }
 
-        static void AddReleaseWindow(TimelineAsset timeline, TimelineContractCatalog catalog, string stage, decimal duration)
+        static void AddReleaseWindow(TimelineAsset timeline, TimelineContractCatalog catalog, string stage, decimal duration, float endTime)
         {
             string ownerId = Id(stage, "release-graph");
             string variableId = Id(stage, "release-window");
@@ -86,7 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "BranchRelease", "BranchRelease", 9001UL));
             BtsmtlSkillAuthoringContract.Apply(set, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", variableId), new BtsmtlSkillAuthoringFieldValue("ownerId", ownerId), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringCode.SetValue(set, "m_Value", true);
-            BtsmtlSkillAuthoringCode.SetValue(reached, "b", (float)duration);
+            BtsmtlSkillAuthoringCode.SetValue(reached, "b", endTime);
             BtsmtlSkillAuthoringContract.Apply(selector, new[] { new BtsmtlSkillAuthoringFieldValue("steps", new[] { BtsmtlSkillAuthoringContract.CreateStep("end", "结束", endRule, 0, ProgramAbortPolicy.None), BtsmtlSkillAuthoringContract.CreateStep("body", "执行", null, 0, ProgramAbortPolicy.None) }) });
             BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, root, "Output", selector, "Input", Id(stage, "release-root-selector"));
             BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, selector, "end", exit, "Input", Id(stage, "release-selector-exit"));

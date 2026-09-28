@@ -1,5 +1,7 @@
 # 单端接触保护、权重交接与膝盖连续性
 
+> 当前交付以文末“用户反馈后的收敛修改”为准。前文记录首次实验；其中脚掌包络扩展、骨盆硬约束和世界输出历史已撤回。单端支撑、正式权重交接及 FinalIK 部分权重补偿保留。
+
 ## 本轮目标和证据
 
 用户明确要求：脚跟或脚尖一端踩住时，另一端允许悬空；修的是已踩住的一端随后穿地，以及抖动、膝盖突然弯直。本轮沿既有 FootPlacement、Pelvis、FinalIK 链路修改，没有新增运行配置或另一套求解器。
@@ -53,3 +55,36 @@ FinalIK 在施加脚目标前会平移骨盆及其后代。原来部分权重混
 没有修改后的运行采样，不把编译和静态公式核对称作视觉验收。需要观察的现象是：有效接触端是否保持不穿、悬空端是否仍自由、停走恢复是否跳变、膝盖弯直和身体高度是否自然。
 
 最终 Editor 构建 0 错误、34 警告，日志 tmp/foot-support-reach-delivery-build.log；构建服务器已关闭。Center 记录为“完善脚掌单端支撑与膝盖连续性”，change_id=7d4505a8500a4078a0e539942c848fd8。没有创建回放 Run 或伪造前后比较。
+
+
+## 用户反馈后的收敛修改
+
+### 依据与撤回
+
+用户反馈骨盆异常，已踩住的脚尖或脚跟仍可能随后穿过踏面。新采样 `20260928-030542-1f4dfd6fcf4f47a885693da5767c07ae` 的骨盆末端约束有 329 帧修正超过 1mm，最大追加约 6.48cm。历史 `3d209c488` 已撤除 Reach 硬执行，`5d8ded540` 已限制骨盆姿态偏好范围，因此本次不继续叠加这条实验。
+
+提交 `65052876f` 恢复原骨盆修正弹簧、姿态偏好范围和中点摆腿包络，删除 ReachConstraintApplied / ReachOutputAdjustment 两个实验字段。保留零权重骨盆历史清理、单端支撑、正式权重交接及 FinalIK 部分权重目标补偿。旧采样和首次实验说明保留追溯。
+
+### 摆腿目标不再依赖脚下即时命中
+
+5700–5705 左脚的 GroundPath 均为 Accepted，InputIdentity 均为 `5633887286461608957`，下一次落脚事件均为 `11993514060683856971`。5701–5704 CurrentSupport 不可用时，正式 IK 权重仍为 1，最终脚目标权重却从 1 降到 0，查询恢复后回到 1。这证明目标取消链路存在问题；它不能单独证明用户看到的全部接触端穿透都来自这里。
+
+原 `TryResolveSupportTarget` 先检查 CurrentSupport，再生成 SwingGround，因此有效摆腿路径也会因脚下当前探针无命中而取消。现在 StateFrame 显式携带已有 GroundPath：SwingGround 的高度仍由原包络和 FootHeight 给出，法线、表面来自同一路径的下一次预测落点，世界版本来自该路径的正式 SurfaceCoverage。路径编号、落脚事件和世界版本由生命周期入口检查一致性。统一 support-target 诊断以 PredictedLanding 标识法线来源。
+
+没有预测路径，或当前接触已取得目标控制权时，仍要求当前有效支撑。没有伪造当前接触，也没有把预测落点设为整段脚部高度硬下界。`AdvanceUnavailable` 的历史清理保持原样，避免重复 `dd8376f5b` 修过的陈旧世界位置问题。
+
+同时补全 OutputWeightZero 的合法枚举位校验：上一轮已产生此退出原因，但入口仍只接受旧的两个位，会错误抛出 Foot lifecycle frame is invalid。既有测试辅助构造仅补传 GroundPath 参数；没有新增测试或执行测试。
+
+### 最终真实 Toe 接入原采样
+
+`CharacterFinalPosePhysicalWriter` 在所有物理骨骼写回完成之后，按现有 Rig 的 ToePhysicalBoneIndex 读取左右 Toe 的世界位置和旋转。`CharacterPhysicalFootPose` 增加 ToeWorldPosition / ToeWorldRotation，沿已有 physical 根进入自动生成采样，不新增采样器、探针或逐帧托管分配。
+
+这些数据表示最终真实脚趾骨骼，能与源动画、校准脚底点和最终踝区分；它们仍不等于整只鞋的网格表面。下次手动采样可以判定穿透发生在目标生成、最终骨骼求解还是接触校准与鞋形状的差异，不能用本次新增字段提前宣布穿透消失。
+
+### 本次交付边界
+
+Editor 项目构建为 0 错误、91 警告，日志 `tmp/foot-contact-convergence-build.log`；已执行 build-server shutdown。同工作目录有其它窗口修改 PoseGraph 求值文件，本次未修改或提交它们，构建不作为固定提交的性能或视觉证据。
+
+不运行 replay、Unity batchmode 或测试。当前修改尚无新的运行采样；接触端穿透、踏地抖动和膝盖弯曲自然度仍需用户手测确认。本次撤回骨盆实验，不宣称已经完成膝盖平滑。
+
+主 Editor `e852139597e42532` 已完成域重载，处于 Edit、不编译、不刷新，Console 错误 0 条。反射确认 GroundPath 输入及 Toe 字段已加载，旧 ReachOutputAdjustment 已移除；正式 FullCaptureProgram 生成的 Schema 已含 `character-foot-ik/main/physical/toe-world-position` 和 `character-foot-ik/main/physical/toe-world-rotation`。这确认代码及采样入口已更新，不替代实际运行验证。

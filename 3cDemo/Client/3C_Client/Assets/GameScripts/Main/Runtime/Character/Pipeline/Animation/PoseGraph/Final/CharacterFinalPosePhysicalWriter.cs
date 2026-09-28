@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_RootBoneIndex;
         readonly int m_LeftAnkleBoneIndex;
         readonly int m_RightAnkleBoneIndex;
+        readonly int m_LeftToeBoneIndex;
+        readonly int m_RightToeBoneIndex;
         readonly int m_PelvisBoneIndex;
         readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
         readonly AnimationLocalBonePose m_RootReferencePose;
@@ -43,6 +45,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RootBoneIndex = rig.RootPhysicalBoneIndex;
             m_LeftAnkleBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;
             m_RightAnkleBoneIndex = rig.RightLeg.AnklePhysicalBoneIndex;
+            m_LeftToeBoneIndex = rig.LeftLeg.ToePhysicalBoneIndex;
+            m_RightToeBoneIndex = rig.RightLeg.ToePhysicalBoneIndex;
             m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
             m_RootBonePolicy = rig.RootBonePolicy;
             CharacterAnimationPhysicalBonePayload root =
@@ -140,6 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Transform poseRoot = m_RootHierarchy.PoseRoot;
             Transform leftAnkle = m_Bones[m_LeftAnkleBoneIndex];
             Transform rightAnkle = m_Bones[m_RightAnkleBoneIndex];
+            Transform leftToe = m_Bones[m_LeftToeBoneIndex];
+            Transform rightToe = m_Bones[m_RightToeBoneIndex];
             return new CharacterFootIkPhysicalCapture(
                 logicRoot.position,
                 logicRoot.rotation,
@@ -154,8 +160,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 pelvisWorldPosition,
                 leftAnkle.position,
                 leftAnkle.rotation,
+                leftToe.position,
+                leftToe.rotation,
                 rightAnkle.position,
-                rightAnkle.rotation);
+                rightAnkle.rotation,
+                rightToe.position,
+                rightToe.rotation);
         }
 
         Vector3 CaptureComponentPosition(int boneIndex) =>

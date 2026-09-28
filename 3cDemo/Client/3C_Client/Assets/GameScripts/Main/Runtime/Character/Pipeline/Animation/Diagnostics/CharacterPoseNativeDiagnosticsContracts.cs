@@ -10,11 +10,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal CharacterPhysicalFootPose(
             Vector3 ankleWorldPosition,
-            Quaternion ankleWorldRotation)
+            Quaternion ankleWorldRotation,
+            Vector3 toeWorldPosition,
+            Quaternion toeWorldRotation)
         {
             IsAvailable = true;
             AnkleWorldPosition = ankleWorldPosition;
             AnkleWorldRotation = ankleWorldRotation;
+            ToeWorldPosition = toeWorldPosition;
+            ToeWorldRotation = toeWorldRotation;
         }
 
         [DiagnosticField]
@@ -34,6 +38,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             DiagnosticAvailabilityReference.Member,
             nameof(IsAvailable))]
         public Quaternion AnkleWorldRotation { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-toe-position")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IsAvailable))]
+        public Vector3 ToeWorldPosition { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-toe-rotation")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IsAvailable))]
+        public Quaternion ToeWorldRotation { get; }
     }
 
     [DiagnosticGroup("physical")]
@@ -92,8 +110,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Vector3 pelvisWorldPosition,
             Vector3 leftAnkleWorldPosition,
             Quaternion leftAnkleWorldRotation,
+            Vector3 leftToeWorldPosition,
+            Quaternion leftToeWorldRotation,
             Vector3 rightAnkleWorldPosition,
-            Quaternion rightAnkleWorldRotation)
+            Quaternion rightAnkleWorldRotation,
+            Vector3 rightToeWorldPosition,
+            Quaternion rightToeWorldRotation)
         {
             LogicRootWorldPosition = logicRootWorldPosition;
             LogicRootWorldRotation = logicRootWorldRotation;
@@ -111,10 +133,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 pelvisWorldPosition);
             Left = new CharacterPhysicalFootPose(
                 leftAnkleWorldPosition,
-                leftAnkleWorldRotation);
+                leftAnkleWorldRotation,
+                leftToeWorldPosition,
+                leftToeWorldRotation);
             Right = new CharacterPhysicalFootPose(
                 rightAnkleWorldPosition,
-                rightAnkleWorldRotation);
+                rightAnkleWorldRotation,
+                rightToeWorldPosition,
+                rightToeWorldRotation);
         }
 
         internal Vector3 LogicRootWorldPosition { get; }
@@ -151,7 +177,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IsFinite(LeftAnkleWorldPosition) &&
             IsFinite(LeftAnkleWorldRotation) &&
             IsFinite(RightAnkleWorldPosition) &&
-            IsFinite(RightAnkleWorldRotation);
+            IsFinite(RightAnkleWorldRotation) &&
+            IsFinite(Left.ToeWorldPosition) &&
+            IsFinite(Left.ToeWorldRotation) &&
+            IsFinite(Right.ToeWorldPosition) &&
+            IsFinite(Right.ToeWorldRotation);
 
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) &&

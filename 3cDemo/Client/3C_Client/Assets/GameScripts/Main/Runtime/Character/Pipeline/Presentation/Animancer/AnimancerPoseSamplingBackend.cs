@@ -350,20 +350,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 if (preparedResource)
                     visual = CreateSource(key, clipCatalog);
-                float inverseTotalWeight = ValidateClipPlans(
-                    clips,
-                    visual);
                 int clipOffset = checked(mutationIndex * m_ClipCapacity);
-                for (int i = 0; i < clips.Count; i++)
-                {
-                    m_PendingClipPlans[clipOffset + i] = clips[i];
-                    m_PendingClipStates[clipOffset + i] =
-                        visual.RequireClip(
-                            clips[i].ClipBindingIndex,
-                            clips[i].Clip);
-                    m_PendingNormalizedClipWeights[clipOffset + i] =
-                        clips[i].Weight * inverseTotalWeight;
-                }
+                PrepareClipPlans(
+                    clips,
+                    visual,
+                    clipOffset);
                 AnimationPoseSourcePrepareKind kind = preparedResource
                     ? AnimationPoseSourcePrepareKind.PreparedResource
                     : AnimationPoseSourcePrepareKind.CommittedUpdate;
@@ -870,27 +861,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        static float ValidateClipPlans(
+        void PrepareClipPlans(
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            SourceVisual visual)
+            SourceVisual visual,
+            int clipOffset)
         {
             float totalWeight = 0f;
-            for (int i = 0; i < clips.Count; i++)
+            int clipCount = clips.Count;
+            for (int i = 0; i < clipCount; i++)
             {
                 ClipSamplePlan plan = clips[i];
                 if (!plan.IsValid)
                     throw new InvalidOperationException("Animation pose source clip plan is invalid.");
-                visual.RequireClip(plan.ClipBindingIndex, plan.Clip);
                 for (int previous = 0; previous < i; previous++)
                 {
-                    if (clips[previous].ClipBindingIndex == plan.ClipBindingIndex)
+                    if (m_PendingClipPlans[clipOffset + previous].ClipBindingIndex == plan.ClipBindingIndex)
                         throw new InvalidOperationException($"Animation pose source clip plan duplicates binding #{plan.ClipBindingIndex}.");
                 }
+                int index = clipOffset + i;
+                m_PendingClipStates[index] = visual.RequireClip(plan.ClipBindingIndex, plan.Clip);
+                m_PendingClipPlans[index] = plan;
                 totalWeight += plan.Weight;
             }
             if (!float.IsFinite(totalWeight) || totalWeight <= 0f)
                 throw new InvalidOperationException("Animation pose source clip plan has no positive total weight.");
-            return 1f / totalWeight;
+            float inverseTotalWeight = 1f / totalWeight;
+            for (int i = 0; i < clipCount; i++)
+            {
+                int index = clipOffset + i;
+                m_PendingNormalizedClipWeights[index] =
+                    m_PendingClipPlans[index].Weight * inverseTotalWeight;
+            }
         }
 
         static void PrepareClips(

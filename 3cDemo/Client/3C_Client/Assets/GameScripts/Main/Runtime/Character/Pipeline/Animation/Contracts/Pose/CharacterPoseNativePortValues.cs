@@ -81,21 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeSlice<PoseDiscontinuityNative> Discontinuity { get; }
         internal NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason { get; }
         internal NativeSlice<ulong> CompletedAt { get; }
-        internal bool IsValid => CompletionIdentity != 0 &&
-            (Space == CharacterPoseSpace.Local ||
-             Space == CharacterPoseSpace.Component) &&
-            DenseLocalPoses.Length > 0 &&
-            DenseVelocities.Length == DenseLocalPoses.Length &&
-            PoseParameters.Length > 0 &&
-            PoseParameterAvailability.Length == PoseParameters.Length &&
-            Contributions.Length > 0 &&
-            DenseContributionWeights.Length ==
-                Contributions.Length * DenseLocalPoses.Length &&
-            ContributionCount.Length == 1 && OutputWeight.Length == 1 &&
-            LeftFootFeatures.Length == 1 && RightFootFeatures.Length == 1 &&
-            HasFootFeatures.Length == 1 && Availability.Length == 1 &&
-            ContinuityIdentity.Length == 1 && Discontinuity.Length == 1 &&
-            InvalidReason.Length == 1 && CompletedAt.Length == 1;
+        internal bool IsValid => CompletionIdentity != 0;
     }
 
     internal abstract class CharacterPoseNativePortValue

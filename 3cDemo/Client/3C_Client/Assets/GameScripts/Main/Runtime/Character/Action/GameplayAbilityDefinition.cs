@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if UNITY_EDITOR
 using ThirdPersonCharacter.Control.Authoring;
+#endif
 using ThirdPersonGameplay.Contracts;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;

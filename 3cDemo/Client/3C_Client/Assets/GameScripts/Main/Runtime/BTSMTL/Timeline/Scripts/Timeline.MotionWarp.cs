@@ -54,6 +54,7 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), Color(248, 177, 91)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("sourceMotionClipId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("translationMode", typeof(MotionWarpTranslationMode))]
     [TimelineAuthoringProperty("targetOffsetSpace", typeof(MotionWarpTargetOffsetSpace))]
@@ -81,6 +82,7 @@ namespace BTSMTL.Timeline
         Minimum = 0d,
         Finite = true)]
     [TimelineAuthoringProperty("limitPolicy", typeof(MotionWarpLimitPolicy))]
+#endif
     public sealed class MotionWarpClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.MotionWarpClip;
@@ -141,7 +143,6 @@ namespace BTSMTL.Timeline
         public bool UsesMaximumYawRate => HasYawWarp && RotationMethod == MotionWarpRotationMethod.ConstantRate;
         public bool UsesYawResponse => HasYawWarp && RotationMethod == MotionWarpRotationMethod.TargetResponse;
 
-#if UNITY_EDITOR
         public override string Name
         {
             get
@@ -152,6 +153,7 @@ namespace BTSMTL.Timeline
             }
         }
 
+#if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
 
         public MotionWarpClip(Track track, FixedScalar time) : base(track, time)

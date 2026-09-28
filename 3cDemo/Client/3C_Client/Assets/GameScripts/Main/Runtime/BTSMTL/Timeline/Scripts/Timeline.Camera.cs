@@ -175,6 +175,7 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("mode", typeof(TimelineCameraMode))]
     [TimelineAuthoringProperty("sequenceId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
@@ -182,6 +183,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("blendOutSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("targetKey", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
     [TimelineAuthoringProperty("interruptPolicy", typeof(TimelineCameraInterruptPolicy))]
+#endif
     public sealed class CameraStateClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraStateClip;
@@ -273,11 +275,13 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(170, 225, 255)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("lookResponse", typeof(TimelineCameraLookResponseMode))]
     [TimelineAuthoringProperty("manualOrbitWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
     [TimelineAuthoringProperty("pitchResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
     [TimelineAuthoringProperty("yawResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
+#endif
     public sealed class CameraResponseClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraResponseClip;

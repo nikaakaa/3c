@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
+#if UNITY_EDITOR
 using ThirdPersonCharacter.Control.Authoring;
+#endif
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
 using ThirdPersonCharacter.Equipment;

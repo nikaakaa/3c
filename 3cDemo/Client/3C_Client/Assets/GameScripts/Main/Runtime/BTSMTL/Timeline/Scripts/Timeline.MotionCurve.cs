@@ -109,6 +109,7 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Color(126, 220, 146)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("curveId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("sourceCurve", TimelineAuthoringPropertyKind.Object)]
     [TimelineAuthoringProperty("sourceStartTime", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0, Finite = true)]
@@ -118,6 +119,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("blendMode", typeof(TimelineMotionBlendMode))]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     [TimelineAuthoringProperty("consumeLowerChannels", TimelineAuthoringPropertyKind.Boolean)]
+#endif
     public sealed partial class MotionCurveClip : Clip, ITimelineContentClosureSource
     {
         public override string ContractKind => TimelineContractKinds.MotionCurveClip;
@@ -196,6 +198,7 @@ namespace BTSMTL.Timeline
             return m_SourceCurve;
         }
 
+#if UNITY_EDITOR
         public void ConfigureSource(RootMotionCurveAsset source, float sourceStartTime, float sourceEndTime)
         {
             if (!source)
@@ -211,6 +214,7 @@ namespace BTSMTL.Timeline
             if (Track?.Timeline != null)
                 RebindTimeline();
         }
+#endif
 
         public Vector3 EvaluatePositionAtTimelineTime(FixedScalar timelineTime)
         {

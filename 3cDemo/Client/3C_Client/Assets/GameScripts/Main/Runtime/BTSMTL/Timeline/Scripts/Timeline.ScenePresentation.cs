@@ -38,9 +38,11 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("9a9b5b4c1d2e4f6a8b7c0d1e2f3a4b5c"), Color(132, 224, 184)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("targetBindingId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("parameterBindingId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("valueCurve", TimelineAuthoringPropertyKind.Object)]
+#endif
     public sealed class ScenePresentationParameterCurveClip : Clip, ITimelineExternalBindingUseSource
     {
         [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]

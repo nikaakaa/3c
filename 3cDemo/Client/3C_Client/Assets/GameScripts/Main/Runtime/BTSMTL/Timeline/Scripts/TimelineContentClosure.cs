@@ -478,8 +478,7 @@ namespace BTSMTL.Timeline
                     }
                     var bindingUses = new List<TimelineContentBindingUse>();
                     var curves = new List<TimelineContentCurve>();
-                    var curveDescriptors = new List<TimelineCurveChannelDescriptor>();
-                    TimelineCurveChannelCatalog.CollectForTrack(track, curveDescriptors);
+                    IReadOnlyList<TimelineCurveChannelDescriptor> curveDescriptors = TimelineCurveChannelCatalog.All;
                     for (int curveIndex = 0; curveIndex < curveDescriptors.Count; curveIndex++)
                     {
                         TimelineCurveChannelDescriptor descriptor = curveDescriptors[curveIndex];

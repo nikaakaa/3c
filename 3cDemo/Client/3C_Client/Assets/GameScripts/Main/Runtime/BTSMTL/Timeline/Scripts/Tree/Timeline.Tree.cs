@@ -64,7 +64,10 @@ namespace BTSMTL.Timeline
 
     [Serializable]
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
-    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource, ITimelineTerminalTimeAlignedClip
+    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource
+#if UNITY_EDITOR
+        , ITimelineTerminalTimeAlignedClip
+#endif
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;
 
@@ -121,6 +124,7 @@ namespace BTSMTL.Timeline
             graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}", ExecutionDomain);
         }
 
+#if UNITY_EDITOR
         public bool AlignTerminalTime(FixedScalar terminalTime)
         {
             if (m_ExitSource != TimelineClipExitSource.TreeDecision)
@@ -133,14 +137,15 @@ namespace BTSMTL.Timeline
             ConfigureTimeRange(StartTime, endTime);
             return true;
         }
+#endif
 
         public override void Init(Track track)
         {
             base.Init(track);
         }
 
-#if UNITY_EDITOR
         public override string Name => $"{ExecutionDomain} / {m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : "Unbound")}";
+#if UNITY_EDITOR
         public override ClipCapabilities Capabilities =>
             m_ExitSource == TimelineClipExitSource.TreeDecision
                 ? ClipCapabilities.TickQuantized

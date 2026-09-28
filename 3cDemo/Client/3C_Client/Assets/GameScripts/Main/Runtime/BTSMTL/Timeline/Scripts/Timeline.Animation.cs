@@ -76,9 +76,14 @@ namespace BTSMTL.Timeline
     }
 
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
+#if UNITY_EDITOR
     [TimelineAuthoringTrackField("animationChannelId", "skill_timeline_animation_channel_invalid", "AnimationTrack必须声明稳定AnimationChannel identity。")]
     [TimelineAuthoringTrackField("animationSlotId", "skill_timeline_animation_slot_invalid", "AnimationTrack必须声明稳定AnimationSlot identity。")]
-    public partial class AnimationTrack : Track, ITimelineAuthoringTrackFieldSink
+#endif
+    public partial class AnimationTrack : Track
+#if UNITY_EDITOR
+        , ITimelineAuthoringTrackFieldSink
+#endif
     {
         public override string ContractKind => TimelineContractKinds.AnimationTrack;
 
@@ -242,11 +247,13 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), Color(127, 253, 228)]
+#if UNITY_EDITOR
     [TimelineAuthoringProperty("extraPolationMode", typeof(ExtraPolationMode))]
     [TimelineAuthoringProperty(
         "blendProfileId",
         TimelineAuthoringPropertyKind.Text,
         Trimmed = true)]
+#endif
     public partial class AnimationClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.AnimationClip;
@@ -263,9 +270,9 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string BlendProfileId = string.Empty;
-#if UNITY_EDITOR
 
         public override string Name => Clip ? Clip.name : base.Name;
+#if UNITY_EDITOR
         public override FixedScalar Length => Clip
             ? FixedScalar.FromDouble(Clip.length)
             : base.Length;

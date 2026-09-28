@@ -1,15 +1,16 @@
-#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
 {
+#if UNITY_EDITOR
     public enum TimelineAuthoringContentKind : byte
     {
         SpanClip,
         ContinuousCurve
     }
+#endif
 
     public enum TimelineCurveTimeDomain : byte
     {
@@ -113,11 +114,13 @@ namespace BTSMTL.Timeline
             return TimelineCurveAuthoring.Read(owner, ChannelId);
         }
 
+#if UNITY_EDITOR
         public void Replace(Clip owner, AnimationCurve curve)
         {
             RequireOwner(owner);
             TimelineCurveAuthoring.Replace(owner, ChannelId, curve);
         }
+#endif
 
         public void Validate(Clip owner, AnimationCurve curve)
         {
@@ -171,6 +174,7 @@ namespace BTSMTL.Timeline
             return descriptor;
         }
 
+#if UNITY_EDITOR
         public static void CollectForTrack(Track track, List<TimelineCurveChannelDescriptor> output)
         {
             if (output == null)
@@ -189,6 +193,7 @@ namespace BTSMTL.Timeline
                     output.Add(descriptor);
             }
         }
+#endif
 
         static List<TimelineCurveChannelDescriptor> BuildDescriptors() => new List<TimelineCurveChannelDescriptor>
         {
@@ -271,6 +276,7 @@ namespace BTSMTL.Timeline
             return CopyCurve(curve);
         }
 
+#if UNITY_EDITOR
         public static void Replace(Clip owner, TimelineCurveChannelId channelId, AnimationCurve curve)
         {
             Validate(owner, channelId, curve);
@@ -301,6 +307,7 @@ namespace BTSMTL.Timeline
             }
             owner.RebindTimeline();
         }
+#endif
 
         public static void Validate(Clip owner, TimelineCurveChannelId channelId, AnimationCurve curve)
         {
@@ -406,4 +413,3 @@ namespace BTSMTL.Timeline
         }
     }
 }
-#endif

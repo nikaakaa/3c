@@ -192,6 +192,7 @@ namespace BTSMTL.Timeline
         [NonSerialized]
         public Track Track;
         public TimelineData Timeline => Track.Timeline;
+        public virtual string Name => GetType().Name;
 
         public Action OnNameChanged;
         public Action OnInspectorRepaint;
@@ -693,7 +694,6 @@ namespace BTSMTL.Timeline
         [NonSerialized]
         public bool Invalid;
 
-        public virtual string Name => GetType().Name;
         public virtual FixedScalar Length => DurationTime;
         public virtual ClipCapabilities Capabilities => ClipCapabilities.None;
 

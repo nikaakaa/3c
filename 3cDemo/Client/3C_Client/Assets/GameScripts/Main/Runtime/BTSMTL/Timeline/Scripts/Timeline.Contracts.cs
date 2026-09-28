@@ -153,10 +153,12 @@ namespace BTSMTL.Timeline
         TimelineClipExitSource ClipExitSource { get; }
     }
 
+#if UNITY_EDITOR
     public interface ITimelineTerminalTimeAlignedClip
     {
         bool AlignTerminalTime(FixedScalar terminalTime);
     }
+#endif
 
     public delegate void TimelineClipContractValidator(Clip clip, List<string> errors);
     public delegate void TimelineContentContractValidator(TimelineData timeline, List<string> errors);

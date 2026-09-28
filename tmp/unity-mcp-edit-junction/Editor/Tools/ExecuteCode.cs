@@ -276,16 +276,19 @@ namespace MCPForUnity.Editor.Tools
             var filtered = FilterAssemblyPathsForCodeDom(assemblyPaths);
 
             using (var provider = new CSharpCodeProvider())
+            using (var temporaryFiles = new TempFileCollection())
             {
                 var parameters = new CompilerParameters
                 {
                     GenerateInMemory = true,
                     GenerateExecutable = false,
                     TreatWarningsAsErrors = false,
+                    TempFiles = temporaryFiles,
                 };
 
-                foreach (var path in filtered)
-                    parameters.ReferencedAssemblies.Add(path);
+                string responsePath = temporaryFiles.AddExtension("references.rsp");
+                File.WriteAllLines(responsePath, filtered.Select(path => $"-r:\"{path}\""), new UTF8Encoding(false));
+                parameters.CompilerOptions = $"@\"{responsePath}\"";
 
                 var results = provider.CompileAssemblyFromSource(parameters, source);
 

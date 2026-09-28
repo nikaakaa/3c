@@ -11,22 +11,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
     internal struct AnimationSourcePoseCaptureJob : IAnimationJob
     {
         [NativeDisableParallelForRestriction]
-        readonly NativeSlice<AnimationLocalBonePose> m_CurrentPose;
+        NativeSlice<AnimationLocalBonePose> m_CurrentPose;
         [NativeDisableParallelForRestriction]
-        readonly NativeSlice<AnimationLocalBonePose> m_PreviousPose;
+        NativeSlice<AnimationLocalBonePose> m_PreviousPose;
         [NativeDisableParallelForRestriction]
-        readonly NativeSlice<AnimationBlendBoneVelocity> m_Velocity;
+        NativeSlice<AnimationBlendBoneVelocity> m_Velocity;
         [ReadOnly]
-        readonly NativeArray<byte> m_PreviousAvailable;
+        NativeArray<byte> m_PreviousAvailable;
         [NativeDisableParallelForRestriction]
-        readonly NativeArray<byte> m_HasPrevious;
+        NativeArray<byte> m_HasPrevious;
         [NativeDisableParallelForRestriction]
-        readonly NativeArray<ulong> m_CompletedAt;
+        NativeArray<ulong> m_CompletedAt;
         [NativeDisableParallelForRestriction]
-        readonly NativeArray<AnimationSourcePoseCaptureFailure> m_Failure;
-        readonly int m_SourceIndex;
-        readonly ulong m_CompletionIdentity;
-        readonly float m_PresentationDeltaSeconds;
+        NativeArray<AnimationSourcePoseCaptureFailure> m_Failure;
+        int m_SourceIndex;
+        ulong m_CompletionIdentity;
+        float m_PresentationDeltaSeconds;
         [ReadOnly]
         readonly NativeArray<TransformStreamHandle> m_Handles;
         [ReadOnly]
@@ -43,7 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         readonly CharacterAnimationScalePolicy m_ScalePolicy;
 
         internal AnimationSourcePoseCaptureJob(
-            AnimationPoseSourceCaptureBinding binding,
             CharacterPoseBoneCounts boneCounts,
             NativeArray<TransformStreamHandle> handles,
             NativeArray<AnimationLocalBonePose> referencePose,
@@ -52,18 +51,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             NativeArray<CharacterComponentBonePose> componentScratch,
             int rootBoneIndex,
             CharacterAnimationRootBonePolicy rootBonePolicy,
-            CharacterAnimationScalePolicy scalePolicy,
-            bool validateBinding = true)
+            CharacterAnimationScalePolicy scalePolicy)
         {
-            if (validateBinding)
-                RequireValidBinding(binding);
             if (!boneCounts.IsValid ||
                 !handles.IsCreated || handles.Length != boneCounts.PhysicalBoneCount ||
                 !referencePose.IsCreated || referencePose.Length != boneCounts.PoseBoneCount ||
                 !physicalParentIndices.IsCreated || physicalParentIndices.Length != boneCounts.PhysicalBoneCount ||
                 !virtualBones.IsCreated || virtualBones.Length != boneCounts.VirtualBoneCount ||
                 !componentScratch.IsCreated || componentScratch.Length < boneCounts.PhysicalBoneCount ||
-                validateBinding && binding.CurrentPose.Length != boneCounts.PoseBoneCount ||
                 rootBoneIndex < 0 || rootBoneIndex >= handles.Length ||
                 (byte)rootBonePolicy < (byte)CharacterAnimationRootBonePolicy.ExcludeSourceRoot ||
                 (byte)rootBonePolicy > (byte)CharacterAnimationRootBonePolicy.CaptureSourceRoot ||
@@ -77,17 +72,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 if (!referencePose[boneIndex].IsValid)
                     throw new ArgumentException($"Animation source pose reference Bone #{boneIndex} is invalid.");
             }
+            CharacterVirtualBonePoseResult layout = CharacterVirtualBonePoseDerivation.ValidateLayout(
+                boneCounts, physicalParentIndices, virtualBones);
+            if (!layout.Succeeded)
+                throw new ArgumentException($"Animation source pose topology is invalid: {layout.Failure}.");
 
-            m_CurrentPose = binding.CurrentPose;
-            m_PreviousPose = binding.PreviousPose;
-            m_Velocity = binding.Velocity;
-            m_PreviousAvailable = binding.PreviousAvailable;
-            m_HasPrevious = binding.HasPrevious;
-            m_CompletedAt = binding.CompletedAt;
-            m_Failure = binding.Failure;
-            m_SourceIndex = binding.SourceIndex;
-            m_CompletionIdentity = binding.CompletionIdentity;
-            m_PresentationDeltaSeconds = binding.PresentationDeltaSeconds;
+            m_CurrentPose = default;
+            m_PreviousPose = default;
+            m_Velocity = default;
+            m_PreviousAvailable = default;
+            m_HasPrevious = default;
+            m_CompletedAt = default;
+            m_Failure = default;
+            m_SourceIndex = 0;
+            m_CompletionIdentity = 0;
+            m_PresentationDeltaSeconds = 0f;
             m_Handles = handles;
             m_ReferencePose = referencePose;
             m_PhysicalParentIndices = physicalParentIndices;
@@ -194,23 +193,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
         }
 
-        static void RequireValidBinding(AnimationPoseSourceCaptureBinding binding)
+        internal void BindFrame(in AnimationPoseSourceCaptureBinding binding)
         {
-            if (!binding.SourceId.IsValid || binding.SourceIndex < 0 || binding.CompletionIdentity == 0 ||
-                binding.CurrentPose.Length == 0 ||
-                binding.PreviousPose.Length != binding.CurrentPose.Length ||
-                binding.Velocity.Length != binding.CurrentPose.Length ||
-                !binding.PreviousAvailable.IsCreated || !binding.HasPrevious.IsCreated || !binding.CompletedAt.IsCreated || !binding.Failure.IsCreated ||
-                binding.HasPrevious.Length == 0 ||
-                binding.PreviousAvailable.Length != binding.HasPrevious.Length ||
-                binding.HasPrevious.Length != binding.CompletedAt.Length ||
-                binding.HasPrevious.Length != binding.Failure.Length ||
-                binding.SourceIndex >= binding.HasPrevious.Length ||
-                binding.PreviousAvailable[binding.SourceIndex] > 1 || binding.HasPrevious[binding.SourceIndex] > 1 ||
-                !float.IsFinite(binding.PresentationDeltaSeconds) || binding.PresentationDeltaSeconds < 0f)
-            {
-                throw new ArgumentException("Animation pose source capture binding is invalid.", nameof(binding));
-            }
+            if (binding.CurrentPose.Length != m_BoneCounts.PoseBoneCount)
+                throw new ArgumentException("Animation pose source capture binding does not match its rig.", nameof(binding));
+            m_CurrentPose = binding.CurrentPose;
+            m_PreviousPose = binding.PreviousPose;
+            m_Velocity = binding.Velocity;
+            m_PreviousAvailable = binding.PreviousAvailable;
+            m_HasPrevious = binding.HasPrevious;
+            m_CompletedAt = binding.CompletedAt;
+            m_Failure = binding.Failure;
+            m_SourceIndex = binding.SourceIndex;
+            m_CompletionIdentity = binding.CompletionIdentity;
+            m_PresentationDeltaSeconds = binding.PresentationDeltaSeconds;
         }
 
         static bool IsFinite(Vector3 value) =>

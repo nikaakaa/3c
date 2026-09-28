@@ -573,13 +573,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     source.RequirePhysicalBoneIndex(bone.TargetPhysicalBoneId),
                     counts.PhysicalBoneCount + i);
             }
-            CharacterVirtualBonePoseResult result = CharacterVirtualBonePoseDerivation.Derive(
-                counts,
-                physicalLocalPoses,
-                physicalParentIndices,
-                descriptors,
-                componentScratch,
-                outputPose);
+            CharacterVirtualBonePoseResult result = CharacterVirtualBonePoseDerivation.ValidateLayout(
+                counts, physicalParentIndices, descriptors);
+            if (result.Succeeded)
+                result = CharacterVirtualBonePoseDerivation.Derive(
+                    counts,
+                    physicalLocalPoses,
+                    physicalParentIndices,
+                    descriptors,
+                    componentScratch,
+                    outputPose);
             if (!result.Succeeded)
                 throw new InvalidOperationException($"Animation Rig '{source.name}' reference Virtual Bone derivation failed: {result.Failure}.");
 

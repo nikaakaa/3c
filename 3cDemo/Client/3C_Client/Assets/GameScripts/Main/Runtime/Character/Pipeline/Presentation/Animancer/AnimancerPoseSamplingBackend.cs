@@ -529,18 +529,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     m_PendingNormalizedClipWeights,
                     clipOffset,
                     mutation.ClipCount);
-                var job = new AnimationSourcePoseCaptureJob(
-                    mutation.Capture,
-                    m_Rig.BoneCounts,
-                    m_Handles,
-                    m_ReferencePose,
-                    m_PhysicalParentIndices,
-                    m_VirtualBones,
-                    mutation.Visual.ComponentScratch,
-                    m_Rig.RootPhysicalBoneIndex,
-                    m_Rig.RootBonePolicy,
-                    m_Rig.ScalePolicy);
-                mutation.Visual.CapturePlayable.SetJobData(job);
+                mutation.Visual.CaptureJob.BindFrame(in mutation.Capture);
+                mutation.Visual.CapturePlayable.SetJobData(mutation.Visual.CaptureJob);
             }
         }
 
@@ -801,7 +791,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     Allocator.Persistent,
                     NativeArrayOptions.UninitializedMemory);
                 var job = new AnimationSourcePoseCaptureJob(
-                    default,
                     m_Rig.BoneCounts,
                     m_Handles,
                     m_ReferencePose,
@@ -810,8 +799,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     componentScratch,
                     m_Rig.RootPhysicalBoneIndex,
                     m_Rig.RootBonePolicy,
-                    m_Rig.ScalePolicy,
-                    false);
+                    m_Rig.ScalePolicy);
                 mixer.SetGraph(m_Graph);
                 capturePlayable = AnimationScriptPlayable.Create(m_Graph.PlayableGraph, job, 1);
                 capturePlayable.SetProcessInputs(true);
@@ -821,6 +809,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     key,
                     mixer,
                     capturePlayable,
+                    job,
                     componentScratch,
                     clipCatalog.Count);
                 for (int i = 0; i < clipCatalog.Count; i++)
@@ -1087,12 +1076,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 AnimationPlayerSourceKey key,
                 ManualMixerState mixer,
                 AnimationScriptPlayable capturePlayable,
+                AnimationSourcePoseCaptureJob captureJob,
                 NativeArray<CharacterComponentBonePose> componentScratch,
                 int clipCapacity)
             {
                 Key = key;
                 Mixer = mixer ?? throw new ArgumentNullException(nameof(mixer));
                 CapturePlayable = capturePlayable;
+                CaptureJob = captureJob;
                 ComponentScratch = componentScratch;
                 if (!key.IsValid || !capturePlayable.IsValid() ||
                     !componentScratch.IsCreated || clipCapacity <= 0)
@@ -1110,6 +1101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             public AnimationPlayerSourceKey Key { get; }
             public ManualMixerState Mixer { get; }
             public AnimationScriptPlayable CapturePlayable { get; }
+            public AnimationSourcePoseCaptureJob CaptureJob;
             public NativeArray<CharacterComponentBonePose> ComponentScratch { get; }
 
             public void ClearClipWeights()

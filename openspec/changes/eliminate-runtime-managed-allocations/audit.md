@@ -299,6 +299,13 @@
 - `SimulationInput.RemapTicks` 共享其私有、不可变的 Values 数组，只创建一次改时间戳后的 Requests 数组；Sequence/RequestId 顺序不变，不再复制及排序。HoldValues 共享相同数值并清空请求。RebindSource 统一使用同一私有快照构造入口，删除无职责 bool 参数和内部数组空值兜底。
 - 每 Tick 输入快照对象及有请求时的请求数组仍分配，未通过复用可变对象破坏历史持有关系。本项降低的是回放/诊断负担，不能记成纯角色业务的全部 GC 降幅；仅做差异与调用链静态检查，未编译、未运行。
 
+### AP31 采样任务每帧重查参考姿势与骨架拓扑（2026-09-29，已实施，未运行）
+
+- ACL SourceGraph.Apply 和 Animancer EnterEvaluateBarrier 原来每次重新构造 AnimationSourcePoseCaptureJob，逐骨检查固定 referencePose；Job 执行时 Derive 还逐帧检查父节点顺序、根数量、虚拟骨配置及重复身份。
+- 任务构造只在 source 创建时执行，保存固定骨架、参考姿势及策略；每帧 BindFrame 只接收正式 AnimationPoseSourceCaptureBinding，核对该帧骨骼页与任务骨架的长度并更新页、身份和时间。删除 validateBinding 开关和重复的完整绑定校验，绑定字段本身由既有构造边界负责。ACL 与 Animancer 都使用同一 Job 接口，没有留下旧构造路径。
+- 骨架拓扑检查集中到 ValidateLayout，Job 构造和 reference Virtual Bone 编译入口各在接收布局时调用一次；Derive 只处理当帧姿势与输出页。删除进入 TryCreateComponent 前对同一 local 的重复 IsValid；每根虚拟骨共享一次 inverseSource，保持计算公式和归一化次数。
+- 不改变 Playable 的求值、帧绑定更新时机、双页提交、Discard 或资源释放顺序。保留引擎输入及派生结果的数值失败语义。静态核对全部4处原 Job 构造点、两个 Derive 调用入口和引用；未编译、未运行，不宣称 CPU 收益数值。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

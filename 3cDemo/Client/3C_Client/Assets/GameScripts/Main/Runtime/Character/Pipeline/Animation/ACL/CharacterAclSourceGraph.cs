@@ -9,16 +9,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
     internal sealed class CharacterAclSourceGraph : IDisposable
     {
         readonly PlayableGraph m_Graph;
-        readonly CharacterAnimationRigPayload m_Rig;
-        readonly NativeArray<TransformStreamHandle> m_Handles;
-        readonly NativeArray<AnimationLocalBonePose> m_ReferencePose;
-        readonly NativeArray<int> m_PhysicalParentIndices;
-        readonly NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
         readonly AnimationScriptPlayable[] m_ClipOutputs;
         readonly int[] m_ActiveClipIndices;
         readonly NativeArray<CharacterComponentBonePose> m_ComponentScratch;
         AnimationMixerPlayable m_Mixer;
         AnimationScriptPlayable m_Capture;
+        AnimationSourcePoseCaptureJob m_CaptureJob;
         int m_ActiveClipCount;
         bool m_Disposed;
 
@@ -40,11 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 clipCapacity <= 0)
                 throw new ArgumentException("ACL source graph input is invalid.");
             m_Graph = graph;
-            m_Rig = rig;
-            m_Handles = handles;
-            m_ReferencePose = referencePose;
-            m_PhysicalParentIndices = physicalParentIndices;
-            m_VirtualBones = virtualBones;
             m_ActiveClipIndices = new int[clipCapacity];
             m_ComponentScratch = new NativeArray<CharacterComponentBonePose>(
                 rig.PhysicalBoneCount,
@@ -66,9 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     graph.Connect(m_ClipOutputs[i], 0, m_Mixer, i);
                     m_Mixer.SetInputWeight(i, 0f);
                 }
-                AnimationSourcePoseCaptureJob captureJob =
+                m_CaptureJob =
                     new AnimationSourcePoseCaptureJob(
-                        default,
                         rig.BoneCounts,
                         handles,
                         referencePose,
@@ -77,9 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                         m_ComponentScratch,
                         rig.RootPhysicalBoneIndex,
                         rig.RootBonePolicy,
-                        rig.ScalePolicy,
-                        false);
-                m_Capture = AnimationScriptPlayable.Create(graph, captureJob, 1);
+                        rig.ScalePolicy);
+                m_Capture = AnimationScriptPlayable.Create(graph, m_CaptureJob, 1);
                 graph.Connect(m_Mixer, 0, m_Capture, 0);
                 m_Capture.SetInputWeight(0, 1f);
             }
@@ -110,17 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     batch.GetNormalizedWeight(i));
                 m_ActiveClipIndices[m_ActiveClipCount++] = clipIndex;
             }
-            m_Capture.SetJobData(new AnimationSourcePoseCaptureJob(
-                capture,
-                m_Rig.BoneCounts,
-                m_Handles,
-                m_ReferencePose,
-                m_PhysicalParentIndices,
-                m_VirtualBones,
-                m_ComponentScratch,
-                m_Rig.RootPhysicalBoneIndex,
-                m_Rig.RootBonePolicy,
-                m_Rig.ScalePolicy));
+            m_CaptureJob.BindFrame(in capture);
+            m_Capture.SetJobData(m_CaptureJob);
         }
 
         internal void ClearInputs()

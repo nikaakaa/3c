@@ -385,7 +385,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceDurationSeconds,
             bool looping)
         {
-            RequireValid();
             if (!float.IsFinite(normalizedTime) ||
                 normalizedTime < 0f ||
                 normalizedTime > 1f ||

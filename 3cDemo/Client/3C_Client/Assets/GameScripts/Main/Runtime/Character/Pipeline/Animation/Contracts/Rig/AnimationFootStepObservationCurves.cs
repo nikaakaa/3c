@@ -315,7 +315,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceDurationSeconds,
             bool looping)
         {
-            RequireValid();
             float time = Mathf.Clamp01(normalizedTime);
             AnimationFootMotionEventFrame events = m_LandingEvents.Resolve(
                 time,

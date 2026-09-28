@@ -20,7 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose Foot Motion source metadata is invalid.");
             }
-            observation.RequireValid();
             SourceIdentity = sourceIdentity.Trim();
             SourceSampleIdentity = sourceSampleIdentity;
             Observation = observation;

@@ -160,11 +160,12 @@
 - 可在图中显式保存确实复用的中间结果，代价是作者维护少量变量和明确写入顺序。同一帧 SetVariable 后必须能读到新值，禁止整帧缓存。
 - 原生 Pose 已有 [节点/端口/执行阶段输出缓存](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1056)，不应再为它添加重复的整帧缓存。
 
-### AP13 ACL 每帧重设不变 Clip Job，并全容量清权重（本轮续查，CPU/引擎调用）
+### AP13 ACL 每帧重设不变 Clip Job，并全容量清权重（已实施，未实跑）
 
 - 证据：[CharacterAclSourceGraph.cs:105](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/ACL/CharacterAclSourceGraph.cs#L105)。每次 Apply 遍历 clipCapacity，重建值类型 Job 并 SetJobData，然后所有输入权重设零，再设当前活动权重。
 - Clip Job 的 handles、解压值数组和骨骼映射在构造时已绑定，SourceInstance 更新数组内容，没有每帧更换这些容器。这里的 new Job 是 struct，不作为托管 GC 证据；问题是重复校验和引擎调用。
 - 可保留装配时的 Clip Job 绑定，只维护活动输入权重；从上一批退出的输入必须清零。业务上减少未活动 clip 槽位的工作，代价是记录上次活动槽。Capture Job 携带每帧页绑定，不能一并停止更新；ClearInputs、Discard 和池复用也必须重置活动记录。
+- 实施结果：Clip Job 只在构造 Playable 时绑定；新增按正式 clipCapacity 准备的活动索引数组，Apply 只清上次活动输入并写本次权重，ClearInputs 同时归零活动数量。Capture Job 仍每帧绑定当前捕获页。已核对 SourceInstance 的 ResetForReuse 沿同一 ClearInputs 清理，没有改动解压、混合顺序或池复用入口。
 
 ### AP14 足部支撑候选完整排序，但只消费最优项（本轮续查，CPU）
 
@@ -195,3 +196,9 @@
 当前已覆盖 EventGraph → Pose 输入 → 图/子图准备 → 混合/惯性/变换 → ACL 输入设置 → Final Pose 写回，以及足部支撑选择与动作来源解析。没有新增性能采集链。
 
 仍未确定 ACL native 解压、Playable 求值、FBBIK、世界物理查询各自耗时、线程等待、活动角色/源数量和采样开关差异。原生插件内存、托管 GC、内存带宽和引擎调用次数分别记录；不得凭源码循环数量给出毫秒收益，也不把非当前内容使用的分支当作已命中热点。
+
+## 2026-09-28 性能优化实施
+
+用户已授权开始性能优化。上文未实施条目继续作为候选，标明“已实施”的条目不再计为未修复；编译、运行和耗时证据分别记录，不用源码修改代替验证结果。
+
+Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964ebf61c4cd3a5300db396ad91a5`。修改前正式 compile 返回 `WorkspaceEditorInUse`，没有产生 RunId，也没有启动 Unity。随后用户明确“不用你起进程”，本轮不再启动 Unity、编译或采样进程，不建立替代验证路径。仅做代码与差异检查；不新增测试，运行结果和性能收益未验证。

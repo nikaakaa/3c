@@ -14,12 +14,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         readonly NativeArray<AnimationLocalBonePose> m_ReferencePose;
         readonly NativeArray<int> m_PhysicalParentIndices;
         readonly NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
-        readonly NativeArray<int> m_TrackByPoseBone;
-        readonly NativeArray<CharacterAclNativeTransformSample>[] m_TransformValues;
         readonly AnimationScriptPlayable[] m_ClipOutputs;
+        readonly int[] m_ActiveClipIndices;
         readonly NativeArray<CharacterComponentBonePose> m_ComponentScratch;
         AnimationMixerPlayable m_Mixer;
         AnimationScriptPlayable m_Capture;
+        int m_ActiveClipCount;
         bool m_Disposed;
 
         internal CharacterAclSourceGraph(
@@ -45,8 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_ReferencePose = referencePose;
             m_PhysicalParentIndices = physicalParentIndices;
             m_VirtualBones = virtualBones;
-            m_TrackByPoseBone = trackByPoseBone;
-            m_TransformValues = transformValues;
+            m_ActiveClipIndices = new int[clipCapacity];
             m_ComponentScratch = new NativeArray<CharacterComponentBonePose>(
                 rig.PhysicalBoneCount,
                 Allocator.Persistent,
@@ -102,19 +101,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireAlive();
             if (batch == null || batch.Count <= 0 || batch.Count > m_ClipOutputs.Length)
                 throw new ArgumentException("ACL source graph sample batch does not match its catalog.");
-            for (int i = 0; i < m_ClipOutputs.Length; i++)
-            {
-                m_ClipOutputs[i].SetJobData(
-                    new CharacterAclClipPoseJob(
-                        m_Handles,
-                        m_TransformValues[i],
-                        m_TrackByPoseBone));
-                m_Mixer.SetInputWeight(i, 0f);
-            }
+            ClearInputs();
             for (int i = 0; i < batch.Count; i++)
+            {
+                int clipIndex = batch[i].ClipBindingIndex;
                 m_Mixer.SetInputWeight(
-                    batch[i].ClipBindingIndex,
+                    clipIndex,
                     batch.GetNormalizedWeight(i));
+                m_ActiveClipIndices[m_ActiveClipCount++] = clipIndex;
+            }
             m_Capture.SetJobData(new AnimationSourcePoseCaptureJob(
                 capture,
                 m_Rig.BoneCounts,
@@ -131,8 +126,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         internal void ClearInputs()
         {
             RequireAlive();
-            for (int i = 0; i < m_ClipOutputs.Length; i++)
-                m_Mixer.SetInputWeight(i, 0f);
+            for (int i = 0; i < m_ActiveClipCount; i++)
+                m_Mixer.SetInputWeight(m_ActiveClipIndices[i], 0f);
+            m_ActiveClipCount = 0;
         }
 
         public void Dispose()

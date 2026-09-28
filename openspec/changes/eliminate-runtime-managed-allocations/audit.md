@@ -233,12 +233,12 @@
 - 三类绑定表各持有与正式容量相同的已写索引数组；首次写某个位置记录索引，同帧再次写仍覆盖原位置而不重复记账。Clear 只清实际写过的绑定，随后将有效数量和页完成身份清零。占用判断使用不可变的 PhysicalIdentity，不依赖资源是否已释放的动态 ScalarReadView 有效性。旧引用会真实清除，不用帧号掩盖长期残留对象。
 - 代价是每个配置槽多一个 int 的常驻索引；活动源远少于配置总量时减少清理范围。容量来自原配置，无运行扩容、第二绑定路径或额外设置。已静态核对全部清理入口、重复写和空页行为，未实跑。
 
-### AP22 表情属性重复检查同一渲染器并逐帧读取形状名称（共同检查已合并，名称检查移至装配）
+### AP22 表情属性重复检查同一渲染器及固定配置（已实施装配绑定与唯一目标检查）
 
 - Corin 正式 Profile 配置41个 BlendShape，全部来自 `Corin_face`。FinalPosePropertyWriter 原先按每个属性重复执行同一 Renderer 的存在、根层级、期望 Mesh、Hash 格式检查，再读取对应 BlendShape 名称。BlendShape 是模型预制变形（如眨眼、闭眼、眉毛表情），权重仍需要正常更新。
-- 装配时按绑定对象建立唯一 Renderer 列表；帧前共同检查每个 Renderer 一次，属性检查仍逐项核对名称/索引/Hash。每项属性将 sharedMesh 读取从最多3次改为一次。同一脸部的41次共同 Renderer 检查变为1次；名称检查仍为41次，保留运行中原地修改 Mesh 时的现有检测规则。WriteDefaults/RestoreInitial 共用完整检查入口。
+- 最终实现：装配时核对名称、Hash、输入声明和 Renderer 配置，按实际 SkinnedMeshRenderer 绑定唯一目标及该目标需要的最大形状编号。正常帧不再逐属性验证这些固定配置；每个实际 Renderer 只检查一次对象存活、Mesh 身份、形状数量能否覆盖最大编号以及是否仍属于装配根。Corin 的41个属性共用1个目标检查，运行路径没有名称读取、Hash格式扫描、Hash/配置字符串比较或逐属性 Mesh 查询。写入持有直接 Renderer 引用；WriteDefaults/RestoreInitial 共用目标有效性入口。
 - 续查规则依据：`character-animation-scalar-presentation/spec.md` 要求 Build 固定目标索引，并在构建或 Actor 装配时拒绝 Mesh revision/BlendShape 映射不一致；运行时仍须验证 Renderer/Mesh/目标索引。全 Assets C# 搜索未发现 ClearBlendShapes/AddBlendShapeFrame 调用，项目业务代码未发现运行时替换 sharedMesh 的赋值。第三方布料存在更换 sharedMesh 的入口，因此 Mesh 身份检查继续保留。
-- 据此删除帧前 GetBlendShapeName，名称/索引对应关系由构造期 ValidateNativeBinding 完整检查，运行时仍核对 Renderer、Mesh 身份、索引范围、配置身份和当帧值。这是固定模型映射的正式使用边界；原地重建形状列表必须重新装配，不支持不通知 owner 就改变映射。改变 BlendShape 权重（表情、眨眼或捏脸）不属于改变映射，不需要重新装配。没有新增设置或替代 writer，未做分配实测。
+- 名称/索引对应关系由构造期 ValidateNativeBinding 完整检查；当帧参数可用性、有限值和整体发布身份仍需检查。这是固定模型映射的正式使用边界；原地重建形状列表或修改绑定配置必须重新装配，不支持不通知 owner 就改变映射。改变 BlendShape 权重（表情、眨眼或捏脸）不属于改变映射，不需要重新装配。没有新增设置或替代 writer，未做分配实测。
 
 ## 可靠性问题独立保留
 

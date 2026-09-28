@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ICharacterPoseNativeNodeHandler
     {
         readonly PoseNodeId m_NodeId;
-        readonly CharacterAnimationRigPayload m_Rig;
+        readonly (Vector3 Position, Quaternion InverseRotation, Vector3 Scale)[] m_ReferenceBones;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         int m_PageIndex = -1;
@@ -39,7 +39,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose native Additive Pose handler identity is invalid.",
                     nameof(nodeId));
-            m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
+            if (rig == null)
+                throw new ArgumentNullException(nameof(rig));
+            m_ReferenceBones = new (Vector3, Quaternion, Vector3)[rig.PoseBoneCount];
+            for (int i = 0; i < m_ReferenceBones.Length; i++)
+            {
+                AnimationLocalBonePose reference = rig.GetReferenceLocalPose(i);
+                m_ReferenceBones[i] = (reference.Position, Quaternion.Inverse(reference.Rotation), reference.Scale);
+            }
             m_NodeId = nodeId;
             m_OutputBuffer = outputBuffer ??
                 throw new ArgumentNullException(nameof(outputBuffer));
@@ -340,55 +347,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationPoseNativeInvalidReason> outputInvalidReason =
                 m_WriteBinding.InvalidReason;
             NativeSlice<ulong> outputCompletedAt = m_WriteBinding.CompletedAt;
-            for (int bone = 0; bone < outputPoses.Length; bone++)
+            if (weight == 0f)
             {
-                AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
-                if (weight == 0f)
+                outputPoses.CopyFrom(basePose.DenseLocalPoses);
+                outputVelocities.CopyFrom(basePose.DenseVelocities);
+            }
+            else
+            {
+                for (int bone = 0; bone < outputPoses.Length; bone++)
                 {
-                    outputPoses[bone] = baseBone;
-                    outputVelocities[bone] = basePose.DenseVelocities[bone];
-                    continue;
+                    AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
+                    AnimationLocalBonePose additiveBone = additivePose.DenseLocalPoses[bone];
+                    var reference = m_ReferenceBones[bone];
+                    Vector3 position = baseBone.Position +
+                        (additiveBone.Position - reference.Position) * weight;
+                    Quaternion referenceToAdditive =
+                        reference.InverseRotation * additiveBone.Rotation;
+                    Quaternion rotation = baseBone.Rotation *
+                        Quaternion.Slerp(Quaternion.identity, referenceToAdditive, weight);
+                    Vector3 scale;
+                    if (scalePolicy == AdditiveScalePolicy.Multiply)
+                    {
+                        Vector3 ratio = new Vector3(
+                            additiveBone.Scale.x / reference.Scale.x,
+                            additiveBone.Scale.y / reference.Scale.y,
+                            additiveBone.Scale.z / reference.Scale.z);
+                        scale = Vector3.Scale(
+                            baseBone.Scale,
+                            Vector3.Lerp(Vector3.one, ratio, weight));
+                    }
+                    else
+                    {
+                        scale = baseBone.Scale +
+                            (additiveBone.Scale - reference.Scale) * weight;
+                    }
+                    outputPoses[bone] = new AnimationLocalBonePose(position, rotation, scale);
+                    AnimationBlendBoneVelocity additiveVelocity = additivePose.DenseVelocities[bone];
+                    AnimationBlendBoneVelocity baseVelocity = basePose.DenseVelocities[bone];
+                    outputVelocities[bone] = new AnimationBlendBoneVelocity(
+                        baseVelocity.Linear + additiveVelocity.Linear * weight,
+                        baseVelocity.Angular + additiveVelocity.Angular * weight,
+                        baseVelocity.Scale + additiveVelocity.Scale * weight);
                 }
-                AnimationLocalBonePose additiveBone = additivePose.DenseLocalPoses[bone];
-                AnimationLocalBonePose reference = m_Rig.GetReferenceLocalPose(bone);
-                Vector3 position = baseBone.Position +
-                    (additiveBone.Position - reference.Position) * weight;
-                Quaternion referenceToAdditive =
-                    Quaternion.Inverse(reference.Rotation) * additiveBone.Rotation;
-                Quaternion rotation =
-                    baseBone.Rotation *
-                     Quaternion.Slerp(
-                         Quaternion.identity,
-                         referenceToAdditive,
-                         weight);
-                Vector3 scale;
-                if (scalePolicy == AdditiveScalePolicy.Multiply)
-                {
-                    Vector3 ratio = new Vector3(
-                        additiveBone.Scale.x / reference.Scale.x,
-                        additiveBone.Scale.y / reference.Scale.y,
-                        additiveBone.Scale.z / reference.Scale.z);
-                    scale = Vector3.Scale(
-                        baseBone.Scale,
-                        Vector3.Lerp(Vector3.one, ratio, weight));
-                }
-                else
-                {
-                    scale = baseBone.Scale +
-                        (additiveBone.Scale - reference.Scale) * weight;
-                }
-                outputPoses[bone] = new AnimationLocalBonePose(
-                    position,
-                    rotation,
-                    scale);
-                AnimationBlendBoneVelocity additiveVelocity =
-                    additivePose.DenseVelocities[bone];
-                AnimationBlendBoneVelocity baseVelocity =
-                    basePose.DenseVelocities[bone];
-                outputVelocities[bone] = new AnimationBlendBoneVelocity(
-                    baseVelocity.Linear + additiveVelocity.Linear * weight,
-                    baseVelocity.Angular + additiveVelocity.Angular * weight,
-                    baseVelocity.Scale + additiveVelocity.Scale * weight);
             }
             outputAvailability[0] = AnimationPoseAvailability.Pose;
             outputContinuity[0] = m_ContinuityIdentity;

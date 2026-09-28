@@ -648,6 +648,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         contentParts.Add(((byte)warp.LimitPolicy).ToString(CultureInfo.InvariantCulture));
                         AddCurveContent(contentParts, warp.UsesPositionProgress ? warp.PositionProgressCurve : null);
                         AddCurveContent(contentParts, warp.UsesYawProgress ? warp.YawProgressCurve : null);
+                        AddCurveContent(contentParts, warp.UsesYawResponse ? warp.YawResponseCurve : null);
+                        contentParts.Add(warp.SteeringInputId);
+                        AddCurveContent(contentParts, warp.UsesYawResponse ? warp.InputYawResponseCurve : null);
                     }
                 }
             }

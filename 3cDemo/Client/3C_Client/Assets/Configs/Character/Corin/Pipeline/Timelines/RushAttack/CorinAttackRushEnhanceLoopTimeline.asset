@@ -44,6 +44,7 @@ MonoBehaviour:
     - rid: 207050738426183694
     - rid: 207050751823839252
     - rid: 207050751823839315
+    - rid: 207050751823839387
     m_Sections:
     - m_AuthoringId: a4fd678b-681d-0c35-65f8-48af5017c8f9
       m_Name: Attack_Rush_Enhance_Loop
@@ -325,6 +326,153 @@ MonoBehaviour:
         m_ExecutionPhase: 1
         m_ExitSource: 0
         m_AssetTree: {fileID: -4298811993247111233}
+    - rid: 207050751823839387
+      type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 6f742146-8087-d74f-0c8f-a03d47ad1eb6
+        Name: Action Steering
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839388
+        m_Markers: []
+    - rid: 207050751823839388
+      type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 9198b997-87ba-b25c-4864-1d7fbfb329f3
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 5726622720
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_SourceMotionClipId: be9bc72e-d950-88e2-400e-156b6017c7f3
+        TranslationMode: 0
+        TargetOffsetSpace: 1
+        RotationMode: 1
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
+        TargetYawOffsetDegrees: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
+        LimitPolicy: 0
+        PositionProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.050000004
+            value: 60
+            inSlope: 0
+            outSlope: -627.6593
+            tangentMode: 0
+            weightedMode: 3
+            inWeight: 0.33333334
+            outWeight: 0.13218151
+          - serializedVersion: 3
+            time: 0.22500002
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.87500006
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.8750002
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
 --- !u!114 &5775952646542771060
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -2419,8 +2419,8 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eb07c8dd-3527-4470-8bc4-c44f6665d937
-        m_StartTimeRaw: 501079518
-        m_EndTimeRaw: 2290649225
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 3507556608
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -2430,12 +2430,12 @@ MonoBehaviour:
         TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
-        RotationMethod: 0
-        TargetPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
         TargetYawOffsetDegrees: 0
-        MaxTotalPositionCorrection: 1.5
-        MaxTotalYawCorrectionDegrees: 90
-        MaximumYawRateDegreesPerSecond: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
         LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
@@ -2468,38 +2468,87 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 0
+            outSlope: 1
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 0.333333
-            value: 0.571906
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.6666667
-            value: 0.842683
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.99999964
+            time: 1
             value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: Infinity
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.20408164
+            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 999
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.020408163
+            value: 999
+            inSlope: 0
+            outSlope: -4895105
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.020612245
+            value: 0
+            inSlope: -4895105
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 2.0408165
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -3261,8 +3310,8 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 28fc08a4-055f-4a38-9371-77efd7c6914a
-        m_StartTimeRaw: 357913941
-        m_EndTimeRaw: 2075900860
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 3435973888
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -3272,12 +3321,12 @@ MonoBehaviour:
         TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
-        RotationMethod: 0
-        TargetPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
         TargetYawOffsetDegrees: 0
-        MaxTotalPositionCorrection: 1.5
-        MaxTotalYawCorrectionDegrees: 90
-        MaximumYawRateDegreesPerSecond: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
         LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
@@ -3310,25 +3359,7 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.333333
-            value: 0.638016
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.666667
-            value: 0.909659
-            inSlope: 0
-            outSlope: 0
+            outSlope: 1
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -3336,12 +3367,79 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: Infinity
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.1875
+            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 999
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.020833334
+            value: 999
+            inSlope: 0
+            outSlope: -4795205
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.021041667
+            value: 0
+            inSlope: -4795205
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 2.0833335
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -4215,8 +4313,8 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 86240efe-6475-4499-bc61-9a80a91c84b8
-        m_StartTimeRaw: 715827883
-        m_EndTimeRaw: 2863311531
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 6514033664
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -4226,12 +4324,12 @@ MonoBehaviour:
         TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
-        RotationMethod: 0
-        TargetPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
         TargetYawOffsetDegrees: 0
-        MaxTotalPositionCorrection: 1.5
-        MaxTotalYawCorrectionDegrees: 90
-        MaximumYawRateDegreesPerSecond: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
         LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
@@ -4264,25 +4362,7 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.333333
-            value: 0.581287
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.666667
-            value: 0.857153
-            inSlope: 0
-            outSlope: 0
+            outSlope: 1
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -4290,6 +4370,64 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: Infinity
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.2747253
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.13186814
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1.3626374
+            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -5561,8 +5699,8 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b7cc37e0-f20d-40a9-afd5-c6d2e659d99d
-        m_StartTimeRaw: 429496730
-        m_EndTimeRaw: 2791728742
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 5798205952
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -5572,12 +5710,12 @@ MonoBehaviour:
         TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
-        RotationMethod: 0
-        TargetPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
         TargetYawOffsetDegrees: 0
-        MaxTotalPositionCorrection: 1.5
-        MaxTotalYawCorrectionDegrees: 90
-        MaximumYawRateDegreesPerSecond: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
         LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
@@ -5610,25 +5748,7 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.333333
-            value: 0.450166
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.666667
-            value: 0.552825
-            inSlope: 0
-            outSlope: 0
+            outSlope: 1
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -5636,12 +5756,79 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: Infinity
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.39506173
+            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.09876543
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.19753087
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 0.9876543
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -6716,8 +6903,8 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e28c94f9-544b-4d3c-8280-ac6cfb9f0a42
-        m_StartTimeRaw: 644245094
-        m_EndTimeRaw: 3006477107
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 6370868224
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -6727,12 +6914,12 @@ MonoBehaviour:
         TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
-        RotationMethod: 0
-        TargetPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
         TargetYawOffsetDegrees: 0
-        MaxTotalPositionCorrection: 1.5
-        MaxTotalYawCorrectionDegrees: 90
-        MaximumYawRateDegreesPerSecond: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
         LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
@@ -6765,25 +6952,7 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.333333
-            value: 0.548504
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0
-            outWeight: 0
-          - serializedVersion: 3
-            time: 0.666667
-            value: 0.836836
-            inSlope: 0
-            outSlope: 0
+            outSlope: 1
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -6791,6 +6960,73 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 60
+            inSlope: 0
+            outSlope: Infinity
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.20224719
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.101123594
+            value: 6
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.20224719
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.98876405
+            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0

@@ -19,6 +19,7 @@ MonoBehaviour:
     - rid: 207050738426183718
     - rid: 207050738426183720
     - rid: 207050751823839260
+    - rid: 207050751823839393
     m_Sections:
     - m_AuthoringId: 58bc6ed1-4905-144e-2abc-7a341aabec10
       m_Name: Attack_Rush_Enhance_Explode_End
@@ -247,6 +248,135 @@ MonoBehaviour:
             time: 1
             value: 1
             inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 207050751823839393
+      type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: f734b29a-119c-b4a8-9fdb-c4d377fb0914
+        Name: Action Steering
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839394
+        m_Markers: []
+    - rid: 207050751823839394
+      type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 8b2b7d62-1d42-a094-ccfa-69d4d4984843
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 8446768640
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_SourceMotionClipId: 1ea108be-0bb5-461f-7a4e-a82624912322
+        TranslationMode: 0
+        TargetOffsetSpace: 1
+        RotationMode: 1
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
+        TargetYawOffsetDegrees: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
+        LimitPolicy: 0
+        PositionProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.008474577
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.008474577
+            value: 0
+            inSlope: 0
             outSlope: 0
             tangentMode: 0
             weightedMode: 0

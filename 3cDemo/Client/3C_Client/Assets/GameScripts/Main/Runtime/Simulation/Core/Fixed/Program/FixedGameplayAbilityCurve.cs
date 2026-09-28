@@ -73,6 +73,8 @@ namespace ThirdPersonSimulation.Fixed
             if (duration == FixedScalar.Zero)
                 return to.Value;
             FixedScalar t = (time - from.Time) / duration;
+            if ((from.WeightedMode & 2) != 0 || (to.WeightedMode & 1) != 0)
+                return EvaluateWeighted(from, to, duration, t);
             FixedScalar t2 = t * t;
             FixedScalar t3 = t2 * t;
             FixedScalar two = FixedScalar.FromInt64(2);
@@ -82,6 +84,36 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar h01 = -two * t3 + three * t2;
             FixedScalar h11 = t3 - t2;
             return h00 * from.Value + h10 * duration * from.OutTangent + h01 * to.Value + h11 * duration * to.InTangent;
+        }
+
+        static FixedScalar EvaluateWeighted(FixedGameplayAbilityCurveKey from, FixedGameplayAbilityCurveKey to,
+            FixedScalar duration, FixedScalar normalizedTime)
+        {
+            FixedScalar third = FixedScalar.One / FixedScalar.FromInt64(3);
+            FixedScalar outgoing = (from.WeightedMode & 2) != 0 ? from.OutWeight : third;
+            FixedScalar incoming = (to.WeightedMode & 1) != 0 ? to.InWeight : third;
+            FixedScalar low = FixedScalar.Zero;
+            FixedScalar high = FixedScalar.One;
+            FixedScalar two = FixedScalar.FromInt64(2);
+            for (int iteration = 0; iteration < 24; iteration++)
+            {
+                FixedScalar middle = (low + high) / two;
+                FixedScalar x = Bezier(FixedScalar.Zero, outgoing, FixedScalar.One - incoming, FixedScalar.One, middle);
+                if (x < normalizedTime)
+                    low = middle;
+                else
+                    high = middle;
+            }
+            return Bezier(from.Value, from.Value + duration * outgoing * from.OutTangent,
+                to.Value - duration * incoming * to.InTangent, to.Value, (low + high) / two);
+        }
+
+        static FixedScalar Bezier(FixedScalar a, FixedScalar b, FixedScalar c, FixedScalar d, FixedScalar t)
+        {
+            FixedScalar oneMinusT = FixedScalar.One - t;
+            FixedScalar three = FixedScalar.FromInt64(3);
+            return oneMinusT * oneMinusT * oneMinusT * a + three * oneMinusT * oneMinusT * t * b +
+                three * oneMinusT * t * t * c + t * t * t * d;
         }
     }
 

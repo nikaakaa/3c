@@ -1,9 +1,8 @@
-using BTSMTL.Authoring.Blackboard;
 using System;
+using BTSMTL.Authoring.Blackboard;
 using FlowCanvas.Nodes;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration

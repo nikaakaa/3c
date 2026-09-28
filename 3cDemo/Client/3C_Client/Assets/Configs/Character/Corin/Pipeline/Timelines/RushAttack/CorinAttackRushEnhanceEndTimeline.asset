@@ -126,6 +126,7 @@ MonoBehaviour:
     - rid: 207050738426183704
     - rid: 207050751823839256
     - rid: 207050751823839254
+    - rid: 207050751823839391
     m_Sections:
     - m_AuthoringId: 43a899a3-042c-644d-130e-673ca2a9d5d3
       m_Name: Attack_Rush_Enhance_End
@@ -386,6 +387,135 @@ MonoBehaviour:
         m_Clips:
         - rid: 207050751823839244
         m_Markers: []
+    - rid: 207050751823839391
+      type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 34c9f0c6-96c6-fd2c-ab7a-6f17c80e756f
+        Name: Action Steering
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050751823839392
+        m_Markers: []
+    - rid: 207050751823839392
+      type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: aa0998e8-c99e-5300-e02f-0302e0ae17ab
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 5010795008
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
+        m_ClipInTimeRaw: 0
+        m_SourceMotionClipId: 50de4831-18d8-a8e0-acaa-8b563d4f8b68
+        TranslationMode: 0
+        TargetOffsetSpace: 1
+        RotationMode: 1
+        RotationMethod: 3
+        TargetPlanarOffset: {x: 0, y: 0}
+        TargetYawOffsetDegrees: 0
+        MaxTotalPositionCorrection: 1
+        MaxTotalYawCorrectionDegrees: 180
+        MaximumYawRateDegreesPerSecond: 360
+        LimitPolicy: 0
+        PositionProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawProgressCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        YawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.014285714
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        SteeringInputId: MoveAxis
+        InputYawResponseCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.014285714
+            value: 0
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
 --- !u!114 &7254867210131745066
 MonoBehaviour:
   m_ObjectHideFlags: 0

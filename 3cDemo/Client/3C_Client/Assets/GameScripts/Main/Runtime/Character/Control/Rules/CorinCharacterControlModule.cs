@@ -232,6 +232,7 @@ namespace ThirdPersonCharacter.Control.Rules
                     BranchAttack,
                     s_BranchRequest,
                     true,
+                    s_ActionTarget,
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
@@ -301,6 +302,7 @@ namespace ThirdPersonCharacter.Control.Rules
                 RushAttack,
                 s_AttackRequest,
                 true,
+                s_ActionTarget,
                 replacementActionInstanceId: replacementActionInstanceId));
 
         void ResumeRunningAfterDodge(CharacterControlStateId stateId, CharacterSkillId ability)

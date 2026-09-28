@@ -33,7 +33,8 @@ namespace BTSMTL.Timeline
     {
         ProgressCurve = 0,
         ConstantRate = 1,
-        ScaleSourceYaw = 2
+        ScaleSourceYaw = 2,
+        TargetResponse = 3
     }
 
     public enum MotionWarpLimitPolicy : byte
@@ -58,6 +59,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("targetOffsetSpace", typeof(MotionWarpTargetOffsetSpace))]
     [TimelineAuthoringProperty("rotationMode", typeof(MotionWarpRotationMode))]
     [TimelineAuthoringProperty("rotationMethod", typeof(MotionWarpRotationMethod))]
+    [TimelineAuthoringProperty("steeringInputId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("targetPlanarOffset", TimelineAuthoringPropertyKind.Vector2)]
     [TimelineAuthoringProperty("targetYawOffsetDegrees", TimelineAuthoringPropertyKind.Float, Finite = true)]
     [TimelineAuthoringProperty(
@@ -122,12 +124,22 @@ namespace BTSMTL.Timeline
         [ShowInInspector, ShowIf(nameof(UsesYawProgress)), OnValueChanged("RebindTimeline")]
         public AnimationCurve YawProgressCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
+        [ShowInInspector, ShowIf(nameof(UsesYawResponse)), OnValueChanged("RebindTimeline")]
+        public AnimationCurve YawResponseCurve = AnimationCurve.Constant(0f, 1f, 1f);
+
+        [ShowInInspector, ShowIf(nameof(UsesYawResponse)), OnValueChanged("RebindTimeline")]
+        public string SteeringInputId = string.Empty;
+
+        [ShowInInspector, ShowIf(nameof(UsesYawResponse)), OnValueChanged("RebindTimeline")]
+        public AnimationCurve InputYawResponseCurve = AnimationCurve.Constant(0f, 1f, 0f);
+
         public string SourceMotionClipId => m_SourceMotionClipId ?? string.Empty;
         public bool HasPositionWarp => TranslationMode != MotionWarpTranslationMode.Disabled;
         public bool HasYawWarp => RotationMode != MotionWarpRotationMode.Disabled;
         public bool UsesPositionProgress => TranslationMode == MotionWarpTranslationMode.SkewToTarget || TranslationMode == MotionWarpTranslationMode.LinearToTarget;
         public bool UsesYawProgress => HasYawWarp && RotationMethod == MotionWarpRotationMethod.ProgressCurve;
         public bool UsesMaximumYawRate => HasYawWarp && RotationMethod == MotionWarpRotationMethod.ConstantRate;
+        public bool UsesYawResponse => HasYawWarp && RotationMethod == MotionWarpRotationMethod.TargetResponse;
 
 #if UNITY_EDITOR
         public override string Name
@@ -158,7 +170,10 @@ namespace BTSMTL.Timeline
             float maximumYawRateDegreesPerSecond,
             MotionWarpLimitPolicy limitPolicy,
             AnimationCurve positionProgressCurve,
-            AnimationCurve yawProgressCurve)
+            AnimationCurve yawProgressCurve,
+            AnimationCurve yawResponseCurve,
+            string steeringInputId,
+            AnimationCurve inputYawResponseCurve)
         {
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
@@ -172,6 +187,9 @@ namespace BTSMTL.Timeline
             LimitPolicy = limitPolicy;
             PositionProgressCurve = CloneCurve(positionProgressCurve);
             YawProgressCurve = CloneCurve(yawProgressCurve);
+            YawResponseCurve = CloneCurve(yawResponseCurve);
+            SteeringInputId = steeringInputId ?? string.Empty;
+            InputYawResponseCurve = CloneCurve(inputYawResponseCurve);
             RebindTimeline();
         }
 
@@ -408,6 +426,8 @@ namespace BTSMTL.Timeline
                 warp.LimitPolicy,
                 warp.PositionProgressCurve,
                 warp.YawProgressCurve,
+                warp.YawResponseCurve,
+                warp.InputYawResponseCurve,
                 issues,
                 warp,
                 source);
@@ -427,6 +447,8 @@ namespace BTSMTL.Timeline
             MotionWarpLimitPolicy limitPolicy,
             AnimationCurve positionProgressCurve,
             AnimationCurve yawProgressCurve,
+            AnimationCurve yawResponseCurve,
+            AnimationCurve inputYawResponseCurve,
             List<MotionWarpAuthoringIssue> issues,
             MotionWarpClip warp = null,
             MotionCurveClip source = null)
@@ -483,6 +505,32 @@ namespace BTSMTL.Timeline
             if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled &&
                 rotationMethodDefined && rotationMethod == MotionWarpRotationMethod.ProgressCurve)
                 valid &= ValidateProgressCurve(yawProgressCurve, "yaw", warp, source, issues);
+            if (rotationMethod == MotionWarpRotationMethod.TargetResponse)
+            {
+                if (translationMode != MotionWarpTranslationMode.Disabled)
+                {
+                    Add(issues, "motion_warp_response_translation", $"MotionWarp '{identity}' target response requires translation correction to be disabled.", warp, source);
+                    valid = false;
+                }
+                valid &= ValidateResponseCurve(inputYawResponseCurve, "input yaw", warp, source, issues);
+                if (yawResponseCurve == null || yawResponseCurve.length < 2)
+                {
+                    Add(issues, "motion_warp_response_missing", $"MotionWarp '{identity}' yaw response curve is missing.", warp, source);
+                    valid = false;
+                }
+                else
+                {
+                    foreach (Keyframe key in yawResponseCurve.keys)
+                    {
+                        if (!Finite(key.time) || !Finite(key.value) || key.value < 0f)
+                        {
+                            Add(issues, "motion_warp_response_invalid", $"MotionWarp '{identity}' yaw response must be finite and non-negative.", warp, source);
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+            }
             if (warp != null && source != null && translationDefined && translationMode == MotionWarpTranslationMode.ScaleToTarget &&
                 SourceWindowPlanarMagnitude(source, warp) <= Epsilon)
             {
@@ -497,6 +545,24 @@ namespace BTSMTL.Timeline
                 valid = false;
             }
             return valid;
+        }
+
+        static bool ValidateResponseCurve(AnimationCurve curve, string name, MotionWarpClip warp, MotionCurveClip source, List<MotionWarpAuthoringIssue> issues)
+        {
+            if (curve == null || curve.length < 2)
+            {
+                Add(issues, "motion_warp_response_missing", $"MotionWarp {name} response requires at least two keys.", warp, source);
+                return false;
+            }
+            foreach (Keyframe key in curve.keys)
+            {
+                if (!Finite(key.time) || !Finite(key.value) || key.value < 0f || key.time < 0f)
+                {
+                    Add(issues, "motion_warp_response_invalid", $"MotionWarp {name} response contains an invalid key.", warp, source);
+                    return false;
+                }
+            }
+            return true;
         }
 
         static bool ValidateProgressCurve(

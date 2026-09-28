@@ -216,6 +216,9 @@ namespace ThirdPersonSimulation
             FixedScalar previousYawProgress,
             FixedScalar currentPositionProgress,
             FixedScalar currentYawProgress,
+            FixedScalar yawResponse,
+            string steeringInputId,
+            FixedScalar inputYawResponse,
             ProgramMotionWarpTranslationMode translationMode,
             ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
             ProgramMotionWarpRotationMode rotationMode,
@@ -273,6 +276,9 @@ namespace ThirdPersonSimulation
             PreviousYawProgress = FixedScalar.Clamp(previousYawProgress, FixedScalar.Zero, FixedScalar.One);
             CurrentPositionProgress = FixedScalar.Clamp(currentPositionProgress, FixedScalar.Zero, FixedScalar.One);
             CurrentYawProgress = FixedScalar.Clamp(currentYawProgress, FixedScalar.Zero, FixedScalar.One);
+            YawResponse = yawResponse;
+            SteeringInputId = steeringInputId;
+            InputYawResponse = inputYawResponse;
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
@@ -316,6 +322,9 @@ namespace ThirdPersonSimulation
         public FixedScalar PreviousYawProgress { get; }
         public FixedScalar CurrentPositionProgress { get; }
         public FixedScalar CurrentYawProgress { get; }
+        public FixedScalar YawResponse { get; }
+        public string SteeringInputId { get; }
+        public FixedScalar InputYawResponse { get; }
         public ProgramMotionWarpTranslationMode TranslationMode { get; }
         public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public ProgramMotionWarpRotationMode RotationMode { get; }

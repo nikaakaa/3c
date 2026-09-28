@@ -1385,6 +1385,9 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar previousYawProgress,
             FixedScalar currentPositionProgress,
             FixedScalar currentYawProgress,
+            FixedScalar yawResponse,
+            string steeringInputId,
+            FixedScalar inputYawResponse,
             MotionWarpTranslationMode translationMode,
             MotionWarpTargetOffsetSpace targetOffsetSpace,
             MotionWarpRotationMode rotationMode,
@@ -1411,6 +1414,9 @@ namespace BTSMTL.Timeline.Runtime
             PreviousYawProgress = previousYawProgress;
             CurrentPositionProgress = currentPositionProgress;
             CurrentYawProgress = currentYawProgress;
+            YawResponse = yawResponse;
+            SteeringInputId = steeringInputId;
+            InputYawResponse = inputYawResponse;
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
@@ -1436,6 +1442,9 @@ namespace BTSMTL.Timeline.Runtime
         public FixedScalar PreviousYawProgress { get; }
         public FixedScalar CurrentPositionProgress { get; }
         public FixedScalar CurrentYawProgress { get; }
+        public FixedScalar YawResponse { get; }
+        public string SteeringInputId { get; }
+        public FixedScalar InputYawResponse { get; }
         public FixedScalar Time { get; }
         public int Cycle { get; }
         public MotionWarpTranslationMode TranslationMode { get; }

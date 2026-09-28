@@ -142,6 +142,8 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId MotionEaseOut = Id("motion.ease-out");
         public static readonly TimelineCurveChannelId MotionWarpPositionProgress = Id("motion-warp.position-progress");
         public static readonly TimelineCurveChannelId MotionWarpYawProgress = Id("motion-warp.yaw-progress");
+        public static readonly TimelineCurveChannelId MotionWarpYawResponse = Id("motion-warp.yaw-response");
+        public static readonly TimelineCurveChannelId MotionWarpInputYawResponse = Id("motion-warp.input-yaw-response");
         public static readonly TimelineCurveChannelId CameraStateWeight = Id("camera-state.weight");
         public static readonly TimelineCurveChannelId CameraStateEaseIn = Id("camera-state.ease-in");
         public static readonly TimelineCurveChannelId CameraStateEaseOut = Id("camera-state.ease-out");
@@ -200,6 +202,10 @@ namespace BTSMTL.Timeline
                 clip => ((MotionWarpClip)clip).UsesPositionProgress),
             D(MotionWarpYawProgress, typeof(MotionWarpClip), "Yaw Progress", C(232, 110, 101), Unit, ZeroOne,
                 clip => ((MotionWarpClip)clip).UsesYawProgress),
+            D(MotionWarpInputYawResponse, typeof(MotionWarpClip), "Input Yaw Response", C(232, 110, 101), TimelineCurveValueDomain.Unbounded(0f, "1/s"), Zero,
+                clip => ((MotionWarpClip)clip).UsesYawResponse),
+            D(MotionWarpYawResponse, typeof(MotionWarpClip), "Yaw Response", C(232, 110, 101), TimelineCurveValueDomain.Unbounded(0f, "1/s"), One,
+                clip => ((MotionWarpClip)clip).UsesYawResponse),
             D(CameraStateWeight, typeof(CameraStateClip), "Weight", C(184, 161, 252), Unit, One),
             D(CameraStateEaseIn, typeof(CameraStateClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraStateEaseOut, typeof(CameraStateClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
@@ -248,6 +254,8 @@ namespace BTSMTL.Timeline
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut => clip.EaseOutCurve,
                 MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress && clip.UsesPositionProgress => clip.PositionProgressCurve,
                 MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress && clip.UsesYawProgress => clip.YawProgressCurve,
+                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawResponse && clip.UsesYawResponse => clip.YawResponseCurve,
+                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpInputYawResponse && clip.UsesYawResponse => clip.InputYawResponseCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateWeight => clip.WeightCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseIn => clip.EaseInCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseOut => clip.EaseOutCurve,
@@ -277,6 +285,8 @@ namespace BTSMTL.Timeline
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut: clip.EaseOutCurve = copy; break;
                 case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress: clip.PositionProgressCurve = copy; break;
                 case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress: clip.YawProgressCurve = copy; break;
+                case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawResponse: clip.YawResponseCurve = copy; break;
+                case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpInputYawResponse: clip.InputYawResponseCurve = copy; break;
                 case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateWeight: clip.WeightCurve = copy; break;
                 case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseIn: clip.EaseInCurve = copy; break;
                 case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseOut: clip.EaseOutCurve = copy; break;
@@ -306,7 +316,8 @@ namespace BTSMTL.Timeline
                         warp.TargetPlanarOffset, warp.TargetYawOffsetDegrees,
                         warp.MaxTotalPositionCorrection, warp.MaxTotalYawCorrectionDegrees,
                         warp.MaximumYawRateDegreesPerSecond, warp.LimitPolicy,
-                        position, yaw, null, warp))
+                        position, yaw, channelId == TimelineCurveChannelCatalog.MotionWarpYawResponse ? curve : warp.YawResponseCurve,
+                        channelId == TimelineCurveChannelCatalog.MotionWarpInputYawResponse ? curve : warp.InputYawResponseCurve, null, warp))
                     throw new InvalidOperationException($"MotionWarp curve '{channelId}' violates its owner validation contract.");
                 return;
             }

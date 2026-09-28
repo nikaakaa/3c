@@ -538,6 +538,11 @@ namespace ThirdPersonSimulation.Fixed
             if (action.SkillId != warp.AbilityId)
                 FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
                     "Timeline MotionWarp Ability does not match the active Action.");
+            if (warp.RotationMethod == ProgramMotionWarpRotationMethod.TargetResponse)
+            {
+                ApplyTargetResponse(warp, action, ref channel);
+                return;
+            }
             var currentAction = new TimelineActionContextIdentity(
                 action.ActionId,
                 action.ContextId,
@@ -690,6 +695,63 @@ namespace ThirdPersonSimulation.Fixed
                     currentWarpedYaw,
                     positionProgress,
                     yawProgress));
+        }
+
+        void ApplyTargetResponse(
+            AbilityTimelineLogicMotionWarp warp,
+            FixedActionInstanceState action,
+            ref ResolvedMotionChannel channel)
+        {
+            if (warp.TranslationMode != ProgramMotionWarpTranslationMode.Disabled ||
+                warp.YawResponse < ThirdPersonSimulation.Fixed.FixedScalar.Zero ||
+                warp.InputYawResponse < ThirdPersonSimulation.Fixed.FixedScalar.Zero)
+                FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
+                    "Target response requires non-negative response and no translation correction.");
+            FixedYaw currentYaw = m_Frame.BodyFacts.Yaw;
+            FixedScalar yawDelta = FixedScalar.Zero;
+            FixedYaw targetYaw = currentYaw;
+            FixedScalar response = warp.YawResponse;
+            bool useTarget = action.TargetSnapshot.HasTarget && response > FixedScalar.Zero;
+            if (useTarget)
+            {
+                targetYaw = action.TargetSnapshot.Yaw;
+                if (warp.RotationMode == ProgramMotionWarpRotationMode.FaceTarget)
+                {
+                    FixedVector3 direction = action.TargetSnapshot.Position - m_Frame.BodyFacts.Position;
+                    targetYaw = direction.X != FixedScalar.Zero || direction.Z != FixedScalar.Zero
+                        ? FixedAngle.FromPlanarDirection(direction.X, direction.Z)
+                        : currentYaw;
+                }
+            }
+            else
+            {
+                if (!action.TargetSnapshot.HasTarget &&
+                    Access.Services.RequireAdmissionProfile(action.ActionId).TargetRequirement == ActionTargetRequirement.SnapshotRequired)
+                    FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.TargetSnapshotRequired,
+                        "Target response requires an admitted target snapshot.");
+                response = warp.InputYawResponse;
+                if (response > FixedScalar.Zero)
+                {
+                    FixedVector2 direction = new FixedInputRuntime(m_Frame)
+                        .ReadValue(warp.SteeringInputId, SimulationInputValueKind.Vector2).Vector2;
+                    if (direction != FixedVector2.Zero)
+                        targetYaw = FixedAngle.FromPlanarDirection(direction.X, direction.Y);
+                }
+            }
+            FixedScalar delta = warp.CurrentTime - warp.PreviousTime;
+            FixedScalar amount = FixedScalar.Clamp(response * delta, FixedScalar.Zero, FixedScalar.One);
+            FixedYaw desired = new FixedYaw(targetYaw.Degrees + FixedScalar.FromSingle(warp.TargetYawOffsetDegrees));
+            FixedScalar maximum = FixedScalar.FromSingle(warp.MaximumYawCorrectionDegrees);
+            yawDelta = FixedScalar.Clamp(FixedAngle.Delta(currentYaw, desired), -maximum, maximum) * amount;
+            var localDelta = new FixedVector3(
+                (warp.CurrentPositionX - warp.PreviousPositionX),
+                (warp.CurrentPositionY - warp.PreviousPositionY),
+                (warp.CurrentPositionZ - warp.PreviousPositionZ));
+            FixedVector3 previousDirectionDelta = FixedAngle.RotatePlanar(localDelta, currentYaw);
+            FixedVector3 nextDirectionDelta = FixedAngle.RotatePlanar(localDelta, new FixedYaw(currentYaw.Degrees + yawDelta));
+            channel.ApplyCorrection(
+                nextDirectionDelta - previousDirectionDelta,
+                yawDelta - (warp.CurrentYawDegrees - warp.PreviousYawDegrees));
         }
 
         public void FailTimelineMotionWarp(OperationHandle operation, string code, string detail)

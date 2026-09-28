@@ -217,6 +217,7 @@ namespace BTSMTL.Timeline
                 "targetOffsetSpace" => configuration.TargetOffsetSpace,
                 "rotationMode" => configuration.RotationMode,
                 "rotationMethod" => configuration.RotationMethod,
+                "steeringInputId" => configuration.SteeringInputId,
                 "targetPlanarOffset" => configuration.TargetPlanarOffset,
                 "targetYawOffsetDegrees" => configuration.TargetYawOffsetDegrees,
                 "maxTotalPositionCorrection" => configuration.MaxTotalPositionCorrection,
@@ -261,6 +262,7 @@ namespace BTSMTL.Timeline
                 case "targetOffsetSpace": configuration.TargetOffsetSpace = (MotionWarpTargetOffsetSpace)value; break;
                 case "rotationMode": configuration.RotationMode = (MotionWarpRotationMode)value; break;
                 case "rotationMethod": configuration.RotationMethod = (MotionWarpRotationMethod)value; break;
+                case "steeringInputId": configuration.SteeringInputId = (string)value; break;
                 case "targetPlanarOffset": configuration.TargetPlanarOffset = (Vector2)value; break;
                 case "targetYawOffsetDegrees": configuration.TargetYawOffsetDegrees = (float)value; break;
                 case "maxTotalPositionCorrection": configuration.MaxTotalPositionCorrection = (float)value; break;
@@ -300,6 +302,7 @@ namespace BTSMTL.Timeline
                 TargetOffsetSpace = MotionWarpTargetOffsetSpace.ApproachDirection,
                 RotationMode = MotionWarpRotationMode.FaceTarget,
                 RotationMethod = MotionWarpRotationMethod.ProgressCurve,
+                SteeringInputId = string.Empty,
                 TargetPlanarOffset = Vector2.zero,
                 MaxTotalPositionCorrection = 1f,
                 MaxTotalYawCorrectionDegrees = 45f,
@@ -320,6 +323,8 @@ namespace BTSMTL.Timeline
                 ParameterBindingId = "openAmount",
                 PositionProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpPositionProgress),
                 YawProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpYawProgress),
+                YawResponseCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpYawResponse),
+                InputYawResponseCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpInputYawResponse),
                 CameraWeightCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectWeight),
                 CameraEaseInCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectEaseIn),
                 CameraEaseOutCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraEffectEaseOut),
@@ -348,6 +353,7 @@ namespace BTSMTL.Timeline
                 "targetOffsetSpace" => MotionWarpTargetOffsetSpace.ApproachDirection,
                 "rotationMode" => MotionWarpRotationMode.FaceTarget,
                 "rotationMethod" => MotionWarpRotationMethod.ProgressCurve,
+                "steeringInputId" => string.Empty,
                 "targetPlanarOffset" => Vector2.zero,
                 "targetYawOffsetDegrees" => 0f,
                 "maxTotalPositionCorrection" => 1f,

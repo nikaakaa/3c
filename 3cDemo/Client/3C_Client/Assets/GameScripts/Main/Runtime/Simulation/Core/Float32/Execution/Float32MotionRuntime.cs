@@ -538,6 +538,11 @@ namespace ThirdPersonSimulation
             if (action.SkillId != warp.AbilityId)
                 FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
                     "Timeline MotionWarp Ability does not match the active Action.");
+            if (warp.RotationMethod == ProgramMotionWarpRotationMethod.TargetResponse)
+            {
+                ApplyTargetResponse(warp, action, ref channel);
+                return;
+            }
             var currentAction = new TimelineActionContextIdentity(
                 action.ActionId,
                 action.ContextId,
@@ -690,6 +695,63 @@ namespace ThirdPersonSimulation
                     currentWarpedYaw,
                     positionProgress,
                     yawProgress));
+        }
+
+        void ApplyTargetResponse(
+            AbilityTimelineLogicMotionWarp warp,
+            Float32ActionInstanceState action,
+            ref ResolvedMotionChannel channel)
+        {
+            if (warp.TranslationMode != ProgramMotionWarpTranslationMode.Disabled ||
+                warp.YawResponse < ThirdPersonSimulation.Fixed.FixedScalar.Zero ||
+                warp.InputYawResponse < ThirdPersonSimulation.Fixed.FixedScalar.Zero)
+                FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
+                    "Target response requires non-negative response and no translation correction.");
+            Float32Yaw currentYaw = m_Frame.BodyFacts.Yaw;
+            Float32Scalar yawDelta = Float32Scalar.Zero;
+            Float32Yaw targetYaw = currentYaw;
+            Float32Scalar response = Float32Scalar.FromSingle((warp.YawResponse).ToSingle());
+            bool useTarget = action.TargetSnapshot.HasTarget && response > Float32Scalar.Zero;
+            if (useTarget)
+            {
+                targetYaw = action.TargetSnapshot.Yaw;
+                if (warp.RotationMode == ProgramMotionWarpRotationMode.FaceTarget)
+                {
+                    Float32Vector3 direction = action.TargetSnapshot.Position - m_Frame.BodyFacts.Position;
+                    targetYaw = direction.X != Float32Scalar.Zero || direction.Z != Float32Scalar.Zero
+                        ? Float32Angle.FromPlanarDirection(direction.X, direction.Z)
+                        : currentYaw;
+                }
+            }
+            else
+            {
+                if (!action.TargetSnapshot.HasTarget &&
+                    Access.Services.RequireAdmissionProfile(action.ActionId).TargetRequirement == ActionTargetRequirement.SnapshotRequired)
+                    FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.TargetSnapshotRequired,
+                        "Target response requires an admitted target snapshot.");
+                response = Float32Scalar.FromSingle((warp.InputYawResponse).ToSingle());
+                if (response > Float32Scalar.Zero)
+                {
+                    Float32Vector2 direction = new Float32InputRuntime(m_Frame)
+                        .ReadValue(warp.SteeringInputId, SimulationInputValueKind.Vector2).Vector2;
+                    if (direction != Float32Vector2.Zero)
+                        targetYaw = Float32Angle.FromPlanarDirection(direction.X, direction.Y);
+                }
+            }
+            Float32Scalar delta = Float32Scalar.FromSingle((warp.CurrentTime - warp.PreviousTime).ToSingle());
+            Float32Scalar amount = Float32Scalar.Clamp(response * delta, Float32Scalar.Zero, Float32Scalar.One);
+            Float32Yaw desired = new Float32Yaw(targetYaw.Degrees + Float32Scalar.FromSingle(warp.TargetYawOffsetDegrees));
+            Float32Scalar maximum = Float32Scalar.FromSingle(warp.MaximumYawCorrectionDegrees);
+            yawDelta = Float32Scalar.Clamp(Float32Angle.Delta(currentYaw, desired), -maximum, maximum) * amount;
+            var localDelta = new Float32Vector3(
+                Float32Scalar.FromSingle((warp.CurrentPositionX - warp.PreviousPositionX).ToSingle()),
+                Float32Scalar.FromSingle((warp.CurrentPositionY - warp.PreviousPositionY).ToSingle()),
+                Float32Scalar.FromSingle((warp.CurrentPositionZ - warp.PreviousPositionZ).ToSingle()));
+            Float32Vector3 previousDirectionDelta = Float32Angle.RotatePlanar(localDelta, currentYaw);
+            Float32Vector3 nextDirectionDelta = Float32Angle.RotatePlanar(localDelta, new Float32Yaw(currentYaw.Degrees + yawDelta));
+            channel.ApplyCorrection(
+                nextDirectionDelta - previousDirectionDelta,
+                yawDelta - Float32Scalar.FromSingle((warp.CurrentYawDegrees - warp.PreviousYawDegrees).ToSingle()));
         }
 
         public void FailTimelineMotionWarp(OperationHandle operation, string code, string detail)

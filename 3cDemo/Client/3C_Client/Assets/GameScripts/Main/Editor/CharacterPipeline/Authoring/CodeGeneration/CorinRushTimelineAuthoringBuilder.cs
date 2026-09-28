@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return timeline;
         }
 
-        static string AddWindow(TimelineAsset timeline, TimelineContractCatalog catalog, Track track, string state, Window window)
+        internal static string AddWindow(TimelineAsset timeline, TimelineContractCatalog catalog, Track track, string state, Window window)
         {
             string seed = $"corin.rush.window:{state}:{window.Id}";
             string ownerId = Id(seed + ":graph");

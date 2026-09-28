@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc7d900d60bf416f951c25f1a614420e, type: 3}
   m_Name: CorinBranchAdmissionProfile
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_ActionId: BranchAttack
   m_DisplayName: BranchAttack
   m_DebugCategory: Local
@@ -33,5 +33,5 @@ MonoBehaviour:
     - m_Value: Rush
     - m_Value: Branch
     m_None: []
-  m_TargetRequirement: 0
+  m_TargetRequirement: 2
   m_MaxConcurrentInstances: 1

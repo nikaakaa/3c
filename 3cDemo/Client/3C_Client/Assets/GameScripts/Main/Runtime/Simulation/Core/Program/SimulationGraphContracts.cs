@@ -82,7 +82,8 @@ namespace ThirdPersonSimulation
     {
         ProgressCurve = 0,
         ConstantRate = 1,
-        ScaleSourceYaw = 2
+        ScaleSourceYaw = 2,
+        TargetResponse = 3
     }
 
     public enum ProgramMotionWarpLimitPolicy : byte

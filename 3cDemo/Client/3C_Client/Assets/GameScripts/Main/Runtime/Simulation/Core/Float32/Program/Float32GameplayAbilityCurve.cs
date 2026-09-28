@@ -72,6 +72,8 @@ namespace ThirdPersonSimulation
             if (duration == Float32Scalar.Zero)
                 return to.Value;
             Float32Scalar t = (time - from.Time) / duration;
+            if ((from.WeightedMode & 2) != 0 || (to.WeightedMode & 1) != 0)
+                return EvaluateWeighted(from, to, duration, t);
             Float32Scalar t2 = t * t;
             Float32Scalar t3 = t2 * t;
             Float32Scalar two = Float32Scalar.FromInt64(2);
@@ -81,6 +83,35 @@ namespace ThirdPersonSimulation
             Float32Scalar h01 = -two * t3 + three * t2;
             Float32Scalar h11 = t3 - t2;
             return h00 * from.Value + h10 * duration * from.OutTangent + h01 * to.Value + h11 * duration * to.InTangent;
+        }
+        static Float32Scalar EvaluateWeighted(Float32GameplayAbilityCurveKey from, Float32GameplayAbilityCurveKey to,
+            Float32Scalar duration, Float32Scalar normalizedTime)
+        {
+            Float32Scalar third = Float32Scalar.One / Float32Scalar.FromInt64(3);
+            Float32Scalar outgoing = (from.WeightedMode & 2) != 0 ? from.OutWeight : third;
+            Float32Scalar incoming = (to.WeightedMode & 1) != 0 ? to.InWeight : third;
+            Float32Scalar low = Float32Scalar.Zero;
+            Float32Scalar high = Float32Scalar.One;
+            Float32Scalar two = Float32Scalar.FromInt64(2);
+            for (int iteration = 0; iteration < 24; iteration++)
+            {
+                Float32Scalar middle = (low + high) / two;
+                Float32Scalar x = Bezier(Float32Scalar.Zero, outgoing, Float32Scalar.One - incoming, Float32Scalar.One, middle);
+                if (x < normalizedTime)
+                    low = middle;
+                else
+                    high = middle;
+            }
+            return Bezier(from.Value, from.Value + duration * outgoing * from.OutTangent,
+                to.Value - duration * incoming * to.InTangent, to.Value, (low + high) / two);
+        }
+
+        static Float32Scalar Bezier(Float32Scalar a, Float32Scalar b, Float32Scalar c, Float32Scalar d, Float32Scalar t)
+        {
+            Float32Scalar oneMinusT = Float32Scalar.One - t;
+            Float32Scalar three = Float32Scalar.FromInt64(3);
+            return oneMinusT * oneMinusT * oneMinusT * a + three * oneMinusT * oneMinusT * t * b +
+                three * oneMinusT * t * t * c + t * t * t * d;
         }
     }
 

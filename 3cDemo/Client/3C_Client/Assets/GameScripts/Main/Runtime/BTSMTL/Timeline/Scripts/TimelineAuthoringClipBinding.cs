@@ -77,6 +77,9 @@ namespace BTSMTL.Timeline
         public MotionWarpLimitPolicy LimitPolicy { get; set; }
         public AnimationCurve PositionProgressCurve { get; set; }
         public AnimationCurve YawProgressCurve { get; set; }
+        public AnimationCurve YawResponseCurve { get; set; }
+        public string SteeringInputId { get; set; }
+        public AnimationCurve InputYawResponseCurve { get; set; }
         public TimelineCameraMode CameraMode { get; set; }
         public float CameraBlendInSeconds { get; set; }
         public float CameraBlendOutSeconds { get; set; }
@@ -145,6 +148,9 @@ namespace BTSMTL.Timeline
                 result.LimitPolicy = warp.LimitPolicy;
                 result.PositionProgressCurve = warp.PositionProgressCurve;
                 result.YawProgressCurve = warp.YawProgressCurve;
+                result.YawResponseCurve = warp.YawResponseCurve;
+                result.SteeringInputId = warp.SteeringInputId;
+                result.InputYawResponseCurve = warp.InputYawResponseCurve;
             }
             if (clip is CameraStateClip cameraState)
             {
@@ -225,7 +231,10 @@ namespace BTSMTL.Timeline
                     configuration.MaximumYawRateDegreesPerSecond,
                     configuration.LimitPolicy,
                     configuration.PositionProgressCurve,
-                    configuration.YawProgressCurve);
+                    configuration.YawProgressCurve,
+                    configuration.YawResponseCurve,
+                    configuration.SteeringInputId,
+                    configuration.InputYawResponseCurve);
                 if (!string.IsNullOrEmpty(configuration.SourceMotionClipId) &&
                     resolver != null &&
                     resolver.TryResolveMotionClip(timeline, configuration.SourceMotionClipId, out MotionCurveClip source))

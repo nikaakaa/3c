@@ -1361,6 +1361,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     request.PreviousYawProgress,
                     request.CurrentPositionProgress,
                     request.CurrentYawProgress,
+                    request.YawResponse,
+                    request.SteeringInputId,
+                    request.InputYawResponse,
                     MapWarpTranslationMode(request.TranslationMode),
                     MapWarpTargetOffsetSpace(request.TargetOffsetSpace),
                     MapWarpRotationMode(request.RotationMode),
@@ -1422,6 +1425,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             MotionWarpRotationMethod.ProgressCurve => ProgramMotionWarpRotationMethod.ProgressCurve,
             MotionWarpRotationMethod.ConstantRate => ProgramMotionWarpRotationMethod.ConstantRate,
             MotionWarpRotationMethod.ScaleSourceYaw => ProgramMotionWarpRotationMethod.ScaleSourceYaw,
+            MotionWarpRotationMethod.TargetResponse => ProgramMotionWarpRotationMethod.TargetResponse,
             _ => throw new InvalidOperationException($"Unsupported Timeline motion warp rotation method '{method}'.")
         };
 

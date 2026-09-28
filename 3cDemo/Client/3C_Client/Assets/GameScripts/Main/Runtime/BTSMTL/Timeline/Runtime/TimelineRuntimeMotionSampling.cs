@@ -24,27 +24,56 @@ namespace BTSMTL.Timeline.Runtime
         sealed class FixedCurve : TimelineRuntimeCurve
         {
             readonly FixedGameplayAbilityCurve m_Curve;
+            readonly bool[] m_SteppedSegments;
 
             public FixedCurve(AnimationCurve source)
             {
                 Keyframe[] sourceKeys = source.keys;
                 var keys = new FixedGameplayAbilityCurveKey[sourceKeys.Length];
+                for (int index = 0; index + 1 < sourceKeys.Length; index++)
+                {
+                    if (!float.IsInfinity(sourceKeys[index].outTangent) && !float.IsInfinity(sourceKeys[index + 1].inTangent))
+                        continue;
+                    m_SteppedSegments ??= new bool[sourceKeys.Length - 1];
+                    m_SteppedSegments[index] = true;
+                }
                 for (int index = 0; index < sourceKeys.Length; index++)
                 {
                     Keyframe key = sourceKeys[index];
-                    if (key.weightedMode != WeightedMode.None ||
-                        !float.IsFinite(key.inTangent) || !float.IsFinite(key.outTangent))
-                        throw new InvalidOperationException("Fixed Timeline motion requires finite, unweighted curve tangents.");
+                    if (!float.IsFinite(key.time) || !float.IsFinite(key.value) ||
+                        float.IsNaN(key.inTangent) || float.IsNaN(key.outTangent) ||
+                        !float.IsFinite(key.inWeight) || !float.IsFinite(key.outWeight) ||
+                        key.inWeight < 0f || key.inWeight > 1f || key.outWeight < 0f || key.outWeight > 1f)
+                        throw new InvalidOperationException("Fixed Timeline motion contains an invalid curve key.");
                     keys[index] = new FixedGameplayAbilityCurveKey(
                         FixedScalar.FromSingle(key.time), FixedScalar.FromSingle(key.value),
-                        FixedScalar.FromSingle(key.inTangent), FixedScalar.FromSingle(key.outTangent),
+                        float.IsInfinity(key.inTangent) ? FixedScalar.Zero : FixedScalar.FromSingle(key.inTangent),
+                        float.IsInfinity(key.outTangent) ? FixedScalar.Zero : FixedScalar.FromSingle(key.outTangent),
                         FixedScalar.FromSingle(key.inWeight), FixedScalar.FromSingle(key.outWeight),
                         (int)key.weightedMode);
                 }
                 m_Curve = new FixedGameplayAbilityCurve((int)source.preWrapMode, (int)source.postWrapMode, keys);
             }
 
-            public override FixedScalar Evaluate(FixedScalar time) => m_Curve.Evaluate(time, FixedScalar.Zero);
+            public override FixedScalar Evaluate(FixedScalar time)
+            {
+                if (m_SteppedSegments != null && time > m_Curve.Keys[0].Time && time < m_Curve.Keys[m_Curve.Keys.Count - 1].Time)
+                {
+                    int low = 0;
+                    int high = m_Curve.Keys.Count - 1;
+                    while (high - low > 1)
+                    {
+                        int middle = low + (high - low) / 2;
+                        if (m_Curve.Keys[middle].Time <= time)
+                            low = middle;
+                        else
+                            high = middle;
+                    }
+                    if (m_SteppedSegments[low])
+                        return m_Curve.Keys[low].Value;
+                }
+                return m_Curve.Evaluate(time, FixedScalar.Zero);
+            }
         }
 
         sealed class FloatCurve : TimelineRuntimeCurve
@@ -154,6 +183,8 @@ namespace BTSMTL.Timeline.Runtime
         readonly TimelineRuntimeMotionCurve m_Source;
         readonly TimelineRuntimeCurve m_PositionProgress;
         readonly TimelineRuntimeCurve m_YawProgress;
+        readonly TimelineRuntimeCurve m_YawResponse;
+        readonly TimelineRuntimeCurve m_InputYawResponse;
         readonly TimelineRuntimeMotionPosition m_Start;
         readonly TimelineRuntimeMotionPosition m_End;
 
@@ -167,6 +198,11 @@ namespace BTSMTL.Timeline.Runtime
                 m_PositionProgress = TimelineRuntimeCurve.Prepare(clip.PositionProgressCurve, target);
             if (clip.RotationMode != MotionWarpRotationMode.Disabled && clip.RotationMethod == MotionWarpRotationMethod.ProgressCurve)
                 m_YawProgress = TimelineRuntimeCurve.Prepare(clip.YawProgressCurve, target);
+            if (clip.UsesYawResponse)
+            {
+                m_YawResponse = TimelineRuntimeCurve.Prepare(clip.YawResponseCurve, target);
+                m_InputYawResponse = TimelineRuntimeCurve.Prepare(clip.InputYawResponseCurve, target);
+            }
         }
 
         public TimelineRuntimeMotionWarpRequest Sample(FixedScalar previousTime, FixedScalar time, int cycle)
@@ -181,6 +217,8 @@ namespace BTSMTL.Timeline.Runtime
                 m_Source.Evaluate(previousTime), m_Source.Evaluate(time),
                 EvaluateProgress(m_PositionProgress, previousNormalized), EvaluateProgress(m_YawProgress, previousNormalized),
                 EvaluateProgress(m_PositionProgress, normalized), EvaluateProgress(m_YawProgress, normalized),
+                m_YawResponse == null ? FixedScalar.Zero : m_YawResponse.Evaluate(normalized),
+                m_Clip.SteeringInputId, m_InputYawResponse == null ? FixedScalar.Zero : m_InputYawResponse.Evaluate(normalized),
                 m_Clip.TranslationMode, m_Clip.TargetOffsetSpace, m_Clip.RotationMode, m_Clip.RotationMethod,
                 m_Clip.TargetPlanarOffset, m_Clip.TargetYawOffsetDegrees, m_Clip.MaxTotalPositionCorrection,
                 m_Clip.MaxTotalYawCorrectionDegrees, m_Clip.MaximumYawRateDegreesPerSecond, m_Clip.LimitPolicy);

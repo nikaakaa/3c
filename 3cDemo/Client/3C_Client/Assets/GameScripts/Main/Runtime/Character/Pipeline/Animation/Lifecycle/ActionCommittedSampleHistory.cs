@@ -282,14 +282,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (FindPreparedEntry(playbackId) < 0)
                     PrepareEntry(playbackId);
             }
-            Array.Clear(
-                m_ReservedEntrySlots,
-                0,
-                m_ReservedEntrySlots.Length);
             for (int i = 0; i < m_Entries.Length; i++)
             {
-                if (m_Entries[i].Occupied)
-                    m_ReservedEntrySlots[i] = true;
+                m_ReservedEntrySlots[i] = m_Entries[i].Occupied;
             }
             for (int i = 0; i < m_PreparedEntryCount; i++)
             {
@@ -302,6 +297,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     m_ReservedEntrySlots[committedIndex] = false;
                 }
             }
+            int nextFreeSlot = 0;
             for (int i = 0; i < m_PreparedEntryCount; i++)
             {
                 if (!m_PreparedEntries[i].Occupied ||
@@ -309,14 +305,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     continue;
                 }
-                int targetIndex = FindFreeReservedEntry();
-                if (targetIndex < 0)
+                while (nextFreeSlot < m_ReservedEntrySlots.Length &&
+                       m_ReservedEntrySlots[nextFreeSlot])
+                    nextFreeSlot++;
+                if (nextFreeSlot == m_ReservedEntrySlots.Length)
                 {
                     throw new InvalidOperationException(
                         "Action committed sample playback capacity was exceeded.");
                 }
-                m_PreparedTargetIndices[i] = targetIndex;
-                m_ReservedEntrySlots[targetIndex] = true;
+                m_PreparedTargetIndices[i] = nextFreeSlot;
+                m_ReservedEntrySlots[nextFreeSlot++] = true;
             }
             m_Validated = true;
         }
@@ -341,18 +339,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Entry prepared = m_PreparedEntries[i];
                 if (!prepared.Occupied)
                     continue;
-                Entry target =
-                    m_Entries[m_PreparedTargetIndices[i]];
-                target.Clear();
-                target.Occupied = true;
-                target.PlaybackId = prepared.PlaybackId;
-                target.Count = prepared.Count;
-                Array.Copy(
-                    prepared.Samples,
-                    0,
-                    target.Samples,
-                    0,
-                    prepared.Count);
+                int targetIndex = m_PreparedTargetIndices[i];
+                m_PreparedEntries[i] = m_Entries[targetIndex];
+                m_Entries[targetIndex] = prepared;
             }
             Close();
         }
@@ -492,16 +481,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     return i;
                 }
-            }
-            return -1;
-        }
-
-        int FindFreeReservedEntry()
-        {
-            for (int i = 0; i < m_ReservedEntrySlots.Length; i++)
-            {
-                if (!m_ReservedEntrySlots[i])
-                    return i;
             }
             return -1;
         }

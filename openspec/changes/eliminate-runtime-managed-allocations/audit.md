@@ -284,6 +284,13 @@
 - 正常 Finalize 只清 MutationCount×ClipCapacity 的已使用前缀，然后沿原顺序清 journal 和关闭帧。保留行内余量清理，不增加索引数组或第二套计数；Rollback/Discard 仍按原日志范围清理与回收资源。此前使用过但本帧未用的行已在其 Finalize/Discard/失败路径清除，不能长期残留旧 clip 引用。
 - 静态核对全部 pending plan 写入、成功登记、失败清理和关闭入口；未测内存写带宽。本项减少的是按闲置来源容量执行的清理，不是删除每帧对象分配。
 
+### AP29 动作采样历史提交重复复制整份准备结果（已实施，未实跑）
+
+- `ActionCommittedSampleHistory.ValidateFrame` 在独立 prepared Entry 中组装完整历史；Commit 原先清 committed Entry、复制 prepared 的所有样本，再在 Close 清掉 prepared。同一帧已完成的样本结果被复制一次并随即清除一次。
+- Entry 与其样本数组均由模块私有持有，构造时所有 committed/prepared Entry 等容量且互不共享。预检固定唯一目标槽后，Commit 交换目标槽与对应 prepared 槽的 Entry 引用；Close 只清换出的旧页。删除项仍先清 committed 槽，随后新条目可按原顺序占用该空槽。Discard 不交换页，重复预检仍重新准备；公开投影窗口返回样本值，不外借 Entry 或样本数组，因此没有改变外部数据寿命。
+- 同时将历史预检的 reserved 标记改为逐槽覆盖，用单向游标按原 prepared 顺序分配最小空槽，与 AP27 使用相同规则；删除 FindFreeReservedEntry。保留 BuildWindowSamples、排序、修剪、重复事件及时间顺序检查，不用省复制绕过准备隔离。
+- 无新增工作页、集合或配置。静态核对所有 Entry 赋值/访问、目标槽唯一性、移除后复用、Commit/Close、Discard和Reset路径；未编译、未实跑。减少的是提交时的数据搬运与新结果清理，不能据此宣称整条历史链已无重复工作或已测得CPU收益。
+
 ## 可靠性问题独立保留
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。

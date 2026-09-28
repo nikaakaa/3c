@@ -578,7 +578,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             bool started = m_Host.RequestAbilityTimelinePlayback(
                 request.TimelineId,
                 request.ActionContext,
-                request.Loop,
+                request.PlaybackMode,
                 request.InvocationSource,
                 request.InputSequence,
                 request.Tick,
@@ -776,7 +776,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int restoredHandle = m_Host.ApplyAbilityTimelineSnapshot(snapshot);
             m_Requests[restoredHandle] = new AbilityTimelineStartRequest(
                 snapshot.TimelineId,
-                snapshot.Loop,
+                (AbilityTimelinePlaybackMode)snapshot.PlaybackMode,
                 snapshot.ActionContext,
                 snapshot.InvocationSource,
                 snapshot.InputSequence,

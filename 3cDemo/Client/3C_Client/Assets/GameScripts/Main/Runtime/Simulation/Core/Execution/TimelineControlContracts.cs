@@ -701,7 +701,8 @@ namespace ThirdPersonSimulation
     public enum AbilityTimelinePlaybackMode : byte
     {
         Once = 0,
-        Loop = 1
+        Loop = 1,
+        HoldLastFrame = 2
     }
 
     public enum AbilityTimelineRuntimeStatus : byte
@@ -716,7 +717,7 @@ namespace ThirdPersonSimulation
     {
         public AbilityTimelineStartRequest(
             string timelineId,
-            bool loop,
+            AbilityTimelinePlaybackMode playbackMode,
             TimelineActionContextIdentity actionContext,
             AbilityTimelineInvocationSource invocationSource,
             ulong inputSequence,
@@ -727,7 +728,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Ability Timeline Action context is incomplete.", nameof(actionContext));
             if (!invocationSource.IsValid)
                 throw new ArgumentException("Ability Timeline invocation source is incomplete.", nameof(invocationSource));
-            Loop = loop;
+            PlaybackMode = playbackMode;
             InputSequence = inputSequence;
             ActionContext = actionContext;
             InvocationSource = invocationSource;
@@ -737,7 +738,7 @@ namespace ThirdPersonSimulation
         }
 
         public string TimelineId { get; }
-        public bool Loop { get; }
+        public AbilityTimelinePlaybackMode PlaybackMode { get; }
         public TimelineActionContextIdentity ActionContext { get; }
         public AbilityTimelineInvocationSource InvocationSource { get; }
         public SimulationTick Tick { get; }
@@ -905,7 +906,8 @@ namespace ThirdPersonSimulation
     public enum AbilityTimelineSnapshotMode : byte
     {
         Once = 0,
-        Loop = 1
+        Loop = 1,
+        HoldLastFrame = 2
     }
 
     public enum AbilityTimelineSnapshotState : byte
@@ -988,7 +990,6 @@ namespace ThirdPersonSimulation
             ulong stopLocalLogicTick,
             bool initialBoundaryPending,
             string timelineId,
-            bool loop,
             TimelineActionContextIdentity actionContext,
             AbilityTimelineInvocationSource invocationSource,
             ulong inputSequence,
@@ -1003,7 +1004,7 @@ namespace ThirdPersonSimulation
             CallIdentity = SimulationIdentity.Require(callIdentity, nameof(callIdentity));
             if (executionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(executionInstanceId));
-            if ((byte)playbackMode > (byte)AbilityTimelineSnapshotMode.Loop)
+            if ((byte)playbackMode > (byte)AbilityTimelineSnapshotMode.HoldLastFrame)
                 throw new ArgumentOutOfRangeException(nameof(playbackMode));
             ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
             if ((byte)state > (byte)AbilityTimelineSnapshotState.Disposed)
@@ -1047,7 +1048,6 @@ namespace ThirdPersonSimulation
             Cycle = cycle;
             HasStopContext = hasStopContext;
             InitialBoundaryPending = initialBoundaryPending;
-            Loop = loop;
             InputSequence = inputSequence;
         }
 
@@ -1074,7 +1074,6 @@ namespace ThirdPersonSimulation
         public ulong StopLocalLogicTick { get; }
         public bool InitialBoundaryPending { get; }
         public string TimelineId { get; }
-        public bool Loop { get; }
         public TimelineActionContextIdentity ActionContext { get; }
         public AbilityTimelineInvocationSource InvocationSource { get; }
         public ulong InputSequence { get; }

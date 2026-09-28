@@ -127,7 +127,8 @@ namespace ThirdPersonCharacter.Control.Authoring
     public enum BtsmtlSkillParallelMode
     {
         JumpComplete,
-        UpdateAll
+        UpdateAll,
+        FirstChild
     }
 
     public enum BtsmtlSkillLoopStopType

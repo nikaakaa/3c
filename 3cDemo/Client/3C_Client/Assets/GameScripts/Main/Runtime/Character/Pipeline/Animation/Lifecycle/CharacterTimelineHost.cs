@@ -689,7 +689,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public bool RequestAbilityTimelinePlayback(
             string timelineId,
             TimelineActionContextIdentity actionContext,
-            bool loop,
+            AbilityTimelinePlaybackMode playbackMode,
             AbilityTimelineInvocationSource invocationSource,
             ulong inputSequence,
             SimulationTick tick,
@@ -716,7 +716,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 actionContext.ActionId,
                 timeline.Name,
                 playbackActionContext,
-                loop ? TimelinePlaybackMode.Loop : TimelinePlaybackMode.Once,
+                (TimelinePlaybackMode)playbackMode,
                 actionContext.ContextId,
                 invocationSource.OperationExecutionPath,
                 invocationSource.OperationIndex,

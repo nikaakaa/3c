@@ -291,7 +291,8 @@ namespace BTSMTL.Timeline
     public enum TimelinePlaybackMode
     {
         Once,
-        Loop
+        Loop,
+        HoldLastFrame
     }
 
     public enum TimelinePlaybackStatus

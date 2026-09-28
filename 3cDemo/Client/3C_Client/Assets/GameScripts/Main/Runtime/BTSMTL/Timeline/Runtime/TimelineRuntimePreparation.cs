@@ -387,6 +387,13 @@ namespace BTSMTL.Timeline.Runtime
                 nextCycle = checked(nextCycle + (int)cycleDelta);
                 nextTime = FixedScalar.FromRaw(requestedTime.Raw % duration.Raw);
             }
+            else if (PlaybackMode == TimelinePlaybackMode.HoldLastFrame)
+            {
+                FixedScalar lastSample = FixedScalar.FromRaw(Math.Max(0L, duration.Raw - 1L));
+                nextTime = FixedScalar.Min(requestedTime, lastSample);
+                if (nextTime == lastSample)
+                    nextTimeCarry = 0;
+            }
             else
                 nextTime = FixedScalar.Min(requestedTime, duration);
 
@@ -466,7 +473,7 @@ namespace BTSMTL.Timeline.Runtime
                 if (hasUnexitedTreeDecisionClip)
                     break;
             }
-            bool completes = !loop && nextTime >= duration && !hasUnexitedTreeDecisionClip;
+            bool completes = PlaybackMode == TimelinePlaybackMode.Once && nextTime >= duration && !hasUnexitedTreeDecisionClip;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
                 advanceSequence,

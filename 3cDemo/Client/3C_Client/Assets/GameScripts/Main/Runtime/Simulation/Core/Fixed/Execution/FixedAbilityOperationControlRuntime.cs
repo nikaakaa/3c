@@ -379,7 +379,7 @@ namespace ThirdPersonSimulation.Fixed
                     action.SkillExecutionGeneration);
                 var request = new AbilityTimelineStartRequest(
                     operation.Text0,
-                    operation.Integer0 == (int)AbilityTimelinePlaybackMode.Loop,
+                    (AbilityTimelinePlaybackMode)operation.Integer0,
                     actionContext,
                     CreateTimelineInvocationSource(operation),
                     action.InputSequence,

@@ -154,6 +154,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
             int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
             int completedMask = m_Host.ReadInt32(slot);
+            bool completesWithFirstChild = operation.Integer0 == 2;
             bool running = false;
             bool stopping = false;
             for (int i = 0; i < children.Count; i++)
@@ -161,6 +162,24 @@ namespace ThirdPersonSimulation
                 if (i >= 31)
                     throw new InvalidOperationException($"Parallel operation '{operation.Handle}' exceeds the portable 31-child completion mask.");
                 ProgramControlFlowEdge edge = children[i];
+                if (completesWithFirstChild && (completedMask & 1) != 0)
+                {
+                    if (i == 0)
+                        continue;
+                    OperationStopStatus stop = m_Host.IsStopping(edge.Target)
+                        ? m_Host.ContinueStop(edge.Target)
+                        : m_Host.IsActive(edge.Target)
+                            ? m_Host.RequestStop(edge.Target, OperationStopContext.ParentStop(operation.Handle))
+                            : OperationStopStatus.Completed;
+                    if (stop == OperationStopStatus.Failed)
+                        return OperationExecutionResult.Failure;
+                    if (stop == OperationStopStatus.Running)
+                    {
+                        running = true;
+                        stopping = true;
+                    }
+                    continue;
+                }
                 if (!EvaluateCondition(edge))
                 {
                     if (m_Host.IsStopping(edge.Target))
@@ -188,16 +207,24 @@ namespace ThirdPersonSimulation
                     completedMask &= ~(1 << i);
                     continue;
                 }
-                if (operation.Integer0 == 0 && (completedMask & (1 << i)) != 0)
+                if (operation.Integer0 != 1 && (completedMask & (1 << i)) != 0)
                     continue;
                 OperationExecutionResult result = m_Host.TickEdge(edge);
                 if (result == OperationExecutionResult.Running)
                     running = true;
-                else if (operation.Integer0 == 0)
+                else if (operation.Integer0 != 1)
+                {
                     completedMask |= 1 << i;
+                    if (completesWithFirstChild && i == 0 && result == OperationExecutionResult.Failure)
+                        completedMask |= int.MinValue;
+                }
             }
             m_Host.WriteInt32(slot, completedMask);
-            return running ? m_Host.Wait(operation, stopping ? OperationWaitReason.ParallelStop : OperationWaitReason.ParallelCompletion) : OperationExecutionResult.Success;
+            if (running)
+                return m_Host.Wait(operation, stopping ? OperationWaitReason.ParallelStop : OperationWaitReason.ParallelCompletion);
+            return completesWithFirstChild && completedMask < 0
+                ? OperationExecutionResult.Failure
+                : OperationExecutionResult.Success;
         }
 
         OperationExecutionResult TickSelectorFrom(

@@ -37,7 +37,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.StopContext.LocalLogicTick,
                 native.InitialBoundaryPending,
                 request.TimelineId,
-                request.Loop,
                 request.ActionContext,
                 request.InvocationSource,
                 request.InputSequence,
@@ -78,12 +77,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         static AbilityTimelineSnapshotMode MapSnapshotMode(TimelinePlaybackMode mode) => mode switch
         {
             TimelinePlaybackMode.Loop => AbilityTimelineSnapshotMode.Loop,
+            TimelinePlaybackMode.HoldLastFrame => AbilityTimelineSnapshotMode.HoldLastFrame,
             _ => AbilityTimelineSnapshotMode.Once
         };
 
         internal static TimelinePlaybackMode MapPlaybackMode(AbilityTimelineSnapshotMode mode) => mode switch
         {
             AbilityTimelineSnapshotMode.Loop => TimelinePlaybackMode.Loop,
+            AbilityTimelineSnapshotMode.HoldLastFrame => TimelinePlaybackMode.HoldLastFrame,
             _ => TimelinePlaybackMode.Once
         };
 

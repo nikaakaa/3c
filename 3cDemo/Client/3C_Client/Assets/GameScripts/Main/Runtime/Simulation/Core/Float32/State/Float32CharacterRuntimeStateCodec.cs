@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 11;
+        const int Version = 12;
         const string HashIdentity = "float32-character-runtime-state-hash/9";
         public const string CodecIdentity = "float32-character-runtime-state/9";
 
@@ -242,7 +242,6 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(snapshot.StopLocalLogicTick);
             writer.WriteBoolean(snapshot.InitialBoundaryPending);
             writer.WriteString(snapshot.TimelineId);
-            writer.WriteBoolean(snapshot.Loop);
             writer.WriteString(snapshot.ActionContext.ActionId);
             writer.WriteString(snapshot.ActionContext.ContextId);
             writer.WriteUInt64(snapshot.ActionContext.InstanceId);
@@ -304,7 +303,6 @@ namespace ThirdPersonSimulation
             ulong stopLocalLogicTick = reader.ReadUInt64();
             bool initialBoundaryPending = reader.ReadBoolean();
             string timelineId = reader.ReadString();
-            bool loop = reader.ReadBoolean();
             string actionId = reader.ReadString();
             string contextId = reader.ReadString();
             ulong actionInstanceId = reader.ReadUInt64();
@@ -363,7 +361,6 @@ namespace ThirdPersonSimulation
                 stopLocalLogicTick,
                 initialBoundaryPending,
                 timelineId,
-                loop,
                 actionContext,
                 invocationSource,
                 inputSequence,
@@ -1033,7 +1030,7 @@ namespace ThirdPersonSimulation
 
         static AbilityTimelineSnapshotMode ReadTimelineSnapshotMode(byte value)
         {
-            if (value > (byte)AbilityTimelineSnapshotMode.Loop)
+            if (value > (byte)AbilityTimelineSnapshotMode.HoldLastFrame)
                 throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(AbilityTimelineSnapshotMode)}' value '{value}' is invalid.");
             return (AbilityTimelineSnapshotMode)value;
         }

@@ -242,7 +242,7 @@ namespace ThirdPersonSimulation.Fixed
 						result = AbilityStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
 						break;
 					case SimulationOperationCode.Or:
-						result = AbilityStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
+						result = AbilityStateValue.FromBoolean(inputs.Count > 0 && (ToBoolean(inputs[0]) || inputs.Count > 1 && ToBoolean(inputs[1])));
 						break;
 					case SimulationOperationCode.Not:
 						result = AbilityStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
@@ -357,6 +357,10 @@ namespace ThirdPersonSimulation.Fixed
                         m_Frame.Trace.AddValue(operation, port, ProgramValuePortDirection.Input, value);
                         m_Frame.Trace.AddValueEdge(operation, port);
                     }
+                    if (i == 0 &&
+                        (operation.Code == SimulationOperationCode.And && !ToBoolean(value) ||
+                         operation.Code == SimulationOperationCode.Or && ToBoolean(value)))
+                        break;
                 }
                 return new FixedValueInputLease(this, buffer, depth);
             }

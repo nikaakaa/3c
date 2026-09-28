@@ -505,7 +505,7 @@ namespace BTSMTL.EventGraphs
                     $"Event graph value input '{portId}' is already connected.");
             EventGraphValue.FromObject(value);
             Apply(graph, "Configure Event Graph Value", () =>
-                valueInput.SetDefaultAndSerializedValue(value));
+                valueInput.serializedValue = value);
         }
 
         internal static void ConfigureHostInput(

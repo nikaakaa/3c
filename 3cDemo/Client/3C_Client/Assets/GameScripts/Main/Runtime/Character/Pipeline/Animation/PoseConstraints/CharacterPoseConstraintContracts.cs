@@ -593,6 +593,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct CharacterComponentBonePose
     {
+        internal CharacterComponentBonePose(in AnimationLocalBonePose pose)
+        {
+            Position = pose.Position;
+            Rotation = pose.Rotation;
+            Scale = pose.Scale;
+        }
+
         public CharacterComponentBonePose(Vector3 position, Quaternion rotation, Vector3 scale)
         {
             if (!CharacterPoseConstraintMath.IsFinite(position) ||
@@ -689,7 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             if (parentIndex < 0)
             {
-                component = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
+                component = new CharacterComponentBonePose(in local);
                 return true;
             }
             return TryCreateComponent(local, componentPoses[parentIndex], out component);
@@ -707,7 +714,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             if (parentIndex < 0)
             {
-                component = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
+                component = new CharacterComponentBonePose(in local);
                 return true;
             }
             return TryCreateComponent(
@@ -726,7 +733,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             Vector3 position = parent.Position +
                                parent.Rotation * Vector3.Scale(parent.Scale, local.Position);
-            Quaternion rotation = (parent.Rotation * local.Rotation).normalized;
+            Quaternion rotation = parent.Rotation * local.Rotation;
             Vector3 scale = Vector3.Scale(parent.Scale, local.Scale);
             if (!IsFinite(position) || !IsFinite(rotation) || !IsFinite(scale) ||
                 Quaternion.Dot(rotation, rotation) <= 0f)
@@ -758,7 +765,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 position.x / parent.Scale.x,
                 position.y / parent.Scale.y,
                 position.z / parent.Scale.z);
-            Quaternion rotation = (inverseParent * component.Rotation).normalized;
+            Quaternion rotation = inverseParent * component.Rotation;
             Vector3 scale = new Vector3(
                 component.Scale.x / parent.Scale.x,
                 component.Scale.y / parent.Scale.y,

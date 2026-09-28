@@ -46,12 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 pose = default;
                 return false;
             }
-            rotation = rotation.normalized;
-            if (!IsFinite(rotation))
-            {
-                pose = default;
-                return false;
-            }
             pose = new AnimationLocalBonePose(position, rotation, scale);
             return true;
         }

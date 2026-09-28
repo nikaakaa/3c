@@ -128,18 +128,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     return;
                 }
 
-                AnimationLocalBonePose pose = new AnimationLocalBonePose(position, rotation, scale);
+                AnimationLocalBonePose pose;
                 if (m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
                     boneIndex == m_RootBoneIndex)
                 {
                     pose = m_ReferencePose[boneIndex];
                 }
-                else if (m_ScalePolicy == CharacterAnimationScalePolicy.PreserveReferenceScale)
+                else
                 {
                     pose = new AnimationLocalBonePose(
-                        pose.Position,
-                        pose.Rotation,
-                        m_ReferencePose[boneIndex].Scale);
+                        position,
+                        rotation,
+                        m_ScalePolicy == CharacterAnimationScalePolicy.PreserveReferenceScale
+                            ? m_ReferencePose[boneIndex].Scale
+                            : scale);
                 }
                 if (!pose.IsValid)
                 {

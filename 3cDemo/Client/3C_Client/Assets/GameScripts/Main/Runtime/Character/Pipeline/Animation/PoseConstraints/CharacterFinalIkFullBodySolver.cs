@@ -632,7 +632,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     offset,
                     goal.RotationWeight);
                 Quaternion weightedRotation =
-                    (weightedOffset * current).normalized;
+                    weightedOffset * current;
                 m_Backend.SetComponentRotation(
                     effector.boneHandle,
                     weightedRotation);

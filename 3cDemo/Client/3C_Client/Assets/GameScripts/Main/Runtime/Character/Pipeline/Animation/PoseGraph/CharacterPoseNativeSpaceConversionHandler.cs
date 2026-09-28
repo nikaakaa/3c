@@ -368,10 +368,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose space conversion '{NodeId}' could not derive component bone #{i}.");
                 }
                 m_ComponentScratch[i] = component;
-                outputPoses[i] = new AnimationLocalBonePose(
-                    component.Position,
-                    component.Rotation,
-                    component.Scale);
+                outputPoses[i] = new AnimationLocalBonePose(in component);
             }
         }
 
@@ -386,10 +383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!value.IsValid)
                     throw new InvalidOperationException(
                         $"Pose space conversion '{NodeId}' received invalid component bone #{i}.");
-                m_ComponentScratch[i] = new CharacterComponentBonePose(
-                    value.Position,
-                    value.Rotation,
-                    value.Scale);
+                m_ComponentScratch[i] = new CharacterComponentBonePose(in value);
             }
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
@@ -398,10 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (parent < 0)
                 {
                     CharacterComponentBonePose component = m_ComponentScratch[i];
-                    local = new AnimationLocalBonePose(
-                        component.Position,
-                        component.Rotation,
-                        component.Scale);
+                    local = new AnimationLocalBonePose(in component);
                 }
                 else if (!CharacterPoseConstraintMath.TryCreateLocal(
                              m_ComponentScratch[i],

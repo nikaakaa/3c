@@ -602,6 +602,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct AnimationLocalBonePose
     {
+        internal AnimationLocalBonePose(in AnimationLocalBonePose pose, Vector3 position)
+        {
+            if (!IsFinite(position))
+                throw new ArgumentException("Animation local Bone position is invalid.");
+            Position = position;
+            Rotation = pose.Rotation;
+            Scale = pose.Scale;
+        }
+
+        internal AnimationLocalBonePose(in CharacterComponentBonePose pose)
+        {
+            Position = pose.Position;
+            Rotation = pose.Rotation;
+            Scale = pose.Scale;
+        }
+
         public AnimationLocalBonePose(Vector3 position, Quaternion rotation, Vector3 scale)
         {
             if (!IsFinite(position) || !IsFinite(rotation) || !IsFinite(scale) || Quaternion.Dot(rotation, rotation) <= 0f)

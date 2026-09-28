@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Quaternion rotation = new Quaternion(rotationSum.x, rotationSum.y, rotationSum.z, rotationSum.w);
             if (Quaternion.Dot(rotation, rotation) <= QuaternionTolerance)
                 throw new InvalidOperationException("Animation Blend produced a degenerate rotation.");
-            return new AnimationLocalBonePose(positionSum / weight, rotation.normalized, scaleSum / weight);
+            return new AnimationLocalBonePose(positionSum / weight, rotation, scaleSum / weight);
         }
 
         public static Vector4 AlignAndScale(Quaternion rotation, Quaternion reference, float weight)

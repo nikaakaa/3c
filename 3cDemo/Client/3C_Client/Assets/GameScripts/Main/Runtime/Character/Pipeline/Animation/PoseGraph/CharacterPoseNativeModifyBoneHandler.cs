@@ -161,10 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Modify Bone '{NodeId}' received invalid Component bone #{i}.");
                     if (modifies)
-                        m_ComponentScratch[i] = new CharacterComponentBonePose(
-                            value.Position,
-                            value.Rotation,
-                            value.Scale);
+                        m_ComponentScratch[i] = new CharacterComponentBonePose(in value);
                     else
                         outputPoses[i] = value;
                 }
@@ -174,10 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     for (int i = 0; i < m_ComponentScratch.Length; i++)
                     {
                         CharacterComponentBonePose value = m_ComponentScratch[i];
-                        outputPoses[i] = new AnimationLocalBonePose(
-                            value.Position,
-                            value.Rotation,
-                            value.Scale);
+                        outputPoses[i] = new AnimationLocalBonePose(in value);
                     }
                 }
             }
@@ -328,7 +322,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (!CharacterPoseConstraintMath.TryCreateLocal(original, m_ComponentScratch[parent], out var local))
                     throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot resolve parent space.");
-                original = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
+                original = new CharacterComponentBonePose(in local);
             }
             Vector3 targetPosition = m_Modification.PositionMode switch
             {

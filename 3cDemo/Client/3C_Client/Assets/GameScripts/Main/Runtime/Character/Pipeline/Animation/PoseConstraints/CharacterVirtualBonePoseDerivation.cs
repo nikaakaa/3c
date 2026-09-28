@@ -89,7 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     unrotatedPosition.y / source.Scale.y,
                     unrotatedPosition.z / source.Scale.z);
                 Quaternion localRotation =
-                    (inverseSource * target.Rotation).normalized;
+                    inverseSource * target.Rotation;
                 if (!CharacterPoseConstraintMath.IsFinite(localPosition) ||
                     !CharacterPoseConstraintMath.IsFinite(localRotation) ||
                     Quaternion.Dot(localRotation, localRotation) <= 0f)

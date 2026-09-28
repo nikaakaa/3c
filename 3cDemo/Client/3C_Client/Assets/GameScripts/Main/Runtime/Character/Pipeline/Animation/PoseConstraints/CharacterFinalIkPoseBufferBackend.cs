@@ -141,10 +141,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void SetComponentPosition(IndexedBoneHandle bone, Vector3 position)
         {
             int index = RequireWritableBone(bone);
-            RequireFinite(position, nameof(position));
             AnimationLocalBonePose current = m_ComponentPose[index];
             Vector3 delta = position - current.Position;
-            m_ComponentPose[index] = new AnimationLocalBonePose(position, current.Rotation, current.Scale);
+            m_ComponentPose[index] = new AnimationLocalBonePose(in current, position);
             if (delta == Vector3.zero)
                 return;
             int end = m_DescendantOffsets[index + 1];
@@ -152,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 int child = m_DescendantIndices[descendant];
                 AnimationLocalBonePose value = m_ComponentPose[child];
-                m_ComponentPose[child] = new AnimationLocalBonePose(value.Position + delta, value.Rotation, value.Scale);
+                m_ComponentPose[child] = new AnimationLocalBonePose(in value, value.Position + delta);
             }
         }
 
@@ -161,9 +160,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index = RequireWritableBone(bone);
             RequireFinite(rotation, nameof(rotation));
             AnimationLocalBonePose current = m_ComponentPose[index];
-            Quaternion normalized = rotation.normalized;
-            Quaternion delta = normalized * Quaternion.Inverse(current.Rotation);
-            m_ComponentPose[index] = new AnimationLocalBonePose(current.Position, normalized, current.Scale);
+            var updated = new AnimationLocalBonePose(current.Position, rotation, current.Scale);
+            Quaternion delta = updated.Rotation * Quaternion.Inverse(current.Rotation);
+            m_ComponentPose[index] = updated;
             int end = m_DescendantOffsets[index + 1];
             for (int descendant = m_DescendantOffsets[index]; descendant < end; descendant++)
             {

@@ -356,11 +356,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Quaternion referenceToAdditive =
                     Quaternion.Inverse(reference.Rotation) * additiveBone.Rotation;
                 Quaternion rotation =
-                    (baseBone.Rotation *
+                    baseBone.Rotation *
                      Quaternion.Slerp(
                          Quaternion.identity,
                          referenceToAdditive,
-                         weight)).normalized;
+                         weight);
                 Vector3 scale;
                 if (scalePolicy == AdditiveScalePolicy.Multiply)
                 {

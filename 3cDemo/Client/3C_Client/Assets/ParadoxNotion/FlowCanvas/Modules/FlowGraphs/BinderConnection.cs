@@ -358,6 +358,14 @@ namespace FlowCanvas
             }
         }
 
+        protected void BindValuePorts() {
+            ( targetPort as ValueInput ).BindTo((ValueOutput)sourcePort);
+#if !UNITY_EDITOR || !DO_EDITOR_BINDING
+            sourcePort.connections++;
+            targetPort.connections++;
+#endif
+        }
+
         ///<summary>UnBinds the delegates</summary>
         virtual public void UnBind() {
             if ( sourcePort is FlowOutput ) {

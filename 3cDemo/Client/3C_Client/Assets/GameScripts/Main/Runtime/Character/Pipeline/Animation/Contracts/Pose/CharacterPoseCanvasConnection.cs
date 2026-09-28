@@ -35,10 +35,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose connection '{EdgeId}' has stale endpoint identity.");
             }
             CharacterPoseCanvasNativePorts.RequireCompatible(this);
-            if (sourcePort is FlowCanvas.ValueOutput valueOutput &&
-                targetPort is FlowCanvas.ValueInput valueInput)
+            if (sourcePort is FlowCanvas.ValueOutput &&
+                targetPort is FlowCanvas.ValueInput)
             {
-                valueInput.BindTo(valueOutput);
+                BindValuePorts();
                 return;
             }
             if (sourcePort is FlowCanvas.FlowOutput &&

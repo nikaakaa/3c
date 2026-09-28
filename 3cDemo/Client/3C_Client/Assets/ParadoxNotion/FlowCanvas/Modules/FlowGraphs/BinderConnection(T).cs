@@ -17,13 +17,10 @@ namespace FlowCanvas
                 return;
             }
 
-            ( targetPort as ValueInput<T> ).BindTo((ValueOutput)sourcePort);
+            BindValuePorts();
 
 #if UNITY_EDITOR && DO_EDITOR_BINDING
             ( targetPort as ValueInput<T> ).Append(GetValue);
-#else
-            sourcePort.connections++;
-            targetPort.connections++;
 #endif
         }
 

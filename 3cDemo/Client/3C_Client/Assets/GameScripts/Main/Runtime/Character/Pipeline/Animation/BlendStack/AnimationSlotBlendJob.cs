@@ -41,12 +41,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationLocalBonePose> m_StoredPose;
         NativeArray<AnimationBlendBoneVelocity> m_StoredVelocity;
         NativeArray<float> m_StoredParameters;
+        NativeArray<byte> m_StoredParameterAvailability;
         NativeArray<float> m_StoredBoneOutputWeights;
 
         NativeArray<AnimationSlotBlendHistoryNativeState> m_HistoryStates;
         NativeArray<AnimationLocalBonePose> m_HistoryPoses;
         NativeArray<AnimationBlendBoneVelocity> m_HistoryVelocities;
         NativeArray<float> m_HistoryParameters;
+        NativeArray<byte> m_HistoryParameterAvailability;
         NativeArray<float> m_HistoryBoneOutputWeights;
         NativeArray<AnimationSlotBlendRotationHistory> m_HistorySourceRotations;
 
@@ -54,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationLocalBonePose> m_ScratchPose;
         NativeArray<AnimationBlendBoneVelocity> m_ScratchVelocity;
         NativeArray<float> m_ScratchParameters;
+        NativeArray<byte> m_ScratchParameterAvailability;
         NativeArray<AnimationPrimitivePoseContribution> m_ScratchContributions;
         NativeArray<float> m_ScratchDenseContributionWeights;
         NativeArray<Vector3> m_ScratchPositionSums;
@@ -135,12 +138,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_StoredPose = workspace.StoredPose.DenseLocalPose;
             m_StoredVelocity = workspace.StoredPose.DenseVelocity;
             m_StoredParameters = workspace.StoredPose.PoseParameters;
+            m_StoredParameterAvailability = workspace.StoredPose.PoseParameterAvailability;
             m_StoredBoneOutputWeights = workspace.StoredPose.DenseBoneOutputWeights;
 
             m_HistoryStates = workspace.History.States;
             m_HistoryPoses = workspace.History.DenseLocalPoses;
             m_HistoryVelocities = workspace.History.DenseVelocities;
             m_HistoryParameters = workspace.History.PoseParameters;
+            m_HistoryParameterAvailability = workspace.History.PoseParameterAvailability;
             m_HistoryBoneOutputWeights = workspace.History.DenseBoneOutputWeights;
             m_HistorySourceRotations = workspace.History.SourceRotations;
 
@@ -148,6 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_ScratchPose = workspace.Scratch.DenseLocalPose;
             m_ScratchVelocity = workspace.Scratch.DenseVelocity;
             m_ScratchParameters = workspace.Scratch.PoseParameters;
+            m_ScratchParameterAvailability = workspace.Scratch.PoseParameterAvailability;
             m_ScratchContributions = workspace.Scratch.Contributions;
             m_ScratchDenseContributionWeights = workspace.Scratch.DenseContributionWeights;
             m_ScratchPositionSums = workspace.Scratch.PositionSums;
@@ -338,7 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
                 if (!float.IsFinite(m_SourcePoseParameters[parameterOffset + parameterIndex]) ||
-                    m_SourcePoseParameterAvailability[parameterOffset + parameterIndex] != 1)
+                    m_SourcePoseParameterAvailability[parameterOffset + parameterIndex] > 1)
                     return false;
             }
             return true;
@@ -370,7 +376,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int parameterOffset = checked(pageIndex * m_ParameterCount);
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
-                if (!float.IsFinite(m_HistoryParameters[parameterOffset + parameterIndex]))
+                if (!float.IsFinite(m_HistoryParameters[parameterOffset + parameterIndex]) ||
+                    m_HistoryParameterAvailability[parameterOffset + parameterIndex] > 1)
                     return false;
             }
             return true;
@@ -398,7 +405,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
-                if (!float.IsFinite(m_StoredParameters[parameterIndex]))
+                if (!float.IsFinite(m_StoredParameters[parameterIndex]) ||
+                    m_StoredParameterAvailability[parameterIndex] > 1)
                     return false;
             }
             return true;
@@ -566,17 +574,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
                 float sum = 0f;
+                float weight = 0f;
                 for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
                 {
                     AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(contributionIndex);
-                    if (!TryGetCrossFadeParameter(entry, parameterIndex, out float value))
+                    if (!TryGetCrossFadeParameter(entry, parameterIndex, out float value, out byte available))
                         return AnimationPoseNativeInvalidReason.SlotParameterInvalid;
+                    if (available == 0)
+                        continue;
                     sum += value * entry.ScalarWeight;
+                    weight += entry.ScalarWeight;
                 }
-                float result = header.OutputWeight > 0f ? sum / header.OutputWeight : 0f;
+                float result = weight > 0f ? sum / weight : 0f;
                 if (!float.IsFinite(result))
                     return AnimationPoseNativeInvalidReason.SlotParameterInvalid;
                 m_ScratchParameters[parameterIndex] = result;
+                m_ScratchParameterAvailability[parameterIndex] = weight > 0f ? (byte)1 : (byte)0;
             }
             return AnimationPoseNativeInvalidReason.None;
         }
@@ -759,7 +772,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return AnimationPoseNativeInvalidReason.SlotContributionInvalid;
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
-                if (!float.IsFinite(m_ScratchParameters[parameterIndex]))
+                if (!float.IsFinite(m_ScratchParameters[parameterIndex]) ||
+                    m_ScratchParameterAvailability[parameterIndex] > 1)
                     return AnimationPoseNativeInvalidReason.SlotParameterInvalid;
             }
             return AnimationPoseNativeInvalidReason.None;
@@ -816,21 +830,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         bool TryGetCrossFadeParameter(
             AnimationSlotBlendFramePlanEntry entry,
             int parameterIndex,
-            out float value)
+            out float value,
+            out byte available)
         {
             if (entry.Kind == AnimationPoseContributionKind.Live)
             {
-                value = m_SourcePoseParameters[entry.SourceCaptureIndex * m_ParameterCount + parameterIndex];
+                int index = entry.SourceCaptureIndex * m_ParameterCount + parameterIndex;
+                value = m_SourcePoseParameters[index];
+                available = m_SourcePoseParameterAvailability[index];
                 return float.IsFinite(value);
             }
             if (entry.Kind == AnimationPoseContributionKind.Stored)
             {
-                value = m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture
-                    ? m_HistoryParameters[m_FramePlan.Header.HistoryReadPageIndex * m_ParameterCount + parameterIndex]
-                    : m_StoredParameters[parameterIndex];
+                bool capture = m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture;
+                int index = capture
+                    ? m_FramePlan.Header.HistoryReadPageIndex * m_ParameterCount + parameterIndex
+                    : parameterIndex;
+                value = capture ? m_HistoryParameters[index] : m_StoredParameters[index];
+                available = capture ? m_HistoryParameterAvailability[index] : m_StoredParameterAvailability[index];
                 return float.IsFinite(value);
             }
             value = 0f;
+            available = 0;
             return false;
         }
 
@@ -897,7 +918,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_StoredBoneOutputWeights[boneIndex] = m_HistoryBoneOutputWeights[historyPoseOffset + boneIndex];
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_StoredParameters[parameterIndex] = m_HistoryParameters[historyParameterOffset + parameterIndex];
+                m_StoredParameterAvailability[parameterIndex] = m_HistoryParameterAvailability[historyParameterOffset + parameterIndex];
+            }
             AnimationSlotBlendHistoryNativeState history = m_HistoryStates[historyPage];
             m_StoredState[0] = new AnimationSlotBlendStoredPoseNativeState
             {
@@ -925,7 +949,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryBoneOutputWeights[poseOffset + boneIndex] = m_ScratchPoseWeightSums[boneIndex];
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_HistoryParameters[parameterOffset + parameterIndex] = m_ScratchParameters[parameterIndex];
+                m_HistoryParameterAvailability[parameterOffset + parameterIndex] = m_ScratchParameterAvailability[parameterIndex];
+            }
             AnimationSlotBlendScratchNativeState scratch = m_ScratchState[0];
             m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
             {
@@ -952,7 +979,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryBoneOutputWeights[poseOffset + boneIndex] = 0f;
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_HistoryParameters[parameterOffset + parameterIndex] = 0f;
+                m_HistoryParameterAvailability[parameterOffset + parameterIndex] = 0;
+            }
             m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
             {
                 Availability = AnimationPoseAvailability.NoPose,
@@ -973,7 +1003,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
                 m_FinalPoseParameters[parameterIndex] = m_ScratchParameters[parameterIndex];
-                m_FinalPoseParameterAvailability[parameterIndex] = 1;
+                m_FinalPoseParameterAvailability[parameterIndex] = m_ScratchParameterAvailability[parameterIndex];
             }
             for (int contributionIndex = 0; contributionIndex < m_ContributionCapacity; contributionIndex++)
             {
@@ -1069,7 +1099,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_ScratchPoseWeightSums[boneIndex] = 0f;
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_ScratchParameters[parameterIndex] = 0f;
+                m_ScratchParameterAvailability[parameterIndex] = 0;
+            }
             for (int contributionIndex = 0; contributionIndex < m_ContributionCapacity; contributionIndex++)
             {
                 m_ScratchContributions[contributionIndex] = default;
@@ -1090,7 +1123,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_StoredBoneOutputWeights[boneIndex] = 0f;
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_StoredParameters[parameterIndex] = 0f;
+                m_StoredParameterAvailability[parameterIndex] = 0;
+            }
         }
 
         int FindContribution(AnimationPoseContributionKind kind)
@@ -1254,12 +1290,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.StoredPose.DenseLocalPose, header.BoneCount);
             RequireLength(binding.StoredPose.DenseVelocity, header.BoneCount);
             RequireLength(binding.StoredPose.PoseParameters, header.ParameterCount);
+            RequireLength(binding.StoredPose.PoseParameterAvailability, header.ParameterCount);
             RequireLength(binding.StoredPose.DenseBoneOutputWeights, header.BoneCount);
 
             RequireLength(binding.History.States, 2);
             RequireLength(binding.History.DenseLocalPoses, checked(header.BoneCount * 2));
             RequireLength(binding.History.DenseVelocities, checked(header.BoneCount * 2));
             RequireLength(binding.History.PoseParameters, checked(header.ParameterCount * 2));
+            RequireLength(binding.History.PoseParameterAvailability, checked(header.ParameterCount * 2));
             RequireLength(binding.History.DenseBoneOutputWeights, checked(header.BoneCount * 2));
             RequireLength(binding.History.SourceRotations,
                 checked(header.ContributionCapacity * header.BoneCount * 2));
@@ -1268,6 +1306,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.Scratch.DenseLocalPose, header.BoneCount);
             RequireLength(binding.Scratch.DenseVelocity, header.BoneCount);
             RequireLength(binding.Scratch.PoseParameters, header.ParameterCount);
+            RequireLength(binding.Scratch.PoseParameterAvailability, header.ParameterCount);
             RequireLength(binding.Scratch.Contributions, header.ContributionCapacity);
             RequireLength(binding.Scratch.DenseContributionWeights, checked(header.ContributionCapacity * header.BoneCount));
             RequireLength(binding.Scratch.PositionSums, header.BoneCount);

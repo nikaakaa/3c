@@ -47,12 +47,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationLocalBonePose> denseLocalPose,
             NativeArray<AnimationBlendBoneVelocity> denseVelocity,
             NativeArray<float> poseParameters,
+            NativeArray<byte> poseParameterAvailability,
             NativeArray<float> denseBoneOutputWeights)
         {
             State = state;
             DenseLocalPose = denseLocalPose;
             DenseVelocity = denseVelocity;
             PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
             DenseBoneOutputWeights = denseBoneOutputWeights;
         }
 
@@ -60,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<AnimationLocalBonePose> DenseLocalPose { get; }
         internal NativeArray<AnimationBlendBoneVelocity> DenseVelocity { get; }
         internal NativeArray<float> PoseParameters { get; }
+        internal NativeArray<byte> PoseParameterAvailability { get; }
         internal NativeArray<float> DenseBoneOutputWeights { get; }
     }
 
@@ -76,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationLocalBonePose> denseLocalPoses,
             NativeArray<AnimationBlendBoneVelocity> denseVelocities,
             NativeArray<float> poseParameters,
+            NativeArray<byte> poseParameterAvailability,
             NativeArray<float> denseBoneOutputWeights,
             NativeArray<AnimationSlotBlendRotationHistory> sourceRotations)
         {
@@ -83,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DenseLocalPoses = denseLocalPoses;
             DenseVelocities = denseVelocities;
             PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
             DenseBoneOutputWeights = denseBoneOutputWeights;
             SourceRotations = sourceRotations;
         }
@@ -92,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<AnimationSlotBlendRotationHistory> SourceRotations { get; }
         internal NativeArray<AnimationBlendBoneVelocity> DenseVelocities { get; }
         internal NativeArray<float> PoseParameters { get; }
+        internal NativeArray<byte> PoseParameterAvailability { get; }
         internal NativeArray<float> DenseBoneOutputWeights { get; }
     }
 
@@ -102,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationLocalBonePose> denseLocalPose,
             NativeArray<AnimationBlendBoneVelocity> denseVelocity,
             NativeArray<float> poseParameters,
+            NativeArray<byte> poseParameterAvailability,
             NativeArray<AnimationPrimitivePoseContribution> contributions,
             NativeArray<float> denseContributionWeights,
             NativeArray<Vector3> positionSums,
@@ -117,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DenseLocalPose = denseLocalPose;
             DenseVelocity = denseVelocity;
             PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
             Contributions = contributions;
             DenseContributionWeights = denseContributionWeights;
             PositionSums = positionSums;
@@ -133,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<AnimationLocalBonePose> DenseLocalPose { get; }
         internal NativeArray<AnimationBlendBoneVelocity> DenseVelocity { get; }
         internal NativeArray<float> PoseParameters { get; }
+        internal NativeArray<byte> PoseParameterAvailability { get; }
         internal NativeArray<AnimationPrimitivePoseContribution> Contributions { get; }
         internal NativeArray<float> DenseContributionWeights { get; }
         internal NativeArray<Vector3> PositionSums { get; }
@@ -199,12 +208,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationLocalBonePose> m_StoredPose;
         NativeArray<AnimationBlendBoneVelocity> m_StoredVelocity;
         NativeArray<float> m_StoredParameters;
+        NativeArray<byte> m_StoredParameterAvailability;
         NativeArray<float> m_StoredBoneOutputWeights;
 
         NativeArray<AnimationSlotBlendHistoryNativeState> m_HistoryStates;
         NativeArray<AnimationLocalBonePose> m_HistoryPoses;
         NativeArray<AnimationBlendBoneVelocity> m_HistoryVelocities;
         NativeArray<float> m_HistoryParameters;
+        NativeArray<byte> m_HistoryParameterAvailability;
         NativeArray<float> m_HistoryBoneOutputWeights;
         NativeArray<AnimationSlotBlendRotationHistory> m_HistorySourceRotations;
 
@@ -212,6 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationLocalBonePose> m_ScratchPose;
         NativeArray<AnimationBlendBoneVelocity> m_ScratchVelocity;
         NativeArray<float> m_ScratchParameters;
+        NativeArray<byte> m_ScratchParameterAvailability;
         NativeArray<AnimationPrimitivePoseContribution> m_ScratchContributions;
         NativeArray<float> m_ScratchDenseContributionWeights;
         NativeArray<Vector3> m_ScratchPositionSums;
@@ -269,12 +281,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_StoredPose = Allocate<AnimationLocalBonePose>(m_BoneCount);
                 m_StoredVelocity = Allocate<AnimationBlendBoneVelocity>(m_BoneCount);
                 m_StoredParameters = Allocate<float>(m_ParameterCount);
+                m_StoredParameterAvailability = Allocate<byte>(m_ParameterCount);
                 m_StoredBoneOutputWeights = Allocate<float>(m_BoneCount);
 
                 m_HistoryStates = Allocate<AnimationSlotBlendHistoryNativeState>(2);
                 m_HistoryPoses = Allocate<AnimationLocalBonePose>(checked(m_BoneCount * 2));
                 m_HistoryVelocities = Allocate<AnimationBlendBoneVelocity>(checked(m_BoneCount * 2));
                 m_HistoryParameters = Allocate<float>(checked(m_ParameterCount * 2));
+                m_HistoryParameterAvailability = Allocate<byte>(checked(m_ParameterCount * 2));
                 m_HistoryBoneOutputWeights = Allocate<float>(checked(m_BoneCount * 2));
                 m_HistorySourceRotations = Allocate<AnimationSlotBlendRotationHistory>(
                     checked(m_ContributionCapacity * m_BoneCount * 2));
@@ -283,6 +297,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_ScratchPose = Allocate<AnimationLocalBonePose>(m_BoneCount);
                 m_ScratchVelocity = Allocate<AnimationBlendBoneVelocity>(m_BoneCount);
                 m_ScratchParameters = Allocate<float>(m_ParameterCount);
+                m_ScratchParameterAvailability = Allocate<byte>(m_ParameterCount);
                 m_ScratchContributions = Allocate<AnimationPrimitivePoseContribution>(m_ContributionCapacity);
                 m_ScratchDenseContributionWeights = Allocate<float>(checked(m_ContributionCapacity * m_BoneCount));
                 m_ScratchPositionSums = Allocate<Vector3>(m_BoneCount);
@@ -518,12 +533,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     m_StoredPose,
                     m_StoredVelocity,
                     m_StoredParameters,
+                    m_StoredParameterAvailability,
                     m_StoredBoneOutputWeights),
                 new AnimationSlotBlendHistoryWorkspaceBinding(
                     m_HistoryStates,
                     m_HistoryPoses,
                     m_HistoryVelocities,
                     m_HistoryParameters,
+                    m_HistoryParameterAvailability,
                     m_HistoryBoneOutputWeights,
                     m_HistorySourceRotations),
                 new AnimationSlotBlendScratchWorkspaceBinding(
@@ -531,6 +548,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     m_ScratchPose,
                     m_ScratchVelocity,
                     m_ScratchParameters,
+                    m_ScratchParameterAvailability,
                     m_ScratchContributions,
                     m_ScratchDenseContributionWeights,
                     m_ScratchPositionSums,
@@ -559,17 +577,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Clear(m_StoredPose);
             Clear(m_StoredVelocity);
             Clear(m_StoredParameters);
+            Clear(m_StoredParameterAvailability);
             Clear(m_StoredBoneOutputWeights);
             Clear(m_HistoryStates);
             Clear(m_HistoryPoses);
             Clear(m_HistoryVelocities);
             Clear(m_HistoryParameters);
+            Clear(m_HistoryParameterAvailability);
             Clear(m_HistoryBoneOutputWeights);
             Clear(m_HistorySourceRotations);
             Clear(m_ScratchState);
             Clear(m_ScratchPose);
             Clear(m_ScratchVelocity);
             Clear(m_ScratchParameters);
+            Clear(m_ScratchParameterAvailability);
             Clear(m_ScratchContributions);
             Clear(m_ScratchDenseContributionWeights);
             Clear(m_ScratchPositionSums);
@@ -850,17 +871,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DisposeArray(ref m_ScratchDenseContributionWeights);
             DisposeArray(ref m_ScratchContributions);
             DisposeArray(ref m_ScratchParameters);
+            DisposeArray(ref m_ScratchParameterAvailability);
             DisposeArray(ref m_ScratchVelocity);
             DisposeArray(ref m_ScratchPose);
             DisposeArray(ref m_ScratchState);
             DisposeArray(ref m_HistoryBoneOutputWeights);
             DisposeArray(ref m_HistorySourceRotations);
             DisposeArray(ref m_HistoryParameters);
+            DisposeArray(ref m_HistoryParameterAvailability);
             DisposeArray(ref m_HistoryVelocities);
             DisposeArray(ref m_HistoryPoses);
             DisposeArray(ref m_HistoryStates);
             DisposeArray(ref m_StoredBoneOutputWeights);
             DisposeArray(ref m_StoredParameters);
+            DisposeArray(ref m_StoredParameterAvailability);
             DisposeArray(ref m_StoredVelocity);
             DisposeArray(ref m_StoredPose);
             DisposeArray(ref m_StoredState);

@@ -1,6 +1,6 @@
 # OpenSpec 现行文档索引
 
-更新：2026-09-18。
+更新：2026-09-29。
 
 本文只维护现行文档的读取入口和边界，不记录已完成比例、旧工作区状态、历史构建结果或实现快照。那些内容会随迁移快速失真，不能再作为当前架构或待办的依据。
 
@@ -15,6 +15,7 @@
 
 | change | 入口 |
 | --- | --- |
+| 角色运行与作者底层职责整理 | [refactor-character-runtime-and-authoring-boundaries](changes/refactor-character-runtime-and-authoring-boundaries/proposal.md) |
 | 编译期性能采样 | [add-compile-time-performance-instrumentation](changes/add-compile-time-performance-instrumentation/proposal.md) |
 | 生成诊断采样框架 | [add-generated-diagnostic-sampling-framework](changes/add-generated-diagnostic-sampling-framework/proposal.md) |
 | 网络模型 locomotion 表现策略 | [add-network-model-locomotion-presentation-policy](changes/add-network-model-locomotion-presentation-policy/proposal.md) |

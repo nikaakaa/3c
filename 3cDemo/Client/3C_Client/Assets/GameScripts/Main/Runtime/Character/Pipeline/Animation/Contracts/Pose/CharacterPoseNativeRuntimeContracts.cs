@@ -272,7 +272,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimancerComponent animancer,
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
-            CharacterRootHierarchyBinding rootHierarchy)
+            CharacterRootHierarchyBinding rootHierarchy,
+            CharacterAnimationVariableContract variableContract)
         {
             if (!actorId.IsValid || !animancer || rig == null || !rigBinding ||
                 !rootHierarchy)
@@ -287,6 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Rig = rig;
             RigBinding = rigBinding;
             RootHierarchy = rootHierarchy;
+            VariableContract = variableContract ?? throw new ArgumentNullException(nameof(variableContract));
         }
 
         internal ActorId ActorId { get; }
@@ -294,7 +296,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterAnimationRigPayload Rig { get; }
         internal CharacterAnimationRigBinding RigBinding { get; }
         internal CharacterRootHierarchyBinding RootHierarchy { get; }
-        internal bool IsValid => ActorId.IsValid && Animancer && Rig != null && RigBinding && RootHierarchy &&
+        internal CharacterAnimationVariableContract VariableContract { get; }
+        internal bool IsValid => ActorId.IsValid && Animancer && Rig != null && RigBinding && RootHierarchy && VariableContract != null &&
             string.Equals(Rig.RigId, RigBinding.RigId, StringComparison.Ordinal) &&
             string.Equals(Rig.RigRevision, RigBinding.RigRevision, StringComparison.Ordinal);
     }

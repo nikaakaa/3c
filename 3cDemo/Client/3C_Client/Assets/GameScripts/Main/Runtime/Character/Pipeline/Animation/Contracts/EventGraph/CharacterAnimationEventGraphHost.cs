@@ -28,12 +28,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character animation event graph Actor identity is invalid.",
                     nameof(actorId));
             m_ActorId = actorId;
-            m_VariableContract = new CharacterAnimationVariableContract(
-                graph.BuildVariableContract());
             m_HostContract = CreateContract(graph);
             m_Runtime = new NativeEventGraphRuntime(
                 graph,
                 m_HostContract);
+            m_VariableContract = new CharacterAnimationVariableContract(m_Runtime.VariableContract);
         }
 
         public CharacterAnimationEventGraph Graph => m_Graph;

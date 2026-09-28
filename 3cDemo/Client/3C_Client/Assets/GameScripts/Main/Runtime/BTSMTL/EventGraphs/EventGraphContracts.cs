@@ -419,9 +419,24 @@ namespace BTSMTL.EventGraphs
         public int Index { get; }
     }
 
+    public readonly struct EventGraphVariableBinding
+    {
+        internal EventGraphVariableBinding(EventGraphVariableLayout layout, EventGraphVariableLayoutEntry entry)
+        {
+            Layout = layout;
+            Index = entry.Index;
+            VariableId = entry.Descriptor.Reference.VariableId;
+        }
+
+        internal EventGraphVariableLayout Layout { get; }
+        internal int Index { get; }
+        public string VariableId { get; }
+    }
+
     public sealed class EventGraphVariableLayout
     {
         readonly EventGraphVariableLayoutEntry[] m_Entries;
+        readonly Dictionary<string, EventGraphVariableLayoutEntry> m_EntriesById;
 
         public EventGraphVariableLayout(
             string graphId,
@@ -438,15 +453,15 @@ namespace BTSMTL.EventGraphs
                 .Where(value => value == null || value.IsExposedPublic)
                 .OrderBy(value => value?.Reference.VariableId, StringComparer.Ordinal)
                 .ToArray();
-            var ids = new HashSet<string>(StringComparer.Ordinal);
             m_Entries = new EventGraphVariableLayoutEntry[ordered.Length];
+            m_EntriesById = new Dictionary<string, EventGraphVariableLayoutEntry>(ordered.Length, StringComparer.Ordinal);
             for (int i = 0; i < ordered.Length; i++)
             {
                 EventGraphVariableDescriptor descriptor = ordered[i] ??
                     throw new ArgumentException("Event graph variable descriptor is missing.", nameof(descriptors));
-                if (!ids.Add(descriptor.Reference.VariableId))
-                    throw new ArgumentException("Event graph variable identity is duplicated.", nameof(descriptors));
                 m_Entries[i] = new EventGraphVariableLayoutEntry(descriptor, i);
+                if (!m_EntriesById.TryAdd(descriptor.Reference.VariableId, m_Entries[i]))
+                    throw new ArgumentException("Event graph variable identity is duplicated.", nameof(descriptors));
             }
             LayoutId = $"{GraphId}/variables/{ContractRevision}";
         }
@@ -458,17 +473,16 @@ namespace BTSMTL.EventGraphs
 
         public bool TryGet(string variableId, out EventGraphVariableLayoutEntry entry)
         {
-            for (int i = 0; i < m_Entries.Length; i++)
-            {
-                if (string.Equals(m_Entries[i].Descriptor.Reference.VariableId, variableId, StringComparison.Ordinal))
-                {
-                    entry = m_Entries[i];
-                    return true;
-                }
-            }
+            if (variableId != null)
+                return m_EntriesById.TryGetValue(variableId, out entry);
             entry = null;
             return false;
         }
+
+        public EventGraphVariableBinding Bind(string variableId) =>
+            TryGet(variableId, out EventGraphVariableLayoutEntry entry)
+                ? new EventGraphVariableBinding(this, entry)
+                : throw new InvalidOperationException($"Event graph variable '{variableId}' is not published by layout '{LayoutId}'.");
     }
 
     public sealed class EventGraphVariableContract
@@ -827,6 +841,25 @@ namespace BTSMTL.EventGraphs
                 return TryRead(reference.VariableId, out value);
             value = default;
             return false;
+        }
+
+        public bool TryRead(EventGraphVariableBinding binding, out EventGraphValue value)
+        {
+            if (IsValid && ReferenceEquals(Contract.Layout, binding.Layout))
+            {
+                value = m_Buffer.Read(binding.Index);
+                return true;
+            }
+            value = default;
+            return false;
+        }
+
+        public EventGraphValue Require(EventGraphVariableBinding binding)
+        {
+            if (TryRead(binding, out EventGraphValue value))
+                return value;
+            throw new InvalidOperationException(
+                $"Event graph variable binding '{binding.VariableId}' is unavailable in frame '{Invocation}'.");
         }
 
         public EventGraphValue Require(string variableId)

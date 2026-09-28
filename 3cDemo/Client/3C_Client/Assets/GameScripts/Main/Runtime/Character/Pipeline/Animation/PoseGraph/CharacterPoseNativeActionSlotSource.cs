@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly AnimationChannelId m_ChannelId;
         readonly CharacterPoseNativeSourceResourceCatalog m_Catalog;
         readonly CharacterAnimationInputContract m_InputContract;
+        readonly EventGraphVariableBinding[] m_ParameterBindings;
         readonly AnimationPoseRequestWorkspace m_Workspace;
         readonly AnimationResolvedPoseSourceSample[] m_Resolved;
         readonly bool[] m_Prepared;
@@ -45,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int capacity,
             CharacterPoseNativeSourceResourceCatalog catalog,
             CharacterAnimationInputContract inputContract,
+            CharacterAnimationVariableContract variableContract,
             int footPlacementWeightParameterIndex)
         {
             if (!nodeId.IsValid || !slotId.IsValid || !channelId.IsValid || capacity <= 0)
@@ -58,6 +60,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(catalog));
             m_InputContract = inputContract ??
                 throw new ArgumentNullException(nameof(inputContract));
+            m_ParameterBindings = new EventGraphVariableBinding[inputContract.Parameters.Count];
+            for (int i = 0; i < m_ParameterBindings.Length; i++)
+            {
+                CharacterPoseParameterDeclaration parameter = inputContract.Parameters[i];
+                if (parameter.Usage != CharacterPoseParameterUsage.AnimatedProperty &&
+                    parameter.ValueType != PoseParameterValueType.Vector3 &&
+                    parameter.ValueType != PoseParameterValueType.Quaternion)
+                    m_ParameterBindings[i] = variableContract.Bind(parameter.ParameterId.Value);
+            }
             m_Workspace = new AnimationPoseRequestWorkspace(
                 new AnimationPoseRequestWorkspaceLayout(
                     capacity,
@@ -311,7 +322,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 row.PoseParameters[row.ParameterOffset + i] =
                     declaration.Usage == CharacterPoseParameterUsage.AnimatedProperty
                         ? declaration.DefaultValue
-                        : ReadParameter(parameters.RequireValue(declaration.ParameterId), declaration);
+                        : ReadParameter(parameters.RequireValue(m_ParameterBindings[i]), declaration);
                 row.PoseParameterAvailability[row.ParameterOffset + i] = 1;
             }
             PresentationPoseSampleTime time = state.Sample.Time;

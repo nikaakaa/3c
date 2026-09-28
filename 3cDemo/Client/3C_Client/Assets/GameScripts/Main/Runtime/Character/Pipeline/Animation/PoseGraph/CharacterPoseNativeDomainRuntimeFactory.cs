@@ -89,7 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     animancer,
                     rig,
                     rigBinding,
-                    rootHierarchy);
+                    rootHierarchy,
+                    services.Services.EventFrameSource.VariableContract);
                 CharacterPoseNativeAdoptedResult adopted =
                     CharacterPoseNativeRoleEntry.Create(
                         requestId,

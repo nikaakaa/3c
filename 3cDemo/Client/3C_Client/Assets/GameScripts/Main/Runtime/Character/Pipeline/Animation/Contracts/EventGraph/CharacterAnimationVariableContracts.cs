@@ -35,6 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string LayoutId => Source.Layout.LayoutId;
         public IReadOnlyList<EventGraphVariableDescriptor> Variables => Source.PublishedDescriptors;
 
+        public EventGraphVariableBinding Bind(string variableId) => Source.Layout.Bind(variableId);
+
         public EventGraphVariableDescriptor Require(string variableId) =>
             TryGet(variableId, out var descriptor) ? descriptor :
                 throw new InvalidOperationException($"Animation variable '{variableId}' is not published by the Character Animation Event Graph.");
@@ -86,6 +88,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public bool TryRead(string variableId, out EventGraphValue value) =>
             Values.TryRead(variableId, out value);
+
+        public bool TryRead(EventGraphVariableBinding binding, out EventGraphValue value) =>
+            Values.TryRead(binding, out value);
+
+        public EventGraphValue Require(EventGraphVariableBinding binding) => Values.Require(binding);
 
         public bool TryRead(PoseParameterId parameterId, out EventGraphValue value)
         {

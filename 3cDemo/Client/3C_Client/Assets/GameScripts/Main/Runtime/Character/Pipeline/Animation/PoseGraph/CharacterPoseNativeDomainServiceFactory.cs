@@ -740,6 +740,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 stack.SourceCapacity,
                 m_SourceCatalog,
                 m_InputContract,
+                m_EventFrameSource.VariableContract,
                 RequireParameterIndex(
                     AnimationPoseParameterIds.FootPlacementWeight));
         }

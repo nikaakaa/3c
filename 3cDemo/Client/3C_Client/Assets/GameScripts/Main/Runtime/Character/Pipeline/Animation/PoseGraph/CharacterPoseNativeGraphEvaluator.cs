@@ -520,6 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         sealed class ParameterInputHandler : ICharacterPoseNativeNodeHandler
         {
             PoseParameterValueType m_ValueType;
+            EventGraphVariableBinding m_Binding;
             CharacterPoseNativeParameterValue m_Output;
             bool m_Initialized;
 
@@ -551,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose parameter node '{NodeId}' does not reference a read-only EventGraph Control parameter.");
                 }
                 m_ValueType = declaration.ValueType;
+                m_Binding = runtime.InstanceContext.VariableContract.Bind(node.ParameterId.Value);
                 m_Initialized = true;
             }
             public void Start(CharacterPoseNativeGraphRuntime runtime) { }
@@ -577,7 +579,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose parameter node '{node.NodeId}' has no output '{portId}'.");
                 EventGraphValue value =
-                    runtime.CurrentInput.ParameterFrame.RequireValue(node.ParameterId);
+                    runtime.CurrentInput.ParameterFrame.RequireValue(m_Binding);
                 if (m_ValueType == PoseParameterValueType.Float &&
                     value.Kind != EventGraphValueKind.Float32 ||
                     m_ValueType == PoseParameterValueType.Int &&

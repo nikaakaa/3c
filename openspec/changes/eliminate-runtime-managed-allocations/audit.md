@@ -88,17 +88,20 @@
 
 每项说明输入、当前工作、可讨论的改法及业务取舍。这里记录审计发现，不授权修改运行行为，不新增手动验证任务。来源和行号按本轮代码基线记录。
 
-### AP01 固定参数合同仍逐帧校验（CPU）
+### AP01 固定参数合同仍逐帧校验（已实施，未实跑）
 
 - 证据：[CharacterAnimationPoseInputFrame.cs:25](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterAnimationPoseInputFrame.cs#L25)，由表现域 RunPoseFrame 调用。
 - 输入是已发布变量帧和绑定时确定的参数 ID 列表；每帧查参数存在，并两层循环查重复。参数数量为 P 时，重复检查为 P(P−1)/2 次比较，还叠加名称查找。
 - 可在正式装配时校验固定声明，帧内只验发布身份及失效状态。角色表现不变；代价是换图或换合同时必须重新装配，不能缓存跨版本的绑定。
+- 实施结果：BindPoseDomain 一次校验 Control 声明存在和唯一性，保存正式变量合同；FromPublishedVariables 每帧只检查当前发布有效及源合同引用匹配。删除长期保存的参数 ID 数组与帧内双层循环。
 
-### AP02 参数名称仍重复线性查找（CPU）
+### AP02 参数名称仍重复线性查找（主读取已实施，诊断位置绑定未收口）
 
 - 证据：[EventGraphContracts.cs:459](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/EventGraphs/EventGraphContracts.cs#L459) 的变量布局名称解析。
 - 输入是变量名，输出是同帧变量；多个 Pose 消费者和诊断重复比较字符串。零分配发布已经完成，并不消除读取端的查找成本。
 - 可在装配时解析带布局身份的位置，运行时直接读值。变量多、角色多时减少重复查找；代价是布局替换后位置失效，不能只缓存裸整数。
+- 实施结果：正式 EventGraphVariableBinding 保存布局对象身份与位置，读值同时检查发布版本和布局引用；Pose 参数节点、Action Slot 标量参数在装配时绑定，帧内直接按位置读。Character Host 直接包装 NativeEventGraphRuntime 的唯一变量合同，删除独立重建的同名合同。仍按名称读的消费者改走布局持有的 Ordinal 字典，旧线性扫描删除。
+- 剩余：采样字段仍按名称读，未迁移为预绑定位置；未接入正式工厂的 BlendSpace 类也未假称已改成位置读取。布局替换不会静默复用旧 binding，下一次成功发布、Reset/Dispose 的旧帧失效机制保留。
 
 ### AP03 图节点 getter 创建周期数组（已实施，未实跑）
 

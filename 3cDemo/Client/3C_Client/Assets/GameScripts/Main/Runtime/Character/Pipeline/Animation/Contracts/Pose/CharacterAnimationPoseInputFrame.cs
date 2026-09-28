@@ -22,31 +22,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterAnimationVariableFrame PublishedVariableFrame =>
             m_VariableFrame;
 
-        internal static CharacterAnimationPoseInputFrame FromPublishedVariables(
-            CharacterAnimationVariableFrame frame,
-            IReadOnlyList<PoseParameterId> parameterIds)
+        internal static CharacterAnimationVariableContract BindContract(
+            CharacterAnimationVariableContract contract,
+            IReadOnlyList<CharacterPoseParameterDeclaration> parameters)
         {
-            if (!frame.IsValid || parameterIds == null)
-                throw new ArgumentException(
-                    "Animation Event Graph variable frame is incomplete.");
-            for (int i = 0; i < parameterIds.Count; i++)
+            if (contract == null || parameters == null)
+                throw new ArgumentException("Animation Event Graph variable binding is incomplete.");
+            var seen = new HashSet<PoseParameterId>();
+            for (int i = 0; i < parameters.Count; i++)
             {
-                PoseParameterId parameterId = parameterIds[i];
+                CharacterPoseParameterDeclaration parameter = parameters[i];
+                if (parameter.Usage != CharacterPoseParameterUsage.Control)
+                    continue;
+                PoseParameterId parameterId = parameter.ParameterId;
                 if (!parameterId.IsValid ||
-                    !frame.TryRead(parameterId.Value, out _))
+                    !contract.TryGet(parameterId.Value, out _))
                 {
                     throw new InvalidOperationException(
-                        $"Animation Event Graph variable '{parameterId}' is missing from the published frame.");
+                        $"Animation Event Graph variable '{parameterId}' is missing from the published contract.");
                 }
-                for (int prior = 0; prior < i; prior++)
-                {
-                    if (parameterIds[prior].Equals(parameterId))
-                        throw new ArgumentException(
-                            $"Animation Event Graph variable frame contains duplicate '{parameterId}'.");
-                }
+                if (!seen.Add(parameterId))
+                    throw new ArgumentException(
+                        $"Animation Event Graph variable binding contains duplicate '{parameterId}'.");
             }
+            return contract;
+        }
+
+        internal static CharacterAnimationPoseInputFrame FromPublishedVariables(
+            CharacterAnimationVariableFrame frame,
+            CharacterAnimationVariableContract contract)
+        {
+            if (!frame.IsValid || contract == null ||
+                !ReferenceEquals(frame.Values.Contract, contract.Source))
+                throw new ArgumentException("Animation Event Graph variable frame does not match its bound contract.");
             return new CharacterAnimationPoseInputFrame(frame);
         }
+
+        internal EventGraphValue RequireValue(EventGraphVariableBinding binding) =>
+            m_VariableFrame.Require(binding);
 
         internal bool TryRead(
             PoseParameterId parameterId,

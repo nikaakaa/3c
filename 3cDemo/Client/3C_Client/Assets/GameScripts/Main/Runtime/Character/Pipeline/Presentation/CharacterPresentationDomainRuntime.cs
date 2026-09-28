@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 actorId);
         }
 
-        PoseParameterId[] m_PoseParameterIds;
+        CharacterAnimationVariableContract m_PoseVariableContract;
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher m_PoseActionPublisher;
         List<ActionAnimationPlaybackCommand> m_DiagnosticCommands;
 
@@ -146,14 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
             m_PoseDomain = poseDomain ?? throw new ArgumentNullException(nameof(poseDomain));
             m_PoseResourceScope = resourceScope ?? throw new ArgumentNullException(nameof(resourceScope));
-            var ids = new List<PoseParameterId>();
-            for (int i = 0; i < poseParameterIds.Count; i++)
-            {
-                CharacterPoseParameterDeclaration parameter = poseParameterIds[i];
-                if (parameter.Usage == CharacterPoseParameterUsage.Control)
-                    ids.Add(parameter.ParameterId);
-            }
-            m_PoseParameterIds = ids.ToArray();
+            m_PoseVariableContract = CharacterAnimationPoseInputFrame.BindContract(
+                m_EventGraph.VariableContract, poseParameterIds);
         }
 
         public bool AcceptsTrajectoryIntent => true;
@@ -672,7 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
                     eventFrame,
-                    m_PoseParameterIds);
+                    m_PoseVariableContract);
                 var frameInput = new CharacterPoseNativeFrameInput(
                     m_ActorId,
                     context.RenderFrame,
@@ -772,6 +766,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_EventGraph.Dispose();
             m_Body.Dispose();
         }
+
+        CharacterAnimationVariableContract ICharacterPoseNativeEventFrameSource.VariableContract =>
+            m_EventGraph.VariableContract;
 
         bool ICharacterPoseNativeEventFrameSource.TryGetFrame(
             ActorId actorId,

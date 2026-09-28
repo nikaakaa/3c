@@ -101,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal interface ICharacterPoseNativeEventFrameSource
     {
+        CharacterAnimationVariableContract VariableContract { get; }
         bool TryGetFrame(
             ActorId actorId,
             ulong frameIdentity,

@@ -713,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeSourceDemand(
             in CharacterPoseNativeFrameLineage lineage,
             IReadOnlyList<CharacterPoseNativeSourceRequest> requests,
-            HashSet<CharacterPoseNativeSourceDemandKey> duplicateKeys = null)
+            HashSet<CharacterPoseNativeSourceDemandKey> duplicateKeys)
         {
             if (!lineage.IsValid)
                 throw new ArgumentException(
@@ -723,7 +723,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"resetGeneration={lineage.ResetGeneration}).");
             if (requests == null)
                 throw new ArgumentNullException(nameof(requests));
-            duplicateKeys?.Clear();
+            if (duplicateKeys == null)
+                throw new ArgumentNullException(nameof(duplicateKeys));
+            duplicateKeys.Clear();
             for (int i = 0; i < requests.Count; i++)
             {
                 CharacterPoseNativeSourceRequest request = requests[i];
@@ -736,25 +738,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         "Pose native source demand contains an invalid request " +
                         $"(index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
                         $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
-                if (duplicateKeys != null)
+                if (!duplicateKeys.Add(new CharacterPoseNativeSourceDemandKey(in request)))
                 {
-                    if (!duplicateKeys.Add(new CharacterPoseNativeSourceDemandKey(in request)))
-                    {
-                        throw new ArgumentException(
-                            "Pose native source demand contains a duplicate request " +
-                            $"(index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
-                            $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
-                    }
-                    continue;
-                }
-                for (int previousIndex = 0; previousIndex < i; previousIndex++)
-                {
-                    CharacterPoseNativeSourceRequest previous = requests[previousIndex];
-                    if (previous.ScopeInstanceId == request.ScopeInstanceId &&
-                        previous.NodeId == request.NodeId &&
-                        previous.SourceId == request.SourceId)
-                        throw new ArgumentException(
-                            "Pose native source demand contains a duplicate request.");
+                    throw new ArgumentException(
+                        "Pose native source demand contains a duplicate request " +
+                        $"(index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
+                        $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
                 }
             }
             Lineage = lineage;

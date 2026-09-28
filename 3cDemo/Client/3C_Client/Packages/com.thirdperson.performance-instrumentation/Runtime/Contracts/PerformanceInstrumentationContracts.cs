@@ -74,9 +74,9 @@ namespace ThirdPersonPerformance.Instrumentation
         public const string ContractsAssembly = "ThirdPerson.Performance.Instrumentation.Contracts";
         public const string RuntimeAssembly = "ThirdPerson.Performance.Instrumentation.Runtime";
         public const string ManifestSchema = "third-person-performance-instrumentation/1";
-        public const string SpanFileSchema = "third-person-performance-instrumentation-spans/1";
+        public const string SpanFileSchema = "third-person-performance-instrumentation-spans/2";
         public const string WeaverVersion = "1.0.2";
-        public const int SpanLayoutRevision = 1;
+        public const int SpanLayoutRevision = 2;
         public const ulong Unavailable = 0;
 
         public static ulong Hash64(string value)

@@ -517,10 +517,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PerformancePlayerManifestDocument player = ReadJson<PerformancePlayerManifestDocument>(PlayerManifestPath);
             RequireSchema(player.schema, PerformanceCaptureSchemas.Player, "player manifest");
             if (string.IsNullOrWhiteSpace(player.instrumentation_identity) ||
-                (string.Equals(operation, PerformanceOperationKinds.Capture, StringComparison.Ordinal) &&
-                 !string.Equals(player.instrumentation_mode, PerformanceInstrumentationMode.Span.ToString(), StringComparison.Ordinal)))
+                !Enum.TryParse(player.instrumentation_mode, out PerformanceInstrumentationMode mode) ||
+                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), mode))
             {
-                throw new InvalidDataException("Performance Capture requires a Span instrumentation Player.");
+                throw new InvalidDataException("Performance Player instrumentation identity or mode is invalid.");
             }
             string playerScenario = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(PlayerManifestPath), player.scenario_catalog_path));
             if (!File.Exists(playerScenario) || !string.Equals(Sha256(playerScenario), Sha256(ScenarioPath), StringComparison.Ordinal))

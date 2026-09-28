@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using ThirdPersonCharacter.Pipeline;
@@ -37,14 +36,6 @@ namespace ThirdPersonPerformance.Runtime
         {
             public PerformanceMetricDefinition Metric;
             public ulong LogicTick;
-            public ulong RenderFrame;
-            public long DurationTicks;
-            public int Count;
-        }
-
-        sealed class RenderFrameSample
-        {
-            public PerformanceMetricDefinition Metric;
             public ulong RenderFrame;
             public long DurationTicks;
             public int Count;
@@ -214,10 +205,9 @@ namespace ThirdPersonPerformance.Runtime
                 throw new InvalidDataException("Performance Request and Player instrumentation modes do not match.");
             RequireText(m_PlayerManifest.instrumentation_identity, "Player instrumentation identity");
             if (!Enum.TryParse(m_PlayerManifest.instrumentation_mode, true, out m_InstrumentationMode) ||
-                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), m_InstrumentationMode) ||
-                m_InstrumentationMode == PerformanceInstrumentationMode.Disabled)
+                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), m_InstrumentationMode))
             {
-                throw new InvalidDataException("Performance Player instrumentation mode must be MarkerOnly or Span.");
+                throw new InvalidDataException("Performance Player instrumentation mode must be Disabled, MarkerOnly or Span.");
             }
             if (m_PlayerManifest.instrumentation_span_layout_revision != PerformanceInstrumentationIdentity.SpanLayoutRevision)
                 throw new InvalidDataException("Performance Player instrumentation Span layout is unsupported.");
@@ -295,11 +285,6 @@ namespace ThirdPersonPerformance.Runtime
 
         void ConfigureInstrumentation()
         {
-            if (IsOperation(PerformanceOperationKinds.Capture) &&
-                m_InstrumentationMode != PerformanceInstrumentationMode.Span)
-            {
-                throw new InvalidDataException("Performance Capture requires a Span instrumentation Player.");
-            }
             if (m_InstrumentationMode == PerformanceInstrumentationMode.Span)
             {
                 if (m_Profile.instrumentation_span_capacity <= 0)
@@ -493,7 +478,8 @@ namespace ThirdPersonPerformance.Runtime
                 m_Scenario.capture_logic_ticks,
                 m_Profile.logic_tick_rate,
                 m_Profile.sample_capacity_margin_percent);
-            PerformanceInstrumentationSpanRuntime.BeginCapture();
+            if (m_InstrumentationMode != PerformanceInstrumentationMode.Disabled)
+                PerformanceInstrumentationSpanRuntime.BeginCapture();
             StartRecorders(renderCapacity);
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
             Profiler.logFile = profilerPath;
@@ -540,9 +526,11 @@ namespace ThirdPersonPerformance.Runtime
             }
         }
 
-        static bool UsesRecorder(PerformanceMetricDefinition metric) =>
-            metric.SampleScope == PerformanceSampleScope.RenderFrame ||
-            metric.SampleScope == PerformanceSampleScope.Counter;
+        bool UsesRecorder(PerformanceMetricDefinition metric) =>
+            metric.Domain == PerformanceMetricDomain.Unity ||
+            m_InstrumentationMode != PerformanceInstrumentationMode.Disabled &&
+            (metric.SampleScope == PerformanceSampleScope.RenderFrame ||
+             metric.SampleScope == PerformanceSampleScope.Counter);
 
         static ProfilerCategory Category(PerformanceMetricDefinition metric) => metric.MetricId switch
         {
@@ -626,20 +614,30 @@ namespace ThirdPersonPerformance.Runtime
             m_CurrentStage = "finalizing";
             if (PerformanceInstrumentationSpanRuntime.Faulted)
                 throw new InvalidOperationException("Performance instrumentation Span capture faulted before finalization.");
-            PerformanceSpanRecord[] instrumentationSpans = PerformanceInstrumentationSpanRuntime.EndCapture();
+            PerformanceSpanRecord[] instrumentationSpans = m_InstrumentationMode == PerformanceInstrumentationMode.Disabled
+                ? Array.Empty<PerformanceSpanRecord>()
+                : PerformanceInstrumentationSpanRuntime.EndCapture();
             Profiler.enabled = false;
             Profiler.enableBinaryLog = false;
             Profiler.logFile = string.Empty;
             for (int i = 0; i < m_Recorders.Count; i++)
                 m_Recorders[i].Recorder.Stop();
-            string instrumentationSpanPath = Path.Combine(m_Request.staging_root, "instrumentation-spans.bin");
-            PerformanceInstrumentationSpanFile.Write(instrumentationSpanPath, instrumentationSpans);
-            string instrumentationSpanHash = Sha256(instrumentationSpanPath);
+            string instrumentationSpanFile = string.Empty;
+            string instrumentationSpanHash = string.Empty;
+            if (m_InstrumentationMode == PerformanceInstrumentationMode.Span)
+            {
+                instrumentationSpanFile = "instrumentation-spans.bin";
+                string instrumentationSpanPath = Path.Combine(m_Request.staging_root, instrumentationSpanFile);
+                PerformanceInstrumentationSpanFile.Write(instrumentationSpanPath, instrumentationSpans);
+                instrumentationSpanHash = Sha256(instrumentationSpanPath);
+            }
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
             if (!File.Exists(profilerPath) || new FileInfo(profilerPath).Length == 0L)
                 throw new InvalidDataException("Unity binary Profiler capture was not published.");
-            int logicTicks = CountMetricSamples(instrumentationSpans, "session.logic-tick");
-            if (logicTicks != m_Scenario.capture_logic_ticks)
+            int logicTicks = FixedCharacterInputTraceModule.Status.ReplayedFrameCount - m_Scenario.warmup_logic_ticks;
+            if (logicTicks != m_Scenario.capture_logic_ticks ||
+                m_InstrumentationMode == PerformanceInstrumentationMode.Span &&
+                CountMetricSamples(instrumentationSpans, "session.logic-tick") != logicTicks)
                 throw new InvalidDataException("Performance Session LogicTick Span count does not match the capture scenario.");
             WriteMetricSamples(instrumentationSpans);
             string catalogRevision = ComputeCatalogRevision();
@@ -661,7 +659,7 @@ namespace ThirdPersonPerformance.Runtime
                 instrumentation_identity = m_InstrumentationIdentity,
                 instrumentation_mode = m_InstrumentationMode.ToString(),
                 instrumentation_span_layout_revision = PerformanceInstrumentationIdentity.SpanLayoutRevision,
-                instrumentation_span_path = "instrumentation-spans.bin",
+                instrumentation_span_path = instrumentationSpanFile,
                 instrumentation_span_hash = instrumentationSpanHash,
                 operating_system = SystemInfo.operatingSystem,
                 processor = SystemInfo.processorType,
@@ -709,9 +707,7 @@ namespace ThirdPersonPerformance.Runtime
                 if (!metricsByHash.TryAdd(metricHash, metric))
                     throw new InvalidDataException($"Performance metric '{metric.MetricId}' has a duplicate hash.");
             }
-            var frameSamples = new Dictionary<(ulong MetricId, ulong RenderFrame), RenderFrameSample>();
             var logicSamples = new Dictionary<(ulong MetricId, ulong LogicTick), LogicTickSample>();
-            var invocationSampleIndex = 0;
             for (int i = 0; i < instrumentationSpans.Length; i++)
             {
                 PerformanceSpanRecord span = instrumentationSpans[i];
@@ -719,24 +715,6 @@ namespace ThirdPersonPerformance.Runtime
                     throw new InvalidDataException($"Performance instrumentation Span metric hash '{span.MetricId:x16}' is not in the catalog.");
                 if (UsesRecorder(metric))
                     continue;
-                if ((span.ContextFlags & PerformanceInstrumentationContextFlags.RenderFrame) == 0)
-                    throw new InvalidDataException($"Performance metric '{metric.MetricId}' has no RenderFrame context.");
-                if (metric.SampleScope == PerformanceSampleScope.RenderFrame)
-                {
-                    var key = (span.MetricId, span.RenderFrame);
-                    if (!frameSamples.TryGetValue(key, out RenderFrameSample sample))
-                    {
-                        sample = new RenderFrameSample
-                        {
-                            Metric = metric,
-                            RenderFrame = span.RenderFrame
-                        };
-                        frameSamples.Add(key, sample);
-                    }
-                    sample.DurationTicks = checked(sample.DurationTicks + span.DurationTicks);
-                    sample.Count++;
-                    continue;
-                }
                 if (metric.SampleScope == PerformanceSampleScope.LogicTick)
                 {
                     if ((span.ContextFlags & PerformanceInstrumentationContextFlags.LogicTick) == 0)
@@ -756,30 +734,16 @@ namespace ThirdPersonPerformance.Runtime
                     sample.Count++;
                     continue;
                 }
-                if (metric.SampleScope != PerformanceSampleScope.Invocation)
-                    throw new InvalidDataException($"Performance metric '{metric.MetricId}' has unsupported Span sample scope '{metric.SampleScope}'.");
                 double nanoseconds = span.DurationTicks * 1000000000d / Stopwatch.Frequency;
                 builder.Append(Csv(metric.MetricId)).Append(',')
                     .Append(metric.SampleScope).Append(',')
-                    .Append((invocationSampleIndex++).ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(i.ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(span.PointId.ToString("x16", CultureInfo.InvariantCulture)).Append(',')
                     .Append(span.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).AppendLine(",1");
             }
-            int frameSampleIndex = 0;
-            foreach (RenderFrameSample sample in frameSamples.Values.OrderBy(value => value.Metric.MetricId, StringComparer.Ordinal).ThenBy(value => value.RenderFrame))
-            {
-                double nanoseconds = sample.DurationTicks * 1000000000d / Stopwatch.Frequency;
-                builder.Append(Csv(sample.Metric.MetricId)).Append(',')
-                    .Append(sample.Metric.SampleScope).Append(',')
-                    .Append((frameSampleIndex++).ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(sample.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(sample.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(sample.Count.ToString(CultureInfo.InvariantCulture)).AppendLine();
-            }
             int logicSampleIndex = 0;
-            foreach (LogicTickSample sample in logicSamples.Values.OrderBy(value => value.Metric.MetricId, StringComparer.Ordinal).ThenBy(value => value.LogicTick))
+            foreach (LogicTickSample sample in logicSamples.Values)
             {
                 double nanoseconds = sample.DurationTicks * 1000000000d / Stopwatch.Frequency;
                 builder.Append(Csv(sample.Metric.MetricId)).Append(',')

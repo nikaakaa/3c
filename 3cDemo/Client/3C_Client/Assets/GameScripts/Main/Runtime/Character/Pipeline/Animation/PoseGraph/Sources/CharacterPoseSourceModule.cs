@@ -1,3 +1,4 @@
+using ThirdPersonPerformance.Instrumentation;
 using System;
 using System.Collections.Generic;
 using Animancer;
@@ -1048,6 +1049,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in scalarReadView);
         }
 
+        [PerformanceProbe("presentation.animation.source-barrier")]
         internal void EnterEvaluateBarrier(
             CharacterPoseSourceFrameLease lease)
         {

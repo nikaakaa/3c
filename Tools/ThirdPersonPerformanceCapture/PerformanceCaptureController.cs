@@ -436,9 +436,7 @@ internal sealed class PerformanceCaptureController
             string.IsNullOrWhiteSpace(_playerManifest.instrumentation_identity) ||
             !Enum.TryParse(_playerManifest.instrumentation_mode, true, out PerformanceInstrumentationMode instrumentationMode) ||
             !Enum.IsDefined(typeof(PerformanceInstrumentationMode), instrumentationMode) ||
-            instrumentationMode == PerformanceInstrumentationMode.Disabled ||
-            _playerManifest.instrumentation_span_layout_revision != PerformanceInstrumentationIdentity.SpanLayoutRevision ||
-            IsOperation(PerformanceOperationKinds.Capture) && instrumentationMode != PerformanceInstrumentationMode.Span)
+            _playerManifest.instrumentation_span_layout_revision != PerformanceInstrumentationIdentity.SpanLayoutRevision)
         {
             throw new InvalidDataException("Performance Player instrumentation identity or mode is invalid.");
         }

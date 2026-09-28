@@ -787,6 +787,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             string path = ThirdPersonPerformanceCaptureWorkflow.RequireCaptureFile(manifestPath, "summary");
             PerformanceSummaryDocument summary = ReadJson<PerformanceSummaryDocument>(path);
+            if (!string.Equals(summary.schema, PerformanceCaptureSchemas.Summary, StringComparison.Ordinal))
+                throw new InvalidDataException("Performance summary schema is unsupported; rebuild and capture with the current workflow.");
             return new
             {
                 manifest_path = Path.GetFullPath(manifestPath),
@@ -798,6 +800,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 summary.fps_budget_exceeded,
                 summary.logic_ticks_per_second,
                 summary.dropped_logic_ticks,
+                summary.instrumentation_mode,
+                summary.timing_basis,
+                summary.budget_evaluated,
+                summary.unavailable_budget_metrics,
                 summary.budget_passed,
                 summary.budget_exceeded_count,
                 logic_tick_render_frame = summary.logic_tick_render_frame_distribution,

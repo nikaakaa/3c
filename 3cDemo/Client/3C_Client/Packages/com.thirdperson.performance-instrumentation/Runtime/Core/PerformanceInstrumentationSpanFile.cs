@@ -24,6 +24,7 @@ namespace ThirdPersonPerformance.Instrumentation
             {
                 writer.Write(FileSchema);
                 writer.Write(PerformanceInstrumentationIdentity.SpanLayoutRevision);
+                writer.Write(System.Diagnostics.Stopwatch.Frequency);
                 writer.Write(records.Length);
                 for (int i = 0; i < records.Length; i++)
                     WriteRecord(writer, records[i]);

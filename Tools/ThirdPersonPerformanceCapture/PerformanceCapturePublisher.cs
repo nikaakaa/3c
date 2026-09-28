@@ -233,7 +233,7 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceSummaryDocument summary = BuildSummary(request, scenario, budget, playerManifest, runtime, catalog, profile);
         WriteJson(Path.Combine(request.staging_root, "summary.json"), summary);
-        PerformanceComparisonDocument comparison = BuildComparison(request, scenario, playerManifest, summary, runtime);
+        PerformanceComparisonDocument comparison = BuildComparison(request, scenario, summary, runtime);
         WriteJson(Path.Combine(request.staging_root, "comparison.json"), comparison);
         RequireNonEmptyFile(Path.Combine(request.staging_root, "summary.json"), "summary");
         RequireNonEmptyFile(Path.Combine(request.staging_root, "comparison.json"), "comparison");
@@ -264,7 +264,6 @@ internal static class PerformanceCapturePublisher
             "runtime-result.json",
             "metric-samples.csv",
             "metric-catalog.json",
-            "instrumentation-spans.bin",
             "unity-profiler.raw",
             "windows-cpu.etl",
             "cpu-hotspots.csv",
@@ -302,7 +301,6 @@ internal static class PerformanceCapturePublisher
             !string.Equals(runtime.instrumentation_identity, playerManifest.instrumentation_identity, StringComparison.Ordinal) ||
             !Enum.TryParse(playerManifest.instrumentation_mode, true, out PerformanceInstrumentationMode mode) ||
             !Enum.IsDefined(typeof(PerformanceInstrumentationMode), mode) ||
-            mode == PerformanceInstrumentationMode.Disabled ||
             !string.Equals(runtime.instrumentation_mode, mode.ToString(), StringComparison.Ordinal) ||
             playerManifest.instrumentation_span_layout_revision != PerformanceInstrumentationIdentity.SpanLayoutRevision ||
             runtime.instrumentation_span_layout_revision != PerformanceInstrumentationIdentity.SpanLayoutRevision ||
@@ -310,10 +308,9 @@ internal static class PerformanceCapturePublisher
         {
             throw new InvalidDataException("Performance instrumentation identity is invalid.");
         }
-        if (requireSpanFile)
+        if (requireSpanFile && mode == PerformanceInstrumentationMode.Span)
         {
-            if (mode != PerformanceInstrumentationMode.Span ||
-                !string.Equals(runtime.instrumentation_span_path, "instrumentation-spans.bin", StringComparison.Ordinal) ||
+            if (!string.Equals(runtime.instrumentation_span_path, "instrumentation-spans.bin", StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(runtime.instrumentation_span_hash))
             {
                 throw new InvalidDataException("Performance Capture instrumentation Span artifact is incomplete.");
@@ -330,7 +327,7 @@ internal static class PerformanceCapturePublisher
         else if (!string.IsNullOrEmpty(runtime.instrumentation_span_path) ||
                  !string.IsNullOrEmpty(runtime.instrumentation_span_hash))
         {
-            throw new InvalidDataException("Performance Smoke or Replay wrote an instrumentation Span artifact.");
+            throw new InvalidDataException("Performance operation or instrumentation mode does not permit a Span artifact.");
         }
     }
 
@@ -478,20 +475,29 @@ internal static class PerformanceCapturePublisher
                 sample_scope = definition.sample_scope,
                 unit = nanoseconds ? "Milliseconds" : definition.unit,
                 distribution = distribution,
+                total = accumulator.Values.Sum() * scale,
                 mean_per_invocation = accumulator.Invocations == 0
                     ? 0d
                     : accumulator.Values.Sum() * scale / accumulator.Invocations,
                 budget_exceeded = exceeded
             });
         }
+        var unavailableBudgets = new List<string>();
         PerformanceMetricBudgetDocument[] requiredBudgets = budget.metrics ?? Array.Empty<PerformanceMetricBudgetDocument>();
         for (int i = 0; i < requiredBudgets.Length; i++)
         {
             PerformanceMetricBudgetDocument required = requiredBudgets[i];
+            if (!catalog.metrics.Any(value => string.Equals(value.metric_id, required.metric_id, StringComparison.Ordinal)))
+                throw new InvalidDataException($"Performance budget metric '{required.metric_id}' is not in the current catalog.");
             PerformanceMetricSummaryDocument metric = summaries.FirstOrDefault(
                 value => string.Equals(value.metric_id, required.metric_id, StringComparison.Ordinal));
-            if (metric == null || !string.Equals(metric.unit, required.unit, StringComparison.Ordinal))
-                throw new InvalidDataException($"Performance budget metric '{required.metric_id}' is missing or has another unit.");
+            if (metric == null)
+            {
+                unavailableBudgets.Add(required.metric_id);
+                continue;
+            }
+            if (!string.Equals(metric.unit, required.unit, StringComparison.Ordinal))
+                throw new InvalidDataException($"Performance budget metric '{required.metric_id}' has another unit.");
         }
         var byId = summaries.ToDictionary(value => value.metric_id, StringComparer.Ordinal);
         for (int i = 0; i < summaries.Count; i++)
@@ -499,9 +505,9 @@ internal static class PerformanceCapturePublisher
             PerformanceMetricSummaryDocument metric = summaries[i];
             if (!string.IsNullOrEmpty(metric.parent_id) &&
                 byId.TryGetValue(metric.parent_id, out PerformanceMetricSummaryDocument parent) &&
-                parent.distribution.p95 > 0d && string.Equals(parent.unit, metric.unit, StringComparison.Ordinal))
+                parent.total > 0d && string.Equals(parent.unit, metric.unit, StringComparison.Ordinal))
             {
-                metric.parent_p95_ratio = metric.distribution.p95 / parent.distribution.p95;
+                metric.parent_inclusive_total_ratio = metric.total / parent.total;
             }
         }
         PerformanceFunctionHotspotDocument[] hotspots = ReadHotspots(
@@ -512,10 +518,9 @@ internal static class PerformanceCapturePublisher
             {
                 process = group.Key.process,
                 thread = group.Key.thread,
-                inclusive_samples = group.Sum(value => value.inclusive_samples),
                 exclusive_samples = group.Sum(value => value.exclusive_samples)
             })
-            .OrderByDescending(value => value.inclusive_samples)
+            .OrderByDescending(value => value.exclusive_samples)
             .ThenBy(value => value.thread, StringComparer.Ordinal)
             .ToArray();
         PerformanceWaitEvidenceDocument[] waitEvidence = ReadWaitEvidence(
@@ -529,7 +534,11 @@ internal static class PerformanceCapturePublisher
             fps_budget_exceeded = fpsExceeded,
             logic_ticks_per_second = runtime.logic_ticks / runtime.capture_seconds,
             dropped_logic_ticks = runtime.dropped_logic_ticks,
-            budget_passed = budgetPassed,
+            instrumentation_mode = runtime.instrumentation_mode,
+            timing_basis = "Elapsed wall time; includes preemption and waits; CPU hotspots are sampled counts.",
+            budget_evaluated = unavailableBudgets.Count == 0,
+            unavailable_budget_metrics = unavailableBudgets.ToArray(),
+            budget_passed = budgetPassed && unavailableBudgets.Count == 0,
             budget_exceeded_count = summaries.Count(value => value.budget_exceeded) +
                                     (runtime.dropped_logic_ticks > budget.maximum_dropped_logic_ticks ? 1 : 0) +
                                     (fpsExceeded ? 1 : 0),
@@ -560,6 +569,8 @@ internal static class PerformanceCapturePublisher
         PerformanceCaptureProfileDocument profile,
         PerformanceMetricCatalogDocument catalog)
     {
+        if (!string.Equals(runtime.instrumentation_mode, PerformanceInstrumentationMode.Span.ToString(), StringComparison.Ordinal))
+            return Array.Empty<PerformanceInstrumentationPointSummaryDocument>();
         string playerRoot = Path.GetDirectoryName(Path.GetFullPath(request.player_manifest_path))!;
         string manifestPath = Path.GetFullPath(Path.Combine(playerRoot, playerManifest.instrumentation_manifest_path));
         Dictionary<ulong, InstrumentationPoint> points = ReadInstrumentationManifest(
@@ -579,6 +590,9 @@ internal static class PerformanceCapturePublisher
         {
             throw new InvalidDataException("Performance instrumentation Span file schema is invalid.");
         }
+        long timestampFrequency = reader.ReadInt64();
+        if (timestampFrequency <= 0)
+            throw new InvalidDataException("Performance instrumentation timestamp frequency is invalid.");
         int count = reader.ReadInt32();
         if (count < 0 || count > profile.instrumentation_span_capacity)
             throw new InvalidDataException("Performance instrumentation Span file count exceeds its fixed capacity.");
@@ -608,7 +622,7 @@ internal static class PerformanceCapturePublisher
             if (metricId != PerformanceInstrumentationIdentity.Hash64(accumulator.Point.MetricId))
                 throw new InvalidDataException($"Performance instrumentation Span MetricId for PointId '{pointId:x16}' is invalid.");
             PerformanceProbeEndState endState = (PerformanceProbeEndState)endStateValue;
-            double durationMilliseconds = durationTicks * 1000d / Stopwatch.Frequency;
+            double durationMilliseconds = durationTicks * 1000d / timestampFrequency;
             accumulator.Values.Add(durationMilliseconds);
             if (endState == PerformanceProbeEndState.Exception)
                 accumulator.Exceptions++;
@@ -779,7 +793,6 @@ internal static class PerformanceCapturePublisher
             throw new InvalidDataException("Performance metric samples header is invalid.");
         PerformanceMetricDefinitionDocument[] definitions = catalog.metrics ?? Array.Empty<PerformanceMetricDefinitionDocument>();
         var definitionsById = definitions
-            .Where(value => value != null)
             .ToDictionary(value => value.metric_id, StringComparer.Ordinal);
         var result = new MetricSampleSet();
         for (int i = 1; i < lines.Length; i++)
@@ -792,7 +805,7 @@ internal static class PerformanceCapturePublisher
                 sampleIndex < 0 || string.IsNullOrWhiteSpace(fields[3]) ||
                 !ulong.TryParse(fields[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong renderFrame) ||
                 !double.TryParse(fields[5], NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ||
-                !double.IsFinite(value) ||
+                !double.IsFinite(value) || value < 0d ||
                 !long.TryParse(fields[6], NumberStyles.Integer, CultureInfo.InvariantCulture, out long count) || count <= 0)
             {
                 throw new InvalidDataException($"Performance metric sample line {i + 1} is invalid.");
@@ -927,7 +940,6 @@ internal static class PerformanceCapturePublisher
     static PerformanceComparisonDocument BuildComparison(
         PerformanceRunRequestDocument request,
         PerformanceScenarioDocument scenario,
-        PerformancePlayerManifestDocument playerManifest,
         PerformanceSummaryDocument candidate,
         PerformanceRuntimeResultDocument runtime)
     {
@@ -954,19 +966,12 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceToolchainDocument toolchain = ReadJson<PerformanceToolchainDocument>(request.toolchain_path);
         string wprProfileHash = PerformanceFileUtility.Sha256(toolchain.wpr_profile_path);
-        string candidatePlayerManifestHash = PerformanceFileUtility.Sha256(request.player_manifest_path);
         string candidateToolchainHash = PerformanceFileUtility.Sha256(request.toolchain_path);
         string hardware = HardwareIdentity(runtime);
         var conflicts = new List<string>();
         AddConflict(conflicts, "manifest_schema", PerformanceCaptureSchemas.Manifest, baselineManifest.schema);
         AddConflict(conflicts, "status", PerformanceCaptureStatus.Completed.ToString(), baselineManifest.status);
         AddConflict(conflicts, "scenario_hash", scenario.content_hash, baselineManifest.scenario_hash);
-        AddConflict(conflicts, "player_manifest_hash", candidatePlayerManifestHash, baselineManifest.player_manifest_hash);
-        AddConflict(conflicts, "build_id", playerManifest.build_id, baselineManifest.build_id);
-        AddConflict(conflicts, "content_identity", playerManifest.content_identity, baselineManifest.content_identity);
-        AddConflict(conflicts, "pipeline_identity", playerManifest.pipeline_identity, baselineManifest.pipeline_identity);
-        AddConflict(conflicts, "pose_graph_revision", playerManifest.pose_graph_revision, baselineManifest.pose_graph_revision);
-        AddConflict(conflicts, "solver_identity", playerManifest.solver_identity, baselineManifest.solver_identity);
         AddConflict(conflicts, "toolchain_identity", candidateToolchainHash, baselineManifest.toolchain_identity);
         AddConflict(conflicts, "runtime_id", scenario.runtime_id, baselineManifest.runtime_id);
         AddConflict(conflicts, "roster_identity", scenario.roster_identity, baselineManifest.roster_identity);
@@ -1134,9 +1139,10 @@ internal static class PerformanceCapturePublisher
         }
         if (summaryCount != 1)
             return "baseline_closure: manifest requires exactly one summary";
-        return instrumentationSpanCount == 1
+        int expectedSpanCount = string.Equals(manifest.instrumentation_mode, PerformanceInstrumentationMode.Span.ToString(), StringComparison.Ordinal) ? 1 : 0;
+        return instrumentationSpanCount == expectedSpanCount
             ? string.Empty
-            : "baseline_closure: manifest requires exactly one instrumentation span file";
+            : "baseline_closure: instrumentation span file count does not match capture mode";
     }
 
     static void AddConflict(List<string> conflicts, string field, object expected, object actual, bool ignoreCase = false)

@@ -143,6 +143,8 @@ Player Capture Agent MUST只发布Runtime Ready、接收Warmup/Start/Stop/Fault�
 
 Gameplay、Session、Simulation与Presentation各领域Owner MUST发布不可变Metric Catalog，定义MetricId、Profiler名称、Domain、ParentId、Unit、SampleScope和Aggregation。Unity Marker与Capture Recorder MUST读取同一Definition；Catalog composer MUST在Ready前拒绝重复Id、重复名称、断裂Parent和未知语义。Unity Marker MUST只由正式Owner按Catalog名称创建；Agent MUST在Warmup边界从同一Catalog建立并验证Recorder，MUST不在Owner执行前预注册另一组同名Marker。采集器 MUST不维护第二份Marker字符串列表或保留无运行Owner的Metric。
 
+Performance Player MUST 显式支持 Disabled、MarkerOnly、Span 三种业务探针模式，并共用原 Smoke／Replay／Capture 门禁。Disabled MUST 不织入业务探针，只采 Unity 整体指标与 Windows 热点；MarkerOnly MUST 增加业务帧 Marker 汇总但不伪造单 Tick 耗时；Span MUST 增加调用点与 LogicTick 样本。只有 Span MUST 发布跨度文件；其它模式 MUST 不发布空跨度文件。Disabled 不代表 Unity Profiler、Recorder 或 WPR 自身没有成本。
+
 #### Scenario: Presentation Owner增加正式阶段
 
 - **WHEN** 重构后的Presentation模块新增一个需要采集的稳定阶段
@@ -175,6 +177,10 @@ Recording开始前Agent MUST按Profile计算容量并一次创建Recorder，Unit
 
 Analyzer MUST分别计算RenderFrame Aggregate、LogicTick Aggregate和Invocation Mean，并只对前两类对应原始序列计算P50、P95、P99与Max。父Metric与子Metric MUST按Inclusive关系显示占比，不得相加。跨线程`Idle`总和 MUST不进入热点排行。容量 MUST由采集范围、最大表现帧率、Logic Tick率和安全余量计算，MUST不固定为1024或在Recording中扩容。
 
+父子占比 MUST 使用同次采集的累计耗时之比，不得把两个不同分布的 P95 比值解释为耗时占比。线程热点 MUST 按 Exclusive 样本汇总，不累加调用栈各层 Inclusive 样本。跨度文件 MUST 保存采集 Player 的单调计时频率，分析器 MUST 用文件频率换算耗时。报告 MUST 说明跨度是包含抢占、等待和子调用的经过时间，Windows 热点是采样次数。
+
+预算指标没有样本时，报告 MUST 列出缺失指标并标记预算尚未完整评估，不得把缺失样本当成零或预算通过。采集模式不支持某类指标 MUST 不导致伪造样本。
+
 #### Scenario: 一个表现帧补三个Logic Tick
 
 - **WHEN** 同一RenderFrame中`Session.LogicTick`调用三次
@@ -206,6 +212,8 @@ Analyzer MUST分别计算RenderFrame Aggregate、LogicTick Aggregate和Invocatio
 ### Requirement: Budget和Baseline比较必须使用严格相同身份
 
 Budget Profile MUST显式声明目标FPS、Main Thread、Logic Tick、Dropped Tick、GC及选定业务Metric预算。预算超限 MUST作为Completed Capture的诊断结论，不得伪装成采集Fault。Baseline MUST由作者显式选择；Comparer MUST核对Scenario hash、Variant、roster、Build mode、分辨率、画质、VSync、targetFrameRate、hardware、Metric revision、WPR profile、统计schema与完整`DiagnosticCapabilitySet` identity。任一Capability的Mode、Program、Sampler Set、Schema、packet capacity或transport identity不同 MUST拒绝性能差值。任一身份不一致或Capture Faulted时 MUST拒绝比较，不得选择最新、近似或其它机器结果。
+
+Comparer MUST 同时核对 Toolchain 与 Instrumentation identity。BuildId 与 Player 文件 hash MUST 用于追溯各自产物，不要求基线和候选拥有相同代码构建，否则无法比较重构前后。不同业务探针模式 MUST 不被当作普通业务性能回归比较。
 
 #### Scenario: 同场景候选超过预算
 

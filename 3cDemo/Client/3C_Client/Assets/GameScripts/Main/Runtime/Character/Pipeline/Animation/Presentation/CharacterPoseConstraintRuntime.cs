@@ -1,3 +1,4 @@
+using ThirdPersonPerformance.Instrumentation;
 using System;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
@@ -298,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return lease;
         }
 
+        [PerformanceProbe("presentation.animation.foot-placement")]
         internal CharacterFootPlacementConstraintOperationResult
             EvaluateFootPlacement(
                 in CharacterFootPlacementConstraintHandle handle,
@@ -449,6 +451,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in m_Pending.GoalSet);
         }
 
+        [PerformanceProbe("presentation.animation.full-body-ik")]
         internal CharacterFullBodyIkConstraintOperationResult ExecuteFullBodyIk(
             in CharacterFullBodyIkConstraintHandle handle,
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,

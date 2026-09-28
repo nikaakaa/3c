@@ -19,7 +19,7 @@ namespace ThirdPersonPerformance
         public const string RuntimeResult = "third-person-performance-runtime-result/3";
         public const string Gate = "third-person-performance-gate/1";
         public const string Manifest = "third-person-performance-capture/2";
-        public const string Summary = "third-person-performance-summary/2";
+        public const string Summary = "third-person-performance-summary/3";
         public const string Comparison = "third-person-performance-comparison/1";
         public const string InstrumentationManifest = PerformanceInstrumentationIdentity.ManifestSchema;
         public const string CollectorId = "windows-wpr-cpu/1";
@@ -342,7 +342,8 @@ namespace ThirdPersonPerformance
         public string unit = string.Empty;
         public PerformanceDistributionDocument distribution = new PerformanceDistributionDocument();
         public double mean_per_invocation;
-        public double parent_p95_ratio;
+        public double total;
+        public double parent_inclusive_total_ratio;
         public bool budget_exceeded;
     }
 
@@ -398,7 +399,6 @@ namespace ThirdPersonPerformance
     {
         public string process = string.Empty;
         public string thread = string.Empty;
-        public double inclusive_samples;
         public double exclusive_samples;
     }
 
@@ -425,6 +425,10 @@ namespace ThirdPersonPerformance
         public int dropped_logic_ticks;
         public bool budget_passed;
         public int budget_exceeded_count;
+        public string instrumentation_mode = string.Empty;
+        public string timing_basis = string.Empty;
+        public bool budget_evaluated;
+        public string[] unavailable_budget_metrics = Array.Empty<string>();
         public PerformanceDistributionDocument logic_tick_render_frame_distribution = new PerformanceDistributionDocument();
         public PerformanceMetricSummaryDocument[] metrics = Array.Empty<PerformanceMetricSummaryDocument>();
         public PerformanceInstrumentationPointSummaryDocument[] instrumentation_points = Array.Empty<PerformanceInstrumentationPointSummaryDocument>();

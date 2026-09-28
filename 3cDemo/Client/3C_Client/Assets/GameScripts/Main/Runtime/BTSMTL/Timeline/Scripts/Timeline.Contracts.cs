@@ -25,6 +25,12 @@ namespace BTSMTL.Timeline
         ScenePresentationParameter = 1 << 6
     }
 
+#if UNITY_EDITOR
+    public interface ITimelineTreeClipAuthoringSource
+    {
+        ScriptableObject AssetTree { get; }
+    }
+
     public interface ITimelineTreeGraphAsset
     {
         string AuthoringId { get; }
@@ -32,6 +38,7 @@ namespace BTSMTL.Timeline
         bool IsTimelineTrigger { get; }
         void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath, TimelineExecutionDomain domain);
     }
+#endif
 
     public enum TimelineTrackOverlapPolicy : byte
     {

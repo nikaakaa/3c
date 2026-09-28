@@ -235,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 #if UNITY_EDITOR
             MarkStartup("timeline-programs-installed");
 #endif
-            var timelineRuntime = new CharacterTimelineAbilityRuntime(m_TimelineHost, characterDefinition.ControlMotionTimelines);
+            var timelineRuntime = new CharacterTimelineAbilityRuntime(m_TimelineHost, characterDefinition.ControlMotionTimelines, abilityData.Data);
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
@@ -541,11 +541,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public CharacterTimelineAbilityRuntime(
             CharacterTimelineHost host,
-            IReadOnlyList<TimelineAsset> timelineAssets)
+            IReadOnlyList<TimelineAsset> timelineAssets,
+            IReadOnlyList<FixedGameplayAbilityExecutionData> programs)
         {
             m_Host = host ?? throw new ArgumentNullException(nameof(host));
-            m_TimelineAssets = timelineAssets ?? throw new ArgumentNullException(nameof(timelineAssets));
-            m_MotionWarpCatalog = BuildMotionWarpCatalog(timelineAssets);
+            m_TimelineAssets = SelectPlaybackTimelines(timelineAssets, programs);
+            m_MotionWarpCatalog = BuildMotionWarpCatalog(m_TimelineAssets);
+        }
+
+        internal static IReadOnlyList<TimelineAsset> SelectPlaybackTimelines(
+            IReadOnlyList<TimelineAsset> timelineAssets,
+            IReadOnlyList<FixedGameplayAbilityExecutionData> programs)
+        {
+            var required = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < programs.Count; i++)
+                for (int j = 0; j < programs[i].OperationDefinitions.Count; j++)
+                {
+                    var operation = programs[i].OperationDefinitions[j];
+                    if (operation.Code == SimulationOperationCode.Timeline)
+                        required.Add(operation.Text0);
+                }
+            var selected = new List<TimelineAsset>(required.Count);
+            for (int i = 0; i < timelineAssets.Count; i++)
+                if (required.Contains(timelineAssets[i].Data.AuthoringId))
+                    selected.Add(timelineAssets[i]);
+            for (int i = 0; i < selected.Count; i++)
+                required.Remove(selected[i].Data.AuthoringId);
+            if (required.Count != 0)
+                throw new InvalidOperationException($"Compiled abilities reference missing Timelines: {string.Join(", ", required)}");
+            return selected;
         }
 
         public int Start(in AbilityTimelineStartRequest request)

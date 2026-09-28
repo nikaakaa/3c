@@ -42,18 +42,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-    internal sealed class CharacterTimelineDependencyResolver : ITimelineRuntimeDependencyResolver
+    internal sealed partial class CharacterTimelineDependencyResolver : ITimelineRuntimeDependencyResolver
     {
         readonly Dictionary<string, string> m_GraphRevisions = new(StringComparer.Ordinal);
-        readonly HashSet<string> m_PresentationGraphs = new(StringComparer.Ordinal);
-
-        internal void InstallPresentationGraph(string graphId) => m_PresentationGraphs.Add("tree:" + graphId);
         readonly Dictionary<string, string> m_CurveRevisions = new(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_CameraEffectRevisions = new(StringComparer.Ordinal);
         readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Handles = new(StringComparer.Ordinal);
         TimelineRuntimeNumericTarget m_NumericTarget;
 
-        internal void InstallGraphSources(IReadOnlyList<ProgramSourceMapEntry> sources)
+        internal void InstallGraphSources(IReadOnlyList<ProgramSourceMapEntry> sources, bool presentationPrograms = false)
         {
             for (int i = 0; i < sources.Count; i++)
             {
@@ -65,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException($"Compiled Timeline graph '{identity}' has conflicting revisions.");
                 m_GraphRevisions[identity] = source.ContentHash;
             }
+            InstallGraphCalls(sources, presentationPrograms);
         }
 
         internal void InstallContent(IEnumerable<TimelineData> timelines, TimelineRuntimeNumericTarget numericTarget)
@@ -78,18 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     Track track = timeline.Tracks[trackIndex];
-                    if (track.ExecutionDomain == TimelineExecutionDomain.Presentation)
-                        for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
-                        {
-                            if (track.Markers[markerIndex].Graph is not ITimelineTreeGraphAsset graph ||
-                                !m_PresentationGraphs.Contains("tree:" + graph.AuthoringId))
-                                throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' marker '{track.Markers[markerIndex].AuthoringId}' has no installed Presentation graph.");
-                        }
                     for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     {
-                        if (track.ExecutionDomain == TimelineExecutionDomain.Presentation && track.Clips[clipIndex] is TreeClip tree &&
-                            (tree.AssetTree is not ITimelineTreeGraphAsset treeGraph || !m_PresentationGraphs.Contains("tree:" + treeGraph.AuthoringId)))
-                            throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' TreeClip '{tree.AuthoringId}' has no installed Presentation graph.");
                         if (track.Clips[clipIndex] is CameraEffectClip camera)
                         {
                             if (!camera.Effect)

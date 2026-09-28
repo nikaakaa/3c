@@ -94,60 +94,6 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
-    public sealed class TimelineRuntimeBindingTable :
-        ITimelineDomainBindingResolver,
-        ITimelineRuntimeDependencyResolver
-    {
-        readonly Dictionary<string, TimelineBindingHandle> m_Bindings =
-            new Dictionary<string, TimelineBindingHandle>(StringComparer.Ordinal);
-        readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Dependencies =
-            new Dictionary<string, TimelineRuntimeDependencyHandle>(StringComparer.Ordinal);
-
-        public void Bind(string bindingId, TimelineBindingHandle handle)
-        {
-            if (!handle.IsValid)
-                throw new ArgumentOutOfRangeException(nameof(handle));
-            m_Bindings[TimelineRuntimeIdentity.Require(bindingId, nameof(bindingId))] = handle;
-        }
-
-        public void BindDependency(string dependencyIdentity, TimelineRuntimeDependencyHandle handle)
-        {
-            if (!handle.IsValid)
-                throw new ArgumentOutOfRangeException(nameof(handle));
-            m_Dependencies[TimelineRuntimeIdentity.Require(dependencyIdentity, nameof(dependencyIdentity))] = handle;
-        }
-
-        public bool TryResolve(
-            TimelineBindingDeclaration declaration,
-            TimelineBindingValue callValue,
-            out TimelineBindingHandle handle,
-            out string error)
-        {
-            if (!m_Bindings.TryGetValue(declaration.BindingId, out handle))
-            {
-                error = $"binding '{declaration.BindingId}' is not installed";
-                return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-        public bool TryResolve(
-            TimelineContentDependency dependency,
-            TimelineRuntimeNumericTarget numericTarget,
-            out TimelineRuntimeDependencyHandle handle,
-            out string error)
-        {
-            if (!m_Dependencies.TryGetValue(dependency.Identity, out handle))
-            {
-                error = $"dependency '{dependency.Identity}' is not installed for '{numericTarget}'";
-                return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-    }
-
     public readonly struct TimelineRuntimeCommittedEvaluation
     {
         internal TimelineRuntimeCommittedEvaluation(TimelineRuntimeStepContext context)

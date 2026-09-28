@@ -64,9 +64,9 @@ namespace BTSMTL.Timeline
 
     [Serializable]
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
-    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource
+    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource
 #if UNITY_EDITOR
-        , ITimelineTerminalTimeAlignedClip
+        , ITimelineTerminalTimeAlignedClip, ITimelineTreeClipAuthoringSource
 #endif
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;
@@ -77,11 +77,13 @@ namespace BTSMTL.Timeline
         [SerializeField, ShowInInspector, OnValueChanged("OnClipChanged", "RepaintInspector")]
         TimelineClipExitSource m_ExitSource = TimelineClipExitSource.TreeDecision;
 
+#if UNITY_EDITOR
         [SerializeField]
         ScriptableObject m_AssetTree;
 
 
         public ScriptableObject AssetTree => m_AssetTree;
+#endif
 
         public TimelineTreeExecutionPhase ExecutionPhase => m_ExecutionPhase;
         public TimelineClipExitSource ClipExitSource => m_ExitSource;
@@ -112,18 +114,6 @@ namespace BTSMTL.Timeline
 #endif
         }
 
-        public void CollectContentClosure(TimelineContentClosureBuilder builder)
-        {
-            if (builder == null)
-                throw new ArgumentNullException(nameof(builder));
-            if (m_AssetTree is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
-            {
-                builder.AddError("timeline_tree_missing", AuthoringId, "TreeClip没有绑定正式的Timeline节点图资产。");
-                return;
-            }
-            graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}", ExecutionDomain);
-        }
-
 #if UNITY_EDITOR
         public bool AlignTerminalTime(FixedScalar terminalTime)
         {
@@ -144,7 +134,11 @@ namespace BTSMTL.Timeline
             base.Init(track);
         }
 
+#if UNITY_EDITOR
         public override string Name => $"{ExecutionDomain} / {m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : "Unbound")}";
+#else
+        public override string Name => $"{ExecutionDomain} / {m_ExecutionPhase}";
+#endif
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities =>
             m_ExitSource == TimelineClipExitSource.TreeDecision
@@ -216,18 +210,13 @@ namespace BTSMTL.Timeline
                 errors?.Add($"Timeline TreeClip '{clip?.AuthoringId}' is invalid.");
                 return;
             }
-            bool hasGraph = treeClip.AssetTree is ITimelineTreeGraphAsset graph && graph.IsTimelineTree;
             switch (treeClip.ExecutionDomain)
             {
                 case TimelineExecutionDomain.Logic:
-                    if (!hasGraph)
-                        errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
                     if (treeClip.ClipExitSource != TimelineClipExitSource.TreeDecision)
                         errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' must use TreeDecision exit.");
                     break;
                 case TimelineExecutionDomain.Presentation:
-                    if (!hasGraph)
-                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
                     if (treeClip.ClipExitSource != TimelineClipExitSource.FrameBoundary && treeClip.ClipExitSource != TimelineClipExitSource.TreeDecision)
                         errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' has an invalid exit source.");
                     if (treeClip.ExecutionPhase != TimelineTreeExecutionPhase.Commit)

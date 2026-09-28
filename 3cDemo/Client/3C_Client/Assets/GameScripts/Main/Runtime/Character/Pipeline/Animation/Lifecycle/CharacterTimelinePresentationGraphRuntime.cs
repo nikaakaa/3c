@@ -36,12 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (!hasMarkers)
                     continue;
                 var runtime = new Float32PresentationGraphRuntime(data);
-                m_DependencyResolver.InstallGraphSources(data.SourceMap);
+                m_DependencyResolver.InstallGraphSources(data.SourceMap, true);
                 m_PresentationGraphs.Add(runtime);
-                for (int index = 0; index < data.SourceMap.Count; index++)
-                    if (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
-                        data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip)
-                        m_DependencyResolver.InstallPresentationGraph(data.SourceMap[index].GraphId);
             }
         }
 

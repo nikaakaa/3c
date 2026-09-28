@@ -202,7 +202,8 @@ namespace BTSMTL.Timeline
             bool supportsStop,
             bool trackMuted,
             IReadOnlyList<TimelineContentBindingUse> bindings,
-            IReadOnlyList<TimelineContentCurve> curves = null)
+            IReadOnlyList<TimelineContentCurve> curves = null,
+            TimelineGraphBinding graphBinding = default)
         {
             AuthoringId = Require(authoringId, nameof(authoringId));
             ContractKind = Require(contractKind, nameof(contractKind));
@@ -217,6 +218,7 @@ namespace BTSMTL.Timeline
             TrackMuted = trackMuted;
             Bindings = new ReadOnlyCollection<TimelineContentBindingUse>(new List<TimelineContentBindingUse>(bindings ?? Array.Empty<TimelineContentBindingUse>()));
             Curves = new ReadOnlyCollection<TimelineContentCurve>(new List<TimelineContentCurve>(curves ?? Array.Empty<TimelineContentCurve>()));
+            GraphBinding = graphBinding;
         }
 
         public string AuthoringId { get; }
@@ -232,6 +234,7 @@ namespace BTSMTL.Timeline
         public bool TrackMuted { get; }
         public IReadOnlyList<TimelineContentBindingUse> Bindings { get; }
         public IReadOnlyList<TimelineContentCurve> Curves { get; }
+        public TimelineGraphBinding GraphBinding { get; }
 
         static string Require(string value, string name)
         {
@@ -363,12 +366,18 @@ namespace BTSMTL.Timeline
 
     public static class TimelineContentDiscovery
     {
+#if UNITY_EDITOR
         public static TimelineContentDiscoveryResult Discover(TimelineAsset asset, TimelineContractCatalog catalog)
         {
             return Discover(asset?.Data, catalog);
         }
 
         public static TimelineContentDiscoveryResult Discover(TimelineData timeline, TimelineContractCatalog catalog)
+            => Discover(timeline, catalog, TimelineAuthoringGraphBindings.Instance);
+#endif
+
+        public static TimelineContentDiscoveryResult Discover(TimelineData timeline, TimelineContractCatalog catalog,
+            ITimelineGraphBindingSource graphBindings)
         {
             var errors = new List<string>();
             if (timeline == null)
@@ -406,29 +415,14 @@ namespace BTSMTL.Timeline
                     if (marker == null)
                         continue;
                     duration = FixedScalar.Max(duration, FixedScalar.Max(FixedScalar.FromRaw(1), marker.Time));
-                    if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
-                    {
-                        errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
-                        continue;
-                    }
-                    markerGraph.CollectTimelineContentClosure(closure, $"track:{track.AuthoringId}/marker:{marker.AuthoringId}", track.ExecutionDomain);
-                    string graphIdentity = $"tree:{markerGraph.AuthoringId}";
-                    string graphRevision = string.Empty;
-                    for (int dependencyIndex = 0; dependencyIndex < closure.Dependencies.Count; dependencyIndex++)
-                    {
-                        if (string.Equals(closure.Dependencies[dependencyIndex].Identity, graphIdentity, StringComparison.Ordinal))
-                        {
-                            graphRevision = closure.Dependencies[dependencyIndex].ContentHash;
-                            break;
-                        }
-                    }
+                    TimelineGraphBinding graphBinding = graphBindings.ResolveMarker(marker, closure);
                     markers.Add(new TimelineContentMarker(
                         marker.AuthoringId,
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(marker.ExecutionDomain),
                         marker.Time,
-                        graphIdentity,
-                        graphRevision,
+                        graphBinding.GraphId,
+                        graphBinding.Revision,
                         track.PersistentMuted));
                 }
                 tracks.Add(new TimelineContentTrack(
@@ -531,7 +525,8 @@ namespace BTSMTL.Timeline
                         clipContract.SupportsStop,
                         track.PersistentMuted,
                         bindingUses,
-                        curves));
+                        curves,
+                        clip.ContractKind == TimelineContractKinds.TreeClip ? graphBindings.ResolveTreeClip(clip, closure) : default));
                     if (clip is ITimelineContentClosureSource closureSource)
                         closureSource.CollectContentClosure(closure);
                 }

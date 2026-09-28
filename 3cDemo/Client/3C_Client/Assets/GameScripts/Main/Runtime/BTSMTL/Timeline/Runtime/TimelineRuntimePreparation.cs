@@ -31,7 +31,7 @@ namespace BTSMTL.Timeline.Runtime
         public static TimelineRuntimeDependencyHandle Invalid => default;
     }
 
-    public interface ITimelineRuntimeDependencyResolver
+    public interface ITimelineRuntimeDependencyResolver : ITimelineGraphBindingSource
     {
         bool TryResolve(
             TimelineContentDependency dependency,
@@ -1018,7 +1018,8 @@ namespace BTSMTL.Timeline.Runtime
                 sourceTimeline.Init();
                 TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(
                     sourceTimeline,
-                    request.ContractCatalog);
+                    request.ContractCatalog,
+                    request.DependencyResolver);
                 if (!discovery.IsValid)
                     return TimelineRuntimePreparationResult.Failed(
                         request.RequestId,
@@ -2280,32 +2281,13 @@ namespace BTSMTL.Timeline.Runtime
         {
             treeGraphId = string.Empty;
             treeGraphRevision = string.Empty;
-            return treeClip?.AssetTree is ITimelineTreeGraphAsset treeGraph &&
-                   TryGetTreeGraphContract(content, treeGraph, out treeGraphId, out treeGraphRevision);
-        }
-
-        internal static bool TryGetTreeGraphContract(
-            TimelineContentUnit content,
-            ITimelineTreeGraphAsset graph,
-            out string treeGraphId,
-            out string treeGraphRevision)
-        {
-            treeGraphId = string.Empty;
-            treeGraphRevision = string.Empty;
-            if (content == null || graph == null)
-                return false;
-            string authoringId = graph.AuthoringId;
-            const string prefix = "tree:";
-            for (int index = 0; index < content.Dependencies.Count; index++)
+            for (int index = 0; index < content.Clips.Count; index++)
             {
-                TimelineContentDependency dependency = content.Dependencies[index];
-                if (dependency.Kind != "timeline.tree" ||
-                    dependency.Identity.Length != prefix.Length + authoringId.Length ||
-                    !dependency.Identity.StartsWith(prefix, StringComparison.Ordinal) ||
-                    string.CompareOrdinal(dependency.Identity, prefix.Length, authoringId, 0, authoringId.Length) != 0)
+                TimelineContentClip clip = content.Clips[index];
+                if (clip.AuthoringId != treeClip.AuthoringId)
                     continue;
-                treeGraphId = dependency.Identity;
-                treeGraphRevision = dependency.ContentHash;
+                treeGraphId = clip.GraphBinding.GraphId;
+                treeGraphRevision = clip.GraphBinding.Revision;
                 return true;
             }
             return false;

@@ -386,7 +386,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return errors.Count == 0;
         }
 
-        static bool TryComputeContentRevisions(
+        bool TryComputeContentRevisions(
             IReadOnlyList<TimelineAsset> timelines,
             out string authoringRevision,
             out string contentRevision,
@@ -417,7 +417,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     errors.Add($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
                     continue;
                 }
-                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(asset, catalog);
+                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(asset.Data, catalog, m_DependencyResolver);
                 if (!discovery.IsValid)
                 {
                     for (int errorIndex = 0; errorIndex < discovery.Errors.Count; errorIndex++)

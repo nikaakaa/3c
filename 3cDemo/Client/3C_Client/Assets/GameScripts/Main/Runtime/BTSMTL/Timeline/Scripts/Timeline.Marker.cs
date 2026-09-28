@@ -14,14 +14,18 @@ namespace BTSMTL.Timeline
         [SerializeField]
         long m_TimeRaw;
 
+#if UNITY_EDITOR
         [SerializeField]
         ScriptableObject m_Graph;
+#endif
 
         Track m_Track;
 
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public FixedScalar Time => FixedScalar.FromRaw(m_TimeRaw);
+#if UNITY_EDITOR
         public ScriptableObject Graph => m_Graph;
+#endif
         public Track Track => m_Track;
         public TimelineExecutionDomain ExecutionDomain =>
             m_Track != null ? m_Track.ExecutionDomain : throw new InvalidOperationException("Timeline Marker has no owning Track.");
@@ -33,6 +37,7 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException($"Timeline Marker '{AuthoringId}' time is invalid.");
         }
 
+#if UNITY_EDITOR
         public void Configure(FixedScalar time, ScriptableObject graph)
         {
             if (time < FixedScalar.Zero)
@@ -43,7 +48,6 @@ namespace BTSMTL.Timeline
             m_Graph = graph;
         }
 
-#if UNITY_EDITOR
         public void ConfigureAuthoringIdentity(string authoringId)
         {
             if (!AuthoringIdentity.IsValid(authoringId))

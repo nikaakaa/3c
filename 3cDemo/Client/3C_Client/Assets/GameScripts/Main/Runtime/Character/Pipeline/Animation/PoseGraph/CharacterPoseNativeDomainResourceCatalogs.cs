@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterAnimationRigPayload m_Rig;
         readonly Dictionary<int, CharacterPresentationPoseSourcePlan> m_Plans;
         readonly Dictionary<AnimationClip, CharacterActionAnimationSourcePlan> m_ActionPlans;
+        readonly Dictionary<(int ResourceIndex, int ClipIndex), CharacterActionAnimationSourcePlan> m_AclActionPlans;
         readonly Dictionary<int, CharacterAnimationCompiledResourceDescriptor> m_Descriptors;
 
         internal CharacterPoseNativeSourceResourceCatalog(
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(resourceScope));
             m_Plans = BuildIndex(sourcePlans, value => value.SourceIndex.Value);
             m_ActionPlans = BuildActionIndex(actionSourcePlans);
+            m_AclActionPlans = new Dictionary<(int, int), CharacterActionAnimationSourcePlan>(m_ActionPlans.Count);
             m_Descriptors = BuildIndex(resourceDescriptors, value => value.ResourceIndex);
             foreach (CharacterPresentationPoseSourcePlan plan in m_Plans.Values)
             {
@@ -71,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Action animation source plan '{plan.ClipIdentity}' does not match its ACL manifest.");
                 }
+                m_AclActionPlans.TryAdd((plan.ResourceCatalogIndex, plan.GroupClipIndex), plan);
             }
         }
 
@@ -93,11 +96,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!sample.IsAcl)
                 return RequireActionPlan(sample.Clip);
-            foreach (CharacterActionAnimationSourcePlan plan in m_ActionPlans.Values)
-                if (plan.Backend == CharacterAnimationSamplingBackendKind.Acl &&
-                    plan.ResourceCatalogIndex == sample.ResourceCatalogIndex &&
-                    plan.GroupClipIndex == sample.GroupClipIndex)
-                    return plan;
+            if (m_AclActionPlans.TryGetValue(
+                    (sample.ResourceCatalogIndex, sample.GroupClipIndex),
+                    out CharacterActionAnimationSourcePlan plan))
+                return plan;
             throw new InvalidOperationException("Action ACL sample has no compiled source plan.");
         }
 

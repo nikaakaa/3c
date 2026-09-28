@@ -181,11 +181,12 @@
 - 必须沿原 CompareCurrentSupport 的完整规则选择，完全相等时保留先出现者；容量溢出、坡度、自碰撞过滤、候选 raycast 和统计均保持。球扫后的 collider.Raycast 用来确认真实支撑位置，不因“看起来查了两次”而删除。此项不修改其它窗口正在调整的脚部业务代码。
 - 实施结果：过滤阶段同时保留按原 CompareCurrentSupport 比较的最小候选，末尾只写 hits[0]；相等时不替换，保留原稳定排序的首项。候选总数、有效数、两类拒绝统计及全部物理查询不变。删除完整插入排序；没有更改脚部目标、骨盆、权重或求解业务。
 
-### AP15 ACL 动作足部来源每次解析扫描全部动作目录（本轮续查，CPU）
+### AP15 ACL 动作足部来源每次解析扫描全部动作目录（已实施，未实跑）
 
 - 证据：[CharacterPoseNativeDomainResourceCatalogs.cs:91](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeDomainResourceCatalogs.cs#L91) 对 ACL ClipSample 按 ResourceCatalogIndex/GroupClipIndex 遍历 m_ActionPlans.Values；[CharacterPoseNativeDomainServiceFactory.cs:222](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeDomainServiceFactory.cs#L222) 的 ResolveFootMotion 在 Timeline 贡献路径调用它，委托由 CharacterPoseWorldContextAdapter 消费。
 - 输入是已经确定的 ACL 资源/clip 身份，输出为正式动作源计划；动作目录越大，单次足部来源解析比较越多。仅 Timeline 且 ACL 的对应路径命中，不能算成所有 locomotion 帧的全目录查找。
 - 可装配时建立同一目录内的复合身份索引。增加一份查找索引内存，换取不随动作总量增长的查找；装配时须明确重复 ACL 身份是否允许，不能擅自从原首个匹配变成另一动作。该索引引用同一正式计划，不创建第二数据源。
+- 实施结果：在同一目录构造与 ACL manifest 校验阶段，按原 m_ActionPlans.Values 顺序建立资源/clip 二元键索引，键重复时保留原首个匹配项；运行时一次 TryGetValue。索引只引用原计划，不复制计划、不新增配置、不更改非 ACL 入口或缺失报错。
 
 ### AP16 动态源请求重复检查仍为平方比较（本轮续查，既有取舍）
 

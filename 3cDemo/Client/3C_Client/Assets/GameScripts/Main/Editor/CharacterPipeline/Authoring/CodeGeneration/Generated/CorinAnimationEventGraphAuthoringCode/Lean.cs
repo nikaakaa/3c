@@ -39,18 +39,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 graph.DeclareVariable(id, name, value);
                 graph.ConfigureVariable(id, true);
             }
-            Declare("animation.lean.max-angle", "Lean / 最大倾角（度，参考默认跑映射上限）", 16f);
-            Declare("animation.lean.tilt-seconds", "Lean / 倾斜时间（秒，参考 dump）", 0.3f);
-            Declare("animation.lean.recover-seconds", "Lean / 回正时间（秒，参考 dump）", 0.3f);
-            Declare("animation.lean.full-turn-rate", "Lean / 满倾转速（度每秒，项目调参）", 180f);
-            Declare("animation.lean.full-speed", "Lean / 满倾速度（米每秒，项目调参）", 6f);
-            Declare("animation.lean.eligible", "Lean / 跑动适用", false);
-            Declare("animation.lean.turn-rate", "Lean / 有符号转向速度", 0f);
-            Declare("animation.lean.target-angle", "Lean / 目标倾角", 0f);
-            Declare("animation.lean.angle", "Lean / 平滑倾角", 0f);
-            Declare("animation.lean.rotation", "Lean / 输出旋转", Quaternion.identity);
-            Declare("animation.lean.previous-direction", "Lean / 上帧运动方向", Vector2.zero);
-            Declare("animation.lean.has-previous-direction", "Lean / 上帧方向有效", false);
+            Declare("animation.lean.max-angle", "Lean · 最大倾角（度，参考默认跑映射上限）", 16f);
+            Declare("animation.lean.tilt-seconds", "Lean · 倾斜时间（秒，参考 dump）", 0.3f);
+            Declare("animation.lean.recover-seconds", "Lean · 回正时间（秒，参考 dump）", 0.3f);
+            Declare("animation.lean.full-turn-rate", "Lean · 满倾转速（度每秒，项目调参）", 180f);
+            Declare("animation.lean.full-speed", "Lean · 满倾速度（米每秒，项目调参）", 6f);
+            Declare("animation.lean.eligible", "Lean · 跑动适用", false);
+            Declare("animation.lean.turn-rate", "Lean · 有符号转向速度", 0f);
+            Declare("animation.lean.target-angle", "Lean · 目标倾角", 0f);
+            Declare("animation.lean.angle", "Lean · 平滑倾角", 0f);
+            Declare("animation.lean.rotation", "Lean · 输出旋转", Quaternion.identity);
+            Declare("animation.lean.previous-direction", "Lean · 上帧运动方向", Vector2.zero);
+            Declare("animation.lean.has-previous-direction", "Lean · 上帧方向有效", false);
 
             var mode = Add<EventGraphStringInputNode>("movement-mode", -5, 0);
             graph.ConfigureHostInput(mode, CharacterPresentationFactSchema.MovementMode.Value);

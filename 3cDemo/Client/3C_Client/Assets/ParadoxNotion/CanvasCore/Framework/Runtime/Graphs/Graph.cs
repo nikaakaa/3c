@@ -509,7 +509,7 @@ namespace NodeCanvas.Framework
         public void LoadOverwrite(GraphLoadData data) {
             SetGraphSourceMetaData(data.source);
             Deserialize(data.json, data.references, false);
-            UpdateReferences(data.agent, data.parentBlackboard);
+            UpdateReferences(data.agent, data.parentBlackboard, true);
             Validate();
             OnGraphInitialize();
             // TODO: Make subgraphs instance in main thread and init them as parallel tasks
@@ -522,7 +522,7 @@ namespace NodeCanvas.Framework
         public void Initialize(Component newAgent, IBlackboard newParentBlackboard, bool preInitializeSubGraphs) {
             Debug.Assert(Threader.applicationIsPlaying, "Initialize should have been called in play mode only.");
             Debug.Assert(!hasInitialized, "Graph is already initialized.");
-            UpdateReferences(newAgent, newParentBlackboard);
+            UpdateReferences(newAgent, newParentBlackboard, true);
             OnGraphInitialize();
             if ( preInitializeSubGraphs ) { PreInitializeSubGraphs(); }
             localBlackboard.InitializePropertiesBinding(newAgent, false);

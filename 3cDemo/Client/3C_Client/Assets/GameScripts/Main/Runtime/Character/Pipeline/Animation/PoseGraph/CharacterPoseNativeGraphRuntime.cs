@@ -436,6 +436,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void BuildPortDefinitions()
         {
             m_PortDefinitions.Clear();
+            int outputPortCount = 0;
+            int graphInputCount = 0;
             for (int nodeIndex = 0; nodeIndex < Nodes.Count; nodeIndex++)
             {
                 CharacterPoseCanvasNode node = Nodes[nodeIndex];
@@ -463,8 +465,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (!m_PortDefinitions.TryAdd(key, port))
                         throw new InvalidOperationException(
                             $"Pose node '{node.NodeId}' contains duplicate port '{port.PortId}'.");
+                    if (port.Direction == CharacterPosePortDirection.Output)
+                    {
+                        outputPortCount++;
+                        if (node.Kind == CharacterPoseNodeKind.GraphInput)
+                            graphInputCount++;
+                    }
                 }
             }
+            int frameOutputCount = checked(outputPortCount * 2);
+            m_OutputCache.EnsureCapacity(frameOutputCount);
+            m_Observations.EnsureCapacity(frameOutputCount);
+            m_CommittedObservations.EnsureCapacity(frameOutputCount);
+            m_Evaluating.EnsureCapacity(frameOutputCount);
+            m_GraphInputs.EnsureCapacity(graphInputCount);
         }
         internal CharacterPoseNativeFrameLease BeginFrame(
             in CharacterPoseNativeFrameInput input)

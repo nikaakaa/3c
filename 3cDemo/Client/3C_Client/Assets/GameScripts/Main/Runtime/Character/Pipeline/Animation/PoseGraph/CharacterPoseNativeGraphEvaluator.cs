@@ -70,6 +70,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new List<ICharacterPoseNativeNodeHandler>();
         readonly List<ICharacterPoseNativeNodeHandler> m_ActiveHandlers =
             new List<ICharacterPoseNativeNodeHandler>();
+        readonly List<ICharacterPoseNativePhaseSource> m_PhaseSources =
+            new List<ICharacterPoseNativePhaseSource>();
         readonly List<(CharacterPoseCanvasNode Node, ICharacterPoseNativeNodeHandler Handler)> m_PrepareOrder =
             new List<(CharacterPoseCanvasNode, ICharacterPoseNativeNodeHandler)>();
         readonly HashSet<PoseNodeId> m_ReachableNodeIds =
@@ -98,18 +100,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             get
             {
                 int count = 0;
-                for (int i = 0; i < m_ActiveHandlers.Count; i++)
-                    if (m_ActiveHandlers[i] is ICharacterPoseNativePhaseSource source)
-                        count += source.PhasePlayerCount;
+                for (int i = 0; i < m_PhaseSources.Count; i++)
+                    count += m_PhaseSources[i].PhasePlayerCount;
                 return count;
             }
         }
         public AnimationClipPlayerRuntime ReadPhasePlayer(int index)
         {
-            for (int i = 0; i < m_ActiveHandlers.Count; i++)
+            for (int i = 0; i < m_PhaseSources.Count; i++)
             {
-                if (!(m_ActiveHandlers[i] is ICharacterPoseNativePhaseSource source))
-                    continue;
+                ICharacterPoseNativePhaseSource source = m_PhaseSources[i];
                 int count = source.PhasePlayerCount;
                 if (index < count)
                     return source.ReadPhasePlayer(index);
@@ -201,7 +201,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BindGraphOutput(runtime, connections);
             for (int i = 0; i < m_HandlerOrder.Count; i++)
                 if (m_ReachableNodeIds.Contains(m_HandlerOrder[i].NodeId))
+                {
                     m_ActiveHandlers.Add(m_HandlerOrder[i]);
+                    if (m_HandlerOrder[i] is ICharacterPoseNativePhaseSource source)
+                        m_PhaseSources.Add(source);
+                }
             for (int i = 0; i < runtime.Nodes.Count; i++)
             {
                 CharacterPoseCanvasNode node = runtime.Nodes[i];
@@ -510,6 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_HandlerOrder.Clear();
             m_ActiveHandlers.Clear();
+            m_PhaseSources.Clear();
             m_PrepareOrder.Clear();
             m_Handlers.Clear();
             m_ReachableNodeIds.Clear();

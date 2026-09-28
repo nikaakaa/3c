@@ -176,6 +176,7 @@
 
 - 证据：[PureFunctionNode.cs:26](../../../3cDemo/Client/3C_Client/Assets/ParadoxNotion/FlowCanvas/Modules/FlowGraphs/Nodes/Functions/Implemented/PureFunctionNode.cs#L26) 按读取触发计算。仅在多个消费者读取同一计算结果时构成重复工作，不能假定每个图都命中。
 - 可在图中显式保存确实复用的中间结果，代价是作者维护少量变量和明确写入顺序。同一帧 SetVariable 后必须能读到新值，禁止整帧缓存。
+- 本轮解析 Corin 正式 EventGraph 的序列化连接，已确认共享纯计算：`calculate.velocity-planar` 有4条输出连接，`calculate.horizontal-speed`、`calculate.vertical-speed`各2条，`lean.eligible`有3条，`lean.direction-angle`与`lean.return-before-switch`各2条。连接数不等于实际每帧执行次数，分支与下游重复读取还会影响次数。历史方向、当前倾角在同一更新中有写入，不能以节点共享为由做整帧缓存。当前尚未改图资产；这项需要沿正式 authoring 链重接写入与读取顺序，不直接编辑序列化连接或另建运行时缓存。
 - 原生 Pose 已有 [节点/端口/执行阶段输出缓存](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1056)，不应再为它添加重复的整帧缓存。
 
 ### AP13 ACL 每帧重设不变 Clip Job，并全容量清权重（已实施，未实跑）
@@ -209,6 +210,16 @@
 
 - 证据：CharacterPoseNativeInertializationHandler.EvaluateEnvelope 对每根骨骼以及参数/脚部包络重复计算同一条编译曲线在 0 和 1 的导数；曲线由构造阶段 CompileCurve 固定。
 - 实施结果：两个端点导数在构造阶段计算并持有，逐帧仍计算当前 normalized 对应的曲线值和导数。曲线公式、计算项顺序和过渡时间不变，减少的是固定端点求值；没有新增运行分配，也没有缓存变化中的当前采样值。
+
+### AP18 图求值集合容量在首次求值时增长（本轮续查，已实施）
+
+- GraphRuntime 的输出缓存、工作/已提交观察字典、循环检测集合和边界输入字典原本从空容量开始。预建图并不代表这些容器已准备好，因此初次求值仍可能分配。
+- BuildPortDefinitions 统计正式输出端口及 GraphInput 输出数量；按 Prepare/Evaluate 两个阶段的输出键总数准备集合容量，边界输入按接口端口数量准备。保留观察功能、循环报错、帧清理和字典交换，不通过关闭观察来消除分配。增加装配期常驻容量；未证明所有节点自身的首次结果包装与动态源集合已零分配。
+
+### AP19 相位播放器遍历反复筛选全部活动节点（本轮续查，已实施）
+
+- GraphEvaluator 的 PhasePlayerCount 与 ReadPhasePlayer 原先扫描每个活动 handler 并判断是否提供相位播放器；嵌套状态同步会反复调用。
+- 初始化时按原活动顺序绑定相位源列表，运行时只访问这些源。各状态当前播放器数量仍动态读取，没有缓存跨状态变化的播放器或停止时间推进。
 
 ## 可靠性问题独立保留
 

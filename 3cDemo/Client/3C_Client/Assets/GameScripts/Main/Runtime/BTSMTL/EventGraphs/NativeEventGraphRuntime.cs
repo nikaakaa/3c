@@ -28,6 +28,7 @@ namespace BTSMTL.EventGraphs
             m_Agent = agent;
             m_ParentBlackboard = parentBlackboard;
             ReplaceSource(source, contract, false);
+            EnsureInstance();
         }
 
         public HostEventGraph Source => m_Source;
@@ -96,7 +97,6 @@ namespace BTSMTL.EventGraphs
                         m_Agent,
                         m_ParentBlackboard,
                         Graph.UpdateMode.Manual);
-                    m_Instance.InitializeVariableOutput(m_VariableContract, m_Contract);
                     m_Started = true;
                 }
                 m_Instance.UpdateGraph(invocation.DeltaSeconds);
@@ -183,7 +183,17 @@ namespace BTSMTL.EventGraphs
         {
             if (m_Instance)
                 return;
-            m_Instance = Graph.Clone<HostEventGraph>(m_Source, null);
+            try
+            {
+                m_Instance = Graph.Clone<HostEventGraph>(m_Source, null);
+                m_Instance.Initialize(m_Agent, m_ParentBlackboard, true);
+                m_Instance.InitializeVariableOutput(m_VariableContract, m_Contract);
+            }
+            catch
+            {
+                DestroyInstance();
+                throw;
+            }
         }
 
         void DestroyInstance()

@@ -117,14 +117,15 @@
 - 可装配时建立父输入到子输入的正式绑定。代价是维护绑定生命周期；必须保留普通参数先绑定、姿势等输入延后绑定的时序，不能提前求姿势来省扫描。
 - 实施结果：GraphRuntime 准备端口定义时固定 GraphInput/GraphOutput 边界；Subgraph 在 Start、即 GatherPorts/BindPorts 完成之后建立两组输入映射和输出映射，帧内只读取当前值并传给子图。保留当前帧身份、重复绑定检查和原 Prepare/Evaluate 顺序。旧 FindBoundary 与按 PortId 查动态端口的循环入口删除。
 
-### AP05 首次执行和首次状态进入仍创建实例（状态图创建策略已配置，EventGraph仍待收口）
+### AP05 首次执行和首次状态进入仍创建实例（状态图策略和EventGraph初次准备已实施）
 
 - 证据：[NativeEventGraphRuntime.cs:91](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/EventGraphs/NativeEventGraphRuntime.cs#L91) 首次 Execute 克隆/启动图并准备变量输出；[CharacterPoseNativeStateMachineSource.cs:402](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeStateMachineSource.cs#L402) 在 PrepareFrame 调用 EnsureState，未出现过的状态创建子图。
 - 创建期间 [CharacterPoseNativeGraphEvaluator.cs:435](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphEvaluator.cs#L435) 的可达性扫描反复访问 Connections；其 getter 每次收集、去重、排序、生成数组。此处不能统计成每个稳定帧都执行。
 - 装配时预建可把首次动作成本移出游玩帧，但增加准备时间和常驻内存；按需创建减少未使用状态占用，却保留首次进入成本。准备期反射本身在用户允许边界内，审计问题是创建是否落在游戏更新中。
 - Evaluator 初始化取一次连接集合，供可达性和输出绑定共用。状态图创建时机进入正式 Presentation Profile：`DuringPreparation` 在 handler Start、端口绑定完成后递归创建状态子图，`OnFirstEntry` 在首次进入时创建并保留。两种模式使用同一个 EnsureState/CreateChild 和原有 Reset/Dispose；新配置与 Corin 正式资产选择准备时创建，作者可在 Profile 切换。非法枚举报错，不存在隐式降级。
 - 业务取舍：准备时创建增加角色准备耗时与常驻图内存，移除正常状态首次进入的建图工作；首次进入模式节省未用状态的图内存，但不能保证首次进入零分配。创建不推进状态时间，也不提前执行状态帧。创建失败仍沿原装配失败与 Dispose 链处理。修改配置在下次装配生效，不支持运行中悄悄切换。
-- 资源仓库已有异步准备、租约和按预算淘汰闲置 ACL 组，但该配置仅控制图实例，未实现状态资源缺失时的等待/切换合同；不能称为完整流式。LOD 的更新频率、骨骼/IK裁剪也没有被此配置替代。EventGraph 的首次执行和 Reset 后重建仍需单独处理，AP05 未全部完成。
+- 资源仓库已有异步准备、租约和按预算淘汰闲置 ACL 组，但该配置仅控制图实例，未实现状态资源缺失时的等待/切换合同；不能称为完整流式。LOD 的更新频率、骨骼/IK裁剪也没有被此配置替代。
+- EventGraph 构造时准备实例、端口、宏子图和变量输出读取器；Start 事件仍在首次真实 invocation 的 BeginInvocation 之后执行，Update 仍只执行一次，没有伪造输入或提前执行 Start。准备失败释放克隆。Reset 的销毁/重建语义保留，Reset 后首次调用仍有创建成本，Start 的节点回调成本也保留，AP05 未全部完成。
 
 ### AP06 无影响 Modify Bone 仍复制并重建（计算已实施，独立页复制保留）
 

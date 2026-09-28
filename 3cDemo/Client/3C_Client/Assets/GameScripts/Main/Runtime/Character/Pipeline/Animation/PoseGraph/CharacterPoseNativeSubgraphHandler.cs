@@ -89,10 +89,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireChild();
-            CharacterPoseNativeResetResult result =
-                m_Child.ResetInstance(resetGeneration);
-            if (!result.IsReset)
-                throw new InvalidOperationException(result.Message);
+            if (resetGeneration == m_Child.ResetGeneration)
+                m_Child.ResetForStateEntry();
+            else
+            {
+                CharacterPoseNativeResetResult result =
+                    m_Child.ResetInstance(resetGeneration);
+                if (!result.IsReset)
+                    throw new InvalidOperationException(result.Message);
+            }
             m_ChildFrameOpen = false;
             m_ChildPreparation = default;
             m_ChildEvaluation = default;

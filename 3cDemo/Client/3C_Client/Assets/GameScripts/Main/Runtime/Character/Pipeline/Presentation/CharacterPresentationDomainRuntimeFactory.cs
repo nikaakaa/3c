@@ -167,6 +167,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 #endif
             try
             {
+#if KK_DIAGNOSTIC_SAMPLING
+                runtime.BindRenderCapture(animationRigBinding, animationRig, rootHierarchy,
+                    cameraRig ? cameraRig.Brain.OutputCamera : null);
+#endif
                 if (poseResources)
                 {
                     var inputContract = CharacterAnimationInputContract.Create(animationPresentationProfile);

@@ -38,6 +38,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_PoseDiscontinuityIdentity;
         bool m_Disposed;
         ulong m_NextPoseResetGeneration = 1;
+#if KK_DIAGNOSTIC_SAMPLING
+        Animation.Diagnostics.CharacterPoseRenderCaptureRuntime m_RenderCapture;
+
+        internal void BindRenderCapture(CharacterAnimationRigBinding binding,
+            CharacterAnimationRigPayload rig, CharacterRootHierarchyBinding roots, Camera camera)
+        {
+            m_RenderCapture = new Animation.Diagnostics.CharacterPoseRenderCaptureRuntime(
+                m_Diagnostics.CharacterRuntimeId, binding, rig, roots, camera);
+        }
+#endif
 
         internal CharacterPresentationDomainRuntime(
             ActorId actorId,
@@ -354,6 +364,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Reset()
         {
+#if KK_DIAGNOSTIC_SAMPLING
+            m_RenderCapture.Flush();
+#endif
             m_TimelinePresentationBridge?.Reset();
             m_Camera?.Reset();
             m_Equipment?.Reset();
@@ -422,6 +435,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
+#if KK_DIAGNOSTIC_SAMPLING
+            m_RenderCapture.Flush();
+#endif
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
@@ -536,8 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         context.RenderFrame, body.ResetSequence, context.PresentationDeltaSeconds, in plan, in basis, m_Camera.AppliedTargetValid, m_Camera.AppliedResetReason,
                         in context, m_Camera.EffectContributions, m_Camera.ProfileId, m_Camera.ProfileRevision);
                 }
-                Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.Publish(
-                    m_Diagnostics.CharacterRuntimeId, in m_CommittedDiagnosticFrame,
+                m_RenderCapture.Capture(in m_CommittedDiagnosticFrame,
                     in animation, in camera, in bodyCapture, in commandCapture);
             }
             catch (Exception exception)
@@ -758,6 +773,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+#if KK_DIAGNOSTIC_SAMPLING
+            m_RenderCapture?.Dispose();
+#endif
             m_TimelineBridge?.Dispose();
             m_TimelinePresentationBridge?.Dispose();
             if (m_TimelineHost != null)

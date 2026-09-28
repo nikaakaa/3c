@@ -102,6 +102,7 @@
 - 可在装配时解析带布局身份的位置，运行时直接读值。变量多、角色多时减少重复查找；代价是布局替换后位置失效，不能只缓存裸整数。
 - 实施结果：正式 EventGraphVariableBinding 保存布局对象身份与位置，读值同时检查发布版本和布局引用；Pose 参数节点、Action Slot 标量参数在装配时绑定，帧内直接按位置读。Character Host 直接包装 NativeEventGraphRuntime 的唯一变量合同，删除独立重建的同名合同。仍按名称读的消费者改走布局持有的 Ordinal 字典，旧线性扫描删除。
 - 采样续步：会话装配时绑定 lean 的七个变量位置，两种采样事件共用同一个构造入口；帧内不再按名称逐字段解析。没有 lean 声明的图仍输出 LeanAvailable=false；有声明却缺其它所需字段时在绑定阶段明确失败。未接入正式工厂的 BlendSpace 类不假称已改成位置读取；其它按名称访问已走同一布局字典。布局替换不会静默复用旧 binding，旧帧失效机制保留。
+- ParameterResolve 续查：原 ResolveParameters 每次对每条固定策略调用 FindParameterIndex，线性扫描 InputContract.Parameters，并反复读取作者策略声明。现 Initialize 按原策略顺序保存 ParameterId、位置和策略枚举；缺失参数、输出布局越界及非法策略在装配时失败。逐帧仍读取本次 base/source 值与可用性，沿原 Base/Overlay/Weighted/Max/Min 公式合成，不缓存参数值、不合并重复策略。代价是每节点一份固定策略数组，修改图/合同需重新装配；骨骼页遗漏的独立正确性修复见下文。仅静态核对，没有该节点实际执行次数或耗时数据。
 
 ### AP03 图节点 getter 创建周期数组（已实施，未实跑）
 

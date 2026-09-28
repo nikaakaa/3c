@@ -8,9 +8,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseNativeParameterResolveHandler :
         ICharacterPoseNativeNodeHandler
     {
+        readonly struct BoundParameterPolicy
+        {
+            internal BoundParameterPolicy(PoseParameterId parameterId, int parameterIndex, PoseParameterResolvePolicy policy)
+            {
+                ParameterId = parameterId;
+                ParameterIndex = parameterIndex;
+                Policy = policy;
+            }
+
+            internal PoseParameterId ParameterId { get; }
+            internal int ParameterIndex { get; }
+            internal PoseParameterResolvePolicy Policy { get; }
+        }
+
         readonly PoseNodeId m_NodeId;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        BoundParameterPolicy[] m_ParameterPolicies;
         int m_PageIndex = -1;
         CharacterPoseNativeLocalPoseValue m_Output;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -38,9 +53,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void Initialize(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
-            if (runtime.Graph.RequireNode(NodeId).Kind != Kind)
+            CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
+            if (node.Kind != Kind)
                 throw new InvalidOperationException(
                     $"Parameter Resolve handler '{NodeId}' does not match its graph node.");
+            IReadOnlyList<CharacterPoseParameterPolicy> policies = node.ParameterPolicies;
+            m_ParameterPolicies = new BoundParameterPolicy[policies.Count];
+            for (int i = 0; i < policies.Count; i++)
+            {
+                CharacterPoseParameterPolicy policy = policies[i];
+                if (policy == null || !policy.ParameterId.IsValid)
+                    throw new InvalidOperationException(
+                        $"Parameter Resolve '{NodeId}' has an invalid parameter policy.");
+                PoseParameterId parameterId = policy.ParameterId;
+                int parameterIndex = FindParameterIndex(
+                    runtime.PreparedBinding.InputContract.Parameters,
+                    parameterId);
+                if (parameterIndex < 0 || parameterIndex >= m_OutputBuffer.ParameterCount)
+                    throw new InvalidOperationException(
+                        $"Parameter Resolve '{NodeId}' references unknown parameter '{parameterId}'.");
+                if (policy.Policy < PoseParameterResolvePolicy.Base || policy.Policy > PoseParameterResolvePolicy.Min)
+                    throw new InvalidOperationException(
+                        $"Parameter Resolve '{NodeId}' has an unsupported policy.");
+                m_ParameterPolicies[i] = new BoundParameterPolicy(parameterId, parameterIndex, policy.Policy);
+            }
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -111,8 +147,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationLocalBonePose> outputPoses = m_WriteBinding.DenseLocalPoses;
             outputPoses.CopyFrom(baseBinding.DenseLocalPoses);
             ResolveParameters(
-                runtime,
-                node,
                 in baseBinding,
                 in sourceBinding);
             CharacterPoseNativePoseReadBinding output =
@@ -198,8 +232,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void ResolveParameters(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node,
             in CharacterPoseNativePoseReadBinding basePose,
             in CharacterPoseNativePoseReadBinding sourcePose)
         {
@@ -207,20 +239,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<byte> outputAvailability =
                 m_WriteBinding.PoseParameterAvailability;
             for (int policyIndex = 0;
-                 policyIndex < node.ParameterPolicies.Count;
+                 policyIndex < m_ParameterPolicies.Length;
                  policyIndex++)
             {
-                CharacterPoseParameterPolicy policy =
-                    node.ParameterPolicies[policyIndex];
-                if (policy == null || !policy.ParameterId.IsValid)
-                    throw new InvalidOperationException(
-                        $"Parameter Resolve '{NodeId}' has an invalid parameter policy.");
-                int parameterIndex = FindParameterIndex(
-                    runtime.PreparedBinding.InputContract.Parameters,
-                    policy.ParameterId);
-                if (parameterIndex < 0 || parameterIndex >= outputParameters.Length)
-                    throw new InvalidOperationException(
-                        $"Parameter Resolve '{NodeId}' references unknown parameter '{policy.ParameterId}'.");
+                BoundParameterPolicy policy = m_ParameterPolicies[policyIndex];
+                int parameterIndex = policy.ParameterIndex;
                 byte baseAvailable = basePose.PoseParameterAvailability[parameterIndex];
                 byte sourceAvailable = sourcePose.PoseParameterAvailability[parameterIndex];
                 if (baseAvailable > 1 || sourceAvailable > 1)

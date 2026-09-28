@@ -190,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ActiveTuning m_ActiveTuning;
         ActiveTuning m_CandidateTuning;
         bool m_HasTuningCandidate;
-        Vector3 m_DiagnosticPelvisTranslation;
+        Vector3 m_AppliedPelvisTranslation;
         LegSolveFrame m_LeftLegSolveFrame;
         LegSolveFrame m_RightLegSolveFrame;
         ulong m_BendResetGeneration;
@@ -430,7 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 effector.positionOffset = Vector3.zero;
             }
             m_Diagnostics = default;
-            m_DiagnosticPelvisTranslation = Vector3.zero;
+            m_AppliedPelvisTranslation = Vector3.zero;
             ResetLegBendState();
             m_DiagnosticFrameSequence = 0;
             m_DiagnosticEffectorCount = 0;
@@ -574,7 +574,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     pelvis,
                     m_Backend.GetComponentPosition(pelvis) +
                     goal.ComponentPosition * goal.PositionWeight);
-                m_DiagnosticPelvisTranslation =
+                m_AppliedPelvisTranslation =
                     goal.ComponentPosition * goal.PositionWeight;
             }
             return CharacterFullBodyIkResult.Success(0);
@@ -592,12 +592,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     effector.rotationWeight = goal.RotationWeight;
                     break;
                 case CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget:
-                    effector.position = goal.ComponentPosition;
+                    effector.position = ResolveFootPlacementEffectorPosition(in goal);
                     effector.positionWeight = goal.PositionWeight;
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported effector goal application {goal.Application}.");
             }
+        }
+
+        Vector3 ResolveFootPlacementEffectorPosition(in CharacterFullBodyIkGoal goal)
+        {
+            float weight = goal.PositionWeight;
+            return weight > CharacterPoseConstraintMath.Epsilon
+                ? goal.ComponentPosition - m_AppliedPelvisTranslation * ((1f - weight) / weight)
+                : goal.ComponentPosition;
         }
 
         void ApplyFootPlacementPreSolveRotations(
@@ -763,7 +771,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float lowerLength = Vector3.Distance(originalKnee, originalAnkle);
             float legLength = upperLength + lowerLength;
             Vector3 targetAnkle = hasFootPlacementGoal
-                ? Vector3.Lerp(originalAnkle, goal.ComponentPosition, goal.PositionWeight)
+                ? Vector3.Lerp(originalAnkle, ResolveFootPlacementEffectorPosition(in goal), goal.PositionWeight)
                 : originalAnkle;
             bool hasAnimatedDirection = TryResolveBendDirection(
                 originalHip,
@@ -1053,17 +1061,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         0,
                         goal.Slot);
                 }
+                Vector3 effectorTarget = ResolveFootPlacementEffectorPosition(in goal);
                 float solverResidual =
-                    Vector3.Distance(solverPosition, goal.ComponentPosition);
+                    Vector3.Distance(solverPosition, effectorTarget);
                 float residual =
-                    Vector3.Distance(solvedPosition, goal.ComponentPosition);
+                    Vector3.Distance(solvedPosition, effectorTarget);
                 if (solverResidual > FootEffectorSolverResidualTolerance)
                 {
                     return CharacterFullBodyIkResult.FailFootSolverResidual(
                         0,
                         goal.Slot,
                         solvedResult.AppliedGoalCount,
-                        goal.ComponentPosition,
+                        effectorTarget,
                         solverPosition,
                         solvedPosition,
                         goal.SourceKind,
@@ -1095,7 +1104,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void BeginDiagnostics(ulong frameSequence)
         {
             m_Diagnostics = default;
-            m_DiagnosticPelvisTranslation = Vector3.zero;
+            m_AppliedPelvisTranslation = Vector3.zero;
             m_DiagnosticFrameSequence = frameSequence;
             m_DiagnosticEffectorCount = 0;
             m_LeftLegSolveFrame = default;
@@ -1181,7 +1190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BendResetGeneration,
                 m_ActiveTuning.Iterations,
                 m_ActiveTuning.FabrikPass,
-                m_DiagnosticPelvisTranslation,
+                m_AppliedPelvisTranslation,
                 result,
                 m_DiagnosticEffectorCount,
                 m_DiagnosticLimbs.Length);

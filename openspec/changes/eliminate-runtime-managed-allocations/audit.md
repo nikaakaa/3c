@@ -142,11 +142,12 @@
 - 输入页和输出页布局相同不表示所有字段都要先复制；可让计算节点直接写自身负责的结果，只复制继承字段。
 - 业务不变的前提是消费者严格按有效数量读取。取消尾部清理须先统一这一合同；跨节点共享不可变数据需要正式页寿命支持，不能引入第二条借用路径。
 
-### AP09 惯性混合七组残差无条件复制（CPU/内存读写）
+### AP09 惯性混合七组残差无条件复制（已实施，未实跑）
 
 - 证据：[CharacterPoseNativeInertializationHandler.cs:192](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeInertializationHandler.cs#L192) 每帧复制位置、旋转、缩放、三类速度与参数残差；写入残差的实际计算集中在 BeginTransition。
 - 稳定播放、没有正在进行的过渡时也搬运整组数据。可按是否产生新残差管理待提交页，持续过渡阶段读取原残差和新的 elapsed。
 - 下一次过渡仍依赖连续历史姿势，CommitHistory 不能一并停掉。代价是明确残差只读期与新过渡写入期，并保留丢帧不污染已提交数据的规则。
+- 实施结果：七组数组归入两页 ResidualPage。新过渡完整重算待提交页，计算成功才标记新页；持续过渡读取已提交残差，Commit 仅在新页产生时交换残差页，Discard 不交换。BeginFrame 的七次 Array.Copy 删除；历史姿势、速度、参数和脚部历史仍沿原来每帧提交更新。
 
 ### AP10 Final Pose 发布与物理写回重复遍历（CPU/引擎调用）
 
@@ -191,6 +192,11 @@
 - 证据：[CharacterPoseNativeRuntimeContracts.cs:697](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseNativeRuntimeContracts.cs#L697)，每条请求与所有前序请求比较 ScopeInstanceId/NodeId/SourceId。子图请求汇总到父图后，还会经过父图 demand 校验。
 - 这是历史 4.2.8 删除每帧 HashSet 构造时主动选择的实现，已经没有原构造分配。与 AP01 不同，这里的活动源随状态和过渡变化，不能简单移到装配时查一次。
 - 保留顺序比较：活动源少时结构简单、无额外工作集合；改用实例持有且按正式容量准备的去重集合：源多或嵌套深时减少比较，但增加常驻内存、清空与哈希成本。两种都必须保持原请求顺序、完整三元身份和重复报错；没有规模与耗时数据前不替用户选方案。
+
+### AP17 惯性包络反复计算固定曲线端点导数（续查并实施，未实跑）
+
+- 证据：CharacterPoseNativeInertializationHandler.EvaluateEnvelope 对每根骨骼以及参数/脚部包络重复计算同一条编译曲线在 0 和 1 的导数；曲线由构造阶段 CompileCurve 固定。
+- 实施结果：两个端点导数在构造阶段计算并持有，逐帧仍计算当前 normalized 对应的曲线值和导数。曲线公式、计算项顺序和过渡时间不变，减少的是固定端点求值；没有新增运行分配，也没有缓存变化中的当前采样值。
 
 ## 可靠性问题独立保留
 

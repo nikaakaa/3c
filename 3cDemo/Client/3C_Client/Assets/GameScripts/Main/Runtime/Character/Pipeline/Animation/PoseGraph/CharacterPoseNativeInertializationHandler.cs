@@ -19,12 +19,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool Active;
         }
 
+        sealed class ResidualPage
+        {
+            internal readonly Vector3[] Position;
+            internal readonly Vector3[] Rotation;
+            internal readonly Vector3[] Scale;
+            internal readonly Vector3[] LinearVelocity;
+            internal readonly Vector3[] AngularVelocity;
+            internal readonly Vector3[] ScaleVelocity;
+            internal readonly float[] Parameters;
+
+            internal ResidualPage(int boneCount, int parameterCount)
+            {
+                Position = new Vector3[boneCount];
+                Rotation = new Vector3[boneCount];
+                Scale = new Vector3[boneCount];
+                LinearVelocity = new Vector3[boneCount];
+                AngularVelocity = new Vector3[boneCount];
+                ScaleVelocity = new Vector3[boneCount];
+                Parameters = new float[parameterCount];
+            }
+        }
+
         readonly PoseNodeId m_NodeId;
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterPoseInertializationPolicy m_Policy;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly AnimationBlendCurvePayload m_Curve;
+        readonly float m_CurveStartDerivative;
+        readonly float m_CurveEndDerivative;
         readonly float[] m_DenseProfiles;
         readonly PoseParameterInertializationMode[] m_ParameterModes;
         readonly int m_LeftFootBoneIndex;
@@ -43,20 +67,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationFootFeatureSample m_PendingRightFoot;
         bool m_CommittedHasFootFeatures;
         bool m_PendingHasFootFeatures;
-        Vector3[] m_PendingPositionResiduals;
-        Vector3[] m_PendingRotationResiduals;
-        Vector3[] m_PendingScaleResiduals;
-        Vector3[] m_PendingLinearVelocityResiduals;
-        Vector3[] m_PendingAngularVelocityResiduals;
-        Vector3[] m_PendingScaleVelocityResiduals;
-        float[] m_PendingParameterResiduals;
-        Vector3[] m_CommittedPositionResiduals;
-        Vector3[] m_CommittedRotationResiduals;
-        Vector3[] m_CommittedScaleResiduals;
-        Vector3[] m_CommittedLinearVelocityResiduals;
-        Vector3[] m_CommittedAngularVelocityResiduals;
-        Vector3[] m_CommittedScaleVelocityResiduals;
-        float[] m_CommittedParameterResiduals;
+        ResidualPage m_PendingResiduals;
+        ResidualPage m_CommittedResiduals;
+        bool m_HasPendingResiduals;
         State m_CommittedState;
         State m_PendingState;
         CharacterPoseNativeLocalPoseValue m_Output;
@@ -96,6 +109,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Curve = directRule.Mode == PoseInertializationMode.Inertialize
                 ? directRule.CompileCurve()
                 : null;
+            m_CurveStartDerivative = m_Curve == null ? 0f : AnimationBlendCurveEvaluator.EvaluateDerivative(m_Curve, 0f);
+            m_CurveEndDerivative = m_Curve == null ? 0f : AnimationBlendCurveEvaluator.EvaluateDerivative(m_Curve, 1f);
             m_DenseProfiles = directRule.Mode == PoseInertializationMode.Inertialize
                 ? directRule.BlendProfile.BuildDense(
                     preparedBinding.Profile.RigDefinition)
@@ -129,20 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new byte[m_ParameterModes.Length];
             m_PendingHistoryParameterAvailability =
                 new byte[m_ParameterModes.Length];
-            m_PendingPositionResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingRotationResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingScaleResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingLinearVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingAngularVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingScaleVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_PendingParameterResiduals = new float[m_ParameterModes.Length];
-            m_CommittedPositionResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedRotationResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedScaleResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedLinearVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedAngularVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedScaleVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
-            m_CommittedParameterResiduals = new float[m_ParameterModes.Length];
+            m_PendingResiduals = new ResidualPage(m_Rig.PoseBoneCount, m_ParameterModes.Length);
+            m_CommittedResiduals = new ResidualPage(m_Rig.PoseBoneCount, m_ParameterModes.Length);
         }
 
         public PoseNodeId NodeId => m_NodeId;
@@ -189,34 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? 0
                 : 1 - m_CommittedPageIndex;
             m_PendingState = m_CommittedState;
-            Array.Copy(
-                m_CommittedPositionResiduals,
-                m_PendingPositionResiduals,
-                m_CommittedPositionResiduals.Length);
-            Array.Copy(
-                m_CommittedRotationResiduals,
-                m_PendingRotationResiduals,
-                m_CommittedRotationResiduals.Length);
-            Array.Copy(
-                m_CommittedScaleResiduals,
-                m_PendingScaleResiduals,
-                m_CommittedScaleResiduals.Length);
-            Array.Copy(
-                m_CommittedLinearVelocityResiduals,
-                m_PendingLinearVelocityResiduals,
-                m_CommittedLinearVelocityResiduals.Length);
-            Array.Copy(
-                m_CommittedAngularVelocityResiduals,
-                m_PendingAngularVelocityResiduals,
-                m_CommittedAngularVelocityResiduals.Length);
-            Array.Copy(
-                m_CommittedScaleVelocityResiduals,
-                m_PendingScaleVelocityResiduals,
-                m_CommittedScaleVelocityResiduals.Length);
-            Array.Copy(
-                m_CommittedParameterResiduals,
-                m_PendingParameterResiduals,
-                m_CommittedParameterResiduals.Length);
+            m_HasPendingResiduals = false;
             m_PendingLeftFoot = m_CommittedLeftFoot;
             m_PendingRightFoot = m_CommittedRightFoot;
             m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
@@ -331,17 +307,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Swap(
                 ref m_CommittedHistoryParameterAvailability,
                 ref m_PendingHistoryParameterAvailability);
-            Swap(ref m_CommittedPositionResiduals, ref m_PendingPositionResiduals);
-            Swap(ref m_CommittedRotationResiduals, ref m_PendingRotationResiduals);
-            Swap(ref m_CommittedScaleResiduals, ref m_PendingScaleResiduals);
-            Swap(
-                ref m_CommittedLinearVelocityResiduals,
-                ref m_PendingLinearVelocityResiduals);
-            Swap(
-                ref m_CommittedAngularVelocityResiduals,
-                ref m_PendingAngularVelocityResiduals);
-            Swap(ref m_CommittedScaleVelocityResiduals, ref m_PendingScaleVelocityResiduals);
-            Swap(ref m_CommittedParameterResiduals, ref m_PendingParameterResiduals);
+            if (m_HasPendingResiduals)
+                (m_CommittedResiduals, m_PendingResiduals) = (m_PendingResiduals, m_CommittedResiduals);
             AnimationFootFeatureSample left = m_CommittedLeftFoot;
             m_CommittedLeftFoot = m_PendingLeftFoot;
             m_PendingLeftFoot = left;
@@ -447,11 +414,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!previous.IsValid || !target.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history Bone #{bone} is invalid.");
-                m_PendingPositionResiduals[bone] = previous.Position - target.Position;
-                m_PendingRotationResiduals[bone] =
+                m_PendingResiduals.Position[bone] = previous.Position - target.Position;
+                m_PendingResiduals.Rotation[bone] =
                     AnimationPoseMath.QuaternionLog(
                         previous.Rotation * Quaternion.Inverse(target.Rotation));
-                m_PendingScaleResiduals[bone] = previous.Scale - target.Scale;
+                m_PendingResiduals.Scale[bone] = previous.Scale - target.Scale;
                 AnimationBlendBoneVelocity previousVelocity =
                     m_CommittedHistoryVelocities[bone];
                 AnimationBlendBoneVelocity targetVelocity =
@@ -459,16 +426,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!previousVelocity.IsValid || !targetVelocity.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history velocity Bone #{bone} is invalid.");
-                m_PendingLinearVelocityResiduals[bone] =
+                m_PendingResiduals.LinearVelocity[bone] =
                     previousVelocity.Linear - targetVelocity.Linear;
-                m_PendingAngularVelocityResiduals[bone] =
+                m_PendingResiduals.AngularVelocity[bone] =
                     previousVelocity.Angular - targetVelocity.Angular;
-                m_PendingScaleVelocityResiduals[bone] =
+                m_PendingResiduals.ScaleVelocity[bone] =
                     previousVelocity.Scale - targetVelocity.Scale;
             }
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
-                m_PendingParameterResiduals[parameter] =
+                m_PendingResiduals.Parameters[parameter] =
                     m_ParameterModes[parameter] ==
                     PoseParameterInertializationMode.Inertialize &&
                     m_CommittedHistoryParameterAvailability[parameter] != 0 &&
@@ -481,6 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingRightFoot = m_CommittedRightFoot;
             m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
             m_PendingState.Active = true;
+            m_HasPendingResiduals = true;
         }
 
         void ApplyResiduals(
@@ -488,8 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in AnimationPlayerPoseNativeWriteBinding output,
             float deltaSeconds)
         {
-            CharacterPoseDirectInertializationRule rule =
-                m_Policy.DirectPlayerRule;
+            ResidualPage residuals = m_HasPendingResiduals ? m_PendingResiduals : m_CommittedResiduals;
             bool anyActive = false;
             NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
             NativeSlice<AnimationBlendBoneVelocity> velocities = output.DenseVelocities;
@@ -505,21 +472,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 anyActive |= m_PendingState.ElapsedSeconds < duration;
                 AnimationLocalBonePose target = input.DenseLocalPoses[bone];
                 AnimationBlendBoneVelocity targetVelocity = input.DenseVelocities[bone];
-                Vector3 positionBase = m_PendingPositionResiduals[bone] +
-                    m_PendingState.ElapsedSeconds * m_PendingLinearVelocityResiduals[bone];
-                Vector3 rotationBase = m_PendingRotationResiduals[bone] +
-                    m_PendingState.ElapsedSeconds * m_PendingAngularVelocityResiduals[bone];
-                Vector3 scaleBase = m_PendingScaleResiduals[bone] +
-                    m_PendingState.ElapsedSeconds * m_PendingScaleVelocityResiduals[bone];
+                Vector3 positionBase = residuals.Position[bone] +
+                    m_PendingState.ElapsedSeconds * residuals.LinearVelocity[bone];
+                Vector3 rotationBase = residuals.Rotation[bone] +
+                    m_PendingState.ElapsedSeconds * residuals.AngularVelocity[bone];
+                Vector3 scaleBase = residuals.Scale[bone] +
+                    m_PendingState.ElapsedSeconds * residuals.ScaleVelocity[bone];
                 Vector3 linear = targetVelocity.Linear +
                     residualDerivative * positionBase +
-                    residualWeight * m_PendingLinearVelocityResiduals[bone];
+                    residualWeight * residuals.LinearVelocity[bone];
                 Vector3 angular = targetVelocity.Angular +
                     residualDerivative * rotationBase +
-                    residualWeight * m_PendingAngularVelocityResiduals[bone];
+                    residualWeight * residuals.AngularVelocity[bone];
                 Vector3 scaleVelocity = targetVelocity.Scale +
                     residualDerivative * scaleBase +
-                    residualWeight * m_PendingScaleVelocityResiduals[bone];
+                    residualWeight * residuals.ScaleVelocity[bone];
                 if (!AnimationPoseMath.IsFinite(linear) ||
                     !AnimationPoseMath.IsFinite(angular) ||
                     !AnimationPoseMath.IsFinite(scaleVelocity))
@@ -556,6 +523,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out float residualWeight,
                 out _);
             NativeSlice<float> parameters = output.PoseParameters;
+            float[] residuals = (m_HasPendingResiduals ? m_PendingResiduals : m_CommittedResiduals).Parameters;
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
                 if (m_ParameterModes[parameter] ==
@@ -563,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     input.PoseParameterAvailability[parameter] != 0)
                 {
                     parameters[parameter] = input.PoseParameters[parameter] +
-                        residualWeight * m_PendingParameterResiduals[parameter];
+                        residualWeight * residuals[parameter];
                 }
             }
         }
@@ -651,12 +619,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float derivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
                 m_Curve,
                 normalized);
-            float startDerivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
-                m_Curve,
-                0f);
-            float endDerivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
-                m_Curve,
-                1f);
             float square = normalized * normalized;
             float cube = square * normalized;
             float h10 = cube - 2f * square + normalized;
@@ -664,10 +626,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float h10Derivative = 3f * square - 4f * normalized + 1f;
             float h11Derivative = 3f * square - 2f * normalized;
             envelope = Mathf.Clamp01(
-                curve - startDerivative * h10 - endDerivative * h11);
+                curve - m_CurveStartDerivative * h10 - m_CurveEndDerivative * h11);
             float envelopeDerivative = derivative -
-                startDerivative * h10Derivative -
-                endDerivative * h11Derivative;
+                m_CurveStartDerivative * h10Derivative -
+                m_CurveEndDerivative * h11Derivative;
             residualWeight = 1f - envelope;
             residualDerivative = -envelopeDerivative / duration;
         }
@@ -729,6 +691,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ClearFrame()
         {
             m_FrameOpen = false;
+            m_HasPendingResiduals = false;
             m_PageIndex = -1;
             m_WriteBinding = default;
         }

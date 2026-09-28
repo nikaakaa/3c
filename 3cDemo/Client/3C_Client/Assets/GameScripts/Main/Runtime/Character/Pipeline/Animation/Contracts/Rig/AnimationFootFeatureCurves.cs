@@ -962,6 +962,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
             if (!HasLandingEvent || visualTimeScale <= 0.000001f)
                 return default;
+            if (visualTimeScale == 1f)
+                return this;
             return new AnimationPredictedFootStepSample(
                 EventOrdinal,
                 SourceLandingCycleOffset,
@@ -992,35 +994,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_UsesSynchronizedMarkerIdentity != 0);
         }
 
-        internal static AnimationPredictedFootStepSample Select(
-            AnimationPredictedFootStepSample current,
+        internal static bool ShouldSelect(
+            in AnimationPredictedFootStepSample current,
             float currentScore,
-            AnimationPredictedFootStepSample candidate,
-            float candidateScore,
-            out bool candidateSelected)
+            in AnimationPredictedFootStepSample candidate,
+            float candidateScore)
         {
-            candidateSelected = false;
             if (!candidate.HasLandingEvent)
-                return current;
+                return false;
             if (!current.HasLandingEvent || candidateScore > currentScore + 0.000001f)
-            {
-                candidateSelected = true;
-                return candidate;
-            }
+                return true;
             if (Mathf.Abs(candidateScore - currentScore) > 0.000001f)
-                return current;
+                return false;
             if (candidate.SourceSampleIdentity != current.SourceSampleIdentity)
-            {
-                candidateSelected = candidate.SourceSampleIdentity < current.SourceSampleIdentity;
-                return candidateSelected ? candidate : current;
-            }
+                return candidate.SourceSampleIdentity < current.SourceSampleIdentity;
             if (candidate.SourceSampleCycle != current.SourceSampleCycle)
-            {
-                candidateSelected = candidate.SourceSampleCycle < current.SourceSampleCycle;
-                return candidateSelected ? candidate : current;
-            }
-            candidateSelected = candidate.EventOrdinal < current.EventOrdinal;
-            return candidateSelected ? candidate : current;
+                return candidate.SourceSampleCycle < current.SourceSampleCycle;
+            return candidate.EventOrdinal < current.EventOrdinal;
         }
 
         static Vector3 EvaluateVectorRoute(
@@ -1237,12 +1227,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPredictedFootStepSample m_IncomingPredictedStep;
         float m_PredictionPairScore;
 
-        public void Add(AnimationFootFeatureSample sample, float weight)
+        public void Add(in AnimationFootFeatureSample sample, float weight)
         {
-            Add(sample, weight, 1f);
+            Add(in sample, weight, 1f);
         }
 
-        public void Add(AnimationFootFeatureSample sample, float weight, float visualTimeScale)
+        public void Add(in AnimationFootFeatureSample sample, float weight, float visualTimeScale)
         {
             if (!sample.IsValid || !float.IsFinite(weight) || weight <= 0f ||
                 !float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
@@ -1255,24 +1245,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 sample.PredictedStep.ApplyTimeScale(visualTimeScale);
             AnimationPredictedFootStepSample incomingCandidate =
                 sample.IncomingPredictedStep.ApplyTimeScale(visualTimeScale);
-            AnimationPredictedFootStepSample currentAuthority =
-                m_PredictedStep.HasLandingEvent
-                    ? m_PredictedStep
-                    : m_IncomingPredictedStep;
-            AnimationPredictedFootStepSample candidateAuthority =
-                candidate.HasLandingEvent
-                    ? candidate
-                    : incomingCandidate;
+            ref readonly AnimationPredictedFootStepSample currentAuthority = ref
+                (m_PredictedStep.HasLandingEvent ? ref m_PredictedStep : ref m_IncomingPredictedStep);
+            ref readonly AnimationPredictedFootStepSample candidateAuthority = ref
+                (candidate.HasLandingEvent ? ref candidate : ref incomingCandidate);
             float pairScore = candidateAuthority.HasLandingEvent
                 ? weight * candidateAuthority.Confidence
                 : 0f;
-            AnimationPredictedFootStepSample.Select(
-                currentAuthority,
+            if (AnimationPredictedFootStepSample.ShouldSelect(
+                in currentAuthority,
                 m_PredictionPairScore,
-                candidateAuthority,
-                pairScore,
-                out bool candidatePairSelected);
-            if (candidatePairSelected)
+                in candidateAuthority,
+                pairScore))
             {
                 m_PredictedStep = candidate;
                 m_IncomingPredictedStep = incomingCandidate;

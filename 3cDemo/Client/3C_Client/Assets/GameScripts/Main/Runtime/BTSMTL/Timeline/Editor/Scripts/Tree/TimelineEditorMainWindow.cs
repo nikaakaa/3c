@@ -79,12 +79,6 @@ namespace BTSMTL.Timeline.Editor
         string m_SourceGraphAuthoringId;
 
         [SerializeField]
-        UnityEngine.Object m_SourceGraphWindow;
-
-        [SerializeField]
-        UnityEngine.Object m_SourceGraphOwner;
-
-        [SerializeField]
         UnityEngine.Object m_NavigationOwner;
 
         [SerializeField]
@@ -103,15 +97,8 @@ namespace BTSMTL.Timeline.Editor
         string m_NavigationSourceNodeGuid;
 
         [SerializeField]
-        UnityEngine.Object m_NavigationSourceGraphWindow;
-
-        [SerializeField]
-        UnityEngine.Object m_NavigationSourceGraphOwner;
-
-        [SerializeField]
         Vector2 m_NavigationViewport;
 
-        TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
@@ -125,7 +112,6 @@ namespace BTSMTL.Timeline.Editor
         RuntimeDebugViewModel m_RuntimePlaybackSelectionView;
 
         public TimelineData Timeline => m_Timeline;
-        public UnityEngine.Object SourceGraphWindow => m_SourceGraphWindow;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
         public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
         public TimelineAsset SourceAsset => m_SerializedOwner as TimelineAsset;
@@ -319,19 +305,6 @@ namespace BTSMTL.Timeline.Editor
                    m_SlateProjection.FocusSource(trackAuthoringId, clipAuthoringId);
         }
 
-        public static TimelineEditorWindow Open(UnityEngine.Object sourceGraphWindow, TimelineNode node)
-        {
-            if (node?.Timeline == null)
-                return null;
-
-            TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            window.ClearNavigation();
-            window.BindNode(sourceGraphWindow, node);
-            window.Show();
-            window.Focus();
-            return window;
-        }
-
         public static TimelineEditorWindow Open(TimelineAsset asset)
         {
             return Open(asset, string.Empty, string.Empty);
@@ -424,7 +397,6 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!asset)
                 throw new ArgumentNullException(nameof(asset));
-            m_SourceGraphOwner = null;
             m_RuntimeObservationReadOnly = false;
             ClearRuntimeObservationSelection();
             Bind(
@@ -432,25 +404,8 @@ namespace BTSMTL.Timeline.Editor
                 asset,
                 "m_Data",
                 AssetDatabase.IsSubAsset(asset) ? "Private Asset" : "Shared Asset",
-                null,
-                null,
                 sourceNodeGuid ?? string.Empty,
                 sourceGraphAuthoringId ?? string.Empty);
-        }
-
-        public static void RebindIfOpen(TimelineNode node)
-        {
-            if (node == null)
-                return;
-
-            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
-            for (int index = 0; index < windows.Length; index++)
-            {
-                TimelineEditorWindow window = windows[index];
-                if (!window || !window.MatchesSourceNode(node))
-                    continue;
-                window.BindNode(window.m_SourceGraphWindow, node);
-            }
         }
 
         public void CreateGUI()
@@ -460,7 +415,7 @@ namespace BTSMTL.Timeline.Editor
                 BuildUnboundView();
         }
 
-        [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
+        [MenuItem("Tools/BTSMTL/Timeline Editor", false, 3)]
         public static void OpenStandalone()
         {
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
@@ -470,30 +425,11 @@ namespace BTSMTL.Timeline.Editor
             window.Focus();
         }
 
-        void BindNode(UnityEngine.Object sourceGraphWindow, TimelineNode node)
-        {
-            m_SourceNode = node;
-            m_SourceGraphWindow = sourceGraphWindow;
-            m_SourceGraphOwner = node.Owner?.SerializedOwner;
-            m_SourceGraphAuthoringId = node.Owner?.GraphAuthoringId ?? string.Empty;
-            Bind(
-                node.Timeline,
-                node.Timeline.SerializedOwner,
-                node.Timeline.SerializedPropertyPath,
-                node.TimelineOwnership.ToString(),
-                sourceGraphWindow,
-                node,
-                node.GUID,
-                m_SourceGraphAuthoringId);
-        }
-
         void Bind(
             TimelineData timeline,
             UnityEngine.Object serializedOwner,
             string serializedPropertyPath,
             string ownershipLabel,
-            UnityEngine.Object sourceGraphWindow,
-            TimelineNode sourceNode,
             string sourceNodeGuid,
             string sourceGraphAuthoringId = null)
         {
@@ -506,18 +442,8 @@ namespace BTSMTL.Timeline.Editor
             m_SerializedOwner = serializedOwner;
             m_SerializedPropertyPath = serializedPropertyPath;
             m_OwnershipLabel = ownershipLabel;
-            m_SourceGraphWindow = sourceGraphWindow;
-            m_SourceNode = sourceNode;
-            if (sourceNode != null)
-            {
-                m_SourceGraphOwner = sourceNode.Owner?.SerializedOwner;
-                m_SourceGraphAuthoringId = sourceNode.Owner?.GraphAuthoringId ?? string.Empty;
-            }
-            else if (string.IsNullOrEmpty(sourceNodeGuid))
-            {
-                m_SourceGraphOwner = null;
+            if (string.IsNullOrEmpty(sourceNodeGuid))
                 m_SourceGraphAuthoringId = string.Empty;
-            }
             if (sourceGraphAuthoringId != null)
                 m_SourceGraphAuthoringId = sourceGraphAuthoringId;
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
@@ -592,9 +518,6 @@ namespace BTSMTL.Timeline.Editor
             m_OwnershipLabel = string.Empty;
             m_SourceNodeGuid = string.Empty;
             m_SourceGraphAuthoringId = string.Empty;
-            m_SourceGraphWindow = null;
-            m_SourceGraphOwner = null;
-            m_SourceNode = null;
             ClearRuntimeObservationSelection();
             BuildUnboundView();
         }
@@ -613,8 +536,6 @@ namespace BTSMTL.Timeline.Editor
                 m_SerializedOwner,
                 m_SerializedPropertyPath,
                 m_OwnershipLabel,
-                m_SourceGraphWindow,
-                null,
                 m_SourceNodeGuid,
                 m_SourceGraphAuthoringId);
         }
@@ -675,15 +596,6 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
-        bool MatchesSourceNode(TimelineNode node)
-        {
-            if (ReferenceEquals(m_SourceNode, node))
-                return true;
-            return m_SourceGraphOwner == node.Owner?.SerializedOwner &&
-                   !string.IsNullOrEmpty(m_SourceNodeGuid) &&
-                   m_SourceNodeGuid == node.GUID;
-        }
-
         void OnDisable()
         {
             WindowClosed?.Invoke(this);
@@ -735,9 +647,6 @@ namespace BTSMTL.Timeline.Editor
             m_SerializedOwner,
             m_SerializedPropertyPath,
             m_OwnershipLabel,
-            m_SourceGraphWindow,
-            m_SourceGraphOwner,
-            m_SourceNode,
             m_SourceNodeGuid,
             m_SourceGraphAuthoringId);
 
@@ -765,8 +674,6 @@ namespace BTSMTL.Timeline.Editor
             m_NavigationTrackAuthoringId = clip.Track?.AuthoringId ?? string.Empty;
             m_NavigationClipAuthoringId = clip.AuthoringId;
             m_NavigationSourceNodeGuid = m_SourceNodeGuid;
-            m_NavigationSourceGraphWindow = m_SourceGraphWindow;
-            m_NavigationSourceGraphOwner = m_SourceGraphOwner;
             m_NavigationViewport = Vector2.zero;
         }
 
@@ -780,14 +687,11 @@ namespace BTSMTL.Timeline.Editor
             string trackAuthoringId = m_NavigationTrackAuthoringId;
             string clipAuthoringId = m_NavigationClipAuthoringId;
             string sourceNodeGuid = m_NavigationSourceNodeGuid;
-            UnityEngine.Object sourceGraphWindow = m_NavigationSourceGraphWindow;
-            UnityEngine.Object sourceGraphOwner = m_NavigationSourceGraphOwner;
             TimelineData timeline = ResolveTimelineData(owner, propertyPath);
             if (timeline == null)
                 throw new InvalidOperationException("The source Action Timeline can no longer be resolved.");
             ClearNavigation();
-            Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
-            m_SourceGraphOwner = sourceGraphOwner;
+            Bind(timeline, owner, propertyPath, ownershipLabel, sourceNodeGuid);
             m_SlateProjection?.FocusSource(trackAuthoringId, clipAuthoringId);
         }
 
@@ -799,8 +703,6 @@ namespace BTSMTL.Timeline.Editor
             m_NavigationTrackAuthoringId = string.Empty;
             m_NavigationClipAuthoringId = string.Empty;
             m_NavigationSourceNodeGuid = string.Empty;
-            m_NavigationSourceGraphWindow = null;
-            m_NavigationSourceGraphOwner = null;
             m_NavigationViewport = Vector2.zero;
             m_Toolbar?.SetBackVisible(false);
         }

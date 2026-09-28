@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
-using TreeDesigner;
 
 namespace BTSMTL.Timeline.Runtime
 {
@@ -811,7 +810,7 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
-    public sealed class TimelineRuntimeComposition : ITimelinePlaybackService, IDisposable
+    public sealed class TimelineRuntimeComposition : IDisposable
     {
         readonly TimelineContractCatalog m_ContractCatalog;
         readonly TimelineRuntimeNumericTarget m_NumericTarget;
@@ -951,8 +950,6 @@ namespace BTSMTL.Timeline.Runtime
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
             out TimelinePlaybackHandle handle)
         {
             return m_Service.RequestTimelinePlayback(
@@ -961,8 +958,6 @@ namespace BTSMTL.Timeline.Runtime
                 sourceName,
                 actionContext,
                 playbackMode,
-                sourceActivation,
-                sourceRuntimeGraph,
                 out handle);
         }
 

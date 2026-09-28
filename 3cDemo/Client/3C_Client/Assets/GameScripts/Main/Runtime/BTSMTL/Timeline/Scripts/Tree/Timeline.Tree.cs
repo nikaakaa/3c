@@ -2,7 +2,6 @@ using System;
 using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using UnityEngine;
-using TreeDesigner;
 
 namespace BTSMTL.Timeline
 {

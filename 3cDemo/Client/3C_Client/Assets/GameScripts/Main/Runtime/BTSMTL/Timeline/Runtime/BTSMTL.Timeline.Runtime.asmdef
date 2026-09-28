@@ -5,7 +5,6 @@
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
         "BTSMTL.Diagnostics",
-        "BTSMTL.TreeDesigner",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed"
     ],

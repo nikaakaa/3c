@@ -289,21 +289,10 @@ namespace TreeDesigner
                 node is StateMachineNode ||
                 node is StateNode ||
                 node is StateLifecycleNode ||
-                node is RootNode ||
-                IsTimelineValueNode(node.GetType()))
+                node is RootNode)
                 return false;
 
             return node is ValueNode;
-        }
-
-        static bool IsTimelineValueNode(System.Type type)
-        {
-            for (System.Type current = type; current != null; current = current.BaseType)
-            {
-                if (current.FullName == "BTSMTL.Timeline.TimelineValueNode")
-                    return true;
-            }
-            return false;
         }
 
         static void ValidateSubTreeLifecycle(BaseTree tree, NestedGraphValidationResult result)

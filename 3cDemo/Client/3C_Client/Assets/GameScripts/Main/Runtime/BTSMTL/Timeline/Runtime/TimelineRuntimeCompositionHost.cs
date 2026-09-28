@@ -3,11 +3,10 @@ using ThirdPersonSimulation;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
-using TreeDesigner;
 
 namespace BTSMTL.Timeline.Runtime
 {
-    public sealed class TimelineRuntimeCompositionHost : ITimelinePlaybackService, IDisposable
+    public sealed class TimelineRuntimeCompositionHost : IDisposable
     {
         readonly TimelineRuntimeComposition m_Composition;
         readonly TimelineRuntimePresentationDriver m_PresentationDriver =
@@ -291,8 +290,6 @@ namespace BTSMTL.Timeline.Runtime
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
             out TimelinePlaybackHandle handle)
         {
             EnsureAvailable();
@@ -302,8 +299,6 @@ namespace BTSMTL.Timeline.Runtime
                 sourceName,
                 actionContext,
                 playbackMode,
-                sourceActivation,
-                sourceRuntimeGraph,
                 out handle);
         }
 

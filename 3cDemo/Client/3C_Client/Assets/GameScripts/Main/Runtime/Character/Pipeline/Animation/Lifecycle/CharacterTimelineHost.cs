@@ -8,7 +8,6 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonGameplay.Tick;
-using TreeDesigner;
 using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
 using UnityEngine;
 
@@ -506,7 +505,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal readonly bool Retiring;
     }
 
-    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
+    public sealed class CharacterTimelineHost : IDisposable
     {
         struct ActivePlayback
         {
@@ -515,7 +514,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal TimelineData Timeline;
             internal string SourceName;
             internal CharacterTimelinePlaybackSourceKind SourceKind;
-            internal bool CoreDriven;
             internal TimelinePlaybackActionContext ActionContext;
             internal string ActionContextId;
             internal ulong ActionInstanceId;
@@ -529,7 +527,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal ulong LogicReleaseTick;
             internal bool PresentationReleased;
             internal bool CreatedDiagnosticSnapshot;
-            internal TimelineRuntimePresentationSample LocalPresentationSample;
             internal CharacterTimelinePlaybackTrace Trace => new CharacterTimelinePlaybackTrace(
                 Handle, Timeline, RuntimeInstance, Provenance, ActionInstanceId);
         }
@@ -634,39 +631,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Initialized = true;
         }
 
-        public bool RequestTimelinePlayback(
-            TimelineData timeline,
-            string sourceId,
-            string sourceName,
-            TimelinePlaybackActionContext actionContext,
-            TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
-            out TimelinePlaybackHandle handle)
-        {
-            return RequestTimelinePlayback(
-                timeline,
-                sourceId,
-                sourceName,
-                actionContext,
-                playbackMode,
-                sourceActivation,
-                sourceRuntimeGraph,
-                CharacterTimelinePlaybackSourceKind.None,
-                -1,
-                CreatePlaybackProvenance(sourceId, sourceName, sourceActivation, sourceRuntimeGraph),
-                out handle);
-        }
-
         bool RequestTimelinePlayback(
             TimelineData timeline,
             string sourceId,
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
-            CharacterTimelinePlaybackSourceKind sourceKind,
+            string actionContextId,
+            string operationExecutionPath,
             int sourceOperationIndex,
             RuntimeTimelinePlaybackProvenance provenance,
             out TimelinePlaybackHandle handle)
@@ -679,7 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineData playbackTimeline = timeline?.Clone();
             if (!m_Host.RequestTimelinePlayback(
                 playbackTimeline, sourceId, sourceName, actionContext, playbackMode,
-                sourceActivation, sourceRuntimeGraph, out handle))
+                out handle))
                 return false;
             var runtimeHandle = new TimelineRuntimePlaybackHandle(handle.Value);
             bool accepted = false;
@@ -693,8 +665,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     Generation = descriptor.Generation,
                     Timeline = playbackTimeline,
                     SourceName = sourceName ?? string.Empty,
-                    SourceKind = sourceKind,
-                    CoreDriven = false,
+                    SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
+                    ActionContextId = actionContextId,
+                    OperationExecutionPath = operationExecutionPath,
                     ActionContext = actionContext,
                     ActionInstanceId = actionContext.ActionInstanceId,
                     RuntimeInstance = CreateRuntimeInstance(handle, actionContext.ActionInstanceId, sourceOperationIndex),
@@ -756,29 +729,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 timeline.Name,
                 playbackActionContext,
                 loop ? TimelinePlaybackMode.Loop : TimelinePlaybackMode.Once,
-                default,
-                null,
-                CharacterTimelinePlaybackSourceKind.AbilityRuntime,
+                actionContext.ContextId,
+                invocationSource.OperationExecutionPath,
                 invocationSource.OperationIndex,
                 CreateAbilityPlaybackProvenance(invocationSource, actionContext, timeline.Name),
                 out handle);
             if (!requested)
                 throw new InvalidOperationException($"Ability Timeline '{timelineId}' could not start: {m_Host.Service.LastFailure}");
-            if (requested)
-            {
-                for (int i = 0; i < m_ActivePlaybacks.Count; i++)
-                {
-                    if (m_ActivePlaybacks[i].Handle.Value == handle.Value)
-                    {
-                        ActivePlayback updated = m_ActivePlaybacks[i];
-                        updated.SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime;
-                        updated.CoreDriven = true;
-                        updated.ActionContextId = actionContext.ContextId;
-                        updated.OperationExecutionPath = invocationSource.OperationExecutionPath;
-                        m_ActivePlaybacks[i] = updated;
-                    }
-                }
-            }
             return requested;
         }
 
@@ -1243,7 +1200,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
             {
                 ActivePlayback active = m_ActivePlaybacks[index];
-                if (!active.CoreDriven || !active.LogicOwnerReleased || !active.PresentationReleased ||
+                if (!active.LogicOwnerReleased || !active.PresentationReleased ||
                     active.LogicReleaseTick > confirmedTick)
                     continue;
                 m_Host.ReleasePlayback(new TimelineRuntimePlaybackHandle(active.Handle.Value));
@@ -1309,7 +1266,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Timeline = playbackTimeline,
                 SourceName = playbackTimeline.Name,
                 SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
-                CoreDriven = true,
                 ActionContext = new TimelinePlaybackActionContext(
                     snapshot.ActionContext.InstanceId,
                     snapshot.ActionContext.ActionId,
@@ -1361,29 +1317,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     actionInstanceId);
         }
 
-        static RuntimeTimelinePlaybackProvenance CreatePlaybackProvenance(
-            string sourceId,
-            string sourceName,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph)
-        {
-            if (sourceRuntimeGraph == null)
-                return default;
-            if (!sourceActivation.IsValid)
-                throw new InvalidOperationException("Timeline playback source activation is invalid.");
-            StateMachineExecutionScope state = sourceActivation.StateMachineExecutionPath.Leaf;
-            return new RuntimeTimelinePlaybackProvenance(
-                sourceRuntimeGraph.GraphAuthoringId,
-                sourceId,
-                sourceRuntimeGraph.RuntimeId,
-                sourceActivation.ActivationId.Generation,
-                state.StateMachineGraphOwnerId,
-                state.StateId,
-                state.StateMachineGraphRuntimeId,
-                state.ActivationGeneration,
-                sourceName);
-        }
-
         static RuntimeTimelinePlaybackProvenance CreateAbilityPlaybackProvenance(
             AbilityTimelineInvocationSource invocationSource,
             TimelineActionContextIdentity actionContext,
@@ -1429,19 +1362,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!TryGetActivePlayback(evaluation.Handle, out ActivePlayback active))
                 return;
-            if (!active.CoreDriven)
-            {
-                active.LocalPresentationSample = new TimelineRuntimePresentationSample(evaluation.Generation,
-                    evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle,
-                    evaluation.Completes ? TimelinePresentationSampleReason.Completed :
-                    evaluation.Control.IsPaused ? TimelinePresentationSampleReason.Paused : TimelinePresentationSampleReason.Advance, false);
-                for (int i = 0; i < m_ActivePlaybacks.Count; i++)
-                    if (m_ActivePlaybacks[i].Handle.Value == active.Handle.Value)
-                    {
-                        m_ActivePlaybacks[i] = active;
-                        break;
-                    }
-            }
             float time = evaluation.Time.ToSingle();
             CharacterTimelinePlaybackDiagnostics.PublishTimelineEvent(m_Diagnostics, active.Trace,
                 RuntimeTraceDomain.Logic,
@@ -1578,25 +1498,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ActivePlayback active = m_ActivePlaybacks[index];
                 if (active.PresentationReleased)
                     continue;
-                TimelineRuntimePresentationSample sample = active.LocalPresentationSample;
-                bool hasSample = sample.IsValid;
-                if (active.CoreDriven)
-                {
-                    if (clock == null)
-                        throw new InvalidOperationException("Ability Timeline presentation requires its Action clock coordinator.");
-                    hasSample = clock.TrySampleTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                        active.OperationExecutionPath, active.Timeline.AuthoringId, active.Generation,
-                        context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
-                }
+                if (clock == null)
+                    throw new InvalidOperationException("Ability Timeline presentation requires its Action clock coordinator.");
+                bool hasSample = clock.TrySampleTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
+                    active.OperationExecutionPath, active.Timeline.AuthoringId, active.Generation,
+                    context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out TimelineRuntimePresentationSample sample);
                 if (active.PresentationWithdrawn && hasSample && sample.Reason == TimelinePresentationSampleReason.Withdrawn && sample.RetainForCorrection)
                     continue;
-                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
-                bool locallyStopped = !active.CoreDriven && status != TimelinePlaybackStatus.Requested &&
-                    status != TimelinePlaybackStatus.Running && status != TimelinePlaybackStatus.Succeeded;
                 TimelineRuntimePresentationFrame frame = default;
-                if (locallyStopped && hasSample)
-                    sample = new TimelineRuntimePresentationSample(sample.Generation, sample.LogicTick, sample.ContentRevision,
-                        sample.Time, sample.Cycle, TimelinePresentationSampleReason.Stopped, false);
                 bool presented = hasSample && m_Host.TryPresent(
                         active.Handle,
                         in sample,
@@ -1611,13 +1520,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     PresentationGraphs.Execute(in active.Provenance, in frame, in facts, m_Host);
                     PresentationFramePrepared?.Invoke(frame);
                 }
-                bool ended = active.CoreDriven
-                    ? hasSample && sample.EndsPlayback
-                    : status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running;
+                bool ended = hasSample && sample.EndsPlayback;
                 if (ended && !presented)
                 {
-                    TimelinePresentationSampleReason reason = active.CoreDriven ? sample.Reason : TimelinePresentationSampleReason.Stopped;
-                    bool retainForCorrection = active.CoreDriven && sample.RetainForCorrection;
+                    TimelinePresentationSampleReason reason = sample.Reason;
+                    bool retainForCorrection = sample.RetainForCorrection;
                     m_PresentationEndCandidates.Add((active, reason, retainForCorrection));
                     if (!active.PresentationWithdrawn || !retainForCorrection)
                         PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason, retainForCorrection);
@@ -1655,7 +1562,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 ActivePlayback active = m_PresentationEndCandidates[i].Playback;
                 bool retainForCorrection = m_PresentationEndCandidates[i].RetainForCorrection;
-                if (active.CoreDriven && !retainForCorrection)
+                if (!retainForCorrection)
                     clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
                         active.OperationExecutionPath, active.Timeline.AuthoringId, active.Generation);
                 var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
@@ -1677,10 +1584,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         active.PresentationWithdrawn = true;
                         m_ActivePlaybacks[index] = active;
                     }
-                    else if (active.CoreDriven)
-                        m_ActivePlaybacks[index] = active;
                     else
-                        m_ActivePlaybacks.RemoveAt(index);
+                        m_ActivePlaybacks[index] = active;
                 }
             }
             m_PresentationCandidates.Clear();

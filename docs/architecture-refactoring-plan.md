@@ -2,7 +2,7 @@
 
 更新：2026-09-28。
 
-状态：按用户要求收口当前小步，等待用户进行闭环体验；后续实施暂停。以下问题清单保留评估时的证据，实际进展以本节记录为准。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
+状态：已按用户继续指令完成本轮职责拆分与正式 Timeline 旧依赖清理；检查结果见实施进展。以下问题清单保留评估时的证据，实际进展以本节记录为准。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
 
 ## 实施进展
 
@@ -13,9 +13,16 @@
 - 现行 `character-animation-pipeline` 写明“表现运行时逐阶段消费”的结构条款已与上述收拢后的调用链不同；阶段顺序及唯一 Source／Constraint／Publication 所有权保持。当前未调用 OpenSpec 工作流，因此本轮未修改 spec，后续同步时应把外层职责改为提供输入、消费最终结果，由 FrameCoordinator 执行阶段门。
 
 - 已删除旧 Skill 的 BaseTree 黑板入口、旧绑定接口及四个节点绑定器和元文件，共移除约 480 行；正式 FlowCanvas 编译与黑板作用域保留。
-- Timeline 内容管理已拆到 [CharacterTimelineContentStore](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelineContentStore.cs)：唯一持有内容快照、版本、generation 和动画来源身份，处理导出、准备、发布与采用。Fixed 装配、ScenePlay 和动画命令桥已直接消费该模块；Host 仍唯一持有播放记录。Host 减少约 400 行，尚未拆分表现图执行、快照恢复和诊断职责。
+- Timeline 内容管理已拆到 [CharacterTimelineContentStore](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelineContentStore.cs)：唯一持有内容快照、版本、generation 和动画来源身份，处理导出、准备、发布与采用。Fixed 装配、ScenePlay 和动画命令桥已直接消费该模块；Host 仍唯一持有播放记录。Host 在该步减少约 400 行，后续表现图、快照转换和诊断拆分见下文。
 - 三组改动均已通过目标 Unity Editor 正式编译；最后检查为 Edit/idle、Console error 为 0。未运行游戏闭环、replay、故障注入或分配采样。
-- 本轮暂停点：Pose 帧事务、旧 Skill 编译分支清理、Timeline 内容模块。Timeline 的旧 TreeDesigner 请求参数与编辑器入口尚未迁移，不能宣称 TreeDesigner 已完全退出正式调用链。
+- 继续后已抽出 [CharacterTimelinePresentationGraphRuntime](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelinePresentationGraphRuntime.cs)：接收播放来源、本帧采样和表现事实，拥有编译表现图实例及调用上下文，向正式桥接模块输出相机请求和 TreeClip 退出请求，不推进逻辑时钟。
+- 已抽出 [CharacterTimelineSnapshotCodec](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelineSnapshotCodec.cs) 与 [CharacterTimelinePlaybackDiagnostics](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelinePlaybackDiagnostics.cs)。前者转换两种正式快照，后者读取播放信息并输出观察事件；恢复准备、播放登记、终态标记和释放仍由 Host 唯一决定。
+- 已删除 TimelineNode／TimelineOwnershipModule、TimelineBaseTree、Timeline.Node 中的旧生命周期／时间节点，以及无消费者的播放请求合同和服务接口；同步删除编辑器旧节点对象绑定、请求工厂旧图激活参数和两处旧类型名校验。已核对代码、作者目录、序列化类型名与脚本 GUID。
+- 角色 Timeline 已只接受正式技能播放请求，移除仅旧入口使用的 CoreDriven 分支与 LocalPresentationSample；统一由 Action 时钟提供表现采样。当前正式 TreeClip 调用编译技能的语义保持。
+- Timeline 的 Runtime、Tree、Editor 和 Tree.Editor 程序集均已去掉 TreeDesigner 直接依赖；Timeline 目录没有 TreeDesigner C# 引用。编辑器菜单入口调整为 `Tools/BTSMTL/Timeline Editor`。
+- 继续实施后的三组（表现图、快照／诊断、旧 Timeline 链）均通过正式编译与 diff 检查；最终目标 Editor 为 Edit/idle，Console error 为 0。其他窗口修改的 Pose Writer 与场景未包含在本轮提交中；未运行闭环、replay 或分配采样。
+- CharacterTimelineHost 本体从评估时约 1970 行降到约 1115 行。原文件仍含约 500 行准备、片段服务及合同类型；不把文件总行数误认为 Host 本身大小。
+- TreeDesigner 包及 CharacterRuntime 对其它真实图实现的依赖仍保留；本轮完成正式 Skill／Timeline 链中已被替代的旧入口清理，不宣称整个包已经移除。Workspace、SimulationSessionHost 与算法模块仍是独立候选。
 
 ## 目标与范围
 

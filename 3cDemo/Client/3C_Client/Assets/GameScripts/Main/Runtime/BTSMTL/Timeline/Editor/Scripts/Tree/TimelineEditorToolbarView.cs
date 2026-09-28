@@ -13,9 +13,6 @@ namespace BTSMTL.Timeline.Editor
             UnityEngine.Object serializedOwner,
             string serializedPropertyPath,
             string ownershipLabel,
-            UnityEngine.Object sourceGraphWindow,
-            UnityEngine.Object sourceGraphOwner,
-            TimelineNode sourceNode,
             string sourceNodeGuid,
             string sourceGraphAuthoringId)
         {
@@ -23,9 +20,6 @@ namespace BTSMTL.Timeline.Editor
             SerializedOwner = serializedOwner;
             SerializedPropertyPath = serializedPropertyPath ?? string.Empty;
             OwnershipLabel = ownershipLabel ?? string.Empty;
-            SourceGraphWindow = sourceGraphWindow;
-            SourceGraphOwner = sourceGraphOwner;
-            SourceNode = sourceNode;
             SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             SourceGraphAuthoringId = sourceGraphAuthoringId ?? string.Empty;
         }
@@ -34,9 +28,6 @@ namespace BTSMTL.Timeline.Editor
         public UnityEngine.Object SerializedOwner { get; }
         public string SerializedPropertyPath { get; }
         public string OwnershipLabel { get; }
-        public UnityEngine.Object SourceGraphWindow { get; }
-        public UnityEngine.Object SourceGraphOwner { get; }
-        public TimelineNode SourceNode { get; }
         public string SourceNodeGuid { get; }
         public string SourceGraphAuthoringId { get; }
         public bool IsBound => Timeline != null && SerializedOwner != null &&

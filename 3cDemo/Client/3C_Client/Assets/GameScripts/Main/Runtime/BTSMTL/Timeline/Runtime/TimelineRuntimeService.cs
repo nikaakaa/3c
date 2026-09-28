@@ -4,7 +4,6 @@ using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
-using TreeDesigner;
 
 namespace BTSMTL.Timeline.Runtime
 {
@@ -16,8 +15,6 @@ namespace BTSMTL.Timeline.Runtime
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
             TimelineRuntimePlaybackHandle playbackHandle,
             ulong generation,
             out TimelineRuntimePrepareRequest request,
@@ -71,8 +68,6 @@ namespace BTSMTL.Timeline.Runtime
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
             TimelineRuntimePlaybackHandle playbackHandle,
             ulong generation,
             out TimelineRuntimePrepareRequest request,
@@ -84,30 +79,6 @@ namespace BTSMTL.Timeline.Runtime
             {
                 error = "timeline_runtime_request_invalid";
                 return false;
-            }
-            if (sourceRuntimeGraph != null)
-            {
-                if (!sourceActivation.IsValid)
-                {
-                    error = "timeline_source_activation_invalid";
-                    return false;
-                }
-                if (!string.Equals(
-                        sourceActivation.AuthoringRoute.LeafGraphAuthoringId,
-                        sourceRuntimeGraph.GraphAuthoringId,
-                        StringComparison.Ordinal) ||
-                    !string.Equals(
-                        sourceActivation.Source.GraphAuthoringId,
-                        sourceRuntimeGraph.GraphAuthoringId,
-                        StringComparison.Ordinal) ||
-                    !string.Equals(
-                        sourceActivation.Source.ElementAuthoringId,
-                        sourceId,
-                        StringComparison.Ordinal))
-                {
-                    error = "timeline_source_activation_mismatch";
-                    return false;
-                }
             }
             if (!m_CallBindingSource.TryCreateExecutionIdentity(
                     sourceId,
@@ -546,7 +517,7 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline restore snapshot does not match the prepared content.");
         }
     }
-    public sealed class TimelineRuntimeService : ITimelinePlaybackService, ITimelinePlaybackActionContextSource, IDisposable
+    public sealed class TimelineRuntimeService : ITimelinePlaybackActionContextSource, IDisposable
     {
         static readonly List<TimelineRuntimeService> s_ActiveServices =
             new List<TimelineRuntimeService>();
@@ -612,8 +583,6 @@ namespace BTSMTL.Timeline.Runtime
             string sourceName,
             TimelinePlaybackActionContext actionContext,
             TimelinePlaybackMode playbackMode,
-            TreeExecutionActivationScope sourceActivation,
-            BaseGraph sourceRuntimeGraph,
             out TimelinePlaybackHandle handle)
         {
             handle = TimelinePlaybackHandle.Invalid;
@@ -627,9 +596,7 @@ namespace BTSMTL.Timeline.Runtime
                     sourceName,
                     actionContext,
                     playbackMode,
-                    sourceActivation,
-                    sourceRuntimeGraph,
-                    runtimeHandle,
+                            runtimeHandle,
                     generation,
                     out TimelineRuntimePrepareRequest request,
                     out string requestError))

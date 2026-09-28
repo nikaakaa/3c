@@ -51,21 +51,10 @@ namespace TreeDesigner
                 typeof(StateMachineNode).IsAssignableFrom(type) ||
                 typeof(StateNode).IsAssignableFrom(type) ||
                 typeof(StateLifecycleNode).IsAssignableFrom(type) ||
-                typeof(RootNode).IsAssignableFrom(type) ||
-                IsTimelineValueNode(type))
+                typeof(RootNode).IsAssignableFrom(type))
                 return false;
 
             return typeof(ValueNode).IsAssignableFrom(type);
-        }
-
-        static bool IsTimelineValueNode(Type type)
-        {
-            for (Type current = type; current != null; current = current.BaseType)
-            {
-                if (current.FullName == "BTSMTL.Timeline.TimelineValueNode")
-                    return true;
-            }
-            return false;
         }
 
 #if UNITY_EDITOR

@@ -530,9 +530,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float previousGoalWorldAlongUp,
             float requestedGoalWorldAlongUp,
             float limitedGoalWorldAlongUp,
-            float sameLevelMaximumDownVelocity,
-            bool reachConstraintApplied,
-            float reachOutputAdjustment)
+            float sameLevelMaximumDownVelocity)
         {
             Evaluated = evaluated;
             Completed = completed;
@@ -560,20 +558,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequestedGoalWorldAlongUp = requestedGoalWorldAlongUp;
             LimitedGoalWorldAlongUp = limitedGoalWorldAlongUp;
             SameLevelMaximumDownVelocity = sameLevelMaximumDownVelocity;
-            ReachConstraintApplied = reachConstraintApplied;
-            ReachOutputAdjustment = reachOutputAdjustment;
         }
 
         [DiagnosticField]
         [DiagnosticKey("pelvis-response-evaluated")]
         [DiagnosticGroup("pelvis-response")]
         public bool Evaluated { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("pelvis-response")]
-        public bool ReachConstraintApplied { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("pelvis-response")]
-        public float ReachOutputAdjustment { get; }
         [DiagnosticField]
         [DiagnosticKey("pelvis-response-completed")]
         [DiagnosticGroup("pelvis-response")]
@@ -948,7 +938,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootStrideSlope Slope;
         internal float TargetAlongUp;
         internal float OutputAlongUp;
-        internal float GoalWorldVelocityAlongUp;
+        internal float VelocityAlongUp;
         internal bool HasGoalWorldPosition;
         internal Vector3 GoalWorldPosition;
 
@@ -960,7 +950,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Slope = CharacterFootStrideSlope.Flat;
             TargetAlongUp = 0f;
             OutputAlongUp = 0f;
-            GoalWorldVelocityAlongUp = 0f;
+            VelocityAlongUp = 0f;
             HasGoalWorldPosition = false;
             GoalWorldPosition = default;
         }
@@ -1384,7 +1374,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float postureTarget = postureAvailable
                 ? Mathf.Clamp(requestedTarget, postureMinimum, postureMaximum)
                 : requestedTarget;
-            float preferredTarget = postureTarget;
+            float preferredTarget = Mathf.Clamp(
+                postureTarget, Mathf.Min(0f, requestedTarget), Mathf.Max(0f, requestedTarget));
             var posture = new CharacterFootPelvisPosturePreference(
                 postureAvailable,
                 supportPose.HipPosition,
@@ -1410,7 +1401,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 up, in reachInput, primaryRequired, intent.SupportSide, in primaryRequest);
             CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
                 preferredTarget, false, intent.SupportSide,
-                primarySupport.LandingEventIdentity, slope, in frame, in reach,
+                primarySupport.LandingEventIdentity, slope, in frame, reach.HasLandingRequests,
                 sameLevelWorldDownLimit, input.PairTargetHeightSpread,
                 in settings, ref spring);
             return new CharacterFootStrideHipsResult(
@@ -1462,7 +1453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0,
                 CharacterFootStrideSlope.Flat,
                 in frame,
-                in reach,
+                reach.HasLandingRequests,
                 true,
                 pairTargetHeightSpread,
                 in settings,
@@ -1501,11 +1492,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingReachRequest noPrimary = default;
             CharacterFootPelvisReachObservation reach = ResolveReachObservation(
                 up, in reachInput, false, default, in noPrimary);
-            if (!spring.HasValue && reach.Status != CharacterFootPelvisReachStatus.Available)
+            if (!spring.HasValue)
                 return BuildRejected(reason, reach);
             CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
                 0f, true, default, 0, CharacterFootStrideSlope.Flat,
-                in frame, in reach,
+                in frame, reach.HasLandingRequests,
                 sameLevelWorldDownLimit, pairTargetHeightSpread,
                 in settings, ref spring);
             if (response.Completed)
@@ -1578,21 +1569,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong supportEventIdentity,
             CharacterFootStrideSlope slope,
             in CharacterFootPelvisFrame frame,
-            in CharacterFootPelvisReachObservation reach,
+            bool hasFootTargets,
             bool sameLevelWorldDownLimit,
             float pairTargetHeightSpread,
             in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
-            Vector3 up = frame.ComponentUp.normalized;
-            float weight = frame.FootPlacementWeight;
-            float animatedGoalWorldAlongUp = Vector3.Dot(frame.AnimatedPelvis, up);
-            bool constrainReach = reach.Status == CharacterFootPelvisReachStatus.Available;
-            float minimum = constrainReach ? reach.IntersectionMinimumAlongUp / weight : 0f;
-            float maximum = constrainReach ? reach.IntersectionMaximumAlongUp / weight : 0f;
-            float target = constrainReach
-                ? Mathf.Clamp(preferredTarget, minimum, maximum)
-                : preferredTarget;
+            float target = preferredTarget;
             if (!float.IsFinite(target) || !float.IsFinite(settings.PelvisSpringFrequency) ||
                 settings.PelvisSpringFrequency <= 0f)
                 throw new ArgumentException("Pelvis spring target or frequency is invalid.");
@@ -1604,10 +1587,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? spring.Slope : CharacterFootStrideSlope.Flat;
             bool slopeChanged = hadPreviousState && previousSlope != slope;
             float previousTarget = hadPreviousState ? spring.TargetAlongUp : 0f;
-            float previousOutput = hadPreviousState && spring.HasGoalWorldPosition
-                ? (Vector3.Dot(spring.GoalWorldPosition, up) - animatedGoalWorldAlongUp) / weight
-                : 0f;
-            float previousVelocity = hadPreviousState ? spring.GoalWorldVelocityAlongUp / weight : 0f;
+            float previousOutput = hadPreviousState ? spring.OutputAlongUp : 0f;
+            float previousVelocity = hadPreviousState ? spring.VelocityAlongUp : 0f;
             float previousTargetDirection = previousTarget - previousOutput;
             float nextTargetDirection = target - previousOutput;
             bool targetCrossedOutput = !releasing && hadPreviousState &&
@@ -1639,6 +1620,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 velocity = (inputVelocity - omega * j0 * frame.DeltaSeconds) * decay;
             }
             float integratedOutput = output;
+            Vector3 up = frame.ComponentUp.normalized;
+            float animatedGoalWorldAlongUp = Vector3.Dot(
+                frame.AnimatedPelvis,
+                up);
             bool sameLevelWorldDownLimitEvaluated =
                 sameLevelWorldDownLimit &&
                 hadPreviousState &&
@@ -1672,21 +1657,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     sameLevelWorldDownLimitApplied = true;
                 }
             }
-            float reachOutputAdjustment = 0f;
-            if (constrainReach)
-            {
-                float constrained = Mathf.Clamp(output, minimum, maximum);
-                reachOutputAdjustment = (constrained - output) * weight;
-                if (output < minimum && velocity < 0f || output > maximum && velocity > 0f)
-                    velocity = 0f;
-                output = constrained;
-            }
             if (!float.IsFinite(output) || !float.IsFinite(velocity))
                 throw new InvalidOperationException("Pelvis spring response is non-finite.");
             bool completed = releasing &&
                 Mathf.Abs(output) <= GeometryEpsilon &&
                 Mathf.Abs(velocity) <= GeometryEpsilon;
-            float visibleTolerance = reach.HasLandingRequests
+            float visibleTolerance = hasFootTargets
                 ? GeometryEpsilon
                 : EndpointTolerance;
             float positionWeight = !completed &&
@@ -1707,7 +1683,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 spring.Slope = slope;
                 spring.TargetAlongUp = target;
                 spring.OutputAlongUp = output;
-                spring.GoalWorldVelocityAlongUp = velocity * weight;
+                spring.VelocityAlongUp = velocity;
                 spring.HasGoalWorldPosition = true;
                 spring.GoalWorldPosition = frame.AnimatedPelvis +
                     up * (output * positionWeight);
@@ -1724,9 +1700,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousGoalWorldAlongUp,
                 requestedGoalWorldAlongUp,
                 limitedGoalWorldAlongUp,
-                settings.PelvisSameLevelMaximumDownVelocity,
-                constrainReach && Mathf.Abs(reachOutputAdjustment) > GeometryEpsilon,
-                reachOutputAdjustment);
+                settings.PelvisSameLevelMaximumDownVelocity);
         }
 
         static bool TryResolvePostureInterval(

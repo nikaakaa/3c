@@ -8,6 +8,7 @@ namespace ThirdPersonCamera
     public interface ICameraRigAdapter : ICameraBasisSnapshotProvider
     {
         CameraRigResult Result { get; }
+        int PixelHeight { get; }
         void ValidateBinding(string shotId);
         void Apply(in CameraFramePlan plan);
         void Reset();

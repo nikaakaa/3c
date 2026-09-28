@@ -239,21 +239,20 @@ namespace ThirdPersonCamera
             {
                 CameraEffectRuntimeState active = m_States.Active[i];
                 ICameraEffectOwner owner = RequireOwner(active.Request.Kind);
-                float delta = owner.ResolveDelta(active, in input);
-                active.Elapsed += delta;
-                if (active.Retired)
-                {
-                    active.RetireElapsed += delta;
-                    if (active.RetireElapsed >= owner.RetireDuration(active))
-                        m_States.RemoveAt(i);
-                }
-                else if (owner.IsExpired(active))
+                if (active.Retired
+                    ? active.RetireElapsed >= owner.RetireDuration(active)
+                    : owner.IsExpired(active))
                 {
                     CameraEffectEventKey key = CameraEffectEventKey.From(active.Request);
                     if (ContainsEvent(requests, key))
                         m_CompletedEvents.Add(key);
                     m_States.RemoveAt(i);
+                    continue;
                 }
+                float delta = owner.ResolveDelta(active, in input);
+                active.Elapsed += delta;
+                if (active.Retired)
+                    active.RetireElapsed += delta;
             }
         }
 

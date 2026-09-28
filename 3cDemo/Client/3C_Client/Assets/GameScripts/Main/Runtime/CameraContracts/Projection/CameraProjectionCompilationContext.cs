@@ -24,6 +24,14 @@ namespace ThirdPersonCamera
             return curve.Compile();
         }
 
+        public CameraCurvePayload CompileCurve(string curveId)
+        {
+            foreach (CameraCurveAsset curve in m_Curves.Values)
+                if (string.Equals(curve.CurveId, curveId, StringComparison.Ordinal))
+                    return CompileCurve(curve);
+            throw new InvalidOperationException($"Camera Curve '{curveId}' is not registered by its Profile.");
+        }
+
         public CameraCurveAsset RequireCurve(CameraCurveAsset curve)
         {
             if (!curve || !m_Curves.ContainsKey(curve.GetInstanceID()))

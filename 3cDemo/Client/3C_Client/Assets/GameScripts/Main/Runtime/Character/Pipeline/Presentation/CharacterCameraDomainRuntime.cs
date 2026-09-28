@@ -506,7 +506,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 paused,
                 resetHistory,
                 resetReason,
-                m_Targets);
+                m_Targets,
+                m_Rig.PixelHeight);
             CameraResponseRequest response = m_ResponseResolver.Resolve(m_ResponseRequests);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(
                 in frameInput,

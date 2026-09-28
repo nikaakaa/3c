@@ -38,6 +38,7 @@ namespace ThirdPersonCamera
         public Vector3 AimPoint => basisSnapshot.AimPoint;
         public CameraBasisSnapshot BasisSnapshot => basisSnapshot;
         public CameraRigResult Result => result;
+        public int PixelHeight => brain.OutputCamera.pixelHeight;
 
         void Awake()
         {

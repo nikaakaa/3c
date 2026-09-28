@@ -143,19 +143,19 @@ namespace ThirdPersonCamera
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ShakeId) ||
                 !float.IsFinite(AngleVertical) || !float.IsFinite(NoiseAngle) || !float.IsFinite(RadiusLength) ||
                 RadiusLength < 0f || !float.IsFinite(DistanceToPlane) || !float.IsFinite(NoiseRatio) ||
-                NoiseRatio < 0f || !float.IsFinite(ShakeTotalTime) || ShakeTotalTime <= 0f ||
+                NoiseRatio < 0f || !float.IsFinite(ShakeTotalTime) || ShakeTotalTime == 0f ||
                 !float.IsFinite(Frequency) || Frequency < 0f || !float.IsFinite(RollAmplitude) ||
                 !float.IsFinite(PitchAmplitude) || !float.IsFinite(YawAmplitude) ||
                 !Enum.IsDefined(typeof(CameraSpace), ShakeCenterSpace) || !float.IsFinite(ImpactRadius) ||
                 ImpactRadius < 0f || !float.IsFinite(DissipationDistance) || DissipationDistance < 0f ||
                 !float.IsFinite(FadeInDuration) || FadeInDuration < 0f || !float.IsFinite(FadeOutDuration) ||
                 FadeOutDuration < 0f || FadeInDuration > 0f && !FadeInCurve ||
-                FadeOutDuration > 0f && !FadeOutCurve || !Curve ||
+                FadeOutDuration > 0f && !FadeOutCurve || ShakeTotalTime > 0f && !Curve ||
                 !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType))
                 throw new InvalidOperationException($"Camera Shake Asset '{name}' is incomplete.");
             if (FadeInCurve) FadeInCurve.RequireValid();
             if (FadeOutCurve) FadeOutCurve.RequireValid();
-            Curve.RequireValid();
+            if (Curve) Curve.RequireValid();
         }
     }
 }

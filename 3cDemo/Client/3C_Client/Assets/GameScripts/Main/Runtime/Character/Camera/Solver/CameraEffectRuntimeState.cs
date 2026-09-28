@@ -16,6 +16,10 @@ namespace ThirdPersonCamera
             RetireElapsed = 0f;
             RetireStartElapsed = 0f;
             RetireReason = default;
+            ShakeSampleCount = 0;
+            ShakeSourceForward = default;
+            ShakeDistance = 0f;
+            ShakeEnvelope = 1f;
         }
 
         public CameraEffectRequest Request { get; set; }
@@ -25,5 +29,9 @@ namespace ThirdPersonCamera
         public float RetireElapsed;
         public float RetireStartElapsed;
         public CameraPresentationStopReason RetireReason;
+        public int ShakeSampleCount;
+        public UnityEngine.Vector3 ShakeSourceForward;
+        public float ShakeDistance;
+        public float ShakeEnvelope;
     }
 }

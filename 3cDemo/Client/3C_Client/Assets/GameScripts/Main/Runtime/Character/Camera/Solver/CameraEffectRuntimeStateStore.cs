@@ -116,15 +116,12 @@ namespace ThirdPersonCamera
                     effect.Request.EventId.Equals(eventId);
                 bool matchesSource = hasSourceId &&
                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal);
-                bool matchesIdentity = effect.Request.Generation == generation &&
-                    effect.Request.SourceActionInstanceId == sourceActionInstanceId;
                 bool matchesScope = reason == CameraPresentationStopReason.EventRevoked
                     ? matchesEvent
                     : matchesSource;
                 if (effect.Request.Generation != generation ||
                     effect.Request.SourceActionInstanceId != sourceActionInstanceId ||
                     effect.Request.Cycle != cycle ||
-                    !matchesIdentity ||
                     !matchesScope)
                     continue;
                 if (effect.Retired)

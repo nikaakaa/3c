@@ -20,8 +20,10 @@ public readonly struct CameraFrameInput
             bool paused,
             bool resetHistory,
             CameraResetReason resetReason,
-            IReadOnlyList<CameraTargetSnapshot> targets)
+            IReadOnlyList<CameraTargetSnapshot> targets,
+            int pixelHeight)
         {
+            PixelHeight = pixelHeight;
             BodyPosition = bodyPosition;
             BodyRotation = bodyRotation;
             LookInput = lookInput;
@@ -44,6 +46,7 @@ public readonly struct CameraFrameInput
             Targets = targets ?? Array.Empty<CameraTargetSnapshot>();
         }
 
+        public int PixelHeight { get; }
         public Vector3 BodyPosition { get; }
         public Quaternion BodyRotation { get; }
         public Vector2 LookInput { get; }

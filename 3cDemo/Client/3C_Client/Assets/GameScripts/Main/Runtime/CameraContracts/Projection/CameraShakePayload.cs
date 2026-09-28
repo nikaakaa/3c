@@ -25,7 +25,7 @@ namespace ThirdPersonCamera
         [SerializeField] int m_DissipationMode;
         [SerializeField] float m_ImpactRadius;
         [SerializeField] float m_DissipationDistance;
-        [SerializeField] string m_CustomCurveKey = string.Empty;
+        [SerializeField] CameraCurvePayload m_CustomCurve;
         [SerializeField] float m_FadeInDuration;
         [SerializeField] CameraCurvePayload m_FadeInCurve;
         [SerializeField] float m_FadeOutDuration;
@@ -56,7 +56,7 @@ namespace ThirdPersonCamera
             int dissipationMode,
             float impactRadius,
             float dissipationDistance,
-            string customCurveKey,
+            CameraCurvePayload customCurve,
             float fadeInDuration,
             CameraCurvePayload fadeInCurve,
             float fadeOutDuration,
@@ -86,7 +86,7 @@ namespace ThirdPersonCamera
             m_DissipationMode = dissipationMode;
             m_ImpactRadius = impactRadius;
             m_DissipationDistance = dissipationDistance;
-            m_CustomCurveKey = customCurveKey ?? string.Empty;
+            m_CustomCurve = customCurve;
             m_FadeInDuration = fadeInDuration;
             m_FadeInCurve = fadeInCurve;
             m_FadeOutDuration = fadeOutDuration;
@@ -117,7 +117,7 @@ namespace ThirdPersonCamera
         public int DissipationMode => m_DissipationMode;
         public float ImpactRadius => m_ImpactRadius;
         public float DissipationDistance => m_DissipationDistance;
-        public string CustomCurveKey => m_CustomCurveKey ?? string.Empty;
+        public CameraCurvePayload CustomCurve => m_CustomCurve;
         public float FadeInDuration => m_FadeInDuration;
         public CameraCurvePayload FadeInCurve => m_FadeInCurve;
         public float FadeOutDuration => m_FadeOutDuration;
@@ -134,7 +134,7 @@ namespace ThirdPersonCamera
             if (string.IsNullOrWhiteSpace(ShakeId) || !float.IsFinite(AngleVertical) ||
                 !float.IsFinite(NoiseAngle) || !float.IsFinite(RadiusLength) || RadiusLength < 0f ||
                 !float.IsFinite(DistanceToPlane) || !float.IsFinite(NoiseRatio) || NoiseRatio < 0f ||
-                !float.IsFinite(ShakeTotalTime) || ShakeTotalTime <= 0f || !float.IsFinite(Frequency) || Frequency < 0f ||
+                !float.IsFinite(ShakeTotalTime) || ShakeTotalTime == 0f || !float.IsFinite(Frequency) || Frequency < 0f ||
                 !float.IsFinite(RollAmplitude) || !float.IsFinite(PitchAmplitude) || !float.IsFinite(YawAmplitude) ||
                 (byte)ShakeCenterSpace < (byte)CameraSpace.World ||
                 (byte)ShakeCenterSpace > (byte)CameraSpace.Camera ||
@@ -142,13 +142,14 @@ namespace ThirdPersonCamera
                 !float.IsFinite(DissipationDistance) || DissipationDistance < 0f || !float.IsFinite(FadeInDuration) ||
                 FadeInDuration < 0f || !float.IsFinite(FadeOutDuration) || FadeOutDuration < 0f ||
                 FadeInDuration > 0f && FadeInCurve == null ||
-                FadeOutDuration > 0f && FadeOutCurve == null || Curve == null ||
+                FadeOutDuration > 0f && FadeOutCurve == null || ShakeTotalTime > 0f && Curve == null ||
+                DissipationMode == 5 && CustomCurve == null ||
                 (byte)PlayStackingType < (byte)CameraEffectStackingType.Replace ||
                 (byte)PlayStackingType > (byte)CameraEffectStackingType.HighestPriority)
                 throw new InvalidOperationException($"{source} contains an invalid Camera Shake payload.");
             FadeInCurve?.RequireValid(source + ".FadeInCurve");
             FadeOutCurve?.RequireValid(source + ".FadeOutCurve");
-            Curve.RequireValid(source + ".Curve");
+            Curve?.RequireValid(source + ".Curve");
         }
     }
 }

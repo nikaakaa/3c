@@ -348,6 +348,16 @@
       "sha256": "6d5d2e87fed97b78e03d3dc8d2e199d8b58f1b65b0544d1b003b76e9a34fc99d"
     },
     {
+      "path": "distance-damper-0x1f949c40.json",
+      "bytes": 8513,
+      "sha256": "edc6779ddd26f1bb732a70a9199b6a7aa1ac05aab2feba5e2d4548a1fbc98568"
+    },
+    {
+      "path": "distance-damper-identity.json",
+      "bytes": 113,
+      "sha256": "fbfd7f7ab63724c0597a87cf422385b9cafd9dcc11028a0170e4b9145b4e8893"
+    },
+    {
       "path": "hit-scale-literals.json",
       "bytes": 222,
       "sha256": "d0045ef974df07433b09d2e33daa3c9e8d0d88ff74332f3a2d45df5af6209570"

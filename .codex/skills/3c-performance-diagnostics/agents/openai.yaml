@@ -1,0 +1,4 @@
+interface:
+  display_name: "3C 性能诊断"
+  short_description: "使用现有 Player 工具采集 CPU 与 GC 数据，比较多次运行并校准探针开销"
+  default_prompt: "使用 $3c-performance-diagnostics 按我的目标进行性能诊断：优先复用已有证据，区分业务回归比较与探针开销校准，并遵守当前构建和进程启动限制。"

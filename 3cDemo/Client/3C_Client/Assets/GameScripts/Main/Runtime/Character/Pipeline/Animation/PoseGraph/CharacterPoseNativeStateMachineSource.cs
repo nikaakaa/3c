@@ -770,8 +770,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                         input.CompletionIdentity);
             CharacterPoseNativePoseBufferCopy.CopyMetadata(in input, in output);
-            for (int i = 0; i < output.DenseLocalPoses.Length; i++)
-                output.DenseLocalPoses[i] = input.DenseLocalPoses[i];
+            NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
+            poses.CopyFrom(input.DenseLocalPoses);
             output.ContinuityIdentity[0] =
                 m_PendingTransition == null
                     ? input.ContinuityIdentity[0]
@@ -796,7 +796,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                         sourcePose.CompletionIdentity);
-            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+            CharacterPoseNativePoseBufferCopy.ValidateLayout(
                 in sourcePose,
                 in output);
             float duration = m_PendingTransition?.DurationSeconds ?? 0f;
@@ -915,6 +915,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AppendContributions(in source, sourceWeight / totalWeight, ref count, output);
             AppendContributions(in target, targetWeight / totalWeight, ref count, output);
             output.ContributionCount[0] = count;
+            CharacterPoseNativePoseBufferCopy.ClearContributionTail(in output, count);
         }
 
         static void AppendContributions(

@@ -229,17 +229,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 runtime.CurrentLineage.CompletionIdentity);
-            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+            CharacterPoseNativePoseBufferCopy.CopyAttributes(
                 in input,
                 in m_WriteBinding);
-            NativeSlice<AnimationLocalBonePose> outputPoses =
-                m_WriteBinding.DenseLocalPoses;
-            for (int bone = 0; bone < outputPoses.Length; bone++)
-                outputPoses[bone] = input.DenseLocalPoses[bone];
             if (input.Availability[0] == AnimationPoseAvailability.Pose)
                 EvaluatePose(in input, in m_WriteBinding, runtime.CurrentInput.DeltaSeconds);
             else
             {
+                CopyBones(in input, in m_WriteBinding);
                 m_PendingState = default;
                 m_PendingHasFootFeatures = false;
             }
@@ -389,7 +386,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (m_PendingState.Active)
                 ApplyResiduals(in input, in output, deltaSeconds);
+            else
+                CopyBones(in input, in output);
             CommitHistory(in output);
+        }
+
+        static void CopyBones(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output)
+        {
+            NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> velocities = output.DenseVelocities;
+            poses.CopyFrom(input.DenseLocalPoses);
+            velocities.CopyFrom(input.DenseVelocities);
         }
 
         void BeginTransition(

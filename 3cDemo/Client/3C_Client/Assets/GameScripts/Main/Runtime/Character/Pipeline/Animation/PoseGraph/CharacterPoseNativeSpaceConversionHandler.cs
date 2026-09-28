@@ -27,9 +27,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding input,
             in AnimationPlayerPoseNativeWriteBinding output)
         {
-            ValidateLayout(in input, in output);
+            CopyAttributes(in input, in output);
             NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
                 output.DenseVelocities;
+            outputVelocities.CopyFrom(input.DenseVelocities);
+        }
+
+        internal static void CopyAttributes(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output)
+        {
+            ValidateLayout(in input, in output);
             NativeSlice<float> outputParameters = output.PoseParameters;
             NativeSlice<byte> outputParameterAvailability =
                 output.PoseParameterAvailability;
@@ -52,7 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationPoseNativeInvalidReason> outputInvalidReason =
                 output.InvalidReason;
             NativeSlice<ulong> outputCompletedAt = output.CompletedAt;
-            outputVelocities.CopyFrom(input.DenseVelocities);
             outputParameters.CopyFrom(input.PoseParameters);
             outputParameterAvailability.CopyFrom(input.PoseParameterAvailability);
             int contributionCount = input.ContributionCount[0];

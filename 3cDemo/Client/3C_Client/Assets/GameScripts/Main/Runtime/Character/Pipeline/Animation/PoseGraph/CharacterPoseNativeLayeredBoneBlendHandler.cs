@@ -149,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 runtime.CurrentLineage.CompletionIdentity);
-            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+            CharacterPoseNativePoseBufferCopy.ValidateLayout(
                 in baseBinding,
                 in m_WriteBinding);
             BlendPose(
@@ -351,6 +351,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!float.IsFinite(total) || total <= 0f)
                     throw new InvalidOperationException(
                         $"Layered Bone Blend '{NodeId}' has no visible bone output weight.");
+                if (overlayWeight == 0f)
+                {
+                    outputPoses[bone] = basePose.DenseLocalPoses[bone];
+                    outputVelocities[bone] = basePose.DenseVelocities[bone];
+                    continue;
+                }
+                if (baseWeight == 0f)
+                {
+                    outputPoses[bone] = overlayPose.DenseLocalPoses[bone];
+                    outputVelocities[bone] = overlayPose.DenseVelocities[bone];
+                    continue;
+                }
                 AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
                 AnimationLocalBonePose overlayBone = overlayPose.DenseLocalPoses[bone];
                 Vector3 position =
@@ -421,6 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 true,
                 ref contributionCount);
             outputContributionCount[0] = contributionCount;
+            CharacterPoseNativePoseBufferCopy.ClearContributionTail(in m_WriteBinding, contributionCount);
             outputWeight[0] = Mathf.Clamp01(totalGlobalWeight);
             BlendFeet(in basePose, in overlayPose, baseGlobalWeight, overlayGlobalWeight);
             outputAvailability[0] = AnimationPoseAvailability.Pose;

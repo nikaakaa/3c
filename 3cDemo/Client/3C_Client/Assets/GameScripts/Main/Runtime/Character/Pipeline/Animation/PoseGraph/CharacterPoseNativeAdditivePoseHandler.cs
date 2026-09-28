@@ -152,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 runtime.CurrentLineage.CompletionIdentity);
-            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+            CharacterPoseNativePoseBufferCopy.CopyAttributes(
                 in baseBinding,
                 in m_WriteBinding);
             ApplyAdditive(
@@ -343,6 +343,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int bone = 0; bone < outputPoses.Length; bone++)
             {
                 AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
+                if (weight == 0f)
+                {
+                    outputPoses[bone] = baseBone;
+                    outputVelocities[bone] = basePose.DenseVelocities[bone];
+                    continue;
+                }
                 AnimationLocalBonePose additiveBone = additivePose.DenseLocalPoses[bone];
                 AnimationLocalBonePose reference = m_Rig.GetReferenceLocalPose(bone);
                 Vector3 position = baseBone.Position +

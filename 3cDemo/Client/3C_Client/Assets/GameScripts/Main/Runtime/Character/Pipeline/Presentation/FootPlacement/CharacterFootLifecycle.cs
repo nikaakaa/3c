@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootLifecycleTransitionFact lifecycleTransition,
                 bool landingCompletionPending,
                 in CharacterFootCurrentSupportObservation outputSupport,
-                in CharacterFootCurrentSupportObservation releaseTargetSupport)
+                in CharacterFootCurrentSupportObservation stateTargetSupport)
             {
                 Evaluation = evaluation;
                 PreTransition = preTransition;
@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LifecycleTransition = lifecycleTransition;
                 LandingCompletionPending = landingCompletionPending;
                 OutputSupport = outputSupport;
-                ReleaseTargetSupport = releaseTargetSupport;
+                StateTargetSupport = stateTargetSupport;
             }
 
             CharacterFootStateEvaluation Evaluation { get; }
@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
             bool LandingCompletionPending { get; }
             internal CharacterFootCurrentSupportObservation OutputSupport { get; }
-            internal CharacterFootCurrentSupportObservation ReleaseTargetSupport { get; }
+            internal CharacterFootCurrentSupportObservation StateTargetSupport { get; }
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
@@ -187,14 +187,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in preTransition,
                     timeToLandingSeconds,
                     in frame);
-            CharacterFootCurrentSupportObservation releaseTargetSupport = default;
+            CharacterFootCurrentSupportObservation stateTargetSupport = default;
             if (!target.SuppressOutput && target.SupportTargetAvailable &&
-                target.InterpolationPolicy == CharacterFootInterpolationPolicy.ReleaseResidual)
+                (target.InterpolationPolicy == CharacterFootInterpolationPolicy.ReleaseResidual ||
+                 target.InterpolationPolicy == CharacterFootInterpolationPolicy.VerifiedSupport))
             {
-                releaseTargetSupport = QueryFootSupport(
+                stateTargetSupport = QueryFootSupport(
                     in context, in evaluation, target.Correction, target.SupportTarget);
-                target = CharacterFootStateTargetResolver.ConstrainReleaseTarget(
-                    in target, in releaseTargetSupport, in frame);
+                target = CharacterFootStateTargetResolver.ConstrainStateTarget(
+                    in target, in stateTargetSupport, in frame);
             }
             CharacterFootInterpolationResult interpolation;
             if (!preTransition.SuppressOutput &&
@@ -339,7 +340,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in lifecycleTransition,
                 landingCompletionPending,
                 in outputSupport,
-                in releaseTargetSupport);
+                in stateTargetSupport);
             return request;
         }
 

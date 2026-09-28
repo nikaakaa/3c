@@ -55,15 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         in supportIntent);
                 case CharacterFootConstraintState.Landing:
-                    return ResolveContactPlant(
-                        in context,
-                        in transition,
-                        swingCorrection,
-                        timeToLandingSeconds,
-                        in frame,
-                        in supportIntent);
                 case CharacterFootConstraintState.Locked:
-                    return ResolveLockedPlant(
+                    return ResolvePlant(
                         in context,
                         in transition,
                         swingCorrection,
@@ -177,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in supportIntent);
         }
 
-        internal static CharacterFootStateTarget ConstrainReleaseTarget(
+        internal static CharacterFootStateTarget ConstrainStateTarget(
             in CharacterFootStateTarget target,
             in CharacterFootCurrentSupportObservation support,
             in CharacterFootStateFrame frame)
@@ -194,60 +187,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterFootStateTarget(
                 correction, target.SwingCorrection, target.InterpolationPolicy,
                 target.PlantTargetAvailable, target.PlantTargetEventIdentity,
-                target.PlantTargetVerified, target.PlantTargetPoint,
+                target.PlantTargetVerified,
+                target.PlantTargetAvailable ? target.PlantTargetPoint + adjustment : target.PlantTargetPoint,
                 target.PlantTargetKind, target.PlantLockResponse, target.LockWeightCompleted,
                 target.SupportTargetAvailable, in supportTarget, target.StateEntered,
                 target.ResponseEntered, target.DirectPlantFollow, target.SuppressOutput,
                 target.TimeToLandingSeconds, target.SupportIntent);
         }
 
-        static CharacterFootStateTarget ResolveContactPlant(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootTransitionDecision transition,
-            Vector3 swingCorrection,
-            float timeToLandingSeconds,
-            in CharacterFootStateFrame frame,
-            in CharacterFootSupportIntent supportIntent)
-        {
-            Vector3 correction =
-                CharacterFootConstraintMath.ResolveContactCorrection(
-                    frame.AnimatedFoot,
-                    context.Contact.Anchor);
-            return PlantTarget(
-                correction,
-                swingCorrection,
-                context.Contact.EventIdentity,
-                true,
-                context.Contact.Anchor,
-                CharacterFootPlantTargetKind.VerifiedAnchor,
-                CharacterFootLockResponse.None,
-                context.ContactTransition.HasCompletedLockWeight(
-                    context.Contact.EventIdentity),
-                new CharacterFootSupportTarget(
-                    frame.FrameSequence,
-                    frame.CompletionIdentity,
-                    frame.Side,
-                    context.Contact.Anchor,
-                    context.Contact.Normal,
-                    context.Contact.SurfaceIdentity,
-                    context.Contact.WorldRevision,
-                    CharacterFootSupportTargetKind.VerifiedAnchor,
-                    CharacterFootSupportPositionSource.ContactAnchor,
-                    context.Contact.AcquiredFrameSequence,
-                    context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity,
-                    0,
-                    CharacterFootSupportNormalSource.ContactAnchor,
-                    context.Contact.AcquiredFrameSequence,
-                    context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity),
-                transition,
-                timeToLandingSeconds,
-                false,
-                in supportIntent);
-        }
-
-        static CharacterFootStateTarget ResolveLockedPlant(
+        static CharacterFootStateTarget ResolvePlant(
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,
             Vector3 swingCorrection,
@@ -259,13 +207,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveContactCorrection(
                     frame.AnimatedFoot,
                     context.Contact.Anchor);
+            bool landing = context.Discrete.State == CharacterFootConstraintState.Landing;
+            CharacterFootLockResponse response = landing
+                ? frame.LockRequest.Response
+                : context.Discrete.LockResponse;
             Vector3 correction;
-            if (context.Discrete.LockResponse ==
+            if (response ==
                 CharacterFootLockResponse.FullAnchor)
             {
                 correction = fullCorrection;
             }
-            else if (context.Discrete.LockResponse ==
+            else if (response ==
                      CharacterFootLockResponse.Sliding)
             {
                 float horizontalError =
@@ -282,7 +234,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             else
             {
                 throw new System.InvalidOperationException(
-                    "Locked Foot response is invalid.");
+                    "Contact Foot response is invalid.");
             }
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
@@ -293,11 +245,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Contact.EventIdentity,
                 true,
                 originalSole + correction,
-                context.Discrete.LockResponse ==
-                CharacterFootLockResponse.FullAnchor
-                    ? CharacterFootPlantTargetKind.LockedFullAnchor
-                    : CharacterFootPlantTargetKind.LockedSliding,
-                context.Discrete.LockResponse,
+                landing
+                    ? CharacterFootPlantTargetKind.VerifiedAnchor
+                    : response == CharacterFootLockResponse.FullAnchor
+                        ? CharacterFootPlantTargetKind.LockedFullAnchor
+                        : CharacterFootPlantTargetKind.LockedSliding,
+                response,
                 context.ContactTransition.HasCompletedLockWeight(
                     context.Contact.EventIdentity),
                 new CharacterFootSupportTarget(
@@ -308,10 +261,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.Normal,
                     context.Contact.SurfaceIdentity,
                     context.Contact.WorldRevision,
-                    context.Discrete.LockResponse ==
-                    CharacterFootLockResponse.FullAnchor
-                        ? CharacterFootSupportTargetKind.LockedFullAnchor
-                        : CharacterFootSupportTargetKind.LockedSliding,
+                    landing
+                        ? CharacterFootSupportTargetKind.VerifiedAnchor
+                        : response == CharacterFootLockResponse.FullAnchor
+                            ? CharacterFootSupportTargetKind.LockedFullAnchor
+                            : CharacterFootSupportTargetKind.LockedSliding,
                     CharacterFootSupportPositionSource.ContactAnchor,
                     context.Contact.AcquiredFrameSequence,
                     context.Contact.AcquiredCompletionIdentity,

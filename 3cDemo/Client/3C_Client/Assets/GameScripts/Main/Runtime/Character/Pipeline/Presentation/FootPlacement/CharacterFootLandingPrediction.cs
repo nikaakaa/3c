@@ -638,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSwingMotionResult footMotion,
             in CharacterFullBodyIkGoal goal,
             in CharacterFootCurrentSupportObservation outputSupport,
-            in CharacterFootCurrentSupportObservation releaseTargetSupport)
+            in CharacterFootCurrentSupportObservation stateTargetSupport)
         {
             Side = result.Side;
             State = result.State;
@@ -705,7 +705,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentSupport = new CharacterFootCurrentSupportDiagnostics(
                 in currentSupport);
             OutputSupport = new CharacterFootCurrentSupportDiagnostics(in outputSupport);
-            ReleaseTargetSupport = new CharacterFootCurrentSupportDiagnostics(in releaseTargetSupport);
+            StateTargetSupport = new CharacterFootCurrentSupportDiagnostics(in stateTargetSupport);
             Resolved = new CharacterResolvedFootDiagnostics(
                 in resolved,
                 in sourcePose);
@@ -858,7 +858,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public CharacterFootCurrentSupportDiagnostics CurrentSupport { get; }
         public CharacterFootCurrentSupportDiagnostics OutputSupport { get; }
-        public CharacterFootCurrentSupportDiagnostics ReleaseTargetSupport { get; }
+        public CharacterFootCurrentSupportDiagnostics StateTargetSupport { get; }
         public CharacterResolvedFootDiagnostics Resolved { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]

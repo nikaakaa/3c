@@ -65,14 +65,18 @@ namespace ThirdPersonCamera
                 brain = GetComponent<CinemachineBrain>();
         }
 
-        public void ValidateBinding(string shotId)
+        public void ValidateBinding(string shotId) => RequireBoundCamera(shotId);
+
+        CinemachineVirtualCamera RequireBoundCamera(string shotId)
         {
             if (virtualCamera == null)
                 throw new InvalidOperationException("Camera rig requires an explicit CinemachineVirtualCamera.");
             if (!HasValidBrain())
                 throw new InvalidOperationException("Camera rig requires a CinemachineBrain using Manual Update.");
-            if (ResolveShotCamera(shotId) == null)
+            CinemachineVirtualCamera camera = ResolveShotCamera(shotId);
+            if (camera == null)
                 throw new InvalidOperationException($"Camera Shot '{shotId}' has no live rig camera.");
+            return camera;
         }
 
         public void Apply(in CameraFramePlan plan)
@@ -84,8 +88,7 @@ namespace ThirdPersonCamera
                 return;
             }
 
-            ValidateBinding(plan.ShotId);
-            CinemachineVirtualCamera targetCamera = ResolveShotCamera(plan.ShotId);
+            CinemachineVirtualCamera targetCamera = RequireBoundCamera(plan.ShotId);
             ActivateCamera(targetCamera);
             ApplyLens(targetCamera, plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
             targetCamera.ForceCameraPosition(plan.Location, plan.Rotation);

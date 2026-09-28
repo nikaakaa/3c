@@ -175,7 +175,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Camera validation requires an open frame candidate.");
             m_Rig.ValidateBinding(string.Empty);
             for (int index = 0; index < m_CandidateRequests.Count; index++)
-                ValidateRequest(m_CandidateRequests[index].Command.CameraRequest);
+            {
+                PresentationCameraRequest request = m_CandidateRequests[index].Command.CameraRequest;
+                if (request.Kind == PresentationCameraRequestKind.Effect &&
+                    request.EffectKind == (int)CameraEffectKind.Shot)
+                    m_Rig.ValidateBinding(request.ResourceId);
+            }
         }
 
         internal void CommitFrame()
@@ -209,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CandidateRetirements[request.AcceptedIndex] = reason;
         }
 
-        internal void ValidateRequest(PresentationCameraRequest request)
+        void ValidateRequest(PresentationCameraRequest request)
         {
             bool valid = request.Kind switch
             {
@@ -231,8 +236,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException($"Camera request '{request.RequestId}' has unsupported mode or missing resource '{request.ResourceId}/{request.SequenceId}'.");
             if (request.Kind == PresentationCameraRequestKind.Sequence)
                 RequireSequenceInterruptPolicy(request.InterruptPolicy);
-            if (request.Kind == PresentationCameraRequestKind.Effect && request.EffectKind == (int)CameraEffectKind.Shot)
-                m_Rig.ValidateBinding(request.ResourceId);
             ValidateTargetKey(request.TargetKey);
             ValidateTargetKey(request.AnchorKey);
             ValidateTargetKey(request.AimPointKey);
@@ -252,7 +255,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Publish(CharacterPresentationCommand command)
         {
             RequireAlive();
+            ValidateCommand(command);
+            ApplyCommand(command);
+        }
+
+        void ValidateCommand(CharacterPresentationCommand command)
+        {
             RequireCameraCommand(command);
+            if (command.CameraRequest.Lifecycle != PresentationCameraRequestLifecycle.Retire)
+                ValidateRequest(command.CameraRequest);
+        }
+
+        void ApplyCommand(CharacterPresentationCommand command)
+        {
             if (command.CameraRequest.Lifecycle == PresentationCameraRequestLifecycle.Retire)
             {
                 Retire(command);
@@ -285,10 +300,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
         {
-            RequireCameraCommand(current);
-            RequireCameraCommand(replacement);
+            RequireAlive();
+            ValidateCommand(replacement);
             Retire(current);
-            Publish(replacement);
+            ApplyCommand(replacement);
         }
 
         internal void Retire(CharacterPresentationCommand command)

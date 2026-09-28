@@ -2542,6 +2542,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out Vector3 sample,
             out CharacterFootSwingMotionRejectReason rejectReason)
         {
+            if (progress >= 1f)
+            {
+                sample = groundPath.EnvelopeVertexAt(groundPath.EnvelopeVertexCount - 1).Position;
+                rejectReason = CharacterFootSwingMotionRejectReason.None;
+                return true;
+            }
             Vector3 start = groundPath.LastLanding;
             Vector3 axis = Vector3.ProjectOnPlane(
                 groundPath.NextSwingLanding - start, up);

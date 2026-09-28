@@ -26,27 +26,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float support,
             in AnimationFootMotionEventFrame events)
         {
-            if (!float.IsFinite(footHeight) || footHeight < 0f ||
-                !float.IsFinite(toeHeight) ||
-                !float.IsFinite(toeSpeed) || toeSpeed < 0f ||
-                !float.IsFinite(positionError) || positionError < 0f ||
-                !float.IsFinite(rotationError) || rotationError < 0f ||
-                !Normalized(contact) ||
-                (byte)lockMode > (byte)AnimationFootStepObservationLockMode.Locked ||
-                !Normalized(lockWeight) || !Normalized(support) ||
-                !events.IsValid)
-            {
-                throw new ArgumentOutOfRangeException(nameof(footHeight));
-            }
-            FootHeight = footHeight;
+            FootHeight = RequireNonNegative(footHeight, nameof(footHeight));
+            if (!float.IsFinite(toeHeight))
+                throw new ArgumentOutOfRangeException(nameof(toeHeight), toeHeight, "Foot observation must be finite.");
             ToeHeight = toeHeight;
-            ToeSpeed = toeSpeed;
-            PositionError = positionError;
-            RotationError = rotationError;
-            Contact = contact;
+            ToeSpeed = RequireNonNegative(toeSpeed, nameof(toeSpeed));
+            PositionError = RequireNonNegative(positionError, nameof(positionError));
+            RotationError = RequireNonNegative(rotationError, nameof(rotationError));
+            Contact = NormalizeCurveWeight(contact, nameof(contact));
+            if ((byte)lockMode > (byte)AnimationFootStepObservationLockMode.Locked)
+                throw new ArgumentOutOfRangeException(nameof(lockMode), lockMode, "Foot observation lock mode is invalid.");
             LockMode = lockMode;
-            LockWeight = lockWeight;
-            Support = support;
+            LockWeight = NormalizeCurveWeight(lockWeight, nameof(lockWeight));
+            Support = NormalizeCurveWeight(support, nameof(support));
+            if (!events.IsValid)
+                throw new ArgumentException("Foot observation event frame is invalid.", nameof(events));
             Events = events;
             m_IsSpecified = 1;
         }
@@ -184,8 +178,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     contributionContinuityIdentity,
                     side));
 
-        static bool Normalized(float value) =>
-            float.IsFinite(value) && value >= 0f && value <= 1f;
+        static float RequireNonNegative(float value, string parameter)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+                throw new ArgumentOutOfRangeException(parameter, value, "Foot observation must be finite and non-negative.");
+            return value;
+        }
+
+        static float NormalizeCurveWeight(float value, string parameter)
+        {
+            // AnimationCurve evaluation can round just outside the domain near a valid endpoint.
+            const float tolerance = 0.000001f;
+            if (!float.IsFinite(value) || value < -tolerance || value > 1f + tolerance)
+                throw new ArgumentOutOfRangeException(parameter, value, "Foot observation weight must be in [0, 1].");
+            return Mathf.Clamp01(value);
+        }
     }
 
     internal readonly struct AnimationFootMotionRuntimeFrame

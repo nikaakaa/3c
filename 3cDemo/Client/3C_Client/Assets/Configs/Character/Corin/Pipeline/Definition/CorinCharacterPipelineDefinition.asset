@@ -14,11 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Float32AbilityData:
   - {fileID: 11400000, guid: df8eede078e50834399c3a28b9dd2c08, type: 2}
+  - {fileID: 11400000, guid: 5bcc372b3536c8c4aa16742465ff6341, type: 2}
   - {fileID: 11400000, guid: 83893fb1b0a4c034b95e66ecff4b9210, type: 2}
   - {fileID: 11400000, guid: dc299d3d882ffac499574bd2822c8d84, type: 2}
   - {fileID: 11400000, guid: 4d1ec1134c85d4540b294438a494b626, type: 2}
   m_FixedAbilityData:
   - {fileID: 11400000, guid: fc9e39f2c0445ae44ac1e0a9f9d8863b, type: 2}
+  - {fileID: 11400000, guid: 4f0b07ee5cefb5b4189ecf335ef3c880, type: 2}
   - {fileID: 11400000, guid: 9cc36935315907e43a17e7eb3ff37329, type: 2}
   - {fileID: 11400000, guid: 77e63dea703b5fd448c56f3035c32520, type: 2}
   - {fileID: 11400000, guid: 614a5083017b56b41b5a9af9fd13ebcf, type: 2}
@@ -48,6 +50,11 @@ MonoBehaviour:
     m_ConsumeSourceInputRequest: 1
     m_TargetInputValueId: 
     m_TargetKey: 
+  - m_Ability: {fileID: 11400000, guid: 03c9347714a38f74b9254117fce54b4a, type: 2}
+    m_SourceInputRequestId: Branch
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: 
+    m_TargetKey: 
   m_ControlMotionTimelines:
   - {fileID: 7999859642905170529, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 1204746802003447441, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
@@ -56,10 +63,20 @@ MonoBehaviour:
   - {fileID: -3912177769877704289, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 6609220109475648578, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 114000001, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
+  - {fileID: 11400000, guid: 6298d2478f8df6b48a4b731722f9e36c, type: 2}
+  - {fileID: 11400000, guid: 81af72973551d614fb2d92701c5ca4de, type: 2}
+  - {fileID: 11400000, guid: 1ea69314cf61a114b893fff507498642, type: 2}
+  - {fileID: 11400000, guid: 9ecdfe6e91bf13147a5232e6d85277bb, type: 2}
+  - {fileID: 11400000, guid: e4a93a78c1f15ba48ae9a880ffc90e88, type: 2}
   - {fileID: 868224944086050979, guid: 67424e487a089064c85e32792e482909, type: 2}
   - {fileID: -7289415213675704551, guid: 352b16179174b5542b10f199fe287ed6, type: 2}
+  - {fileID: 11400000, guid: a56b7b70203a3874594ebd081bedf890, type: 2}
   - {fileID: 11400000, guid: e3100a5d9749e494587ceb12edb1e4a6, type: 2}
   - {fileID: 11400000, guid: f06be6da2a09ed84490180afd5d9df8a, type: 2}
+  - {fileID: 11400000, guid: 360aa71112b01c34bb4240c4749570a4, type: 2}
+  - {fileID: 11400000, guid: fb99c86adf91a334aa0f9ec4af178eb7, type: 2}
+  - {fileID: 11400000, guid: 791526a6eabe6f346bcbd81c5c026ccf, type: 2}
+  - {fileID: 11400000, guid: 4543870841cc4214caa1ff0246d84fb5, type: 2}
   - {fileID: 11400000, guid: 65ce679de3fdadd4f916432996dcefa0, type: 2}
   - {fileID: 11400000, guid: 6fbeaf0090c34c31a4a21216e3ccc966, type: 2}
   m_SimulationTickRate: 60
@@ -78,6 +95,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
   - {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
   - {fileID: 11400000, guid: 9ad8777c8e597c54686a27bb42133b8f, type: 2}
+  - {fileID: 11400000, guid: a08176d11d1d44e98eabf30f46cffc14, type: 2}
   m_BehaviorProfiles:
   - {fileID: 11400000, guid: 99e9d56129664ebbb07fbaa1a0bb7c30, type: 2}
   - {fileID: 11400000, guid: 4e38e0339f0e431ba4c15c9575166034, type: 2}

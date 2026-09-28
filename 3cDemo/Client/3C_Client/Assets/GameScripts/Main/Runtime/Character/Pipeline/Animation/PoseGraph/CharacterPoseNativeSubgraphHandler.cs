@@ -343,8 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             kind == CharacterPosePortKind.ComponentPose ||
             kind == CharacterPosePortKind.PoseDiscontinuity ||
             kind == CharacterPosePortKind.FullBodyIkGoals ||
-            kind == CharacterPosePortKind.FullBodyIkGoalContribution ||
-            kind == CharacterPosePortKind.PoseHistory;
+            kind == CharacterPosePortKind.FullBodyIkGoalContribution;
 
         static CharacterPoseCanvasNode FindBoundary(
             CharacterPoseCanvasGraph graph,

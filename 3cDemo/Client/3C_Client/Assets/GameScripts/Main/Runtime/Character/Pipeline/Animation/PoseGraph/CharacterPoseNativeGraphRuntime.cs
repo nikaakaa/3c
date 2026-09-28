@@ -640,10 +640,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ReadInput<CharacterPoseNativeFullBodyIkGoalsValue>(node, portId.Value),
                 CharacterPosePortKind.FullBodyIkGoalContribution =>
                     ReadInput<CharacterPoseNativeGoalContributionValue>(node, portId.Value),
-                CharacterPosePortKind.PoseHistory =>
-                    ReadInput<CharacterPoseNativeHistoryValue>(node, portId.Value),
-                CharacterPosePortKind.Trajectory =>
-                    ReadInput<CharacterPoseNativeTrajectoryValue>(node, portId.Value),
                 CharacterPosePortKind.PresentationFacts =>
                     ReadInput<CharacterPoseNativeFactsValue>(node, portId.Value),
                 CharacterPosePortKind.MotionMatchingBinding =>

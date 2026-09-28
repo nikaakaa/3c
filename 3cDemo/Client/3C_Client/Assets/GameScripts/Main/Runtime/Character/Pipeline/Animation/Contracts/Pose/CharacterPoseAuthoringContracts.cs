@@ -264,7 +264,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         FullBodyIK = 30,
         LinkedPoseCall = 31,
         MotionMatchingPose = 33,
-        PoseHistoryCollector = 34,
         EntryPoseInput = 35,
         FullBodyIkGoalAssembler = 36
     }
@@ -277,8 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LocalPose = 6,
         ComponentPose = 7,
         FullBodyIkGoals = 9,
-        PoseHistory = 10,
-        Trajectory = 11,
         PresentationFacts = 12,
         MotionMatchingBinding = 13,
         FullBodyIkGoalContribution = 14

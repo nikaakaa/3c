@@ -1009,92 +1009,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        static void ValidateMotionMatchingTopology(
-            CharacterPoseCanvasGraph graph,
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
-            CharacterPoseGraphValidationReport report)
-        {
-            var collectorOwners = new Dictionary<PoseNodeId, PoseNodeId>();
-            foreach (CharacterPoseCanvasNode node in nodes.Values)
-            {
-                if (node.Kind != CharacterPoseNodeKind.MotionMatchingPose)
-                    continue;
-                CharacterPoseCanvasConnection[] historyEdges = graph.Edges
-                    .Where(edge => edge != null &&
-                                   edge.TargetNodeId == node.NodeId &&
-                                   edge.TargetPortId.Equals(CharacterMotionMatchingPosePorts.History))
-                    .ToArray();
-                if (historyEdges.Length != 1 ||
-                    !nodes.TryGetValue(historyEdges[0].SourceNodeId, out CharacterPoseCanvasNode collector) ||
-                    collector.Kind != CharacterPoseNodeKind.PoseHistoryCollector ||
-                    !historyEdges[0].SourcePortId.Equals(CharacterMotionMatchingPosePorts.History))
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Motion Matching Pose '{node.NodeId}' requires exactly one Pose History Collector read edge.",
-                        graph.GraphId,
-                        node.NodeId,
-                        CharacterMotionMatchingPosePorts.History);
-                    continue;
-                }
-                if (!collectorOwners.TryAdd(collector.NodeId, node.NodeId))
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Pose History Collector '{collector.NodeId}' has competing Motion Matching owners.",
-                        graph.GraphId,
-                        collector.NodeId);
-                }
-                CharacterPoseCanvasConnection[] commitEdges = graph.Edges
-                    .Where(edge => edge != null &&
-                                   edge.SourceNodeId == node.NodeId &&
-                                   edge.SourcePortId.Equals(CharacterMotionMatchingPosePorts.LocalPoseOutput) &&
-                                   edge.TargetNodeId == collector.NodeId &&
-                                   edge.TargetPortId.Equals(CharacterMotionMatchingPosePorts.LocalPoseInput))
-                    .ToArray();
-                if (commitEdges.Length != 1)
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Motion Matching Pose '{node.NodeId}' must commit its base Local Pose through Collector '{collector.NodeId}'.",
-                        graph.GraphId,
-                        node.NodeId,
-                        CharacterMotionMatchingPosePorts.LocalPoseOutput);
-                }
-                if (node.Payload is CharacterMotionMatchingPosePayload motionMatching &&
-                    collector.Payload is CharacterPoseHistoryCollectorPayload history &&
-                    (!motionMatching.BindingSlot ||
-                     motionMatching.BindingSlot.Kind != CharacterPoseResourceKind.MotionMatchingBinding ||
-                     !motionMatching.JumpBlendPolicySlot ||
-                     motionMatching.JumpBlendPolicySlot.Kind != CharacterPoseResourceKind.BlendPolicy ||
-                     !history.HistoryId.IsValid))
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Motion Matching Pose '{node.NodeId}' resource slots or Collector history identity are incomplete.",
-                        graph.GraphId,
-                        node.NodeId);
-                }
-            }
-            foreach (CharacterPoseCanvasNode collector in nodes.Values)
-            {
-                if (collector.Kind == CharacterPoseNodeKind.PoseHistoryCollector &&
-                    !collectorOwners.ContainsKey(collector.NodeId))
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Pose History Collector '{collector.NodeId}' has no Motion Matching owner.",
-                        graph.GraphId,
-                        collector.NodeId);
-                }
-            }
-        }
-
         static HashSet<PoseParameterId> ValidateParameters(
             CharacterPoseCanvasGraph graph,
             CharacterPoseGraphValidationReport report)
@@ -1338,17 +1252,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         edge.TargetNodeId,
                         edge.TargetPortId);
                 }
-                if (source.Kind != CharacterPosePortKind.PoseHistory)
-                {
-                    Add(
-                        adjacency,
-                        edge.SourceNodeId,
-                        edge.TargetNodeId);
-                    Add(
-                        reverse,
-                        edge.TargetNodeId,
-                        edge.SourceNodeId);
-                }
+                Add(
+                    adjacency,
+                    edge.SourceNodeId,
+                    edge.TargetNodeId);
+                Add(
+                    reverse,
+                    edge.TargetNodeId,
+                    edge.SourceNodeId);
             }
             foreach (CharacterPoseCanvasNode node in nodes.Values)
             {
@@ -1384,7 +1295,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 goalConsumerCounts,
                 requireFullBodyIk,
                 report);
-            ValidateMotionMatchingTopology(graph, nodes, report);
             DetectCycles(
                 graph.GraphId.Value,
                 nodes.Keys,

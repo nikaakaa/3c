@@ -154,8 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var managedHandlers = new CharacterPoseNativeManagedHandlerComposition(
                 ThrowLinkedPose,
                 ThrowMotionMatching,
-                (node, context) => new CharacterPoseHistoryId($"history/{node.NodeId}"),
-                ThrowHistorySource,
                 ThrowEntryPose,
                 (node, context) => requestId,
                 (node, context) => AllocateSubgraphInstanceId(instanceId, node.NodeId.Value),
@@ -838,11 +836,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasNode node,
             CharacterPoseNativeInstanceContext context) =>
             throw new InvalidOperationException($"Motion Matching source '{node.NodeId}' is not assembled.");
-
-        static ICharacterPoseNativeHistoryCollectorSource ThrowHistorySource(
-            CharacterPoseCanvasNode node,
-            CharacterPoseNativeInstanceContext context) =>
-            throw new InvalidOperationException($"Pose History collector '{node.NodeId}' is not assembled.");
 
         static ICharacterPoseNativeEntryPoseSource ThrowEntryPose(
             CharacterPoseCanvasNode node,

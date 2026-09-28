@@ -160,11 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             $"{graph.GraphId}/{targetKey}",
                             "Pose input port has more than one connection.");
                     }
-                    if (sourcePort.Kind != CharacterPosePortKind.PoseHistory)
-                    {
-                        if (outgoing[source.NodeId].Add(target.NodeId))
-                            indegree[target.NodeId]++;
-                    }
+                    if (outgoing[source.NodeId].Add(target.NodeId))
+                        indegree[target.NodeId]++;
                 }
 
                 foreach (CharacterPoseCanvasNode node in nodes)

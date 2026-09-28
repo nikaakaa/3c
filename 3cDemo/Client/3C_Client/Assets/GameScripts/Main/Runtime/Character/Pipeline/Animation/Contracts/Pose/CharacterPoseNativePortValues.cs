@@ -509,66 +509,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal sealed class CharacterPoseNativeHistoryValue : CharacterPoseNativePortValue
-    {
-        internal CharacterPoseNativeHistoryValue(
-            PoseNodeId producerNodeId,
-            ulong completionIdentity,
-            CharacterPoseHistoryReadView value)
-            : base(producerNodeId, completionIdentity)
-        {
-            if (!value.IsValid)
-                throw new ArgumentException("Pose native history value is invalid.");
-            Value = value;
-        }
-
-        internal CharacterPoseHistoryReadView Value { get; private set; }
-
-        internal static CharacterPoseNativeHistoryValue Reuse(
-            CharacterPoseNativeHistoryValue value,
-            PoseNodeId producerNodeId,
-            ulong completionIdentity,
-            CharacterPoseHistoryReadView history)
-        {
-            if (value == null)
-                return new CharacterPoseNativeHistoryValue(
-                    producerNodeId,
-                    completionIdentity,
-                    history);
-            value.Refresh(producerNodeId, completionIdentity, history);
-            return value;
-        }
-
-        void Refresh(
-            PoseNodeId producerNodeId,
-            ulong completionIdentity,
-            CharacterPoseHistoryReadView history)
-        {
-            if (!producerNodeId.IsValid || completionIdentity == 0)
-                throw new ArgumentException("Pose native port value identity is invalid.");
-            if (!history.IsValid)
-                throw new ArgumentException("Pose native history value is invalid.");
-            SetIdentity(producerNodeId, completionIdentity);
-            Value = history;
-        }
-    }
-
-    internal sealed class CharacterPoseNativeTrajectoryValue : CharacterPoseNativePortValue
-    {
-        internal CharacterPoseNativeTrajectoryValue(
-            PoseNodeId producerNodeId,
-            ulong completionIdentity,
-            CharacterMotionMatchingTrajectoryReadView value)
-            : base(producerNodeId, completionIdentity)
-        {
-            if (!value.IsValid)
-                throw new ArgumentException("Pose native trajectory value is invalid.");
-            Value = value;
-        }
-
-        internal CharacterMotionMatchingTrajectoryReadView Value { get; }
-    }
-
     internal sealed class CharacterPoseNativeFactsValue : CharacterPoseNativePortValue
     {
         internal CharacterPoseNativeFactsValue(

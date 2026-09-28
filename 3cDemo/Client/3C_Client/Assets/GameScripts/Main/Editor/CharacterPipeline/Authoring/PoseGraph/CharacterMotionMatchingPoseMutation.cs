@@ -42,25 +42,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return transaction;
         }
 
-        public static CharacterPresentationMutationTransaction CreateCollector(
-            PoseGraphId stateGraphId,
-            PoseNodeId nodeId,
-            CharacterPoseHistoryId historyId,
-            Vector2 position)
-        {
-            var transaction = new CharacterPresentationMutationTransaction(
-                $"create-pose-history-collector/{nodeId.Value}",
-                "Create Pose History Collector");
-            transaction.Add(new CreatePoseNodeMutation(
-                stateGraphId.Value,
-                new CharacterPoseCanvasNode(
-                    nodeId,
-                    "Pose History Collector",
-                    new CharacterPoseHistoryCollectorPayload(historyId)),
-                position));
-            return transaction;
-        }
-
         public static CharacterPresentationMutationTransaction ConfigurePose(
             PoseGraphId stateGraphId,
             PoseNodeId nodeId,
@@ -214,11 +195,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 field == "entry-graph-id" ? new PoseGraphId(Convert.ToString(value)) : current.EntryGraph.PoseGraphId,
                 field == "relevance-reset-policy" ? EnumValue<CharacterMotionMatchingRelevanceResetPolicy>(value) : current.RelevanceResetPolicy,
                 field == "search-cadence-policy" ? EnumValue<CharacterMotionMatchingSearchCadencePolicy>(value) : current.SearchCadencePolicy);
-
-        internal static CharacterPoseNodePayload Set(CharacterPoseHistoryCollectorPayload current, string field, object value) =>
-            field == "history-id"
-                ? new CharacterPoseHistoryCollectorPayload(new CharacterPoseHistoryId(Convert.ToString(value)))
-                : throw new InvalidOperationException($"Pose History Collector does not declare writable field '{field}'.");
 
         static T Require<T>(object value, string field) where T : UnityEngine.Object =>
             value is T typed

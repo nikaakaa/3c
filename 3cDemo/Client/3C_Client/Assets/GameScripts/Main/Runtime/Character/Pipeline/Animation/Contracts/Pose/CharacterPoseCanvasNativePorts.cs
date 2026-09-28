@@ -31,8 +31,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 [CharacterPosePortKind.ActionPlayback] = Registration<CharacterPoseNativeActionPlaybackValue>(),
                 [CharacterPosePortKind.FullBodyIkGoals] = Registration<CharacterPoseNativeFullBodyIkGoalsValue>(),
                 [CharacterPosePortKind.FullBodyIkGoalContribution] = Registration<CharacterPoseNativeGoalContributionValue>(),
-                [CharacterPosePortKind.PoseHistory] = Registration<CharacterPoseNativeHistoryValue>(),
-                [CharacterPosePortKind.Trajectory] = Registration<CharacterPoseNativeTrajectoryValue>(),
                 [CharacterPosePortKind.PresentationFacts] = Registration<CharacterPoseNativeFactsValue>(),
                 [CharacterPosePortKind.MotionMatchingBinding] = Registration<CharacterPoseNativeMotionMatchingBindingValue>()
             };
@@ -198,14 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 case CharacterPoseNodeKind.FullBodyIkGoalAssembler:
                     ports.Add(Out("goals", "Full Body IK Goals", CharacterPosePortKind.FullBodyIkGoals));
                     break;
-                case CharacterPoseNodeKind.PoseHistoryCollector:
-                    ports.Add(In("pose.local.input", "Local Pose", CharacterPosePortKind.LocalPose));
-                    ports.Add(Out("pose.local", "Local Pose", CharacterPosePortKind.LocalPose));
-                    ports.Add(Out("history.pose", "Previous Pose History", CharacterPosePortKind.PoseHistory));
-                    break;
                 case CharacterPoseNodeKind.MotionMatchingPose:
-                    ports.Add(In("history.pose", "Previous Pose History", CharacterPosePortKind.PoseHistory));
-                    ports.Add(In("trajectory.query", "Trajectory", CharacterPosePortKind.Trajectory, false));
                     ports.Add(In("presentation.facts", "Presentation Facts", CharacterPosePortKind.PresentationFacts, false));
                     ports.Add(In("motion-matching.binding", "Binding", CharacterPosePortKind.MotionMatchingBinding, false));
                     ports.Add(Out("pose.local", "Local Pose", CharacterPosePortKind.LocalPose));

@@ -56,36 +56,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 creator.Create);
         }
 
-        internal static void RegisterHistoryCollector(
-            this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
-                CharacterPoseHistoryId> historyIdFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
-                ICharacterPoseNativeHistoryCollectorSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
-                CharacterPoseNativeNodePoseBuffer>
-                bufferFactory)
-        {
-            RequireArguments(registry, sourceFactory, bufferFactory);
-            if (historyIdFactory == null)
-                throw new ArgumentNullException(nameof(historyIdFactory));
-            var creator = new Creator((node, context) =>
-                CreateSourceHandler(
-                    node,
-                    in context,
-                    sourceFactory,
-                    bufferFactory,
-                    (value, source, buffer) =>
-                        new CharacterPoseNativeHistoryCollectorHandler(
-                            value.NodeId,
-                            historyIdFactory(value, context),
-                            source,
-                            buffer)));
-            registry.Register(
-                CharacterPoseNodeKind.PoseHistoryCollector,
-                creator.Create);
-        }
-
         internal static void RegisterEntryPose(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,

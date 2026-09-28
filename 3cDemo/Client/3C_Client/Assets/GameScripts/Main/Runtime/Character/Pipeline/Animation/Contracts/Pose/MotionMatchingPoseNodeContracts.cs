@@ -6,32 +6,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public static class CharacterMotionMatchingPoseNodeKinds
     {
         public const CharacterPoseNodeKind MotionMatchingPose = CharacterPoseNodeKind.MotionMatchingPose;
-        public const CharacterPoseNodeKind PoseHistoryCollector = CharacterPoseNodeKind.PoseHistoryCollector;
         public const CharacterPoseNodeKind EntryPoseInput = CharacterPoseNodeKind.EntryPoseInput;
     }
 
     public static class CharacterMotionMatchingPosePorts
     {
-        public static readonly PosePortId History = new PosePortId("history.pose");
-        public static readonly PosePortId Trajectory = new PosePortId("trajectory.query");
         public static readonly PosePortId Facts = new PosePortId("presentation.facts");
         public static readonly PosePortId Binding = new PosePortId("motion-matching.binding");
         public static readonly PosePortId LocalPoseInput = new PosePortId("pose.local.input");
         public static readonly PosePortId LocalPoseOutput = new PosePortId("pose.local");
-    }
-
-    public readonly struct CharacterPoseHistoryId : IEquatable<CharacterPoseHistoryId>, IComparable<CharacterPoseHistoryId>
-    {
-        public CharacterPoseHistoryId(string value) => Value = PoseIdentity.Require(value, nameof(value));
-        public string Value { get; }
-        public bool IsValid => !string.IsNullOrEmpty(Value);
-        public int CompareTo(CharacterPoseHistoryId other) => string.CompareOrdinal(Value, other.Value);
-        public bool Equals(CharacterPoseHistoryId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
-        public override bool Equals(object obj) => obj is CharacterPoseHistoryId other && Equals(other);
-        public override int GetHashCode() => Value == null ? 0 : StringComparer.Ordinal.GetHashCode(Value);
-        public override string ToString() => Value ?? string.Empty;
-        public static bool operator ==(CharacterPoseHistoryId left, CharacterPoseHistoryId right) => left.Equals(right);
-        public static bool operator !=(CharacterPoseHistoryId left, CharacterPoseHistoryId right) => !left.Equals(right);
     }
 
     public enum CharacterMotionMatchingRelevanceResetPolicy : byte
@@ -95,24 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(parameterName);
             return value;
         }
-    }
-
-    [Serializable]
-    public sealed class CharacterPoseHistoryCollectorPayload : CharacterPoseNodePayload
-    {
-        [SerializeField] string m_HistoryId = string.Empty;
-
-        public override CharacterPoseNodeKind Kind => CharacterMotionMatchingPoseNodeKinds.PoseHistoryCollector;
-        public CharacterPoseHistoryId HistoryId => string.IsNullOrWhiteSpace(m_HistoryId)
-            ? default
-            : new CharacterPoseHistoryId(m_HistoryId);
-
-        public CharacterPoseHistoryCollectorPayload() { }
-
-        public CharacterPoseHistoryCollectorPayload(CharacterPoseHistoryId historyId) =>
-            m_HistoryId = historyId.IsValid
-                ? historyId.Value
-                : throw new ArgumentException("Pose History identity is invalid.", nameof(historyId));
     }
 
     [Serializable]

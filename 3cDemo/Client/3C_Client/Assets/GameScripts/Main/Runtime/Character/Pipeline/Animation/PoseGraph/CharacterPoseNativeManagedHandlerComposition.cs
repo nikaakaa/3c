@@ -7,8 +7,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeLinkedPoseSource> m_LinkedPoseSourceFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeMotionMatchingSource> m_MotionMatchingSourceFactory;
-        readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, CharacterPoseHistoryId> m_HistoryIdFactory;
-        readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeHistoryCollectorSource> m_HistorySourceFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeEntryPoseSource> m_EntryPoseSourceFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong> m_SubgraphRequestIdFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong> m_SubgraphInstanceIdFactory;
@@ -21,8 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeManagedHandlerComposition(
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeLinkedPoseSource> linkedPoseSourceFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeMotionMatchingSource> motionMatchingSourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, CharacterPoseHistoryId> historyIdFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeHistoryCollectorSource> historySourceFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ICharacterPoseNativeEntryPoseSource> entryPoseSourceFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong> subgraphRequestIdFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong> subgraphInstanceIdFactory,
@@ -34,8 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_LinkedPoseSourceFactory = linkedPoseSourceFactory ?? throw new ArgumentNullException(nameof(linkedPoseSourceFactory));
             m_MotionMatchingSourceFactory = motionMatchingSourceFactory ?? throw new ArgumentNullException(nameof(motionMatchingSourceFactory));
-            m_HistoryIdFactory = historyIdFactory ?? throw new ArgumentNullException(nameof(historyIdFactory));
-            m_HistorySourceFactory = historySourceFactory ?? throw new ArgumentNullException(nameof(historySourceFactory));
             m_EntryPoseSourceFactory = entryPoseSourceFactory ?? throw new ArgumentNullException(nameof(entryPoseSourceFactory));
             m_SubgraphRequestIdFactory = subgraphRequestIdFactory ?? throw new ArgumentNullException(nameof(subgraphRequestIdFactory));
             m_SubgraphInstanceIdFactory = subgraphInstanceIdFactory ?? throw new ArgumentNullException(nameof(subgraphInstanceIdFactory));
@@ -55,10 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BufferFactory);
             registry.RegisterMotionMatching(
                 m_MotionMatchingSourceFactory,
-                m_BufferFactory);
-            registry.RegisterHistoryCollector(
-                m_HistoryIdFactory,
-                m_HistorySourceFactory,
                 m_BufferFactory);
             registry.RegisterEntryPose(
                 m_EntryPoseSourceFactory,

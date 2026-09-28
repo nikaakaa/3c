@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterMotionMatchingPosePayload>(CharacterPoseNodeKind.MotionMatchingPose, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Motion Matching Pose", "Sources", SourceColor,
                 Fields(ResourceField("binding", "Motion Matching Binding"), ResourceField("jump-blend-policy", "Jump Blend Policy"), ReferenceIdentityField("entry-graph-id", "Entry Processing Graph", "pose-graph"), TypedEnumField("relevance-reset-policy", "Relevance Reset", typeof(CharacterMotionMatchingRelevanceResetPolicy)), TypedEnumField("search-cadence-policy", "Search Cadence", typeof(CharacterMotionMatchingSearchCadencePolicy))),
-                Ports(In("history.pose", "Previous Pose History", "pose.history"), OptionalIn("trajectory.query", "Trajectory", "motion-matching.trajectory"), OptionalIn("presentation.facts", "Presentation Facts", "presentation.facts"), OptionalIn("motion-matching.binding", "Binding", "motion-matching.binding"), Out("pose.local", "Local Pose", "pose.local")),
+                Ports(OptionalIn("presentation.facts", "Presentation Facts", "presentation.facts"), OptionalIn("motion-matching.binding", "Binding", "motion-matching.binding"), Out("pose.local", "Local Pose", "pose.local")),
                 childSurfaces: new[] { Child("open-entry-processing-graph", "Open Entry Processing Graph", CharacterPoseGraphAuthoringCapabilities.Subgraph) },
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture);
 
@@ -67,32 +67,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Validate(payload, sourcePath);
             payload.RequireValid();
         }
-    }
-
-    internal sealed class CharacterPoseHistoryCollectorNodeDefinition :
-        CharacterPoseNodeDefinition<CharacterPoseHistoryCollectorPayload>
-    {
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseHistoryCollector;
-        public override GraphAuthoringCapabilityDescriptor Declare() =>
-            Node<CharacterPoseHistoryCollectorPayload>(CharacterPoseNodeKind.PoseHistoryCollector, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Pose History Collector", "Sources", SourceColor,
-                Fields(Field("history-id", "History", GraphAuthoringFieldValueKind.IdentityReference, "pose-history")),
-                Ports(In("pose.local.input", "Local Pose", "pose.local"), Out("pose.local", "Local Pose", "pose.local"), Out("history.pose", "Previous Pose History", "pose.history")),
-                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
-
-        public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterPoseHistoryCollectorPayload(
-                new CharacterPoseHistoryId(input.Require<string>("history-id")));
-
-        protected override object ReadField(CharacterPoseHistoryCollectorPayload payload, string field) =>
-            field == "history-id"
-                ? payload.HistoryId.Value
-                : base.ReadField(payload, field);
-
-        protected override void Validate(CharacterPoseHistoryCollectorPayload payload, string sourcePath) =>
-            CharacterPoseNodeDefinitionValidation.Require(
-                payload.HistoryId.IsValid,
-                sourcePath,
-                "Pose History identity is missing.");
     }
 
     internal sealed class CharacterEntryPoseInputNodeDefinition :

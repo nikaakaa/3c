@@ -65,8 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPosePortKind.FullBodyIkGoals,
                 "component.full-body-ik-goal-contribution" =>
                     CharacterPosePortKind.FullBodyIkGoalContribution,
-                "pose.history" => CharacterPosePortKind.PoseHistory,
-                "motion-matching.trajectory" => CharacterPosePortKind.Trajectory,
                 "presentation.facts" => CharacterPosePortKind.PresentationFacts,
                 "motion-matching.binding" => CharacterPosePortKind.MotionMatchingBinding,
                 _ => throw new InvalidOperationException(
@@ -88,8 +86,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "component.full-body-ik-goals",
                 CharacterPosePortKind.FullBodyIkGoalContribution =>
                     "component.full-body-ik-goal-contribution",
-                CharacterPosePortKind.PoseHistory => "pose.history",
-                CharacterPosePortKind.Trajectory => "motion-matching.trajectory",
                 CharacterPosePortKind.PresentationFacts => "presentation.facts",
                 CharacterPosePortKind.MotionMatchingBinding => "motion-matching.binding",
                 _ => throw new InvalidOperationException(

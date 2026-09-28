@@ -372,7 +372,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new CharacterFullBodyIkGoalAssemblerNodeDefinition(),
                 new CharacterLinkedPoseCallNodeDefinition(),
                 new CharacterMotionMatchingPoseNodeDefinition(),
-                new CharacterPoseHistoryCollectorNodeDefinition(),
                 new CharacterEntryPoseInputNodeDefinition()
             };
             m_Definitions = new Dictionary<CharacterPoseNodeKind,

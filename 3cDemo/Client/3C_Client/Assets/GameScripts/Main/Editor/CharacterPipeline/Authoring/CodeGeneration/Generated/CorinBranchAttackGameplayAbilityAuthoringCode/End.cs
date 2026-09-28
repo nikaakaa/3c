@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
@@ -9,7 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             var parts = new EndParts();
             parts.graph5 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "a4b4718d-7de3-3f0a-2503-a5e11098eb21", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "ExplodeComplete Condition");
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge3, parts.graph5, 0, ProgramAbortPolicy.None, 0);
             parts.graph7 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "bfd4da16-db48-e661-9a5a-fa1f4a1471cc", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "EndComplete Condition");
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge4, parts.graph7, 0, ProgramAbortPolicy.None, 0);
             var node18 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph5, typeof(BtsmtlSkillConditionResultFlowNode), "8b6167f3-dba9-4215-33a6-12a02c05cc15", "条件结果", new Vector2(600f, 180f));
             var node17 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph5, typeof(BtsmtlSkillStateRootCompletedFlowNode), "c14c347d-5d46-9afa-8328-042449d0ffac", "状态主体已完成", new Vector2(-360f, 0f));
             var node24 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph7, typeof(BtsmtlSkillConditionResultFlowNode), "39f055ab-f09a-4d45-18d1-bb92b0bfedcf", "条件结果", new Vector2(600f, 180f));

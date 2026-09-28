@@ -74,23 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 EditorUtility.SetDirty(float32Assets[i]);
                 EditorUtility.SetDirty(fixedAssets[i]);
             }
-            var configuredTimelines = definition.ControlMotionTimelines;
-            var allTimelines = new List<TimelineAsset>(configuredTimelines.Count + abilityTimelines.Count);
-            var timelineIdentities = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < abilityTimelines.Count; i++)
-                if (timelineIdentities.Add(abilityTimelines[i].Data.AuthoringId))
-                    allTimelines.Add(abilityTimelines[i]);
-            for (int i = 0; i < configuredTimelines.Count; i++)
-            {
-                TimelineAsset timeline = configuredTimelines[i];
-                if (!timeline || timeline.Data == null)
-                    throw new InvalidOperationException($"Character Pipeline Definition '{definition.name}' has an invalid configured Timeline.");
-                if (timelineIdentities.Add(timeline.Data.AuthoringId))
-                    allTimelines.Add(timeline);
-            }
             definition.SetFloat32AbilityData(float32Assets);
             definition.SetFixedAbilityData(fixedAssets);
-            definition.SetControlMotionTimelines(allTimelines);
+            MergeTimelines(definition, abilityTimelines);
             EditorUtility.SetDirty(definition);
             AssetDatabase.SaveAssets();
             for (int i = 0; i < compiled.Count; i++)
@@ -123,6 +109,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (remaining.Count != 0)
                 throw new InvalidOperationException($"Definition '{definition.name}' does not grant every selected Ability.");
             compiled.Sort((left, right) => string.CompareOrdinal(left.Float32Path, right.Float32Path));
+            var abilityTimelines = new List<TimelineAsset>();
+            for (int i = 0; i < compiled.Count; i++)
+                abilityTimelines.AddRange(compiled[i].Timelines);
 
             var float32Assets = new GameplayAbilityDataAsset[compiled.Count];
             var fixedAssets = new FixedGameplayAbilityDataAsset[compiled.Count];
@@ -146,6 +135,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 AssetDatabase.ImportAsset(compiled[i].Float32Path, ImportAssetOptions.ForceUpdate);
                 AssetDatabase.ImportAsset(compiled[i].FixedPath, ImportAssetOptions.ForceUpdate);
             }
+            MergeTimelines(definition, abilityTimelines);
+            EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssetIfDirty(definition);
+        }
+
+        static void MergeTimelines(CharacterPipelineDefinition definition, IReadOnlyList<TimelineAsset> abilityTimelines)
+        {
+            var configuredTimelines = definition.ControlMotionTimelines;
+            var allTimelines = new List<TimelineAsset>(configuredTimelines.Count + abilityTimelines.Count);
+            var timelineIdentities = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < abilityTimelines.Count; i++)
+                if (timelineIdentities.Add(abilityTimelines[i].Data.AuthoringId))
+                    allTimelines.Add(abilityTimelines[i]);
+            for (int i = 0; i < configuredTimelines.Count; i++)
+            {
+                TimelineAsset timeline = configuredTimelines[i];
+                if (!timeline || timeline.Data == null)
+                    throw new InvalidOperationException($"Character Pipeline Definition '{definition.name}' has an invalid configured Timeline.");
+                if (timelineIdentities.Add(timeline.Data.AuthoringId))
+                    allTimelines.Add(timeline);
+            }
+            definition.SetControlMotionTimelines(allTimelines);
         }
 
         static CompiledAbility CompileAbility(

@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using FlowCanvas.Nodes;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
@@ -10,7 +11,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             var parts = new ExplodeParts();
             parts.graph2 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "df4ce173-d799-01fd-09d6-3ccf61ee49f1", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "StartRelease Condition");
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge1, parts.graph2, 100, ProgramAbortPolicy.None, 0);
             parts.graph9 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "14146bd4-eb66-78cb-9321-8b3f39bccad8", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Release Condition");
+            BtsmtlSkillAuthoringContract.ConfigureConnection(rootParts.stateEdge5, parts.graph9, 100, ProgramAbortPolicy.None, 0);
             var node6 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph2, typeof(BtsmtlSkillBooleanInputFlowNode), "03f3919f-1ae9-11dd-3bb6-1b317fd53755", "BranchHeld", new Vector2(-520f, 0f));
             var node8 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph2, typeof(BtsmtlSkillNativeNodeWrapper<AND>), "7a4e9072-0daf-449c-3623-85a81e4fa46a", "AND", new Vector2(200f, 100f));
             var node7 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph2, typeof(BtsmtlSkillNativeNodeWrapper<NOT>), "86908c72-bc7f-6759-9380-6045b8e17c75", "NOT", new Vector2(-240f, 0f));

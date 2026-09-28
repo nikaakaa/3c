@@ -17,10 +17,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var asset10 = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/BranchAttack/CorinBranchLoopTimeline.asset", 11400000L);
             var asset11 = context.ResolveExternalAsset<TimelineAsset>("Assets/Configs/Character/Corin/Pipeline/Timelines/BranchAttack/CorinBranchWalkTimeline.asset", 11400000L);
             parts.graph1 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "00f20065-267d-9b0f-3b16-3671c867525f", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Start State Body");
+            BtsmtlSkillAuthoringCode.ConfigureNativeState(rootParts.state1, parts.graph1);
             parts.graph4 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "dba3170e-4eeb-d46a-75d5-da4bc64fc6b2", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Explode State Body");
+            BtsmtlSkillAuthoringCode.ConfigureNativeState(rootParts.state2, parts.graph4);
             parts.graph6 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "5eb55018-0efe-f2bf-fa7d-84438caf8433", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "End State Body");
+            BtsmtlSkillAuthoringCode.ConfigureNativeState(rootParts.state3, parts.graph6);
             parts.graph8 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "f919f518-17f1-3b53-9319-8e1edba3f827", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Loop State Body");
+            BtsmtlSkillAuthoringCode.ConfigureNativeState(rootParts.state5, parts.graph8);
             parts.graph11 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "d4dc4405-5666-3cd9-7877-d776f1aefe5a", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Walk State Body");
+            BtsmtlSkillAuthoringCode.ConfigureNativeState(rootParts.state6, parts.graph11);
             var node5 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillStateOnExitFlowNode), "29fb343e-c67c-2f9c-d218-b1ad2df26835", "退出状态", new Vector2(120f, 460f));
             var node2 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillStateOnEnterFlowNode), "4ab87d0d-e5a7-4e50-e2df-544301e7f0fc", "进入状态", new Vector2(120f, 60f));
             var node3 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillRootFlowNode), "95386920-cebd-2d3c-f221-a2f33bba5f76", "技能入口", new Vector2(120f, 260f));

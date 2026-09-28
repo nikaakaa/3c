@@ -803,11 +803,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!sourceId.IsValid)
                 throw new ArgumentException("Predicted foot step pose source identity is invalid.", nameof(sourceId));
-            ulong value = HashText(sourceId.ToString());
-            return string.IsNullOrEmpty(discriminator)
-                ? value
-                : Hash(value, HashText(discriminator), 0, 0, 0);
+            return SourceIdentity(HashText(sourceId.ToString()), discriminator);
         }
+
+        public static ulong SourceIdentity(ulong sourceIdentity, string discriminator) =>
+            string.IsNullOrEmpty(discriminator)
+                ? sourceIdentity
+                : Hash(sourceIdentity, HashText(discriminator), 0, 0, 0);
 
         public static ulong SourceIdentity(string stableIdentity)
         {

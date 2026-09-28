@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal ulong ResetSequence;
             internal ulong NextResetSequence;
             internal AnimationPoseSourceId SourceId;
+            internal ulong PredictionSourceIdentity;
             internal PoseDiscontinuityEndpoint Endpoint;
             internal PoseDiscontinuityResetReason
                 PendingResetReason;
@@ -91,7 +92,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         ulong m_NextEventIdentity { get => ActiveState.NextEventIdentity; set => ActiveState.NextEventIdentity = value; }
         ulong m_ResetSequence { get => ActiveState.ResetSequence; set => ActiveState.ResetSequence = value; }
         ulong m_NextResetSequence { get => ActiveState.NextResetSequence; set => ActiveState.NextResetSequence = value; }
-        AnimationPoseSourceId m_SourceId { get => ActiveState.SourceId; set => ActiveState.SourceId = value; }
+        AnimationPoseSourceId m_SourceId
+        {
+            get => ActiveState.SourceId;
+            set
+            {
+                ref State state = ref ActiveState;
+                state.SourceId = value;
+                state.PredictionSourceIdentity = value.IsValid
+                    ? AnimationPredictedFootStepSample.SourceIdentity(value)
+                    : 0;
+            }
+        }
         PoseDiscontinuityEndpoint m_Endpoint { get => ActiveState.Endpoint; set => ActiveState.Endpoint = value; }
         PoseDiscontinuityResetReason m_PendingResetReason { get => ActiveState.PendingResetReason; set => ActiveState.PendingResetReason = value; }
         CharacterAnimationBlendSpaceCanonicalPhase m_CanonicalPhase { get => ActiveState.CanonicalPhase; set => ActiveState.CanonicalPhase = value; }
@@ -411,15 +423,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 footPlacementWeight += sample.SampleFootPlacementWeight(time.NormalizedTime) * weight;
                 if (sample.HasFootFeatures)
                 {
+                    ulong predictionSourceIdentity = AnimationPredictedFootStepSample.SourceIdentity(
+                        ActiveState.PredictionSourceIdentity, sample.SampleId.Value);
                     left.Add(
                         sample.LeftFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
-                            AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
+                            predictionSourceIdentity,
                             time.Cycle),
                         weight,
                         1f);
                     right.Add(
                         sample.RightFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
-                            AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
+                            predictionSourceIdentity,
                             time.Cycle),
                         weight,
                         1f);

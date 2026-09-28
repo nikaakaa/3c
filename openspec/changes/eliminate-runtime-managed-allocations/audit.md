@@ -319,6 +319,13 @@
 - 已核对 PhasePlan.Create 保持 Samples 顺序，两个成功的 PhaseMapper 路径均按该顺序完整写 TimePage。参数计算仍按原活动权重顺序累加；Unavailable 不参与，RequireAllSamplesWeighted 仍只在缺参样本实际激活时失败，未提前拒绝永不激活的缺参样本。缺失参数策略在装配期明确报错。
 - 常驻代价为一张索引字典、活动位置数组和非动画属性参数的样本值表；无每帧分配、跨帧权重缓存或配置 fallback。删除仅用于该链路的 FindTime/FindSampleIndex 和动画属性自赋值。未编译、未运行。
 
+### AP34 足部预测来源身份逐帧格式化字符串（2026-09-29，已实施，未运行）
+
+- Clip Player 每次采样左右脚、BlendSpace 每次采样每个活动样本的左右脚，都调用 SourceIdentity(AnimationPoseSourceId)，内部先 ToString 再 HashText，包含插值字符串和枚举/数值格式化。
+- Player 在 SourceId 生成或清除时同时更新 PredictionSourceIdentity，保存于原 committed/pending State 内。BeginFrame、Commit、Discard、Reset 继续整体复制或清除该 State，来源身份与其哈希不会跨事务错配。来源代次变更时仍使用原字符串算法一次，不更改既有事件身份。
+- BlendSpace 将已解析来源身份与样本 discriminator 按原 Hash 公式组合，一次结果同时交给左右脚。删除逐脚重复格式化；不修改最终 landing identity、相位或周期。来源切换仍可能产生一次字符串分配，本项只消除稳定播放期间该调用的周期分配，不能宣称整条链路 0 GC。
+- 静态核对全部 SourceId 写入点、State 页复制与哈希组合顺序；未编译、未运行。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。
@@ -328,6 +335,10 @@
 - AP05 的创建策略、AP07 的采样裁剪、AP08 的页共享需要保持正式生命周期及业务合同，不设临时旁路。AP11 的提交证明已按用户的采样隔离要求拆分。
 
 ## 后续证据范围
+
+2026-09-29 已取得一份优化前 Player 实测：`capture.20260928-161732.1d0ec10f9dd94ede8de4ab5b205bc7f2`，位于项目 `Library/Performance/Captures/`，总览为 `Library/Performance/Reports/overall-performance-20260929.md`。双角色、1920×1080、关闭 VSync 与 FPS 上限，完整采集约101.49 FPS，主线程均值9.82 ms、P95 13.17 ms，GC.Alloc 均值约99.8 KiB/帧。`presentation.animation` 包含整个表现域，均值约5.44 ms/帧；Pose Evaluate 累计约2.80 ms/帧包含嵌套图，不能与父级直接相加。GC 含回放与诊断开销，原生调用栈约70.25%未解析，尚不能完整归因。
+
+上述是 AP30–AP34 修改前的单次观测，不是本轮优化后的收益证明。当前用户要求静态检查，不启动编译或采样，并限制后续性能采样最多两次；本轮新增采样次数为0。此前条目的“未实跑”只表示各条改动缺少独立前后验证，不再表示项目从未取得 Player 性能数据。
 
 当前已覆盖 EventGraph → Pose 输入 → 图/子图准备 → 混合/惯性/变换 → ACL 输入设置 → Final Pose 写回，以及足部支撑选择与动作来源解析。没有新增性能采集链。
 

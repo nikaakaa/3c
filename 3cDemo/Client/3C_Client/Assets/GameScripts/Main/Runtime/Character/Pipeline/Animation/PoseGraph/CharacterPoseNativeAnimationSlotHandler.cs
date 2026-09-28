@@ -423,10 +423,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             BlendParameters(in source, in action, sourceGlobalWeight, actionGlobalWeight);
             int count = 0;
-            NativeSlice<int> outputCount = m_WriteBinding.ContributionCount;
             AppendContributions(in source, sourceGlobalWeight, ref count);
             AppendContributions(in action, actionGlobalWeight, ref count);
-            outputCount[0] = count;
+            CharacterPoseNativePoseBufferCopy.CompleteContributions(in m_WriteBinding, count);
             m_WriteBinding.OutputWeight[0] = Mathf.Clamp01(
                 source.OutputWeight[0] + action.OutputWeight[0]);
             BlendFeet(in source, in action, sourceGlobalWeight, actionGlobalWeight);
@@ -538,6 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Animation Slot '{NodeId}' contribution capacity was exceeded.");
                 AnimationPrimitivePoseContribution value =
                     input.Contributions[contribution];
+                CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
                 output[outputCount] = new AnimationPrimitivePoseContribution(
                     value.PhysicalPlayerIndex,
                     value.PhysicalSourceIndex,

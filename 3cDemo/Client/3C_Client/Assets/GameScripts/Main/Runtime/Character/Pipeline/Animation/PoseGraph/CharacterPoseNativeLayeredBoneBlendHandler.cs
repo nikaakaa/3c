@@ -329,8 +329,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<float> outputParameters = m_WriteBinding.PoseParameters;
             NativeSlice<byte> outputParameterAvailability =
                 m_WriteBinding.PoseParameterAvailability;
-            NativeSlice<int> outputContributionCount =
-                m_WriteBinding.ContributionCount;
             NativeSlice<float> outputWeight = m_WriteBinding.OutputWeight;
             NativeSlice<AnimationPoseAvailability> outputAvailability =
                 m_WriteBinding.Availability;
@@ -432,8 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 totalGlobalWeight <= 0f ? 0f : overlayGlobalWeight / totalGlobalWeight,
                 true,
                 ref contributionCount);
-            outputContributionCount[0] = contributionCount;
-            CharacterPoseNativePoseBufferCopy.ClearContributionTail(in m_WriteBinding, contributionCount);
+            CharacterPoseNativePoseBufferCopy.CompleteContributions(in m_WriteBinding, contributionCount);
             outputWeight[0] = Mathf.Clamp01(totalGlobalWeight);
             BlendFeet(in basePose, in overlayPose, baseGlobalWeight, overlayGlobalWeight);
             outputAvailability[0] = AnimationPoseAvailability.Pose;
@@ -468,6 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (outputCount >= outputContributions.Length)
                     throw new InvalidOperationException(
                         $"Layered Bone Blend '{NodeId}' contribution capacity was exceeded.");
+                CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
                 outputContributions[outputCount] =
                     new AnimationPrimitivePoseContribution(
                         value.PhysicalPlayerIndex,

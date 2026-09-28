@@ -941,8 +941,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int count = 0;
             AppendContributions(in source, sourceWeight / totalWeight, ref count, output);
             AppendContributions(in target, targetWeight / totalWeight, ref count, output);
-            output.ContributionCount[0] = count;
-            CharacterPoseNativePoseBufferCopy.ClearContributionTail(in output, count);
+            CharacterPoseNativePoseBufferCopy.CompleteContributions(in output, count);
         }
 
         static void AppendContributions(
@@ -959,6 +958,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         "Pose StateMachine transition contribution capacity was exceeded.");
                 AnimationPrimitivePoseContribution value = input.Contributions[i];
+                CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in output, count + 1);
                 output.Contributions[count] = new AnimationPrimitivePoseContribution(
                     value.PhysicalPlayerIndex,
                     value.PhysicalSourceIndex,

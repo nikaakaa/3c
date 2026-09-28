@@ -45,7 +45,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.Contributions;
             NativeSlice<float> outputContributionWeights =
                 output.DenseContributionWeights;
-            NativeSlice<int> outputContributionCount = output.ContributionCount;
             NativeSlice<float> outputOutputWeight = output.OutputWeight;
             NativeSlice<AnimationFootFeatureSample> outputLeftFootFeatures =
                 output.LeftFootFeatures;
@@ -63,12 +62,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             outputParameters.CopyFrom(input.PoseParameters);
             outputParameterAvailability.CopyFrom(input.PoseParameterAvailability);
             int contributionCount = input.ContributionCount[0];
+            ExtendContributionPrefix(in output, contributionCount);
             outputContributions.Slice(0, contributionCount).CopyFrom(input.Contributions.Slice(0, contributionCount));
             int boneCount = output.DenseLocalPoses.Length;
             int weightCount = contributionCount * boneCount;
             outputContributionWeights.Slice(0, weightCount).CopyFrom(input.DenseContributionWeights.Slice(0, weightCount));
-            ClearContributionTail(in output, contributionCount);
-            outputContributionCount[0] = contributionCount;
+            CompleteContributions(in output, contributionCount);
             outputOutputWeight[0] = input.OutputWeight[0];
             outputLeftFootFeatures[0] = input.LeftFootFeatures[0];
             outputRightFootFeatures[0] = input.RightFootFeatures[0];
@@ -80,16 +79,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             outputCompletedAt[0] = input.CompletedAt[0];
         }
 
-        internal static void ClearContributionTail(
+        internal static void ExtendContributionPrefix(
             in AnimationPlayerPoseNativeWriteBinding output,
             int contributionCount)
         {
+            NativeSlice<int> count = output.ContributionCount;
+            if (contributionCount > count[0])
+                count[0] = contributionCount;
+        }
+
+        internal static void CompleteContributions(
+            in AnimationPlayerPoseNativeWriteBinding output,
+            int contributionCount)
+        {
+            // Pending writes retain their touched prefix until tail cleanup succeeds.
+            NativeSlice<int> count = output.ContributionCount;
+            int previousCount = count[0];
             NativeSlice<AnimationPrimitivePoseContribution> contributions = output.Contributions;
             NativeSlice<float> weights = output.DenseContributionWeights;
-            for (int i = contributionCount; i < contributions.Length; i++)
+            for (int i = contributionCount; i < previousCount; i++)
                 contributions[i] = default;
-            for (int i = contributionCount * output.DenseLocalPoses.Length; i < weights.Length; i++)
+            int boneCount = output.DenseLocalPoses.Length;
+            int previousWeightCount = previousCount * boneCount;
+            for (int i = contributionCount * boneCount; i < previousWeightCount; i++)
                 weights[i] = 0f;
+            count[0] = contributionCount;
         }
     }
 

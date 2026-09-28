@@ -332,6 +332,13 @@
 - 按当前 byte 枚举的连续取值范围进行原生比较，保留状态与失败码、资源是否存在的组合规则。MotionMatchingTrajectorySourceFrame 的两种来源枚举改为直接比较，保留输入合同；该分支未证明由当前 Corin 采集命中。
 - 只更改已确认的运行结果/帧构造路径，未为消除初始化分配去改 authoring 和编译器 Enum API。有效/无效取值集合不变，无新增防御检查。静态核对枚举定义和调用点，未编译或采样。
 
+### AP36 原生节点贡献页按最大容量清尾（2026-09-29，已实施，未运行）
+
+- 公共 CopyAttributes 及普通/分层 Blend、状态过渡原先每次清空 contributionCount 到容量末尾的所有贡献及逐骨权重。页面由 NodePoseBuffer 以 ClearMemory 创建，实际写入始终为连续前缀；空闲容量没有必要逐帧重新清零。
+- 沿用该页已有 ContributionCount：批量复制前或单条写入前，ExtendContributionPrefix 将计数扩大至本次可能触及的前缀；CompleteContributions 只清最终数量到该前缀上界的旧尾部，清理成功后再写最终数量。计数在未发布页内承担写入范围，发布后仍是正式贡献数量，没有新增缓存标志、第二计数或工作数组。
+- 已覆盖公共元数据复制、Blend、Layered、StateMachine 和 AnimationSlot 的逐项写入。后者原先未清旧尾部，现在采用同一完成入口。写入容量检查仍先于范围登记；构造单条贡献或复制权重中途失败时，范围已经登记，Discard 不交换 committed 页，后续复用仍能清掉半写数据。Stop/Reset 不清数据也不缩小这段范围；实际销毁沿原 NativeArray Dispose。
+- 静态检查了新页、数量增减、不变与归零、追加中途异常、重复 Discard 后复用及成功后再失败的路径；确认节点双页独立创建，惯性节点只改已完成前缀内的贡献。保留输出完成身份与发布时序。增加逐条写入时一次前缀比较，减少空闲容量清零；未编译或实测，不预判小容量下净收益。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

@@ -129,9 +129,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class CharacterPoseSourceBindingPage
     {
-        readonly CharacterPoseSourceBinding[] m_Direct;
-        readonly CharacterPoseSourceBinding[] m_Clip;
-        readonly CharacterPoseSourceBinding[] m_BlendSpace;
+        sealed class BindingTable
+        {
+            internal readonly CharacterPoseSourceBinding[] Values;
+            readonly int[] m_WrittenIndices;
+            int m_WrittenCount;
+
+            internal BindingTable(int capacity)
+            {
+                Values = new CharacterPoseSourceBinding[capacity];
+                m_WrittenIndices = new int[capacity];
+            }
+
+            internal void Bind(int index, in CharacterPoseSourceBinding binding)
+            {
+                if (!Values[index].PhysicalIdentity.IsValid)
+                    m_WrittenIndices[m_WrittenCount++] = index;
+                Values[index] = binding;
+            }
+
+            internal void Clear()
+            {
+                for (int i = 0; i < m_WrittenCount; i++)
+                    Values[m_WrittenIndices[i]] = default;
+                m_WrittenCount = 0;
+            }
+        }
+
+        readonly BindingTable m_Direct;
+        readonly BindingTable m_Clip;
+        readonly BindingTable m_BlendSpace;
         ulong m_CompletionIdentity;
 
         internal CharacterPoseSourceBindingPage(
@@ -139,12 +166,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int clipCapacity,
             int blendSpaceCapacity)
         {
-            m_Direct = new CharacterPoseSourceBinding[
-                RequireCapacity(directCapacity, nameof(directCapacity))];
-            m_Clip = new CharacterPoseSourceBinding[
-                RequireCapacity(clipCapacity, nameof(clipCapacity))];
-            m_BlendSpace = new CharacterPoseSourceBinding[
-                RequireCapacity(blendSpaceCapacity, nameof(blendSpaceCapacity))];
+            m_Direct = new BindingTable(
+                RequireCapacity(directCapacity, nameof(directCapacity)));
+            m_Clip = new BindingTable(
+                RequireCapacity(clipCapacity, nameof(clipCapacity)));
+            m_BlendSpace = new BindingTable(
+                RequireCapacity(blendSpaceCapacity, nameof(blendSpaceCapacity)));
         }
 
         internal ulong CompletionIdentity => m_CompletionIdentity;
@@ -174,35 +201,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Clear()
         {
-            Array.Clear(m_Direct, 0, m_Direct.Length);
-            Array.Clear(m_Clip, 0, m_Clip.Length);
-            Array.Clear(m_BlendSpace, 0, m_BlendSpace.Length);
+            m_Direct.Clear();
+            m_Clip.Clear();
+            m_BlendSpace.Clear();
             m_CompletionIdentity = 0;
         }
 
         void Bind(
-            CharacterPoseSourceBinding[] bindings,
+            BindingTable bindings,
             int index,
             in CharacterPoseSourceBinding binding)
         {
             if (m_CompletionIdentity == 0 || !binding.IsValid)
                 throw new InvalidOperationException(
                     "Pose source binding page is not open.");
-            bindings[index] = binding;
+            bindings.Bind(index, in binding);
         }
 
         CharacterPoseSourceBinding Require(
-            CharacterPoseSourceBinding[] bindings,
+            BindingTable bindings,
             int index,
             ulong completionIdentity)
         {
-            if ((uint)index >= (uint)bindings.Length ||
+            if ((uint)index >= (uint)bindings.Values.Length ||
                 !Matches(completionIdentity))
             {
                 throw new InvalidOperationException(
                     "Pose source binding request is stale.");
             }
-            CharacterPoseSourceBinding binding = bindings[index];
+            CharacterPoseSourceBinding binding = bindings.Values[index];
             if (!binding.IsValid)
                 throw new InvalidOperationException(
                     "Pose source binding is not prepared.");

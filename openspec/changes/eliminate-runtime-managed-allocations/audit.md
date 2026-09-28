@@ -227,6 +227,12 @@
 - 改为 `CreateProviderRequest` 返回既有值类型请求；Blend Stack、Selected Player 和 Source Workspace 沿同一捕获入口传请求与左右足特征，删除临时包装构造器及旧 ResolveProviderSample。持续持有的 Action Slot 样本仍在装配期创建并复用，不使用共享可变临时对象，也不外借生命周期不明的缓存。请求、捕获身份、参数和足部有效性检查保留，底层工作页与 Commit/Discard 不变。
 - 静态搜索确认剩余 `new AnimationResolvedPoseSourceSample` 仅在 Action Slot 构造阶段。已核对捕获调用点及差异；未执行编译或分配采样。
 
+### AP21 源绑定页每帧按三组总容量清空（本轮续查，已实施）
+
+- `CharacterPoseSourceBindingPage.Clear` 原先全量清空 Direct、Clip、BlendSpace 三组结构体数组；Begin、Discard、Reset、Dispose 共用此清理入口。
+- 三类绑定表各持有与正式容量相同的已写索引数组；首次写某个位置记录索引，同帧再次写仍覆盖原位置而不重复记账。Clear 只清实际写过的绑定，随后将有效数量和页完成身份清零。占用判断使用不可变的 PhysicalIdentity，不依赖资源是否已释放的动态 ScalarReadView 有效性。旧引用会真实清除，不用帧号掩盖长期残留对象。
+- 代价是每个配置槽多一个 int 的常驻索引；活动源远少于配置总量时减少清理范围。容量来自原配置，无运行扩容、第二绑定路径或额外设置。已静态核对全部清理入口、重复写和空页行为，未实跑。
+
 ## 可靠性问题独立保留
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。

@@ -139,6 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new Dictionary<CharacterPoseNativePortDefinitionKey,
                     CharacterPosePortDefinition>();
         CharacterPoseCanvasGraph m_Graph;
+        CharacterPoseCanvasNode m_GraphInputNode;
+        CharacterPoseCanvasNode m_GraphOutputNode;
         CharacterPoseNativeFrameInput m_FrameInput;
         CharacterPoseNativeFrameLineage m_OpenLineage;
         CharacterPoseNativeFrameLineage m_CompletedLineage;
@@ -174,6 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal Diagnostics.CharacterNativeStateCapturePage StateCapture => new Diagnostics.CharacterNativeStateCapturePage(m_Evaluator.StateCapture);
         internal ICharacterPoseNativePhaseSource PhaseSources => m_Evaluator.PhaseSources;
         internal CharacterPoseCanvasGraph Graph => m_Graph;
+        internal IReadOnlyList<CharacterPoseCanvasNode> Nodes { get; private set; }
         internal CharacterPoseNativePreparedBinding PreparedBinding => m_PreparedBinding;
         internal CharacterPoseNativeInstanceContext InstanceContext => m_CreateRequest.Context;
         internal ulong InstanceId => m_CreateRequest.InstanceId;
@@ -424,6 +427,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             if (m_Initialized)
                 throw new InvalidOperationException("Pose native graph is already initialized.");
+            Nodes = m_Graph.Nodes;
             BuildPortDefinitions();
             m_Evaluator.Initialize(this);
             m_Initialized = true;
@@ -432,8 +436,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void BuildPortDefinitions()
         {
             m_PortDefinitions.Clear();
-            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
+            for (int nodeIndex = 0; nodeIndex < Nodes.Count; nodeIndex++)
             {
+                CharacterPoseCanvasNode node = Nodes[nodeIndex];
+                if (node.Kind == CharacterPoseNodeKind.GraphInput)
+                {
+                    if (m_GraphInputNode != null)
+                        throw new InvalidOperationException("Pose native graph has multiple Graph Input boundaries.");
+                    m_GraphInputNode = node;
+                }
+                else if (node.Kind == CharacterPoseNodeKind.GraphOutput)
+                {
+                    if (m_GraphOutputNode != null)
+                        throw new InvalidOperationException("Pose native graph has multiple Graph Output boundaries.");
+                    m_GraphOutputNode = node;
+                }
                 IReadOnlyList<CharacterPosePortDefinition> shape =
                     CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
                 for (int i = 0; i < shape.Count; i++)
@@ -555,21 +572,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native graph input binding is invalid.",
                     nameof(value));
             }
-            CharacterPoseCanvasNode graphInput = null;
-            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
-            {
-                if (node.Kind != CharacterPoseNodeKind.GraphInput)
-                    continue;
-                if (graphInput != null)
-                    throw new InvalidOperationException(
-                        "Pose native graph has multiple Graph Input boundaries.");
-                graphInput = node;
-            }
-            if (graphInput == null)
-                throw new InvalidOperationException(
-                    $"Pose native graph '{m_PreparedBinding.GraphId}' has no Graph Input boundary.");
             CharacterPosePortDefinition definition = FindPort(
-                graphInput,
+                RequireBoundary(CharacterPoseNodeKind.GraphInput),
                 portId,
                 CharacterPosePortDirection.Output);
             if (definition == null ||
@@ -653,21 +657,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PosePortId portId)
         {
             RequireEvaluationStage();
-            CharacterPoseCanvasNode graphOutput = null;
-            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
-            {
-                if (node.Kind != CharacterPoseNodeKind.GraphOutput)
-                    continue;
-                if (graphOutput != null)
-                    throw new InvalidOperationException(
-                        "Pose native graph has multiple Graph Output boundaries.");
-                graphOutput = node;
-            }
-            if (graphOutput == null)
-                throw new InvalidOperationException(
-                    $"Pose native graph '{m_PreparedBinding.GraphId}' has no Graph Output boundary.");
-            return ReadInputValue(graphOutput, portId);
+            return ReadInputValue(RequireBoundary(CharacterPoseNodeKind.GraphOutput), portId);
         }
+
+        internal CharacterPoseCanvasNode RequireBoundary(CharacterPoseNodeKind kind) =>
+            (kind switch
+            {
+                CharacterPoseNodeKind.GraphInput => m_GraphInputNode,
+                CharacterPoseNodeKind.GraphOutput => m_GraphOutputNode,
+                _ => throw new ArgumentOutOfRangeException(nameof(kind))
+            }) ?? throw new InvalidOperationException(
+                $"Pose native graph '{m_PreparedBinding.GraphId}' has no '{kind}' boundary.");
 
         internal CharacterPoseNativePortValue ReadOutput()
         {
@@ -1249,6 +1249,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_GraphInputs.Clear();
             m_PortDefinitions.Clear();
             m_Started = false;
+            Nodes = null;
+            m_GraphInputNode = null;
+            m_GraphOutputNode = null;
             m_Initialized = false;
             m_LastCommittedLineage = default;
         }

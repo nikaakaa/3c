@@ -100,23 +100,26 @@
 - 输入是变量名，输出是同帧变量；多个 Pose 消费者和诊断重复比较字符串。零分配发布已经完成，并不消除读取端的查找成本。
 - 可在装配时解析带布局身份的位置，运行时直接读值。变量多、角色多时减少重复查找；代价是布局替换后位置失效，不能只缓存裸整数。
 
-### AP03 图节点 getter 创建周期数组（已确认托管分配）
+### AP03 图节点 getter 创建周期数组（已实施，未实跑）
 
 - 证据：[CharacterPoseCanvasGraph.cs:35](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseCanvasGraph.cs#L35) 的 Nodes 每次执行 OfType/ToArray；[CharacterPoseNativeGraphEvaluator.cs:238](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphEvaluator.cs#L238) 每次 PrepareFrame 读取它。
 - 图拓扑未变也会重新筛选并生成数组；每个实际执行 PrepareFrame 的实例都会经过此入口。不是看到初始化 new 就猜成每帧分配。
 - 可由运行实例在装配时持有固定节点/handler 集合。业务节点顺序不变；代价是编辑器变更后必须明确重装配，不能把作者可变集合直接作为不受约束的运行数据。
+- 实施结果：GraphRuntime 初始化时获取一次实例节点集合；Evaluator 按原节点顺序准备 node/handler 对应表，PrepareFrame 直接遍历。其它帧阶段使用按原 handler 顺序筛选的活动列表，删除逐阶段可达性查找；Start/Reset/Stop/Dispose 仍覆盖原完整 handler 集合。作者资产 getter 未加可失效的全局缓存。
 
-### AP04 子图固定边界和端口映射仍逐帧解析（CPU，叠加 AP03 分配）
+### AP04 子图固定边界和端口映射仍逐帧解析（已实施，未实跑）
 
 - 证据：[CharacterPoseNativeSubgraphHandler.cs:299](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeSubgraphHandler.cs#L299) 在 Prepare/Evaluate 两阶段调用 BindInputs；[CharacterPoseNativeGraphRuntime.cs:558](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L558) 每个输入绑定又扫描 GraphInput；子图输出还有 FindBoundary/ReadGraphOutput 扫描。
 - 输入为同一子图实例的新帧值，重复工作是寻找不变的边界、接口端口和连接。仅把 Nodes 换成数组缓存，仍保留这些扫描。
 - 可装配时建立父输入到子输入的正式绑定。代价是维护绑定生命周期；必须保留普通参数先绑定、姿势等输入延后绑定的时序，不能提前求姿势来省扫描。
+- 实施结果：GraphRuntime 准备端口定义时固定 GraphInput/GraphOutput 边界；Subgraph 在 Start、即 GatherPorts/BindPorts 完成之后建立两组输入映射和输出映射，帧内只读取当前值并传给子图。保留当前帧身份、重复绑定检查和原 Prepare/Evaluate 顺序。旧 FindBoundary 与按 PortId 查动态端口的循环入口删除。
 
 ### AP05 首次执行和首次状态进入仍创建实例（首次使用成本）
 
 - 证据：[NativeEventGraphRuntime.cs:91](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/EventGraphs/NativeEventGraphRuntime.cs#L91) 首次 Execute 克隆/启动图并准备变量输出；[CharacterPoseNativeStateMachineSource.cs:402](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeStateMachineSource.cs#L402) 在 PrepareFrame 调用 EnsureState，未出现过的状态创建子图。
 - 创建期间 [CharacterPoseNativeGraphEvaluator.cs:435](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphEvaluator.cs#L435) 的可达性扫描反复访问 Connections；其 getter 每次收集、去重、排序、生成数组。此处不能统计成每个稳定帧都执行。
 - 装配时预建可把首次动作成本移出游玩帧，但增加准备时间和常驻内存；按需创建减少未使用状态占用，却保留首次进入成本。准备期反射本身在用户允许边界内，审计问题是创建是否落在游戏更新中。
+- 本轮仅收口创建过程中反复读取 Connections 的额外工作：Evaluator 初始化取一次连接集合，供可达性和输出绑定共用。首次状态创建与 EventGraph 懒创建仍保留，AP05 未完成。
 
 ### AP06 无影响 Modify Bone 仍复制并重建（CPU）
 

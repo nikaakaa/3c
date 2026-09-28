@@ -12,6 +12,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ulong m_ResetGeneration;
         readonly string m_Reason;
         readonly ICharacterPoseNativeNodeHandlerFactory m_Factory;
+        readonly List<(PosePortId Parent, PosePortId Child)> m_ImmediateInputs =
+            new List<(PosePortId, PosePortId)>();
+        readonly List<(PosePortId Parent, PosePortId Child)> m_DeferredInputs =
+            new List<(PosePortId, PosePortId)>();
+        readonly Dictionary<PosePortId, PosePortId> m_OutputPorts =
+            new Dictionary<PosePortId, PosePortId>();
         CharacterPoseCanvasNode m_CallNode;
         CharacterPoseNativeGraphRuntime m_Child;
         CharacterPoseNativeFrameLease m_ChildLease;
@@ -81,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireChild();
+            BindInterface();
         }
 
         public void Reset(
@@ -148,24 +155,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireChild();
-            CharacterPoseDynamicPort parentPort = FindDynamicPort(
-                node,
-                portId,
-                CharacterPosePortDirection.Output);
-            if (parentPort == null)
+            if (!m_OutputPorts.TryGetValue(portId, out PosePortId childPortId))
                 throw new InvalidOperationException(
                     $"Pose subgraph '{NodeId}' has no output '{portId}'.");
-            CharacterPoseCanvasNode graphOutput = FindBoundary(
-                m_Child.Graph,
-                CharacterPoseNodeKind.GraphOutput);
-            CharacterPoseDynamicPort childPort = FindDynamicPort(
-                graphOutput,
-                parentPort.InterfacePortId,
-                CharacterPosePortDirection.Input);
-            if (childPort == null)
-                throw new InvalidOperationException(
-                    $"Pose subgraph '{NodeId}' output '{portId}' has no child GraphOutput binding.");
-            return m_Child.ReadGraphOutput(childPort.PortId);
+            return m_Child.ReadGraphOutput(childPortId);
         }
 
         public void EvaluateFrame(
@@ -294,15 +287,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Child?.Dispose();
             m_Child = null;
             m_ChildFrameOpen = false;
+            m_ImmediateInputs.Clear();
+            m_DeferredInputs.Clear();
+            m_OutputPorts.Clear();
         }
 
         void BindInputs(
             CharacterPoseNativeGraphRuntime runtime,
             bool bindDeferredPoseInputs)
         {
-            CharacterPoseCanvasNode childInput = FindBoundary(
-                m_Child.Graph,
-                CharacterPoseNodeKind.GraphInput);
+            var bindings = bindDeferredPoseInputs ? m_DeferredInputs : m_ImmediateInputs;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                var binding = bindings[i];
+                CharacterPoseNativePortValue value = runtime.ReadInputValue(m_CallNode, binding.Parent);
+                m_Child.BindGraphInput(binding.Child, value);
+            }
+        }
+
+        void BindInterface()
+        {
+            m_ImmediateInputs.Clear();
+            m_DeferredInputs.Clear();
+            m_OutputPorts.Clear();
+            CharacterPoseCanvasNode childInput = m_Child.RequireBoundary(CharacterPoseNodeKind.GraphInput);
             for (int i = 0; i < childInput.DynamicPorts.Count; i++)
             {
                 CharacterPoseDynamicPort childPort = childInput.DynamicPorts[i];
@@ -329,12 +337,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             $"Pose subgraph '{NodeId}' is missing required connection '{parentPort.PortId}'.");
                     continue;
                 }
-                if (deferred != bindDeferredPoseInputs)
+                var bindings = deferred ? m_DeferredInputs : m_ImmediateInputs;
+                bindings.Add((parentPort.PortId, childPort.PortId));
+            }
+            CharacterPoseCanvasNode childOutput = m_Child.RequireBoundary(CharacterPoseNodeKind.GraphOutput);
+            for (int i = 0; i < m_CallNode.DynamicPorts.Count; i++)
+            {
+                CharacterPoseDynamicPort parentPort = m_CallNode.DynamicPorts[i];
+                if (parentPort.Direction != CharacterPosePortDirection.Output)
                     continue;
-                CharacterPoseNativePortValue value = runtime.ReadInputValue(
-                    m_CallNode,
-                    parentPort.PortId);
-                m_Child.BindGraphInput(childPort.PortId, value);
+                CharacterPoseDynamicPort childPort = FindDynamicPort(
+                    childOutput,
+                    parentPort.InterfacePortId,
+                    CharacterPosePortDirection.Input);
+                if (childPort == null)
+                    throw new InvalidOperationException(
+                        $"Pose subgraph '{NodeId}' output '{parentPort.PortId}' has no child GraphOutput binding.");
+                m_OutputPorts.Add(parentPort.PortId, childPort.PortId);
             }
         }
 
@@ -344,42 +363,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             kind == CharacterPosePortKind.PoseDiscontinuity ||
             kind == CharacterPosePortKind.FullBodyIkGoals ||
             kind == CharacterPosePortKind.FullBodyIkGoalContribution;
-
-        static CharacterPoseCanvasNode FindBoundary(
-            CharacterPoseCanvasGraph graph,
-            CharacterPoseNodeKind kind)
-        {
-            CharacterPoseCanvasNode result = null;
-            foreach (CharacterPoseCanvasNode node in graph.Nodes)
-            {
-                if (node.Kind != kind)
-                    continue;
-                if (result != null)
-                    throw new InvalidOperationException(
-                        $"Pose graph '{graph.GraphId}' has multiple '{kind}' boundaries.");
-                result = node;
-            }
-            return result ?? throw new InvalidOperationException(
-                $"Pose graph '{graph.GraphId}' has no '{kind}' boundary.");
-        }
-
-        static CharacterPoseDynamicPort FindDynamicPort(
-            CharacterPoseCanvasNode node,
-            PosePortId portId,
-            CharacterPosePortDirection direction)
-        {
-            if (node == null)
-                return null;
-            for (int i = 0; i < node.DynamicPorts.Count; i++)
-            {
-                CharacterPoseDynamicPort port = node.DynamicPorts[i];
-                if (port.Direction != direction)
-                    continue;
-                if (port.PortId == portId)
-                    return port;
-            }
-            return null;
-        }
 
         static CharacterPoseDynamicPort FindDynamicPort(
             CharacterPoseCanvasNode node,

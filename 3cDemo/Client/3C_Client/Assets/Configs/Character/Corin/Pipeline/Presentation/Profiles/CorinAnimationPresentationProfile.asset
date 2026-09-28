@@ -44,6 +44,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PoseGraph: {fileID: 11400000, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_EventGraph: {fileID: 11400000, guid: d90ccc65c39b2d84a8b06ef1ae46b885, type: 2}
+  m_StateGraphCreationMode: 1
   m_RigDefinition: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_MotionMatchingProfile: {fileID: 0}
   m_FullBodyIkProfile: {fileID: 11400000, guid: d8baaf75d0994cf6aa8ed54c35542ea0,

@@ -135,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPresentationPoseGraphAsset m_GraphAsset;
         readonly CharacterPoseStateMachineDefinition m_Definition;
         readonly CharacterAnimationPresentationProfile m_Profile;
+        readonly CharacterPoseStateGraphCreationMode m_CreationMode;
         readonly ICharacterPoseNativeNodeHandlerFactory m_Factory;
         readonly Dictionary<PoseStateId, StateRuntime> m_States;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
@@ -286,6 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RuleVisiting = new HashSet<PoseTransitionRuleOperationId>(
                 ruleOperationCapacity);
             m_Profile = profile;
+            m_CreationMode = profile.StateGraphCreationMode;
             m_Factory = factory;
             m_States = new Dictionary<PoseStateId, StateRuntime>();
             m_StateDurations = new Dictionary<PoseStateId, float>();
@@ -312,6 +314,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     capacity = Math.Max(capacity, rule.Operations.Count);
             }
             return capacity;
+        }
+
+        public void PrepareGraphs(CharacterPoseNativeGraphRuntime runtime)
+        {
+            RequireAlive();
+            switch (m_CreationMode)
+            {
+                case CharacterPoseStateGraphCreationMode.DuringPreparation:
+                    foreach (StateRuntime state in m_States.Values)
+                        EnsureState(runtime, state);
+                    break;
+                case CharacterPoseStateGraphCreationMode.OnFirstEntry:
+                    break;
+                default:
+                    throw new InvalidOperationException("Pose StateMachine graph creation mode is invalid.");
+            }
         }
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
@@ -682,8 +700,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!adopted.IsAdopted || child == null)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' state '{state.Definition.StateId}' could not create its child graph: {adopted.Message}");
-            child.Graph.RequireNode(state.Definition.OutputPoseNodeId);
             state.Graph = child;
+            child.Graph.RequireNode(state.Definition.OutputPoseNodeId);
         }
 
         void SynchronizeReset(

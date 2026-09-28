@@ -7,6 +7,14 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public enum CharacterPoseStateGraphCreationMode : byte
+    {
+        [InspectorName("角色准备时创建全部状态图")]
+        DuringPreparation = 1,
+        [InspectorName("首次进入时创建并保留状态图")]
+        OnFirstEntry = 2
+    }
+
     [Serializable]
     public sealed class AnimationProducerPresentationBinding
     {
@@ -33,6 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] CharacterPresentationPoseGraphAsset m_PoseGraph;
         [SerializeField] CharacterAnimationEventGraph m_EventGraph;
+        [SerializeField] CharacterPoseStateGraphCreationMode m_StateGraphCreationMode =
+            CharacterPoseStateGraphCreationMode.DuringPreparation;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
         [SerializeField] CharacterMotionMatchingProfile m_MotionMatchingProfile;
         [SerializeField] CharacterFullBodyIkProfile m_FullBodyIkProfile;
@@ -63,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
         public CharacterAnimationEventGraph EventGraph => m_EventGraph;
+        public CharacterPoseStateGraphCreationMode StateGraphCreationMode => m_StateGraphCreationMode;
         public CharacterAnimationRigDefinition RigDefinition => m_RigDefinition;
         public CharacterMotionMatchingProfile MotionMatchingProfile => m_MotionMatchingProfile;
         public CharacterFullBodyIkProfile FullBodyIkProfile => m_FullBodyIkProfile;
@@ -210,6 +221,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : throw new ArgumentNullException(nameof(eventGraph));
         }
 
+        public void SetStateGraphCreationMode(CharacterPoseStateGraphCreationMode mode)
+        {
+            if (mode != CharacterPoseStateGraphCreationMode.DuringPreparation &&
+                mode != CharacterPoseStateGraphCreationMode.OnFirstEntry)
+                throw new ArgumentOutOfRangeException(nameof(mode));
+            m_StateGraphCreationMode = mode;
+        }
+
         public void SetMotionMatchingProfile(CharacterMotionMatchingProfile profile)
         {
             m_MotionMatchingProfile = profile;
@@ -266,6 +285,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool CollectConfigurationErrors(List<string> errors, bool includeActionResources)
         {
             bool valid = true;
+            if (m_StateGraphCreationMode != CharacterPoseStateGraphCreationMode.DuringPreparation &&
+                m_StateGraphCreationMode != CharacterPoseStateGraphCreationMode.OnFirstEntry)
+            {
+                errors?.Add($"{name}: State Graph creation mode is invalid.");
+                valid = false;
+            }
             if (!m_PoseGraph)
             {
                 errors?.Add($"{name}: Presentation Pose Graph is missing.");

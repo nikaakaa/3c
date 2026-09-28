@@ -7,6 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal interface ICharacterPoseNativeStateMachineSource : IDisposable, Diagnostics.ICharacterNativeStateCaptureSource, ICharacterPoseNativePhaseSource
     {
+        void PrepareGraphs(CharacterPoseNativeGraphRuntime runtime);
         IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
             CharacterPoseCanvasNode node,
@@ -77,7 +78,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"StateMachine handler '{NodeId}' does not match its graph node.");
         }
 
-        public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
+        public void Start(CharacterPoseNativeGraphRuntime runtime)
+        {
+            RequireAlive();
+            m_Source.PrepareGraphs(runtime);
+        }
 
         public void Reset(
             CharacterPoseNativeGraphRuntime runtime,

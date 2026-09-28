@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class CharacterPoseNativePoseBufferCopy
     {
-        internal static void CopyMetadata(
+        internal static void ValidateLayout(
             in CharacterPoseNativePoseReadBinding input,
             in AnimationPlayerPoseNativeWriteBinding output)
         {
@@ -21,6 +21,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Pose native node buffer layouts are incompatible.");
             }
+        }
+
+        internal static void CopyMetadata(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output)
+        {
+            ValidateLayout(in input, in output);
             NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
                 output.DenseVelocities;
             NativeSlice<float> outputParameters = output.PoseParameters;
@@ -45,38 +52,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationPoseNativeInvalidReason> outputInvalidReason =
                 output.InvalidReason;
             NativeSlice<ulong> outputCompletedAt = output.CompletedAt;
-            for (int i = 0; i < outputVelocities.Length; i++)
-                outputVelocities[i] = input.DenseVelocities[i];
-            for (int i = 0; i < outputParameters.Length; i++)
-            {
-                outputParameters[i] = input.PoseParameters[i];
-                outputParameterAvailability[i] =
-                    input.PoseParameterAvailability[i];
-            }
-            for (int i = 0; i < outputContributions.Length; i++)
-                outputContributions[i] = i < input.Contributions.Length
-                    ? input.Contributions[i]
-                    : default;
+            outputVelocities.CopyFrom(input.DenseVelocities);
+            outputParameters.CopyFrom(input.PoseParameters);
+            outputParameterAvailability.CopyFrom(input.PoseParameterAvailability);
+            int contributionCount = input.ContributionCount[0];
+            outputContributions.Slice(0, contributionCount).CopyFrom(input.Contributions.Slice(0, contributionCount));
             int boneCount = output.DenseLocalPoses.Length;
-            for (int contribution = 0;
-                 contribution < input.ContributionCount[0];
-                 contribution++)
-            {
-                for (int bone = 0; bone < boneCount; bone++)
-                {
-                    outputContributionWeights[
-                        contribution * boneCount + bone] =
-                        input.DenseContributionWeights[
-                            contribution * boneCount + bone];
-                }
-            }
-            for (int i = input.ContributionCount[0] * boneCount;
-                 i < outputContributionWeights.Length;
-                 i++)
-            {
-                outputContributionWeights[i] = 0f;
-            }
-            outputContributionCount[0] = input.ContributionCount[0];
+            int weightCount = contributionCount * boneCount;
+            outputContributionWeights.Slice(0, weightCount).CopyFrom(input.DenseContributionWeights.Slice(0, weightCount));
+            ClearContributionTail(in output, contributionCount);
+            outputContributionCount[0] = contributionCount;
             outputOutputWeight[0] = input.OutputWeight[0];
             outputLeftFootFeatures[0] = input.LeftFootFeatures[0];
             outputRightFootFeatures[0] = input.RightFootFeatures[0];
@@ -86,6 +71,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             outputDiscontinuity[0] = input.Discontinuity[0];
             outputInvalidReason[0] = input.InvalidReason[0];
             outputCompletedAt[0] = input.CompletedAt[0];
+        }
+
+        internal static void ClearContributionTail(
+            in AnimationPlayerPoseNativeWriteBinding output,
+            int contributionCount)
+        {
+            NativeSlice<AnimationPrimitivePoseContribution> contributions = output.Contributions;
+            NativeSlice<float> weights = output.DenseContributionWeights;
+            for (int i = contributionCount; i < contributions.Length; i++)
+                contributions[i] = default;
+            for (int i = contributionCount * output.DenseLocalPoses.Length; i < weights.Length; i++)
+                weights[i] = 0f;
         }
     }
 

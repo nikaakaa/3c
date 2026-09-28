@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 runtime.CurrentLineage.CompletionIdentity);
-            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+            CharacterPoseNativePoseBufferCopy.ValidateLayout(
                 in baseBinding,
                 in m_WriteBinding);
             BlendPose(
@@ -334,50 +334,59 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.InvalidReason;
             NativeSlice<ulong> outputCompletedAt = m_WriteBinding.CompletedAt;
             int boneCount = outputPoses.Length;
-            for (int bone = 0; bone < boneCount; bone++)
+            if (baseWeight == 0f || overlayWeight == 0f)
             {
-                AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
-                AnimationLocalBonePose overlayBone = overlayPose.DenseLocalPoses[bone];
-                Vector3 position =
-                    (baseBone.Position * baseWeight +
-                     overlayBone.Position * overlayWeight) /
-                    totalWeight;
-                Vector3 scale =
-                    (baseBone.Scale * baseWeight +
-                     overlayBone.Scale * overlayWeight) /
-                    totalWeight;
-                Vector4 rotation =
-                    new Vector4(
-                        baseBone.Rotation.x * baseWeight,
-                        baseBone.Rotation.y * baseWeight,
-                        baseBone.Rotation.z * baseWeight,
-                        baseBone.Rotation.w * baseWeight) +
-                    AnimationPoseMath.AlignAndScale(
-                        overlayBone.Rotation,
-                        baseBone.Rotation,
-                        overlayWeight);
-                outputPoses[bone] =
-                    AnimationPoseMath.BlendWeighted(
-                        position * totalWeight,
-                        rotation,
-                        scale * totalWeight,
-                        totalWeight,
-                        baseBone);
-                AnimationBlendBoneVelocity baseVelocity =
-                    basePose.DenseVelocities[bone];
-                AnimationBlendBoneVelocity overlayVelocity =
-                    overlayPose.DenseVelocities[bone];
-                outputVelocities[bone] =
-                    new AnimationBlendBoneVelocity(
-                        (baseVelocity.Linear * baseWeight +
-                         overlayVelocity.Linear * overlayWeight) /
-                        totalWeight,
-                        (baseVelocity.Angular * baseWeight +
-                         overlayVelocity.Angular * overlayWeight) /
-                        totalWeight,
-                        (baseVelocity.Scale * baseWeight +
-                         overlayVelocity.Scale * overlayWeight) /
-                        totalWeight);
+                CharacterPoseNativePoseReadBinding selected = baseWeight == 0f ? overlayPose : basePose;
+                outputPoses.CopyFrom(selected.DenseLocalPoses);
+                outputVelocities.CopyFrom(selected.DenseVelocities);
+            }
+            else
+            {
+                for (int bone = 0; bone < boneCount; bone++)
+                {
+                    AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
+                    AnimationLocalBonePose overlayBone = overlayPose.DenseLocalPoses[bone];
+                    Vector3 position =
+                        (baseBone.Position * baseWeight +
+                         overlayBone.Position * overlayWeight) /
+                        totalWeight;
+                    Vector3 scale =
+                        (baseBone.Scale * baseWeight +
+                         overlayBone.Scale * overlayWeight) /
+                        totalWeight;
+                    Vector4 rotation =
+                        new Vector4(
+                            baseBone.Rotation.x * baseWeight,
+                            baseBone.Rotation.y * baseWeight,
+                            baseBone.Rotation.z * baseWeight,
+                            baseBone.Rotation.w * baseWeight) +
+                        AnimationPoseMath.AlignAndScale(
+                            overlayBone.Rotation,
+                            baseBone.Rotation,
+                            overlayWeight);
+                    outputPoses[bone] =
+                        AnimationPoseMath.BlendWeighted(
+                            position * totalWeight,
+                            rotation,
+                            scale * totalWeight,
+                            totalWeight,
+                            baseBone);
+                    AnimationBlendBoneVelocity baseVelocity =
+                        basePose.DenseVelocities[bone];
+                    AnimationBlendBoneVelocity overlayVelocity =
+                        overlayPose.DenseVelocities[bone];
+                    outputVelocities[bone] =
+                        new AnimationBlendBoneVelocity(
+                            (baseVelocity.Linear * baseWeight +
+                             overlayVelocity.Linear * overlayWeight) /
+                            totalWeight,
+                            (baseVelocity.Angular * baseWeight +
+                             overlayVelocity.Angular * overlayWeight) /
+                            totalWeight,
+                            (baseVelocity.Scale * baseWeight +
+                             overlayVelocity.Scale * overlayWeight) /
+                            totalWeight);
+                }
             }
             for (int parameter = 0;
                  parameter < outputParameters.Length;
@@ -416,6 +425,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 overlayWeight / totalWeight,
                 ref outputContributionCount);
             outputContributionCountSlice[0] = outputContributionCount;
+            CharacterPoseNativePoseBufferCopy.ClearContributionTail(in m_WriteBinding, outputContributionCount);
             outputWeight[0] = Mathf.Clamp01(totalWeight);
             BlendFeet(
                 in basePose,

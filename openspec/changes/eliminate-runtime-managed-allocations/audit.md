@@ -131,17 +131,19 @@
 - 业务要求是直跑回正后的姿势与身份不变。必须保留独立输出页、CompletionIdentity、Commit/Discard；不允许直接外借输入指针来绕过正式生命周期。
 - 实施结果：先读取并校验本帧变换参数；权重零、全部 Ignore 或中性 Add 直接复制已验证输入到自己的输出页，不再构造整副组件空间 scratch 或反复归一化。Replace/非中性变换在求出目标后按精确分量比较；无变化则不保存/重建后代与虚拟骨骼。没有引入浮点阈值，也未省略动态输入合法性检查；输出页和元数据仍正式提交。
 
-### AP07 Blend Pose 在端点仍求两侧姿势并全骨骼混合（CPU）
+### AP07 Blend Pose 在端点仍求两侧姿势并全骨骼混合（端点骨骼计算已实施，源采样保留）
 
 - 证据：[CharacterPoseNativeBlendPoseHandler.cs:115](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeBlendPoseHandler.cs#L115) 先读取 base/overlay，再解析权重；BlendPose 的逐骨骼循环没有权重 0/1 分支。
 - 可减少端点时的骨骼插值、旋转归一化和速度混合。但现行参数合并允许另一侧补充缺失参数，单边返回未必等价。
 - 只省骨骼混合较易维持时间推进；进一步裁剪源采样可能省更多工作，但必须定义播放器时间、相位、过渡、缺参和连续性行为。不能仅凭权重为零停掉整个分支。
+- 实施结果：有效 base/overlay 权重有一侧为零时，骨骼姿势与速度批量复制到独立输出页，不再执行无意义的加权、除法与旋转归一化。两侧输入仍按原顺序求值，参数缺失补充、有效贡献、脚部特征、连续性和不连续事件仍按原逻辑计算。没有把参数处理简化为单边复制，也没有引入按帧缓存或停播放器。端点减少了浮点往返运算，不承诺与旧重复归一化后的结果逐位相等。
 
-### AP08 通用元数据复制按容量搬运，计算节点随后覆盖（CPU/内存读写）
+### AP08 通用元数据复制按容量搬运，计算节点随后覆盖（批量复制与Blend Pose已实施，其它节点待收口）
 
 - 证据：[CharacterPoseNativeSpaceConversionHandler.cs:48](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeSpaceConversionHandler.cs#L48) 的 CopyMetadata 复制骨骼速度、参数、贡献表及贡献×骨骼权重，并清零容量尾部；Blend Pose 在调用后又计算写回其中多项。
 - 输入页和输出页布局相同不表示所有字段都要先复制；可让计算节点直接写自身负责的结果，只复制继承字段。
 - 业务不变的前提是消费者严格按有效数量读取。取消尾部清理须先统一这一合同；跨节点共享不可变数据需要正式页寿命支持，不能引入第二条借用路径。
+- 实施结果：公共复制使用 NativeSlice 批量复制速度、参数、可用性及有效贡献/权重；贡献只复制有效数量，尾部统一清零，不传播旧页无效尾部记录。Blend Pose 已完整写回全部输出字段，因而删除其“先复制再覆盖”，只保留布局校验和输出贡献尾部清理。其它节点仍经同一 CopyMetadata 继承需要的字段，未引入共享页或绕过 Commit 的借用。
 
 ### AP09 惯性混合七组残差无条件复制（已实施，未实跑）
 

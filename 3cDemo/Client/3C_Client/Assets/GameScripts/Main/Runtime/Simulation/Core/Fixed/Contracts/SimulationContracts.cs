@@ -108,13 +108,52 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationInput RebindSource(SimulationTickSourceIdentity tickSource, string inputSourceIdentity)
             => new SimulationInput(
-                NumericProfile,
+                this,
                 tickSource,
                 inputSourceIdentity,
                 Sequence,
-                m_Values,
-                m_Requests,
-                true);
+                m_Requests);
+
+        internal SimulationInput RemapTicks(
+            SimulationTickSourceIdentity tickSource,
+            string inputSourceIdentity,
+            ulong sequence,
+            ulong recordedFrameTick,
+            ulong replayFrameTick)
+        {
+            var requests = m_Requests.Length == 0
+                ? Array.Empty<SimulationInputRequest>()
+                : new SimulationInputRequest[m_Requests.Length];
+            for (int i = 0; i < requests.Length; i++)
+            {
+                SimulationInputRequest request = m_Requests[i];
+                requests[i] = new SimulationInputRequest(
+                    request.RequestId,
+                    request.Sequence,
+                    RemapTick(request.SourceTick, recordedFrameTick, replayFrameTick),
+                    RemapTick(request.ExpireSimulationTick, recordedFrameTick, replayFrameTick),
+                    request.Priority);
+            }
+            return new SimulationInput(this, tickSource, inputSourceIdentity, sequence, requests);
+        }
+
+        internal SimulationInput HoldValues(
+            SimulationTickSourceIdentity tickSource,
+            string inputSourceIdentity,
+            ulong sequence) =>
+            new SimulationInput(this, tickSource, inputSourceIdentity, sequence, Array.Empty<SimulationInputRequest>());
+
+        static ulong RemapTick(ulong recordedTick, ulong recordedFrameTick, ulong replayFrameTick)
+        {
+            if (recordedTick == 0)
+                return 0;
+            if (recordedTick >= recordedFrameTick)
+                return checked(replayFrameTick + recordedTick - recordedFrameTick);
+            ulong age = recordedFrameTick - recordedTick;
+            if (age >= replayFrameTick)
+                throw new InvalidOperationException("Fixed character input request predates the replay clock.");
+            return replayFrameTick - age;
+        }
 
         static SimulationInputValue[] SortValues(IEnumerable<SimulationInputValue> values)
         {
@@ -145,22 +184,20 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         SimulationInput(
-            SimulationNumericProfile numericProfile,
+            SimulationInput source,
             SimulationTickSourceIdentity tickSource,
             string inputSourceIdentity,
             ulong sequence,
-            SimulationInputValue[] values,
-            SimulationInputRequest[] requests,
-            bool _)
+            SimulationInputRequest[] requests)
         {
-            if (!numericProfile.IsValid || sequence == 0)
+            if (sequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(sequence));
-            NumericProfile = numericProfile;
+            NumericProfile = source.NumericProfile;
             TickSource = tickSource;
             InputSourceIdentity = SimulationIdentity.Require(inputSourceIdentity, nameof(inputSourceIdentity));
             Sequence = sequence;
-            m_Values = values ?? Array.Empty<SimulationInputValue>();
-            m_Requests = requests ?? Array.Empty<SimulationInputRequest>();
+            m_Values = source.m_Values;
+            m_Requests = requests;
         }
 
         static T[] Copy<T>(IEnumerable<T> source)

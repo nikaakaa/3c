@@ -292,6 +292,13 @@
 - 同时将历史预检的 reserved 标记改为逐槽覆盖，用单向游标按原 prepared 顺序分配最小空槽，与 AP27 使用相同规则；删除 FindFreeReservedEntry。保留 BuildWindowSamples、排序、修剪、重复事件及时间顺序检查，不用省复制绕过准备隔离。
 - 无新增工作页、集合或配置。静态核对所有 Entry 赋值/访问、目标槽唯一性、移除后复用、Commit/Close、Discard和Reset路径；未编译、未实跑。减少的是提交时的数据搬运与新结果清理，不能据此宣称整条历史链已无重复工作或已测得CPU收益。
 
+### AP30 回放热路径哈希、进度字符串与输入重复制（2026-09-29，已实施，未运行）
+
+- `FixedCharacterInputTraceModule.Status` 原来每次读取都对固定起始 Body 做 SHA256；现在在注册起始 Body 或从 checkpoint 恢复时计算一次，Status 和最终证据复用同一哈希，Reset 清除。逐 Tick 进度改为固定文本，数量继续由 Status 的结构化计数提供。
+- 回放逐 Tick 只保存 ReplayTick 与已发布的 WorldBodyState 值快照。输入哈希和 Body 哈希移到完成后的 CaptureReplayEvidence，沿用原哈希算法、原始录制输入和对应 Body；未请求完整证据的性能采集不再支付这些证明哈希的成本。Tick 连续性、重复消费、输入与 Body 配对、暂停和完成计数仍由回放协议检查。
+- `SimulationInput.RemapTicks` 共享其私有、不可变的 Values 数组，只创建一次改时间戳后的 Requests 数组；Sequence/RequestId 顺序不变，不再复制及排序。HoldValues 共享相同数值并清空请求。RebindSource 统一使用同一私有快照构造入口，删除无职责 bool 参数和内部数组空值兜底。
+- 每 Tick 输入快照对象及有请求时的请求数组仍分配，未通过复用可变对象破坏历史持有关系。本项降低的是回放/诊断负担，不能记成纯角色业务的全部 GC 降幅；仅做差异与调用链静态检查，未编译、未运行。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

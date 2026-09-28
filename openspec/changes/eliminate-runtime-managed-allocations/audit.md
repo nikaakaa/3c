@@ -208,6 +208,7 @@
 - 实施结果：每个图实例持有一个 `HashSet<CharacterPoseNativeSourceDemandKey>`，按图节点数预留容量；每帧只清空并复用该集合，按完整的 ScopeInstanceId/NodeId/SourceId 三元身份检查重复请求。请求顺序、重复报错和子图汇总语义不变；不再为每条请求扫描全部前序请求，也不在运行帧新建 HashSet。
 - 容量目前按图节点数乘二估算。若正式图的动态源请求数超过该估算，HashSet 仍可能扩容；这属于后续按正式 SourceCapacity 收紧的容量问题，不能在没有装配容量来源前伪称为完全零分配。
 - 续查删除可选 HashSet 参数及空参时的旧平方扫描分支；全仓 C# 仅有 GraphRuntime 一个构造调用者，必须使用该实例的去重集合。汇总请求 List 仍按 handler 数预留，状态机汇总按 contributionCapacity 预留；这三者的容量尚未统一为包含嵌套实例的请求上界，AP16 的容量收口仍未完成。
+- 状态机 PrepareEvaluation 原先逐条扫描父 demand.Requests，确认子请求没有在进入求值屏障前丢失。现由 Demand 私有引用本图已建立的同一个身份集合并提供 Contains；沿原 ScopeInstanceId/NodeId/SourceId 比较，不新增集合、不重复建索引，原缺失报错、请求顺序和 Required/SourceSlot 语义不变。每图有自己的集合，子图 Prepare 不会清父图集合；状态机只在已校验当前 lineage 的 PrepareEvaluation 内查询，集合在下一次本图 Prepare 时复用，与原 Requests 列表的有效期相同。静态核对唯一构造入口和全部消费者，未实跑。
 
 ### AP17 惯性包络反复计算固定曲线端点导数（续查并实施，未实跑）
 

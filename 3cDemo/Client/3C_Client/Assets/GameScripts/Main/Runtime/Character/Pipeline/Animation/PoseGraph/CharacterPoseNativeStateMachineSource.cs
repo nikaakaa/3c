@@ -509,7 +509,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     CharacterPoseNativeSourceRequest expected =
                         state.Preparation.Demand.Requests[requestIndex];
-                    if (!ContainsRequest(demand.Requests, in expected))
+                    if (!demand.Contains(in expected))
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
                 }
@@ -697,23 +697,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             return 1;
-        }
-
-        static bool ContainsRequest(
-            IReadOnlyList<CharacterPoseNativeSourceRequest> requests,
-            in CharacterPoseNativeSourceRequest expected)
-        {
-            for (int i = 0; i < requests.Count; i++)
-            {
-                CharacterPoseNativeSourceRequest candidate = requests[i];
-                if (candidate.ScopeInstanceId == expected.ScopeInstanceId &&
-                    candidate.NodeId == expected.NodeId &&
-                    candidate.SourceId == expected.SourceId)
-                {
-                    return true;
-                }
-            }
-            return false;
         }
 
         StateRuntime RequireState(PoseStateId stateId)

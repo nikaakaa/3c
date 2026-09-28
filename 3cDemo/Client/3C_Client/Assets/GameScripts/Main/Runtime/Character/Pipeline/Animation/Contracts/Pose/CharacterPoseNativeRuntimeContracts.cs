@@ -710,6 +710,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseNativeSourceDemand
     {
+        readonly HashSet<CharacterPoseNativeSourceDemandKey> m_RequestKeys;
+
         internal CharacterPoseNativeSourceDemand(
             in CharacterPoseNativeFrameLineage lineage,
             IReadOnlyList<CharacterPoseNativeSourceRequest> requests,
@@ -748,11 +750,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             Lineage = lineage;
             Requests = requests;
+            m_RequestKeys = duplicateKeys;
         }
 
         internal CharacterPoseNativeFrameLineage Lineage { get; }
         internal IReadOnlyList<CharacterPoseNativeSourceRequest> Requests { get; }
         internal bool IsValid => Lineage.IsValid && Requests != null;
+        internal bool Contains(in CharacterPoseNativeSourceRequest request) =>
+            m_RequestKeys.Contains(new CharacterPoseNativeSourceDemandKey(in request));
     }
 
     internal readonly struct CharacterPoseNativePreparationResult

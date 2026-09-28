@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     [DiagnosticGroup("timing")]
     public readonly struct CharacterPoseDiagnosticFrame
     {
-        internal CharacterPoseDiagnosticFrame(in CharacterPoseNativeFrameLineage lineage, CharacterAnimationVariableFrame variables = null)
+        internal CharacterPoseDiagnosticFrame(in CharacterPoseNativeFrameLineage lineage, CharacterAnimationVariableFrame variables = default)
         {
             ActorId = lineage.ActorId.Value;
             FrameIdentity = lineage.FrameIdentity;
@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LeanEligible = false;
             LeanHorizontalSpeed = LeanTurnRate = LeanTargetAngle = LeanAngle = 0f;
             LeanMovementX = LeanMovementZ = LeanRotationX = LeanRotationY = LeanRotationZ = LeanRotationW = 0f;
-            if (variables != null && variables.TryRead("animation.lean.rotation", out EventGraphValue leanRotation))
+            if (variables.IsValid && variables.TryRead("animation.lean.rotation", out EventGraphValue leanRotation))
             {
                 LeanAvailable = true;
                 LeanEligible = variables.RequireBool("animation.lean.eligible");

@@ -92,7 +92,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 renderFrame,
                 factFrame.SimulationTick,
                 factFrame.BodyDiscontinuityGeneration,
-                execution.Frame);
+                execution.Frame,
+                m_VariableContract);
             m_LastFrame = frame;
             return CharacterAnimationVariableUpdateResult.Success(frame);
         }
@@ -102,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             m_Runtime.Reset();
             m_LastBodyDiscontinuityGeneration = 0;
-            m_LastFrame = null;
+            m_LastFrame = default;
         }
 
         public void Dispose()

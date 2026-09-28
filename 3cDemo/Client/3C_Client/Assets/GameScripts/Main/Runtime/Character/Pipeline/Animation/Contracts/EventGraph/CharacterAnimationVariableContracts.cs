@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.EventGraphs;
 using ThirdPersonSimulation;
 
@@ -37,26 +36,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<EventGraphVariableDescriptor> Variables => Source.PublishedDescriptors;
 
         public EventGraphVariableDescriptor Require(string variableId) =>
-            Source.PublishedDescriptors.FirstOrDefault(
-                value => string.Equals(
-                    value.Reference.VariableId,
-                    variableId,
-                    StringComparison.Ordinal)) ??
-            throw new InvalidOperationException(
-                $"Animation variable '{variableId}' is not published by the Character Animation Event Graph.");
+            TryGet(variableId, out var descriptor) ? descriptor :
+                throw new InvalidOperationException($"Animation variable '{variableId}' is not published by the Character Animation Event Graph.");
 
         public bool TryGet(string variableId, out EventGraphVariableDescriptor descriptor)
         {
-            descriptor = Source.PublishedDescriptors.FirstOrDefault(
-                value => string.Equals(
-                    value.Reference.VariableId,
-                    variableId,
-                    StringComparison.Ordinal));
-            return descriptor != null;
+            if (Source.Layout.TryGet(variableId, out var entry))
+            {
+                descriptor = entry.Descriptor;
+                return true;
+            }
+            descriptor = null;
+            return false;
         }
     }
 
-    public sealed class CharacterAnimationVariableFrame
+    public readonly struct CharacterAnimationVariableFrame
     {
         readonly CharacterAnimationVariableContract m_Contract;
 
@@ -65,7 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong renderFrame,
             SimulationTick simulationTick,
             ulong bodyDiscontinuityGeneration,
-            EventGraphVariableFrame values)
+            EventGraphVariableFrame values,
+            CharacterAnimationVariableContract contract)
         {
             if (!actorId.IsValid || renderFrame == 0 || !simulationTick.IsValid ||
                 bodyDiscontinuityGeneration == 0)
@@ -76,10 +72,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RenderFrame = renderFrame;
             SimulationTick = simulationTick;
             BodyDiscontinuityGeneration = bodyDiscontinuityGeneration;
-            Values = values ?? throw new ArgumentNullException(nameof(values));
-            m_Contract = new CharacterAnimationVariableContract(values.Contract);
+            Values = values.IsValid ? values : throw new ArgumentException("Animation variable values are invalid.", nameof(values));
+            m_Contract = contract;
         }
 
+        public bool IsValid => Values.IsValid;
         public ActorId ActorId { get; }
         public ulong RenderFrame { get; }
         public SimulationTick SimulationTick { get; }
@@ -122,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public sealed class CharacterAnimationVariableUpdateResult
+    public readonly struct CharacterAnimationVariableUpdateResult
     {
         internal CharacterAnimationVariableUpdateResult(
             bool succeeded,
@@ -142,14 +139,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationVariableFrame frame) =>
             new CharacterAnimationVariableUpdateResult(
                 true,
-                frame ?? throw new ArgumentNullException(nameof(frame)),
+                frame.IsValid ? frame : throw new ArgumentException("Animation variable frame is invalid.", nameof(frame)),
                 null);
 
         internal static CharacterAnimationVariableUpdateResult Failed(
             EventGraphExecutionFailure failure) =>
             new CharacterAnimationVariableUpdateResult(
                 false,
-                null,
+                default,
                 failure ?? throw new ArgumentNullException(nameof(failure)));
     }
 }

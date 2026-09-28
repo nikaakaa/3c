@@ -74,7 +74,7 @@ namespace BTSMTL.EventGraphs
             }
             if (m_LastInvocation.IsValid)
             {
-                if (m_LastInvocation.Equals(invocation))
+                if (m_LastInvocation.Equals(invocation.Identity))
                     return Fail(invocation, "Event graph invocation was already executed.");
                 if (!string.Equals(
                         m_LastInvocation.SourceId,
@@ -86,23 +86,23 @@ namespace BTSMTL.EventGraphs
                 }
             }
 
-            EnsureInstance();
-            m_Instance.BeginInvocation(m_Contract, hostContext);
             try
             {
+                EnsureInstance();
+                m_Instance.BeginInvocation(m_Contract, hostContext);
                 if (!m_Started)
                 {
                     m_Instance.StartGraph(
                         m_Agent,
                         m_ParentBlackboard,
                         Graph.UpdateMode.Manual);
+                    m_Instance.InitializeVariableOutput(m_VariableContract, m_Contract);
                     m_Started = true;
                 }
                 m_Instance.UpdateGraph(invocation.DeltaSeconds);
                 if (m_Instance.ExecutionFailure != null)
                     return Fail(invocation, m_Instance.ExecutionFailure);
                 EventGraphVariableFrame frame = m_Instance.CreateVariableFrame(
-                    m_VariableContract,
                     invocation.Identity,
                     m_ResetGeneration);
                 m_LastInvocation = invocation.Identity;
@@ -121,7 +121,7 @@ namespace BTSMTL.EventGraphs
             }
             finally
             {
-                m_Instance.EndInvocation();
+                m_Instance?.EndInvocation();
             }
         }
 
@@ -193,6 +193,7 @@ namespace BTSMTL.EventGraphs
                 m_Started = false;
                 return;
             }
+            m_Instance.InvalidateVariableOutput();
             try
             {
                 if (m_Instance.isRunning)

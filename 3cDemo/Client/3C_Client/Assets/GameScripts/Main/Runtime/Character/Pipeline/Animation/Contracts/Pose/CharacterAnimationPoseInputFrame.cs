@@ -15,9 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool IsValid =>
-            m_VariableFrame != null;
+            m_VariableFrame.IsValid;
 
-        internal bool IsPublishedVariableFrame => m_VariableFrame != null;
+        internal bool IsPublishedVariableFrame => m_VariableFrame.IsValid;
 
         internal CharacterAnimationVariableFrame PublishedVariableFrame =>
             m_VariableFrame;
@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationVariableFrame frame,
             IReadOnlyList<PoseParameterId> parameterIds)
         {
-            if (frame == null || parameterIds == null)
+            if (!frame.IsValid || parameterIds == null)
                 throw new ArgumentException(
                     "Animation Event Graph variable frame is incomplete.");
             for (int i = 0; i < parameterIds.Count; i++)
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 value = default;
                 return false;
             }
-            if (m_VariableFrame != null)
+            if (m_VariableFrame.IsValid)
                 return m_VariableFrame.TryRead(parameterId.Value, out value);
             value = default;
             return false;

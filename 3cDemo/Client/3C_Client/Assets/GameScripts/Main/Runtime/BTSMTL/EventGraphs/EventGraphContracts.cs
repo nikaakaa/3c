@@ -315,13 +315,28 @@ namespace BTSMTL.EventGraphs
             if (typeof(T) == typeof(UnityEngine.Quaternion) && Kind == EventGraphValueKind.Quaternion)
                 return Reinterpret<UnityEngine.Quaternion, T>(m_QuaternionValue);
             if (typeof(T).IsEnum && Kind == EventGraphValueKind.Enum && m_EnumType == typeof(T))
-                return (T)Enum.ToObject(typeof(T), m_EnumValue);
+                return EventGraphEnumValue<T>.FromInt32(m_EnumValue);
             throw new InvalidOperationException(
                 $"Event graph value kind '{Kind}' cannot be read as '{typeof(T).FullName}'.");
         }
 
         static TResult Reinterpret<TValue, TResult>(TValue value) =>
             Unsafe.As<TValue, TResult>(ref value);
+
+        internal static EventGraphValue FromTyped<T>(T value)
+        {
+            if (typeof(T) == typeof(bool)) return FromBool(Unsafe.As<T, bool>(ref value));
+            if (typeof(T) == typeof(int)) return FromInt32(Unsafe.As<T, int>(ref value));
+            if (typeof(T) == typeof(float)) return FromFloat32(Unsafe.As<T, float>(ref value));
+            if (typeof(T) == typeof(UnityEngine.Vector2)) return FromVector2(Unsafe.As<T, UnityEngine.Vector2>(ref value));
+            if (typeof(T) == typeof(UnityEngine.Vector3)) return FromVector3(Unsafe.As<T, UnityEngine.Vector3>(ref value));
+            if (typeof(T) == typeof(UnityEngine.Quaternion)) return FromQuaternion(Unsafe.As<T, UnityEngine.Quaternion>(ref value));
+            if (typeof(T) == typeof(string)) return FromString(Unsafe.As<T, string>(ref value));
+            if (typeof(T).IsEnum)
+                return new EventGraphValue(EventGraphValueKind.Enum, false, 0, 0f, default, default,
+                    default, typeof(T), EventGraphEnumValue<T>.ToInt32(value));
+            throw new InvalidOperationException($"Unsupported EventGraph value type '{typeof(T).FullName}'.");
+        }
 
         void RequireKind(EventGraphValueKind expected)
         {
@@ -703,40 +718,102 @@ namespace BTSMTL.EventGraphs
             $"EventGraphFailure graph={GraphId} event={EventId} node={NodeId} message={Message}";
     }
 
-    public sealed class EventGraphVariableFrame
+    internal static class EventGraphEnumValue<T>
     {
-        readonly EventGraphValue[] m_Values;
+        static readonly TypeCode s_Code = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(T)));
+
+        internal static int ToInt32(T value) => s_Code switch
+        {
+            TypeCode.SByte => Unsafe.As<T, sbyte>(ref value),
+            TypeCode.Byte => Unsafe.As<T, byte>(ref value),
+            TypeCode.Int16 => Unsafe.As<T, short>(ref value),
+            TypeCode.UInt16 => Unsafe.As<T, ushort>(ref value),
+            TypeCode.Int32 => Unsafe.As<T, int>(ref value),
+            TypeCode.UInt32 => checked((int)Unsafe.As<T, uint>(ref value)),
+            TypeCode.Int64 => checked((int)Unsafe.As<T, long>(ref value)),
+            TypeCode.UInt64 => checked((int)Unsafe.As<T, ulong>(ref value)),
+            _ => throw new InvalidOperationException("Unsupported enum storage.")
+        };
+
+        internal static T FromInt32(int value)
+        {
+            switch (s_Code)
+            {
+                case TypeCode.SByte: { sbyte v = checked((sbyte)value); return Unsafe.As<sbyte, T>(ref v); }
+                case TypeCode.Byte: { byte v = checked((byte)value); return Unsafe.As<byte, T>(ref v); }
+                case TypeCode.Int16: { short v = checked((short)value); return Unsafe.As<short, T>(ref v); }
+                case TypeCode.UInt16: { ushort v = checked((ushort)value); return Unsafe.As<ushort, T>(ref v); }
+                case TypeCode.Int32: return Unsafe.As<int, T>(ref value);
+                case TypeCode.UInt32: { uint v = checked((uint)value); return Unsafe.As<uint, T>(ref v); }
+                case TypeCode.Int64: { long v = value; return Unsafe.As<long, T>(ref v); }
+                case TypeCode.UInt64: { ulong v = checked((ulong)value); return Unsafe.As<ulong, T>(ref v); }
+                default: throw new InvalidOperationException("Unsupported enum storage.");
+            }
+        }
+    }
+
+    internal sealed class EventGraphVariableBuffer
+    {
+        EventGraphValue[] m_Published;
+        EventGraphValue[] m_Writing;
+        ulong m_Version;
+
+        internal EventGraphVariableBuffer(int count)
+        {
+            m_Published = new EventGraphValue[count];
+            m_Writing = new EventGraphValue[count];
+        }
+
+        internal void Write(int index, EventGraphValue value) => m_Writing[index] = value;
+        internal EventGraphValue Read(int index) => m_Published[index];
+        internal bool IsCurrent(ulong version) => version != 0 && version == m_Version;
+        internal void Invalidate() => m_Version = checked(m_Version + 1);
+
+        internal EventGraphVariableFrame Publish(EventGraphVariableContract contract,
+            EventGraphInvocationIdentity invocation, ulong resetGeneration)
+        {
+            (m_Published, m_Writing) = (m_Writing, m_Published);
+            Invalidate();
+            return new EventGraphVariableFrame(contract, invocation, resetGeneration, this, m_Version);
+        }
+    }
+
+    public readonly struct EventGraphVariableFrame
+    {
+        readonly EventGraphVariableBuffer m_Buffer;
+        readonly ulong m_Version;
 
         internal EventGraphVariableFrame(
             EventGraphVariableContract contract,
             EventGraphInvocationIdentity invocation,
             ulong resetGeneration,
-            EventGraphValue[] values)
+            EventGraphVariableBuffer buffer,
+            ulong version)
         {
             Contract = contract ?? throw new ArgumentNullException(nameof(contract));
             if (!invocation.IsValid)
                 throw new ArgumentException("Event graph frame invocation identity is invalid.", nameof(invocation));
             if (resetGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(resetGeneration));
-            if (values == null || values.Length != contract.Layout.Entries.Count)
-                throw new ArgumentException("Event graph frame values do not match its layout.", nameof(values));
             Invocation = invocation;
             ResetGeneration = resetGeneration;
-            m_Values = (EventGraphValue[])values.Clone();
+            m_Buffer = buffer;
+            m_Version = version;
         }
 
         public EventGraphVariableContract Contract { get; }
         public EventGraphInvocationIdentity Invocation { get; }
         public ulong ResetGeneration { get; }
+        public bool IsValid => m_Buffer != null && m_Buffer.IsCurrent(m_Version);
         public string GraphId => Contract.GraphId;
         public string ContractRevision => Contract.Revision;
         public string LayoutId => Contract.Layout.LayoutId;
 
         public bool TryRead(string variableId, out EventGraphValue value)
         {
-            if (Contract.Layout.TryGet(variableId, out EventGraphVariableLayoutEntry entry))
+            if (IsValid && Contract.Layout.TryGet(variableId, out EventGraphVariableLayoutEntry entry))
             {
-                value = m_Values[entry.Index];
+                value = m_Buffer.Read(entry.Index);
                 return true;
             }
             value = default;
@@ -745,7 +822,7 @@ namespace BTSMTL.EventGraphs
 
         public bool TryRead(EventGraphVariableReference reference, out EventGraphValue value)
         {
-            if (reference.IsValid &&
+            if (IsValid && reference.IsValid &&
                 string.Equals(reference.GraphId, GraphId, StringComparison.Ordinal))
                 return TryRead(reference.VariableId, out value);
             value = default;
@@ -761,7 +838,7 @@ namespace BTSMTL.EventGraphs
         }
     }
 
-    public sealed class NativeEventGraphExecutionResult
+    public readonly struct NativeEventGraphExecutionResult
     {
         NativeEventGraphExecutionResult(
             bool succeeded,
@@ -780,13 +857,13 @@ namespace BTSMTL.EventGraphs
         internal static NativeEventGraphExecutionResult Success(EventGraphVariableFrame frame) =>
             new NativeEventGraphExecutionResult(
                 true,
-                frame ?? throw new ArgumentNullException(nameof(frame)),
+                frame.IsValid ? frame : throw new ArgumentException("Event graph frame is invalid.", nameof(frame)),
                 null);
 
         internal static NativeEventGraphExecutionResult Failed(EventGraphExecutionFailure failure) =>
             new NativeEventGraphExecutionResult(
                 false,
-                null,
+                default,
                 failure ?? throw new ArgumentNullException(nameof(failure)));
     }
 }

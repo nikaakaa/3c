@@ -268,42 +268,61 @@ namespace BTSMTL.EventGraphs
             return value.As<T>();
         }
 
+        interface IVariableReader
+        {
+            EventGraphValue Read();
+        }
+
+        sealed class VariableReader<T> : IVariableReader
+        {
+            readonly Variable<T> m_Variable;
+
+            public VariableReader(Variable variable) => m_Variable = (Variable<T>)variable;
+            public EventGraphValue Read() => EventGraphValue.FromTyped(m_Variable.value);
+        }
+
+        [NonSerialized] IVariableReader[] m_OutputReaders;
+        [NonSerialized] EventGraphVariableBuffer m_OutputBuffer;
+        [NonSerialized] EventGraphVariableContract m_OutputContract;
+
+        internal void InitializeVariableOutput(EventGraphVariableContract variableContract,
+            EventGraphHostContract hostContract)
+        {
+            m_OutputContract = variableContract;
+            m_OutputReaders = new IVariableReader[variableContract.Layout.Entries.Count];
+            m_OutputBuffer = new EventGraphVariableBuffer(m_OutputReaders.Length);
+            for (int i = 0; i < m_OutputReaders.Length; i++)
+            {
+                EventGraphVariableDescriptor descriptor = variableContract.Layout.Entries[i].Descriptor;
+                if (!hostContract.TryGetOutput(descriptor.Reference.VariableId, out var output) ||
+                    output.ValueType != descriptor.ValueType)
+                    throw new InvalidOperationException($"Event graph output '{descriptor.Reference.VariableId}' does not match its contract.");
+                Variable variable = blackboard.GetVariableByID(descriptor.Reference.VariableId);
+                if (variable == null || variable.varType != descriptor.ValueType)
+                    throw new InvalidOperationException($"Event graph variable '{descriptor.Reference.VariableId}' does not match its declaration.");
+                m_OutputReaders[i] = (IVariableReader)Activator.CreateInstance(
+                    typeof(VariableReader<>).MakeGenericType(descriptor.ValueType), variable);
+            }
+            for (int i = 0; i < allNodes.Count; i++)
+            {
+                if (allNodes[i] is ParameterVariableNode node &&
+                    (node.parameter.varRef == null || !ReferenceEquals(node.parameter.varRef,
+                        blackboard.GetVariableByID(node.parameter.targetVariableID))))
+                    throw new InvalidOperationException($"Event graph variable node '{node.UID}' is not bound to its instance.");
+            }
+        }
+
+        internal void InvalidateVariableOutput() => m_OutputBuffer?.Invalidate();
+
         internal EventGraphVariableFrame CreateVariableFrame(
-            EventGraphVariableContract variableContract,
             EventGraphInvocationIdentity invocation,
             ulong resetGeneration)
         {
             if (m_RuntimeContract == null)
                 throw new InvalidOperationException("Event graph output was requested outside an active host invocation.");
-            var values = new EventGraphValue[variableContract.Layout.Entries.Count];
-            for (int i = 0; i < variableContract.Layout.Entries.Count; i++)
-            {
-                EventGraphVariableLayoutEntry entry = variableContract.Layout.Entries[i];
-                if (!m_RuntimeContract.TryGetOutput(
-                        entry.Descriptor.Reference.VariableId,
-                        out EventGraphOutputDescriptor output))
-                {
-                    throw new InvalidOperationException(
-                        $"Event graph variable '{entry.Descriptor.Reference.VariableId}' is not declared as a host output.");
-                }
-                if (output.ValueType != entry.Descriptor.ValueType)
-                    throw new InvalidOperationException(
-                        $"Event graph output '{output.VariableId}' type changed from '{entry.Descriptor.ValueType.FullName}' to '{output.ValueType.FullName}'.");
-                Variable variable = blackboard.variables.Values.SingleOrDefault(
-                    value => string.Equals(
-                        value.ID,
-                        entry.Descriptor.Reference.VariableId,
-                        StringComparison.Ordinal));
-                if (variable == null)
-                    throw new InvalidOperationException(
-                        $"Event graph variable '{entry.Descriptor.Reference.VariableId}' disappeared during execution.");
-                values[i] = EventGraphValue.FromObject(variable.value);
-            }
-            return new EventGraphVariableFrame(
-                variableContract,
-                invocation,
-                resetGeneration,
-                values);
+            for (int i = 0; i < m_OutputReaders.Length; i++)
+                m_OutputBuffer.Write(i, m_OutputReaders[i].Read());
+            return m_OutputBuffer.Publish(m_OutputContract, invocation, resetGeneration);
         }
 
         internal Node AddNodeNative(Type nodeType, Vector2 position) =>

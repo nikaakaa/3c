@@ -366,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Body.Reset();
             m_EventGraph.Reset();
             m_PresentationClockCoordinator?.Reset();
-            m_EventFrame = null;
+            m_EventFrame = default;
             m_Trajectory = default;
             m_LastLocomotionFactLineage = default;
             m_LocomotionFailureCode = LocomotionPresentationFailureCode.None;
@@ -779,7 +779,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterAnimationVariableFrame frame)
         {
             frame = m_EventFrame;
-            return actorId == m_ActorId && frame != null && frame.RenderFrame == frameIdentity;
+            return actorId == m_ActorId && frame.IsValid && frame.RenderFrame == frameIdentity;
         }
 
         CharacterPresentationFactFrame CreateFactFrame(

@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         OpenStateMachine(m_Asset.EnumerateStateMachines().Single(value => value.StateMachineId.Value == saved.rootId));
                         break;
                     case "rule":
-                        var owner = FindTransitionRuleOwner(saved.rootId);
+                        var owner = CharacterPoseAuthoringCatalog.FindTransitionRuleOwner(m_Asset, saved.rootId);
                         BindTransitionRule(owner.Machine, owner.Transition.TransitionId);
                         break;
                     default:

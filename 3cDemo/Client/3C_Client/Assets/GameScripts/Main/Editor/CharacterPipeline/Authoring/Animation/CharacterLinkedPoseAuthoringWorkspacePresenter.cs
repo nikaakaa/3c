@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Summary("Groups", m_Window.ProfileContext.LinkedPoseGroups.Count.ToString());
             Summary("Implementations", m_Window.ProfileContext.LinkedPoseImplementations.Count.ToString());
             Summary("Selectors", m_Window.ProfileContext.LinkedPoseSelectors.Count.ToString());
-            Summary("Status", m_Window.CurrentPublishedStatus());
+            Summary("Status", m_Window.CurrentAuthoringStatus());
             AddAction("Create Interface", () =>
             {
                 try

@@ -1468,28 +1468,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterPoseGraphCapabilityValidator
     {
-        public static IReadOnlyList<string> Validate(
-            CharacterPoseCanvasAuthoringView view) =>
-            view == null
-                ? new[] { "Pose capability validation requires one Canvas Pose Authoring View." }
-                : Validate(view.OwnerAsset, Array.Empty<PoseGraphId>());
-
-        public static IReadOnlyList<string> Validate(CharacterPresentationPoseGraphAsset asset)
+        public static void Validate(CharacterPresentationPoseGraphAsset asset, CharacterPoseGraphValidationReport report)
         {
-            return Validate(asset, Array.Empty<PoseGraphId>());
-        }
-
-        public static IReadOnlyList<string> Validate(
-            CharacterPresentationPoseGraphAsset asset,
-            IReadOnlyCollection<PoseGraphId> linkedPoseEntryGraphs)
-        {
-            var errors = new List<string>();
-            if (!asset || asset.Graph == null)
-            {
-                errors.Add("Pose capability validation requires one Canvas Pose Graph asset.");
-                return errors;
-            }
-
             GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphCapabilityProjector.Catalog;
             HashSet<PoseGraphId> stateGraphs = asset.EnumerateGraphs()
                 .Where(value => value != null)
@@ -1503,17 +1483,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value.GraphId.IsValid)
                 .Select(value => value.GraphId)
                 .ToHashSet();
-            var linkedEntries = new HashSet<PoseGraphId>(linkedPoseEntryGraphs ?? Array.Empty<PoseGraphId>());
-            HashSet<PoseGraphId> linkedClosure = CollectGraphClosure(
-                asset,
-                linkedEntries);
             foreach (CharacterPoseCanvasGraph graph in asset.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
-                GraphAuthoringDocumentRoleId role = linkedClosure.Contains(graph.GraphId)
-                    ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
-                    : ReferenceEquals(graph, asset.Graph)
+                GraphAuthoringDocumentRoleId role = ReferenceEquals(graph, asset.Graph)
                     ? CharacterPoseGraphAuthoringCapabilities.RootGraph
                     : stateGraphs.Contains(graph.GraphId)
                         ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph
@@ -1523,7 +1497,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                     if (node?.Payload == null)
                     {
-                        errors.Add($"Pose Graph '{graph.GraphId}' node #{nodeIndex} has no typed payload.");
+                        report.Add(new CharacterPoseGraphValidationIssue(CharacterPoseGraphValidationCode.NodeInvalid,
+                            $"Pose Graph '{graph.GraphId}' node #{nodeIndex} has no typed payload.", graph.GraphId.Value, node?.NodeId ?? default));
                         continue;
                     }
                     try
@@ -1547,39 +1522,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                     catch (Exception exception)
                     {
-                        errors.Add($"Pose Graph '{graph.GraphId}' node '{node.NodeId}': {exception.Message}");
+                        report.Add(new CharacterPoseGraphValidationIssue(CharacterPoseGraphValidationCode.NodeInvalid,
+                            $"Pose Graph '{graph.GraphId}' node '{node.NodeId}': {exception.Message}", graph.GraphId.Value, node.NodeId));
                     }
                 }
             }
-            return errors;
-        }
-
-        static HashSet<PoseGraphId> CollectGraphClosure(
-            CharacterPresentationPoseGraphAsset asset,
-            IReadOnlyCollection<PoseGraphId> roots)
-        {
-            var result = new HashSet<PoseGraphId>();
-            var pending = new Stack<PoseGraphId>(roots.Reverse());
-            while (pending.Count > 0)
-            {
-                PoseGraphId graphId = pending.Pop();
-                if (!result.Add(graphId))
-                    continue;
-                CharacterPoseCanvasGraph graph = asset.RequireGraph(graphId);
-                foreach (CharacterPoseCanvasNode node in graph.Nodes.Where(
-                             value => value?.Payload != null))
-                {
-                    foreach (CharacterPoseGraphDependency dependency in
-                             CharacterPoseNodeDefinitionModule.Shared
-                                 .Require(node.Kind)
-                                 .ProjectGraphDependencies(node.Payload))
-                    {
-                        if (dependency.GraphId.IsValid)
-                            pending.Push(dependency.GraphId);
-                    }
-                }
-            }
-            return result;
         }
 
         static void ValidateFields(

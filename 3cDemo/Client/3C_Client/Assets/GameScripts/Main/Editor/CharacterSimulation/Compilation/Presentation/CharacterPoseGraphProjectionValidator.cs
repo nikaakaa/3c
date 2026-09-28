@@ -61,8 +61,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string message,
             string graphId = "",
             PoseNodeId nodeId = default,
-            PosePortId portId = default)
+            PosePortId portId = default,
+            CharacterPoseStateMachineValidationIssue? stateMachineIssue = null)
         {
+            StateMachineIssue = stateMachineIssue;
             Code = code;
             Message = message ?? string.Empty;
             GraphId = graphId ?? string.Empty;
@@ -70,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PortId = portId;
         }
 
+        public CharacterPoseStateMachineValidationIssue? StateMachineIssue { get; }
         public CharacterPoseGraphValidationCode Code { get; }
         public string Message { get; }
         public string GraphId { get; }
@@ -109,6 +112,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ControlRig = 5
         }
 
+        public static CharacterPoseGraphValidationReport ValidateAuthoring(CharacterPresentationPoseGraphAsset asset)
+        {
+            var report = new CharacterPoseGraphValidationReport();
+            if (!asset || asset.Graph == null)
+            {
+                Report(report, CharacterPoseGraphValidationCode.GraphMissing, "Character Presentation Pose Graph is missing.");
+                return report;
+            }
+            foreach (CharacterPoseCanvasGraph graph in asset.EnumerateGraphs())
+            {
+                if (graph == null)
+                    continue;
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
+                {
+                    if (node?.Payload is not CharacterPoseStateMachineNodePayload payload)
+                        continue;
+                    CharacterPoseStateMachineValidationIssue? issue =
+                        CharacterPoseStateMachineAuthoringValidator.FindFirstIssue(payload.StateMachine, asset.RequireGraph);
+                    if (issue.HasValue)
+                        report.Add(new CharacterPoseGraphValidationIssue(
+                            CharacterPoseGraphValidationCode.StateMachineInvalid, issue.Value.Message,
+                            graph.GraphId.Value, node.NodeId, stateMachineIssue: issue.Value));
+                }
+            }
+            if (!report.IsValid)
+                return report;
+            CharacterPoseGraphCapabilityValidator.Validate(asset, report);
+            ValidateStateMachineLayouts(asset, report);
+            return report;
+        }
+
         public static CharacterPoseGraphValidationReport Validate(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationRigDefinition rig,
@@ -122,15 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (portResolver == null)
                 throw new ArgumentNullException(nameof(portResolver));
-            var report = new CharacterPoseGraphValidationReport();
-            if (!asset || asset.Graph == null)
-            {
-                Report(
-                    report,
-                    CharacterPoseGraphValidationCode.GraphMissing,
-                    "Character Presentation Pose Graph is missing.");
+            CharacterPoseGraphValidationReport report = ValidateAuthoring(asset);
+            if (!report.IsValid)
                 return report;
-            }
             if (!rig)
             {
                 Report(
@@ -153,18 +181,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     asset.Graph.GraphId);
                 return report;
             }
-            ValidateStateMachineLayouts(asset, report);
-
-            foreach (string error in
-                     CharacterPoseGraphCapabilityValidator.Validate(asset))
-            {
-                Report(
-                    report,
-                    CharacterPoseGraphValidationCode.NodeInvalid,
-                    error,
-                    asset.Graph.GraphId);
-            }
-
             var catalogIds = new HashSet<PoseGraphId>();
             var referenceCounts = new Dictionary<PoseGraphId, int>();
             var subgraphCallCounts = new Dictionary<PoseGraphId, int>();
@@ -748,48 +764,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyCollection<CharacterPoseParameterDeclaration>
                 animationInputParameters)
         {
-            try
+            foreach (CharacterPoseStateDefinition state in payload.StateMachine.States)
             {
-                CharacterPoseStateMachineAuthoringValidator
-                    .RequireValid(
-                        payload.StateMachine,
-                        graphResolver);
-            }
-            catch (Exception exception)
-            {
-                Report(
-                    report,
-                    CharacterPoseGraphValidationCode
-                        .StateMachineInvalid,
-                    $"Pose Node '{node.NodeId}': {exception.Message}",
-                    ownerGraph.GraphId,
-                    node.NodeId);
-                return;
-            }
-            foreach (CharacterPoseStateDefinition state in
-                     payload.StateMachine.States)
-            {
-                CharacterPoseCanvasGraph stateGraph = null;
-                try
-                {
-                    if (state != null)
-                        stateGraph = graphResolver(state.PoseGraphId);
-                }
-                catch
-                {
-                    stateGraph = null;
-                }
-                if (state == null || stateGraph == null)
-                {
-                    Report(
-                        report,
-                        CharacterPoseGraphValidationCode
-                            .StateMachineInvalid,
-                        $"Pose Node '{node.NodeId}' references a missing state Pose Graph.",
-                        ownerGraph.GraphId,
-                        node.NodeId);
-                    continue;
-                }
+                CharacterPoseCanvasGraph stateGraph = graphResolver(state.PoseGraphId);
                 if (traverseDependencies)
                 {
                     ValidateGraph(

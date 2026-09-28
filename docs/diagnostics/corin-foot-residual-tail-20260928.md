@@ -22,7 +22,7 @@ EvaluatePlant 将“允许 Landing 完成”和“数值残差归零”分开。
 
 ThirdPersonClient.Editor.csproj 编译通过，0 错误、91 警告；使用规定的禁用构建服务器参数，结束后已关闭构建服务器。日志为 tmp/foot-residual-tail-build.log。本轮三个源码文件 diff 检查通过。
 
-编译后目标 Editor 的 MCP 会话暂时未注册，尚未确认 Unity 加载；不能把磁盘代码编译通过当作当前运行版本或视觉效果已验证。
+编译后目标 Editor 的 MCP 会话短暂未注册，随后恢复。已核对目标工程路径、Edit 模式、未编译且未刷新；统一采样布局已加载两个 zero-tolerance 新字段，旧 completion-tolerance 字段未出现，Console 错误为 0。未运行回放或 Play 验收，视觉改善由用户手测确认。
 
 ## 尚未处理
 

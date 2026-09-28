@@ -28,17 +28,6 @@ namespace BTSMTL.Timeline
         HoldUntilSourceEnds
     }
 
-    public enum TimelineCameraCueKind
-    {
-        Shake,
-        FovKick,
-        Recoil,
-        CollisionCorrection,
-        Custom,
-        Override,
-        Shot
-    }
-
     public readonly struct TimelineCameraStateSample
     {
         public TimelineCameraStateSample(
@@ -84,53 +73,6 @@ namespace BTSMTL.Timeline
         public float BlendOutSeconds { get; }
         public string TargetKey { get; }
         public TimelineCameraInterruptPolicy InterruptPolicy { get; }
-    }
-
-    public readonly struct TimelineCameraCueSample
-    {
-        public TimelineCameraCueSample(
-            string sourceId,
-            string sourceName,
-            string trackName,
-            string trackAuthoringId,
-            string clipAuthoringId,
-            string cueId,
-            TimelineCameraCueKind cueKind,
-            string cueType,
-            string resourceId,
-            float intensity,
-            float durationSeconds,
-            int priority,
-            int cycle)
-        {
-            SourceId = sourceId ?? string.Empty;
-            SourceName = sourceName ?? string.Empty;
-            TrackName = trackName ?? string.Empty;
-            TrackAuthoringId = trackAuthoringId;
-            ClipAuthoringId = clipAuthoringId;
-            CueId = cueId ?? string.Empty;
-            CueKind = cueKind;
-            CueType = cueType ?? string.Empty;
-            ResourceId = resourceId ?? string.Empty;
-            Intensity = Mathf.Max(0f, intensity);
-            DurationSeconds = Mathf.Max(0f, durationSeconds);
-            Priority = priority;
-            Cycle = cycle;
-        }
-
-        public string SourceId { get; }
-        public string SourceName { get; }
-        public string TrackName { get; }
-        public string TrackAuthoringId { get; }
-        public string ClipAuthoringId { get; }
-        public string CueId { get; }
-        public TimelineCameraCueKind CueKind { get; }
-        public string CueType { get; }
-        public string ResourceId { get; }
-        public float Intensity { get; }
-        public float DurationSeconds { get; }
-        public int Priority { get; }
-        public int Cycle { get; }
     }
 
     public readonly struct TimelineCameraResponseSample
@@ -274,94 +216,6 @@ namespace BTSMTL.Timeline
 #endif
     }
 
-    [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(5), Color(255, 168, 214)]
-    public sealed class CameraCueTrack : Track
-    {
-        public override string ContractKind => TimelineContractKinds.CameraCueTrack;
-
-        public void Sample(
-            FixedScalar previousTime,
-            FixedScalar timelineTime,
-            string sourceId,
-            string sourceName,
-            ICollection<TimelineCameraCueSample> cues,
-            int cycle,
-            bool includeStartBoundary = false)
-        {
-            if (m_PersistentMuted || cues == null)
-                return;
-
-            foreach (var clip in Clips)
-            {
-                if (clip is not CameraCueClip cueClip)
-                    continue;
-
-                if ((includeStartBoundary && cueClip.StartTime.Raw == 0) ||
-                    previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
-                {
-                    cues.Add(new TimelineCameraCueSample(
-                        sourceId,
-                        sourceName,
-                        Name,
-                        AuthoringId,
-                        cueClip.AuthoringId,
-                        cueClip.CueId,
-                        cueClip.CueKind,
-                        cueClip.CueType,
-                        cueClip.ResourceId,
-                        cueClip.Intensity,
-                        cueClip.DurationSeconds,
-                        cueClip.Priority,
-                        cycle));
-                }
-            }
-        }
-
-#if UNITY_EDITOR
-        public override Type ClipType => typeof(CameraCueClip);
-#endif
-    }
-
-    [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(255, 168, 214)]
-    [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("cueKind", typeof(TimelineCameraCueKind))]
-    [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("resourceId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("intensity", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
-    [TimelineAuthoringProperty("durationSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
-    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
-    public sealed class CameraCueClip : SignalClip
-    {
-        public override string ContractKind => TimelineContractKinds.CameraCueClip;
-
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string CueId = "CameraCue";
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public TimelineCameraCueKind CueKind = TimelineCameraCueKind.Shake;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string CueType = "Camera";
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string ResourceId;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public float Intensity = 1f;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public float DurationSeconds = 0.2f;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public int Priority;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-
-#if UNITY_EDITOR
-        public CameraCueClip(Track track, FixedScalar time) : base(track, time)
-        {
-        }
-#endif
-    }
-
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(6), Color(170, 225, 255)]
     public sealed class CameraResponseTrack : Track
     {
@@ -467,13 +321,6 @@ namespace BTSMTL.Timeline
                     TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.CameraStateClip),
                 new TimelineTrackContract(
-                    TimelineContractKinds.CameraCueTrack,
-                    TimelineTrackOverlapPolicy.Parallel,
-                    TimelineCapability.Camera,
-                    TimelineExecutionDomain.Presentation,
-                    TimelineOutputKind.PresentationEvent,
-                    TimelineContractKinds.CameraCueClip),
-                new TimelineTrackContract(
                     TimelineContractKinds.CameraResponseTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Camera,
@@ -497,15 +344,6 @@ namespace BTSMTL.Timeline
                     TimelineCapability.Camera,
                     true,
                     true,
-                    TimelineExecutionDomain.Presentation,
-                    TimelineOutputKind.PresentationEvent),
-                new TimelineClipContract(
-                    TimelineContractKinds.CameraCueClip,
-                    TimelineContractKinds.CameraCueTrack,
-                    TimelineClipExecutionPhase.Commit,
-                    TimelineCapability.Camera,
-                    false,
-                    false,
                     TimelineExecutionDomain.Presentation,
                     TimelineOutputKind.PresentationEvent),
                 new TimelineClipContract(

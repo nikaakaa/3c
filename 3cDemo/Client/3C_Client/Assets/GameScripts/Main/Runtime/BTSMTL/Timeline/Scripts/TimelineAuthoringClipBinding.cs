@@ -77,16 +77,11 @@ namespace BTSMTL.Timeline
         public MotionWarpLimitPolicy LimitPolicy { get; set; }
         public AnimationCurve PositionProgressCurve { get; set; }
         public AnimationCurve YawProgressCurve { get; set; }
-        public string CueId { get; set; }
-        public string CueType { get; set; }
         public TimelineCameraMode CameraMode { get; set; }
         public float CameraBlendInSeconds { get; set; }
         public float CameraBlendOutSeconds { get; set; }
         public string CameraTargetKey { get; set; }
         public TimelineCameraInterruptPolicy CameraInterruptPolicy { get; set; }
-        public TimelineCameraCueKind CameraCueKind { get; set; }
-        public float CameraIntensity { get; set; }
-        public float CameraDurationSeconds { get; set; }
         public string CameraSequenceId { get; set; }
         public string CameraResourceId { get; set; }
         public CameraEffectAsset CameraEffect { get; set; }
@@ -151,11 +146,6 @@ namespace BTSMTL.Timeline
                 result.PositionProgressCurve = warp.PositionProgressCurve;
                 result.YawProgressCurve = warp.YawProgressCurve;
             }
-            if (clip is ActionCueClip actionCue)
-            {
-                result.CueId = actionCue.CueId;
-                result.CueType = actionCue.CueType;
-            }
             if (clip is CameraStateClip cameraState)
             {
                 result.CameraMode = cameraState.Mode;
@@ -165,19 +155,6 @@ namespace BTSMTL.Timeline
                 result.CameraBlendOutSeconds = cameraState.BlendOutSeconds;
                 result.CameraTargetKey = cameraState.TargetKey;
                 result.CameraInterruptPolicy = cameraState.InterruptPolicy;
-            }
-            if (clip is CameraCueClip cameraCue)
-            {
-                result.CueId = cameraCue.CueId;
-                result.CameraCueKind = cameraCue.CueKind;
-                result.CueType = cameraCue.CueType;
-                result.CameraIntensity = cameraCue.Intensity;
-                result.CameraDurationSeconds = cameraCue.DurationSeconds;
-                result.CameraResourceId = cameraCue.ResourceId;
-                result.Priority = cameraCue.Priority;
-                result.CameraWeightCurve = cameraCue.WeightCurve;
-                result.CameraEaseInCurve = cameraCue.EaseInCurve;
-                result.CameraEaseOutCurve = cameraCue.EaseOutCurve;
             }
             if (clip is CameraEffectClip cameraResource)
             {
@@ -254,11 +231,6 @@ namespace BTSMTL.Timeline
                     resolver.TryResolveMotionClip(timeline, configuration.SourceMotionClipId, out MotionCurveClip source))
                     MotionWarpAuthoring.BindSource(timeline, warp, source);
             }
-            if (clip is ActionCueClip actionCue)
-            {
-                actionCue.CueId = configuration.CueId;
-                actionCue.CueType = configuration.CueType;
-            }
             if (clip is CameraStateClip cameraState)
             {
                 cameraState.Mode = configuration.CameraMode;
@@ -268,19 +240,6 @@ namespace BTSMTL.Timeline
                 cameraState.TargetKey = configuration.CameraTargetKey;
                 cameraState.InterruptPolicy = configuration.CameraInterruptPolicy;
                 cameraState.SequenceId = configuration.CameraSequenceId;
-            }
-            if (clip is CameraCueClip cameraCue)
-            {
-                cameraCue.CueId = configuration.CueId;
-                cameraCue.CueKind = configuration.CameraCueKind;
-                cameraCue.CueType = configuration.CueType;
-                cameraCue.ResourceId = configuration.CameraResourceId;
-                cameraCue.Intensity = configuration.CameraIntensity;
-                cameraCue.DurationSeconds = configuration.CameraDurationSeconds;
-                cameraCue.Priority = configuration.Priority;
-                cameraCue.WeightCurve = configuration.CameraWeightCurve;
-                cameraCue.EaseInCurve = configuration.CameraEaseInCurve;
-                cameraCue.EaseOutCurve = configuration.CameraEaseOutCurve;
             }
             if (clip is CameraResponseClip cameraResponse)
             {

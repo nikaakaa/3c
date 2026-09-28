@@ -148,9 +148,6 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId CameraResponseWeight = Id("camera-response.weight");
         public static readonly TimelineCurveChannelId CameraResponseEaseIn = Id("camera-response.ease-in");
         public static readonly TimelineCurveChannelId CameraResponseEaseOut = Id("camera-response.ease-out");
-        public static readonly TimelineCurveChannelId CameraCueWeight = Id("camera-cue.weight");
-        public static readonly TimelineCurveChannelId CameraCueEaseIn = Id("camera-cue.ease-in");
-        public static readonly TimelineCurveChannelId CameraCueEaseOut = Id("camera-cue.ease-out");
         public static readonly TimelineCurveChannelId CameraEffectWeight = Id("camera-effect.weight");
         public static readonly TimelineCurveChannelId CameraEffectEaseIn = Id("camera-effect.ease-in");
         public static readonly TimelineCurveChannelId CameraEffectEaseOut = Id("camera-effect.ease-out");
@@ -209,9 +206,6 @@ namespace BTSMTL.Timeline
             D(CameraResponseWeight, typeof(CameraResponseClip), "Weight", C(110, 201, 240), Unit, One),
             D(CameraResponseEaseIn, typeof(CameraResponseClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraResponseEaseOut, typeof(CameraResponseClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(CameraCueWeight, typeof(CameraCueClip), "Weight", C(255, 168, 214), Unit, One),
-            D(CameraCueEaseIn, typeof(CameraCueClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraCueEaseOut, typeof(CameraCueClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(CameraEffectWeight, typeof(CameraEffectClip), "Weight", C(236, 190, 120), Unit, One),
             D(CameraEffectEaseIn, typeof(CameraEffectClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraEffectEaseOut, typeof(CameraEffectClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
@@ -260,9 +254,6 @@ namespace BTSMTL.Timeline
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight => clip.WeightCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn => clip.EaseInCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut => clip.EaseOutCurve,
-                CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueWeight => clip.WeightCurve,
-                CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseIn => clip.EaseInCurve,
-                CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseOut => clip.EaseOutCurve,
                 CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight => clip.WeightCurve,
                 CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn => clip.EaseInCurve,
                 CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut => clip.EaseOutCurve,
@@ -292,9 +283,6 @@ namespace BTSMTL.Timeline
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight: clip.WeightCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn: clip.EaseInCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut: clip.EaseOutCurve = copy; break;
-                case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueWeight: clip.WeightCurve = copy; break;
-                case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseIn: clip.EaseInCurve = copy; break;
-                case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseOut: clip.EaseOutCurve = copy; break;
                 case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight: clip.WeightCurve = copy; break;
                 case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn: clip.EaseInCurve = copy; break;
                 case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut: clip.EaseOutCurve = copy; break;

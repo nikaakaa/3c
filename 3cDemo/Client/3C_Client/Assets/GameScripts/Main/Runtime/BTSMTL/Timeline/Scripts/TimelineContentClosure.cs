@@ -307,7 +307,6 @@ namespace BTSMTL.Timeline
             string contentHash,
             string rootFingerprint,
             string name,
-            int frameRate,
             FixedScalar duration,
             bool loop,
             IReadOnlyList<TimelineContentTrack> tracks,
@@ -321,7 +320,6 @@ namespace BTSMTL.Timeline
             ContentHash = contentHash ?? string.Empty;
             RootFingerprint = rootFingerprint ?? string.Empty;
             Name = name ?? string.Empty;
-            FrameRate = frameRate;
             Duration = duration;
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
@@ -336,7 +334,6 @@ namespace BTSMTL.Timeline
         public string ContentHash { get; }
         public string RootFingerprint { get; }
         public string Name { get; }
-        public int FrameRate { get; }
         public FixedScalar Duration { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
@@ -348,7 +345,6 @@ namespace BTSMTL.Timeline
         public bool IsValid => !string.IsNullOrEmpty(Identity) &&
             !string.IsNullOrEmpty(ContentHash) &&
             !string.IsNullOrEmpty(RootFingerprint) &&
-            FrameRate > 0 &&
             Duration >= FixedScalar.Zero;
     }
 
@@ -611,7 +607,6 @@ namespace BTSMTL.Timeline
                     SourceContentHasher.Hash(hashParts.ToArray()),
                     rootFingerprint,
                     timeline.Name,
-                    TimelineUtility.FrameRate,
                     duration,
                     timeline.Loop,
                     tracks,

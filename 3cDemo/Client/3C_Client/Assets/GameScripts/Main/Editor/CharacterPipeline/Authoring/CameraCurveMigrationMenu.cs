@@ -57,11 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
                 "863fd5a3-0f36-4ee2-9560-1e6f4f549d90",
                 "98df6307-0b02-4348-bdf7-f3b98eb63a7f");
 
-            RemoveLegacyCue("Attack1CameraCue");
-            RemoveLegacyCue("Attack5CameraCue");
-
             AssetDatabase.SaveAssets();
-            Debug.Log($"[CameraCurveMigration] 相机节点写入 {applied} 处；旧 Attack1/Attack5 CameraCue 已删除。连线由作者在图窗口完成。");
+            Debug.Log($"[CameraCurveMigration] 相机节点写入 {applied} 处。连线由作者在图窗口完成。");
         }
 
         [MenuItem("3C/Camera/Validate Corin Camera Profile")]
@@ -219,35 +216,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
             return 1;
         }
 
-        static void RemoveLegacyCue(string cueId)
-        {
-            var timelines = AssetDatabase.FindAssets("t:TimelineAsset", new[] { "Assets/Configs/Character/Corin" })
-                .Select(guid => AssetDatabase.GUIDToAssetPath(guid))
-                .Concat(new[] { DefinitionPath })
-                .Distinct(StringComparer.Ordinal);
-            foreach (string path in timelines)
-            {
-                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
-                {
-                    if (asset is not BTSMTL.Timeline.TimelineAsset timeline || timeline.Data == null)
-                        continue;
-                foreach (BTSMTL.Timeline.Track track in timeline.Data.Tracks)
-                {
-                    if (track is not BTSMTL.Timeline.ActionCueTrack cueTrack)
-                        continue;
-                    for (int i = cueTrack.Clips.Count - 1; i >= 0; i--)
-                    {
-                        if (cueTrack.Clips[i] is BTSMTL.Timeline.ActionCueClip cue &&
-                            string.Equals(cue.CueId, cueId, StringComparison.Ordinal))
-                        {
-                            cueTrack.Clips.RemoveAt(i);
-                            EditorUtility.SetDirty(timeline);
-                            Debug.Log($"[CameraCurveMigration] 删除旧 Cue {cueId} @ {path}");
-                        }
-                    }
-                }
-            }
-            }
-        }
     }
 }

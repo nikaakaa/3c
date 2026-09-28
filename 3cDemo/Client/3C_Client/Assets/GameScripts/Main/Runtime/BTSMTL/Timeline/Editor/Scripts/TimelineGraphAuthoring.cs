@@ -43,6 +43,7 @@ namespace BTSMTL.Timeline.Editor
             graph.SelfSerialize();
             EditorUtility.SetDirty(graph);
             EditorUtility.SetDirty(container);
+            AssetDatabase.SaveAssetIfDirty(container);
             return graph;
         }
 

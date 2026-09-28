@@ -13,14 +13,6 @@ namespace BTSMTL.Timeline
     {
         public event Action OnValueChanged;
 
-        float m_Time;
-        public float Time
-        {
-            get => m_Time;
-            set => m_Time = value;
-        }
-        public int Frame => Mathf.RoundToInt(Time * TimelineUtility.FrameRate);
-
         public int MaxFrame => TimelineTimeGrid.CeilingIndex(DurationTime, TimelineUtility.FrameRate);
         public FixedScalar DurationTime { get; private set; }
         public float Duration => DurationTime.ToSingle();
@@ -160,7 +152,7 @@ namespace BTSMTL.Timeline
         [SerializeField]
         string m_AuthoringId;
 
-        #region Frame
+        #region Time
         [SerializeField]
         long m_StartTimeRaw;
         [SerializeField]

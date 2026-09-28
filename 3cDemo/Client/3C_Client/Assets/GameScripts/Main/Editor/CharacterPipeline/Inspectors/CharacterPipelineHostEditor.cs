@@ -204,7 +204,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeTraceEventKind.ActionActivationRequested,
                 RuntimeTraceEventKind.ActionLifecycleTransitioned,
                 RuntimeTraceEventKind.ActionWindowSampled,
-                RuntimeTraceEventKind.ActionCueSubmitted,
                 RuntimeTraceEventKind.ActionResultSubmitted), FormatAction);
         }
 

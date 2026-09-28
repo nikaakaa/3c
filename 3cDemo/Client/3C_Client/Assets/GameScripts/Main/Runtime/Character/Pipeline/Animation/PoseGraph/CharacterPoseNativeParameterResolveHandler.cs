@@ -108,6 +108,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePoseBufferCopy.CopyMetadata(
                 in baseBinding,
                 in m_WriteBinding);
+            NativeSlice<AnimationLocalBonePose> outputPoses = m_WriteBinding.DenseLocalPoses;
+            outputPoses.CopyFrom(baseBinding.DenseLocalPoses);
             ResolveParameters(
                 runtime,
                 node,

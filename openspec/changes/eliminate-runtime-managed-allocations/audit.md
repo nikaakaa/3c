@@ -159,13 +159,14 @@
 - 必须保留全量预检后写入，不能改成逐骨骼检查后立即写而留下半帧姿势。引擎调用成本尚未测量，减少调用数量不等同于已证实总帧耗时下降。
 - 实施结果：物理 writer 按 Rig 骨骼数准备值类型写入数组，预检时一次解析并存放所选姿势，全部预检成功后直接消费该数组。位置/旋转用 SetLocalPositionAndRotation 合并写入，缩放仍写；发布页的有限性检查与写入前 Transform 存活检查均保留。增加一副定容本地姿势数组，换取删除第二次 ResolvePose 和减少逐骨骼引擎调用。
 
-### AP11 诊断关闭后仍有字段采集与观察字典维护（表现采样与字典移交已实施，物理检查待决策）
+### AP11 诊断关闭后仍有字段采集与观察字典维护（采样拆分与字典移交已实施）
 
 - 证据：[CharacterPresentationDomainRuntime.cs:716](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/CharacterPresentationDomainRuntime.cs#L716) 无条件构造含 lean 读取的诊断帧；[CharacterFinalPosePhysicalWriter.cs:116](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/Final/CharacterFinalPosePhysicalWriter.cs#L116) 在足部采集开关外读取骨盆/双踝 Transform 并转换空间。
 - [CharacterPoseNativeGraphRuntime.cs:1069](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1069) 每个首次求值输出写观察字典，CommitGraphOutput 再逐项复制到已提交字典，不以观察订阅为前提。
 - 可沿现有订阅按需采集，但 PhysicalWrite.IsAvailable 当前参与提交校验：须把写回成功身份与诊断坐标分开，保留故障与 Commit 证明。不能整段关闭而破坏发布合同，也不能让关闭观察后返回上次残留字段。
 - 实施结果：原生表现采样未订阅时不构造诊断帧，清除该帧诊断结果；发布时检查诊断帧对应当前 renderFrame，避免订阅在帧中变化后发布旧数据。节点观察仍保留原读取能力，但 Commit 改为交换工作/已提交字典并清空旧页，删除逐项复制；Discard 不替换已提交字典。
-- 剩余：物理写回后的坐标读取同时承担世界坐标有限性校验。已向用户说明保留该校验与改成仅确认本地写入的区别，未收到选择前保留现行行为。节点观察尚无正式订阅寿命合同，本轮不加全局开关或静默关闭观察。
+- 用户明确普通运行不做采样，采样由编译选项控制。物理写入现在返回完成身份，publication 在写入与 Commit 时核对当帧身份；足部世界坐标采集、缓存和提交复制仅在 `KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT` 编译分支存在，且仅有订阅时读取 Transform。采样包含原有根、骨盆、双踝及双脚趾字段。旧 `AnimationPhysicalBoneWriteDiagnostics` 删除，不再把诊断结构作为业务提交证明。
+- 行为边界：本地姿势全量预检仍保留；普通提交不再借诊断坐标拦截父变换引起的异常世界坐标。节点观察尚无正式订阅寿命合同，本轮不加全局开关或静默关闭观察。已静态核对采样宏开关分支及旧类型全仓消费者，未执行编译。
 
 ### AP12 FlowCanvas 共享纯计算可能重复执行（取决于正式图连接）
 
@@ -209,7 +210,7 @@
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。
 - Corin Lean 实施说明已经记录个别初始化绑定及常量恢复修复；这些修复不等于通用 authoring/变量身份缺口全部收口。
-- AP05 的预建、AP07 的采样裁剪、AP08 的页共享和 AP11 的提交证明拆分若需要改变现行系统合同，应明确业务取舍后在正式链内实施，不设临时旁路。本轮只记录，不实施。
+- AP05 的创建策略、AP07 的采样裁剪、AP08 的页共享需要保持正式生命周期及业务合同，不设临时旁路。AP11 的提交证明已按用户的采样隔离要求拆分。
 
 ## 后续证据范围
 

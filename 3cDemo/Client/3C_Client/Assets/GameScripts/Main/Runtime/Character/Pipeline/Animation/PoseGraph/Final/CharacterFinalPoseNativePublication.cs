@@ -34,7 +34,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal int BufferPage = -1;
             internal CharacterPoseNativePoseReadBinding Output;
             internal ComposedAnimationPoseFrame Frame;
-            internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
+            internal ulong PhysicalCompletionIdentity;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            internal CharacterFootIkPhysicalCapture PhysicalCapture;
+#endif
             internal bool HasOutput;
             internal bool HasFrame;
             internal bool IsOpen => Lease.IsValid;
@@ -50,7 +53,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = bufferPage;
                 Output = default;
                 Frame = default;
-                PhysicalWrite = default;
+                PhysicalCompletionIdentity = 0;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+                PhysicalCapture = default;
+#endif
                 HasOutput = false;
                 HasFrame = false;
             }
@@ -93,7 +99,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = -1;
                 Output = default;
                 Frame = default;
-                PhysicalWrite = default;
+                PhysicalCompletionIdentity = 0;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+                PhysicalCapture = default;
+#endif
                 HasOutput = false;
                 HasFrame = false;
             }
@@ -125,7 +134,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_CommittedPage = -1;
         bool m_HasCommitted;
         ComposedAnimationPoseFrame m_CommittedFrame;
-        AnimationPhysicalBoneWriteDiagnostics m_CommittedPhysicalWrite;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+        CharacterFootIkPhysicalCapture m_CommittedPhysicalCapture;
+#endif
         bool m_Disposed;
 
         internal CharacterFinalPoseNativePublication(
@@ -399,16 +410,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             m_Pending.RequireFrame(lease);
             m_PropertyWriter.ValidateFrame(in m_Pending.Frame);
-            m_PhysicalWriter.WriteNative(
+            m_Pending.PhysicalCompletionIdentity = m_PhysicalWriter.WriteNative(
                 in m_Pending.Output,
                 in m_Pending.Frame,
                 m_HasCommitted,
                 in m_CommittedFrame,
                 captureFootIkDiagnostics);
-            m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
-            if (!m_Pending.PhysicalWrite.IsAvailable ||
-                m_Pending.PhysicalWrite.CompletionIdentity !=
-                lease.Lineage.CompletionIdentity)
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_Pending.PhysicalCapture = m_PhysicalWriter.FootIkCapture;
+#endif
+            if (m_Pending.PhysicalCompletionIdentity == 0 ||
+                m_Pending.PhysicalCompletionIdentity != lease.Lineage.CompletionIdentity)
             {
                 throw new InvalidOperationException(
                     "Native Final Pose publication physical write is incomplete.");
@@ -421,16 +433,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             m_Pending.RequireFrame(lease);
-            if (!m_Pending.PhysicalWrite.IsAvailable ||
-                m_Pending.PhysicalWrite.CompletionIdentity !=
-                lease.Lineage.CompletionIdentity)
+            if (m_Pending.PhysicalCompletionIdentity == 0 ||
+                m_Pending.PhysicalCompletionIdentity != lease.Lineage.CompletionIdentity)
             {
                 throw new InvalidOperationException(
                     "Native Final Pose publication cannot commit before physical write.");
             }
             m_CommittedPage = m_Pending.BufferPage;
             m_CommittedFrame = m_Pending.Frame;
-            m_CommittedPhysicalWrite = m_Pending.PhysicalWrite;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_CommittedPhysicalCapture = m_Pending.PhysicalCapture;
+#endif
             m_HasCommitted = true;
             CharacterPoseNativeFrameLineage lineage = lease.Lineage;
             m_Pending.Clear();
@@ -466,7 +479,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterFootIkPhysicalCapture CommittedPhysicalCapture =>
-            m_CommittedPhysicalWrite.FootIkCapture;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_CommittedPhysicalCapture;
+#else
+            default;
+#endif
 
         internal AnimationReadOnlyBuffer<ClipSamplePlan> RequireCommittedClipSamples(ulong completionIdentity)
         {
@@ -509,7 +526,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PageLeases[i].Invalidate();
             m_CommittedPage = -1;
             m_CommittedFrame = default;
-            m_CommittedPhysicalWrite = default;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_CommittedPhysicalCapture = default;
+#endif
             m_HasCommitted = false;
             m_Pending.Clear();
         }

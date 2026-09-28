@@ -9,20 +9,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterFinalPosePhysicalWriter
     {
         readonly CharacterAnimationRigPayload m_Rig;
-        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly IReadOnlyList<Transform> m_Bones;
-        readonly Transform m_ComponentRoot;
         readonly int m_RootBoneIndex;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly int m_LeftAnkleBoneIndex;
         readonly int m_RightAnkleBoneIndex;
         readonly int m_LeftToeBoneIndex;
         readonly int m_RightToeBoneIndex;
         readonly int m_PelvisBoneIndex;
+        internal CharacterFootIkPhysicalCapture FootIkCapture { get; private set; }
+#endif
         readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
         readonly AnimationLocalBonePose m_RootReferencePose;
         readonly AnimationLocalBonePose[] m_ReferencePoses;
         readonly AnimationLocalBonePose[] m_WritePoses;
-        AnimationPhysicalBoneWriteDiagnostics m_Diagnostics;
 
         internal CharacterFinalPosePhysicalWriter(
             CharacterAnimationRigBinding binding,
@@ -32,23 +33,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!binding)
                 throw new ArgumentNullException(nameof(binding));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_RootHierarchy = rootHierarchy
-                ? rootHierarchy
-                : throw new ArgumentNullException(nameof(rootHierarchy));
+            if (!rootHierarchy)
+                throw new ArgumentNullException(nameof(rootHierarchy));
             m_Bones = binding.PhysicalBones;
-            m_ComponentRoot = binding.Animator.transform;
-            if (m_ComponentRoot != m_RootHierarchy.PoseRoot)
+            if (binding.Animator.transform != rootHierarchy.PoseRoot)
             {
                 throw new ArgumentException(
                     "Final Pose writer must use the formal PoseRoot.",
                     nameof(rootHierarchy));
             }
             m_RootBoneIndex = rig.RootPhysicalBoneIndex;
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            m_RootHierarchy = rootHierarchy;
             m_LeftAnkleBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;
             m_RightAnkleBoneIndex = rig.RightLeg.AnklePhysicalBoneIndex;
             m_LeftToeBoneIndex = rig.LeftLeg.ToePhysicalBoneIndex;
             m_RightToeBoneIndex = rig.RightLeg.ToePhysicalBoneIndex;
             m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
+#endif
             m_RootBonePolicy = rig.RootBonePolicy;
             CharacterAnimationPhysicalBonePayload root =
                 rig.PhysicalBones[m_RootBoneIndex];
@@ -73,16 +75,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Animation root reference pose is invalid.");
         }
 
-        internal AnimationPhysicalBoneWriteDiagnostics Diagnostics =>
-            m_Diagnostics;
-
-        internal void WriteNative(
+        internal ulong WriteNative(
             in CharacterPoseNativePoseReadBinding output,
             in ComposedAnimationPoseFrame pending,
             bool hasCommitted,
             in ComposedAnimationPoseFrame committed,
             bool captureFootIkDiagnostics)
         {
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            FootIkCapture = default;
+#endif
             bool pendingValid = PendingNativeHeaderIsValid(
                 in output,
                 in pending);
@@ -114,25 +116,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bone.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
                 bone.localScale = pose.Scale;
             }
-            if (pendingValid)
-            {
-                Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
-                CharacterFootIkPhysicalCapture footIkCapture =
-                    captureFootIkDiagnostics
-                        ? CaptureFootIkPhysical(pelvisWorldPosition)
-                        : default;
-                m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
-                    output.CompletionIdentity,
-                    CaptureComponentPosition(m_LeftAnkleBoneIndex),
-                    CaptureComponentRotation(m_LeftAnkleBoneIndex),
-                    CaptureComponentPosition(m_RightAnkleBoneIndex),
-                    CaptureComponentRotation(m_RightAnkleBoneIndex),
-                    m_ComponentRoot.InverseTransformPoint(pelvisWorldPosition),
-                    pelvisWorldPosition,
-                    in footIkCapture);
-            }
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
+            if (pendingValid && captureFootIkDiagnostics)
+                FootIkCapture = CaptureFootIkPhysical(m_Bones[m_PelvisBoneIndex].position);
+#endif
+            return pendingValid ? output.CompletionIdentity : 0;
         }
 
+#if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
         CharacterFootIkPhysicalCapture CaptureFootIkPhysical(
             Vector3 pelvisWorldPosition)
         {
@@ -165,12 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rightToe.rotation);
         }
 
-        Vector3 CaptureComponentPosition(int boneIndex) =>
-            m_ComponentRoot.InverseTransformPoint(m_Bones[boneIndex].position);
-
-        Quaternion CaptureComponentRotation(int boneIndex) =>
-            (Quaternion.Inverse(m_ComponentRoot.rotation) *
-             m_Bones[boneIndex].rotation).normalized;
+#endif
 
         AnimationLocalBonePose ResolvePose(
             in ComposedAnimationPoseFrame pending,

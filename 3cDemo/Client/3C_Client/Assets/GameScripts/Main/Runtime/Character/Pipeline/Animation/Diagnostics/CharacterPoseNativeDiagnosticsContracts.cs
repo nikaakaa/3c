@@ -196,58 +196,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Quaternion.Dot(value, value) > 0.000001f;
     }
 
-    internal readonly struct AnimationPhysicalBoneWriteDiagnostics
-    {
-        internal AnimationPhysicalBoneWriteDiagnostics(
-            ulong completionIdentity,
-            Vector3 leftAnkleComponentPosition,
-            Quaternion leftAnkleComponentRotation,
-            Vector3 rightAnkleComponentPosition,
-            Quaternion rightAnkleComponentRotation,
-            Vector3 pelvisComponentPosition,
-            Vector3 pelvisWorldPosition,
-            in CharacterFootIkPhysicalCapture footIkCapture)
-        {
-            CompletionIdentity = completionIdentity;
-            LeftAnkleComponentPosition = leftAnkleComponentPosition;
-            LeftAnkleComponentRotation = leftAnkleComponentRotation;
-            RightAnkleComponentPosition = rightAnkleComponentPosition;
-            RightAnkleComponentRotation = rightAnkleComponentRotation;
-            PelvisComponentPosition = pelvisComponentPosition;
-            PelvisWorldPosition = pelvisWorldPosition;
-            FootIkCapture = footIkCapture;
-        }
-
-        internal ulong CompletionIdentity { get; }
-        internal Vector3 LeftAnkleComponentPosition { get; }
-        internal Quaternion LeftAnkleComponentRotation { get; }
-        internal Vector3 RightAnkleComponentPosition { get; }
-        internal Quaternion RightAnkleComponentRotation { get; }
-        internal Vector3 PelvisComponentPosition { get; }
-        internal Vector3 PelvisWorldPosition { get; }
-        internal CharacterFootIkPhysicalCapture FootIkCapture { get; }
-        internal bool IsAvailable =>
-            CompletionIdentity != 0 &&
-            IsFinite(LeftAnkleComponentPosition) &&
-            IsFinite(LeftAnkleComponentRotation) &&
-            IsFinite(RightAnkleComponentPosition) &&
-            IsFinite(RightAnkleComponentRotation) &&
-            IsFinite(PelvisComponentPosition) &&
-            IsFinite(PelvisWorldPosition);
-
-        static bool IsFinite(Vector3 value) =>
-            float.IsFinite(value.x) &&
-            float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
-
-        static bool IsFinite(Quaternion value) =>
-            float.IsFinite(value.x) &&
-            float.IsFinite(value.y) &&
-            float.IsFinite(value.z) &&
-            float.IsFinite(value.w) &&
-            Quaternion.Dot(value, value) > 0.000001f;
-    }
-
     public readonly struct AnimationReleasedPoseSourceSnapshot
     {
         internal AnimationReleasedPoseSourceSnapshot(

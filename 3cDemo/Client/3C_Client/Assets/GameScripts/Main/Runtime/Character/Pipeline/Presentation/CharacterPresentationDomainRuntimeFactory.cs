@@ -167,9 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 #endif
             try
             {
-#if KK_DIAGNOSTIC_SAMPLING
-                runtime.BindRenderCapture(animationRigBinding, animationRig, rootHierarchy,
-                    cameraRig ? cameraRig.Brain.OutputCamera : null);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                runtime.BindPoseWriteMonitor(animationRigBinding, animationRig, rootHierarchy);
 #endif
                 if (poseResources)
                 {

@@ -114,7 +114,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             }
             if (m_Stopped)
                 return !Failure.HasValue;
-            CharacterPoseRenderCaptureRuntime.FlushPending(m_Target.GuidValue);
             m_Stopped = true;
             bool result = m_CoreLifecycle != null
                 ? m_CoreLifecycle.Stop(in outcome)
@@ -192,7 +191,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         {
             if (!m_Started)
                 return null;
-            CharacterPoseRenderCaptureRuntime.FlushPending(m_Target.GuidValue);
             if (m_CoreLifecycle != null)
                 m_CoreLifecycle.Dispose();
             else

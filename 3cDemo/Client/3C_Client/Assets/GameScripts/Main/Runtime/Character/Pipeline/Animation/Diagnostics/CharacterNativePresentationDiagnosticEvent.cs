@@ -20,16 +20,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         [DiagnosticEvent(EventId)]
         static partial void PublishCommitted(in DiagnosticEventTargetKey target, in DiagnosticLineageKey lineage,
             in CharacterNativePoseCaptureFrame animation, in CharacterNativeCameraCaptureFrame camera,
-            in CharacterNativeBodyCaptureFrame facts, in CharacterNativeCommandCaptureFrame commands,
-            in CharacterPoseRenderCaptureFrame render);
+            in CharacterNativeBodyCaptureFrame facts, in CharacterNativeCommandCaptureFrame commands);
         internal static void Publish(Guid runtimeId, in CharacterPoseDiagnosticFrame frame,
             in CharacterNativePoseCaptureFrame animation, in CharacterNativeCameraCaptureFrame camera,
-            in CharacterNativeBodyCaptureFrame facts, in CharacterNativeCommandCaptureFrame commands,
-            in CharacterPoseRenderCaptureFrame render)
+            in CharacterNativeBodyCaptureFrame facts, in CharacterNativeCommandCaptureFrame commands)
         {
             var target = new DiagnosticEventTargetKey(TargetTypeIdentity, runtimeId);
             var lineage = new DiagnosticLineageKey(LineageTypeIdentity, frame.PresentationFrame, frame.CompletionIdentity);
-            PublishCommitted(in target, in lineage, in animation, in camera, in facts, in commands, in render);
+            PublishCommitted(in target, in lineage, in animation, in camera, in facts, in commands);
         }
     }
 }

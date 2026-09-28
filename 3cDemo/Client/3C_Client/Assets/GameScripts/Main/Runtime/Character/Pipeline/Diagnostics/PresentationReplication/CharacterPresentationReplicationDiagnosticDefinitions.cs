@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
     {
         public const string CapabilityId =
             "character-presentation-replication";
-        public const int CapabilityRevision = 4;
+        public const int CapabilityRevision = 3;
         public const string MainDimensionId =
             "character-presentation-replication/main";
         public const string CoreSamplerId =
@@ -85,7 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "animation",
         typeof(CharacterNativePoseCaptureFrame))]
     [DiagnosticFactRoot("camera", typeof(CharacterNativeCameraCaptureFrame))]
-    [DiagnosticFactRoot("render", typeof(CharacterPoseRenderCaptureFrame))]
     [DiagnosticFactRoot(
         "facts",
         typeof(CharacterNativeBodyCaptureFrame))]
@@ -106,7 +105,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "animation-output",
         "animation-parameters",
         "animation-state",
-        "animation-render",
         "camera-frame",
         "camera-output",
         "camera-clock",

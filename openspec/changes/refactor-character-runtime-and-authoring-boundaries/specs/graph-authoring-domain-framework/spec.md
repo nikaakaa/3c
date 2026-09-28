@@ -20,6 +20,8 @@ Pose 作者校验 MUST 在其输入责任边界生成统一结果，并为可定
 
 Pose 保存 MUST 持久化当前正式图资产、所属图内容以及当前上下文实际拥有的待保存作者资源。纯图模式 MUST 不要求不存在的 Profile；带 Profile 模式 MUST 同时处理正式引用的可编辑参数资源。保存 MUST 沿唯一持久化操作执行，不得在窗口与调参入口重复维护保存协议，不得创建默认 Profile、备用资源或通过资产扫描猜测上下文。
 
+C# 作者生成 MUST 将实际写入的各个 owner 在修改前纳入同一正式事务的快照、保存和失败回退集合，包括被修改的独立 Profile。只读引用不等于写入 owner。系统 MUST NOT 只保存输出图与 Definition 后将尚未保存的 Profile 修改报告为 Saved，也不得调用作者窗口的保存操作绕过生成事务。
+
 #### Scenario: 保存纯图资产
 
 - **WHEN** 作者从不带 Profile 的正式入口保存已修改的 Pose 图
@@ -31,6 +33,12 @@ Pose 保存 MUST 持久化当前正式图资产、所属图内容以及当前上
 - **WHEN** 作者在正式 Profile 上下文保存图及所引用参数资源的修改
 - **THEN** 唯一保存操作 MUST 覆盖这些已知 owner
 - **AND** 保存成功 MUST NOT 被显示成运行 Session 已采用新内容
+
+#### Scenario: 生成代码同时修改独立Profile
+
+- **WHEN** 正式 C# 作者生成同时修改输出图和已引用的独立 Profile
+- **THEN** 生成事务 MUST 在成功时保存所有实际写入 owner，失败时按同一事务回退它们
+- **AND** MUST NOT 遗留未回退的 Profile 内存修改或在 Profile 未保存时报告全部 Saved
 
 ### Requirement: Pose作者操作必须如实表达实际结果
 

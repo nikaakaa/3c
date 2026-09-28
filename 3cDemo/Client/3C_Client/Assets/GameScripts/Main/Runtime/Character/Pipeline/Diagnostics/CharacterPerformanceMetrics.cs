@@ -30,6 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         public const string ValidateName = "ThirdPerson.Presentation.Animation.Validate";
         public const string GraphEvaluateName = "ThirdPerson.Presentation.Animation.GraphEvaluate";
         public const string PoseGraphExecuteName = "ThirdPerson.Presentation.Animation.PoseGraphExecute";
+        public const string PoseGraphPrepareName = "ThirdPerson.Presentation.Animation.PoseGraph.Prepare";
+        public const string PoseGraphEvaluateName = "ThirdPerson.Presentation.Animation.PoseGraph.Evaluate";
+        public const string PoseGraphCommitName = "ThirdPerson.Presentation.Animation.PoseGraph.Commit";
         public const string FinalWriteName = "ThirdPerson.Presentation.Animation.FinalWrite";
         public const string SealName = "ThirdPerson.Presentation.Animation.Seal";
         public const string DiagnosticsName = "ThirdPerson.Presentation.Animation.Diagnostics";
@@ -71,6 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             Metric("presentation.animation.validate", ValidateName, "presentation.animation"),
             Metric("presentation.animation.graph-evaluate", GraphEvaluateName, "presentation.animation"),
             Metric("presentation.animation.pose-graph", PoseGraphExecuteName, "presentation.animation"),
+            Metric("presentation.animation.pose-graph.prepare", PoseGraphPrepareName, "presentation.animation.pose-graph"),
+            Metric("presentation.animation.pose-graph.evaluate", PoseGraphEvaluateName, "presentation.animation.pose-graph"),
+            Metric("presentation.animation.pose-graph.commit", PoseGraphCommitName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.final-write", FinalWriteName, "presentation.animation"),
             Metric("presentation.animation.seal", SealName, "presentation.animation"),
             Metric("presentation.animation.diagnostics", DiagnosticsName, "presentation.animation"),

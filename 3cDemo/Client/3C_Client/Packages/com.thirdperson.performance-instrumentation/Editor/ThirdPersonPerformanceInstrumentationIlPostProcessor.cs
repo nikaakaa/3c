@@ -68,6 +68,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                         return Original(peData, pdbData, diagnostics);
                     }
 
+                    if (input.Mode == PerformanceInstrumentationMode.Disabled)
+                        return Original(peData, pdbData, diagnostics);
+
                     var points = new List<PerformanceInstrumentationPointDescriptor>(targets.Count);
                     var pointIds = new HashSet<ulong>();
                     for (int i = 0; i < targets.Count; i++)

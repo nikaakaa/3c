@@ -9,6 +9,7 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -431,6 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return false;
         }
 
+        [PerformanceProbe("presentation.animation")]
         public void PresentationFrame(GameplayPresentationFrameContext context)
         {
             if (m_Disposed)

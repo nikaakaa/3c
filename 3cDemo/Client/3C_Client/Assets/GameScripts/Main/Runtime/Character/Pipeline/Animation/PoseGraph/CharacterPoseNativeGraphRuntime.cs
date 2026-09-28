@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlowCanvas;
 using NodeCanvas.Framework;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -529,6 +530,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_FrameLease;
         }
 
+        [PerformanceProbe("presentation.animation.pose-graph.prepare")]
         internal CharacterPoseNativePreparationResult PrepareFrame(
             CharacterPoseNativeFrameLease lease)
         {
@@ -714,6 +716,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 barrierIdentity);
         }
 
+        [PerformanceProbe("presentation.animation.pose-graph.evaluate")]
         internal CharacterPoseNativeEvaluationResult Evaluate(
             CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
@@ -805,6 +808,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        [PerformanceProbe("presentation.animation.pose-graph.commit")]
         internal CharacterPoseNativePublicationResult Commit(
             CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)

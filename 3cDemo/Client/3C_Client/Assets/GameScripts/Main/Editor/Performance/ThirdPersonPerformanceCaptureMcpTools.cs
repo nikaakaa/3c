@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     [McpForUnityTool(
         "performance.build_player",
-        Description = "Build and atomically publish the exact Windows x64 IL2CPP Development Performance Player with an explicit MarkerOnly or Span instrumentation mode. Use start, then poll status with the returned job_id.",
+        Description = "Build and atomically publish the exact Windows x64 IL2CPP Development Performance Player with an explicit Disabled, MarkerOnly or Span instrumentation mode. Use start, then poll status with the returned job_id.",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = true,
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             [ToolParameter("Exact Fixed runtime id. Defaults to character.fixed-local.", Required = false)]
             public string runtime_id { get; set; }
 
-            [ToolParameter("Required instrumentation mode: MarkerOnly or Span.", Required = true)]
+            [ToolParameter("Required instrumentation mode: Disabled, MarkerOnly or Span.", Required = true)]
             public string instrumentation_mode { get; set; }
         }
 
@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     instrumentationModeText,
                     true,
                     out PerformanceInstrumentationMode instrumentationMode) ||
-                instrumentationMode == PerformanceInstrumentationMode.Disabled)
+                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), instrumentationMode))
             {
                 return new ErrorResponse(
                     "invalid_instrumentation_mode",

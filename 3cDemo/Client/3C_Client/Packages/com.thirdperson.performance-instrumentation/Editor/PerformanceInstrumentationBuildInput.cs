@@ -207,10 +207,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 return false;
             }
             if (!Enum.TryParse(mode, true, out PerformanceInstrumentationMode parsedMode) ||
-                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), parsedMode) ||
-                parsedMode == PerformanceInstrumentationMode.Disabled)
+                !Enum.IsDefined(typeof(PerformanceInstrumentationMode), parsedMode))
             {
-                error = "Performance instrumentation build input mode must be MarkerOnly or Span.";
+                error = "Performance instrumentation build input mode must be Disabled, MarkerOnly or Span.";
                 return false;
             }
             try
@@ -245,9 +244,8 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
 
         void Validate()
         {
-            if (!Enum.IsDefined(typeof(PerformanceInstrumentationMode), Mode) ||
-                Mode == PerformanceInstrumentationMode.Disabled)
-                throw new ArgumentException("Performance instrumentation build input cannot use Disabled mode.", nameof(Mode));
+            if (!Enum.IsDefined(typeof(PerformanceInstrumentationMode), Mode))
+                throw new ArgumentException("Performance instrumentation build input mode is invalid.", nameof(Mode));
             if (string.IsNullOrWhiteSpace(CatalogRevision))
                 throw new ArgumentException("Performance instrumentation catalog revision is missing.", nameof(CatalogRevision));
             if (m_Assemblies.Count == 0)

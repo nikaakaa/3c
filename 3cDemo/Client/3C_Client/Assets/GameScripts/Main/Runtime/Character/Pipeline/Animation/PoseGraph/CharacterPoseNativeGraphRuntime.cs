@@ -168,9 +168,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CreateRequest = createRequest;
             m_ResetGeneration = createRequest.ResetGeneration;
             m_Evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
-            m_Graph = NodeCanvas.Framework.Graph.Clone(createRequest.PreparedBinding.Graph, null);
             m_SourceDemandKeys = new HashSet<CharacterPoseNativeSourceDemandKey>(
-                Math.Max(1, m_Graph.Nodes.Count * 2));
+                createRequest.Context.SourceRequestLayout.RequireGraph(m_PreparedBinding.GraphId));
+            m_Graph = NodeCanvas.Framework.Graph.Clone(createRequest.PreparedBinding.Graph, null);
 #if UNITY_EDITOR
             if (m_PreparedBinding.Boundary == CharacterPoseNativeGraphBoundary.Root)
                 CharacterPoseNativeDomainRuntimeFactory.MarkStartup(m_PreparedBinding.ActorId, "pose-root-graph-cloned");

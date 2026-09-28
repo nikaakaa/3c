@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new List<(CharacterPoseCanvasNode, ICharacterPoseNativeNodeHandler)>();
         readonly HashSet<PoseNodeId> m_ReachableNodeIds =
             new HashSet<PoseNodeId>();
-        readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
+        FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest> m_SourceRequests;
         CharacterPoseCanvasNode m_OutputPose;
         CharacterPoseCanvasNode m_GraphOutput;
         CharacterPosePortDefinition m_GraphOutputPort;
@@ -87,8 +87,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (handlers == null)
                 throw new ArgumentNullException(nameof(handlers));
-            m_SourceRequests =
-                new List<CharacterPoseNativeSourceRequest>(handlers.Count);
             for (int i = 0; i < handlers.Count; i++)
                 Register(handlers[i]);
         }
@@ -161,6 +159,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void Initialize(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
+            m_SourceRequests = new FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest>(
+                runtime.InstanceContext.SourceRequestLayout.RequireGraph(runtime.PreparedBinding.GraphId));
             var graphNodeIds = new HashSet<PoseNodeId>();
             for (int nodeIndex = 0; nodeIndex < runtime.Nodes.Count; nodeIndex++)
             {

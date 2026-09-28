@@ -66,11 +66,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceIndexBySlot = BuildSourceIndexes();
             m_IndexByNode = BuildNodeIndexes();
             m_AnimationContributionCapacity = CalculateAnimationContributionCapacity();
+            SourceRequestLayout = BuildSourceRequestLayout();
             resources.RequireSourceCatalogComplete(profile);
             m_SourceCatalog = resources.CreateSourceCatalog(m_Rig, m_ResourceScope);
         }
 
         internal CharacterAnimationResourceScope ResourceScope => m_ResourceScope;
+        internal CharacterPoseNativeSourceRequestLayout SourceRequestLayout { get; }
 
         internal CharacterPoseNativeDomainServiceSet Create(
             ActorId actorId,
@@ -288,35 +290,90 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             foreach (CharacterPoseCanvasGraph graph in m_Profile.PoseGraph.EnumerateGraphs())
             foreach (CharacterPoseCanvasNode node in graph.Nodes)
             {
-                if (node.Kind == CharacterPoseNodeKind.ClipPlayer ||
-                    node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-                    node.Kind == CharacterPoseNodeKind.SelectedPosePlayer)
-                {
+                capacity = checked(capacity + ResolveNodeSourceRequestCapacity(node));
+                if (node.Kind == CharacterPoseNodeKind.AnimationSlot ||
+                    node.Kind == CharacterPoseNodeKind.BlendStack)
                     capacity = checked(capacity + 1);
-                    continue;
-                }
-                if (node.Kind != CharacterPoseNodeKind.AnimationSlot &&
-                    node.Kind != CharacterPoseNodeKind.BlendStack)
-                    continue;
-                CharacterAnimationSlotPosePayload slotPayload =
-                    node.Payload as CharacterAnimationSlotPosePayload;
-                CharacterBlendStackPosePayload stackPayload =
-                    node.Payload as CharacterBlendStackPosePayload;
-                CharacterPoseResourceSlot policySlot = slotPayload != null
-                    ? slotPayload.BlendPolicySlot
-                    : stackPayload != null ? stackPayload.BlendPolicySlot : null;
-                CharacterPoseResourceBinding binding = policySlot == null
-                    ? null
-                    : m_Profile.FindPoseResourceBinding(policySlot);
-                CharacterAnimationBlendPolicy policy = binding?.Resource as CharacterAnimationBlendPolicy;
-                if (policy == null)
-                    throw new InvalidOperationException(
-                        $"Pose Blend Stack '{node.NodeId}' has no valid blend policy resource.");
-                capacity = checked(capacity + policy.StackPolicy.MaxActiveSourceEntries + 1);
             }
             if (capacity == 0)
                 throw new InvalidOperationException("Pose graph has no animation contribution sources.");
             return capacity;
+        }
+
+        CharacterPoseNativeSourceRequestLayout BuildSourceRequestLayout()
+        {
+            var graphCapacities = new Dictionary<PoseGraphId, int>();
+            var stateMachineCapacities = new Dictionary<PoseNodeId, int>();
+            var visiting = new HashSet<PoseGraphId>();
+            foreach (CharacterPoseCanvasGraph graph in m_Profile.PoseGraph.EnumerateGraphs())
+                ResolveGraph(graph.GraphId);
+            return new CharacterPoseNativeSourceRequestLayout(graphCapacities, stateMachineCapacities);
+
+            int ResolveGraph(PoseGraphId graphId)
+            {
+                if (graphCapacities.TryGetValue(graphId, out int capacity))
+                    return capacity;
+                if (!visiting.Add(graphId))
+                    throw new InvalidOperationException($"Pose source request capacity contains a graph cycle at '{graphId}'.");
+                CharacterPoseCanvasGraph graph = m_Profile.PoseGraph.RequireGraph(graphId);
+                IReadOnlyList<CharacterPoseCanvasNode> nodes = graph.Nodes;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    CharacterPoseCanvasNode node = nodes[i];
+                    int nodeCapacity;
+                    if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
+                    {
+                        nodeCapacity = ResolveGraph(node.Subgraph.PoseGraphId);
+                    }
+                    else if (node.Kind == CharacterPoseNodeKind.PoseStateMachine)
+                    {
+                        int largest = 0;
+                        int secondLargest = 0;
+                        IReadOnlyList<CharacterPoseStateDefinition> states = node.PoseStateMachine.States;
+                        for (int stateIndex = 0; stateIndex < states.Count; stateIndex++)
+                        {
+                            int stateCapacity = ResolveGraph(states[stateIndex].PoseGraphId);
+                            if (stateCapacity > largest)
+                            {
+                                secondLargest = largest;
+                                largest = stateCapacity;
+                            }
+                            else if (stateCapacity > secondLargest)
+                                secondLargest = stateCapacity;
+                        }
+                        nodeCapacity = checked(largest + secondLargest);
+                        stateMachineCapacities.Add(node.NodeId, nodeCapacity);
+                    }
+                    else
+                    {
+                        nodeCapacity = ResolveNodeSourceRequestCapacity(node);
+                    }
+                    capacity = checked(capacity + nodeCapacity);
+                }
+                visiting.Remove(graphId);
+                graphCapacities.Add(graphId, capacity);
+                return capacity;
+            }
+        }
+
+        int ResolveNodeSourceRequestCapacity(CharacterPoseCanvasNode node)
+        {
+            if (node.Kind == CharacterPoseNodeKind.ClipPlayer ||
+                node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+                node.Kind == CharacterPoseNodeKind.SelectedPosePlayer)
+                return 1;
+            if (node.Kind != CharacterPoseNodeKind.AnimationSlot &&
+                node.Kind != CharacterPoseNodeKind.BlendStack)
+                return 0;
+            CharacterPoseResourceSlot policySlot = node.Payload is CharacterAnimationSlotPosePayload slot
+                ? slot.BlendPolicySlot
+                : node.RequirePayload<CharacterBlendStackPosePayload>().BlendPolicySlot;
+            CharacterPoseResourceBinding binding = policySlot == null
+                ? null
+                : m_Profile.FindPoseResourceBinding(policySlot);
+            if (!(binding?.Resource is CharacterAnimationBlendPolicy policy))
+                throw new InvalidOperationException($"Pose Blend Stack '{node.NodeId}' has no valid blend policy resource.");
+            return policy.StackPolicy.MaxActiveSourceEntries;
         }
 
         ulong AllocateSubgraphInstanceId(ulong parentInstanceId, string subgraphNodeId)

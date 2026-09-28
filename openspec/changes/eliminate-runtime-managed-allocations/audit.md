@@ -201,13 +201,14 @@
 - 可装配时建立同一目录内的复合身份索引。增加一份查找索引内存，换取不随动作总量增长的查找；装配时须明确重复 ACL 身份是否允许，不能擅自从原首个匹配变成另一动作。该索引引用同一正式计划，不创建第二数据源。
 - 实施结果：在同一目录构造与 ACL manifest 校验阶段，按原 m_ActionPlans.Values 顺序建立资源/clip 二元键索引，键重复时保留原首个匹配项；运行时一次 TryGetValue。索引只引用原计划，不复制计划、不新增配置、不更改非 ACL 入口或缺失报错。
 
-### AP16 动态源请求重复检查仍为平方比较（已实施实例去重集合，未实跑）
+### AP16 动态源请求去重与汇总容量（已实施身份集合和装配期请求上界，未实跑）
 
 - 证据：[CharacterPoseNativeRuntimeContracts.cs:697](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseNativeRuntimeContracts.cs#L697)，每条请求与所有前序请求比较 ScopeInstanceId/NodeId/SourceId。子图请求汇总到父图后，还会经过父图 demand 校验。
 - 这是历史 4.2.8 删除每帧 HashSet 构造时主动选择的实现，已经没有原构造分配。与 AP01 不同，这里的活动源随状态和过渡变化，不能简单移到装配时查一次。
-- 实施结果：每个图实例持有一个 `HashSet<CharacterPoseNativeSourceDemandKey>`，按图节点数预留容量；每帧只清空并复用该集合，按完整的 ScopeInstanceId/NodeId/SourceId 三元身份检查重复请求。请求顺序、重复报错和子图汇总语义不变；不再为每条请求扫描全部前序请求，也不在运行帧新建 HashSet。
-- 容量目前按图节点数乘二估算。若正式图的动态源请求数超过该估算，HashSet 仍可能扩容；这属于后续按正式 SourceCapacity 收紧的容量问题，不能在没有装配容量来源前伪称为完全零分配。
-- 续查删除可选 HashSet 参数及空参时的旧平方扫描分支；全仓 C# 仅有 GraphRuntime 一个构造调用者，必须使用该实例的去重集合。汇总请求 List 仍按 handler 数预留，状态机汇总按 contributionCapacity 预留；这三者的容量尚未统一为包含嵌套实例的请求上界，AP16 的容量收口仍未完成。
+- 实施结果：每个图实例持有一个 `HashSet<CharacterPoseNativeSourceDemandKey>`，每帧清空复用，按完整的 ScopeInstanceId/NodeId/SourceId 三元身份检查重复请求。删除可选 HashSet 参数及空参时的旧平方扫描分支；全仓 C# 仅有 GraphRuntime 一个构造调用者。请求顺序、重复报错和子图汇总语义不变；不再为每条请求扫描全部前序请求，也不在运行帧新建 HashSet。
+- 最初的节点数乘二、handler 数及 contributionCapacity 估算已删除。DomainServiceFactory 在装配期依据正式图引用和源策略生成唯一 SourceRequestLayout，通过实例 Context 传给根图及全部子图。单播放器按1条请求，BlendStack/AnimationSlot 按 StackPolicy.MaxActiveSourceEntries；每条子图调用边分别累计，同一模板复用不会被只算一次。状态机按不同状态中最大的两个请求容量之和预留，覆盖当前态与过渡目标同时活动；自过渡、单状态及零源图同样被覆盖。循环引用、整数溢出及缺失图会在准备时失败。
+- GraphEvaluator 与 StateMachineSource 汇总请求改用现有 FixedCapacityFrameBuffer；正常帧按下标追加和清理有效部分，超出声明上界明确报错，不自动扩容。图 HashSet 按同一图上界预分配，接收的请求已受汇总缓冲容量约束。各图保守包含所有节点而非仅当前可达节点，代价是固定常驻容量；没有新增手填配置、预执行状态或改变 DuringPreparation/OnFirstEntry 策略。后者首次创建状态图本身仍有生命周期分配。
+- 静态容量依据：三个 Player 的请求数组长度为1；BlendStackSourceBinding 的请求数不超过 stack.EntryCount，EntryCapacity 来自同一 MaxActiveSourceEntries；Subgraph 透传子图请求；CollectActiveStates 最多返回2个不同状态；其余当前装配的计算节点不发请求。LinkedPose/MotionMatching/EntryPose 的实际工厂仍明确拒绝未装配实现，不能将本结论扩大到未来外接来源。新增来源须随正式装配同步声明请求容量。最终贡献页容量是不同合同，未将其替换为请求数量。
 - 状态机 PrepareEvaluation 原先逐条扫描父 demand.Requests，确认子请求没有在进入求值屏障前丢失。现由 Demand 私有引用本图已建立的同一个身份集合并提供 Contains；沿原 ScopeInstanceId/NodeId/SourceId 比较，不新增集合、不重复建索引，原缺失报错、请求顺序和 Required/SourceSlot 语义不变。每图有自己的集合，子图 Prepare 不会清父图集合；状态机只在已校验当前 lineage 的 PrepareEvaluation 内查询，集合在下一次本图 Prepare 时复用，与原 Requests 列表的有效期相同。静态核对唯一构造入口和全部消费者，未实跑。
 
 ### AP17 惯性包络反复计算固定曲线端点导数（续查并实施，未实跑）

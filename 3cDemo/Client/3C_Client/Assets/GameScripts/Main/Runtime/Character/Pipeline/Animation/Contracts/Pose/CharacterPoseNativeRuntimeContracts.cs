@@ -273,7 +273,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
-            CharacterAnimationVariableContract variableContract)
+            CharacterAnimationVariableContract variableContract,
+            CharacterPoseNativeSourceRequestLayout sourceRequestLayout)
         {
             if (!actorId.IsValid || !animancer || rig == null || !rigBinding ||
                 !rootHierarchy)
@@ -289,6 +290,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RigBinding = rigBinding;
             RootHierarchy = rootHierarchy;
             VariableContract = variableContract ?? throw new ArgumentNullException(nameof(variableContract));
+            SourceRequestLayout = sourceRequestLayout ?? throw new ArgumentNullException(nameof(sourceRequestLayout));
         }
 
         internal ActorId ActorId { get; }
@@ -297,7 +299,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterAnimationRigBinding RigBinding { get; }
         internal CharacterRootHierarchyBinding RootHierarchy { get; }
         internal CharacterAnimationVariableContract VariableContract { get; }
-        internal bool IsValid => ActorId.IsValid && Animancer && Rig != null && RigBinding && RootHierarchy && VariableContract != null &&
+        internal CharacterPoseNativeSourceRequestLayout SourceRequestLayout { get; }
+        internal bool IsValid => ActorId.IsValid && Animancer && Rig != null && RigBinding && RootHierarchy && VariableContract != null && SourceRequestLayout != null &&
             string.Equals(Rig.RigId, RigBinding.RigId, StringComparison.Ordinal) &&
             string.Equals(Rig.RigRevision, RigBinding.RigRevision, StringComparison.Ordinal);
     }

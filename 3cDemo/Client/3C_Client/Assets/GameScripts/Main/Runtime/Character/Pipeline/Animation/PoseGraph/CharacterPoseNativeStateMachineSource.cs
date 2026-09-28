@@ -159,7 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Dictionary<PoseStateId, float> m_StateDurations;
         readonly Dictionary<PoseStateId, CharacterPoseStateTransition[]> m_TransitionsByState;
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
-        readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
+        FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest> m_SourceRequests;
         readonly Dictionary<CharacterPoseTransitionRuleGraph,
             Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> m_RuleOperationTables;
         readonly Dictionary<PoseTransitionRuleOperationId, RuleValue> m_RuleValues;
@@ -307,8 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Factory = factory;
             m_States = new Dictionary<PoseStateId, StateRuntime>();
             m_StateDurations = new Dictionary<PoseStateId, float>();
-            m_SourceRequests =
-                new List<CharacterPoseNativeSourceRequest>(contributionCapacity);
             RequireDefinition();
             m_TransitionsByState = BuildTransitionsByState();
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
@@ -362,6 +360,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void PrepareGraphs(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
+            m_SourceRequests = new FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest>(
+                runtime.InstanceContext.SourceRequestLayout.RequireStateMachine(m_NodeId));
             BuildRuleOperationTables(runtime.InstanceContext.VariableContract);
             switch (m_CreationMode)
             {

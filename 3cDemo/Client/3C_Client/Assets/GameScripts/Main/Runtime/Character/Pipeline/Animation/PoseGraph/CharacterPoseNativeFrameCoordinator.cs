@@ -1,199 +1,129 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseNativeFrameCoordinator : IDisposable
     {
         readonly CharacterPoseNativeRoleRuntime m_Role;
-        CharacterPoseNativeFrameLease m_Lease;
-        CharacterPoseNativePreparationResult m_Preparation;
-        CharacterPoseNativeEvaluationResult m_Evaluation;
-        CharacterPoseNativeValidationResult m_Validation;
-        bool m_Open;
+        Exception m_Failure;
+        bool m_Running;
         bool m_Disposed;
 
-        internal CharacterPoseNativeFrameCoordinator(
-            CharacterPoseNativeRoleRuntime role)
+        internal CharacterPoseNativeFrameCoordinator(CharacterPoseNativeRoleRuntime role)
         {
             m_Role = role ?? throw new ArgumentNullException(nameof(role));
         }
 
-        internal bool IsOpen => m_Open;
-        internal CharacterPoseNativeFrameLease Lease => m_Lease;
-        internal CharacterPoseNativePreparationResult Preparation => m_Preparation;
-        internal CharacterPoseNativeSourceDemand Demand => m_Preparation.Demand;
-        internal CharacterPoseNativeEvaluationResult Evaluation => m_Evaluation;
-        internal CharacterPoseNativeValidationResult Validation => m_Validation;
-
-        internal CharacterPoseNativePreparationResult BeginFrame(
-            in CharacterPoseNativeFrameInput input)
-        {
-            RequireAlive();
-            if (m_Open)
-                throw new InvalidOperationException(
-                    "Pose native frame coordinator already has an open frame.");
-            m_Lease = m_Role.BeginFrame(in input);
-            m_Preparation = m_Role.PrepareFrame(m_Lease);
-            m_Evaluation = default;
-            m_Validation = default;
-            if (!m_Preparation.IsValid ||
-                m_Preparation.Status != CharacterPoseNativeFrameStatus.Prepared)
-            {
-                CharacterPoseNativePreparationResult failure = m_Preparation;
-                DiscardOpenedFrame(
-                    m_Preparation.FailureCode == CharacterPoseNativeFailureCode.None
-                        ? CharacterPoseNativeFailureCode.FrameInvalid
-                        : m_Preparation.FailureCode);
-                return failure;
-            }
-            m_Open = true;
-            return m_Preparation;
-        }
-
-        internal void PrepareEvaluation(ulong barrierIdentity)
-        {
-            RequireOpen();
-            CharacterPoseNativeSourceDemand demand = m_Preparation.Demand;
-            m_Role.PrepareEvaluation(
-                m_Lease,
-                in demand,
-                barrierIdentity);
-            m_Role.EvaluateAnimationGraph();
-        }
-
-        internal CharacterPoseNativeEvaluationResult Evaluate(
-            ulong barrierIdentity)
-        {
-            RequireOpen();
-            CharacterPoseNativeSourceDemand demand = m_Preparation.Demand;
-            m_Evaluation = m_Role.Evaluate(
-                m_Lease,
-                in demand,
-                barrierIdentity);
-            return m_Evaluation;
-        }
-
-        internal CharacterPoseNativeValidationResult ValidatePending()
-        {
-            RequireOpen();
-            m_Validation = m_Role.ValidatePending(
-                m_Lease,
-                in m_Evaluation);
-            return m_Validation;
-        }
-
-        internal CharacterPoseNativePublicationResult Commit(
-            bool captureFootIkDiagnostics)
-        {
-            RequireOpen();
-            CharacterPoseNativePublicationResult result = m_Role.Commit(
-                m_Lease,
-                in m_Evaluation,
-                captureFootIkDiagnostics);
-            ClearFrame();
-            return result;
-        }
-
-        internal void Discard(CharacterPoseNativeFailureCode reason)
-        {
-            RequireAlive();
-            if (!m_Open)
-                return;
-            if (reason == CharacterPoseNativeFailureCode.None)
-                throw new ArgumentOutOfRangeException(nameof(reason));
-            try
-            {
-                m_Role.Discard(m_Lease, reason);
-            }
-            finally
-            {
-                ClearFrame();
-            }
-        }
-
-        internal void Stop()
-        {
-            RequireAlive();
-            if (m_Open)
-                Discard(CharacterPoseNativeFailureCode.Disposed);
-            m_Role.Stop();
-        }
-
-        internal bool TryObserve(
-            PoseNodeId nodeId,
-            PosePortId portId,
-            out CharacterPoseNativeNodeObservation observation) =>
-            m_Role.TryObserve(nodeId, portId, out observation);
-
-        void DiscardOpenedFrame(CharacterPoseNativeFailureCode reason)
-        {
-            try
-            {
-                m_Role.Discard(m_Lease, reason);
-            }
-            finally
-            {
-                ClearFrame();
-            }
-        }
-
-        void ClearFrame()
-        {
-            m_Lease = default;
-            m_Preparation = default;
-            m_Evaluation = default;
-            m_Validation = default;
-            m_Open = false;
-        }
-
-        void RequireOpen()
-        {
-            RequireAlive();
-            if (!m_Open)
-                throw new InvalidOperationException(
-                    "Pose native frame coordinator has no open frame.");
-        }
-
-        void RequireAlive()
+        internal void RequireAvailable()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(
-                    nameof(CharacterPoseNativeFrameCoordinator));
+                throw new ObjectDisposedException(nameof(CharacterPoseNativeFrameCoordinator));
+            if (m_Failure != null)
+                throw new InvalidOperationException("Pose runtime is faulted and cannot execute another frame.", m_Failure);
+            if (m_Running)
+                throw new InvalidOperationException("Pose frame is already running.");
         }
+
+        internal CharacterPoseNativePublicationResult RunFrame(
+            in CharacterPoseNativeFrameInput input,
+            IActionPresentationClockCoordinator clock,
+            ICharacterPoseNativeActionCommandSource commands,
+            bool captureFootIkDiagnostics)
+        {
+            RequireAvailable();
+            m_Running = true;
+            CharacterPoseNativeFrameLease lease = default;
+            CharacterPoseNativeFailureCode failureCode = CharacterPoseNativeFailureCode.FrameInvalid;
+            AnimationPresentationFramePhase phase = AnimationPresentationFramePhase.Begin;
+            bool enteredBarrier = false;
+            try
+            {
+                lease = m_Role.BeginFrame(in input);
+                phase = AnimationPresentationFramePhase.Prepare;
+                CharacterPoseNativePreparationResult preparation = m_Role.PrepareFrame(lease);
+                if (!preparation.IsValid || preparation.Status != CharacterPoseNativeFrameStatus.Prepared)
+                {
+                    failureCode = preparation.FailureCode;
+                    throw new InvalidOperationException(
+                        $"Pose frame preparation failed ({preparation.Source}): {preparation.Message}");
+                }
+                CharacterPoseNativeSourceDemand demand = preparation.Demand;
+                m_Role.PrepareEvaluation(lease, in demand, input.PresentationFrame);
+                phase = AnimationPresentationFramePhase.EvaluateBarrier;
+                enteredBarrier = true;
+                m_Role.EvaluateAnimationGraph();
+                CharacterPoseNativeEvaluationResult evaluation =
+                    m_Role.Evaluate(lease, in demand, input.PresentationFrame);
+                if (evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
+                {
+                    failureCode = evaluation.FailureCode;
+                    throw new InvalidOperationException(
+                        $"Pose frame evaluation failed ({evaluation.Source}): {evaluation.Message}");
+                }
+                CharacterPoseNativeValidationResult validation = m_Role.ValidatePending(lease, in evaluation);
+                if (!validation.IsValidated)
+                {
+                    failureCode = validation.FailureCode;
+                    throw new InvalidOperationException(
+                        $"Pose frame validation failed ({validation.Source}): {validation.Message}");
+                }
+                clock?.ValidateFrame();
+                CharacterPoseNativePublicationResult publication =
+                    m_Role.Commit(lease, in evaluation, captureFootIkDiagnostics);
+                if (publication.Status != CharacterPoseNativeFrameStatus.Committed)
+                {
+                    failureCode = publication.FailureCode;
+                    throw new InvalidOperationException(
+                        $"Pose frame publication failed ({publication.Source}): {publication.Message}");
+                }
+                phase = AnimationPresentationFramePhase.Sealed;
+                commands.CommitFrame();
+                clock?.CommitFrame();
+                return publication;
+            }
+            catch (Exception exception)
+            {
+                Exception failure = exception;
+                try
+                {
+                    if (lease.IsValid)
+                        m_Role.Discard(lease, failureCode == CharacterPoseNativeFailureCode.None
+                            ? CharacterPoseNativeFailureCode.FrameInvalid
+                            : failureCode);
+                }
+                catch (Exception cleanup)
+                {
+                    failure = new AggregateException("Pose frame cleanup failed.", failure, cleanup);
+                }
+                if (enteredBarrier)
+                {
+                    var fault = new AnimationPresentationFault(input.ActorId, input.PresentationFrame,
+                        input.BodyTick, phase, m_Role.CurrentLineage.CompletionIdentity);
+                    failure.Data[nameof(AnimationPresentationFault)] = fault;
+                    m_Failure = new InvalidOperationException(
+                        $"Pose runtime faulted: actor={fault.ActorId}, frame={fault.PresentationFrame}, " +
+                        $"bodyTick={fault.BodyTick}, completion={fault.CompletionIdentity}, phase={fault.Phase}.", failure);
+                    throw m_Failure;
+                }
+                if (!ReferenceEquals(failure, exception))
+                    throw failure;
+                throw;
+            }
+            finally
+            {
+                m_Running = false;
+            }
+        }
+
+        internal void Stop() => m_Role.Stop();
 
         public void Dispose()
         {
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            Exception failure = null;
-            try
-            {
-                if (m_Open)
-                    m_Role.Discard(
-                        m_Lease,
-                        CharacterPoseNativeFailureCode.Disposed);
-            }
-            catch (Exception exception)
-            {
-                failure = exception;
-            }
-            finally
-            {
-                ClearFrame();
-            }
-            try
-            {
-                m_Role.Dispose();
-            }
-            catch (Exception exception)
-            {
-                failure = failure == null
-                    ? exception
-                    : new AggregateException(failure, exception);
-            }
-            if (failure != null)
-                throw failure;
+            m_Role.Dispose();
         }
     }
 }

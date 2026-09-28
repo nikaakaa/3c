@@ -31,9 +31,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             out System.Collections.Generic.IReadOnlyList<ActionAnimationPlaybackCommand> commands) =>
             m_ActionCommandSource.TryGetCommands(actorId, frameIdentity, out commands);
 
-        internal void CommitFrame() =>
-            m_ActionCommandSource.CommitFrame();
-
         internal void DiscardFrame()
         {
             if (m_ActionCommandSource.HasOpenFrame)

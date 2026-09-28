@@ -2,7 +2,15 @@
 
 更新：2026-09-28。
 
-状态：代码评估与后续实施建议，尚未实施。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
+状态：实施中。以下问题清单保留评估时的证据，实际进展以本节记录为准。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
+
+## 实施进展
+
+- 已收拢 Pose 帧执行：Presentation 只提供帧输入，DomainSession 交给 FrameCoordinator 执行准备、求值、验证、发布和动作确认；删除外层阶段分支及 Session 的逐阶段转发。根图和子图保留自己的执行状态。
+- 已将 Constraint 完成检查移到物理写入前，发布失败不再提升 Constraint 历史或提交 Source。开帧失败与丢弃路径负责关闭图帧，并尝试清理全部模块租约。
+- 已接入最终骨骼／属性绑定的 Barrier 前检查。Animancer 求值开始后失败会保留 Actor、帧、BodyTick、completion、phase 上下文并拒绝后续表现帧，不尝试物理回滚。
+- 此组已通过目标 Unity Editor 正式编译，Edit/idle，Console error 为 0。没有运行 replay、故障注入或分配采样，尚未验证实际运行行为与零 GC。
+- 现行 `character-animation-pipeline` 写明“表现运行时逐阶段消费”的结构条款已与上述收拢后的调用链不同；阶段顺序及唯一 Source／Constraint／Publication 所有权保持。当前未调用 OpenSpec 工作流，因此本轮未修改 spec，后续同步时应把外层职责改为提供输入、消费最终结果，由 FrameCoordinator 执行阶段门。
 
 ## 目标与范围
 
@@ -25,7 +33,7 @@
 
 ## 建议实施顺序
 
-先收拢 Pose 帧提交与失败处理，再整理 CharacterTimelineHost，随后按真实消费者迁移 TreeDesigner 剩余依赖。这是本次讨论的建议顺序，不代表三个阶段已经获准实施或已经交付。
+先收拢 Pose 帧提交与失败处理，再整理 CharacterTimelineHost，随后按真实消费者迁移 TreeDesigner 剩余依赖。用户已授权开始实施这三项；不代表各项已经交付。
 
 Pose Workspace、会话恢复模块与动画分析器是独立候选，不强行作为前三项的前置。每次以一个完整职责为提交单位；不能为减少单次修改量而长期保留新旧双路径。
 

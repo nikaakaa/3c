@@ -275,12 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             catch
             {
-                if (m_Constraints != null && m_ConstraintsLease.IsValid)
-                {
-                    m_Constraints.DiscardFrame(m_ConstraintsLease);
-                    m_ConstraintsLease = default;
-                }
-                m_Graph.Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid);
+                Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid);
                 throw;
             }
         }
@@ -303,6 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
+            m_Publication.ValidateBindingsBeforeEvaluate();
             m_Graph.PrepareEvaluation(
                 lease,
                 in demand,
@@ -321,8 +317,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseNativeValidationResult ValidatePending(
             CharacterPoseNativeFrameLease lease,
-            in CharacterPoseNativeEvaluationResult evaluation) =>
-            m_Graph.ValidatePending(lease, in evaluation);
+            in CharacterPoseNativeEvaluationResult evaluation)
+        {
+            CharacterPoseNativeValidationResult validation =
+                m_Graph.ValidatePending(lease, in evaluation);
+            if (!validation.IsValidated || m_Constraints == null)
+                return validation;
+            CharacterPoseNativeFrameLineage lineage = evaluation.Lineage;
+            try
+            {
+                CharacterPoseConstraintResult constraints = m_Constraints.CompleteFrame(
+                    m_ConstraintsLease,
+                    in lineage,
+                    AnimationPoseAvailability.Pose,
+                    AnimationPoseNativeInvalidReason.None,
+                    AnimationPoseNativeInvalidReason.None);
+                if (!constraints.IsCompleted)
+                    throw new InvalidOperationException(
+                        $"Pose Constraint completion failed: {constraints.InvalidReason}.");
+                return validation;
+            }
+            catch (Exception exception)
+            {
+                return CharacterPoseNativeValidationResult.Failed(
+                    in lineage,
+                    CharacterPoseNativeFailureCode.FrameInvalid,
+                    "Pose/Constraint",
+                    exception.Message);
+            }
+        }
 
         internal CharacterPoseNativePublicationResult Commit(
             CharacterPoseNativeFrameLease lease,
@@ -334,16 +357,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in evaluation,
                 m_Publication,
                 captureFootIkDiagnostics);
+            if (result.Status != CharacterPoseNativeFrameStatus.Committed)
+            {
+                DiscardPendingModules();
+                return result;
+            }
             if (m_Constraints != null)
             {
-                CharacterPoseNativeFrameLineage committedLineage =
-                    m_Graph.CurrentLineage;
-                m_Constraints.CompleteFrame(
-                    m_ConstraintsLease,
-                    in committedLineage,
-                    AnimationPoseAvailability.Pose,
-                    AnimationPoseNativeInvalidReason.None,
-                    AnimationPoseNativeInvalidReason.None);
                 m_Constraints.SealFrame(m_ConstraintsLease);
                 m_ConstraintsLease = default;
             }
@@ -359,17 +379,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameLease lease,
             CharacterPoseNativeFailureCode reason)
         {
-            m_Graph.Discard(lease, reason);
-            if (m_Constraints != null && m_ConstraintsLease.IsValid)
+            try
             {
-                m_Constraints.DiscardFrame(m_ConstraintsLease);
-                m_ConstraintsLease = default;
+                if (m_Graph.HasOpenFrame)
+                    m_Graph.Discard(lease, reason);
             }
-            if (m_Source != null && m_SourceLease.IsValid)
+            finally
             {
-                m_Source.DiscardFrame(m_SourceLease);
-                m_SourceLease = default;
+                DiscardPendingModules();
             }
+        }
+
+        void DiscardPendingModules()
+        {
+            CharacterPoseConstraintFrameLease constraintsLease = m_ConstraintsLease;
+            CharacterPoseSourceFrameLease sourceLease = m_SourceLease;
+            m_ConstraintsLease = default;
+            m_SourceLease = default;
+            Exception failure = null;
+            try
+            {
+                if (constraintsLease.IsValid)
+                    m_Constraints.DiscardFrame(constraintsLease);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+            try
+            {
+                if (sourceLease.IsValid)
+                    m_Source.DiscardFrame(sourceLease);
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null ? exception : new AggregateException(failure, exception);
+            }
+            if (failure != null)
+                throw failure;
         }
 
         internal CharacterPoseNativeResetResult Reset(ulong resetGeneration)
@@ -382,17 +429,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Stop()
         {
-            if (m_Constraints != null && m_ConstraintsLease.IsValid)
+            try
             {
-                m_Constraints.DiscardFrame(m_ConstraintsLease);
-                m_ConstraintsLease = default;
+                m_Graph.StopInstance();
             }
-            if (m_Source != null && m_SourceLease.IsValid)
+            finally
             {
-                m_Source.DiscardFrame(m_SourceLease);
-                m_SourceLease = default;
+                DiscardPendingModules();
             }
-            m_Graph.StopInstance();
         }
 
         internal bool TryObserve(

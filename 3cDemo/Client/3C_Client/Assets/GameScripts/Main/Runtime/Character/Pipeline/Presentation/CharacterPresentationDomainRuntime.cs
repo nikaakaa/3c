@@ -437,6 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
+            m_PoseDomain?.Session.RequireAvailable();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             m_PoseWriteMonitor.Invalidate();
 #endif
@@ -684,92 +685,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
                 return m_TimelineHost == null;
             float deltaSeconds = Mathf.Max(0f, context.PresentationDeltaSeconds);
-            CharacterPoseNativePreparationResult preparation;
-            try
-            {
-                var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
-                    eventFrame,
-                    m_PoseVariableContract);
-                var frameInput = new CharacterPoseNativeFrameInput(
-                    m_ActorId,
-                    context.RenderFrame,
-                    context.RenderFrame,
-                    bodyFrame.CurrentTick,
-                    bodyFrame.CurrentTick + deltaSeconds / m_PresentationTimePerTick,
-                    deltaSeconds,
-                    bodyFrame,
-                    factFrame,
-                    parameterFrame,
-                    actionCommands);
-                preparation = m_PoseDomain.Session.BeginFrame(in frameInput, m_Diagnostics.CharacterRuntimeId);
-                if (preparation.IsValid && preparation.Status == CharacterPoseNativeFrameStatus.Prepared)
-                {
-                    m_PoseDomain.Session.PrepareEvaluation(context.RenderFrame);
-                    CharacterPoseNativeEvaluationResult evaluation = m_PoseDomain.Session.Evaluate(context.RenderFrame);
-                    if (evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
-                    {
-                        Debug.LogWarning(
-                            $"Pose frame evaluation faulted ({evaluation.Source}): {evaluation.Message}");
-                        m_PoseDomain.Session.Discard(
-                            evaluation.FailureCode != CharacterPoseNativeFailureCode.None
-                                ? evaluation.FailureCode
-                                : CharacterPoseNativeFailureCode.FrameInvalid);
-                        m_PoseDomain.DiscardFrame();
-                        m_PresentationClockCoordinator?.DiscardFrame();
-                        return false;
-                    }
-                    CharacterPoseNativeValidationResult validation = m_PoseDomain.Session.ValidatePending();
-                    if (validation.IsValidated)
-                    {
-                        m_PresentationClockCoordinator?.ValidateFrame();
-                        CharacterPoseNativePublicationResult commit =
-                            m_PoseDomain.Session.Commit(m_PoseDomain.Session.CaptureFootDiagnostics);
-                        if (commit.Status == CharacterPoseNativeFrameStatus.Committed)
-                        {
-                            m_PoseDomain.CommitFrame();
-                            m_PresentationClockCoordinator?.CommitFrame();
-                            CharacterPoseNativeFrameLineage lineage = commit.Lineage;
-                            m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
+            var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
+                eventFrame,
+                m_PoseVariableContract);
+            var frameInput = new CharacterPoseNativeFrameInput(
+                m_ActorId,
+                context.RenderFrame,
+                context.RenderFrame,
+                bodyFrame.CurrentTick,
+                bodyFrame.CurrentTick + deltaSeconds / m_PresentationTimePerTick,
+                deltaSeconds,
+                bodyFrame,
+                factFrame,
+                parameterFrame,
+                actionCommands);
+            CharacterPoseNativePublicationResult commit = m_PoseDomain.Session.RunFrame(
+                in frameInput, m_Diagnostics.CharacterRuntimeId, m_PresentationClockCoordinator);
+            CharacterPoseNativeFrameLineage lineage = commit.Lineage;
+            m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
 #if KK_DIAGNOSTIC_SAMPLING
-                            m_CommittedDiagnosticFrame = Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId)
-                                ? m_PoseDomain.Session.CaptureDiagnosticFrame(in lineage)
-                                : default;
+            m_CommittedDiagnosticFrame = Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId)
+                ? m_PoseDomain.Session.CaptureDiagnosticFrame(in lineage)
+                : default;
 #endif
-                        }
-                        else
-                        {
-                            m_PoseDomain.DiscardFrame();
-                            m_PresentationClockCoordinator?.DiscardFrame();
-                            throw new InvalidOperationException(
-                                $"Pose frame publication failed ({commit.Source}): {commit.Message}");
-                        }
-                    }
-                    else
-                    {
-                        m_PoseDomain.Session.Discard(
-                            validation.FailureCode != CharacterPoseNativeFailureCode.None
-                                ? validation.FailureCode
-                                : CharacterPoseNativeFailureCode.FrameInvalid);
-                        m_PoseDomain.DiscardFrame();
-                        m_PresentationClockCoordinator?.DiscardFrame();
-                        throw new InvalidOperationException(
-                            $"Pose frame validation failed ({validation.Source}): {validation.Message}");
-                    }
-                }
-                else
-                {
-                    m_PoseDomain.DiscardFrame();
-                    m_PresentationClockCoordinator?.DiscardFrame();
-                    throw new InvalidOperationException(
-                        $"Pose frame preparation failed ({preparation.Source}): {preparation.Message}");
-                }
-            }
-            catch
-            {
-                m_PoseDomain.DiscardFrame();
-                m_PresentationClockCoordinator?.DiscardFrame();
-                throw;
-            }
             return true;
         }
 

@@ -226,15 +226,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Session.Role.Graph.StateCapture);
         }
 
-        internal CharacterPoseNativePreparationResult BeginFrame(
+        internal void RequireAvailable() => m_Session.Frame.RequireAvailable();
+
+        internal CharacterPoseNativePublicationResult RunFrame(
             in CharacterPoseNativeFrameInput input,
-            Guid diagnosticRuntimeId)
+            Guid diagnosticRuntimeId,
+            IActionPresentationClockCoordinator clock)
         {
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             m_Services.Constraints.CaptureDiagnostics =
                 Diagnostics.CharacterPoseFootDiagnosticEvent.IsInterested(diagnosticRuntimeId);
 #endif
-            return m_Session.Frame.BeginFrame(in input);
+            return m_Session.Frame.RunFrame(in input, clock, m_ActionCommandSource, CaptureFootDiagnostics);
         }
 
         internal void PublishFootDiagnostics(
@@ -275,21 +278,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 #endif
         }
-
-        internal void PrepareEvaluation(ulong barrierIdentity) =>
-            m_Session.Frame.PrepareEvaluation(barrierIdentity);
-
-        internal CharacterPoseNativeEvaluationResult Evaluate(ulong barrierIdentity) =>
-            m_Session.Frame.Evaluate(barrierIdentity);
-
-        internal CharacterPoseNativeValidationResult ValidatePending() =>
-            m_Session.Frame.ValidatePending();
-
-        internal CharacterPoseNativePublicationResult Commit(bool captureFootIkDiagnostics) =>
-            m_Session.Frame.Commit(captureFootIkDiagnostics);
-
-        internal void Discard(CharacterPoseNativeFailureCode reason) =>
-            m_Session.Frame.Discard(reason);
 
         internal CharacterPoseNativeResetResult Reset(ulong resetGeneration) =>
             m_Session.Reset(resetGeneration);

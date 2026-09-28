@@ -529,8 +529,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Observations.Clear();
             m_Evaluating.Clear();
             m_Stage = CharacterPoseNativeExecutionStage.Frame;
-            m_Evaluator.BeginFrame(this, in input, in m_CompletedLineage);
-            return m_FrameLease;
+            try
+            {
+                m_Evaluator.BeginFrame(this, in input, in m_CompletedLineage);
+                return m_FrameLease;
+            }
+            catch
+            {
+                Discard(m_FrameLease, CharacterPoseNativeFailureCode.FrameInvalid);
+                throw;
+            }
         }
 
         [PerformanceProbe("presentation.animation.pose-graph.prepare")]
@@ -948,9 +956,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireLease(lease);
             if (reason == CharacterPoseNativeFailureCode.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
-            m_Evaluator.DiscardFrame(this, in m_CompletedLineage, reason);
-            m_Observations.Clear();
-            CloseFrame();
+            try
+            {
+                m_Evaluator.DiscardFrame(this, in m_CompletedLineage, reason);
+            }
+            finally
+            {
+                m_Observations.Clear();
+                CloseFrame();
+            }
         }
 
         void CommitGraphOutput(

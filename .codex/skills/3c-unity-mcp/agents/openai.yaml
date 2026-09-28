@@ -1,0 +1,4 @@
+interface:
+  display_name: "3C Unity 操作"
+  short_description: "在通用 Unity MCP 流程上应用项目实例、构建与作业执行规则"
+  default_prompt: "使用 $3c-unity-mcp 核对当前工作区的目标 Unity 实例，沿正式入口完成已授权操作并保留准确的作业状态。"

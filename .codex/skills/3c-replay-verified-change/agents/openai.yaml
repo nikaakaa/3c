@@ -1,0 +1,4 @@
+interface:
+  display_name: "3C 同输入回放验证"
+  short_description: "通过项目正式回放入口比较代码改动，读取脚部诊断与输入一致性证据"
+  default_prompt: "使用 $3c-replay-verified-change 按同一份输入验证本次改动，沿用正式回放和诊断入口，说明实际覆盖与未验证部分。"

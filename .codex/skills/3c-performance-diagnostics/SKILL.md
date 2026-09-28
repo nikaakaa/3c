@@ -13,7 +13,7 @@ description: 使用 3C 项目现有 Windows IL2CPP Player 性能工具进行 CPU
 - 单任务可以直接使用本 skill。仅因性能检测、多个聊天窗口或已有多个 worktree，不调用 `3c-fast-development-validation`，不创建 worktree、不启动其他 Agent。已经明确进入并行开发时，才按该工作流关联证据；同机性能采集顺序执行。
 - 沿用 `performance.*` 工具和 `ThirdPersonPerformanceCapture.Controller`，不另写采样器、统计器或绕过检查的启动脚本。MCP 与 Launcher 调用同一 workflow。
 - 用户只问用法、位置或要求读取报告时，执行只读工作。要求实际采集时沿用已有执行授权；会话中禁止启动进程、构建或采样的限制优先，不因调用 skill 自动解除。允许的工作直接完成，不反复确认。
-- 真正需要操作 Unity MCP 时，读取可用的 `unity-mcp-orchestrator`。核对目标实例的 `project_path`，每次调用显式传 `unity_instance`，不使用全局 `set_active_instance`。构建前确认退出 Play、编译已结束；不停止别人拥有的会话。
+- 真正需要操作 Unity MCP 时，读取 [3C Unity 操作](../3c-unity-mcp/SKILL.md)，由该入口衔接通用连接流程和本项目执行规则。
 
 ## 根据任务选择路径
 

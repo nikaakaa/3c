@@ -487,17 +487,34 @@ namespace ThirdPersonSimulation
                 AbilityTimelineLogicMotionWarp warp = warps[index];
                 if (!catalog.HasOperation(warp.StateOperation) || !warp.Source.Operation.Equals(resolvedOwner))
                     continue;
-                if (selected >= 0)
+                if (selected >= 0 && !IsLoopContinuation(warps[selected], warp))
                 {
+                    AbilityTimelineLogicMotionWarp previous = warps[selected];
                     target.FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.AmbiguousModifier,
-                        $"Action channel owner '{resolvedOwner}' has multiple eligible Timeline MotionWarps.");
+                        $"Action channel owner '{resolvedOwner}' has conflicting Timeline MotionWarps: " +
+                        $"'{previous.StateOperation}' cycle {previous.Cycle} [{previous.PreviousTime}, {previous.CurrentTime}] and " +
+                        $"'{warp.StateOperation}' cycle {warp.Cycle} [{warp.PreviousTime}, {warp.CurrentTime}].");
                     return;
                 }
                 selected = index;
             }
-            if (selected >= 0)
-                target.ApplyTimelineMotionWarp(warps[selected], ref channel);
+            for (int index = 0; index < warps.Count; index++)
+            {
+                AbilityTimelineLogicMotionWarp warp = warps[index];
+                if (catalog.HasOperation(warp.StateOperation) && warp.Source.Operation.Equals(resolvedOwner))
+                    target.ApplyTimelineMotionWarp(warp, ref channel);
+            }
         }
+
+        static bool IsLoopContinuation(AbilityTimelineLogicMotionWarp previous, AbilityTimelineLogicMotionWarp current) =>
+            previous.StateOperation.Equals(current.StateOperation) &&
+            previous.Source.Equals(current.Source) &&
+            previous.AbilityId.Equals(current.AbilityId) &&
+            string.Equals(previous.ActionContextIdentity, current.ActionContextIdentity, StringComparison.Ordinal) &&
+            previous.PlaybackGeneration >> 32 == current.PlaybackGeneration >> 32 &&
+            current.Cycle == previous.Cycle + 1 &&
+            previous.CurrentTime == previous.EndTime &&
+            current.PreviousTime == current.StartTime;
     }
 
     internal static class MotionModifierDiagnosticCode

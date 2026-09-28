@@ -271,6 +271,54 @@ namespace BTSMTL.Timeline.Runtime
             m_Warps[clipId].Sample(previousTime, time, cycle);
 
         public void Sample(
+            MotionCurveTrack track, TimelineRuntimeEvaluationSegments segments,
+            string sourceId, string sourceName, TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> contributions)
+        {
+            if (segments.Count == 1)
+            {
+                Sample(track, segments[0].PreviousTime, segments[0].CurrentTime, sourceId, sourceName, contributions);
+                return;
+            }
+            for (int index = 0; index < track.Clips.Count; index++)
+            {
+                if (track.Clips[index] is not MotionCurveClip clip)
+                    continue;
+                TimelineMotionCurveContribution last = default;
+                FixedScalar x = FixedScalar.Zero;
+                FixedScalar y = FixedScalar.Zero;
+                FixedScalar z = FixedScalar.Zero;
+                FixedScalar yaw = FixedScalar.Zero;
+                bool sampled = false;
+                for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+                {
+                    TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
+                    if (!m_Curves[clip.AuthoringId].TrySample(
+                            segment.PreviousTime, segment.CurrentTime, sourceId, sourceName, out var contribution))
+                        continue;
+                    if (clip.BlendMode != TimelineMotionBlendMode.Override)
+                    {
+                        contributions.Add(contribution);
+                        continue;
+                    }
+                    last = contribution;
+                    sampled = true;
+                    x += contribution.DisplacementX * contribution.Weight;
+                    y += contribution.DisplacementY * contribution.Weight;
+                    z += contribution.DisplacementZ * contribution.Weight;
+                    yaw += contribution.YawDegrees * contribution.Weight;
+                }
+                if (sampled)
+                {
+                    // Sequential slices of one source must enter Override arbitration as one contribution.
+                    contributions.Add(new TimelineMotionCurveContribution(
+                        last.SourceId, last.SourceName, last.TrackName, last.CurveId,
+                        last.Space, last.Channel, last.BlendMode, x, y, z, yaw,
+                        last.Priority, FixedScalar.One, last.ConsumeLowerChannels, last.NormalizedTime));
+                }
+            }
+        }
+
+        public void Sample(
             MotionCurveTrack track, FixedScalar previousTime, FixedScalar currentTime,
             string sourceId, string sourceName, TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> contributions)
         {

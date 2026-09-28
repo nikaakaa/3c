@@ -164,6 +164,8 @@ namespace ThirdPersonSimulation.Fixed
             TraceSourceGeneration = traceSourceGeneration;
             ParticipatingSourceCount = participatingSourceCount;
             ParticipatingSourceFingerprint = participatingSourceFingerprint;
+            WarpedDisplacement = FixedVector3.Zero;
+            WarpedYawDegrees = FixedScalar.Zero;
         }
 
         public SimulationMotionChannel Channel { get; }
@@ -186,10 +188,17 @@ namespace ThirdPersonSimulation.Fixed
         public ulong ParticipatingSourceFingerprint { get; }
         public bool HasDelta => Displacement != FixedVector3.Zero || YawDegrees != FixedScalar.Zero;
 
-        public void ApplyCorrection(FixedVector3 displacement, FixedScalar yawDegrees)
+        public FixedVector3 WarpedDisplacement { get; private set; }
+        public FixedScalar WarpedYawDegrees { get; private set; }
+
+        public void ApplyMotionWarp(
+            FixedVector3 sourceDisplacement, FixedScalar sourceYaw,
+            FixedVector3 warpedDisplacement, FixedScalar warpedYaw)
         {
-            Displacement += displacement;
-            YawDegrees += yawDegrees;
+            Displacement += warpedDisplacement - sourceDisplacement;
+            YawDegrees += warpedYaw - sourceYaw;
+            WarpedDisplacement += warpedDisplacement;
+            WarpedYawDegrees += warpedYaw;
         }
     }
 
@@ -543,6 +552,13 @@ namespace ThirdPersonSimulation.Fixed
                 ApplyTargetResponse(warp, action, ref channel);
                 return;
             }
+            FixedVector3 rawSourceDelta = FixedAngle.RotatePlanar(
+                new FixedVector3(
+                    (warp.CurrentPositionX - warp.PreviousPositionX),
+                    (warp.CurrentPositionY - warp.PreviousPositionY),
+                    (warp.CurrentPositionZ - warp.PreviousPositionZ)),
+                m_Frame.BodyFacts.Yaw);
+            FixedScalar rawSourceYawDelta = (warp.CurrentYawDegrees - warp.PreviousYawDegrees);
             var currentAction = new TimelineActionContextIdentity(
                 action.ActionId,
                 action.ContextId,
@@ -590,12 +606,15 @@ namespace ThirdPersonSimulation.Fixed
                     if (requirement == ActionTargetRequirement.OptionalSnapshot)
                     {
                         m_Frame.SkillState.SetMotionWarpState(warp.StateOperation, default);
+                        channel.ApplyMotionWarp(rawSourceDelta, rawSourceYawDelta, rawSourceDelta, rawSourceYawDelta);
                         return;
                     }
                     FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.TargetSnapshotRequired,
                         $"Action '{action.ActionId}' has no immutable target snapshot for requirement '{requirement}'.");
                 }
                 ResolveDirectTarget(warp, action.TargetSnapshot,
+                    m_Frame.BodyFacts.Position + channel.WarpedDisplacement,
+                    new FixedYaw(m_Frame.BodyFacts.Yaw.Degrees + channel.WarpedYawDegrees),
                     out startBodyPosition,
                     out startBodyYaw,
                     out sourceWindowStartPosition,
@@ -605,7 +624,8 @@ namespace ThirdPersonSimulation.Fixed
                     out limitResult);
                 if (limitResult == ProgramMotionWarpLimitResult.PreservedByLimitPolicy)
                 {
-                        m_Frame.SkillState.SetMotionWarpState(warp.StateOperation, default);
+                    m_Frame.SkillState.SetMotionWarpState(warp.StateOperation, default);
+                    channel.ApplyMotionWarp(rawSourceDelta, rawSourceYawDelta, rawSourceDelta, rawSourceYawDelta);
                     return;
                 }
                 EvaluateDirectPose(warp,
@@ -679,16 +699,9 @@ namespace ThirdPersonSimulation.Fixed
                 resolvedTargetYaw,
                 out FixedVector3 currentWarpedPosition,
                 out FixedYaw currentWarpedYaw);
-            FixedVector3 rawSourceDelta = FixedAngle.RotatePlanar(
-                new FixedVector3(
-                    (warp.CurrentPositionX - warp.PreviousPositionX),
-                    (warp.CurrentPositionY - warp.PreviousPositionY),
-                    (warp.CurrentPositionZ - warp.PreviousPositionZ)),
-                m_Frame.BodyFacts.Yaw);
-            FixedScalar rawSourceYawDelta = (warp.CurrentYawDegrees - warp.PreviousYawDegrees);
-            channel.ApplyCorrection(
-                currentWarpedPosition - previousWarpedPosition - rawSourceDelta,
-                FixedAngle.Delta(previousWarpedYaw, currentWarpedYaw) - rawSourceYawDelta);
+            channel.ApplyMotionWarp(rawSourceDelta, rawSourceYawDelta,
+                currentWarpedPosition - previousWarpedPosition,
+                FixedAngle.Delta(previousWarpedYaw, currentWarpedYaw));
             m_Frame.SkillState.SetMotionWarpState(warp.StateOperation,
                 storedState.WithProgress(
                     currentWarpedPosition,
@@ -707,7 +720,7 @@ namespace ThirdPersonSimulation.Fixed
                 warp.InputYawResponse < ThirdPersonSimulation.Fixed.FixedScalar.Zero)
                 FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
                     "Target response requires non-negative response and no translation correction.");
-            FixedYaw currentYaw = m_Frame.BodyFacts.Yaw;
+            FixedYaw currentYaw = new FixedYaw(m_Frame.BodyFacts.Yaw.Degrees + channel.WarpedYawDegrees);
             FixedScalar yawDelta = FixedScalar.Zero;
             FixedYaw targetYaw = currentYaw;
             FixedScalar response = warp.YawResponse;
@@ -717,7 +730,8 @@ namespace ThirdPersonSimulation.Fixed
                 targetYaw = action.TargetSnapshot.Yaw;
                 if (warp.RotationMode == ProgramMotionWarpRotationMode.FaceTarget)
                 {
-                    FixedVector3 direction = action.TargetSnapshot.Position - m_Frame.BodyFacts.Position;
+                    FixedVector3 direction = action.TargetSnapshot.Position -
+                        (m_Frame.BodyFacts.Position + channel.WarpedDisplacement);
                     targetYaw = direction.X != FixedScalar.Zero || direction.Z != FixedScalar.Zero
                         ? FixedAngle.FromPlanarDirection(direction.X, direction.Z)
                         : currentYaw;
@@ -747,11 +761,12 @@ namespace ThirdPersonSimulation.Fixed
                 (warp.CurrentPositionX - warp.PreviousPositionX),
                 (warp.CurrentPositionY - warp.PreviousPositionY),
                 (warp.CurrentPositionZ - warp.PreviousPositionZ));
-            FixedVector3 previousDirectionDelta = FixedAngle.RotatePlanar(localDelta, currentYaw);
+            FixedVector3 previousDirectionDelta = FixedAngle.RotatePlanar(localDelta, m_Frame.BodyFacts.Yaw);
             FixedVector3 nextDirectionDelta = FixedAngle.RotatePlanar(localDelta, new FixedYaw(currentYaw.Degrees + yawDelta));
-            channel.ApplyCorrection(
-                nextDirectionDelta - previousDirectionDelta,
-                yawDelta - (warp.CurrentYawDegrees - warp.PreviousYawDegrees));
+            channel.ApplyMotionWarp(
+                previousDirectionDelta,
+                warp.CurrentYawDegrees - warp.PreviousYawDegrees,
+                nextDirectionDelta, yawDelta);
         }
 
         public void FailTimelineMotionWarp(OperationHandle operation, string code, string detail)
@@ -762,6 +777,8 @@ namespace ThirdPersonSimulation.Fixed
         void ResolveDirectTarget(
             AbilityTimelineLogicMotionWarp warp,
             SimulationActionTargetSnapshot target,
+            FixedVector3 bodyPosition,
+            FixedYaw bodyYaw,
             out FixedVector3 startBodyPosition,
             out FixedYaw startBodyYaw,
             out FixedVector3 sourceWindowStartPosition,
@@ -777,8 +794,8 @@ namespace ThirdPersonSimulation.Fixed
             resolvedTargetPosition = default;
             resolvedTargetYaw = default;
             limitResult = default;
-            startBodyPosition = m_Frame.BodyFacts.Position;
-            startBodyYaw = m_Frame.BodyFacts.Yaw;
+            startBodyPosition = bodyPosition;
+            startBodyYaw = bodyYaw;
             sourceWindowStartPosition = new FixedVector3(
                 warp.SourceStartPositionX,
                 warp.SourceStartPositionY,

@@ -1973,6 +1973,12 @@ namespace BTSMTL.Timeline.Runtime
                 loop,
                 includeStartBoundary,
                 markers);
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is MotionCurveTrack motionTrack &&
+                    !motionTrack.PersistentMuted && motionTrack.ExecutionDomain == TimelineExecutionDomain.Logic)
+                    motionSampling.Sample(motionTrack, segments, timeline.AuthoringId, timeline.Name, motions);
+            }
             for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
             {
                 TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
@@ -1992,16 +1998,6 @@ namespace BTSMTL.Timeline.Runtime
                             animations,
                             loop,
                             segment.Cycle);
-                    }
-                    else if (track is MotionCurveTrack motionTrack)
-                    {
-                        motionSampling.Sample(
-                            motionTrack,
-                            segment.PreviousTime,
-                            segment.CurrentTime,
-                            timeline.AuthoringId,
-                            timeline.Name,
-                            motions);
                     }
                     else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
                     {

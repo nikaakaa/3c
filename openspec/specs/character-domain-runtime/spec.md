@@ -248,7 +248,7 @@ Timeline MUST唯一拥有cursor、区间／loop／section、活动Clip与播放�
 
 ### Requirement: 领域迁移必须同时退出对应旧编译和运行链
 
-领域迁移 MUST先按owner删除已取消的整角色Program、Timeline操作码／ProgramPlan、Pose IR／Image及专属编译器、执行器、转换层、字段、codec、产物、缓存和构建入口，再接通保留业务消费者；不得以旧消费者尚有引用或新Runtime未完成为理由维持已取消职责。混合文件 MUST保留实际技能／动画／网络算法与资源数据，可做必要提取，不得按文件命名整删业务。中间提交 MAY无法编译或运行，但 MUST记录缺失接线且不得以桥接、占位类型或假成功掩盖。最终完成 MUST同时包含删除与正式Host／工具／产品接通，单独删除或新增外壳均不构成整体完成。技能编译、Pipeline的Pass计划与能力校验及实际资源处理 MUST保留。
+领域迁移 MUST先按owner删除已取消的整角色Program、Timeline操作码／ProgramPlan、Pose IR／Image及专属编译器、执行器、转换层、字段、codec、产物、缓存和构建入口，再接通保留业务消费者；现行原生 FlowCanvas Pose 运行链不属于待恢复的 Pose IR。不得以旧消费者尚有引用或新Runtime未完成为理由维持已取消职责。混合文件 MUST保留实际技能／动画／网络算法与资源数据，可做必要提取，不得按文件命名整删业务。中间提交 MAY无法编译或运行，但 MUST记录缺失接线且不得以桥接、占位类型或假成功掩盖。最终完成 MUST同时包含删除与正式Host／工具／产品接通，单独删除或新增外壳均不构成整体完成。技能编译、Pipeline的Pass计划与能力校验及实际资源处理 MUST保留。
 
 #### Scenario: 角色装配两个独立技能
 - **WHEN** 正式角色工厂装配两个已准备的独立技能
@@ -257,7 +257,7 @@ Timeline MUST唯一拥有cursor、区间／loop／section、活动Clip与播放�
 
 #### Scenario: Pose与Timeline正式消费者完成切换
 - **WHEN** 某领域的正式运行、预览及产品消费者全部切换到该领域原生图或直接内容运行
-- **THEN** 该领域先前删除的IR／Image／ProgramPlan及专属编译运行链 MUST保持退出，不能重新进入正式依赖
+- **THEN** 该领域先前删除的IR／Image／ProgramPlan及专属编译运行链 MUST保持退出，不能重新进入正式依赖；Pose MUST继续使用原生 FlowCanvas 图实例
 - **AND** MUST保留仍有效的动画／播放算法、资源准备、网络Pass校验和技能TreeClip服务，不提供新旧运行开关
 
 #### Scenario: 删除批次暴露旧消费者引用

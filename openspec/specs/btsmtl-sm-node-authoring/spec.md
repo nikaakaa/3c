@@ -404,7 +404,7 @@ StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionR
 
 ### Requirement: StateMachine作者交互必须复用共享领域表面
 
-BTSMTL StateMachine与Character PoseStateMachine MUST复用Graph Authoring Domain Framework的State、Transition、Entry、selection、Node/Port View、Details与Navigator交互实现。BTSMTL domain policy MUST继续把ConditionRuleGraph、interruption和compiled operation映射到自身typed document；Pose domain policy MUST把Presentation Fact、Pose source、transition routing和Pose IR映射到独立typed document。共享表面 MUST不合并两种数据schema、runtime state或compiler handler，也不得保留BTSMTL旧StateMachine View和Pose专用StateMachine View两套实现。
+BTSMTL StateMachine与Character PoseStateMachine MUST复用Graph Authoring Domain Framework的State、Transition、Entry、selection、Node/Port View、Details与Navigator交互实现。BTSMTL domain policy MUST继续把ConditionRuleGraph、interruption和compiled operation映射到自身typed document；Pose domain policy MUST把Presentation Fact、Pose source和transition routing映射到独立typed document，并由原生 FlowCanvas Pose 宿主消费。共享表面 MUST不合并两种数据schema、runtime state或compiler handler，也不得保留BTSMTL旧StateMachine View和Pose专用StateMachine View两套实现。
 
 #### Scenario: 在两个领域创建Transition
 

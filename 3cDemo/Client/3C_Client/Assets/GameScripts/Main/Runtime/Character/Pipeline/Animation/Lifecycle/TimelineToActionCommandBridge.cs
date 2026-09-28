@@ -408,7 +408,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         m_Alive = new HashSet<CameraEventKey>(requestCapacity);
         m_Retired = new List<CameraEventKey>(requestCapacity);
         m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
-        m_TimelineHost.PresentationGraphCameraPrepared += OnGraphCamera;
+        m_TimelineHost.PresentationGraphs.CameraPrepared += OnGraphCamera;
         m_TimelineHost.PresentationGraphFramePreparing += OnGraphFramePreparing;
         m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
     }
@@ -773,7 +773,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         Reset();
         m_Disposed = true;
         m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
-        m_TimelineHost.PresentationGraphCameraPrepared -= OnGraphCamera;
+        m_TimelineHost.PresentationGraphs.CameraPrepared -= OnGraphCamera;
         m_TimelineHost.PresentationGraphFramePreparing -= OnGraphFramePreparing;
         m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
     }

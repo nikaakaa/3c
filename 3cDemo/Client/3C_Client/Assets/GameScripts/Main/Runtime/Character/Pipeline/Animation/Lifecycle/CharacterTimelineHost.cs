@@ -506,7 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal readonly bool Retiring;
     }
 
-    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable, IFloat32PresentationGraphOutput
+    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
     {
         struct ActivePlayback
         {
@@ -543,8 +543,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         readonly string m_SourceName;
-        readonly List<Float32PresentationGraphRuntime> m_PresentationGraphs = new();
-        Float32PresentationGraphFacts m_PresentationFacts;
         readonly CharacterTimelineDependencyResolver m_DependencyResolver = new();
         TimelineRuntimeNumericTarget m_NumericTarget;
         internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
@@ -555,6 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public CharacterTimelineHost(string sourceName)
         {
             Content = new CharacterTimelineContentStore(m_DependencyResolver);
+            PresentationGraphs = new CharacterTimelinePresentationGraphRuntime(m_DependencyResolver);
             m_SourceName = string.IsNullOrWhiteSpace(sourceName)
                 ? "character-timeline"
                 : sourceName.Trim();
@@ -578,37 +577,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (m_Initialized)
                 throw new InvalidOperationException("Presentation graphs must be installed before Timeline preparation.");
-            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
-            {
-                Float32GameplayAbilityExecutionData data = programs[programIndex];
-                bool hasMarkers = false;
-                for (int index = 0; index < data.SourceMap.Count; index++)
-                    hasMarkers |= data.SourceMap[index].TargetKind == ProgramSourceTargetKind.GraphInvocation &&
-                        (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
-                         data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip);
-                if (!hasMarkers)
-                    continue;
-                var runtime = new Float32PresentationGraphRuntime(data);
-                m_DependencyResolver.InstallGraphSources(data.SourceMap);
-                m_PresentationGraphs.Add(runtime);
-                for (int index = 0; index < data.SourceMap.Count; index++)
-                    if (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker ||
-                        data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip)
-                        m_DependencyResolver.InstallPresentationGraph(data.SourceMap[index].GraphId);
-            }
+            PresentationGraphs.InstallPrograms(programs);
         }
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
         public CharacterTimelineContentStore Content { get; }
         internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
-        internal event Action<TimelinePresentationGraphCameraOutput> PresentationGraphCameraPrepared;
+        internal CharacterTimelinePresentationGraphRuntime PresentationGraphs { get; }
         internal event Action<TimelineRuntimePresentationFrame> PresentationGraphFramePreparing;
-        TimelineRuntimePresentationFrame m_GraphFrame;
-        string m_GraphCaller;
-        bool m_GraphMarker;
-        int m_GraphCycle;
-        long m_GraphTime;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
         internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason, bool> PresentationPlaybackEndPrepared;
         public event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEnded;
@@ -1871,7 +1848,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (facts.RenderFrame != context.RenderFrame)
                 throw new InvalidOperationException("Timeline presentation requires facts from the same render frame.");
-            m_PresentationFacts = facts;
             if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
                 return;
             for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
@@ -1909,7 +1885,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     m_PresentationCandidates.Add(frame);
                     PresentationGraphFramePreparing?.Invoke(frame);
-                    ExecutePresentationGraphs(active, frame);
+                    PresentationGraphs.Execute(in active.Provenance, in frame, in facts, m_Host);
                     PresentationFramePrepared?.Invoke(frame);
                 }
                 bool ended = active.CoreDriven
@@ -1924,79 +1900,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason, retainForCorrection);
                 }
             }
-        }
-
-        void ExecutePresentationGraphs(in ActivePlayback active, in TimelineRuntimePresentationFrame frame)
-        {
-            m_GraphFrame = frame;
-            try
-            {
-                for (int index = 0; index < frame.Operations.TreeClips.Count; index++)
-                {
-                    TimelineRuntimeTreeClipRequest request = frame.Operations.TreeClips[index];
-                    m_GraphCaller = request.ClipAuthoringId;
-                    m_GraphMarker = false;
-                    m_GraphCycle = request.Cycle;
-                    m_GraphTime = request.Time.Raw;
-                    AbilityTreeClipHook hook = request.EventKind switch
-                    {
-                        TimelineRuntimeTreeClipEventKind.Enter => AbilityTreeClipHook.OnEnable,
-                        TimelineRuntimeTreeClipEventKind.Update => AbilityTreeClipHook.Root,
-                        TimelineRuntimeTreeClipEventKind.Exit => AbilityTreeClipHook.OnDisable,
-                        TimelineRuntimeTreeClipEventKind.Destroy => AbilityTreeClipHook.OnDestroy,
-                        _ => throw new ArgumentOutOfRangeException()
-                    };
-                    if (ExecutePresentationGraph(active, request.TreeGraphId, request.TreeGraphRevision,
-                        ProgramInvocationCallerKind.PresentationTreeClip, hook))
-                        m_Host.RequestPresentationTreeClipExit(frame, request);
-                }
-                for (int index = 0; index < frame.Events.Count; index++)
-                {
-                    TimelineRuntimePresentationEvent marker = frame.Events[index];
-                    m_GraphCaller = marker.MarkerAuthoringId;
-                    m_GraphMarker = true;
-                    m_GraphCycle = marker.Cycle;
-                    m_GraphTime = marker.Time.Raw;
-                    ExecutePresentationGraph(active, marker.GraphId, marker.GraphRevision,
-                        ProgramInvocationCallerKind.PresentationMarker, AbilityTreeClipHook.OnEnable);
-                }
-            }
-            finally
-            {
-                m_GraphFrame = default;
-                m_GraphCaller = null;
-            }
-        }
-
-        bool ExecutePresentationGraph(in ActivePlayback active, string graphId, string revision,
-            ProgramInvocationCallerKind kind, AbilityTreeClipHook hook)
-        {
-            Float32PresentationGraphRuntime matched = null;
-            int binding = -1;
-            for (int index = 0; index < m_PresentationGraphs.Count; index++)
-            {
-                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index];
-                if (!runtime.TryBind(active.Provenance.SourceInvocationPath, active.Provenance.SourceNodeAuthoringId,
-                    m_GraphCaller, graphId, revision, kind, hook, out int candidate))
-                    continue;
-                if (matched != null)
-                    throw new InvalidOperationException("Timeline Presentation graph invocation is ambiguous.");
-                matched = runtime;
-                binding = candidate;
-            }
-            if (matched == null)
-                throw new InvalidOperationException($"Timeline Presentation graph '{m_GraphCaller}' has no compiled {hook} entry. parent={active.Provenance.SourceInvocationPath};timeline={active.Provenance.SourceNodeAuthoringId};graph={graphId};revision={revision}");
-            return matched.Evaluate(binding, m_PresentationFacts, m_GraphFrame.Generation, this);
-        }
-
-        void IFloat32PresentationGraphOutput.SubmitCamera(in Float32PresentationGraphOutputIdentity identity, string producer,
-            in PresentationCameraRequest activation,
-            in PresentationCameraRequest retirement, bool retiring)
-        {
-            if (PresentationGraphCameraPrepared == null)
-                throw new InvalidOperationException("Timeline Presentation graph has no composed Camera consumer.");
-            PresentationGraphCameraPrepared(new TimelinePresentationGraphCameraOutput(m_GraphFrame, m_GraphCaller,
-                m_GraphMarker, m_GraphCycle, m_GraphTime, identity, producer, activation, retirement, retiring));
         }
 
         internal void CommitPresentationFrame(ulong frame, IActionPresentationClockCoordinator clock)
@@ -2065,7 +1968,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal void DiscardPresentationFrame(ulong frame)
         {
-            m_PresentationFacts = default;
             m_Host?.DiscardPresentationFrame(frame);
             m_PresentationCandidates.Clear();
             m_PresentationEndCandidates.Clear();

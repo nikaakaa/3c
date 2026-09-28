@@ -58,4 +58,4 @@ Timeline MotionWarp 的 TargetResponse 模式分别采样目标响应、方向�
 
 没有运行 replay、没有新增测试、没有修改 IK，画面效果由用户手测。
 
-最后补齐 Float32 通用加权曲线求值后，全项目编译遇到同期 Pose 改动的阻塞：`CharacterPoseNativeFrameCoordinator.cs:29` 无法解析 `IActionPresentationClockCoordinator`。相关 Pose 文件属于其它在途改动，本轮未修改；最后一次全项目编译不能记为通过。三份技能运行资产发布及 Fixed 曲线数值核对是在此阻塞之前完成的。
+最后补齐 Float32 通用加权曲线求值后，全项目编译曾遇到同期 Pose 改动的阻塞：`CharacterPoseNativeFrameCoordinator.cs:29` 无法解析 `IActionPresentationClockCoordinator`。相关 Pose 文件属于其它在途改动，本轮未修改。提交 `40fdedc21` 时保留了该阻塞记录；随后工作区同步修复完成，最新 Bee 编译记录无失败节点，目标 Editor 回读为 Play=false、Compiling=false，Console 为 0 错误。最终编译门槛已恢复通过，可以交由用户手测。

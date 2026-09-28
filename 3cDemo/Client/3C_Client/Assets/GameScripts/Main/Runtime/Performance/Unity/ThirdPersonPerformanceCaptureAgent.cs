@@ -299,11 +299,11 @@ namespace ThirdPersonPerformance.Runtime
 
         void ConfigureRuntime()
         {
-            Application.targetFrameRate = m_Scenario.target_frame_rate;
-            QualitySettings.vSyncCount = m_Scenario.v_sync_count;
             if (m_Scenario.quality_level < 0 || m_Scenario.quality_level >= QualitySettings.names.Length)
                 throw new InvalidDataException("Performance scenario quality level is invalid.");
             QualitySettings.SetQualityLevel(m_Scenario.quality_level, true);
+            Application.targetFrameRate = m_Scenario.target_frame_rate;
+            QualitySettings.vSyncCount = m_Scenario.v_sync_count;
             if (m_Scenario.width <= 0 || m_Scenario.height <= 0)
                 throw new InvalidDataException("Performance scenario resolution is invalid.");
             Screen.SetResolution(m_Scenario.width, m_Scenario.height, false);

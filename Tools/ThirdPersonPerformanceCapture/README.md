@@ -10,7 +10,9 @@
 | MarkerOnly | 上述数据及业务 RenderFrame 指标、Unity Profiler Marker | 查看阶段成本，不保存单次调用跨度 |
 | Span | 上述数据及调用点、Actor、RenderFrame、LogicTick、异常结束记录 | 定位具体方法及慢调用 |
 
-Disabled 关闭的是业务方法织入，Unity Profiler、Recorder 和 WPR 仍有采集开销，不能把它叫作完全没有诊断开销的发布包。MarkerOnly 不具备单 Tick 耗时，不把一帧内多个 Tick 的总耗时写成单 Tick 样本。只有 Span 生成 `instrumentation-spans.bin`。
+Disabled 关闭的是业务方法织入，Unity Profiler、Recorder 和 WPR 仍有采集开销，不能把它叫作完全没有诊断开销的发布包。当前 MarkerOnly 的 JSON 摘要按 RenderFrame 汇总，不把一帧内多个 Tick 的总耗时写成单 Tick 样本；Unity Profiler 原始 Marker 仍能记录每次调用，逐 Tick 汇总缺失是当前报告实现的限制。只有 Span 生成 `instrumentation-spans.bin`。
+
+新发布的 Scenario 使用 `target_frame_rate=-1`、`v_sync_count=0`，不限制 Player 帧率。Profile 的 `maximum_presentation_fps=1024` 只用于预分配 Recorder 容量，不传给帧率控制；Span 预分配 1048576 条记录。缓冲不足仍按正式采集错误处理，不在采样热路径扩容，也不通过限帧避免溢出。旧 Scenario 保留原配置，新配置使用独立的 `fixed.r5` 身份。
 
 普通 Baseline 比较要求相同场景、环境、采集工具、指标目录和织入身份，允许代码构建身份变化，因此能比较重构前后。不同探针模式会被拒绝作为普通性能回归比较。探针开销使用同一分析入口的 `InstrumentationOverhead` 类型，要求构建输入快照一致，多次观察共同的整体指标；不能把模式变化解释成业务优化。
 
@@ -85,11 +87,13 @@ Launcher/MCP 产物放在 `Library/Performance/Analyses/<独立编号>/`，包�
 
 ## 验证边界
 
-本次完善通过 8 个 C# 文件的 Roslyn 语法树解析和差异静态检查，没有启动编译、Unity、Controller 或真实采集，没有新增测试。语法解析不检查类型绑定；Xperf 导出格式、MCP 调度、Player 数据闭环与新增统计代码尚待实际运行确认；不把这次代码完善称为已验证的工业级工具。
+早期工具完善只通过语法解析和差异静态检查。2026-09-28 已实际完成 Windows IL2CPP Development Player 构建、产物发布和 Controller 编译，并多次执行 Smoke。构建输入临时资源误判、Controller 旧场景合同及 Pose 连线计数问题已经通过后续运行推进验证；当前 Smoke 仍在 TimelineBody 编辑器图被剥离后缺少运行数据处失败。尚未完成 Replay 和 Capture，没有有效热点报告、探针开销数字或优化收益数据，没有新增测试。
 
 GPU、整机内存峰值、长期泄漏与多硬件基准不在当前 Windows CPU/托管分配工具的报告范围内。
 
 ## 探针开销校准
+
+输入快照排除 `Assets/Resources/PerformanceTestRunInfo.json` 和 `PerformanceTestRunSettings.json`：它们由 Unity Performance Testing 的构建回调生成并在构建结束删除，属于生成产物。其他输入继续比较；不一致时将前后快照保存到 `Library/Performance/BuildDiagnostics/<job>/inputs-before.json` 和 `inputs-after.json`，供定位实际变化，不发布该次 Player。
 
 同一份分析清单将 `comparison_kind` 改为 `InstrumentationOverhead`，其余操作入口和报告格式不变。支持 Disabled → MarkerOnly、Disabled → Span、MarkerOnly → Span；每组仍必须使用同一个明确构建、至少 3 次采集才满足最低重复数。普通 `Regression` 继续严格禁止跨模式。
 

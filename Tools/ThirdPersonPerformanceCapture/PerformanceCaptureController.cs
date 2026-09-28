@@ -298,11 +298,11 @@ internal sealed class PerformanceCaptureController
             throw new InvalidDataException("Performance scenario, profile or budget content identity is invalid.");
         }
         ValidateScenarioClosure();
-        string expectedScene = "Assets/Scenes/GameplayLab/GameplayLab.unity";
+        string expectedScene = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
         if (!string.Equals(_scenario.scene_path, expectedScene, StringComparison.Ordinal) ||
             !string.Equals(_playerManifest.scene_path, expectedScene, StringComparison.Ordinal))
         {
-            throw new InvalidDataException("Performance Player and Scenario must use Gameplay Lab.");
+            throw new InvalidDataException("Performance Player and Scenario must use Gameplay Lab Fixed.");
         }
         if (_profile.runtime_ready_timeout_seconds <= 0 || _profile.capture_timeout_seconds <= 0 ||
             _scenario.warmup_logic_ticks <= 0 || _scenario.capture_logic_ticks <= 0 ||
@@ -433,7 +433,7 @@ internal sealed class PerformanceCaptureController
         {
             throw new InvalidDataException("Performance Camera Trace identity is invalid.");
         }
-        if (!string.Equals(_scenario.ready_condition, "gameplay-lab.session-active+locked-roster+fixed-start-body+metric-catalog-registered", StringComparison.Ordinal) ||
+        if (!string.Equals(_scenario.ready_condition, "fixed-session-active+locked-roster+fixed-start-body+metric-catalog-registered", StringComparison.Ordinal) ||
             !string.Equals(_scenario.capture_start_boundary, "after-fixed-input-warmup", StringComparison.Ordinal) ||
             !string.Equals(_scenario.capture_end_boundary, "fixed-input-replay-completed", StringComparison.Ordinal))
         {

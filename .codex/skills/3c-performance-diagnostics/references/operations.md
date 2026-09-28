@@ -43,6 +43,12 @@ schema 不受本 skill 固定。准备请求前读取当前 `PerformanceCaptureS
 
 当前输入快照记录 Unity 已导入资源的依赖指纹和少量配置文件哈希，不递归散列全部 Assets 与 PackageCache。包中的临时 `obj` 文件不是稳定的输入清单来源。插桩配置使用按输入与模式身份确定的路径，同输入构建复用编译宏；不要手工删除其清单再假设增量编译会重新生成。具体快照 schema 与范围以仓库 README 和合同为准，不把 Unity 未导入的外部文件也说成已覆盖。
 
+未保存资源检查区分可保存的原生资源、AssetImporter 设置和导入后生成的对象。已确认字体生成的 Texture2D 可被标记 dirty，但字体导入设置并未修改；这种缓存状态不能阻塞构建，不通过全局 SaveAssets 或清除 dirty 标志绕过检查。新 Scenario 默认取消帧率上限并关闭 VSync；Profile 的 `maximum_presentation_fps` 是预分配容量的估算输入，不是 Player 帧率上限。
+
+构建输入核对失败时读取 `Client/Library/Performance/BuildDiagnostics/<job>/inputs-before.json` 和 `inputs-after.json`，定位变化后再处理。Unity Performance Testing 在构建前生成、成功构建后删除的两份 `Assets/Resources/PerformanceTestRunInfo.json`、`PerformanceTestRunSettings.json` 已从源码输入快照排除；不要把这个已确认的生成生命周期扩大成忽略所有 Resources 或所有资源变化。
+
+Smoke 的 `Performance Player transport closed` 只是连接关闭。读取该次 Gate 的 `runtime-result.json` 与 `player.log` 确认 Player 初始化原因，不把它直接归为 TCP 故障。2026-09-28 已确认 Controller 的旧场景和 Ready 名称可在 Player 启动前拒绝正式 Fixed 场景；应与发布器、Player 的当前合同统一，不能放宽为接受任意场景。Player 构建完成不等于角色初始化或采集完成。
+
 ## 多次分析清单
 
 使用系统文件工具以 UTF-8 写入请求，保存到明确的性能分析请求位置，避免写进会触发 Unity 导入的 Assets。`schema` 从当前合同读取，路径从已确认的 Completed Capture 获取。结构为：

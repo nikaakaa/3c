@@ -257,7 +257,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             const int warmupLogicTicks = 180;
             if (input.frame_count <= warmupLogicTicks)
                 throw new InvalidDataException("Fixed Input Trace must contain both warmup and capture LogicTicks.");
-            string scenarioId = $"performance.{input.trace_id}.fixed.r4";
+            string scenarioId = $"performance.{input.trace_id}.fixed.r5";
             string root = Path.Combine(PerformanceRoot, "Scenarios", scenarioId);
             string scenarioPath = Path.Combine(root, "scenario.json");
             if (Directory.Exists(root))
@@ -298,11 +298,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var profile = new PerformanceCaptureProfileDocument
             {
                 profile_id = "gameplay-cpu-standard",
-                revision = 3,
-                maximum_presentation_fps = 120,
+                revision = 4,
+                maximum_presentation_fps = 1024,
                 logic_tick_rate = input.tick_rate,
                 sample_capacity_margin_percent = 25,
-                instrumentation_span_capacity = 262144,
+                instrumentation_span_capacity = 1048576,
                 runtime_ready_timeout_seconds = 90,
                 capture_timeout_seconds = Math.Max(120, (int)Math.Ceiling((double)input.frame_count / input.tick_rate) + 60)
             };
@@ -347,7 +347,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 height = 1080,
                 quality_level = QualitySettings.GetQualityLevel(),
                 v_sync_count = 0,
-                target_frame_rate = 120
+                target_frame_rate = -1
             };
             scenario.content_hash = PerformanceCaptureIdentity.Scenario(scenario);
             WriteJson(scenarioPath, scenario);
@@ -443,8 +443,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
                     throw new InvalidOperationException($"Performance Player build failed: {report.summary.result}");
                 BeginPhase("input-verification", "核对构建期间的 Unity 输入变化");
-                if (!string.Equals(buildInputsJson, CaptureBuildInputs(options, Progress), StringComparison.Ordinal))
-                    throw new InvalidDataException("性能 Player 构建期间输入文件发生变化，请保存配置后重新构建；本次不发布构建身份。");
+                string verifiedBuildInputsJson = CaptureBuildInputs(options, Progress);
+                if (!string.Equals(buildInputsJson, verifiedBuildInputsJson, StringComparison.Ordinal))
+                {
+                    string evidenceRoot = Path.Combine(PerformanceRoot, "BuildDiagnostics", workspaceId);
+                    Directory.CreateDirectory(evidenceRoot);
+                    File.WriteAllText(Path.Combine(evidenceRoot, "inputs-before.json"), buildInputsJson, new UTF8Encoding(false));
+                    File.WriteAllText(Path.Combine(evidenceRoot, "inputs-after.json"), verifiedBuildInputsJson, new UTF8Encoding(false));
+                    throw new InvalidDataException($"性能 Player 构建期间输入文件发生变化；前后输入快照：{evidenceRoot}。本次不发布构建身份。");
+                }
                 File.WriteAllText(Path.Combine(candidate, "build-inputs.json"), buildInputsJson, new UTF8Encoding(false));
                 BeginPhase("artifacts", "整理 Player、符号与插桩清单");
                 RequireFile(executable, "Performance Player executable");
@@ -960,6 +967,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             UnityEngine.Object dirtyAsset = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
                 .FirstOrDefault(value => EditorUtility.IsPersistent(value) && EditorUtility.IsDirty(value) &&
+                    (AssetDatabase.IsNativeAsset(value) || value is AssetImporter) &&
                     (AssetDatabase.GetAssetPath(value).StartsWith("Assets/", StringComparison.Ordinal) ||
                      AssetDatabase.GetAssetPath(value).StartsWith("Packages/", StringComparison.Ordinal)));
             if (dirtyAsset != null)
@@ -977,6 +985,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string[] paths = AssetDatabase.GetAllAssetPaths()
                 .Where(path => (path.StartsWith("Assets/", StringComparison.Ordinal) ||
                                 path.StartsWith("Packages/", StringComparison.Ordinal)) &&
+                               path != "Assets/Resources/PerformanceTestRunInfo.json" &&
+                               path != "Assets/Resources/PerformanceTestRunSettings.json" &&
                                !AssetDatabase.IsValidFolder(path))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .ToArray();

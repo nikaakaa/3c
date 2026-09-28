@@ -1,0 +1,552 @@
+{
+  "method": {
+    "ordinal": 47,
+    "definition_index": 626153,
+    "definition_va": 1736657356486,
+    "rva": 252855024,
+    "raw_hex": "11510b00f4e34b0beaec0700871301003cbc03060000ffffffff86000200",
+    "token": 100908092,
+    "name_identity": 189522932,
+    "name": "EDEDPAAJMLM",
+    "attributes": 134,
+    "static": false,
+    "abstract": false,
+    "return_type": {
+      "display": "void",
+      "type_ref": "0x7ff975e200c0",
+      "complete": true
+    },
+    "parameters": [
+      {
+        "ordinal": 0,
+        "definition_index": 519402,
+        "definition_va": 1736636467744,
+        "raw_hex": "2329377951664c893ae6cd54",
+        "name_identity": 191533827,
+        "name": "PLKFIJDODDG",
+        "token": 134450341,
+        "type": {
+          "display": "bool",
+          "type_ref": "0x7ff975e5add0",
+          "complete": true
+        }
+      },
+      {
+        "ordinal": 1,
+        "definition_index": 519403,
+        "definition_va": 1736636467756,
+        "raw_hex": "1a04affbd7d9ce0d30cb35d7",
+        "name_identity": 191892148,
+        "name": "PEKIHANADAC",
+        "token": 134450342,
+        "type": {
+          "display": "bool",
+          "type_ref": "0x7ff975e5add0",
+          "complete": true
+        }
+      }
+    ],
+    "runtime_record_va": 5497684716656,
+    "runtime_raw_hex": "e0aec90500050000f042cf82f97f0000e01dbd73f97f0000ffffffff00000000e98d0900000000003cbc0306ffff86000000020000000000f848030b00050000",
+    "runtime_matches_definition": true,
+    "code_va": 140709618205424,
+    "runtime_name_matches": true,
+    "signature_complete": true
+  },
+  "begin": 252855024,
+  "end": 252855419,
+  "unwind": 56582656,
+  "byte_sha256": "2491f3fab419b720868bf465beed37a32c7fccfe8bdd4919be92d54fe2d06742",
+  "instructions": [
+    [
+      252855024,
+      "push",
+      "rsi"
+    ],
+    [
+      252855025,
+      "push",
+      "rdi"
+    ],
+    [
+      252855026,
+      "push",
+      "rbx"
+    ],
+    [
+      252855027,
+      "sub",
+      "rsp, 0x20"
+    ],
+    [
+      252855031,
+      "mov",
+      "ebx, r8d"
+    ],
+    [
+      252855034,
+      "mov",
+      "edi, edx"
+    ],
+    [
+      252855036,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      252855039,
+      "cmp",
+      "byte ptr [rip - 0x9d4b41a], 0"
+    ],
+    [
+      252855046,
+      "jne",
+      "0xf1243d2"
+    ],
+    [
+      252855052,
+      "mov",
+      "rcx, qword ptr [rsi + 0x3f8]"
+    ],
+    [
+      252855059,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855062,
+      "je",
+      "0xf1243fd"
+    ],
+    [
+      252855068,
+      "call",
+      "0x13fee410"
+    ],
+    [
+      252855073,
+      "mov",
+      "rcx, qword ptr [rsi + 0x400]"
+    ],
+    [
+      252855080,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855083,
+      "je",
+      "0xf124402"
+    ],
+    [
+      252855089,
+      "call",
+      "0x11cc23e0"
+    ],
+    [
+      252855094,
+      "test",
+      "dil, dil"
+    ],
+    [
+      252855097,
+      "jne",
+      "0xf12434e"
+    ],
+    [
+      252855099,
+      "mov",
+      "rcx, qword ptr [rsi + 0x408]"
+    ],
+    [
+      252855106,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855109,
+      "je",
+      "0xf12434e"
+    ],
+    [
+      252855111,
+      "mov",
+      "edx, ebx"
+    ],
+    [
+      252855113,
+      "call",
+      "0x18709740"
+    ],
+    [
+      252855118,
+      "mov",
+      "rcx, qword ptr [rsi + 0x410]"
+    ],
+    [
+      252855125,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855128,
+      "je",
+      "0xf124407"
+    ],
+    [
+      252855134,
+      "call",
+      "0x11266f40"
+    ],
+    [
+      252855139,
+      "mov",
+      "rcx, qword ptr [rsi + 0x418]"
+    ],
+    [
+      252855146,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855149,
+      "je",
+      "0xf12440c"
+    ],
+    [
+      252855155,
+      "call",
+      "0x1bb62ec0"
+    ],
+    [
+      252855160,
+      "mov",
+      "rcx, qword ptr [rsi + 0x420]"
+    ],
+    [
+      252855167,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      252855170,
+      "je",
+      "0xf124411"
+    ],
+    [
+      252855176,
+      "call",
+      "0x15572ef0"
+    ],
+    [
+      252855181,
+      "mov",
+      "rdi, qword ptr [rsi + 0x428]"
+    ],
+    [
+      252855188,
+      "test",
+      "rdi, rdi"
+    ],
+    [
+      252855191,
+      "je",
+      "0xf124416"
+    ],
+    [
+      252855193,
+      "cmp",
+      "byte ptr [rip - 0x9d779d2], 0"
+    ],
+    [
+      252855200,
+      "jne",
+      "0xf12441b"
+    ],
+    [
+      252855202,
+      "mov",
+      "rsi, qword ptr [rsi + 0x3e0]"
+    ],
+    [
+      252855209,
+      "test",
+      "rsi, rsi"
+    ],
+    [
+      252855212,
+      "je",
+      "0xf124445"
+    ],
+    [
+      252855218,
+      "cmp",
+      "byte ptr [rip - 0x9d3bcfe], 0"
+    ],
+    [
+      252855225,
+      "jne",
+      "0xf12444a"
+    ],
+    [
+      252855231,
+      "mov",
+      "dword ptr [rsi + 0x24], 0xffffffff"
+    ],
+    [
+      252855238,
+      "mov",
+      "byte ptr [rsi + 0x21], 0"
+    ],
+    [
+      252855242,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      252855246,
+      "pop",
+      "rbx"
+    ],
+    [
+      252855247,
+      "pop",
+      "rdi"
+    ],
+    [
+      252855248,
+      "pop",
+      "rsi"
+    ],
+    [
+      252855249,
+      "ret",
+      ""
+    ],
+    [
+      252855250,
+      "mov",
+      "ecx, 0x3bc3c"
+    ],
+    [
+      252855255,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      252855260,
+      "test",
+      "rax, rax"
+    ],
+    [
+      252855263,
+      "je",
+      "0xf12446b"
+    ],
+    [
+      252855269,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      252855272,
+      "mov",
+      "rdx, rsi"
+    ],
+    [
+      252855275,
+      "mov",
+      "r8d, edi"
+    ],
+    [
+      252855278,
+      "mov",
+      "r9d, ebx"
+    ],
+    [
+      252855281,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      252855285,
+      "pop",
+      "rbx"
+    ],
+    [
+      252855286,
+      "pop",
+      "rdi"
+    ],
+    [
+      252855287,
+      "pop",
+      "rsi"
+    ],
+    [
+      252855288,
+      "jmp",
+      "0xb1a15e0"
+    ],
+    [
+      252855293,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855298,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855303,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855308,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855313,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855318,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855323,
+      "mov",
+      "ecx, 0xf71e"
+    ],
+    [
+      252855328,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      252855333,
+      "test",
+      "rax, rax"
+    ],
+    [
+      252855336,
+      "je",
+      "0xf124470"
+    ],
+    [
+      252855338,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      252855341,
+      "mov",
+      "rdx, rdi"
+    ],
+    [
+      252855344,
+      "call",
+      "0xb189870"
+    ],
+    [
+      252855349,
+      "mov",
+      "rsi, qword ptr [rsi + 0x3e0]"
+    ],
+    [
+      252855356,
+      "test",
+      "rsi, rsi"
+    ],
+    [
+      252855359,
+      "jne",
+      "0xf1243b2"
+    ],
+    [
+      252855365,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855370,
+      "mov",
+      "ecx, 0x4b40b"
+    ],
+    [
+      252855375,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      252855380,
+      "test",
+      "rax, rax"
+    ],
+    [
+      252855383,
+      "je",
+      "0xf124475"
+    ],
+    [
+      252855385,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      252855388,
+      "mov",
+      "rdx, rsi"
+    ],
+    [
+      252855391,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      252855395,
+      "pop",
+      "rbx"
+    ],
+    [
+      252855396,
+      "pop",
+      "rdi"
+    ],
+    [
+      252855397,
+      "pop",
+      "rsi"
+    ],
+    [
+      252855398,
+      "jmp",
+      "0xb189870"
+    ],
+    [
+      252855403,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855408,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855413,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252855418,
+      "int3",
+      ""
+    ]
+  ]
+}

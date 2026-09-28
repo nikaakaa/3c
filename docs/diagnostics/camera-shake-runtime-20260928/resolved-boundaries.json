@@ -1,0 +1,31 @@
+{
+  "time_slot_identity": {
+    "host_call": "0x174dd447",
+    "slot": "0x0540ac98",
+    "brain_call": "0x1f38fb8d",
+    "brain_branch": "m_IgnoreTimeScale=false, fixedDelta=false",
+    "source_comparison": "CinemachineBrain.GetEffectiveDeltaTime in local Cinemachine 2.10.7, line485 returns Time.deltaTime. Native branch graph and IgnoreTimeScale field offset match. This identification uses source comparison, not a named UnityEngine.Time wrapper."
+  },
+  "slots": [
+    {
+      "rva": "0x540ac98",
+      "snapshot_pointer": "0x7ff995abec90"
+    },
+    {
+      "rva": "0x540acc8",
+      "snapshot_pointer": "0x7ff995abf040"
+    },
+    {
+      "rva": "0x540ace0",
+      "snapshot_pointer": "0x7ff995abf290"
+    },
+    {
+      "rva": "0x5811100",
+      "snapshot_pointer": "0x0"
+    }
+  ],
+  "mute_transition_seconds": 0.11999999731779099,
+  "quaternion_order": "OrientationCorrection = OrientationCorrection * Quaternion.Euler(rotationAggregateDegrees)",
+  "hit_multiplier_key": "ShakeStrength, decoded from initializer 0x3233f, usage 587345, literal 53812 despite null runtime cache; see hit-scale-literals.json",
+  "nonpositive_delta_state_key": "Action3DCamera, decoded from initializer 0x338de, usage 606649, literal 36186; see host-state-literals.json"
+}

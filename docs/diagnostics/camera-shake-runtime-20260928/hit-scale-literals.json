@@ -1,0 +1,11 @@
+[
+  {
+    "initializer": "0x3233f",
+    "usageIndex": 587345,
+    "literalIndex": 53812,
+    "cacheRva": "0x5811100",
+    "length": 13,
+    "utf8": "ShakeStrength",
+    "hex": "5368616b65537472656e677468"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "source": "writeback-0x134db450.json",
+  "instruction_range": [
+    "0x134dba46",
+    "0x134dbac1"
+  ],
+  "s": "Quaternion.Euler(shakeRotationDegrees)",
+  "c": "existing OrientationCorrection",
+  "result_xyzw": [
+    "+1*cw*sx +1*cx*sw +1*cy*sz -1*cz*sy",
+    "+1*cw*sy -1*cx*sz +1*cy*sw +1*cz*sx",
+    "+1*cw*sz +1*cx*sy -1*cy*sx +1*cz*sw",
+    "+1*cw*sw -1*cx*sx -1*cy*sy -1*cz*sz"
+  ]
+}

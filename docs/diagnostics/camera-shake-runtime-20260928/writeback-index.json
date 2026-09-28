@@ -1,0 +1,331 @@
+[
+  {
+    "function": "0xdc87880",
+    "access": "0xdc87972",
+    "nearby": [
+      [
+        "0xdc87987",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x10d12f70",
+    "access": "0x10d132ee",
+    "nearby": [
+      [
+        "0x10d13320",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x10d12f70",
+    "access": "0x10d133a5",
+    "nearby": [
+      [
+        "0x10d133d3",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x10f2d6f0",
+    "access": "0x10f2d836",
+    "nearby": [
+      [
+        "0x10f2d84b",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x10f2d6f0",
+    "access": "0x10f2d8c8",
+    "nearby": [
+      [
+        "0x10f2d8d8",
+        "movsd",
+        "xmm11, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x113e7640",
+    "access": "0x113e7a02",
+    "nearby": [
+      [
+        "0x113e7a18",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x113e7640",
+    "access": "0x113e7a84",
+    "nearby": [
+      [
+        "0x113e7aab",
+        "movsd",
+        "xmm9, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x116d3d20",
+    "access": "0x116d3f25",
+    "nearby": [
+      [
+        "0x116d3f3a",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x116d3d20",
+    "access": "0x116d3fc2",
+    "nearby": [
+      [
+        "0x116d3fd2",
+        "movsd",
+        "xmm11, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x116d7070",
+    "access": "0x116d71c3",
+    "nearby": [
+      [
+        "0x116d71d8",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x116d7070",
+    "access": "0x116d7256",
+    "nearby": [
+      [
+        "0x116d7266",
+        "movsd",
+        "xmm11, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x11c90090",
+    "access": "0x11c904e9",
+    "nearby": [
+      [
+        "0x11c90518",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x11c90090",
+    "access": "0x11c9059d",
+    "nearby": [
+      [
+        "0x11c905c8",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x1264fc20",
+    "access": "0x1264fec2",
+    "nearby": [
+      [
+        "0x1264fef1",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x1264fc20",
+    "access": "0x1264ff76",
+    "nearby": [
+      [
+        "0x1264ffa1",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x134db450",
+    "access": "0x134db95a",
+    "nearby": [
+      [
+        "0x134db978",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ],
+      [
+        "0x134db9aa",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x134e41a0",
+    "access": "0x134e45e4",
+    "nearby": [
+      [
+        "0x134e4602",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ],
+      [
+        "0x134e4634",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x14dd0230",
+    "access": "0x14dd0613",
+    "nearby": [
+      [
+        "0x14dd0628",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x14dd0230",
+    "access": "0x14dd06a5",
+    "nearby": [
+      [
+        "0x14dd06b5",
+        "movsd",
+        "xmm11, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x150e20e0",
+    "access": "0x150e257b",
+    "nearby": [
+      [
+        "0x150e25b0",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x150e20e0",
+    "access": "0x150e2635",
+    "nearby": [
+      [
+        "0x150e2666",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x174de220",
+    "access": "0x174de568",
+    "nearby": [
+      [
+        "0x174de58e",
+        "movlps",
+        "qword ptr [rax + 0x40], xmm8"
+      ]
+    ]
+  },
+  {
+    "function": "0x182fd360",
+    "access": "0x182fd380",
+    "nearby": [
+      [
+        "0x182fd3a5",
+        "mov",
+        "r14, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18b7d6d0",
+    "access": "0x18b7e57c",
+    "nearby": [
+      [
+        "0x18b7e59a",
+        "movsd",
+        "xmm0, qword ptr [rax + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18b7d6d0",
+    "access": "0x18b7e610",
+    "nearby": [
+      [
+        "0x18b7e620",
+        "movsd",
+        "xmm9, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18b99770",
+    "access": "0x18b99e16",
+    "nearby": [
+      [
+        "0x18b99e33",
+        "movsd",
+        "xmm1, qword ptr [rcx + 0x54]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18b99770",
+    "access": "0x18b99ee0",
+    "nearby": [
+      [
+        "0x18b99f00",
+        "movsd",
+        "xmm1, qword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18fc9ad0",
+    "access": "0x18fc9c24",
+    "nearby": [
+      [
+        "0x18fc9c3a",
+        "cmp",
+        "edx, dword ptr [rax + 0x40]"
+      ]
+    ]
+  },
+  {
+    "function": "0x18fcacf0",
+    "access": "0x18fcaf7b",
+    "nearby": [
+      [
+        "0x18fcaf91",
+        "cmp",
+        "edx, dword ptr [rax + 0x40]"
+      ]
+    ]
+  }
+]

@@ -1,0 +1,855 @@
+{
+  "hits": [
+    {
+      "rva": "0xdc92ab0",
+      "owner": 44836,
+      "name": "IMLCKHAHGJH",
+      "method": "DPNFOBMFKJN"
+    },
+    {
+      "rva": "0x10afb8b0",
+      "owner": 77269,
+      "name": "MoleMole.VentCrawlSubSystem",
+      "method": "EnterVentCrawlCamera"
+    },
+    {
+      "rva": "0x12970460",
+      "owner": 47955,
+      "name": "CLEOHGGLEDN",
+      "method": "EMPJHIKLNHB"
+    },
+    {
+      "rva": "0x12a7ed00",
+      "owner": 46751,
+      "name": "AONHPMMKECA",
+      "method": "EMPJHIKLNHB"
+    },
+    {
+      "rva": "0x12b8bae0",
+      "owner": 74472,
+      "name": "GHIOAEAMJEG",
+      "method": "DPNFOBMFKJN"
+    },
+    {
+      "rva": "0x13d38ab0",
+      "owner": 74479,
+      "name": "EKOPBBOKGOO",
+      "method": "HCBMKBDIHJB"
+    },
+    {
+      "rva": "0x14056300",
+      "owner": 40636,
+      "name": "KCFCEMEAKEF",
+      "method": "LBBNNCEBLGA"
+    },
+    {
+      "rva": "0x174de220",
+      "owner": 61770,
+      "name": "NHEFILHBNND",
+      "method": "NOPJIAOCHID"
+    },
+    {
+      "rva": "0x191b9c90",
+      "owner": 54323,
+      "name": "MoleMole.Spline.NapPointMetaPlugin_CameraShake",
+      "method": "OFAOFBJLBCE"
+    },
+    {
+      "rva": "0x19ce2d30",
+      "owner": 69288,
+      "name": "NNNFCKFOIPG",
+      "method": "NDBBJDDPKGB"
+    },
+    {
+      "rva": "0x1a8b7630",
+      "owner": 49974,
+      "name": "DHFHDKAKAMJ",
+      "method": "NIPOMMCDJHG"
+    }
+  ],
+  "types": [
+    {
+      "type_index": 61770,
+      "name": "NHEFILHBNND",
+      "namespace": "",
+      "full_name": "NHEFILHBNND",
+      "klass": 5497654006128,
+      "klass_raw_hex": "80955c0100050000010000000000003e00000000000000000000000000000000000000000000000058f320070005000090ee200700050000000000000000000000000000000000000000000000000000800474020005000000ff075a9401000000000000000000000000000000000000000000000000000000000000000000004af100000000000000001200000000004af100000000000000001240000000003b54000270d1b6050000000001001000c03b5c0270d1b60500003800ffffffff00001800110000000003000131580c00",
+      "definition_va": 1736677261056,
+      "definition_raw_hex": "1886080005610e000800000009080e00ffffffff3b540002010010005694630b5f5d0b0058020400679301005f5d0b00ffffffff0000ffff00001800000000000000ffffffffffff11000100000cffff",
+      "token": 33575995,
+      "attributes": 1048577,
+      "field_start": 4294967295,
+      "field_count": 0,
+      "method_start": 558616,
+      "method_count": 17,
+      "parent_descriptor_index": 262744,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 5497677737616,
+      "value_type": false,
+      "instance_size": 56,
+      "parent_klass": 5497597737920,
+      "parent_type_index": 73452,
+      "parent_name": "OEFNMPPHFFI",
+      "parent_type": "OEFNMPPHFFI",
+      "selection_reasons": [
+        "震动更新宿主"
+      ],
+      "fields": [],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 558616,
+          "definition_va": 1736655330376,
+          "rva": 390981424,
+          "raw_hex": "11510b0022000005ffffffff4af1000070b402060000ffffffff86180001",
+          "token": 100840560,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497677737752,
+          "runtime_raw_hex": "70d1b6050005000030e70a8bf97f00000010bd73f97f0000ffffffff00000000188608000000000070b40206ffff861800000010000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756331824,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 558617,
+          "definition_va": 1736655330406,
+          "rva": 390975024,
+          "raw_hex": "23800d007cf4450bffffffff4af100006bb4020600000400ffffc6080000",
+          "token": 100840555,
+          "name_identity": 189133948,
+          "name": "FGMCHOKPDLP",
+          "attributes": 2246,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "CMHPMJFCABO",
+            "type_ref": "0x7ff97604f1e0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497677737816,
+          "runtime_raw_hex": "70d1b6050005000030ce0a8bf97f00007033bd73f97f0000ffffffff0000000019860800000000006bb402060400c60800000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756325424,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 558618,
+          "definition_va": 1736655330436,
+          "rva": 390975040,
+          "raw_hex": "11510b00a759100bd51007004af100006cb4020600000500ffffc6000200",
+          "token": 100840556,
+          "name_identity": 185620903,
+          "name": "CPIMPBNOGJJ",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463061,
+              "definition_va": 1736635791652,
+              "raw_hex": "d34d3886ab04279c3304c761",
+              "name_identity": 186264717,
+              "name": "PIOFELAKDAJ",
+              "token": 134394056,
+              "type": {
+                "display": "CinemachineVirtualCameraBase",
+                "type_ref": "0x7ff975558510",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463062,
+              "definition_va": 1736635791664,
+              "raw_hex": "0ca89b082efc86183b212fe4",
+              "name_identity": 185761291,
+              "name": "OBHNFHEAHIO",
+              "token": 134394057,
+              "type": {
+                "display": "CameraDataAccessor",
+                "type_ref": "0x7ff9760488f0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677737880,
+          "runtime_raw_hex": "70d1b6050005000040ce0a8bf97f0000901abd73f97f0000ffffffff000000001a860800000000006cb402060500c60000000200000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756325440,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 558619,
+          "definition_va": 1736655330466,
+          "rva": 390976352,
+          "raw_hex": "11510b00615b3d0bd71007004af100006db4020600000800ffffc6000300",
+          "token": 100840557,
+          "name_identity": 188570465,
+          "name": "MHBHCKLLKLD",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463063,
+              "definition_va": 1736635791676,
+              "raw_hex": "958f068bd166179f4ebc9666",
+              "name_identity": 186353176,
+              "name": "NGJOJICJBJM",
+              "token": 134394058,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463064,
+              "definition_va": 1736635791688,
+              "raw_hex": "79c36b0dbace291ddc75ffe8",
+              "name_identity": 189133970,
+              "name": "INICGFDJLML",
+              "token": 134394059,
+              "type": {
+                "display": "NEGKDBJNJJL&",
+                "type_ref": "0x7ff97607c3f0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 463065,
+              "definition_va": 1736635791700,
+              "raw_hex": "71e6e38fc8e391b1c292677b",
+              "name_identity": 189133981,
+              "name": "EAOBHLFJEOD",
+              "token": 134394060,
+              "type": {
+                "display": "CameraAvatarPrepareData",
+                "type_ref": "0x7ff97607c400",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677737944,
+          "runtime_raw_hex": "70d1b6050005000060d30a8bf97f0000009ec373f97f0000ffffffff000000001b860800000000006db402060800c60000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756326752,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 558620,
+          "definition_va": 1736655330496,
+          "rva": 390976448,
+          "raw_hex": "11510b00e1892a0bda1007004af100006eb4020600000900ffffc6000300",
+          "token": 100840558,
+          "name_identity": 187337185,
+          "name": "MEIBNMFIBPN",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463066,
+              "definition_va": 1736635791712,
+              "raw_hex": "701d3e12eef41f386c2ecffd",
+              "name_identity": 186353176,
+              "name": "NGJOJICJBJM",
+              "token": 134394061,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463067,
+              "definition_va": 1736635791724,
+              "raw_hex": "362ab39466fb99b4fd673780",
+              "name_identity": 188593666,
+              "name": "LONDDKBNBJF",
+              "token": 134394062,
+              "type": {
+                "display": "CameraState&",
+                "type_ref": "0x7ff9760019e0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 463068,
+              "definition_va": 1736635791736,
+              "raw_hex": "95301017ee5d3e2be4049af2",
+              "name_identity": 189133970,
+              "name": "INICGFDJLML",
+              "token": 134394063,
+              "type": {
+                "display": "NEGKDBJNJJL&",
+                "type_ref": "0x7ff97607c3f0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738008,
+          "runtime_raw_hex": "70d1b60500050000c0d30a8bf97f0000009ec373f97f0000ffffffff000000001c860800000000006eb402060900c60000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756326848,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 558621,
+          "definition_va": 1736655330526,
+          "rva": 390981280,
+          "raw_hex": "e1010000d010440bffffffff4af100006fb4020600000700ffffc6000000",
+          "token": 100840559,
+          "name_identity": 189010128,
+          "name": "IDLJBLBBIOH",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497677738072,
+          "runtime_raw_hex": "70d1b60500050000a0e60a8bf97f00007033bd73f97f0000ffffffff000000001d860800000000006fb402060700c60000000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756331680,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 6,
+          "definition_index": 558622,
+          "definition_va": 1736655330556,
+          "rva": 390978112,
+          "raw_hex": "e10100006194630bffffffff4af1000071b402060000ffffffff86000000",
+          "token": 100840561,
+          "name_identity": 191075425,
+          "name": "LMFCLMLPJLJ",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497677738136,
+          "runtime_raw_hex": "70d1b6050005000040da0a8bf97f00007033bd73f97f0000ffffffff000000001e8608000000000071b40206ffff860000000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756328512,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 7,
+          "definition_index": 558623,
+          "definition_va": 1736655330586,
+          "rva": 390981440,
+          "raw_hex": "e10100006c94630bffffffff4af1000072b402060000ffffffff06000000",
+          "token": 100840562,
+          "name_identity": 191075436,
+          "name": "KJNFPOHLNIJ",
+          "attributes": 6,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497677738200,
+          "runtime_raw_hex": "70d1b6050005000040e70a8bf97f00007033bd73f97f0000ffffffff000000001f8608000000000072b40206ffff060000000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756331840,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 8,
+          "definition_index": 558624,
+          "definition_va": 1736655330616,
+          "rva": 390981584,
+          "raw_hex": "e101000089672a0bdd1007004af1000073b402060000ffffffff81000100",
+          "token": 100840563,
+          "name_identity": 187328393,
+          "name": "CACEHJBEMFE",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463069,
+              "definition_va": 1736635791748,
+              "raw_hex": "c09870997f9008a96d200275",
+              "name_identity": 191075447,
+              "name": "AFEKBHKPLIN",
+              "token": 134394064,
+              "type": {
+                "display": "AONHPMMKECA",
+                "type_ref": "0x7ff975837a20",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738264,
+          "runtime_raw_hex": "70d1b60500050000d0e70a8bf97f00007016bd73f97f0000ffffffff00000000208608000000000073b40206ffff810000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756331984,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 9,
+          "definition_index": 558625,
+          "definition_va": 1736655330646,
+          "rva": 390980016,
+          "raw_hex": "11510b008d94630bde1007004af1000074b402060000ffffffff86000100",
+          "token": 100840564,
+          "name_identity": 191075469,
+          "name": "CIFJEEEEMGD",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463070,
+              "definition_va": 1736635791760,
+              "raw_hex": "9de3d81b074cb02d81db69f7",
+              "name_identity": 191075458,
+              "name": "JBKOFGNCICH",
+              "token": 134394065,
+              "type": {
+                "display": "AONHPMMKECA",
+                "type_ref": "0x7ff975837a20",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738328,
+          "runtime_raw_hex": "70d1b60500050000b0e10a8bf97f0000d015bd73f97f0000ffffffff00000000218608000000000074b40206ffff860000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756330416,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 10,
+          "definition_index": 558626,
+          "definition_va": 1736655330676,
+          "rva": 390978640,
+          "raw_hex": "11510b009894630bdf1007004af1000075b402060000ffffffff81000100",
+          "token": 100840565,
+          "name_identity": 191075480,
+          "name": "LJMHOGFLLIC",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463071,
+              "definition_va": 1736635791772,
+              "raw_hex": "d26b459e943a21c49578d289",
+              "name_identity": 186353176,
+              "name": "NGJOJICJBJM",
+              "token": 134394066,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738392,
+          "runtime_raw_hex": "70d1b6050005000050dc0a8bf97f00002087bd73f97f0000ffffffff00000000228608000000000075b40206ffff810000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756329040,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 11,
+          "definition_index": 558627,
+          "definition_va": 1736655330706,
+          "rva": 390982016,
+          "raw_hex": "11510b00a8f4450be01007004af1000076b402060000ffffffff06000300",
+          "token": 100840566,
+          "name_identity": 189133992,
+          "name": "KDEJNHLDNCE",
+          "attributes": 6,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463072,
+              "definition_va": 1736635791784,
+              "raw_hex": "5741ad207286b94009923a0c",
+              "name_identity": 186258279,
+              "name": "PMFKJFFEIDL",
+              "token": 134394067,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463073,
+              "definition_va": 1736635791796,
+              "raw_hex": "4e8808a33e9c21c7b82da28e",
+              "name_identity": 187329253,
+              "name": "KNANNBDHDDG",
+              "token": 134394068,
+              "type": {
+                "display": "NEGKDBJNJJL&",
+                "type_ref": "0x7ff97607c3f0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 463074,
+              "definition_va": 1736635791808,
+              "raw_hex": "4c8f8025b4a55945b66a0a11",
+              "name_identity": 187329308,
+              "name": "EFBELMIHKJI",
+              "token": 134394069,
+              "type": {
+                "display": "CameraAvatarPrepareData",
+                "type_ref": "0x7ff97607c400",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738456,
+          "runtime_raw_hex": "70d1b6050005000080e90a8bf97f0000009ec373f97f0000ffffffff00000000238608000000000076b40206ffff060000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756332416,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 12,
+          "definition_index": 558628,
+          "definition_va": 1736655330736,
+          "rva": 390978224,
+          "raw_hex": "11510b00ae94630be31007004af1000077b402060000ffffffff81000100",
+          "token": 100840567,
+          "name_identity": 191075502,
+          "name": "EBMNKBFGCDN",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463075,
+              "definition_va": 1736635791820,
+              "raw_hex": "05d4e4a78abcb9b920047183",
+              "name_identity": 191075491,
+              "name": "HFHEFLDHFPA",
+              "token": 134394070,
+              "type": {
+                "display": "int",
+                "type_ref": "0x7ff9752cfa40",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738520,
+          "runtime_raw_hex": "70d1b60500050000b0da0a8bf97f0000d01bbd73f97f0000ffffffff00000000248608000000000077b40206ffff810000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756328624,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 13,
+          "definition_index": 558629,
+          "definition_va": 1736655330766,
+          "rva": 390982192,
+          "raw_hex": "11510b0000e52a0be41007004af1000078b402060000ffffffff06000200",
+          "token": 100840568,
+          "name_identity": 187360512,
+          "name": "GGABPPBONGA",
+          "attributes": 6,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463076,
+              "definition_va": 1736635791832,
+              "raw_hex": "05364a2aa31059405e1fd905",
+              "name_identity": 186258279,
+              "name": "PMFKJFFEIDL",
+              "token": 134394071,
+              "type": {
+                "display": "CinemachineVirtualCameraBase",
+                "type_ref": "0x7ff975558510",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463077,
+              "definition_va": 1736635791844,
+              "raw_hex": "bac5a9ac1a0b81bc58bc4088",
+              "name_identity": 187329253,
+              "name": "KNANNBDHDDG",
+              "token": 134394072,
+              "type": {
+                "display": "CameraDataAccessor",
+                "type_ref": "0x7ff9760488f0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738584,
+          "runtime_raw_hex": "70d1b6050005000030ea0a8bf97f0000901abd73f97f0000ffffffff00000000258608000000000078b40206ffff060000000200000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756332592,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 14,
+          "definition_index": 558630,
+          "definition_va": 1736655330796,
+          "rva": 390982352,
+          "raw_hex": "11510b0001533b0be61007004af1000079b402060000ffffffff06000300",
+          "token": 100840569,
+          "name_identity": 188437249,
+          "name": "PLLLADNDKDK",
+          "attributes": 6,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463078,
+              "definition_va": 1736635791856,
+              "raw_hex": "1e651c2f29aa0853ca75a91a",
+              "name_identity": 186258279,
+              "name": "PMFKJFFEIDL",
+              "token": 134394073,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 463079,
+              "definition_va": 1736635791868,
+              "raw_hex": "ac5379b1f57f50d17f91119d",
+              "name_identity": 187329253,
+              "name": "KNANNBDHDDG",
+              "token": 134394074,
+              "type": {
+                "display": "CameraState&",
+                "type_ref": "0x7ff9760019e0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 463080,
+              "definition_va": 1736635791880,
+              "raw_hex": "fe8af133b599c855472e791f",
+              "name_identity": 187329308,
+              "name": "EFBELMIHKJI",
+              "token": 134394075,
+              "type": {
+                "display": "NEGKDBJNJJL&",
+                "type_ref": "0x7ff97607c3f0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738648,
+          "runtime_raw_hex": "70d1b60500050000d0ea0a8bf97f0000009ec373f97f0000ffffffff00000000268608000000000079b40206ffff060000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756332752,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 15,
+          "definition_index": 558631,
+          "definition_va": 1736655330826,
+          "rva": 390980128,
+          "raw_hex": "11510b00b994630be91007004af100007ab402060000ffffffff81000100",
+          "token": 100840570,
+          "name_identity": 191075513,
+          "name": "NOPJIAOCHID",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463081,
+              "definition_va": 1736635791892,
+              "raw_hex": "eafa53b66ccb51ccf367e191",
+              "name_identity": 186353176,
+              "name": "NGJOJICJBJM",
+              "token": 134394076,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738712,
+          "runtime_raw_hex": "70d1b6050005000020e20a8bf97f00002087bd73f97f0000ffffffff0000000027860800000000007ab40206ffff810000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756330528,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 16,
+          "definition_index": 558632,
+          "definition_va": 1736655330856,
+          "rva": 390975200,
+          "raw_hex": "11510b00c494630bea1007004af100007bb402060000ffffffff81000100",
+          "token": 100840571,
+          "name_identity": 191075524,
+          "name": "EDAPHBPJLMH",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 463082,
+              "definition_va": 1736635791904,
+              "raw_hex": "11d3bb3896b3d2481f034c14",
+              "name_identity": 191075491,
+              "name": "HFHEFLDHFPA",
+              "token": 134394077,
+              "type": {
+                "display": "int",
+                "type_ref": "0x7ff9752cfa40",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497677738776,
+          "runtime_raw_hex": "70d1b60500050000e0ce0a8bf97f0000d01bbd73f97f0000ffffffff0000000028860800000000007bb40206ffff810000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709756325600,
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625841128,
+        "record_number": 478,
+        "record_va": 1736696656232,
+        "record_hex": "000000003800080100000000",
+        "instance_size": 56,
+        "offset_array_va": 1736717977800,
+        "offsets_hex": "",
+        "offset_flags": []
+      },
+      "layout_instance_size": 56,
+      "dependencies": [
+        34727,
+        34764,
+        41157,
+        46751,
+        64019,
+        70535,
+        70795
+      ]
+    }
+  ],
+  "errors": {}
+}

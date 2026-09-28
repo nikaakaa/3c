@@ -1,0 +1,70 @@
+[
+  {
+    "instruction": "0x12a7dfaf",
+    "operand": "eax, dword ptr [rip - 0xd71aeb1]",
+    "target": "0x5363104",
+    "bytes": "00000000",
+    "floats": [
+      0.0
+    ]
+  },
+  {
+    "instruction": "0x12a7dfb5",
+    "operand": "rcx, qword ptr [rip - 0xd71aec0]",
+    "target": "0x53630fc",
+    "bytes": "0000000000000000",
+    "floats": [
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "instruction": "0x12a7dfd3",
+    "operand": "xmm9, dword ptr [rip - 0xd71aeb0]",
+    "target": "0x536312c",
+    "bytes": "00000000",
+    "floats": [
+      0.0
+    ]
+  },
+  {
+    "instruction": "0x12a7dfdc",
+    "operand": "xmm7, qword ptr [rip - 0xd71aeb4]",
+    "target": "0x5363130",
+    "bytes": "0000803f00000000",
+    "floats": [
+      1.0,
+      0.0
+    ]
+  },
+  {
+    "instruction": "0x134db9d0",
+    "operand": "xmm2, dword ptr [rip - 0x10cc2f78]",
+    "target": "0x2818a60",
+    "bytes": "fee6db2e",
+    "floats": [
+      9.999999439624929e-11
+    ]
+  },
+  {
+    "instruction": "0x134db9e1",
+    "operand": "xmm0, dword ptr [rip - 0x10cbee9d]",
+    "target": "0x281cb4c",
+    "bytes": "35fa8e3c",
+    "floats": [
+      0.01745329238474369
+    ]
+  },
+  {
+    "instruction": "0x134db9e9",
+    "operand": "xmm1, xmmword ptr [rip - 0x10cbee90]",
+    "target": "0x281cb60",
+    "bytes": "35fa8e3c35fa8e3c0000000000000000",
+    "floats": [
+      0.01745329238474369,
+      0.01745329238474369,
+      0.0,
+      0.0
+    ]
+  }
+]

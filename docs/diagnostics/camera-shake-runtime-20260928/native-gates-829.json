@@ -1,0 +1,62 @@
+[
+  {
+    "function": "create",
+    "at": "0x15dc5f17",
+    "flagRva": "0x5883d82",
+    "value": 0
+  },
+  {
+    "function": "create",
+    "at": "0x15dc5f24",
+    "flagRva": "0x539dec6",
+    "value": 0
+  },
+  {
+    "function": "update",
+    "at": "0x12a7ed67",
+    "flagRva": "0x5895d7f",
+    "value": 0
+  },
+  {
+    "function": "update",
+    "at": "0x12a7ed85",
+    "flagRva": "0x53a933b",
+    "value": 0
+  },
+  {
+    "function": "position",
+    "at": "0x12a7df4b",
+    "flagRva": "0x53a9335",
+    "value": 0
+  },
+  {
+    "function": "distance",
+    "at": "0x12a7dc45",
+    "flagRva": "0x53a9332",
+    "value": 0
+  },
+  {
+    "function": "select",
+    "at": "0x174de268",
+    "flagRva": "0x58852d2",
+    "value": 0
+  },
+  {
+    "function": "select",
+    "at": "0x174de275",
+    "flagRva": "0x53c872a",
+    "value": 0
+  },
+  {
+    "function": "host",
+    "at": "0x174dd3eb",
+    "flagRva": "0x58852ce",
+    "value": 1
+  },
+  {
+    "function": "host",
+    "at": "0x174dd3f8",
+    "flagRva": "0x53c871e",
+    "value": 0
+  }
+]

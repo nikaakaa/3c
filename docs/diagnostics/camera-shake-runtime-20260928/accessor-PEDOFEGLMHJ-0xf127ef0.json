@@ -1,0 +1,158 @@
+{
+  "method": {
+    "ordinal": 85,
+    "definition_index": 626191,
+    "definition_va": 1736657357626,
+    "rva": 252870384,
+    "raw_hex": "e101000027703b0bffffffff8713010062bc03060000ffffffff86000000",
+    "token": 100908130,
+    "name_identity": 188444711,
+    "name": "PEDOFEGLMHJ",
+    "attributes": 134,
+    "static": false,
+    "abstract": false,
+    "return_type": {
+      "display": "bool",
+      "type_ref": "0x7ff9752d0dc0",
+      "complete": true
+    },
+    "parameters": [],
+    "runtime_record_va": 5497684719088,
+    "runtime_raw_hex": "e0aec90500050000f07ecf82f97f00007033bd73f97f0000ffffffff000000000f8e09000000000062bc0306ffff86000000000000000000b84e030b00050000",
+    "runtime_matches_definition": true,
+    "code_va": 140709618220784,
+    "runtime_name_matches": true,
+    "signature_complete": true
+  },
+  "begin": 252870384,
+  "end": 252870468,
+  "unwind": 56584972,
+  "byte_sha256": "c7383352fa5ca3198f699aa9cb64742f907fd78292458ccbccf3d4ce09ff063f",
+  "instructions": [
+    [
+      252870384,
+      "push",
+      "rsi"
+    ],
+    [
+      252870385,
+      "sub",
+      "rsp, 0x20"
+    ],
+    [
+      252870389,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      252870392,
+      "cmp",
+      "byte ptr [rip - 0x9d4efed], 0"
+    ],
+    [
+      252870399,
+      "jne",
+      "0xf127f1a"
+    ],
+    [
+      252870401,
+      "mov",
+      "rax, qword ptr [rsi + 0x408]"
+    ],
+    [
+      252870408,
+      "test",
+      "rax, rax"
+    ],
+    [
+      252870411,
+      "je",
+      "0xf127f39"
+    ],
+    [
+      252870413,
+      "cmp",
+      "byte ptr [rax + 0x36], 0"
+    ],
+    [
+      252870417,
+      "setne",
+      "al"
+    ],
+    [
+      252870420,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      252870424,
+      "pop",
+      "rsi"
+    ],
+    [
+      252870425,
+      "ret",
+      ""
+    ],
+    [
+      252870426,
+      "mov",
+      "ecx, 0x3bc62"
+    ],
+    [
+      252870431,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      252870436,
+      "test",
+      "rax, rax"
+    ],
+    [
+      252870439,
+      "je",
+      "0xf127f3e"
+    ],
+    [
+      252870441,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      252870444,
+      "mov",
+      "rdx, rsi"
+    ],
+    [
+      252870447,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      252870451,
+      "pop",
+      "rsi"
+    ],
+    [
+      252870452,
+      "jmp",
+      "0xb18d840"
+    ],
+    [
+      252870457,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252870462,
+      "call",
+      "0xac9120"
+    ],
+    [
+      252870467,
+      "int3",
+      ""
+    ]
+  ]
+}

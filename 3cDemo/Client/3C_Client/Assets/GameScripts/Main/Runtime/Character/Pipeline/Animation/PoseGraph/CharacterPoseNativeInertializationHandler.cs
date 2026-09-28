@@ -19,6 +19,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool Active;
         }
 
+        struct EnvelopeSample
+        {
+            internal float Duration;
+            internal float Envelope;
+            internal float ResidualWeight;
+            internal float ResidualDerivative;
+        }
+
         sealed class ResidualPage
         {
             internal readonly Vector3[] Position;
@@ -49,7 +57,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly AnimationBlendCurvePayload m_Curve;
         readonly float m_CurveStartDerivative;
         readonly float m_CurveEndDerivative;
-        readonly float[] m_DenseProfiles;
+        readonly int[] m_BoneEnvelopeIndices;
+        readonly float[] m_EnvelopeProfiles;
+        readonly EnvelopeSample[] m_EnvelopeSamples;
         readonly PoseParameterInertializationMode[] m_ParameterModes;
         readonly int m_LeftFootBoneIndex;
         readonly int m_RightFootBoneIndex;
@@ -111,10 +121,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : null;
             m_CurveStartDerivative = m_Curve == null ? 0f : AnimationBlendCurveEvaluator.EvaluateDerivative(m_Curve, 0f);
             m_CurveEndDerivative = m_Curve == null ? 0f : AnimationBlendCurveEvaluator.EvaluateDerivative(m_Curve, 1f);
-            m_DenseProfiles = directRule.Mode == PoseInertializationMode.Inertialize
+            float[] denseProfiles = directRule.Mode == PoseInertializationMode.Inertialize
                 ? directRule.BlendProfile.BuildDense(
                     preparedBinding.Profile.RigDefinition)
                 : CreateUnitProfiles(m_Rig.PoseBoneCount);
+            BuildEnvelopeLayout(denseProfiles, out m_BoneEnvelopeIndices, out m_EnvelopeProfiles);
+            m_EnvelopeSamples = new EnvelopeSample[m_EnvelopeProfiles.Length];
             m_ParameterModes = BuildParameterModes(
                 policy.Response,
                 preparedBinding.InputContract);
@@ -466,19 +478,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float deltaSeconds)
         {
             ResidualPage residuals = m_HasPendingResiduals ? m_PendingResiduals : m_CommittedResiduals;
+            for (int i = 0; i < m_EnvelopeSamples.Length; i++)
+            {
+                ref EnvelopeSample sample = ref m_EnvelopeSamples[i];
+                sample.Duration = m_PendingState.DurationSeconds * m_EnvelopeProfiles[i];
+                EvaluateEnvelope(
+                    sample.Duration,
+                    m_PendingState.ElapsedSeconds,
+                    out sample.Envelope,
+                    out sample.ResidualWeight,
+                    out sample.ResidualDerivative);
+            }
             bool anyActive = false;
             NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
             NativeSlice<AnimationBlendBoneVelocity> velocities = output.DenseVelocities;
             for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
             {
-                float duration = m_PendingState.DurationSeconds * m_DenseProfiles[bone];
-                EvaluateEnvelope(
-                    duration,
-                    m_PendingState.ElapsedSeconds,
-                    out float envelope,
-                    out float residualWeight,
-                    out float residualDerivative);
-                anyActive |= m_PendingState.ElapsedSeconds < duration;
+                EnvelopeSample sample = m_EnvelopeSamples[m_BoneEnvelopeIndices[bone]];
+                float residualWeight = sample.ResidualWeight;
+                float residualDerivative = sample.ResidualDerivative;
+                anyActive |= m_PendingState.ElapsedSeconds < sample.Duration;
                 AnimationLocalBonePose target = input.DenseLocalPoses[bone];
                 AnimationBlendBoneVelocity targetVelocity = input.DenseVelocities[bone];
                 Vector3 positionBase = residuals.Position[bone] +
@@ -514,7 +533,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     scaleVelocity);
             }
             ApplyParameters(in input, in output, m_PendingState.ElapsedSeconds);
-            ApplyFootFeatures(in input, in output, m_PendingState.ElapsedSeconds);
+            ApplyFootFeatures(in input, in output);
             m_PendingState.ElapsedSeconds += deltaSeconds;
             if (!anyActive)
                 m_PendingState.Active = false;
@@ -547,17 +566,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void ApplyFootFeatures(
             in CharacterPoseNativePoseReadBinding input,
-            in AnimationPlayerPoseNativeWriteBinding output,
-            float elapsedSeconds)
+            in AnimationPlayerPoseNativeWriteBinding output)
         {
             if (!m_PendingHasFootFeatures || input.HasFootFeatures[0] == 0)
                 return;
-            float leftDuration = m_PendingState.DurationSeconds *
-                m_DenseProfiles[m_LeftFootBoneIndex];
-            float rightDuration = m_PendingState.DurationSeconds *
-                m_DenseProfiles[m_RightFootBoneIndex];
-            EvaluateEnvelope(leftDuration, elapsedSeconds, out float leftEnvelope, out _, out _);
-            EvaluateEnvelope(rightDuration, elapsedSeconds, out float rightEnvelope, out _, out _);
+            float leftEnvelope = m_EnvelopeSamples[m_BoneEnvelopeIndices[m_LeftFootBoneIndex]].Envelope;
+            float rightEnvelope = m_EnvelopeSamples[m_BoneEnvelopeIndices[m_RightFootBoneIndex]].Envelope;
             AnimationFootFeatureBlendAccumulator left = default;
             if (leftEnvelope < 1f)
                 left.Add(m_PendingLeftFoot, 1f - leftEnvelope);
@@ -624,10 +638,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             }
             float normalized = Mathf.Clamp01(elapsedSeconds / duration);
-            float curve = AnimationBlendCurveEvaluator.Evaluate(m_Curve, normalized);
-            float derivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
+            AnimationBlendCurveEvaluator.EvaluateWithDerivative(
                 m_Curve,
-                normalized);
+                normalized,
+                out float curve,
+                out float derivative);
             float square = normalized * normalized;
             float cube = square * normalized;
             float h10 = cube - 2f * square + normalized;
@@ -673,6 +688,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 modes[index] = filter.Mode;
             }
             return modes;
+        }
+
+        static void BuildEnvelopeLayout(
+            float[] denseProfiles,
+            out int[] boneIndices,
+            out float[] profiles)
+        {
+            boneIndices = new int[denseProfiles.Length];
+            var indices = new Dictionary<float, int>();
+            var uniqueProfiles = new List<float>();
+            for (int bone = 0; bone < denseProfiles.Length; bone++)
+            {
+                float profile = denseProfiles[bone];
+                if (!indices.TryGetValue(profile, out int index))
+                {
+                    index = uniqueProfiles.Count;
+                    indices.Add(profile, index);
+                    uniqueProfiles.Add(profile);
+                }
+                boneIndices[bone] = index;
+            }
+            profiles = uniqueProfiles.ToArray();
         }
 
         static float[] CreateUnitProfiles(int count)

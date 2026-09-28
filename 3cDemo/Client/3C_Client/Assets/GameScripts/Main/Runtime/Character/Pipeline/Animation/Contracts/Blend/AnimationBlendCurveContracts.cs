@@ -253,6 +253,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                    (segment.EndTime - segment.StartTime);
         }
 
+        public static void EvaluateWithDerivative(
+            AnimationBlendCurvePayload curve,
+            float normalizedTime,
+            out float value,
+            out float derivative)
+        {
+            ResolveSegment(curve, normalizedTime, out AnimationBlendCurveSegment segment, out float u);
+            value = Mathf.Clamp01(((segment.A * u + segment.B) * u + segment.C) * u + segment.D);
+            derivative = ((3f * segment.A * u + 2f * segment.B) * u + segment.C) /
+                         (segment.EndTime - segment.StartTime);
+        }
+
         static void ResolveSegment(
             AnimationBlendCurvePayload curve,
             float normalizedTime,

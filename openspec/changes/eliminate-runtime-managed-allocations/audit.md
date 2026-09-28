@@ -272,6 +272,18 @@
 - 租约生成选择严格大于上次编号、且 `(lease - 1) % SourceCapacity == rowIndex` 的下一个编号。每次 buffer 访问按该式定位一行，再核对完整编号、source身份、准备完成身份及当前帧；删除全行扫描，没有新增索引集合。编号可能跳号，但只在此工作区用于相等性/有效期检查，不参与动作时间、参数页身份或播放顺序；Reset 不回退编号，重复准备仍先更换租约再报错，旧租约失效语义保持。到 ulong 边界时显式失败，不回绕。
 - 输入/输出仍是同一请求行、同一租约保护的数组视图，Commit/Discard 的调用顺序不变。静态追踪了初始空帧、连续BeginFrame、准备失败、重复准备、Reset/Dispose和行复用路径；没有编译或实跑。租约检查从随容量增长的比较改为取模和定点核对，小容量下不预判哪种机器指令更快；本项不宣称新增GC收益。
 
+### AP27 动作播放游标反复从头分配空槽（已实施，未实跑）
+
+- `ActionPresentationSampleProjector.ValidateFrame` 经正式 ActionPresentationClockPolicy 提交预检调用。原来先清整个 reserved 数组再按 Occupied 写入true；为每个新增游标从下标0扫描第一个空槽，新增项多时反复比较同一前缀。
+- 现在逐槽直接覆盖 Occupied，删除先清后写；处理完全部待移除游标后，只用一个局部下标向前寻找空槽。该阶段只占用槽、不再释放槽，因此按原 pending 顺序选出的槽位仍是同一个最小空下标；每次 ValidateFrame 从0重新开始，重复预检不会借用上次临时位置。没有新增字段、集合或配置，保留先预检再 Commit、容量不足报错及 Discard 不写 committed 游标。
+- 静态核对 reserved 全部写入点、移除与新增顺序及调用者；扫描上界从每个新增项遍历容量，变为本次分配合计遍历容量。未编译、未运行或测量游标容量下的耗时。
+
+### AP28 ACL 完成帧后按全部来源容量清理采样计划（已实施，未实跑）
+
+- `CharacterAclPoseSamplingBackend.FinalizeAppliedFrame` 原来清空 SourceCapacity×ClipCapacity 的整个 pending plan 数组。准备路径按 journal.MutationCount 顺序分配一行，行内实际 clip 数不超过 ClipCapacity；失败时 catch 清掉本次尝试写入的范围。
+- 正常 Finalize 只清 MutationCount×ClipCapacity 的已使用前缀，然后沿原顺序清 journal 和关闭帧。保留行内余量清理，不增加索引数组或第二套计数；Rollback/Discard 仍按原日志范围清理与回收资源。此前使用过但本帧未用的行已在其 Finalize/Discard/失败路径清除，不能长期残留旧 clip 引用。
+- 静态核对全部 pending plan 写入、成功登记、失败清理和关闭入口；未测内存写带宽。本项减少的是按闲置来源容量执行的清理，不是删除每帧对象分配。
+
 ## 可靠性问题独立保留
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。

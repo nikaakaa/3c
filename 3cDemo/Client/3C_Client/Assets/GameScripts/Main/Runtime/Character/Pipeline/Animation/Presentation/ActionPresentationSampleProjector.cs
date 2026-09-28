@@ -221,14 +221,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         public void ValidateFrame(ActionSampleProjectionMutationLease lease)
         {
             RequireLease(lease);
-            Array.Clear(
-                m_ReservedCommittedSlots,
-                0,
-                m_ReservedCommittedSlots.Length);
             for (int i = 0; i < m_CommittedCursors.Length; i++)
             {
-                if (m_CommittedCursors[i].Occupied)
-                    m_ReservedCommittedSlots[i] = true;
+                m_ReservedCommittedSlots[i] = m_CommittedCursors[i].Occupied;
             }
             for (int i = 0; i < m_PendingCount; i++)
             {
@@ -240,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ReservedCommittedSlots[committedIndex] = false;
                 }
             }
+            int nextFreeSlot = 0;
             for (int i = 0; i < m_PendingCount; i++)
             {
                 if (m_PendingCursors[i].Remove ||
@@ -247,14 +243,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     continue;
                 }
-                int targetIndex = FindFreeReservedSlot();
-                if (targetIndex < 0)
+                while (nextFreeSlot < m_ReservedCommittedSlots.Length &&
+                       m_ReservedCommittedSlots[nextFreeSlot])
+                    nextFreeSlot++;
+                if (nextFreeSlot == m_ReservedCommittedSlots.Length)
                 {
                     throw new InvalidOperationException(
                         "Action sample cursor committed capacity was exceeded.");
                 }
-                m_PendingTargetIndices[i] = targetIndex;
-                m_ReservedCommittedSlots[targetIndex] = true;
+                m_PendingTargetIndices[i] = nextFreeSlot;
+                m_ReservedCommittedSlots[nextFreeSlot++] = true;
             }
             m_Validated = true;
         }
@@ -349,16 +347,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     return i;
                 }
-            }
-            return -1;
-        }
-
-        int FindFreeReservedSlot()
-        {
-            for (int i = 0; i < m_ReservedCommittedSlots.Length; i++)
-            {
-                if (!m_ReservedCommittedSlots[i])
-                    return i;
             }
             return -1;
         }

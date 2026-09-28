@@ -297,7 +297,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
             if (m_FramePhase != FramePhase.EvaluateBarrier || !m_FrameApplied)
                 return;
-            Array.Clear(m_PendingPlans, 0, m_PendingPlans.Length);
+            Array.Clear(m_PendingPlans, 0, checked(m_Journal.MutationCount * m_ClipCapacity));
             m_Journal.ClearMutations();
             m_FrameIdentity = 0;
             m_FrameApplied = false;

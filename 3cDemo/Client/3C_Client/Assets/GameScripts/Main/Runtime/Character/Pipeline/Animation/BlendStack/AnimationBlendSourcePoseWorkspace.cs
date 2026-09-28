@@ -180,13 +180,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         public AnimationPoseSourceCaptureBinding PrepareCapture(
-            AnimationResolvedPoseSourceSample sourceSample,
+            in AnimationPoseSampleRequest request,
+            in AnimationFootFeatureSample leftFootFeatures,
+            in AnimationFootFeatureSample rightFootFeatures,
+            bool hasFootFeatures,
             float presentationDeltaSeconds)
         {
-            if (sourceSample == null)
-                throw new ArgumentNullException(nameof(sourceSample));
-            AnimationPoseSampleRequest request = sourceSample.Request;
-            if (!sourceSample.IsValid)
+            if (!request.IsValid || (hasFootFeatures
+                    ? !leftFootFeatures.IsValid || !rightFootFeatures.IsValid
+                    : leftFootFeatures.IsValid || rightFootFeatures.IsValid))
                 throw new ArgumentException("Animation source pose capture request is invalid.");
             return PrepareCapture(
                 request.SourceId,
@@ -195,9 +197,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 request.VisualTimeScale,
                 request.PoseParameters,
                 request.PoseParameterAvailability,
-                in sourceSample.LeftFootFeatures,
-                in sourceSample.RightFootFeatures,
-                sourceSample.HasFootFeatures,
+                in leftFootFeatures,
+                in rightFootFeatures,
+                hasFootFeatures,
                 presentationDeltaSeconds);
         }
 

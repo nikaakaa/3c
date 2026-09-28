@@ -221,6 +221,12 @@
 - GraphEvaluator 的 PhasePlayerCount 与 ReadPhasePlayer 原先扫描每个活动 handler 并判断是否提供相位播放器；嵌套状态同步会反复调用。
 - 初始化时按原活动顺序绑定相位源列表，运行时只访问这些源。各状态当前播放器数量仍动态读取，没有缓存跨状态变化的播放器或停止时间推进。
 
+### AP20 Provider 与 Selected Player 捕获临时样本对象（本轮续查，已实施）
+
+- `CharacterPoseSourceModule.ResolveProviderSample` 原先每次创建 `AnimationResolvedPoseSourceSample`；Blend Stack 的 PrepareFrame 和 PrepareNativeProviderSource 各调用一次。`AnimationSelectedPosePlayerRuntime.PrepareCapture` 也每次构造同类临时包装。它们是 class 分配，与值类型请求的 new 不同；是否在当前内容命中及具体次数未实测。
+- 改为 `CreateProviderRequest` 返回既有值类型请求；Blend Stack、Selected Player 和 Source Workspace 沿同一捕获入口传请求与左右足特征，删除临时包装构造器及旧 ResolveProviderSample。持续持有的 Action Slot 样本仍在装配期创建并复用，不使用共享可变临时对象，也不外借生命周期不明的缓存。请求、捕获身份、参数和足部有效性检查保留，底层工作页与 Commit/Discard 不变。
+- 静态搜索确认剩余 `new AnimationResolvedPoseSourceSample` 仅在 Action Slot 构造阶段。已核对捕获调用点及差异；未执行编译或分配采样。
+
 ## 可靠性问题独立保留
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。

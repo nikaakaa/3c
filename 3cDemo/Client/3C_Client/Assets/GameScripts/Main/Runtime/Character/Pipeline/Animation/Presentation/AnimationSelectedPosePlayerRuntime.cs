@@ -248,14 +248,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sample.ParameterPageId,
                 sample.PoseParameters,
                 sample.PoseParameterAvailability);
-            var resolved = new AnimationResolvedPoseSourceSample(
-                request,
-                in sample.LeftFootFeatures,
-                in sample.RightFootFeatures,
-                sample.HasFootFeatures);
             AnimationPoseSourceCaptureBinding binding =
                 m_Sources.PrepareCapture(
-                    resolved,
+                    in request,
+                    in sample.LeftFootFeatures,
+                    in sample.RightFootFeatures,
+                    sample.HasFootFeatures,
                     presentationDeltaSeconds);
             m_SourceRetained = true;
             return binding;

@@ -710,9 +710,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new ArgumentException(
                     "Native Provider source preparation is invalid.");
             }
-            AnimationResolvedPoseSourceSample resolved =
-                ResolveProviderSample(sample, sourceOwnerIndex);
-            if (!capture.SourceId.Equals(resolved.Request.SourceId))
+            AnimationPoseSampleRequest request =
+                CreateProviderRequest(sample, sourceOwnerIndex);
+            if (!capture.SourceId.Equals(request.SourceId))
                 throw new ArgumentException(
                     "Native Provider source capture is invalid.",
                     nameof(capture));
@@ -722,7 +722,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new InvalidOperationException(
                     "Native Provider source binding frame is stale.");
             PrepareProviderAndConnect(
-                resolved.Request,
+                request,
                 sample,
                 capture,
                 poseNodeId);
@@ -758,7 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Backends.RequireOpenFrame(lease);
         }
 
-        internal AnimationResolvedPoseSourceSample ResolveProviderSample(
+        internal static AnimationPoseSampleRequest CreateProviderRequest(
             in PresentationPoseSourceSample sample,
             int sourceOwnerIndex)
         {
@@ -776,7 +776,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 new AnimationPoseSelectionGeneration(
                     sample.SourceGeneration.Value));
             PresentationPoseSampleTime time = sample.EffectiveSample;
-            var request = new AnimationPoseSampleRequest(
+            return new AnimationPoseSampleRequest(
                 sourceId,
                 sample.SourcePoseContinuityIdentity,
                 sample.FrameSequence,
@@ -790,13 +790,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sample.ParameterPageId,
                 sample.PoseParameters,
                 sample.PoseParameterAvailability);
-            AnimationFootFeatureSample leftFootFeatures = sample.LeftFootFeatures;
-            AnimationFootFeatureSample rightFootFeatures = sample.RightFootFeatures;
-            return new AnimationResolvedPoseSourceSample(
-                request,
-                in leftFootFeatures,
-                in rightFootFeatures,
-                sample.HasFootFeatures);
         }
 
         internal void Prepare(

@@ -481,19 +481,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
         }
 
-        internal AnimationResolvedPoseSourceSample(
-            AnimationPoseSampleRequest request,
-            in AnimationFootFeatureSample leftFootFeatures,
-            in AnimationFootFeatureSample rightFootFeatures,
-            bool hasFootFeatures)
-        {
-            Set(
-                request,
-                in leftFootFeatures,
-                in rightFootFeatures,
-                hasFootFeatures);
-        }
-
         internal void Set(
             AnimationPoseSampleRequest request,
             in AnimationFootFeatureSample leftFootFeatures,

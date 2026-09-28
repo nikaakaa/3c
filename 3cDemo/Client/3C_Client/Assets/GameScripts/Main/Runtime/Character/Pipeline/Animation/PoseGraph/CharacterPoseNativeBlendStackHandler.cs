@@ -109,7 +109,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Blend Stack '{stack.PoseNodeId}' has no Action source sample for '{entry.SourceId}'.");
                     AnimationPoseSourceCaptureBinding capture =
-                        stack.PrepareCapture(sample, input.DeltaSeconds);
+                        stack.PrepareCapture(
+                            sample.Request,
+                            in sample.LeftFootFeatures,
+                            in sample.RightFootFeatures,
+                            sample.HasFootFeatures,
+                            input.DeltaSeconds);
                     m_Pending.Add(new PendingSource(
                         entry.SourceId,
                         entry.SourceOwnerIndex,
@@ -128,15 +133,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Blend Stack '{stack.PoseNodeId}' has no Provider source sample for '{entry.SourceId}'.");
                     }
-                    AnimationResolvedPoseSourceSample resolved =
-                        m_Source.ResolveProviderSample(
+                    AnimationPoseSampleRequest request =
+                        CharacterPoseSourceModule.CreateProviderRequest(
                             in sample,
                             entry.SourceOwnerIndex);
-                    if (resolved.Request.SourceId != entry.SourceId)
+                    if (request.SourceId != entry.SourceId)
                         throw new InvalidOperationException(
                             $"Blend Stack '{stack.PoseNodeId}' Provider source identity is stale.");
                     AnimationPoseSourceCaptureBinding capture =
-                        stack.PrepareCapture(resolved, input.DeltaSeconds);
+                        stack.PrepareCapture(
+                            in request,
+                            in sample.LeftFootFeatures,
+                            in sample.RightFootFeatures,
+                            sample.HasFootFeatures,
+                            input.DeltaSeconds);
                     m_Pending.Add(new PendingSource(
                         entry.SourceId,
                         entry.SourceOwnerIndex,

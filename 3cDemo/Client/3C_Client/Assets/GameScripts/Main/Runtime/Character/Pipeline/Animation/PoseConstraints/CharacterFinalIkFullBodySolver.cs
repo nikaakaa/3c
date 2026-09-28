@@ -295,11 +295,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterFullBodyIkResult Prepare(
             NativeSlice<AnimationLocalBonePose> referenceComponentPose)
         {
-            if (!IsValidPosePage(referenceComponentPose))
+            if (!m_Backend.TryBind(referenceComponentPose))
                 return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidPosePage);
             try
             {
-                m_Backend.Bind(referenceComponentPose);
                 m_Solver.SetToIndexedReferences(m_Backend, m_References);
                 ApplyProfile();
                 IKConstraintBend left = m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg);
@@ -343,7 +342,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     completionIdentity,
                     recordDiagnostics);
             }
-            if (!IsValidPosePage(pendingOutputComponentPose))
+            if (!m_Backend.TryBind(pendingOutputComponentPose))
             {
                 return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidPosePage),
@@ -355,7 +354,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             try
             {
-                m_Backend.Bind(pendingOutputComponentPose);
                 CharacterFullBodyIkResult goalResult = ApplyGoals(
                     in goalSet,
                     goalWorkspace,

@@ -32,6 +32,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("FinalIK Pose Buffer parent indices do not match the Animation Rig.", nameof(parentIndices));
             if (!virtualBones.IsCreated || virtualBones.Length != m_Counts.VirtualBoneCount)
                 throw new ArgumentException("FinalIK Pose Buffer virtual descriptors do not match the Animation Rig.", nameof(virtualBones));
+            for (int i = 0; i < virtualBones.Length; i++)
+            {
+                CharacterVirtualBoneDescriptor descriptor = virtualBones[i];
+                if (!descriptor.IsValid ||
+                    descriptor.SourcePhysicalBoneIndex >= m_Counts.PhysicalBoneCount ||
+                    descriptor.TargetPhysicalBoneIndex >= m_Counts.PhysicalBoneCount ||
+                    descriptor.PoseBoneIndex != m_Counts.PhysicalBoneCount + i)
+                {
+                    throw new ArgumentException($"FinalIK virtual bone descriptor #{i} is invalid.", nameof(virtualBones));
+                }
+            }
             m_ParentIndices = parentIndices;
             m_VirtualBones = virtualBones;
             m_ReferenceComponentPositions = new Vector3[m_Counts.PhysicalBoneCount];
@@ -71,11 +82,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new IndexedBoneHandle(rig.RightLeg.AnklePhysicalBoneIndex));
         }
 
-        public void Bind(NativeSlice<AnimationLocalBonePose> componentPose)
+        public bool TryBind(NativeSlice<AnimationLocalBonePose> componentPose)
         {
             if (componentPose.Length != m_Counts.PoseBoneCount)
-                throw new ArgumentException("FinalIK Pose Buffer page does not match the Animation Rig.", nameof(componentPose));
+                return false;
+            for (int i = 0; i < componentPose.Length; i++)
+            {
+                if (!componentPose[i].IsValid)
+                    return false;
+            }
             m_ComponentPose = componentPose;
+            return true;
         }
 
         public IndexedBoneHandle GetParent(IndexedBoneHandle bone)
@@ -85,13 +102,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return parent >= 0 ? new IndexedBoneHandle(parent) : IndexedBoneHandle.Invalid;
         }
 
-        public Vector3 GetComponentPosition(IndexedBoneHandle bone) => RequirePose(bone).Position;
-        public Quaternion GetComponentRotation(IndexedBoneHandle bone) => RequirePose(bone).Rotation;
+        public Vector3 GetComponentPosition(IndexedBoneHandle bone) => RequirePose(RequireBone(bone)).Position;
+        public Quaternion GetComponentRotation(IndexedBoneHandle bone) => RequirePose(RequireBone(bone)).Rotation;
 
         public Vector3 GetLocalPosition(IndexedBoneHandle bone)
         {
             int index = RequireBone(bone);
-            AnimationLocalBonePose value = RequirePose(bone);
+            AnimationLocalBonePose value = RequirePose(index);
             int parentIndex = m_ParentIndices[index];
             if (parentIndex < 0)
                 return value.Position;
@@ -102,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Quaternion GetLocalRotation(IndexedBoneHandle bone)
         {
             int index = RequireBone(bone);
-            AnimationLocalBonePose value = RequirePose(bone);
+            AnimationLocalBonePose value = RequirePose(index);
             int parentIndex = m_ParentIndices[index];
             return parentIndex < 0
                 ? value.Rotation
@@ -194,13 +211,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < m_VirtualBones.Length; i++)
             {
                 CharacterVirtualBoneDescriptor descriptor = m_VirtualBones[i];
-                if (!descriptor.IsValid ||
-                    descriptor.SourcePhysicalBoneIndex >= m_Counts.PhysicalBoneCount ||
-                    descriptor.TargetPhysicalBoneIndex >= m_Counts.PhysicalBoneCount ||
-                    descriptor.PoseBoneIndex != m_Counts.PhysicalBoneCount + i)
-                {
-                    throw new InvalidOperationException($"FinalIK virtual bone descriptor #{i} is invalid.");
-                }
                 AnimationLocalBonePose source = m_ComponentPose[descriptor.SourcePhysicalBoneIndex];
                 AnimationLocalBonePose target = m_ComponentPose[descriptor.TargetPhysicalBoneIndex];
                 CharacterComponentBonePose derived = CharacterPoseConstraintMath.CreateVirtualComponent(
@@ -267,14 +277,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        AnimationLocalBonePose RequirePose(IndexedBoneHandle bone)
+        AnimationLocalBonePose RequirePose(int index)
         {
-            int index = RequireBone(bone);
             RequireBound();
-            AnimationLocalBonePose value = m_ComponentPose[index];
-            if (!value.IsValid)
-                throw new InvalidOperationException($"FinalIK Pose Buffer bone #{index} is invalid.");
-            return value;
+            return m_ComponentPose[index];
         }
 
         int RequireBone(IndexedBoneHandle bone)
@@ -295,8 +301,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int RequireWritableBone(IndexedBoneHandle bone)
         {
             int index = RequirePhysicalBone(bone);
-            if (!IsWritablePhysicalBone(bone))
-                throw new InvalidOperationException("FinalIK cannot write a Virtual Bone.");
             RequireBound();
             return index;
         }

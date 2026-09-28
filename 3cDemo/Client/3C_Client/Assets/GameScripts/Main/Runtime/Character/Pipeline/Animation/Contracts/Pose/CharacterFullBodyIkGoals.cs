@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Application = application;
             SourceKind = sourceKind;
             DiagnosticMetadataIndex = diagnosticMetadataIndex;
-            if (!IsValid)
+            if (!HasValidFields())
                 throw new ArgumentException("Full Body IK Goal is invalid.");
         }
 
@@ -97,7 +97,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         [DiagnosticField]
         [DiagnosticGroup("goal")]
-        public bool IsValid =>
+        public bool IsValid => Slot != 0;
+
+        bool HasValidFields() =>
             Slot >= CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation &&
             Slot <= CharacterFullBodyIkEffectorSlot.RightFoot &&
             CharacterPoseConstraintMath.IsFinite(ComponentPosition) &&

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -73,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         readonly AnimationBlendNodePayload m_Slot;
+        readonly Dictionary<AnimationBlendTransitionIdentity, AnimationBlendTransitionPayload> m_Transitions;
+        readonly Dictionary<string, int> m_SourceOwnerIndices;
         readonly AnimationChannelId m_AnimationChannelId;
         readonly PresentationPoseSourceProviderId m_PresentationPoseSourceProviderId;
         readonly PresentationPoseSourceIndex m_PresentationPoseSourceIndex;
@@ -448,6 +451,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (initialFinalWriteBinding.DenseLocalPoses.Length != boneCount || parameterCount <= 0)
                 throw new ArgumentException("Animation Blend Stack final Slot layout is invalid.", nameof(initialFinalWriteBinding));
 
+            m_Transitions = new Dictionary<AnimationBlendTransitionIdentity, AnimationBlendTransitionPayload>(slot.Transitions.Count);
+            m_SourceOwnerIndices = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < slot.Transitions.Count; i++)
+            {
+                AnimationBlendTransitionPayload transition = slot.Transitions[i];
+                if (!m_Transitions.TryAdd(transition.GetIdentity(PoseNodeId), transition))
+                    throw new InvalidOperationException($"Compiled Animation Blend Stack '{PoseNodeId}' duplicates an exact transition.");
+                if (transition.SourceEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner)
+                    BindSourceOwnerIndex(transition.SourceOwnerIdentity, transition.SourceOwnerIndex);
+                if (transition.TargetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner)
+                    BindSourceOwnerIndex(transition.TargetOwnerIdentity, transition.TargetOwnerIndex);
+            }
+
             m_CommittedEntries = new AnimationBlendEntryState[capacity];
             m_PendingEntries = new AnimationBlendEntryState[capacity];
             m_PendingEntryVersions = new uint[capacity];
@@ -694,37 +710,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new ArgumentException(
                     "Animation source owner identity is missing.",
                     nameof(sourceOwnerIdentity));
-            int result = -1;
-            for (int i = 0; i < m_Slot.Transitions.Count; i++)
-            {
-                AnimationBlendTransitionPayload transition =
-                    m_Slot.Transitions[i];
-                if (transition.SourceEndpointKind ==
-                        AnimationBlendTransitionEndpointKind.SourceOwner &&
-                    string.Equals(
-                        transition.SourceOwnerIdentity,
-                        sourceOwnerIdentity,
-                        StringComparison.Ordinal))
-                {
-                    RequireMatchingOwnerIndex(
-                        sourceOwnerIdentity,
-                        transition.SourceOwnerIndex,
-                        ref result);
-                }
-                if (transition.TargetEndpointKind ==
-                        AnimationBlendTransitionEndpointKind.SourceOwner &&
-                    string.Equals(
-                        transition.TargetOwnerIdentity,
-                        sourceOwnerIdentity,
-                        StringComparison.Ordinal))
-                {
-                    RequireMatchingOwnerIndex(
-                        sourceOwnerIdentity,
-                        transition.TargetOwnerIndex,
-                        ref result);
-                }
-            }
-            return result >= 0
+            return m_SourceOwnerIndices.TryGetValue(sourceOwnerIdentity, out int result)
                 ? result
                 : throw new InvalidOperationException(
                     $"Animation source owner '{sourceOwnerIdentity}' is not compiled for Blend Stack '{PoseNodeId}'.");
@@ -739,7 +725,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             GetCurrentEndpoint(
                 out int sourceOwnerIndex,
                 out AnimationBlendTransitionEndpointKind sourceEndpointKind);
-            return m_Slot.RequireTransition(
+            return RequireTransition(
                 sourceOwnerIndex,
                 sourceEndpointKind,
                 targetOwnerIndex,
@@ -770,17 +756,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return !current.IsSourcePose && current.SourceId.Equals(sourceId);
         }
 
-        static void RequireMatchingOwnerIndex(
+        void BindSourceOwnerIndex(
             string sourceOwnerIdentity,
-            int candidate,
-            ref int result)
+            int candidate)
         {
-            if (candidate < 0 || result >= 0 && result != candidate)
+            if (candidate < 0 ||
+                m_SourceOwnerIndices.TryGetValue(sourceOwnerIdentity, out int result) && result != candidate)
             {
                 throw new InvalidOperationException(
                     $"Animation source owner '{sourceOwnerIdentity}' has inconsistent compiled indexes.");
             }
-            result = candidate;
+            m_SourceOwnerIndices[sourceOwnerIdentity] = candidate;
+        }
+
+        AnimationBlendTransitionPayload RequireTransition(
+            int sourceOwnerIndex,
+            AnimationBlendTransitionEndpointKind sourceEndpointKind,
+            int targetOwnerIndex,
+            AnimationBlendTransitionEndpointKind targetEndpointKind)
+        {
+            var identity = new AnimationBlendTransitionIdentity(
+                PoseNodeId,
+                sourceOwnerIndex,
+                sourceEndpointKind,
+                targetOwnerIndex,
+                targetEndpointKind);
+            return m_Transitions.TryGetValue(identity, out AnimationBlendTransitionPayload transition)
+                ? transition
+                : throw new InvalidOperationException($"Compiled Animation Blend Stack '{PoseNodeId}' has no exact transition.");
         }
 
         internal void BeginSourceFrame(ulong completionIdentity)
@@ -1631,13 +1634,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             GetCurrentEndpoint(
                 out int sourceOwnerIndex,
                 out AnimationBlendTransitionEndpointKind sourceEndpointKind);
-            AnimationBlendTransitionPayload exact = m_Slot.RequireTransition(
+            AnimationBlendTransitionPayload exact = RequireTransition(
                 sourceOwnerIndex,
                 sourceEndpointKind,
                 request.SourceOwnerIndex,
                 request.TargetEndpointKind);
-            if (!ReferenceEquals(exact, request.Transition) ||
-                exact.GetIdentity(PoseNodeId) != request.Transition.GetIdentity(PoseNodeId))
+            if (!ReferenceEquals(exact, request.Transition))
             {
                 throw new InvalidOperationException("Animation Blend push did not use the compiled exact transition.");
             }

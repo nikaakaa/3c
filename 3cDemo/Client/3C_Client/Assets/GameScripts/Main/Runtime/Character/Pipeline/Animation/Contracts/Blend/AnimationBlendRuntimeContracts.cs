@@ -501,33 +501,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RoutingPlan?.Load() ??
             throw new InvalidOperationException(
                 $"Animation Blend Stack '{NodeId}' has no compiled Routing Plan.");
-
-        public AnimationBlendTransitionPayload RequireTransition(
-            int sourceOwnerIndex,
-            AnimationBlendTransitionEndpointKind sourceEndpointKind,
-            int targetOwnerIndex,
-            AnimationBlendTransitionEndpointKind targetEndpointKind)
-        {
-            var identity = new AnimationBlendTransitionIdentity(
-                NodeId,
-                sourceOwnerIndex,
-                sourceEndpointKind,
-                targetOwnerIndex,
-                targetEndpointKind);
-            AnimationBlendTransitionPayload result = null;
-            for (int i = 0; i < Transitions.Count; i++)
-            {
-                AnimationBlendTransitionPayload candidate = Transitions[i];
-                if (candidate == null || candidate.GetIdentity(NodeId) != identity)
-                {
-                    continue;
-                }
-                if (result != null)
-                    throw new InvalidOperationException($"Compiled Animation Blend Stack '{NodeId}' duplicates an exact transition.");
-                result = candidate;
-            }
-            return result ?? throw new InvalidOperationException($"Compiled Animation Blend Stack '{NodeId}' has no exact transition.");
-        }
     }
 
     public readonly struct AnimationReadOnlyBuffer<T>

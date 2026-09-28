@@ -1,15 +1,12 @@
 using System;
+using static ThirdPersonCharacter.Pipeline.Simulation.Editor.CharacterFootPlacementSampleValidation;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.Animations;
-using UnityEngine.Playables;
-using UnityEngine.SceneManagement;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -62,235 +59,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public float[][] SupportFootPivotWeight;
         }
 
-        sealed class SamplingContext : IDisposable
-        {
-            Scene m_PreviewScene;
-            GameObject m_Instance;
-            CharacterFootPlacementPoseRig m_Binding;
-            Animator m_Animator;
-            Transform[] m_Transforms;
-            Vector3[] m_LocalPositions;
-            Quaternion[] m_LocalRotations;
-            Vector3[] m_LocalScales;
-            PlayableGraph m_PlayableGraph;
-            AnimationPlayableOutput m_PlayableOutput;
-            AnimationClipPlayable m_ClipPlayable;
-            NativeArray<AnimationLocalBonePose> m_ComponentPoses;
-            int m_MotionRootPhysicalBoneIndex = -1;
-
-            public float GroundReferenceHeight { get; private set; }
-            public CharacterFootPlacementRigGeometryReport CalibrationGeometryReport { get; private set; }
-            public float LeftLegLength => m_Binding.LeftLegLength;
-            public float RightLegLength => m_Binding.RightLegLength;
-
-            public SamplingContext(GameObject rigPrefab, CharacterFootPlacementAnalysisSource source)
-                : this(rigPrefab, source, false)
-            {
-            }
-
-            public SamplingContext(
-                GameObject rigPrefab,
-                CharacterFootPlacementAnalysisSource source,
-                bool calibrationAuthoring)
-            {
-                try
-                {
-                    m_PreviewScene = EditorSceneManager.NewPreviewScene();
-                    m_Instance = PrefabUtility.InstantiatePrefab(rigPrefab, m_PreviewScene) as GameObject;
-                    if (!m_Instance)
-                        throw new InvalidOperationException("Sampling Rig Prefab could not be instantiated");
-                    m_Instance.hideFlags = HideFlags.HideAndDontSave;
-                    m_Instance.SetActive(true);
-                    CharacterAnimationRigBinding[] rigBindings = m_Instance.GetComponentsInChildren<CharacterAnimationRigBinding>(true);
-                    CharacterWorldAwarePresentationBinding[] worldBindings = m_Instance.GetComponentsInChildren<CharacterWorldAwarePresentationBinding>(true);
-                    Animator[] animators = m_Instance.GetComponentsInChildren<Animator>(true);
-                    if (rigBindings.Length != 1 || worldBindings.Length != 1 || animators.Length != 1)
-                        throw new InvalidOperationException(
-                            $"Sampling Rig requires exactly one Animation Rig Binding, World-Aware Binding and Animator; found {rigBindings.Length}/{worldBindings.Length}/{animators.Length}");
-                    CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(source.RigDefinition);
-                    rigBindings[0].RequireValid(rig);
-                    m_Binding = calibrationAuthoring
-                        ? CharacterFootPlacementPoseRig.CreateCalibrationAuthoringRig(
-                            source.RigCalibration,
-                            source.RigDefinition,
-                            rigBindings[0],
-                            worldBindings[0])
-                        : new CharacterFootPlacementPoseRig(
-                            source.RigCalibration,
-                            rig,
-                            rigBindings[0],
-                            worldBindings[0]);
-                    if (!calibrationAuthoring)
-                        m_Binding.RequireValid();
-                    m_MotionRootPhysicalBoneIndex = calibrationAuthoring
-                        ? -1
-                        : source.RigDefinition.RequirePhysicalBoneIndex(source.MotionRootBoneId);
-                    m_ComponentPoses = new NativeArray<AnimationLocalBonePose>(
-                        rig.PoseBoneCount,
-                        Allocator.Persistent,
-                        NativeArrayOptions.ClearMemory);
-                    m_Animator = animators[0];
-                    if (rigBindings[0].Animator != m_Animator)
-                        throw new InvalidOperationException("Sampling Rig Animation Rig Binding and Animator do not match exactly");
-                    m_Animator.enabled = true;
-                    Behaviour[] behaviours = m_Instance.GetComponentsInChildren<Behaviour>(true);
-                    for (int i = 0; i < behaviours.Length; i++)
-                    {
-                        if (behaviours[i] && behaviours[i] != m_Animator)
-                            behaviours[i].enabled = false;
-                    }
-                    Collider[] colliders = m_Instance.GetComponentsInChildren<Collider>(true);
-                    for (int i = 0; i < colliders.Length; i++)
-                    {
-                        if (colliders[i])
-                            UnityEngine.Object.DestroyImmediate(colliders[i]);
-                    }
-                    Rigidbody[] rigidbodies = m_Instance.GetComponentsInChildren<Rigidbody>(true);
-                    for (int i = 0; i < rigidbodies.Length; i++)
-                    {
-                        if (rigidbodies[i])
-                            UnityEngine.Object.DestroyImmediate(rigidbodies[i]);
-                    }
-                    m_Animator.applyRootMotion = false;
-                    m_Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-                    m_PlayableGraph = PlayableGraph.Create("Foot Analysis Sampling");
-                    m_PlayableGraph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
-                    m_PlayableOutput = AnimationPlayableOutput.Create(
-                        m_PlayableGraph,
-                        "Foot Analysis Pose",
-                        m_Animator);
-                    m_PlayableGraph.Play();
-                    m_Transforms = m_Instance.GetComponentsInChildren<Transform>(true);
-                    m_LocalPositions = new Vector3[m_Transforms.Length];
-                    m_LocalRotations = new Quaternion[m_Transforms.Length];
-                    m_LocalScales = new Vector3[m_Transforms.Length];
-                    for (int i = 0; i < m_Transforms.Length; i++)
-                    {
-                        m_LocalPositions[i] = m_Transforms[i].localPosition;
-                        m_LocalRotations[i] = m_Transforms[i].localRotation;
-                        m_LocalScales[i] = m_Transforms[i].localScale;
-                    }
-                    BeginClip(source.CalibrationPreviewClip);
-                    _ = Sample(source.CalibrationPreviewTimeSeconds, 1UL);
-                    CalibrationGeometryReport =
-                        CharacterFootPlacementRigGeometryValidator.Evaluate(
-                            m_Binding,
-                            source.RigCalibration.Left,
-                            source.RigCalibration.Right);
-                    if (!CalibrationGeometryReport.IsValid)
-                    {
-                        throw new InvalidOperationException(
-                            $"Foot Placement Calibration Preview Pose is geometrically invalid.\n{CalibrationGeometryReport.FormatDiagnostics()}");
-                    }
-                    GroundReferenceHeight = CalibrationGeometryReport.ReferenceGroundHeight;
-                    if (!float.IsFinite(GroundReferenceHeight))
-                        throw new InvalidOperationException("Sampling Rig ground reference is not finite");
-                }
-                catch
-                {
-                    Dispose();
-                    throw;
-                }
-            }
-
-            public void BeginClip(UnityEngine.AnimationClip clip)
-            {
-                if (clip.humanMotion && (!m_Animator.avatar || !m_Animator.avatar.isHuman))
-                    throw new InvalidOperationException("Humanoid AnimationClip requires the Sampling Rig's exact Humanoid Avatar");
-                for (int i = 0; i < m_Transforms.Length; i++)
-                {
-                    m_Transforms[i].localPosition = m_LocalPositions[i];
-                    m_Transforms[i].localRotation = m_LocalRotations[i];
-                    m_Transforms[i].localScale = m_LocalScales[i];
-                }
-                if (m_ClipPlayable.IsValid())
-                {
-                    m_PlayableOutput.SetSourcePlayable(Playable.Null);
-                    m_PlayableGraph.DestroyPlayable(m_ClipPlayable);
-                }
-                m_ClipPlayable = AnimationClipPlayable.Create(m_PlayableGraph, clip);
-                m_ClipPlayable.SetApplyFootIK(false);
-                m_ClipPlayable.SetApplyPlayableIK(false);
-                m_PlayableOutput.SetSourcePlayable(m_ClipPlayable);
-            }
-
-            public CharacterFootPlacementAnimatedPose Sample(
-                float sampleTime,
-                ulong sequence)
-            {
-                m_ClipPlayable.SetTime(sampleTime);
-                m_PlayableGraph.Evaluate(0f);
-                CaptureComponentPoses();
-                return m_Binding.CaptureAnimatedPose(
-                    sequence,
-                    new NativeSlice<AnimationLocalBonePose>(m_ComponentPoses));
-            }
-
-            void CaptureComponentPoses()
-            {
-                Transform poseRoot = m_Binding.PoseRoot;
-                Vector3 rootScale = poseRoot.lossyScale;
-                for (int i = 0; i < m_Binding.Rig.PhysicalBoneCount; i++)
-                {
-                    Transform bone = m_Binding.Binding.PhysicalBones[i];
-                    Vector3 boneScale = bone.lossyScale;
-                    m_ComponentPoses[i] = new AnimationLocalBonePose(
-                        poseRoot.InverseTransformPoint(bone.position),
-                        Quaternion.Inverse(poseRoot.rotation) * bone.rotation,
-                        new Vector3(
-                            boneScale.x / rootScale.x,
-                            boneScale.y / rootScale.y,
-                            boneScale.z / rootScale.z));
-                }
-            }
-
-            public Vector3 ToVisualRootLocal(Vector3 worldPosition) =>
-                m_Binding.VisualRoot.InverseTransformPoint(worldPosition);
-
-            public Quaternion ToVisualRootLocal(Quaternion worldRotation) =>
-                (Quaternion.Inverse(m_Binding.VisualRoot.rotation) * worldRotation).normalized;
-
-            public Vector3 MotionRootPosition =>
-                m_Binding.VisualRoot.InverseTransformPoint(
-                    MotionRoot.position);
-
-            public Quaternion MotionRootRotation =>
-                (Quaternion.Inverse(m_Binding.VisualRoot.rotation) *
-                 MotionRoot.rotation).normalized;
-
-            Transform MotionRoot => m_MotionRootPhysicalBoneIndex >= 0
-                ? m_Binding.Binding.PhysicalBones[m_MotionRootPhysicalBoneIndex]
-                : throw new InvalidOperationException("Foot Analysis Motion Root is unavailable during calibration authoring.");
-
-            public Quaternion LeftHipRotation => ToVisualRootLocal(m_Binding.LeftHip.rotation);
-            public Quaternion LeftKneeRotation => ToVisualRootLocal(m_Binding.LeftKnee.rotation);
-            public Quaternion LeftToeRotation => ToVisualRootLocal(m_Binding.LeftToe.rotation);
-            public Quaternion RightHipRotation => ToVisualRootLocal(m_Binding.RightHip.rotation);
-            public Quaternion RightKneeRotation => ToVisualRootLocal(m_Binding.RightKnee.rotation);
-            public Quaternion RightToeRotation => ToVisualRootLocal(m_Binding.RightToe.rotation);
-
-            public void Dispose()
-            {
-                if (m_ComponentPoses.IsCreated)
-                    m_ComponentPoses.Dispose();
-                if (m_PlayableGraph.IsValid())
-                {
-                    m_PlayableGraph.Destroy();
-                    m_PlayableGraph = default;
-                }
-                if (m_Instance)
-                {
-                    UnityEngine.Object.DestroyImmediate(m_Instance);
-                    m_Instance = null;
-                }
-                if (m_PreviewScene.IsValid())
-                {
-                    EditorSceneManager.ClosePreviewScene(m_PreviewScene);
-                    m_PreviewScene = default;
-                }
-            }
-        }
-
         public static AnimationFootAnalysisBuildResult Analyze(
             UnityEngine.AnimationClip clip,
             in CharacterFootMotionReference motionReference,
@@ -321,7 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     $"Foot Analysis Clip '{clipGuid}' Source '{source.AnalysisSourceId}' Sampling Rig '{source.SamplingRigAssetGuid}' does not resolve to a Prefab.");
             try
             {
-                using var samplingContext = new SamplingContext(rigPrefab, source);
+                using var samplingContext = new CharacterFootPlacementAnimationSampler(rigPrefab, source);
                 return AnalyzeClip(samplingContext, source, clip, in motionReference, contactSchedule);
             }
             catch (Exception exception)
@@ -343,164 +111,107 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!rigPrefab)
                 throw new InvalidOperationException(
                     $"Foot Placement Sampling Rig '{source.SamplingRigAssetGuid}' does not resolve to a Prefab.");
-            using var samplingContext = new SamplingContext(rigPrefab, source, true);
+            using var samplingContext = new CharacterFootPlacementAnimationSampler(rigPrefab, source, true);
             return samplingContext.CalibrationGeometryReport;
         }
 
         static AnimationFootAnalysisBuildResult AnalyzeClip(
-            SamplingContext samplingContext,
+            CharacterFootPlacementAnimationSampler samplingContext,
             CharacterFootPlacementAnalysisSource source,
             UnityEngine.AnimationClip clip,
             in CharacterFootMotionReference motionReference,
             AnimationFootContactSchedule contactSchedule)
         {
-            float sourceDuration =
-                CharacterAnimationClipRegisteredCurveCatalog.ResolveSourceDurationSeconds(clip);
-            samplingContext.BeginClip(clip);
-            int intervals = Mathf.Max(2, Mathf.RoundToInt(sourceDuration * source.SampleRate));
-            int sampleCount = intervals + 1;
-            float step = sourceDuration / intervals;
-            var leftHeelPositions = new Vector3[sampleCount];
-            var leftToePositions = new Vector3[sampleCount];
-            var leftAnklePositions = new Vector3[sampleCount];
-            var leftKneePositions = new Vector3[sampleCount];
-            var rightHeelPositions = new Vector3[sampleCount];
-            var rightToePositions = new Vector3[sampleCount];
-            var rightAnklePositions = new Vector3[sampleCount];
-            var rightKneePositions = new Vector3[sampleCount];
-            var leftHipPositions = new Vector3[sampleCount];
-            var rightHipPositions = new Vector3[sampleCount];
-            var leftSoleRotations = new Quaternion[sampleCount];
-            var rightSoleRotations = new Quaternion[sampleCount];
-            var leftAnkleRotations = new Quaternion[sampleCount];
-            var rightAnkleRotations = new Quaternion[sampleCount];
-            var rootPositions = new Vector3[sampleCount];
-            var rootRotations = new Quaternion[sampleCount];
-            for (int i = 0; i < sampleCount; i++)
-            {
-                CharacterFootPlacementAnimatedPose pose = samplingContext.Sample(i * step, (ulong)i + 1UL);
-                leftHeelPositions[i] = samplingContext.ToVisualRootLocal(pose.Left.HeelPosition);
-                leftToePositions[i] = samplingContext.ToVisualRootLocal(pose.Left.ToePosition);
-                leftAnklePositions[i] = samplingContext.ToVisualRootLocal(pose.Left.AnklePosition);
-                leftKneePositions[i] = samplingContext.ToVisualRootLocal(pose.Left.KneePosition);
-                rightHeelPositions[i] = samplingContext.ToVisualRootLocal(pose.Right.HeelPosition);
-                rightToePositions[i] = samplingContext.ToVisualRootLocal(pose.Right.ToePosition);
-                rightAnklePositions[i] = samplingContext.ToVisualRootLocal(pose.Right.AnklePosition);
-                rightKneePositions[i] = samplingContext.ToVisualRootLocal(pose.Right.KneePosition);
-                leftHipPositions[i] = samplingContext.ToVisualRootLocal(pose.Left.HipPosition);
-                rightHipPositions[i] = samplingContext.ToVisualRootLocal(pose.Right.HipPosition);
-                leftSoleRotations[i] = samplingContext.ToVisualRootLocal(pose.Left.SemanticRotation);
-                rightSoleRotations[i] = samplingContext.ToVisualRootLocal(pose.Right.SemanticRotation);
-                leftAnkleRotations[i] = samplingContext.ToVisualRootLocal(pose.Left.AnkleRotation);
-                rightAnkleRotations[i] = samplingContext.ToVisualRootLocal(pose.Right.AnkleRotation);
-                rootPositions[i] = Vector3.zero;
-                rootRotations[i] = Quaternion.identity;
-                RequireFinite(leftHeelPositions[i], "left heel position", i);
-                RequireFinite(leftToePositions[i], "left toe position", i);
-                RequireFinite(leftAnklePositions[i], "left ankle position", i);
-                RequireFinite(leftKneePositions[i], "left knee position", i);
-                RequireFinite(rightHeelPositions[i], "right heel position", i);
-                RequireFinite(rightToePositions[i], "right toe position", i);
-                RequireFinite(rightAnklePositions[i], "right ankle position", i);
-                RequireFinite(rightKneePositions[i], "right knee position", i);
-                RequireFinite(leftHipPositions[i], "left hip position", i);
-                RequireFinite(rightHipPositions[i], "right hip position", i);
-                RequireFinite(leftSoleRotations[i], "left Sole rotation", i);
-                RequireFinite(rightSoleRotations[i], "right Sole rotation", i);
-                RequireFinite(leftAnkleRotations[i], "left Ankle rotation", i);
-                RequireFinite(rightAnkleRotations[i], "right Ankle rotation", i);
-                RequireFinite(rootPositions[i], "animation root position", i);
-                RequireFinite(rootRotations[i], "animation root rotation", i);
-            }
+            CharacterFootPlacementClipSamples samples = samplingContext.SampleClip(source, clip);
 
             SampledFoot left = AnalyzeFoot(
-                leftHeelPositions,
-                leftToePositions,
-                leftAnklePositions,
-                leftKneePositions,
-                leftHipPositions,
-                leftSoleRotations,
-                leftAnkleRotations,
+                samples.Left.HeelPositions,
+                samples.Left.ToePositions,
+                samples.Left.AnklePositions,
+                samples.Left.KneePositions,
+                samples.Left.HipPositions,
+                samples.Left.SoleRotations,
+                samples.Left.AnkleRotations,
                 samplingContext.LeftLegLength,
-                rootPositions,
-                rootRotations);
+                samples.RootPositions,
+                samples.RootRotations);
             SampledFoot right = AnalyzeFoot(
-                rightHeelPositions,
-                rightToePositions,
-                rightAnklePositions,
-                rightKneePositions,
-                rightHipPositions,
-                rightSoleRotations,
-                rightAnkleRotations,
+                samples.Right.HeelPositions,
+                samples.Right.ToePositions,
+                samples.Right.AnklePositions,
+                samples.Right.KneePositions,
+                samples.Right.HipPositions,
+                samples.Right.SoleRotations,
+                samples.Right.AnkleRotations,
                 samplingContext.RightLegLength,
-                rootPositions,
-                rootRotations);
+                samples.RootPositions,
+                samples.RootRotations);
             BuildContactFeatures(
                 left,
                 samplingContext.GroundReferenceHeight,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds);
             BuildContactFeatures(
                 right,
                 samplingContext.GroundReferenceHeight,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds);
             List<int> leftLandingSamples = ResolveLandingSamples(
                 left,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds,
                 contactSchedule.InferLandingEvents,
                 contactSchedule.LeftLandingPhases);
             List<int> rightLandingSamples = ResolveLandingSamples(
                 right,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds,
                 contactSchedule.InferLandingEvents,
                 contactSchedule.RightLandingPhases);
             BuildLandingFeatures(
                 left,
                 right,
-                rootPositions,
-                rootRotations,
+                samples.RootPositions,
+                samples.RootRotations,
                 leftLandingSamples,
                 rightLandingSamples,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds,
                 contactSchedule.InferLandingEvents);
             BuildLandingFeatures(
                 right,
                 left,
-                rootPositions,
-                rootRotations,
+                samples.RootPositions,
+                samples.RootRotations,
                 rightLandingSamples,
                 leftLandingSamples,
                 clip.isLooping,
-                step,
+                samples.Step,
                 source.Thresholds,
                 contactSchedule.InferLandingEvents);
             BuildPairedLandingFeatures(
                 left,
                 right,
-                rootPositions,
-                rootRotations,
+                samples.RootPositions,
+                samples.RootRotations,
                 leftLandingSamples,
                 rightLandingSamples,
                 clip.isLooping,
-                step);
+                samples.Step);
             BuildPairedLandingFeatures(
                 right,
                 left,
-                rootPositions,
-                rootRotations,
+                samples.RootPositions,
+                samples.RootRotations,
                 rightLandingSamples,
                 leftLandingSamples,
                 clip.isLooping,
-                step);
+                samples.Step);
             if (!contactSchedule.InferLandingEvents &&
                 (leftLandingSamples.Count > 0 || rightLandingSamples.Count > 0))
             {
@@ -511,35 +222,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clip.isLooping);
             }
             AnimationFootFeaturePair features = new AnimationFootFeaturePair(
-                BuildCurveSet(left, source.Reduction, clip.isLooping, step),
-                BuildCurveSet(right, source.Reduction, clip.isLooping, step));
+                BuildCurveSet(left, source.Reduction, clip.isLooping, samples.Step),
+                BuildCurveSet(right, source.Reduction, clip.isLooping, samples.Step));
             ValidateFlatReconstruction(
                 features.Left,
                 left,
                 source.Reduction,
                 clip.isLooping,
-                step,
+                samples.Step,
                 "Left");
             ValidateFlatReconstruction(
                 features.Right,
                 right,
                 source.Reduction,
                 clip.isLooping,
-                step,
+                samples.Step,
                 "Right");
-            AnimationFootMotionDataDescriptor motionData = BuildMotionData(
-                samplingContext,
-                source,
+            AnimationFootMotionDataDescriptor motionData = CharacterFootMotionDataBuilder.Build(
+                samplingContext.SampleMotion(source,
                 in motionReference,
-                sourceDuration,
+                samples.DurationSeconds,
                 left.SolePositions,
                 right.SolePositions,
-                contactSchedule);
+                contactSchedule));
             return new AnimationFootAnalysisBuildResult(
                 features,
                 new AnimationFootPhaseValidationDescriptor(
                     source.SampleRate,
-                    sourceDuration,
+                    samples.DurationSeconds,
                     BuildPhaseValidationFoot(
                         left,
                         samplingContext.GroundReferenceHeight,
@@ -549,139 +259,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         samplingContext.GroundReferenceHeight,
                         rightLandingSamples)),
                 motionData);
-        }
-
-        static AnimationFootMotionDataDescriptor BuildMotionData(
-            SamplingContext samplingContext,
-            CharacterFootPlacementAnalysisSource source,
-            in CharacterFootMotionReference motionReference,
-            float sourceDuration,
-            Vector3[] targetLeftRootLocalSolePositions,
-            Vector3[] targetRightRootLocalSolePositions,
-            AnimationFootContactSchedule contactSchedule)
-        {
-            AnimationClip motionClip = motionReference.MotionReference;
-            AnimationClip samplingClip = CreateMotionSamplingClip(motionClip);
-            try
-            {
-                samplingContext.BeginClip(samplingClip);
-                int intervals = Mathf.Max(2, Mathf.RoundToInt(sourceDuration * source.SampleRate));
-                int sampleCount = intervals + 1;
-                float step = sourceDuration / intervals;
-                var rootPositions = new Vector3[sampleCount];
-                var rootRotations = new Quaternion[sampleCount];
-                CharacterFootMotionSampleInput left = CreateMotionFootInput(
-                    sampleCount,
-                    samplingContext.LeftLegLength,
-                    targetLeftRootLocalSolePositions);
-                CharacterFootMotionSampleInput right = CreateMotionFootInput(
-                    sampleCount,
-                    samplingContext.RightLegLength,
-                    targetRightRootLocalSolePositions);
-                for (int i = 0; i < sampleCount; i++)
-                {
-                    CharacterFootPlacementAnimatedPose pose = samplingContext.Sample(i * step, (ulong)i + 1UL);
-                    rootPositions[i] = samplingContext.MotionRootPosition;
-                    rootRotations[i] = samplingContext.MotionRootRotation;
-                    CaptureMotionFoot(samplingContext, pose.Left, left, i, true);
-                    CaptureMotionFoot(samplingContext, pose.Right, right, i, false);
-                    RequireFinite(rootPositions[i], "motion reference root position", i);
-                    RequireFinite(rootRotations[i], "motion reference root rotation", i);
-                }
-                return CharacterFootMotionDataBuilder.Build(
-                    new CharacterFootMotionDataInput
-                    {
-                        SampleRate = source.SampleRate,
-                        DurationSeconds = sourceDuration,
-                        GroundReferenceHeight = samplingContext.GroundReferenceHeight,
-                        Loop = motionClip.isLooping,
-                        NoContactLoop = motionClip.isLooping &&
-                            !contactSchedule.InferLandingEvents &&
-                            contactSchedule.LeftLandingPhases.Count == 0 &&
-                            contactSchedule.RightLandingPhases.Count == 0,
-                        RootPositions = rootPositions,
-                        RootRotations = rootRotations,
-                        Thresholds = source.Thresholds,
-                        ContactMotionPolicy = contactSchedule.MotionPolicy,
-                        Left = left,
-                        Right = right
-                    });
-            }
-            finally
-            {
-                if (samplingClip != motionClip)
-                    UnityEngine.Object.DestroyImmediate(samplingClip);
-            }
-        }
-
-        static AnimationClip CreateMotionSamplingClip(AnimationClip source)
-        {
-            if (!source.isLooping)
-                return source;
-            AnimationClip clone = UnityEngine.Object.Instantiate(source);
-            clone.name = source.name + " Motion Sampling";
-            AnimationClipSettings settings = AnimationUtility.GetAnimationClipSettings(clone);
-            settings.loopTime = false;
-            AnimationUtility.SetAnimationClipSettings(clone, settings);
-            clone.wrapMode = WrapMode.ClampForever;
-            return clone;
-        }
-
-        static CharacterFootMotionSampleInput CreateMotionFootInput(
-            int sampleCount,
-            float legLength,
-            Vector3[] targetRootLocalSolePositions)
-        {
-            if (targetRootLocalSolePositions == null ||
-                targetRootLocalSolePositions.Length != sampleCount)
-            {
-                throw new InvalidOperationException(
-                    "Foot Motion target Root-local sole samples do not match the Motion Reference.");
-            }
-            return new CharacterFootMotionSampleInput
-            {
-                RigLegLength = legLength,
-                HipPositions = new Vector3[sampleCount],
-                HipRotations = new Quaternion[sampleCount],
-                KneePositions = new Vector3[sampleCount],
-                KneeRotations = new Quaternion[sampleCount],
-                AnklePositions = new Vector3[sampleCount],
-                AnkleRotations = new Quaternion[sampleCount],
-                HeelPositions = new Vector3[sampleCount],
-                ToePositions = new Vector3[sampleCount],
-                ToeRotations = new Quaternion[sampleCount],
-                SolePositions = new Vector3[sampleCount],
-                SoleRotations = new Quaternion[sampleCount],
-                TargetRootLocalSolePositions =
-                    (Vector3[])targetRootLocalSolePositions.Clone()
-            };
-        }
-
-        static void CaptureMotionFoot(
-            SamplingContext samplingContext,
-            CharacterFootPlacementAnimatedFootPose pose,
-            CharacterFootMotionSampleInput destination,
-            int index,
-            bool left)
-        {
-            destination.HipPositions[index] = samplingContext.ToVisualRootLocal(pose.HipPosition);
-            destination.KneePositions[index] = samplingContext.ToVisualRootLocal(pose.KneePosition);
-            destination.AnklePositions[index] = samplingContext.ToVisualRootLocal(pose.AnklePosition);
-            destination.HeelPositions[index] = samplingContext.ToVisualRootLocal(pose.HeelPosition);
-            destination.ToePositions[index] = samplingContext.ToVisualRootLocal(pose.ToePosition);
-            destination.SolePositions[index] =
-                (destination.HeelPositions[index] + destination.ToePositions[index]) * 0.5f;
-            destination.SoleRotations[index] = samplingContext.ToVisualRootLocal(pose.SemanticRotation);
-            destination.AnkleRotations[index] = samplingContext.ToVisualRootLocal(pose.AnkleRotation);
-            destination.HipRotations[index] = left
-                ? samplingContext.LeftHipRotation
-                : samplingContext.RightHipRotation;
-            destination.KneeRotations[index] = left
-                ? samplingContext.LeftKneeRotation
-                : samplingContext.RightKneeRotation;
-            destination.ToeRotations[index] = left
-                ? samplingContext.LeftToeRotation
-                : samplingContext.RightToeRotation;
         }
 
         static void ValidateFlatReconstruction(
@@ -2466,20 +2043,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Reduce(values, maximumIndex, last, tolerance, keep);
         }
 
-        static void RequireFinite(Vector3 value, string field, int sample)
-        {
-            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) || !float.IsFinite(value.z))
-                throw new InvalidOperationException($"Foot Analysis {field} sample #{sample} is not finite.");
-        }
 
-        static void RequireFinite(Quaternion value, string field, int sample)
-        {
-            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) ||
-                !float.IsFinite(value.z) || !float.IsFinite(value.w) ||
-                Quaternion.Dot(value, value) <= 0.000001f)
-            {
-                throw new InvalidOperationException($"Foot Analysis {field} sample #{sample} is not finite.");
-            }
-        }
     }
 }

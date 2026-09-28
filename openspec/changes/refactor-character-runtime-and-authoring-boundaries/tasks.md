@@ -12,9 +12,9 @@ R1／R2 的已有提交、R8 的保留结论、R9 的证据与专项归属记录
 
 ## 2. 收口动画采样职责（R4）
 
-- [ ] 2.1 完成 AnimationSampler 对预览场景、采样实例、PlayableGraph、NativeArray 和临时 Clip 的统一生命周期管理。
-- [ ] 2.2 让 Analyzer 从同一规范样本数组执行现有几何、特征与 Motion Data 构建，保持 Target／Motion Reference 的采样时刻、坐标空间、loop 及末端语义。
-- [ ] 2.3 移除 Analyzer 内被替代的采样环境与重复辅助入口，保留唯一正式分析入口、既有数值算法及 artifact／曲线输出。
+- [x] 2.1 完成 AnimationSampler 对预览场景、采样实例、PlayableGraph、NativeArray 和临时 Clip 的统一生命周期管理。
+- [x] 2.2 让 Analyzer 从同一规范样本数组执行现有几何、特征与 Motion Data 构建，保持 Target／Motion Reference 的采样时刻、坐标空间、loop 及末端语义。
+- [x] 2.3 移除 Analyzer 内被替代的采样环境与重复辅助入口，保留唯一正式分析入口、既有数值算法及 artifact／曲线输出。
 
 ## 3. 整理Pose作者工作区（R5）
 

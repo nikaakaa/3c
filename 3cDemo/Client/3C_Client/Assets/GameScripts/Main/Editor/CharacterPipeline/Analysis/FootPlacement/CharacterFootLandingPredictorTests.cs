@@ -181,10 +181,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in preparedTarget);
             CharacterFootLifecycleContext context = default;
             context.Discrete.State = CharacterFootConstraintState.Swing;
+            CharacterFootSupportTarget selectedTarget = CreateSupportTarget(
+                CharacterFootSupportTargetKind.SwingGround,
+                CharacterFootSupportPositionSource.SwingMotion,
+                CharacterFootSupportNormalSource.PredictedLanding);
             CharacterFootHardConstraintResult result =
                 CharacterFootHardConstraintResolver.Resolve(
                     in context,
                     in frame,
+                    in selectedTarget,
                     Vector3.zero);
             Vector3 envelopeMinimum =
                 CharacterFootConstraintMath.ResolvePointMinimumCorrection(

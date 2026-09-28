@@ -39,14 +39,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static CharacterFootHardConstraintResult Resolve(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame,
+            in CharacterFootSupportTarget selectedTarget,
             Vector3 correction)
         {
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
+            bool ownsSwingPath = selectedTarget.Kind ==
+                CharacterFootSupportTargetKind.SwingGround && swing.Accepted;
             switch (context.Discrete.State)
             {
-                case CharacterFootConstraintState.Swing when swing.Accepted:
+                case CharacterFootConstraintState.Swing when ownsSwingPath:
                 case CharacterFootConstraintState.UnlockedSupport
-                    when swing.Accepted:
+                    when ownsSwingPath:
                 {
                     Vector3 minimum =
                         CharacterFootConstraintMath.ResolvePointMinimumCorrection(

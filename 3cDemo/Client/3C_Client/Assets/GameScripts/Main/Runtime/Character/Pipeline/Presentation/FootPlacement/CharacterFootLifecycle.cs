@@ -391,8 +391,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportObservation outputSupport,
             Vector3 correction)
         {
+            CharacterFootSupportTarget selectedTarget = interpolation.SupportTarget;
             CharacterFootHardConstraintResult constraint = CharacterFootHardConstraintResolver.Resolve(
-                in context, in frame, correction);
+                in context, in frame, in selectedTarget, correction);
             if (!outputSupport.TryResolveHeightConstraint(
                     out float displacement, out int surfaceIdentity))
                 return constraint;

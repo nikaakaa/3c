@@ -43,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeRootOrientationSource m_Source;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        EventGraphVariableBinding m_FacingErrorBinding;
         State m_CommittedState;
         State m_PendingState;
         CharacterPoseNativeLocalPoseValue m_Output;
@@ -101,6 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node.Kind != Kind || node.RootOrientationYawCurveSlot == null)
                 throw new InvalidOperationException(
                     $"Root Orientation Warp '{NodeId}' does not match its graph node.");
+            m_FacingErrorBinding = runtime.InstanceContext.VariableContract.Bind(
+                CharacterAnimationVariableIds.FacingError);
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -180,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.DenseLocalPoses;
             poses.CopyFrom(input.DenseLocalPoses);
             EventGraphValue facingValue = runtime.CurrentInput.ParameterFrame.RequireValue(
-                new PoseParameterId(CharacterAnimationVariableIds.FacingError));
+                m_FacingErrorBinding);
             if (facingValue.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(facingValue.Float32Value))
             {

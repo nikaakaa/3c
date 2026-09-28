@@ -88,6 +88,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool FrameOpen;
         }
 
+        readonly struct BoundRuleOperation
+        {
+            internal BoundRuleOperation(
+                CharacterPoseTransitionRuleOperation definition,
+                CharacterAnimationVariableContract variables)
+            {
+                Definition = definition;
+                Variable = definition.Kind == PoseTransitionRuleOperationKind.AnimationVariableInput
+                    ? variables.Bind(definition.ParameterId.Value)
+                    : default;
+            }
+
+            internal CharacterPoseTransitionRuleOperation Definition { get; }
+            internal EventGraphVariableBinding Variable { get; }
+        }
+
         enum RuleValueKind : byte
         {
             Bool = 1,
@@ -145,7 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
         readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
         readonly Dictionary<CharacterPoseTransitionRuleGraph,
-            Dictionary<PoseTransitionRuleOperationId, CharacterPoseTransitionRuleOperation>> m_RuleOperationTables;
+            Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> m_RuleOperationTables;
         readonly Dictionary<PoseTransitionRuleOperationId, RuleValue> m_RuleValues;
         readonly HashSet<PoseTransitionRuleOperationId> m_RuleVisiting;
         CharacterPoseNativeGraphRuntime m_ParentRuntime;
@@ -281,7 +297,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose StateMachine '{node.NodeId}' has no definition.");
             int ruleOperationCapacity = ResolveRuleOperationCapacity();
             m_RuleOperationTables = new Dictionary<CharacterPoseTransitionRuleGraph,
-                Dictionary<PoseTransitionRuleOperationId, CharacterPoseTransitionRuleOperation>>();
+                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>>();
             m_RuleValues = new Dictionary<PoseTransitionRuleOperationId, RuleValue>(
                 ruleOperationCapacity);
             m_RuleVisiting = new HashSet<PoseTransitionRuleOperationId>(
@@ -294,7 +310,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceRequests =
                 new List<CharacterPoseNativeSourceRequest>(contributionCapacity);
             RequireDefinition();
-            BuildRuleOperationTables();
             m_TransitionsByState = BuildTransitionsByState();
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
                 0,
@@ -317,7 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return capacity;
         }
 
-        void BuildRuleOperationTables()
+        void BuildRuleOperationTables(CharacterAnimationVariableContract variables)
         {
             for (int i = 0; i < m_Definition.Transitions.Count; i++)
             {
@@ -326,12 +341,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (rule == null || m_RuleOperationTables.ContainsKey(rule))
                     continue;
                 var operations = new Dictionary<PoseTransitionRuleOperationId,
-                    CharacterPoseTransitionRuleOperation>(rule.Operations.Count);
+                    BoundRuleOperation>(rule.Operations.Count);
                 for (int operationIndex = 0; operationIndex < rule.Operations.Count; operationIndex++)
                 {
                     CharacterPoseTransitionRuleOperation operation = rule.Operations[operationIndex];
                     if (operation == null || !operation.OperationId.IsValid ||
-                        !operations.TryAdd(operation.OperationId, operation))
+                        !operations.TryAdd(operation.OperationId, new BoundRuleOperation(operation, variables)))
                     {
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' transition rule contains duplicate or missing operation.");
@@ -347,6 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void PrepareGraphs(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
+            BuildRuleOperationTables(runtime.InstanceContext.VariableContract);
             switch (m_CreationMode)
             {
                 case CharacterPoseStateGraphCreationMode.DuringPreparation:
@@ -1133,7 +1149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_RuleOperationTables.TryGetValue(
                     rule,
                     out Dictionary<PoseTransitionRuleOperationId,
-                        CharacterPoseTransitionRuleOperation> operations))
+                        BoundRuleOperation> operations))
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' transition rule was not prepared.");
             RuleValue result = EvaluateOperation(
@@ -1153,7 +1169,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         RuleValue EvaluateOperation(
             PoseTransitionRuleOperationId id,
-            IReadOnlyDictionary<PoseTransitionRuleOperationId, CharacterPoseTransitionRuleOperation> operations,
+            IReadOnlyDictionary<PoseTransitionRuleOperationId, BoundRuleOperation> operations,
             IDictionary<PoseTransitionRuleOperationId, RuleValue> values,
             ISet<PoseTransitionRuleOperationId> visiting,
             in CharacterPresentationFactFrame facts,
@@ -1163,9 +1179,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (values.TryGetValue(id, out RuleValue cached))
                 return cached;
-            if (!visiting.Add(id) || !operations.TryGetValue(id, out CharacterPoseTransitionRuleOperation operation))
+            if (!visiting.Add(id) || !operations.TryGetValue(id, out BoundRuleOperation bound))
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' transition rule references an invalid operation '{id}'.");
+            CharacterPoseTransitionRuleOperation operation = bound.Definition;
             RuleValue result;
             switch (operation.Kind)
             {
@@ -1173,7 +1190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     result = FromFact(facts.Require(operation.FactId));
                     break;
                 case PoseTransitionRuleOperationKind.AnimationVariableInput:
-                    result = FromEvent(inputs.RequireValue(operation.ParameterId));
+                    result = FromEvent(inputs.RequireValue(bound.Variable));
                     break;
                 case PoseTransitionRuleOperationKind.BoolLiteral:
                     result = new RuleValue(operation.BoolLiteral);

@@ -48,8 +48,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Readiness = readiness;
             FailureCode = failureCode;
             Message = message ?? string.Empty;
-            if (!Enum.IsDefined(typeof(CharacterAclResourceReadiness), readiness) ||
-                !Enum.IsDefined(typeof(CharacterAclResourceFailureCode), failureCode) ||
+            if ((byte)readiness < (byte)CharacterAclResourceReadiness.Pending ||
+                (byte)readiness > (byte)CharacterAclResourceReadiness.Invalid ||
+                (byte)failureCode > (byte)CharacterAclResourceFailureCode.SourceIdentityMismatch ||
                 readiness == CharacterAclResourceReadiness.Invalid && failureCode == CharacterAclResourceFailureCode.None ||
                 readiness != CharacterAclResourceReadiness.Invalid && failureCode != CharacterAclResourceFailureCode.None)
             {

@@ -326,6 +326,12 @@
 - BlendSpace 将已解析来源身份与样本 discriminator 按原 Hash 公式组合，一次结果同时交给左右脚。删除逐脚重复格式化；不修改最终 landing identity、相位或周期。来源切换仍可能产生一次字符串分配，本项只消除稳定播放期间该调用的周期分配，不能宣称整条链路 0 GC。
 - 静态核对全部 SourceId 写入点、State 页复制与哈希组合顺序；未编译、未运行。
 
+### AP35 运行期状态合同的枚举装箱（2026-09-29，已实施，未运行）
+
+- ACL Ready/Pending/Invalid 结果的公共构造器每次对两个枚举调用 Enum.IsDefined(Type, object)，需要装箱。SourceResourceResolver 的正常就绪结果和 ResourceStore 租约申请均经过该入口。AssetLoadResult 的轮询状态也有同类检查。
+- 按当前 byte 枚举的连续取值范围进行原生比较，保留状态与失败码、资源是否存在的组合规则。MotionMatchingTrajectorySourceFrame 的两种来源枚举改为直接比较，保留输入合同；该分支未证明由当前 Corin 采集命中。
+- 只更改已确认的运行结果/帧构造路径，未为消除初始化分配去改 authoring 和编译器 Enum API。有效/无效取值集合不变，无新增防御检查。静态核对枚举定义和调用点，未编译或采样。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

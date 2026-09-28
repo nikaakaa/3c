@@ -188,7 +188,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float sampleAge,
             ulong resetSequence)
         {
-            if (!identity.IsValid || !Enum.IsDefined(typeof(MotionMatchingTrajectorySourceKind), kind) ||
+            if (!identity.IsValid ||
+                kind != MotionMatchingTrajectorySourceKind.AcceptedIntent &&
+                kind != MotionMatchingTrajectorySourceKind.SelectedBody ||
                 !actorId.IsValid || !sourceTick.IsValid || sourceSequence == 0 ||
                 !IsFinite(worldPosition) || !IsFinite(worldRotation) || !IsFinite(planarVelocity) ||
                 !float.IsFinite(yawVelocityDegrees) || !IsFinite(desiredPlanarVelocity) ||

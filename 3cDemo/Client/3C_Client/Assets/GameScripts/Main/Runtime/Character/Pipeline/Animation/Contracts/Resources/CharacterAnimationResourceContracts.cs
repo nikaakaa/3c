@@ -54,7 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAclAnimationResource resource,
             string message)
         {
-            if (!Enum.IsDefined(typeof(CharacterAnimationAssetLoadState), state) ||
+            if ((byte)state < (byte)CharacterAnimationAssetLoadState.Pending ||
+                (byte)state > (byte)CharacterAnimationAssetLoadState.Invalid ||
                 state == CharacterAnimationAssetLoadState.Ready && !resource ||
                 state != CharacterAnimationAssetLoadState.Ready && resource)
                 throw new ArgumentException("Animation asset load result is invalid.");

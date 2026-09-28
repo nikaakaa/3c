@@ -158,6 +158,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float timeToLandingSeconds = formalFootMotion.HasPredictiveLanding
                 ? formalFootMotion.TimeToLandingSeconds : 0f;
             RequireValid(in frame);
+            CharacterFootInterpolationRuntime.RebaseOutputWeight(
+                ref context.Interpolation, context.PreviousOutputWeight,
+                frame.FootPlacementWeight, context.PreviousAnimatedSole);
+            context.PreviousOutputWeight = frame.FootPlacementWeight;
+            context.PreviousAnimatedSole = CharacterFootConstraintMath.ResolveOriginalSole(
+                frame.AnimatedFoot);
             CharacterFootLifecycleTransitionFact lifecycleTransition =
                 CharacterFootLifecycleTransitionFact.Begin(
                     in context,
@@ -386,18 +392,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootHardConstraintResult constraint = CharacterFootHardConstraintResolver.Resolve(
                 in context, in frame, correction);
-            if (!outputSupport.Available)
+            if (!outputSupport.TryResolveHeightConstraint(
+                    out float displacement, out int surfaceIdentity))
                 return constraint;
             Vector3 up = frame.ComponentUp.normalized;
-            float clearanceCorrection = Mathf.Max(outputSupport.HeelRequiredDisplacement,
-                outputSupport.ToeRequiredDisplacement) / frame.FootPlacementWeight;
+            float clearanceCorrection = displacement / frame.FootPlacementWeight;
             Vector3 minimum = interpolation.Correction + up * clearanceCorrection;
             if (constraint.Available && constraint.Owner != CharacterFootSafetyFloorOwner.PlantTarget &&
                 Vector3.Dot(constraint.MinimumCorrection - minimum, up) >= 0f)
                 return constraint;
             return new CharacterFootHardConstraintResult(
                 true, true, CharacterFootSafetyFloorOwner.OutputFootprint,
-                outputSupport.Target.SurfaceIdentity, 0, correction, minimum,
+                surfaceIdentity, 0, correction, minimum,
                 CharacterFootConstraintMath.RaiseToMinimum(correction, minimum, up));
         }
 

@@ -215,14 +215,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 request.LayerMask, request.MinimumGroundNormalDot);
             CharacterFootLandingQueryResult heel = Query(in heelRequest);
             CharacterFootLandingQueryResult toe = Query(in toeRequest);
-            if (!heel.Accepted)
+            if (!heel.Accepted && (!toe.Accepted ||
+                heel.RejectReason != CharacterFootLandingQueryRejectReason.NoHit))
                 return heel;
-            if (!toe.Accepted)
+            if (!toe.Accepted && toe.RejectReason != CharacterFootLandingQueryRejectReason.NoHit)
                 return toe;
             Vector3 up = -request.Direction.normalized;
             Vector3 heelSole = heel.Support.Point - request.HeelOffset;
             Vector3 toeSole = toe.Support.Point - request.ToeOffset;
-            bool selectHeel = Vector3.Dot(heelSole - toeSole, up) >= 0f;
+            bool selectHeel = heel.Accepted &&
+                (!toe.Accepted || Vector3.Dot(heelSole - toeSole, up) >= 0f);
             CharacterFootLandingSupport selected = selectHeel ? heel.Support : toe.Support;
             Vector3 point = selectHeel ? heelSole : toeSole;
             CharacterFootSupportQueryDiagnostics h = heel.SelectionDiagnostics.Coverage;

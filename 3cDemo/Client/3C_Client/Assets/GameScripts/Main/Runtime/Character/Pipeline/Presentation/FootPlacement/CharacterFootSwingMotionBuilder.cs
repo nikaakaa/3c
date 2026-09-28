@@ -2333,11 +2333,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 groundPath.LastLanding,
                 groundPath.NextSwingLanding,
                 progress);
-            if (!TrySampleEnvelope(
+            if (!TrySampleFootEnvelope(
                     groundPath,
+                    in animatedFoot,
                     progress,
                     up,
                     out Vector3 envelopeSample,
+                    out float centerEnvelopeHeight,
                     out CharacterFootSwingMotionRejectReason sampleRejectReason))
                 return Rejected(
                     sampleRejectReason,
@@ -2353,9 +2355,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float envelopeMinimumCorrection = Vector3.Dot(
                 envelopeSample,
                 up) - originalSoleHeight;
-            float formalTargetHeightAlongUp = Vector3.Dot(
-                envelopeSample,
-                up) + formalFootHeight;
+            float formalTargetHeightAlongUp = Mathf.Max(
+                centerEnvelopeHeight + formalFootHeight,
+                Vector3.Dot(envelopeSample, up));
             float formalTargetCorrection =
                 formalTargetHeightAlongUp - originalSoleHeight;
             if (!float.IsFinite(envelopeMinimumCorrection) ||
@@ -2534,6 +2536,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
                 lifecycleTransition);
+
+        static bool TrySampleFootEnvelope(
+            in CharacterFootGroundPathResult groundPath,
+            in CharacterFootPlacementAnimatedFootPose foot,
+            float progress,
+            Vector3 up,
+            out Vector3 sample,
+            out float centerHeight,
+            out CharacterFootSwingMotionRejectReason rejectReason)
+        {
+            centerHeight = 0f;
+            if (!TrySampleEnvelope(in groundPath, progress, up, out sample, out rejectReason))
+                return false;
+            centerHeight = Vector3.Dot(sample, up);
+            Vector3 sole = (foot.HeelPosition + foot.ToePosition) * 0.5f;
+            Vector3 axis = Vector3.ProjectOnPlane(
+                groundPath.NextSwingLanding - groundPath.LastLanding, up);
+            float heelProgress = Vector3.Dot(foot.HeelPosition - groundPath.LastLanding, axis) /
+                axis.sqrMagnitude;
+            float toeProgress = Vector3.Dot(foot.ToePosition - groundPath.LastLanding, axis) /
+                axis.sqrMagnitude;
+            if (!TrySampleEnvelope(in groundPath, heelProgress, up,
+                    out Vector3 heel, out rejectReason) ||
+                !TrySampleEnvelope(in groundPath, toeProgress, up,
+                    out Vector3 toe, out rejectReason))
+                return false;
+            float height = Mathf.Max(centerHeight,
+                Mathf.Max(Vector3.Dot(heel - (foot.HeelPosition - sole), up),
+                    Vector3.Dot(toe - (foot.ToePosition - sole), up)));
+            sample += up * (height - Vector3.Dot(sample, up));
+            return true;
+        }
 
         static bool TrySampleEnvelope(
             in CharacterFootGroundPathResult groundPath,

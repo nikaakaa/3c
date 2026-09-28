@@ -182,10 +182,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportObservation support,
             in CharacterFootStateFrame frame)
         {
-            if (!support.Available)
+            if (!support.TryResolveHeightConstraint(out float displacement, out _))
                 return target;
-            float displacement = Mathf.Max(
-                support.HeelRequiredDisplacement, support.ToeRequiredDisplacement);
             if (displacement <= 0f)
                 return target;
             Vector3 adjustment = frame.ComponentUp.normalized *

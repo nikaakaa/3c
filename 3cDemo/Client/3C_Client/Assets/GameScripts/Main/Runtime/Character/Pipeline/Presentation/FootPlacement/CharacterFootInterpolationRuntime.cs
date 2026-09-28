@@ -5,6 +5,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootInterpolationRuntime
     {
+        internal static void RebaseOutputWeight(
+            ref CharacterFootInterpolationState state,
+            float previousWeight,
+            float currentWeight,
+            Vector3 previousAnimatedSole)
+        {
+            state.OutputWeightRebased = state.HasOutput &&
+                previousWeight > CharacterFootConstraintMath.GeometryEpsilon &&
+                currentWeight > previousWeight;
+            if (!state.OutputWeightRebased)
+                return;
+            float ratio = previousWeight / currentWeight;
+            state.EffectiveCorrection *= ratio;
+            if (state.HasPreviousResponseOutputPoint)
+                state.PreviousResponseOutputPoint = previousAnimatedSole +
+                    (state.PreviousResponseOutputPoint - previousAnimatedSole) * ratio;
+            state.SwingResidual = state.EffectiveCorrection - state.PreviousSwingTargetCorrection;
+            state.Residual = state.EffectiveCorrection - state.PreviousTargetCorrection;
+            state.HasPlantTarget = false;
+            if (state.ResponseHistory.HasValue)
+            {
+                CharacterFootCorrectionResponseHistory history = state.ResponseHistory;
+                state.ResponseHistory = new CharacterFootCorrectionResponseHistory(
+                    history.Scalar * ratio, history.Domain, history.AppliedDirection);
+            }
+        }
+
         internal static CharacterFootInterpolationResult Evaluate(
             ref CharacterFootInterpolationState state,
             in CharacterFootStateTarget target,
@@ -577,7 +604,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
-            if (target.StateEntered)
+            if (target.StateEntered || state.OutputWeightRebased)
             {
                 if (state.HasPreviousResponseOutputPoint)
                 {
@@ -839,7 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 state.SwingResidual = default;
             }
-            else if (revised || targetTrackingApplied)
+            else if (revised || targetTrackingApplied || state.OutputWeightRebased)
             {
                 state.SwingResidual =
                     state.EffectiveCorrection - swingTargetCorrection;
@@ -1115,7 +1142,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 directionLimited,
                 maximumDirectionChangeDegrees,
                 appliedDirectionChangeDegrees,
-                false,
+                state.OutputWeightRebased,
                 responseBeforeRebase,
                 previousResponse,
                 currentResponse,

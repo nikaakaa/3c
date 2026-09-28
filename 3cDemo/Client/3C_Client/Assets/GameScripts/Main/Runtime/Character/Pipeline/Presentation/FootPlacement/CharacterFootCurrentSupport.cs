@@ -43,7 +43,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         HeelHigherRequiredDisplacement = 1,
         ToeHigherRequiredDisplacement = 2,
         EquivalentDisplacementSurfaceIdentity = 3,
-        EquivalentDisplacementHeelOrder = 4
+        EquivalentDisplacementHeelOrder = 4,
+        HeelOnlySupport = 5,
+        ToeOnlySupport = 6
     }
 
     internal readonly struct CharacterFootCurrentSupportProbeRequest
@@ -509,6 +511,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IsSpecified && RejectReason == CharacterFootCurrentSupportRejectReason.None &&
             Target.IsValid;
 
+        internal bool TryResolveHeightConstraint(out float displacement, out int surfaceIdentity)
+        {
+            displacement = 0f;
+            surfaceIdentity = 0;
+            if (!Available)
+                return false;
+            displacement = SelectedProbe == CharacterFootCurrentSupportProbeKind.Heel
+                ? HeelRequiredDisplacement : ToeRequiredDisplacement;
+            surfaceIdentity = Target.SurfaceIdentity;
+            return true;
+        }
+
         internal static CharacterFootCurrentSupportObservation Resolve(
             ulong frameSequence,
             ulong completionIdentity,
@@ -541,7 +555,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default);
             }
             CharacterFootCurrentSupportRejectReason rejectReason =
-                ResolveRejectReason(heel.Accepted, toe.Accepted);
+                ResolveRejectReason(in heel, in toe);
             if (rejectReason != CharacterFootCurrentSupportRejectReason.None)
             {
                 return new CharacterFootCurrentSupportObservation(
@@ -564,15 +578,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedHeel = heelRequest.ProbePosition;
             Vector3 animatedToe = toeRequest.ProbePosition;
             Vector3 up = heelRequest.ComponentUp.normalized;
-            float heelDisplacement = Vector3.Dot(heel.Point - animatedHeel, up);
-            float toeDisplacement = Vector3.Dot(toe.Point - animatedToe, up);
-            CharacterFootCurrentSupportProbeKind selected = SelectProbe(
-                heelDisplacement,
-                toeDisplacement,
-                heel.SurfaceIdentity,
-                toe.SurfaceIdentity,
-                out CharacterFootCurrentSupportSelectionReason
-                    selectionReason);
+            float heelDisplacement = heel.Accepted ? Vector3.Dot(heel.Point - animatedHeel, up) : 0f;
+            float toeDisplacement = toe.Accepted ? Vector3.Dot(toe.Point - animatedToe, up) : 0f;
+            CharacterFootCurrentSupportSelectionReason selectionReason;
+            CharacterFootCurrentSupportProbeKind selected;
+            if (!toe.Accepted)
+            {
+                selected = CharacterFootCurrentSupportProbeKind.Heel;
+                selectionReason = CharacterFootCurrentSupportSelectionReason.HeelOnlySupport;
+            }
+            else if (!heel.Accepted)
+            {
+                selected = CharacterFootCurrentSupportProbeKind.Toe;
+                selectionReason = CharacterFootCurrentSupportSelectionReason.ToeOnlySupport;
+            }
+            else
+            {
+                selected = SelectProbe(heelDisplacement, toeDisplacement,
+                    heel.SurfaceIdentity, toe.SurfaceIdentity, out selectionReason);
+            }
             Vector3 selectedNormal = selected ==
                                      CharacterFootCurrentSupportProbeKind.Heel
                 ? heel.Normal
@@ -597,7 +621,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedNormal,
                     default);
             }
-            float displacement = Mathf.Max(heelDisplacement, toeDisplacement);
+            float displacement = selected == CharacterFootCurrentSupportProbeKind.Heel
+                ? heelDisplacement : toeDisplacement;
             Vector3 originalSole = (animatedHeel + animatedToe) * 0.5f;
             int surfaceIdentity = selected ==
                                   CharacterFootCurrentSupportProbeKind.Heel
@@ -678,10 +703,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static CharacterFootCurrentSupportRejectReason ResolveRejectReason(
-            bool heelAccepted,
-            bool toeAccepted)
+            in CharacterFootCurrentSupportProbeResult heel,
+            in CharacterFootCurrentSupportProbeResult toe)
         {
-            if (heelAccepted && toeAccepted)
+            bool heelAccepted = heel.Accepted;
+            bool toeAccepted = toe.Accepted;
+            if (heelAccepted && toeAccepted ||
+                heelAccepted && toe.RejectReason == CharacterFootCurrentSupportProbeRejectReason.NoHit ||
+                toeAccepted && heel.RejectReason == CharacterFootCurrentSupportProbeRejectReason.NoHit)
                 return CharacterFootCurrentSupportRejectReason.None;
             if (!heelAccepted && !toeAccepted)
                 return CharacterFootCurrentSupportRejectReason.HeelAndToeUnavailable;

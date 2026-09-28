@@ -170,7 +170,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         None = 0,
         Ungrounded = 1 << 0,
-        SourceLineageInvalidated = 1 << 1
+        SourceLineageInvalidated = 1 << 1,
+        OutputWeightZero = 1 << 2
     }
 
     internal readonly struct CharacterFootPathContinuityFact
@@ -1484,6 +1485,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal struct CharacterFootInterpolationState
     {
+        internal bool OutputWeightRebased;
         internal bool HasOutput;
         internal bool HasSwingPath;
         internal ulong SwingLandingEventIdentity;
@@ -1528,6 +1530,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal struct CharacterFootLifecycleContext
     {
+        internal float PreviousOutputWeight;
+        internal Vector3 PreviousAnimatedSole;
         internal CharacterFootLandingContext Landing;
         internal CharacterFootDiscreteStateContext Discrete;
         internal CharacterFootContactContext Contact;
@@ -1583,7 +1587,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
-            OwnershipLossReason = ownershipLossReason;
+            OwnershipLossReason = footPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon
+                ? ownershipLossReason | CharacterFootGoalOwnershipLossReason.OutputWeightZero
+                : ownershipLossReason;
             FootPlacementWeight = footPlacementWeight;
             ComponentUp = componentUp;
             DeltaSeconds = deltaSeconds;

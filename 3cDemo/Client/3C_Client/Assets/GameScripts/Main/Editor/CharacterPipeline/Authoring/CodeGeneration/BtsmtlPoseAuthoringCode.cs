@@ -98,6 +98,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (sourceIndices.Length != sourceValues.Length || resourceIndices.Length != resourceValues.Length)
                 throw new InvalidOperationException("Pose C# authoring Profile binding indexes do not match the slot catalog.");
 
+            context.RegisterAssetWrite(AssetDatabase.GetAssetPath(profile));
+            CharacterPresentationPoseSourceBinding[] sourceBindings =
+                PrepareSourceBindings(context, profile, sourceValues, sourceIndices);
+
             string outputPath = context.OutputAssetPath.Replace('\\', '/');
             if (!outputPath.StartsWith("Assets/", StringComparison.Ordinal) ||
                 AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(outputPath) is not null &&
@@ -135,7 +139,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             if (asset.Graph == null)
             {
-                Undo.RegisterCreatedObjectUndo(graphValues[0], "创建 Pose 根图");
                 owner.ApplyGraphCatalogMutation(new CreatePoseGraphMutation(outputPath, graphValues[0]));
             }
             else
@@ -154,7 +157,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     UpdateGraph(current, graph);
                 else
                 {
-                    Undo.RegisterCreatedObjectUndo(graph, "创建 Pose 子图");
                     owner.ApplyGraphCatalogMutation(new CreatePoseGraphMutation(outputPath, graph));
                 }
             }
@@ -163,18 +165,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 if (asset.SourceSlots.Contains(slot))
                     continue;
-                Undo.RegisterCreatedObjectUndo(slot, "创建 Pose Source Slot");
                 owner.ApplyGraphCatalogMutation(new CreatePoseSourceSlotMutation(outputPath, slot));
             }
             foreach (CharacterPoseResourceSlot slot in resourceValues)
             {
                 if (asset.ResourceSlots.Contains(slot))
                     continue;
-                Undo.RegisterCreatedObjectUndo(slot, "创建 Pose Resource Slot");
                 owner.ApplyGraphCatalogMutation(new CreatePoseResourceSlotMutation(outputPath, slot));
             }
 
-            RebindSourceSlots(profile, sourceValues, sourceIndices);
+            RebindSourceSlots(profile, sourceValues, sourceBindings);
             RebindResourceSlots(profile, resourceValues, resourceIndices);
             var desiredResourceSlots = new HashSet<CharacterPoseResourceSlot>(resourceValues);
             foreach (CharacterPoseResourceSlot slot in asset.ResourceSlots.ToArray())
@@ -203,25 +203,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             UnityEngine.Object.DestroyImmediate(candidate);
         }
 
-        static void RebindSourceSlots(
+        static CharacterPresentationPoseSourceBinding[] PrepareSourceBindings(
+            BtsmtlAuthoringGenerationContext context,
             CharacterAnimationPresentationProfile profile,
             IReadOnlyList<CharacterPresentationPoseSourceSlot> slots,
             IReadOnlyList<int> indices)
         {
-            CharacterPresentationPoseSourceBinding[] bindings =
-                profile.PoseSourceBindings.ToArray();
-            var next = new List<CharacterPresentationPoseSourceBinding>();
+            var selected = new CharacterPresentationPoseSourceBinding[slots.Count];
             for (int i = 0; i < slots.Count; i++)
             {
                 int index = indices[i];
-                if ((uint)index >= (uint)bindings.Length)
+                if ((uint)index >= (uint)profile.PoseSourceBindings.Count)
                     throw new InvalidOperationException($"Pose Source Slot '{slots[i].name}' binding index {index} is invalid.");
-                CharacterPresentationPoseSourceBinding binding = bindings[index];
+                CharacterPresentationPoseSourceBinding binding = profile.PoseSourceBindings[index];
                 if (!ReferenceEquals(binding.Slot, slots[i]))
-                    ConfigureSourceBinding(binding, slots[i]);
-                next.Add(binding);
+                    context.RegisterAssetWrite(AssetDatabase.GetAssetPath(binding));
+                selected[i] = binding;
             }
-            profile.SetPoseSourceBindings(next.ToArray());
+            return selected;
+        }
+
+        static void RebindSourceSlots(
+            CharacterAnimationPresentationProfile profile,
+            IReadOnlyList<CharacterPresentationPoseSourceSlot> slots,
+            CharacterPresentationPoseSourceBinding[] bindings)
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                CharacterPresentationPoseSourceBinding binding = bindings[i];
+                if (ReferenceEquals(binding.Slot, slots[i]))
+                    continue;
+                ConfigureSourceBinding(binding, slots[i]);
+                EditorUtility.SetDirty(binding);
+            }
+            profile.SetPoseSourceBindings(bindings);
         }
 
         static void ConfigureSourceBinding(

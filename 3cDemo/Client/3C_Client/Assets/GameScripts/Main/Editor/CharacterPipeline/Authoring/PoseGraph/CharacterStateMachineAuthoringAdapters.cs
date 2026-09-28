@@ -260,6 +260,83 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public bool ReadOnly { get; set; }
 
+        public void CreateState(CharacterPoseStateMachineDocument document, Vector2 position)
+        {
+            string suffix = Guid.NewGuid().ToString("N");
+            var graphId = new PoseGraphId(suffix);
+            var outputNodeId = new PoseNodeId(
+                Guid.NewGuid().ToString("N"));
+            var outputNode = new CharacterPoseCanvasNode(
+                outputNodeId,
+                "Output Pose",
+                new CharacterOutputPosePayload());
+            var graph = CharacterPoseCanvasGraph.CreateAuthoring(
+                graphId,
+                Guid.NewGuid().ToString("N"),
+                Array.Empty<CharacterPoseParameterDeclaration>(),
+                new[] { outputNode },
+                Array.Empty<CharacterPoseCanvasConnection>(),
+                new[]
+                {
+                    new CharacterPoseGraphLayoutEntry(
+                        outputNodeId,
+                        new Vector2(420f, 0f))
+                });
+            var state = new CharacterPoseStateDefinition(
+                new PoseStateId(suffix),
+                $"State {document.Definition.States.Count + 1}",
+                graphId,
+                outputNodeId,
+                true);
+            Apply(
+                document,
+                new GraphAuthoringMutationRequest(
+                    GraphAuthoringMutationKind.CreateState,
+                    position: position,
+                    value: new CharacterPoseStateCreation(
+                        state,
+                        graph)));
+        }
+
+        public void CreateStateAlias(
+            CharacterPoseStateMachineDocument document,
+            IReadOnlyList<GraphAuthoringSelection> selection,
+            Vector2 position)
+        {
+            CharacterPoseStateTransitionSource[] sources =
+                selection
+                    .Where(value =>
+                        value.Kind ==
+                        GraphAuthoringSelectionKind.State)
+                    .Select(value =>
+                        document.Definition.States.Any(
+                            state =>
+                                state.StateId.Value ==
+                                value.ElementId.Value)
+                            ? CharacterPoseStateTransitionSource
+                                .FromState(
+                                    new PoseStateId(
+                                        value.ElementId.Value))
+                            : CharacterPoseStateTransitionSource
+                                .FromAlias(
+                                    new PoseStateAliasId(
+                                        value.ElementId.Value)))
+                    .Distinct()
+                    .ToArray();
+            var alias = new CharacterPoseStateAlias(
+                new PoseStateAliasId(
+                    Guid.NewGuid().ToString("N")),
+                $"Alias {document.Definition.Aliases.Count + 1}",
+                sources);
+            Apply(
+                document,
+                new GraphAuthoringMutationRequest(
+                    GraphAuthoringMutationKind.CreateStateAlias,
+                    position: position,
+                    value: alias));
+        }
+
+
         public void Apply(
             IGraphAuthoringDocumentProjection document,
             GraphAuthoringMutationRequest request) =>

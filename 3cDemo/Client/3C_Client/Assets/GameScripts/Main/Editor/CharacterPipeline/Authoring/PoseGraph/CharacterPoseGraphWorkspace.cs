@@ -110,11 +110,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         Label m_Status;
         CharacterPoseGraphAssetMutationOwner m_Owner;
         CharacterPoseCanvasGraphDocument m_Document;
-        CharacterPoseCanvasEditorMutationAdapter m_Mutation;
+        CharacterPoseCanvasMutationAdapter m_Mutation;
         CharacterPoseCanvasDetailsDataSource m_DetailsDataSource;
         Action m_ShowDetails;
         CharacterPoseStateMachineDocument m_StateMachineDocument;
-        CharacterPoseStateMachineEditorMutationAdapter m_StateMachineMutation;
+        CharacterPoseStateMachineMutationAdapter m_StateMachineMutation;
         CharacterPoseTransitionRuleDocument m_RuleDocument;
         CharacterPoseTransitionRuleMutationAdapter m_RuleMutation;
         CharacterLinkedPoseAuthoringWorkspacePresenter m_LinkedPoseWorkspace;
@@ -478,9 +478,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 graph.GraphId.Value,
                 ResolveRole(graph),
                 graphDisplayName);
-            m_Mutation = new CharacterPoseCanvasEditorMutationAdapter(
-                new CharacterPoseCanvasMutationAdapter(),
-                null);
+            m_Mutation = new CharacterPoseCanvasMutationAdapter();
             m_Mutation.ReadOnly =
                 false;
             IGraphAuthoringDomainDiagnostics runtimeTrace = null;
@@ -955,8 +953,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_Asset,
                     machine);
             m_StateMachineMutation =
-                new CharacterPoseStateMachineEditorMutationAdapter(
-                    new CharacterPoseStateMachineMutationAdapter(), null)
+                new CharacterPoseStateMachineMutationAdapter()
                 {
                     ReadOnly = false
                 };
@@ -1129,81 +1126,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void CreateState(Vector2 position)
         {
-            string suffix = Guid.NewGuid().ToString("N");
-            var graphId = new PoseGraphId(suffix);
-            var outputNodeId = new PoseNodeId(
-                Guid.NewGuid().ToString("N"));
-            var outputNode = new CharacterPoseCanvasNode(
-                outputNodeId,
-                "Output Pose",
-                new CharacterOutputPosePayload());
-            var graph = CharacterPoseCanvasGraph.CreateAuthoring(
-                graphId,
-                Guid.NewGuid().ToString("N"),
-                Array.Empty<CharacterPoseParameterDeclaration>(),
-                new[] { outputNode },
-                Array.Empty<CharacterPoseCanvasConnection>(),
-                new[]
-                {
-                    new CharacterPoseGraphLayoutEntry(
-                        outputNodeId,
-                        new Vector2(420f, 0f))
-                });
-            var state = new CharacterPoseStateDefinition(
-                new PoseStateId(suffix),
-                $"State {m_StateMachineDocument.Definition.States.Count + 1}",
-                graphId,
-                outputNodeId,
-                true);
-            m_StateMachineMutation.Apply(
-                m_StateMachineDocument,
-                new GraphAuthoringMutationRequest(
-                    GraphAuthoringMutationKind.CreateState,
-                    position: position,
-                    value: new CharacterPoseStateCreation(
-                        state,
-                        graph)));
-            OpenStateMachine(
-                m_StateMachineDocument.Definition);
+            m_StateMachineMutation.CreateState(m_StateMachineDocument, position);
+            OpenStateMachine(m_StateMachineDocument.Definition);
         }
 
         void CreateStateAlias(Vector2 position)
         {
-            CharacterPoseStateTransitionSource[] sources =
-                m_StateMachineSurface.GetStableSelection()
-                    .Where(value =>
-                        value.Kind ==
-                        GraphAuthoringSelectionKind.State)
-                    .Select(value =>
-                        m_StateMachineDocument.Definition.States.Any(
-                            state =>
-                                state.StateId.Value ==
-                                value.ElementId.Value)
-                            ? CharacterPoseStateTransitionSource
-                                .FromState(
-                                    new PoseStateId(
-                                        value.ElementId.Value))
-                            : CharacterPoseStateTransitionSource
-                                .FromAlias(
-                                    new PoseStateAliasId(
-                                        value.ElementId.Value)))
-                    .Distinct()
-                    .ToArray();
-            if (sources.Length == 0)
-                return;
-            var alias = new CharacterPoseStateAlias(
-                new PoseStateAliasId(
-                    Guid.NewGuid().ToString("N")),
-                $"Alias {m_StateMachineDocument.Definition.Aliases.Count + 1}",
-                sources);
-            m_StateMachineMutation.Apply(
-                m_StateMachineDocument,
-                new GraphAuthoringMutationRequest(
-                    GraphAuthoringMutationKind.CreateStateAlias,
-                    position: position,
-                    value: alias));
-            OpenStateMachine(
-                m_StateMachineDocument.Definition);
+            m_StateMachineMutation.CreateStateAlias(
+                m_StateMachineDocument, m_StateMachineSurface.GetStableSelection(), position);
+            OpenStateMachine(m_StateMachineDocument.Definition);
         }
 
         void PublishStateMachineSelection(bool refresh = false)

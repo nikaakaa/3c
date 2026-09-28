@@ -28,8 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public BtsmtlUnityAuthoringGenerationContext(BtsmtlAuthoringGenerationRequest request)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
-            SnapshotAsset(m_Request.OutputAssetPath);
-            SnapshotAsset(m_Request.DefinitionAssetPath);
+            RegisterAssetWrite(m_Request.OutputAssetPath);
+            RegisterAssetWrite(m_Request.DefinitionAssetPath);
             m_OutputExisted = AssetDatabase.LoadMainAssetAtPath(m_Request.OutputAssetPath) != null;
         }
 
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string normalized = NormalizeAssetPath(assetPath);
             if (string.Equals(normalized, OutputAssetPath, StringComparison.Ordinal))
                 throw new InvalidOperationException("正式生成入口不能删除当前输出资产。");
-            SnapshotAsset(normalized);
+            RegisterAssetWrite(normalized);
             if (!m_DeletionRequests.Contains(normalized))
                 m_DeletionRequests.Add(normalized);
         }
@@ -110,8 +110,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     "正式生成入口没有返回根输出。"));
             try
             {
-                AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(OutputAssetPath));
-                AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(DefinitionAssetPath));
+                foreach (string path in m_AssetSnapshots.Keys)
+                    if (!m_DeletionRequests.Contains(path))
+                        AssetDatabase.SaveAssetIfDirty(AssetDatabase.GUIDFromAssetPath(path));
                 foreach (string path in m_DeletionRequests)
                 {
                     if (AssetDatabase.LoadMainAssetAtPath(path) == null)
@@ -162,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return normalized;
         }
 
-        void SnapshotAsset(string assetPath)
+        public override void RegisterAssetWrite(string assetPath)
         {
             string path = NormalizeAssetPath(assetPath);
             if (m_AssetSnapshots.ContainsKey(path))

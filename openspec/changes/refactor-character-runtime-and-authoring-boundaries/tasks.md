@@ -18,11 +18,11 @@ R1／R2 的已有提交、R8 的保留结论、R9 的证据与专项归属记录
 
 ## 3. 整理Pose作者工作区（R5）
 
-- [ ] 3.1 将新建 Graph 的创建 Undo 注册收拢到实际 GraphCatalog mutation owner，删除 C# 同一路径的重复注册，保留根资产及 SourceSlot／ResourceSlot 各自创建事务。
-- [ ] 3.2 将 State／Alias 的领域数据创建交给现有 StateMachine mutation，窗口只传递 document、位置与选择并刷新页面；状态、子图、布局继续在同一 Undo 事务内。
+- [x] 3.1 将新建 Graph 的创建 Undo 注册收拢到实际 GraphCatalog mutation owner，删除 C# 同一路径的重复注册，保留根资产及 SourceSlot／ResourceSlot 各自创建事务。
+- [x] 3.2 将 State／Alias 的领域数据创建交给现有 StateMachine mutation，窗口只传递 document、位置与选择并刷新页面；状态、子图、布局继续在同一 Undo 事务内。
 - [ ] 3.3 由正式校验报告携带错误定位身份，统一作者检查与带 Rig 内容检查的输入模式，删除窗口和内部重复执行的同一能力／状态机校验。
 - [ ] 3.4 收拢图、Profile 与其正式引用参数资源的保存操作，支持正式无 Profile 作者入口，移除 Tuning 模块内独立的保存协议。
-- [ ] 3.5 将 C# 生成实际修改的独立 Profile 纳入正式生成事务的写 owner 集合，统一写入前快照、保存和失败回退；只读依赖不进入写集合，不调用 Workspace.Save 绕过生成事务。
+- [x] 3.5 将 C# 生成实际修改的独立 Profile 纳入正式生成事务的写 owner 集合，统一写入前快照、保存和失败回退；只读依赖不进入写集合，不调用 Workspace.Save 绕过生成事务。
 - [ ] 3.6 将导航目录、图显示名、角色与规则 owner 查询移到只读作者目录职责，窗口保留选择、打开页面和导航历史。
 - [ ] 3.7 删除已确认无消费者的 tuning 指纹字段、方法、分支及对应文件／meta，同时清理直接调用者。
 - [ ] 3.8 删除只执行 Validate 的 Compile 入口、虚假编译成功提示和过时 Projection／Build 状态命名，更新 presenter 等直接消费者，保持实际采用状态来自正式 Session。

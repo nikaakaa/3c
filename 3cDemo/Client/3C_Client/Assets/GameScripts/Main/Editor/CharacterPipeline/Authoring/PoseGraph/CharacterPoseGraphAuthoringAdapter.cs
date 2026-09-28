@@ -589,6 +589,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 case CreatePoseGraphMutation create:
                     CharacterPoseCanvasMutationPreflight.RequireValid(create.Graph);
+                    Undo.RegisterCreatedObjectUndo(create.Graph, "创建 Pose Graph");
                     if (m_Asset.Graph == null)
                         m_Asset.SetGraph(create.Graph);
                     else

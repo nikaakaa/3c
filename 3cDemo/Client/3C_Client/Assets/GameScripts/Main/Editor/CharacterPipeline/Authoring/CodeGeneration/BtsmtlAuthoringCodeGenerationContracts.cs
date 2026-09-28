@@ -637,6 +637,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public abstract string DefinitionAssetPath { get; }
         public abstract string OutputAssetPath { get; }
         public abstract T ResolveExternalAsset<T>(string assetPath, long localFileId);
+        public abstract void RegisterAssetWrite(string assetPath);
         public abstract void DeleteAsset(string assetPath);
         public abstract BtsmtlAuthoringGenerationResult Complete(object rootOutput);
         public abstract BtsmtlAuthoringGenerationResult Fail(BtsmtlAuthoringCodeDiagnostic diagnostic);

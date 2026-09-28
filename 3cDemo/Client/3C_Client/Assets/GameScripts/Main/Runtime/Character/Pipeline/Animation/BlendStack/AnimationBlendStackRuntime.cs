@@ -82,6 +82,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly AnimationSelectionAvailabilityPolicy m_AvailabilityPolicy;
         readonly AnimationBlendCurveCatalogPayload m_CurveCatalog;
         readonly AnimationBlendProfileCatalogPayload m_ProfileCatalog;
+        readonly (int[] BoneGroups, int[] RepresentativeBones)[] m_ProfileAlphaLayouts;
+        readonly int m_MaxAlphaGroupCount;
+        readonly float[] m_EntryGroupAlphas;
         readonly CharacterAnimationRigPayload m_Rig;
         AnimationBlendEntryState[] m_CommittedEntries;
         AnimationBlendEntryState[] m_PendingEntries;
@@ -450,6 +453,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int parameterCount = initialFinalWriteBinding.PoseParameters.Length;
             if (initialFinalWriteBinding.DenseLocalPoses.Length != boneCount || parameterCount <= 0)
                 throw new ArgumentException("Animation Blend Stack final Slot layout is invalid.", nameof(initialFinalWriteBinding));
+
+            m_ProfileAlphaLayouts = new (int[], int[])[profileCatalog.Entries.Count];
+            for (int i = 0; i < m_ProfileAlphaLayouts.Length; i++)
+            {
+                m_ProfileAlphaLayouts[i] = BuildBoneAlphaLayout(profileCatalog.Require(i));
+                m_MaxAlphaGroupCount = Math.Max(
+                    m_MaxAlphaGroupCount,
+                    m_ProfileAlphaLayouts[i].RepresentativeBones.Length);
+            }
+            m_EntryGroupAlphas = new float[checked(capacity * m_MaxAlphaGroupCount)];
 
             m_Transitions = new Dictionary<AnimationBlendTransitionIdentity, AnimationBlendTransitionPayload>(slot.Transitions.Count);
             m_SourceOwnerIndices = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -1311,6 +1324,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 : AnimationBlendPushResult.Pushed;
         }
 
+        static (int[] BoneGroups, int[] RepresentativeBones) BuildBoneAlphaLayout(
+            AnimationBlendProfilePayload profile)
+        {
+            IReadOnlyList<float> multipliers = profile.DenseDurationMultipliers;
+            var boneGroups = new int[multipliers.Count];
+            var groups = new Dictionary<float, int>();
+            var representativeBones = new List<int>();
+            for (int bone = 0; bone < multipliers.Count; bone++)
+            {
+                if (!groups.TryGetValue(multipliers[bone], out int group))
+                {
+                    group = representativeBones.Count;
+                    groups.Add(multipliers[bone], group);
+                    representativeBones.Add(bone);
+                }
+                boneGroups[bone] = group;
+            }
+            return (boneGroups, representativeBones.ToArray());
+        }
+
         void PrepareCrossFadePlan(
             in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
             CharacterPoseSourceModule sourceModule,
@@ -1356,28 +1389,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
             outputWeight = ResolveAccumulatedWeight(outputWeight);
 
+            for (int i = m_EntryCount - 1; i >= 0; i--)
+            {
+                AnimationBlendEntryState entry = ReadEntry(i);
+                AnimationBlendCurvePayload curve = m_CurveCatalog.Require(entry.CanonicalCurveIndex);
+                AnimationBlendProfilePayload profile = m_ProfileCatalog.Require(entry.BlendProfileIndex);
+                int[] representativeBones = m_ProfileAlphaLayouts[entry.BlendProfileIndex].RepresentativeBones;
+                int offset = i * m_MaxAlphaGroupCount;
+                for (int group = 0; group < representativeBones.Length; group++)
+                {
+                    float alpha = entry.EvaluateBoneAlpha(representativeBones[group], curve, profile);
+                    RequireNormalized(alpha);
+                    m_EntryGroupAlphas[offset + group] = alpha;
+                }
+            }
+
             bool hasDenseOutput = false;
             for (int boneIndex = 0; boneIndex < m_Rig.PoseBoneCount; boneIndex++)
             {
                 float residual = 1f;
                 float boneOutputWeight = 0f;
-            for (int i = m_EntryCount - 1; i >= 0; i--)
-            {
-                AnimationBlendEntryState entry = ReadEntry(i);
-                bool sourceAvailable = entry.IsSourcePose ||
-                    m_EntrySourceCaptureIndices[i] >= 0;
-                float alpha = entry.EvaluateBoneAlpha(
-                    boneIndex,
-                    m_CurveCatalog.Require(entry.CanonicalCurveIndex),
-                    m_ProfileCatalog.Require(entry.BlendProfileIndex));
-                RequireNormalized(alpha);
-                float weight = sourceAvailable ? residual * alpha : 0f;
-                m_EntryBoneWeights[i * m_Rig.PoseBoneCount + boneIndex] = weight;
-                m_PlannedEntryMaximumWeights[i] = Mathf.Max(m_PlannedEntryMaximumWeights[i], weight);
-                if (!entry.IsSourcePose)
-                    boneOutputWeight += weight;
-                if (sourceAvailable)
-                    residual *= 1f - alpha;
+                for (int i = m_EntryCount - 1; i >= 0; i--)
+                {
+                    AnimationBlendEntryState entry = ReadEntry(i);
+                    bool sourceAvailable = entry.IsSourcePose ||
+                        m_EntrySourceCaptureIndices[i] >= 0;
+                    int group = m_ProfileAlphaLayouts[entry.BlendProfileIndex].BoneGroups[boneIndex];
+                    float alpha = m_EntryGroupAlphas[i * m_MaxAlphaGroupCount + group];
+                    float weight = sourceAvailable ? residual * alpha : 0f;
+                    m_EntryBoneWeights[i * m_Rig.PoseBoneCount + boneIndex] = weight;
+                    m_PlannedEntryMaximumWeights[i] = Mathf.Max(m_PlannedEntryMaximumWeights[i], weight);
+                    if (!entry.IsSourcePose)
+                        boneOutputWeight += weight;
+                    if (sourceAvailable)
+                        residual *= 1f - alpha;
                 }
                 float storedWeight = usesStored ? residual * storedBoneWeights[boneIndex] : 0f;
                 boneOutputWeight += storedWeight;

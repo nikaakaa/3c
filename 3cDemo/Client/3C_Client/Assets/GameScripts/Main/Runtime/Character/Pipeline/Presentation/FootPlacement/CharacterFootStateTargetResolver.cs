@@ -398,35 +398,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool currentContactOwnsTarget,
             out CharacterFootSupportTarget target)
         {
-            if (!frame.CurrentSupport.Available)
-            {
-                target = default;
-                return false;
-            }
-            CharacterFootSupportTarget current = frame.CurrentSupport.Target;
             if (!frame.SwingMotion.Accepted || currentContactOwnsTarget)
             {
-                target = current;
-                return true;
+                target = frame.CurrentSupport.Available
+                    ? frame.CurrentSupport.Target
+                    : default;
+                return target.IsValid;
             }
+            CharacterFootGroundPathInput path = frame.GroundPath.Page.Input;
             target = new CharacterFootSupportTarget(
                 frame.FrameSequence,
                 frame.CompletionIdentity,
                 frame.Side,
                 position,
-                current.SupportNormal,
-                current.SurfaceIdentity,
-                current.WorldRevision,
+                path.NextSwingLandingNormal,
+                path.NextSwingLandingSurfaceIdentity,
+                frame.GroundPath.Page.Contacts.SurfaceCoverage.WorldRevision,
                 CharacterFootSupportTargetKind.SwingGround,
                 CharacterFootSupportPositionSource.SwingMotion,
                 frame.FrameSequence,
                 frame.CompletionIdentity,
                 frame.SwingMotion.LandingEventIdentity,
                 frame.SwingMotion.GroundPathInputIdentity,
-                CharacterFootSupportNormalSource.CurrentSupport,
-                current.NormalFrameSequence,
-                current.NormalCompletionIdentity,
-                current.NormalEventIdentity);
+                CharacterFootSupportNormalSource.PredictedLanding,
+                frame.FrameSequence,
+                frame.CompletionIdentity,
+                path.Key.NextSwingLandingEventIdentity);
             return true;
         }
 

@@ -177,6 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootStateFrame frame = CreateStateFrame(
                 animated,
                 in swing,
+                in path,
                 in preparedTarget);
             CharacterFootLifecycleContext context = default;
             context.Discrete.State = CharacterFootConstraintState.Swing;
@@ -418,6 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootStateFrame frame = CreateStateFrame(
                 animated,
                 in swing,
+                in path,
                 in releaseLanding);
             CharacterFootSupportTarget support = CreateSupportTarget(
                 CharacterFootSupportTargetKind.Releasing,
@@ -607,6 +609,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFootStateFrame CreateStateFrame(
             CharacterFootPlacementAnimatedFootPose animated,
             in CharacterFootSwingMotionResult swing,
+            in CharacterFootGroundPathResult groundPath,
             in CharacterFootGroundPathLanding preparedTarget) =>
             new CharacterFootStateFrame(
                 1UL,
@@ -618,6 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new Vector3(0f, 0.5f, 0f),
                 1f,
                 in swing,
+                in groundPath,
                 false,
                 default,
                 true,

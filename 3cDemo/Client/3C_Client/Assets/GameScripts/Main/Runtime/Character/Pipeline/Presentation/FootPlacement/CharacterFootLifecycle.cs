@@ -881,7 +881,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ((byte)frame.OwnershipLossReason &
                  ~((byte)CharacterFootGoalOwnershipLossReason.Ungrounded |
                    (byte)CharacterFootGoalOwnershipLossReason
-                       .SourceLineageInvalidated)) != 0 ||
+                       .SourceLineageInvalidated |
+                   (byte)CharacterFootGoalOwnershipLossReason.OutputWeightZero)) != 0 ||
                 !CharacterFootConstraintMath.Finite(frame.ComponentUp) ||
                 frame.ComponentUp.sqrMagnitude <=
                     CharacterFootConstraintMath.GeometryEpsilon ||
@@ -905,6 +906,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.SwingMotion.Accepted &&
                 !float.IsFinite(
                     frame.SwingMotion.FormalTargetHeightAlongUp) ||
+                frame.SwingMotion.Accepted &&
+                (!frame.GroundPath.Accepted ||
+                 frame.GroundPath.InputIdentity != frame.SwingMotion.GroundPathInputIdentity ||
+                 frame.GroundPath.NextSwingLandingEventIdentity != frame.SwingMotion.LandingEventIdentity ||
+                 frame.GroundPath.Page.Contacts.SurfaceCoverage.WorldRevision != frame.WorldRevision) ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0 ||
                 !frame.CurrentSupport.IsSpecified ||

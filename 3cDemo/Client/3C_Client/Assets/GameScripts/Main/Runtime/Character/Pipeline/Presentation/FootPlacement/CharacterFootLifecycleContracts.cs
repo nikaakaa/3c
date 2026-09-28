@@ -1553,6 +1553,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedHip,
             float legLength,
             in CharacterFootSwingMotionResult swingMotion,
+            in CharacterFootGroundPathResult groundPath,
             bool hasContactLanding,
             in CharacterFootGroundPathLanding contactLanding,
             bool preparedPlantActive,
@@ -1579,6 +1580,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimatedHip = animatedHip;
             LegLength = legLength;
             SwingMotion = swingMotion;
+            GroundPath = groundPath;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
@@ -1608,6 +1610,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 AnimatedHip { get; }
         internal float LegLength { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }
+        internal CharacterFootGroundPathResult GroundPath { get; }
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool PreparedPlantActive { get; }

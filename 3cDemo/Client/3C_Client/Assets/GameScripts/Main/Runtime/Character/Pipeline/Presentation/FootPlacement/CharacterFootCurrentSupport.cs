@@ -225,7 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         CurrentSupport = 1,
         ContactAnchor = 2,
-        RetainedContactAnchor = 3
+        RetainedContactAnchor = 3,
+        PredictedLanding = 4
     }
 
     internal readonly struct CharacterFootSupportTarget

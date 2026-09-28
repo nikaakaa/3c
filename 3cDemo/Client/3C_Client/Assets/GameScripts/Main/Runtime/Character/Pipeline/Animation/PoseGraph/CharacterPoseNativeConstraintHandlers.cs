@@ -663,8 +663,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
-            for (int i = 0; i < outputPoses.Length; i++)
-                outputPoses[i] = binding.DenseLocalPoses[i];
+            outputPoses.CopyFrom(binding.DenseLocalPoses);
             CharacterPoseNativeFrameInput frame = runtime.CurrentInput;
             CharacterFullBodyIkConstraintOperationResult result =
                 m_Service.EvaluateFullBodyIk(

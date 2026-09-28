@@ -178,8 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             NativeSlice<AnimationLocalBonePose> poses =
                 m_WriteBinding.DenseLocalPoses;
-            for (int bone = 0; bone < poses.Length; bone++)
-                poses[bone] = input.DenseLocalPoses[bone];
+            poses.CopyFrom(input.DenseLocalPoses);
             EventGraphValue facingValue = runtime.CurrentInput.ParameterFrame.RequireValue(
                 new PoseParameterId(CharacterAnimationVariableIds.FacingError));
             if (facingValue.Kind != EventGraphValueKind.Float32 ||

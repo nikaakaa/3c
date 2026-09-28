@@ -454,8 +454,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             NativeSlice<AnimationLocalBonePose> poses =
                 m_WriteBinding.DenseLocalPoses;
-            for (int bone = 0; bone < poses.Length; bone++)
-                poses[bone] = input.DenseLocalPoses[bone];
+            poses.CopyFrom(input.DenseLocalPoses);
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding, space);
             m_ContinuityIdentity = input.ContinuityIdentity[0];
@@ -475,8 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             NativeSlice<AnimationLocalBonePose> poses =
                 m_WriteBinding.DenseLocalPoses;
-            for (int bone = 0; bone < poses.Length; bone++)
-                poses[bone] = input.DenseLocalPoses[bone];
+            poses.CopyFrom(input.DenseLocalPoses);
             m_WriteBinding.Availability[0] = AnimationPoseAvailability.NoPose;
             m_WriteBinding.OutputWeight[0] = 0f;
             m_WriteBinding.ContinuityIdentity[0] = input.ContinuityIdentity[0];

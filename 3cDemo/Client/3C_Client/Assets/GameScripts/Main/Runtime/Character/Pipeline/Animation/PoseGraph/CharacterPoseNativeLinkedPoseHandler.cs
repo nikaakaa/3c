@@ -164,8 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             NativeSlice<AnimationLocalBonePose> poses =
                 m_WriteBinding.DenseLocalPoses;
-            for (int bone = 0; bone < poses.Length; bone++)
-                poses[bone] = input.DenseLocalPoses[bone];
+            poses.CopyFrom(input.DenseLocalPoses);
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
             m_Output = CharacterPoseNativeLocalPoseValue.Reuse(

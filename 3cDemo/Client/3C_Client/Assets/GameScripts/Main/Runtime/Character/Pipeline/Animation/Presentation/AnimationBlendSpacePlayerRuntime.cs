@@ -49,6 +49,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterAnimationBlendSpacePhasePlan m_Phase;
         readonly CharacterAnimationBlendSpaceWeightPage m_Weights;
         readonly CharacterAnimationBlendSpaceTimePage m_Times;
+        readonly Dictionary<CharacterAnimationBlendSpaceSampleId, int> m_SampleIndices;
+        readonly int[] m_ActiveSampleIndices;
+        readonly SourceParameterBinding[] m_SourceParameters;
         readonly AnimationBlendSourcePoseWorkspace m_SourceWorkspace;
         readonly AnimationFootAnalysisProjectionIdentity m_FootAnalysis;
         readonly PoseParameterId[] m_ParameterIds;
@@ -126,6 +129,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Phase = m_Plan.CreatePhasePlan(clipPhasePlans);
             m_Weights = new CharacterAnimationBlendSpaceWeightPage(m_Plan.Samples.Count);
             m_Times = new CharacterAnimationBlendSpaceTimePage(m_Plan.Samples.Count);
+            m_SampleIndices = new Dictionary<CharacterAnimationBlendSpaceSampleId, int>(m_Plan.Samples.Count);
+            m_ActiveSampleIndices = new int[m_Plan.Samples.Count];
+            for (int i = 0; i < m_Plan.Samples.Count; i++)
+                m_SampleIndices.Add(m_Plan.Samples[i].SampleId, i);
+            m_SourceParameters = new SourceParameterBinding[parameters.Count];
             m_ParameterIds = new PoseParameterId[parameters.Count];
             m_ParameterUsages = new CharacterPoseParameterUsage[parameters.Count];
             m_Parameters = new float[parameters.Count];
@@ -136,6 +144,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ParameterUsages[i] = parameters[i].Usage;
                 m_Parameters[i] = parameters[i].DefaultValue;
                 m_ParameterAvailability[i] = 1;
+                if (i != descriptor.XParameterIndex && i != descriptor.YParameterIndex &&
+                    i != footPlacementWeightParameterIndex &&
+                    parameters[i].Usage != CharacterPoseParameterUsage.AnimatedProperty)
+                    m_SourceParameters[i] = new SourceParameterBinding(m_Plan, parameters[i].ParameterId);
             }
             m_FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
             m_ClipSamples = new ClipSamplePlan[m_Plan.Samples.Count];
@@ -357,6 +369,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     $"Blend Space '{m_Plan.PlanIdentity}' phase solve failed: {phaseFailure}.");
             }
+            for (int i = 0; i < m_Weights.Count; i++)
+                m_ActiveSampleIndices[i] = m_SampleIndices[m_Weights.GetSampleId(i)];
             WriteParameters(x, y);
             var left = new AnimationFootFeatureBlendAccumulator();
             var right = new AnimationFootFeatureBlendAccumulator();
@@ -365,14 +379,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float nativePropertyWeight = 0f;
             for (int weightIndex = 0; weightIndex < m_Weights.Count; weightIndex++)
             {
-                CharacterAnimationBlendSpaceSampleId sampleId =
-                    m_Weights.GetSampleId(weightIndex);
+                int sampleIndex = m_ActiveSampleIndices[weightIndex];
                 float weight = m_Weights.GetWeight(weightIndex);
                 CharacterAnimationBlendSpaceSamplePlan sample =
-                    m_Plan.RequireSample(sampleId);
+                    m_Plan.Samples[sampleIndex];
                 CharacterAnimationBlendSpaceSampleTime time =
-                    FindTime(m_Times, sampleId);
-                int sampleIndex = FindSampleIndex(m_Plan, sampleId);
+                    m_Times.Get(sampleIndex);
                 bool looping = sample.IsLooping;
                 double continuousClipTime = time.RawContinuousTime;
                 m_ClipSamples[m_ClipSampleCount++] = sample.IsAcl
@@ -425,7 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 ClipSamplePlan clipSample = m_ClipSamples[sampleIndex];
                 CharacterAnimationBlendSpaceSamplePlan sample =
-                    m_Plan.RequireSample(clipSample.BlendSpaceSampleId);
+                    m_Plan.Samples[clipSample.ClipBindingIndex];
                 sample.SampleNativeProperties(
                     clipSample.NormalizedTime,
                     clipSample.IsAcl || nativePropertyWeight <= 0f
@@ -609,26 +621,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     if (m_ParameterUsages[parameterIndex] == CharacterPoseParameterUsage.AnimatedProperty)
                     {
-                        value = m_Parameters[parameterIndex];
-                        available = true;
-                        m_Parameters[parameterIndex] = value;
                         m_ParameterAvailability[parameterIndex] = 1;
                         continue;
                     }
-                    if (m_ParameterIds[parameterIndex].Equals(AnimationPoseParameterIds.FootPlacementWeight))
+                    if (parameterIndex == m_FootPlacementWeightParameterIndex)
                     {
-                        value = 0f;
-                        available = true;
-                        m_Parameters[parameterIndex] = value;
+                        m_Parameters[parameterIndex] = 0f;
                         m_ParameterAvailability[parameterIndex] = 1;
                         continue;
                     }
-                    available = TryResolveSourceParameter(
-                        m_Plan,
-                        m_Weights,
-                        m_Descriptor,
-                        parameterIndex,
-                        out value);
+                    available = TryResolveSourceParameter(parameterIndex, out value);
                 }
                 m_Parameters[parameterIndex] = value;
                 m_ParameterAvailability[parameterIndex] =
@@ -637,27 +639,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         bool TryResolveSourceParameter(
-            CharacterAnimationBlendSpacePlan plan,
-            CharacterAnimationBlendSpaceWeightPage weights,
-            CharacterAnimationBlendSpacePlayerPlan player,
             int parameterIndex,
             out float result)
         {
-            PoseParameterId parameterId =
-                parameterIndex == player.XParameterIndex
-                    ? plan.XAxis.ParameterId
-                    : parameterIndex == player.YParameterIndex
-                        ? plan.YAxis.ParameterId
-                        : default;
-            if (!parameterId.IsValid)
-                parameterId = m_ParameterIds[parameterIndex];
-            if (!plan.TryGetParameterPolicy(
-                    parameterId,
-                    out CharacterAnimationBlendSpaceParameterPolicy policy))
-            {
-                throw new InvalidOperationException(
-                    $"Blend Space '{plan.PlanIdentity}' has no policy for Pose Parameter '{parameterId}'.");
-            }
+            SourceParameterBinding binding = m_SourceParameters[parameterIndex];
+            CharacterAnimationBlendSpaceParameterPolicy policy = binding.Policy;
             if (policy == CharacterAnimationBlendSpaceParameterPolicy.Unavailable)
             {
                 result = 0f;
@@ -665,22 +651,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             float weighted = 0f;
             float availableWeight = 0f;
-            for (int i = 0; i < weights.Count; i++)
+            for (int i = 0; i < m_Weights.Count; i++)
             {
-                CharacterAnimationBlendSpaceSamplePlan sample =
-                    plan.RequireSample(weights.GetSampleId(i));
-                float weight = weights.GetWeight(i);
-                if (!sample.TryGetParameter(parameterId, out float value))
+                int sampleIndex = m_ActiveSampleIndices[i];
+                float? sampleValue = binding.Values[sampleIndex];
+                float weight = m_Weights.GetWeight(i);
+                if (!sampleValue.HasValue)
                 {
                     if (policy ==
                         CharacterAnimationBlendSpaceParameterPolicy.RequireAllSamplesWeighted)
                     {
                         throw new InvalidOperationException(
-                            $"Blend Space '{plan.PlanIdentity}' active Sample '{sample.SampleId}' has no Parameter '{parameterId}'.");
+                            $"Blend Space '{m_Plan.PlanIdentity}' active Sample '{m_Plan.Samples[sampleIndex].SampleId}' has no Parameter '{m_ParameterIds[parameterIndex]}'.");
                     }
                     continue;
                 }
-                weighted += value * weight;
+                weighted += sampleValue.Value * weight;
                 availableWeight += weight;
             }
             if (!float.IsFinite(weighted) ||
@@ -688,7 +674,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 availableWeight <= 0f)
             {
                 throw new InvalidOperationException(
-                    $"Blend Space '{plan.PlanIdentity}' cannot resolve Parameter '{parameterId}'.");
+                    $"Blend Space '{m_Plan.PlanIdentity}' cannot resolve Parameter '{m_ParameterIds[parameterIndex]}'.");
             }
             result = weighted / availableWeight;
             return true;
@@ -781,31 +767,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return m_NextEventIdentity++;
         }
 
-        static int FindSampleIndex(
-            CharacterAnimationBlendSpacePlan plan,
-            CharacterAnimationBlendSpaceSampleId sampleId)
+        readonly struct SourceParameterBinding
         {
-            for (int i = 0; i < plan.Samples.Count; i++)
+            internal SourceParameterBinding(CharacterAnimationBlendSpacePlan plan, PoseParameterId parameterId)
             {
-                if (plan.Samples[i].SampleId.Equals(sampleId))
-                    return i;
+                if (!plan.TryGetParameterPolicy(parameterId, out CharacterAnimationBlendSpaceParameterPolicy policy))
+                    throw new InvalidOperationException(
+                        $"Blend Space '{plan.PlanIdentity}' has no policy for Pose Parameter '{parameterId}'.");
+                Policy = policy;
+                Values = policy == CharacterAnimationBlendSpaceParameterPolicy.Unavailable
+                    ? Array.Empty<float?>()
+                    : new float?[plan.Samples.Count];
+                for (int i = 0; i < Values.Length; i++)
+                    if (plan.Samples[i].TryGetParameter(parameterId, out float value))
+                        Values[i] = value;
             }
-            throw new InvalidOperationException(
-                $"Blend Space '{plan.PlanIdentity}' weight references unknown Sample '{sampleId}'.");
-        }
 
-        static CharacterAnimationBlendSpaceSampleTime FindTime(
-            CharacterAnimationBlendSpaceTimePage times,
-            CharacterAnimationBlendSpaceSampleId sampleId)
-        {
-            for (int i = 0; i < times.Count; i++)
-            {
-                CharacterAnimationBlendSpaceSampleTime time = times.Get(i);
-                if (time.SampleId.Equals(sampleId))
-                    return time;
-            }
-            throw new InvalidOperationException(
-                $"Blend Space time page has no Sample '{sampleId}'.");
+            internal CharacterAnimationBlendSpaceParameterPolicy Policy { get; }
+            internal float?[] Values { get; }
         }
 
         static float ApplyRange(

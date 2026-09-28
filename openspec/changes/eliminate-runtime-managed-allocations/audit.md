@@ -312,6 +312,13 @@
 - Clip Player、BlendSpace Player 和 Blend Stack 在各自构造期保存编译描述符的 NodeId，播放、相位、来源、过渡检查统一读取同一值。空间转换节点的输入输出 PosePortId 也在构造期解析。
 - 没有关闭逐帧身份匹配、租约或 Commit/Discard 校验，没有按帧缓存计算结果。减少的是固定字符串格式扫描；不宣称这些值类型构造本身存在 GC。仅静态核对初始化顺序与调用路径，未编译或采样。
 
+### AP33 BlendSpace 参数与采样时间逐帧线性查找（2026-09-29，已实施，未运行）
+
+- BlendSpace WriteParameters 原来逐参数找策略，再逐活动样本找 Sample、按参数 ID 找数值；生成 ClipSamplePlan 又分别线性找 Sample、Time 和索引，属性采样再找一次 Sample。
+- 构造期建立 SampleId 到计划位置的索引，以及实际需要混合的参数策略和各样本静态参数值。每次权重求解后只解析一次活动样本位置，参数、时间和 Clip 计划共享它；Native 属性使用 ClipBindingIndex 直接读同一计划。
+- 已核对 PhasePlan.Create 保持 Samples 顺序，两个成功的 PhaseMapper 路径均按该顺序完整写 TimePage。参数计算仍按原活动权重顺序累加；Unavailable 不参与，RequireAllSamplesWeighted 仍只在缺参样本实际激活时失败，未提前拒绝永不激活的缺参样本。缺失参数策略在装配期明确报错。
+- 常驻代价为一张索引字典、活动位置数组和非动画属性参数的样本值表；无每帧分配、跨帧权重缓存或配置 fallback。删除仅用于该链路的 FindTime/FindSampleIndex 和动画属性自赋值。未编译、未运行。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

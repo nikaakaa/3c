@@ -293,23 +293,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationClearanceHeights.Add(m_AnimationClearanceHeight[i].Evaluate(time));
             }
             float eventPhase = m_EventPhase.Evaluate(time);
-            m_BiomechanicalStep.Sample(
-                time,
-                out float landingPhase,
-                out Quaternion opposingRootLocalSoleRotation,
-                out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> biomechanicalRoute);
-            float scaledBiomechanicalIndex = Mathf.Clamp01(eventPhase) * (biomechanicalRoute.Length - 1);
-            int firstBiomechanicalIndex = Mathf.Min(
-                biomechanicalRoute.Length - 1,
-                Mathf.FloorToInt(scaledBiomechanicalIndex));
-            int secondBiomechanicalIndex = Mathf.Min(
-                biomechanicalRoute.Length - 1,
-                firstBiomechanicalIndex + 1);
             AnimationFootBiomechanicalRouteSample biomechanicalSample =
-                AnimationFootBiomechanicalRouteSample.Interpolate(
-                    biomechanicalRoute[firstBiomechanicalIndex],
-                    biomechanicalRoute[secondBiomechanicalIndex],
-                    scaledBiomechanicalIndex - firstBiomechanicalIndex);
+                m_BiomechanicalStep.SamplePhase(
+                    time,
+                    eventPhase,
+                    out float landingPhase,
+                    out Quaternion opposingRootLocalSoleRotation);
             return new AnimationPredictedFootStepSample(
                 Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
                 Mathf.Max(0, Mathf.RoundToInt(m_SourceLandingCycleOffset.Evaluate(time))),

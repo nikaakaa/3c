@@ -227,6 +227,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             out Quaternion opposingRootLocalSoleRotation,
             out FixedList4096Bytes<AnimationFootBiomechanicalRouteSample> route)
         {
+            float time = SampleFrame(normalizedTime, out landingPhase, out opposingRootLocalSoleRotation);
+            route = default;
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                route.Add(SampleRoutePoint(time, i));
+        }
+
+        internal AnimationFootBiomechanicalRouteSample SamplePhase(
+            float normalizedTime,
+            float eventPhase,
+            out float landingPhase,
+            out Quaternion opposingRootLocalSoleRotation)
+        {
+            float time = SampleFrame(normalizedTime, out landingPhase, out opposingRootLocalSoleRotation);
+            int last = AnimationPredictedFootStepCurveSet.RouteSampleCount - 1;
+            float scaled = Mathf.Clamp01(eventPhase) * last;
+            int firstIndex = Mathf.Min(last, Mathf.FloorToInt(scaled));
+            int secondIndex = Mathf.Min(last, firstIndex + 1);
+            AnimationFootBiomechanicalRouteSample first = SampleRoutePoint(time, firstIndex);
+            AnimationFootBiomechanicalRouteSample second = secondIndex == firstIndex
+                ? first
+                : SampleRoutePoint(time, secondIndex);
+            return AnimationFootBiomechanicalRouteSample.Interpolate(first, second, scaled - firstIndex);
+        }
+
+        float SampleFrame(
+            float normalizedTime,
+            out float landingPhase,
+            out Quaternion opposingRootLocalSoleRotation)
+        {
             float time = Mathf.Clamp01(normalizedTime);
             landingPhase = m_LandingPhase.Evaluate(time);
             opposingRootLocalSoleRotation = Normalize(new Quaternion(
@@ -234,24 +263,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_OpposingRootLocalSoleRotationY.Evaluate(time),
                 m_OpposingRootLocalSoleRotationZ.Evaluate(time),
                 m_OpposingRootLocalSoleRotationW.Evaluate(time)));
-            route = default;
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-            {
-                route.Add(new AnimationFootBiomechanicalRouteSample(
-                    EvaluateVector(time, i, m_RootLocalHeelRouteX, m_RootLocalHeelRouteY, m_RootLocalHeelRouteZ),
-                    EvaluateVector(time, i, m_RootLocalToeRouteX, m_RootLocalToeRouteY, m_RootLocalToeRouteZ),
-                    EvaluateVector(time, i, m_RootLocalKneeRouteX, m_RootLocalKneeRouteY, m_RootLocalKneeRouteZ),
-                    Normalize(EvaluateQuaternion(time, i, m_RootLocalSoleRotationX, m_RootLocalSoleRotationY, m_RootLocalSoleRotationZ, m_RootLocalSoleRotationW)),
-                    Normalize(EvaluateQuaternion(time, i, m_RootLocalAnkleRotationX, m_RootLocalAnkleRotationY, m_RootLocalAnkleRotationZ, m_RootLocalAnkleRotationW)),
-                    m_ConstraintWeight[i].Evaluate(time),
-                    m_SupportWeight[i].Evaluate(time),
-                    m_SupportLegLength[i].Evaluate(time),
-                    m_SupportLegCompressionReserve[i].Evaluate(time),
-                    EvaluateVector(time, i, m_SupportKneeBendPlaneX, m_SupportKneeBendPlaneY, m_SupportKneeBendPlaneZ),
-                    EvaluateVector(time, i, m_SupportFootPivotPositionX, m_SupportFootPivotPositionY, m_SupportFootPivotPositionZ),
-                    m_SupportFootPivotWeight[i].Evaluate(time)));
-            }
+            return time;
         }
+
+        AnimationFootBiomechanicalRouteSample SampleRoutePoint(float time, int i) =>
+            new AnimationFootBiomechanicalRouteSample(
+                EvaluateVector(time, i, m_RootLocalHeelRouteX, m_RootLocalHeelRouteY, m_RootLocalHeelRouteZ),
+                EvaluateVector(time, i, m_RootLocalToeRouteX, m_RootLocalToeRouteY, m_RootLocalToeRouteZ),
+                EvaluateVector(time, i, m_RootLocalKneeRouteX, m_RootLocalKneeRouteY, m_RootLocalKneeRouteZ),
+                Normalize(EvaluateQuaternion(time, i, m_RootLocalSoleRotationX, m_RootLocalSoleRotationY, m_RootLocalSoleRotationZ, m_RootLocalSoleRotationW)),
+                Normalize(EvaluateQuaternion(time, i, m_RootLocalAnkleRotationX, m_RootLocalAnkleRotationY, m_RootLocalAnkleRotationZ, m_RootLocalAnkleRotationW)),
+                m_ConstraintWeight[i].Evaluate(time),
+                m_SupportWeight[i].Evaluate(time),
+                m_SupportLegLength[i].Evaluate(time),
+                m_SupportLegCompressionReserve[i].Evaluate(time),
+                EvaluateVector(time, i, m_SupportKneeBendPlaneX, m_SupportKneeBendPlaneY, m_SupportKneeBendPlaneZ),
+                EvaluateVector(time, i, m_SupportFootPivotPositionX, m_SupportFootPivotPositionY, m_SupportFootPivotPositionZ),
+                m_SupportFootPivotWeight[i].Evaluate(time));
 
         public void RequireValid()
         {

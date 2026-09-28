@@ -134,10 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (completionIdentity == 0 || completionIdentity <= m_LastCompletionIdentity)
                 throw new ArgumentOutOfRangeException(nameof(completionIdentity));
-            Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
-            Array.Clear(m_LeaseGenerations, 0, m_LeaseGenerations.Length);
-            Array.Clear(m_PreparedAt, 0, m_PreparedAt.Length);
-            m_Count = 0;
+            ClearRows();
             m_CompletionIdentity = completionIdentity;
             m_LastCompletionIdentity = completionIdentity;
         }
@@ -153,11 +150,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             bool existing = TryFind(sourceId, out int rowIndex);
             if (!existing)
             {
-                rowIndex = FindFreeRowIndex();
+                if (m_Count == m_SourceIds.Length)
+                    throw new InvalidOperationException("Animation pose request workspace capacity was exceeded.");
+                rowIndex = m_Count;
                 m_SourceIds[rowIndex] = sourceId;
                 m_Count++;
             }
-            m_LeaseGenerations[rowIndex] = AllocateLeaseGeneration();
+            m_LeaseGenerations[rowIndex] = AllocateLeaseGeneration(rowIndex);
             if (m_LeaseGenerations[rowIndex] == 0)
                 throw new InvalidOperationException($"Animation pose request row {rowIndex} has no active lease.");
             if (m_PreparedAt[rowIndex] == m_CompletionIdentity)
@@ -165,9 +164,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
             int clipOffset = checked(rowIndex * m_Layout.ClipStride);
             int parameterOffset = checked(rowIndex * m_Layout.ParameterStride);
-            Array.Clear(m_Clips, clipOffset, m_Layout.ClipStride);
-            Array.Clear(m_PoseParameters, parameterOffset, m_Layout.ParameterStride);
-            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_Layout.ParameterStride);
             m_PreparedAt[rowIndex] = m_CompletionIdentity;
             return new AnimationPoseRequestWorkspaceRow(
                 sourceId,
@@ -219,19 +215,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal void Reset()
         {
             RequireAlive();
-            Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
-            Array.Clear(m_LeaseGenerations, 0, m_LeaseGenerations.Length);
-            Array.Clear(m_PreparedAt, 0, m_PreparedAt.Length);
-            Array.Clear(m_Clips, 0, m_Clips.Length);
-            Array.Clear(m_PoseParameters, 0, m_PoseParameters.Length);
-            Array.Clear(m_PoseParameterAvailability, 0, m_PoseParameterAvailability.Length);
-            m_Count = 0;
+            ClearRows();
             m_CompletionIdentity = 0;
+        }
+
+        void ClearRows()
+        {
+            if (m_Count == 0)
+                return;
+            Array.Clear(m_SourceIds, 0, m_Count);
+            Array.Clear(m_LeaseGenerations, 0, m_Count);
+            Array.Clear(m_PreparedAt, 0, m_Count);
+            Array.Clear(m_Clips, 0, checked(m_Count * m_Layout.ClipStride));
+            int parameterCount = checked(m_Count * m_Layout.ParameterStride);
+            Array.Clear(m_PoseParameters, 0, parameterCount);
+            Array.Clear(m_PoseParameterAvailability, 0, parameterCount);
+            m_Count = 0;
         }
 
         bool TryFind(AnimationPoseSourceId sourceId, out int rowIndex)
         {
-            for (int i = 0; i < m_SourceIds.Length; i++)
+            for (int i = 0; i < m_Count; i++)
             {
                 if (!m_SourceIds[i].Equals(sourceId))
                     continue;
@@ -242,34 +246,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return false;
         }
 
-        int FindFreeRowIndex()
+        ulong AllocateLeaseGeneration(int rowIndex)
         {
-            for (int i = 0; i < m_SourceIds.Length; i++)
-            {
-                if (!m_SourceIds[i].IsValid)
-                    return i;
-            }
-            throw new InvalidOperationException("Animation pose request workspace capacity was exceeded.");
-        }
-
-        ulong AllocateLeaseGeneration()
-        {
-            if (m_LastLeaseGeneration == ulong.MaxValue)
+            ulong capacity = (ulong)m_SourceIds.Length;
+            ulong rowLease = (ulong)rowIndex + 1;
+            ulong remainder = m_LastLeaseGeneration % capacity;
+            ulong advance = rowLease > remainder
+                ? rowLease - remainder
+                : capacity - remainder + rowLease;
+            if (m_LastLeaseGeneration > ulong.MaxValue - advance)
                 throw new InvalidOperationException("Animation pose request row lease generation was exhausted.");
-            m_LastLeaseGeneration++;
+            m_LastLeaseGeneration += advance;
             return m_LastLeaseGeneration;
-        }
-
-        void ClearRow(int rowIndex)
-        {
-            int clipOffset = checked(rowIndex * m_Layout.ClipStride);
-            int parameterOffset = checked(rowIndex * m_Layout.ParameterStride);
-            Array.Clear(m_Clips, clipOffset, m_Layout.ClipStride);
-            Array.Clear(m_PoseParameters, parameterOffset, m_Layout.ParameterStride);
-            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_Layout.ParameterStride);
-            m_SourceIds[rowIndex] = default;
-            m_LeaseGenerations[rowIndex] = 0;
-            m_PreparedAt[rowIndex] = 0;
         }
 
         void RequireAlive()
@@ -283,15 +271,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (leaseIdentity == 0)
                 throw new InvalidOperationException("Animation pose request buffer lease identity is invalid.");
-            for (int i = 0; i < m_LeaseGenerations.Length; i++)
+            int rowIndex = (int)((leaseIdentity - 1) % (ulong)m_SourceIds.Length);
+            if (rowIndex < m_Count &&
+                m_LeaseGenerations[rowIndex] == leaseIdentity &&
+                m_SourceIds[rowIndex].IsValid && m_PreparedAt[rowIndex] != 0 &&
+                m_PreparedAt[rowIndex] == m_CompletionIdentity)
             {
-                if (m_LeaseGenerations[i] != leaseIdentity)
-                    continue;
-                if (!m_SourceIds[i].IsValid || m_PreparedAt[i] == 0 ||
-                    m_PreparedAt[i] != m_CompletionIdentity)
-                {
-                    break;
-                }
                 return;
             }
             throw new InvalidOperationException("Animation pose request buffer lease is stale.");

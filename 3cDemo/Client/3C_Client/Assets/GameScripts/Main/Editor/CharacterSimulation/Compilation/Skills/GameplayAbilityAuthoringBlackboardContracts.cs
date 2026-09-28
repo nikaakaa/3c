@@ -6,7 +6,6 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
-using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -41,18 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class GameplayAbilityAuthoringBlackboardDeclaration
     {
-        internal GameplayAbilityAuthoringBlackboardDeclaration(BaseTree graph, BaseExposedProperty declaration, string route)
-        {
-            GraphId = graph.GraphAuthoringId;
-            SourceType = declaration.GetType().FullName;
-            ContentHash = GraphAuthoringFingerprint.Compute(graph);
-            AuthoringDeclaration = declaration;
-            Declaration = new GameplayAbilityBlackboardDeclarationSnapshot(declaration.DeclarationId, declaration.BlackboardKey,
-                declaration.ValueType, declaration.BlackboardScope, declaration.BlackboardLifetime, declaration.BlackboardCategoryPath,
-                declaration.GetValue(), declaration.InputBinding, declaration.FactProjection);
-            Route = route;
-        }
-
         internal GameplayAbilityAuthoringBlackboardDeclaration(FlowGraph graph, BtsmtlSkillBlackboardDeclaration declaration, string route, string contentHash)
         {
             Variable variable = BtsmtlSkillBlackboardDeclarations.RequireVariable(graph, declaration.VariableId);

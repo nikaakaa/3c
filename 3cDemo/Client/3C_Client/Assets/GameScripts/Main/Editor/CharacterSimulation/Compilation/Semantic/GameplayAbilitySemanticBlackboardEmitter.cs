@@ -7,7 +7,6 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.GameplayAbilityAuthoringBlackboardDeclaration;
 
@@ -72,27 +71,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public void BeginGraph(
-            BaseTree graph,
-            string route,
-            IReadOnlyList<BaseExposedProperty> declarations,
-            OperationHandle stateScopeOwner)
-        {
-            if (graph == null)
-                throw new ArgumentNullException(nameof(graph));
-            if (route == null)
-                throw new ArgumentNullException(nameof(route));
-            if (declarations == null)
-                throw new ArgumentNullException(nameof(declarations));
-            m_GraphStack.Add(new GraphRoute(graph.GraphAuthoringId, route));
-            for (int i = 0; i < declarations.Count; i++)
-            {
-                BaseExposedProperty declaration = declarations[i];
-                BlackboardDeclaration item = m_Declarations[DeclarationIdentity(graph.GraphAuthoringId, declaration.DeclarationId)];
-                EnsureDeclarationState(item, route, stateScopeOwner);
-            }
-        }
-
         public void EndGraph()
         {
             m_GraphStack.RemoveAt(m_GraphStack.Count - 1);
@@ -111,25 +89,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 scope.SetOwnerOperation(graphEntry);
         }
 
-        public bool TryGetValueSlot(
-            BaseTree graph,
-            string route,
-            string declarationId,
-            out int slot)
-        {
-            slot = -1;
-            if (graph == null || string.IsNullOrEmpty(route) || string.IsNullOrEmpty(declarationId))
-                return false;
-            BaseExposedProperty declaration = graph.ExposedProperties
-                .FirstOrDefault(value => value != null && string.Equals(value.DeclarationId, declarationId, StringComparison.Ordinal));
-            if (declaration == null)
-                return false;
-            string key = declaration.BlackboardScope == PipelineBlackboardVariableScope.Character
-                ? DeclarationIdentity(graph.GraphAuthoringId, declaration.DeclarationId)
-                : $"{route}/declaration:{declaration.DeclarationId}";
-            return m_ValueSlots.TryGetValue(key, out slot);
-        }
-
         public void DeclareScopes()
         {
             foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))
@@ -142,25 +101,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     scope.StateSlots,
                     scope.Source);
             }
-        }
-
-        public void Bind(
-            OperationHandle operation,
-            string route,
-            PipelineBlackboardVariableReference reference,
-            SimulationSourceLocation source)
-        {
-            Bind(operation, route, reference.DeclarationOwnerId, reference.DeclarationId, source);
-        }
-
-        public void Bind(
-            OperationHandle operation,
-            string route,
-            string declarationOwnerId,
-            string declarationId,
-            SimulationSourceLocation source)
-        {
-            Bind(operation, route, declarationOwnerId, declarationId, null, source);
         }
 
         public void Bind(

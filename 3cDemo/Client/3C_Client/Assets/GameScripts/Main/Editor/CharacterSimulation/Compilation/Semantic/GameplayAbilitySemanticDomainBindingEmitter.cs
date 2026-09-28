@@ -1,29 +1,14 @@
-using BTSMTL.Authoring.Blackboard;
 using System;
-using System.Collections.Generic;
 using FlowCanvas;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline.Graph;
-using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
-using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal interface IGameplayAbilitySemanticNodeBinding
-    {
-        bool TryBind(
-            BaseNode node,
-            OperationHandle operation,
-            string route,
-            SimulationSourceLocation source);
-    }
-
     internal sealed class GameplayAbilitySemanticDomainBindingEmitter
     {
         readonly GameplayAbilitySemanticBlackboardEmitter m_Blackboard;
-        readonly IReadOnlyList<IGameplayAbilitySemanticNodeBinding> m_Bindings;
         readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly SimulationCompileReport m_Report;
@@ -42,50 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(report));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Report = report;
-            var catalog = new GameplayAbilitySemanticCatalogReferenceEmitter(catalogIndex, builder, report);
-            m_Catalog = catalog;
+            m_Catalog = new GameplayAbilitySemanticCatalogReferenceEmitter(catalogIndex, builder, report);
             m_CatalogIndex = catalogIndex;
-            m_Bindings = new IGameplayAbilitySemanticNodeBinding[]
-            {
-                new GameplayAbilitySemanticInputNodeBindingEmitter(catalog, catalogIndex),
-                new GameplayAbilitySemanticEquipmentNodeBindingEmitter(catalog, catalogIndex),
-                new GameplayAbilitySemanticActionNodeBindingEmitter(catalog, catalogIndex, blackboard, report),
-                new GameplayAbilitySemanticGameplayNodeBindingEmitter(catalog, catalogIndex, report)
-            };
-        }
-
-        public void Bind(
-            BaseNode node,
-            OperationHandle operation,
-            string route,
-            SimulationSourceLocation source)
-        {
-            if (TryGetBlackboardReference(node, out PipelineBlackboardVariableReference blackboard))
-            {
-                m_Blackboard.Bind(operation, route, blackboard, source);
-                return;
-            }
-            for (int i = 0; i < m_Bindings.Count; i++)
-            {
-                if (m_Bindings[i].TryBind(node, operation, route, source))
-                    return;
-            }
-        }
-
-        static bool TryGetBlackboardReference(BaseNode node, out PipelineBlackboardVariableReference reference)
-        {
-            if (node is ExposedPropertyNode exposed)
-            {
-                reference = exposed.BlackboardVariable;
-                return true;
-            }
-            if (node is PipelineBlackboardValueInfoNode value)
-            {
-                reference = value.BlackboardVariable;
-                return true;
-            }
-            reference = default;
-            return false;
         }
 
         public void Bind(FlowNode node, OperationHandle operation, string route, SimulationSourceLocation source)

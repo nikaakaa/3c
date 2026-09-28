@@ -201,11 +201,12 @@
 - 可装配时建立同一目录内的复合身份索引。增加一份查找索引内存，换取不随动作总量增长的查找；装配时须明确重复 ACL 身份是否允许，不能擅自从原首个匹配变成另一动作。该索引引用同一正式计划，不创建第二数据源。
 - 实施结果：在同一目录构造与 ACL manifest 校验阶段，按原 m_ActionPlans.Values 顺序建立资源/clip 二元键索引，键重复时保留原首个匹配项；运行时一次 TryGetValue。索引只引用原计划，不复制计划、不新增配置、不更改非 ACL 入口或缺失报错。
 
-### AP16 动态源请求重复检查仍为平方比较（本轮续查，既有取舍）
+### AP16 动态源请求重复检查仍为平方比较（已实施实例去重集合，未实跑）
 
 - 证据：[CharacterPoseNativeRuntimeContracts.cs:697](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseNativeRuntimeContracts.cs#L697)，每条请求与所有前序请求比较 ScopeInstanceId/NodeId/SourceId。子图请求汇总到父图后，还会经过父图 demand 校验。
 - 这是历史 4.2.8 删除每帧 HashSet 构造时主动选择的实现，已经没有原构造分配。与 AP01 不同，这里的活动源随状态和过渡变化，不能简单移到装配时查一次。
-- 保留顺序比较：活动源少时结构简单、无额外工作集合；改用实例持有且按正式容量准备的去重集合：源多或嵌套深时减少比较，但增加常驻内存、清空与哈希成本。两种都必须保持原请求顺序、完整三元身份和重复报错；没有规模与耗时数据前不替用户选方案。
+- 实施结果：每个图实例持有一个 `HashSet<CharacterPoseNativeSourceDemandKey>`，按图节点数预留容量；每帧只清空并复用该集合，按完整的 ScopeInstanceId/NodeId/SourceId 三元身份检查重复请求。请求顺序、重复报错和子图汇总语义不变；不再为每条请求扫描全部前序请求，也不在运行帧新建 HashSet。
+- 容量目前按图节点数乘二估算。若正式图的动态源请求数超过该估算，HashSet 仍可能扩容；这属于后续按正式 SourceCapacity 收紧的容量问题，不能在没有装配容量来源前伪称为完全零分配。
 
 ### AP17 惯性包络反复计算固定曲线端点导数（续查并实施，未实跑）
 

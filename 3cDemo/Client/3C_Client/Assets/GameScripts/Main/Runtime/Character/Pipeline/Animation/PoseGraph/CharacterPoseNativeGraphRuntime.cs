@@ -135,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new Dictionary<PosePortId, CharacterPoseNativePortValue>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
             new HashSet<CharacterPoseNativePortKey>();
+        readonly HashSet<CharacterPoseNativeSourceDemandKey> m_SourceDemandKeys;
         readonly Dictionary<CharacterPoseNativePortDefinitionKey,
             CharacterPosePortDefinition> m_PortDefinitions =
                 new Dictionary<CharacterPoseNativePortDefinitionKey,
@@ -168,6 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ResetGeneration = createRequest.ResetGeneration;
             m_Evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
             m_Graph = NodeCanvas.Framework.Graph.Clone(createRequest.PreparedBinding.Graph, null);
+            m_SourceDemandKeys = new HashSet<CharacterPoseNativeSourceDemandKey>(
+                Math.Max(1, m_Graph.Nodes.Count * 2));
 #if UNITY_EDITOR
             if (m_PreparedBinding.Boundary == CharacterPoseNativeGraphBoundary.Root)
                 CharacterPoseNativeDomainRuntimeFactory.MarkStartup(m_PreparedBinding.ActorId, "pose-root-graph-cloned");
@@ -544,7 +547,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException("Pose native source demand is missing.");
                 m_SourceDemand = new CharacterPoseNativeSourceDemand(
                     in m_CompletedLineage,
-                    requests);
+                    requests,
+                    m_SourceDemandKeys);
                 return new CharacterPoseNativePreparationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Prepared,

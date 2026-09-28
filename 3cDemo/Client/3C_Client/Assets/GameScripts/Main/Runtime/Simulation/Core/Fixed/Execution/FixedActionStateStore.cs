@@ -298,6 +298,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly Stack<SkillExecutionScope> m_SkillExecutionScopePool = new();
+        readonly List<FixedActionInstanceState> m_EvaluatedActions = new(8);
         readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
         readonly TraceExecutionScope m_TraceExecutionScope = new();
 
@@ -316,6 +317,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_SkillExecutionStack.Count != 0)
                 throw new InvalidOperationException("Skill execution stack retained transient state across evaluations.");
             m_SkillExecution.BeginEvaluation();
+            m_EvaluatedActions.Clear();
         }
 
         public void EndEvaluation()
@@ -323,12 +325,14 @@ namespace ThirdPersonSimulation.Fixed
             if (m_SkillExecutionStack.Count != 0)
                 throw new InvalidOperationException("Skill execution stack has an unclosed runtime scope.");
             m_SkillExecution.EndEvaluation();
+            m_EvaluatedActions.Clear();
         }
 
         public IDisposable EnterSkillExecution(FixedActionInstanceState action)
         {
             if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
                 throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
+            RetainEvaluatedAction(action);
             IDisposable execution = m_SkillExecution.Enter(new AbilityExecutionContext(
                 action.SkillId,
                 action.SkillEntryOperation,
@@ -489,6 +493,7 @@ namespace ThirdPersonSimulation.Fixed
             m_SkillExecution.BindGeneration(action.InstanceId, generation);
             FixedActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
             WriteState(next);
+            RetainEvaluatedAction(next);
             return next;
         }
 
@@ -611,6 +616,32 @@ namespace ThirdPersonSimulation.Fixed
                     return true;
             }
             return false;
+        }
+
+        public bool TryGetEvaluatedInstance(ulong instanceId, out FixedActionInstanceState state)
+        {
+            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            {
+                if (m_EvaluatedActions[index].InstanceId != instanceId)
+                    continue;
+                state = m_EvaluatedActions[index];
+                return true;
+            }
+            state = default;
+            return false;
+        }
+
+        void RetainEvaluatedAction(FixedActionInstanceState action)
+        {
+            // Timeline motion resolves after lifecycle changes and may outlive the action's state slot.
+            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            {
+                if (m_EvaluatedActions[index].InstanceId != action.InstanceId)
+                    continue;
+                m_EvaluatedActions[index] = action;
+                return;
+            }
+            m_EvaluatedActions.Add(action);
         }
 
         public bool TryGetInstance(ulong instanceId, out FixedActionInstanceState state)

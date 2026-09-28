@@ -294,6 +294,7 @@ namespace ThirdPersonSimulation
 		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
 		readonly Stack<SkillExecutionScope> m_SkillExecutionScopePool = new();
+        readonly List<Float32ActionInstanceState> m_EvaluatedActions = new(8);
 		readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
 		readonly TraceExecutionScope m_TraceExecutionScope = new();
 
@@ -312,6 +313,7 @@ namespace ThirdPersonSimulation
 			if (m_SkillExecutionStack.Count != 0)
 				throw new InvalidOperationException("Skill execution stack retained transient state across evaluations.");
 			m_SkillExecution.BeginEvaluation();
+            m_EvaluatedActions.Clear();
 		}
 
 		public void EndEvaluation()
@@ -319,12 +321,14 @@ namespace ThirdPersonSimulation
 			if (m_SkillExecutionStack.Count != 0)
 				throw new InvalidOperationException("Skill execution stack has an unclosed runtime scope.");
 			m_SkillExecution.EndEvaluation();
+            m_EvaluatedActions.Clear();
 		}
 
 		public IDisposable EnterSkillExecution(Float32ActionInstanceState action)
 		{
 			if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
 				throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
+            RetainEvaluatedAction(action);
 			IDisposable execution = m_SkillExecution.Enter(new AbilityExecutionContext(
 				action.SkillId,
 				action.SkillEntryOperation,
@@ -485,6 +489,7 @@ namespace ThirdPersonSimulation
 			m_SkillExecution.BindGeneration(action.InstanceId, generation);
 			Float32ActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
 			WriteState(next);
+            RetainEvaluatedAction(next);
 			return next;
 		}
 
@@ -607,6 +612,32 @@ namespace ThirdPersonSimulation
                     return true;
             }
             return false;
+        }
+
+        public bool TryGetEvaluatedInstance(ulong instanceId, out Float32ActionInstanceState state)
+        {
+            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            {
+                if (m_EvaluatedActions[index].InstanceId != instanceId)
+                    continue;
+                state = m_EvaluatedActions[index];
+                return true;
+            }
+            state = default;
+            return false;
+        }
+
+        void RetainEvaluatedAction(Float32ActionInstanceState action)
+        {
+            // Timeline motion resolves after lifecycle changes and may outlive the action's state slot.
+            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            {
+                if (m_EvaluatedActions[index].InstanceId != action.InstanceId)
+                    continue;
+                m_EvaluatedActions[index] = action;
+                return;
+            }
+            m_EvaluatedActions.Add(action);
         }
 
         public bool TryGetInstance(ulong instanceId, out Float32ActionInstanceState state)

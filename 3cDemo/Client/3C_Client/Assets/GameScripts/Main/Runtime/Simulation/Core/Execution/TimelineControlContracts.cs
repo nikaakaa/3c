@@ -189,6 +189,9 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source,
             CharacterSkillId abilityId,
             string actionContextIdentity,
+            ulong actionInstanceId,
+            ulong actionPredictionKey,
+            ulong skillExecutionGeneration,
             OperationHandle stateOperation,
             ulong playbackGeneration,
             int cycle,
@@ -241,6 +244,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
             if (string.IsNullOrEmpty(actionContextIdentity))
                 throw new ArgumentException("Timeline motion warp requires an Action Context identity.", nameof(actionContextIdentity));
+            if (actionInstanceId == 0 || actionPredictionKey == 0 || skillExecutionGeneration == 0)
+                throw new ArgumentException("Timeline motion warp requires a complete Action execution identity.", nameof(actionInstanceId));
             if (endTime <= startTime || previousTime < startTime || currentTime > endTime || previousTime > currentTime)
                 throw new ArgumentOutOfRangeException(nameof(previousTime), "Timeline motion warp window is invalid.");
             if (translationMode == ProgramMotionWarpTranslationMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
@@ -249,6 +254,9 @@ namespace ThirdPersonSimulation
             Source = source;
             AbilityId = abilityId;
             ActionContextIdentity = actionContextIdentity;
+            ActionInstanceId = actionInstanceId;
+            ActionPredictionKey = actionPredictionKey;
+            SkillExecutionGeneration = skillExecutionGeneration;
             StateOperation = stateOperation;
             PlaybackGeneration = playbackGeneration;
             Cycle = cycle;
@@ -295,6 +303,9 @@ namespace ThirdPersonSimulation
         public SimulationExecutionSource Source { get; }
         public CharacterSkillId AbilityId { get; }
         public string ActionContextIdentity { get; }
+        public ulong ActionInstanceId { get; }
+        public ulong ActionPredictionKey { get; }
+        public ulong SkillExecutionGeneration { get; }
         public OperationHandle StateOperation { get; }
         public ulong PlaybackGeneration { get; }
         public int Cycle { get; }
@@ -511,6 +522,9 @@ namespace ThirdPersonSimulation
             previous.Source.Equals(current.Source) &&
             previous.AbilityId.Equals(current.AbilityId) &&
             string.Equals(previous.ActionContextIdentity, current.ActionContextIdentity, StringComparison.Ordinal) &&
+            previous.ActionInstanceId == current.ActionInstanceId &&
+            previous.ActionPredictionKey == current.ActionPredictionKey &&
+            previous.SkillExecutionGeneration == current.SkillExecutionGeneration &&
             previous.PlaybackGeneration >> 32 == current.PlaybackGeneration >> 32 &&
             current.Cycle == previous.Cycle + 1 &&
             previous.CurrentTime == previous.EndTime &&

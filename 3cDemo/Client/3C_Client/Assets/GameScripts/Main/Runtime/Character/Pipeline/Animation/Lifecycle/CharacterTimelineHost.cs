@@ -931,6 +931,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     source,
                     new CharacterSkillId(active.ActionContext.ActionId),
                     active.ActionContextId,
+                    active.ActionContext.ActionInstanceId,
+                    active.ActionContext.PredictionKey,
+                    active.Provenance.SkillExecutionGeneration,
                     ResolveMotionWarpStateOperation(
                         motionWarpCatalog,
                         active.Timeline.AuthoringId,

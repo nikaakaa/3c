@@ -541,12 +541,16 @@ namespace ThirdPersonSimulation.Fixed
 
         public void ApplyTimelineMotionWarp(AbilityTimelineLogicMotionWarp warp, ref ResolvedMotionChannel channel)
         {
-            if (m_Actions.FindActive(warp.ActionContextIdentity, out FixedActionInstanceState action) < 0)
+            if (!m_Actions.TryGetEvaluatedInstance(warp.ActionInstanceId, out FixedActionInstanceState action) ||
+                !action.IsValid ||
+                !string.Equals(action.ContextId, warp.ActionContextIdentity, StringComparison.Ordinal) ||
+                action.PredictionKey != warp.ActionPredictionKey ||
+                action.SkillExecutionGeneration != warp.SkillExecutionGeneration)
                 FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
-                    $"Timeline MotionWarp Action Context '{warp.ActionContextIdentity}' is not active.");
+                    $"Timeline MotionWarp Action instance '{warp.ActionInstanceId}' for '{warp.ActionContextIdentity}' is missing or has a different execution identity.");
             if (action.SkillId != warp.AbilityId)
                 FailTimelineMotionWarp(warp.StateOperation, MotionModifierDiagnosticCode.InvalidState,
-                    "Timeline MotionWarp Ability does not match the active Action.");
+                    "Timeline MotionWarp Ability does not match its owning Action instance.");
             if (warp.RotationMethod == ProgramMotionWarpRotationMethod.TargetResponse)
             {
                 ApplyTargetResponse(warp, action, ref channel);

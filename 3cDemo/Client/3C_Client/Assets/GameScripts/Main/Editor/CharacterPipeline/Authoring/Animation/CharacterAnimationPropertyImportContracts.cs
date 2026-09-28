@@ -47,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string sourceCategory,
             CharacterAnimationSamplingBackendKind currentBackend,
             string blendShapeCurveHash,
+            bool hasBlendShapeCurves,
             int linearizationCount,
             IReadOnlyList<string> rootEvidenceBindings,
             string rootEvidenceHash)
@@ -56,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SourceCategory = sourceCategory ?? string.Empty;
             CurrentBackend = currentBackend;
             BlendShapeCurveHash = blendShapeCurveHash ?? string.Empty;
+            HasBlendShapeCurves = hasBlendShapeCurves;
             LinearizationCount = linearizationCount;
             RootEvidenceBindings = rootEvidenceBindings?.ToArray() ?? Array.Empty<string>();
             RootEvidenceHash = rootEvidenceHash ?? string.Empty;
@@ -72,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string CurrentBackendName => CurrentBackend.ToString();
         public string TargetBackend => CharacterAnimationSamplingBackendKind.Acl.ToString();
         public string BlendShapeCurveHash { get; }
+        public bool HasBlendShapeCurves { get; }
         public int LinearizationCount { get; }
         public IReadOnlyList<string> RootEvidenceBindings { get; }
         public int RootEvidenceCount => RootEvidenceBindings.Count;

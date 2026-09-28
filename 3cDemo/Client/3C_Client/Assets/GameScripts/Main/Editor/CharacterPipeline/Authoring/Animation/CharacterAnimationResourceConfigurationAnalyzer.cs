@@ -55,15 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     closure,
                     animationCurvePath,
                     rigAnalysis.Mesh);
-            for (int i = 0; i < curveAnalysis.Clips.Count; i++)
-            {
-                if (curveAnalysis.Clips[i].RootEvidenceCount !=
-                    CharacterAnimationRootCurveClassifier.EvidenceNames.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"Formal AnimationClip '{curveAnalysis.Clips[i].AssetPath}' must expose the exact seven Animator root evidence curves.");
-                }
-            }
             CharacterAnimationPropertyContractAnalysis contract =
                 CharacterAnimationPropertyContractFactory.Create(
                     profile,

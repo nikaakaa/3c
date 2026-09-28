@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "linear-left-right",
                         $"linearization_count={clip.LinearizationCount}");
                 }
-                foreach (CharacterAnimationPropertyImportCurveTarget curve in curves.Where(value => value.RequiresRename))
+                foreach (CharacterAnimationPropertyImportCurveTarget curve in curves.Where(value => value.RequiresRename && clip.HasBlendShapeCurves))
                 {
                     AddDiff(
                         diffs,

@@ -36,11 +36,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationResourceClosureEntry entry = closure[i];
                 Dictionary<string, AnimationCurve> current =
                     ReadBlendShapeCurves(entry.Clip, animationCurvePath);
-                if (first == null)
+                if (current.Count > 0 && first == null)
                 {
                     first = current;
                 }
-                else if (!new HashSet<string>(first.Keys, StringComparer.Ordinal)
+                else if (current.Count > 0 && !new HashSet<string>(first.Keys, StringComparer.Ordinal)
                              .SetEquals(current.Keys))
                 {
                     throw new InvalidOperationException(
@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     entry.SourceCategory,
                     entry.CurrentBackend,
                     ComputeBlendShapeCurveHash(current),
+                    current.Count > 0,
                     CountLinearizationRequired(current),
                     rootEvidence,
                     CharacterAnimationRootCurveClassifier.ComputeEvidenceHash(entry.Clip)));
@@ -120,9 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"AnimationClip '{clip.name}' BlendShape curve '{name}' is empty.");
             }
-            if (result.Count == 0)
-                throw new InvalidOperationException(
-                    $"AnimationClip '{clip.name}' has no BlendShape curve at '{animationCurvePath}'.");
             return result;
         }
 

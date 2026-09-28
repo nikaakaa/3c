@@ -170,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static CharacterAclCompressionSettings CreateCompressionSettings() =>
             new CharacterAclCompressionSettings(
-                960,
+                1440,
                 0.01f,
                 0.01f,
                 0.5f,

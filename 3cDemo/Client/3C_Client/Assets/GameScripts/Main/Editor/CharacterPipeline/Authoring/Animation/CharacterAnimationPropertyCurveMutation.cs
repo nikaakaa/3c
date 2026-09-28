@@ -9,6 +9,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     internal static class CharacterAnimationPropertyCurveMutation
     {
+        internal static bool RequiresMutation(
+            CharacterAnimationPropertyImportPlan plan,
+            CharacterAnimationPropertyImportClipTarget target) =>
+            target.HasBlendShapeCurves &&
+            (target.LinearizationCount > 0 || plan.CurveSet.Any(curve => curve.RequiresRename));
+
         internal static void ValidateClips(CharacterAnimationPropertyImportPlan plan)
         {
             for (int i = 0; i < plan.SourceClosure.Count; i++)
@@ -27,14 +33,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterAnimationPropertyCurveAnalyzer.ReadBlendShapeCurves(
                         target.Clip,
                         plan.AnimationCurvePath);
-                if (currentCurves.Count != plan.CurveSet.Count ||
-                    !new HashSet<string>(currentCurves.Keys, StringComparer.Ordinal)
-                        .SetEquals(plan.CurveSet.Select(value => value.SourceBlendShapeName)))
+                if (target.HasBlendShapeCurves
+                        ? currentCurves.Count != plan.CurveSet.Count ||
+                          !new HashSet<string>(currentCurves.Keys, StringComparer.Ordinal)
+                              .SetEquals(plan.CurveSet.Select(value => value.SourceBlendShapeName))
+                        : currentCurves.Count != 0)
                 {
                     throw new InvalidOperationException(
                         $"AnimationClip '{target.AssetPath}' BlendShape curve set changed after analyze.");
                 }
-                CharacterAnimationRootCurveClassifier.RequireExact(target.Clip);
+                CharacterAnimationRootCurveClassifier.AllowNoneOrRequireExact(target.Clip);
                 if (!string.Equals(
                         CharacterAnimationRootCurveClassifier.ComputeEvidenceHash(target.Clip),
                         target.RootEvidenceHash,
@@ -43,6 +51,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"AnimationClip '{target.AssetPath}' root evidence changed after analyze.");
                 }
+                if (!target.HasBlendShapeCurves)
+                    continue;
                 foreach (CharacterAnimationPropertyImportCurveTarget curve in plan.CurveSet)
                 {
                     EditorCurveBinding sourceBinding = EditorCurveBinding.FloatCurve(
@@ -72,6 +82,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int clipIndex = 0; clipIndex < plan.SourceClosure.Count; clipIndex++)
             {
                 CharacterAnimationPropertyImportClipTarget target = plan.SourceClosure[clipIndex];
+                if (!RequiresMutation(plan, target))
+                {
+                    VerifyAfterApply(plan, target);
+                    continue;
+                }
                 foreach (CharacterAnimationPropertyImportCurveTarget curve in plan.CurveSet)
                 {
                     EditorCurveBinding sourceBinding = EditorCurveBinding.FloatCurve(
@@ -145,9 +160,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationPropertyCurveAnalyzer.ReadBlendShapeCurves(
                     clip.Clip,
                     plan.AnimationCurvePath);
-            if (curves.Count != plan.CurveSet.Count)
+            if (clip.HasBlendShapeCurves
+                    ? curves.Count != plan.CurveSet.Count
+                    : curves.Count != 0)
                 throw new InvalidOperationException(
-                    $"AnimationClip '{clip.AssetPath}' must retain exactly {plan.CurveSet.Count} target BlendShape curves.");
+                    $"AnimationClip '{clip.AssetPath}' BlendShape curve set changed during apply.");
+            if (!string.Equals(
+                    CharacterAnimationRootCurveClassifier.ComputeEvidenceHash(clip.Clip),
+                    clip.RootEvidenceHash,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"AnimationClip '{clip.AssetPath}' root evidence was modified.");
+            }
+            if (!clip.HasBlendShapeCurves)
+                return;
             foreach (CharacterAnimationPropertyImportCurveTarget curve in plan.CurveSet)
             {
                 AnimationCurve target = curves.TryGetValue(
@@ -178,14 +205,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"AnimationClip '{clip.AssetPath}' retained old BlendShape binding '{curve.SourcePropertyName}'.");
                 }
-            }
-            if (!string.Equals(
-                    CharacterAnimationRootCurveClassifier.ComputeEvidenceHash(clip.Clip),
-                    clip.RootEvidenceHash,
-                    StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"AnimationClip '{clip.AssetPath}' root evidence was modified.");
             }
         }
 

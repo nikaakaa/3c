@@ -27,6 +27,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.RootMotion
             destination.name = Path.GetFileNameWithoutExtension(assetPath);
             AssetDatabase.CreateAsset(destination, assetPath);
 
+            Normalize(source, destination, rootRotationSource);
+            return destination;
+        }
+
+        public static void ReplaceRootOffsetNormalizedCopy(
+            AnimationClip source,
+            AnimationClip destination,
+            AnimationClip rootRotationSource)
+        {
+            if (!source || !destination || !rootRotationSource || source == destination)
+                throw new ArgumentException("Animation replacement requires distinct source and destination clips.");
+            string destinationName = destination.name;
+            Undo.RecordObject(destination, "Replace normalized animation source");
+            EditorUtility.CopySerialized(source, destination);
+            destination.name = destinationName;
+            Normalize(source, destination, rootRotationSource);
+        }
+
+        static void Normalize(AnimationClip source, AnimationClip destination, AnimationClip rootRotationSource)
+        {
             EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(source);
             for (int i = 0; i < bindings.Length; i++)
             {
@@ -54,7 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.RootMotion
             if (rootRotationSource != source)
                 CopyRootRotationCurves(rootRotationSource, destination);
             EditorUtility.SetDirty(destination);
-            return destination;
         }
 
         public static void CopyRootRotationCurves(AnimationClip source, AnimationClip destination)

@@ -58,16 +58,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationMeshContentIdentity.RequireCurrent(
                 plan.Mesh,
                 plan.MeshContentHash);
-            List<LoadedPrefab> prefabs = LoadPrefabs(plan);
+            CharacterAnimationPropertyImportPrefabTarget[] prefabTargets = plan.PrefabTargets
+                .Where(target => plan.Diffs.Any(diff => string.Equals(
+                    diff.Target,
+                    "prefab:" + target.AssetPath + ":renderer-binding",
+                    StringComparison.Ordinal)))
+                .ToArray();
+            List<LoadedPrefab> prefabs = LoadPrefabs(prefabTargets);
             PrefabBackup[] backups = Array.Empty<PrefabBackup>();
             int undoGroup = -1;
             try
             {
                 CharacterAnimationPropertyCurveMutation.ValidateClips(plan);
-                ValidatePrefabs(plan, prefabs);
-                backups = CreateBackups(plan.PrefabTargets);
+                ValidatePrefabs(plan, prefabTargets, prefabs);
+                backups = CreateBackups(prefabTargets);
                 CharacterPresentationMutationTransaction graphTransaction =
-                    CreateGraphTransaction(plan);
+                    plan.Diffs.Any(diff => diff.Target.StartsWith("poseGraph:", StringComparison.Ordinal))
+                        ? CreateGraphTransaction(plan)
+                        : null;
                 CharacterPresentationMutationTransaction profileTransaction =
                     CreateProfileTransaction(plan);
                 Undo.IncrementCurrentGroup();
@@ -86,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationPropertyCurveMutation.Apply(plan);
                 CharacterPresentationMutationService mutationService =
                     new CharacterPresentationMutationService();
-                if (graphTransaction.Mutations.Count > 0)
+                if (graphTransaction != null && graphTransaction.Mutations.Count > 0)
                 {
                     mutationService.ApplyWithoutUndo(
                         new CharacterPoseGraphAssetMutationOwner(plan.PoseGraph),
@@ -102,9 +110,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 ApplyPrefabBindings(plan, prefabs);
                 EditorUtility.SetDirty(plan.Profile);
-                EditorUtility.SetDirty(plan.PoseGraph);
+                if (graphTransaction != null)
+                    EditorUtility.SetDirty(plan.PoseGraph);
                 for (int i = 0; i < plan.SourceClosure.Count; i++)
-                    EditorUtility.SetDirty(plan.SourceClosure[i].Clip);
+                {
+                    CharacterAnimationPropertyImportClipTarget clip = plan.SourceClosure[i];
+                    if (CharacterAnimationPropertyCurveMutation.RequiresMutation(plan, clip))
+                        EditorUtility.SetDirty(clip.Clip);
+                }
                 AssetDatabase.SaveAssets();
                 for (int i = 0; i < prefabs.Count; i++)
                 {
@@ -132,14 +145,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static List<LoadedPrefab> LoadPrefabs(CharacterAnimationPropertyImportPlan plan)
+        static List<LoadedPrefab> LoadPrefabs(
+            IReadOnlyList<CharacterAnimationPropertyImportPrefabTarget> targets)
         {
-            var result = new List<LoadedPrefab>(plan.PrefabTargets.Count);
+            var result = new List<LoadedPrefab>(targets.Count);
             try
             {
-                for (int i = 0; i < plan.PrefabTargets.Count; i++)
+                for (int i = 0; i < targets.Count; i++)
                 {
-                    CharacterAnimationPropertyImportPrefabTarget target = plan.PrefabTargets[i];
+                    CharacterAnimationPropertyImportPrefabTarget target = targets[i];
                     GameObject root = PrefabUtility.LoadPrefabContents(target.AssetPath);
                     CharacterAnimationRigBinding[] bindings = root
                         .GetComponentsInChildren<CharacterAnimationRigBinding>(true)
@@ -175,15 +189,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ValidatePrefabs(
             CharacterAnimationPropertyImportPlan plan,
+            IReadOnlyList<CharacterAnimationPropertyImportPrefabTarget> targets,
             IReadOnlyList<LoadedPrefab> prefabs)
         {
-            if (prefabs.Count != plan.PrefabTargets.Count)
+            if (prefabs.Count != targets.Count)
                 throw new InvalidOperationException("Animation resource configuration Prefab closure changed after analyze.");
             for (int i = 0; i < prefabs.Count; i++)
             {
                 LoadedPrefab loaded = prefabs[i];
-                CharacterAnimationPropertyImportPrefabTarget target =
-                    plan.PrefabTargets.Single(value => value.AssetPath == loaded.AssetPath);
+                CharacterAnimationPropertyImportPrefabTarget target = targets[i];
                 if (!string.Equals(loaded.RigBinding.RigRevision, target.RigRevision, StringComparison.Ordinal) ||
                     loaded.Renderer.sharedMesh != plan.Mesh ||
                     !string.Equals(

@@ -1,0 +1,133 @@
+{
+  "owner": "MoleMole.Cameras.VTransformNoiseParams",
+  "method": {
+    "ordinal": 0,
+    "definition_index": 442437,
+    "definition_va": 1736651845006,
+    "rva": 7632304,
+    "raw_hex": "58240000c42c4c0bdd1805009cbc000098ee00060000ffffffff86000200",
+    "token": 100724376,
+    "name_identity": 189541572,
+    "name": "ELAADPLKJCK",
+    "attributes": 134,
+    "static": false,
+    "abstract": false,
+    "return_type": {
+      "display": "Vector3",
+      "type_ref": "0x7ff9752f3530",
+      "complete": true
+    },
+    "parameters": [
+      {
+        "ordinal": 0,
+        "definition_index": 334045,
+        "definition_va": 1736634243460,
+        "raw_hex": "5a8c9421fd1798477ac6220d",
+        "name_identity": 185955351,
+        "name": "CHDMAALKNGC",
+        "token": 134265125,
+        "type": {
+          "display": "float",
+          "type_ref": "0x7ff9752d2e60",
+          "complete": true
+        }
+      },
+      {
+        "ordinal": 1,
+        "definition_index": 334046,
+        "definition_va": 1736634243472,
+        "raw_hex": "5046fca30093b6c5d4728b8f",
+        "name_identity": 189541561,
+        "name": "DGBPLADIGKD",
+        "token": 134265126,
+        "type": {
+          "display": "Vector3",
+          "type_ref": "0x7ff9752f3530",
+          "complete": true
+        }
+      }
+    ],
+    "runtime_record_va": 5497666030048,
+    "runtime_raw_hex": "b8fe990500050000b0753174f97f0000c0c8c473f97f0000ffffffff0000000045c006000000000098ee0006ffff860000000200000000000000000000000000",
+    "runtime_matches_definition": true,
+    "code_va": 140709372982704,
+    "signature_complete": true
+  },
+  "begin": 7632304,
+  "end": 7632351,
+  "unwind": 45261720,
+  "byte_sha256": "13d8f0b2f157336ecd46c349e0aacd60fe2b80a5f07f2235ad2308c6b8581ed9",
+  "instructions": [
+    [
+      7632304,
+      "push",
+      "rsi"
+    ],
+    [
+      7632305,
+      "sub",
+      "rsp, 0x30"
+    ],
+    [
+      7632309,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      7632312,
+      "add",
+      "rdx, 0x10"
+    ],
+    [
+      7632316,
+      "mov",
+      "eax, dword ptr [r9 + 8]"
+    ],
+    [
+      7632320,
+      "mov",
+      "dword ptr [rsp + 0x28], eax"
+    ],
+    [
+      7632324,
+      "mov",
+      "rax, qword ptr [r9]"
+    ],
+    [
+      7632327,
+      "mov",
+      "qword ptr [rsp + 0x20], rax"
+    ],
+    [
+      7632332,
+      "lea",
+      "r9, [rsp + 0x20]"
+    ],
+    [
+      7632337,
+      "call",
+      "0x116d8620"
+    ],
+    [
+      7632342,
+      "mov",
+      "rax, rsi"
+    ],
+    [
+      7632345,
+      "add",
+      "rsp, 0x30"
+    ],
+    [
+      7632349,
+      "pop",
+      "rsi"
+    ],
+    [
+      7632350,
+      "ret",
+      ""
+    ]
+  ],
+  "scope": "exception-directory-range"
+}

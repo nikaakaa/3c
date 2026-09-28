@@ -1,0 +1,69 @@
+{
+  "scannedParameters": 694748,
+  "unavailableDescriptors": [],
+  "hits": [
+    {
+      "methodIndex": 384451,
+      "owner": 40636,
+      "ownerName": "KCFCEMEAKEF",
+      "method": "LFNHBNKPBDO",
+      "parameterTypes": [
+        72480
+      ]
+    },
+    {
+      "methodIndex": 415146,
+      "owner": 44819,
+      "ownerName": "ALBHHPAGBDD",
+      "method": "LKGJNGPCPIJ",
+      "parameterTypes": [
+        46013
+      ]
+    },
+    {
+      "methodIndex": 415148,
+      "owner": 44820,
+      "ownerName": "IMNBPJIBAKD",
+      "method": "DANPPNNBLNJ",
+      "parameterTypes": [
+        46013
+      ]
+    },
+    {
+      "methodIndex": 415150,
+      "owner": 44821,
+      "ownerName": "FJLAPIHDFMD",
+      "method": "MFIBDJAIIGP",
+      "parameterTypes": [
+        46013
+      ]
+    },
+    {
+      "methodIndex": 474035,
+      "owner": 51372,
+      "ownerName": "IFix.ILFixDynamicMethodWrapper",
+      "method": "_GW_8418",
+      "parameterTypes": [
+        46013
+      ]
+    },
+    {
+      "methodIndex": 640541,
+      "owner": 72481,
+      "ownerName": "PIEKNPBDNFF",
+      "method": "ReadMember",
+      "parameterTypes": [
+        72480
+      ]
+    },
+    {
+      "methodIndex": 640542,
+      "owner": 72481,
+      "ownerName": "PIEKNPBDNFF",
+      "method": "Write",
+      "parameterTypes": [
+        72480
+      ]
+    }
+  ]
+}

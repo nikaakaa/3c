@@ -1,0 +1,171 @@
+{
+  "sourceBinary": "D:/Normal_Software/HoYoPlay/games/ZenlessZoneZero Game/GameAssembly.dll",
+  "sourceSha256": "4cba5d52c5fbfd478d2a9ec217075f82216780d56ad1bd1e85e4f724dcce30b4",
+  "metadataSession": "829",
+  "metadataCatalog": "D:/ZZZ_Dump/PIK分析包/元数据/控制器与战斗/catalog_829.json",
+  "metadataReader": "D:/ZZZ_Dump/PIK分析包/元数据/export_gameplay_metadata.py",
+  "disassembler": "D:/ZZZ_Dump/PIK分析包/元数据/offline_sources.py:PEImage.disassemble_function",
+  "scope": "普通原生路径静态证据，未运行游戏，未确认 IFix 动态替换；前缀文件不作为完整函数",
+  "files": [
+    {
+      "path": "42017-APMEGPCMOEF.json",
+      "bytes": 30932,
+      "sha256": "195cd82feae65fd8bae58b454ac1eb53fee505abf7e57eccc63ea928e6ebe7a8"
+    },
+    {
+      "path": "44820-DANPPNNBLNJ.json",
+      "bytes": 5822,
+      "sha256": "af360b3452a3292172646e5a0132459dfbe718ea11e663d5f53fbe41cf9e7dc4"
+    },
+    {
+      "path": "46013-get_SignalDuration.json",
+      "bytes": 5075,
+      "sha256": "574e8d96bea5b8706a66f299af89a6c4b26b177895f39247eb284f3a97861b5b"
+    },
+    {
+      "path": "46013-GetCombinedFilterResults.json",
+      "bytes": 9456,
+      "sha256": "7fbc3dda885bdeea459bfd08be81988e39cdb7d86b79612891563ceb9efcb1cd"
+    },
+    {
+      "path": "46013-GetSignal.json",
+      "bytes": 7243,
+      "sha256": "f2880e296e6926695be6b4ebb3f5d96dec4f7ea46e91b09b6b5c07fc14c32bf8"
+    },
+    {
+      "path": "48284-ELAADPLKJCK.json",
+      "bytes": 2828,
+      "sha256": "87cd23b4a1478d2979b2ee8adb458759edcb0f4172d91e14fc8015a2be4aef5d"
+    },
+    {
+      "path": "52818-BPLIMBOKJGD.json",
+      "bytes": 5455,
+      "sha256": "dd5f84c5e6e88a1c33493663a1161e44860e901d744499dc9796620ab9666643"
+    },
+    {
+      "path": "52818-ELAADPLKJCK.json",
+      "bytes": 5249,
+      "sha256": "ea3d41d8ac49e6b5f28a002cb4f1085daa30d6c659a00623fa9e006370325122"
+    },
+    {
+      "path": "combat-hit-shake.json",
+      "bytes": 13518,
+      "sha256": "f788a2275a92f93bd72c05a78a660d161ac878be913021a5c2128aa05c920bde"
+    },
+    {
+      "path": "combat-runtime-types.json",
+      "bytes": 169198,
+      "sha256": "9fcf1eda363e40ab972432bc45e04117637435f748b86e3e7d32fa0b1f20297c"
+    },
+    {
+      "path": "combat-shake-create.json",
+      "bytes": 35895,
+      "sha256": "906332050f47df74aaf5ef3c82c1dbb691c6602bf11e5e98a43a87611564e052"
+    },
+    {
+      "path": "consumer-field-index.json",
+      "bytes": 104018,
+      "sha256": "6c988d992f923aba82f9a629132840e5f7054fd40b180f74cc089d1148af3736"
+    },
+    {
+      "path": "consumer-parameter-index.json",
+      "bytes": 1397,
+      "sha256": "969d7eb724205863bd5765d0b59cbf779a4a42ab1e07b4aad20d420776ef05af"
+    },
+    {
+      "path": "consumers.json",
+      "bytes": 122075,
+      "sha256": "9fd08f428059b60845f037b1662aff8bd9dae473468dc9e0e72ffabba0d8435b"
+    },
+    {
+      "path": "coordinate-math-types.json",
+      "bytes": 126874,
+      "sha256": "1ccdf6f4d04b54d8c68df728520e13348154654bd2912c638b74e691d02cd65a"
+    },
+    {
+      "path": "cosine-polynomial-constants.json",
+      "bytes": 546,
+      "sha256": "94740ff6544a7829f0f8af7c74925c1df67834b268c066b1472b07a87394c1df"
+    },
+    {
+      "path": "direction-provider.json",
+      "bytes": 11263,
+      "sha256": "6d5d2e87fed97b78e03d3dc8d2e199d8b58f1b65b0544d1b003b76e9a34fc99d"
+    },
+    {
+      "path": "metadata.json",
+      "bytes": 125891,
+      "sha256": "d11e8f8ba645aa0cb0f17b8c79c612e83e13f877a054f7778ed374306f1ec8fa"
+    },
+    {
+      "path": "noise-constants.json",
+      "bytes": 991,
+      "sha256": "f2c4c679ec6d079f84ebe608a48df356b17d89bede07221b0c7e6f1f504007a6"
+    },
+    {
+      "path": "noise-consumer-index.json",
+      "bytes": 1586,
+      "sha256": "361e9bd4e233f1a866bacd1652f88b7c4b2bde7a965878fdd7ecfa145203615b"
+    },
+    {
+      "path": "noise-consumers.json",
+      "bytes": 206024,
+      "sha256": "533758ccd2141ce7b6e33ab258dc3c33812ac64ed53756854b82403d8af43356"
+    },
+    {
+      "path": "parameter-consumers.json",
+      "bytes": 491690,
+      "sha256": "7a1bb84c3af8fae3da4544b107e21855d3db2108cbd82044ccf3edd9474bf77c"
+    },
+    {
+      "path": "shake-envelope.json",
+      "bytes": 7030,
+      "sha256": "87f5cebe76b7cdb7da8978977fc228cd92d2e0e1cfe92d540eff70dfcf0d8a8f"
+    },
+    {
+      "path": "shake-instance-types.json",
+      "bytes": 100508,
+      "sha256": "4d57f93e0bbcaa5ce171b7c885623ff4e7c480f86284a060acb300b32c83666f"
+    },
+    {
+      "path": "shake-runtime-constants.json",
+      "bytes": 1213,
+      "sha256": "fc6b3f6d3f23ead8404e185ae37a59945291b5f3e1ca8d7c52de5be14ba500b4"
+    },
+    {
+      "path": "shake-sample.json",
+      "bytes": 29738,
+      "sha256": "a055291148617ed11c733a16e082c7a774fae6d9ea8798508f5715555e694415"
+    },
+    {
+      "path": "shake-spatial.json",
+      "bytes": 24190,
+      "sha256": "8be4d0ea9b161cb516c72d702c32704c0d61e311e2860539c31f6f141d9e7c32"
+    },
+    {
+      "path": "shake-submit.json",
+      "bytes": 7100,
+      "sha256": "2ffae717e2504653fb180053ad633d76b3655d5e5605a205ede507b0a7ecfef3"
+    },
+    {
+      "path": "shake-update.json",
+      "bytes": 43242,
+      "sha256": "b50304fd4ad0d618d16e0be39a074f0d004f964f370ffeceb9b79faaae7781b2"
+    },
+    {
+      "path": "trigonometric-function.json",
+      "bytes": 18561,
+      "sha256": "33baa25889e6fa1f7c541e2c59cafcbfd876c2040c6c3128cbb627e986ba0d49"
+    },
+    {
+      "path": "unity-math-wrappers.json",
+      "bytes": 1417,
+      "sha256": "0762984124ef76b713eb304b0497b9b76fe9c933d3905f2d7ed84662e909d918"
+    },
+    {
+      "path": "update-callers.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

@@ -1,0 +1,3552 @@
+{
+  "types": [
+    {
+      "type_index": 34697,
+      "name": "CinemachineBasicMultiChannelPerlin",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.CinemachineBasicMultiChannelPerlin",
+      "klass": 5497609932496,
+      "klass_raw_hex": "b0885c010005000000000000000000000000000000000000000000000000000000000000000000000850160300050000000000000000000000000000000000000000000000000000000000000000000058c7e10200050000b0f2e659940100000000000000000000000000000000000000000000000000000000000000000000898700000000000000001200000000008987000000000000000012400000000043000002d04e16030000000001001000d8c9e102d04e160300008000ffffffff00000d00060000000007000130400000",
+      "definition_va": 1736675095216,
+      "definition_raw_hex": "7139050069330d007dc8310b42b906006e6d02004300000201001000bce63122746e0300058a0200ce340100746e0300ffffffff0700ffff00000d00000000000000ffffffffffff06000200000cffff",
+      "token": 33554499,
+      "attributes": 1048577,
+      "field_start": 159086,
+      "field_count": 7,
+      "method_start": 342385,
+      "method_count": 6,
+      "parent_descriptor_index": 166405,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 128,
+      "parent_klass": 5497606490584,
+      "parent_type_index": 34737,
+      "parent_name": "CinemachineComponentBase",
+      "parent_type": "CinemachineComponentBase",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159086,
+          "definition_va": 1736666018316,
+          "raw_hex": "e7b9c7b08ba958da3ce7a2e6",
+          "token": 67109211,
+          "name_identity": 238151390,
+          "name": "m_NoiseProfile",
+          "type": {
+            "display": "NoiseSettings",
+            "type_ref": "0x7ff976002650",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 80,
+          "metadata_offset": 80,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159087,
+          "definition_va": 1736666018328,
+          "raw_hex": "13408efada9c202498da6a2f",
+          "token": 67109212,
+          "name_identity": 221374188,
+          "name": "m_PivotOffset",
+          "type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff975e95430",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 88,
+          "metadata_offset": 88,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159088,
+          "definition_va": 1736666018340,
+          "raw_hex": "24051b69159bad92dfd8f79f",
+          "token": 67109213,
+          "name_identity": 254928633,
+          "name": "m_AmplitudeGain",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 100,
+          "metadata_offset": 100,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159089,
+          "definition_va": 1736666018352,
+          "raw_hex": "f1011e44e397b06dbbd5fa7a",
+          "token": 67109214,
+          "name_identity": 254928648,
+          "name": "m_FrequencyGain",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 104,
+          "metadata_offset": 104,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 159090,
+          "definition_va": 1736666018364,
+          "raw_hex": "3e8cfce5be288f0fe7f3d819",
+          "token": 67109215,
+          "name_identity": 204567642,
+          "name": "mInitialized",
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff975e558d0",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 108,
+          "metadata_offset": 108,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 159091,
+          "definition_va": 1736666018376,
+          "raw_hex": "1d0f86d64d99180032d76208",
+          "token": 67109216,
+          "name_identity": 171042583,
+          "name": "mNoiseTime",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e67de0",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 112,
+          "metadata_offset": 112,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 6,
+          "definition_index": 159092,
+          "definition_va": 1736666018388,
+          "raw_hex": "41ee8399d94a16c3c78860ce",
+          "token": 67109217,
+          "name_identity": 221374241,
+          "name": "mNoiseOffsets",
+          "type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff975e95770",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 116,
+          "metadata_offset": 116,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 342385,
+          "definition_va": 1736648843446,
+          "rva": null,
+          "raw_hex": "11510b0022000005ffffffff89870000c20100060000ffffffff86180001",
+          "token": 100663746,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 342386,
+          "definition_va": 1736648843476,
+          "rva": null,
+          "raw_hex": "e1010000d238020bffffffff89870000bd01000600000400ffffc6080000",
+          "token": 100663741,
+          "name_identity": 184694994,
+          "name": "get_IsValid",
+          "attributes": 2246,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 342387,
+          "definition_va": 1736648843506,
+          "rva": null,
+          "raw_hex": "268b020023e63109ffffffff89870000be01000600000600ffffc6080000",
+          "token": 100663742,
+          "name_identity": 154265123,
+          "name": "get_Stage",
+          "attributes": 2246,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "Stage",
+            "type_ref": "0x7ff97555a210",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 342388,
+          "definition_va": 1736648843536,
+          "rva": null,
+          "raw_hex": "11510b002ce6311108bc030089870000bf01000600000800ffffc6000200",
+          "token": 100663743,
+          "name_identity": 288482860,
+          "name": "MutateCameraState",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 244744,
+              "definition_va": 1736633171848,
+              "raw_hex": "96640273c6c3bc9556f7855e",
+              "name_identity": 137480514,
+              "name": "curState",
+              "token": 134218117,
+              "type": {
+                "display": "CameraState&",
+                "type_ref": "0x7ff9760019e0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 244745,
+              "definition_va": 1736633171860,
+              "raw_hex": "33135ff5fbd94f17e0d0ede0",
+              "name_identity": 151698720,
+              "name": "deltaTime",
+              "token": 134218118,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 342389,
+          "definition_va": 1736648843566,
+          "rva": null,
+          "raw_hex": "11510b002ee73106ffffffff89870000c00100060000ffffffff86000000",
+          "token": 100663744,
+          "name_identity": 103933742,
+          "name": "ReSeed",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 342390,
+          "definition_va": 1736648843596,
+          "rva": null,
+          "raw_hex": "11510b006811000affffffff89870000c10100060000ffffffff81000000",
+          "token": 100663745,
+          "name_identity": 167776616,
+          "name": "Initialize",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625732836,
+        "record_number": 11779,
+        "record_va": 1736696791844,
+        "record_hex": "0000000080000801ba810100",
+        "instance_size": 128,
+        "offset_array_va": 1736718372784,
+        "offsets_hex": "500000005800000064000000680000006c0000007000000074000000",
+        "offset_flags": [
+          80,
+          88,
+          100,
+          104,
+          108,
+          112,
+          116
+        ]
+      },
+      "layout_instance_size": 128,
+      "dependencies": [
+        5300,
+        34727,
+        34740,
+        34785
+      ]
+    },
+    {
+      "type_index": 34785,
+      "name": "NoiseSettings",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.NoiseSettings",
+      "klass": 5497606509096,
+      "klass_raw_hex": "b0885c01000500000000000000000000000000000000000000000000000000000000000000000000404c2f030005000000000000000000000000000000000000000000000000000000000000000000003813e20200050000300ee759940100000000000000000000000000000000000000000000000000000000000000000000e1870000000000000000120000000000e18700000000000000001240000000009b0000022812e20200000000010110004813e2022812e20200002800ffffffff00000800040001000005000130400000",
+      "definition_va": 1736675102256,
+      "definition_raw_hex": "8f3b05005f340d007dc8310b61bd0600626f02009b000002010110004217320d5e340d0060340d00673501005e340d00ffffffff0200ffff00000800000001000200ffffffffe58704000100000cb11e",
+      "token": 33554587,
+      "attributes": 1048833,
+      "field_start": 159586,
+      "field_count": 2,
+      "method_start": 342927,
+      "method_count": 4,
+      "parent_descriptor_index": 865376,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 40,
+      "parent_klass": 5497606509384,
+      "parent_type_index": 34790,
+      "parent_name": "SignalSourceAsset",
+      "parent_type": "SignalSourceAsset",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159586,
+          "definition_va": 1736666024316,
+          "raw_hex": "cf8607cd707798f69ee3e201",
+          "token": 67109711,
+          "name_identity": 221386575,
+          "name": "PositionNoise",
+          "type": {
+            "display": "TransformNoiseParams[]",
+            "type_ref": "0x7ff9760035c0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159587,
+          "definition_va": 1736666024328,
+          "raw_hex": "092aec78ab1a7da2e586c7b0",
+          "token": 67109712,
+          "name_identity": 271718236,
+          "name": "OrientationNoise",
+          "type": {
+            "display": "TransformNoiseParams[]",
+            "type_ref": "0x7ff9760035c0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 32,
+          "metadata_offset": 32,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 342927,
+          "definition_va": 1736648859706,
+          "rva": null,
+          "raw_hex": "11510b0022000005ffffffffe1870000de0300060000ffffffff86180001",
+          "token": 100664286,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 342928,
+          "definition_va": 1736648859736,
+          "rva": null,
+          "raw_hex": "582400009017321831be0300e1870000db0300060000ffffffff96000300",
+          "token": 100664283,
+          "name_identity": 405936016,
+          "name": "GetCombinedFilterResults",
+          "attributes": 150,
+          "static": true,
+          "abstract": false,
+          "return_type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff9752f3530",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245297,
+              "definition_va": 1736633178484,
+              "raw_hex": "28094d25cf7e74454ed6de10",
+              "name_identity": 187832186,
+              "name": "noiseParams",
+              "token": 134218670,
+              "type": {
+                "display": "TransformNoiseParams[]",
+                "type_ref": "0x7ff9760035d0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245298,
+              "definition_va": 1736633178496,
+              "raw_hex": "3eecb7a72d51aec6dcab4683",
+              "name_identity": 67113739,
+              "name": "time",
+              "token": 134218671,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245299,
+              "definition_va": 1736633178508,
+              "raw_hex": "04e61f2a380a2840b689ae05",
+              "name_identity": 187832197,
+              "name": "timeOffsets",
+              "token": 134218672,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 342929,
+          "definition_va": 1736648859766,
+          "rva": null,
+          "raw_hex": "eb030000a8173212ffffffffe1870000dc03000600000600ffffc6080000",
+          "token": 100664284,
+          "name_identity": 305272744,
+          "name": "get_SignalDuration",
+          "attributes": 2246,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 342930,
+          "definition_va": 1736648859796,
+          "rva": null,
+          "raw_hex": "11510b00ce17320934be0300e1870000dd03000600000700ffffc6000300",
+          "token": 100664285,
+          "name_identity": 154277838,
+          "name": "GetSignal",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245300,
+              "definition_va": 1736633178520,
+              "raw_hex": "bca487acfcecafd34c641688",
+              "name_identity": 338827194,
+              "name": "timeSinceSignalStart",
+              "token": 134218673,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245301,
+              "definition_va": 1736633178532,
+              "raw_hex": "e03fe82edfc7e54a22427e1a",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134218674,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245302,
+              "definition_va": 1736633178544,
+              "raw_hex": "0ba460b176ef57c9911fe69c",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134218675,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733188,
+        "record_number": 227,
+        "record_va": 1736696653220,
+        "record_hex": "00000000280008013e070000",
+        "instance_size": 40,
+        "offset_array_va": 1736717985216,
+        "offsets_hex": "1800000020000000",
+        "offset_flags": [
+          24,
+          32
+        ]
+      },
+      "layout_instance_size": 40,
+      "dependencies": [
+        5300,
+        5301,
+        34787
+      ]
+    },
+    {
+      "type_index": 34811,
+      "name": "CinemachineImpulseDefinition",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.CinemachineImpulseDefinition",
+      "klass": 5497606513728,
+      "klass_raw_hex": "b0885c01000500000000000000000000000000000000000000000000000000000000000000000000d89a1e030005000000000000000000000000000000000000000000000000000000000000000000003025e202000500005016e759940100000000000000000000000000000000000000000000000000000000000000000000fb870000000000000000120000000000fb870000000000000000124000000000b50000024024e2020000000001201000486c5d014024e20200006800ffffffff00000400040000000002000130400000",
+      "definition_va": 1736675104336,
+      "definition_raw_hex": "f53b0500a6340d007dc8310b39be0600c46f0200b500000201201000a81e321ca5340d0001000000ffffffffa5340d00ffffffff0c00ffff00000400000000000200ffffffffffff04000000000cbf1e",
+      "token": 33554613,
+      "attributes": 1056769,
+      "field_start": 159684,
+      "field_count": 12,
+      "method_start": 343029,
+      "method_count": 4,
+      "parent_descriptor_index": 1,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 104,
+      "parent_klass": 5497581038664,
+      "parent_type_index": 401,
+      "parent_name": "Object",
+      "parent_type": "object",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159684,
+          "definition_va": 1736666025492,
+          "raw_hex": "70ececa4918b7fced2fec9dc",
+          "token": 67109809,
+          "name_identity": 271720132,
+          "name": "m_ImpulseChannel",
+          "type": {
+            "display": "int",
+            "type_ref": "0x7ff975e553e0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159685,
+          "definition_va": 1736666025504,
+          "raw_hex": "b6e67fcb74d710f5c44a5bfe",
+          "token": 67109810,
+          "name_identity": 187834068,
+          "name": "m_RawSignal",
+          "type": {
+            "display": "SignalSourceAsset",
+            "type_ref": "0x7ff976003a20",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159686,
+          "definition_va": 1736666025516,
+          "raw_hex": "79ed1ecdc085b1f634c1fb03",
+          "token": 67109811,
+          "name_identity": 254928633,
+          "name": "m_AmplitudeGain",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 32,
+          "metadata_offset": 32,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159687,
+          "definition_va": 1736666025528,
+          "raw_hex": "a7f11cafef89afd871c5f9e5",
+          "token": 67109812,
+          "name_identity": 254928648,
+          "name": "m_FrequencyGain",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 36,
+          "metadata_offset": 36,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 159688,
+          "definition_va": 1736666025540,
+          "raw_hex": "691c83db290d140581805e0f",
+          "token": 67109813,
+          "name_identity": 204611295,
+          "name": "m_RepeatMode",
+          "type": {
+            "display": "RepeatMode",
+            "type_ref": "0x7ff976003a30",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 40,
+          "metadata_offset": 40,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 159689,
+          "definition_va": 1736666025552,
+          "raw_hex": "add5c85399735b7dfce6a586",
+          "token": 67109814,
+          "name_identity": 187834091,
+          "name": "m_Randomize",
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff975e56780",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 44,
+          "metadata_offset": 44,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 6,
+          "definition_index": 159690,
+          "definition_va": 1736666025564,
+          "raw_hex": "f275d7d8b366680220dab20e",
+          "token": 67109815,
+          "name_identity": 238165750,
+          "name": "m_TimeEnvelope",
+          "type": {
+            "display": "EnvelopeDefinition",
+            "type_ref": "0x7ff976003a40",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 48,
+          "metadata_offset": 48,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 7,
+          "definition_index": 159691,
+          "definition_va": 1736666025576,
+          "raw_hex": "564fa42ba2e736551c5b8161",
+          "token": 67109816,
+          "name_identity": 238165764,
+          "name": "m_ImpactRadius",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 80,
+          "metadata_offset": 80,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 8,
+          "definition_index": 159692,
+          "definition_va": 1736666025588,
+          "raw_hex": "3b87854dfd77167784eb6084",
+          "token": 67109817,
+          "name_identity": 254942994,
+          "name": "m_DirectionMode",
+          "type": {
+            "display": "DirectionMode",
+            "type_ref": "0x7ff976003a50",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 84,
+          "metadata_offset": 84,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 9,
+          "definition_index": 159693,
+          "definition_va": 1736666025600,
+          "raw_hex": "096487a8cb5418d260c862e1",
+          "token": 67109818,
+          "name_identity": 288497441,
+          "name": "m_DissipationMode",
+          "type": {
+            "display": "DissipationMode",
+            "type_ref": "0x7ff976003a60",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 88,
+          "metadata_offset": 88,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 10,
+          "definition_index": 159694,
+          "definition_va": 1736666025612,
+          "raw_hex": "b7bed25c06576586abcaaf99",
+          "token": 67109819,
+          "name_identity": 355606322,
+          "name": "m_DissipationDistance",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 92,
+          "metadata_offset": 92,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 11,
+          "definition_index": 159695,
+          "definition_va": 1736666025624,
+          "raw_hex": "25bd957e755528a82ec972b8",
+          "token": 67109820,
+          "name_identity": 305274695,
+          "name": "m_PropagationSpeed",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 96,
+          "metadata_offset": 96,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343029,
+          "definition_va": 1736648862766,
+          "rva": null,
+          "raw_hex": "11510b0022000005fffffffffb870000440400060000ffffffff86180001",
+          "token": 100664388,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343030,
+          "definition_va": 1736648862796,
+          "rva": null,
+          "raw_hex": "11510b00ebb2020afffffffffb870000410400060000ffffffff86000000",
+          "token": 100664385,
+          "name_identity": 167949035,
+          "name": "OnValidate",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343031,
+          "definition_va": 1736648862826,
+          "rva": null,
+          "raw_hex": "11510b005c57060b8dbe0300fb870000420400060000ffffffff86000200",
+          "token": 100664386,
+          "name_identity": 184964956,
+          "name": "CreateEvent",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245389,
+              "definition_va": 1736633179588,
+              "raw_hex": "abc5a202581f992557a531ee",
+              "name_identity": 134226814,
+              "name": "position",
+              "token": 134218762,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245390,
+              "definition_va": 1736633179600,
+              "raw_hex": "b2ea0a857c4809a85f8a9970",
+              "name_identity": 134861459,
+              "name": "velocity",
+              "token": 134218763,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 343032,
+          "definition_va": 1736648862856,
+          "rva": null,
+          "raw_hex": "c28b0200591f32148fbe0300fb870000430400060000ffffffff86000200",
+          "token": 100664387,
+          "name_identity": 338829145,
+          "name": "CreateAndReturnEvent",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "ImpulseEvent",
+            "type_ref": "0x7ff97555abd0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245391,
+              "definition_va": 1736633179612,
+              "raw_hex": "647d7207cdd6681aea5c01e3",
+              "name_identity": 134226814,
+              "name": "position",
+              "token": 134218764,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245392,
+              "definition_va": 1736633179624,
+              "raw_hex": "c797da899f9dd99c74376965",
+              "name_identity": 134861459,
+              "name": "velocity",
+              "token": 134218765,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733292,
+        "record_number": 11827,
+        "record_va": 1736696792420,
+        "record_hex": "000000006800080110830100",
+        "instance_size": 104,
+        "offset_array_va": 1736718374152,
+        "offsets_hex": "10000000180000002000000024000000280000002c000000300000005000000054000000580000005c00000060000000",
+        "offset_flags": [
+          16,
+          24,
+          32,
+          36,
+          40,
+          44,
+          48,
+          80,
+          84,
+          88,
+          92,
+          96
+        ]
+      },
+      "layout_instance_size": 104,
+      "dependencies": [
+        5300,
+        34790,
+        34812,
+        34818,
+        34819,
+        34820,
+        34821
+      ]
+    },
+    {
+      "type_index": 34813,
+      "name": "SignalSource",
+      "namespace": "",
+      "full_name": "SignalSource",
+      "klass": 5497606514000,
+      "klass_raw_hex": "b0885c01000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005026e20200050000f016e759940100000000000000000000000000000000000000000000000000000000000000000000fd870000000000000000120000000000fd870000000000000000124000000000b70000025025e2024024e20203001000486c5d015025e20200002800ffffffff00000600030001000000000130400000",
+      "definition_va": 1736675104496,
+      "definition_raw_hex": "f93b0500b0340d000800000033be0600d36f0200b700000203001000771f320caf340d00010000007a350100af340d00a5340d000300ffff00000600010001000000d096ffffe58703000100000cffff",
+      "token": 33554615,
+      "attributes": 1048579,
+      "field_start": 159699,
+      "field_count": 3,
+      "method_start": 343033,
+      "method_count": 3,
+      "parent_descriptor_index": 1,
+      "declaring_descriptor_index": 865445,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 40,
+      "parent_klass": 5497581038664,
+      "parent_type_index": 401,
+      "parent_name": "Object",
+      "parent_type": "object",
+      "declaring_type_index": 34811,
+      "declaring_type": "CinemachineImpulseDefinition",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159699,
+          "definition_va": 1736666025672,
+          "raw_hex": "0ce3a442ced3356cbf47806f",
+          "token": 67109824,
+          "name_identity": 87170947,
+          "name": "m_Def",
+          "type": {
+            "display": "CinemachineImpulseDefinition",
+            "type_ref": "0x7ff976003ac0",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159700,
+          "definition_va": 1736666025684,
+          "raw_hex": "440735f3d693c71cca07122c",
+          "token": 67109826,
+          "name_identity": 288497544,
+          "name": "m_StartTimeOffset",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e67de0",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159701,
+          "definition_va": 1736666025696,
+          "raw_hex": "9f0fb7db976e4905c59b710d",
+          "token": 67109825,
+          "name_identity": 168810689,
+          "name": "m_Velocity",
+          "type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff975e95770",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 28,
+          "metadata_offset": 28,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343033,
+          "definition_va": 1736648862886,
+          "rva": null,
+          "raw_hex": "11510b002200000591be0300fd870000450400060000ffffffff86180201",
+          "token": 100664389,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245393,
+              "definition_va": 1736633179636,
+              "raw_hex": "fb43370ce72f3c267e14d1e7",
+              "name_identity": 50561986,
+              "name": "def",
+              "token": 134218766,
+              "type": {
+                "display": "CinemachineImpulseDefinition",
+                "type_ref": "0x7ff976003a00",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245394,
+              "definition_va": 1736633179648,
+              "raw_hex": "014faa8e45d6a9b10cef387a",
+              "name_identity": 134861459,
+              "name": "velocity",
+              "token": 134218767,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343034,
+          "definition_va": 1736648862916,
+          "rva": null,
+          "raw_hex": "eb030000a8173212fffffffffd8700004604000600000400ffffe6090000",
+          "token": 100664390,
+          "name_identity": 305272744,
+          "name": "get_SignalDuration",
+          "attributes": 2534,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343035,
+          "definition_va": 1736648862946,
+          "rva": null,
+          "raw_hex": "11510b00ce17320993be0300fd8700004704000600000500ffffe6010300",
+          "token": 100664391,
+          "name_identity": 154277838,
+          "name": "GetSignal",
+          "attributes": 486,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245395,
+              "definition_va": 1736633179660,
+              "raw_hex": "230e1211e1763a2086d1a0fc",
+              "name_identity": 338827194,
+              "name": "timeSinceSignalStart",
+              "token": 134218768,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245396,
+              "definition_va": 1736633179672,
+              "raw_hex": "cd247e93ec2c70af9ca6087f",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134218769,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245397,
+              "definition_va": 1736633179684,
+              "raw_hex": "fefcd515b146cd330d8970f1",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134218770,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733300,
+        "record_number": 11828,
+        "record_va": 1736696792432,
+        "record_hex": "000000002800080194010000",
+        "instance_size": 40,
+        "offset_array_va": 1736717979416,
+        "offsets_hex": "10000000180000001c000000",
+        "offset_flags": [
+          16,
+          24,
+          28
+        ]
+      },
+      "layout_instance_size": 40,
+      "dependencies": [
+        5300,
+        5301,
+        34811
+      ]
+    },
+    {
+      "type_index": 34814,
+      "name": "CinemachineImpulseListener",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.CinemachineImpulseListener",
+      "klass": 5497606518512,
+      "klass_raw_hex": "b0885c010005000000000000000000000000000000000000000000000000000000000000000000006038e2020005000000000000000000000000000000000000000000000000000000000000000000006026e202000500004017e759940100000000000000000000000000000000000000000000000000000000000000000000fe870000000000000000120000000000fe870000000000000000124000000000b8000002f036e20200000000010010004099e102f036e20200003800ffffffff00000e00030000000007000130400000",
+      "definition_va": 1736675104576,
+      "definition_raw_hex": "fc3b0500b3340d007dc8310b3dbe0600d66f0200b800000201001000991f321ab2340d00168b0200ffffffffb2340d00ffffffff0400ffff00000e00000000000000ffffffffffff03000000000cffff",
+      "token": 33554616,
+      "attributes": 1048577,
+      "field_start": 159702,
+      "field_count": 4,
+      "method_start": 343036,
+      "method_count": 3,
+      "parent_descriptor_index": 166678,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 56,
+      "parent_klass": 5497606478144,
+      "parent_type_index": 34746,
+      "parent_name": "CinemachineExtension",
+      "parent_type": "CinemachineExtension",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159702,
+          "definition_va": 1736666025708,
+          "raw_hex": "32608780065318aa1f7062b4",
+          "token": 67109827,
+          "name_identity": 204589230,
+          "name": "m_ApplyAfter",
+          "type": {
+            "display": "Stage",
+            "type_ref": "0x7ff9760019d0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 40,
+          "metadata_offset": 40,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159703,
+          "definition_va": 1736666025720,
+          "raw_hex": "0dd3c8a041725bca3fe3a4d5",
+          "token": 67109828,
+          "name_identity": 221322388,
+          "name": "m_ChannelMask",
+          "type": {
+            "display": "int",
+            "type_ref": "0x7ff975e553e0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 44,
+          "metadata_offset": 44,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159704,
+          "definition_va": 1736666025732,
+          "raw_hex": "2e9a5e1e8732f147a3a63b4c",
+          "token": 67109829,
+          "name_identity": 103948211,
+          "name": "m_Gain",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 48,
+          "metadata_offset": 48,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159705,
+          "definition_va": 1736666025744,
+          "raw_hex": "eec0e404ea5e772e0bd3c13b",
+          "token": 67109830,
+          "name_identity": 254943161,
+          "name": "m_Use2DDistance",
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff975e56780",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 52,
+          "metadata_offset": 52,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343036,
+          "definition_va": 1736648862976,
+          "rva": null,
+          "raw_hex": "11510b0022000005fffffffffe8700004a0400060000ffffffff86180001",
+          "token": 100664394,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343037,
+          "definition_va": 1736648863006,
+          "rva": null,
+          "raw_hex": "11510b0063110005fffffffffe870000480400060000ffffffff81000000",
+          "token": 100664392,
+          "name_identity": 83890531,
+          "name": "Reset",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343038,
+          "definition_va": 1736648863036,
+          "rva": null,
+          "raw_hex": "11510b00d3c8311996be0300fe8700004904000600000900ffffc4000400",
+          "token": 100664393,
+          "name_identity": 422693075,
+          "name": "PostPipelineStageCallback",
+          "attributes": 196,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245398,
+              "definition_va": 1736633179696,
+              "raw_hex": "8a264798b2bb6eb7a163d873",
+              "name_identity": 70371535,
+              "name": "vcam",
+              "token": 134218771,
+              "type": {
+                "display": "CinemachineVirtualCameraBase",
+                "type_ref": "0x7ff975558510",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245399,
+              "definition_va": 1736633179708,
+              "raw_hex": "b507af1a5679a330bd4040f6",
+              "name_identity": 84715528,
+              "name": "stage",
+              "token": 134218772,
+              "type": {
+                "display": "Stage",
+                "type_ref": "0x7ff97555a210",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245400,
+              "definition_va": 1736633179720,
+              "raw_hex": "c545249d32b20fb3291ba878",
+              "name_identity": 83892929,
+              "name": "state",
+              "token": 134218773,
+              "type": {
+                "display": "CameraState&",
+                "type_ref": "0x7ff9760019e0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 3,
+              "definition_index": 245401,
+              "definition_va": 1736633179732,
+              "raw_hex": "ca31811fa43b6e41d9ed0f0b",
+              "name_identity": 151698720,
+              "name": "deltaTime",
+              "token": 134218774,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733304,
+        "record_number": 11764,
+        "record_va": 1736696791664,
+        "record_hex": "00000000380008013c810100",
+        "instance_size": 56,
+        "offset_array_va": 1736718372280,
+        "offsets_hex": "280000002c0000003000000034000000",
+        "offset_flags": [
+          40,
+          44,
+          48,
+          52
+        ]
+      },
+      "layout_instance_size": 56,
+      "dependencies": [
+        34727,
+        34740,
+        34764
+      ]
+    },
+    {
+      "type_index": 34817,
+      "name": "CinemachineImpulseManager",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.CinemachineImpulseManager",
+      "klass": 5497606514664,
+      "klass_raw_hex": "b0885c01000500000000000000000000000000000000000000000000000000000000000000000000f0853e030005000048326c0400050000000000000000000000000000000000000000000000000000d828e202000500003018e7599401000000000000000000000000000000000000000000000000000000000000000000000188000000000000000012000000000001880000000000000000124000000000bb000002e827e2020000000001001000486c5d01e827e20200002800ffffffff080004000b0000000002010130401000",
+      "definition_va": 1736675104816,
+      "definition_raw_hex": "013c0500b9340d007dc8310b8fbe0600da6f0200bb000002010010001d203219b8340d00010000007b350100b8340d00ffffffff0500ffff00000400000000000200ffffffffffff0b000300080cc31e",
+      "token": 33554619,
+      "attributes": 1048577,
+      "field_start": 159706,
+      "field_count": 5,
+      "method_start": 343041,
+      "method_count": 11,
+      "parent_descriptor_index": 1,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 5497632338504,
+      "value_type": false,
+      "instance_size": 40,
+      "parent_klass": 5497581038664,
+      "parent_type_index": 401,
+      "parent_name": "Object",
+      "parent_type": "object",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159706,
+          "definition_va": 1736666025756,
+          "raw_hex": "b95e3bfa794fcc2378a7162b",
+          "token": 67109831,
+          "name_identity": 154272664,
+          "name": "sInstance",
+          "type": {
+            "display": "CinemachineImpulseManager",
+            "type_ref": "0x7ff976003b50",
+            "complete": true
+          },
+          "attributes": 17,
+          "static": true,
+          "literal": false,
+          "offset_flags": 67276752,
+          "metadata_offset": 167888,
+          "storage_flags": 4,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159707,
+          "definition_va": 1736666025768,
+          "raw_hex": "66a4aefcb4f2402630a9592b",
+          "token": 67109832,
+          "name_identity": 117465622,
+          "name": "Epsilon",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975ea6280",
+            "complete": true
+          },
+          "attributes": 32849,
+          "static": true,
+          "literal": true,
+          "constant_value_status": "默认值表尚未展开",
+          "offset_flags": 0,
+          "metadata_offset": 0,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159708,
+          "definition_va": 1736666025780,
+          "raw_hex": "5ab087dc1ca11806b6156312",
+          "token": 67109834,
+          "name_identity": 238166070,
+          "name": "m_ActiveEvents",
+          "type": {
+            "display": "List<ImpulseEvent>",
+            "type_ref": "0x7ff976003b60",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159709,
+          "definition_va": 1736666025792,
+          "raw_hex": "15dec122d6ce524c7f439d59",
+          "token": 67109833,
+          "name_identity": 254943300,
+          "name": "m_ExpiredEvents",
+          "type": {
+            "display": "List<ImpulseEvent>",
+            "type_ref": "0x7ff976003b60",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 159710,
+          "definition_va": 1736666025804,
+          "raw_hex": "2632c4c912d156f3c845a111",
+          "token": 67109835,
+          "name_identity": 540155987,
+          "name": "<IgnoreTimeScale>k__BackingField",
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff975e558d0",
+            "complete": true
+          },
+          "attributes": 1,
+          "static": false,
+          "literal": false,
+          "offset_flags": 32,
+          "metadata_offset": 32,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343041,
+          "definition_va": 1736648863126,
+          "rva": 528782064,
+          "raw_hex": "11510b0022000005ffffffff018800004d0400060000ffffffff81180001",
+          "token": 100664397,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6273,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632338592,
+          "runtime_raw_hex": "e827e20200050000f0924193f97f00000010bd73f97f0000ffffffff00000000013c0500000000004d040006ffff8118000000100000000060356c0400050000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894132464,
+          "runtime_name_matches": true,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343042,
+          "definition_va": 1736648863156,
+          "rva": 528784496,
+          "raw_hex": "11510b0096000006ffffffff01880000570400060000ffffffff91180002",
+          "token": 100664407,
+          "name_identity": 100663446,
+          "name": ".cctor",
+          "attributes": 6289,
+          "static": true,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632338656,
+          "runtime_raw_hex": "e827e20200050000709c4193f97f0000c015bd73f97f0000ffffffff00000000023c05000000000057040006ffff9118000000200000000078356c0400050000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134896,
+          "runtime_name_matches": true,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343043,
+          "definition_va": 1736648863186,
+          "rva": 528782080,
+          "raw_hex": "b8340d007476030cffffffff018800004e0400060000ffffffff96080000",
+          "token": 100664398,
+          "name_identity": 201553524,
+          "name": "get_Instance",
+          "attributes": 2198,
+          "static": true,
+          "abstract": false,
+          "return_type": {
+            "display": "CinemachineImpulseManager",
+            "type_ref": "0x7ff976003b30",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632338720,
+          "runtime_raw_hex": "e827e2020005000000934193f97f00002014bd73f97f0000ffffffff00000000033c0500000000004e040006ffff9608000000000000000090356c0400050000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894132480,
+          "runtime_name_matches": true,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 343044,
+          "definition_va": 1736648863216,
+          "rva": 528782192,
+          "raw_hex": "11510b0013063210ffffffff018800004f0400060000ffffffff91000000",
+          "token": 100664399,
+          "name_identity": 271713811,
+          "name": "InitializeModule",
+          "attributes": 145,
+          "static": true,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632338784,
+          "runtime_raw_hex": "e827e2020005000070934193f97f0000c015bd73f97f0000ffffffff00000000043c0500000000004f040006ffff91000000000000000000a8356c0400050000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894132592,
+          "runtime_name_matches": true,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 343045,
+          "definition_va": 1736648863246,
+          "rva": 528782480,
+          "raw_hex": "e1010000a720320c9abe030001880000500400060000ffffffff86000500",
+          "token": 100664400,
+          "name_identity": 204611751,
+          "name": "GetImpulseAt",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245402,
+              "definition_va": 1736633179744,
+              "raw_hex": "44f3e8a1f943cdccd1d2778d",
+              "name_identity": 271720578,
+              "name": "listenerLocation",
+              "token": 134218775,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245403,
+              "definition_va": 1736633179756,
+              "raw_hex": "5fe850247f1d754540a5df0f",
+              "name_identity": 171057298,
+              "name": "distance2D",
+              "token": 134218776,
+              "type": {
+                "display": "bool",
+                "type_ref": "0x7ff9752d0dc0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245404,
+              "definition_va": 1736633179768,
+              "raw_hex": "68c4b8a62c397dbaf2874782",
+              "name_identity": 187834524,
+              "name": "channelMask",
+              "token": 134218777,
+              "type": {
+                "display": "int",
+                "type_ref": "0x7ff9752cfa40",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 3,
+              "definition_index": 245405,
+              "definition_va": 1736633179780,
+              "raw_hex": "ee5e17290de81641f85caf04",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134218778,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 4,
+              "definition_index": 245406,
+              "definition_va": 1736633179792,
+              "raw_hex": "d8338fab4b9184c56e371787",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134218779,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497632338848,
+          "runtime_raw_hex": "e827e2020005000090944193f97f00006079c673f97f0000ffffffff00000000053c05000000000050040006ffff860000000500000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894132880,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 343046,
+          "definition_va": 1736648863276,
+          "rva": 528783600,
+          "raw_hex": "e1010000b3203213ffffffff01880000510400060000ffffffff86080000",
+          "token": 100664401,
+          "name_identity": 322052275,
+          "name": "get_IgnoreTimeScale",
+          "attributes": 2182,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632338912,
+          "runtime_raw_hex": "e827e20200050000f0984193f97f00007033bd73f97f0000ffffffff00000000063c05000000000051040006ffff860800000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134000,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 6,
+          "definition_index": 343047,
+          "definition_va": 1736648863306,
+          "rva": 528783616,
+          "raw_hex": "11510b00c62032139fbe030001880000520400060000ffffffff86080100",
+          "token": 100664402,
+          "name_identity": 322052294,
+          "name": "set_IgnoreTimeScale",
+          "attributes": 2182,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245407,
+              "definition_va": 1736633179804,
+              "raw_hex": "8f57f02d31abe64d141a7f19",
+              "name_identity": 83886324,
+              "name": "value",
+              "token": 134218780,
+              "type": {
+                "display": "bool",
+                "type_ref": "0x7ff9752d0dc0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497632338976,
+          "runtime_raw_hex": "e827e2020005000000994193f97f0000b01bbd73f97f0000ffffffff00000000073c05000000000052040006ffff860800000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134016,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 7,
+          "definition_index": 343048,
+          "definition_va": 1736648863336,
+          "rva": 528783632,
+          "raw_hex": "eb0300000205320fffffffff01880000530400060000ffffffff86080000",
+          "token": 100664403,
+          "name_identity": 254936322,
+          "name": "get_CurrentTime",
+          "attributes": 2182,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632339040,
+          "runtime_raw_hex": "e827e2020005000010994193f97f0000d0f0bd73f97f0000ffffffff00000000083c05000000000053040006ffff860800000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134032,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 8,
+          "definition_index": 343049,
+          "definition_va": 1736648863366,
+          "rva": 528783872,
+          "raw_hex": "c28b0200d920320fffffffff01880000540400060000ffffffff86000000",
+          "token": 100664404,
+          "name_identity": 254943449,
+          "name": "NewImpulseEvent",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "ImpulseEvent",
+            "type_ref": "0x7ff97555abd0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632339104,
+          "runtime_raw_hex": "e827e20200050000009a4193f97f0000f015bd73f97f0000ffffffff00000000093c05000000000054040006ffff860000000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134272,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 9,
+          "definition_index": 343050,
+          "definition_va": 1736648863396,
+          "rva": 528784016,
+          "raw_hex": "11510b00e820320fa0be030001880000550400060000ffffffff86000100",
+          "token": 100664405,
+          "name_identity": 254943464,
+          "name": "AddImpulseEvent",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245408,
+              "definition_va": 1736633179816,
+              "raw_hex": "e3b856b059a84ecce2eee69b",
+              "name_identity": 16785627,
+              "name": "e",
+              "token": 134218781,
+              "type": {
+                "display": "ImpulseEvent",
+                "type_ref": "0x7ff97555abd0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497632339168,
+          "runtime_raw_hex": "e827e20200050000909a4193f97f0000d015bd73f97f0000ffffffff000000000a3c05000000000055040006ffff860000000100000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894134416,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 10,
+          "definition_index": 343051,
+          "definition_va": 1736648863426,
+          "rva": 528782224,
+          "raw_hex": "11510b0027090005ffffffff01880000560400060000ffffffff86000000",
+          "token": 100664406,
+          "name_identity": 83888423,
+          "name": "Clear",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497632339232,
+          "runtime_raw_hex": "e827e2020005000090934193f97f00000010bd73f97f0000ffffffff000000000b3c05000000000056040006ffff860000000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709894132624,
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733316,
+        "record_number": 11829,
+        "record_va": 1736696792444,
+        "record_hex": "00000800280008011c830100",
+        "instance_size": 40,
+        "offset_array_va": 1736718374200,
+        "offsets_hex": "d08f020400000000100000001800000020000000",
+        "offset_flags": [
+          67276752,
+          0,
+          16,
+          24,
+          32
+        ]
+      },
+      "layout_instance_size": 40,
+      "dependencies": [
+        1556,
+        5300,
+        5301,
+        34817,
+        34819
+      ]
+    },
+    {
+      "type_index": 34819,
+      "name": "ImpulseEvent",
+      "namespace": "",
+      "full_name": "ImpulseEvent",
+      "klass": 5497606514936,
+      "klass_raw_hex": "b0885c010005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f829e20200050000e829e20200050000d018e7599401000000000000000000000000000000000000000000000000000000000000000000000388000000000000000012000000000003880000000000000000124000000000bd000002f828e202e827e20202001000486c5d01f828e20200006000ffffffff00000400060000000000000130400000",
+      "definition_va": 1736675104976,
+      "definition_raw_hex": "123c0500be340d00080000008bbe0600e66f0200bd000002020010007e21320cc28b0200010000007f350100c28b0200b8340d000a00ffff00000400000000000200ffffffffffff06000100000cc11e",
+      "token": 33554621,
+      "attributes": 1048578,
+      "field_start": 159718,
+      "field_count": 10,
+      "method_start": 343058,
+      "method_count": 6,
+      "parent_descriptor_index": 1,
+      "declaring_descriptor_index": 865464,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 96,
+      "parent_klass": 5497581038664,
+      "parent_type_index": 401,
+      "parent_name": "Object",
+      "parent_type": "object",
+      "declaring_type_index": 34817,
+      "declaring_type": "CinemachineImpulseManager",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159718,
+          "definition_va": 1736666025900,
+          "raw_hex": "bbabc1d1999c52fb7d129d03",
+          "token": 67109844,
+          "name_identity": 171057546,
+          "name": "m_Envelope",
+          "type": {
+            "display": "EnvelopeDefinition",
+            "type_ref": "0x7ff976003a40",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159719,
+          "definition_va": 1736666025912,
+          "raw_hex": "17092e38e0f9be61cd6f096e",
+          "token": 67109845,
+          "name_identity": 238166420,
+          "name": "m_SignalSource",
+          "type": {
+            "display": "ISignalSource6D",
+            "type_ref": "0x7ff976003ba0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 48,
+          "metadata_offset": 48,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159720,
+          "definition_va": 1736666025924,
+          "raw_hex": "36fe2dc218efbeeb8d6209fb",
+          "token": 67109850,
+          "name_identity": 288497441,
+          "name": "m_DissipationMode",
+          "type": {
+            "display": "DissipationMode",
+            "type_ref": "0x7ff976003a60",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 56,
+          "metadata_offset": 56,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159721,
+          "definition_va": 1736666025936,
+          "raw_hex": "0c9f48497b37db7200ab2586",
+          "token": 67109851,
+          "name_identity": 355606322,
+          "name": "m_DissipationDistance",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 60,
+          "metadata_offset": 60,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 159722,
+          "definition_va": 1736666025948,
+          "raw_hex": "52c0a580c25838aa5bcc82ba",
+          "token": 67109852,
+          "name_identity": 305274695,
+          "name": "m_PropagationSpeed",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 64,
+          "metadata_offset": 64,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 159723,
+          "definition_va": 1736666025960,
+          "raw_hex": "0f8bb7d1582a4afb4fa09402",
+          "token": 67109849,
+          "name_identity": 154280354,
+          "name": "m_Channel",
+          "type": {
+            "display": "int",
+            "type_ref": "0x7ff975e553e0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 68,
+          "metadata_offset": 68,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 6,
+          "definition_index": 159724,
+          "definition_va": 1736666025972,
+          "raw_hex": "858cc0de667d5108cef09b15",
+          "token": 67109848,
+          "name_identity": 254942994,
+          "name": "m_DirectionMode",
+          "type": {
+            "display": "DirectionMode",
+            "type_ref": "0x7ff976003a50",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 72,
+          "metadata_offset": 72,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 7,
+          "definition_index": 159725,
+          "definition_va": 1736666025984,
+          "raw_hex": "bbc2a3c9225b36f354e87bfc",
+          "token": 67109843,
+          "name_identity": 187513047,
+          "name": "m_StartTime",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 76,
+          "metadata_offset": 76,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 8,
+          "definition_index": 159726,
+          "definition_va": 1736666025996,
+          "raw_hex": "ea18043c2b7896658fc7b86d",
+          "token": 67109846,
+          "name_identity": 168426252,
+          "name": "m_Position",
+          "type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff975e95430",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 80,
+          "metadata_offset": 80,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 9,
+          "definition_index": 159727,
+          "definition_va": 1736666026008,
+          "raw_hex": "dbf0a83746893b61418a6367",
+          "token": 67109847,
+          "name_identity": 135244964,
+          "name": "m_Radius",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 92,
+          "metadata_offset": 92,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343058,
+          "definition_va": 1736648863636,
+          "rva": null,
+          "raw_hex": "11510b0022000005ffffffff03880000630400060000ffffffff83180001",
+          "token": 100664419,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6275,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343059,
+          "definition_va": 1736648863666,
+          "rva": null,
+          "raw_hex": "e1010000df40070bffffffff038800005e0400060000ffffffff86080000",
+          "token": 100664414,
+          "name_identity": 185024735,
+          "name": "get_Expired",
+          "attributes": 2182,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343060,
+          "definition_va": 1736648863696,
+          "rva": null,
+          "raw_hex": "11510b0000a80106a4be0300038800005f0400060000ffffffff86000200",
+          "token": 100664415,
+          "name_identity": 100771840,
+          "name": "Cancel",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245412,
+              "definition_va": 1736633179864,
+              "raw_hex": "eb9bf7b95ae1edd08f638695",
+              "name_identity": 67113739,
+              "name": "time",
+              "token": 134218785,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245413,
+              "definition_va": 1736633179876,
+              "raw_hex": "467b5f3c5af0674b6336ee17",
+              "name_identity": 204611940,
+              "name": "forceNoDecay",
+              "token": 134218786,
+              "type": {
+                "display": "bool",
+                "type_ref": "0x7ff9752d0dc0",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 343061,
+          "definition_va": 1736648863726,
+          "rva": null,
+          "raw_hex": "eb030000ab21320da6be030003880000600400060000ffffffff86000100",
+          "token": 100664416,
+          "name_identity": 221389227,
+          "name": "DistanceDecay",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245414,
+              "definition_va": 1736633179888,
+              "raw_hex": "7954c7be2ef6c4e11b1b56aa",
+              "name_identity": 134864577,
+              "name": "distance",
+              "token": 134218787,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 343062,
+          "definition_va": 1736648863756,
+          "rva": null,
+          "raw_hex": "e1010000cd213210a7be030003880000610400060000ffffffff86000400",
+          "token": 100664417,
+          "name_identity": 271720909,
+          "name": "GetDecayedSignal",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245415,
+              "definition_va": 1736633179900,
+              "raw_hex": "384e2f4127a8176ceeedbd2c",
+              "name_identity": 271720888,
+              "name": "listenerPosition",
+              "token": 134218788,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245416,
+              "definition_va": 1736633179912,
+              "raw_hex": "620d97c3ca419fdb78d025af",
+              "name_identity": 87171528,
+              "name": "use2D",
+              "token": 134218789,
+              "type": {
+                "display": "bool",
+                "type_ref": "0x7ff9752d0dc0",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 245417,
+              "definition_va": 1736633179924,
+              "raw_hex": "a427f945a32ff56372a58d21",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134218790,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 3,
+              "definition_index": 245418,
+              "definition_va": 1736633179936,
+              "raw_hex": "46fc70c8b94766e2c087f5a3",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134218791,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 343063,
+          "definition_va": 1736648863786,
+          "rva": null,
+          "raw_hex": "11510b0027090005ffffffff03880000620400060000ffffffff86000000",
+          "token": 100664418,
+          "name_identity": 83888423,
+          "name": "Clear",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733324,
+        "record_number": 11831,
+        "record_va": 1736696792468,
+        "record_hex": "000000006000080128830100",
+        "instance_size": 96,
+        "offset_array_va": 1736718374248,
+        "offsets_hex": "1000000030000000380000003c0000004000000044000000480000004c000000500000005c000000",
+        "offset_flags": [
+          16,
+          48,
+          56,
+          60,
+          64,
+          68,
+          72,
+          76,
+          80,
+          92
+        ]
+      },
+      "layout_instance_size": 96,
+      "dependencies": [
+        5300,
+        5301,
+        34789,
+        34818,
+        34820,
+        34821
+      ]
+    },
+    {
+      "type_index": 34821,
+      "name": "DissipationMode",
+      "namespace": "",
+      "full_name": "DissipationMode",
+      "klass": 5497606515616,
+      "klass_raw_hex": "b0885c010005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060124c02000500007019e7599401000000000000000000000000000000000000000000000000000000000000000000000588000000000000000011000000000005880000000000000000114000000000bf000002087b5d01f828e20202010000c0895d01087b5d0100001400ffff040000001700000003000000000120050100",
+      "definition_va": 1736675105136,
+      "definition_raw_hex": "ffffffffc4340d000800000074be0600f36f0200bf00000202010000fc21320fc3340d00c2130000ffffffffa9000000c28b02000400ffff00001700000003000000ffffffff060000000000130cffff",
+      "token": 33554623,
+      "attributes": 258,
+      "field_start": 159731,
+      "field_count": 4,
+      "method_start": 4294967295,
+      "method_count": 0,
+      "parent_descriptor_index": 5058,
+      "declaring_descriptor_index": 166850,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": true,
+      "instance_size": 20,
+      "parent_klass": 5497581046208,
+      "parent_type_index": 224,
+      "parent_name": "Enum",
+      "parent_type": "Enum",
+      "declaring_type_index": 34819,
+      "declaring_type": "ImpulseEvent",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159731,
+          "definition_va": 1736666026056,
+          "raw_hex": "30986219ff88f34257ff3d4c",
+          "token": 67109857,
+          "name_identity": 187834891,
+          "name": "LinearDecay",
+          "type": {
+            "display": "DissipationMode",
+            "type_ref": "0x7ff976003c00",
+            "complete": true
+          },
+          "attributes": 32854,
+          "static": true,
+          "literal": true,
+          "constant_value_status": "默认值表尚未展开",
+          "offset_flags": 0,
+          "metadata_offset": 0,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 159732,
+          "definition_va": 1736666026068,
+          "raw_hex": "a3aa4293739bd3bcd5111ec4",
+          "token": 67109858,
+          "name_identity": 154280470,
+          "name": "SoftDecay",
+          "type": {
+            "display": "DissipationMode",
+            "type_ref": "0x7ff976003c00",
+            "complete": true
+          },
+          "attributes": 32854,
+          "static": true,
+          "literal": true,
+          "constant_value_status": "默认值表尚未展开",
+          "offset_flags": 0,
+          "metadata_offset": 0,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 159733,
+          "definition_va": 1736666026080,
+          "raw_hex": "51f4a51522e5363f8c5b814d",
+          "token": 67109859,
+          "name_identity": 271720991,
+          "name": "ExponentialDecay",
+          "type": {
+            "display": "DissipationMode",
+            "type_ref": "0x7ff976003c00",
+            "complete": true
+          },
+          "attributes": 32854,
+          "static": true,
+          "literal": true,
+          "constant_value_status": "默认值表尚未展开",
+          "offset_flags": 0,
+          "metadata_offset": 0,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 159734,
+          "definition_va": 1736666026092,
+          "raw_hex": "01365571b9d4e79a0d3a00a0",
+          "token": 67109856,
+          "name_identity": 117444870,
+          "name": "value__",
+          "type": {
+            "display": "int",
+            "type_ref": "0x7ff975e55d60",
+            "complete": true
+          },
+          "attributes": 1542,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": 0,
+          "complete": true
+        }
+      ],
+      "methods": [],
+      "issues": [],
+      "enum_type": true,
+      "layout": {
+        "index_va": 1736625733332,
+        "record_number": 60,
+        "record_va": 1736696651216,
+        "record_hex": "000000001400040039010000",
+        "instance_size": 20,
+        "offset_array_va": 1736717979052,
+        "offsets_hex": "00000000000000000000000010000000",
+        "offset_flags": [
+          0,
+          0,
+          0,
+          16
+        ]
+      },
+      "layout_instance_size": 20,
+      "dependencies": [
+        34821
+      ]
+    },
+    {
+      "type_index": 34822,
+      "name": "CinemachineImpulseSource",
+      "namespace": "Cinemachine",
+      "full_name": "Cinemachine.CinemachineImpulseSource",
+      "klass": 5497608185192,
+      "klass_raw_hex": "b0885c0100050000000000000000000000000000000000000000000000000000000000000000000058a6fb02000500000000000000000000000000000000000000000000000000000000000000000000282de20200050000c019e7599401000000000000000000000000000000000000000000000000000000000000000000000688000000000000000012000000000006880000000000000000124000000000c000000268a5fb0200000000010010006888650168a5fb0200002000ffffffff00000400060000000006000130400000",
+      "definition_va": 1736675105216,
+      "definition_raw_hex": "183c0500c6340d007dc8310b93be0600f76f0200c0000002010010002f223218a0340d0061280000ffffffffa0340d00ffffffff0100ffff00000400000000000000ffffffffffff06000000000cffff",
+      "token": 33554624,
+      "attributes": 1048577,
+      "field_start": 159735,
+      "field_count": 1,
+      "method_start": 343064,
+      "method_count": 6,
+      "parent_descriptor_index": 10337,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 0,
+      "value_type": false,
+      "instance_size": 32,
+      "parent_klass": 5497581570152,
+      "parent_type_index": 5352,
+      "parent_name": "MonoBehaviour",
+      "parent_type": "MonoBehaviour",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 159735,
+          "definition_va": 1736666026104,
+          "raw_hex": "5be83c7d2bd9cda6bc4f18b8",
+          "token": 67109860,
+          "name_identity": 322052679,
+          "name": "m_ImpulseDefinition",
+          "type": {
+            "display": "CinemachineImpulseDefinition",
+            "type_ref": "0x7ff976003c20",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 343064,
+          "definition_va": 1736648863816,
+          "rva": null,
+          "raw_hex": "11510b0022000005ffffffff06880000690400060000ffffffff86180001",
+          "token": 100664425,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 343065,
+          "definition_va": 1736648863846,
+          "rva": null,
+          "raw_hex": "11510b00ebb2020affffffff06880000640400060000ffffffff81000000",
+          "token": 100664420,
+          "name_identity": 167949035,
+          "name": "OnValidate",
+          "attributes": 129,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 343066,
+          "definition_va": 1736648863876,
+          "rva": null,
+          "raw_hex": "11510b005a223211abbe030006880000650400060000ffffffff86000200",
+          "token": 100664421,
+          "name_identity": 288498266,
+          "name": "GenerateImpulseAt",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245419,
+              "definition_va": 1736633179948,
+              "raw_hex": "c882ce4a39d2c45d52625d26",
+              "name_identity": 134226814,
+              "name": "position",
+              "token": 134218792,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 245420,
+              "definition_va": 1736633179960,
+              "raw_hex": "cf9736cd979d35e05837c5a8",
+              "name_identity": 134861459,
+              "name": "velocity",
+              "token": 134218793,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 343067,
+          "definition_va": 1736648863906,
+          "rva": null,
+          "raw_hex": "11510b006b22320fadbe030006880000660400060000ffffffff86000100",
+          "token": 100664422,
+          "name_identity": 254943851,
+          "name": "GenerateImpulse",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245421,
+              "definition_va": 1736633179972,
+              "raw_hex": "013a9e4f45f98d72291a2d3b",
+              "name_identity": 134861459,
+              "name": "velocity",
+              "token": 134218794,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 4,
+          "definition_index": 343068,
+          "definition_va": 1736648863936,
+          "rva": null,
+          "raw_hex": "11510b006b22320faebe030006880000670400060000ffffffff86000100",
+          "token": 100664423,
+          "name_identity": 254943851,
+          "name": "GenerateImpulse",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 245422,
+              "definition_va": 1736633179984,
+              "raw_hex": "233306d2e97b03eabdec94bd",
+              "name_identity": 84377506,
+              "name": "force",
+              "token": 134218795,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 5,
+          "definition_index": 343069,
+          "definition_va": 1736648863966,
+          "rva": null,
+          "raw_hex": "11510b006b22320fffffffff06880000680400060000ffffffff86000000",
+          "token": 100664424,
+          "name_identity": 254943851,
+          "name": "GenerateImpulse",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_unavailable": "类型方法缓存未取得",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625733336,
+        "record_number": 46,
+        "record_va": 1736696651048,
+        "record_hex": "0000000020000801ee000000",
+        "instance_size": 32,
+        "offset_array_va": 1736717978752,
+        "offsets_hex": "18000000",
+        "offset_flags": [
+          24
+        ]
+      },
+      "layout_instance_size": 32,
+      "dependencies": [
+        5300,
+        34811
+      ]
+    },
+    {
+      "type_index": 46013,
+      "name": "VNoiseSettings",
+      "namespace": "MoleMole.Cameras",
+      "full_name": "MoleMole.Cameras.VNoiseSettings",
+      "klass": 5497607984896,
+      "klass_raw_hex": "80955c0100050000010000000000f80f58b151060005000078b15106000500000000000000000000b099f8020005000038b051060005000000000000000000000000000000000000000000000000000008ea420200050000f0c2f459940100000000000000000000000000000000000000000000000000000000000000000000bdb30000000000000000120000000000bdb30000000000000000124000000000ae1600020097f80200000000010010004098f8020097f80200006800ffffffff00000e00040002000007000131580c00",
+      "definition_va": 1736676000496,
+      "definition_raw_hex": "6f7d060035b80d00bc983e108c510900eb4e0300ae16000201001000f2ca470e6e8d0300858d0300e76101006e8d0300ffffffff0200ffff00000e00000002000000fffffffff48e04000100000cffff",
+      "token": 33560238,
+      "attributes": 1048577,
+      "field_start": 216811,
+      "field_count": 2,
+      "method_start": 425327,
+      "method_count": 4,
+      "parent_descriptor_index": 232837,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 5497664156024,
+      "method_array": 5497664155704,
+      "value_type": false,
+      "instance_size": 104,
+      "parent_klass": 5497607985216,
+      "parent_type_index": 84131,
+      "parent_name": "VSignalSourceAsset",
+      "parent_type": "VSignalSourceAsset",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 216811,
+          "definition_va": 1736666711016,
+          "raw_hex": "54f6ab72b9e53c9c4ecf86a7",
+          "token": 67143144,
+          "name_identity": 221386575,
+          "name": "PositionNoise",
+          "type": {
+            "display": "VTransformNoiseParams[]",
+            "type_ref": "0x7ff976087310",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 88,
+          "metadata_offset": 88,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "runtime_offset_flags": 88,
+          "runtime_metadata_offset": 88,
+          "runtime_record_va": 5497664156024,
+          "runtime_raw_hex": "4b67083dc3b8c17aa5ee7a76437e622165ece11b7b408165095d2810b2df2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 216812,
+          "definition_va": 1736666711028,
+          "raw_hex": "7b857c40e1740d6a825e5778",
+          "token": 67143145,
+          "name_identity": 271718236,
+          "name": "OrientationNoise",
+          "type": {
+            "display": "VTransformNoiseParams[]",
+            "type_ref": "0x7ff976087310",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 96,
+          "metadata_offset": 96,
+          "storage_flags": 0,
+          "value_payload_offset": null,
+          "runtime_offset_flags": 96,
+          "runtime_metadata_offset": 96,
+          "runtime_record_va": 5497664156056,
+          "runtime_raw_hex": "4b67083dc3b8c17aa5ee7a76437e622115ece11b7b408165085d2810badf2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 425327,
+          "definition_va": 1736651331706,
+          "rva": 317600768,
+          "raw_hex": "11510b0022000005ffffffffbdb30000c5ab00060000ffffffff86180001",
+          "token": 100707269,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497664155736,
+          "runtime_raw_hex": "0097f802000500000034ab86f97f00000010bd73f97f0000ffffffff000000006f7d060000000000c5ab0006ffff861800000010000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709682951168,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 425328,
+          "definition_va": 1736651331736,
+          "rva": 317600080,
+          "raw_hex": "58240000901732182de50400bdb30000c2ab00060000ffffffff96000300",
+          "token": 100707266,
+          "name_identity": 405936016,
+          "name": "GetCombinedFilterResults",
+          "attributes": 150,
+          "static": true,
+          "abstract": false,
+          "return_type": {
+            "display": "Vector3",
+            "type_ref": "0x7ff9752f3530",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 320813,
+              "definition_va": 1736634084676,
+              "raw_hex": "c1997fc90b4342d92d3c09a5",
+              "name_identity": 187832186,
+              "name": "noiseParams",
+              "token": 134251905,
+              "type": {
+                "display": "VTransformNoiseParams[]",
+                "type_ref": "0x7ff976087320",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 320814,
+              "definition_va": 1736634084688,
+              "raw_hex": "eedce14b5d22d86221237027",
+              "name_identity": 67113739,
+              "name": "time",
+              "token": 134251906,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 320815,
+              "definition_va": 1736634084700,
+              "raw_hex": "14d549ce681b6ef4b5f4d7b9",
+              "name_identity": 187832197,
+              "name": "timeOffsets",
+              "token": 134251907,
+              "type": {
+                "display": "Vector3",
+                "type_ref": "0x7ff9752f3530",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497664155800,
+          "runtime_raw_hex": "0097f802000500005031ab86f97f0000a075c673f97f0000ffffffff00000000707d060000000000c2ab0006ffff960000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709682950480,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 425329,
+          "definition_va": 1736651331766,
+          "rva": 317600464,
+          "raw_hex": "eb030000a8173212ffffffffbdb30000c3ab000600000c00ffffc6080000",
+          "token": 100707267,
+          "name_identity": 305272744,
+          "name": "get_SignalDuration",
+          "attributes": 2246,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497664155864,
+          "runtime_raw_hex": "0097f80200050000d032ab86f97f0000d0f0bd73f97f0000ffffffff00000000717d060000000000c3ab00060c00c60800000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709682950864,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 425330,
+          "definition_va": 1736651331796,
+          "rva": 317600480,
+          "raw_hex": "11510b00ce17320930e50400bdb30000c4ab000600000d00ffffc6000300",
+          "token": 100707268,
+          "name_identity": 154277838,
+          "name": "GetSignal",
+          "attributes": 198,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 320816,
+              "definition_va": 1736634084712,
+              "raw_hex": "c897b1502800965f4dd93f3c",
+              "name_identity": 338827194,
+              "name": "timeSinceSignalStart",
+              "token": 134251908,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 320817,
+              "definition_va": 1736634084724,
+              "raw_hex": "102f1ed32fd80fef45aca7be",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134251909,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 320818,
+              "definition_va": 1736634084736,
+              "raw_hex": "bb83765566c16d6dd4851041",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134251910,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497664155928,
+          "runtime_raw_hex": "0097f80200050000e032ab86f97f0000009ec373f97f0000ffffffff00000000727d060000000000c4ab00060d00c60000000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709682950880,
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625778100,
+        "record_number": 903,
+        "record_va": 1736696661332,
+        "record_hex": "0000000068000801a51d0000",
+        "instance_size": 104,
+        "offset_array_va": 1736718008156,
+        "offsets_hex": "5800000060000000",
+        "offset_flags": [
+          88,
+          96
+        ]
+      },
+      "layout_instance_size": 104,
+      "dependencies": [
+        5300,
+        5301,
+        48284
+      ]
+    },
+    {
+      "type_index": 84131,
+      "name": "VSignalSourceAsset",
+      "namespace": "MoleMole.Cameras",
+      "full_name": "MoleMole.Cameras.VSignalSourceAsset",
+      "klass": 5497607985216,
+      "klass_raw_hex": "80955c0100050000010000000000e00f18b0510600050000000000000000000000000000000000008099f8020005000040af510600050000000000000000000038af51060005000000000000000000004061b80200050000d04a235a940100000000000000000000000000000000000000000000000000000000000000000000a3480100000000000000120000000000a348010000000000000012400000000094ab00024098f8020000000081001000f06f7e014098f80200005800ffffffff00000e00030002000006000131580c00",
+      "definition_va": 1736679049936,
+      "definition_raw_hex": "9b1e0b0088320f00bc983e1036cf1400ffffffff94ab000281001000c4018312858d03002fdd020063de0100858d0300ffffffff0000ffff00000e0001000200000054baffff4b9d03000100000cffff",
+      "token": 33598356,
+      "attributes": 1048705,
+      "field_start": 4294967295,
+      "field_count": 0,
+      "method_start": 728731,
+      "method_count": 3,
+      "parent_descriptor_index": 187695,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 5497664155456,
+      "value_type": false,
+      "instance_size": 88,
+      "parent_klass": 5497583202288,
+      "parent_type_index": 8248,
+      "parent_name": "MihoyoSerializedScriptableObject",
+      "parent_type": "MihoyoSerializedScriptableObject",
+      "selection_reasons": [
+        "震动与 Cinemachine 消费链"
+      ],
+      "fields": [],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 728731,
+          "definition_va": 1736660433826,
+          "rva": 315262368,
+          "raw_hex": "11510b0022000005ffffffffa3480100f04c05060000ffffffff84180001",
+          "token": 101010672,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6276,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497664155480,
+          "runtime_raw_hex": "4098f80200050000a0858786f97f00000010bd73f97f0000ffffffff000000009b1e0b0000000000f04c0506ffff841800000010000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709680612768,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 728732,
+          "definition_va": 1736660433856,
+          "rva": null,
+          "raw_hex": "eb030000a8173212ffffffffa3480100ee4c050600000c00ffffc60d0000",
+          "token": 101010670,
+          "name_identity": 305272744,
+          "name": "get_SignalDuration",
+          "attributes": 3526,
+          "static": false,
+          "abstract": true,
+          "return_type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497664155544,
+          "runtime_raw_hex": "4098f802000500000000000000000000d0f0bd73f97f0000ffffffff000000009c1e0b0000000000ee4c05060c00c60d00000000000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_status": "无代码指针",
+          "signature_complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 728733,
+          "definition_va": 1736660433886,
+          "rva": null,
+          "raw_hex": "11510b00ce1732093c330900a3480100ef4c050600000d00ffffc6050300",
+          "token": 101010671,
+          "name_identity": 154277838,
+          "name": "GetSignal",
+          "attributes": 1478,
+          "static": false,
+          "abstract": true,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 602940,
+              "definition_va": 1736637470200,
+              "raw_hex": "9da6de7f5befe6aee816716b",
+              "name_identity": 338827194,
+              "name": "timeSinceSignalStart",
+              "token": 134533748,
+              "type": {
+                "display": "float",
+                "type_ref": "0x7ff9752d2e60",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 1,
+              "definition_index": 602941,
+              "definition_va": 1736637470212,
+              "raw_hex": "5f3c51025ec53c20e6efd8ed",
+              "name_identity": 50336442,
+              "name": "pos",
+              "token": 134533749,
+              "type": {
+                "display": "Vector3&",
+                "type_ref": "0x7ff975e95250",
+                "complete": true
+              }
+            },
+            {
+              "ordinal": 2,
+              "definition_index": 602942,
+              "definition_va": 1736637470224,
+              "raw_hex": "88a4a984fbef9e9c534e4170",
+              "name_identity": 51044195,
+              "name": "rot",
+              "token": 134533750,
+              "type": {
+                "display": "Quaternion&",
+                "type_ref": "0x7ff975e97420",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497664155608,
+          "runtime_raw_hex": "4098f802000500000000000000000000009ec373f97f0000ffffffff000000009d1e0b0000000000ef4c05060d00c60500000300000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_status": "无代码指针",
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625930572,
+        "record_number": 900,
+        "record_va": 1736696661296,
+        "record_hex": "000000005800080100000000",
+        "instance_size": 88,
+        "offset_array_va": 1736717977800,
+        "offsets_hex": "",
+        "offset_flags": []
+      },
+      "layout_instance_size": 88,
+      "dependencies": [
+        5300,
+        5301
+      ]
+    }
+  ],
+  "errors": {}
+}

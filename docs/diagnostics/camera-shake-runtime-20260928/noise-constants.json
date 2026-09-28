@@ -1,0 +1,50 @@
+[
+  {
+    "instruction": "0x7be161",
+    "target": "0x28265ac",
+    "bytes": "db0f4940",
+    "float": 3.1415927410125732
+  },
+  {
+    "instruction": "0x7be176",
+    "target": "0x2703f80",
+    "bytes": "0000003f",
+    "float": 0.5
+  },
+  {
+    "instruction": "0x7be17e",
+    "target": "0x2818a9c",
+    "bytes": "17b7d138",
+    "float": 9.999999747378752e-05
+  },
+  {
+    "instruction": "0x7be198",
+    "target": "0x281cb70",
+    "bytes": "000000bf",
+    "float": -0.5
+  },
+  {
+    "instruction": "0x7be22a",
+    "target": "0x2818a9c",
+    "bytes": "17b7d138",
+    "float": 9.999999747378752e-05
+  },
+  {
+    "instruction": "0x7be23c",
+    "target": "0x28265ac",
+    "bytes": "db0f4940",
+    "float": 3.1415927410125732
+  },
+  {
+    "instruction": "0x7be251",
+    "target": "0x2703f80",
+    "bytes": "0000003f",
+    "float": 0.5
+  },
+  {
+    "instruction": "0x7be267",
+    "target": "0x281cb70",
+    "bytes": "000000bf",
+    "float": -0.5
+  }
+]

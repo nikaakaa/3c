@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Mathf.PerlinNoise",
+    "rva": "0x1eb51cf0",
+    "instructions": [
+      [
+        "0x1eb51cf0",
+        "mov",
+        "rax, qword ptr [rip - 0x1974775f]"
+      ],
+      [
+        "0x1eb51cf7",
+        "jmp",
+        "rax"
+      ]
+    ]
+  },
+  {
+    "name": "Mathf.Sin",
+    "rva": "0x1eb51d00",
+    "instructions": [
+      [
+        "0x1eb51d00",
+        "sub",
+        "rsp, 0x28"
+      ],
+      [
+        "0x1eb51d04",
+        "cvtss2sd",
+        "xmm0, xmm0"
+      ],
+      [
+        "0x1eb51d08",
+        "call",
+        "0xe55080"
+      ],
+      [
+        "0x1eb51d0d",
+        "cvtsd2ss",
+        "xmm0, xmm0"
+      ],
+      [
+        "0x1eb51d11",
+        "add",
+        "rsp, 0x28"
+      ],
+      [
+        "0x1eb51d15",
+        "ret",
+        ""
+      ]
+    ]
+  },
+  {
+    "name": "Mathf.Cos",
+    "rva": "0x1eb51d20",
+    "instructions": [
+      [
+        "0x1eb51d20",
+        "sub",
+        "rsp, 0x28"
+      ],
+      [
+        "0x1eb51d24",
+        "cvtss2sd",
+        "xmm0, xmm0"
+      ],
+      [
+        "0x1eb51d28",
+        "call",
+        "0xe4bdf0"
+      ],
+      [
+        "0x1eb51d2d",
+        "cvtsd2ss",
+        "xmm0, xmm0"
+      ],
+      [
+        "0x1eb51d31",
+        "add",
+        "rsp, 0x28"
+      ],
+      [
+        "0x1eb51d35",
+        "ret",
+        ""
+      ]
+    ]
+  }
+]

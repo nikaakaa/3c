@@ -19,8 +19,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_DisplayName = string.Empty;
         [SerializeField, fsSerializeAsReference] CharacterPoseNodePayload m_Payload;
         [SerializeField] CharacterPoseDynamicPort[] m_DynamicPorts = Array.Empty<CharacterPoseDynamicPort>();
+        [NonSerialized] PoseNodeId m_NativeNodeId;
 
         public override string UID => NodeId.Value;
+        internal PoseNodeId NativeNodeId => m_NativeNodeId;
+        internal void BindNativeIdentity() => m_NativeNodeId = NodeId;
         public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId)
             ? default
             : new PoseNodeId(m_NodeId);

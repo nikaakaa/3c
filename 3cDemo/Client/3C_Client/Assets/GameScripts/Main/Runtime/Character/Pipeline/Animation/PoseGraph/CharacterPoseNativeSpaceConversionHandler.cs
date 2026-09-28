@@ -100,6 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNodeKind m_Kind;
         readonly CharacterPoseSpace m_InputSpace;
         readonly CharacterPoseSpace m_OutputSpace;
+        readonly PosePortId m_InputPort;
+        readonly PosePortId m_OutputPort;
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
@@ -127,6 +129,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_NodeId = nodeId;
             m_Kind = kind;
+            m_InputPort = new PosePortId(kind == CharacterPoseNodeKind.LocalToComponentPose
+                ? "local-pose"
+                : "component-pose");
+            m_OutputPort = new PosePortId(kind == CharacterPoseNodeKind.LocalToComponentPose
+                ? "component-pose"
+                : "local-pose");
             m_InputSpace = kind == CharacterPoseNodeKind.LocalToComponentPose
                 ? CharacterPoseSpace.Local
                 : CharacterPoseSpace.Component;
@@ -192,22 +200,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeExecutionStage stage)
         {
             RequireAlive();
-            string outputPort = m_Kind == CharacterPoseNodeKind.LocalToComponentPose
-                ? "component-pose"
-                : "local-pose";
-            if (portId.Value != outputPort)
+            if (portId != m_OutputPort)
                 throw new InvalidOperationException(
                     $"Pose space conversion '{NodeId}' has no output '{portId}'.");
             if (m_Output != null &&
                 m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
-            string inputPort = m_Kind == CharacterPoseNodeKind.LocalToComponentPose
-                ? "local-pose"
-                : "component-pose";
             CharacterPoseNativePortValue inputValue = runtime.ReadInputValue(
                 node,
-                new PosePortId(inputPort));
+                m_InputPort);
             CharacterPoseNativePoseReadBinding input =
                 RequireInput(inputValue);
             if (input.Availability[0] != AnimationPoseAvailability.Pose)

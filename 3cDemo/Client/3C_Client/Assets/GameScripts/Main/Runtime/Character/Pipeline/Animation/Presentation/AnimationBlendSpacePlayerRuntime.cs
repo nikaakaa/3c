@@ -112,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             System.Collections.Generic.IReadOnlyList<AnimationClipPhasePlan> clipPhasePlans)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+            NodeId = descriptor.NodeId;
             m_Plan = plan ?? throw new ArgumentNullException(nameof(plan));
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
@@ -159,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingState = m_CommittedState;
         }
 
-        internal PoseNodeId NodeId => m_Descriptor.NodeId;
+        internal PoseNodeId NodeId { get; }
         internal int PlayerIndex => m_Descriptor.PlayerIndex;
         internal AnimationPoseSourceId SourceId => m_SourceId;
         internal bool IsRelevant => m_Relevant;

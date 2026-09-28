@@ -432,6 +432,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Initialized)
                 throw new InvalidOperationException("Pose native graph is already initialized.");
             Nodes = m_Graph.Nodes;
+            for (int i = 0; i < Nodes.Count; i++)
+                Nodes[i].BindNativeIdentity();
             BuildPortDefinitions();
             m_Evaluator.Initialize(this);
             m_Initialized = true;
@@ -1088,7 +1090,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireEvaluationStage();
             if (node == null || !portId.IsValid)
                 throw new ArgumentException("Pose native output request is invalid.");
-            var key = new CharacterPoseNativePortKey(node.NodeId, portId, m_Stage);
+            var key = new CharacterPoseNativePortKey(node.NativeNodeId, portId, m_Stage);
             if (m_OutputCache.TryGetValue(key, out CharacterPoseNativePortValue cached))
                 return RequireTyped<T>(cached, node, portId);
             if (!m_Evaluating.Add(key))
@@ -1103,7 +1105,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_OutputCache.Add(key, value);
                 m_Observations[key] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
-                    node.NodeId,
+                    node.NativeNodeId,
                     portId,
                     InstanceId,
                     m_CompletedLineage.CompletionIdentity,
@@ -1118,7 +1120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Observations[key] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
-                    node.NodeId,
+                    node.NativeNodeId,
                     portId,
                     InstanceId,
                     m_CompletedLineage.CompletionIdentity,
@@ -1217,7 +1219,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node == null || !portId.IsValid)
                 return null;
             var key = new CharacterPoseNativePortDefinitionKey(
-                node.NodeId,
+                node.NativeNodeId,
                 portId,
                 direction);
             return m_PortDefinitions.TryGetValue(key, out CharacterPosePortDefinition definition)

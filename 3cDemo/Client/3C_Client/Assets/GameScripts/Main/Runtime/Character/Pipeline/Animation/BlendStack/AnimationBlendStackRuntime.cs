@@ -416,6 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             in AnimationPlayerPoseNativeWriteBinding initialFinalWriteBinding)
         {
             m_Slot = slot ?? throw new ArgumentNullException(nameof(slot));
+            PoseNodeId = slot.NodeId;
             m_AnimationChannelId = animationChannelId;
             m_PresentationPoseSourceProviderId =
                 presentationPoseSourceProviderId;
@@ -488,7 +489,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
         }
 
-        internal PoseNodeId PoseNodeId => m_Slot.NodeId;
+        internal PoseNodeId PoseNodeId { get; }
         internal int PlayerIndex => m_SlotWorkspace.PhysicalPlayerIndex;
         internal AnimationChannelId AnimationChannelId => m_AnimationChannelId;
         internal PresentationPoseSourceProviderId
@@ -850,7 +851,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
 
             AnimationBlendPushResult result = Push(new AnimationBlendPushRequest(
-                m_Slot.NodeId,
+                PoseNodeId,
                 request.SourceId,
                 AnimationBlendTransitionEndpointKind.SourceOwner,
                 request.SourceOwnerIndex,
@@ -892,7 +893,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return AnimationBlendPushResult.ContinuedSource;
             }
             AnimationBlendPushResult result = Push(new AnimationBlendPushRequest(
-                m_Slot.NodeId,
+                PoseNodeId,
                 default,
                 AnimationBlendTransitionEndpointKind.SourcePose,
                 -1,
@@ -1194,7 +1195,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 request.TargetEndpointKind != AnimationBlendTransitionEndpointKind.SourceOwner)
             {
                 throw new InvalidOperationException(
-                    $"Required Blend Stack '{m_Slot.NodeId}' cannot target Source Pose.");
+                    $"Required Blend Stack '{PoseNodeId}' cannot target Source Pose.");
             }
 
             AnimationBlendPushResult result = PushCrossFade(request);
@@ -1210,7 +1211,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             builder.Append("Animation Blend Stack invalid")
                 .Append(" Channel=").Append(m_AnimationChannelId)
                 .Append(", Provider=").Append(m_PresentationPoseSourceProviderId)
-                .Append(", Node=").Append(m_Slot.NodeId)
+                .Append(", Node=").Append(PoseNodeId)
                 .Append(", Completion=").Append(completionIdentity)
                 .Append(", Reason=").Append(invalidReason)
                 .Append(", PlanKind=").Append(m_PendingPlanKind)
@@ -1598,7 +1599,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             return new AnimationBlendEntryState(
                 new AnimationBlendEntryId(
-                    m_Slot.NodeId,
+                    PoseNodeId,
                     request.SourceId,
                     request.TargetEndpointKind == AnimationBlendTransitionEndpointKind.SourcePose,
                     request.PresentationRequestSequence),
@@ -1620,7 +1621,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void RequireRequest(AnimationBlendPushRequest request)
         {
-            if (request.PoseNodeId != m_Slot.NodeId)
+            if (request.PoseNodeId != PoseNodeId)
                 throw new InvalidOperationException("Animation Blend push was routed to the wrong node.");
             RequireTarget(
                 request.SourceId,
@@ -1636,7 +1637,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 request.SourceOwnerIndex,
                 request.TargetEndpointKind);
             if (!ReferenceEquals(exact, request.Transition) ||
-                exact.GetIdentity(m_Slot.NodeId) != request.Transition.GetIdentity(m_Slot.NodeId))
+                exact.GetIdentity(PoseNodeId) != request.Transition.GetIdentity(PoseNodeId))
             {
                 throw new InvalidOperationException("Animation Blend push did not use the compiled exact transition.");
             }
@@ -1741,8 +1742,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             CharacterPoseSourceModule sourceModule,
             AnimationBlendEntryState entry)
         {
-            AnimationPhysicalSourceIdentity identity = sourceModule.RequireIdentity(entry.SourceId, m_Slot.NodeId);
-            if (sourceModule.RequirePoseNodeId(identity) != m_Slot.NodeId ||
+            AnimationPhysicalSourceIdentity identity = sourceModule.RequireIdentity(entry.SourceId, PoseNodeId);
+            if (sourceModule.RequirePoseNodeId(identity) != PoseNodeId ||
                 sourceModule.RequireSourceOwnerIndex(identity) != entry.SourceOwnerIndex)
             {
                 throw new InvalidOperationException("Animation physical source is routed to the wrong Blend Stack entry.");
@@ -1863,7 +1864,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     throw new InvalidOperationException("Animation Blend source retirement queue was not drained.");
                 int tail = (m_StackReleaseHead + m_StackReleaseCount) % StackReleaseCapacity;
                 WriteStackRelease(tail, new AnimationBlendStackRelease(
-                    m_Slot.NodeId,
+                    PoseNodeId,
                     sourceId,
                     completionIdentity));
                 m_StackReleaseCount++;

@@ -471,7 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         ICharacterPoseNativeNodeHandler RequireHandler(
             CharacterPoseCanvasNode node) =>
-            m_Handlers.TryGetValue(node.NodeId, out ICharacterPoseNativeNodeHandler handler)
+            m_Handlers.TryGetValue(node.NativeNodeId, out ICharacterPoseNativeNodeHandler handler)
                 ? handler
                 : throw new InvalidOperationException(
                     $"Pose native node '{node.NodeId}' of kind '{node.Kind}' has no registered handler.");

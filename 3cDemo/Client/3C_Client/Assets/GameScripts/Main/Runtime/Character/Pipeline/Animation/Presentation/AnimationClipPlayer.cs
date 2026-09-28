@@ -306,6 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterAnimationRigPayload rig)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+            NodeId = descriptor.NodeId;
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
@@ -348,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             SetRawClock(descriptor.InitialTime);
         }
 
-        internal PoseNodeId NodeId => m_Descriptor.NodeId;
+        internal PoseNodeId NodeId { get; }
         internal string SyncGroupId => m_Source.SyncGroupId;
         internal AnimationClipPhasePlan PhasePlan => m_Source.PhasePlan;
         internal int PlayerIndex => m_Descriptor.PlayerIndex;

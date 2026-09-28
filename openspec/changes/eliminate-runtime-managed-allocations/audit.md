@@ -306,6 +306,12 @@
 - 骨架拓扑检查集中到 ValidateLayout，Job 构造和 reference Virtual Bone 编译入口各在接收布局时调用一次；Derive 只处理当帧姿势与输出页。删除进入 TryCreateComponent 前对同一 local 的重复 IsValid；每根虚拟骨共享一次 inverseSource，保持计算公式和归一化次数。
 - 不改变 Playable 的求值、帧绑定更新时机、双页提交、Discard 或资源释放顺序。保留引擎输入及派生结果的数值失败语义。静态核对全部4处原 Job 构造点、两个 Derive 调用入口和引用；未编译、未运行，不宣称 CPU 收益数值。
 
+### AP32 Pose 求值反复从序列化字符串构造身份（2026-09-29，已实施，未运行）
+
+- Canvas Node 的 NodeId getter 每次都构造 PoseNodeId 并扫描字符串；图端口缓存、观察记录、端口定义索引和 handler 查找在求值中反复走它。现在图实例 Initialize 时绑定非序列化 NativeNodeId，运行索引及观察读取该身份；authoring 的 NodeId 解析仍用于编辑和装配，未修改序列化数据。图变化按原合同重建实例。
+- Clip Player、BlendSpace Player 和 Blend Stack 在各自构造期保存编译描述符的 NodeId，播放、相位、来源、过渡检查统一读取同一值。空间转换节点的输入输出 PosePortId 也在构造期解析。
+- 没有关闭逐帧身份匹配、租约或 Commit/Discard 校验，没有按帧缓存计算结果。减少的是固定字符串格式扫描；不宣称这些值类型构造本身存在 GC。仅静态核对初始化顺序与调用路径，未编译或采样。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

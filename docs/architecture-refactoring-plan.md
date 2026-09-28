@@ -2,7 +2,7 @@
 
 更新：2026-09-28。
 
-状态：实施中。以下问题清单保留评估时的证据，实际进展以本节记录为准。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
+状态：按用户要求收口当前小步，等待用户进行闭环体验；后续实施暂停。以下问题清单保留评估时的证据，实际进展以本节记录为准。本文承接本次架构、大类和职责评估，不替代 `openspec/specs/` 的现行合同，也不修改已经归档的历史方案。本次文档更新不启动新的 OpenSpec workflow。
 
 ## 实施进展
 
@@ -11,6 +11,11 @@
 - 已接入最终骨骼／属性绑定的 Barrier 前检查。Animancer 求值开始后失败会保留 Actor、帧、BodyTick、completion、phase 上下文并拒绝后续表现帧，不尝试物理回滚。
 - 此组已通过目标 Unity Editor 正式编译，Edit/idle，Console error 为 0。没有运行 replay、故障注入或分配采样，尚未验证实际运行行为与零 GC。
 - 现行 `character-animation-pipeline` 写明“表现运行时逐阶段消费”的结构条款已与上述收拢后的调用链不同；阶段顺序及唯一 Source／Constraint／Publication 所有权保持。当前未调用 OpenSpec 工作流，因此本轮未修改 spec，后续同步时应把外层职责改为提供输入、消费最终结果，由 FrameCoordinator 执行阶段门。
+
+- 已删除旧 Skill 的 BaseTree 黑板入口、旧绑定接口及四个节点绑定器和元文件，共移除约 480 行；正式 FlowCanvas 编译与黑板作用域保留。
+- Timeline 内容管理已拆到 [CharacterTimelineContentStore](../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Lifecycle/CharacterTimelineContentStore.cs)：唯一持有内容快照、版本、generation 和动画来源身份，处理导出、准备、发布与采用。Fixed 装配、ScenePlay 和动画命令桥已直接消费该模块；Host 仍唯一持有播放记录。Host 减少约 400 行，尚未拆分表现图执行、快照恢复和诊断职责。
+- 三组改动均已通过目标 Unity Editor 正式编译；最后检查为 Edit/idle、Console error 为 0。未运行游戏闭环、replay、故障注入或分配采样。
+- 本轮暂停点：Pose 帧事务、旧 Skill 编译分支清理、Timeline 内容模块。Timeline 的旧 TreeDesigner 请求参数与编辑器入口尚未迁移，不能宣称 TreeDesigner 已完全退出正式调用链。
 
 ## 目标与范围
 

@@ -826,7 +826,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (m_ContentInstalled)
                 return;
-            m_Host.SetTimelineContent(m_TimelineAssets);
+            m_Host.Content.SetTimelineContent(m_TimelineAssets);
             m_ContentInstalled = true;
         }
     }

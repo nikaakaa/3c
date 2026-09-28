@@ -153,7 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         throw new InvalidOperationException("Timeline animation producer capacity was exceeded.");
                     m_Producers[producerIndex] = new ProducerState(frame.Handle.Value,
                         new AnimationPlaybackId(producerId, frame.Generation), actionContext.ActionInstanceId,
-                        contribution.AnimationChannelId, m_TimelineHost.RequireAnimationProducerIdentity(producerId));
+                        contribution.AnimationChannelId, m_TimelineHost.Content.RequireAnimationProducerIdentity(producerId));
                     PublishSelect(m_Producers[producerIndex], logicTick, frame.PresentationFrame);
                 }
                 ProducerState producer = m_Producers[producerIndex];

@@ -762,7 +762,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     return;
                 }
                 ClearContentWorkflow();
-                if (!timelineHost.TryExportContent(
+                if (!timelineHost.Content.TryExportContent(
                         out CharacterTimelineContentExport export,
                         out string error))
                 {
@@ -787,7 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetContentStatus(CharacterTimelineContentAdoptionState.Failed, "请先导出 Timeline 内容。");
                     return;
                 }
-                if (!timelineHost.TryPrepareContentAdoption(
+                if (!timelineHost.Content.TryPrepareContentAdoption(
                         m_ExportedContent,
                         out CharacterTimelineContentAdoptionPlan plan,
                         out string error))
@@ -811,7 +811,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetStatus("当前 Actor 没有可用 Timeline Host。");
                     return;
                 }
-                if (!timelineHost.TryPublishContentAdoption(
+                if (!timelineHost.Content.TryPublishContentAdoption(
                         m_PendingPlan,
                         out CharacterTimelineContentPublication publication,
                         out string error))
@@ -834,7 +834,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetStatus("当前 Actor 没有可用 Timeline Host。");
                     return;
                 }
-                if (!timelineHost.TryAdoptContent(
+                if (!timelineHost.Content.TryAdoptContent(
                         m_PublishedContent,
                         out CharacterTimelineContentAdoptionReport report))
                 {
@@ -869,9 +869,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 CharacterTimelineHost timelineHost = actorHost.TimelineHost;
                 if (timelineHost == null || !timelineHost.IsInitialized)
                     return $"Preview | {target} | Timeline 尚未准备 | {message}";
-                if (!timelineHost.TryGetCurrentAuthoringContentRevision(out string authoring, out string revisionError))
+                if (!timelineHost.Content.TryGetCurrentAuthoringContentRevision(out string authoring, out string revisionError))
                     return $"Preview | {target} | 作者内容不可用 | {revisionError}";
-                string adopted = timelineHost.AuthoringContentRevision;
+                string adopted = timelineHost.Content.AuthoringContentRevision;
                 if (string.IsNullOrEmpty(adopted))
                     return $"Preview | {target} | 尚未收到实际采用版本 | {message}";
                 string staged = m_PublishedContent?.AuthoringRevision ??
@@ -901,7 +901,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             string ResolveCurrentAuthoringRevision()
             {
                 CharacterTimelineHost timelineHost = ResolveActorHost()?.TimelineHost;
-                return timelineHost != null && timelineHost.TryGetCurrentAuthoringContentRevision(
+                return timelineHost != null && timelineHost.Content.TryGetCurrentAuthoringContentRevision(
                     out string revision,
                     out _)
                     ? revision

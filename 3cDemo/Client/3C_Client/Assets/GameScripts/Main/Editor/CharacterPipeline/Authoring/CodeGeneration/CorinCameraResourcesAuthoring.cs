@@ -83,6 +83,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             shake12.Configure("Corin_Attack_Rush_Enhance_CamShake_E_01", 0, 0, 90f, 10f, 0.0399999991f, 0f, 0f, 0.300000012f, 20f, 0f, 0f, 0f, CameraSpace.Camera, false, 5, 0f, 0f, "Camera_ShakeSpatial_Curve_01", 0f, null, 0f, null, curves["Camera_ShakeDecay_Curve_04"], false, CameraEffectStackingType.Replace, 0, 0, null);
             shakes["Corin_Attack_Rush_Enhance_CamShake_E_01"] = shake12;
             Save(shake12);
+            var branchHitShake = LoadOrCreate<CameraShakeAsset>("Corin_Attack_Branch_02_CamShake_A_01");
+            branchHitShake.Configure("Corin_Attack_Branch_02_CamShake_A_01", 0, 1, 180f, 10f, 0.0250000004f, 0f, 0f, 0.600000024f, 12f, 0f, 0f, 0f, CameraSpace.Camera, false, 5, 0f, 0f, "Camera_ShakeSpatial_Curve_01", 0f, null, 0f, null, curves["Camera_ShakeDecay_Curve_02"], true, CameraEffectStackingType.Replace, 0, 0, "CamShake_A_01");
+            shakes["Corin_Attack_Branch_02_CamShake_A_01"] = branchHitShake;
+            Save(branchHitShake);
+            var rushHitShake = LoadOrCreate<CameraShakeAsset>("Corin_Attack_Rush_CamShake_A_01");
+            rushHitShake.Configure("Corin_Attack_Rush_CamShake_A_01", 0, 1, 90f, 10f, 0.0250000004f, 0f, 0f, 0.600000024f, 12f, 0f, 0f, 0f, CameraSpace.Camera, false, 5, 0f, 0f, "Camera_ShakeSpatial_Curve_01", 0f, null, 0f, null, curves["Camera_ShakeDecay_Curve_02"], true, CameraEffectStackingType.Replace, 0, 0, "CamShake_A_01");
+            shakes["Corin_Attack_Rush_CamShake_A_01"] = rushHitShake;
+            Save(rushHitShake);
             Undo.RecordObject(profile, "配置可琳相机资源");
             profile.ConfigureShakeResources(new List<CameraShakeAsset>(shakes.Values).ToArray(), new List<CameraCurveAsset>(curves.Values).ToArray());
             Save(profile);

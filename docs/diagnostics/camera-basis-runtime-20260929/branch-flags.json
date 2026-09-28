@@ -1,0 +1,272 @@
+[
+  {
+    "function": "track-sample",
+    "instruction": "0x109eba96",
+    "byte_rva": "0x53b0afe",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-sample",
+    "instruction": "0x109ebaa3",
+    "byte_rva": "0x53b0b01",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-sample",
+    "instruction": "0x109ebabc",
+    "byte_rva": "0x53b0b0a",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-sample",
+    "instruction": "0x109ebb4e",
+    "byte_rva": "0x53b0b0c",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-sample",
+    "instruction": "0x109ebc01",
+    "byte_rva": "0x53b0b0d",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-sample",
+    "instruction": "0x109ebd49",
+    "byte_rva": "0x53b0b0a",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ebe57",
+    "byte_rva": "0x5886a89",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ebe64",
+    "byte_rva": "0x53b0aff",
+    "snapshot_value": 0
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ebeb8",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ebf11",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ebf69",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ec01b",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "track-prepare",
+    "instruction": "0x109ec260",
+    "byte_rva": "0x53b0aff",
+    "snapshot_value": 0
+  },
+  {
+    "function": "screen-sample",
+    "instruction": "0x109ec446",
+    "byte_rva": "0x53b0b02",
+    "snapshot_value": 0
+  },
+  {
+    "function": "screen-sample",
+    "instruction": "0x109ec453",
+    "byte_rva": "0x53b0b01",
+    "snapshot_value": 0
+  },
+  {
+    "function": "screen-sample",
+    "instruction": "0x109ec46c",
+    "byte_rva": "0x53b0b0b",
+    "snapshot_value": 0
+  },
+  {
+    "function": "screen-sample",
+    "instruction": "0x109ec56a",
+    "byte_rva": "0x53b0b0b",
+    "snapshot_value": 0
+  },
+  {
+    "function": "sphere-track",
+    "instruction": "0x1279ee89",
+    "byte_rva": "0x589472a",
+    "snapshot_value": 0
+  },
+  {
+    "function": "sphere-track",
+    "instruction": "0x1279ee96",
+    "byte_rva": "0x53bf3ac",
+    "snapshot_value": 0
+  },
+  {
+    "function": "sphere-track",
+    "instruction": "0x1279eec9",
+    "byte_rva": "0x587e530",
+    "snapshot_value": 1
+  },
+  {
+    "function": "sphere-track",
+    "instruction": "0x1279ef96",
+    "byte_rva": "0x53bf3ac",
+    "snapshot_value": 0
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3c9a7",
+    "byte_rva": "0x588e6d2",
+    "snapshot_value": 0
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3c9c4",
+    "byte_rva": "0x53c9c98",
+    "snapshot_value": 0
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3c9fc",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3ca46",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3ca91",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3cb1e",
+    "byte_rva": "0x58560da",
+    "snapshot_value": 1
+  },
+  {
+    "function": "orbit-prepare",
+    "instruction": "0x14a3cb76",
+    "byte_rva": "0x53c9c98",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a39d9f",
+    "byte_rva": "0x588e6ce",
+    "snapshot_value": 1
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a39e25",
+    "byte_rva": "0x53c9c8f",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a39fac",
+    "byte_rva": "0x53eb65b",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a39fdb",
+    "byte_rva": "0x53c9c7d",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a3a09c",
+    "byte_rva": "0x53c9c7d",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a3a143",
+    "byte_rva": "0x53c9c87",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a3a4fb",
+    "byte_rva": "0x53fe68c",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a3a575",
+    "byte_rva": "0x536afe7",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-update",
+    "instruction": "0x14a3a5dd",
+    "byte_rva": "0x536afe7",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c575",
+    "byte_rva": "0x588e6cf",
+    "snapshot_value": 1
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c582",
+    "byte_rva": "0x53c9c92",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c5a7",
+    "byte_rva": "0x58565e2",
+    "snapshot_value": 1
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c5c8",
+    "byte_rva": "0x58565cf",
+    "snapshot_value": 1
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c5fd",
+    "byte_rva": "0x53de1cd",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c63f",
+    "byte_rva": "0x53c9c92",
+    "snapshot_value": 0
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c669",
+    "byte_rva": "0x58565e2",
+    "snapshot_value": 1
+  },
+  {
+    "function": "delay-apply",
+    "instruction": "0x14a3c6a0",
+    "byte_rva": "0x58565cf",
+    "snapshot_value": 1
+  }
+]

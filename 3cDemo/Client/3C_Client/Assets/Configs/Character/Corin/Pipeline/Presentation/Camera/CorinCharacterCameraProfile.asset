@@ -70,6 +70,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 486354ba3a0967c4b9831307d0c532dd, type: 2}
   - {fileID: 11400000, guid: 47904d07d48eacf48ba141d67c777169, type: 2}
   - {fileID: 11400000, guid: eb3648e10f97d3e4f89a828569d7a5ac, type: 2}
+  - {fileID: 11400000, guid: a54df55c26a30cb4e9ab445c76e7b98b, type: 2}
+  - {fileID: 11400000, guid: 17e16da512847ce45bff88f7d2c0df07, type: 2}
   m_Shots: []
   m_Curves:
   - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69e7758d6cdf44d2ba88711821334cc7, type: 3}
+  m_Name: Corin_Attack_Rush_CamShake_A_01
+  m_EditorClassIdentifier: 
+  m_Schema: character-camera-shake/v1
+  m_ShakeId: Corin_Attack_Rush_CamShake_A_01
+  m_ShakeType: 0
+  m_CameraShakePropertyConfig: 1
+  m_AngleVertical: 90
+  m_NoiseAngle: 10
+  m_RadiusLength: 0.025
+  m_DistanceToPlane: 0
+  m_NoiseRatio: 0
+  m_ShakeTotalTime: 0.6
+  m_Frequency: 12
+  m_RollAmplitude: 0
+  m_PitchAmplitude: 0
+  m_YawAmplitude: 0
+  m_ShakeCenterSpace: 4
+  m_RealtimeVibration: 0
+  m_DissipationMode: 5
+  m_ImpactRadius: 0
+  m_DissipationDistance: 0
+  m_CustomCurveKey: Camera_ShakeSpatial_Curve_01
+  m_FadeInDuration: 0
+  m_FadeInCurve: {fileID: 0}
+  m_FadeOutDuration: 0
+  m_FadeOutCurve: {fileID: 0}
+  m_Curve: {fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}
+  m_IgnoreTimeScale: 1
+  m_PlayStackingType: 1
+  m_PlayPriority: 0
+  m_DataPriority: 0
+  m_StandardConfigKey: CamShake_A_01

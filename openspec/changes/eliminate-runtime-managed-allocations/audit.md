@@ -124,11 +124,12 @@
 - 装配时预建可把首次动作成本移出游玩帧，但增加准备时间和常驻内存；按需创建减少未使用状态占用，却保留首次进入成本。准备期反射本身在用户允许边界内，审计问题是创建是否落在游戏更新中。
 - 本轮仅收口创建过程中反复读取 Connections 的额外工作：Evaluator 初始化取一次连接集合，供可达性和输出绑定共用。首次状态创建与 EventGraph 懒创建仍保留，AP05 未完成。
 
-### AP06 无影响 Modify Bone 仍复制并重建（CPU）
+### AP06 无影响 Modify Bone 仍复制并重建（计算已实施，独立页复制保留）
 
 - 证据：[CharacterPoseNativeModifyBoneHandler.cs:149](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeModifyBoneHandler.cs#L149)。外层复制元数据和姿势；变换执行还涉及后代与虚拟骨骼。
 - 输入权重为零，或最终变换没有影响时，可减少变换计算和重建。判断应基于通用变换模式，不能为 Corin 写角色专用捷径。
 - 业务要求是直跑回正后的姿势与身份不变。必须保留独立输出页、CompletionIdentity、Commit/Discard；不允许直接外借输入指针来绕过正式生命周期。
+- 实施结果：先读取并校验本帧变换参数；权重零、全部 Ignore 或中性 Add 直接复制已验证输入到自己的输出页，不再构造整副组件空间 scratch 或反复归一化。Replace/非中性变换在求出目标后按精确分量比较；无变化则不保存/重建后代与虚拟骨骼。没有引入浮点阈值，也未省略动态输入合法性检查；输出页和元数据仍正式提交。
 
 ### AP07 Blend Pose 在端点仍求两侧姿势并全骨骼混合（CPU）
 

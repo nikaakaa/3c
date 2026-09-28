@@ -80,11 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (renderer.ExpectedMesh != binding.ExpectedMesh ||
                 !string.Equals(renderer.MeshContentHash, binding.MeshContentHash, StringComparison.Ordinal) ||
                 mesh != binding.ExpectedMesh ||
-                mesh.blendShapeCount <= binding.BlendShapeIndex ||
-                !string.Equals(
-                    mesh.GetBlendShapeName(binding.BlendShapeIndex),
-                    binding.BlendShapeName,
-                    StringComparison.Ordinal))
+                mesh.blendShapeCount <= binding.BlendShapeIndex)
                 throw new InvalidOperationException($"Final animation property '{binding.BindingId}' Renderer binding is stale.");
         }
 

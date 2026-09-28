@@ -460,7 +460,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool residualDeadlineHalfLifeAvailable = false;
             float residualDeadlineHalfLifeSeconds = 0f;
             float residualAppliedHalfLifeSeconds = 0f;
-            bool residualClearedAtCompletionTolerance = false;
+            bool residualClearedAtZeroTolerance = false;
             if (state.PlantWorldResidualTransitionActive &&
                 frame.DeltaSeconds > 0f)
             {
@@ -476,12 +476,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     frame.DeltaSeconds,
                     residualAppliedHalfLifeSeconds);
-                if (state.PlantWorldResidual.magnitude <=
-                    frame.Settings.LandingLockCompletionTolerance)
+                if (state.PlantWorldResidual.sqrMagnitude <=
+                    CharacterFootConstraintMath.GeometryEpsilon *
+                    CharacterFootConstraintMath.GeometryEpsilon)
                 {
                     state.PlantWorldResidual = default;
                     state.PlantWorldResidualTransitionActive = false;
-                    residualClearedAtCompletionTolerance = true;
+                    residualClearedAtZeroTolerance = true;
                 }
             }
             Vector3 residualAfterDecay = state.PlantWorldResidual;
@@ -578,8 +579,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 residualDeadlineHalfLifeSeconds,
                 residualAppliedHalfLifeSeconds,
                 residualAfterDecay,
-                frame.Settings.LandingLockCompletionTolerance,
-                residualClearedAtCompletionTolerance,
+                CharacterFootConstraintMath.GeometryEpsilon,
+                residualClearedAtZeroTolerance,
                 verticalContinuityOwners,
                 effectiveCorrectionBefore,
                 state.EffectiveCorrection,

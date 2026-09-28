@@ -1815,10 +1815,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 path.PlantWorldResidualAppliedHalfLifeSeconds;
             PlantWorldResidualAfterDecay =
                 path.PlantWorldResidualAfterDecay;
-            PlantWorldResidualCompletionTolerance =
-                path.PlantWorldResidualCompletionTolerance;
-            PlantWorldResidualClearedAtCompletionTolerance =
-                path.PlantWorldResidualClearedAtCompletionTolerance;
+            PlantWorldResidualZeroTolerance =
+                path.PlantWorldResidualZeroTolerance;
+            PlantWorldResidualClearedAtZeroTolerance =
+                path.PlantWorldResidualClearedAtZeroTolerance;
             CorrectionResponseEvaluated =
                 path.CorrectionResponseEvaluated;
             CorrectionResponseInitializedBefore =
@@ -2006,14 +2006,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantWorldResidualAfterDecay { get; }
 
         [DiagnosticField]
-        [DiagnosticKey("foot-motion-plant-world-residual-completion-tolerance")]
+        [DiagnosticKey("foot-motion-plant-world-residual-zero-tolerance")]
         [DiagnosticGroup("response-contact")]
-        public float PlantWorldResidualCompletionTolerance { get; }
+        public float PlantWorldResidualZeroTolerance { get; }
 
         [DiagnosticField]
-        [DiagnosticKey("foot-motion-plant-world-residual-cleared-at-completion-tolerance")]
+        [DiagnosticKey("foot-motion-plant-world-residual-cleared-at-zero-tolerance")]
         [DiagnosticGroup("response-contact")]
-        public bool PlantWorldResidualClearedAtCompletionTolerance { get; }
+        public bool PlantWorldResidualClearedAtZeroTolerance { get; }
 
         [DiagnosticField]
         [DiagnosticKey("foot-motion-correction-response-evaluated")]

@@ -312,8 +312,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantWorldResidualDeadlineHalfLifeSeconds = 0f;
             PlantWorldResidualAppliedHalfLifeSeconds = 0f;
             PlantWorldResidualAfterDecay = default;
-            PlantWorldResidualCompletionTolerance = 0f;
-            PlantWorldResidualClearedAtCompletionTolerance = false;
+            PlantWorldResidualZeroTolerance = 0f;
+            PlantWorldResidualClearedAtZeroTolerance = false;
             CorrectionResponseEvaluated = false;
             CorrectionResponseInitializedBefore = false;
             CorrectionResponseInitializedThisFrame = false;
@@ -489,10 +489,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantWorldResidualAppliedHalfLifeSeconds =
                 plant.WorldResidualAppliedHalfLifeSeconds;
             PlantWorldResidualAfterDecay = plant.WorldResidualAfterDecay;
-            PlantWorldResidualCompletionTolerance =
-                plant.WorldResidualCompletionTolerance;
-            PlantWorldResidualClearedAtCompletionTolerance =
-                plant.WorldResidualClearedAtCompletionTolerance;
+            PlantWorldResidualZeroTolerance =
+                plant.WorldResidualZeroTolerance;
+            PlantWorldResidualClearedAtZeroTolerance =
+                plant.WorldResidualClearedAtZeroTolerance;
             CorrectionResponseEvaluated = correctionResponse.Evaluated;
             CorrectionResponseInitializedBefore =
                 correctionResponse.InitializedBefore;
@@ -631,8 +631,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
         internal float PlantWorldResidualAppliedHalfLifeSeconds { get; }
         internal Vector3 PlantWorldResidualAfterDecay { get; }
-        internal float PlantWorldResidualCompletionTolerance { get; }
-        internal bool PlantWorldResidualClearedAtCompletionTolerance { get; }
+        internal float PlantWorldResidualZeroTolerance { get; }
+        internal bool PlantWorldResidualClearedAtZeroTolerance { get; }
         internal bool CorrectionResponseEvaluated { get; }
         internal bool CorrectionResponseInitializedBefore { get; }
         internal bool CorrectionResponseInitializedThisFrame { get; }
@@ -1354,8 +1354,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float worldResidualDeadlineHalfLifeSeconds,
             float worldResidualAppliedHalfLifeSeconds,
             Vector3 worldResidualAfterDecay,
-            float worldResidualCompletionTolerance,
-            bool worldResidualClearedAtCompletionTolerance,
+            float worldResidualZeroTolerance,
+            bool worldResidualClearedAtZeroTolerance,
             CharacterFootVerticalContinuityOwner verticalContinuityOwners,
             Vector3 effectiveCorrectionBefore,
             Vector3 effectiveCorrectionAfter,
@@ -1397,10 +1397,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             WorldResidualAppliedHalfLifeSeconds =
                 worldResidualAppliedHalfLifeSeconds;
             WorldResidualAfterDecay = worldResidualAfterDecay;
-            WorldResidualCompletionTolerance =
-                worldResidualCompletionTolerance;
-            WorldResidualClearedAtCompletionTolerance =
-                worldResidualClearedAtCompletionTolerance;
+            WorldResidualZeroTolerance =
+                worldResidualZeroTolerance;
+            WorldResidualClearedAtZeroTolerance =
+                worldResidualClearedAtZeroTolerance;
             VerticalContinuityOwners = verticalContinuityOwners;
             EffectiveCorrectionBefore = effectiveCorrectionBefore;
             EffectiveCorrectionAfter = effectiveCorrectionAfter;
@@ -1438,8 +1438,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float WorldResidualDeadlineHalfLifeSeconds { get; }
         internal float WorldResidualAppliedHalfLifeSeconds { get; }
         internal Vector3 WorldResidualAfterDecay { get; }
-        internal float WorldResidualCompletionTolerance { get; }
-        internal bool WorldResidualClearedAtCompletionTolerance { get; }
+        internal float WorldResidualZeroTolerance { get; }
+        internal bool WorldResidualClearedAtZeroTolerance { get; }
         internal CharacterFootVerticalContinuityOwner VerticalContinuityOwners { get; }
         internal Vector3 EffectiveCorrectionBefore { get; }
         internal Vector3 EffectiveCorrectionAfter { get; }

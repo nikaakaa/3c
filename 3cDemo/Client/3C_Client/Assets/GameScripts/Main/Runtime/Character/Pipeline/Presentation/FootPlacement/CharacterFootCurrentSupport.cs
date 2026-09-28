@@ -321,6 +321,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 NormalCompletionIdentity,
                 NormalEventIdentity);
 
+        internal CharacterFootSupportTarget WithPosition(Vector3 position) =>
+            new CharacterFootSupportTarget(
+                FrameSequence, CompletionIdentity, Side, position, SupportNormal,
+                SurfaceIdentity, WorldRevision, Kind, PositionSource,
+                PositionFrameSequence, PositionCompletionIdentity,
+                PositionEventIdentity, PositionPathIdentity, NormalSource,
+                NormalFrameSequence, NormalCompletionIdentity, NormalEventIdentity);
+
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) &&
             float.IsFinite(value.z);

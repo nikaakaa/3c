@@ -677,7 +677,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in leftResolved,
                         in leftFootMotion,
                         in leftGoal,
-                        leftCompletion.OutputSupport);
+                        leftCompletion.OutputSupport,
+                        leftCompletion.ReleaseTargetSupport);
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
@@ -694,7 +695,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in rightResolved,
                         in rightFootMotion,
                         in rightGoal,
-                        rightCompletion.OutputSupport);
+                        rightCompletion.OutputSupport,
+                        rightCompletion.ReleaseTargetSupport);
                 var primarySupportDiagnostics =
                     new CharacterFootPrimarySupportDiagnostics(in primarySupport);
                 var strideDiagnostics =

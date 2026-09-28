@@ -18,7 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootSwingMotionResult preliminaryMotion,
                 in CharacterFootLifecycleTransitionFact lifecycleTransition,
                 bool landingCompletionPending,
-                in CharacterFootCurrentSupportObservation outputSupport)
+                in CharacterFootCurrentSupportObservation outputSupport,
+                in CharacterFootCurrentSupportObservation releaseTargetSupport)
             {
                 Evaluation = evaluation;
                 PreTransition = preTransition;
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LifecycleTransition = lifecycleTransition;
                 LandingCompletionPending = landingCompletionPending;
                 OutputSupport = outputSupport;
+                ReleaseTargetSupport = releaseTargetSupport;
             }
 
             CharacterFootStateEvaluation Evaluation { get; }
@@ -42,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
             bool LandingCompletionPending { get; }
             internal CharacterFootCurrentSupportObservation OutputSupport { get; }
+            internal CharacterFootCurrentSupportObservation ReleaseTargetSupport { get; }
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
@@ -178,6 +181,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in preTransition,
                     timeToLandingSeconds,
                     in frame);
+            CharacterFootCurrentSupportObservation releaseTargetSupport = default;
+            if (!target.SuppressOutput && target.SupportTargetAvailable &&
+                target.InterpolationPolicy == CharacterFootInterpolationPolicy.ReleaseResidual)
+            {
+                releaseTargetSupport = QueryFootSupport(
+                    in context, in evaluation, target.Correction, target.SupportTarget);
+                target = CharacterFootStateTargetResolver.ConstrainReleaseTarget(
+                    in target, in releaseTargetSupport, in frame);
+            }
             CharacterFootInterpolationResult interpolation;
             if (!preTransition.SuppressOutput &&
                 !target.SupportTargetAvailable)
@@ -223,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in result,
                     in lifecycleTransition,
                     false,
+                    default,
                     default);
                 return unavailable;
             }
@@ -252,7 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : frameSwing;
             CharacterFootCurrentSupportObservation outputSupport = preTransition.SuppressOutput
                 ? default
-                : QueryOutputSupport(in context, in evaluation, in interpolation);
+                : QueryFootSupport(in context, in evaluation,
+                    interpolation.Correction, interpolation.SupportTarget);
             CharacterFootHardConstraintResult hardConstraint =
                 preTransition.SuppressOutput
                     ? new CharacterFootHardConstraintResult(
@@ -318,7 +332,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in result,
                 in lifecycleTransition,
                 landingCompletionPending,
-                in outputSupport);
+                in outputSupport,
+                in releaseTargetSupport);
             return request;
         }
 
@@ -327,6 +342,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
+            if (target.InterpolationPolicy == CharacterFootInterpolationPolicy.ReleaseResidual)
+                return target.Correction;
             switch (context.Discrete.State)
             {
                 case CharacterFootConstraintState.Swing:
@@ -340,19 +357,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CharacterFootCurrentSupportObservation QueryOutputSupport(
+        static CharacterFootCurrentSupportObservation QueryFootSupport(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
-            in CharacterFootInterpolationResult interpolation)
+            Vector3 correction,
+            in CharacterFootSupportTarget support)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
             CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
-            CharacterFootSupportTarget support = interpolation.SupportTarget;
             float rotationWeight = context.Contact.HasContact
                 ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
             if (!evaluation.Grounded || frame.FootPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon ||
                 !TryResolveFootGoalPose(in foot,
-                    CharacterFootConstraintMath.ResolveOriginalSole(foot) + interpolation.Correction,
+                    CharacterFootConstraintMath.ResolveOriginalSole(foot) + correction,
                     in support, frame.FootPlacementWeight, rotationWeight,
                     out _, out _, out _, out Vector3 ankle, out Quaternion rotation))
                 return default;

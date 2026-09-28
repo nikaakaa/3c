@@ -177,6 +177,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in supportIntent);
         }
 
+        internal static CharacterFootStateTarget ConstrainReleaseTarget(
+            in CharacterFootStateTarget target,
+            in CharacterFootCurrentSupportObservation support,
+            in CharacterFootStateFrame frame)
+        {
+            if (!support.Available)
+                return target;
+            float displacement = Mathf.Max(
+                support.HeelRequiredDisplacement, support.ToeRequiredDisplacement);
+            if (displacement <= 0f)
+                return target;
+            Vector3 adjustment = frame.ComponentUp.normalized *
+                (displacement / frame.FootPlacementWeight);
+            Vector3 correction = target.Correction + adjustment;
+            CharacterFootSupportTarget supportTarget = target.SupportTarget.WithPosition(
+                CharacterFootConstraintMath.ResolveOriginalSole(frame.AnimatedFoot) + correction);
+            return new CharacterFootStateTarget(
+                correction, target.SwingCorrection, target.InterpolationPolicy,
+                target.PlantTargetAvailable, target.PlantTargetEventIdentity,
+                target.PlantTargetVerified, target.PlantTargetPoint,
+                target.PlantTargetKind, target.PlantLockResponse, target.LockWeightCompleted,
+                target.SupportTargetAvailable, in supportTarget, target.StateEntered,
+                target.ResponseEntered, target.DirectPlantFollow, target.SuppressOutput,
+                target.TimeToLandingSeconds, target.SupportIntent);
+        }
+
         static CharacterFootStateTarget ResolveContactPlant(
             in CharacterFootLifecycleContext context,
             in CharacterFootTransitionDecision transition,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "3C 并行开发验证"
+  short_description: "仅用于 3C 并行开发，通过 Center 协调独立任务的改动与验证证据"
+  default_prompt: "当前正在进行 3C 并行开发，使用 $3c-fast-development-validation 在分配给本任务的 worktree 中记录改动、前后验证和证据，并遵守已有执行限制。"

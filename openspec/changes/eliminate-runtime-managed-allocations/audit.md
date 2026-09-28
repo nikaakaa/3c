@@ -95,13 +95,13 @@
 - 可在正式装配时校验固定声明，帧内只验发布身份及失效状态。角色表现不变；代价是换图或换合同时必须重新装配，不能缓存跨版本的绑定。
 - 实施结果：BindPoseDomain 一次校验 Control 声明存在和唯一性，保存正式变量合同；FromPublishedVariables 每帧只检查当前发布有效及源合同引用匹配。删除长期保存的参数 ID 数组与帧内双层循环。
 
-### AP02 参数名称仍重复线性查找（主读取已实施，诊断位置绑定未收口）
+### AP02 参数名称仍重复线性查找（主运行与lean采样已实施，未实跑）
 
 - 证据：[EventGraphContracts.cs:459](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/BTSMTL/EventGraphs/EventGraphContracts.cs#L459) 的变量布局名称解析。
 - 输入是变量名，输出是同帧变量；多个 Pose 消费者和诊断重复比较字符串。零分配发布已经完成，并不消除读取端的查找成本。
 - 可在装配时解析带布局身份的位置，运行时直接读值。变量多、角色多时减少重复查找；代价是布局替换后位置失效，不能只缓存裸整数。
 - 实施结果：正式 EventGraphVariableBinding 保存布局对象身份与位置，读值同时检查发布版本和布局引用；Pose 参数节点、Action Slot 标量参数在装配时绑定，帧内直接按位置读。Character Host 直接包装 NativeEventGraphRuntime 的唯一变量合同，删除独立重建的同名合同。仍按名称读的消费者改走布局持有的 Ordinal 字典，旧线性扫描删除。
-- 剩余：采样字段仍按名称读，未迁移为预绑定位置；未接入正式工厂的 BlendSpace 类也未假称已改成位置读取。布局替换不会静默复用旧 binding，下一次成功发布、Reset/Dispose 的旧帧失效机制保留。
+- 采样续步：会话装配时绑定 lean 的七个变量位置，两种采样事件共用同一个构造入口；帧内不再按名称逐字段解析。没有 lean 声明的图仍输出 LeanAvailable=false；有声明却缺其它所需字段时在绑定阶段明确失败。未接入正式工厂的 BlendSpace 类不假称已改成位置读取；其它按名称访问已走同一布局字典。布局替换不会静默复用旧 binding，旧帧失效机制保留。
 
 ### AP03 图节点 getter 创建周期数组（已实施，未实跑）
 
@@ -152,17 +152,20 @@
 - 下一次过渡仍依赖连续历史姿势，CommitHistory 不能一并停掉。代价是明确残差只读期与新过渡写入期，并保留丢帧不污染已提交数据的规则。
 - 实施结果：七组数组归入两页 ResidualPage。新过渡完整重算待提交页，计算成功才标记新页；持续过渡读取已提交残差，Commit 仅在新页产生时交换残差页，Discard 不交换。BeginFrame 的七次 Array.Copy 删除；历史姿势、速度、参数和脚部历史仍沿原来每帧提交更新。
 
-### AP10 Final Pose 发布与物理写回重复遍历（CPU/引擎调用）
+### AP10 Final Pose 发布与物理写回重复遍历（写回解析与调用已实施，预检保留）
 
 - 证据：[CharacterFinalPoseNativePublication.cs:283](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/Final/CharacterFinalPoseNativePublication.cs#L283) 校验/复制所有骨骼；[CharacterFinalPosePhysicalWriter.cs:87](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/Final/CharacterFinalPosePhysicalWriter.cs#L87) 再遍历解析/校验，然后第三遍解析/写入，位置、旋转、缩放分别调用 setter。
 - 可统一使用已验证发布页，减少重复解析；评估位置/旋转合并写入。缩放是否可省必须依据正式动画和骨骼写入所有权，不能假设永远不变。
 - 必须保留全量预检后写入，不能改成逐骨骼检查后立即写而留下半帧姿势。引擎调用成本尚未测量，减少调用数量不等同于已证实总帧耗时下降。
+- 实施结果：物理 writer 按 Rig 骨骼数准备值类型写入数组，预检时一次解析并存放所选姿势，全部预检成功后直接消费该数组。位置/旋转用 SetLocalPositionAndRotation 合并写入，缩放仍写；发布页的有限性检查与写入前 Transform 存活检查均保留。增加一副定容本地姿势数组，换取删除第二次 ResolvePose 和减少逐骨骼引擎调用。
 
-### AP11 诊断关闭后仍有字段采集与观察字典维护（CPU）
+### AP11 诊断关闭后仍有字段采集与观察字典维护（表现采样与字典移交已实施，物理检查待决策）
 
 - 证据：[CharacterPresentationDomainRuntime.cs:716](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/CharacterPresentationDomainRuntime.cs#L716) 无条件构造含 lean 读取的诊断帧；[CharacterFinalPosePhysicalWriter.cs:116](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/Final/CharacterFinalPosePhysicalWriter.cs#L116) 在足部采集开关外读取骨盆/双踝 Transform 并转换空间。
 - [CharacterPoseNativeGraphRuntime.cs:1069](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1069) 每个首次求值输出写观察字典，CommitGraphOutput 再逐项复制到已提交字典，不以观察订阅为前提。
 - 可沿现有订阅按需采集，但 PhysicalWrite.IsAvailable 当前参与提交校验：须把写回成功身份与诊断坐标分开，保留故障与 Commit 证明。不能整段关闭而破坏发布合同，也不能让关闭观察后返回上次残留字段。
+- 实施结果：原生表现采样未订阅时不构造诊断帧，清除该帧诊断结果；发布时检查诊断帧对应当前 renderFrame，避免订阅在帧中变化后发布旧数据。节点观察仍保留原读取能力，但 Commit 改为交换工作/已提交字典并清空旧页，删除逐项复制；Discard 不替换已提交字典。
+- 剩余：物理写回后的坐标读取同时承担世界坐标有限性校验。已向用户说明保留该校验与改成仅确认本地写入的区别，未收到选择前保留现行行为。节点观察尚无正式订阅寿命合同，本轮不加全局开关或静默关闭观察。
 
 ### AP12 FlowCanvas 共享纯计算可能重复执行（取决于正式图连接）
 

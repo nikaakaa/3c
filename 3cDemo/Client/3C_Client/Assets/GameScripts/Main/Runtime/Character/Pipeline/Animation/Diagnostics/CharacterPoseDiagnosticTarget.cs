@@ -33,10 +33,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool IsValid => RuntimeInstanceId != Guid.Empty && PoseInstanceId != 0;
     }
 
+    internal readonly struct CharacterPoseDiagnosticVariableBindings
+    {
+        internal CharacterPoseDiagnosticVariableBindings(CharacterAnimationVariableContract contract) : this()
+        {
+            if (!contract.TryGet("animation.lean.rotation", out _))
+                return;
+            HasLean = true;
+            Rotation = contract.Bind("animation.lean.rotation");
+            Eligible = contract.Bind("animation.lean.eligible");
+            HorizontalSpeed = contract.Bind("animation.horizontal-speed");
+            TurnRate = contract.Bind("animation.lean.turn-rate");
+            TargetAngle = contract.Bind("animation.lean.target-angle");
+            Angle = contract.Bind("animation.lean.angle");
+            MovementDirection = contract.Bind("animation.movement-direction");
+        }
+
+        internal bool HasLean { get; }
+        internal EventGraphVariableBinding Rotation { get; }
+        internal EventGraphVariableBinding Eligible { get; }
+        internal EventGraphVariableBinding HorizontalSpeed { get; }
+        internal EventGraphVariableBinding TurnRate { get; }
+        internal EventGraphVariableBinding TargetAngle { get; }
+        internal EventGraphVariableBinding Angle { get; }
+        internal EventGraphVariableBinding MovementDirection { get; }
+    }
+
     [DiagnosticGroup("timing")]
     public readonly struct CharacterPoseDiagnosticFrame
     {
-        internal CharacterPoseDiagnosticFrame(in CharacterPoseNativeFrameLineage lineage, CharacterAnimationVariableFrame variables = default)
+        internal CharacterPoseDiagnosticFrame(in CharacterPoseNativeFrameLineage lineage,
+            CharacterAnimationVariableFrame variables, in CharacterPoseDiagnosticVariableBindings bindings)
         {
             ActorId = lineage.ActorId.Value;
             FrameIdentity = lineage.FrameIdentity;
@@ -54,15 +81,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LeanEligible = false;
             LeanHorizontalSpeed = LeanTurnRate = LeanTargetAngle = LeanAngle = 0f;
             LeanMovementX = LeanMovementZ = LeanRotationX = LeanRotationY = LeanRotationZ = LeanRotationW = 0f;
-            if (variables.IsValid && variables.TryRead("animation.lean.rotation", out EventGraphValue leanRotation))
+            if (bindings.HasLean && variables.TryRead(bindings.Rotation, out EventGraphValue leanRotation))
             {
                 LeanAvailable = true;
-                LeanEligible = variables.RequireBool("animation.lean.eligible");
-                LeanHorizontalSpeed = variables.RequireFloat("animation.horizontal-speed");
-                LeanTurnRate = variables.RequireFloat("animation.lean.turn-rate");
-                LeanTargetAngle = variables.RequireFloat("animation.lean.target-angle");
-                LeanAngle = variables.RequireFloat("animation.lean.angle");
-                Vector2 direction = variables.Require("animation.movement-direction").Vector2Value;
+                LeanEligible = variables.Require(bindings.Eligible).As<bool>();
+                LeanHorizontalSpeed = variables.Require(bindings.HorizontalSpeed).As<float>();
+                LeanTurnRate = variables.Require(bindings.TurnRate).As<float>();
+                LeanTargetAngle = variables.Require(bindings.TargetAngle).As<float>();
+                LeanAngle = variables.Require(bindings.Angle).As<float>();
+                Vector2 direction = variables.Require(bindings.MovementDirection).Vector2Value;
                 LeanMovementX = direction.x;
                 LeanMovementZ = direction.y;
                 Quaternion rotation = leanRotation.QuaternionValue;

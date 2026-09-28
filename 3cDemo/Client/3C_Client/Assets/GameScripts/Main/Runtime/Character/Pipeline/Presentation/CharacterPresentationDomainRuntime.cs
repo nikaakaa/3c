@@ -519,7 +519,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IReadOnlyList<ActionAnimationPlaybackCommand> commands)
         {
 #if KK_DIAGNOSTIC_SAMPLING
-            if (!Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId))
+            if (!Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId) ||
+                m_CommittedDiagnosticFrame.PresentationFrame != context.RenderFrame)
                 return;
             try
             {
@@ -707,7 +708,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             m_PresentationClockCoordinator?.CommitFrame();
                             CharacterPoseNativeFrameLineage lineage = commit.Lineage;
                             m_PoseDomain.Session.PublishFootDiagnostics(m_Diagnostics.CharacterRuntimeId, in lineage);
-                            m_CommittedDiagnosticFrame = new Animation.Diagnostics.CharacterPoseDiagnosticFrame(in lineage, m_EventFrame);
+#if KK_DIAGNOSTIC_SAMPLING
+                            m_CommittedDiagnosticFrame = Animation.Diagnostics.CharacterNativePresentationDiagnosticEvent.IsInterested(m_Diagnostics.CharacterRuntimeId)
+                                ? m_PoseDomain.Session.CaptureDiagnosticFrame(in lineage)
+                                : default;
+#endif
                         }
                         else
                         {

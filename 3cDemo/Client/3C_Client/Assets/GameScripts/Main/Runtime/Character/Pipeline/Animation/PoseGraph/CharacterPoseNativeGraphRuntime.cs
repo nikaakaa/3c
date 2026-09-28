@@ -126,9 +126,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeNodeEvaluator m_Evaluator;
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue> m_OutputCache =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
-        readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
+        Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
-        readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
+        Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
         readonly Dictionary<PosePortId, CharacterPoseNativePortValue> m_GraphInputs =
             new Dictionary<PosePortId, CharacterPoseNativePortValue>();
@@ -938,9 +938,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 this,
                 in m_CompletedLineage,
                 evaluation.Output);
-            m_CommittedObservations.Clear();
-            foreach (KeyValuePair<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> observation in m_Observations)
-                m_CommittedObservations.Add(observation.Key, observation.Value);
+            (m_CommittedObservations, m_Observations) = (m_Observations, m_CommittedObservations);
+            m_Observations.Clear();
             m_LastCommittedLineage = m_CompletedLineage;
         }
 

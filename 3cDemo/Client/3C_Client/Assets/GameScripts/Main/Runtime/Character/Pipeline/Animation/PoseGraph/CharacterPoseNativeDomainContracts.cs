@@ -184,6 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeActionCommandSource m_ActionCommandSource;
         readonly ICharacterPoseNativeEventFrameSource m_EventFrameSource;
         readonly CharacterPoseNativeDomainServiceSet m_Services;
+        readonly Diagnostics.CharacterPoseDiagnosticVariableBindings m_DiagnosticVariables;
 
         internal CharacterPoseNativeDomainSession(
             CharacterPoseNativeRoleSession session,
@@ -195,6 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActionCommandSource = actionCommandSource ?? throw new ArgumentNullException(nameof(actionCommandSource));
             m_EventFrameSource = eventFrameSource ?? throw new ArgumentNullException(nameof(eventFrameSource));
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_DiagnosticVariables = new Diagnostics.CharacterPoseDiagnosticVariableBindings(eventFrameSource.VariableContract);
         }
 
         internal CharacterPoseNativeRoleSession RoleSession => m_Session;
@@ -205,6 +207,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong ResetGeneration => m_Session.ResetGeneration;
 
         internal bool CaptureFootDiagnostics => m_Services.Constraints.CaptureDiagnostics;
+
+        internal Diagnostics.CharacterPoseDiagnosticFrame CaptureDiagnosticFrame(in CharacterPoseNativeFrameLineage lineage)
+        {
+            if (!m_EventFrameSource.TryGetFrame(lineage.ActorId, lineage.PresentationFrame, out CharacterAnimationVariableFrame variables))
+                throw new InvalidOperationException("Pose diagnostics require the committed frame's animation variables.");
+            return new Diagnostics.CharacterPoseDiagnosticFrame(in lineage, variables, in m_DiagnosticVariables);
+        }
 
         internal Diagnostics.CharacterNativePoseCaptureFrame CapturePresentationDiagnostics(
             in Diagnostics.CharacterPoseDiagnosticFrame frame)
@@ -252,9 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
                 AnimationFootMotionRuntimeFrame motion = m_Services.WorldContext.LastSampledFootMotion;
-                if (!m_EventFrameSource.TryGetFrame(lineage.ActorId, lineage.PresentationFrame, out CharacterAnimationVariableFrame variables))
-                    throw new InvalidOperationException("Pose diagnostics require the committed frame's animation variables.");
-                var frame = new Diagnostics.CharacterPoseDiagnosticFrame(in lineage, variables);
+                Diagnostics.CharacterPoseDiagnosticFrame frame = CaptureDiagnosticFrame(in lineage);
                 Diagnostics.CharacterFootIkPhysicalCapture physical = m_Session.Role.CommittedPhysicalCapture;
                 AnimationFootMotionRuntimeSample left = motion.Left;
                 AnimationFootMotionRuntimeSample right = motion.Right;

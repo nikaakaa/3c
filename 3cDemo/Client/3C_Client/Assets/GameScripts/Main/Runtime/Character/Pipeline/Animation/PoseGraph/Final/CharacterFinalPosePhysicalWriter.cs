@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
         readonly AnimationLocalBonePose m_RootReferencePose;
         readonly AnimationLocalBonePose[] m_ReferencePoses;
+        readonly AnimationLocalBonePose[] m_WritePoses;
         AnimationPhysicalBoneWriteDiagnostics m_Diagnostics;
 
         internal CharacterFinalPosePhysicalWriter(
@@ -57,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 root.ReferenceLocalScale);
             m_ReferencePoses =
                 new AnimationLocalBonePose[rig.PhysicalBoneCount];
+            m_WritePoses = new AnimationLocalBonePose[rig.PhysicalBoneCount];
             for (int i = 0; i < m_ReferencePoses.Length; i++)
             {
                 CharacterAnimationPhysicalBonePayload bone =
@@ -102,19 +104,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Final animation physical write Bone #{boneIndex} is invalid.");
                 }
+                m_WritePoses[boneIndex] = pose;
             }
 
             for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
             {
                 Transform bone = m_Bones[boneIndex];
-                AnimationLocalBonePose pose = ResolvePose(
-                    in pending,
-                    in committed,
-                    pendingValid,
-                    committedValid,
-                    boneIndex);
-                bone.localPosition = pose.Position;
-                bone.localRotation = pose.Rotation;
+                AnimationLocalBonePose pose = m_WritePoses[boneIndex];
+                bone.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
                 bone.localScale = pose.Scale;
             }
             if (pendingValid)

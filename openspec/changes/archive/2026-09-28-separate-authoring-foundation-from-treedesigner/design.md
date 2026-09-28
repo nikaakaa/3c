@@ -36,7 +36,7 @@
 | 短路 | TreeDesigner/Scripts/Node/Value/Operate/OrNode.cs；两套 ValueRuntime | 旧 OR 未定义 TREERUNNER_DEBUG 时按需读右侧；编译链先 ReadInputs 再执行 OR，右侧仍求值。编译 AND 同样先读取全部输入 |
 | 类型和节点覆盖 | Editor/CharacterSimulation/Compilation/Skills/BtsmtlSkillFlowLeafEmitter.cs 的 Kind/Emit | 只支持明确映射的类型与节点；不能把旧 PropertyPort<T> 的可表达范围视为自动完整迁入 |
 
-这些结论来自源码检查，不是性能测量或全节点等价证明。尚未完成旧节点、转换规则、求值顺序、共享依赖和运行实例状态的全量对应。此次整理不得删除尚未证明有完整去向的语义，也不把脏缓存、短路修复、公共子表达式合并或执行器重写列为已交付。
+以上为拆分前的源码检查记录，不是性能测量或全节点等价证明。2026-09-28 后续独立提交 `7cc34146d` 已补齐 Float32/Fixed 的 AND/OR 短路，不再提前读取不需要的右侧输入。旧节点、转换规则、共享依赖求值次数和运行实例状态仍未完成全量对应；脏缓存、公共子表达式合并和执行器重写不属于此次拆分成果。
 
 ## Goals / Non-Goals
 
@@ -128,7 +128,7 @@ Timeline 仅更新本次迁出类型的引用；仍有真实消费者的 BaseGra
 | unity-simulation-assembly-ownership | 公共 Runtime 与公共 Editor 建立真实单向程序集边界，具体图适配留在所属领域；只对本次列入清单的自有类型允许精确迁名，仍有有效类型的旧程序集保留 |
 | native-flowcanvas-pose-runtime、character-presentation-pose-graph | 保持原生 Pose 实例和正式观察，不恢复 Pose IR 或独立预览执行器 |
 
-本次不替其它 change 完成或归档，不沿用旧文档对它们“未归档”的状态判断。实施完成后，本 change 的 delta 已同步到直接受影响的八份主规格；本 change 尚未归档。下面这些历史冲突仍需明确指出：
+本次不替其它 change 完成或归档，不沿用旧文档对它们“未归档”的状态判断。实施完成后，本 change 的 delta 已同步到直接受影响的八份主规格；2026-09-28 按用户要求归档，归档前逐项确认八份主规格已同步。下面这些历史冲突仍需明确指出：
 
 - `btsmtl-graph-core` 的“BaseGraph 承载唯一图结构数据”适用范围仍覆盖过宽；本次保留具体图运行类型，不借整理整体删除该运行合同。目标项目中 BaseTreeAsset 资产数量为零，旧资产菜单、Inspector 和打开回调已删除，对应旧入口要求也已从主规格移除；跨领域共享旧 Canvas 的要求已修订。
 - `graph-authoring-domain-framework` 的“Authoring节点与Runtime执行描述必须分离”仍要求 Pose 编译为 IR 并拒绝直接执行作者图，与 `native-flowcanvas-pose-runtime` 的原生执行要求冲突；Capability 条款也仍含 Pose lowering/Compiler 描述。本次保留现有原生 Pose 执行及领域定义，不把解决历史运行合同算作文件归位成果。

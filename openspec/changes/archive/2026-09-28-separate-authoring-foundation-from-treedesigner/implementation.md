@@ -103,3 +103,9 @@ Blend Space 仍编辑原来的样本坐标与资产。它实际使用的窗口�
 ### 共享文件与提交
 
 A、B、C 已分别提交为 `7ff71c785`、`921e73ead`、`36d33dcb6`。C5/C6 与规格收口作为第四个切片提交。共享的 CharacterPoseNodeDefinitionModule、CharacterPoseGraphProjectionValidator、CharacterPoseGraphAuthoringAdapter、CharacterPoseAuthoringPortProjection 只移除旧 Editor namespace 引用；已有业务修改保持，提交只包含本次差异。其它窗口产生的编译错误和改动没有纳入本次修复。
+
+## 2026-09-28：归档
+
+用户明确要求归档，按项目规则视为已验收。34 项任务完成，八份 delta 的新增、修改和删除要求已逐项与主规格核对一致。C5/C6 最终提交为 `c3f870c12`；后续技能值短路独立提交为 `7cc34146d`，两套正式可移植项目编译均为零警告、零错误，没有新增测试或运行 replay。
+
+短路已完成，不再列为待办。后续仍可独立处理：技能节点与值类型编译覆盖；同一上游的重复求值及有状态读取规则；仍有消费者的 TreeDesigner 运行实现归属；领域 Editor 程序集边界；现行规范中 Pose IR 与原生运行、BaseGraph 适用范围的历史冲突。以上为剩余范围说明，不表示本 change 还有未完成任务，也不授权自动扩展运行行为。

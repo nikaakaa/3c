@@ -530,6 +530,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal bool PresentationReleased;
             internal bool CreatedDiagnosticSnapshot;
             internal TimelineRuntimePresentationSample LocalPresentationSample;
+            internal CharacterTimelinePlaybackTrace Trace => new CharacterTimelinePlaybackTrace(
+                Handle, Timeline, RuntimeInstance, Provenance, ActionInstanceId);
         }
 
         TimelineRuntimeCompositionHost m_Host;
@@ -700,8 +702,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 };
                 m_ActivePlaybacks.Add(active);
                 PublishPlaybackSnapshot(active);
-                PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineRequested, "Requested", string.Empty);
-                PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Running", string.Empty);
+                CharacterTimelinePlaybackDiagnostics.PublishTimelineLifecycle(m_Diagnostics, active.Trace, RuntimeTraceEventKind.TimelineRequested, "Requested", string.Empty);
+                CharacterTimelinePlaybackDiagnostics.PublishTimelineLifecycle(m_Diagnostics, active.Trace, RuntimeTraceEventKind.TimelineStarted, "Running", string.Empty);
                 accepted = true;
                 return true;
             }
@@ -1256,35 +1258,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline capture requires an initialized CharacterTimelineHost.");
             TimelineRuntimePlaybackSnapshot native = m_Host.Capture(new TimelineRuntimePlaybackHandle(handle.Value));
-            return new AbilityTimelineRuntimeSnapshot(
-                (int)native.Handle.Value,
-                native.Generation,
-                native.RequestId,
-                native.ExecutionIdentity.OwnerIdentity,
-                native.ExecutionIdentity.CallIdentity,
-                native.ExecutionIdentity.InstanceId,
-                MapSnapshotMode(native.PlaybackMode),
-                native.ContentRevision,
-                MapSnapshotState(native.State),
-                native.CursorTime,
-                native.Cycle,
-                native.TimeCarry,
-                native.Control,
-                native.TreeDecisionExits,
-                native.PendingTreeDecisionExits,
-                native.SectionId,
-                native.ActiveClipIds,
-                TimelineSnapshotItems<AbilityTimelineTreeClipState>.CopyFrom(m_TreeClipService.Capture(handle.Value)),
-                native.HasStopContext,
-                MapSnapshotStopCause(native.StopContext.Cause),
-                native.StopContext.LocalLogicTick,
-                native.InitialBoundaryPending,
-                request.TimelineId,
-                request.Loop,
-                request.ActionContext,
-                request.InvocationSource,
-                request.InputSequence,
-                request.Tick);
+            return CharacterTimelineSnapshotCodec.Capture(native, request, m_TreeClipService.Capture(handle.Value));
         }
 
         public int ApplyAbilityTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
@@ -1306,34 +1280,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     snapshot.RequestId,
                     timeline.Clone(),
                     executionIdentity,
-                    MapPlaybackMode(snapshot.PlaybackMode),
+                    CharacterTimelineSnapshotCodec.MapPlaybackMode(snapshot.PlaybackMode),
                     Array.Empty<TimelineCallBinding>());
                 if (!preparation.IsReady)
                     throw new InvalidOperationException($"Ability Timeline restore '{snapshot.RuntimeHandle}' failed preparation: {string.Join(" | ", preparation.Errors)}");
             }
             TimelineData playbackTimeline = preparation.SourceTimeline;
-            var stopCause = MapPlaybackStopCause(snapshot.StopCause);
-            var native = new TimelineRuntimePlaybackSnapshot(
-                new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle),
-                snapshot.Generation,
-                snapshot.RequestId,
-                executionIdentity,
-                preparation.PlaybackMode,
-                m_NumericTarget,
-                snapshot.ContentRevision,
-                MapPlaybackState(snapshot.State),
-                snapshot.CursorTime,
-                snapshot.Cycle,
-                snapshot.SectionId,
-                snapshot.ActiveClipIds,
-                snapshot.HasStopContext,
-                new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
-                snapshot.InitialBoundaryPending,
-                snapshot.TimeCarry,
-                snapshot.Control,
-                snapshot.TreeDecisionExits,
-                snapshot.PendingTreeDecisionExits,
-                m_TickRate);
+            TimelineRuntimePlaybackSnapshot native = CharacterTimelineSnapshotCodec.Restore(
+                snapshot, executionIdentity, preparation.PlaybackMode, m_NumericTarget, m_TickRate);
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
             m_TreeClipService.Restore(restored.Value, snapshot.ActiveTreeClips);
@@ -1376,67 +1330,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             };
             m_ActivePlaybacks.Add(active);
             PublishPlaybackSnapshot(active);
-            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Restored", string.Empty);
+            CharacterTimelinePlaybackDiagnostics.PublishTimelineLifecycle(m_Diagnostics, active.Trace, RuntimeTraceEventKind.TimelineStarted, "Restored", string.Empty);
             return checked((int)restored.Value);
         }
 
-        static AbilityTimelineSnapshotMode MapSnapshotMode(TimelinePlaybackMode mode) => mode switch
-        {
-            TimelinePlaybackMode.Loop => AbilityTimelineSnapshotMode.Loop,
-            _ => AbilityTimelineSnapshotMode.Once
-        };
-
-        static TimelinePlaybackMode MapPlaybackMode(AbilityTimelineSnapshotMode mode) => mode switch
-        {
-            AbilityTimelineSnapshotMode.Loop => TimelinePlaybackMode.Loop,
-            _ => TimelinePlaybackMode.Once
-        };
-
-        static AbilityTimelineSnapshotState MapSnapshotState(TimelineRuntimePlaybackState state) => state switch
-        {
-            TimelineRuntimePlaybackState.Prepared => AbilityTimelineSnapshotState.Prepared,
-            TimelineRuntimePlaybackState.Running => AbilityTimelineSnapshotState.Running,
-            TimelineRuntimePlaybackState.Stopping => AbilityTimelineSnapshotState.Stopping,
-            TimelineRuntimePlaybackState.Completed => AbilityTimelineSnapshotState.Completed,
-            TimelineRuntimePlaybackState.Stopped => AbilityTimelineSnapshotState.Stopped,
-            TimelineRuntimePlaybackState.Failed => AbilityTimelineSnapshotState.Failed,
-            TimelineRuntimePlaybackState.Disposed => AbilityTimelineSnapshotState.Disposed,
-            _ => throw new InvalidOperationException("Timeline playback state is invalid.")
-        };
-
-        static TimelineRuntimePlaybackState MapPlaybackState(AbilityTimelineSnapshotState state) => state switch
-        {
-            AbilityTimelineSnapshotState.Prepared => TimelineRuntimePlaybackState.Prepared,
-            AbilityTimelineSnapshotState.Running => TimelineRuntimePlaybackState.Running,
-            AbilityTimelineSnapshotState.Stopping => TimelineRuntimePlaybackState.Stopping,
-            AbilityTimelineSnapshotState.Completed => TimelineRuntimePlaybackState.Completed,
-            AbilityTimelineSnapshotState.Stopped => TimelineRuntimePlaybackState.Stopped,
-            AbilityTimelineSnapshotState.Failed => TimelineRuntimePlaybackState.Failed,
-            AbilityTimelineSnapshotState.Disposed => TimelineRuntimePlaybackState.Disposed,
-            _ => throw new ArgumentOutOfRangeException(nameof(state))
-        };
-
-        static AbilityTimelineSnapshotStopCause MapSnapshotStopCause(TimelinePlaybackStopCause cause) => cause switch
-        {
-            TimelinePlaybackStopCause.SelfAbort => AbilityTimelineSnapshotStopCause.SelfAbort,
-            TimelinePlaybackStopCause.LowerPriorityAbort => AbilityTimelineSnapshotStopCause.LowerPriorityAbort,
-            TimelinePlaybackStopCause.ExplicitParentStop => AbilityTimelineSnapshotStopCause.ExplicitParentStop,
-            TimelinePlaybackStopCause.StateTransition => AbilityTimelineSnapshotStopCause.StateTransition,
-            TimelinePlaybackStopCause.Reset => AbilityTimelineSnapshotStopCause.Reset,
-            TimelinePlaybackStopCause.Shutdown => AbilityTimelineSnapshotStopCause.Shutdown,
-            _ => AbilityTimelineSnapshotStopCause.None
-        };
-
-        static TimelinePlaybackStopCause MapPlaybackStopCause(AbilityTimelineSnapshotStopCause cause) => cause switch
-        {
-            AbilityTimelineSnapshotStopCause.SelfAbort => TimelinePlaybackStopCause.SelfAbort,
-            AbilityTimelineSnapshotStopCause.LowerPriorityAbort => TimelinePlaybackStopCause.LowerPriorityAbort,
-            AbilityTimelineSnapshotStopCause.ExplicitParentStop => TimelinePlaybackStopCause.ExplicitParentStop,
-            AbilityTimelineSnapshotStopCause.StateTransition => TimelinePlaybackStopCause.StateTransition,
-            AbilityTimelineSnapshotStopCause.Reset => TimelinePlaybackStopCause.Reset,
-            AbilityTimelineSnapshotStopCause.Shutdown => TimelinePlaybackStopCause.Shutdown,
-            _ => TimelinePlaybackStopCause.SelfAbort
-        };
         public void CancelTimelinePlayback(
             TimelinePlaybackHandle handle,
             TimelinePlaybackStopContext stopContext)
@@ -1546,8 +1443,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     }
             }
             float time = evaluation.Time.ToSingle();
-            PublishTimelineEvent(
-                active,
+            CharacterTimelinePlaybackDiagnostics.PublishTimelineEvent(m_Diagnostics, active.Trace,
                 RuntimeTraceDomain.Logic,
                 RuntimeTraceEventKind.TimelineLogicTime,
                 RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
@@ -1555,8 +1451,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 string.Empty,
                 time,
                 evaluation.Cycle);
-            PublishActiveTimelineElements(active, evaluation, time);
-            PublishTreeClipEvents(active, evaluation, time);
+            CharacterTimelinePlaybackDiagnostics.PublishActiveTimelineElements(m_Diagnostics, active.Trace, evaluation, time);
+            CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, evaluation, time);
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(
                 new TimelinePlaybackHandle(evaluation.Handle.Value));
             if (status == TimelinePlaybackStatus.Succeeded)
@@ -1574,125 +1470,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 request.Reason.Cause.ToString());
         }
 
-        void PublishActiveTimelineElements(
-            ActivePlayback active,
-            TimelineRuntimeCommittedEvaluation evaluation,
-            float time)
-        {
-            if (active.Timeline == null || m_Diagnostics == null)
-                return;
-            bool publishTracks = m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, RuntimeTraceEventKind.TrackActive);
-            bool publishClips = m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, RuntimeTraceEventKind.ClipActive);
-            if (!publishTracks && !publishClips)
-                return;
-            TimelineRuntimeSampleView<string> activeClipIds = evaluation.ActiveClipIds;
-            for (int trackIndex = 0; trackIndex < active.Timeline.Tracks.Count; trackIndex++)
-            {
-                Track track = active.Timeline.Tracks[trackIndex];
-                if (track == null)
-                    continue;
-                bool trackPublished = false;
-                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                {
-                    Clip clip = track.Clips[clipIndex];
-                    if (clip == null)
-                        continue;
-                    bool isActive = false;
-                    for (int activeIndex = 0; activeIndex < activeClipIds.Count; activeIndex++)
-                    {
-                        if (!string.Equals(activeClipIds[activeIndex], clip.AuthoringId, StringComparison.Ordinal))
-                            continue;
-                        isActive = true;
-                        break;
-                    }
-                    if (!isActive)
-                        continue;
-                    if (publishTracks && !trackPublished)
-                    {
-                        PublishTimelineEvent(active, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.TrackActive,
-                            RuntimeSourceElementKey.Track(active.Timeline.AuthoringId, track.AuthoringId),
-                            "Active", string.Empty, time, evaluation.Cycle);
-                        trackPublished = true;
-                    }
-                    if (publishClips)
-                        PublishTimelineEvent(active, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.ClipActive,
-                            RuntimeSourceElementKey.Clip(active.Timeline.AuthoringId, track.AuthoringId,
-                                clip.AuthoringId, clip is TreeClip), "Active", string.Empty, time, evaluation.Cycle);
-                }
-            }
-        }
-
-        void PublishTreeClipEvents(
-            ActivePlayback active,
-            TimelineRuntimeCommittedEvaluation evaluation,
-            float time)
-        {
-            PublishTreeClipEvents(active, evaluation.Evaluation.TreeClips, RuntimeTraceDomain.Logic, time);
-        }
-
-        void PublishTreeClipEvents(ActivePlayback active, TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> requests,
-            RuntimeTraceDomain domain, float time)
-        {
-            for (int index = 0; index < requests.Count; index++)
-            {
-                TimelineRuntimeTreeClipRequest request = requests[index];
-                RuntimeTraceEventKind kind = request.EventKind switch
-                {
-                    TimelineRuntimeTreeClipEventKind.Enter => RuntimeTraceEventKind.TreeClipEntered,
-                    TimelineRuntimeTreeClipEventKind.Update => RuntimeTraceEventKind.TreeClipUpdated,
-                    TimelineRuntimeTreeClipEventKind.Exit => RuntimeTraceEventKind.TreeClipExited,
-                    TimelineRuntimeTreeClipEventKind.Destroy => RuntimeTraceEventKind.TreeClipDestroyed,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                if (m_Diagnostics == null || !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
-                    continue;
-                RuntimeInstanceKey treeClip = RuntimeInstanceKey.TreeClip(
-                    active.RuntimeInstance.CharacterRuntimeId,
-                    active.Provenance.SourceGraphRuntimeId,
-                    active.RuntimeInstance.SourceOperationIndex,
-                    active.Handle.Value,
-                    request.Cycle,
-                    active.ActionInstanceId);
-                PublishTimelineEvent(
-                    active,
-                    domain,
-                    kind,
-                    RuntimeSourceElementKey.Clip(
-                        active.Timeline.AuthoringId,
-                        request.TrackAuthoringId,
-                        request.ClipAuthoringId,
-                        true),
-                    request.EventKind switch
-                    {
-                        TimelineRuntimeTreeClipEventKind.Enter => "Enter",
-                        TimelineRuntimeTreeClipEventKind.Update => "Update",
-                        TimelineRuntimeTreeClipEventKind.Exit => "Exit",
-                        TimelineRuntimeTreeClipEventKind.Destroy => "Destroy",
-                        _ => throw new ArgumentOutOfRangeException()
-                    },
-                    string.Empty,
-                    domain == RuntimeTraceDomain.Presentation ? request.Time.ToSingle() : time,
-                    request.Cycle,
-                    treeClip,
-                    request.TreeGraphId);
-            }
-        }
-
-        void PublishTimelineVisualTime(ActivePlayback active, TimelineRuntimePresentationFrame frame)
-        {
-            PublishTimelineEvent(
-                active,
-                RuntimeTraceDomain.Presentation,
-                RuntimeTraceEventKind.TimelineVisualTime,
-                RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
-                "Presented",
-                string.Empty,
-                frame.Time.ToSingle(),
-                frame.Cycle,
-                default,
-                string.Empty);
-        }
-
         void PublishTerminal(
             TimelinePlaybackHandle handle,
             RuntimeTraceEventKind kind,
@@ -1706,63 +1483,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     continue;
                 active.TerminalPublished = true;
                 m_ActivePlaybacks[index] = active;
-                PublishTimelineLifecycle(active, kind, status, cause);
+                CharacterTimelinePlaybackDiagnostics.PublishTimelineLifecycle(m_Diagnostics, active.Trace, kind, status, cause);
                 return;
             }
-        }
-
-        void PublishTimelineLifecycle(
-            ActivePlayback active,
-            RuntimeTraceEventKind kind,
-            string status,
-            string cause)
-        {
-            if (active.Timeline == null)
-                return;
-            PublishTimelineEvent(
-                active,
-                RuntimeTraceDomain.Lifecycle,
-                kind,
-                RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
-                status,
-                cause,
-                0f,
-                0);
-        }
-
-        void PublishTimelineEvent(
-            ActivePlayback active,
-            RuntimeTraceDomain domain,
-            RuntimeTraceEventKind kind,
-            RuntimeSourceElementKey source,
-            string status,
-            string cause,
-            float time,
-            int cycle,
-            RuntimeInstanceKey runtimeInstance = default,
-            string relatedElementId = "")
-        {
-            if (m_Diagnostics == null || !active.RuntimeInstance.IsValid ||
-                !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
-                return;
-            m_Diagnostics.Publish(
-                RuntimeTraceChannel.Timeline,
-                domain,
-                kind,
-                source,
-                runtimeInstance.IsValid ? runtimeInstance : active.RuntimeInstance,
-                new RuntimeTracePayload
-                {
-                    Name = active.Timeline.Name,
-                    Status = status,
-                    Cause = cause,
-                    RelatedElementId = relatedElementId,
-                    ActionInstanceId = active.ActionInstanceId,
-                    ActivationGeneration = active.Provenance.SourceActivationGeneration,
-                    Time = time,
-                    Cycle = cycle,
-                    TimelinePlayback = active.Provenance
-                });
         }
 
         bool TryGetActivePlayback(TimelineRuntimePlaybackHandle handle, out ActivePlayback active)
@@ -1910,8 +1633,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 PresentationFrameProduced?.Invoke(candidate);
                 if (TryGetActivePlayback(candidate.Handle, out ActivePlayback active))
                 {
-                    PublishTimelineVisualTime(active, candidate);
-                    PublishTreeClipEvents(active, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
+                    CharacterTimelinePlaybackDiagnostics.PublishTimelineVisualTime(m_Diagnostics, active.Trace, candidate);
+                    CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
                 }
             }
             m_Host?.CommitPresentationFrame(frame);

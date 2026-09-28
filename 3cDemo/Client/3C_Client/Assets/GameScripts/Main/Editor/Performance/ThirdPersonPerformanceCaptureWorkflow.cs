@@ -363,7 +363,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal static void BuildPlayer(
             string selectedRuntimeId,
             string workspaceIdentity,
-            PerformanceInstrumentationMode instrumentationMode)
+            PerformanceInstrumentationMode instrumentationMode,
+            Action<string, string, long> reportProgress = null)
         {
             PerformanceScenarioDocument scenario = RequireScenario();
             if (!string.Equals(scenario.runtime_id, selectedRuntimeId, StringComparison.Ordinal))
@@ -389,18 +390,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string stageRoot = Path.Combine(PerformanceRoot, "Players", ".staging");
             string stage = Path.Combine(stageRoot, workspaceId);
             string instrumentationRoot = Path.Combine(candidate, "Instrumentation");
-            string instrumentationInputPath = Path.Combine(instrumentationRoot, "build-input.txt");
-            string instrumentationManifestDirectory = Path.Combine(instrumentationRoot, "Fragments");
             Directory.CreateDirectory(candidate);
             string executable = Path.Combine(candidate, "ThirdPersonPerformancePlayer.exe");
             ScriptingImplementation backend = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone);
+            var buildClock = Stopwatch.StartNew();
+            string phase = string.Empty;
+            long phaseStarted = 0;
+            void Progress(string message, float fraction)
+            {
+                reportProgress?.Invoke(phase, message, buildClock.ElapsedMilliseconds);
+                if (EditorUtility.DisplayCancelableProgressBar("性能 Player 构建", $"{message}（已用 {buildClock.Elapsed.TotalSeconds:F1} 秒）", fraction))
+                    throw new OperationCanceledException("性能 Player 构建已取消。");
+            }
+            void BeginPhase(string next, string message)
+            {
+                if (phase.Length > 0)
+                    Debug.Log($"Performance Build [{phase}]: {buildClock.ElapsedMilliseconds - phaseStarted} ms");
+                phase = next;
+                phaseStarted = buildClock.ElapsedMilliseconds;
+                Debug.Log($"Performance Build [{phase}]: {message}");
+                Progress(message, 0f);
+            }
             try
             {
-                ThirdPersonPerformanceInstrumentationCatalog.WriteBuildInput(
-                    instrumentationInputPath,
-                    instrumentationManifestDirectory,
-                    instrumentationMode,
-                    ThirdPersonPerformanceInstrumentationCatalog.AssemblyNames);
+                BeginPhase("input-snapshot", "记录 Unity 资源指纹与构建配置");
+                RequireSavedBuildInputs();
                 PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
                 var options = new BuildPlayerOptions
                 {
@@ -408,19 +422,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     locationPathName = executable,
                     target = BuildTarget.StandaloneWindows64,
                     targetGroup = BuildTargetGroup.Standalone,
-                    options = BuildOptions.Development | BuildOptions.StrictMode,
-                    extraScriptingDefines = PerformanceInstrumentationBuildInput.CreateBuildDefines(instrumentationInputPath)
+                    options = BuildOptions.Development | BuildOptions.StrictMode
                 };
-                string buildInputsJson = CaptureBuildInputs(options);
+                string buildInputsJson = CaptureBuildInputs(options, Progress);
                 string buildInputsHash = Sha256(Encoding.UTF8.GetBytes(buildInputsJson));
+                string instrumentationCache = Path.Combine(buildWorkspaceRoot, "inputs", buildInputsHash, instrumentationInput.Identity);
+                string instrumentationInputPath = Path.Combine(instrumentationCache, "build-input.txt");
+                string instrumentationManifestDirectory = Path.Combine(instrumentationCache, "Fragments");
+                ThirdPersonPerformanceInstrumentationCatalog.WriteBuildInput(
+                    instrumentationInputPath,
+                    instrumentationManifestDirectory,
+                    instrumentationMode,
+                    ThirdPersonPerformanceInstrumentationCatalog.AssemblyNames);
+                options.extraScriptingDefines = PerformanceInstrumentationBuildInput.CreateBuildDefines(instrumentationInputPath);
+                BeginPhase("unity-build", "Unity 编译、转换代码与打包资源；具体阶段见 Unity 构建进度");
+                EditorUtility.ClearProgressBar();
                 BuildReport report;
                 using (ProductBuildValidationContext.Enter(ProductBuildKind.PerformancePlayer))
                     report = BuildPipeline.BuildPlayer(options);
                 if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
                     throw new InvalidOperationException($"Performance Player build failed: {report.summary.result}");
-                if (!string.Equals(buildInputsJson, CaptureBuildInputs(options), StringComparison.Ordinal))
+                BeginPhase("input-verification", "核对构建期间的 Unity 输入变化");
+                if (!string.Equals(buildInputsJson, CaptureBuildInputs(options, Progress), StringComparison.Ordinal))
                     throw new InvalidDataException("性能 Player 构建期间输入文件发生变化，请保存配置后重新构建；本次不发布构建身份。");
                 File.WriteAllText(Path.Combine(candidate, "build-inputs.json"), buildInputsJson, new UTF8Encoding(false));
+                BeginPhase("artifacts", "整理 Player、符号与插桩清单");
                 RequireFile(executable, "Performance Player executable");
                 PublishNativeSymbols(candidate, executable);
                 string[] pdbs = Directory.GetFiles(candidate, "*.pdb", SearchOption.AllDirectories);
@@ -438,7 +464,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 buildIdentity = buildIdentity.WithInstrumentationIdentity(instrumentationIdentity);
                 string scenarioRoot = Path.Combine(candidate, "Scenario");
                 CopyScenarioClosure(Path.GetDirectoryName(ScenarioPath), scenarioRoot);
-                PerformanceFileDocument[] files = BuildClosure(candidate);
+                BeginPhase("artifact-hashes", "记录已构建产物的文件身份");
+                PerformanceFileDocument[] files = BuildClosure(candidate, Progress);
                 string closureIdentity = string.Join("\n", files.Select(value =>
                     $"{value.role}|{value.path}|{value.size.ToString(CultureInfo.InvariantCulture)}|{value.sha256}"));
                 string buildSeed = string.Join("|", new[]
@@ -480,6 +507,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     files = files
                 };
                 WriteJson(manifestPath, manifest);
+                BeginPhase("publication", "发布本次 Player");
                 string destination = Path.Combine(PerformanceRoot, "Players", buildId);
                 if (Directory.Exists(destination))
                     throw new IOException($"Performance Player '{buildId}' is already published.");
@@ -489,6 +517,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Directory.Move(stage, destination);
                 string publishedManifest = Path.Combine(destination, "player-manifest.json");
                 ProjectEditorPreferences.SetString(PlayerPreference, publishedManifest);
+                reportProgress?.Invoke("completed", "性能 Player 已发布", buildClock.ElapsedMilliseconds);
+                Debug.Log($"Performance Build total: {buildClock.ElapsedMilliseconds} ms");
                 Debug.Log($"Performance Player published: {publishedManifest}");
             }
             catch
@@ -499,6 +529,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             finally
             {
+                EditorUtility.ClearProgressBar();
                 if (PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone) != backend)
                     PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, backend);
             }
@@ -925,7 +956,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeleteOwnedStage(backup, candidate);
         }
 
-        static string CaptureBuildInputs(BuildPlayerOptions options)
+        static void RequireSavedBuildInputs()
         {
             UnityEngine.Object dirtyAsset = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
                 .FirstOrDefault(value => EditorUtility.IsPersistent(value) && EditorUtility.IsDirty(value) &&
@@ -939,35 +970,43 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (scene.isDirty)
                     throw new InvalidOperationException($"性能构建需要已保存的输入，请先保存场景：{scene.path}");
             }
-            var files = new List<PerformanceFileDocument>();
-            void AddTree(string root, string prefix)
+        }
+
+        static string CaptureBuildInputs(BuildPlayerOptions options, Action<string, float> progress)
+        {
+            string[] paths = AssetDatabase.GetAllAssetPaths()
+                .Where(path => (path.StartsWith("Assets/", StringComparison.Ordinal) ||
+                                path.StartsWith("Packages/", StringComparison.Ordinal)) &&
+                               !AssetDatabase.IsValidFolder(path))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+            var assets = new PerformanceBuildAssetDocument[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
             {
-                if (!Directory.Exists(root))
-                    throw new DirectoryNotFoundException($"Performance build input root is missing: {root}");
-                foreach (string path in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+                if (i % 100 == 0)
+                    progress($"读取 Unity 资源指纹 {i}/{paths.Length}：{paths[i]}", (float)i / paths.Length);
+                assets[i] = new PerformanceBuildAssetDocument
                 {
-                    files.Add(new PerformanceFileDocument
-                    {
-                        role = "build-input",
-                        path = prefix + "/" + RelativePath(root, path).Replace('\\', '/'),
-                        size = new FileInfo(path).Length,
-                        sha256 = Sha256(path)
-                    });
-                }
+                    path = paths[i],
+                    dependency_hash = AssetDatabase.GetAssetDependencyHash(paths[i]).ToString()
+                };
             }
-            AddTree(Path.Combine(ClientRoot, "Assets"), "Assets");
-            AddTree(Path.Combine(ClientRoot, "ProjectSettings"), "ProjectSettings");
-            foreach (string name in new[] { "manifest.json", "packages-lock.json" })
+            var files = new List<PerformanceFileDocument>();
+            void AddFile(string path)
             {
-                string path = Path.Combine(ClientRoot, "Packages", name);
-                RequireFile(path, "package resolution inputs");
-                files.Add(new PerformanceFileDocument { role = "build-input", path = "Packages/" + name, size = new FileInfo(path).Length, sha256 = Sha256(path) });
+                string fullPath = Path.Combine(ClientRoot, path);
+                files.Add(new PerformanceFileDocument
+                {
+                    role = "build-input",
+                    path = path,
+                    size = new FileInfo(fullPath).Length,
+                    sha256 = Sha256(fullPath)
+                });
             }
-            var packages = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages();
-            if (packages == null || packages.Length == 0)
-                throw new InvalidOperationException("性能构建未取得已解析的包清单，不能发布输入快照。");
-            foreach (var package in packages.OrderBy(value => value.name, StringComparer.Ordinal))
-                AddTree(package.resolvedPath, "Packages/" + package.name);
+            foreach (string path in Directory.GetFiles(Path.Combine(ClientRoot, "ProjectSettings"), "*", SearchOption.AllDirectories))
+                AddFile(RelativePath(ClientRoot, path).Replace('\\', '/'));
+            AddFile("Packages/manifest.json");
+            AddFile("Packages/packages-lock.json");
             var inputs = new PerformanceBuildInputsDocument
             {
                 unity_version = Application.unityVersion,
@@ -976,22 +1015,32 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 build_options = options.options.ToString(),
                 scenes = options.scenes,
                 common_extra_defines = new[] { PerformanceInstrumentationIdentity.Define },
+                assets = assets,
                 files = files.OrderBy(value => value.path, StringComparer.Ordinal).ToArray()
             };
+            progress($"已记录 {assets.Length} 项 Unity 资源指纹与 {files.Count} 个配置文件", 1f);
             return JsonUtility.ToJson(inputs, true);
         }
 
-        static PerformanceFileDocument[] BuildClosure(string root) =>
-            Directory.GetFiles(root, "*", SearchOption.AllDirectories)
-                .OrderBy(value => value, StringComparer.Ordinal)
-                .Select(path => new PerformanceFileDocument
+        static PerformanceFileDocument[] BuildClosure(string root, Action<string, float> progress)
+        {
+            string[] paths = Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+                .OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            var files = new PerformanceFileDocument[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                string path = paths[i];
+                progress($"记录构建产物 {i + 1}/{paths.Length}：{RelativePath(root, path)}", (float)i / paths.Length);
+                files[i] = new PerformanceFileDocument
                 {
                     role = PlayerFileRole(path),
                     path = RelativePath(root, path),
                     size = new FileInfo(path).Length,
                     sha256 = Sha256(path)
-                })
-                .ToArray();
+                };
+            }
+            return files;
+        }
 
         static string PlayerFileRole(string path)
         {

@@ -93,7 +93,11 @@ GPU、整机内存峰值、长期泄漏与多硬件基准不在当前 Windows CP
 
 同一份分析清单将 `comparison_kind` 改为 `InstrumentationOverhead`，其余操作入口和报告格式不变。支持 Disabled → MarkerOnly、Disabled → Span、MarkerOnly → Span；每组仍必须使用同一个明确构建、至少 3 次采集才满足最低重复数。普通 `Regression` 继续严格禁止跨模式。
 
-Player 构建在设置正式 IL2CPP 构建选项后，对 Assets、ProjectSettings、包清单与锁文件、所有已解析包的文件做 SHA-256 快照，同时记录 Unity 版本、目标、后端、构建选项、场景和共同的额外编译定义。模式及其输入文件位置单独由已有织入合同记录，不混入模式无关的快照。构建前后快照必须完全一致；有未保存的资源或场景时明确报错，不替用户保存。这个检查会增加构建阶段的磁盘读取和哈希耗时，不在运行时采样热路径执行。
+Player 构建输入使用 `build-inputs/2`：Assets 和 Packages 中 Unity 已导入资源的身份来自 `AssetDatabase.GetAssetDependencyHash`，不再递归读取全部美术资源、包缓存或包内的 `obj`、`Source~` 等目录。ProjectSettings、包清单与锁文件继续记录文件 SHA-256，同时记录 Unity 版本、目标、后端、构建选项、场景和共同的额外编译定义。构建前后比较这份指纹；开始时要求资源与场景已保存，不替用户保存。资源身份依赖 Unity 的导入数据库，不声称覆盖 Unity 未导入、构建回调私自读取的外部文件。旧版输入快照不再作为新版工具的有效构建证据，需要重新构建。
+
+插桩输入与编译清单存放在仓库 `.performance-build/inputs/<输入快照哈希>/<插桩身份>/`。相同输入与模式复用路径及清单，内容未变时不重写输入文件；编译宏不再包含随机作业 ID。输入或模式变化会使用另一份明确输入，避免读取旧输入的插桩清单。Player 发布目录仍按本次产物身份保存，产物文件哈希仍计算一次。
+
+构建显示 `input-snapshot`、`unity-build`、`input-verification`、`artifacts`、`artifact-hashes`、`publication` 阶段，Console 记录阶段耗时与总耗时。资源指纹阶段显示计数，产物阶段显示当前文件；这些阶段的进度窗口支持取消，Unity 原生构建阶段使用 Unity 自身的进度。MCP `status` 和 `Library/Performance/McpJobs/<job>.json` 返回 `phase`、`elapsed_ms` 与当前消息。`elapsed_ms` 是最近一次进度更新时的累计耗时，原生构建期间不伪造心跳或百分比。进程退出后遗留的 `running` 文件不代表构建仍在运行，应核对原作业和目标 Editor；不据此自动重试构建。
 
 快照 `build-inputs.json` 纳入 Player 文件闭包，其哈希随 Player 和 Capture manifest 保存；Capture 发布时复制这份证据并再次校验。校准除常规环境身份外，还要求两组 `build_inputs_hash`、内容、Pipeline、Pose Graph 与 Solver 身份一致。普通回归允许源码改变；校准不允许把源码差异与探针模式差异混在一起。快照覆盖的是上述已记录输入，不能据此消除操作系统调度、温度或外部工具链状态的波动。
 

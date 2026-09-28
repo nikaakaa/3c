@@ -50,7 +50,8 @@ internal static class PerformanceCaptureAnalysis
             !string.IsNullOrWhiteSpace(manifest.build_inputs_hash) && PerformanceFileUtility.Sha256(buildInputsPath) == manifest.build_inputs_hash,
             "Capture build-input evidence is missing or has another identity.");
         var buildInputs = Read<PerformanceBuildInputsDocument>(buildInputsPath);
-        Require(buildInputs.schema == PerformanceCaptureSchemas.BuildInputs && buildInputs.files != null && buildInputs.files.Length > 0,
+        Require(buildInputs.schema == PerformanceCaptureSchemas.BuildInputs && buildInputs.files != null && buildInputs.files.Length > 0 &&
+            buildInputs.assets != null && buildInputs.assets.Length > 0,
             "Capture build-input schema or source list is invalid.");
         Require(manifest.instrumentation_mode is "Disabled" or "MarkerOnly" or "Span", "Unknown instrumentation mode.");
         Require(roles.ContainsKey("instrumentation-spans") == (manifest.instrumentation_mode == "Span"), "Span artifact does not match instrumentation mode.");

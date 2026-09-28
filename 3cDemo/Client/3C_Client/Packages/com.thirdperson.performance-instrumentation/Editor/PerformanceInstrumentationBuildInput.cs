@@ -101,7 +101,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                     value.Aggregation)));
             string fullPath = Path.GetFullPath(path);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-            File.WriteAllText(fullPath, string.Join("\n", lines) + "\n", new UTF8Encoding(false));
+            string contents = string.Join("\n", lines) + "\n";
+            if (!File.Exists(fullPath) || !string.Equals(File.ReadAllText(fullPath, Encoding.UTF8), contents, StringComparison.Ordinal))
+                File.WriteAllText(fullPath, contents, new UTF8Encoding(false));
         }
 
         public static string[] CreateBuildDefines(string path)

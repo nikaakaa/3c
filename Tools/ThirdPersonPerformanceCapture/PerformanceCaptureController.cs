@@ -497,6 +497,7 @@ internal sealed class PerformanceCaptureController
             throw new InvalidDataException("Performance Player build-input identity is missing or does not match its closure.");
         PerformanceBuildInputsDocument inputEvidence = ReadJson<PerformanceBuildInputsDocument>(ResolvePath(manifestRoot, buildInputs[0].path));
         if (inputEvidence.schema != PerformanceCaptureSchemas.BuildInputs || inputEvidence.files == null || inputEvidence.files.Length == 0 ||
+            inputEvidence.assets == null || inputEvidence.assets.Length == 0 ||
             inputEvidence.unity_version != _playerManifest.unity_version || inputEvidence.build_target != _playerManifest.build_target ||
             inputEvidence.scripting_backend != _playerManifest.scripting_backend)
             throw new InvalidDataException("Performance Player build-input evidence is invalid.");

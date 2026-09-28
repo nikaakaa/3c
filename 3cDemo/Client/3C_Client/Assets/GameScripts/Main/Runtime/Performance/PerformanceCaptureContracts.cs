@@ -14,7 +14,7 @@ namespace ThirdPersonPerformance
         public const string Budget = "third-person-performance-budget/1";
         public const string Profile = "third-person-performance-profile/1";
         public const string Player = "third-person-performance-player/3";
-        public const string BuildInputs = "third-person-performance-build-inputs/1";
+        public const string BuildInputs = "third-person-performance-build-inputs/2";
         public const string Request = "third-person-performance-run-request/3";
         public const string Status = "third-person-performance-run-status/2";
         public const string RuntimeResult = "third-person-performance-runtime-result/3";
@@ -632,6 +632,13 @@ namespace ThirdPersonPerformance
     }
 
     [Serializable]
+    public sealed class PerformanceBuildAssetDocument
+    {
+        public string path = string.Empty;
+        public string dependency_hash = string.Empty;
+    }
+
+    [Serializable]
     public sealed class PerformanceBuildInputsDocument
     {
         public string schema = PerformanceCaptureSchemas.BuildInputs;
@@ -641,6 +648,7 @@ namespace ThirdPersonPerformance
         public string build_options = string.Empty;
         public string[] scenes = Array.Empty<string>();
         public string[] common_extra_defines = Array.Empty<string>();
+        public PerformanceBuildAssetDocument[] assets = Array.Empty<PerformanceBuildAssetDocument>();
         public PerformanceFileDocument[] files = Array.Empty<PerformanceFileDocument>();
     }
 

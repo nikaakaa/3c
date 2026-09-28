@@ -133,7 +133,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
                         runtimeId,
                         jobId,
-                        instrumentationMode);
+                        instrumentationMode,
+                        (phase, message, elapsed) => PerformanceMcpJobScheduler.ReportBuildProgress(jobId, phase, message, elapsed));
                     return PerformanceMcpBridge.Success("Performance Player published.");
                 });
         }
@@ -442,6 +443,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public string operation = string.Empty;
             public string state = string.Empty;
             public string message = string.Empty;
+            public string phase = string.Empty;
+            public long elapsed_ms;
             public string updated_utc = string.Empty;
             public string workspace_path = string.Empty;
             public string player_manifest_before = string.Empty;
@@ -510,6 +513,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return Pending(job.Document, "Performance job scheduled.");
         }
 
+        internal static void ReportBuildProgress(string jobId, string phase, string message, long elapsedMilliseconds)
+        {
+            lock (Gate)
+            {
+                JobDocument document = Jobs[jobId].Document;
+                document.phase = phase;
+                document.elapsed_ms = elapsedMilliseconds;
+                SetState(document, "running", message);
+            }
+        }
+
         public static object Status(string jobId, string operation)
         {
             lock (Gate)
@@ -530,7 +544,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     return new ErrorResponse("performance_job_operation_mismatch", new { job_id = jobId, expected = operation, actual = document.operation });
                 Reconcile(document, job != null);
                 if (IsPending(document.state))
-                    return Pending(document, "Performance job is running.");
+                    return Pending(document, document.message);
                 if (job?.FinalResponse != null)
                     return job.FinalResponse;
                 if (document.state == "completed")
@@ -714,6 +728,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             operation = document.operation,
             state = document.state,
             message = document.message,
+            phase = document.phase,
+            elapsed_ms = document.elapsed_ms,
             updated_utc = document.updated_utc,
             workspace_path = document.workspace_path,
             player_manifest_path = document.player_manifest_after,

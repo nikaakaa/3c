@@ -26,4 +26,64 @@ Span 是同步方法进入和退出时的单调计时差值，包含被系统抢
 
 `presentation.animation` 包围表现事务，下面分为 Pose Prepare、Evaluate、Commit，以及 Source Barrier。Evaluate 下另有 Foot Placement 和 FullBodyIK 探针。Source Barrier 包含资源验证、回收准备和后端 Evaluate，不是纯骨骼计算时间。没有实际探针的旧阶段从指标目录删除；新增阶段要同时增加所属目录定义和方法声明。
 
-报告使用 summary/3，跨度使用 spans/2 和 layout revision 2。旧文件不会通过新格式检查；重新构建及采集后才能产生当前格式。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。
+报告使用 summary/4、comparison/2，跨度使用 spans/2 和 layout revision 2。旧报告不进入当前比较，需要使用当前 Controller 重新采集；旧证据保留原样。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。
+
+## 单次比较的结果口径
+
+Controller 先校验候选 Summary，再读取基线 manifest 中声明的 Summary。基线必须 Completed，产物路径不能越界或重复，要求的文件角色必须齐全，文件大小和 SHA-256 必须匹配；Summary、Runtime Result、Capture 身份与请求哈希也必须对应。读取失败或环境身份冲突写入 `Rejected`，不会使已经成功采集的候选数据丢失。
+
+每个指标都记录两侧样本数。只在一侧出现的指标保留为 `MissingBaseline` / `MissingCandidate`，单位、采样范围或调用点归属不同为 `DefinitionMismatch`，整个比较标记 `Incomplete`。调用点注册了但没有被调用时保留 `NoSamples`；只在一侧没有调用则为 `NoBaselineSamples` / `NoCandidateSamples`，整个比较也标记 `Incomplete`。它们不能按数值字段的默认零解释成零开销。
+
+基线为零时，变化百分比在数学上没有定义：`percent_delta_available=false`，状态为 `BaselineZero` 或 `BothZero`。读取者必须先检查状态与可用性，不能直接显示 `percent_delta` 的占位值。正常的绝对差仍然保留，例如 0 → 0.2 ms 的绝对差为 +0.2 ms。预算也分开提供 `budget_evaluated` 与 `budget_passed`；只有两侧均完整评估时 `budget_delta_available=true`。
+
+Summary 保存全部函数热点，线程 Exclusive 汇总不受前 200 条展示限制影响。未解析的地址和符号不会被静默丢弃，报告保存 `unresolved_exclusive_samples` 与 `total_exclusive_samples`；无法识别格式的导出行直接报错。热点比较保留原始样本数，但 `absolute_delta` 和百分比按每秒样本数计算，分母为 Player 的 `capture_seconds`，不是 CPU 毫秒。ETW 的 Controller 起止标记还包围通信握手边界，并非与 Player 第一帧、最后一帧精确对齐；据此定位热点后，应结合原始 ETL 分析，不能把比率当作方法精确耗时。
+
+Smoke、Replay、Capture 都在证据整理完成后才写 Completed 状态，并在 manifest 和目录原子发布后作为正式结果。MCP 在 Controller 尚存活、正在发布时继续等待，避免把“状态已完成、manifest 尚未落盘”的间隙误判为失败。
+
+## 多次采集分析
+
+仍使用同一个 Controller。先按正常入口分别采集基线版本和候选版本，再明确列出参加比较的 manifest；不会扫描目录自动挑选结果，不会自动剔除离群运行。每组必须来自同一个 Player 构建，两组之间允许构建变化；场景、预算、画质、硬件、工具链、指标目录和探针模式等比较条件仍必须一致。重复路径、复制出来的相同 Capture ID，以及同一次采集同时进入两组都会被拒绝。
+
+分析清单示例（路径替换成真实的 Completed Capture manifest）：
+
+```json
+{
+  "schema": "third-person-performance-analysis-request/1",
+  "baseline_manifest_paths": [
+    "D:/Performance/baseline-01/manifest.json",
+    "D:/Performance/baseline-02/manifest.json",
+    "D:/Performance/baseline-03/manifest.json"
+  ],
+  "candidate_manifest_paths": [
+    "D:/Performance/candidate-01/manifest.json",
+    "D:/Performance/candidate-02/manifest.json",
+    "D:/Performance/candidate-03/manifest.json"
+  ]
+}
+```
+
+- Launcher → Performance → **分析重复采集…**：选择清单。分析不启动 Player、WPR 或 Unity 构建，会先构建 Controller；随后打开 Markdown 报告。操作在按钮回调中调度，不在 Inspector 绘制过程中扫描和分析。
+- MCP `performance.analyze`：`action=start`、`request_path`，再以 `action=status`、`job_id` 查询任务；`performance.report` 的 `action=analysis`、`analysis_path` 读取结果。省略报告路径时使用最近一次显式分析。报告读取支持 `limit`，完整数据仍保存在文件中。
+- 已构建的 Controller CLI：`ThirdPersonPerformanceCapture.Controller.exe --analysis-request="D:/Performance/repeats.json" --analysis-output="D:/Performance/analysis-01"`。输出目录必须不存在，不覆盖历史结果；此命令只分析文件。
+
+Launcher/MCP 产物放在 `Library/Performance/Analyses/<独立编号>/`，包含输入清单快照 `request.json`、正式结果 `analysis.json` 和同源展示 `analysis.md`。报告保存清单哈希、每份源 manifest 的路径、哈希、Capture ID、Build ID、采集时长与预算状态。输入验证失败生成 `Rejected` 报告，CLI 返回 2；无法读取请求或写入结果等执行错误也返回 2，不能按“进程结束”判断比较有效。文件分析时禁止同时进行当前 Launcher 拥有的采集、Play 或编译，避免干扰测量。
+
+每次运行的 P95/P99 分别作为一次观测，调用点使用每次运行的 P95；报告还包含整体 FPS 和丢弃 Tick 数。每组保留全部观测值，计算中位数、最小/最大值及中位绝对偏差（MAD），组间绝对差和百分比比较的是两组中位数。不会合并不同运行的帧，也不会让采集帧数更多的一次运行获得更大权重。
+
+| 状态 | 含义 |
+| --- | --- |
+| Rejected | 身份或证据不符合比较条件，不产生性能结论 |
+| Incomplete | 某些运行缺失对应指标或定义不一致；记录具体 Capture ID，不把缺失补成零 |
+| InsufficientRepeats | 某组少于 3 次独立采集；可查看差值，重复证据不足 |
+| ObservedRangesOverlap | 两组观测范围重叠 |
+| CandidateRangeLower / CandidateRangeHigher | 候选的整个观测范围低于 / 高于基线 |
+| IdenticalObservedValues | 所有观测值一致 |
+| NotObserved | 调用点在所有运行中均未被调用，不计算耗时差，也不据此声称零开销 |
+
+后四类为指标行状态。总报告 `Comparable` 只表示可以按当前口径比较，不等于优化通过。3 次是报告的最低重复数，不是统计功效保证；观测范围分离也不是置信区间或显著性检验。耗时和分配下降通常是目标，但 FPS 下降不是改善。建议交错采集 A/B、保持热身和后台负载一致，完整保留异常运行及其原因；本工具不会以排序或删数据掩盖漂移。
+
+## 验证边界
+
+本次完善通过 8 个 C# 文件的 Roslyn 语法树解析和差异静态检查，没有启动编译、Unity、Controller 或真实采集，没有新增测试。语法解析不检查类型绑定；Xperf 导出格式、MCP 调度、Player 数据闭环与新增统计代码尚待实际运行确认；不把这次代码完善称为已验证的工业级工具。
+
+重复比较严格禁止跨探针模式比较业务收益。三种模式已经具备采集入口，但当前没有自动证明“除探针模式外源码和构建条件完全一致”的跨模式校准报告，也没有实测探针开销；需要独立保留同代码的构建来源和三种模式的多次采集证据。GPU、整机内存峰值、长期泄漏与多硬件基准也不在当前 Windows CPU/托管分配工具的报告范围内。

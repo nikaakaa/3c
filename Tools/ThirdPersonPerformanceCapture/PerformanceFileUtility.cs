@@ -97,8 +97,10 @@ internal static class PerformanceFileUtility
         const string sectionStart = "<a id='TblSI'>";
         const string sectionEnd = "<a id='TblSN'>";
         int start = report.IndexOf(sectionStart, StringComparison.Ordinal);
+        if (start < 0)
+            throw new InvalidDataException("Xperf stack report is missing the UniInclusive function table.");
         int end = report.IndexOf(sectionEnd, start + sectionStart.Length, StringComparison.Ordinal);
-        if (start < 0 || end <= start)
+        if (end <= start)
             throw new InvalidDataException("Xperf stack report is missing the UniInclusive function table.");
         string section = report.Substring(start, end - start);
         var rows = new Regex(
@@ -113,14 +115,13 @@ internal static class PerformanceFileUtility
         {
             Match identity = identityPattern.Match(row.Groups["identity"].Value);
             if (!identity.Success)
-                continue;
+                throw new InvalidDataException("Xperf function row cannot be mapped to module and function identities.");
             string module = NormalizeHtmlText(identity.Groups["module"].Value);
             string function = NormalizeHtmlText(identity.Groups["function"].Value);
-            if (function.Contains("***unknown***", StringComparison.OrdinalIgnoreCase) ||
-                !double.TryParse(NormalizeHtmlText(row.Groups["inclusive"].Value), NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double inclusive) ||
+            if (!double.TryParse(NormalizeHtmlText(row.Groups["inclusive"].Value), NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double inclusive) ||
                 !double.TryParse(NormalizeHtmlText(row.Groups["exclusive"].Value), NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double exclusive))
             {
-                continue;
+                throw new InvalidDataException("Xperf function row contains invalid sample counts.");
             }
             output.Add(string.Join(",", new[]
             {
@@ -133,7 +134,7 @@ internal static class PerformanceFileUtility
             }));
         }
         if (output.Count == 1)
-            throw new InvalidDataException("Xperf stack report contains no resolved function hotspots.");
+            throw new InvalidDataException("Xperf stack report contains no function hotspots.");
         File.WriteAllLines(Path.Combine(stagingRoot, "cpu-hotspots.csv"), output, new UTF8Encoding(false));
     }
 

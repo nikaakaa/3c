@@ -309,6 +309,59 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [McpForUnityTool(
+        "performance.analyze",
+        Description = "Compare explicitly selected repeated Completed Captures offline using the existing Controller. No Player, WPR or Unity build is started; the Controller executable is built before analysis.",
+        StructuredOutput = true,
+        AutoRegister = true,
+        RequiresPolling = true,
+        BackgroundPollingStatus = true,
+        PollAction = "status",
+        MaxPollSeconds = 900,
+        HasBehaviorAnnotations = true,
+        ReadOnlyHint = false,
+        DestructiveHint = false,
+        IdempotentHint = false,
+        OpenWorldHint = false)]
+    public static class ThirdPersonPerformanceAnalyzeMcpTool
+    {
+        public sealed class Parameters
+        {
+            [ToolParameter("Action: start or status. Defaults to start.", Required = false)]
+            public string action { get; set; }
+
+            [ToolParameter("Exact analysis request JSON containing baseline_manifest_paths and candidate_manifest_paths. Required for start.", Required = false)]
+            public string request_path { get; set; }
+
+            [ToolParameter("Job identity returned by start.", Required = false)]
+            public string job_id { get; set; }
+        }
+
+        public static object HandleCommand(JObject parameters)
+        {
+            string action = parameters?["action"]?.Value<string>()?.Trim().ToLowerInvariant() ?? "start";
+            try
+            {
+                if (action == "status")
+                    return PerformanceMcpJobScheduler.Status(parameters?["job_id"]?.Value<string>(), "analyze");
+                if (action != "start")
+                    return new ErrorResponse("invalid_action", new { action });
+                string path = parameters?["request_path"]?.Value<string>();
+                if (string.IsNullOrWhiteSpace(path))
+                    return new ErrorResponse("analysis_request_required");
+                return PerformanceMcpJobScheduler.Start("analyze", false, _ =>
+                {
+                    string report = ThirdPersonPerformanceCaptureWorkflow.AnalyzeCaptures(path);
+                    return new SuccessResponse("Performance repeat analysis published; inspect report status.", PerformanceMcpBridge.ReadAnalysis(report, 200));
+                });
+            }
+            catch (Exception exception)
+            {
+                return new ErrorResponse("performance_analysis_failed", new { message = exception.Message });
+            }
+        }
+    }
+
+    [McpForUnityTool(
         "performance.report",
         Description = "Read exact Performance Capture status, manifests, summaries and comparisons, or list published Capture manifests without opening Windows UI.",
         StructuredOutput = true,
@@ -323,11 +376,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: status, gates, gate, list, manifest, summary, or comparison. Defaults to status.", Required = false)]
+            [ToolParameter("Action: status, gates, gate, list, manifest, summary, comparison, or analysis. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Exact Capture manifest path. manifest, summary and comparison default to the last explicit Capture.", Required = false)]
             public string manifest_path { get; set; }
+
+            [ToolParameter("Exact analysis.json path for action=analysis; defaults to last explicit repeat analysis.", Required = false)]
+            public string analysis_path { get; set; }
 
             [ToolParameter("Maximum hotspot, thread and wait rows returned by summary. Defaults to 30 and is capped at 200.", Required = false)]
             public int limit { get; set; }
@@ -362,6 +418,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         return new SuccessResponse("Performance Capture summary loaded.", PerformanceMcpBridge.ReadSummary(manifestPath, limit));
                     case "comparison":
                         return new SuccessResponse("Performance Capture comparison loaded.", PerformanceMcpBridge.ReadComparison(manifestPath, limit));
+                    case "analysis":
+                        return new SuccessResponse("Performance repeat analysis loaded.", PerformanceMcpBridge.ReadAnalysis(
+                            parameters?["analysis_path"]?.Value<string>() ?? ThirdPersonPerformanceCaptureWorkflow.LastAnalysisPath, limit));
                     default:
                         return new ErrorResponse("invalid_action", new { action });
                 }
@@ -388,6 +447,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public string player_manifest_before = string.Empty;
             public string player_manifest_after = string.Empty;
             public string result_manifest_path = string.Empty;
+            public string analysis_path = string.Empty;
         }
 
         sealed class Job
@@ -493,6 +553,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             try
             {
                 response = job.Execute(job.Document.job_id);
+                if (job.Document.operation == "analyze")
+                    job.Document.analysis_path = ThirdPersonPerformanceCaptureWorkflow.LastAnalysisPath;
                 if (job.MonitorRun)
                 {
                     job.Document.result_manifest_path = RunManifestPath(job.Document.operation);
@@ -527,10 +589,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 SetState(document, "faulted", "Unity reloaded before the scheduled Performance job started.");
                 return;
             }
-            if (document.operation == "build_player" && IsPending(document.state))
+            if ((document.operation == "build_player" || document.operation == "analyze") && IsPending(document.state))
             {
                 if (!hasRuntimeJob)
-                    SetState(document, "faulted", "Unity reloaded before the Performance Player build completed.");
+                    SetState(document, "faulted", "Unity reloaded before the Performance job completed; inspect any published artifacts before retrying.");
                 return;
             }
             if (document.operation == "build_player" || document.state != "monitoring")
@@ -596,7 +658,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return false;
             }
             if (IsTerminalStatus(status.status))
-                return false;
+                return status.controller_process_id > 0 && IsProcessRunning(status.controller_process_id);
             if (DateTime.TryParse(
                     status.updated_utc,
                     CultureInfo.InvariantCulture,
@@ -620,8 +682,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             try
             {
-                using Process _ = Process.GetProcessById(processId);
-                return true;
+                using Process process = Process.GetProcessById(processId);
+                return !process.HasExited;
             }
             catch
             {
@@ -655,7 +717,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             updated_utc = document.updated_utc,
             workspace_path = document.workspace_path,
             player_manifest_path = document.player_manifest_after,
-            result_manifest_path = document.result_manifest_path
+            result_manifest_path = document.result_manifest_path,
+            analysis_path = document.analysis_path
         };
 
         static string RunManifestPath(string operation)
@@ -803,6 +866,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 summary.instrumentation_mode,
                 summary.timing_basis,
                 summary.budget_evaluated,
+                summary.capture_seconds,
+                summary.total_exclusive_samples,
+                summary.unresolved_exclusive_samples,
                 summary.unavailable_budget_metrics,
                 summary.budget_passed,
                 summary.budget_exceeded_count,
@@ -819,20 +885,49 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             string path = ThirdPersonPerformanceCaptureWorkflow.RequireCaptureFile(manifestPath, "comparison");
             PerformanceComparisonDocument comparison = ReadJson<PerformanceComparisonDocument>(path);
+            if (comparison.schema != PerformanceCaptureSchemas.Comparison)
+                throw new InvalidDataException("Performance comparison schema is invalid; regenerate the Capture with the current Controller.");
             return new
             {
                 manifest_path = Path.GetFullPath(manifestPath),
                 comparison_path = path,
+                comparison.schema,
+                comparison.baseline_manifest_path,
+                comparison.baseline_manifest_hash,
                 comparison.baseline_capture_id,
                 comparison.candidate_capture_id,
                 comparison.status,
                 comparison.message,
                 comparison.baseline_budget_passed,
                 comparison.candidate_budget_passed,
+                comparison.baseline_budget_evaluated,
+                comparison.candidate_budget_evaluated,
+                comparison.budget_delta_available,
+                comparison.warnings,
                 comparison.budget_exceeded_delta,
                 comparison.metrics,
                 instrumentation_points = comparison.instrumentation_points.Take(limit).ToArray(),
                 hotspots = comparison.hotspots.Take(limit).ToArray()
+            };
+        }
+
+        public static object ReadAnalysis(string path, int limit)
+        {
+            PerformanceAnalysisDocument report = ReadJson<PerformanceAnalysisDocument>(path);
+            if (report.schema != PerformanceCaptureSchemas.Analysis)
+                throw new InvalidDataException("Performance repeat analysis schema is invalid.");
+            return new
+            {
+                analysis_path = Path.GetFullPath(path),
+                report.schema,
+                report.status,
+                report.message,
+                report.created_utc,
+                report.request_hash,
+                report.sources,
+                report.warnings,
+                total_metric_count = report.metrics.Length,
+                metrics = report.metrics.Take(limit).ToArray()
             };
         }
 

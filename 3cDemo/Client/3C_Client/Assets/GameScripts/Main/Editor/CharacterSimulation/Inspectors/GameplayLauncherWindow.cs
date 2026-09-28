@@ -663,6 +663,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (GUILayout.Button("Open WPA"))
                         Execute(ThirdPersonPerformanceCaptureWorkflow.OpenWpa);
                 }
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(IsBusy || ThirdPersonPerformanceCaptureWorkflow.IsRunRunning || EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode))
+                    {
+                        if (GUILayout.Button("分析重复采集…"))
+                            SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.SelectAnalysisRequestAndRun);
+                    }
+                    using (new EditorGUI.DisabledScope(!File.Exists(ThirdPersonPerformanceCaptureWorkflow.LastAnalysisPath)))
+                    {
+                        if (GUILayout.Button("打开重复分析报告"))
+                            Execute(ThirdPersonPerformanceCaptureWorkflow.OpenAnalysis);
+                    }
+                }
                 DrawFootLandingSampling();
             }
         }

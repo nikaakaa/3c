@@ -138,6 +138,7 @@ internal static class PerformanceCapturePublisher
             PerformanceCaptureStatus.Completed,
             "completed",
             $"Performance {request.operation} Gate completed.");
+        PublishCompletedStatus(request);
         manifest.files = PerformanceFileUtility.BuildClosure(request.staging_root, "manifest.json");
         WriteJson(Path.Combine(request.staging_root, "manifest.json"), manifest);
         PublishDirectory(request.staging_root, request.result_root);
@@ -233,10 +234,6 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceSummaryDocument summary = BuildSummary(request, scenario, budget, playerManifest, runtime, catalog, profile);
         WriteJson(Path.Combine(request.staging_root, "summary.json"), summary);
-        PerformanceComparisonDocument comparison = BuildComparison(request, scenario, summary, runtime);
-        WriteJson(Path.Combine(request.staging_root, "comparison.json"), comparison);
-        RequireNonEmptyFile(Path.Combine(request.staging_root, "summary.json"), "summary");
-        RequireNonEmptyFile(Path.Combine(request.staging_root, "comparison.json"), "comparison");
         var manifest = CreateManifest(
             request,
             scenario,
@@ -250,11 +247,25 @@ internal static class PerformanceCapturePublisher
             PerformanceCaptureStatus.Completed,
             "completed",
             "Performance Capture completed.");
+        PerformanceComparisonDocument comparison = PerformanceCaptureAnalysis.Compare(request.baseline_manifest_path, manifest, summary);
+        WriteJson(Path.Combine(request.staging_root, "comparison.json"), comparison);
+        PublishCompletedStatus(request);
         manifest.files = PerformanceFileUtility.BuildClosure(
             request.staging_root,
             "manifest.json");
         WriteJson(Path.Combine(request.staging_root, "manifest.json"), manifest);
         PublishDirectory(request.staging_root, request.result_root);
+    }
+
+    static void PublishCompletedStatus(PerformanceRunRequestDocument request)
+    {
+        PerformanceRunStatusDocument status = ReadJson<PerformanceRunStatusDocument>(request.status_path);
+        status.status = PerformanceCaptureStatus.Completed.ToString();
+        status.stage = "completed";
+        status.message = $"Performance {request.operation} completed.";
+        status.updated_utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        WriteJson(request.status_path + ".tmp", status);
+        File.Move(request.status_path + ".tmp", request.status_path, true);
     }
 
     static void RequireCompletedArtifacts(string root)
@@ -527,6 +538,9 @@ internal static class PerformanceCapturePublisher
             Path.Combine(request.staging_root, "context-switches.csv"));
         return new PerformanceSummaryDocument
         {
+            capture_seconds = runtime.capture_seconds,
+            total_exclusive_samples = hotspots.Sum(value => value.exclusive_samples),
+            unresolved_exclusive_samples = hotspots.Where(value => IsUnresolvedSymbol(value.function)).Sum(value => value.exclusive_samples),
             capture_id = request.run_id,
             status = PerformanceCaptureStatus.Completed.ToString(),
             presentation_fps = presentationFps,
@@ -866,12 +880,9 @@ internal static class PerformanceCapturePublisher
             string function = fields[functionColumn];
             if (string.IsNullOrWhiteSpace(fields[processColumn]) || string.IsNullOrWhiteSpace(fields[threadColumn]) ||
                 string.IsNullOrWhiteSpace(fields[moduleColumn]) || string.IsNullOrWhiteSpace(function) ||
-                function.Contains("<Symbols disabled>", StringComparison.Ordinal) ||
-                function.Contains("Unknown", StringComparison.OrdinalIgnoreCase) ||
-                function.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
-                function.Contains("!0x", StringComparison.OrdinalIgnoreCase))
+                !double.IsFinite(inclusive) || !double.IsFinite(exclusive) || inclusive < 0 || exclusive < 0)
             {
-                throw new InvalidDataException("Xperf CPU hotspot export contains unresolved symbols.");
+                throw new InvalidDataException("Xperf CPU hotspot export contains invalid identities or counts.");
             }
             values.Add(new PerformanceFunctionHotspotDocument
             {
@@ -886,9 +897,15 @@ internal static class PerformanceCapturePublisher
         return values
             .OrderByDescending(value => value.inclusive_samples)
             .ThenBy(value => value.function, StringComparer.Ordinal)
-            .Take(200)
             .ToArray();
     }
+
+    static bool IsUnresolvedSymbol(string function) =>
+        function.Contains("<Symbols disabled>", StringComparison.Ordinal) ||
+        function.Contains("***unknown***", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(function, "Unknown", StringComparison.OrdinalIgnoreCase) ||
+        function.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ||
+        function.Contains("!0x", StringComparison.OrdinalIgnoreCase);
 
     static PerformanceWaitEvidenceDocument[] ReadWaitEvidence(string path)
     {
@@ -937,222 +954,6 @@ internal static class PerformanceCapturePublisher
             .ToArray();
     }
 
-    static PerformanceComparisonDocument BuildComparison(
-        PerformanceRunRequestDocument request,
-        PerformanceScenarioDocument scenario,
-        PerformanceSummaryDocument candidate,
-        PerformanceRuntimeResultDocument runtime)
-    {
-        if (string.IsNullOrWhiteSpace(request.baseline_manifest_path))
-        {
-            return new PerformanceComparisonDocument
-            {
-                candidate_capture_id = request.run_id,
-                status = "NotRequested",
-                message = "No Baseline Capture was selected."
-            };
-        }
-        PerformanceCaptureManifestDocument baselineManifest = ReadJson<PerformanceCaptureManifestDocument>(request.baseline_manifest_path);
-        string baselineClosureError = BaselineClosureError(request.baseline_manifest_path, baselineManifest);
-        if (!string.IsNullOrEmpty(baselineClosureError))
-        {
-            return new PerformanceComparisonDocument
-            {
-                baseline_capture_id = baselineManifest.capture_id,
-                candidate_capture_id = request.run_id,
-                status = "Rejected",
-                message = baselineClosureError
-            };
-        }
-        PerformanceToolchainDocument toolchain = ReadJson<PerformanceToolchainDocument>(request.toolchain_path);
-        string wprProfileHash = PerformanceFileUtility.Sha256(toolchain.wpr_profile_path);
-        string candidateToolchainHash = PerformanceFileUtility.Sha256(request.toolchain_path);
-        string hardware = HardwareIdentity(runtime);
-        var conflicts = new List<string>();
-        AddConflict(conflicts, "manifest_schema", PerformanceCaptureSchemas.Manifest, baselineManifest.schema);
-        AddConflict(conflicts, "status", PerformanceCaptureStatus.Completed.ToString(), baselineManifest.status);
-        AddConflict(conflicts, "scenario_hash", scenario.content_hash, baselineManifest.scenario_hash);
-        AddConflict(conflicts, "toolchain_identity", candidateToolchainHash, baselineManifest.toolchain_identity);
-        AddConflict(conflicts, "runtime_id", scenario.runtime_id, baselineManifest.runtime_id);
-        AddConflict(conflicts, "roster_identity", scenario.roster_identity, baselineManifest.roster_identity);
-        AddConflict(conflicts, "hardware_identity", hardware, baselineManifest.hardware_identity);
-        AddConflict(conflicts, "metric_catalog_revision", runtime.metric_catalog_revision, baselineManifest.metric_catalog_revision);
-        AddConflict(conflicts, "instrumentation_identity", runtime.instrumentation_identity, baselineManifest.instrumentation_identity);
-        AddConflict(conflicts, "instrumentation_mode", runtime.instrumentation_mode, baselineManifest.instrumentation_mode);
-        AddConflict(conflicts, "instrumentation_span_layout_revision", runtime.instrumentation_span_layout_revision, baselineManifest.instrumentation_span_layout_revision);
-        AddConflict(conflicts, "build_mode", "Development", baselineManifest.build_mode);
-        AddConflict(conflicts, "wpr_profile", toolchain.wpr_profile_path, baselineManifest.wpr_profile, true);
-        AddConflict(conflicts, "wpr_profile_hash", wprProfileHash, baselineManifest.wpr_profile_hash);
-        AddConflict(conflicts, "statistics_schema", PerformanceCaptureSchemas.Summary, baselineManifest.statistics_schema);
-        AddConflict(conflicts, "budget_hash", request.budget_hash, baselineManifest.budget_hash);
-        AddConflict(conflicts, "capture_profile_hash", request.profile_hash, baselineManifest.capture_profile_hash);
-        AddConflict(conflicts, "width", scenario.width, baselineManifest.width);
-        AddConflict(conflicts, "height", scenario.height, baselineManifest.height);
-        AddConflict(conflicts, "quality_level", scenario.quality_level, baselineManifest.quality_level);
-        AddConflict(conflicts, "v_sync_count", scenario.v_sync_count, baselineManifest.v_sync_count);
-        AddConflict(conflicts, "target_frame_rate", scenario.target_frame_rate, baselineManifest.target_frame_rate);
-        if (conflicts.Count != 0)
-        {
-            return new PerformanceComparisonDocument
-            {
-                baseline_capture_id = baselineManifest.capture_id,
-                candidate_capture_id = request.run_id,
-                status = "Rejected",
-                message = string.Join("; ", conflicts)
-            };
-        }
-        string baselineRoot = Path.GetDirectoryName(Path.GetFullPath(request.baseline_manifest_path))!;
-        PerformanceSummaryDocument baseline = ReadJson<PerformanceSummaryDocument>(Path.Combine(baselineRoot, "summary.json"));
-        if (!string.Equals(baseline.schema, PerformanceCaptureSchemas.Summary, StringComparison.Ordinal))
-        {
-            return new PerformanceComparisonDocument
-            {
-                baseline_capture_id = baselineManifest.capture_id,
-                candidate_capture_id = request.run_id,
-                status = "Rejected",
-                message = $"summary_schema: expected='{PerformanceCaptureSchemas.Summary}', baseline='{baseline.schema}'"
-            };
-        }
-        var pointComparisons = new List<PerformanceInstrumentationPointComparisonDocument>();
-        PerformanceInstrumentationPointSummaryDocument[] baselinePoints =
-            baseline.instrumentation_points ?? Array.Empty<PerformanceInstrumentationPointSummaryDocument>();
-        Dictionary<string, PerformanceInstrumentationPointSummaryDocument> baselinePointsById =
-            baselinePoints.ToDictionary(value => value.point_id, StringComparer.Ordinal);
-        PerformanceInstrumentationPointSummaryDocument[] candidatePoints =
-            candidate.instrumentation_points ?? Array.Empty<PerformanceInstrumentationPointSummaryDocument>();
-        for (int i = 0; i < candidatePoints.Length; i++)
-        {
-            PerformanceInstrumentationPointSummaryDocument current = candidatePoints[i];
-            if (!baselinePointsById.TryGetValue(current.point_id, out PerformanceInstrumentationPointSummaryDocument before) ||
-                !string.Equals(before.metric_id, current.metric_id, StringComparison.Ordinal))
-            {
-                continue;
-            }
-            double delta = current.distribution.p95 - before.distribution.p95;
-            pointComparisons.Add(new PerformanceInstrumentationPointComparisonDocument
-            {
-                point_id = current.point_id,
-                metric_id = current.metric_id,
-                baseline_p95 = before.distribution.p95,
-                candidate_p95 = current.distribution.p95,
-                absolute_delta = delta,
-                percent_delta = before.distribution.p95 == 0d ? 0d : delta / before.distribution.p95 * 100d,
-                baseline_invocation_count = before.distribution.invocation_count,
-                candidate_invocation_count = current.distribution.invocation_count
-            });
-        }
-        var baselineMetrics = baseline.metrics.ToDictionary(value => value.metric_id, StringComparer.Ordinal);
-        var comparisons = new List<PerformanceComparisonMetricDocument>();
-        for (int i = 0; i < candidate.metrics.Length; i++)
-        {
-            PerformanceMetricSummaryDocument current = candidate.metrics[i];
-            if (!baselineMetrics.TryGetValue(current.metric_id, out PerformanceMetricSummaryDocument before) ||
-                !string.Equals(before.unit, current.unit, StringComparison.Ordinal))
-            {
-                continue;
-            }
-            double delta = current.distribution.p95 - before.distribution.p95;
-            comparisons.Add(new PerformanceComparisonMetricDocument
-            {
-                metric_id = current.metric_id,
-                baseline_p95 = before.distribution.p95,
-                candidate_p95 = current.distribution.p95,
-                absolute_delta = delta,
-                percent_delta = before.distribution.p95 == 0d ? 0d : delta / before.distribution.p95 * 100d
-            });
-        }
-        Dictionary<string, double> baselineHotspots = baseline.hotspots
-            .GroupBy(HotspotKey)
-            .ToDictionary(group => group.Key, group => group.Sum(value => value.inclusive_samples), StringComparer.Ordinal);
-        Dictionary<string, double> candidateHotspots = candidate.hotspots
-            .GroupBy(HotspotKey)
-            .ToDictionary(group => group.Key, group => group.Sum(value => value.inclusive_samples), StringComparer.Ordinal);
-        var hotspotKeys = new HashSet<string>(baselineHotspots.Keys, StringComparer.Ordinal);
-        hotspotKeys.UnionWith(candidateHotspots.Keys);
-        PerformanceHotspotComparisonDocument[] hotspotComparisons = hotspotKeys
-            .Select(key =>
-            {
-                baselineHotspots.TryGetValue(key, out double before);
-                candidateHotspots.TryGetValue(key, out double after);
-                string[] identity = key.Split('\n');
-                double delta = after - before;
-                return new PerformanceHotspotComparisonDocument
-                {
-                    thread = identity[0],
-                    module = identity[1],
-                    function = identity[2],
-                    baseline_inclusive_samples = before,
-                    candidate_inclusive_samples = after,
-                    absolute_delta = delta,
-                    percent_delta = before == 0d ? 0d : delta / before * 100d
-                };
-            })
-            .OrderByDescending(value => Math.Abs(value.absolute_delta))
-            .ThenBy(value => value.function, StringComparer.Ordinal)
-            .Take(200)
-            .ToArray();
-        return new PerformanceComparisonDocument
-        {
-            baseline_capture_id = baseline.capture_id,
-            candidate_capture_id = candidate.capture_id,
-            status = "Comparable",
-            message = "Baseline and Candidate identities match.",
-            baseline_budget_passed = baseline.budget_passed,
-            candidate_budget_passed = candidate.budget_passed,
-            budget_exceeded_delta = candidate.budget_exceeded_count - baseline.budget_exceeded_count,
-            metrics = comparisons.OrderByDescending(value => Math.Abs(value.percent_delta)).ToArray(),
-            instrumentation_points = pointComparisons
-                .OrderByDescending(value => Math.Abs(value.percent_delta))
-                .ThenBy(value => value.point_id, StringComparer.Ordinal)
-                .ToArray(),
-            hotspots = hotspotComparisons
-        };
-    }
-
-    static string HotspotKey(PerformanceFunctionHotspotDocument value) =>
-        value.thread + "\n" + value.module + "\n" + value.function;
-
-    static string BaselineClosureError(string manifestPath, PerformanceCaptureManifestDocument manifest)
-    {
-        if (manifest.files == null || manifest.files.Length == 0)
-            return "baseline_closure: manifest has no files";
-        string root = Path.GetDirectoryName(Path.GetFullPath(manifestPath))!;
-        string prefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        int summaryCount = 0;
-        int instrumentationSpanCount = 0;
-        for (int i = 0; i < manifest.files.Length; i++)
-        {
-            PerformanceFileDocument file = manifest.files[i];
-            if (file == null)
-                return "baseline_closure: manifest contains a null file";
-            string path = Path.GetFullPath(Path.Combine(root, file.path));
-            if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || !File.Exists(path) ||
-                new FileInfo(path).Length != file.size ||
-                !string.Equals(PerformanceFileUtility.Sha256(path), file.sha256, StringComparison.Ordinal))
-            {
-                return $"baseline_closure: file '{file.path}' is missing or has another hash";
-            }
-            if (string.Equals(file.role, "summary", StringComparison.Ordinal))
-                summaryCount++;
-            if (string.Equals(file.role, "instrumentation-spans", StringComparison.Ordinal))
-                instrumentationSpanCount++;
-        }
-        if (summaryCount != 1)
-            return "baseline_closure: manifest requires exactly one summary";
-        int expectedSpanCount = string.Equals(manifest.instrumentation_mode, PerformanceInstrumentationMode.Span.ToString(), StringComparison.Ordinal) ? 1 : 0;
-        return instrumentationSpanCount == expectedSpanCount
-            ? string.Empty
-            : "baseline_closure: instrumentation span file count does not match capture mode";
-    }
-
-    static void AddConflict(List<string> conflicts, string field, object expected, object actual, bool ignoreCase = false)
-    {
-        string expectedText = Convert.ToString(expected, CultureInfo.InvariantCulture) ?? string.Empty;
-        string actualText = Convert.ToString(actual, CultureInfo.InvariantCulture) ?? string.Empty;
-        StringComparison comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (!string.Equals(expectedText, actualText, comparison))
-            conflicts.Add($"{field}: expected='{expectedText}', baseline='{actualText}'");
-    }
 
     static PerformanceCaptureManifestDocument CreateManifest(
         PerformanceRunRequestDocument request,

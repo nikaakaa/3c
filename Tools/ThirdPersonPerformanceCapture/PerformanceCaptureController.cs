@@ -60,6 +60,21 @@ internal sealed class PerformanceCaptureController
 
     public static async Task<int> RunAsync(string[] args)
     {
+        string analysisRequest = ReadArgument(args, "--analysis-request=");
+        if (!string.IsNullOrWhiteSpace(analysisRequest))
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(ReadArgument(args, RequestArgument)))
+                    throw new ArgumentException("Capture and offline analysis requests cannot be combined.");
+                return PerformanceCaptureAnalysis.Run(analysisRequest, ReadArgument(args, "--analysis-output="));
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine(exception.Message);
+                return 2;
+            }
+        }
         string requestPath = ReadArgument(args, RequestArgument);
         if (string.IsNullOrWhiteSpace(requestPath))
         {
@@ -119,7 +134,7 @@ internal sealed class PerformanceCaptureController
                 writer.WriteLine("STOP");
                 await ReadUntilAsync(reader, _profile.runtime_ready_timeout_seconds, "STOPPED");
                 WaitForPlayerSuccess();
-                WriteStatus(PerformanceCaptureStatus.Completed, "completed", "Performance Smoke Gate completed.");
+                WriteStatus(PerformanceCaptureStatus.Finalizing, "publish", "Publishing Performance Smoke Gate evidence.");
                 PerformanceCapturePublisher.PublishGateCompleted(
                     _request,
                     _scenario,
@@ -144,7 +159,7 @@ internal sealed class PerformanceCaptureController
                 WriteStatus(PerformanceCaptureStatus.Replaying, "replay", "Performance Replay Gate is running.");
                 await ReadUntilAsync(reader, _profile.capture_timeout_seconds, "REPLAY_COMPLETED");
                 WaitForPlayerSuccess();
-                WriteStatus(PerformanceCaptureStatus.Completed, "completed", "Performance Replay Gate completed.");
+                WriteStatus(PerformanceCaptureStatus.Finalizing, "publish", "Publishing Performance Replay Gate evidence.");
                 PerformanceCapturePublisher.PublishGateCompleted(
                     _request,
                     _scenario,
@@ -177,7 +192,6 @@ internal sealed class PerformanceCaptureController
             ExportWpa();
             _stage = "analysis";
             WriteStatus(PerformanceCaptureStatus.Finalizing, "analysis", "Building performance summary and comparison.");
-            WriteStatus(PerformanceCaptureStatus.Completed, "completed", "Performance Capture completed.");
             PerformanceCapturePublisher.PublishCompleted(
                 _request,
                 _scenario,

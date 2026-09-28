@@ -19,8 +19,10 @@ namespace ThirdPersonPerformance
         public const string RuntimeResult = "third-person-performance-runtime-result/3";
         public const string Gate = "third-person-performance-gate/1";
         public const string Manifest = "third-person-performance-capture/2";
-        public const string Summary = "third-person-performance-summary/3";
-        public const string Comparison = "third-person-performance-comparison/1";
+        public const string Summary = "third-person-performance-summary/4";
+        public const string Comparison = "third-person-performance-comparison/2";
+        public const string AnalysisRequest = "third-person-performance-analysis-request/1";
+        public const string Analysis = "third-person-performance-analysis/1";
         public const string InstrumentationManifest = PerformanceInstrumentationIdentity.ManifestSchema;
         public const string CollectorId = "windows-wpr-cpu/1";
         public const string TransportId = "loopback-tcp/1";
@@ -415,6 +417,9 @@ namespace ThirdPersonPerformance
     [Serializable]
     public sealed class PerformanceSummaryDocument
     {
+        public double capture_seconds;
+        public double unresolved_exclusive_samples;
+        public double total_exclusive_samples;
         public string schema = PerformanceCaptureSchemas.Summary;
         public string capture_id = string.Empty;
         public string status = string.Empty;
@@ -441,6 +446,12 @@ namespace ThirdPersonPerformance
     public sealed class PerformanceComparisonMetricDocument
     {
         public string metric_id = string.Empty;
+        public string unit = string.Empty;
+        public string sample_scope = string.Empty;
+        public string status = string.Empty;
+        public bool percent_delta_available;
+        public int baseline_sample_count;
+        public int candidate_sample_count;
         public double baseline_p95;
         public double candidate_p95;
         public double absolute_delta;
@@ -450,6 +461,10 @@ namespace ThirdPersonPerformance
     [Serializable]
     public sealed class PerformanceHotspotComparisonDocument
     {
+        public string status = string.Empty;
+        public bool percent_delta_available;
+        public double baseline_samples_per_second;
+        public double candidate_samples_per_second;
         public string thread = string.Empty;
         public string module = string.Empty;
         public string function = string.Empty;
@@ -462,6 +477,10 @@ namespace ThirdPersonPerformance
     [Serializable]
     public sealed class PerformanceInstrumentationPointComparisonDocument
     {
+        public string status = string.Empty;
+        public bool percent_delta_available;
+        public int baseline_sample_count;
+        public int candidate_sample_count;
         public string point_id = string.Empty;
         public string metric_id = string.Empty;
         public double baseline_p95;
@@ -476,16 +495,84 @@ namespace ThirdPersonPerformance
     public sealed class PerformanceComparisonDocument
     {
         public string schema = PerformanceCaptureSchemas.Comparison;
+        public string baseline_manifest_path = string.Empty;
+        public string baseline_manifest_hash = string.Empty;
         public string baseline_capture_id = string.Empty;
         public string candidate_capture_id = string.Empty;
         public string status = string.Empty;
         public string message = string.Empty;
         public bool baseline_budget_passed;
         public bool candidate_budget_passed;
+        public bool baseline_budget_evaluated;
+        public bool candidate_budget_evaluated;
+        public bool budget_delta_available;
+        public string[] warnings = Array.Empty<string>();
         public int budget_exceeded_delta;
         public PerformanceComparisonMetricDocument[] metrics = Array.Empty<PerformanceComparisonMetricDocument>();
         public PerformanceInstrumentationPointComparisonDocument[] instrumentation_points = Array.Empty<PerformanceInstrumentationPointComparisonDocument>();
         public PerformanceHotspotComparisonDocument[] hotspots = Array.Empty<PerformanceHotspotComparisonDocument>();
+    }
+
+    [Serializable]
+    public sealed class PerformanceAnalysisRequestDocument
+    {
+        public string schema = PerformanceCaptureSchemas.AnalysisRequest;
+        public string[] baseline_manifest_paths = Array.Empty<string>();
+        public string[] candidate_manifest_paths = Array.Empty<string>();
+    }
+
+    [Serializable]
+    public sealed class PerformanceAnalysisSourceDocument
+    {
+        public string group = string.Empty;
+        public string manifest_path = string.Empty;
+        public string manifest_hash = string.Empty;
+        public string capture_id = string.Empty;
+        public string build_id = string.Empty;
+        public double capture_seconds;
+        public int dropped_logic_ticks;
+        public bool budget_evaluated;
+        public bool budget_passed;
+    }
+
+    [Serializable]
+    public sealed class PerformanceRunDistributionDocument
+    {
+        public double[] values = Array.Empty<double>();
+        public double median;
+        public double min;
+        public double max;
+        public double median_absolute_deviation;
+    }
+
+    [Serializable]
+    public sealed class PerformanceAnalysisMetricDocument
+    {
+        public string metric_id = string.Empty;
+        public string point_id = string.Empty;
+        public string unit = string.Empty;
+        public string statistic = string.Empty;
+        public string sample_scope = string.Empty;
+        public string status = string.Empty;
+        public string[] unavailable_capture_ids = Array.Empty<string>();
+        public PerformanceRunDistributionDocument baseline = new PerformanceRunDistributionDocument();
+        public PerformanceRunDistributionDocument candidate = new PerformanceRunDistributionDocument();
+        public double absolute_delta;
+        public bool percent_delta_available;
+        public double percent_delta;
+    }
+
+    [Serializable]
+    public sealed class PerformanceAnalysisDocument
+    {
+        public string schema = PerformanceCaptureSchemas.Analysis;
+        public string status = string.Empty;
+        public string message = string.Empty;
+        public string created_utc = string.Empty;
+        public string request_hash = string.Empty;
+        public PerformanceAnalysisSourceDocument[] sources = Array.Empty<PerformanceAnalysisSourceDocument>();
+        public string[] warnings = Array.Empty<string>();
+        public PerformanceAnalysisMetricDocument[] metrics = Array.Empty<PerformanceAnalysisMetricDocument>();
     }
 
     [Serializable]

@@ -45,6 +45,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         const string SmokePreference = "ThirdPerson.Performance.LastSmokeManifestPath";
         const string ReplayPreference = "ThirdPerson.Performance.LastReplayManifestPath";
         const string CapturePreference = "ThirdPerson.Performance.LastCaptureManifestPath";
+        const string AnalysisPreference = "ThirdPerson.Performance.LastAnalysisPath";
         const string ActiveRunPreference = "ThirdPerson.Performance.ActiveRunId";
         const string ActiveOperationPreference = "ThirdPerson.Performance.ActiveOperation";
         const string ActiveCancelPreference = "ThirdPerson.Performance.ActiveCancelPath";
@@ -75,6 +76,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static string LastSmokeManifestPath => ProjectEditorPreferences.GetString(SmokePreference, string.Empty);
         public static string LastReplayManifestPath => ProjectEditorPreferences.GetString(ReplayPreference, string.Empty);
         public static string LastCaptureManifestPath => ProjectEditorPreferences.GetString(CapturePreference, string.Empty);
+        public static string LastAnalysisPath => ProjectEditorPreferences.GetString(AnalysisPreference, string.Empty);
         public static bool SmokeGateReady => IsGateReady(LastSmokeManifestPath, PerformanceOperationKinds.Smoke);
         public static bool ReplayGateReady => IsGateReady(LastReplayManifestPath, PerformanceOperationKinds.Replay);
 
@@ -126,6 +128,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (!File.Exists(statusPath))
                         return true;
                     PerformanceRunStatusDocument status = ReadJson<PerformanceRunStatusDocument>(statusPath);
+                    int controllerId = status.controller_process_id;
+                    if (controllerId > 0)
+                    {
+                        try
+                        {
+                            using Process controller = Process.GetProcessById(controllerId);
+                            if (controller.HasExited)
+                                return false;
+                        }
+                        catch (ArgumentException)
+                        {
+                            return false;
+                        }
+                    }
                     if (!IsTerminalStatus(status.status))
                         return true;
                     string manifestPath = ProjectEditorPreferences.GetString(ManifestPreference(status.operation), string.Empty);
@@ -495,6 +511,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static void StartReplay()
         {
             StartRun(PerformanceOperationKinds.Replay);
+        }
+
+        public static void SelectAnalysisRequestAndRun()
+        {
+            string path = EditorUtility.OpenFilePanel("选择重复采集分析清单", PerformanceRoot, "json");
+            if (string.IsNullOrEmpty(path))
+                return;
+            string reportPath = AnalyzeCaptures(path);
+            OpenFile(Path.ChangeExtension(reportPath, ".md"));
+        }
+
+        public static string AnalyzeCaptures(string requestPath)
+        {
+            if (IsRunRunning || EditorApplication.isCompiling || EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("请先结束性能采集、Play 模式和编译，再分析已有采集，避免分析进程干扰测量。");
+            requestPath = Path.GetFullPath(requestPath);
+            RequireFile(requestPath, "repeat analysis request");
+            PerformanceAnalysisRequestDocument request = ReadJson<PerformanceAnalysisRequestDocument>(requestPath);
+            RequireSchema(request.schema, PerformanceCaptureSchemas.AnalysisRequest, "analysis request");
+            BuildController();
+            string outputRoot = Path.Combine(PerformanceRoot, "Analyses", $"{DateTime.UtcNow:yyyyMMdd-HHmmss}.{Guid.NewGuid():N}");
+            string arguments = $"--analysis-request=\"{requestPath}\" --analysis-output=\"{outputRoot}\"";
+            ProcessResult result = RunProcess(ControllerExecutablePath, arguments, RepositoryRoot, 300000);
+            string reportPath = Path.Combine(outputRoot, "analysis.json");
+            if (!File.Exists(reportPath))
+                throw new InvalidOperationException($"Performance analysis failed ({result.ExitCode}).\n{result.Output}");
+            PerformanceAnalysisDocument report = ReadJson<PerformanceAnalysisDocument>(reportPath);
+            RequireSchema(report.schema, PerformanceCaptureSchemas.Analysis, "analysis report");
+            ProjectEditorPreferences.SetString(AnalysisPreference, reportPath);
+            if (result.ExitCode != 0)
+                Debug.LogWarning($"Performance analysis {report.status}: {report.message}\n{reportPath}");
+            return reportPath;
+        }
+
+        public static void OpenAnalysis()
+        {
+            RequireFile(LastAnalysisPath, "last repeat analysis");
+            OpenFile(Path.ChangeExtension(LastAnalysisPath, ".md"));
         }
 
         static void StartRun(string operation)
@@ -922,14 +976,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 RedirectStandardError = true
             };
             using Process process = Process.Start(start) ?? throw new InvalidOperationException($"Process '{file}' did not start.");
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
+            var output = process.StandardOutput.ReadToEndAsync();
+            var error = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit(timeoutMilliseconds))
             {
                 process.Kill();
+                process.WaitForExit();
                 throw new TimeoutException($"Process '{file}' timed out.");
             }
-            return new ProcessResult(process.ExitCode, output + error);
+            return new ProcessResult(process.ExitCode, output.GetAwaiter().GetResult() + error.GetAwaiter().GetResult());
         }
 
         static string RequireLastCaptureRoot()

@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                abilityInput.Begin(input.Sequence, input.Values);
+                abilityInput.Begin(input.Sequence, input.Values, ingress, ingressCount);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -296,14 +296,16 @@ namespace ThirdPersonSimulation.Fixed
             int ingressCount)
         {
             for (int i = 0; i < ingressCount; i++)
-                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
+                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle &&
+                    ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     invocation.ApplyGameplayEffectIngress(ingress[i]);
         }
 
         static void RequireNoGameplayEffectIngress(SimulationIngress[] ingress, int ingressCount)
         {
             for (int i = 0; i < ingressCount; i++)
-                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
+                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle &&
+                    ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     throw new InvalidOperationException(
                         "Fixed Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
         }

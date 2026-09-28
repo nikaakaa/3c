@@ -255,6 +255,7 @@ namespace ThirdPersonSimulation.Fixed
                 case SimulationOperationCode.MoveFacingAngle:
                 case SimulationOperationCode.CharacterStateRead:
                 case SimulationOperationCode.ActionContextActive:
+                case SimulationOperationCode.ActionEventReceived:
                 case SimulationOperationCode.ActionWindowActive:
                 case SimulationOperationCode.CanActivateAction:
                 case SimulationOperationCode.GameplayEffectHasTag:

@@ -245,6 +245,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 activationEntry.SetActivationEntryId((string)values["activationEntryId"]);
             if (node is BtsmtlSkillActionWindowActiveFlowNode window && values.ContainsKey("windowType"))
                 window.SetWindowType((string)values["windowType"]);
+            if (node is BtsmtlSkillActionEventReceivedFlowNode actionEvent && values.ContainsKey("eventId"))
+                actionEvent.SetEventId((string)values["eventId"]);
             if (node is RequestCameraStateNode cameraState)
                 cameraState.Configure(
                     values.TryGetValue("mode", out object cameraMode) ? (CameraMode)cameraMode : cameraState.Mode,

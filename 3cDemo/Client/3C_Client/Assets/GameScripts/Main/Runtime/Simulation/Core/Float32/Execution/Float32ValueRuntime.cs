@@ -75,7 +75,12 @@ namespace ThirdPersonSimulation
 								? m_Actions.IsCurrentExecutionContextActive()
 								: m_Actions.IsContextActive(operation.Text0));
 						break;
-                case SimulationOperationCode.ActionWindowActive:
+                case SimulationOperationCode.ActionEventReceived:
+                        result = AbilityStateValue.FromBoolean(
+                            m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState eventAction) &&
+                            m_Frame.Input.HasActionEvent(eventAction.InstanceId, operation.Text0));
+                        break;
+                    case SimulationOperationCode.ActionWindowActive:
 						result = AbilityStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
 						break;
                 case SimulationOperationCode.CanActivateAction:

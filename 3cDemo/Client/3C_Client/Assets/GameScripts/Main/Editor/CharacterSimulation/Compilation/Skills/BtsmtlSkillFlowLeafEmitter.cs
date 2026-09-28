@@ -163,6 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillLocomotionFlowNode motion => Locomotion(motion),
             BtsmtlSkillActionContextActiveFlowNode context => new SimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: SimulationAssetIdentity.Of(Field<BtsmtlSkillActionContextActiveFlowNode, ActionContextSlot>(context, "actionContext"))),
+            BtsmtlSkillActionEventReceivedFlowNode actionEvent => new SimulationNodeEmission(
+                SimulationOperationCode.ActionEventReceived, text0: Field<BtsmtlSkillActionEventReceivedFlowNode, string>(actionEvent, "eventId")),
             BtsmtlSkillActionWindowActiveFlowNode window => new SimulationNodeEmission(
                 SimulationOperationCode.ActionWindowActive, text0: Field<BtsmtlSkillActionWindowActiveFlowNode, string>(window, "windowType")),
             BtsmtlSkillCanActivateActionFlowNode action => CanActivate(action),

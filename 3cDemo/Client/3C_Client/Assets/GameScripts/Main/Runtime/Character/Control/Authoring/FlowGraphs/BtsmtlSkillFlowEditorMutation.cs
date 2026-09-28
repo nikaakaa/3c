@@ -316,7 +316,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             foreach (UnityEngine.Object owner in undoOwners)
                 if (owner is Graph ownerGraph)
                     ownerGraph.SelfSerialize();
-            HashSet<UnityEngine.Object> previousOwnedAssets = root ? BtsmtlSkillOwnedAssets.Collect(root) : null;
+            HashSet<UnityEngine.Object> previousOwnedAssets = root ? BtsmtlSkillOwnedAssets.SnapshotPrivateSubAssets(root) : null;
             int group = -1;
             if (recordUndo)
             {

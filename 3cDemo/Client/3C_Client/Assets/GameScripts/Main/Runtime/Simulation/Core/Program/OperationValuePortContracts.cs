@@ -332,6 +332,7 @@ namespace ThirdPersonSimulation
 			Set(values, Output(SimulationOperationCode.SubmitActionLifecycle, Fixed("m_Submitted", 0, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.ActionWindowActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.CanActivateAction, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.ActionEventReceived, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
 			Set(values, Input(SimulationOperationCode.LocomotionInputMotion, Fixed("m_MoveInput", 0, SemanticValueKind.Vector2)));
 			Set(values, Input(SimulationOperationCode.ConditionResult, BooleanLike("m_Result", 0)));
 			Set(values, Both(SimulationOperationCode.Compare,

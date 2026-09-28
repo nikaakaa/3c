@@ -159,6 +159,8 @@ namespace ThirdPersonSimulation.Fixed
                         result = AbilityStateValue.FromBoolean(m_Actions.IsActivationEntry(operation.Text0));
                         break;
                     case SimulationOperationCode.TimelineTime:
+                        if (!m_Frame.HasTreeClipInvocation)
+                            throw new InvalidOperationException($"TimelineTime at '{Access.SourcePath(operation)}' requires a TreeClip invocation (ability '{m_Frame.Data.AbilityId.Value}', actor '{m_Frame.ActorId.Value}', tick {m_Frame.Tick.Value}).");
                         result = AbilityStateValue.FromScalar(m_Frame.TreeClipInvocation.Time);
                         break;
 					case SimulationOperationCode.InputScalar:
@@ -185,7 +187,12 @@ namespace ThirdPersonSimulation.Fixed
 								? m_Actions.IsCurrentExecutionContextActive()
 								: m_Actions.IsContextActive(operation.Text0));
 						break;
-					case SimulationOperationCode.ActionWindowActive:
+					case SimulationOperationCode.ActionEventReceived:
+                        result = AbilityStateValue.FromBoolean(
+                            m_Actions.TryGetCurrentSkillExecution(out FixedActionInstanceState eventAction) &&
+                            m_Frame.Input.HasActionEvent(eventAction.InstanceId, operation.Text0));
+                        break;
+                    case SimulationOperationCode.ActionWindowActive:
 						result = AbilityStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
 						break;
 					case SimulationOperationCode.CanActivateAction:

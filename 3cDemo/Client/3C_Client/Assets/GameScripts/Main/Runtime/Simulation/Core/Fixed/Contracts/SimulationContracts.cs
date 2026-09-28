@@ -184,7 +184,8 @@ namespace ThirdPersonSimulation.Fixed
         ActionLifecycle = 1,
         GameplayResult = 2,
         GameplayEffectLifecycle = 3,
-        AttributeValue = 4
+        AttributeValue = 4,
+        ActionEvent = 5
     }
 
     public enum SimulationActionPhase : byte
@@ -335,6 +336,7 @@ namespace ThirdPersonSimulation.Fixed
             if (header.Kind != SimulationIngressKind.ActionLifecycle || !actionLifecycle.IsValid)
                 throw new ArgumentException("Action lifecycle ingress header and payload do not match.");
             Header = header;
+            ActionEvent = default;
             ActionLifecycle = actionLifecycle;
             GameplayResult = default;
             GameplayEffectLifecycle = null;
@@ -346,6 +348,7 @@ namespace ThirdPersonSimulation.Fixed
             if (header.Kind != SimulationIngressKind.GameplayResult || !gameplayResult.IsValid)
                 throw new ArgumentException("Gameplay Result ingress header and payload do not match.");
             Header = header;
+            ActionEvent = default;
             ActionLifecycle = default;
             GameplayResult = gameplayResult;
             GameplayEffectLifecycle = null;
@@ -357,6 +360,7 @@ namespace ThirdPersonSimulation.Fixed
             if (header.Kind != SimulationIngressKind.GameplayEffectLifecycle || gameplayEffectLifecycle == null || !gameplayEffectLifecycle.IsValid)
                 throw new ArgumentException("Gameplay Effect lifecycle ingress header and payload do not match.");
             Header = header;
+            ActionEvent = default;
             ActionLifecycle = default;
             GameplayResult = default;
             GameplayEffectLifecycle = gameplayEffectLifecycle;
@@ -368,11 +372,26 @@ namespace ThirdPersonSimulation.Fixed
             if (header.Kind != SimulationIngressKind.AttributeValue || !attributeValue.IsValid)
                 throw new ArgumentException("Attribute value ingress header and payload do not match.");
             Header = header;
+            ActionEvent = default;
             ActionLifecycle = default;
             GameplayResult = default;
             GameplayEffectLifecycle = null;
             AttributeValue = attributeValue;
         }
+
+        public SimulationIngress(SimulationIngressHeader header, SimulationActionEventIngress actionEvent)
+        {
+            if (header.Kind != SimulationIngressKind.ActionEvent || !actionEvent.IsValid)
+                throw new ArgumentException("Action event ingress header and payload do not match.");
+            Header = header;
+            ActionEvent = actionEvent;
+            ActionLifecycle = default;
+            GameplayResult = default;
+            GameplayEffectLifecycle = null;
+            AttributeValue = default;
+        }
+
+        public SimulationActionEventIngress ActionEvent { get; }
 
         public SimulationIngressHeader Header { get; }
         public SimulationActionLifecycleIngress ActionLifecycle { get; }

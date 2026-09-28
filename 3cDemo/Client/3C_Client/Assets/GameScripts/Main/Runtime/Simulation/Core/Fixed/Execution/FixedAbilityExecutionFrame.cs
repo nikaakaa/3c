@@ -19,6 +19,9 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionInput
     {
+        SimulationIngress[] m_Ingress;
+        int m_IngressCount;
+
         public ulong Sequence { get; private set; }
         public IReadOnlyList<SimulationInputValue> Values { get; private set; }
 
@@ -28,17 +31,36 @@ namespace ThirdPersonSimulation.Fixed
 
         public void Begin(
             ulong sequence,
-            IReadOnlyList<SimulationInputValue> values)
+            IReadOnlyList<SimulationInputValue> values,
+            SimulationIngress[] ingress,
+            int ingressCount)
         {
             if (sequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(sequence));
             Sequence = sequence;
+            m_Ingress = ingress;
+            m_IngressCount = ingressCount;
             Values = values ?? throw new ArgumentNullException(nameof(values));
+        }
+
+        public bool HasActionEvent(ulong actionInstanceId, string eventId)
+        {
+            for (int i = 0; i < m_IngressCount; i++)
+            {
+                SimulationIngress ingress = m_Ingress[i];
+                if (ingress.Header.Kind == SimulationIngressKind.ActionEvent &&
+                    ingress.ActionEvent.ActionInstanceId == actionInstanceId &&
+                    string.Equals(ingress.ActionEvent.EventId, eventId, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         public void Clear()
         {
             Sequence = 0;
+            m_Ingress = null;
+            m_IngressCount = 0;
             Values = null;
         }
     }

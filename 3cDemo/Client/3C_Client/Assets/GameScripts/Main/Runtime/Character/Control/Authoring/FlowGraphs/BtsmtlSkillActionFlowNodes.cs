@@ -53,6 +53,25 @@ namespace ThirdPersonCharacter.Control.Authoring
         protected override void RegisterPorts() => AddValueOutput<bool>("开放中", RejectAuthoringValue<bool>, "m_Output");
     }
 
+    [Name("接收到动作事件"), Category("BTSMTL/动作条件")]
+    [BtsmtlSkillNodeKind("action-event-received")]
+    [BtsmtlSkillAuthoringField(
+        "eventId",
+        BTSMTL.Authoring.Graph.GraphAuthoringFieldValueKind.String,
+        NonEmpty = true)]
+    public sealed class BtsmtlSkillActionEventReceivedFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] string m_EventId;
+        public string EventId => m_EventId ?? string.Empty;
+        public void SetEventId(string eventId)
+        {
+            if (string.IsNullOrWhiteSpace(eventId))
+                throw new ArgumentException("Action event identity is required.", nameof(eventId));
+            m_EventId = eventId;
+        }
+        protected override void RegisterPorts() => AddValueOutput<bool>("已接收", RejectAuthoringValue<bool>, "m_Output");
+    }
+
     [Name("动作准入判断"), Category("BTSMTL/动作条件")]
     [BtsmtlSkillNodeKind("can-activate-action")]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.TargetSnapshotObject, "targetSnapshot")]

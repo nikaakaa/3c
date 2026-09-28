@@ -3,6 +3,21 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    public readonly struct SimulationActionEventIngress
+    {
+        public SimulationActionEventIngress(ulong actionInstanceId, string eventId)
+        {
+            if (actionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
+            ActionInstanceId = actionInstanceId;
+            EventId = SimulationIdentity.Require(eventId, nameof(eventId));
+        }
+
+        public ulong ActionInstanceId { get; }
+        public string EventId { get; }
+        public bool IsValid => ActionInstanceId != 0 && !string.IsNullOrEmpty(EventId);
+    }
+
     public enum SimulationActionResultKind : byte
     {
         None = 0,

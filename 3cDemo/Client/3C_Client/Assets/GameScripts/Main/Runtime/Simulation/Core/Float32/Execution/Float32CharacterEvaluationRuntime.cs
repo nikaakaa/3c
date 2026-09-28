@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                abilityInput.Begin(input.Sequence, input.Values);
+                abilityInput.Begin(input.Sequence, input.Values, ingress, ingressCount);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -295,14 +295,16 @@ namespace ThirdPersonSimulation
             int ingressCount)
         {
             for (int i = 0; i < ingressCount; i++)
-                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
+                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle &&
+                    ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     invocation.ApplyGameplayEffectIngress(ingress[i]);
         }
 
         static void RequireNoGameplayEffectIngress(SimulationIngress[] ingress, int ingressCount)
         {
             for (int i = 0; i < ingressCount; i++)
-                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle)
+                if (ingress[i].Header.Kind != SimulationIngressKind.ActionLifecycle &&
+                    ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     throw new InvalidOperationException(
                         "Float32 Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
         }

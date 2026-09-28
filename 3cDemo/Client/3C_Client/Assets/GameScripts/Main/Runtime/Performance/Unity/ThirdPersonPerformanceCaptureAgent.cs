@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using ThirdPersonCharacter.Pipeline;
@@ -36,6 +37,14 @@ namespace ThirdPersonPerformance.Runtime
         {
             public PerformanceMetricDefinition Metric;
             public ulong LogicTick;
+            public ulong RenderFrame;
+            public long DurationTicks;
+            public int Count;
+        }
+
+        sealed class RenderFrameSample
+        {
+            public PerformanceMetricDefinition Metric;
             public ulong RenderFrame;
             public long DurationTicks;
             public int Count;
@@ -700,7 +709,9 @@ namespace ThirdPersonPerformance.Runtime
                 if (!metricsByHash.TryAdd(metricHash, metric))
                     throw new InvalidDataException($"Performance metric '{metric.MetricId}' has a duplicate hash.");
             }
+            var frameSamples = new Dictionary<(ulong MetricId, ulong RenderFrame), RenderFrameSample>();
             var logicSamples = new Dictionary<(ulong MetricId, ulong LogicTick), LogicTickSample>();
+            var invocationSampleIndex = 0;
             for (int i = 0; i < instrumentationSpans.Length; i++)
             {
                 PerformanceSpanRecord span = instrumentationSpans[i];
@@ -708,6 +719,24 @@ namespace ThirdPersonPerformance.Runtime
                     throw new InvalidDataException($"Performance instrumentation Span metric hash '{span.MetricId:x16}' is not in the catalog.");
                 if (UsesRecorder(metric))
                     continue;
+                if ((span.ContextFlags & PerformanceInstrumentationContextFlags.RenderFrame) == 0)
+                    throw new InvalidDataException($"Performance metric '{metric.MetricId}' has no RenderFrame context.");
+                if (metric.SampleScope == PerformanceSampleScope.RenderFrame)
+                {
+                    var key = (span.MetricId, span.RenderFrame);
+                    if (!frameSamples.TryGetValue(key, out RenderFrameSample sample))
+                    {
+                        sample = new RenderFrameSample
+                        {
+                            Metric = metric,
+                            RenderFrame = span.RenderFrame
+                        };
+                        frameSamples.Add(key, sample);
+                    }
+                    sample.DurationTicks = checked(sample.DurationTicks + span.DurationTicks);
+                    sample.Count++;
+                    continue;
+                }
                 if (metric.SampleScope == PerformanceSampleScope.LogicTick)
                 {
                     if ((span.ContextFlags & PerformanceInstrumentationContextFlags.LogicTick) == 0)
@@ -727,16 +756,30 @@ namespace ThirdPersonPerformance.Runtime
                     sample.Count++;
                     continue;
                 }
+                if (metric.SampleScope != PerformanceSampleScope.Invocation)
+                    throw new InvalidDataException($"Performance metric '{metric.MetricId}' has unsupported Span sample scope '{metric.SampleScope}'.");
                 double nanoseconds = span.DurationTicks * 1000000000d / Stopwatch.Frequency;
                 builder.Append(Csv(metric.MetricId)).Append(',')
                     .Append(metric.SampleScope).Append(',')
-                    .Append(i.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append((invocationSampleIndex++).ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(span.PointId.ToString("x16", CultureInfo.InvariantCulture)).Append(',')
                     .Append(span.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).AppendLine(",1");
             }
+            int frameSampleIndex = 0;
+            foreach (RenderFrameSample sample in frameSamples.Values.OrderBy(value => value.Metric.MetricId, StringComparer.Ordinal).ThenBy(value => value.RenderFrame))
+            {
+                double nanoseconds = sample.DurationTicks * 1000000000d / Stopwatch.Frequency;
+                builder.Append(Csv(sample.Metric.MetricId)).Append(',')
+                    .Append(sample.Metric.SampleScope).Append(',')
+                    .Append((frameSampleIndex++).ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.Count.ToString(CultureInfo.InvariantCulture)).AppendLine();
+            }
             int logicSampleIndex = 0;
-            foreach (LogicTickSample sample in logicSamples.Values)
+            foreach (LogicTickSample sample in logicSamples.Values.OrderBy(value => value.Metric.MetricId, StringComparer.Ordinal).ThenBy(value => value.LogicTick))
             {
                 double nanoseconds = sample.DurationTicks * 1000000000d / Stopwatch.Frequency;
                 builder.Append(Csv(sample.Metric.MetricId)).Append(',')

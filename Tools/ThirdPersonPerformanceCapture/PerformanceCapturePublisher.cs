@@ -233,7 +233,7 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceSummaryDocument summary = BuildSummary(request, scenario, budget, playerManifest, runtime, catalog, profile);
         WriteJson(Path.Combine(request.staging_root, "summary.json"), summary);
-        PerformanceComparisonDocument comparison = BuildComparison(request, scenario, summary, runtime);
+        PerformanceComparisonDocument comparison = BuildComparison(request, scenario, playerManifest, summary, runtime);
         WriteJson(Path.Combine(request.staging_root, "comparison.json"), comparison);
         RequireNonEmptyFile(Path.Combine(request.staging_root, "summary.json"), "summary");
         RequireNonEmptyFile(Path.Combine(request.staging_root, "comparison.json"), "comparison");
@@ -436,7 +436,8 @@ internal static class PerformanceCapturePublisher
         PerformanceCaptureProfileDocument profile)
     {
         MetricSampleSet samples = ReadMetricSamples(
-            Path.Combine(request.staging_root, "metric-samples.csv"));
+            Path.Combine(request.staging_root, "metric-samples.csv"),
+            catalog);
         Dictionary<string, MetricAccumulator> accumulators = samples.Metrics;
         var summaries = new List<PerformanceMetricSummaryDocument>();
         double presentationFps = runtime.presentation_frames / runtime.capture_seconds;
@@ -769,18 +770,29 @@ internal static class PerformanceCapturePublisher
             values[slowestIndex] = sample;
     }
 
-    static MetricSampleSet ReadMetricSamples(string path)
+    static MetricSampleSet ReadMetricSamples(
+        string path,
+        PerformanceMetricCatalogDocument catalog)
     {
         string[] lines = File.ReadAllLines(path, Encoding.UTF8);
         if (lines.Length < 2 || !string.Equals(lines[0], "metric_id,sample_scope,sample_index,identity,render_frame,value,count", StringComparison.Ordinal))
             throw new InvalidDataException("Performance metric samples header is invalid.");
+        PerformanceMetricDefinitionDocument[] definitions = catalog.metrics ?? Array.Empty<PerformanceMetricDefinitionDocument>();
+        var definitionsById = definitions
+            .Where(value => value != null)
+            .ToDictionary(value => value.metric_id, StringComparer.Ordinal);
         var result = new MetricSampleSet();
         for (int i = 1; i < lines.Length; i++)
         {
             string[] fields = Csv(lines[i]);
             if (fields.Length != 7 ||
+                !definitionsById.TryGetValue(fields[0], out PerformanceMetricDefinitionDocument definition) ||
+                !string.Equals(fields[1], definition.sample_scope, StringComparison.Ordinal) ||
+                !int.TryParse(fields[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int sampleIndex) ||
+                sampleIndex < 0 || string.IsNullOrWhiteSpace(fields[3]) ||
                 !ulong.TryParse(fields[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong renderFrame) ||
                 !double.TryParse(fields[5], NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ||
+                !double.IsFinite(value) ||
                 !long.TryParse(fields[6], NumberStyles.Integer, CultureInfo.InvariantCulture, out long count) || count <= 0)
             {
                 throw new InvalidDataException($"Performance metric sample line {i + 1} is invalid.");
@@ -915,6 +927,7 @@ internal static class PerformanceCapturePublisher
     static PerformanceComparisonDocument BuildComparison(
         PerformanceRunRequestDocument request,
         PerformanceScenarioDocument scenario,
+        PerformancePlayerManifestDocument playerManifest,
         PerformanceSummaryDocument candidate,
         PerformanceRuntimeResultDocument runtime)
     {
@@ -941,11 +954,20 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceToolchainDocument toolchain = ReadJson<PerformanceToolchainDocument>(request.toolchain_path);
         string wprProfileHash = PerformanceFileUtility.Sha256(toolchain.wpr_profile_path);
+        string candidatePlayerManifestHash = PerformanceFileUtility.Sha256(request.player_manifest_path);
+        string candidateToolchainHash = PerformanceFileUtility.Sha256(request.toolchain_path);
         string hardware = HardwareIdentity(runtime);
         var conflicts = new List<string>();
         AddConflict(conflicts, "manifest_schema", PerformanceCaptureSchemas.Manifest, baselineManifest.schema);
         AddConflict(conflicts, "status", PerformanceCaptureStatus.Completed.ToString(), baselineManifest.status);
         AddConflict(conflicts, "scenario_hash", scenario.content_hash, baselineManifest.scenario_hash);
+        AddConflict(conflicts, "player_manifest_hash", candidatePlayerManifestHash, baselineManifest.player_manifest_hash);
+        AddConflict(conflicts, "build_id", playerManifest.build_id, baselineManifest.build_id);
+        AddConflict(conflicts, "content_identity", playerManifest.content_identity, baselineManifest.content_identity);
+        AddConflict(conflicts, "pipeline_identity", playerManifest.pipeline_identity, baselineManifest.pipeline_identity);
+        AddConflict(conflicts, "pose_graph_revision", playerManifest.pose_graph_revision, baselineManifest.pose_graph_revision);
+        AddConflict(conflicts, "solver_identity", playerManifest.solver_identity, baselineManifest.solver_identity);
+        AddConflict(conflicts, "toolchain_identity", candidateToolchainHash, baselineManifest.toolchain_identity);
         AddConflict(conflicts, "runtime_id", scenario.runtime_id, baselineManifest.runtime_id);
         AddConflict(conflicts, "roster_identity", scenario.roster_identity, baselineManifest.roster_identity);
         AddConflict(conflicts, "hardware_identity", hardware, baselineManifest.hardware_identity);

@@ -226,14 +226,14 @@ namespace ThirdPersonCharacter.Control.Authoring
             Action mutation,
             bool recordUndo,
             IEnumerable<UnityEngine.Object> additionalOwners,
-            bool validateClosure)
+            bool validateClosure,
+            bool updateOwnedAssets = true)
         {
             if (graph is not IBtsmtlSkillFlowGraph || graph.isEditorReadOnly)
                 throw new InvalidOperationException("The skill authoring graph is not writable.");
             Depth depth = s_Depth.GetValue(graph, _ => new Depth());
             if (depth.Value != 0)
                 throw new InvalidOperationException("A skill mutation must join its existing transaction instead of nesting another one.");
-            graph.SelfSerialize();
             var undoOwners = new List<UnityEngine.Object> { graph };
             foreach (UnityEngine.Object owner in additionalOwners ?? Array.Empty<UnityEngine.Object>())
                 if (owner && !undoOwners.Contains(owner))
@@ -241,7 +241,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             foreach (UnityEngine.Object owner in undoOwners)
                 if (owner is FlowGraph ownerGraph)
                     ownerGraph.SelfSerialize();
-            HashSet<UnityEngine.Object> previousOwnedAssets = validateClosure
+            HashSet<UnityEngine.Object> previousOwnedAssets = validateClosure && updateOwnedAssets
                 ? BtsmtlSkillOwnedAssets.Collect(graph)
                 : null;
             int group = -1;
@@ -256,10 +256,9 @@ namespace ThirdPersonCharacter.Control.Authoring
             try
             {
                 mutation();
-                graph.SelfSerialize();
                 if (validateClosure)
                     BtsmtlSkillGraphClosure.Validate(graph, false);
-                if (validateClosure)
+                if (validateClosure && updateOwnedAssets)
                     BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
                 graph.SelfSerialize();
                 foreach (UnityEngine.Object owner in undoOwners)

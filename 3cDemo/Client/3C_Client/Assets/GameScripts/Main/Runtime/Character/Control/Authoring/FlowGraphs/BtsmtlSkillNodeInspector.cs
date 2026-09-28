@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 typeof(BtsmtlSkillNativeStateMachine),
                 false);
             if (value != current)
-                Change(graph, "修改技能状态机", () => node.SetStateMachine(value));
+                Change(graph, "修改技能状态机", () => node.SetStateMachine(value), true);
         }
 
         static void DrawState(FlowGraph graph, BtsmtlSkillStateFlowNode node)
@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 typeof(BtsmtlSkillFlowGraph),
                 false);
             if (value != current)
-                Change(graph, "修改状态内容", () => node.SetBody(value));
+                Change(graph, "修改状态内容", () => node.SetBody(value), true);
         }
 
         static void DrawInput(FlowGraph graph, IBtsmtlSkillInputNode node)
@@ -305,7 +305,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             var playback = (TimelinePlaybackMode)EditorGUILayout.EnumPopup("播放模式", currentPlayback);
             if (timeline != currentTimeline || ownership != currentOwnership ||
                 context != currentContext || playback != currentPlayback)
-                Change(graph, "修改技能Timeline", () => node.Configure(timeline, ownership, context, playback));
+                Change(graph, "修改技能Timeline", () => node.Configure(timeline, ownership, context, playback),
+                    timeline != currentTimeline);
             if (currentTimeline && GUILayout.Button("打开Timeline编辑器"))
             {
                 var observation = graph.editorObservation as IBtsmtlSkillObservationControls;
@@ -410,9 +411,13 @@ namespace ThirdPersonCharacter.Control.Authoring
                 .SingleOrDefault(value => value.Definition.FieldId == fieldId)
                 .Target as T;
 
-        static void Change(FlowGraph graph, string title, Action mutation)
+        static void Change(FlowGraph graph, string title, Action mutation, bool updateOwnedAssets = false)
         {
-            try { BtsmtlSkillFlowEditorMutation.Apply(graph, title, mutation); }
+            try
+            {
+                BtsmtlSkillFlowEditorMutation.Apply(
+                    graph, title, mutation, true, Array.Empty<UnityEngine.Object>(), true, updateOwnedAssets);
+            }
             catch (InvalidOperationException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
             catch (ArgumentException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
         }

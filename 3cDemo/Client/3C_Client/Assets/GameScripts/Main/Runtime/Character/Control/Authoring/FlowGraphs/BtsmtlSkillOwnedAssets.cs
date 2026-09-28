@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
+using FlowCanvas.Macros;
 using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
 using UnityEngine;
@@ -51,20 +52,26 @@ namespace ThirdPersonCharacter.Control.Authoring
                 }
                 else if (asset is FlowGraph graph && graph is IBtsmtlSkillFlowGraph)
                 {
-                    foreach (FlowGraph child in BtsmtlSkillGraphClosure.Validate(graph, false))
+                    foreach (FlowNode node in graph.allNodes)
                     {
-                        if (child != graph)
-                            Visit(child);
-                        foreach (BtsmtlSkillStateMachineFlowNode machineNode in child.allNodes.OfType<BtsmtlSkillStateMachineFlowNode>())
+                        if (node is MacroNodeWrapper macro)
+                            Visit(macro.macro);
+                        if (node is BtsmtlSkillStateMachineFlowNode machineNode)
                             Visit(machineNode.StateMachine);
-                        foreach (BtsmtlSkillTimelineFlowNode timeline in child.allNodes.OfType<BtsmtlSkillTimelineFlowNode>())
-                            if (AssetDatabase.GetAssetPath(child) == path)
-                                Visit(timeline.TimelineAsset);
+                        if (node is BtsmtlSkillStateFlowNode state)
+                            Visit(state.Body);
+                        if (node is BtsmtlSkillTimelineFlowNode timelineNode)
+                            Visit(timelineNode.TimelineAsset);
+                        if (node is BtsmtlSkillCompositeFlowNode composite)
+                            foreach (BtsmtlSkillStepPort step in composite.Steps)
+                                Visit(step.Condition);
+                        foreach (var connection in node.outConnections)
+                            if (connection is BtsmtlSkillFlowConnection transfer)
+                                Visit(transfer.Condition);
                     }
                 }
                 else if (asset is BtsmtlSkillNativeStateMachine machine)
                 {
-                    BtsmtlSkillNativeStateMachineContract.Validate(machine, false);
                     foreach (BtsmtlSkillFlowGraph child in BtsmtlSkillNativeStateMachineContract.References(machine))
                         Visit(child);
                 }

@@ -33,11 +33,7 @@ namespace ThirdPersonCharacter.Pipeline
 
         readonly List<ISimulationActorRegistration> m_Registrations =
             new List<ISimulationActorRegistration>();
-        readonly SortedDictionary<ulong, SimulationSessionCheckpoint> m_Checkpoints =
-            new SortedDictionary<ulong, SimulationSessionCheckpoint>();
-        const int MaxCheckpointCount = 32;
-        const ulong CheckpointInterval = 30;
-        readonly List<ulong> m_CheckpointRemovalBuffer = new List<ulong>(MaxCheckpointCount);
+        readonly SimulationSessionHistory m_History = new SimulationSessionHistory();
         ISimulationSessionCompositionPreparation m_Preparation;
         SimulationSessionLaunchPlan m_LaunchPlan;
         ISimulationSessionRuntimeHandle m_Runtime;
@@ -46,15 +42,10 @@ namespace ThirdPersonCharacter.Pipeline
         SimulationSessionLifecycleState m_State = SimulationSessionLifecycleState.Uninitialized;
         SimulationSessionFailure m_Failure;
         SimulationSessionDiagnosticsSnapshot m_LastDiagnostics;
-        string m_LastCheckpointFailure = string.Empty;
         SimulationSessionHostDebugControlPort m_DebugControlPort;
         bool m_TickTargetsRegistered;
         bool m_Quiesced;
         bool m_Disposed;
-        ulong m_LastLogicTick;
-        Guid m_ExecutionBranchId = Guid.NewGuid();
-        Guid m_ParentExecutionBranchId;
-        ulong m_ExecutionBranchBaseTick;
         ulong m_SessionGeneration = 1;
 
         public TimelineRuntimeNumericTarget TimelineNumericTarget
@@ -77,53 +68,18 @@ namespace ThirdPersonCharacter.Pipeline
         public int RegistrationCount => m_Registrations.Count;
         public bool IsQuiesced => m_Quiesced;
         public bool SupportsInputReplay => m_Runtime is ISimulationSessionInputReplayRuntime;
-        public bool SupportsPresentationCheckpointRestore
-        {
-            get
-            {
-                if (m_Registrations.Count == 0)
-                    return false;
-                for (int i = 0; i < m_Registrations.Count; i++)
-                {
-                    if (m_Registrations[i] is not ISimulationPresentationCheckpointRuntime checkpoint ||
-                        !checkpoint.SupportsPresentationCheckpointCapture ||
-                        !checkpoint.SupportsPresentationCheckpointRestore)
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
+        public bool SupportsPresentationCheckpointRestore =>
+            SimulationSessionHistory.SupportsPresentationCheckpointRestore(m_Registrations);
         public bool IsInputRecording =>
             m_Runtime is ISimulationSessionInputReplayRuntime replay && replay.IsInputRecording;
-        public ulong LatestCheckpointTick => m_Checkpoints.Count == 0 ? 0 : GetLastCheckpointTick();
-        public ulong OldestCheckpointTick => GetFirstCheckpointTick();
-        public int CheckpointCount => m_Checkpoints.Count;
-        public string LastCheckpointFailure => m_LastCheckpointFailure;
-        public Guid ExecutionBranchId => m_ExecutionBranchId;
-        public Guid ParentExecutionBranchId => m_ParentExecutionBranchId;
-        public ulong ExecutionBranchBaseTick => m_ExecutionBranchBaseTick;
+        public ulong LatestCheckpointTick => m_History.LatestCheckpointTick;
+        public ulong OldestCheckpointTick => m_History.OldestCheckpointTick;
+        public int CheckpointCount => m_History.CheckpointCount;
+        public string LastCheckpointFailure => m_History.LastCheckpointFailure;
+        public Guid ExecutionBranchId => m_History.ExecutionBranchId;
+        public Guid ParentExecutionBranchId => m_History.ParentExecutionBranchId;
+        public ulong ExecutionBranchBaseTick => m_History.ExecutionBranchBaseTick;
         public ulong SessionGeneration => m_SessionGeneration;
-        public bool TryCaptureCheckpointNow(out ulong checkpointTick, out string error)
-        {
-            checkpointTick = 0;
-            error = string.Empty;
-            if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
-            {
-                error = "Simulation Session is not active for a skill checkpoint.";
-                return false;
-            }
-            if (m_LastLogicTick == 0)
-            {
-                error = "Simulation Session has not completed a Logic Tick for a skill checkpoint.";
-                return false;
-            }
-            if (!TryCaptureCheckpointAt(m_LastLogicTick, out error))
-                return false;
-            checkpointTick = m_LastLogicTick;
-            return true;
-        }
         public string PredictionSourceIdentity =>
             m_Runtime is ICharacterFutureBodyTranslationSource source
                 ? source.PredictionSourceIdentity
@@ -188,130 +144,51 @@ namespace ThirdPersonCharacter.Pipeline
                 registration.ActorId.Value));
         }
 
-        public void Stop()
+        public bool TryCaptureCheckpointNow(out ulong checkpointTick, out string error)
         {
-            DisposeSession();
+            checkpointTick = 0;
+            if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
+            {
+                error = "Simulation Session is not active for a skill checkpoint.";
+                return false;
+            }
+            return m_History.TryCaptureCheckpointNow(out checkpointTick, out error);
         }
 
         public bool TryRestoreCheckpoint(ulong tick, out string error)
         {
-            error = string.Empty;
             if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
             {
                 error = "Simulation Session is not active for checkpoint restore.";
                 return false;
             }
-            if (!(m_Runtime is ISimulationSessionCheckpointRuntime checkpointRuntime))
-            {
-                error = "Active Session runtime does not expose checkpoint restore.";
-                return false;
-            }
-            if (!m_Checkpoints.TryGetValue(tick, out SimulationSessionCheckpoint checkpoint))
-            {
-                error = $"Simulation Session has no checkpoint at Tick '{tick}'.";
-                return false;
-            }
-            if (!IsCheckpointCompatible(checkpoint, out error))
-                return false;
-            if (!TryPreparePresentationCheckpointRestore(out error))
-                return false;
-            SimulationSessionCheckpoint rollbackCheckpoint = null;
-            try
-            {
-                rollbackCheckpoint = checkpointRuntime.CaptureCheckpoint();
-                if (!TryCapturePresentationCheckpoint(rollbackCheckpoint, out error))
-                    return false;
-                checkpointRuntime.RestoreCheckpoint(checkpoint);
-                if (!TryRestorePresentationCheckpoint(checkpoint, out error))
-                {
-                    string restoreError = error;
-                    TryRollbackSimulationRestore(
-                        checkpointRuntime,
-                        rollbackCheckpoint,
-                        restoreError,
-                        out error);
-                    TryRollbackPresentationRestore(rollbackCheckpoint, error, out error);
-                    return false;
-                }
-                CommitRestoreBranch(checkpoint);
-                return true;
-            }
-            catch (Exception exception)
-            {
-                error = exception.Message;
-                if (rollbackCheckpoint != null)
-                {
-                    TryRollbackSimulationRestore(
-                        checkpointRuntime,
-                        rollbackCheckpoint,
-                        error,
-                        out error);
-                    TryRollbackPresentationRestore(rollbackCheckpoint, error, out error);
-                }
-                return false;
-            }
+            return m_History.TryRestoreCheckpoint(tick, out error);
         }
 
         public bool TryRestoreToTick(ulong targetTick, out ulong restoredCheckpointTick, out string error)
         {
             restoredCheckpointTick = 0;
-            error = string.Empty;
             if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
             {
                 error = "Simulation Session is not active for historical restore.";
                 return false;
             }
-            SimulationSessionCheckpoint checkpoint = FindCheckpointAtOrBefore(targetTick);
-            if (checkpoint == null)
+            return m_History.TryRestoreToTick(targetTick, out restoredCheckpointTick, out error);
+        }
+
+        public bool TryReplayInputRange(ulong fromTick, ulong toTick, out string error)
+        {
+            if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
             {
-                error = $"Simulation Session has no checkpoint at or before Tick '{targetTick}'.";
+                error = "Simulation Session is not active for input replay.";
                 return false;
             }
-            if (!IsCheckpointCompatible(checkpoint, out error))
-                return false;
-            restoredCheckpointTick = checkpoint.Tick.Value;
-            if (restoredCheckpointTick == targetTick)
-                return TryRestoreCheckpoint(targetTick, out error);
-            if (!(m_Runtime is ISimulationSessionInputReplayRuntime replay))
-            {
-                error = "Active Session runtime does not expose input replay for a non-checkpoint historical Tick.";
-                return false;
-            }
-            if (!(m_Runtime is ISimulationSessionCheckpointRuntime checkpointRuntime))
-            {
-                error = "Active Session runtime does not expose checkpoint rollback for historical input replay.";
-                return false;
-            }
-            if (!TryPreparePresentationCheckpointRestore(out error))
-                return false;
-            SimulationSessionCheckpoint rollbackCheckpoint;
-            try
-            {
-                rollbackCheckpoint = checkpointRuntime.CaptureCheckpoint();
-                if (!TryCapturePresentationCheckpoint(rollbackCheckpoint, out error))
-                    return false;
-            }
-            catch (Exception exception)
-            {
-                error = exception.Message;
-                return false;
-            }
-            if (!replay.TryReplayInputRange(checkpoint, restoredCheckpointTick, targetTick, out error))
-                return false;
-            if (!TryRestorePresentationCheckpoint(checkpoint, out error))
-            {
-                string restoreError = error;
-                TryRollbackInputReplay(
-                    replay,
-                    checkpointRuntime,
-                    rollbackCheckpoint,
-                    restoreError,
-                    out error);
-                TryRollbackPresentationRestore(rollbackCheckpoint, error, out error);
-                return false;
-            }
-            CommitRestoreBranch(checkpoint);
-            return true;
+            return m_History.TryReplayInputRange(fromTick, toTick, out error);
+        }
+
+        public void Stop()
+        {
+            DisposeSession();
         }
 
         public bool TryGetOnlyActorId(out ActorId actorId)
@@ -339,67 +216,6 @@ namespace ThirdPersonCharacter.Pipeline
                 return replay.TryStopInputRecording(out error);
             error = "Active Session runtime does not expose input recording.";
             return false;
-        }
-
-        public bool TryReplayInputRange(ulong fromTick, ulong toTick, out string error)
-        {
-            if (m_Disposed || m_State != SimulationSessionLifecycleState.Active || m_Quiesced)
-            {
-                error = "Simulation Session is not active for input replay.";
-                return false;
-            }
-            if (fromTick >= toTick)
-            {
-                error = "Simulation Session input replay range is invalid.";
-                return false;
-            }
-            if (!(m_Runtime is ISimulationSessionInputReplayRuntime replay))
-            {
-                error = "Active Session runtime does not expose input replay.";
-                return false;
-            }
-            if (!m_Checkpoints.TryGetValue(fromTick, out SimulationSessionCheckpoint checkpoint))
-            {
-                error = $"Simulation Session has no checkpoint at Tick '{fromTick}'.";
-                return false;
-            }
-            if (!IsCheckpointCompatible(checkpoint, out error))
-                return false;
-            if (!TryPreparePresentationCheckpointRestore(out error))
-                return false;
-            if (!(m_Runtime is ISimulationSessionCheckpointRuntime checkpointRuntime))
-            {
-                error = "Active Session runtime does not expose checkpoint rollback for input replay.";
-                return false;
-            }
-            SimulationSessionCheckpoint rollbackCheckpoint;
-            try
-            {
-                rollbackCheckpoint = checkpointRuntime.CaptureCheckpoint();
-                if (!TryCapturePresentationCheckpoint(rollbackCheckpoint, out error))
-                    return false;
-            }
-            catch (Exception exception)
-            {
-                error = exception.Message;
-                return false;
-            }
-            if (!replay.TryReplayInputRange(checkpoint, fromTick, toTick, out error))
-                return false;
-            if (!TryRestorePresentationCheckpoint(checkpoint, out error))
-            {
-                string restoreError = error;
-                TryRollbackInputReplay(
-                    replay,
-                    checkpointRuntime,
-                    rollbackCheckpoint,
-                    restoreError,
-                    out error);
-                TryRollbackPresentationRestore(rollbackCheckpoint, error, out error);
-                return false;
-            }
-            CommitRestoreBranch(checkpoint);
-            return true;
         }
 
         public void Quiesce()
@@ -496,258 +312,7 @@ namespace ThirdPersonCharacter.Pipeline
         {
             m_OutputLifecycle.BeginLogicTick();
             m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
-            m_LastLogicTick = context.LocalLogicTick;
-            CaptureCheckpoint(context.LocalLogicTick);
-        }
-
-        void CaptureCheckpoint(ulong outerTick)
-        {
-            if (!(m_Runtime is ISimulationSessionCheckpointRuntime) ||
-                outerTick == 0 || outerTick % CheckpointInterval != 0 && m_Checkpoints.Count != 0)
-            {
-                return;
-            }
-            TryCaptureCheckpointAt(outerTick, out _);
-        }
-
-        bool TryCaptureCheckpointAt(ulong outerTick, out string error)
-        {
-            error = string.Empty;
-            if (!(m_Runtime is ISimulationSessionCheckpointRuntime checkpointRuntime) || outerTick == 0)
-            {
-                error = "Active Session runtime does not expose checkpoint capture.";
-                return false;
-            }
-            try
-            {
-                SimulationSessionCheckpoint checkpoint = checkpointRuntime.CaptureCheckpoint();
-                if (SupportsPresentationCheckpointRestore &&
-                    !TryCapturePresentationCheckpoint(checkpoint, out string presentationError))
-                {
-                    throw new InvalidOperationException(presentationError);
-                }
-                for (int i = 0; i < m_Registrations.Count; i++)
-                    m_Registrations[i].PublishCheckpoint(
-                        checkpoint.Tick.Value,
-                        checkpoint.SnapshotId,
-                        checkpoint.SnapshotHash);
-                m_Checkpoints[checkpoint.Tick.Value] = checkpoint;
-                while (m_Checkpoints.Count > MaxCheckpointCount)
-                    m_Checkpoints.Remove(GetFirstCheckpointTick());
-                m_LastCheckpointFailure = string.Empty;
-                return true;
-            }
-            catch (Exception exception)
-            {
-                m_LastCheckpointFailure = exception.Message;
-                error = exception.Message;
-                return false;
-            }
-        }
-
-        ulong GetLastCheckpointTick()
-        {
-            ulong value = 0;
-            foreach (ulong tick in m_Checkpoints.Keys)
-                value = tick;
-            return value;
-        }
-
-        ulong GetFirstCheckpointTick()
-        {
-            foreach (ulong tick in m_Checkpoints.Keys)
-                return tick;
-            return 0;
-        }
-
-        SimulationSessionCheckpoint FindCheckpointAtOrBefore(ulong targetTick)
-        {
-            SimulationSessionCheckpoint selected = null;
-            foreach (KeyValuePair<ulong, SimulationSessionCheckpoint> pair in m_Checkpoints)
-            {
-                if (pair.Key > targetTick)
-                    break;
-                selected = pair.Value;
-            }
-            return selected;
-        }
-
-        bool IsCheckpointCompatible(SimulationSessionCheckpoint checkpoint, out string error)
-        {
-            SimulationSessionCompositionDescriptor descriptor = m_Runtime.Descriptor;
-            if (!checkpoint.SessionId.Equals(descriptor.SessionId))
-            {
-                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Session '{checkpoint.SessionId}', but the active Session is '{descriptor.SessionId}'.";
-                return false;
-            }
-            if (!checkpoint.GameplayContentHash.Equals(descriptor.GameplayContentHash))
-            {
-                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Gameplay Content '{checkpoint.GameplayContentHash}', but the active Session Content is '{descriptor.GameplayContentHash}'.";
-                return false;
-            }
-            if (!checkpoint.PipelineHash.Equals(descriptor.Pipeline.Hash))
-            {
-                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Pipeline '{checkpoint.PipelineHash}', but the active Session Pipeline is '{descriptor.Pipeline.Hash}'.";
-                return false;
-            }
-            if (!string.Equals(
-                    checkpoint.BackendId,
-                    descriptor.ExecutionBackend.ComponentId,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    checkpoint.BackendSemanticVersion,
-                    descriptor.ExecutionBackend.SemanticVersion,
-                    StringComparison.Ordinal))
-            {
-                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Backend '{checkpoint.BackendId}@{checkpoint.BackendSemanticVersion}', but the active Session Backend is '{descriptor.ExecutionBackend.ComponentId}@{descriptor.ExecutionBackend.SemanticVersion}'.";
-                return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-        bool TryPreparePresentationCheckpointRestore(
-            out string error)
-        {
-            for (int i = 0; i < m_Registrations.Count; i++)
-            {
-                if (m_Registrations[i] is ISimulationPresentationCheckpointRuntime checkpoint &&
-                    checkpoint.SupportsPresentationCheckpointRestore)
-                    continue;
-                error = $"Actor '{m_Registrations[i].ActorId}' does not expose Presentation checkpoint restore.";
-                return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-        bool TryRestorePresentationCheckpoint(
-            SimulationSessionCheckpoint checkpoint,
-            out string error)
-        {
-            for (int i = 0; i < m_Registrations.Count; i++)
-            {
-                if (!((ISimulationPresentationCheckpointRuntime)m_Registrations[i])
-                        .TryRestorePresentationCheckpoint(checkpoint, out error))
-                    return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-        bool TryCapturePresentationCheckpoint(
-            SimulationSessionCheckpoint checkpoint,
-            out string error)
-        {
-            for (int i = 0; i < m_Registrations.Count; i++)
-            {
-                if (!((ISimulationPresentationCheckpointRuntime)m_Registrations[i])
-                        .TryCapturePresentationCheckpoint(checkpoint, out error))
-                    return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-        static void TryRollbackSimulationRestore(
-            ISimulationSessionCheckpointRuntime checkpointRuntime,
-            SimulationSessionCheckpoint rollbackCheckpoint,
-            string failure,
-            out string error)
-        {
-            try
-            {
-                checkpointRuntime.RestoreCheckpoint(rollbackCheckpoint);
-                error = failure;
-            }
-            catch (Exception rollbackException)
-            {
-                error = $"{failure} Simulation rollback failed: {rollbackException.Message}";
-            }
-        }
-
-        static void TryRollbackInputReplay(
-            ISimulationSessionInputReplayRuntime replay,
-            ISimulationSessionCheckpointRuntime checkpointRuntime,
-            SimulationSessionCheckpoint rollbackCheckpoint,
-            string failure,
-            out string error)
-        {
-            string cancelError = string.Empty;
-            bool canceled;
-            try
-            {
-                canceled = replay.TryCancelInputReplay(out cancelError);
-            }
-            catch (Exception exception)
-            {
-                canceled = false;
-                cancelError = exception.Message;
-            }
-            string rollbackError = string.Empty;
-            bool restored;
-            try
-            {
-                checkpointRuntime.RestoreCheckpoint(rollbackCheckpoint);
-                restored = true;
-            }
-            catch (Exception exception)
-            {
-                restored = false;
-                rollbackError = exception.Message;
-            }
-            if (canceled && restored)
-            {
-                error = failure;
-                return;
-            }
-            string details = !canceled
-                ? $"Input replay cancel failed: {cancelError}"
-                : string.Empty;
-            if (!restored)
-                details = string.IsNullOrEmpty(details)
-                    ? $"Simulation rollback failed: {rollbackError}"
-                    : $"{details} Simulation rollback failed: {rollbackError}";
-            error = $"{failure} Replay rollback failed: {details}";
-        }
-
-        void TryRollbackPresentationRestore(
-            SimulationSessionCheckpoint rollbackCheckpoint,
-            string failure,
-            out string error)
-        {
-            try
-            {
-                if (TryRestorePresentationCheckpoint(rollbackCheckpoint, out string presentationError))
-                {
-                    error = failure;
-                    return;
-                }
-                error = string.IsNullOrEmpty(presentationError)
-                    ? $"{failure} Presentation rollback failed."
-                    : $"{failure} Presentation rollback failed: {presentationError}";
-            }
-            catch (Exception exception)
-            {
-                error = $"{failure} Presentation rollback failed: {exception.Message}";
-            }
-        }
-
-        void CommitRestoreBranch(SimulationSessionCheckpoint checkpoint)
-        {
-            m_CheckpointRemovalBuffer.Clear();
-            foreach (ulong futureTick in m_Checkpoints.Keys)
-                if (futureTick > checkpoint.Tick.Value)
-                    m_CheckpointRemovalBuffer.Add(futureTick);
-            for (int i = 0; i < m_CheckpointRemovalBuffer.Count; i++)
-                m_Checkpoints.Remove(m_CheckpointRemovalBuffer[i]);
-            m_CheckpointRemovalBuffer.Clear();
-            m_ParentExecutionBranchId = m_ExecutionBranchId;
-            m_ExecutionBranchId = Guid.NewGuid();
-            m_ExecutionBranchBaseTick = checkpoint.Tick.Value;
-            m_LastLogicTick = checkpoint.Tick.Value;
-            for (int i = 0; i < m_Registrations.Count; i++)
-                m_Registrations[i].BindExecutionBranch(m_ExecutionBranchId);
+            m_History.CompleteLogicTick(context.LocalLogicTick);
         }
 
         void Awake()
@@ -886,11 +451,12 @@ namespace ThirdPersonCharacter.Pipeline
             SimulationSessionPreparedRuntime prepared = m_Preparation.TakePreparedRuntime();
             m_LaunchPlan = prepared.LaunchPlan;
             m_Runtime = prepared.RuntimeHandle;
+            m_History.BindRuntime(m_Runtime, m_Registrations);
             m_OutputLifecycle = prepared.OutputLifecycle;
             m_OuterTickKind = prepared.OuterTickKind;
             for (int i = 0; i < m_Registrations.Count; i++)
             {
-                m_Registrations[i].BindExecutionBranch(m_ExecutionBranchId);
+                m_Registrations[i].BindExecutionBranch(m_History.ExecutionBranchId);
             }
             m_Preparation.Dispose();
             m_Preparation = null;
@@ -1012,18 +578,19 @@ namespace ThirdPersonCharacter.Pipeline
             TryCleanup(UnregisterDebugControlPort, cleanupFailures);
             TryCleanup(UnregisterTickTargets, cleanupFailures);
             TryCleanup(DeactivateActorPorts, cleanupFailures);
-            ReleaseFailedResources(cleanupFailures);
+            ReleaseRuntimeResources(cleanupFailures);
             for (int i = 0; i < cleanupFailures.Count; i++)
                 Debug.LogException(cleanupFailures[i], this);
             Debug.LogError(failure.ToString(), this);
         }
 
-        void ReleaseFailedResources(List<Exception> failures)
+        void ReleaseRuntimeResources(List<Exception> failures)
         {
             if (m_Preparation != null)
                 TryCleanup(m_Preparation.Dispose, failures);
             m_Preparation = null;
 
+            m_History.DetachRuntime();
             if (m_Runtime != null)
             {
                 TryCleanup(m_Runtime.Dispose, failures);
@@ -1052,20 +619,7 @@ namespace ThirdPersonCharacter.Pipeline
         void ReleaseSessionResources(List<Exception> failures)
         {
             TryCleanup(UnregisterDebugControlPort, failures);
-            if (m_Preparation != null)
-                TryCleanup(m_Preparation.Dispose, failures);
-            m_Preparation = null;
-            if (m_Runtime != null)
-            {
-                TryCleanup(m_Runtime.Dispose, failures);
-                m_Runtime = null;
-            }
-            else
-            {
-                for (int i = m_Registrations.Count - 1; i >= 0; i--)
-                    TryCleanup(m_Registrations[i].Dispose, failures);
-            }
-            m_OutputLifecycle = null;
+            ReleaseRuntimeResources(failures);
         }
 
         void RegisterDebugControlPort()
@@ -1109,12 +663,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_LastDiagnostics = null;
             m_LaunchPlan = null;
             m_OutputLifecycle = null;
-            m_Checkpoints.Clear();
-            m_LastCheckpointFailure = string.Empty;
-            m_ExecutionBranchId = Guid.NewGuid();
-            m_ParentExecutionBranchId = Guid.Empty;
-            m_ExecutionBranchBaseTick = 0;
-            m_LastLogicTick = 0;
+            m_History.Reset();
             m_OuterTickKind = default;
             m_SessionGeneration = checked(m_SessionGeneration + 1);
         }

@@ -37,4 +37,4 @@ Pose 帧事务、Timeline 内容与播放、Session 历史恢复和作者工作�
 - Editor：Pose Workspace、现有 mutation／validator／持久化职责、Foot AnimationAnalyzer／Sampler、C# 作者代码导出与直接程序集依赖。
 - 文档：本 change 为统一规划入口；[原重构说明](../../../docs/architecture-refactoring-plan.md)改为指向这里。现行 specs 在后续明确的同步或归档流程中更新，本轮不把提案直接写成已实现合同。
 - 相关专项：`eliminate-runtime-managed-allocations`、`add-compile-time-performance-instrumentation`、`design-btsmtl-authoring-runtime-workbench`、Pose 编辑预览／只读黑板、Foot 稳定化和 Timeline 时钟 change。交叉点按既有 owner 处理，保留其他窗口正确修改。
-- 本阶段 goal 是完整排查与方案交付，已经执行只读核对并回写结果。本提案和 tasks 的存在不代表已经实施代码或启动性能采集；用户要求不运行 replay，继续遵守。
+- 用户已启动完整实施 goal；排查结果是实施输入，不能替代代码交付。完成全部清单、直接调用方与旧路径清理及必要检查后才结束 goal；不运行 replay，不新增测试，不创建 worktree。

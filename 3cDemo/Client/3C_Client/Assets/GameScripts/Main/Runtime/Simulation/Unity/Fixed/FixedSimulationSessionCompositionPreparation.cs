@@ -137,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 Failure = new SimulationSessionFailure(
                     SimulationSessionFailureStage.Composition,
                     "fixed_session_composition_failed",
-                    exception.Message,
+                    exception.ToString(),
                     m_Definition.name);
                 Status = SimulationSessionPreparationStatus.Failed;
                 return Status;

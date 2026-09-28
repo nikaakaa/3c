@@ -16,6 +16,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedTraceSink m_Trace;
         readonly FixedGameplayEffectExecutionScratch m_Scratch;
         FixedGameplayEffectTarget m_GameplayEffects;
+        bool m_EvaluationActive;
+        SimulationTick m_ActiveTick;
 
 		public FixedGameplayEffectOperationRuntime(
 			FixedGameplayAbilityExecutionAccess access,
@@ -39,9 +41,13 @@ namespace ThirdPersonSimulation.Fixed
 
         public void BeginEvaluation()
         {
-            if (m_GameplayEffects != null)
-                throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
-			m_GameplayEffects = m_Scratch.Target.Begin(
+            if (m_EvaluationActive)
+                throw new InvalidOperationException(
+                    $"Gameplay Effect evaluation is already active for '{m_Frame.ActorId}' " +
+                    $"at '{m_ActiveTick.Value}' while beginning '{m_Frame.Tick.Value}' " +
+                    $"for '{m_Frame.Data.AbilityId}'.");
+            m_ActiveTick = m_Frame.Tick;
+            m_GameplayEffects = m_Scratch.Target.Begin(
 				m_Frame.SavepointPort,
                 m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
@@ -50,12 +56,17 @@ namespace ThirdPersonSimulation.Fixed
                 m_Handles.Next,
                 m_Handles.Capture,
                 m_Handles.Restore);
+            m_EvaluationActive = true;
         }
 
         public void EndEvaluation()
         {
+            if (!m_EvaluationActive)
+                return;
+            m_EvaluationActive = false;
             m_GameplayEffects.End();
             m_GameplayEffects = null;
+            m_ActiveTick = default;
         }
 
         public IEnumerable<string> OwnedTags => m_GameplayEffects.OwnedTags;

@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 Failure = new SimulationSessionFailure(
                     SimulationSessionFailureStage.Composition,
                     "float32_session_composition_failed",
-                    exception.Message,
+                    exception.ToString(),
                     m_Definition.name);
                 Status = SimulationSessionPreparationStatus.Failed;
                 return Status;

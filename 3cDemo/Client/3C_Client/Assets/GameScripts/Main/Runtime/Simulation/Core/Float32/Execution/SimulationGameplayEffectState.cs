@@ -1286,7 +1286,18 @@ namespace ThirdPersonSimulation
 
         public GameplayEffectStateAggregate Freeze()
         {
-            if (m_Baseline != null &&
+            if (m_Baseline == null)
+            {
+                return new GameplayEffectStateAggregate(
+                    m_TagSources,
+                    m_Attributes,
+                    m_ActiveEffects,
+                    m_Periods,
+                    m_Journal,
+                    m_LastLifecycleRevisions,
+                    m_ChangeCursor);
+            }
+            if (!m_TagsDirty &&
                 !m_TagsDirty &&
                 !m_AttributesDirty &&
                 !m_ActiveEffectsDirty &&

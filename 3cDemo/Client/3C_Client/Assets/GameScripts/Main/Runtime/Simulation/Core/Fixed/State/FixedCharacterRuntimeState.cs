@@ -479,16 +479,16 @@ namespace ThirdPersonSimulation.Fixed
                 stateSchemaHash,
                 0,
                 abilities,
-                null,
-                null,
-                null,
+                Array.Empty<SimulationActionActivationRequestState>(),
+                Array.Empty<FixedActionInstanceState>(),
+                Array.Empty<KeyValuePair<string, SimulationInputRequestState>>(),
                 0,
                 0,
                 0,
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                null);
+                Array.Empty<AbilityTimelineRuntimeSnapshot>());
         }
 
         static T[] CopyArray<T>(IEnumerable<T> values)

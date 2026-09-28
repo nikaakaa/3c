@@ -190,6 +190,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<float> m_PlanDenseBoneWeights;
         NativeArray<byte> m_PlanEntryWritten;
         NativeArray<byte> m_PlanDenseBoneWeightWritten;
+        NativeArray<int> m_PlanEntryWrittenIndices;
+        NativeArray<int> m_PlanDenseBoneWeightWrittenIndices;
+        readonly int[] m_PlanEntryWrittenCounts = new int[2];
+        readonly int[] m_PlanDenseBoneWeightWrittenCounts = new int[2];
 
         NativeArray<AnimationSlotBlendStoredPoseNativeState> m_StoredState;
         NativeArray<AnimationLocalBonePose> m_StoredPose;
@@ -258,6 +262,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PlanDenseBoneWeights = Allocate<float>(checked(m_ContributionCapacity * m_BoneCount * 2));
                 m_PlanEntryWritten = Allocate<byte>(checked(m_ContributionCapacity * 2));
                 m_PlanDenseBoneWeightWritten = Allocate<byte>(checked(m_ContributionCapacity * m_BoneCount * 2));
+                m_PlanEntryWrittenIndices = Allocate<int>(checked(m_ContributionCapacity * 2));
+                m_PlanDenseBoneWeightWrittenIndices = Allocate<int>(checked(m_ContributionCapacity * m_BoneCount * 2));
 
                 m_StoredState = Allocate<AnimationSlotBlendStoredPoseNativeState>(1);
                 m_StoredPose = Allocate<AnimationLocalBonePose>(m_BoneCount);
@@ -424,6 +430,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException($"Animation Slot Blend frame plan entry #{contributionIndex} was written twice.");
             m_PlanEntries[index] = entry;
             m_PlanEntryWritten[index] = 1;
+            m_PlanEntryWrittenIndices[
+                checked(header.PageIndex * m_ContributionCapacity + m_PlanEntryWrittenCounts[header.PageIndex]++)] = index;
         }
 
         internal void SetPreparedDenseBoneWeight(
@@ -443,6 +451,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Slot Blend dense Bone weight was written twice.");
             m_PlanDenseBoneWeights[index] = weight;
             m_PlanDenseBoneWeightWritten[index] = 1;
+            m_PlanDenseBoneWeightWrittenIndices[
+                checked(header.PageIndex * m_ContributionCapacity * m_BoneCount +
+                    m_PlanDenseBoneWeightWrittenCounts[header.PageIndex]++)] = index;
         }
 
         internal void ValidateInactivePage(in AnimationSlotBlendFramePlanPreparation preparation)
@@ -540,6 +551,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Clear(m_PlanDenseBoneWeights);
             Clear(m_PlanEntryWritten);
             Clear(m_PlanDenseBoneWeightWritten);
+            m_PlanEntryWrittenCounts[0] = 0;
+            m_PlanEntryWrittenCounts[1] = 0;
+            m_PlanDenseBoneWeightWrittenCounts[0] = 0;
+            m_PlanDenseBoneWeightWrittenCounts[1] = 0;
             Clear(m_StoredState);
             Clear(m_StoredPose);
             Clear(m_StoredVelocity);
@@ -727,14 +742,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         void ClearPlanPage(int pageIndex)
         {
             m_PlanHeaders[pageIndex] = default;
-            ClearRange(m_PlanEntries, checked(pageIndex * m_ContributionCapacity), m_ContributionCapacity);
-            ClearRange(m_PlanDenseBoneWeights,
-                checked(pageIndex * m_ContributionCapacity * m_BoneCount),
-                checked(m_ContributionCapacity * m_BoneCount));
-            ClearRange(m_PlanEntryWritten, checked(pageIndex * m_ContributionCapacity), m_ContributionCapacity);
-            ClearRange(m_PlanDenseBoneWeightWritten,
-                checked(pageIndex * m_ContributionCapacity * m_BoneCount),
-                checked(m_ContributionCapacity * m_BoneCount));
+            int entryCount = m_PlanEntryWrittenCounts[pageIndex];
+            for (int i = 0; i < entryCount; i++)
+            {
+                int index = m_PlanEntryWrittenIndices[
+                    checked(pageIndex * m_ContributionCapacity + i)];
+                m_PlanEntries[index] = default;
+                m_PlanEntryWritten[index] = 0;
+            }
+            m_PlanEntryWrittenCounts[pageIndex] = 0;
+            int weightCount = m_PlanDenseBoneWeightWrittenCounts[pageIndex];
+            for (int i = 0; i < weightCount; i++)
+            {
+                int index = m_PlanDenseBoneWeightWrittenIndices[
+                    checked(pageIndex * m_ContributionCapacity * m_BoneCount + i)];
+                m_PlanDenseBoneWeights[index] = 0f;
+                m_PlanDenseBoneWeightWritten[index] = 0;
+            }
+            m_PlanDenseBoneWeightWrittenCounts[pageIndex] = 0;
         }
 
         void ClearPreparation()
@@ -841,6 +866,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DisposeArray(ref m_StoredState);
             DisposeArray(ref m_PlanDenseBoneWeightWritten);
             DisposeArray(ref m_PlanEntryWritten);
+            DisposeArray(ref m_PlanDenseBoneWeightWrittenIndices);
+            DisposeArray(ref m_PlanEntryWrittenIndices);
             DisposeArray(ref m_PlanDenseBoneWeights);
             DisposeArray(ref m_PlanEntries);
             DisposeArray(ref m_PlanHeaders);

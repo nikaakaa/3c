@@ -247,6 +247,12 @@
 - 状态机 Start 装配阶段按正式 RuleGraph 建立唯一操作表，并把 AnimationVariableInput 绑定到变量布局位置；检查缺失/重复操作及输出操作一次。运行时只按已建立的表清空值缓存和访问标记，仍由原 `EvaluateOperation` 递归执行，保留 And/Or 短路、输入变量当帧读取、事实读取、时间值和异常语义。Root Orientation Warp 的 FacingError 也改为 Initialize 时绑定位置。RuleGraph 或变量布局变化需重新装配，和状态图其它绑定一致。
 - 新增的是每条规则的装配期字典常驻内存；没有整帧结果缓存，不会阻止同一帧变量修改后被规则读取。未编译、未运行，耗时收益待采样。
 
+### AP24 Slot Blend 计划换页按最大容量清空（已实施写入索引清理）
+
+- `AnimationSlotBlendPoseWorkspace.ClearPlanPage` 原先每次准备或放弃页都清空整页 entries、dense bone weights 和两组写入标记，即使本帧只写了少量贡献。
+- 计划页现在为每个页保存实际写入的 entry 与 dense weight 索引；首次写入记录绝对索引，重复写入仍沿原规则报错。换页只清这些索引并归零标记和计数，Reset/Dispose 仍完整清理所有 NativeArray。计划内容校验仍依赖写入标记，不通过旧值或页身份掩盖缺项。
+- 代价是两组定容索引 NativeArray 和两个页计数，容量沿原正式页容量；正常贡献数低于上限时减少清理写入。只做静态检查，未测 NativeArray 写带宽。
+
 ## 可靠性问题独立保留
 
 - 保存后恢复校验、变量 ID 与名称解析统一，解决的是配置看似存在却未生效，不作为 CPU 优化的完成条件混入上述条目。

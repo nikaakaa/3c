@@ -39,4 +39,19 @@
 
 `CharacterPoseNativeDomainResourceSetCompiler.CompileLocomotionPhasePlan` 在 group 为 null 时不发布相位计划；`CharacterPoseNativeClipPlayerHandler.PhasePlayerCount` 在计划为 null 时返回 0。`CharacterPoseNativeStateMachineSource.SynchronizeTransition` 只从存在相位计划且同组的播放器映射目标时间。因此 WalkStart → Walk 的交接没有获得起步动画的脚步相位，目标从片头启动。
 
-应通过正式脚步同步数据修正这条交接，让 Crossfade 中源和目标对应同一步的位置。仅延长混合时间、改 IK 或检查 Transform 是否被覆盖均不处理这个相位缺口。本轮完成诊断，没有修改动画、同步组或运行逻辑，没有执行回放。
+应通过正式脚步同步数据修正这条交接，让 Crossfade 中源和目标对应同一步的位置。仅延长混合时间、改 IK 或检查 Transform 是否被覆盖均不处理这个相位缺口。诊断阶段没有修改动画、同步组或运行逻辑，没有执行回放。
+
+## 已实施修复
+
+- 使用现有 Ready 分析产物 `b957288e2d6c1332ddc3a8a2b6bddfb7f67ad913dea04ab06e516142b84d9233`，通过 `CharacterLocomotionPhaseAuthoringService.BuildCandidate/Apply` 写入 WalkStart 正式相位曲线。没有重新分析足部数据。
+- WalkStart 加入现有 `Locomotion.Gait`。通过 BTSMTL export/generate 更新 WalkStart 节点的相位入口范围为 0–1.25000012 秒，其他节点和 0.15 秒 Crossfade 保持原配置。
+- 相位曲线关键点（秒，相位）：(0, 0.25)、(0.216666684, 0.5)、(0.650000036, 1)、(0.9333334, 1.5)、(1.25000012, 2)。运行交接根据当前起步相位选择 Walk 时间，不再从 Walk 片头无条件启动。
+- 未修改骨骼动画曲线、IK 算法或参数，也没有新增运行分支。
+
+## 发布和回读
+
+正式相位映射回读：WalkStart 1.12155 秒映射 Walk 0.48821655 秒，1.224 秒映射 0.59066653 秒，1.25 秒映射 0.61666650 秒。源和目标相位的小数部分一致，与前述原动画姿态对照相符。
+
+正式 ACL 发布组更新为 `4ce133684f97a8812d744f6ee151d91c9eb234ee67e7b9d26b4f03fc4065565f`。注册相位曲线改变依赖身份，因此按现有发布链重发资源；新旧组的 52 个 `.bytes` 载荷 SHA256 全部一致。动画域资源已重新编译，产物包含 WalkStart 相位计划和同步组；生成资源中的参数索引由当前正式编译器重建。
+
+Unity 回读 WalkStart 节点入口终点为 1.25000012 秒，内容版本为 `f2ca3383023d44dd949a9f268a74a114`，资源未脏、编译结束，Console 错误数为 0。未执行 Play 或 replay；画面上的两次拉扯是否消失仍由用户手测确认。

@@ -505,6 +505,7 @@ MonoBehaviour:
     - {fileID: 7400000, guid: 4e613663635adb8428d84960c297d5d7, type: 2}
     - {fileID: 7400000, guid: 5bc3f78b966fa364583dc0e7af8cd0c8, type: 2}
     - {fileID: 7400000, guid: ac3b96331bba6754aa9bc13302762790, type: 2}
+    - {fileID: 7400000, guid: 7bd5e9c109acf4744b50901ed2675c3c, type: 2}
   m_FootPlacementAnalysisMode: 1
   m_PoseNativeDomainResources: {fileID: 11400000, guid: ed97b3257b8448d89d6c3e38087ac407,
     type: 2}

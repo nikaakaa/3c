@@ -17,7 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootPlacementRequest request,
                 in CharacterFootSwingMotionResult preliminaryMotion,
                 in CharacterFootLifecycleTransitionFact lifecycleTransition,
-                bool landingCompletionPending)
+                bool landingCompletionPending,
+                in CharacterFootCurrentSupportObservation outputSupport)
             {
                 Evaluation = evaluation;
                 PreTransition = preTransition;
@@ -28,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PreliminaryMotion = preliminaryMotion;
                 LifecycleTransition = lifecycleTransition;
                 LandingCompletionPending = landingCompletionPending;
+                OutputSupport = outputSupport;
             }
 
             CharacterFootStateEvaluation Evaluation { get; }
@@ -39,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionResult PreliminaryMotion { get; }
             CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
             bool LandingCompletionPending { get; }
+            internal CharacterFootCurrentSupportObservation OutputSupport { get; }
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
@@ -74,9 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref context.Interpolation,
                     in postTransition);
                 CharacterFootHardConstraintResult hardConstraint =
-                    CharacterFootHardConstraintResolver.Resolve(
-                        in context,
-                        in frame,
+                    ResolveOutputSupportConstraint(
+                        in context, in frame, in interpolation,
+                        OutputSupport,
                         context.Interpolation.EffectiveCorrection);
                 CharacterFootInterpolationRuntime.ApplyHardConstraint(
                     ref context.Interpolation,
@@ -219,7 +222,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in unavailable,
                     in result,
                     in lifecycleTransition,
-                    false);
+                    false,
+                    default);
                 return unavailable;
             }
             interpolation =
@@ -246,6 +250,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in frameSwing)
                 : frameSwing;
+            CharacterFootCurrentSupportObservation outputSupport = preTransition.SuppressOutput
+                ? default
+                : QueryOutputSupport(in context, in evaluation, in interpolation);
             CharacterFootHardConstraintResult hardConstraint =
                 preTransition.SuppressOutput
                     ? new CharacterFootHardConstraintResult(
@@ -257,9 +264,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         default,
                         default,
                         default)
-                    : CharacterFootHardConstraintResolver.Resolve(
-                        in context,
-                        in frame,
+                    : ResolveOutputSupportConstraint(
+                        in context, in frame, in interpolation, in outputSupport,
                         context.Interpolation.EffectiveCorrection);
             CharacterFootInterpolationRuntime.ApplyHardConstraint(
                 ref context.Interpolation,
@@ -311,7 +317,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in request,
                 in result,
                 in lifecycleTransition,
-                landingCompletionPending);
+                landingCompletionPending,
+                in outputSupport);
             return request;
         }
 
@@ -331,6 +338,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default:
                     return target.Correction;
             }
+        }
+
+        static CharacterFootCurrentSupportObservation QueryOutputSupport(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateEvaluation evaluation,
+            in CharacterFootInterpolationResult interpolation)
+        {
+            CharacterFootStateFrame frame = evaluation.Frame;
+            CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
+            CharacterFootSupportTarget support = interpolation.SupportTarget;
+            float rotationWeight = context.Contact.HasContact
+                ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
+            if (!evaluation.Grounded || frame.FootPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon ||
+                !TryResolveFootGoalPose(in foot,
+                    CharacterFootConstraintMath.ResolveOriginalSole(foot) + interpolation.Correction,
+                    in support, frame.FootPlacementWeight, rotationWeight,
+                    out _, out _, out _, out Vector3 ankle, out Quaternion rotation))
+                return default;
+            CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(ankle, rotation);
+            return evaluation.SoleSupportQuery.Query(in frame, in contacts);
+        }
+
+        static CharacterFootHardConstraintResult ResolveOutputSupportConstraint(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame,
+            in CharacterFootInterpolationResult interpolation,
+            in CharacterFootCurrentSupportObservation outputSupport,
+            Vector3 correction)
+        {
+            CharacterFootHardConstraintResult constraint = CharacterFootHardConstraintResolver.Resolve(
+                in context, in frame, correction);
+            if (!outputSupport.Available)
+                return constraint;
+            Vector3 up = frame.ComponentUp.normalized;
+            float clearanceCorrection = Mathf.Max(outputSupport.HeelRequiredDisplacement,
+                outputSupport.ToeRequiredDisplacement) / frame.FootPlacementWeight;
+            Vector3 minimum = interpolation.Correction + up * clearanceCorrection;
+            if (constraint.Available && constraint.Owner != CharacterFootSafetyFloorOwner.PlantTarget &&
+                Vector3.Dot(constraint.MinimumCorrection - minimum, up) >= 0f)
+                return constraint;
+            return new CharacterFootHardConstraintResult(
+                true, true, CharacterFootSafetyFloorOwner.OutputFootprint,
+                outputSupport.Target.SurfaceIdentity, 0, correction, minimum,
+                CharacterFootConstraintMath.RaiseToMinimum(correction, minimum, up));
         }
 
         static CharacterFootPathContinuityFact CompleteContinuity(

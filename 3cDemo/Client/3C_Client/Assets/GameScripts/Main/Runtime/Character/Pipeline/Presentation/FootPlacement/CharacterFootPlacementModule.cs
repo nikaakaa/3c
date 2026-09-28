@@ -557,7 +557,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in leftConstraintFrame,
                 in leftStrideRequest,
                 facts.Grounded,
-                goalRoot);
+                goalRoot,
+                new CharacterFootSoleSupportQuery(m_WorldQuery,
+                    m_Settings.CurrentSupportQuery, m_Settings.LandingPrediction));
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
                 in rightCurrentStep,
@@ -565,7 +567,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightConstraintFrame,
                 in rightStrideRequest,
                 facts.Grounded,
-                goalRoot);
+                goalRoot,
+                new CharacterFootSoleSupportQuery(m_WorldQuery,
+                    m_Settings.CurrentSupportQuery, m_Settings.LandingPrediction));
             CharacterFootPlacementRequest leftRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
@@ -672,7 +676,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in leftCurrentSupport,
                         in leftResolved,
                         in leftFootMotion,
-                        in leftGoal);
+                        in leftGoal,
+                        leftCompletion.OutputSupport);
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
@@ -688,7 +693,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in rightCurrentSupport,
                         in rightResolved,
                         in rightFootMotion,
-                        in rightGoal);
+                        in rightGoal,
+                        rightCompletion.OutputSupport);
                 var primarySupportDiagnostics =
                     new CharacterFootPrimarySupportDiagnostics(in primarySupport);
                 var strideDiagnostics =
@@ -1038,7 +1044,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSource,
                     0f,
                     true,
-                    currentSole,
+                    animatedFoot,
                     in timeline,
                     currentSegmentRemainingSeconds,
                     bodyTrajectory,
@@ -1057,7 +1063,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSource,
                     events.TimeToLandingSeconds,
                     false,
-                    currentSole,
+                    animatedFoot,
                     in timeline,
                     currentSegmentRemainingSeconds,
                     bodyTrajectory,
@@ -1104,7 +1110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingStepSource stepSource,
             float timeToLandingSeconds,
             bool currentContact,
-            Vector3 currentSole,
+            CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
             CharacterFutureBodyTranslation bodyTrajectory,
@@ -1113,6 +1119,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
         {
+            Vector3 currentSole = CharacterFootConstraintMath.ResolveOriginalSole(animatedFoot);
             pendingObservation = committedObservation;
             ulong trajectoryGeneration = timeline.IsValid ? timeline.Generation : 0;
             if (!footMotion.IsValid)
@@ -1236,7 +1243,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_WorldQuery,
                     observationPool,
                     committedObservation,
-                    out pendingObservation);
+                    out pendingObservation,
+                    currentContact ? animatedFoot.HeelPosition - currentSole : default,
+                    currentContact ? animatedFoot.ToePosition - currentSole : default);
             CharacterFootLandingObservationPage observationPage =
                 observation.Page;
             CharacterFootLandingQueryResult queryResult =

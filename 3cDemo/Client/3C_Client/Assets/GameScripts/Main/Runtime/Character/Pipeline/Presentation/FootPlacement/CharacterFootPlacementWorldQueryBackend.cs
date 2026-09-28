@@ -6,7 +6,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public enum CharacterFootPlacementQueryShape : byte
     {
-        Sphere = 1
+        Sphere = 1,
+        Sole = 2
     }
 
     public enum CharacterFootPlacementQueryPurpose : byte
@@ -27,8 +28,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumDistance,
             float radius,
             int layerMask,
-            float minimumGroundNormalDot)
+            float minimumGroundNormalDot,
+            Vector3 heelOffset = default,
+            Vector3 toeOffset = default)
         {
+            HeelOffset = heelOffset;
+            ToeOffset = toeOffset;
             Shape = shape;
             Purpose = purpose;
             FootIndex = footIndex;
@@ -43,6 +48,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
         public CharacterFootPlacementQueryShape Shape { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        public Vector3 HeelOffset { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        public Vector3 ToeOffset { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
         public CharacterFootPlacementQueryPurpose Purpose { get; }
@@ -138,6 +149,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLandingQueryResult Query(
             in CharacterFootPlacementQueryRequest request)
         {
+            if (request.Shape == CharacterFootPlacementQueryShape.Sole)
+                return QuerySole(in request);
             bool requestValid = IsGroundRequestValid(in request);
             int count = QueryAll(in request, out bool capacityExceeded,
                 out CharacterFootSupportQueryDiagnostics coverage);
@@ -184,6 +197,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootLandingQueryCandidateSelectionState.Selected,
                     count,
                     selected,
+                    coverage));
+        }
+
+        CharacterFootLandingQueryResult QuerySole(
+            in CharacterFootPlacementQueryRequest request)
+        {
+            var heelRequest = new CharacterFootPlacementQueryRequest(
+                CharacterFootPlacementQueryShape.Sphere, request.Purpose,
+                request.FootIndex, request.Origin + request.HeelOffset,
+                request.Direction, request.MaximumDistance, request.Radius,
+                request.LayerMask, request.MinimumGroundNormalDot);
+            var toeRequest = new CharacterFootPlacementQueryRequest(
+                CharacterFootPlacementQueryShape.Sphere, request.Purpose,
+                request.FootIndex, request.Origin + request.ToeOffset,
+                request.Direction, request.MaximumDistance, request.Radius,
+                request.LayerMask, request.MinimumGroundNormalDot);
+            CharacterFootLandingQueryResult heel = Query(in heelRequest);
+            CharacterFootLandingQueryResult toe = Query(in toeRequest);
+            if (!heel.Accepted)
+                return heel;
+            if (!toe.Accepted)
+                return toe;
+            Vector3 up = -request.Direction.normalized;
+            Vector3 heelSole = heel.Support.Point - request.HeelOffset;
+            Vector3 toeSole = toe.Support.Point - request.ToeOffset;
+            bool selectHeel = Vector3.Dot(heelSole - toeSole, up) >= 0f;
+            CharacterFootLandingSupport selected = selectHeel ? heel.Support : toe.Support;
+            Vector3 point = selectHeel ? heelSole : toeSole;
+            CharacterFootSupportQueryDiagnostics h = heel.SelectionDiagnostics.Coverage;
+            CharacterFootSupportQueryDiagnostics t = toe.SelectionDiagnostics.Coverage;
+            var coverage = new CharacterFootSupportQueryDiagnostics(
+                h.SearchHitCount + t.SearchHitCount, h.SupportHitCount + t.SupportHitCount,
+                h.OutsideSupportRayCount + t.OutsideSupportRayCount,
+                h.SteepSurfaceCount + t.SteepSurfaceCount);
+            return new CharacterFootLandingQueryResult(
+                CharacterFootLandingQueryRejectReason.None,
+                new CharacterFootLandingSupport(selected.SurfaceIdentity,
+                    point, selected.Normal, selected.Distance),
+                new CharacterFootLandingQuerySelectionDiagnostics(
+                    CharacterFootLandingQueryCandidateSelectionState.Selected,
+                    heel.SelectionDiagnostics.ValidCandidateCount + toe.SelectionDiagnostics.ValidCandidateCount,
+                    selectHeel ? heel.SelectionDiagnostics.Selected : toe.SelectionDiagnostics.Selected,
                     coverage));
         }
 

@@ -990,4 +990,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Second.Clear();
         }
     }
+    internal readonly struct CharacterFootSoleSupportQuery
+    {
+        readonly ICharacterFootCurrentSupportWorldQuery m_World;
+        readonly CharacterFootCurrentSupportQuerySettings m_Settings;
+        readonly CharacterFootLandingPredictionSettings m_LandingSettings;
+
+        internal CharacterFootSoleSupportQuery(
+            ICharacterFootCurrentSupportWorldQuery world,
+            CharacterFootCurrentSupportQuerySettings settings,
+            CharacterFootLandingPredictionSettings landingSettings)
+        {
+            m_World = world;
+            m_Settings = settings;
+            m_LandingSettings = landingSettings;
+        }
+
+        internal CharacterFootCurrentSupportObservation Query(
+            in CharacterFootStateFrame frame,
+            in CharacterFootPlacementSoleContactPose contacts)
+        {
+            var heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
+                frame.Side, CharacterFootCurrentSupportProbeKind.Heel,
+                contacts.HeelPosition, frame.ComponentUp, m_Settings, m_LandingSettings);
+            var toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
+                frame.Side, CharacterFootCurrentSupportProbeKind.Toe,
+                contacts.ToePosition, frame.ComponentUp, m_Settings, m_LandingSettings);
+            CharacterFootCurrentSupportProbeResult heel = m_World.Query(in heelRequest);
+            CharacterFootCurrentSupportProbeResult toe = m_World.Query(in toeRequest);
+            return CharacterFootCurrentSupportObservation.Resolve(
+                frame.FrameSequence, frame.CompletionIdentity, frame.WorldRevision,
+                in heelRequest, in toeRequest, in heel, in toe);
+        }
+    }
+
 }

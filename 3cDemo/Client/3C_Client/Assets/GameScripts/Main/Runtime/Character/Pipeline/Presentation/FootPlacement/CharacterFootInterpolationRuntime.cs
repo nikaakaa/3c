@@ -145,6 +145,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!constraint.Available || adjustment.sqrMagnitude == 0f)
                 return;
             state.EffectiveCorrection = constraint.OutputCorrection;
+            if (state.Policy == CharacterFootInterpolationPolicy.ReleaseResidual)
+                state.Residual += adjustment;
             if (state.HasPreviousResponseOutputPoint)
                 state.PreviousResponseOutputPoint += adjustment;
             if (!state.ResponseHistory.HasValue)

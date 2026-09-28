@@ -32,7 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         GroundPathEnvelope = 1,
         ContactAnchor = 2,
-        PlantTarget = 3
+        PlantTarget = 3,
+        OutputFootprint = 4
     }
 
     internal enum CharacterFootTransitionPhase : byte
@@ -1630,7 +1631,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             in CharacterFootStrideRequest stride,
             bool grounded,
-            Transform goalRoot)
+            Transform goalRoot,
+            CharacterFootSoleSupportQuery soleSupportQuery)
         {
             Side = side;
             FormalFootMotion = formalFootMotion;
@@ -1639,6 +1641,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Stride = stride;
             Grounded = grounded;
             GoalRoot = goalRoot;
+            SoleSupportQuery = soleSupportQuery;
         }
 
         internal CharacterFootSide Side { get; }
@@ -1648,6 +1651,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootStrideRequest Stride { get; }
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }
+        internal CharacterFootSoleSupportQuery SoleSupportQuery { get; }
     }
 
     internal readonly struct CharacterFootTransitionDecision

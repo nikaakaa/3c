@@ -204,7 +204,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rawLanding,
             Vector3 componentUp,
             string profileRevision,
-            ulong worldRevision)
+            ulong worldRevision,
+            Vector3 heelOffset = default,
+            Vector3 toeOffset = default)
         {
             if ((side != CharacterFootSide.Left && side != CharacterFootSide.Right) ||
                 (queryPurpose != CharacterFootPlacementQueryPurpose.FutureLanding &&
@@ -229,6 +231,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ComponentUpX = Quantize(up.x, DirectionScale);
             ComponentUpY = Quantize(up.y, DirectionScale);
             ComponentUpZ = Quantize(up.z, DirectionScale);
+            HeelOffset = new Vector3(Quantize(heelOffset.x, PositionScale),
+                Quantize(heelOffset.y, PositionScale), Quantize(heelOffset.z, PositionScale)) / PositionScale;
+            ToeOffset = new Vector3(Quantize(toeOffset.x, PositionScale),
+                Quantize(toeOffset.y, PositionScale), Quantize(toeOffset.z, PositionScale)) / PositionScale;
             ProfileRevision = profileRevision;
             WorldRevision = worldRevision;
             Identity = 0;
@@ -249,6 +255,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal string ProfileRevision { get; }
         internal ulong WorldRevision { get; }
         internal ulong Identity { get; }
+        internal Vector3 HeelOffset { get; }
+        internal Vector3 ToeOffset { get; }
         internal Vector3 CanonicalRawLanding => new Vector3(
             RawLandingX / PositionScale,
             RawLandingY / PositionScale,
@@ -271,6 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ComponentUpX == other.ComponentUpX &&
             ComponentUpY == other.ComponentUpY &&
             ComponentUpZ == other.ComponentUpZ &&
+            HeelOffset.Equals(other.HeelOffset) && ToeOffset.Equals(other.ToeOffset) &&
             WorldRevision == other.WorldRevision &&
             string.Equals(ProfileRevision, other.ProfileRevision, StringComparison.Ordinal);
 
@@ -296,6 +305,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Add(ref hash, unchecked((ulong)(uint)key.ComponentUpX));
             Add(ref hash, unchecked((ulong)(uint)key.ComponentUpY));
             Add(ref hash, unchecked((ulong)(uint)key.ComponentUpZ));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.HeelOffset.x)));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.HeelOffset.y)));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.HeelOffset.z)));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.ToeOffset.x)));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.ToeOffset.y)));
+            Add(ref hash, unchecked((ulong)(uint)BitConverter.SingleToInt32Bits(key.ToeOffset.z)));
             Add(ref hash, key.ProfileRevision);
             Add(ref hash, key.WorldRevision);
             return hash != 0 ? hash : 1UL;
@@ -621,7 +636,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportObservation currentSupport,
             in CharacterResolvedFootResult resolved,
             in CharacterFootSwingMotionResult footMotion,
-            in CharacterFullBodyIkGoal goal)
+            in CharacterFullBodyIkGoal goal,
+            in CharacterFootCurrentSupportObservation outputSupport)
         {
             Side = result.Side;
             State = result.State;
@@ -687,6 +703,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
             CurrentSupport = new CharacterFootCurrentSupportDiagnostics(
                 in currentSupport);
+            OutputSupport = new CharacterFootCurrentSupportDiagnostics(in outputSupport);
             Resolved = new CharacterResolvedFootDiagnostics(
                 in resolved,
                 in sourcePose);
@@ -838,6 +855,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public CharacterFootCurrentSupportDiagnostics CurrentSupport { get; }
+        public CharacterFootCurrentSupportDiagnostics OutputSupport { get; }
         public CharacterResolvedFootDiagnostics Resolved { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]
@@ -1361,7 +1379,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Vector3 up = key.CanonicalComponentUp;
             return new CharacterFootPlacementQueryRequest(
-                CharacterFootPlacementQueryShape.Sphere,
+                key.QueryPurpose == CharacterFootPlacementQueryPurpose.CurrentContactVerification
+                    ? CharacterFootPlacementQueryShape.Sole
+                    : CharacterFootPlacementQueryShape.Sphere,
                 key.QueryPurpose,
                 key.Side == CharacterFootSide.Left ? 0 : 1,
                 key.CanonicalRawLanding + up * settings.CastAbove,
@@ -1369,7 +1389,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.CastAbove + settings.CastBelow,
                 settings.SphereRadius,
                 settings.GroundLayerMask,
-                settings.MinimumGroundNormalDot);
+                settings.MinimumGroundNormalDot,
+                key.HeelOffset,
+                key.ToeOffset);
         }
 
         internal static CharacterFootLandingObservationResult ResolveObservation(
@@ -1385,7 +1407,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterFootLandingWorldQuery world,
             CharacterFootLandingObservationPagePool pool,
             CharacterFootLandingObservationPage committedPage,
-            out CharacterFootLandingObservationPage pendingPage)
+            out CharacterFootLandingObservationPage pendingPage,
+            Vector3 heelOffset = default,
+            Vector3 toeOffset = default)
         {
             if (world == null)
                 throw new ArgumentNullException(nameof(world));
@@ -1415,7 +1439,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rawLandingCandidate,
                 componentUp,
                 profileRevision,
-                worldRevision);
+                worldRevision,
+                heelOffset,
+                toeOffset);
             CharacterFootLandingObservationQueryReason queryReason =
                 CharacterFootLandingObservationQueryReason.None;
             float queryInputDistance = 0f;

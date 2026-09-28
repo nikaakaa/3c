@@ -148,7 +148,7 @@
 - 业务不变的前提是消费者严格按有效数量读取。取消尾部清理须先统一这一合同；跨节点共享不可变数据需要正式页寿命支持，不能引入第二条借用路径。
 - 实施结果：公共复制使用 NativeSlice 批量复制速度、参数、可用性及有效贡献/权重；贡献只复制有效数量，尾部统一清零，不传播旧页无效尾部记录。Blend Pose 已完整写回全部输出字段，因而删除其“先复制再覆盖”，只保留布局校验和输出贡献尾部清理。其它节点仍经同一 CopyMetadata 继承需要的字段，未引入共享页或绕过 Commit 的借用。
 - 续实施：Layered Bone Blend 与状态过渡直接生成各字段，不再预复制随后覆盖；生成贡献后统一清理尾部。公共 CopyAttributes 只继承参数、贡献、足部和状态信息，CopyMetadata 在其上增加速度复制。Additive 使用 CopyAttributes，速度由自身生成；惯性节点仅在不施加残差时复制骨骼与速度，激活残差时直接生成二者，仍逐帧记录完整历史。Additive 零权重以及 Layered 的单侧骨骼权重为零时复制有效侧骨骼，保留两侧求值、参数补缺、贡献与连续性规则；浮点结果不承诺与旧归一化过程逐位一致。
-- 纯复制续收口：EntryPose、LinkedPose、MotionMatching、StateMachine 输出桥、AnimationSlot 的透传/NoPose、RootOrientationWarp 输入及 FullBodyIK 工作页的8处逐元素姿势复制改为 NativeSlice.CopyFrom。原长度/布局预检仍在复制前，修改/求解仍在独立输出页进行；没有改成共享输入页或跳过逐骨骼有效性检查。
+- 纯复制续收口：EntryPose、LinkedPose、MotionMatching、StateMachine 输出桥、AnimationSlot 的透传/NoPose、RootOrientationWarp 输入及 FullBodyIK 工作页的7处逐元素姿势复制改为 NativeSlice.CopyFrom。原长度/布局预检仍在复制前，修改/求解仍在独立输出页进行；没有改成共享输入页或跳过逐骨骼有效性检查。
 
 ### AP09 惯性混合七组残差无条件复制（已实施，未实跑）
 

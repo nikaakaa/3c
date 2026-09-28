@@ -339,6 +339,13 @@
 - 已覆盖公共元数据复制、Blend、Layered、StateMachine 和 AnimationSlot 的逐项写入。后者原先未清旧尾部，现在采用同一完成入口。写入容量检查仍先于范围登记；构造单条贡献或复制权重中途失败时，范围已经登记，Discard 不交换 committed 页，后续复用仍能清掉半写数据。Stop/Reset 不清数据也不缩小这段范围；实际销毁沿原 NativeArray Dispose。
 - 静态检查了新页、数量增减、不变与归零、追加中途异常、重复 Discard 后复用及成功后再失败的路径；确认节点双页独立创建，惯性节点只改已完成前缀内的贡献。保留输出完成身份与发布时序。增加逐条写入时一次前缀比较，减少空闲容量清零；未编译或实测，不预判小容量下净收益。
 
+### AP37 BlendSpace 足部曲线采样触发全曲线校验和 keys 分配（2026-09-29，已实施，未运行）
+
+- BlendSpace 对每个活动样本的左右脚调用 AnimationFootFeatureCurveSet.Sample。该入口每次 RequireValid，递归检查当前/下一步及生物力学曲线；RequireCurve 读取 AnimationCurve.keys 创建关键帧数组，RequireRoute 为每条曲线拼接字段名。属于明确的稳定播放分配，并非所有 new 都只是值类型构造。
+- Player 装配时对具有足部特征的样本完成左右曲线校验；运行时沿 Clip Player 已有的 SamplePrepared 入口采样，不再逐帧读取 keys 或格式化校验字段。原始 Evaluate、Clamp、曲线插值和样本构造公式未变，不涉及四元数精度取舍。固定曲线变更需重新装配。
+- 全曲线非法配置现在在装配时拒绝，不再延迟到该样本激活；没有为不合法配置增加默认曲线。生物力学 Sample 本身不重复 RequireValid。当前 MotionMatching 消费离线样本，未命中这条曲线校验路径，未将其计入收益。
+- 静态核对两个 BlendSpace 调用点和既有 Clip Player 入口，确认原 keys 读取及字符串创建已退出此运行链。未编译、未实跑，尚不能把此前报告的 GC 全部归因于此项。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

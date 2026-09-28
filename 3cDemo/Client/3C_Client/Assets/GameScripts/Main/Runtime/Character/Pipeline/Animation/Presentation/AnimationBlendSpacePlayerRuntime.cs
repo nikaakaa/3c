@@ -144,7 +144,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SampleIndices = new Dictionary<CharacterAnimationBlendSpaceSampleId, int>(m_Plan.Samples.Count);
             m_ActiveSampleIndices = new int[m_Plan.Samples.Count];
             for (int i = 0; i < m_Plan.Samples.Count; i++)
-                m_SampleIndices.Add(m_Plan.Samples[i].SampleId, i);
+            {
+                CharacterAnimationBlendSpaceSamplePlan sample = m_Plan.Samples[i];
+                m_SampleIndices.Add(sample.SampleId, i);
+                if (sample.HasFootFeatures)
+                {
+                    sample.LeftFootFeatures.RequireValid();
+                    sample.RightFootFeatures.RequireValid();
+                }
+            }
             m_SourceParameters = new SourceParameterBinding[parameters.Count];
             m_ParameterIds = new PoseParameterId[parameters.Count];
             m_ParameterUsages = new CharacterPoseParameterUsage[parameters.Count];
@@ -426,13 +434,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     ulong predictionSourceIdentity = AnimationPredictedFootStepSample.SourceIdentity(
                         ActiveState.PredictionSourceIdentity, sample.SampleId.Value);
                     left.Add(
-                        sample.LeftFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
+                        sample.LeftFootFeatures.SamplePrepared(time.NormalizedTime).BindPredictionSource(
                             predictionSourceIdentity,
                             time.Cycle),
                         weight,
                         1f);
                     right.Add(
-                        sample.RightFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
+                        sample.RightFootFeatures.SamplePrepared(time.NormalizedTime).BindPredictionSource(
                             predictionSourceIdentity,
                             time.Cycle),
                         weight,

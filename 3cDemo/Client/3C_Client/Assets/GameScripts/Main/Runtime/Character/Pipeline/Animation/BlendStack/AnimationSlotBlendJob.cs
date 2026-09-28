@@ -111,11 +111,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationBlendSourcePoseNativeReadBinding sources)
         {
             AnimationSlotBlendFramePlan plan = workspace.FramePlan;
-            plan.RequireValidLayout();
             AnimationSlotBlendFramePlanHeader header = plan.Header;
             AnimationPlayerPoseNativeWriteBinding final = workspace.FinalWriteBinding;
 
-            RequirePlan(plan, sources.SourceCapacity);
+            RequireSourceReferences(plan, sources.SourceCapacity);
             RequireSourceBinding(sources, header);
             RequireFinalBinding(final, header);
             RequireWorkspaceBinding(workspace, header);
@@ -1139,94 +1138,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return -1;
         }
 
-        static void RequirePlan(AnimationSlotBlendFramePlan plan, int sourceCapacity)
+        static void RequireSourceReferences(AnimationSlotBlendFramePlan plan, int sourceCapacity)
         {
-            plan.RequireValidLayout();
-            AnimationSlotBlendFramePlanHeader header = plan.Header;
-            int expectedSourceCapacity = checked(
-                (header.MaxActiveSourceEntries + 1) *
-                AnimationBlendSourcePoseWorkspace.PhysicalPageCount);
-            if (sourceCapacity != expectedSourceCapacity)
-            {
-                throw new ArgumentException(
-                    $"Animation Slot Blend source capacity '{sourceCapacity}' does not match plan capacity '{expectedSourceCapacity}'.");
-            }
-
-            int liveCount = 0;
-            int storedCount = 0;
-            float scalarWeight = 0f;
-            float leftFootWeight = 0f;
-            float rightFootWeight = 0f;
-            for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
+            for (int contributionIndex = 0; contributionIndex < plan.ContributionCount; contributionIndex++)
             {
                 AnimationSlotBlendFramePlanEntry entry = plan.GetEntry(contributionIndex);
-                if (!entry.IsValid)
-                    throw new ArgumentException($"Animation Slot Blend contribution #{contributionIndex} is invalid.");
                 if (entry.Kind == AnimationPoseContributionKind.Live &&
                     (uint)entry.SourceCaptureIndex >= (uint)sourceCapacity)
                 {
                     throw new ArgumentException(
                         $"Animation Slot Blend live contribution #{contributionIndex} capture index '{entry.SourceCaptureIndex}' exceeds source capacity '{sourceCapacity}'.");
                 }
-                for (int previousIndex = 0; previousIndex < contributionIndex; previousIndex++)
-                {
-                    if (entry.ContributionContinuityIdentity ==
-                        plan.GetEntry(previousIndex).ContributionContinuityIdentity)
-                    {
-                        throw new ArgumentException(
-                            $"Animation Slot Blend contributions #{previousIndex} and #{contributionIndex} share continuity identity '{entry.ContributionContinuityIdentity}'.");
-                    }
-                }
-                if (entry.Kind == AnimationPoseContributionKind.Live)
-                    liveCount++;
-                else if (entry.Kind == AnimationPoseContributionKind.Stored)
-                    storedCount++;
-                else
-                    throw new ArgumentException($"Animation Slot Blend contribution #{contributionIndex} kind '{entry.Kind}' is unsupported.");
-                scalarWeight += entry.ScalarWeight;
-                leftFootWeight += entry.LeftFootWeight;
-                rightFootWeight += entry.RightFootWeight;
             }
-            if (!float.IsFinite(scalarWeight) || !float.IsFinite(leftFootWeight) ||
-                !float.IsFinite(rightFootWeight))
-                throw new ArgumentException("Animation Slot Blend contribution weights are not finite.");
-            if (scalarWeight > 1f + WeightTolerance ||
-                leftFootWeight > 1f + WeightTolerance ||
-                rightFootWeight > 1f + WeightTolerance)
-            {
-                throw new ArgumentException(
-                    $"Animation Slot Blend contribution weights exceed one: scalar={scalarWeight:R}, left={leftFootWeight:R}, right={rightFootWeight:R}.");
-            }
-            if (Mathf.Abs(scalarWeight - header.OutputWeight) > WeightTolerance)
-            {
-                throw new ArgumentException(
-                    $"Animation Slot Blend scalar contribution '{scalarWeight:R}' does not match output weight '{header.OutputWeight:R}'.");
-            }
-            if (liveCount > header.MaxActiveSourceEntries)
-                throw new ArgumentException($"Animation Slot Blend live contribution count '{liveCount}' exceeds capacity '{header.MaxActiveSourceEntries}'.");
-            if (storedCount > 1)
-                throw new ArgumentException($"Animation Slot Blend stored contribution count '{storedCount}' exceeds one.");
-            if (header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1)
-                throw new ArgumentException($"Animation Slot Blend StoredCapture plan requires one stored contribution, actual '{storedCount}'.");
-            if (header.Kind == AnimationSlotBlendFramePlanKind.Unavailable &&
-                (liveCount != 0 || storedCount != 0 || scalarWeight != 0f))
-            {
-                throw new ArgumentException(
-                    $"Animation Slot Blend Unavailable plan contains live={liveCount}, stored={storedCount}, scalar={scalarWeight:R}.");
-            }
-
-            bool hasOutputWeight = header.OutputWeight > 0f;
-            for (int boneIndex = 0; boneIndex < header.BoneCount; boneIndex++)
-            {
-                float boneWeight = 0f;
-                for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
-                    boneWeight += plan.GetDenseBoneWeight(contributionIndex, boneIndex);
-                if (!float.IsFinite(boneWeight) || boneWeight > 1f + WeightTolerance)
-                    throw new ArgumentException();
-                hasOutputWeight |= boneWeight > 0f;
-            }
-            if (header.Availability == AnimationPoseAvailability.Pose && !hasOutputWeight)
-                throw new ArgumentException();
         }
 
         static void RequireSourceBinding(

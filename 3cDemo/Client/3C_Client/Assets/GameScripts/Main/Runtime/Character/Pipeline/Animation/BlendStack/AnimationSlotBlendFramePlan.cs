@@ -206,7 +206,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationSlotBlendFramePlanEntry> entries,
             NativeArray<float> denseBoneWeights)
         {
-            header.RequireValid();
             int entryOffset = checked(header.PageIndex * header.ContributionCapacity);
             int denseOffset = checked(entryOffset * header.BoneCount);
             if (!entries.IsCreated || entries.Length != checked(header.ContributionCapacity * 2) ||
@@ -226,10 +225,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal int ContributionCapacity => m_Header.ContributionCapacity;
         internal int BoneCount => m_Header.BoneCount;
         internal int ParameterCount => m_Header.ParameterCount;
-        internal bool IsCreated =>
-            m_Header.PlanGeneration != 0 &&
-            m_Entries.Length == m_Header.ContributionCapacity &&
-            m_DenseBoneWeights.Length == checked(m_Header.ContributionCapacity * m_Header.BoneCount);
 
         internal AnimationSlotBlendFramePlanEntry GetEntry(int contributionIndex)
         {
@@ -245,11 +240,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return m_DenseBoneWeights[contributionIndex * BoneCount + boneIndex];
         }
 
-        internal void RequireValidLayout()
-        {
-            m_Header.RequireValid();
-            if (!IsCreated)
-                throw new InvalidOperationException("Animation Slot Blend frame plan is not created.");
-        }
     }
 }

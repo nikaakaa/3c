@@ -163,7 +163,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationSlotBlendHistoryWorkspaceBinding history,
             AnimationSlotBlendScratchWorkspaceBinding scratch)
         {
-            framePlan.RequireValidLayout();
             if (framePlan.Header.CompletionIdentity != finalWriteBinding.CompletionIdentity ||
                 framePlan.Header.PhysicalPlayerIndex != finalWriteBinding.Range.PhysicalPlayerIndex)
             {
@@ -493,7 +492,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Slot Blend inactive plan page was not validated.");
 
             AnimationSlotBlendFramePlanHeader header = m_PlanHeaders[m_PreparationPageIndex];
-            RequirePreparedPageContent(header);
             int committedPage = m_PreparationPageIndex;
             Interlocked.Exchange(ref m_ActivePageIndex, committedPage);
             m_LastCommittedCompletionIdentity = header.CompletionIdentity;
@@ -610,7 +608,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void RequirePreparedPageContent(AnimationSlotBlendFramePlanHeader header)
         {
-            header.RequireValid();
             AnimationPlayerPoseNativeWriteBinding finalWriteBinding = GetFinalWriteBinding(header.PageIndex);
             RequireFinalWriteBinding(in finalWriteBinding);
             if (finalWriteBinding.CompletionIdentity != header.CompletionIdentity)
@@ -639,8 +636,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (m_PlanEntryWritten[entryIndex] != 1)
                     throw new InvalidOperationException($"Animation Slot Blend frame plan entry #{i} is incomplete.");
                 AnimationSlotBlendFramePlanEntry entry = m_PlanEntries[entryIndex];
-                if (!entry.IsValid)
-                    throw new InvalidOperationException($"Animation Slot Blend frame plan entry #{i} is invalid.");
                 for (int previous = 0; previous < i; previous++)
                 {
                     AnimationSlotBlendFramePlanEntry existing = m_PlanEntries[entryOffset + previous];
@@ -681,10 +676,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
                 {
                     int denseIndex = checked(densePageOffset + contributionIndex * m_BoneCount + boneIndex);
-                    if (m_PlanDenseBoneWeightWritten[denseIndex] != 1 ||
-                        !IsNormalized(m_PlanDenseBoneWeights[denseIndex]))
+                    if (m_PlanDenseBoneWeightWritten[denseIndex] != 1)
                     {
-                        throw new InvalidOperationException("Animation Slot Blend dense Bone weight plan is incomplete or invalid.");
+                        throw new InvalidOperationException("Animation Slot Blend dense Bone weight plan is incomplete.");
                     }
                     boneWeight += m_PlanDenseBoneWeights[denseIndex];
                 }

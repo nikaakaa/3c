@@ -164,7 +164,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public double Forward(double continuousTime)
         {
-            RequireValid();
             if (!double.IsFinite(continuousTime) || continuousTime < 0d)
                 throw new ArgumentOutOfRangeException(nameof(continuousTime));
             if (!Loop)
@@ -185,7 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public double Inverse(double unwrappedPhase, double rawContinuationTime)
         {
-            RequireValid();
             if (!double.IsFinite(unwrappedPhase) || !double.IsFinite(rawContinuationTime) || rawContinuationTime < 0d)
                 throw new ArgumentOutOfRangeException();
             if (!Loop)

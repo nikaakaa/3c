@@ -305,6 +305,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPoseParameterDeclaration declaration =
                     m_InputContract.Parameters[i];
+                if (declaration.ValueType == PoseParameterValueType.Vector3 ||
+                    declaration.ValueType == PoseParameterValueType.Quaternion)
+                    continue;
                 row.PoseParameters[row.ParameterOffset + i] =
                     declaration.Usage == CharacterPoseParameterUsage.AnimatedProperty
                         ? declaration.DefaultValue

@@ -491,6 +491,15 @@ internal sealed class PerformanceCaptureController
                 throw new InvalidDataException($"Performance Player file '{file.path}' identity mismatch.");
             }
         }
+        PerformanceFileDocument[] buildInputs = _playerManifest.files.Where(value => value.role == "build-inputs").ToArray();
+        if (buildInputs.Length != 1 || buildInputs[0].path != "build-inputs.json" ||
+            string.IsNullOrWhiteSpace(_playerManifest.build_inputs_hash) || buildInputs[0].sha256 != _playerManifest.build_inputs_hash)
+            throw new InvalidDataException("Performance Player build-input identity is missing or does not match its closure.");
+        PerformanceBuildInputsDocument inputEvidence = ReadJson<PerformanceBuildInputsDocument>(ResolvePath(manifestRoot, buildInputs[0].path));
+        if (inputEvidence.schema != PerformanceCaptureSchemas.BuildInputs || inputEvidence.files == null || inputEvidence.files.Length == 0 ||
+            inputEvidence.unity_version != _playerManifest.unity_version || inputEvidence.build_target != _playerManifest.build_target ||
+            inputEvidence.scripting_backend != _playerManifest.scripting_backend)
+            throw new InvalidDataException("Performance Player build-input evidence is invalid.");
         string closureIdentity = string.Join("\n", _playerManifest.files.Select(value =>
             $"{value.role}|{value.path}|{value.size.ToString(CultureInfo.InvariantCulture)}|{value.sha256}"));
         string buildSeed = string.Join("|", new[]

@@ -411,11 +411,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     options = BuildOptions.Development | BuildOptions.StrictMode,
                     extraScriptingDefines = PerformanceInstrumentationBuildInput.CreateBuildDefines(instrumentationInputPath)
                 };
+                string buildInputsJson = CaptureBuildInputs(options);
+                string buildInputsHash = Sha256(Encoding.UTF8.GetBytes(buildInputsJson));
                 BuildReport report;
                 using (ProductBuildValidationContext.Enter(ProductBuildKind.PerformancePlayer))
                     report = BuildPipeline.BuildPlayer(options);
                 if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
                     throw new InvalidOperationException($"Performance Player build failed: {report.summary.result}");
+                if (!string.Equals(buildInputsJson, CaptureBuildInputs(options), StringComparison.Ordinal))
+                    throw new InvalidDataException("性能 Player 构建期间输入文件发生变化，请保存配置后重新构建；本次不发布构建身份。");
+                File.WriteAllText(Path.Combine(candidate, "build-inputs.json"), buildInputsJson, new UTF8Encoding(false));
                 RequireFile(executable, "Performance Player executable");
                 PublishNativeSymbols(candidate, executable);
                 string[] pdbs = Directory.GetFiles(candidate, "*.pdb", SearchOption.AllDirectories);
@@ -455,6 +460,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 string manifestPath = Path.Combine(candidate, "player-manifest.json");
                 var manifest = new PerformancePlayerManifestDocument
                 {
+                    build_inputs_hash = buildInputsHash,
                     build_id = buildId,
                     unity_version = Application.unityVersion,
                     build_target = BuildTarget.StandaloneWindows64.ToString(),
@@ -919,6 +925,62 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeleteOwnedStage(backup, candidate);
         }
 
+        static string CaptureBuildInputs(BuildPlayerOptions options)
+        {
+            UnityEngine.Object dirtyAsset = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
+                .FirstOrDefault(value => EditorUtility.IsPersistent(value) && EditorUtility.IsDirty(value) &&
+                    (AssetDatabase.GetAssetPath(value).StartsWith("Assets/", StringComparison.Ordinal) ||
+                     AssetDatabase.GetAssetPath(value).StartsWith("Packages/", StringComparison.Ordinal)));
+            if (dirtyAsset != null)
+                throw new InvalidOperationException($"性能构建需要已保存的输入，请先保存资源：{AssetDatabase.GetAssetPath(dirtyAsset)}");
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (scene.isDirty)
+                    throw new InvalidOperationException($"性能构建需要已保存的输入，请先保存场景：{scene.path}");
+            }
+            var files = new List<PerformanceFileDocument>();
+            void AddTree(string root, string prefix)
+            {
+                if (!Directory.Exists(root))
+                    throw new DirectoryNotFoundException($"Performance build input root is missing: {root}");
+                foreach (string path in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+                {
+                    files.Add(new PerformanceFileDocument
+                    {
+                        role = "build-input",
+                        path = prefix + "/" + RelativePath(root, path).Replace('\\', '/'),
+                        size = new FileInfo(path).Length,
+                        sha256 = Sha256(path)
+                    });
+                }
+            }
+            AddTree(Path.Combine(ClientRoot, "Assets"), "Assets");
+            AddTree(Path.Combine(ClientRoot, "ProjectSettings"), "ProjectSettings");
+            foreach (string name in new[] { "manifest.json", "packages-lock.json" })
+            {
+                string path = Path.Combine(ClientRoot, "Packages", name);
+                RequireFile(path, "package resolution inputs");
+                files.Add(new PerformanceFileDocument { role = "build-input", path = "Packages/" + name, size = new FileInfo(path).Length, sha256 = Sha256(path) });
+            }
+            var packages = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages();
+            if (packages == null || packages.Length == 0)
+                throw new InvalidOperationException("性能构建未取得已解析的包清单，不能发布输入快照。");
+            foreach (var package in packages.OrderBy(value => value.name, StringComparer.Ordinal))
+                AddTree(package.resolvedPath, "Packages/" + package.name);
+            var inputs = new PerformanceBuildInputsDocument
+            {
+                unity_version = Application.unityVersion,
+                build_target = options.target.ToString(),
+                scripting_backend = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone).ToString(),
+                build_options = options.options.ToString(),
+                scenes = options.scenes,
+                common_extra_defines = new[] { PerformanceInstrumentationIdentity.Define },
+                files = files.OrderBy(value => value.path, StringComparer.Ordinal).ToArray()
+            };
+            return JsonUtility.ToJson(inputs, true);
+        }
+
         static PerformanceFileDocument[] BuildClosure(string root) =>
             Directory.GetFiles(root, "*", SearchOption.AllDirectories)
                 .OrderBy(value => value, StringComparer.Ordinal)
@@ -933,6 +995,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static string PlayerFileRole(string path)
         {
+            if (string.Equals(Path.GetFileName(path), "build-inputs.json", StringComparison.Ordinal))
+                return "build-inputs";
             string extension = Path.GetExtension(path);
             if (string.Equals(extension, ".pdb", StringComparison.OrdinalIgnoreCase))
                 return path.Contains("burst", StringComparison.OrdinalIgnoreCase) ? "burst-symbol" : "native-symbol";

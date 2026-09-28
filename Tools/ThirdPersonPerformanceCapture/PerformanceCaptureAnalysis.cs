@@ -46,6 +46,12 @@ internal static class PerformanceCaptureAnalysis
         foreach (string role in requiredRoles)
             Require(roles.TryGetValue(role, out string path) && new FileInfo(path).Length > 0, $"Missing artifact role: {role}");
         Require(PerformanceFileUtility.Sha256(roles["request"]) == manifest.request_hash, "Capture request hash does not match its manifest.");
+        Require(roles.TryGetValue("build-inputs", out string buildInputsPath) &&
+            !string.IsNullOrWhiteSpace(manifest.build_inputs_hash) && PerformanceFileUtility.Sha256(buildInputsPath) == manifest.build_inputs_hash,
+            "Capture build-input evidence is missing or has another identity.");
+        var buildInputs = Read<PerformanceBuildInputsDocument>(buildInputsPath);
+        Require(buildInputs.schema == PerformanceCaptureSchemas.BuildInputs && buildInputs.files != null && buildInputs.files.Length > 0,
+            "Capture build-input schema or source list is invalid.");
         Require(manifest.instrumentation_mode is "Disabled" or "MarkerOnly" or "Span", "Unknown instrumentation mode.");
         Require(roles.ContainsKey("instrumentation-spans") == (manifest.instrumentation_mode == "Span"), "Span artifact does not match instrumentation mode.");
         PerformanceSummaryDocument summary = Read<PerformanceSummaryDocument>(roles["summary"]);
@@ -89,7 +95,7 @@ internal static class PerformanceCaptureAnalysis
         if (!condition) throw new InvalidDataException(message);
     }
 
-    static string[] Conflicts(PerformanceCaptureManifestDocument baseline, PerformanceCaptureManifestDocument candidate)
+    static string[] Conflicts(PerformanceCaptureManifestDocument baseline, PerformanceCaptureManifestDocument candidate, bool calibration = false)
     {
         var conflicts = new List<string>();
         void Match(string name, object before, object after)
@@ -104,8 +110,19 @@ internal static class PerformanceCaptureAnalysis
         Match("toolchain_identity", baseline.toolchain_identity, candidate.toolchain_identity);
         Match("hardware_identity", baseline.hardware_identity, candidate.hardware_identity);
         Match("metric_catalog_revision", baseline.metric_catalog_revision, candidate.metric_catalog_revision);
-        Match("instrumentation_identity", baseline.instrumentation_identity, candidate.instrumentation_identity);
-        Match("instrumentation_mode", baseline.instrumentation_mode, candidate.instrumentation_mode);
+        if (calibration)
+        {
+            Match("build_inputs_hash", baseline.build_inputs_hash, candidate.build_inputs_hash);
+            Match("content_identity", baseline.content_identity, candidate.content_identity);
+            Match("pipeline_identity", baseline.pipeline_identity, candidate.pipeline_identity);
+            Match("pose_graph_revision", baseline.pose_graph_revision, candidate.pose_graph_revision);
+            Match("solver_identity", baseline.solver_identity, candidate.solver_identity);
+        }
+        else
+        {
+            Match("instrumentation_identity", baseline.instrumentation_identity, candidate.instrumentation_identity);
+            Match("instrumentation_mode", baseline.instrumentation_mode, candidate.instrumentation_mode);
+        }
         Match("instrumentation_span_layout_revision", baseline.instrumentation_span_layout_revision, candidate.instrumentation_span_layout_revision);
         Match("build_mode", baseline.build_mode, candidate.build_mode);
         Match("wpr_profile_hash", baseline.wpr_profile_hash, candidate.wpr_profile_hash);
@@ -241,15 +258,23 @@ internal static class PerformanceCaptureAnalysis
         }
     }
 
-    static IEnumerable<Measurement> Measurements(PerformanceSummaryDocument summary)
+    static bool IsCalibrationMetric(string id) => id is "unity.main-thread" or "unity.gc-allocated-in-frame";
+    static int ModeRank(string mode) => mode switch { "Disabled" => 0, "MarkerOnly" => 1, "Span" => 2, _ => throw new InvalidDataException("Unknown instrumentation mode.") };
+
+    static IEnumerable<Measurement> Measurements(PerformanceSummaryDocument summary, bool calibration)
     {
         foreach (var metric in summary.metrics)
         {
+            if (calibration && !IsCalibrationMetric(metric.metric_id))
+                continue;
             yield return new Measurement(metric.metric_id, "", metric.unit, metric.sample_scope, "p95", metric.distribution.p95);
             yield return new Measurement(metric.metric_id, "", metric.unit, metric.sample_scope, "p99", metric.distribution.p99);
         }
         foreach (var point in summary.instrumentation_points)
-            yield return new Measurement(point.metric_id, point.point_id, "Milliseconds", "Invocation", "p95", point.distribution.p95, point.distribution.sample_count > 0);
+        {
+            if (!calibration)
+                yield return new Measurement(point.metric_id, point.point_id, "Milliseconds", "Invocation", "p95", point.distribution.p95, point.distribution.sample_count > 0);
+        }
         yield return new Measurement("capture.presentation-fps", "", "FramesPerSecond", "Capture", "value", summary.presentation_fps);
         yield return new Measurement("capture.dropped-logic-ticks", "", "Count", "Capture", "value", summary.dropped_logic_ticks);
     }
@@ -279,6 +304,9 @@ internal static class PerformanceCaptureAnalysis
                 requestSchema.ValueKind == JsonValueKind.String && requestSchema.GetString() == PerformanceCaptureSchemas.AnalysisRequest, "Invalid analysis request schema.");
             var request = requestJson.RootElement.Deserialize<PerformanceAnalysisRequestDocument>(JsonOptions);
             Require(request != null && request.schema == PerformanceCaptureSchemas.AnalysisRequest, "Invalid analysis request schema.");
+            Require(request.comparison_kind is "Regression" or "InstrumentationOverhead", "Unknown comparison_kind; use Regression or InstrumentationOverhead.");
+            bool calibration = request.comparison_kind == "InstrumentationOverhead";
+            report.comparison_kind = request.comparison_kind;
             Require(request.baseline_manifest_paths != null && request.candidate_manifest_paths != null &&
                 request.baseline_manifest_paths.Length is > 0 and <= 100 && request.candidate_manifest_paths.Length is > 0 and <= 100, "Each group requires 1–100 explicitly selected Capture manifests.");
             string[] paths = request.baseline_manifest_paths.Concat(request.candidate_manifest_paths).ToArray();
@@ -289,17 +317,26 @@ internal static class PerformanceCaptureAnalysis
             Require(captures.Select(value => value.Manifest.capture_id).Distinct(StringComparer.Ordinal).Count() == captures.Length, "Copied Captures cannot count as independent runs.");
             report.sources = captures.Select((value, index) => new PerformanceAnalysisSourceDocument { group = index < baselineCount ? "Baseline" : "Candidate", manifest_path = value.Path,
                 manifest_hash = value.Hash, capture_id = value.Manifest.capture_id, build_id = value.Manifest.build_id,
+                build_inputs_hash = value.Manifest.build_inputs_hash, instrumentation_mode = value.Manifest.instrumentation_mode,
                 capture_seconds = value.Summary.capture_seconds, dropped_logic_ticks = value.Summary.dropped_logic_ticks,
                 budget_evaluated = value.Summary.budget_evaluated, budget_passed = value.Summary.budget_passed }).ToArray();
             for (int i = 0; i < captures.Length; i++)
             {
-                string[] conflicts = Conflicts(captures[0].Manifest, captures[i].Manifest);
+                string[] conflicts = Conflicts(captures[0].Manifest, captures[i].Manifest, calibration);
                 Require(conflicts.Length == 0, $"{captures[i].Manifest.capture_id}: {string.Join("; ", conflicts)}");
                 var groupFirst = captures[i < baselineCount ? 0 : baselineCount].Manifest;
-                Require(groupFirst.build_id == captures[i].Manifest.build_id && groupFirst.player_manifest_hash == captures[i].Manifest.player_manifest_hash,
+                Require(groupFirst.build_id == captures[i].Manifest.build_id && groupFirst.player_manifest_hash == captures[i].Manifest.player_manifest_hash &&
+                    groupFirst.instrumentation_identity == captures[i].Manifest.instrumentation_identity && groupFirst.instrumentation_mode == captures[i].Manifest.instrumentation_mode,
                     "Each repeat group must use one exact Player build. Build changes are allowed only between groups.");
             }
-            var tables = captures.Select(value => Measurements(value.Summary).ToDictionary(Key, StringComparer.Ordinal)).ToArray();
+            if (calibration)
+            {
+                Require(ModeRank(captures[baselineCount].Manifest.instrumentation_mode) > ModeRank(captures[0].Manifest.instrumentation_mode),
+                    "Overhead calibration requires Disabled to MarkerOnly/Span, or MarkerOnly to Span.");
+                Require(captures.All(value => value.Summary.metrics.Count(metric => IsCalibrationMetric(metric.metric_id)) == 2),
+                    "Overhead calibration requires both Unity main-thread and GC allocation measurements in every run.");
+            }
+            var tables = captures.Select(value => Measurements(value.Summary, calibration).ToDictionary(Key, StringComparer.Ordinal)).ToArray();
             string[] keys = tables.SelectMany(value => value.Keys).Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray();
             report.metrics = keys.Select(key =>
             {
@@ -326,7 +363,9 @@ internal static class PerformanceCaptureAnalysis
             report.warnings = Warnings(captures.Select(value => value.Summary)).Append("Run-level descriptive statistics only: frames from different runs are not pooled. Range separation is not a confidence interval or a significance test; 3 runs is a minimum reporting threshold, not proof of sufficient power. No automatic outlier removal or performance pass/fail.").ToArray();
             report.status = report.metrics.Any(value => value.status == "Incomplete") ? "Incomplete" :
                 baselineCount < 3 || captures.Length - baselineCount < 3 ? "InsufficientRepeats" : "Comparable";
-            report.message = "Values follow source order within each group. Deltas compare group medians; lower FPS is worse, while lower time or allocation is better. Instrumentation modes must match; this report does not calibrate instrumentation overhead.";
+            report.message = calibration
+                ? "Instrumentation overhead calibration: identical recorded build inputs and environment, different probe modes. Compare aggregate main-thread, GC and FPS effects; this includes scheduling interactions and is not per-call probe cost or a business optimization result. Disabled still includes Recorder, Profiler and WPR overhead."
+                : "Regression comparison: values follow source order within each group. Deltas compare group medians; lower FPS is worse, while lower time or allocation is better. Instrumentation modes match; this is not an instrumentation overhead calibration.";
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or JsonException or ArgumentException or UnauthorizedAccessException)
         {
@@ -348,11 +387,11 @@ internal static class PerformanceCaptureAnalysis
         static string Cell(string text) => (text ?? "").Replace("|", "\\|").Replace("\r", " ").Replace("\n", " ");
         static string Number(double value) => value.ToString("G6", CultureInfo.InvariantCulture);
         var text = new StringBuilder("# 性能重复采集比较\n\n");
-        text.AppendLine($"状态：**{report.status}**\n\n{report.message}\n");
+        text.AppendLine($"类型：**{report.comparison_kind}**　状态：**{report.status}**\n\n{report.message}\n");
         text.AppendLine("每次采集权重相同；范围为实际观测的最小值与最大值，并非置信区间。变化百分比不可用时显示 `—`。原始值、采集身份和完整状态见同目录 analysis.json。\n");
-        text.AppendLine("| 组别 | Capture | Build | 预算 |\n|---|---|---|---|");
+        text.AppendLine("| 组别 | Capture | Build | 探针模式 | 预算 |\n|---|---|---|---|---|");
         foreach (var source in report.sources)
-            text.AppendLine($"| {source.group} | {Cell(source.capture_id)} | {Cell(source.build_id)} | {(source.budget_evaluated ? source.budget_passed ? "通过" : "超预算" : "未完整评估")} |");
+            text.AppendLine($"| {source.group} | {Cell(source.capture_id)} | {Cell(source.build_id)} | {Cell(source.instrumentation_mode)} | {(source.budget_evaluated ? source.budget_passed ? "通过" : "超预算" : "未完整评估")} |");
         text.AppendLine("\n| 指标 / 采样点 | 统计 / 单位 | 基线中位数 [范围] | 候选中位数 [范围] | 中位数差 | 变化 | 状态 |\n|---|---|---|---|---|---|---|");
         foreach (var row in report.metrics)
         {

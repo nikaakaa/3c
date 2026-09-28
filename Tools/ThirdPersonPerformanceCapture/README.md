@@ -12,7 +12,7 @@
 
 Disabled 关闭的是业务方法织入，Unity Profiler、Recorder 和 WPR 仍有采集开销，不能把它叫作完全没有诊断开销的发布包。MarkerOnly 不具备单 Tick 耗时，不把一帧内多个 Tick 的总耗时写成单 Tick 样本。只有 Span 生成 `instrumentation-spans.bin`。
 
-普通 Baseline 比较要求相同场景、环境、采集工具、指标目录和织入身份，允许代码构建身份变化，因此能比较重构前后。不同探针模式会被拒绝作为普通性能回归比较。要估计探针成本，应在同一代码、同一输入和同一环境下分别采集三种模式，多次观察整体指标；不能把模式变化解释成业务优化。
+普通 Baseline 比较要求相同场景、环境、采集工具、指标目录和织入身份，允许代码构建身份变化，因此能比较重构前后。不同探针模式会被拒绝作为普通性能回归比较。探针开销使用同一分析入口的 `InstrumentationOverhead` 类型，要求构建输入快照一致，多次观察共同的整体指标；不能把模式变化解释成业务优化。
 
 ## 时间代表什么
 
@@ -26,7 +26,7 @@ Span 是同步方法进入和退出时的单调计时差值，包含被系统抢
 
 `presentation.animation` 包围表现事务，下面分为 Pose Prepare、Evaluate、Commit，以及 Source Barrier。Evaluate 下另有 Foot Placement 和 FullBodyIK 探针。Source Barrier 包含资源验证、回收准备和后端 Evaluate，不是纯骨骼计算时间。没有实际探针的旧阶段从指标目录删除；新增阶段要同时增加所属目录定义和方法声明。
 
-报告使用 summary/4、comparison/2，跨度使用 spans/2 和 layout revision 2。旧报告不进入当前比较，需要使用当前 Controller 重新采集；旧证据保留原样。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。
+当前合同为 player/3、capture/3、summary/4、comparison/2、analysis-request/2、analysis/2；跨度使用 spans/2 和 layout revision 2。旧报告不进入当前比较，需要重新构建 Player 并使用当前 Controller 采集；旧证据保留原样。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。
 
 ## 单次比较的结果口径
 
@@ -48,7 +48,8 @@ Smoke、Replay、Capture 都在证据整理完成后才写 Completed 状态，�
 
 ```json
 {
-  "schema": "third-person-performance-analysis-request/1",
+  "schema": "third-person-performance-analysis-request/2",
+  "comparison_kind": "Regression",
   "baseline_manifest_paths": [
     "D:/Performance/baseline-01/manifest.json",
     "D:/Performance/baseline-02/manifest.json",
@@ -86,4 +87,14 @@ Launcher/MCP 产物放在 `Library/Performance/Analyses/<独立编号>/`，包�
 
 本次完善通过 8 个 C# 文件的 Roslyn 语法树解析和差异静态检查，没有启动编译、Unity、Controller 或真实采集，没有新增测试。语法解析不检查类型绑定；Xperf 导出格式、MCP 调度、Player 数据闭环与新增统计代码尚待实际运行确认；不把这次代码完善称为已验证的工业级工具。
 
-重复比较严格禁止跨探针模式比较业务收益。三种模式已经具备采集入口，但当前没有自动证明“除探针模式外源码和构建条件完全一致”的跨模式校准报告，也没有实测探针开销；需要独立保留同代码的构建来源和三种模式的多次采集证据。GPU、整机内存峰值、长期泄漏与多硬件基准也不在当前 Windows CPU/托管分配工具的报告范围内。
+GPU、整机内存峰值、长期泄漏与多硬件基准不在当前 Windows CPU/托管分配工具的报告范围内。
+
+## 探针开销校准
+
+同一份分析清单将 `comparison_kind` 改为 `InstrumentationOverhead`，其余操作入口和报告格式不变。支持 Disabled → MarkerOnly、Disabled → Span、MarkerOnly → Span；每组仍必须使用同一个明确构建、至少 3 次采集才满足最低重复数。普通 `Regression` 继续严格禁止跨模式。
+
+Player 构建在设置正式 IL2CPP 构建选项后，对 Assets、ProjectSettings、包清单与锁文件、所有已解析包的文件做 SHA-256 快照，同时记录 Unity 版本、目标、后端、构建选项、场景和共同的额外编译定义。模式及其输入文件位置单独由已有织入合同记录，不混入模式无关的快照。构建前后快照必须完全一致；有未保存的资源或场景时明确报错，不替用户保存。这个检查会增加构建阶段的磁盘读取和哈希耗时，不在运行时采样热路径执行。
+
+快照 `build-inputs.json` 纳入 Player 文件闭包，其哈希随 Player 和 Capture manifest 保存；Capture 发布时复制这份证据并再次校验。校准除常规环境身份外，还要求两组 `build_inputs_hash`、内容、Pipeline、Pose Graph 与 Solver 身份一致。普通回归允许源码改变；校准不允许把源码差异与探针模式差异混在一起。快照覆盖的是上述已记录输入，不能据此消除操作系统调度、温度或外部工具链状态的波动。
+
+校准只输出所有模式共同具备的 Unity Main Thread、帧内 GC 分配、整体 FPS 和丢弃 Tick 数，不将只有 Span 才有的调用点与 Disabled 的“缺失”相减。结果表示切换模式对这些整体指标的观测影响，包括调度等交互；不是每次 Enter/Exit 的精确成本，也不是业务代码优化收益。Disabled 仍启用 Recorder、Profiler 与 WPR，报告不会称它为零诊断开销。当前只实现校准链路，尚无此次实测的探针开销数字。

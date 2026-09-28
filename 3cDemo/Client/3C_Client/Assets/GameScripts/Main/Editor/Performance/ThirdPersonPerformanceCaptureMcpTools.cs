@@ -920,6 +920,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 analysis_path = Path.GetFullPath(path),
                 report.schema,
+                report.comparison_kind,
                 report.status,
                 report.message,
                 report.created_utc,
@@ -960,6 +961,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 manifest.scenario_id,
                 manifest.runtime_id,
                 manifest.build_id,
+                manifest.build_inputs_hash,
                 manifest.hardware_identity,
                 manifest.metric_catalog_revision,
                 manifest.instrumentation_identity,

@@ -211,6 +211,13 @@ internal static class PerformanceCapturePublisher
         };
         WriteJson(Path.Combine(request.staging_root, "process.json"), process);
         RequireCompletedArtifacts(request.staging_root);
+        string buildInputsPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(request.player_manifest_path))!, "build-inputs.json");
+        if (PerformanceFileUtility.Sha256(buildInputsPath) != playerManifest.build_inputs_hash)
+            throw new InvalidDataException("Performance Player build inputs changed during Capture.");
+        string capturedBuildInputsPath = Path.Combine(request.staging_root, "build-inputs.json");
+        File.Copy(buildInputsPath, capturedBuildInputsPath, false);
+        if (PerformanceFileUtility.Sha256(capturedBuildInputsPath) != playerManifest.build_inputs_hash)
+            throw new InvalidDataException("Performance build-input evidence changed while publishing Capture.");
         PerformanceRuntimeResultDocument runtime = ReadJson<PerformanceRuntimeResultDocument>(
             Path.Combine(request.staging_root, "runtime-result.json"));
         if (!string.Equals(runtime.schema, PerformanceCaptureSchemas.RuntimeResult, StringComparison.Ordinal) ||
@@ -972,6 +979,7 @@ internal static class PerformanceCapturePublisher
         {
             capture_id = request.run_id,
             status = status.ToString(),
+            build_inputs_hash = playerManifest?.build_inputs_hash ?? string.Empty,
             stage = stage,
             message = message,
             created_utc = runtime?.started_utc ?? string.Empty,

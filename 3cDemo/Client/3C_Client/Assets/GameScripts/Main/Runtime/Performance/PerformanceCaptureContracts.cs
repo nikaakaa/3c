@@ -13,16 +13,17 @@ namespace ThirdPersonPerformance
         public const string CameraTrace = "third-person-performance-camera-trace/1";
         public const string Budget = "third-person-performance-budget/1";
         public const string Profile = "third-person-performance-profile/1";
-        public const string Player = "third-person-performance-player/2";
+        public const string Player = "third-person-performance-player/3";
+        public const string BuildInputs = "third-person-performance-build-inputs/1";
         public const string Request = "third-person-performance-run-request/3";
         public const string Status = "third-person-performance-run-status/2";
         public const string RuntimeResult = "third-person-performance-runtime-result/3";
         public const string Gate = "third-person-performance-gate/1";
-        public const string Manifest = "third-person-performance-capture/2";
+        public const string Manifest = "third-person-performance-capture/3";
         public const string Summary = "third-person-performance-summary/4";
         public const string Comparison = "third-person-performance-comparison/2";
-        public const string AnalysisRequest = "third-person-performance-analysis-request/1";
-        public const string Analysis = "third-person-performance-analysis/1";
+        public const string AnalysisRequest = "third-person-performance-analysis-request/2";
+        public const string Analysis = "third-person-performance-analysis/2";
         public const string InstrumentationManifest = PerformanceInstrumentationIdentity.ManifestSchema;
         public const string CollectorId = "windows-wpr-cpu/1";
         public const string TransportId = "loopback-tcp/1";
@@ -169,6 +170,7 @@ namespace ThirdPersonPerformance
     public sealed class PerformancePlayerManifestDocument
     {
         public string schema = PerformanceCaptureSchemas.Player;
+        public string build_inputs_hash = string.Empty;
         public string build_id = string.Empty;
         public string unity_version = string.Empty;
         public string build_target = string.Empty;
@@ -517,6 +519,7 @@ namespace ThirdPersonPerformance
     public sealed class PerformanceAnalysisRequestDocument
     {
         public string schema = PerformanceCaptureSchemas.AnalysisRequest;
+        public string comparison_kind = "Regression";
         public string[] baseline_manifest_paths = Array.Empty<string>();
         public string[] candidate_manifest_paths = Array.Empty<string>();
     }
@@ -529,6 +532,8 @@ namespace ThirdPersonPerformance
         public string manifest_hash = string.Empty;
         public string capture_id = string.Empty;
         public string build_id = string.Empty;
+        public string build_inputs_hash = string.Empty;
+        public string instrumentation_mode = string.Empty;
         public double capture_seconds;
         public int dropped_logic_ticks;
         public bool budget_evaluated;
@@ -566,6 +571,7 @@ namespace ThirdPersonPerformance
     public sealed class PerformanceAnalysisDocument
     {
         public string schema = PerformanceCaptureSchemas.Analysis;
+        public string comparison_kind = string.Empty;
         public string status = string.Empty;
         public string message = string.Empty;
         public string created_utc = string.Empty;
@@ -579,6 +585,7 @@ namespace ThirdPersonPerformance
     public sealed class PerformanceCaptureManifestDocument
     {
         public string schema = PerformanceCaptureSchemas.Manifest;
+        public string build_inputs_hash = string.Empty;
         public string capture_id = string.Empty;
         public string status = string.Empty;
         public string stage = string.Empty;
@@ -621,6 +628,19 @@ namespace ThirdPersonPerformance
         public int v_sync_count;
         public int target_frame_rate;
         public PerformanceProcessDocument process = new PerformanceProcessDocument();
+        public PerformanceFileDocument[] files = Array.Empty<PerformanceFileDocument>();
+    }
+
+    [Serializable]
+    public sealed class PerformanceBuildInputsDocument
+    {
+        public string schema = PerformanceCaptureSchemas.BuildInputs;
+        public string unity_version = string.Empty;
+        public string build_target = string.Empty;
+        public string scripting_backend = string.Empty;
+        public string build_options = string.Empty;
+        public string[] scenes = Array.Empty<string>();
+        public string[] common_extra_defines = Array.Empty<string>();
         public PerformanceFileDocument[] files = Array.Empty<PerformanceFileDocument>();
     }
 

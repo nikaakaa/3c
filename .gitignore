@@ -62,6 +62,11 @@ coverage.cobertura.xml
 /3cDemo/Client/3C_Client/FootIkEnduranceRuns/
 
 # Local diagnostic output
+/3cDemo/Client/3C_Client/Diagnostics/CharacterRuntimeTraces/
+/3cDemo/Client/3C_Client/Diagnostics/FootAnalysis/
+/3cDemo/Client/3C_Client/Diagnostics/*.png
+/chi_sim.traineddata
+/eng.traineddata
 /3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/
 /3cDemo/Client/3C_Client/Captures/
 /3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/

@@ -32,13 +32,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             internal CharacterPoseNativePublicationFrameLease Lease;
             internal int BufferPage = -1;
-            internal CharacterPoseNativePoseReadBinding Output;
             internal ComposedAnimationPoseFrame Frame;
             internal ulong PhysicalCompletionIdentity;
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             internal CharacterFootIkPhysicalCapture PhysicalCapture;
 #endif
-            internal bool HasOutput;
             internal bool HasFrame;
             internal bool IsOpen => Lease.IsValid;
 
@@ -51,28 +49,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         "Native Final Pose publication page is already open or invalid.");
                 Lease = lease;
                 BufferPage = bufferPage;
-                Output = default;
                 Frame = default;
                 PhysicalCompletionIdentity = 0;
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
                 PhysicalCapture = default;
 #endif
-                HasOutput = false;
                 HasFrame = false;
             }
 
-            internal void SetOutput(
+            internal void SetFrame(
                 CharacterPoseNativePublicationFrameLease lease,
-                in CharacterPoseNativePoseReadBinding output,
                 in ComposedAnimationPoseFrame frame)
             {
                 RequireLease(lease);
-                if (HasOutput || HasFrame || !output.IsValid)
+                if (HasFrame)
                     throw new InvalidOperationException(
-                        "Native Final Pose publication output is already set or invalid.");
-                Output = output;
+                        "Native Final Pose publication frame is already set.");
                 Frame = frame;
-                HasOutput = true;
                 HasFrame = true;
             }
 
@@ -80,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseNativePublicationFrameLease lease)
             {
                 RequireLease(lease);
-                if (!HasOutput || !HasFrame || BufferPage < 0)
+                if (!HasFrame || BufferPage < 0)
                     throw new InvalidOperationException(
                         "Native Final Pose publication page is incomplete.");
             }
@@ -97,13 +90,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 Lease = default;
                 BufferPage = -1;
-                Output = default;
                 Frame = default;
                 PhysicalCompletionIdentity = 0;
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
                 PhysicalCapture = default;
 #endif
-                HasOutput = false;
                 HasFrame = false;
             }
         }
@@ -221,15 +212,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rigBinding,
                 preparedBinding.InputContract,
                 animationProperties);
-        }
-
-        internal void ValidateBindingsBeforeEvaluate()
-        {
-            RequireAlive();
-            m_PhysicalWriter.ValidateBindingsBeforeEvaluate(
-                m_HasCommitted,
-                in m_CommittedFrame);
-            m_PropertyWriter.ValidateBindingsBeforeEvaluate();
         }
 
         internal CharacterPoseNativePublicationFrameLease BeginFrame(
@@ -400,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.ContinuityIdentity[0],
                 pageLease,
                 output.CompletionIdentity);
-            m_Pending.SetOutput(lease, in output, in frame);
+            m_Pending.SetFrame(lease, in frame);
         }
 
         internal void WritePhysicalPose(
@@ -409,23 +391,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             m_Pending.RequireFrame(lease);
-            m_PropertyWriter.ValidateFrame(in m_Pending.Frame);
-            m_Pending.PhysicalCompletionIdentity = m_PhysicalWriter.WriteNative(
-                in m_Pending.Output,
+            m_PropertyWriter.ValidateBeforeWrite(in m_Pending.Frame);
+            m_PhysicalWriter.Write(
                 in m_Pending.Frame,
-                m_HasCommitted,
-                in m_CommittedFrame,
                 captureFootIkDiagnostics);
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             m_Pending.PhysicalCapture = m_PhysicalWriter.FootIkCapture;
 #endif
-            if (m_Pending.PhysicalCompletionIdentity == 0 ||
-                m_Pending.PhysicalCompletionIdentity != lease.Lineage.CompletionIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Native Final Pose publication physical write is incomplete.");
-            }
             m_PropertyWriter.Write(in m_Pending.Frame);
+            m_Pending.PhysicalCompletionIdentity = lease.Lineage.CompletionIdentity;
         }
 
         internal CharacterPoseNativePublicationResult Commit(

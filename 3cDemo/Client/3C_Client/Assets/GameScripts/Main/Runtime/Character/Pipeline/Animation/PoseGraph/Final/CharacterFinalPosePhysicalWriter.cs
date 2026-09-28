@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
@@ -8,8 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterFinalPosePhysicalWriter
     {
-        readonly CharacterAnimationRigPayload m_Rig;
-        readonly IReadOnlyList<Transform> m_Bones;
+        readonly Transform[] m_Bones;
         readonly int m_RootBoneIndex;
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
@@ -22,8 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 #endif
         readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
         readonly AnimationLocalBonePose m_RootReferencePose;
-        readonly AnimationLocalBonePose[] m_ReferencePoses;
-        readonly AnimationLocalBonePose[] m_WritePoses;
 
         internal CharacterFinalPosePhysicalWriter(
             CharacterAnimationRigBinding binding,
@@ -32,10 +28,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!binding)
                 throw new ArgumentNullException(nameof(binding));
-            m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
+            if (rig == null)
+                throw new ArgumentNullException(nameof(rig));
             if (!rootHierarchy)
                 throw new ArgumentNullException(nameof(rootHierarchy));
-            m_Bones = binding.PhysicalBones;
+            if (binding.PhysicalBones.Count != rig.PhysicalBoneCount ||
+                rig.RootPhysicalBoneIndex < 0 ||
+                rig.RootPhysicalBoneIndex >= rig.PhysicalBoneCount)
+            {
+                throw new ArgumentException(
+                    "Final animation physical writer binding is invalid.");
+            }
+            m_Bones = new Transform[rig.PhysicalBoneCount];
+            for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
+            {
+                Transform bone = binding.PhysicalBones[boneIndex];
+                if (!bone)
+                    throw new ArgumentException(
+                        $"Final animation physical writer Bone #{boneIndex} binding is missing.");
+                m_Bones[boneIndex] = bone;
+            }
             if (binding.Animator.transform != rootHierarchy.PoseRoot)
             {
                 throw new ArgumentException(
@@ -58,69 +70,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 root.ReferenceLocalPosition,
                 root.ReferenceLocalRotation,
                 root.ReferenceLocalScale);
-            m_ReferencePoses =
-                new AnimationLocalBonePose[rig.PhysicalBoneCount];
-            m_WritePoses = new AnimationLocalBonePose[rig.PhysicalBoneCount];
-            for (int i = 0; i < m_ReferencePoses.Length; i++)
-            {
-                CharacterAnimationPhysicalBonePayload bone =
-                    rig.PhysicalBones[i];
-                m_ReferencePoses[i] = new AnimationLocalBonePose(
-                    bone.ReferenceLocalPosition,
-                    bone.ReferenceLocalRotation,
-                    bone.ReferenceLocalScale);
-            }
             if (!m_RootReferencePose.IsValid)
                 throw new InvalidOperationException(
                     "Animation root reference pose is invalid.");
         }
 
-        internal ulong WriteNative(
-            in CharacterPoseNativePoseReadBinding output,
-            in ComposedAnimationPoseFrame pending,
-            bool hasCommitted,
-            in ComposedAnimationPoseFrame committed,
+        internal void Write(
+            in ComposedAnimationPoseFrame frame,
             bool captureFootIkDiagnostics)
         {
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             FootIkCapture = default;
 #endif
-            bool pendingValid = PendingNativeHeaderIsValid(
-                in output,
-                in pending);
-            bool committedValid =
-                hasCommitted &&
-                CommittedHeaderIsValid(in committed);
-
-            for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
+            AnimationReadOnlyBuffer<AnimationLocalBonePose> poses = frame.DenseLocalPose;
+            for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
-                Transform bone = m_Bones[boneIndex];
-                AnimationLocalBonePose pose = ResolvePose(
-                    in pending,
-                    in committed,
-                    pendingValid,
-                    committedValid,
-                    boneIndex);
-                if (!bone || !pose.IsValid)
+                if (!m_Bones[boneIndex])
                 {
                     throw new InvalidOperationException(
-                        $"Final animation physical write Bone #{boneIndex} is invalid.");
+                        $"Final animation physical writer Bone #{boneIndex} binding is missing.");
                 }
-                m_WritePoses[boneIndex] = pose;
             }
 
-            for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
+            for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
                 Transform bone = m_Bones[boneIndex];
-                AnimationLocalBonePose pose = m_WritePoses[boneIndex];
+                AnimationLocalBonePose pose =
+                    m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
+                    boneIndex == m_RootBoneIndex
+                        ? m_RootReferencePose
+                        : poses[boneIndex];
                 bone.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
                 bone.localScale = pose.Scale;
             }
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
-            if (pendingValid && captureFootIkDiagnostics)
+            if (captureFootIkDiagnostics)
                 FootIkCapture = CaptureFootIkPhysical(m_Bones[m_PelvisBoneIndex].position);
 #endif
-            return pendingValid ? output.CompletionIdentity : 0;
         }
 
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
@@ -157,67 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
 #endif
-
-        AnimationLocalBonePose ResolvePose(
-            in ComposedAnimationPoseFrame pending,
-            in ComposedAnimationPoseFrame committed,
-            bool pendingValid,
-            bool committedValid,
-            int boneIndex) =>
-            m_RootBonePolicy ==
-                CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
-            boneIndex == m_RootBoneIndex
-                ? m_RootReferencePose
-                : pendingValid
-                    ? pending.DenseLocalPose[boneIndex]
-                    : committedValid
-                        ? committed.DenseLocalPose[boneIndex]
-                : m_ReferencePoses[boneIndex];
-
-        internal void ValidateBindingsBeforeEvaluate(
-            bool hasCommitted,
-            in ComposedAnimationPoseFrame committed)
-        {
-            if (m_Bones.Count != m_Rig.PhysicalBoneCount ||
-                m_RootBoneIndex < 0 ||
-                m_RootBoneIndex >= m_Bones.Count)
-            {
-                throw new ArgumentException(
-                    "Final animation physical writer binding is invalid.");
-            }
-            if (hasCommitted && !CommittedHeaderIsValid(in committed))
-            {
-                throw new ArgumentException(
-                    "Final animation physical writer committed Pose is invalid.");
-            }
-            for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
-            {
-                if (!m_Bones[boneIndex])
-                {
-                    throw new InvalidOperationException(
-                        $"Final animation physical writer Bone #{boneIndex} binding is missing.");
-                }
-            }
-        }
-
-        bool PendingNativeHeaderIsValid(
-            in CharacterPoseNativePoseReadBinding output,
-            in ComposedAnimationPoseFrame frame) =>
-            output.IsValid &&
-            output.Space == CharacterPoseSpace.Local &&
-            output.Availability[0] == AnimationPoseAvailability.Pose &&
-            output.InvalidReason[0] == AnimationPoseNativeInvalidReason.None &&
-            frame.CompletionIdentity == output.CompletionIdentity &&
-            frame.Availability == AnimationPoseAvailability.Pose &&
-            frame.ContinuityIdentity == output.ContinuityIdentity[0] &&
-            frame.DenseLocalPose.Count >= m_Bones.Count;
-
-        bool CommittedHeaderIsValid(
-            in ComposedAnimationPoseFrame frame) =>
-            frame.CompletionIdentity != 0 &&
-            frame.Availability == AnimationPoseAvailability.Pose &&
-            frame.ContinuityIdentity != 0 &&
-            frame.DenseLocalPose.Count >= m_Bones.Count;
 
     }
 }

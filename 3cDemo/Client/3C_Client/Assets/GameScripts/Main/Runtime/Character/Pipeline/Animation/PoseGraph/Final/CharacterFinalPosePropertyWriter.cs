@@ -8,29 +8,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly struct RendererTarget
         {
-            internal RendererTarget(SkinnedMeshRenderer renderer, Mesh mesh, int requiredShapeCount)
+            internal RendererTarget(SkinnedMeshRenderer renderer, Mesh mesh)
             {
                 Renderer = renderer;
                 Mesh = mesh;
-                RequiredShapeCount = requiredShapeCount;
             }
 
             internal SkinnedMeshRenderer Renderer { get; }
             internal Mesh Mesh { get; }
-            internal int RequiredShapeCount { get; }
-
-            internal void RequireValid(Transform root)
+            internal void RequireCurrent()
             {
-                if (!root || !Renderer || !Mesh || Renderer.sharedMesh != Mesh ||
-                    Mesh.blendShapeCount < RequiredShapeCount)
+                if (!Renderer || !Mesh || Renderer.sharedMesh != Mesh)
                     throw new InvalidOperationException("Final animation property Renderer target is stale.");
-                Transform target = Renderer.transform;
-                if (target != root && !target.IsChildOf(root))
-                    throw new InvalidOperationException("Final animation property Renderer left its bound root.");
             }
         }
 
-        readonly Transform m_Root;
         readonly CharacterPresentationAnimationPropertyBinding[] m_Bindings;
         readonly SkinnedMeshRenderer[] m_Renderers;
         readonly RendererTarget[] m_RendererTargets;
@@ -43,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!rigBinding)
                 throw new ArgumentNullException(nameof(rigBinding));
-            m_Root = rigBinding.Animator ? rigBinding.Animator.transform : null;
+            Transform root = rigBinding.Animator ? rigBinding.Animator.transform : null;
             if (inputContract == null)
                 throw new ArgumentNullException(nameof(inputContract));
             if (bindings == null)
@@ -52,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Renderers = new SkinnedMeshRenderer[bindings.Count];
             m_InitialWeights = new float[bindings.Count];
             var bindingIds = new HashSet<string>(StringComparer.Ordinal);
-            var rendererIndices = new Dictionary<SkinnedMeshRenderer, int>();
+            var renderers = new HashSet<SkinnedMeshRenderer>();
             var rendererTargets = new List<RendererTarget>();
             for (int i = 0; i < m_Bindings.Length; i++)
             {
@@ -66,22 +58,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (renderer == null)
                     throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no Renderer binding '{binding.RendererBindingId}'.");
                 m_Bindings[i] = binding;
-                renderer.RequireValid(m_Root);
+                renderer.RequireValid(root);
                 m_Renderers[i] = renderer.Renderer;
                 ValidateBinding(binding, renderer);
-                int requiredShapeCount = binding.BlendShapeIndex + 1;
-                if (rendererIndices.TryGetValue(renderer.Renderer, out int targetIndex))
+                if (renderers.Add(renderer.Renderer))
                 {
-                    RendererTarget target = rendererTargets[targetIndex];
-                    rendererTargets[targetIndex] = new RendererTarget(
-                        target.Renderer, target.Mesh,
-                        Math.Max(target.RequiredShapeCount, requiredShapeCount));
-                }
-                else
-                {
-                    rendererIndices.Add(renderer.Renderer, rendererTargets.Count);
                     rendererTargets.Add(new RendererTarget(
-                        renderer.Renderer, binding.ExpectedMesh, requiredShapeCount));
+                        renderer.Renderer, binding.ExpectedMesh));
                 }
                 float initialWeight = renderer.Renderer.GetBlendShapeWeight(binding.BlendShapeIndex);
                 if (!float.IsFinite(initialWeight))
@@ -93,10 +76,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal int BindingCount => m_Bindings.Length;
 
-        internal void ValidateBindingsBeforeEvaluate()
+        void RequireCurrentTargets()
         {
             for (int i = 0; i < m_RendererTargets.Length; i++)
-                m_RendererTargets[i].RequireValid(m_Root);
+                m_RendererTargets[i].RequireCurrent();
         }
 
         static void ValidateBinding(
@@ -147,36 +130,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal void ValidateFrame(in ComposedAnimationPoseFrame frame)
+        internal void ValidateBeforeWrite(in ComposedAnimationPoseFrame frame)
         {
-            if (frame.Availability != AnimationPoseAvailability.Pose ||
-                frame.PoseParameters.Count <= 0 ||
-                frame.PoseParameterAvailability.Count != frame.PoseParameters.Count)
-                throw new InvalidOperationException("Final animation property frame is not a complete Pose page.");
+            RequireCurrentTargets();
+            AnimationReadOnlyBuffer<byte> availability = frame.PoseParameterAvailability;
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
-                if (binding.ParameterIndex < 0 || binding.ParameterIndex >= frame.PoseParameters.Count ||
-                    frame.PoseParameterAvailability[binding.ParameterIndex] != 1 ||
-                    !float.IsFinite(frame.PoseParameters[binding.ParameterIndex]))
+                if (availability[binding.ParameterIndex] != 1)
                     throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no valid committed source value.");
             }
         }
 
         internal void Write(in ComposedAnimationPoseFrame frame)
         {
+            AnimationReadOnlyBuffer<float> parameters = frame.PoseParameters;
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
                 m_Renderers[i].SetBlendShapeWeight(
                     binding.BlendShapeIndex,
-                    frame.PoseParameters[binding.ParameterIndex]);
+                    parameters[binding.ParameterIndex]);
             }
         }
 
         internal void WriteDefaults()
         {
-            ValidateBindingsBeforeEvaluate();
+            RequireCurrentTargets();
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
@@ -188,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void RestoreInitial()
         {
-            ValidateBindingsBeforeEvaluate();
+            RequireCurrentTargets();
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 m_Renderers[i].SetBlendShapeWeight(

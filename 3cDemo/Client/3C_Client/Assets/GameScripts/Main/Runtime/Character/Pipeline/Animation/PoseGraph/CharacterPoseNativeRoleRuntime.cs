@@ -298,7 +298,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
-            m_Publication.ValidateBindingsBeforeEvaluate();
             m_Graph.PrepareEvaluation(
                 lease,
                 in demand,

@@ -148,7 +148,7 @@ namespace TreeDesigner
                 {
                     Status = string.IsNullOrEmpty(status) ? result ? "Passed" : "Failed" : status,
                     Flag = result,
-                    Detail = string.IsNullOrEmpty(detail) ? $"{edge.StartNodeGUID}->{edge.EndNodeGUID}" : detail,
+                    Detail = string.IsNullOrEmpty(detail) ? edge.DiagnosticDetail : detail,
                     RelatedElementId = edge.EndNodeGUID,
                     Priority = edge.TransitionPriority
                 });
@@ -260,7 +260,7 @@ namespace TreeDesigner
                 {
                     Status = string.IsNullOrEmpty(status) ? result ? "Passed" : "Failed" : status,
                     Flag = result,
-                    Detail = string.IsNullOrEmpty(detail) ? $"{edge.StartNodeGUID}->{edge.EndNodeGUID}" : detail,
+                    Detail = string.IsNullOrEmpty(detail) ? edge.DiagnosticDetail : detail,
                     OwnerId = scope.IsValid ? $"{scope.StateId}/{scope.ActivationGeneration}" : string.Empty,
                     RelatedElementId = edge.EndNodeGUID,
                     Priority = edge.TransitionPriority

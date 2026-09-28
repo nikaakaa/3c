@@ -829,6 +829,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool AcceptsTrajectoryIntent { get; }
         ulong BodyResetSequence { get; }
         CharacterLocomotionBodySource LocomotionBodySource { get; }
+        bool IsPoseResourceReady { get; }
+        void AdvancePoseResourcePreparation();
         bool TryGetCameraBasis(out CameraBasisSnapshot basis);
         void SetCameraInitialState(in CameraInitialState state);
         bool TryGetLatestBody(out CharacterPresentationBodyState body);

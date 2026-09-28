@@ -105,6 +105,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Resources
             return entry.Readiness;
         }
 
+        internal bool HasPendingPreparation
+        {
+            get
+            {
+                RequireAlive();
+                for (int i = 0; i < m_Catalog.Count; i++)
+                {
+                    CharacterAclResourceStoreEntry entry = m_Catalog.RequireEntry(i);
+                    if (entry.Requested && entry.Readiness.IsPending)
+                        return true;
+                }
+                return false;
+            }
+        }
+
         internal CharacterAclResourceReadinessResult TryAcquire(
             int resourceIndex,
             CharacterAclResourceLeaseTable leaseTable,

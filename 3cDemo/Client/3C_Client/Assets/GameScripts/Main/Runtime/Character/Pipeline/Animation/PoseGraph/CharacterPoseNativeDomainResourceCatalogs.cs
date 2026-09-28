@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (pair.Key != pair.Value.ResourceIndex)
                     throw new InvalidOperationException("Pose ACL resource catalog indexes are not contiguous.");
                 pair.Value.RequireValid();
-                resourceScope.Register(pair.Value);
+                resourceScope.Request(resourceScope.Register(pair.Value));
             }
             foreach (CharacterActionAnimationSourcePlan plan in m_ActionPlans.Values)
             {

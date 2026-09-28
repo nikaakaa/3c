@@ -57,6 +57,24 @@ namespace TreeDesigner
         protected string m_EndPortName;
         public string EndPortName => m_EndPortName;
 
+        [NonSerialized]
+        bool m_DiagnosticDetailReady;
+        [NonSerialized]
+        string m_DiagnosticDetail;
+        public string DiagnosticDetail
+        {
+            get
+            {
+                if (!m_DiagnosticDetailReady)
+                {
+                    m_DiagnosticDetail = $"{m_StartNodeGUID}->{m_EndNodeGUID}";
+                    m_DiagnosticDetailReady = true;
+                }
+
+                return m_DiagnosticDetail;
+            }
+        }
+
         [SerializeField]
         protected int m_FlowOrder;
         public int FlowOrder { get => m_FlowOrder; set => m_FlowOrder = value; }
@@ -197,6 +215,7 @@ namespace TreeDesigner
             m_EndNodeGUID = endNode.GUID;
             m_StartNode = startNode;
             m_EndNode = endNode;
+            m_DiagnosticDetailReady = false;
         }
 #endif
 

@@ -35,8 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public ulong Identity { get; }
         public ulong SequenceHighWatermark { get; }
-        public bool IsValid =>
-            Identity != 0 && SequenceHighWatermark != 0;
+        public bool IsValid => Identity != 0;
     }
 
     public sealed class ActionPlaybackCommandInbox :
@@ -196,8 +195,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException(
                     "Action playback inbox already has an active read lease.");
             }
-            if (m_Count == 0)
-                return default;
             m_NextLeaseIdentity++;
             if (m_NextLeaseIdentity == 0)
                 m_NextLeaseIdentity++;

@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationBlendStackRuntime stack)
         {
             RequireAlive();
-            if (m_FrameOpen || !input.IsValid || !lineage.IsOpenValid ||
+            if (m_FrameOpen || !input.IsValid || !lineage.IsValid ||
                 stack == null || stack.PoseNodeId != m_NodeId ||
                 stack.AnimationChannelId != m_ChannelId)
             {

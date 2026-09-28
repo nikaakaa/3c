@@ -2156,10 +2156,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return weight;
         }
 
-        static void RequireNormalized(float value)
+        static void RequireNormalized(float value, int boneIndex = -1)
         {
             if (!float.IsFinite(value) || value < 0f || value > 1f)
-                throw new InvalidOperationException("Animation Blend weight is outside [0, 1].");
+                throw new InvalidOperationException($"Animation Blend weight is outside [0, 1]: value={value}, boneIndex={boneIndex}.");
         }
 
         static void Fill(int[] values, int value)

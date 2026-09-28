@@ -35,6 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Resources
 
         internal bool IsClosing => m_State != ScopeState.Open;
 
+        internal bool IsReady => m_State == ScopeState.Open &&
+            !m_Store.HasPendingPreparation;
+
         internal int Register(CharacterAnimationCompiledResourceDescriptor descriptor)
         {
             RequireOpen();

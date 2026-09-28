@@ -173,11 +173,12 @@
 - 可保留装配时的 Clip Job 绑定，只维护活动输入权重；从上一批退出的输入必须清零。业务上减少未活动 clip 槽位的工作，代价是记录上次活动槽。Capture Job 携带每帧页绑定，不能一并停止更新；ClearInputs、Discard 和池复用也必须重置活动记录。
 - 实施结果：Clip Job 只在构造 Playable 时绑定；新增按正式 clipCapacity 准备的活动索引数组，Apply 只清上次活动输入并写本次权重，ClearInputs 同时归零活动数量。Capture Job 仍每帧绑定当前捕获页。已核对 SourceInstance 的 ResetForReuse 沿同一 ClearInputs 清理，没有改动解压、混合顺序或池复用入口。
 
-### AP14 足部支撑候选完整排序，但只消费最优项（本轮续查，CPU）
+### AP14 足部支撑候选完整排序，但只消费最优项（已实施，未实跑）
 
 - 证据：[CharacterFootPlacementWorldQueryBackend.cs:523](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootPlacementWorldQueryBackend.cs#L523)。过滤支撑候选后插入排序全部 validCount；落点查询读取 m_LandingHits[0]，当前支撑查询读取 m_CurrentSupportHits[0]，其它输出是数量和拒绝统计。
 - 在只需要最优项的当前消费者合同下，可扫描保留最小项，比较由最坏平方次数降为线性；候选很少时实际收益可能很小。
 - 必须沿原 CompareCurrentSupport 的完整规则选择，完全相等时保留先出现者；容量溢出、坡度、自碰撞过滤、候选 raycast 和统计均保持。球扫后的 collider.Raycast 用来确认真实支撑位置，不因“看起来查了两次”而删除。此项不修改其它窗口正在调整的脚部业务代码。
+- 实施结果：过滤阶段同时保留按原 CompareCurrentSupport 比较的最小候选，末尾只写 hits[0]；相等时不替换，保留原稳定排序的首项。候选总数、有效数、两类拒绝统计及全部物理查询不变。删除完整插入排序；没有更改脚部目标、骨盆、权重或求解业务。
 
 ### AP15 ACL 动作足部来源每次解析扫描全部动作目录（本轮续查，CPU）
 

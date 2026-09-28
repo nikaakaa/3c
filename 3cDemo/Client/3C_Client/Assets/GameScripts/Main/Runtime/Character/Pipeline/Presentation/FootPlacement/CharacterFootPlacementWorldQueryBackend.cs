@@ -497,6 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int validCount = 0;
             int outsideSupportRayCount = 0;
             int steepSurfaceCount = 0;
+            RaycastHit selected = default;
             for (int i = 0; i < count; i++)
             {
                 RaycastHit candidate = hits[i];
@@ -518,19 +519,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     steepSurfaceCount++;
                     continue;
                 }
-                hits[validCount++] = support;
+                if (validCount == 0 || CompareCurrentSupport(support, selected) < 0)
+                    selected = support;
+                validCount++;
             }
-            for (int i = 1; i < validCount; i++)
-            {
-                RaycastHit value = hits[i];
-                int insertion = i;
-                while (insertion > 0 && CompareCurrentSupport(value, hits[insertion - 1]) < 0)
-                {
-                    hits[insertion] = hits[insertion - 1];
-                    insertion--;
-                }
-                hits[insertion] = value;
-            }
+            if (validCount > 0)
+                hits[0] = selected;
             coverage = new CharacterFootSupportQueryDiagnostics(
                 count, validCount, outsideSupportRayCount, steepSurfaceCount);
             return validCount;

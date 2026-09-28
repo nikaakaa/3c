@@ -24,7 +24,7 @@ schema 不受本 skill 固定。准备请求前读取当前 `PerformanceCaptureS
 | `performance.prepare` | `action=status` | 查询准备状态 |
 | 同上 | `action=configure_toolchain` | 校验并保存本机工具链配置 |
 | 同上 | `action=publish_scenario`、`trace_path`、`runtime_id` | 从明确输入发布 Scenario |
-| `performance.build_player` | `action=start`、`runtime_id`、`instrumentation_mode` | 构建并发布指定模式的 Player |
+| `performance.build_player` | `action=start`、`runtime_id`、`instrumentation_mode`，可选 `clean_build_cache` | 构建当前内置资源并发布指定模式的 Player |
 | 同上 | `action=status`、`job_id` | 查询原构建作业；若当前外层 schema 要求模式参数，也传入原模式 |
 | `performance.smoke` | `action=start/status/cancel`；查询带 `job_id` | 启动、就绪与正常退出检查 |
 | `performance.replay` | `action=start/status/cancel`；查询带 `job_id` | 对应 Player 的固定输入回放检查 |
@@ -39,15 +39,27 @@ schema 不受本 skill 固定。准备请求前读取当前 `PerformanceCaptureS
 
 同一构建重复采集可复用仍然匹配的 Smoke/Replay 结果。当前没有一次 `start` 自动连续采集 N 次的合同：每次 Capture 都要完成并登记路径，再启动下一次。
 
-构建状态包含 `phase`、`elapsed_ms` 和当前消息；磁盘记录为 `Client/Library/Performance/McpJobs/<job>.json`。阶段包括资源指纹、Unity 构建、输入核对、产物整理、产物哈希和发布。`elapsed_ms` 仅代表上次进度更新时的累计耗时，Unity 原生构建期间看 Unity 进度和日志，不把未更新的时间当作进程停止。Editor 退出后残留的 `running` 需通过原作业状态核对，不直接启动另一轮。
+构建状态包含 `phase`、`elapsed_ms` 和当前消息；磁盘记录为 `Client/Library/Performance/McpJobs/<job>.json`。阶段包括资源来源指纹、`content-build` 内置资源构建、Player 输入指纹、Unity 构建、输入核对、产物整理、产物哈希和发布。`content-build` 使用项目现有 `TEngine.ReleaseTools.BuildContent`，构建 DefaultPackage 并全量复制内置资源；仅构建 exe 不会更新旧 StreamingAssets 包，已实际发生当前 ACL 地址不在旧 manifest 中的启动失败。资源包来源指纹不纳入生成的 StreamingAssets，最终 Player 输入快照仍纳入内置资源。`elapsed_ms` 仅代表上次进度更新时的累计耗时，Unity 原生构建期间看 Unity 进度和日志，不把未更新的时间当作进程停止。Editor 退出后残留的 `running` 需通过原作业状态核对，不直接启动另一轮。
+
+`clean_build_cache` 默认 false。2026-09-28 调整 Timeline 编辑器专属序列化字段后，增量 Player 在反序列化阶段发生原生崩溃；同一修改使用 `clean_build_cache=true` 重建后通过该阶段。遇到这种有日志依据的场景数据/脚本缓存问题可以显式清理重建，不将所有构建改成全量，也不据此认定已证明某个 Unity 引擎缺陷。
+
+资源构建缓存位于仓库 `.performance-build/content`，发布资源使用 YooAsset 的 `HashName` 文件名选项，业务资源地址不变。曾在较深的 `Client/Library/Performance/Content` 输出目录遇到 SBP `ArchiveAndCompressBundles` 的 `PathTooLongException`；不要把此异常当成 C# 编译错误或改写业务资源路径。
+
+失败的资源构建可能留下 URP 管线资源 dirty：当前 URP `ShaderBuildPreprocessor` 会更新 `m_Prefilter*` 并执行 `EditorUtility.SetDirty`。2026-09-28 已确认一次失败构建前输入干净、构建后三个 URP 资源 dirty，定向保存这三项后没有序列化内容差异。只有确认属于本次构建产生的状态时，才定向保存并检查 diff；不扩展成自动保存所有资源或忽略 URP 的作者改动。
 
 当前输入快照记录 Unity 已导入资源的依赖指纹和少量配置文件哈希，不递归散列全部 Assets 与 PackageCache。包中的临时 `obj` 文件不是稳定的输入清单来源。插桩配置使用按输入与模式身份确定的路径，同输入构建复用编译宏；不要手工删除其清单再假设增量编译会重新生成。具体快照 schema 与范围以仓库 README 和合同为准，不把 Unity 未导入的外部文件也说成已覆盖。
 
-未保存资源检查区分可保存的原生资源、AssetImporter 设置和导入后生成的对象。已确认字体生成的 Texture2D 可被标记 dirty，但字体导入设置并未修改；这种缓存状态不能阻塞构建，不通过全局 SaveAssets 或清除 dirty 标志绕过检查。新 Scenario 默认取消帧率上限并关闭 VSync；Profile 的 `maximum_presentation_fps` 是预分配容量的估算输入，不是 Player 帧率上限。
+未保存资源检查区分可保存的原生资源、AssetImporter 设置和导入后生成的对象。已确认字体生成的 Texture2D 可被标记 dirty，但字体导入设置并未修改；这种缓存状态不能阻塞构建，不通过全局 SaveAssets 或清除 dirty 标志绕过检查。新 Scenario 默认取消帧率上限并关闭 VSync；Profile 的 `maximum_presentation_fps` 是预分配容量的估算输入，不是 Player 帧率上限。采集 Agent 在运行环境就绪、发送 READY 前应用帧率配置，因为更早的 BeforeSceneLoad 设置会被 TEngine RootModule.Awake 覆盖；从当次 player.log 的 `Performance frame pacing` 确认实际值，不能仅凭 scenario.json 声称不限帧。
 
 构建输入核对失败时读取 `Client/Library/Performance/BuildDiagnostics/<job>/inputs-before.json` 和 `inputs-after.json`，定位变化后再处理。Unity Performance Testing 在构建前生成、成功构建后删除的两份 `Assets/Resources/PerformanceTestRunInfo.json`、`PerformanceTestRunSettings.json` 已从源码输入快照排除；不要把这个已确认的生成生命周期扩大成忽略所有 Resources 或所有资源变化。
 
 Smoke 的 `Performance Player transport closed` 只是连接关闭。读取该次 Gate 的 `runtime-result.json` 与 `player.log` 确认 Player 初始化原因，不把它直接归为 TCP 故障。2026-09-28 已确认 Controller 的旧场景和 Ready 名称可在 Player 启动前拒绝正式 Fixed 场景；应与发布器、Player 的当前合同统一，不能放宽为接受任意场景。Player 构建完成不等于角色初始化或采集完成。
+
+2026-09-28 首次通过 Smoke 后，Replay 曾因 Player 仍只接受 `/3`、实际录制已经为 `/4` 而在连接前退出。发布与读取应使用同一当前输入合同；当前每帧已包含相机 basis，文档中的初始相机朝向还需要在 READY 前恢复。Controller 已改为在等待连接期间发现 Player 退出时立即读取当次 runtime-result 报错，不再将这种启动失败拖成连接超时。
+
+核对采集边界时检查有效调用：Session 的开始门应位于被测执行方法之外，暂停或回放完成后的空调用不算已执行 Tick；表现帧需要在进入探针前建立当前 RenderFrame 上下文。总样本计数匹配和上下文完整不能仅凭插桩编译成功判定。
+
+业务 Marker 在配置插桩时按指标目录注册，不依赖各业务类型首次初始化。首次 Capture 曾在未执行的 FactProjection 阶段因 Recorder 无法找到 Marker 而失败；未调用阶段应保留无样本语义，注册 Marker 本身不执行 Begin/End、不生成耗时。2026-09-29 已在目标 Editor 核对全部 15 个 Recorder 入口均可创建，随后独立 Player Capture 完成；FactProjection 仍为无样本，Session 样本恰好覆盖 2536 个采集 Tick。
 
 ## 多次分析清单
 

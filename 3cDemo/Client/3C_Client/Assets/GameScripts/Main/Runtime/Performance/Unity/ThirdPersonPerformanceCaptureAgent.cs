@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -56,6 +57,8 @@ namespace ThirdPersonPerformance.Runtime
             public string actor_id = string.Empty;
             public int tick_rate = 0;
             public int frame_count = 0;
+            public bool has_camera_basis_yaw = false;
+            public float camera_basis_yaw_degrees = 0f;
             public InputTraceFrameDocument[] frames = Array.Empty<InputTraceFrameDocument>();
         }
 
@@ -77,6 +80,7 @@ namespace ThirdPersonPerformance.Runtime
         PerformanceScenarioDocument m_Scenario;
         PerformanceCaptureProfileDocument m_Profile;
         PerformanceCameraTraceDocument m_CameraTrace;
+        CameraInitialState? m_ReplayCameraInitialState;
         PerformanceLoopbackClient m_Transport;
         PerformanceInstrumentationMode m_InstrumentationMode;
         string m_InstrumentationIdentity = string.Empty;
@@ -285,6 +289,16 @@ namespace ThirdPersonPerformance.Runtime
 
         void ConfigureInstrumentation()
         {
+            if (m_InstrumentationMode != PerformanceInstrumentationMode.Disabled)
+            {
+                IReadOnlyList<PerformanceMetricDefinition> metrics = ThirdPersonRuntimePerformanceMetricCatalog.All;
+                for (int i = 0; i < metrics.Count; i++)
+                {
+                    PerformanceMetricDefinition metric = metrics[i];
+                    if (metric.Domain != PerformanceMetricDomain.Unity && UsesRecorder(metric))
+                        _ = new ProfilerMarker(Category(metric), metric.ProfilerName);
+                }
+            }
             if (m_InstrumentationMode == PerformanceInstrumentationMode.Span)
             {
                 if (m_Profile.instrumentation_span_capacity <= 0)
@@ -302,8 +316,6 @@ namespace ThirdPersonPerformance.Runtime
             if (m_Scenario.quality_level < 0 || m_Scenario.quality_level >= QualitySettings.names.Length)
                 throw new InvalidDataException("Performance scenario quality level is invalid.");
             QualitySettings.SetQualityLevel(m_Scenario.quality_level, true);
-            Application.targetFrameRate = m_Scenario.target_frame_rate;
-            QualitySettings.vSyncCount = m_Scenario.v_sync_count;
             if (m_Scenario.width <= 0 || m_Scenario.height <= 0)
                 throw new InvalidDataException("Performance scenario resolution is invalid.");
             Screen.SetResolution(m_Scenario.width, m_Scenario.height, false);
@@ -314,8 +326,8 @@ namespace ThirdPersonPerformance.Runtime
         void PrepareReplay()
         {
             InputTraceDocument document = ReadJson<InputTraceDocument>(m_Scenario.input_trace_path);
-            if (!string.Equals(document.schema, "character-fixed-input-trace/3", StringComparison.Ordinal) ||
-                string.IsNullOrWhiteSpace(document.trace_id) || string.IsNullOrWhiteSpace(document.actor_id) ||
+            RequireSchema(document.schema, PerformanceCaptureSchemas.FixedInputTrace, "Fixed input trace");
+            if (string.IsNullOrWhiteSpace(document.trace_id) || string.IsNullOrWhiteSpace(document.actor_id) ||
                 document.tick_rate != m_Profile.logic_tick_rate ||
                 document.frame_count != m_Scenario.warmup_logic_ticks + m_Scenario.capture_logic_ticks ||
                 document.frames == null || document.frames.Length != document.frame_count)
@@ -337,6 +349,8 @@ namespace ThirdPersonPerformance.Runtime
                 new FixedCharacterInputTrace(document.trace_id, actorId, document.tick_rate, frames),
                 actorId,
                 m_Scenario.warmup_logic_ticks);
+            if (document.has_camera_basis_yaw)
+                m_ReplayCameraInitialState = new CameraInitialState(document.camera_basis_yaw_degrees, 0f);
         }
 
         void StartTransport()
@@ -408,6 +422,18 @@ namespace ThirdPersonPerformance.Runtime
                 return;
             if (!RuntimeReadyCore())
                 return;
+            if (m_ReplayCameraInitialState.HasValue)
+            {
+                foreach (FixedCharacterHost actor in FindObjectsByType<FixedCharacterHost>(
+                             FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                {
+                    if (actor.ActorId.Value == m_Scenario.actor_id)
+                        actor.PresentationRuntime.SetCameraInitialState(m_ReplayCameraInitialState.Value);
+                }
+            }
+            Application.targetFrameRate = m_Scenario.target_frame_rate;
+            QualitySettings.vSyncCount = m_Scenario.v_sync_count;
+            Debug.Log($"Performance frame pacing: targetFrameRate={Application.targetFrameRate}, vSyncCount={QualitySettings.vSyncCount}.");
             Send("READY");
             m_ReadySent = true;
         }

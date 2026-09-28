@@ -471,7 +471,8 @@ namespace ThirdPersonCharacter.Pipeline
                     StepPreparation(context);
                     return;
                 }
-                ExecuteActiveLogicTick(context);
+                if (ActorStartGatesReady())
+                    ExecuteActiveLogicTick(context);
             }
             catch (SimulationSessionCompositionException exception)
             {
@@ -493,8 +494,6 @@ namespace ThirdPersonCharacter.Pipeline
         [PerformanceProbe("session.logic-tick")]
         void ExecuteActiveLogicTick(GameplayLogicTickContext context)
         {
-            if (!ActorStartGatesReady())
-                return;
             m_OutputLifecycle.BeginLogicTick();
             m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
             m_LastLogicTick = context.LocalLogicTick;

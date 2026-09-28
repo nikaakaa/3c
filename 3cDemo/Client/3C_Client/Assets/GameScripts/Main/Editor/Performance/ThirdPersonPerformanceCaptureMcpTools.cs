@@ -103,6 +103,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             [ToolParameter("Required instrumentation mode: Disabled, MarkerOnly or Span.", Required = true)]
             public string instrumentation_mode { get; set; }
+
+            [ToolParameter("Use Unity CleanBuildCache to rebuild Player data and scripts. Defaults to false.", Required = false)]
+            public bool clean_build_cache { get; set; }
         }
 
         public static object HandleCommand(JObject parameters)
@@ -134,7 +137,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         runtimeId,
                         jobId,
                         instrumentationMode,
-                        (phase, message, elapsed) => PerformanceMcpJobScheduler.ReportBuildProgress(jobId, phase, message, elapsed));
+                        (phase, message, elapsed) => PerformanceMcpJobScheduler.ReportBuildProgress(jobId, phase, message, elapsed),
+                        parameters?["clean_build_cache"]?.Value<bool>() ?? false);
                     return PerformanceMcpBridge.Success("Performance Player published.");
                 });
         }

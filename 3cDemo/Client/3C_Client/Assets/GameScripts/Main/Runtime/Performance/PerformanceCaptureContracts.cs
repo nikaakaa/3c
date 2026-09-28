@@ -8,6 +8,7 @@ namespace ThirdPersonPerformance
 {
     public static class PerformanceCaptureSchemas
     {
+        public const string FixedInputTrace = "character-fixed-input-trace/4";
         public const string Toolchain = "third-person-performance-toolchain/2";
         public const string Scenario = "third-person-performance-scenario/3";
         public const string CameraTrace = "third-person-performance-camera-trace/1";

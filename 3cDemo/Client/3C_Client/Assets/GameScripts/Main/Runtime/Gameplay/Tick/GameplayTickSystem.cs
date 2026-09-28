@@ -362,12 +362,24 @@ namespace ThirdPersonGameplay.Tick
             }
         }
 
-        [PerformanceProbe("gameplay.presentation")]
         public void FrameLateUpdate()
         {
             if (m_Disposed || !m_PresentationFrameAdvanced)
                 return;
+            PerformanceInstrumentationContextRuntime.BeginFrame(RenderFrame);
+            try
+            {
+                PresentFrame();
+            }
+            finally
+            {
+                PerformanceInstrumentationContextRuntime.EndFrame();
+            }
+        }
 
+        [PerformanceProbe("gameplay.presentation")]
+        void PresentFrame()
+        {
             var context = new GameplayPresentationFrameContext(
                 m_LastScaledDeltaSeconds,
                 m_LastUnscaledDeltaSeconds,

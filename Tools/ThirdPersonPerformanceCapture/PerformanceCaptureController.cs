@@ -820,6 +820,14 @@ internal sealed class PerformanceCaptureController
         while (!connection.IsCompleted && DateTime.UtcNow < deadline)
         {
             ThrowIfCancelled();
+            if (_player.HasExited)
+            {
+                string resultPath = Path.Combine(_request.staging_root, "runtime-result.json");
+                string reason = File.Exists(resultPath)
+                    ? ReadJson<PerformanceRuntimeResultDocument>(resultPath).message
+                    : $"See {Path.Combine(_request.staging_root, "player.log")}";
+                throw new InvalidOperationException($"Performance Player exited before transport connection with code {_player.ExitCode}: {reason}");
+            }
             Heartbeat();
             await Task.WhenAny(connection, Task.Delay(250));
         }

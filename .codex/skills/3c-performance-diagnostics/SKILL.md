@@ -31,7 +31,7 @@ description: 使用 3C 项目现有 Windows IL2CPP Player 性能工具进行 CPU
 
 1. 发现已有固定输入、Scenario、工具链和 Player，记录精确路径与身份。优先复用匹配产物；不把“最近一次”当成用户指定的基线，不立即要求重新录制输入。
 2. 选择探针模式：`MarkerOnly` 用于阶段成本；`Span` 用于方法、Actor、LogicTick 和慢调用；`Disabled` 关闭业务方法织入，用于整体基线或开销校准。Disabled 仍有 Recorder、Profiler 和 WPR 成本。
-3. 需要构建时使用正式 Windows x64、IL2CPP、Development Player 路径。未保存输入或构建输入变化时保留失败原因，不代替用户保存全部资产，不删除快照检查。代码、资源、模式或必要合同改变后重新构建；同一构建重复采集不反复打包。
+3. 需要构建时先沿发布器、Player、Controller、报告读取核对整条合同：当前输入 schema 与实际内容、相机初态、内置资源、探针覆盖与帧/Tick 边界、样本文件布局、外部工具配置。将可确认的问题集中修完，完成编辑器编译及 Controller 编译后，再进行耗时的 Windows x64、IL2CPP、Development Player 构建，不修一处就打一次包。涉及动作执行链且已有正式回放时，可先用该回放验证整段动作；不要求每次性能采集额外做编辑器回放。未保存输入或构建输入变化时保留失败原因，不代替用户保存全部资产，不删除快照检查。同一构建重复采集不反复打包。
 4. 对选定 Player 顺序执行 Smoke、Replay、Capture。前两步检查启动与固定输入回放，本身不是性能采集。只有与当前 Player、Scenario 匹配的 Completed 检查结果才能放行 Capture，不手改门禁或 manifest。
 5. 启动后保存 `job_id`，查询同一作业直到结束。构建耗时长时先读 `phase`、`elapsed_ms`、当前消息与目标 Editor 日志；没有编译阶段证据时，不把等待归因于 IL2CPP。超时或域重载先核对原作业，不重复启动；仅取消本任务拥有的运行。确认最终 manifest 和所需产物已正式发布，不能只看进程退出、状态字或旧路径。
 6. 保留本次输出及失败证据。读取 Summary 后按问题深入方法样本、Unity Profiler 或 WPA 数据；不自动打开外部应用，不自动压包、迁移或提交采样产物。

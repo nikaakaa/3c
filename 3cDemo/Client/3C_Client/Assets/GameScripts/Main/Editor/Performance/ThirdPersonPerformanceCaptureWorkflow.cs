@@ -248,6 +248,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"Performance Scenario requires the formal Fixed runtime '{FixedRuntimeId}'.");
             RequireFile(tracePath, "Fixed Input Trace");
             FixedInputTraceDocument input = ReadJson<FixedInputTraceDocument>(tracePath);
+            if (!string.Equals(input.schema, PerformanceCaptureSchemas.FixedInputTrace, StringComparison.Ordinal))
+                throw new InvalidDataException($"Performance requires input trace '{PerformanceCaptureSchemas.FixedInputTrace}', got '{input.schema}'.");
             if (string.IsNullOrWhiteSpace(input.trace_id) || string.IsNullOrWhiteSpace(input.actor_id) ||
                 input.tick_rate <= 0 || input.frame_count <= 0 || input.frames == null || input.frames.Length != input.frame_count)
             {
@@ -364,7 +366,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string selectedRuntimeId,
             string workspaceIdentity,
             PerformanceInstrumentationMode instrumentationMode,
-            Action<string, string, long> reportProgress = null)
+            Action<string, string, long> reportProgress = null,
+            bool cleanBuildCache = false)
         {
             PerformanceScenarioDocument scenario = RequireScenario();
             if (!string.Equals(scenario.runtime_id, selectedRuntimeId, StringComparison.Ordinal))
@@ -413,7 +416,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             try
             {
-                BeginPhase("input-snapshot", "记录 Unity 资源指纹与构建配置");
                 RequireSavedBuildInputs();
                 PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
                 var options = new BuildPlayerOptions
@@ -422,8 +424,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     locationPathName = executable,
                     target = BuildTarget.StandaloneWindows64,
                     targetGroup = BuildTargetGroup.Standalone,
-                    options = BuildOptions.Development | BuildOptions.StrictMode
+                    options = BuildOptions.Development | BuildOptions.StrictMode |
+                        (cleanBuildCache ? BuildOptions.CleanBuildCache : BuildOptions.None)
                 };
+                BeginPhase("content-inputs", "记录资源包构建输入");
+                string contentInputs = CaptureBuildInputs(options, Progress, false);
+                BeginPhase("content-build", "构建并安装当前 DefaultPackage 全量内置资源");
+                var contentBuild = TEngine.ReleaseTools.BuildContent(new TEngine.TEngineContentBuildRequest(new TEngine.BuildConfig
+                {
+                    BuildTarget = options.target,
+                    PackageName = "DefaultPackage",
+                    PackageVersion = "performance-" + Sha256(Encoding.UTF8.GetBytes(contentInputs)).Substring(0, 24),
+                    BuildOutputRoot = Path.Combine(buildWorkspaceRoot, "content"),
+                    FileNameStyle = YooAsset.EFileNameStyle.HashName,
+                    MinimalPackage = false,
+                    ClearBuildCache = cleanBuildCache,
+                    BuildinFileCopyOption = YooAsset.Editor.EBuildinFileCopyOption.ClearAndCopyAll
+                }));
+                if (!contentBuild.Success)
+                    throw new InvalidOperationException($"Performance content build failed: {contentBuild.Error}");
+                BeginPhase("input-snapshot", "记录 Unity 资源指纹与构建配置");
                 string buildInputsJson = CaptureBuildInputs(options, Progress);
                 string buildInputsHash = Sha256(Encoding.UTF8.GetBytes(buildInputsJson));
                 string instrumentationCache = Path.Combine(buildWorkspaceRoot, "inputs", buildInputsHash, instrumentationInput.Identity);
@@ -980,13 +1000,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static string CaptureBuildInputs(BuildPlayerOptions options, Action<string, float> progress)
+        static string CaptureBuildInputs(BuildPlayerOptions options, Action<string, float> progress, bool includeBuiltInContent = true)
         {
             string[] paths = AssetDatabase.GetAllAssetPaths()
                 .Where(path => (path.StartsWith("Assets/", StringComparison.Ordinal) ||
                                 path.StartsWith("Packages/", StringComparison.Ordinal)) &&
                                path != "Assets/Resources/PerformanceTestRunInfo.json" &&
                                path != "Assets/Resources/PerformanceTestRunSettings.json" &&
+                               (includeBuiltInContent || !path.StartsWith("Assets/StreamingAssets/", StringComparison.Ordinal)) &&
                                !AssetDatabase.IsValidFolder(path))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .ToArray();

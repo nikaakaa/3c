@@ -87,7 +87,11 @@ Launcher/MCP 产物放在 `Library/Performance/Analyses/<独立编号>/`，包�
 
 ## 验证边界
 
-早期工具完善只通过语法解析和差异静态检查。2026-09-28 已实际完成 Windows IL2CPP Development Player 构建、产物发布和 Controller 编译，并多次执行 Smoke。构建输入临时资源误判、Controller 旧场景合同及 Pose 连线计数问题已经通过后续运行推进验证；当前 Smoke 仍在 TimelineBody 编辑器图被剥离后缺少运行数据处失败。尚未完成 Replay 和 Capture，没有有效热点报告、探针开销数字或优化收益数据，没有新增测试。
+早期工具完善只通过语法解析和差异静态检查。2026-09-28 已实际完成 Windows IL2CPP Development Player 构建、产物发布和 Controller 编译。Timeline 仍为纯数据，TreeClip/Marker 绑定已有技能编译程序的调用来源记录；22 个播放 Timeline 的 61 个 TreeClip、1 个 Marker 已检查，清除作者图引用的克隆仍可解析 139 项依赖。接入当前内置资源构建后，Player `ef114304062e17c8814a9351` 的 Smoke 已完成，实际日志确认不限帧且 VSync 为 0。随后 Replay 暴露了性能入口仍接收旧 `/3` 输入的问题，已与发布入口统一为当前 `/4`，并恢复录制相机初态。集中检查还修正了暂停空 Tick 进入 Session 统计、表现阶段缺少帧上下文，以及 Player 提前退出仍等待连接超时的问题。
+
+上述修改已通过 Controller 与 Editor 编译，Editor 普通回放完整执行 `757f243033414fc7b123c97e2fcb0d70` 的 2716 帧，生成当前版本基线 Proof。2026-09-29，Player `fe981685443dab7200db321d` 已完成 Smoke、Replay 和正式 Capture `capture.20260928-161732.1d0ec10f9dd94ede8de4ab5b205bc7f2`；最终 manifest 为 Completed，Profiler、Span、ETL、函数热点、摘要均已发布。Capture 包含 2536 个逻辑 Tick、4304 个表现帧，持续 42.407 秒；期间丢弃 9 Tick，预算未通过。首次 Capture 曾因未执行的 FactProjection 类型没有注册 Marker 而失败，现按目录预先注册业务 Marker，未执行阶段仍无样本。
+
+该包普通回放约 151.70 FPS，完整诊断运行约 101.49 FPS；这些是单次观测，不能直接当成校准后的工具开销。首次整体报告位于 `Client/Library/Performance/Reports/overall-performance-20260929.md`，原始证据位于 `Client/Library/Performance/Captures/<CaptureId>/`。没有优化前同条件基线、探针开销校准或重复采集证据，不宣称优化收益或完整 0 GC；没有新增测试。
 
 GPU、整机内存峰值、长期泄漏与多硬件基准不在当前 Windows CPU/托管分配工具的报告范围内。
 
@@ -101,7 +105,9 @@ Player 构建输入使用 `build-inputs/2`：Assets 和 Packages 中 Unity 已�
 
 插桩输入与编译清单存放在仓库 `.performance-build/inputs/<输入快照哈希>/<插桩身份>/`。相同输入与模式复用路径及清单，内容未变时不重写输入文件；编译宏不再包含随机作业 ID。输入或模式变化会使用另一份明确输入，避免读取旧输入的插桩清单。Player 发布目录仍按本次产物身份保存，产物文件哈希仍计算一次。
 
-构建显示 `input-snapshot`、`unity-build`、`input-verification`、`artifacts`、`artifact-hashes`、`publication` 阶段，Console 记录阶段耗时与总耗时。资源指纹阶段显示计数，产物阶段显示当前文件；这些阶段的进度窗口支持取消，Unity 原生构建阶段使用 Unity 自身的进度。MCP `status` 和 `Library/Performance/McpJobs/<job>.json` 返回 `phase`、`elapsed_ms` 与当前消息。`elapsed_ms` 是最近一次进度更新时的累计耗时，原生构建期间不伪造心跳或百分比。进程退出后遗留的 `running` 文件不代表构建仍在运行，应核对原作业和目标 Editor；不据此自动重试构建。
+构建先执行 `content-inputs`、`content-build`，使用现有 `TEngine.ReleaseTools.BuildContent` 构建并全量安装 DefaultPackage 内置资源；资源包来源身份不包含生成的 StreamingAssets，随后 `input-snapshot` 会将实际内置资源纳入 Player 输入。之后显示 `unity-build`、`input-verification`、`artifacts`、`artifact-hashes`、`publication` 阶段，Console 记录阶段耗时与总耗时。资源指纹阶段显示计数，产物阶段显示当前文件；这些阶段的进度窗口支持取消，Unity 原生构建阶段使用 Unity 自身的进度。MCP `status` 和 `Library/Performance/McpJobs/<job>.json` 返回 `phase`、`elapsed_ms` 与当前消息。`elapsed_ms` 是最近一次进度更新时的累计耗时，原生构建期间不伪造心跳或百分比。进程退出后遗留的 `running` 文件不代表构建仍在运行，应核对原作业和目标 Editor；不据此自动重试构建。
+
+`performance.build_player` 的 `clean_build_cache` 默认 false；需要明确清理重建时传 true，同时作用于资源包与 Unity Player 缓存。Timeline 编辑器专属序列化字段变化后，曾出现增量 Player 反序列化崩溃，清理重建后通过该阶段；这不要求日常重复采集重新构建。采集帧率配置在运行环境就绪后、发送 READY 前应用，避免被后启动的 TEngine RootModule 覆盖；当次日志应记录 `Performance frame pacing: targetFrameRate=-1, vSyncCount=0.`。
 
 快照 `build-inputs.json` 纳入 Player 文件闭包，其哈希随 Player 和 Capture manifest 保存；Capture 发布时复制这份证据并再次校验。校准除常规环境身份外，还要求两组 `build_inputs_hash`、内容、Pipeline、Pose Graph 与 Solver 身份一致。普通回归允许源码改变；校准不允许把源码差异与探针模式差异混在一起。快照覆盖的是上述已记录输入，不能据此消除操作系统调度、温度或外部工具链状态的波动。
 

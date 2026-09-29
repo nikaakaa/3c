@@ -257,6 +257,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPresentationFactFrame
     {
+        readonly CommittedLocomotionPlanarMotionTimeline m_LocomotionMotionTimeline;
+
         public CharacterPresentationFactFrame(
             CharacterPresentationFactFrameIdentity identity,
             SimulationTick simulationTick,
@@ -303,7 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DesiredPlanarVelocity = desiredPlanarVelocity;
             MovementModeId = movementModeId.Trim();
             MovementPlaybackClock = movementPlaybackClock;
-            LocomotionMotionTimeline = locomotionMotionTimeline;
+            m_LocomotionMotionTimeline = locomotionMotionTimeline;
             MovementPlaybackTime = movementPlaybackTime;
             BodyDiscontinuityGeneration = bodyDiscontinuityGeneration;
             LocomotionFactLineage = locomotionFactLineage;
@@ -322,7 +324,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector2 DesiredPlanarVelocity { get; }
         public string MovementModeId { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
-        public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
+        public ref readonly CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline =>
+            ref m_LocomotionMotionTimeline;
         public double MovementPlaybackTime { get; }
         public ulong BodyDiscontinuityGeneration { get; }
         public CharacterLocomotionPresentationFactLineage LocomotionFactLineage { get; }

@@ -617,6 +617,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void SynchronizeMovementClock(
             double elapsedSeconds,
             CommittedMovementPlaybackClock clock,
+            in CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             float presentationDeltaSeconds,
             float playRate)
         {

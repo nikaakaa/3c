@@ -1769,3 +1769,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Placement frame 的 `Body`、`Facts`、`ParameterFrame` 自动属性每次读取复制整份 readonly struct；EvaluateFrame、事件预测、诊断和 override 重建多次读取。
 - 三个内部属性改为 backing field 返回只读引用。主路径、`PredictEvent` 和 override 重建绑定同一 body/facts/parameters；body 消费的私有辅助和诊断构造改为 `in` 接收。构造、校验、时序和诊断字段读取不变。
 - 该改动删除 Foot Placement 周期主路径中 body、facts、parameters 的重复结构拷贝。静态核对类型均为 readonly struct、引用生命周期覆盖方法调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP242 Presentation fact locomotion timeline 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPresentationFactFrame.LocomotionMotionTimeline` 自动属性每次读取复制完整 timeline；Foot Placement 主路径先复制，再进入多个 `in` 辅助方法，动作 movement clock 同步也复制一次。
+- timeline 改为 backing field 返回只读引用。Foot Placement 直接绑定同一引用，剩余段时长辅助改为 `in` 接收；`SynchronizeMovementClock` 的 timeline 参数改为 `in`，动作 clock policy 直接传入引用。timeline 校验、播放同步和诊断字段读取不变。
+- 该改动删除周期 facts 消费的整份 locomotion timeline 拷贝。静态核对 timeline 为 readonly struct、消费点均只读、引用生命周期覆盖调用；未编译、未采样，不能声称实测耗时收益。

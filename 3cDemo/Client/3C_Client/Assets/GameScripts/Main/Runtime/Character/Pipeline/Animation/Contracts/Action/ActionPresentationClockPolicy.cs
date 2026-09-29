@@ -65,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             player.SynchronizeMovementClock(
                 factFrame.MovementPlaybackTime,
                 factFrame.MovementPlaybackClock,
+                in factFrame.LocomotionMotionTimeline,
                 presentationDeltaSeconds,
                 player.PlayRate);
         }

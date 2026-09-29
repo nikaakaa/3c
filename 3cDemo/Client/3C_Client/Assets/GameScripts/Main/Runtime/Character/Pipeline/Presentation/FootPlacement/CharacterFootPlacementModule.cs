@@ -291,8 +291,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 poseInput.DenseComponentPoses);
-            CommittedLocomotionPlanarMotionTimeline timeline =
-                facts.LocomotionMotionTimeline;
+            ref readonly CommittedLocomotionPlanarMotionTimeline timeline =
+                ref facts.LocomotionMotionTimeline;
             CharacterFootActionOccupancy leftAction = ResolveActionOccupancy(
                 in poseInput,
                 CharacterFootSide.Left);
@@ -1435,7 +1435,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
 
         static float ResolveCurrentSegmentRemainingSeconds(
-            CommittedLocomotionPlanarMotionTimeline timeline,
+            in CommittedLocomotionPlanarMotionTimeline timeline,
             in CharacterBodyPresentationFrame body)
         {
             if (timeline.CurrentSegmentDurationTicks == 0)

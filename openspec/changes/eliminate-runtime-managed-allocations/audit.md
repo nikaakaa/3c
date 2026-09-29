@@ -1414,3 +1414,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Blend Pose 双源混合每骨复制 base/overlay pose 与 velocity；参数循环每次又重新读取 base/overlay 的 parameter 和 availability slice。
 - 混合分支缓存四个输入 slice 并绑定 `ref readonly` 元素引用；参数循环缓存四个输入 slice。`BlendWeighted` 的 reference 按值合同暂不改变，输出计算、可见权重校验、availability 合并和 contributions 顺序不变。
 - 该改动删除 bone 混合的中间 pose/velocity 拷贝和逐参数 slice 重复读取；不改变参数公式、异常文本、输出页身份或 Commit/Discard。静态核对 read binding 长度校验、`NativeSlice` 引用合同和双分支唯一消费点；未编译、未采样，不能声称实测耗时收益。
+
+### AP183 LayeredBoneBlend 输入引用化（2026-09-30，已实施，本轮未编译）
+
+- Layered Bone Blend 的 bone 循环在双权重分支复制 base/overlay pose 与 velocity；参数循环每次重新读取 base/overlay parameter 和 availability slice。
+- bone 循环前缓存四个输入 slice，双权重分支绑定 `ref readonly` 元素引用；参数循环缓存四个输入 slice。per-bone mask、早退分支、可见权重校验、参数公式和 contributions 顺序不变。
+- 该改动删除逐骨中间 pose/velocity 拷贝和逐参数 slice 重复读取；不改变 bone mask 业务权重、输出页身份或 Commit/Discard。静态核对 read binding 长度校验、mask 数组生命周期和唯一 BlendPose 循环；未编译、未采样，不能声称实测耗时收益。

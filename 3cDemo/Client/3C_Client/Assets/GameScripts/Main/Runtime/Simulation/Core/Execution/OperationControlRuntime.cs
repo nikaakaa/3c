@@ -171,8 +171,9 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor machine = m_Topology.Operation(owner);
             int active = FindOperationSlot(machine, ProgramStateSemantic.StateMachineActive);
             int exiting = FindOperationSlot(machine, ProgramStateSemantic.StateMachineExiting);
-            if ((active >= 0 && ParseHandle(m_Target.ReadIdentity(active)).Equals(state)) ||
-                (exiting >= 0 && ParseHandle(m_Target.ReadIdentity(exiting)).Equals(state)))
+            string stateIdentity = m_Topology.OperationIdentity(state);
+            if ((active >= 0 && string.Equals(m_Target.ReadIdentity(active), stateIdentity, StringComparison.Ordinal)) ||
+                (exiting >= 0 && string.Equals(m_Target.ReadIdentity(exiting), stateIdentity, StringComparison.Ordinal)))
             {
                 int path = FindOperationSlot(machine, ProgramStateSemantic.StateMachineExecutionPath);
                 return path >= 0 ? m_Target.ReadIdentity(path) : string.Empty;
@@ -366,13 +367,6 @@ namespace ThirdPersonSimulation
         static string FormatHandle(OperationHandle value)
         {
             return value.IsValid ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
-        }
-
-        static OperationHandle ParseHandle(string value)
-        {
-            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-                ? new OperationHandle(parsed)
-                : OperationHandle.Invalid;
         }
 
         OperationExecutionTopology IOperationCompositeRuntimeHost<TTarget>.Topology => m_Topology;

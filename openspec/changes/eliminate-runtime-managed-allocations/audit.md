@@ -759,6 +759,12 @@
 - 每条曲线在本次位移解析中先计算一次 `cycleTotal`，非 looping 仍按原 clamp 后求值，不预计算 endpoint。`SampleCumulative` 只接收并复用该总量，`cycle`、local time、from/to 和 local 求值顺序不变。
 - looping 位移解析从每轴四次求值收敛为三次（周期总量加 from/to），两轴从八次收敛为六次；数值顺序、舍入输入和可见输出不变。静态核对两域曲线求值器无状态、唯一调用链和差异；未编译、运行回放或采样。
 
+### AP99 State 执行路径身份周期解析（2026-09-29，已实施，本轮未编译）
+
+- `OperationControlRuntime.FindStateExecutionPath` 每次 Push state scope 都读取 active/exiting identity slot，并用 `int.TryParse` 解析回 OperationHandle 后与当前 state 比较。identity slot 只写入 `OperationExecutionTopology.OperationIdentity` 预生成字符串或空串，解析结果不参与其它语义。
+- 改为持有当前 state 的预生成身份并做 `StringComparison.Ordinal` 比较；命中后仍读取同一 execution path slot。空串、其它 operation 身份和无效身份都不命中；命中条件、路径读取和返回值不变。该方法内不再保留解析入口，状态机自身的过渡 handle 解析不在此项范围内。
+- 每次激活、过渡评估、子图或 state 进入时少一次到两次固定数字字符串解析；无新增状态、缓存或第二执行路径。静态核对 identity slot 全部写入、Push scope 调用链和字符串比较边界；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

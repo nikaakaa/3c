@@ -1078,36 +1078,69 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void DiscardFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
             for (int i = 0; i < m_RetirementOwners.Count; i++)
                 m_RetirementOwners[i].DiscardRetirements();
             Exception failure = null;
             int pendingRegistrationCount = 0;
-            DiscardStep(
-                () => pendingRegistrationCount =
-                    m_PhysicalSources.PendingRegistrationCount,
-                ref failure);
+            try
+            {
+                pendingRegistrationCount =
+                    m_PhysicalSources.PendingRegistrationCount;
+            }
+            catch (Exception exception)
+            {
+                RecordDiscardFailure(exception, ref failure);
+            }
             for (int i = pendingRegistrationCount - 1; i >= 0; i--)
             {
                 AnimationPhysicalSourceIdentity physical = default;
-                DiscardStep(
-                    () => physical =
-                        m_PhysicalSources.GetPendingRegistration(i),
-                    ref failure);
+                try
+                {
+                    physical = m_PhysicalSources.GetPendingRegistration(i);
+                }
+                catch (Exception exception)
+                {
+                    RecordDiscardFailure(exception, ref failure);
+                }
                 if (physical.IsValid)
-                    DiscardStep(() => Disconnect(physical), ref failure);
+                {
+                    try
+                    {
+                        Disconnect(physical);
+                    }
+                    catch (Exception exception)
+                    {
+                        RecordDiscardFailure(exception, ref failure);
+                    }
+                }
             }
-            DiscardStep(
-                () => m_Backends.DiscardFrame(lease),
-                ref failure);
-            DiscardStep(
-                () => m_FramePage.Discard(lease),
-                ref failure);
-            DiscardStep(
-                m_PhysicalSources.DiscardFrame,
-                ref failure);
+            try
+            {
+                m_Backends.DiscardFrame(lease);
+            }
+            catch (Exception exception)
+            {
+                RecordDiscardFailure(exception, ref failure);
+            }
+            try
+            {
+                m_FramePage.Discard(lease);
+            }
+            catch (Exception exception)
+            {
+                RecordDiscardFailure(exception, ref failure);
+            }
+            try
+            {
+                m_PhysicalSources.DiscardFrame();
+            }
+            catch (Exception exception)
+            {
+                RecordDiscardFailure(exception, ref failure);
+            }
             m_BindingPage.Clear();
             m_ReleasePage.Clear();
             m_ReleaseValidationIdentities.Clear();
@@ -1468,21 +1501,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        static void DiscardStep(
-            Action action,
+        static void RecordDiscardFailure(
+            Exception exception,
             ref Exception failure)
         {
-            try
-            {
-                action();
-            }
-            catch (Exception exception)
-            {
-                failure = failure == null
-                    ? exception
-                    : new AggregateException(failure, exception);
-            }
+            failure = failure == null
+                ? exception
+                : new AggregateException(failure, exception);
         }
-
     }
 }

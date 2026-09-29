@@ -1366,3 +1366,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine 在 PrepareFrame 收集请求和 PrepareEvaluation 校验子请求时，循环条件与索引访问反复执行 `state.Preparation.Demand.Requests`。Preparation 是状态对象字段，demand 同帧只读。
 - 每个状态把 demand 定成 `ref readonly` 局部，request list 缓存为同一 `IReadOnlyList` 引用；收集、丢失校验和 child PrepareEvaluation 使用同一 demand。请求顺序、错误文本和 barrier 语义不变。
 - 该改动删除周期循环中的重复只读入口调用；不复制 demand 或 request。静态核对三个状态 demand 入口、原有循环边界、异常路径和活跃状态生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP175 source cleanup 去委托化（2026-09-30，已实施，本轮未编译）
+
+- Source commit 回滚、backend discard 和 SourceModule discard 原先用 `Action` 包装每个清理步骤；discard 正常路径每帧会构造闭包/委托，源模块还会为 pending registration 循环分配捕获变量。
+- 周期清理改为专用正式方法或直接 try/catch，失败仍按原顺序记录；BackendSet 保留原有 AggregateException 规则，SourceModule 保留 pending count、倒序 disconnect、backend、frame page、physical source 的清理顺序。两个 DiscardFrame lease 参数随闭包消除改为 `in`。
+- 该改动删除 Source discard/commit 异常清理路径的周期委托分配；不改变失败聚合、rollback/discard 语义或数据生命周期。静态核对两文件的全部剩余 lambda 仅限一次性 Dispose、异常捕获顺序和大括号配对；未编译、未采样，不能声称实测耗时收益。

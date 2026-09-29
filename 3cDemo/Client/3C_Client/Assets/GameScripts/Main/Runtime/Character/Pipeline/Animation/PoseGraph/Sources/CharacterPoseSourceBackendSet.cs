@@ -78,22 +78,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             {
                 Exception failure = exception;
                 if (m_Acl != null && (aclOpen || m_Acl.HasOpenFrame))
-                    RollbackStep(() => m_Acl.RollbackAppliedFrame(lease), ref failure);
+                    RollbackAcl(in lease, ref failure);
                 if (nativeOpen || m_NativeClip.HasOpenFrame)
-                    RollbackStep(() => m_NativeClip.RollbackAppliedFrame(lease), ref failure);
+                    RollbackNativeClip(in lease, ref failure);
                 throw failure;
             }
             m_NativeClip.FinalizeAppliedFrame(lease);
             m_Acl?.FinalizeAppliedFrame(lease);
         }
 
-        internal void DiscardFrame(CharacterPoseSourceFrameLease lease)
+        internal void DiscardFrame(in CharacterPoseSourceFrameLease lease)
         {
             Exception failure = null;
             if (m_Acl?.HasOpenFrame == true)
-                DiscardStep(() => m_Acl.DiscardFrame(lease), ref failure);
+                DiscardAcl(in lease, ref failure);
             if (m_NativeClip.HasOpenFrame)
-                DiscardStep(() => m_NativeClip.DiscardFrame(lease), ref failure);
+                DiscardNativeClip(in lease, ref failure);
             if (failure != null)
                 throw failure;
         }
@@ -122,11 +122,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw failure;
         }
 
-        static void DiscardStep(Action action, ref Exception failure)
+        void RollbackAcl(in CharacterPoseSourceFrameLease lease, ref Exception failure)
         {
             try
             {
-                action();
+                m_Acl.RollbackAppliedFrame(lease);
             }
             catch (Exception exception)
             {
@@ -136,15 +136,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        static void RollbackStep(Action action, ref Exception failure)
+        void RollbackNativeClip(in CharacterPoseSourceFrameLease lease, ref Exception failure)
         {
             try
             {
-                action();
+                m_NativeClip.RollbackAppliedFrame(lease);
             }
             catch (Exception exception)
             {
                 failure = new AggregateException(failure, exception);
+            }
+        }
+
+        void DiscardAcl(in CharacterPoseSourceFrameLease lease, ref Exception failure)
+        {
+            try
+            {
+                m_Acl.DiscardFrame(lease);
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+        }
+
+        void DiscardNativeClip(in CharacterPoseSourceFrameLease lease, ref Exception failure)
+        {
+            try
+            {
+                m_NativeClip.DiscardFrame(lease);
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
             }
         }
 

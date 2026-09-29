@@ -1745,3 +1745,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Motion frame 的 node/source 自动属性每次读取复制结构；Foot Placement 选中 contribution、identity 校验和 Action Occupancy 又把候选 contribution 数组元素复制为局部。
 - Foot Motion 的公共 Node/Source 属性保留，新增 backing field 只读引用；三个周期候选循环绑定数组元素引用，identity 比较和 Action id 读取直达 backing field。选中的 contribution 仍保留一次必要局部存储，公共数组、foot motion frame 和输出 occupancy 不变。
 - 该改动删除 Foot Placement 周期 contribution 校验和 occupancy 统计的重复 identity/候选拷贝。静态核对候选只读、引用生命周期覆盖循环、选中输出语义和比较字段不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP238 Composed Pose buffer 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Composed/Final Pose Frame 的 dense pose、parameters、availability、contributions 和 bone kinds 属性每次读取复制 5 字段 read-only buffer；Final 物理与属性写回先复制再消费。
+- 两层 frame 的五类 buffer 属性改为 backing field 或 composed 字段只读引用；每次读取仍先执行原 lease 校验，失败时不返回引用。Final Property Writer 和 Physical Writer 绑定同一 backing buffer，校验顺序与元素读取不变。
+- 该改动删除 Final 输出写回的 buffer 属性拷贝，并保留输出页 lease 身份校验。静态核对 buffer 只在构造写入、公共属性仍不可绕过 lease、调用局部只读；未编译、未采样，不能声称实测耗时收益。

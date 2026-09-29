@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void ValidateBeforeWrite(in ComposedAnimationPoseFrame frame)
         {
             RequireCurrentTargets();
-            AnimationReadOnlyBuffer<byte> availability = frame.PoseParameterAvailability;
+            ref readonly AnimationReadOnlyBuffer<byte> availability = ref frame.PoseParameterAvailability;
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Write(in ComposedAnimationPoseFrame frame)
         {
-            AnimationReadOnlyBuffer<float> parameters = frame.PoseParameters;
+            ref readonly AnimationReadOnlyBuffer<float> parameters = ref frame.PoseParameters;
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];

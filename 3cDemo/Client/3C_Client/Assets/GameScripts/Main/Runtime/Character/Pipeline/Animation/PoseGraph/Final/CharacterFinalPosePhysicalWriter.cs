@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             FootIkCapture = default;
 #endif
-            AnimationReadOnlyBuffer<AnimationLocalBonePose> poses = frame.DenseLocalPose;
+            ref readonly AnimationReadOnlyBuffer<AnimationLocalBonePose> poses = ref frame.DenseLocalPose;
             for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
                 if (!m_Bones[boneIndex])

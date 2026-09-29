@@ -1757,3 +1757,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPoseConstraintResult.FullBodyIk` 自动属性每次读取复制整份 FullBodyIK result；`MatchesCommittedResult` 为比较 AppliedGoalCount 会触发 committed 与 pending 两次拷贝。
 - result 改为 backing field 保存 FullBodyIK result，内部属性返回只读引用；构造校验仍先读取同一 result 参数，lineage 与标量字段不变。committed/pending 匹配直接读取 backing field。
 - 该改动删除 Pose Constraint 周期提交状态匹配的 result 拷贝。静态核对唯一属性消费只读、构造时机和匹配字段不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP240 Foot Placement frame pose 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Foot Placement frame 的 `Pose` 自动属性每次读取复制整份 pose input，pose 的 `FootMotion` 又复制完整 foot motion；EvaluateFrame、completion identity、诊断和 override 重建多次触发。
+- 两个内部 contract 改为 backing field 保存数据并返回只读引用；EvaluateFrame 开头绑定同一 pose，Foot Motion 直接绑定 backing field，主路径和诊断共用同一引用。构造、布局校验、采样和输出写入不变。
+- 该改动删除 Foot Placement 周期主路径的整份 pose/foot motion 拷贝。静态核对 frame/pose 在方法内只读、引用生命周期覆盖调用、输出存储仍保留必要拷贝；未编译、未采样，不能声称实测耗时收益。

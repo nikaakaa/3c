@@ -72,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationFactFrame frameFacts = frame.Facts;
                 CharacterAnimationPoseInputFrame frameParameters =
                     frame.ParameterFrame;
-                CharacterFootPlacementPoseInput framePose = frame.Pose;
+                ref readonly CharacterFootPlacementPoseInput framePose = ref frame.Pose;
                 frame = new CharacterFootPlacementFrameInput(
                     frame.ActorId,
                     frame.RenderFrame,

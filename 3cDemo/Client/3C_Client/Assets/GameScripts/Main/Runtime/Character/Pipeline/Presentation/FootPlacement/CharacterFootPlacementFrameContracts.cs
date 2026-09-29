@@ -6,6 +6,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal readonly struct CharacterFootPlacementFrameInput
     {
+        readonly CharacterFootPlacementPoseInput m_Pose;
+
         internal CharacterFootPlacementFrameInput(
             ActorId actorId,
             ulong renderFrame,
@@ -32,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Body = body;
             Facts = facts;
             ParameterFrame = parameterFrame;
-            Pose = pose;
+            m_Pose = pose;
         }
 
         internal ActorId ActorId { get; }
@@ -42,6 +44,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterBodyPresentationFrame Body { get; }
         internal CharacterPresentationFactFrame Facts { get; }
         internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
-        internal CharacterFootPlacementPoseInput Pose { get; }
+        internal ref readonly CharacterFootPlacementPoseInput Pose => ref m_Pose;
     }
 }

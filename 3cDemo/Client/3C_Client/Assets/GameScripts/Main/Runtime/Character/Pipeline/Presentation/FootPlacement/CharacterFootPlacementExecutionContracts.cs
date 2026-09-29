@@ -40,6 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementPoseInput
     {
+        readonly AnimationFootMotionRuntimeFrame m_FootMotion;
+
         internal CharacterFootPlacementPoseInput(
             string posePlanHash,
             in AnimationPoseValueNativeReadBinding binding,
@@ -68,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = binding.CompletionIdentity;
             DenseComponentPoses = binding.DensePoses;
             ContinuityIdentity = binding.ContinuityIdentity[0];
-            FootMotion = footStepObservation;
+            m_FootMotion = footStepObservation;
             Contributions = contributions;
             ContributionCount = contributionCount;
             bool hasObservationContribution = false;
@@ -97,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
         internal ulong ContinuityIdentity { get; }
-        internal AnimationFootMotionRuntimeFrame FootMotion { get; }
+        internal ref readonly AnimationFootMotionRuntimeFrame FootMotion => ref m_FootMotion;
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
     }

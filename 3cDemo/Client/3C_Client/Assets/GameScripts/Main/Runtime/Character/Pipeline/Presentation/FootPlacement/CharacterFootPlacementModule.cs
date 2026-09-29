@@ -271,13 +271,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementBank bank)
         {
             RequireAlive();
+            ref readonly CharacterFootPlacementPoseInput poseInput = ref frame.Pose;
             if (bank == null || !bank.IsPendingFrameOpen)
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
                 throw new InvalidOperationException("Foot Placement already evaluated the open bank.");
             if (frame.ActorId != m_ActorId ||
                 !string.Equals(
-                    frame.Pose.PosePlanHash,
+                    poseInput.PosePlanHash,
                     m_Settings.PosePlanHash,
                     StringComparison.Ordinal) ||
                 frame.FootPlacementWeight < 0f ||
@@ -287,21 +288,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
-                frame.Pose.DenseComponentPoses);
+                poseInput.DenseComponentPoses);
             CharacterPresentationFactFrame facts = frame.Facts;
             CommittedLocomotionPlanarMotionTimeline timeline =
                 facts.LocomotionMotionTimeline;
             CharacterFootActionOccupancy leftAction = ResolveActionOccupancy(
-                frame.Pose,
+                in poseInput,
                 CharacterFootSide.Left);
             CharacterFootActionOccupancy rightAction = ResolveActionOccupancy(
-                frame.Pose,
+                in poseInput,
                 CharacterFootSide.Right);
             float currentSegmentRemainingSeconds = timeline.IsValid
                 ? ResolveCurrentSegmentRemainingSeconds(timeline, frame.Body)
                 : 0f;
-            AnimationFootMotionRuntimeFrame formalFootFrame =
-                frame.Pose.FootMotion;
+            ref readonly AnimationFootMotionRuntimeFrame formalFootFrame =
+                ref poseInput.FootMotion;
             AnimationFootMotionRuntimeSample leftCurrentStep =
                 formalFootFrame.Left;
             AnimationFootMotionRuntimeSample rightCurrentStep =
@@ -323,7 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 facts.Grounded,
                 frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
+                poseInput.CompletionIdentity,
                 m_LeftCurrentSupport,
                 committedBank?.LeftCurrentSupport);
             bank.RightCurrentSupport = PrepareCurrentSupport(
@@ -332,7 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 componentUp,
                 facts.Grounded,
                 frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
+                poseInput.CompletionIdentity,
                 m_RightCurrentSupport,
                 committedBank?.RightCurrentSupport);
             CharacterFootCurrentSupportObservation leftCurrentSupport =
@@ -484,13 +485,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out CharacterFootSide selectedSwingSide);
             Transform goalRoot = m_Rig.PoseRoot;
             var sourceLineage = new FixedString128Bytes(
-                frame.Pose.PosePlanHash);
+                poseInput.PosePlanHash);
             var profileRevision = new FixedString128Bytes(
                 m_Settings.ProfileRevision);
             ulong worldRevision = m_WorldQuery.WorldRevision;
             var leftConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
+                poseInput.CompletionIdentity,
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 CharacterFootSide.Left,
@@ -519,7 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Settings.FootMotion);
             var rightConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
+                poseInput.CompletionIdentity,
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 CharacterFootSide.Right,
@@ -646,11 +647,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.LeftGoal = leftGoal;
             bank.RightGoal = rightGoal;
             bank.FrameSequence = frame.RenderFrame;
-            bank.CompletionIdentity = frame.Pose.CompletionIdentity;
+            bank.CompletionIdentity = poseInput.CompletionIdentity;
             if (bank.RecordDiagnostics)
             {
-                AnimationFootMotionRuntimeFrame footStepObservation =
-                    frame.Pose.FootMotion;
                 var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
                     frame.PresentationDeltaSeconds,
                     frame.Body,
@@ -662,7 +661,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in timeline,
                     currentSegmentRemainingSeconds,
                     in bank.PredictionMotionResult,
-                    in footStepObservation);
+                    in formalFootFrame);
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
@@ -705,7 +704,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new CharacterFootStrideHipsDiagnostics(in strideHips);
                 var diagnostics = new CharacterFootLandingPredictionDiagnostics(
                     frame.RenderFrame,
-                    frame.Pose.CompletionIdentity,
+                    poseInput.CompletionIdentity,
                     m_Rig.VisualRoot.GetInstanceID(),
                     m_Settings.ProfileId,
                     m_Settings.ProfileRevision,
@@ -719,7 +718,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             return new CharacterFootPlacementResult(
                 frame.RenderFrame,
-                frame.Pose.CompletionIdentity,
+                poseInput.CompletionIdentity,
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 in resolvedPair,

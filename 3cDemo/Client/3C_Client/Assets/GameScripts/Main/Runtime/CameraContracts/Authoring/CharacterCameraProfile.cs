@@ -29,6 +29,9 @@ namespace ThirdPersonCamera
         [SerializeField] float m_DefaultSmoothTime = 0.08f;
         [SerializeField] float m_RotationTransitionSeconds = 0.2f;
         [SerializeField] CameraInputSettings m_Input = new CameraInputSettings();
+        [SerializeField] CameraDelaySettings m_Delay;
+        [SerializeField] bool m_MuteCameraShake;
+        [SerializeField] bool m_MuteCameraShakeAdvancedProcess;
         [SerializeField] CameraCollisionSettings m_Collision = new CameraCollisionSettings();
         [SerializeField] CameraTargetSlot[] m_TargetSlots = Array.Empty<CameraTargetSlot>();
 
@@ -50,14 +53,29 @@ namespace ThirdPersonCamera
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
         public CameraInputSettings Input => m_Input;
+        public CameraDelaySettings Delay => m_Delay;
+        public bool MuteCameraShake => m_MuteCameraShake;
+        public bool MuteCameraShakeAdvancedProcess => m_MuteCameraShakeAdvancedProcess;
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlot> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlot>();
+
+        public void ConfigureDelay(CameraDelaySettings delay, float defaultSmoothTime)
+        {
+            m_Delay = delay;
+            m_DefaultSmoothTime = defaultSmoothTime;
+        }
 
         public void ConfigureShakeResources(CameraShakeAsset[] shakes, CameraCurveAsset[] curves)
         {
             m_Shakes = (CameraShakeAsset[])shakes.Clone();
             m_Curves = (CameraCurveAsset[])curves.Clone();
             RequireValid();
+        }
+
+        public void ConfigureShakeProcessing(bool muteCameraShake, bool muteCameraShakeAdvancedProcess)
+        {
+            m_MuteCameraShake = muteCameraShake;
+            m_MuteCameraShakeAdvancedProcess = muteCameraShakeAdvancedProcess;
         }
 
         public bool HasSequence(string sequenceId)
@@ -101,6 +119,9 @@ namespace ThirdPersonCamera
                 value.Append('|').Append(DefaultSmoothTime.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(RotationTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
                 AppendInput(value, Input);
+                value.Append('|').Append(JsonUtility.ToJson(Delay));
+                value.Append('|').Append(MuteCameraShake);
+                value.Append('|').Append(MuteCameraShakeAdvancedProcess);
                 AppendCollision(value, Collision);
                 AppendAssetIds(value, Sequences);
                 AppendAssetIds(value, OverrideTracks);
@@ -131,7 +152,7 @@ namespace ThirdPersonCamera
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
-                RequestCapacity <= 0 || !DefaultSequence || Input == null || Collision == null ||
+                RequestCapacity <= 0 || !DefaultSequence || Input == null || Delay == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||

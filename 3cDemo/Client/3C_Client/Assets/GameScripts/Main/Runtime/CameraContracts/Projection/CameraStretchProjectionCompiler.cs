@@ -15,11 +15,17 @@ namespace ThirdPersonCamera
             if (asset.FovVariationType != CameraFovVariationType.Absolute)
                 throw new InvalidOperationException(
                     $"Camera Stretch '{asset.StretchId}' uses FOV variation '{asset.FovVariationType}' without a source FOV delta field.");
+            if (asset.ApplyAimPointsCameraFollowYOffset)
+                throw new InvalidOperationException(
+                    $"Camera Stretch '{asset.StretchId}' requires an aim-point follow-offset input.");
+            var followPoints = new string[asset.RuntimeCamFollowYPoints.Count];
+            for (int i = 0; i < followPoints.Length; i++)
+                followPoints[i] = asset.RuntimeCamFollowYPoints[i];
             return new CameraStretchPayload(
                 asset.StretchId,
                 context.CompileCurve(context.RequireCurve(asset.StartCurve)),
                 context.CompileCurve(context.RequireCurve(asset.EndCurve)),
-                asset.RuntimeCamFollowYPoints,
+                followPoints,
                 asset.RotationZ,
                 asset.IgnoreLocalAvatar,
                 asset.IsAppliedElevationRatio,

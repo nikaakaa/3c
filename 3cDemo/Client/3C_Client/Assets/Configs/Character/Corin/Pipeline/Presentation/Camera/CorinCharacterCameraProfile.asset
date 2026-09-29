@@ -108,6 +108,1073 @@ MonoBehaviour:
     m_DefaultResponseWeight: 1
     m_PitchResponseWeight: 1
     m_YawResponseWeight: 1
+  m_Delay:
+    m_Muted: 0
+    m_AutoChangeMode: 1
+    m_FollowAnimationState: 1
+    m_DefaultMode: 0
+    m_SpeedSmoothTime: 0.01
+    m_OrbitLerpTime: 1
+    m_OverAxisProtectRadius: 0.2
+    m_Modes:
+    - m_Mode: 0
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.6
+          m_Backward: 0.3
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 1
+          m_Forward: 1
+          m_Backward: 0.4
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.4
+          m_Backward: 0.1
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 3
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.6
+          m_Backward: 0.3
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.6
+          m_Backward: 0.2
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.4
+          m_Forward: 0.6
+          m_Backward: 0.1
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 2
+      m_FieldOfView: 60
+      m_MinimumDistanceRatio: 0.5
+      m_Bottom:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.6
+          m_Backward: 0.3
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 0.8}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 1}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 1
+          m_Forward: 1
+          m_Backward: 0.4
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 0.8}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.4
+          m_Forward: 0.6
+          m_Backward: 0.2
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 1
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.8
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.4
+          m_Forward: 0.4
+          m_Backward: 0.02
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 1
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.4
+          m_Forward: 0.4
+          m_Backward: 0.02
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0.5
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.4
+          m_Forward: 0.4
+          m_Backward: 0.02
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0.5
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 4
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 3}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.6
+          m_Backward: 0.3
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 3}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 1
+          m_Forward: 1
+          m_Backward: 0.4
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 3}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 3}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.6
+          m_Forward: 0.4
+          m_Backward: 0.1
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 3}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 0.8}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 12
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 11
+      m_FieldOfView: 60
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 0.8}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 1}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 0.8}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0.5
+        m_FollowPositionDamping: {x: 0, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.1
+          m_Forward: 0
+          m_Backward: 0
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 20
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.2
+          m_Forward: 0.3
+          m_Backward: 0.1
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 1
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.25
+          m_Forward: 0.25
+          m_Backward: 0.25
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.3
+          m_Forward: 0.4
+          m_Backward: 0.05
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0.5
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.25
+          m_Forward: 0.25
+          m_Backward: 0.25
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 0.2
+          m_Forward: 0.3
+          m_Backward: 0.1
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0.5
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.25
+          m_Forward: 0.25
+          m_Backward: 0.25
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    - m_Mode: 25
+      m_FieldOfView: 40
+      m_MinimumDistanceRatio: 0.6
+      m_Bottom:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 1.8
+          m_Forward: 1.8
+          m_Backward: 0.9
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.35}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0.345}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Middle:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 3
+          m_Forward: 3
+          m_Backward: 1.2
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 1}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+      m_Top:
+        m_FollowRotateCoefficient: 0
+        m_FollowPositionDamping: {x: 0.5, y: 0.5, z: 0.5}
+        m_FollowRotationDamping: {x: 0, y: 0, z: 0}
+        m_FollowDirection:
+          m_Idle: 0
+          m_Side: 2.4
+          m_Forward: 1.6
+          m_Backward: 0.4
+        m_FollowAnimation:
+          m_States: []
+          m_Tags: []
+        m_CompositionDamping: {x: 0.5, y: 0.5}
+        m_RotateDamping: 0
+        m_ScreenPosition: {x: 0.5, y: 0.5}
+        m_DeadZone: {x: 0, y: 0}
+        m_SoftZone: {x: 0.8, y: 2}
+        m_Bias: {x: 0, y: 0}
+        m_LookAtDirection:
+          m_Idle: 0
+          m_Side: 0.5
+          m_Forward: 0.5
+          m_Backward: 0.5
+        m_LookAtAnimation:
+          m_States: []
+          m_Tags: []
+    m_Blends:
+    - m_FromMode: 99
+      m_ToMode: 0
+      m_Style: 7
+      m_Duration: 0.1
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 1
+      m_Style: 7
+      m_Duration: 0.15
+      m_StableTime: 1
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 2
+      m_Style: 7
+      m_Duration: 1
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 3
+      m_Style: 7
+      m_Duration: 0.2
+      m_StableTime: 1
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 3
+      m_ToMode: 2
+      m_Style: 7
+      m_Duration: 2
+      m_StableTime: 1
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: -0.0032520324
+          value: 0.009433962
+          inSlope: 0
+          outSlope: 0.17904639
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 0.642275
+          value: 0.12501325
+          inSlope: 0.46081853
+          outSlope: 0.46081853
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0.33333334
+          outWeight: 0.33333334
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 1
+      m_ToMode: 99
+      m_Style: 7
+      m_Duration: 0.1
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 4
+      m_Style: 1
+      m_Duration: 0.5
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 20
+      m_Style: 7
+      m_Duration: 0.1
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    - m_FromMode: 99
+      m_ToMode: 25
+      m_Style: 7
+      m_Duration: 0.1
+      m_StableTime: 0
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    m_Upward:
+      m_VelocityThreshold: 1
+      m_DampingRatio: 1.5
+      m_Duration: 0.5
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+    m_Downward:
+      m_VelocityThreshold: -3
+      m_DampingRatio: 0.05
+      m_Duration: 0.2
+      m_Curve:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 2
+          outSlope: 2
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 0
+          outSlope: 0
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 4
+  m_MuteCameraShake: 0
+  m_MuteCameraShakeAdvancedProcess: 0
   m_Collision:
     m_Enabled: 0
     m_LayerMask:

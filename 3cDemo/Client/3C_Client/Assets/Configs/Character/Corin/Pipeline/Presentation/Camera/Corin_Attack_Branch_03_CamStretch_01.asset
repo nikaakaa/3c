@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91b88cc1ef7e4ca6a626a33d3fadd9e2, type: 3}
   m_Name: Corin_Attack_Branch_03_CamStretch_01
   m_EditorClassIdentifier: 
-  m_Schema: character-camera-stretch/v1
+  m_Schema: character-camera-stretch/v2
   m_StretchId: Corin_Attack_Branch_03_CamStretch_01
   m_StartCurve: {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}
   m_EndCurve: {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
-  m_RuntimeCamFollowYPoints: 0
+  m_RuntimeCamFollowYPoints: []
   m_RotationZ: 0
   m_IgnoreLocalAvatar: 0
   m_IsAppliedElevationRatio: 0

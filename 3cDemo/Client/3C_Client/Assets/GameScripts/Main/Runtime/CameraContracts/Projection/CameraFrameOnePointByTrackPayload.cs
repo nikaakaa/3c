@@ -13,6 +13,10 @@ namespace ThirdPersonCamera
         [SerializeField] float m_ElevationRatio;
         [SerializeField] float m_PolarAngle;
         [SerializeField] float m_CameraLocateRatio;
+        [SerializeField] CameraTrackOrbitPayload m_TopOrbit;
+        [SerializeField] float m_TopCurvature;
+        [SerializeField] Vector3 m_FollowOffset;
+        [SerializeField] Vector3 m_AimOffset;
         [SerializeField] CameraTrackOrbitPayload[] m_CameraOrbits;
         [SerializeField] Vector4[] m_TrackControl1;
         [SerializeField] Vector4[] m_TrackControl2;
@@ -26,7 +30,11 @@ namespace ThirdPersonCamera
             Vector4[] trackControl2,
             float elevationRatio,
             float polarAngle,
-            float cameraLocateRatio)
+            float cameraLocateRatio,
+            CameraTrackOrbitPayload topOrbit,
+            float topCurvature,
+            Vector3 followOffset,
+            Vector3 aimOffset)
             : base(stageId, CameraSequenceStageKind.FrameOnePointByTrack)
         {
             m_CameraOrbits = cameraOrbits ?? Array.Empty<CameraTrackOrbitPayload>();
@@ -38,6 +46,10 @@ namespace ThirdPersonCamera
             m_ElevationRatio = elevationRatio;
             m_PolarAngle = polarAngle;
             m_CameraLocateRatio = cameraLocateRatio;
+            m_TopOrbit = topOrbit;
+            m_TopCurvature = topCurvature;
+            m_FollowOffset = followOffset;
+            m_AimOffset = aimOffset;
         }
 
         public IReadOnlyList<CameraTrackOrbitPayload> CameraOrbits => m_CameraOrbits ?? Array.Empty<CameraTrackOrbitPayload>();
@@ -49,5 +61,9 @@ namespace ThirdPersonCamera
         public float ElevationRatio => m_ElevationRatio;
         public float PolarAngle => m_PolarAngle;
         public float CameraLocateRatio => m_CameraLocateRatio;
+        public CameraTrackOrbitPayload TopOrbit => m_TopOrbit;
+        public float TopCurvature => m_TopCurvature;
+        public Vector3 FollowOffset => m_FollowOffset;
+        public Vector3 AimOffset => m_AimOffset;
     }
 }

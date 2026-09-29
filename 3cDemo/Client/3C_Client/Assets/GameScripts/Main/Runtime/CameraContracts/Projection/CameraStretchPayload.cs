@@ -10,7 +10,7 @@ namespace ThirdPersonCamera
         [SerializeField] string m_StretchId = string.Empty;
         [SerializeField] CameraCurvePayload m_StartCurve;
         [SerializeField] CameraCurvePayload m_EndCurve;
-        [SerializeField] float m_RuntimeCamFollowYPoints;
+        [SerializeField] string[] m_RuntimeCamFollowYPoints;
         [SerializeField] float m_RotationZ;
         [SerializeField] bool m_IgnoreLocalAvatar;
         [SerializeField] bool m_IsAppliedElevationRatio;
@@ -43,7 +43,7 @@ namespace ThirdPersonCamera
             string stretchId,
             CameraCurvePayload startCurve,
             CameraCurvePayload endCurve,
-            float runtimeCamFollowYPoints,
+            string[] runtimeCamFollowYPoints,
             float rotationZ,
             bool ignoreLocalAvatar,
             bool isAppliedElevationRatio,
@@ -108,7 +108,7 @@ namespace ThirdPersonCamera
         public string StretchId => m_StretchId ?? string.Empty;
         public CameraCurvePayload StartCurve => m_StartCurve;
         public CameraCurvePayload EndCurve => m_EndCurve;
-        public float RuntimeCamFollowYPoints => m_RuntimeCamFollowYPoints;
+        public IReadOnlyList<string> RuntimeCamFollowYPoints => m_RuntimeCamFollowYPoints;
         public float RotationZ => m_RotationZ;
         public bool IgnoreLocalAvatar => m_IgnoreLocalAvatar;
         public bool IsAppliedElevationRatio => m_IsAppliedElevationRatio;
@@ -140,7 +140,7 @@ namespace ThirdPersonCamera
         public void RequireValid(string source)
         {
             if (string.IsNullOrWhiteSpace(StretchId) || StartCurve == null || EndCurve == null ||
-                !float.IsFinite(RuntimeCamFollowYPoints) || !float.IsFinite(RotationZ) ||
+                !float.IsFinite(RotationZ) ||
                 !float.IsFinite(RuntimeCamFollowYOffsetRatio) || !float.IsFinite(ElevationAngleMin) ||
                 !float.IsFinite(EndElevationAngleMin) || !float.IsFinite(ElevationAngleMax) ||
                 !float.IsFinite(EndElevationAngleMax) || !float.IsFinite(RecoilTime) || RecoilTime < 0f ||

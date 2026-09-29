@@ -40,3 +40,9 @@ MonoBehaviour:
         m_ElevationRatio: 0.6
         m_PolarAngle: 0
         m_CameraLocateRatio: 1
+        m_TopOrbit:
+          m_Height: 2.225
+          m_Radius: 0.2
+        m_TopCurvature: 0.25
+        m_FollowOffset: {x: 0, y: -0.225, z: 0}
+        m_AimOffset: {x: 0, y: -0.225, z: 0}

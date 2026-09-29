@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json.Linq;
@@ -19,8 +20,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new InvalidOperationException("Camera authoring requires an idle Editor.");
             var profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(Folder + "CorinCharacterCameraProfile.asset");
             PublishDefaultOrbit(profile);
+            PublishDelay(profile);
+            PublishShakeProcessing(profile);
             PublishInput(profile);
-            PublishStacking(profile);
+            PublishEffectSettings(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
             var shakes = new Dictionary<string, CameraShakeAsset>(StringComparer.Ordinal);
@@ -128,8 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         public static void PublishDefaultOrbit(CharacterCameraProfile profile)
         {
-            const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
-            JToken source = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"];
+            JToken source = ReadAvatarConfiguration();
             JToken sphere = source["DEFAULTSPHEREDATA"];
             var orbitSource = (JArray)sphere["Orbits"];
             var orbits = new CameraTrackOrbitDescriptor[orbitSource.Count];
@@ -143,19 +145,122 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 new Vector2(0f, (float)screen["Top"])
             };
             CameraSequenceAsset sequence = profile.DefaultSequence;
+            JToken topOrbit = sphere["TopOrbit"];
+            JToken followOffset = sphere["DEFAULT_FOLLOWOFFSET"];
+            JToken aimOffset = sphere["DEFAULT_LOOKATOFFSET"];
             Undo.RecordObject(sequence, "从解包配置可琳基础轨道");
             var track = (CameraFrameOnePointByTrackStage)sequence.Stages[0];
             track.ConfigureOrbit(orbits, screenOffsets, (float)sphere["CAMERA_FOV"],
-                (float)source["ELEVATION_ANGLE"], (float)sphere["CAMERA_LOCATE_RADIUSRATIO"]);
+                (float)source["ELEVATION_ANGLE"], (float)sphere["CAMERA_LOCATE_RADIUSRATIO"],
+                new CameraTrackOrbitDescriptor((float)topOrbit["m_Height"], (float)topOrbit["m_Radius"]),
+                (float)sphere["TopCurvature"],
+                new Vector3((float)followOffset["x"], (float)followOffset["y"], (float)followOffset["z"]),
+                new Vector3((float)aimOffset["x"], (float)aimOffset["y"], (float)aimOffset["z"]));
             Save(sequence);
+        }
+
+        public static void PublishDelay(CharacterCameraProfile profile)
+        {
+            JToken source = ReadAvatarConfiguration();
+            var modeSource = (JObject)source["DELAYDATAS"];
+            var modes = new CameraDelayModeSettings[modeSource.Count];
+            int modeIndex = 0;
+            foreach (JProperty property in modeSource.Properties())
+            {
+                JToken mode = property.Value;
+                modes[modeIndex++] = new CameraDelayModeSettings(
+                    int.Parse(property.Name, CultureInfo.InvariantCulture),
+                    (float)mode["mFOV"], (float)mode["CAM_MINDISRATIO"],
+                    ReadDelayOrbit(mode["mBottomCameraDelayData"]),
+                    ReadDelayOrbit(mode["mMiddleCameraDelayData"]),
+                    ReadDelayOrbit(mode["mTopCameraDelayData"]));
+            }
+            var blendSource = (JArray)source["DELAY_CustomBlendDatas"]["m_CustomBlends"];
+            var blends = new CameraDelayBlendSettings[blendSource.Count];
+            for (int i = 0; i < blends.Length; i++)
+            {
+                JToken entry = blendSource[i];
+                JToken blend = entry["m_Blend"];
+                blends[i] = new CameraDelayBlendSettings(
+                    (int)entry["m_From"], (int)entry["m_To"], (int)blend["m_Style"],
+                    (float)blend["m_Time"], (float)blend["m_StableTime"], ReadDelayCurve(blend["m_CustomCurve"]));
+            }
+            var settings = new CameraDelaySettings(
+                (bool)source["MUTE_DELAY_USING"], (bool)source["DELAY_ISAUTOCHANGECAMERASTATE"],
+                (bool)source["DELAY_ISCHANGEFOLLOWANIM"], (int)source["DELAY_CameraDelayMoveMode"],
+                (float)source["DELAY_SPEED_SMOOTH_TIME"], (float)source["DragConfig"]["NapCamOrbitLerpTime"],
+                (float)source["camOverAxisProtectRadius"], modes, blends,
+                new CameraVerticalDelaySettings((float)source["camUpVelocityY"], (float)source["camUpDumperY"],
+                    (float)source["camUpDumperTimer"], ReadDelayCurve(source["CamUpDumperCurve"])),
+                new CameraVerticalDelaySettings((float)source["camDropVelocityY"], (float)source["camDropDumperY"],
+                    (float)source["camDropDumperTimer"], ReadDelayCurve(source["CamDropDumperCurve"])));
+            Undo.RecordObject(profile, "从解包配置可琳相机跟随延迟");
+            profile.ConfigureDelay(settings, (float)source["DEFAULT_SMOOTH_TIME"]);
+            Save(profile);
+        }
+
+        static CameraDelayOrbitSettings ReadDelayOrbit(JToken source) => new CameraDelayOrbitSettings(
+            (float)source["Delay_FollowRotateCoef"],
+            new Vector3((float)source["DELAY_FOLLOW_X_DUMPING"], (float)source["DELAY_FOLLOW_Y_DUMPING"],
+                (float)source["DELAY_FOLLOW_Z_DUMPING"]),
+            new Vector3((float)source["DELAY_FOLLOW_PITCH_DUMPING"], (float)source["DELAY_FOLLOW_YAW_DUMPING"],
+                (float)source["DELAY_FOLLOW_ROLL_DUMPING"]),
+            ReadDelayDirection(source["DELAY_FOLLOW_MOVEDIRCETION_RADIO"]),
+            ReadDelayAnimation(source["DELAY_FOLLOW_ANIMSTATE_RADIO"]),
+            new Vector2((float)source["DELAY_HorizontalDamping"], (float)source["DELAY_VerticalDamping"]),
+            (float)source["DELAY_ROTATE_DUMPING"],
+            new Vector2((float)source["DELAY_ScreenX"], (float)source["DELAY_ScreenY"]),
+            new Vector2((float)source["DELAY_DeadZoneWidth"], (float)source["DELAY_DeadZoneHeight"]),
+            new Vector2((float)source["DELAY_SoftZoneWidth"], (float)source["DELAY_SoftZoneHeight"]),
+            new Vector2((float)source["DELAY_BiasX"], (float)source["DELAY_BiasY"]),
+            ReadDelayDirection(source["DELAY_LOOKAT_MOVEDIRCETION_RADIO"]),
+            ReadDelayAnimation(source["DELAY_LOOKAT_ANIMSTATE_RADIO"]));
+
+        static CameraDelayDirectionSettings ReadDelayDirection(JToken source) => new CameraDelayDirectionSettings(
+            (float)source["RATIO_CAMERA_DIRECTION_IDLE"], (float)source["RATIO_CAMERA_DIRECTION_SIDE"],
+            (float)source["RATIO_CAMERA_DIRECTION_FORWARD"], (float)source["RATIO_CAMERA_DIRECTION_BACKWARD"]);
+
+        static CameraDelayAnimationSettings ReadDelayAnimation(JToken source)
+        {
+            var stateSource = (JObject)source["RATIO_CAMERA_STATE"];
+            var states = new CameraDelayStateRatio[stateSource.Count];
+            int index = 0;
+            foreach (JProperty entry in stateSource.Properties())
+                states[index++] = new CameraDelayStateRatio(entry.Name, (float)entry.Value);
+            var tagSource = (JObject)source["RATIO_CAMERA_TAG"];
+            var tags = new CameraDelayTagRatio[tagSource.Count];
+            index = 0;
+            foreach (JProperty entry in tagSource.Properties())
+                tags[index++] = new CameraDelayTagRatio(int.Parse(entry.Name, CultureInfo.InvariantCulture), (float)entry.Value);
+            return new CameraDelayAnimationSettings(states, tags);
+        }
+
+        static AnimationCurve ReadDelayCurve(JToken source)
+        {
+            var keysSource = (JArray)source["keys"];
+            var keys = new Keyframe[keysSource.Count];
+            for (int i = 0; i < keys.Length; i++)
+            {
+                JToken key = keysSource[i];
+                keys[i] = new Keyframe((float)key["m_Time"], (float)key["m_Value"],
+                    (float)key["m_InTangent"], (float)key["m_OutTangent"],
+                    (float)key["m_InWeight"], (float)key["m_OutWeight"])
+                {
+                    weightedMode = (WeightedMode)(int)key["m_WeightedMode"]
+                };
+            }
+            return new AnimationCurve(keys)
+            {
+                preWrapMode = (WrapMode)(int)source["preWrapMode"],
+                postWrapMode = (WrapMode)(int)source["postWrapMode"]
+            };
         }
 
         public static void PublishInput(CharacterCameraProfile profile)
         {
-            const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
             string snapshotPath = Path.GetFullPath(Path.Combine(Application.dataPath,
                 "../../../../docs/diagnostics/camera-basis-runtime-20260929/pointer-input-snapshot.json"));
-            JToken source = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"];
+            JToken source = ReadAvatarConfiguration();
             JToken snapshot = JObject.Parse(File.ReadAllText(snapshotPath, Encoding.UTF8));
             JToken settings = snapshot["player_fields"];
             JToken x = source["DragConfig"]["Drag_XAxis"];
@@ -185,7 +290,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Save(profile);
         }
 
-        public static void PublishStacking(CharacterCameraProfile profile)
+        public static void PublishShakeProcessing(CharacterCameraProfile profile)
+        {
+            JToken source = ReadAvatarConfiguration();
+            Undo.RecordObject(profile, "从解包配置相机震动处理开关");
+            profile.ConfigureShakeProcessing((bool)source["MUTE_CAMERA_SHAKE"],
+                (bool)source["MUTE_CAMERA_SHAKE_ADVANCED_PROCESS"]);
+            Save(profile);
+        }
+
+        static JToken ReadAvatarConfiguration()
+        {
+            const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
+            return JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"];
+        }
+
+        public static void PublishEffectSettings(CharacterCameraProfile profile)
         {
             const string sourceFolder = "D:/ZZZ_Dump/output/corin_replication/replication-guide/data/variants/";
             JToken zooms = JObject.Parse(File.ReadAllText(sourceFolder + "zoom-0.json", Encoding.UTF8))["cameraZooms"];
@@ -202,6 +322,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 JToken source = stretches[stretch.StretchId];
                 stretch.ConfigureStacking(
                     DecodePlaybackStacking((int)source["PlayStackingType"]), (int)source["StackingType"]);
+                JToken pointSource = source["RuntimeCamFollowYPoints"];
+                string[] followPoints = pointSource.Type == JTokenType.Null
+                    ? Array.Empty<string>()
+                    : pointSource.ToObject<string[]>();
+                stretch.ConfigureFollowPoints(followPoints);
                 Save(stretch);
             }
         }

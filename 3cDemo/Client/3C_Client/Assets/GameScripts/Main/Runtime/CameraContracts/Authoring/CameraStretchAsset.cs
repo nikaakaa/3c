@@ -10,13 +10,13 @@ namespace ThirdPersonCamera
 [CreateAssetMenu(fileName = "CameraStretch", menuName = "3C/Character/Camera/Stretch")]
     public sealed class CameraStretchAsset : CameraEffectAsset
     {
-        public const string SchemaVersion = "character-camera-stretch/v1";
+        public const string SchemaVersion = "character-camera-stretch/v2";
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_StretchId = string.Empty;
         [SerializeField] CameraCurveAsset m_StartCurve;
         [SerializeField] CameraCurveAsset m_EndCurve;
-        [SerializeField] float m_RuntimeCamFollowYPoints;
+        [SerializeField] string[] m_RuntimeCamFollowYPoints = Array.Empty<string>();
         [SerializeField] float m_RotationZ;
         [SerializeField] bool m_IgnoreLocalAvatar;
         [SerializeField] bool m_IsAppliedElevationRatio;
@@ -49,7 +49,7 @@ namespace ThirdPersonCamera
         public string StretchId => m_StretchId ?? string.Empty;
         public CameraCurveAsset StartCurve => m_StartCurve;
         public CameraCurveAsset EndCurve => m_EndCurve;
-        public float RuntimeCamFollowYPoints => m_RuntimeCamFollowYPoints;
+        public IReadOnlyList<string> RuntimeCamFollowYPoints => m_RuntimeCamFollowYPoints;
         public float RotationZ => m_RotationZ;
         public bool IgnoreLocalAvatar => m_IgnoreLocalAvatar;
         public bool IsAppliedElevationRatio => m_IsAppliedElevationRatio;
@@ -87,10 +87,16 @@ namespace ThirdPersonCamera
             m_StackingType = stackingType;
         }
 
+        public void ConfigureFollowPoints(string[] runtimeCamFollowYPoints)
+        {
+            m_Schema = SchemaVersion;
+            m_RuntimeCamFollowYPoints = runtimeCamFollowYPoints;
+        }
+
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(StretchId) ||
-                !StartCurve || !EndCurve || !float.IsFinite(RuntimeCamFollowYPoints) ||
+                !StartCurve || !EndCurve ||
                 !float.IsFinite(RotationZ) || !float.IsFinite(RuntimeCamFollowYOffsetRatio) ||
                 !float.IsFinite(ElevationAngleMin) || !float.IsFinite(EndElevationAngleMin) ||
                 !float.IsFinite(ElevationAngleMax) || !float.IsFinite(EndElevationAngleMax) ||

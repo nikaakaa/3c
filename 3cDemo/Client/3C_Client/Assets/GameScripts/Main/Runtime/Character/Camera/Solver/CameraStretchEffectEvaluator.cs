@@ -70,8 +70,6 @@ namespace ThirdPersonCamera
                 if (payload.ApplyRuntimeCamFollowYOffset)
                     offset += input.BodyRotation * Vector3.up *
                         (payload.RuntimeCamFollowYOffsetRatio * plan.Radius * envelope);
-                if (payload.ApplyAimPointsCameraFollowYOffset)
-                    offset += Vector3.up * (payload.RuntimeCamFollowYPoints * envelope);
                 float radiusOffset = sample.RadiusOffset * state.Request.Weight;
                 float rollOffset = sample.RollOffset * state.Request.Weight;
                 if (payload.PlayStackingType == CameraEffectStackingType.Add)

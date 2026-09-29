@@ -7,7 +7,7 @@ namespace ThirdPersonCamera
 [Serializable]
     public sealed class CharacterCameraProjectionPayload
     {
-        public const string SchemaVersion = "character-camera-projection/v8";
+        public const string SchemaVersion = "character-camera-projection/v9";
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_ProfileId = string.Empty;
@@ -26,6 +26,9 @@ namespace ThirdPersonCamera
         [SerializeField] float m_DefaultSmoothTime;
         [SerializeField] float m_RotationTransitionSeconds;
         [SerializeField] CameraInputSettings m_Input;
+        [SerializeField] CameraDelaySettings m_Delay;
+        [SerializeField] bool m_MuteCameraShake;
+        [SerializeField] bool m_MuteCameraShakeAdvancedProcess;
         [SerializeField] CameraCollisionSettings m_Collision;
         [SerializeField] CameraTargetSlotPayload[] m_TargetSlots = Array.Empty<CameraTargetSlotPayload>();
 
@@ -57,6 +60,9 @@ namespace ThirdPersonCamera
             m_DefaultSmoothTime = profile.DefaultSmoothTime;
             m_RotationTransitionSeconds = profile.RotationTransitionSeconds;
             m_Input = new CameraInputSettings(profile.Input);
+            m_Delay = new CameraDelaySettings(profile.Delay);
+            m_MuteCameraShake = profile.MuteCameraShake;
+            m_MuteCameraShakeAdvancedProcess = profile.MuteCameraShakeAdvancedProcess;
             m_Collision = new CameraCollisionSettings(profile.Collision);
             m_TargetSlots = targetSlots ?? Array.Empty<CameraTargetSlotPayload>();
         }
@@ -80,6 +86,9 @@ namespace ThirdPersonCamera
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
         public CameraInputSettings Input => m_Input;
+        public CameraDelaySettings Delay => m_Delay;
+        public bool MuteCameraShake => m_MuteCameraShake;
+        public bool MuteCameraShakeAdvancedProcess => m_MuteCameraShakeAdvancedProcess;
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlotPayload> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlotPayload>();
 

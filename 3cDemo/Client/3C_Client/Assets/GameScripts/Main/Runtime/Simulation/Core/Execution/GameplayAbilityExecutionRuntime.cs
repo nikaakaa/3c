@@ -265,6 +265,19 @@ namespace ThirdPersonSimulation
             return Adopt(frames);
         }
 
+        internal GameplayAbilityExecutionFrame<TValue> MakeFrameMutable(ulong actionInstanceId)
+        {
+            for (int i = 0; i < m_Frames.Count; i++)
+            {
+                if (m_Frames[i].ActionInstanceId != actionInstanceId)
+                    continue;
+                GameplayAbilityExecutionFrame<TValue> frame = m_Frames[i].Clone();
+                m_Frames[i] = frame;
+                return frame;
+            }
+            throw new InvalidOperationException($"Skill execution frame '{actionInstanceId}' is absent from the mutable aggregate.");
+        }
+
         static GameplayAbilityExecutionAggregate<TValue> Adopt(List<GameplayAbilityExecutionFrame<TValue>> frames) =>
             new GameplayAbilityExecutionAggregate<TValue>(frames, true);
 
@@ -295,6 +308,7 @@ namespace ThirdPersonSimulation
         GameplayAbilityExecutionAggregate<TValue> m_States;
         bool m_StatesShared;
         GameplayAbilityExecutionFrame<TValue> m_Active;
+        bool m_ActiveFrameCloned;
         readonly Scope m_Scope;
 
         public GameplayAbilityExecutionManager(IGameplayAbilityExecutionStorage<TValue> storage)
@@ -335,6 +349,7 @@ namespace ThirdPersonSimulation
                     identity.Generation);
                 m_States.Add(frame);
                 m_Storage.WriteAggregate(m_States);
+                m_ActiveFrameCloned = true;
             }
             else if (frame.SkillId != identity.SkillId ||
                      !frame.EntryOperation.Equals(identity.EntryOperation) ||
@@ -440,8 +455,17 @@ namespace ThirdPersonSimulation
             {
                 m_States = m_States.CloneForActiveFrameMutation(m_Active.ActionInstanceId);
                 m_StatesShared = false;
+                m_ActiveFrameCloned = true;
             }
-            m_Active = m_States.Find(m_Active.ActionInstanceId);
+            if (!m_ActiveFrameCloned)
+            {
+                m_Active = m_States.MakeFrameMutable(m_Active.ActionInstanceId);
+                m_ActiveFrameCloned = true;
+            }
+            else
+            {
+                m_Active = m_States.Find(m_Active.ActionInstanceId);
+            }
             if (m_Active == null)
                 throw new InvalidOperationException("Skill execution active frame disappeared while preparing state changes.");
         }
@@ -457,6 +481,7 @@ namespace ThirdPersonSimulation
             }
             m_Storage.WriteAggregate(m_States);
             m_Active = null;
+            m_ActiveFrameCloned = false;
         }
 
         void RequireActiveFrame(int slotIndex)

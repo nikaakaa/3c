@@ -152,6 +152,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeClipSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeSourceRequest[] m_SourceRequests =
             new CharacterPoseNativeSourceRequest[1];
+        AnimationChannelId m_ChannelId;
+        CharacterPresentationPoseSourceSlot m_SourceSlot;
         AnimationScriptPlayable m_Playable;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
         AnimationSelectedPosePlayerJob m_Job;
@@ -203,6 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Player.PlayRate <= 0f || !float.IsFinite(m_Player.PlayRate))
                 throw new InvalidOperationException(
                     $"Clip Player '{NodeId}' has an invalid play rate.");
+            m_ChannelId = node.AnimationChannelId;
+            m_SourceSlot = node.PresentationPoseSourceSlot;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) =>
@@ -258,14 +262,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationFactFrame factFrame = input.FactFrame;
             m_ClockPolicy.DriveClock(
                 m_Player,
-                node.AnimationChannelId,
+                m_ChannelId,
                 input.PresentationSampleTick,
                 in factFrame,
                 input.DeltaSeconds);
             m_DeltaSeconds = input.DeltaSeconds;
             m_SourceRequests[0] = new CharacterPoseNativeSourceRequest(
                 NodeId,
-                node.PresentationPoseSourceSlot,
+                m_SourceSlot,
                 m_Player.SourceId,
                 true,
                 runtime.InstanceId);

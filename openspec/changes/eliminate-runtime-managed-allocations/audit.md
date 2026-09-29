@@ -1240,3 +1240,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Linked Pose 每次输出都重新扫描 dynamic ports 查找并复验 Local Pose output；Initialize 已经要求该节点有且只有一个 Local Pose output。
 - handler 在 Initialize 扫描同一集合时缓存唯一 output `PosePortId`，帧内先比较 output 身份再进入原求值缓存和双缓冲流程。无对应 Local Pose output 的错误文案不变，Source Prepare/Evaluate/Commit/Discard 不变。
 - 该改动消除每次输出的 dynamic port 扫描和重复 Kind 判断，并删除无调用的 `FindOutputPort`；不新增第二数据源。静态核对唯一输出约束、`PosePortId` 比较、错误路径和输出页身份；未编译、未采样，不能声称实测耗时收益。
+
+### AP154 source request 配置定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Clip Player、Blend Space Player、Selected Pose Player 和 Blend Stack 每次准备 source request 都重新通过 `node.PresentationPoseSourceSlot` switch/cast payload；Clip 还重复读取 `AnimationChannelId`，Blend Stack 对每个 source 重复读取同一 slot。这些配置来自 Initialize 已校验的固定 payload。
+- 四类 handler 在 Initialize 缓存 source slot；Clip 同时缓存 channel。Blend Stack 正式 source binding 接口从传入 node 改为传入已解析 slot，每个 source request 使用同一值。
+- 该改动消除 source request 准备期的重复 payload 分派；不改 source kind 校验、request 内容、延迟源分类和 Prepare/Evaluate 时序。静态核对 payload kind、slot 类型、唯一接口实现和四条 PrepareFrame 调用链；未编译、未采样，不能声称实测耗时收益。

@@ -116,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeSelectedSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeSourceRequest[] m_SourceRequests =
             new CharacterPoseNativeSourceRequest[1];
+        CharacterPresentationPoseSourceSlot m_SourceSlot;
         AnimationScriptPlayable m_Playable;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
         AnimationSelectedPosePlayerJob m_Job;
@@ -156,6 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Selected Pose Player handler '{NodeId}' does not match its graph node.");
             }
+            m_SourceSlot = node.PresentationPoseSourceSlot;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -214,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CapturePrepared = true;
             m_SourceRequests[0] = new CharacterPoseNativeSourceRequest(
                 NodeId,
-                node.PresentationPoseSourceSlot,
+                m_SourceSlot,
                 m_Player.SourceId,
                 true,
                 runtime.InstanceId);

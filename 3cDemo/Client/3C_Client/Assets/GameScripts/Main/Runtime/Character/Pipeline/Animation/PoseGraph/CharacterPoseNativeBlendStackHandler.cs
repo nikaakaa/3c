@@ -13,7 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
             AnimationBlendStackRuntime stack,
-            CharacterPoseCanvasNode node,
+            CharacterPresentationPoseSourceSlot sourceSlot,
             in CharacterPoseNativeFrameInput input,
             in CharacterPoseNativeFrameLineage lineage);
         void PrepareEvaluation(
@@ -162,7 +162,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 m_Requests.Add(new CharacterPoseNativeSourceRequest(
                     stack.PoseNodeId,
-                    node.PresentationPoseSourceSlot,
+                    sourceSlot,
                     entry.SourceId,
                     true,
                     runtime.InstanceId));
@@ -238,6 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeBlendStackSourceBinding m_SourceBinding;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        CharacterPresentationPoseSourceSlot m_SourceSlot;
         AnimationScriptPlayable m_Playable;
         AnimationSlotBlendJob m_Job;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -269,9 +270,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void Initialize(CharacterPoseNativeGraphRuntime runtime)
         {
             RequireAlive();
-            if (runtime.Graph.RequireNode(NodeId).Kind != Kind)
+            CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
+            if (node.Kind != Kind)
                 throw new InvalidOperationException(
                     $"Blend Stack handler '{NodeId}' does not match its graph node.");
+            m_SourceSlot = node.PresentationPoseSourceSlot;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -318,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_SourceBinding.PrepareFrame(
                 runtime,
                 m_Stack,
-                node,
+                m_SourceSlot,
                 in input,
                 in lineage);
         }

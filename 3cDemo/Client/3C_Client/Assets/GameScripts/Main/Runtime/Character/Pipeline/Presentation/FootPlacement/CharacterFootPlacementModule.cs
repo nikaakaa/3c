@@ -1527,7 +1527,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static CharacterFullBodyIkGoal EncodeFootGoal(in CharacterResolvedFootResult result)
         {
-            CharacterFootGoalTarget target = result.GoalTarget;
+            ref readonly CharacterFootGoalTarget target = ref result.GoalTarget;
             return new CharacterFullBodyIkGoal(
                 result.Identity.Side == CharacterFootSide.Left
                     ? CharacterFullBodyIkEffectorSlot.LeftFoot

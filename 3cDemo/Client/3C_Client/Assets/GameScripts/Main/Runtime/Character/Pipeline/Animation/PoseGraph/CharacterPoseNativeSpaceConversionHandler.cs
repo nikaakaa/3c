@@ -238,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePortValue inputValue = m_InputSpace == CharacterPoseSpace.Local
                 ? runtime.ReadInput(m_LocalPoseInput, m_NodeId, m_InputPort.Value)
                 : runtime.ReadInput(m_ComponentPoseInput, m_NodeId, m_InputPort.Value);
-            CharacterPoseNativePoseReadBinding input =
+            ref readonly CharacterPoseNativePoseReadBinding input =
                 RequireInput(inputValue);
             if (input.Availability[0] != AnimationPoseAvailability.Pose)
                 throw new InvalidOperationException(
@@ -350,15 +350,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearFrame();
         }
 
-        CharacterPoseNativePoseReadBinding RequireInput(
+        ref readonly CharacterPoseNativePoseReadBinding RequireInput(
             CharacterPoseNativePortValue value)
         {
             if (m_InputSpace == CharacterPoseSpace.Local &&
                 value is CharacterPoseNativeLocalPoseValue local)
-                return local.Native;
+                return ref local.Native;
             if (m_InputSpace == CharacterPoseSpace.Component &&
                 value is CharacterPoseNativeComponentPoseValue component)
-                return component.Native;
+                return ref component.Native;
             throw new InvalidOperationException(
                 $"Pose space conversion '{NodeId}' received the wrong input space.");
         }

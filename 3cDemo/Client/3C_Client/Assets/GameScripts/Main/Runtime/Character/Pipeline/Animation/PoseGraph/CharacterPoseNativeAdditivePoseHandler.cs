@@ -164,9 +164,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_OverlayPoseInput,
                     m_NodeId,
                     "overlay");
-            CharacterPoseNativePoseReadBinding baseBinding =
+            ref readonly CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");
-            CharacterPoseNativePoseReadBinding additiveBinding =
+            ref readonly CharacterPoseNativePoseReadBinding additiveBinding =
                 RequireAvailable(additivePose, "Additive");
             float weight = ResolveWeight(runtime);
             m_ContinuityIdentity = ResolveContinuity(
@@ -287,7 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearFrame();
         }
 
-        CharacterPoseNativePoseReadBinding RequireAvailable(
+        ref readonly CharacterPoseNativePoseReadBinding RequireAvailable(
             CharacterPoseNativeLocalPoseValue value,
             string branch)
         {
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Additive Pose '{NodeId}' {branch} input is unavailable.");
             }
-            return binding;
+            return ref binding;
         }
 
         float ResolveWeight(CharacterPoseNativeGraphRuntime runtime)

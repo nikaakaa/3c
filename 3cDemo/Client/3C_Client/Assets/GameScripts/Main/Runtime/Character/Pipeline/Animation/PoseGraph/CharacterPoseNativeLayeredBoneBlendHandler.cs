@@ -156,9 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_OverlayPoseInput,
                     m_NodeId,
                     "overlay");
-            CharacterPoseNativePoseReadBinding baseBinding =
+            ref readonly CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");
-            CharacterPoseNativePoseReadBinding overlayBinding =
+            ref readonly CharacterPoseNativePoseReadBinding overlayBinding =
                 RequireAvailable(overlayPose, "Overlay");
             float weight = ResolveWeight(runtime);
             m_ContinuityIdentity = ResolveContinuity(
@@ -278,7 +278,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearFrame();
         }
 
-        CharacterPoseNativePoseReadBinding RequireAvailable(
+        ref readonly CharacterPoseNativePoseReadBinding RequireAvailable(
             CharacterPoseNativeLocalPoseValue value,
             string branch)
         {
@@ -291,7 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Layered Bone Blend '{NodeId}' {branch} input is unavailable.");
             }
-            return binding;
+            return ref binding;
         }
 
         float ResolveWeight(CharacterPoseNativeGraphRuntime runtime)

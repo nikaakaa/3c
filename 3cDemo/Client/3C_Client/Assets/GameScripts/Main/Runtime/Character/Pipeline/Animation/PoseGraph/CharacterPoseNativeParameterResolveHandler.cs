@@ -143,9 +143,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_SourcePoseInput,
                     m_NodeId,
                     "parameter-source-pose");
-            CharacterPoseNativePoseReadBinding baseBinding =
+            ref readonly CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");
-            CharacterPoseNativePoseReadBinding sourceBinding =
+            ref readonly CharacterPoseNativePoseReadBinding sourceBinding =
                 RequireAvailable(sourcePose, "Parameter source");
             m_WriteBinding = (m_PageIndex == 0
                     ? m_OutputBuffer
@@ -371,7 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return -1;
         }
 
-        static CharacterPoseNativePoseReadBinding RequireAvailable(
+        static ref readonly CharacterPoseNativePoseReadBinding RequireAvailable(
             CharacterPoseNativeLocalPoseValue value,
             string branch)
         {
@@ -384,7 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Parameter Resolve {branch} input is unavailable.");
             }
-            return binding;
+            return ref binding;
         }
 
         void ClearFrame()

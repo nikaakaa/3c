@@ -43,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeRootOrientationSource m_Source;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_PoseInput;
         EventGraphVariableBinding m_FacingErrorBinding;
         State m_CommittedState;
         State m_PendingState;
@@ -104,6 +105,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Root Orientation Warp '{NodeId}' does not match its graph node.");
             m_FacingErrorBinding = runtime.InstanceContext.VariableContract.Bind(
                 CharacterAnimationVariableIds.FacingError);
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "pose");
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -163,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue inputValue =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(node, "pose");
+                runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
             CharacterPoseNativePoseReadBinding input = inputValue.Native;
             if (!input.IsValid || input.Space != CharacterPoseSpace.Local ||
                 input.Availability[0] != AnimationPoseAvailability.Pose ||

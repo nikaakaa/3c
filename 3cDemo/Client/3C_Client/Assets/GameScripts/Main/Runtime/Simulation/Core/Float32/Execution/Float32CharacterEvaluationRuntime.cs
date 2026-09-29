@@ -48,19 +48,13 @@ namespace ThirdPersonSimulation
             Float32AbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
-            actionRuntimes.Clear();
             Float32GameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
-            sharedEffectScratch.Reset();
             Float32AbilityExecutionWorkspace[] workspaces = actor.Workspaces;
-            for (int i = 0; i < workspaces.Length; i++)
-                workspaces[i].Reset();
-            actor.ClearTimelineTransfers();
             List<AbilityTimelineAdvancePending> timelineAdvances = actor.TimelineAdvances;
             List<AbilityTimelineStopPending> timelineStops = actor.TimelineStops;
             List<AbilityTimelineLogicMotion> timelineLogicMotion = actor.TimelineLogicMotion;
             List<AbilityTimelineLogicMotionWarp> timelineLogicMotionWarps = actor.TimelineLogicMotionWarps;
             Float32CharacterEvaluationOutput evaluationOutput = actor.EvaluationOutput;
-            evaluationOutput.Clear();
             List<GameplayFact> facts = evaluationOutput.Facts;
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;

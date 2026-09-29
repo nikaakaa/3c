@@ -577,6 +577,13 @@
 - 删除入口的字典清空、scratch Reset、workspace Reset、timeline 名单清理和 output 清理。成功结果仍先复制数组，随后清理；异常路径仍丢弃 timeline pending 并清理全部工作区。评估业务顺序、候选状态提交、Discard 语义和异常传播不变。
 - 每个 Fixed actor 每次 Evaluate 少一轮重复容器清理；字符串字典、ulong 集合和多个 List 的 Clear 工作随成员数量变化。没有新增状态标志、备用入口或生命周期假设。静态核对唯一 Evaluate 调用、actor 容器构造、成功/异常清理链和 timeline 读写；未编译、运行回放或采样。
 
+### AP69 Float32 角色评估开头重复清理工作区（2026-09-29，已实施，本轮未编译）
+
+- `Float32CharacterEvaluationRuntime.Evaluate` 与 Fixed 同样在入口清理 action runtime 字典、共享 Effect scratch、ability workspace、timeline advance/stop 名单和 evaluation output；其成功返回和 catch 路径已经执行同类清理。
+- `Float32AbilityEvaluatePass` 是唯一正式 Evaluate 入口；`SimulationActorBinding` 构造时相关容器为空，成功与异常出口构成完整清理边界。入口参数检查与 `RuntimeState.Restart` 不写入这些工作区，入口清理不保护任何可达状态。
+- 删除入口的重复字典清空、scratch Reset、workspace Reset、timeline 名单清理和 output 清理。结果数组先复制后清理，异常路径仍丢弃 pending 并清理；求值顺序、候选状态、Commit/Discard 和异常传播不变。
+- 每个 Float32 actor 每次 Evaluate 少一轮重复容器清理；字典、集合和 List 的实际工作随能力和成员数量变化。静态核对唯一 Evaluate 调用、actor 容器构造、成功/异常清理链；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

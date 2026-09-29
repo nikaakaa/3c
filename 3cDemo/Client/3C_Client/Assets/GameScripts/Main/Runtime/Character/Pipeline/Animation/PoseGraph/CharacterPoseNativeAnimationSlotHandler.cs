@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationSelectionAvailabilityPolicy Availability { get; }
         IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node,
+            CharacterPresentationPoseSourceSlot sourceSlot,
             in CharacterPoseNativeFrameInput input,
             in CharacterPoseNativeFrameLineage lineage);
         void PrepareEvaluation(
@@ -49,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_SourcePoseInput;
+        CharacterPresentationPoseSourceSlot m_SourceSlot;
         CharacterPoseNativeLocalPoseValue m_ActionPose;
         CharacterPoseNativeLocalPoseValue m_Output;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -107,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourcePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
                 node,
                 "source-pose");
+            m_SourceSlot = node.PresentationPoseSourceSlot;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -158,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            return m_Source.PrepareFrame(runtime, node, in input, in lineage);
+            return m_Source.PrepareFrame(runtime, m_SourceSlot, in input, in lineage);
         }
 
         public CharacterPoseNativePortValue EvaluateOutput(
@@ -718,7 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node,
+            CharacterPresentationPoseSourceSlot sourceSlot,
             in CharacterPoseNativeFrameInput input,
             in CharacterPoseNativeFrameLineage lineage)
         {
@@ -743,7 +745,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_SourceBinding.PrepareFrame(
                     runtime,
                     m_Stack,
-                    node,
+                    sourceSlot,
                     in input,
                     in lineage);
             }

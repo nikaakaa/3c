@@ -1252,3 +1252,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Additive Pose 每次准备输出都通过 `node.AdditiveScalePolicy` switch/cast payload，再传给 additive job；Initialize 已完成 Multiply/AddDelta 正式边界校验。
 - handler 在 Initialize 缓存 scale policy，帧内直接使用同一值。reference pose/space 校验、base/additive 读取、weight continuity、delta 计算和输出页写入顺序不变。
 - 该改动消除 additive 输出准备期的重复 payload 分派；不新增第二数据源。静态核对 policy 校验位置、调用链和 ApplyAdditive 参数顺序；未编译、未采样，不能声称实测耗时收益。
+
+### AP156 AnimationSlot source slot 同步定容（2026-09-30，已实施，本轮未编译）
+
+- AP154 将 BlendStack source binding 的正式入口改为已解析 source slot 后，AnimationSlot source 链仍把 `CharacterPoseCanvasNode` 传入该入口，静态复查发现会造成接口不匹配；同时 AnimationSlot 每帧还会重复读取 presentation source slot。
+- AnimationSlot handler 在 Initialize 缓存 source slot，`ICharacterPoseNativeAnimationSlotSource` 与 BlendStack binding 一样直接接收 source slot。Action source frame、slot selection、request 内容、retirement 和 Commit/Discard 顺序不变。
+- 该改动修复 AP154 静态复查发现的跨接口断点，并删除 AnimationSlot source 准备期的重复 payload 分派；不保留 node/slot 双路径。静态核对唯一接口实现、PrepareFrame 调用链和错误边界；未编译、未采样，不能声称实测耗时收益。

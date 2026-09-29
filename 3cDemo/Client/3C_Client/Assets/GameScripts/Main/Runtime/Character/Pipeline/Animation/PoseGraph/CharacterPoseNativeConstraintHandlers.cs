@@ -575,9 +575,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseNativeFullBodyIkHandler :
         CharacterPoseNativeConstraintNodeHandler
     {
+        readonly struct ContributionInput
+        {
+            internal ContributionInput(
+                FlowCanvas.ValueInput<CharacterPoseNativeGoalContributionValue> input,
+                bool required,
+                string portId)
+            {
+                Input = input;
+                Required = required;
+                PortId = portId;
+            }
+
+            internal FlowCanvas.ValueInput<CharacterPoseNativeGoalContributionValue> Input { get; }
+            internal bool Required { get; }
+            internal string PortId { get; }
+        }
+
         readonly CharacterFullBodyIkConstraintHandle m_Handle;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
+        ContributionInput[] m_ContributionInputs;
         int m_PageIndex = -1;
         int m_CommittedPageIndex = -1;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -598,6 +617,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputBuffer = outputBuffer ??
                 throw new ArgumentNullException(nameof(outputBuffer));
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
+        }
+
+        public override void Initialize(CharacterPoseNativeGraphRuntime runtime)
+        {
+            base.Initialize(runtime);
+            CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
+                node,
+                "pose");
+            int contributionCount = 0;
+            for (int i = 0; i < node.DynamicPorts.Count; i++)
+            {
+                if (IsContributionInput(node.DynamicPorts[i]))
+                    contributionCount++;
+            }
+            m_ContributionInputs = new ContributionInput[contributionCount];
+            int contributionIndex = 0;
+            for (int i = 0; i < node.DynamicPorts.Count; i++)
+            {
+                CharacterPoseDynamicPort port = node.DynamicPorts[i];
+                if (!IsContributionInput(port))
+                    continue;
+                m_ContributionInputs[contributionIndex] = new ContributionInput(
+                    runtime.RequireInputPort<CharacterPoseNativeGoalContributionValue>(
+                        node,
+                        port.PortId.Value),
+                    port.Required,
+                    port.PortId.Value);
+                contributionIndex++;
+            }
         }
 
         protected override void OnBeginFrame()
@@ -630,9 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
-                runtime.ReadInput<CharacterPoseNativeComponentPoseValue>(
-                    node,
-                    "pose");
+                runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
             CharacterPoseNativePoseReadBinding binding = input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||
@@ -642,19 +689,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Full Body IK '{NodeId}' received an unavailable Component Pose.");
             }
-            for (int i = 0; i < node.DynamicPorts.Count; i++)
+            for (int i = 0; i < m_ContributionInputs.Length; i++)
             {
-                CharacterPoseDynamicPort contribution = node.DynamicPorts[i];
-                if (contribution.Direction != CharacterPosePortDirection.Input ||
-                    contribution.Kind != CharacterPosePortKind.FullBodyIkGoalContribution)
-                    continue;
-                if (contribution.Required ||
-                    runtime.TryReadInput(
-                        node,
-                        contribution.PortId.Value,
-                        out CharacterPoseNativeGoalContributionValue _))
-                    runtime.ReadInput<CharacterPoseNativeGoalContributionValue>(
-                        node, contribution.PortId.Value);
+                ContributionInput contribution = m_ContributionInputs[i];
+                if (contribution.Required || contribution.Input.isConnected)
+                    runtime.ReadInput(
+                        contribution.Input,
+                        m_NodeId,
+                        contribution.PortId);
             }
             if (runtime.TryReadInput(node, "goals", out CharacterPoseNativeFullBodyIkGoalsValue goals))
             {
@@ -754,5 +796,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputBuffer.Dispose();
             m_SecondaryOutputBuffer.Dispose();
         }
+
+        static bool IsContributionInput(CharacterPoseDynamicPort port) =>
+            port.Direction == CharacterPosePortDirection.Input &&
+            port.Kind == CharacterPosePortKind.FullBodyIkGoalContribution;
     }
 }

@@ -1198,3 +1198,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Placement 与 Pose Bone IK Goals 每次求输出都按 `(NodeId, "pose")` 哈希查找并类型测试同一个 Component Pose 输入；端口在 graph 初始化后固定。
 - 两个 handler 在 base Initialize 校验节点身份后分别缓存 typed `ValueInput`，帧内直接读取 port value。Pose 可用性校验、weight override、Constraint 调用、goal header 和 pending 校验顺序不变。
 - 该改动消除两个 Constraint 主姿态输入的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对 base 生命周期、端口名、类型和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。
+
+### AP147 FullBodyIK 固定输入绑定（2026-09-30，已实施，本轮未编译）
+
+- Full Body IK 每次求输出都按 `(NodeId, "pose")` 哈希查找 Component Pose，并重新遍历 dynamic ports 过滤 Goal Contribution；对 optional contribution 连接时还会重复执行 Try 查找和泛型 Read 查找。这些端口集合在 graph 初始化后固定。
+- handler 在 Initialize 缓存 pose typed `ValueInput`，并按原 `DynamicPorts` 顺序缓存 contribution 的 typed `ValueInput`、required 标记和端口名。帧内 required 或 connected 才读取；未连接的 optional contribution 仍跳过，goal binding、solve、输出页和 Commit 语义不变。
+- 该改动消除主 pose 的每帧查找和 dynamic contribution 的每帧过滤与重复查找；不新增第二数据源。静态核对初始化前端口表、原 dynamic 顺序、required/optional 分支、null value 错误文案和双缓冲 Commit；未编译、未采样，不能声称实测耗时收益。

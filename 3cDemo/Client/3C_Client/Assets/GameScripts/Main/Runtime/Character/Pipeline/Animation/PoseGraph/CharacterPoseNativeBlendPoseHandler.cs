@@ -353,10 +353,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             else
             {
+                NativeSlice<AnimationLocalBonePose> basePoses =
+                    basePose.DenseLocalPoses;
+                NativeSlice<AnimationLocalBonePose> overlayPoses =
+                    overlayPose.DenseLocalPoses;
+                NativeSlice<AnimationBlendBoneVelocity> baseVelocities =
+                    basePose.DenseVelocities;
+                NativeSlice<AnimationBlendBoneVelocity> overlayVelocities =
+                    overlayPose.DenseVelocities;
                 for (int bone = 0; bone < boneCount; bone++)
                 {
-                    AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
-                    AnimationLocalBonePose overlayBone = overlayPose.DenseLocalPoses[bone];
+                    ref readonly AnimationLocalBonePose baseBone = ref basePoses[bone];
+                    ref readonly AnimationLocalBonePose overlayBone = ref overlayPoses[bone];
                     Vector3 position =
                         (baseBone.Position * baseWeight +
                          overlayBone.Position * overlayWeight) /
@@ -382,10 +390,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             scale * totalWeight,
                             totalWeight,
                             baseBone);
-                    AnimationBlendBoneVelocity baseVelocity =
-                        basePose.DenseVelocities[bone];
-                    AnimationBlendBoneVelocity overlayVelocity =
-                        overlayPose.DenseVelocities[bone];
+                    ref readonly AnimationBlendBoneVelocity baseVelocity =
+                        ref baseVelocities[bone];
+                    ref readonly AnimationBlendBoneVelocity overlayVelocity =
+                        ref overlayVelocities[bone];
                     outputVelocities[bone] =
                         new AnimationBlendBoneVelocity(
                             (baseVelocity.Linear * baseWeight +
@@ -399,30 +407,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             totalWeight);
                 }
             }
+            NativeSlice<float> baseParameters = basePose.PoseParameters;
+            NativeSlice<float> overlayParameters = overlayPose.PoseParameters;
+            NativeSlice<byte> baseParameterAvailability =
+                basePose.PoseParameterAvailability;
+            NativeSlice<byte> overlayParameterAvailability =
+                overlayPose.PoseParameterAvailability;
             for (int parameter = 0;
                  parameter < outputParameters.Length;
                  parameter++)
             {
-                byte baseAvailable = basePose.PoseParameterAvailability[parameter];
-                byte overlayAvailable = overlayPose.PoseParameterAvailability[parameter];
+                byte baseAvailable = baseParameterAvailability[parameter];
+                byte overlayAvailable = overlayParameterAvailability[parameter];
                 if (baseAvailable != 0 && overlayAvailable != 0)
                 {
                     outputParameters[parameter] =
-                        (basePose.PoseParameters[parameter] * baseWeight +
-                         overlayPose.PoseParameters[parameter] * overlayWeight) /
+                        (baseParameters[parameter] * baseWeight +
+                         overlayParameters[parameter] * overlayWeight) /
                         totalWeight;
                     outputParameterAvailability[parameter] = 1;
                 }
                 else if (overlayAvailable != 0)
                 {
                     outputParameters[parameter] =
-                        overlayPose.PoseParameters[parameter];
+                        overlayParameters[parameter];
                     outputParameterAvailability[parameter] = 1;
                 }
                 else
                 {
                     outputParameters[parameter] =
-                        basePose.PoseParameters[parameter];
+                        baseParameters[parameter];
                     outputParameterAvailability[parameter] = baseAvailable;
                 }
             }

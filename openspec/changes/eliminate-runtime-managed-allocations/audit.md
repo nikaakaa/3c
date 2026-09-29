@@ -1408,3 +1408,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Additive 混合每根骨骼把 base pose、additive pose、additive velocity 和 base velocity 各复制成按值局部，随后只读取字段；reference bone 也从数组按值复制。
 - 混合分支缓存四个输入 `NativeSlice`，base/additive pose、velocity 和 reference 都绑定 `ref readonly` 元素引用；position、rotation、scale 公式和 `Multiply/AddDelta` 分支保持不变。
 - 该改动删除逐骨的四类输入结构拷贝；不改变 output 写入、continuity、foot/publication 顺序或异常时机。静态核对 `NativeSlice<T>` 与数组元素引用合同、input/output 长度校验和 ApplyAdditive 唯一循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP182 BlendPose 输入引用化（2026-09-30，已实施，本轮未编译）
+
+- Blend Pose 双源混合每骨复制 base/overlay pose 与 velocity；参数循环每次又重新读取 base/overlay 的 parameter 和 availability slice。
+- 混合分支缓存四个输入 slice 并绑定 `ref readonly` 元素引用；参数循环缓存四个输入 slice。`BlendWeighted` 的 reference 按值合同暂不改变，输出计算、可见权重校验、availability 合并和 contributions 顺序不变。
+- 该改动删除 bone 混合的中间 pose/velocity 拷贝和逐参数 slice 重复读取；不改变参数公式、异常文本、输出页身份或 Commit/Discard。静态核对 read binding 长度校验、`NativeSlice` 引用合同和双分支唯一消费点；未编译、未采样，不能声称实测耗时收益。

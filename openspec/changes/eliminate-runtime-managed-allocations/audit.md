@@ -1168,3 +1168,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animation Slot 每次求输出都按 `(NodeId, "source-pose")` 哈希查找并类型测试同一个 Local Pose 输入；端口在 graph 初始化后固定。
 - handler 在 Initialize 缓存 typed `ValueInput`，帧内直接读取 port value。Action/source 可用性、权重 continuity、混合和输出页写入顺序不变。
 - 该改动消除 source pose 的每帧 tuple 查找和类型测试；Action Pose 仍来自同一正式 source 生命周期。静态核对端口名、类型、Initialize 绑定和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。
+
+### AP142 AdditivePose typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Additive Pose 每次求输出都按 `(NodeId, port)` 分别哈希查找 base 与 overlay，并重复做 Local Pose 类型测试；两个端口在 graph 初始化后固定。
+- handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取。optional weight 继续使用原 Try 读取合同；可用性校验、reference delta、scale policy 和 continuity 顺序不变。
+- 该改动消除两个主姿态输入的每帧 tuple 查找；不新增第二数据源。静态核对端口名、类型、Initialize 唯一绑定和 additive 调用链；未编译、未采样，不能声称实测耗时收益。

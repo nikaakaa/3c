@@ -14,6 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly (Vector3 Position, Quaternion InverseRotation, Vector3 Scale)[] m_ReferenceBones;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_BasePoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_OverlayPoseInput;
         int m_PageIndex = -1;
         ulong m_NextContinuityIdentity = 1;
         ulong m_ContinuityIdentity;
@@ -78,6 +80,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Additive Pose '{NodeId}' has an unsupported scale policy.");
             }
+            m_BasePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "base");
+            m_OverlayPoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "overlay");
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -139,12 +147,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue basePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_BasePoseInput,
+                    m_NodeId,
                     "base");
             CharacterPoseNativeLocalPoseValue additivePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_OverlayPoseInput,
+                    m_NodeId,
                     "overlay");
             CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");

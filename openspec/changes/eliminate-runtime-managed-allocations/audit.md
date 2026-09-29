@@ -1396,3 +1396,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Contribution 循环每次读取 primitive 和 weight 都重新取 read binding 的 `NativeSlice` 属性；resolved source 写入目标数组后又按值复制一次读取 Kind、SourceId 和 NodeId；每骨还重复计算同一个 contribution 的 weight offset。
 - 循环外缓存 primitive/weight slice、contribution 和 dense weight offset；resolved source 写入后用目标数组元素引用直接生成 clip sample，contribution 的 weight offset 每层只算一次。
 - 该改动删除 resolved contribution 的读回拷贝和循环内重复 offset 计算；不改变 Resolve 校验、Live clip sample 查询、权重校验、异常文本或数组写入顺序。静态核对 `NativeSlice` 引用合同、目标数组生命周期和 contribution/dense weight 容量；未编译、未采样，不能声称实测耗时收益。
+
+### AP180 publication parameter slice 定容（2026-09-30，已实施，本轮未编译）
+
+- Final Publication 的参数准备循环每项重新读取 `PoseParameters` 和 `PoseParameterAvailability` 两个 `NativeSlice` 属性，并按原 page offset 写入。
+- 循环前缓存两个 slice 和 parameter offset；参数仍逐项读取并完成 finite/availability 校验后写入 pending page。
+- 该改动删除逐参数的 slice 结构重复读取；不改变参数数量校验、可用值合同、异常文本或输出页写入顺序。静态核对两个 `NativeSlice` 长度已在同一入口校验、目标数组生命周期和原循环边界；未编译、未采样，不能声称实测耗时收益。

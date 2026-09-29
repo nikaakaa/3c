@@ -284,11 +284,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Native Final Pose publication Bone #{bone} is invalid.");
                 m_DenseLocalPoses[poseOffset + bone] = pose;
             }
+            NativeSlice<float> outputParameters = output.PoseParameters;
+            NativeSlice<byte> outputAvailability = output.PoseParameterAvailability;
             int parameterOffset = m_Pending.BufferPage * m_ParameterCount;
             for (int parameter = 0; parameter < m_ParameterCount; parameter++)
             {
-                float value = output.PoseParameters[parameter];
-                byte available = output.PoseParameterAvailability[parameter];
+                float value = outputParameters[parameter];
+                byte available = outputAvailability[parameter];
                 if (!float.IsFinite(value) || available > 1)
                     throw new InvalidOperationException(
                         $"Native Final Pose publication parameter #{parameter} is invalid.");

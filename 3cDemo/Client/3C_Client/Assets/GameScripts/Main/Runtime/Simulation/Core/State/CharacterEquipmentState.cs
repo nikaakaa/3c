@@ -347,6 +347,8 @@ namespace ThirdPersonSimulation
             m_ItemById.TryGetValue(equipmentId, out EquipmentProgramItem value) ? value : throw new InvalidOperationException($"Equipment '{equipmentId}' is absent from Program.");
         public EquipmentProgramRoute RequireRoute(EquipmentActionRouteId routeId) =>
             m_RouteById.TryGetValue(routeId, out EquipmentProgramRoute value) ? value : throw new InvalidOperationException($"Equipment Route '{routeId}' is absent from Program.");
+        public bool HasRoute(EquipmentActionRouteId routeId) =>
+            routeId.IsValid && m_RouteById.ContainsKey(routeId);
         public bool TryGetRouteImplementation(EquipmentFeatureId featureId, EquipmentActionRouteId routeId, out EquipmentProgramRouteImplementation value) =>
             m_RouteImplementationByKey.TryGetValue((featureId, routeId), out value);
         public EquipmentProgramParameter RequireParameter(EquipmentId equipmentId, EquipmentParameterId parameterId) =>

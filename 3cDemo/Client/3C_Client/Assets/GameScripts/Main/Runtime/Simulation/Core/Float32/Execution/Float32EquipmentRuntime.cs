@@ -61,10 +61,7 @@ namespace ThirdPersonSimulation
 		{
 			if (!m_EquipmentLayout.CapabilityEnabled || !routeId.IsValid)
 				return false;
-			for (int i = 0; i < m_EquipmentLayout.Routes.Count; i++)
-				if (m_EquipmentLayout.Routes[i].RouteId == routeId)
-					return true;
-			return false;
+			return m_EquipmentLayout.HasRoute(routeId);
 		}
 
 		public bool IsAbilityBinding(EquipmentActionContext context, CharacterSkillId abilityId)

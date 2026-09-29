@@ -669,6 +669,12 @@
 - 删除 Begin 的重复复位，保留 End 唯一空缓存边界。评估内 Enter/Remove/写状态仍通过该缓存读写 storage，评估外 `WriteState` 触发的 `Remove` 会重新从 storage 建立共享聚合；`HasFrame` 本来只读 storage。Action 执行栈检查、frame 身份检查、克隆/写入和异常传播不变。
 - 静态核对 manager 全部字段引用、ActionStateStore Begin/End 唯一调用、评估内 Enter/Exit 和评估外写状态链；未编译、运行回放或采样。
 
+### AP84 状态机入口边周期重复解析（2026-09-29，已实施，本轮未编译）
+
+- `OperationStateMachineRuntime.Tick` 每次执行 StateMachine 都通过 `FindOwnedEntry` 扫描 Enter 边查找 AnyState；首次无 active state 时又扫描同一列表找第一条非 AnyState。拓扑和控制边在装配后固定，这些结果是派生身份。
+- `OperationExecutionTopology` 构造期按既有排序后的 Enter 边预解析 StateMachine 的 initial 和 AnyState 目标。initial 保持原两段逻辑：先取第一条非 AnyState，否则取第一条边；AnyState 仍取第一条 AnyState。状态机 Tick 直接读取预解析结果，删除原周期扫描入口。
+- 每个状态机每次 Tick 少一次 Enter 边扫描，首次激活少两次；无 AnyState 或仅有 AnyState 的图结果不变。拓扑新增两个定容目标数组，不新增运行时配置、fallback 或第二条执行路径。静态核对唯一调用链、边排序、端口匹配、OperationHandle 默认无效值和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

@@ -291,6 +291,8 @@ namespace ThirdPersonSimulation
         readonly int[] m_TimelineOperations;
         readonly int[] m_TimelineOwners;
         readonly int[] m_StateMachineOwners;
+        readonly OperationHandle[] m_StateMachineInitialEntries;
+        readonly OperationHandle[] m_StateMachineAnyStateEntries;
         readonly ProgramControlFlowEdge[] m_StateOnEnter;
         readonly ProgramControlFlowEdge[] m_StateRoot;
         readonly ProgramControlFlowEdge[] m_StateOnExit;
@@ -342,6 +344,7 @@ namespace ThirdPersonSimulation
             m_OperationStateSlots = BuildOperationStateSlots(operationList, stateSlots);
             BuildTimelineIndexes(operationList, edges, out m_TimelineOperations, out m_TimelineOwners);
             m_StateMachineOwners = BuildStateMachineOwners(operationList, referenceList);
+            BuildStateMachineEntries(operationList, m_Outgoing, out m_StateMachineInitialEntries, out m_StateMachineAnyStateEntries);
             BuildStateEdges(operationList, edges, out m_StateOnEnter, out m_StateRoot, out m_StateOnExit);
             m_GraphCallFrames = BuildGraphCallFrames(operationList, graphCallFrames);
             RootOperation = rootOperation;
@@ -410,6 +413,18 @@ namespace ThirdPersonSimulation
             RequireOperation(state);
             int owner = m_StateMachineOwners[state.Value];
             return owner < 0 ? OperationHandle.Invalid : new OperationHandle(owner);
+        }
+
+        public OperationHandle StateMachineInitialEntry(OperationHandle machine)
+        {
+            RequireOperation(machine);
+            return m_StateMachineInitialEntries[machine.Value];
+        }
+
+        public OperationHandle StateMachineAnyStateEntry(OperationHandle machine)
+        {
+            RequireOperation(machine);
+            return m_StateMachineAnyStateEntries[machine.Value];
         }
 
         public ProgramControlFlowEdge StateOnEnter(OperationHandle state) => StateEdge(m_StateOnEnter, state);
@@ -627,6 +642,32 @@ namespace ThirdPersonSimulation
                 if (operations[i].Code == SimulationOperationCode.State && result[i] < 0)
                     throw new ArgumentException($"State '{i}' has no compiled StateMachine owner reference.");
             return result;
+        }
+
+        static void BuildStateMachineEntries(
+            IReadOnlyList<OperationExecutionDescriptor> operations,
+            IReadOnlyList<ProgramControlFlowEdge>[][] outgoing,
+            out OperationHandle[] initialEntries,
+            out OperationHandle[] anyStateEntries)
+        {
+            initialEntries = new OperationHandle[operations.Count];
+            anyStateEntries = new OperationHandle[operations.Count];
+            for (int i = 0; i < operations.Count; i++)
+            {
+                if (operations[i].Code != SimulationOperationCode.StateMachine)
+                    continue;
+                IReadOnlyList<ProgramControlFlowEdge> entries = outgoing[i][(int)ProgramControlFlowKind.Enter];
+                for (int j = 0; j < entries.Count; j++)
+                {
+                    bool isAnyState = string.Equals(entries[j].SourcePort, "AnyState", StringComparison.Ordinal);
+                    if (isAnyState && !anyStateEntries[i].IsValid)
+                        anyStateEntries[i] = entries[j].Target;
+                    else if (!isAnyState && !initialEntries[i].IsValid)
+                        initialEntries[i] = entries[j].Target;
+                }
+                if (!initialEntries[i].IsValid && entries.Count > 0)
+                    initialEntries[i] = entries[0].Target;
+            }
         }
 
         static void BuildStateEdges(

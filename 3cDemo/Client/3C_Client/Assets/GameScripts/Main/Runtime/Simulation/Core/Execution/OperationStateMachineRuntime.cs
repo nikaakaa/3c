@@ -68,16 +68,7 @@ namespace ThirdPersonSimulation
             OperationHandle active = ParseHandle(m_Host.ReadIdentity(activeSlot));
             if (!active.IsValid)
             {
-                OperationHandle enter = FindOwnedEntry(operation, "AnyState", false);
-                var ownerEntries = m_Host.Topology.Outgoing(operation.Handle, ProgramControlFlowKind.Enter);
-                for (int i = 0; i < ownerEntries.Count; i++)
-                {
-                    if (!string.Equals(ownerEntries[i].SourcePort, "AnyState", StringComparison.Ordinal))
-                    {
-                        enter = ownerEntries[i].Target;
-                        break;
-                    }
-                }
+                OperationHandle enter = m_Host.Topology.StateMachineInitialEntry(operation.Handle);
                 ProgramControlFlowEdge initial = SelectTransition(enter);
                 if (initial == null || m_Host.Topology.Operation(initial.Target).Code != SimulationOperationCode.State)
                     return OperationExecutionResult.Failure;
@@ -86,7 +77,7 @@ namespace ThirdPersonSimulation
                 ActivateState(operation, activeSlot, active);
             }
 
-            OperationHandle anyState = FindOwnedEntry(operation, "AnyState", true);
+            OperationHandle anyState = m_Host.Topology.StateMachineAnyStateEntry(operation.Handle);
             ProgramControlFlowEdge transition = anyState.IsValid ? SelectTransition(anyState, active, active) : null;
             if (transition == null)
             {
@@ -314,18 +305,6 @@ namespace ThirdPersonSimulation
                 if (hasScope)
                     scope.Dispose();
             }
-        }
-
-        OperationHandle FindOwnedEntry(OperationExecutionDescriptor operation, string sourcePort, bool requireSourcePort)
-        {
-            var edges = m_Host.Topology.Outgoing(operation.Handle, ProgramControlFlowKind.Enter);
-            for (int i = 0; i < edges.Count; i++)
-            {
-                bool matches = string.Equals(edges[i].SourcePort, sourcePort, StringComparison.Ordinal);
-                if (matches || !requireSourcePort && !string.Equals(edges[i].SourcePort, "AnyState", StringComparison.Ordinal))
-                    return edges[i].Target;
-            }
-            return OperationHandle.Invalid;
         }
 
         OperationExecutionResult TickInStateContext(OperationExecutionDescriptor state, OperationHandle target, int exitCause)

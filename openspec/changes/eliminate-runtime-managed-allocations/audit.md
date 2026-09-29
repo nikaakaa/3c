@@ -741,6 +741,12 @@
 - Enter 改为先在共享 aggregate 上查找；只有需要新增 frame 时建立可变 shell。Remove 先确认目标存在，再建立 shell。已有 frame 的首个 `BindGeneration`、状态写入或 reset 仍由 active frame 所有权检查在当前 shell 内只克隆目标 frame；generation 未变的只读退出继续共享 committed aggregate，事务相等性判断仍得到未变更。
 - 只读进入和 absent Remove 不再分配聚合名单；实际新增、移除或写 frame 时的 List/目标 frame 分配保留。查找、新增、移除、Savepoint、Commit 和 Discard 顺序不变。静态核对 Enter/Remove/Exit、MakeActiveFrameMutable、事务 Get/Set 和两域 ActionStateStore 调用链；未编译、运行回放或采样。
 
+### AP96 Skill 执行 no-op 状态重复克隆与比较（2026-09-29，已实施，本轮未编译）
+
+- `BindGeneration` 对相同 generation、`TrySet` 对已存在且相同的值、`TryReset` 对已存在且已经是默认值的槽位，都会先克隆 active frame 并写事务；事务随后再做一次聚合相等扫描才能发现没有变化。异常代数仍沿原 `BindGeneration` 合同失败。
+- 三个入口在修改前比较正式值：相同 generation、已存在且相同的写入值、已存在且已是默认值的 reset 直接返回成功。frame 中尚不存在的槽位仍按原路径物化，因为 codec 会写入 frame Values 数量，省略默认项会改变状态字节和回放合同。只有真实代数推进或值变化才克隆当前 shell 内的目标 frame 并写 aggregate。类型、slot 合同和值校验边界保持；代数为零或非零不匹配仍沿原有 ArgumentOutOfRange/InvalidOperationException 边界失败。
+- no-op 状态调用省去目标 frame 克隆、aggregate 写回和事务聚合相等扫描；真实变化路径与失败异常语义不变。静态核对 manager 值默认规则、两域 ActionStateStore 接口和 Transaction Set/Get 生命周期；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

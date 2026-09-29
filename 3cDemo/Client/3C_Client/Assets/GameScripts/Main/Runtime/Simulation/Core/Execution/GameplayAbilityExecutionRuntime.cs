@@ -388,6 +388,10 @@ namespace ThirdPersonSimulation
         {
             if (m_Active == null || m_Active.ActionInstanceId != actionInstanceId)
                 return false;
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            if (m_Active.Generation == generation)
+                return true;
             MakeActiveFrameMutable();
             m_Active.BindGeneration(generation);
             m_Storage.WriteAggregate(m_States);
@@ -415,6 +419,8 @@ namespace ThirdPersonSimulation
             RequireActiveFrame(slotIndex);
             if (!m_Storage.IsValueValid(slotIndex, value))
                 throw new InvalidOperationException($"Skill execution state slot '{slotIndex}' contains a value with the wrong kind.");
+            if (m_Active.TryGetValue(slotIndex, out TValue existing) && existing.Equals(value))
+                return true;
             MakeActiveFrameMutable();
             m_Active.SetValue(slotIndex, value);
             m_Storage.WriteAggregate(m_States);
@@ -426,8 +432,11 @@ namespace ThirdPersonSimulation
             if (!m_Storage.IsAbilityStateSlot(slotIndex))
                 return false;
             RequireActiveFrame(slotIndex);
+            TValue defaultValue = m_Storage.DefaultValue(slotIndex);
+            if (m_Active.TryGetValue(slotIndex, out TValue existing) && existing.Equals(defaultValue))
+                return true;
             MakeActiveFrameMutable();
-            m_Active.SetValue(slotIndex, m_Storage.DefaultValue(slotIndex));
+            m_Active.SetValue(slotIndex, defaultValue);
             m_Storage.WriteAggregate(m_States);
             return true;
         }

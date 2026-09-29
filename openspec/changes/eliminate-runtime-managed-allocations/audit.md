@@ -388,6 +388,12 @@
 - 静态读取 CorinLocomotionBlendProfile.asset 和 CorinActionBlendProfile.asset，各203根骨骼倍率均为1：使用这两份配置时，每条目逐骨曲线求值由203次变为1次，逐骨权重仍计算203份，独立的全局标量曲线照常计算。该计数不等于整体耗时收益，也不是删除托管 GC 分配的结论。
 - 未改动脚步预测采样、插值或落点逻辑，未改来源采样和 Commit/Discard。完成配置、公式、工作区读写范围及差异静态核对；未编译、回放或采样。
 
+### AP44 Blend Stack 计算前重复清零骨骼权重工作区（2026-09-29，已实施，未运行）
+
+- ClearPlannedWeights 在每次 PrepareCrossFadePlan 前清空条目容量乘骨骼数量的 m_EntryBoneWeights；随后的双循环无条件覆盖当前全部条目、全部骨骼，包括来源不可用时写入0。完整覆盖后才调用 WriteCrossFadePlan，直接读点及 GetStoredResidualForBone 都只访问当前条目范围。
+- 删除该数组的整容量清零；无输出/不可用分支不读取该工作区，计划生成中途失败也不会发布尚未完成的计划，下一次计算会重新覆盖有效范围。数组不含托管引用，不新增清理标志或备用页，不影响独立输出页和 Commit/Discard。
+- 保留标量权重、Raw/Eased Alpha、条目最大权重和 stored 最大权重的原清理：它们还被诊断或释放流程读取，不能将上述局部读写证明套用到这些字段。该项只减少冗余内存写入，不宣称消除 GC 分配。完成全部字段读写点、唯一计划写入调用及差异静态检查；未编译、回放或采样。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

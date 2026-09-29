@@ -2151,7 +2151,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Array.Clear(m_EntryScalarWeights, 0, m_EntryScalarWeights.Length);
             Array.Clear(m_EntryRawAlphas, 0, m_EntryRawAlphas.Length);
             Array.Clear(m_EntryEasedAlphas, 0, m_EntryEasedAlphas.Length);
-            Array.Clear(m_EntryBoneWeights, 0, m_EntryBoneWeights.Length);
             Array.Clear(m_PlannedEntryMaximumWeights, 0, m_PlannedEntryMaximumWeights.Length);
             m_PlannedStoredMaximumWeight = 0f;
         }

@@ -1426,3 +1426,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animation Slot 双源混合每根骨骼把 source/action pose 和 velocity 复制为按值局部；这些局部随后只被字段读取。
 - bone 循环前缓存四个输入 `NativeSlice`，source/action pose 与 velocity 绑定 `ref readonly` 元素引用；per-bone contribution 权重、pose 可用性校验、混合公式、parameters、contributions 和 feet 顺序保持不变。
 - 该改动删除逐骨四类输入结构拷贝；不改变输出页身份、continuity 或 Commit/Discard。静态核对 `BoneOutputWeight` 不访问 pose/velocity slice、read binding 长度校验和唯一 BlendPoses 循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP185 Inertialization bone 输入引用化（2026-09-30，已实施，本轮未编译）
+
+- Inertialization 在 BeginTransition、ApplyResiduals 和 CommitHistory 的逐骨循环中按值复制 input、history 或 output 的 pose/velocity；ApplyResiduals 还复制 envelope sample。
+- 三段循环分别缓存 input/output slice；history、target、velocity 绑定数组或 `NativeSlice` 元素只读引用，envelope sample 改为只读引用。residual 公式、有效值校验、异常文本、参数/foot 应用和 history swap 顺序不变。
+- 该改动删除 inertialization 周期 bone 链的中间结构拷贝和重复 binding 读取；不改变事件 identity、pending/committed 页语义或 Commit/Discard。静态核对三个唯一循环、字段消费只读和 `EnvelopeSample` 生命周期；未编译、未采样，不能声称实测耗时收益。

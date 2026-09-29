@@ -432,10 +432,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return;
             }
+            NativeSlice<AnimationLocalBonePose> inputPoses =
+                input.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> inputVelocities =
+                input.DenseVelocities;
             for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
             {
-                AnimationLocalBonePose previous = m_CommittedHistory[bone];
-                AnimationLocalBonePose target = input.DenseLocalPoses[bone];
+                ref readonly AnimationLocalBonePose previous =
+                    ref m_CommittedHistory[bone];
+                ref readonly AnimationLocalBonePose target = ref inputPoses[bone];
                 if (!previous.IsValid || !target.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history Bone #{bone} is invalid.");
@@ -444,10 +449,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     AnimationPoseMath.QuaternionLog(
                         previous.Rotation * Quaternion.Inverse(target.Rotation));
                 m_PendingResiduals.Scale[bone] = previous.Scale - target.Scale;
-                AnimationBlendBoneVelocity previousVelocity =
-                    m_CommittedHistoryVelocities[bone];
-                AnimationBlendBoneVelocity targetVelocity =
-                    input.DenseVelocities[bone];
+                ref readonly AnimationBlendBoneVelocity previousVelocity =
+                    ref m_CommittedHistoryVelocities[bone];
+                ref readonly AnimationBlendBoneVelocity targetVelocity =
+                    ref inputVelocities[bone];
                 if (!previousVelocity.IsValid || !targetVelocity.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history velocity Bone #{bone} is invalid.");
@@ -496,14 +501,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool anyActive = false;
             NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
             NativeSlice<AnimationBlendBoneVelocity> velocities = output.DenseVelocities;
+            NativeSlice<AnimationLocalBonePose> inputPoses =
+                input.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> inputVelocities =
+                input.DenseVelocities;
             for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
             {
-                EnvelopeSample sample = m_EnvelopeSamples[m_BoneEnvelopeIndices[bone]];
+                ref readonly EnvelopeSample sample =
+                    ref m_EnvelopeSamples[m_BoneEnvelopeIndices[bone]];
                 float residualWeight = sample.ResidualWeight;
                 float residualDerivative = sample.ResidualDerivative;
                 anyActive |= m_PendingState.ElapsedSeconds < sample.Duration;
-                AnimationLocalBonePose target = input.DenseLocalPoses[bone];
-                AnimationBlendBoneVelocity targetVelocity = input.DenseVelocities[bone];
+                ref readonly AnimationLocalBonePose target = ref inputPoses[bone];
+                ref readonly AnimationBlendBoneVelocity targetVelocity =
+                    ref inputVelocities[bone];
                 Vector3 positionBase = residuals.Position[bone] +
                     m_PendingState.ElapsedSeconds * residuals.LinearVelocity[bone];
                 Vector3 rotationBase = residuals.Rotation[bone] +
@@ -610,10 +621,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void CommitHistory(in AnimationPlayerPoseNativeWriteBinding output)
         {
+            NativeSlice<AnimationLocalBonePose> outputPoses =
+                output.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
+                output.DenseVelocities;
             for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
             {
-                m_PendingHistory[bone] = output.DenseLocalPoses[bone];
-                m_PendingHistoryVelocities[bone] = output.DenseVelocities[bone];
+                m_PendingHistory[bone] = outputPoses[bone];
+                m_PendingHistoryVelocities[bone] = outputVelocities[bone];
             }
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {

@@ -1270,3 +1270,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - graph 与 role runtime 的 `CurrentInput` 按值返回 `CharacterPoseNativeFrameInput`；handler 每次直接读取 `ParameterFrame`、`FactFrame` 或 scalar 时都会先复制整份 readonly frame。字段在 BeginFrame 写入后整个帧阶段只被消费。
 - 两个 internal 属性改为返回 `ref readonly`，直接字段访问不再复制整份 frame；显式赋值给局部 frame 的调用仍按 C# 语义复制并保持多个字段消费方式不变。
 - 该改动统一 frame input 的正式只读入口，不新增第二数据源或可变写入路径。静态核对 `CharacterPoseNativeFrameInput` readonly struct、`m_FrameInput` 帧生命周期、两个 runtime 属性和现有直接访问/局部赋值调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP159 handler frame input 只读局部化（2026-09-30，已实施，本轮未编译）
+
+- Constraint 四条输出链和 RootOrientationWarp 仍把 `CurrentInput` 复制到按值局部变量；RootOrientationWarp 还两次直接读取 FactFrame。frame 在同一次输出求值内不变。
+- 这些调用点改为 `ref readonly` 局部引用，随后沿原顺序消费 Parameter/Fact frame 和 scalar；Foot Placement、Pose Bone IK Goals、Goal Assembler、Full Body IK 和 root warp 的校验、计算、输出页与 Commit 顺序不变。
+- 该改动删除 handler 输出链的整份 frame input 拷贝；不依赖或修改其他窗口的 GraphEvaluator。静态核对 AP158 readonly 引用入口、各局部使用字段和原有分支顺序；未编译、未采样，不能声称实测耗时收益。

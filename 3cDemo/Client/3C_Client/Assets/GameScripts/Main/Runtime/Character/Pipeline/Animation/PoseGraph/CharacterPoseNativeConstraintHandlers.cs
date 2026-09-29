@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             AnimationPoseValueNativeReadBinding inputBinding =
                 new AnimationPoseValueNativeReadBinding(in componentPose);
-            CharacterPoseNativeFrameInput input = runtime.CurrentInput;
+            ref readonly CharacterPoseNativeFrameInput input = ref runtime.CurrentInput;
             CharacterBodyPresentationFrame body = input.BodyFrame;
             CharacterPresentationFactFrame facts = input.FactFrame;
             CharacterAnimationPoseInputFrame parameters = input.ParameterFrame;
@@ -466,7 +466,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose Bone IK Goals '{NodeId}' received an unavailable Component Pose.");
             }
-            CharacterPoseNativeFrameInput frame = runtime.CurrentInput;
+            ref readonly CharacterPoseNativeFrameInput frame = ref runtime.CurrentInput;
             CharacterPoseBoneContributionOperationResult result =
                 m_Service.EvaluatePoseBoneContribution(
                     in m_Handle,
@@ -539,7 +539,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
-            CharacterPoseNativeFrameInput frame = runtime.CurrentInput;
+            ref readonly CharacterPoseNativeFrameInput frame = ref runtime.CurrentInput;
             CharacterFullBodyIkGoalAssemblerOperationResult result =
                 m_Service.EvaluateGoalAssembler(
                     in m_Handle,
@@ -730,7 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
             outputPoses.CopyFrom(binding.DenseLocalPoses);
-            CharacterPoseNativeFrameInput frame = runtime.CurrentInput;
+            ref readonly CharacterPoseNativeFrameInput frame = ref runtime.CurrentInput;
             CharacterFullBodyIkConstraintOperationResult result =
                 m_Service.EvaluateFullBodyIk(
                     in m_Handle,

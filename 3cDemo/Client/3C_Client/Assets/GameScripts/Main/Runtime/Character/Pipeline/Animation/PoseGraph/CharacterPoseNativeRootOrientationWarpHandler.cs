@@ -186,7 +186,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeSlice<AnimationLocalBonePose> poses =
                 m_WriteBinding.DenseLocalPoses;
             poses.CopyFrom(input.DenseLocalPoses);
-            EventGraphValue facingValue = runtime.CurrentInput.ParameterFrame.RequireValue(
+            ref readonly CharacterPoseNativeFrameInput frame =
+                ref runtime.CurrentInput;
+            EventGraphValue facingValue = frame.ParameterFrame.RequireValue(
                 m_FacingErrorBinding);
             if (facingValue.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(facingValue.Float32Value))
@@ -206,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!m_PendingState.Relevant ||
                     m_PendingState.SourceId != m_Source.SourceId ||
                     m_PendingState.BodyDiscontinuityGeneration !=
-                    runtime.CurrentInput.FactFrame.BodyDiscontinuityGeneration)
+                    frame.FactFrame.BodyDiscontinuityGeneration)
                 {
                     m_PendingState.CapturedTargetAngle = Mathf.DeltaAngle(
                         0f,
@@ -215,7 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PendingState.Relevant = true;
                 m_PendingState.SourceId = m_Source.SourceId;
                 m_PendingState.BodyDiscontinuityGeneration =
-                    runtime.CurrentInput.FactFrame.BodyDiscontinuityGeneration;
+                    frame.FactFrame.BodyDiscontinuityGeneration;
                 m_PendingState.CurrentFacingError = Mathf.DeltaAngle(
                     0f,
                     facingValue.Float32Value);

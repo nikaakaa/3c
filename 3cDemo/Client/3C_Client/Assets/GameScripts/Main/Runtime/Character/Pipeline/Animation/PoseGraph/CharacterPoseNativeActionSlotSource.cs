@@ -308,22 +308,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Action Slot source '{m_NodeId}' cannot materialize source #{index}.");
             AnimationPoseRequestWorkspaceRow row =
                 m_Workspace.PrepareRow(state.SourceId);
-            row.Clips[row.ClipOffset] =
+            ClipSamplePlan[] clips = row.Clips;
+            int clipOffset = row.ClipOffset;
+            float[] poseParameters = row.PoseParameters;
+            byte[] poseParameterAvailability = row.PoseParameterAvailability;
+            int parameterOffset = row.ParameterOffset;
+            int parameterCount = row.ParameterCount;
+            IReadOnlyList<CharacterPoseParameterDeclaration> declarations =
+                m_InputContract.Parameters;
+            ulong leaseGeneration = row.LeaseGeneration;
+            clips[clipOffset] =
                 state.Plan.CreateSample(in state.Sample);
             ref readonly CharacterAnimationPoseInputFrame parameters =
                 ref input.ParameterFrame;
-            for (int i = 0; i < row.ParameterCount; i++)
+            for (int i = 0; i < parameterCount; i++)
             {
                 CharacterPoseParameterDeclaration declaration =
-                    m_InputContract.Parameters[i];
+                    declarations[i];
                 if (declaration.ValueType == PoseParameterValueType.Vector3 ||
                     declaration.ValueType == PoseParameterValueType.Quaternion)
                     continue;
-                row.PoseParameters[row.ParameterOffset + i] =
+                poseParameters[parameterOffset + i] =
                     declaration.Usage == CharacterPoseParameterUsage.AnimatedProperty
                         ? declaration.DefaultValue
                         : ReadParameter(parameters.RequireValue(m_ParameterBindings[i]), declaration);
-                row.PoseParameterAvailability[row.ParameterOffset + i] = 1;
+                poseParameterAvailability[parameterOffset + i] = 1;
             }
             PresentationPoseSampleTime time = state.Sample.Time;
             var request = new AnimationPoseSampleRequest(
@@ -337,24 +346,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 time.Loop,
                 time.TimeScale,
                 new AnimationReadOnlyBuffer<ClipSamplePlan>(
-                    row.Clips,
-                    row.ClipOffset,
+                    clips,
+                    clipOffset,
                     1,
                     m_Workspace,
-                    row.LeaseGeneration),
+                    leaseGeneration),
                 new PresentationParameterPageId(state.RequestSequence),
                 new AnimationReadOnlyBuffer<float>(
-                    row.PoseParameters,
-                    row.ParameterOffset,
-                    row.ParameterCount,
+                    poseParameters,
+                    parameterOffset,
+                    parameterCount,
                     m_Workspace,
-                    row.LeaseGeneration),
+                    leaseGeneration),
                 new AnimationReadOnlyBuffer<byte>(
-                    row.PoseParameterAvailability,
-                    row.ParameterOffset,
-                    row.ParameterCount,
+                    poseParameterAvailability,
+                    parameterOffset,
+                    parameterCount,
                     m_Workspace,
-                    row.LeaseGeneration));
+                    leaseGeneration));
             AnimationFootFeatureSample left = default;
             AnimationFootFeatureSample right = default;
             m_Resolved[index].Set(

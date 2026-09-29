@@ -1510,3 +1510,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animation Slot 每根骨骼调用 `BoneOutputWeight` 时重复读取 action 的 contribution count、pose count 和 dense contribution weight binding；这些数据在同一个 `BlendPoses` 调用内不变。
 - bone 循环前缓存三项并传入专用求和入口；仍逐 contribution 累加同一行权重并执行 `Clamp01`。per-bone contribution 权重、混合公式和异常时机不变。
 - 该改动删除逐骨重复 binding 结构读取；不降低贡献求和的业务复杂度，也不新增缓存结果。静态核对唯一调用点、read binding 长度合同和 `NativeSlice` 生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP199 ActionSlot Materialize row 定容（2026-09-30，已实施，本轮未编译）
+
+- Action Slot Source 的 `Materialize` 在写 sample、参数循环和构造三个 request buffer 时反复读取同一 row 的 clips、pose parameters、availability、offset、count 和 lease generation；参数循环还每项重复读取 input contract 的 `Parameters` 属性。
+- `PrepareRow` 返回后一次性绑定同一 row 的数组、offset、count、lease generation 和 contract 参数列表。clip 写入、animated property 默认值、事件图值读取、availability 写入、buffer 长度和构造参数顺序不变。
+- 该改动删除同一次 Materialize 内的重复只读结构读取；不改变 workspace 校验、lease 生命周期、request identity 或 Commit/Discard。静态核对 row 是 readonly struct、数组引用来自同一 prepared row 和唯一 `PrepareRow` 调用；未编译、未采样，不能声称实测耗时收益。

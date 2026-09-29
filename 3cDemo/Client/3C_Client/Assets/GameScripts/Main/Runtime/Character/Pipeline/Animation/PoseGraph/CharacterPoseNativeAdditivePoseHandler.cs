@@ -369,11 +369,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             else
             {
+                NativeSlice<AnimationLocalBonePose> basePoses =
+                    basePose.DenseLocalPoses;
+                NativeSlice<AnimationLocalBonePose> additivePoses =
+                    additivePose.DenseLocalPoses;
+                NativeSlice<AnimationBlendBoneVelocity> baseVelocities =
+                    basePose.DenseVelocities;
+                NativeSlice<AnimationBlendBoneVelocity> additiveVelocities =
+                    additivePose.DenseVelocities;
                 for (int bone = 0; bone < outputPoses.Length; bone++)
                 {
-                    AnimationLocalBonePose baseBone = basePose.DenseLocalPoses[bone];
-                    AnimationLocalBonePose additiveBone = additivePose.DenseLocalPoses[bone];
-                    var reference = m_ReferenceBones[bone];
+                    ref readonly AnimationLocalBonePose baseBone = ref basePoses[bone];
+                    ref readonly AnimationLocalBonePose additiveBone = ref additivePoses[bone];
+                    ref readonly (Vector3 Position, Quaternion InverseRotation, Vector3 Scale)
+                        reference = ref m_ReferenceBones[bone];
                     Vector3 position = baseBone.Position +
                         (additiveBone.Position - reference.Position) * weight;
                     Quaternion referenceToAdditive =
@@ -397,8 +406,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             (additiveBone.Scale - reference.Scale) * weight;
                     }
                     outputPoses[bone] = new AnimationLocalBonePose(position, rotation, scale);
-                    AnimationBlendBoneVelocity additiveVelocity = additivePose.DenseVelocities[bone];
-                    AnimationBlendBoneVelocity baseVelocity = basePose.DenseVelocities[bone];
+                    ref readonly AnimationBlendBoneVelocity additiveVelocity =
+                        ref additiveVelocities[bone];
+                    ref readonly AnimationBlendBoneVelocity baseVelocity =
+                        ref baseVelocities[bone];
                     outputVelocities[bone] = new AnimationBlendBoneVelocity(
                         baseVelocity.Linear + additiveVelocity.Linear * weight,
                         baseVelocity.Angular + additiveVelocity.Angular * weight,

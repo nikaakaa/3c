@@ -1402,3 +1402,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Final Publication 的参数准备循环每项重新读取 `PoseParameters` 和 `PoseParameterAvailability` 两个 `NativeSlice` 属性，并按原 page offset 写入。
 - 循环前缓存两个 slice 和 parameter offset；参数仍逐项读取并完成 finite/availability 校验后写入 pending page。
 - 该改动删除逐参数的 slice 结构重复读取；不改变参数数量校验、可用值合同、异常文本或输出页写入顺序。静态核对两个 `NativeSlice` 长度已在同一入口校验、目标数组生命周期和原循环边界；未编译、未采样，不能声称实测耗时收益。
+
+### AP181 AdditivePose bone 输入引用化（2026-09-30，已实施，本轮未编译）
+
+- Additive 混合每根骨骼把 base pose、additive pose、additive velocity 和 base velocity 各复制成按值局部，随后只读取字段；reference bone 也从数组按值复制。
+- 混合分支缓存四个输入 `NativeSlice`，base/additive pose、velocity 和 reference 都绑定 `ref readonly` 元素引用；position、rotation、scale 公式和 `Multiply/AddDelta` 分支保持不变。
+- 该改动删除逐骨的四类输入结构拷贝；不改变 output 写入、continuity、foot/publication 顺序或异常时机。静态核对 `NativeSlice<T>` 与数组元素引用合同、input/output 长度校验和 ApplyAdditive 唯一循环；未编译、未采样，不能声称实测耗时收益。

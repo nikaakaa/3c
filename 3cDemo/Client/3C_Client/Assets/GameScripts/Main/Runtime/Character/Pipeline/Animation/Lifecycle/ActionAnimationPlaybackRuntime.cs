@@ -95,8 +95,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             m_Registry.ReplaceSlotUsageBatch(m_Lease, m_Usages);
             m_Registry.ApplyRetirementPermissions(m_Lease, m_Retirements);
-            for (int i = 0; i < m_Retirements.Count; i++)
-                m_Registry.RetireWithoutBackendResources(m_Lease, m_Retirements[i].PlaybackId);
+            int retirementCount = m_Retirements.Count;
+            for (int i = 0; i < retirementCount; i++)
+            {
+                ref readonly ActionRetirementPermission permission =
+                    ref m_Retirements.ElementAt(i);
+                m_Registry.RetireWithoutBackendResources(
+                    m_Lease,
+                    permission.PlaybackId);
+            }
             m_Registry.ValidateFrame(m_Lease);
         }
 

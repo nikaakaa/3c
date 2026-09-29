@@ -1558,3 +1558,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Registry 应用命令和退场权限时按 `IReadOnlyList` 按值复制每个元素；`AppendCommandMutation` 和 `ApplyCommand` 又按值转发 inbox entry，`ApplyCommand` 再复制整份 command。
 - 正式批量入口改为接收 source 的固定容量 buffer，循环绑定只读元素引用；mutation journal 保留一次命令存储，但转发、sequence 查重和 command 应用改为 `in` / `CommandRef` 只读读取。retirement 校验、journal 顺序、状态推进和异常时机不变。
 - 该改动删除周期命令/退场批处理的 entry、permission 和 command 中间拷贝；不改变 mutation journal 的持久页或 rollback 语义。静态核对唯一 Registry 批量调用、journal payload 生命周期、`CommandRef` 只读字段和 mutation 期间 inbox 禁写；未编译、未采样，不能声称实测耗时收益。
+
+### AP207 Action Slot usage 批处理引用化（2026-09-30，已实施，本轮未编译）
+
+- Slot usage 批量替换仍通过 `IReadOnlyList` 按值读取每个 usage，再复制写入 registry entry；retirement 回放循环每次索引 permission 并读取 playback identity。
+- usage 正式批量入口改为接收固定容量 buffer，绑定只读元素引用后直接写入目标槽；retirement 回放定容 count 并绑定只读 permission。usage 重置、查重、容量、retirement 顺序和异常时机不变。
+- 该改动删除 usage 校验链的读取拷贝和 permission 回放的元素拷贝；保留 usage 写入 registry 的一次必要存储拷贝。静态核对唯一 batch 调用、固定 buffer 生命周期和 registry entry 数组生命周期；未编译、未采样，不能声称实测耗时收益。

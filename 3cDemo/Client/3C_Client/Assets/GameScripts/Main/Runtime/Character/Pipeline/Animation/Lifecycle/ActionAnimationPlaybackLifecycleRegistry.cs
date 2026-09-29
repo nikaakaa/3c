@@ -347,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void ReplaceSlotUsageBatch(
             ActionLifecycleMutationLease lease,
-            IReadOnlyList<ActionSlotSourceUsage> usages)
+            FixedCapacityFrameBuffer<ActionSlotSourceUsage> usages)
         {
             RequireLease(lease);
             if (usages == null)
@@ -364,9 +364,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (m_PendingCommittedIndices[i] < 0)
                     m_PendingEntries[i].SlotUsageCount = 0;
             }
-            for (int i = 0; i < usages.Count; i++)
+            int usageCount = usages.Count;
+            for (int i = 0; i < usageCount; i++)
             {
-                ActionSlotSourceUsage usage = usages[i];
+                ref readonly ActionSlotSourceUsage usage =
+                    ref usages.ElementAt(i);
                 Entry entry = FindReadable(usage.PlaybackId);
                 if (!usage.IsValid ||
                     entry == null ||

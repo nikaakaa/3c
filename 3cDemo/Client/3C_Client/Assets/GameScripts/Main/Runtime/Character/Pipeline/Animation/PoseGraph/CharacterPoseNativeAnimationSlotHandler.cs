@@ -511,26 +511,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             NativeSlice<float> parameters = m_WriteBinding.PoseParameters;
             NativeSlice<byte> availability = m_WriteBinding.PoseParameterAvailability;
+            NativeSlice<float> sourceParameters = source.PoseParameters;
+            NativeSlice<float> actionParameters = action.PoseParameters;
+            NativeSlice<byte> sourceAvailability =
+                source.PoseParameterAvailability;
+            NativeSlice<byte> actionAvailability =
+                action.PoseParameterAvailability;
             for (int parameter = 0; parameter < parameters.Length; parameter++)
             {
-                byte sourceAvailable = source.PoseParameterAvailability[parameter];
-                byte actionAvailable = action.PoseParameterAvailability[parameter];
+                byte sourceAvailable = sourceAvailability[parameter];
+                byte actionAvailable = actionAvailability[parameter];
                 if (sourceAvailable != 0 && actionAvailable != 0)
                 {
                     parameters[parameter] =
-                        (source.PoseParameters[parameter] * sourceWeight +
-                         action.PoseParameters[parameter] * actionWeight) /
+                        (sourceParameters[parameter] * sourceWeight +
+                         actionParameters[parameter] * actionWeight) /
                         (sourceWeight + actionWeight);
                     availability[parameter] = 1;
                 }
                 else if (actionAvailable != 0)
                 {
-                    parameters[parameter] = action.PoseParameters[parameter];
+                    parameters[parameter] = actionParameters[parameter];
                     availability[parameter] = 1;
                 }
                 else
                 {
-                    parameters[parameter] = source.PoseParameters[parameter];
+                    parameters[parameter] = sourceParameters[parameter];
                     availability[parameter] = sourceAvailable;
                 }
             }

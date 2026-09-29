@@ -1462,3 +1462,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Space Conversion 转换 local/component pose 时按值复制每个 input 元素，ComponentToLocal 的 root 分支再按值读取 scratch；底层 `TryCreateComponent` 和 `TryCreateLocal` 也按值接收 pose。
 - `TryCreateComponent` 的 local 与 parent、`TryCreateLocal` 的 component 与 parent 正式边界改为 `in`；两条转换循环缓存 input/output slice，input 与 root/current/parent scratch 绑定只读引用。父索引推导、有效值校验、错误文本和 scratch 写入顺序不变。
 - 该改动删除 Space Conversion 周期转换的中间 pose 拷贝，并统一 pose 数学边界的只读传参；不改变 Local/Component 输出空间或输出页身份。静态核对全部现有调用仍可传值、方法本体不写参数、readonly struct 字段只读和两个唯一转换循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP191 AnimationSlot parameter 定容（2026-09-30，已实施，本轮未编译）
+
+- Animation Slot 参数混合每项重复读取 source/action 的 parameter 和 availability binding 属性；同一方法内的 output slice 已缓存，但输入 `NativeSlice` 每次索引都重新取。
+- 循环前缓存 source/action 的 parameter 与 availability slice；source/action 可用性仍逐项读取，并按原三分支完成参数混合或 fallback availability 写入。
+- 该改动删除 Animation Slot 参数链的重复 binding 结构读取；不改变参数公式、availability 合并、输出页身份或 Commit/Discard。静态核对 read binding 的参数/可用性等长校验、pose graph layout 校验和唯一 BlendParameters 调用；未编译、未采样，不能声称实测耗时收益。

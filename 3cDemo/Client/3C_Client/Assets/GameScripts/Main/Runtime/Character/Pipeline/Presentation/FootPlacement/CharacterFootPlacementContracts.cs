@@ -278,6 +278,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootSupportFacts
     {
+        readonly CharacterFootSupportTarget m_Target;
+        readonly CharacterFootContactReference m_Contact;
+        readonly CharacterFootPelvisReachReference m_ReachReference;
+
         internal CharacterFootSupportFacts(
             CharacterFootSupportTarget target,
             CharacterFootContactReference contact,
@@ -288,24 +292,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong eventIdentity,
             CharacterFootPelvisReachReference reachReference)
         {
-            Target = target;
-            Contact = contact;
+            m_Target = target;
+            m_Contact = contact;
             ContactOwnership = contactOwnership;
             Eligibility = eligibility;
             Weight = weight;
             HorizontalError = horizontalError;
             EventIdentity = eventIdentity;
-            ReachReference = reachReference;
+            m_ReachReference = reachReference;
         }
 
-        internal CharacterFootSupportTarget Target { get; }
-        internal CharacterFootContactReference Contact { get; }
+        internal ref readonly CharacterFootSupportTarget Target => ref m_Target;
+        internal ref readonly CharacterFootContactReference Contact => ref m_Contact;
         internal float ContactOwnership { get; }
         internal CharacterFootSupportEligibility Eligibility { get; }
         internal float Weight { get; }
         internal float HorizontalError { get; }
         internal ulong EventIdentity { get; }
-        internal CharacterFootPelvisReachReference ReachReference { get; }
+        internal ref readonly CharacterFootPelvisReachReference ReachReference =>
+            ref m_ReachReference;
     }
 
     internal readonly struct CharacterFootGoalTarget
@@ -361,6 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementRequest
     {
+        readonly CharacterFootSupportFacts m_Support;
         readonly CharacterFootStrideRequest m_Stride;
 
         internal CharacterFootPlacementRequest(
@@ -375,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Identity = identity;
             Pose = pose;
-            Support = support;
+            m_Support = support;
             LandingReachRequest = landingReachRequest;
             GoalTarget = goalTarget;
             Outcome = outcome;
@@ -385,7 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootPlacementIdentity Identity { get; }
         internal CharacterFootPlacementPose Pose { get; }
-        internal CharacterFootSupportFacts Support { get; }
+        internal ref readonly CharacterFootSupportFacts Support => ref m_Support;
         internal CharacterFootLandingReachRequest LandingReachRequest { get; }
         internal CharacterFootGoalTarget GoalTarget { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }

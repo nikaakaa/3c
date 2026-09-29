@@ -1805,3 +1805,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootPlacementRequestPair` 的 Left/Right 和 `CharacterFootPlacementRequest.Stride` 自动属性每次读取复制结构；StrideHips 的 `ResolveIntent` 读取 support anchor 时复制整份 request，又复制两个 stride 局部。
 - pair 的左右 request 和 request 的 stride 改为 backing field 只读引用；`ResolveIntent` 的 stride 局部直接绑定引用。pair 构造的 identity 校验、输出 intent 和 reject 分支不变。
 - 该改动删除 StrideHips intent 求解前的整份 request 与 stride 局部拷贝。静态核对 pair/request 为 readonly struct、生命周期覆盖调用、消费点只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP248 Foot request support facts 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPlacementRequest.Support` 自动属性每次读取复制整份 support facts；primary support 的 retain、weight、horizontal error 和 landing identity 判定在同一周期反复读取。`SupportFacts` 的 Target、Contact、ReachReference 又各自复制结构。
+- request 的 Support 与 facts 三个结构属性改为 backing field 只读引用。primary support 选择、retention 比较、intent support anchor 和 reach 判定继续读取同一数据，选择优先级与输出 identity 不变。
+- 该改动删除 Foot Placement 周期中 support facts 的重复拷贝。静态核对 request/facts 为 readonly struct、生命周期覆盖调用、消费点只读；未编译、未采样，不能声称实测耗时收益。

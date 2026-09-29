@@ -1456,3 +1456,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Modify Bone 的 pose 分支每骨按值复制 input pose，`modifies` 时再转换 scratch；输出阶段又按值复制每个 component scratch pose，NoPose 分支每次重复读取 input binding 属性。
 - pose 与 NoPose 分支缓存 input/output slice；input 绑定只读元素引用，修改输出绑定 scratch 数组只读引用。invalid 校验、`modifies` 分支、ApplyModification 写入 scratch 和输出转换顺序不变。
 - 该改动删除 Modify Bone 周期 pose 输入和输出阶段的中间结构拷贝；不改变 Component Pose 空间合同或输出页身份。静态核对 input/output 长度校验、readonly struct 的 `in` 构造合同和三条唯一循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP190 SpaceConversion pose 引用化（2026-09-30，已实施，本轮未编译）
+
+- Space Conversion 转换 local/component pose 时按值复制每个 input 元素，ComponentToLocal 的 root 分支再按值读取 scratch；底层 `TryCreateComponent` 和 `TryCreateLocal` 也按值接收 pose。
+- `TryCreateComponent` 的 local 与 parent、`TryCreateLocal` 的 component 与 parent 正式边界改为 `in`；两条转换循环缓存 input/output slice，input 与 root/current/parent scratch 绑定只读引用。父索引推导、有效值校验、错误文本和 scratch 写入顺序不变。
+- 该改动删除 Space Conversion 周期转换的中间 pose 拷贝，并统一 pose 数学边界的只读传参；不改变 Local/Component 输出空间或输出页身份。静态核对全部现有调用仍可传值、方法本体不写参数、readonly struct 字段只读和两个唯一转换循环；未编译、未采样，不能声称实测耗时收益。

@@ -368,9 +368,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
+            NativeSlice<AnimationLocalBonePose> inputPoses =
+                input.DenseLocalPoses;
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
-                AnimationLocalBonePose local = input.DenseLocalPoses[i];
+                ref readonly AnimationLocalBonePose local = ref inputPoses[i];
                 if (!CharacterPoseConstraintMath.TryCreateComponent(
                         local,
                         m_ParentIndices[i],
@@ -391,9 +393,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
+            NativeSlice<AnimationLocalBonePose> inputPoses =
+                input.DenseLocalPoses;
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
-                AnimationLocalBonePose value = input.DenseLocalPoses[i];
+                ref readonly AnimationLocalBonePose value = ref inputPoses[i];
                 if (!value.IsValid)
                     throw new InvalidOperationException(
                         $"Pose space conversion '{NodeId}' received invalid component bone #{i}.");
@@ -405,12 +409,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose local;
                 if (parent < 0)
                 {
-                    CharacterComponentBonePose component = m_ComponentScratch[i];
+                    ref readonly CharacterComponentBonePose component =
+                        ref m_ComponentScratch[i];
                     local = new AnimationLocalBonePose(in component);
                 }
                 else if (!CharacterPoseConstraintMath.TryCreateLocal(
-                             m_ComponentScratch[i],
-                             m_ComponentScratch[parent],
+                             ref m_ComponentScratch[i],
+                             ref m_ComponentScratch[parent],
                              out local))
                 {
                     throw new InvalidOperationException(

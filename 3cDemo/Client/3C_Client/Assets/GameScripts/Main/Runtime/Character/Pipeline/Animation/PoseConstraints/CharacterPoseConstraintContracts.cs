@@ -696,7 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Mathf.Abs(value.z) > Epsilon;
 
         internal static bool TryCreateComponent(
-            AnimationLocalBonePose local,
+            in AnimationLocalBonePose local,
             int parentIndex,
             NativeArray<CharacterComponentBonePose> componentPoses,
             out CharacterComponentBonePose component)
@@ -713,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal static bool TryCreateComponent(
-            AnimationLocalBonePose local,
+            in AnimationLocalBonePose local,
             int parentIndex,
             CharacterComponentBonePose[] componentPoses,
             int componentOffset,
@@ -734,8 +734,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal static bool TryCreateComponent(
-            AnimationLocalBonePose local,
-            CharacterComponentBonePose parent,
+            in AnimationLocalBonePose local,
+            in CharacterComponentBonePose parent,
             out CharacterComponentBonePose component)
         {
             component = default;
@@ -745,8 +745,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static bool TryCreateComponentWithValidParent(
-            AnimationLocalBonePose local,
-            CharacterComponentBonePose parent,
+            in AnimationLocalBonePose local,
+            in CharacterComponentBonePose parent,
             out CharacterComponentBonePose component)
         {
             component = default;
@@ -784,8 +784,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             pose.Position + pose.Rotation * Vector3.Scale(pose.Scale, localPoint);
 
         internal static bool TryCreateLocal(
-            CharacterComponentBonePose component,
-            CharacterComponentBonePose parent,
+            in CharacterComponentBonePose component,
+            in CharacterComponentBonePose parent,
             out AnimationLocalBonePose local)
         {
             local = default;

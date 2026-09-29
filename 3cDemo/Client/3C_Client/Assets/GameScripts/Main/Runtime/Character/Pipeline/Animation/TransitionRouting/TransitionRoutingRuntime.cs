@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Animation.TransitionRouting
@@ -351,16 +352,11 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
 
             workspace.RequestGenerationValue++;
             var requestGeneration = new TransitionRequestGeneration(workspace.RequestGenerationValue);
-            var requestEventId = new TransitionRequestEventId(StableHash.Compute(
-                "transition-routing-request",
-                workspace.PlanId.ToString(),
-                workspace.OwnerNodeId.ToString(),
-                rule.RuleId.ToString(),
-                input.CurrentEndpoint.ToString(),
-                input.RequestedEndpoint.ToString(),
-                input.SelectionGeneration.ToString(),
-                requestGeneration.ToString(),
-                workspace.ModuleGenerationValue.ToString()));
+            var requestEventId = new TransitionRequestEventId(ComputeRequestEventId(
+                workspace,
+                rule,
+                input,
+                requestGeneration));
             var request = new PoseInertializationRequest(
                 requestEventId,
                 workspace.OwnerNodeId,
@@ -449,6 +445,43 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 workspace.Lifecycle,
                 releasePermission: true,
                 completionOutcome: TransitionRoutingCompletionOutcome.CaptureCommitted);
+        }
+
+        static StableHash ComputeRequestEventId(
+            TransitionRoutingWorkspace workspace,
+            in AnimationTransitionRule rule,
+            in TransitionRoutingFrameInput input,
+            in TransitionRequestGeneration requestGeneration)
+        {
+            CanonicalWriter writer = StableHash.BeginHash();
+            WriteIdentity(writer, "transition-routing-request");
+            writer.WriteByte(0x1f);
+            WriteIdentity(writer, workspace.PlanId.Value.Value);
+            writer.WriteByte(0x1f);
+            WriteIdentity(writer, workspace.OwnerNodeId.Value);
+            writer.WriteByte(0x1f);
+            WriteIdentity(writer, rule.RuleId.Value);
+            writer.WriteByte(0x1f);
+            WriteIdentity(writer, input.CurrentEndpoint.Value);
+            writer.WriteByte(0x1f);
+            WriteIdentity(writer, input.RequestedEndpoint.Value);
+            writer.WriteByte(0x1f);
+            WriteUInt64(writer, input.SelectionGeneration.Value);
+            writer.WriteByte(0x1f);
+            WriteUInt64(writer, requestGeneration.Value);
+            writer.WriteByte(0x1f);
+            WriteUInt64(writer, workspace.ModuleGenerationValue);
+            return writer.ComputeHash();
+        }
+
+        static void WriteIdentity(CanonicalWriter writer, string value) =>
+            writer.WriteRawUtf8(value.AsSpan());
+
+        static void WriteUInt64(CanonicalWriter writer, ulong value)
+        {
+            Span<char> digits = stackalloc char[20];
+            value.TryFormat(digits, out int length, provider: CultureInfo.InvariantCulture);
+            writer.WriteRawUtf8(digits.Slice(0, length));
         }
 
         static TransitionRoutingFrameOutput ApplyReleaseCompletion(

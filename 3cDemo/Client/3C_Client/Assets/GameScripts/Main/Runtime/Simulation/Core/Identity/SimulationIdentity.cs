@@ -80,6 +80,14 @@ namespace ThirdPersonSimulation
             }
             return writer.ComputeHash();
         }
+
+        public static CanonicalWriter BeginHash()
+        {
+            CanonicalWriter writer = s_HashWriter ??= new CanonicalWriter();
+            writer.Reset();
+            return writer;
+        }
+
         public static bool operator ==(StableHash left, StableHash right) => left.Equals(right);
         public static bool operator !=(StableHash left, StableHash right) => !left.Equals(right);
     }

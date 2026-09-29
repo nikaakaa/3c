@@ -723,6 +723,12 @@
 - 两域 RuntimeChanges 合同旁增加静态 trigger 文本映射，覆盖 OnActive、Executed、WhileActive、Removed、Expired 并保持原枚举名。Cue projection 读取同一字符串；fact 字段、producer、presentation 命令和异常传播不变。
 - 每个 Cue fact 少一次枚举格式化分配。Catalog 文件当前有其它窗口改动，本次不触碰。静态核对枚举全集、两域唯一 projection 点和差异；未编译、运行回放或采样。
 
+### AP93 Transition 请求身份参数数组和数字临时字符串（2026-09-29，已实施，本轮未编译）
+
+- `TransitionRoutingRuntime` 每次生成新 inertialization 请求时，把 plan、owner、rule、两个 endpoint、selection/request generation 和 module generation 转成字符串数组交给 `StableHash.Compute`。其中 3 个 64 位代数每次分配十进制字符串，params 调用也建立临时数组；请求身份只在建立新请求时执行，不是每帧必然执行。
+- `StableHash.BeginHash` 暴露同一 ThreadStatic canonical writer 的正式重置入口。Transition routing 按原参数顺序写入固定文本和已有 string identity，3 个 64 位数字用栈上 20 字符工作区按 InvariantCulture 格式化后写入原始 UTF-8；字段间仍写入 `0x1f`，最后复用同一 `ComputeHash`。
+- 该修改保持原文本内容、UTF-8 编码、字段分隔、哈希算法和 `TransitionRequestEventId` 合同；空 identity 沿原有 `ToString` 结果编码。首次使用或 writer 扩容仍分配，最终 hash 对象仍由 canonical 链构造。静态核对唯一生成点、数值上界、字段顺序、写入方法和 workspace 生命周期；未编译、运行哈希对比、回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

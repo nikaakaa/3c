@@ -299,6 +299,7 @@ namespace ThirdPersonSimulation
         readonly ProgramControlFlowEdge[] m_StateOnEnter;
         readonly ProgramControlFlowEdge[] m_StateRoot;
         readonly ProgramControlFlowEdge[] m_StateOnExit;
+        readonly OperationHandle[] m_StateSingleLocomotions;
         readonly IReadOnlyList<ProgramGraphCallFrame>[] m_GraphCallFrames;
 
         public OperationExecutionTopology(
@@ -351,6 +352,7 @@ namespace ThirdPersonSimulation
             m_StateMachineOwners = BuildStateMachineOwners(operationList, referenceList);
             BuildStateMachineEntries(operationList, m_Outgoing, out m_StateMachineInitialEntries, out m_StateMachineAnyStateEntries);
             BuildStateEdges(operationList, edges, out m_StateOnEnter, out m_StateRoot, out m_StateOnExit);
+            m_StateSingleLocomotions = BuildStateSingleLocomotions(operationList, m_StateRoot, m_Outgoing);
             m_GraphCallFrames = BuildGraphCallFrames(operationList, graphCallFrames);
             RootOperation = rootOperation;
         }
@@ -447,6 +449,12 @@ namespace ThirdPersonSimulation
         public ProgramControlFlowEdge StateOnEnter(OperationHandle state) => StateEdge(m_StateOnEnter, state);
         public ProgramControlFlowEdge StateRoot(OperationHandle state) => StateEdge(m_StateRoot, state);
         public ProgramControlFlowEdge StateOnExit(OperationHandle state) => StateEdge(m_StateOnExit, state);
+        public OperationExecutionDescriptor StateSingleLocomotion(OperationHandle state)
+        {
+            RequireOperation(state);
+            OperationHandle locomotion = m_StateSingleLocomotions[state.Value];
+            return locomotion.IsValid ? m_Operations[locomotion.Value] : null;
+        }
 
         public int FindOperationStateSlot(OperationHandle operation, ProgramStateSemantic semantic)
         {
@@ -765,6 +773,42 @@ namespace ThirdPersonSimulation
                     continue;
                 grouped[i].Sort((left, right) => left.Index.CompareTo(right.Index));
                 result[i] = grouped[i].AsReadOnly();
+            }
+            return result;
+        }
+
+        static OperationHandle[] BuildStateSingleLocomotions(
+            IReadOnlyList<OperationExecutionDescriptor> operations,
+            ProgramControlFlowEdge[] roots,
+            IReadOnlyList<ProgramControlFlowEdge>[][] outgoing)
+        {
+            var result = new OperationHandle[operations.Count];
+            var pending = new Stack<OperationHandle>();
+            for (int i = 0; i < operations.Count; i++)
+            {
+                if (operations[i].Code != SimulationOperationCode.State || roots[i] == null)
+                    continue;
+                OperationHandle found = OperationHandle.Invalid;
+                bool unique = true;
+                pending.Push(roots[i].Target);
+                while (pending.Count > 0)
+                {
+                    OperationHandle handle = pending.Pop();
+                    if (operations[handle.Value].Code == SimulationOperationCode.LocomotionInputMotion)
+                    {
+                        if (found.IsValid)
+                        {
+                            unique = false;
+                            break;
+                        }
+                        found = handle;
+                    }
+                    IReadOnlyList<ProgramControlFlowEdge> children = outgoing[handle.Value][(int)ProgramControlFlowKind.Child];
+                    for (int j = children.Count - 1; j >= 0; j--)
+                        pending.Push(children[j].Target);
+                }
+                pending.Clear();
+                result[i] = unique ? found : OperationHandle.Invalid;
             }
             return result;
         }

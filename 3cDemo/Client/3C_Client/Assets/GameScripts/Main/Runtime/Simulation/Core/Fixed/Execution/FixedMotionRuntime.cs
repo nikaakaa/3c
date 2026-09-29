@@ -1149,15 +1149,18 @@ namespace ThirdPersonSimulation.Fixed
             if ((LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Timed)
             {
                 ProgramControlFlowEdge transition = cursor.PredictCurrentStateRootCompletionTransition();
-                if (transition != null &&
-                    TryFindSingleLocomotion(transition.Target, out SimulationOperation continuation) &&
+                OperationExecutionDescriptor continuation = transition == null
+                    ? null
+                    : Access.Topology.StateSingleLocomotion(transition.Target);
+                if (continuation != null &&
+                    continuation.Code == SimulationOperationCode.LocomotionInputMotion &&
                     (LocomotionInputMotionExecutionMode)continuation.Integer0 == LocomotionInputMotionExecutionMode.Continuous &&
                     (LocomotionInputMotionDisplacementMode)continuation.Integer1 == LocomotionInputMotionDisplacementMode.ConstantSpeed)
                 {
-                    ProgramConstant speed = FindConstant(continuation, OperationNamedConstant.MoveSpeed);
+                    ProgramConstant speed = Access.Layout.FindNamedConstant(continuation.Handle, OperationNamedConstant.MoveSpeed);
                     if (speed == null || speed.Kind != ProgramConstantKind.Scalar || speed.Scalar < FixedScalar.Zero)
-                        throw new InvalidOperationException($"Locomotion continuation '{SourcePath(continuation)}' has invalid Move Speed.");
-                    continuationOwner = SourcePath(continuation);
+                        throw new InvalidOperationException($"Locomotion continuation '{Access.Services.SourcePath(continuation.Handle)}' has invalid Move Speed.");
+                    continuationOwner = Access.Services.SourcePath(continuation.Handle);
                     continuationVelocity = move * speed.Scalar;
                 }
             }
@@ -1187,33 +1190,6 @@ namespace ThirdPersonSimulation.Fixed
             if (duration == null || duration.Kind != ProgramConstantKind.Scalar || duration.Scalar <= FixedScalar.Zero)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid duration.");
             return checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Ability.TickRate));
-        }
-
-        bool TryFindSingleLocomotion(OperationHandle state, out SimulationOperation motion)
-        {
-            motion = null;
-            if (!state.IsValid || Access.Topology.Operation(state).Code != SimulationOperationCode.State)
-                return false;
-            ProgramControlFlowEdge root = Access.Topology.StateRoot(state);
-            if (root == null)
-                return false;
-            var pending = new Stack<OperationHandle>();
-            pending.Push(root.Target);
-            while (pending.Count != 0)
-            {
-                OperationHandle handle = pending.Pop();
-                SimulationOperation candidate = Access.Operation(handle);
-                if (candidate.Code == SimulationOperationCode.LocomotionInputMotion)
-                {
-                    if (motion != null)
-                        return false;
-                    motion = candidate;
-                }
-                IReadOnlyList<ProgramControlFlowEdge> children = Edges(handle, ProgramControlFlowKind.Child);
-                for (int i = children.Count - 1; i >= 0; i--)
-                    pending.Push(children[i].Target);
-            }
-            return motion != null;
         }
 
         FixedVector3 ResolveDisplacement(

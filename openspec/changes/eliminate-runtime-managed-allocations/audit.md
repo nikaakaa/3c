@@ -412,6 +412,13 @@
 - 保留深度容量边界、LIFO 租约匹配、BeginEvaluation 跨求值递归状态检查及 ValueStack 清理。未改变短路求值、递归执行顺序、状态事务、快照或 Commit/Discard；不新增计数器、有效标志或兜底路径。只减少重复 Clear 和按预留深度扫描的 CPU 工作，不宣称该修改删除托管分配。
 - 静态核对首次租用、嵌套租用、正常释放、填充异常、下游异常和工作区复用路径；差异检查通过，未编译或运行。数值算法与脚步预测未改动。
 
+### AP47 逻辑技能与控制重复线性读取有序输入（2026-09-29，已实施，未运行）
+
+- FixedInputRuntime／Float32InputRuntime、两域的移动控制及控制条件分别维护同样的逐项 InputId 查找；同一 Tick 的多个技能和控制节点重复扫描同一份输入。OperationExecutionTopology.FirstReference 经复核已经按操作/引用种类索引，不再为它增加缓存。
+- SimulationInput 普通构造按 Ordinal 排序并拒绝重复 ID；Fixed 重绑定/回放沿用该数组，Float32 FromOwnedArrays 在接收边界检查严格有序且唯一。AbilityExecutionInput.Begin 现在直接接收对应域的 SimulationInput，而不接收可任意排列的裸列表与独立 Sequence，沿用原已验证输入建立本 Tick 视图。
+- 两个数值域各由 AbilityExecutionInput.ReadValue 执行 Ordinal 二分查找，技能输入端口、移动输入和条件输入统一调用；删除控制模块的重复查找实现。无每 Tick 新索引或额外数组，不缓存值，不假定不同 Tick 的输入布局相同。空输入、缺失 ID、类型不匹配仍报原 InvalidOperationException，命中后返回同一份当前值，数值计算不变。
+- 比较次数由最坏线性改为对数级，输入很少时实际耗时不保证更低。静态核对两域构造/所有权入口、全部 Begin 调用、三个消费类别和差异；未编译、回放或采样，未修改网络、状态事务、快照持有规则或脚步预测。
+
 ## 可靠性问题独立保留
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。

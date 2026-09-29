@@ -37,18 +37,8 @@ namespace ThirdPersonSimulation
                 m_Frame.InputRequests.SetInputRequest(requestId, state.Consume());
         }
 
-        public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
-        {
-            for (int i = 0; i < m_Frame.Input.Values.Count; i++)
-            {
-                if (!string.Equals(m_Frame.Input.Values[i].InputId, inputId, StringComparison.Ordinal))
-                    continue;
-                if (m_Frame.Input.Values[i].Kind != kind)
-                    throw new InvalidOperationException($"Input '{inputId}' is '{m_Frame.Input.Values[i].Kind}', expected '{kind}'.");
-                return m_Frame.Input.Values[i];
-            }
-            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
-        }
+        public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind) =>
+            m_Frame.Input.ReadValue(inputId, kind);
 
     }
 }

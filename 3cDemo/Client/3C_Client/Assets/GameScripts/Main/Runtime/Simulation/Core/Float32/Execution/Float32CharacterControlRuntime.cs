@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation
             CharacterControlMotionRequest request,
             CharacterControlMotionDescriptor descriptor)
         {
-            SimulationInputValue input = ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
+            SimulationInputValue input = m_Input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
             SubmitControl(
                 input.Vector2,
                 m_Body,
@@ -170,19 +170,6 @@ namespace ThirdPersonSimulation
                 locomotionTimeline);
         }
 
-        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
-        {
-            for (int i = 0; i < m_Input.Values.Count; i++)
-            {
-                SimulationInputValue value = m_Input.Values[i];
-                if (!string.Equals(value.InputId, inputId, StringComparison.Ordinal))
-                    continue;
-                if (value.Kind != kind)
-                    throw new InvalidOperationException($"Input '{inputId}' is '{value.Kind}', expected '{kind}'.");
-                return value;
-            }
-            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
-        }
     }
 
     internal sealed class Float32CharacterTraceSink
@@ -319,7 +306,7 @@ namespace ThirdPersonSimulation
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison)
         {
-            Float32Vector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
+            Float32Vector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
             return Compare(value.Magnitude, m_ReadParameter(threshold), comparison);
         }
 
@@ -328,26 +315,13 @@ namespace ThirdPersonSimulation
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison)
         {
-            Float32Vector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
+            Float32Vector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
             Float32Scalar angle = value == Float32Vector2.Zero
                 ? Float32Scalar.Zero
                 : Float32Scalar.Abs(Float32Angle.Delta(m_Body.Yaw, Float32Angle.FromPlanarDirection(value)));
             return Compare(angle, m_ReadParameter(threshold), comparison);
         }
 
-        SimulationInputValue ReadValue(SimulationInputValueId input, SimulationInputValueKind kind)
-        {
-            for (int i = 0; i < m_Input.Values.Count; i++)
-            {
-                SimulationInputValue value = m_Input.Values[i];
-                if (!string.Equals(value.InputId, input.Value, StringComparison.Ordinal))
-                    continue;
-                if (value.Kind != kind)
-                    throw new InvalidOperationException($"Input '{input}' is '{value.Kind}', expected '{kind}'.");
-                return value;
-            }
-            throw new InvalidOperationException($"Tick input does not contain required value '{input}'.");
-        }
 
         static bool Compare(
             Float32Scalar value,

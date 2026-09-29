@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                abilityInput.Begin(input.Sequence, input.Values, ingress, ingressCount);
+                abilityInput.Begin(input, ingress, ingressCount);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();

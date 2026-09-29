@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
-                abilityInput.Begin(input.Sequence, input.Values, ingress, ingressCount);
+                abilityInput.Begin(input, ingress, ingressCount);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();

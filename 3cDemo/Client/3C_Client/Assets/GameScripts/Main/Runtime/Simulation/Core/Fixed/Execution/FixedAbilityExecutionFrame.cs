@@ -30,17 +30,37 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public void Begin(
-            ulong sequence,
-            IReadOnlyList<SimulationInputValue> values,
+            SimulationInput input,
             SimulationIngress[] ingress,
             int ingressCount)
         {
-            if (sequence == 0)
-                throw new ArgumentOutOfRangeException(nameof(sequence));
-            Sequence = sequence;
+            Sequence = input.Sequence;
             m_Ingress = ingress;
             m_IngressCount = ingressCount;
-            Values = values ?? throw new ArgumentNullException(nameof(values));
+            Values = input.Values;
+        }
+
+        public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
+        {
+            int first = 0;
+            int last = Values.Count - 1;
+            while (first <= last)
+            {
+                int index = first + ((last - first) >> 1);
+                SimulationInputValue value = Values[index];
+                int order = string.CompareOrdinal(value.InputId, inputId);
+                if (order < 0)
+                    first = index + 1;
+                else if (order > 0)
+                    last = index - 1;
+                else
+                {
+                    if (value.Kind != kind)
+                        throw new InvalidOperationException($"Input '{inputId}' is '{value.Kind}', expected '{kind}'.");
+                    return value;
+                }
+            }
+            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
         }
 
         public bool HasActionEvent(ulong actionInstanceId, string eventId)

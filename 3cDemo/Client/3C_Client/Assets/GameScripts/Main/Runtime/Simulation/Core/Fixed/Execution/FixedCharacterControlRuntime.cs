@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlMotionRequest request,
             CharacterControlMotionDescriptor descriptor)
         {
-            SimulationInputValue input = ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
+            SimulationInputValue input = m_Input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
             SubmitControl(
                 input.Vector2,
                 m_Body,
@@ -168,19 +168,6 @@ namespace ThirdPersonSimulation.Fixed
                 locomotionTimeline);
         }
 
-        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
-        {
-            for (int i = 0; i < m_Input.Values.Count; i++)
-            {
-                SimulationInputValue value = m_Input.Values[i];
-                if (!string.Equals(value.InputId, inputId, StringComparison.Ordinal))
-                    continue;
-                if (value.Kind != kind)
-                    throw new InvalidOperationException($"Input '{inputId}' is '{value.Kind}', expected '{kind}'.");
-                return value;
-            }
-            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
-        }
     }
 
     internal sealed class FixedCharacterTraceSink
@@ -317,7 +304,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison)
         {
-            FixedVector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
+            FixedVector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
             return Compare(value.Magnitude, m_ReadParameter(threshold), comparison);
         }
 
@@ -326,26 +313,13 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison)
         {
-            FixedVector2 value = ReadValue(input, SimulationInputValueKind.Vector2).Vector2;
+            FixedVector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
             FixedScalar angle = value == FixedVector2.Zero
                 ? FixedScalar.Zero
                 : FixedScalar.Abs(FixedAngle.Delta(m_Body.Yaw, FixedAngle.FromPlanarDirection(value)));
             return Compare(angle, m_ReadParameter(threshold), comparison);
         }
 
-        SimulationInputValue ReadValue(SimulationInputValueId input, SimulationInputValueKind kind)
-        {
-            for (int i = 0; i < m_Input.Values.Count; i++)
-            {
-                SimulationInputValue value = m_Input.Values[i];
-                if (!string.Equals(value.InputId, input.Value, StringComparison.Ordinal))
-                    continue;
-                if (value.Kind != kind)
-                    throw new InvalidOperationException($"Input '{input}' is '{value.Kind}', expected '{kind}'.");
-                return value;
-            }
-            throw new InvalidOperationException($"Tick input does not contain required value '{input}'.");
-        }
 
         static bool Compare(
             FixedScalar value,

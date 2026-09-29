@@ -1480,3 +1480,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Blend Pose 追加 contribution 时每层按值复制 input primitive，并重复读取 input 的 contribution 与 dense weight binding 属性；逐骨权重写入重复计算 output/input 行偏移。
 - factor 早退后再缓存 input slice；primitive 绑定只读元素引用，每个 contribution 预计算两侧行偏移。weight 过滤、容量校验、`ExtendContributionPrefix`、权重公式和 base/overlay 顺序不变。
 - 该改动删除 Blend Pose contribution 链的 primitive 拷贝、重复 binding 读取和逐骨乘法；不改变输出 count、可见权重或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和唯一 AppendContributions 循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP194 LayeredBoneBlend contribution 定容（2026-09-30，已实施，本轮未编译）
+
+- Layered Bone Blend 追加 contribution 时每层按值复制 input primitive，并重复读取 input 的 contribution 与 dense weight binding 属性；逐骨权重写入重复计算 output/input 行偏移。
+- global factor 早退后缓存 input slice；primitive 绑定只读元素引用，每个 contribution 预计算两侧行偏移。weight 过滤、容量校验、`ExtendContributionPrefix`、bone mask 因子和 base/overlay 顺序不变。
+- 该改动删除 Layered Bone Blend contribution 链的 primitive 拷贝、重复 binding 读取和重复行乘法；不改变 per-bone mask 权重或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和唯一 AppendContributions 循环；未编译、未采样，不能声称实测耗时收益。

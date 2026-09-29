@@ -489,9 +489,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.Contributions;
             NativeSlice<float> outputContributionWeights =
                 m_WriteBinding.DenseContributionWeights;
+            NativeSlice<AnimationPrimitivePoseContribution> inputContributions =
+                input.Contributions;
+            NativeSlice<float> inputContributionWeights =
+                input.DenseContributionWeights;
             for (int contribution = 0; contribution < inputCount; contribution++)
             {
-                AnimationPrimitivePoseContribution value = input.Contributions[contribution];
+                ref readonly AnimationPrimitivePoseContribution value =
+                    ref inputContributions[contribution];
                 float weight = value.Weight * globalFactor;
                 if (weight <= 0f)
                     continue;
@@ -499,6 +504,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Layered Bone Blend '{NodeId}' contribution capacity was exceeded.");
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
+                int outputWeightOffset = outputCount * boneCount;
+                int inputWeightOffset = contribution * boneCount;
                 outputContributions[outputCount] =
                     new AnimationPrimitivePoseContribution(
                         value.PhysicalPlayerIndex,
@@ -515,8 +522,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     float boneFactor = overlay
                         ? m_BoneMask[bone]
                         : 1f - m_BoneMask[bone];
-                    outputContributionWeights[outputCount * boneCount + bone] =
-                        input.DenseContributionWeights[contribution * boneCount + bone] *
+                    outputContributionWeights[outputWeightOffset + bone] =
+                        inputContributionWeights[inputWeightOffset + bone] *
                         globalFactor * boneFactor;
                 }
                 outputCount++;

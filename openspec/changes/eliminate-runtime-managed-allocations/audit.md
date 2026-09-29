@@ -442,6 +442,13 @@
 - 省掉周期 writer 对象及临时缓冲的重新分配/扩容，最终快照数组分配仍保留。首次写入超过256字节时仍会扩容：通常在 Create 初始化阶段完成，若从恢复状态开始而未执行 Create，则首次编码仍有扩容成本。本项不宣称完整0 GC；后续是否按固定名单预留容量仍需结合实际状态规模评估，未为初始化引入重复的序列化长度算法。
 - 静态核对唯一调用点、同步 writer 寿命、Reset/ToArray 实现及字段写入差异；未编译、回放或采样，未修改 KCC 数值算法或脚步预测。
 
+### AP51 CanonicalWriter 整数写入经栈缓冲再次复制（2026-09-29，已实施，未运行）
+
+- WriteInt32/UInt32/UInt16/Int64/UInt64 原先用 BinaryPrimitives 写入2/4/8字节栈缓冲，再通过 WriteRaw 检查容量并 CopyTo 主缓冲。KCC 定点状态、长度前缀、各域数值编码均复用这些基础入口；栈缓冲不是托管分配，不能将该项计入 GC 降幅。
+- 五个入口沿用相同 BinaryPrimitives LittleEndian 方法，先 EnsureCapacity，再直接写入当前位置的定长 Span，最后按原宽度推进 Position 并 TrackLength。删除中间栈缓冲和显式复制，不改变字节序、数值转换、长度跟踪及公开 API。
+- 容量不足/溢出仍在修改主缓冲、Position、Length 前失败；覆盖已有内容时 TrackLength 仍保留原最大长度，长度前缀回填沿原 Position 恢复逻辑。WriteDouble 的有限性与负零处理、UTF-8 分块编码、Raw 写入、Reset、ToArray 和快照所有权均保持，不改协议版本。
+- 静态逐方法对照旧路径的写入宽度、容量检查与状态更新顺序，差异检查通过；未编译、执行字节对比或采样，实际 JIT/IL2CPP 是否已有消除中间复制及本次耗时收益未知。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

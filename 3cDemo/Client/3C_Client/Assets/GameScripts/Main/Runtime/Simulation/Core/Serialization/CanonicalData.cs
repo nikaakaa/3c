@@ -56,37 +56,42 @@ namespace ThirdPersonSimulation
 
         public void WriteInt32(int value)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(int)];
-            BinaryPrimitives.WriteInt32LittleEndian(buffer, value);
-            WriteRaw(buffer);
+            EnsureCapacity(sizeof(int));
+            BinaryPrimitives.WriteInt32LittleEndian(m_Buffer.AsSpan(m_Position, sizeof(int)), value);
+            m_Position += sizeof(int);
+            TrackLength();
         }
 
         public void WriteUInt32(uint value)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(uint)];
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer, value);
-            WriteRaw(buffer);
+            EnsureCapacity(sizeof(uint));
+            BinaryPrimitives.WriteUInt32LittleEndian(m_Buffer.AsSpan(m_Position, sizeof(uint)), value);
+            m_Position += sizeof(uint);
+            TrackLength();
         }
 
         public void WriteUInt16(ushort value)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(ushort)];
-            BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
-            WriteRaw(buffer);
+            EnsureCapacity(sizeof(ushort));
+            BinaryPrimitives.WriteUInt16LittleEndian(m_Buffer.AsSpan(m_Position, sizeof(ushort)), value);
+            m_Position += sizeof(ushort);
+            TrackLength();
         }
 
         public void WriteInt64(long value)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(long)];
-            BinaryPrimitives.WriteInt64LittleEndian(buffer, value);
-            WriteRaw(buffer);
+            EnsureCapacity(sizeof(long));
+            BinaryPrimitives.WriteInt64LittleEndian(m_Buffer.AsSpan(m_Position, sizeof(long)), value);
+            m_Position += sizeof(long);
+            TrackLength();
         }
 
         public void WriteUInt64(ulong value)
         {
-            Span<byte> buffer = stackalloc byte[sizeof(ulong)];
-            BinaryPrimitives.WriteUInt64LittleEndian(buffer, value);
-            WriteRaw(buffer);
+            EnsureCapacity(sizeof(ulong));
+            BinaryPrimitives.WriteUInt64LittleEndian(m_Buffer.AsSpan(m_Position, sizeof(ulong)), value);
+            m_Position += sizeof(ulong);
+            TrackLength();
         }
 
         public void WriteDouble(double value)

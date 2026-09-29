@@ -583,6 +583,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseConstraintResult
     {
+        readonly CharacterFullBodyIkResult m_FullBodyIk;
+
         internal CharacterPoseConstraintResult(
             in CharacterPoseNativeFrameLineage lineage,
             AnimationPresentationFrameOutcome outcome,
@@ -598,7 +600,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             InvalidReason = invalidReason;
             GoalCount = goalCount;
             SolverProduced = solverProduced;
-            FullBodyIk = fullBodyIk;
+            m_FullBodyIk = fullBodyIk;
             m_IsValid =
                 lineage.IsValid &&
                 (outcome == AnimationPresentationFrameOutcome.Committed
@@ -622,7 +624,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseNativeInvalidReason InvalidReason { get; }
         internal int GoalCount { get; }
         internal bool SolverProduced { get; }
-        internal CharacterFullBodyIkResult FullBodyIk { get; }
+        internal ref readonly CharacterFullBodyIkResult FullBodyIk => ref m_FullBodyIk;
         internal bool IsValid => m_IsValid;
         internal bool IsCompleted =>
             IsValid && Outcome == AnimationPresentationFrameOutcome.Committed;

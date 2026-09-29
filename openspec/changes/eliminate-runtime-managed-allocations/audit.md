@@ -1751,3 +1751,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Composed/Final Pose Frame 的 dense pose、parameters、availability、contributions 和 bone kinds 属性每次读取复制 5 字段 read-only buffer；Final 物理与属性写回先复制再消费。
 - 两层 frame 的五类 buffer 属性改为 backing field 或 composed 字段只读引用；每次读取仍先执行原 lease 校验，失败时不返回引用。Final Property Writer 和 Physical Writer 绑定同一 backing buffer，校验顺序与元素读取不变。
 - 该改动删除 Final 输出写回的 buffer 属性拷贝，并保留输出页 lease 身份校验。静态核对 buffer 只在构造写入、公共属性仍不可绕过 lease、调用局部只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP239 Pose Constraint result 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPoseConstraintResult.FullBodyIk` 自动属性每次读取复制整份 FullBodyIK result；`MatchesCommittedResult` 为比较 AppliedGoalCount 会触发 committed 与 pending 两次拷贝。
+- result 改为 backing field 保存 FullBodyIK result，内部属性返回只读引用；构造校验仍先读取同一 result 参数，lineage 与标量字段不变。committed/pending 匹配直接读取 backing field。
+- 该改动删除 Pose Constraint 周期提交状态匹配的 result 拷贝。静态核对唯一属性消费只读、构造时机和匹配字段不变；未编译、未采样，不能声称实测耗时收益。

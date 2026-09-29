@@ -1841,3 +1841,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStrideHipsResult` 的 HeightTarget、PosturePreference、Reach、Response 自动属性每次读取复制完整结构；reach 判定、pelvis goal 和诊断会重复读取 Reach 与 Response。
 - 四个结构属性改为 backing field 只读引用；构造仍保留一次必要字段写入。State/Reject 标量、reach 判定、pelvis delta、诊断字段和输出语义不变。
 - 该改动删除 StrideHips 每脚帧的大结构属性拷贝。静态核对 result 为 readonly struct、生命周期覆盖 bank 与诊断调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP254 StrideHips result 构造入参引用化（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStrideHipsResult` 构造的 HeightTarget、PosturePreference、Reach、Response 仍按值接收；accepted、bilateral、release 和 rejected 四个唯一构造点在写入 backing field 前先复制入参。
+- 四个构造入参改为 `in`，局部和只读默认值显式转发；`BuildRejected` 的 reach/response 可选参数也改为 `in default`。backing field 写入仍保留一次必要存储，标量输入和输出语义不变。
+- 该改动删除 StrideHips result 构造边界的入参拷贝。静态核对四个构造点、参数只读、引用生命周期覆盖构造；未编译、未采样，不能声称实测耗时收益。

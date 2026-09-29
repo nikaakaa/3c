@@ -666,10 +666,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 poseRootPosition,
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
-            CharacterFootPelvisHeightTarget heightTarget,
-            CharacterFootPelvisPosturePreference posturePreference,
-            CharacterFootPelvisReachObservation reach,
-            CharacterFootPelvisSpringStep response)
+            in CharacterFootPelvisHeightTarget heightTarget,
+            in CharacterFootPelvisPosturePreference posturePreference,
+            in CharacterFootPelvisReachObservation reach,
+            in CharacterFootPelvisSpringStep response)
         {
             State = state;
             RejectReason = rejectReason;
@@ -1416,18 +1416,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 intent.SupportSide, intent.SwingSide, intent.StrideStart, intent.StrideEnd,
                 progress, slope, sampledGround, true,
                 frame.PoseRootPosition, frame.AnimatedPelvis, frame.AnimatedPelvisComponentPosition,
-                heightTarget, posture, reach, response);
+                in heightTarget, in posture, in reach, in response);
         }
 
         static CharacterFootStrideHipsResult BuildRejected(
             CharacterFootStrideRejectReason reason,
-            CharacterFootPelvisReachObservation reach = default,
-            CharacterFootPelvisSpringStep response = default) =>
+            in CharacterFootPelvisReachObservation reach = default,
+            in CharacterFootPelvisSpringStep response = default) =>
             new CharacterFootStrideHipsResult(
                 CharacterFootStrideState.Rejected, reason,
                 default, default, default, default, 0f,
                 CharacterFootStrideSlope.Flat, default, false, default, default, default,
-                default, default, reach, response);
+                default, default, in reach, in response);
 
         static CharacterFootPelvisHeightTarget BuildHeightTarget(
             in CharacterFootPelvisFrame frame) =>
@@ -1478,10 +1478,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.PoseRootPosition,
                 frame.AnimatedPelvis,
                 frame.AnimatedPelvisComponentPosition,
-                heightTarget,
+                in heightTarget,
                 default,
-                reach,
-                response);
+                in reach,
+                in response);
         }
 
         static CharacterFootStrideHipsResult ResolvePelvisRelease(
@@ -1512,7 +1512,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 reason, default, default, default, default, 0f,
                 CharacterFootStrideSlope.Flat, default, true,
                 frame.PoseRootPosition, frame.AnimatedPelvis, frame.AnimatedPelvisComponentPosition,
-                default, default, reach, response);
+                default, default, in reach, in response);
         }
 
         static void ValidatePelvisFrame(in CharacterFootPelvisFrame frame)

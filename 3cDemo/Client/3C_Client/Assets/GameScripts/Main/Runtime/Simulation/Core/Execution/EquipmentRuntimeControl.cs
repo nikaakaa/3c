@@ -100,7 +100,7 @@ namespace ThirdPersonSimulation
 
         public EquipmentProgramLayout Layout => m_Port.Layout;
 
-        public void InitializeContributions(OperationHandle source)
+        public void PrepareEvaluation(OperationHandle source)
         {
             if (!Layout.CapabilityEnabled)
                 return;
@@ -108,28 +108,37 @@ namespace ThirdPersonSimulation
             bool requiresMutation = false;
             for (int i = 0; i < state.Slots.Count; i++)
                 requiresMutation |= state.Slots[i].IsEquipped && !state.Slots[i].ContributionsInstalled;
-            if (!requiresMutation)
-                return;
-            using IEquipmentMutationScope mutation = m_Port.BeginMutation();
-            try
+
+            if (requiresMutation)
             {
-                for (int i = 0; i < state.Slots.Count; i++)
+                using IEquipmentMutationScope mutation = m_Port.BeginMutation();
+                try
                 {
-                    EquipmentSlotState slot = state.Slots[i];
-                    if (!slot.IsEquipped || slot.ContributionsInstalled)
-                        continue;
-                    slot = Install(slot);
-                    state = state.WithSlot(slot);
+                    for (int i = 0; i < state.Slots.Count; i++)
+                    {
+                        EquipmentSlotState slot = state.Slots[i];
+                        if (!slot.IsEquipped || slot.ContributionsInstalled)
+                            continue;
+                        slot = Install(slot);
+                        state = state.WithSlot(slot);
+                    }
+                    m_Port.WriteState(state);
+                    m_Port.CommitEffectOutputs(source);
+                    mutation.Complete();
                 }
-                m_Port.WriteState(state);
-                m_Port.CommitEffectOutputs(source);
-                mutation.Complete();
+                catch
+                {
+                    m_Port.CancelEffectOutputs();
+                    throw;
+                }
             }
-            catch
-            {
-                m_Port.CancelEffectOutputs();
-                throw;
-            }
+
+            PendingEquipmentChange pending = state.PendingChange;
+            if (!pending.IsPending || pending.SourceActionInstanceId == 0 || m_Port.IsActionActive(pending.SourceActionInstanceId))
+                return;
+            EquipmentSlotState slot = state.RequireSlot(pending.SlotId);
+            m_Port.WriteState(state.ResolvePending(PendingEquipmentChangeState.Cancelled, m_Port.Tick));
+            m_Port.EmitLifecycle(source, slot, slot, PendingEquipmentChangeState.Cancelled, pending.ChangeId);
         }
 
         public void CancelOrphanedPending(OperationHandle source)

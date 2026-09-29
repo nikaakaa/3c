@@ -821,6 +821,11 @@
 - 两域 Locomotion Runtime 构造期按原检查顺序编译 per-operation profile，保存执行模式、位移模式、Turn/Move 速度、曲线时长、Timed duration ticks 和已解码 X/Z 曲线。周期 Submit、位移解析和 timeline duration 直接读取 profile，删除重复 FindConstant 与逐帧校验。
 - 周期路径少 3 到 6 次常量定位和全部重复类型/范围校验；无效配置仍在 runtime 构造期以原异常语义失败，输出公式和 AP98 曲线求值不变。静态核对两域常量字段、原校验顺序、Timed 与 Continuous 分支和差异检查；未编译、运行回放或采样。
 
+### AP110 Equipment Begin 重复冻结 aggregate（2026-09-29，已实施，本轮未编译）
+
+- 两域 Equipment 每次 BeginEvaluation 先调用 InitializeContributions 读取并冻结完整 Equipment aggregate，再调用 CancelOrphanedPending 再次读取；两次调用之间没有其它状态写入。EndEvaluation 保留 orphan pending 检查。
+- EquipmentRuntimeControl 新增 PrepareEvaluation，一次读取 aggregate 后判断并安装缺失 contribution；mutation 提交后的本地 aggregate 已包含写入结果，继续用同一 aggregate 判断并取消 orphan pending。原 mutation try/catch、WriteState、effect 提交和 lifecycle 顺序不变。
+- 每个 Equipment enabled Ability evaluation 少一次完整 aggregate 冻结和 slots 复制；contribution 缺失与 pending 取消同帧时的最终状态不变。静态核对两域 Begin/End 调用链、mutation 异常路径和 aggregate WithSlot/ResolvePending 所有权；未编译、运行回放或采样。
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

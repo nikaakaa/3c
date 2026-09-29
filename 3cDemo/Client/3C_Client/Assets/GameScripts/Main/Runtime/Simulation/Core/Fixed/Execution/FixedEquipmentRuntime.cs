@@ -92,8 +92,7 @@ namespace ThirdPersonSimulation.Fixed
 			if (!m_EquipmentLayout.CapabilityEnabled)
 				return;
 			SimulationOperation source = m_Ability.Operations[m_Layout.RootOperation.Value];
-			m_Control.InitializeContributions(source.Handle);
-			m_Control.CancelOrphanedPending(source.Handle);
+			m_Control.PrepareEvaluation(source.Handle);
 			TraceSnapshot(source);
 		}
 

@@ -165,14 +165,16 @@
 - 必须保留全量预检后写入，不能改成逐骨骼检查后立即写而留下半帧姿势。引擎调用成本尚未测量，减少调用数量不等同于已证实总帧耗时下降。
 - 实施结果：物理 writer 按 Rig 骨骼数准备值类型写入数组，预检时一次解析并存放所选姿势，全部预检成功后直接消费该数组。位置/旋转用 SetLocalPositionAndRotation 合并写入，缩放仍写；发布页的有限性检查与写入前 Transform 存活检查均保留。增加一副定容本地姿势数组，换取删除第二次 ResolvePose 和减少逐骨骼引擎调用。
 
-### AP11 诊断关闭后仍有字段采集与观察字典维护（采样拆分与字典移交已实施）
+### AP11 诊断关闭后仍有字段采集与观察字典维护（采样拆分、字典移交及普通Player编译裁剪已实施）
 
 - 证据：[CharacterPresentationDomainRuntime.cs:716](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/CharacterPresentationDomainRuntime.cs#L716) 无条件构造含 lean 读取的诊断帧；[CharacterFinalPosePhysicalWriter.cs:116](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/Final/CharacterFinalPosePhysicalWriter.cs#L116) 在足部采集开关外读取骨盆/双踝 Transform 并转换空间。
 - [CharacterPoseNativeGraphRuntime.cs:1069](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1069) 每个首次求值输出写观察字典，CommitGraphOutput 再逐项复制到已提交字典，不以观察订阅为前提。
 - 可沿现有订阅按需采集，但 PhysicalWrite.IsAvailable 当前参与提交校验：须把写回成功身份与诊断坐标分开，保留故障与 Commit 证明。不能整段关闭而破坏发布合同，也不能让关闭观察后返回上次残留字段。
 - 实施结果：原生表现采样未订阅时不构造诊断帧，清除该帧诊断结果；发布时检查诊断帧对应当前 renderFrame，避免订阅在帧中变化后发布旧数据。节点观察仍保留原读取能力，但 Commit 改为交换工作/已提交字典并清空旧页，删除逐项复制；Discard 不替换已提交字典。
 - 用户明确普通运行不做采样，采样由编译选项控制。物理写入现在返回完成身份，publication 在写入与 Commit 时核对当帧身份；足部世界坐标采集、缓存和提交复制仅在 `KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT` 编译分支存在，且仅有订阅时读取 Transform。采样包含原有根、骨盆、双踝及双脚趾字段。旧 `AnimationPhysicalBoneWriteDiagnostics` 删除，不再把诊断结构作为业务提交证明。
-- 行为边界：本地姿势全量预检仍保留；普通提交不再借诊断坐标拦截父变换引起的异常世界坐标。节点观察尚无正式订阅寿命合同，本轮不加全局开关或静默关闭观察。已静态核对采样宏开关分支及旧类型全仓消费者，未执行编译。
+- 行为边界：本地姿势全量预检仍保留；普通提交不再借诊断坐标拦截父变换引起的异常世界坐标。节点观察尚无正式订阅寿命合同，Editor 与采样构建保留原观察能力，不增加运行时订阅开关。
+- 2026-09-29 续查：沿用户“正常运行没有采样工作、由编译选项控制”的要求，将节点观察类型、接口、Graph/Node/Role/Session/Domain 读取链，以及工作/提交字典的创建、扩容、写入、清理和交换统一放入 `UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING`。普通 Player 不再整理每个节点的观察字段或维护观察字典；接口整体不编译，不用返回默认结果的空实现替代。Editor 和开启采样宏的 Player 保留原记录及读取行为。
+- 业务 `m_OutputCache`、求值环检测、帧身份、最终姿势读取和 Commit/Discard 均保留；普通构建只去掉专供观察记录的 catch 后立即 rethrow，原 finally 仍移除求值中标记，异常继续向原帧边界传播。静态追踪全部观察类型与读取接口，核对预处理条件覆盖及差异；未执行任何编译或运行，不以静态条件核对代替多构建配置验证。开启采样宏但无人读取时，节点观察仍维护完整记录，这部分尚未做订阅生命周期设计。
 
 ### AP12 FlowCanvas 共享纯计算可能重复执行（取决于正式图连接）
 

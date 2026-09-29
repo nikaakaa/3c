@@ -284,11 +284,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Stop() => m_Session.Stop();
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         internal bool TryObserve(
             PoseNodeId nodeId,
             PosePortId portId,
             out CharacterPoseNativeNodeObservation observation) =>
             m_Session.TryObserve(nodeId, portId, out observation);
+#endif
 
         internal bool TryObserveFinalPose(out ComposedAnimationPoseFrame frame) =>
             m_Session.TryObserveFinalPose(out frame);

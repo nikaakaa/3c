@@ -956,6 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Status == CharacterPoseNativeFrameStatus.Validated;
     }
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
     internal readonly struct CharacterPoseNativeNodeObservation
     {
         internal CharacterPoseNativeNodeObservation(
@@ -993,6 +994,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string Message { get; }
     }
 
+#endif
+
     internal interface ICharacterPoseCanvasNativeRuntime : IDisposable
     {
         void Initialize(CharacterPoseCanvasGraph graph);
@@ -1000,9 +1003,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void Stop(CharacterPoseCanvasGraph graph);
         T Read<T>(CharacterPoseCanvasNode node, PosePortId portId)
             where T : CharacterPoseNativePortValue;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         bool TryObserve(
             PoseNodeId nodeId,
             PosePortId portId,
             out CharacterPoseNativeNodeObservation observation);
+#endif
     }
 }

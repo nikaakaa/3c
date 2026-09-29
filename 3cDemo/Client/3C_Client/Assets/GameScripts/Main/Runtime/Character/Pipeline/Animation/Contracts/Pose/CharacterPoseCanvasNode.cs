@@ -98,6 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return owner.ReadNativeOutput<T>(this, portId);
         }
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         internal bool TryObserveNativeOutput(
             PosePortId portId,
             out CharacterPoseNativeNodeObservation observation)
@@ -107,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return owner != null &&
                 owner.TryObserveNativeNode(NodeId, portId, out observation);
         }
+#endif
 
         public AnimationChannelId AnimationChannelId => m_Payload switch
         {

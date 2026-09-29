@@ -111,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return runtime.Read<T>(node, portId);
         }
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         internal bool TryObserveNativeNode(
             PoseNodeId nodeId,
             PosePortId portId,
@@ -120,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_NativeRuntime != null &&
                 m_NativeRuntime.TryObserve(nodeId, portId, out observation);
         }
+#endif
 
 #if UNITY_EDITOR
         [NonSerialized] BlackboardSource m_EditorBlackboard;

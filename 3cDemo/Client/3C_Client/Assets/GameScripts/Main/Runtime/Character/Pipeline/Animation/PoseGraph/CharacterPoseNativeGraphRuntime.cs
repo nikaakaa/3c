@@ -127,10 +127,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeNodeEvaluator m_Evaluator;
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue> m_OutputCache =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
         Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
+#endif
         readonly Dictionary<PosePortId, CharacterPoseNativePortValue> m_GraphInputs =
             new Dictionary<PosePortId, CharacterPoseNativePortValue>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
@@ -481,8 +483,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             int frameOutputCount = checked(outputPortCount * 2);
             m_OutputCache.EnsureCapacity(frameOutputCount);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.EnsureCapacity(frameOutputCount);
             m_CommittedObservations.EnsureCapacity(frameOutputCount);
+#endif
             m_Evaluating.EnsureCapacity(frameOutputCount);
             m_GraphInputs.EnsureCapacity(graphInputCount);
         }
@@ -528,7 +532,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Validation = default;
             m_GraphInputs.Clear();
             m_OutputCache.Clear();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
+#endif
             m_Evaluating.Clear();
             m_Stage = CharacterPoseNativeExecutionStage.Frame;
             try
@@ -856,7 +862,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     this,
                     in m_CompletedLineage,
                     CharacterPoseNativeFailureCode.PublicationFailed);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations.Clear();
+#endif
                 CloseFrame();
                 return new CharacterPoseNativePublicationResult(
                     in m_CompletedLineage,
@@ -938,7 +946,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             cleanup);
                     }
                 }
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations.Clear();
+#endif
                 CharacterPoseNativeFrameLineage lineage = m_CompletedLineage;
                 CloseFrame();
                 return new CharacterPoseNativePublicationResult(
@@ -964,7 +974,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             finally
             {
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations.Clear();
+#endif
                 CloseFrame();
             }
         }
@@ -976,8 +988,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 this,
                 in m_CompletedLineage,
                 evaluation.Output);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             (m_CommittedObservations, m_Observations) = (m_Observations, m_CommittedObservations);
             m_Observations.Clear();
+#endif
             m_LastCommittedLineage = m_CompletedLineage;
         }
 
@@ -1006,8 +1020,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_Evaluator.Reset(this, resetGeneration);
             m_OutputCache.Clear();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
             m_CommittedObservations.Clear();
+#endif
             m_Evaluating.Clear();
             m_LastCommittedLineage = default;
         }
@@ -1055,8 +1071,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 StopInstance();
                 m_OutputCache.Clear();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations.Clear();
                 m_CommittedObservations.Clear();
+#endif
                 m_Evaluating.Clear();
                 m_LastCommittedLineage = default;
                 return CharacterPoseNativeResetResult.Failed(
@@ -1103,6 +1121,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose native node '{node.NodeId}' output '{portId}' is missing.");
                 m_OutputCache.Add(key, value);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations[key] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
                     node.NativeNodeId,
@@ -1114,8 +1133,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         : CharacterPoseNativeFrameStatus.Evaluated,
                     CharacterPoseNativeFailureCode.None,
                     "Pose native node output is available.");
+#endif
                 return RequireTyped<T>(value, node, portId);
             }
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             catch (Exception exception)
             {
                 m_Observations[key] = new CharacterPoseNativeNodeObservation(
@@ -1131,12 +1152,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     exception.Message);
                 throw;
             }
+#endif
             finally
             {
                 m_Evaluating.Remove(key);
             }
         }
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         public bool TryObserve(
             PoseNodeId nodeId,
             PosePortId portId,
@@ -1169,6 +1192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
+#endif
         public void Initialize(CharacterPoseCanvasGraph graph)
         {
             if (!ReferenceEquals(graph, m_Graph))
@@ -1280,8 +1304,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Graph = null;
             }
             m_OutputCache.Clear();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
             m_CommittedObservations.Clear();
+#endif
             m_Evaluating.Clear();
             m_GraphInputs.Clear();
             m_PortDefinitions.Clear();

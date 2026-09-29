@@ -30,11 +30,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeResetResult Reset(ulong resetGeneration) =>
             m_Role.Reset(resetGeneration);
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         internal bool TryObserve(
             PoseNodeId nodeId,
             PosePortId portId,
             out CharacterPoseNativeNodeObservation observation) =>
             m_Role.TryObserve(nodeId, portId, out observation);
+#endif
 
         internal bool TryObserveFinalPose(out ComposedAnimationPoseFrame frame) =>
             m_Role.TryGetCommittedPose(out frame);

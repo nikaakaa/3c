@@ -438,11 +438,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         internal bool TryObserve(
             PoseNodeId nodeId,
             PosePortId portId,
             out CharacterPoseNativeNodeObservation observation) =>
             m_Graph.TryObserve(nodeId, portId, out observation);
+#endif
 
         public void Dispose()
         {

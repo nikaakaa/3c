@@ -6,6 +6,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal readonly struct CharacterFootPlacementFrameInput
     {
+        readonly CharacterBodyPresentationFrame m_Body;
+        readonly CharacterPresentationFactFrame m_Facts;
+        readonly CharacterAnimationPoseInputFrame m_ParameterFrame;
         readonly CharacterFootPlacementPoseInput m_Pose;
 
         internal CharacterFootPlacementFrameInput(
@@ -31,9 +34,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RenderFrame = renderFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             FootPlacementWeight = footPlacementWeight;
-            Body = body;
-            Facts = facts;
-            ParameterFrame = parameterFrame;
+            m_Body = body;
+            m_Facts = facts;
+            m_ParameterFrame = parameterFrame;
             m_Pose = pose;
         }
 
@@ -41,9 +44,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong RenderFrame { get; }
         internal float PresentationDeltaSeconds { get; }
         internal float FootPlacementWeight { get; }
-        internal CharacterBodyPresentationFrame Body { get; }
-        internal CharacterPresentationFactFrame Facts { get; }
-        internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
+        internal ref readonly CharacterBodyPresentationFrame Body => ref m_Body;
+        internal ref readonly CharacterPresentationFactFrame Facts => ref m_Facts;
+        internal ref readonly CharacterAnimationPoseInputFrame ParameterFrame => ref m_ParameterFrame;
         internal ref readonly CharacterFootPlacementPoseInput Pose => ref m_Pose;
     }
 }

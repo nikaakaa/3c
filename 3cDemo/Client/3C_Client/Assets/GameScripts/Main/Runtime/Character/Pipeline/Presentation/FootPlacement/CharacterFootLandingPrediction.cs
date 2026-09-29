@@ -961,7 +961,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLandingPredictionInputDiagnostics(
             float presentationDeltaSeconds,
-            CharacterBodyPresentationFrame body,
+            in CharacterBodyPresentationFrame body,
             bool grounded,
             float horizontalSpeed,
             in CharacterFootActionOccupancy leftAction,

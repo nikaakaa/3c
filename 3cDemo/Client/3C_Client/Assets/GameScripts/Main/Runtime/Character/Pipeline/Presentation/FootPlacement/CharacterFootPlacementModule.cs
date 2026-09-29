@@ -272,6 +272,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireAlive();
             ref readonly CharacterFootPlacementPoseInput poseInput = ref frame.Pose;
+            ref readonly CharacterBodyPresentationFrame body = ref frame.Body;
+            ref readonly CharacterPresentationFactFrame facts = ref frame.Facts;
             if (bank == null || !bank.IsPendingFrameOpen)
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
@@ -289,7 +291,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 poseInput.DenseComponentPoses);
-            CharacterPresentationFactFrame facts = frame.Facts;
             CommittedLocomotionPlanarMotionTimeline timeline =
                 facts.LocomotionMotionTimeline;
             CharacterFootActionOccupancy leftAction = ResolveActionOccupancy(
@@ -299,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in poseInput,
                 CharacterFootSide.Right);
             float currentSegmentRemainingSeconds = timeline.IsValid
-                ? ResolveCurrentSegmentRemainingSeconds(timeline, frame.Body)
+                ? ResolveCurrentSegmentRemainingSeconds(timeline, in body)
                 : 0f;
             ref readonly AnimationFootMotionRuntimeFrame formalFootFrame =
                 ref poseInput.FootMotion;
@@ -316,8 +317,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in timeline,
                 currentSegmentRemainingSeconds,
                 frame.PresentationDeltaSeconds,
-                frame.Body);
-            Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
+                in body);
+            Vector3 componentUp = body.VisibleRotation * Vector3.up;
             bank.LeftCurrentSupport = PrepareCurrentSupport(
                 CharacterFootSide.Left,
                 pose.Left,
@@ -652,7 +653,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
                     frame.PresentationDeltaSeconds,
-                    frame.Body,
+                    in body,
                     facts.Grounded,
                     frame.ParameterFrame.Require(
                         new PoseParameterId(CharacterAnimationVariableIds.HorizontalSpeed)),
@@ -1123,6 +1124,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootLandingObservationPage pendingObservation)
         {
             Vector3 currentSole = CharacterFootConstraintMath.ResolveOriginalSole(animatedFoot);
+            ref readonly CharacterBodyPresentationFrame body = ref frame.Body;
             pendingObservation = committedObservation;
             ulong trajectoryGeneration = timeline.IsValid ? timeline.Generation : 0;
             if (!footMotion.IsValid)
@@ -1218,11 +1220,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rawLanding = currentContact
                 ? currentSole
                 : CharacterFootLandingPredictor.ProjectRawLanding(
-                    frame.Body.VisiblePosition,
-                    frame.Body.VisibleRotation,
+                    body.VisiblePosition,
+                    body.VisibleRotation,
                     in bodyTranslation,
                     landingEvent.RootLocalLanding);
-            Vector3 componentUp = frame.Body.VisibleRotation * Vector3.up;
+            Vector3 componentUp = body.VisibleRotation * Vector3.up;
             CharacterFootLandingObservationRefreshMode refreshMode =
                 currentContact
                     ? CharacterFootLandingObservationRefreshMode
@@ -1334,7 +1336,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
             float presentationDeltaSeconds,
-            CharacterBodyPresentationFrame body)
+            in CharacterBodyPresentationFrame body)
         {
             CharacterFootLandingPredictionSettings settings =
                 m_Settings.LandingPrediction;
@@ -1434,7 +1436,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static float ResolveCurrentSegmentRemainingSeconds(
             CommittedLocomotionPlanarMotionTimeline timeline,
-            CharacterBodyPresentationFrame body)
+            in CharacterBodyPresentationFrame body)
         {
             if (timeline.CurrentSegmentDurationTicks == 0)
                 return float.PositiveInfinity;

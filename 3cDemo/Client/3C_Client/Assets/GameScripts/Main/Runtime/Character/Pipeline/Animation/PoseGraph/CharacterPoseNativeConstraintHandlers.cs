@@ -69,16 +69,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_FootPlacementWeightParameterIndex);
             if (hasWeightOverride)
             {
-                CharacterPresentationFactFrame frameFacts = frame.Facts;
-                CharacterAnimationPoseInputFrame frameParameters =
-                    frame.ParameterFrame;
+                ref readonly CharacterBodyPresentationFrame frameBody = ref frame.Body;
+                ref readonly CharacterPresentationFactFrame frameFacts = ref frame.Facts;
+                ref readonly CharacterAnimationPoseInputFrame frameParameters =
+                    ref frame.ParameterFrame;
                 ref readonly CharacterFootPlacementPoseInput framePose = ref frame.Pose;
                 frame = new CharacterFootPlacementFrameInput(
                     frame.ActorId,
                     frame.RenderFrame,
                     frame.PresentationDeltaSeconds,
                     weightOverride,
-                    frame.Body,
+                    in frameBody,
                     in frameFacts,
                     in frameParameters,
                     in framePose);

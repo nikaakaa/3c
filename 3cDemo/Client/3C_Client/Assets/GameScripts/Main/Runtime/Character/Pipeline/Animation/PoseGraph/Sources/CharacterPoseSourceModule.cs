@@ -80,7 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     int index)
             {
                 RequireLease(lease);
-                CharacterPoseSourcePreparationView expected =
+                ref readonly CharacterPoseSourcePreparationView expected =
                     m_Demand.Preparations;
                 if (!m_HasDemand ||
                     !expected.Matches(in preparations) ||

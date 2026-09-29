@@ -81,8 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         "Character Pose provider demand lineage is invalid.");
                 }
             }
-            Lineage = lineage;
-            Preparations = preparations;
+            m_Lineage = lineage;
+            m_Preparations = preparations;
             ProviderDemands = providerDemands;
             ActionSourceCount = actionSourceCount;
             ProviderSourceCount = providerSourceCount;
@@ -90,8 +90,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
-        internal CharacterPoseSourcePreparationView Preparations { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        readonly CharacterPoseSourcePreparationView m_Preparations;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
+        internal ref readonly CharacterPoseSourcePreparationView Preparations => ref m_Preparations;
         internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands { get; }
         internal int ActionSourceCount { get; }
         internal int ProviderSourceCount { get; }

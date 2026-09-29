@@ -1354,3 +1354,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Pending page 和 SourceModule 的 `RequireDemand` 按值返回整份 demand；PrepareFrameResult 与 RequirePreparedResources 再复制到按值局部。demand 在 lease 校验后同一开放帧内只读。
 - 两个返回入口改为 `ref readonly`，两个局部改为 readonly 引用；构造 SourceFrame 与 PreparedResources 时继续传 `in`。lease 校验、错误时机、result 字段和输出页身份不变。
 - 该改动删除 source demand 返回和局部读取的整份拷贝；不暴露可变写入路径。静态核对 backing 字段生命周期、全部 RequireDemand 调用、构造参数和原有异常路径；未编译、未采样，不能声称实测耗时收益。
+
+### AP173 source demand 嵌入数据引用化（2026-09-30，已实施，本轮未编译）
+
+- 旧 `CharacterPoseSourceDemand` 的 Lineage 和 Preparations 仍按值属性返回；pending page 比对 preparation 前还会复制 expected view。这是 SourceFrame.Lineage 引用链底层的重复读取。
+- Lineage 与 Preparations 改为 readonly 字段加 `ref readonly` 属性；ConsumePreparation 的 expected 改为只读引用后直接 Matches。provider demand、计数、lease 校验和错误文本不变。
+- 该改动删除 source demand 嵌入 lineage/view 的整份拷贝；不新增第二 preparation 数据源。静态核对构造赋值、全部 Preparations/Lineage 消费点、Matches 参数和 page 生命周期；未编译、未采样，不能声称实测耗时收益。

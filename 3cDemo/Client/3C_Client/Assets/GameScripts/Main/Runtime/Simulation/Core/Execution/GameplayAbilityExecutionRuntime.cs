@@ -337,10 +337,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Skill execution frame identity is incomplete.", nameof(identity));
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution frames cannot be nested.");
-            EnsureMutableShell();
+            EnsureStates();
             GameplayAbilityExecutionFrame<TValue> frame = m_States.Find(identity.ActionInstanceId);
             if (frame == null)
             {
+                EnsureMutableShell();
                 frame = new GameplayAbilityExecutionFrame<TValue>(
                     identity.SkillId,
                     identity.EntryOperation,
@@ -367,9 +368,10 @@ namespace ThirdPersonSimulation
         {
             if (m_Active != null && m_Active.ActionInstanceId == actionInstanceId)
                 throw new InvalidOperationException("Active Skill execution frame cannot be removed while active.");
-            EnsureMutableShell();
+            EnsureStates();
             if (m_States.Find(actionInstanceId) == null)
                 return false;
+            EnsureMutableShell();
             if (!m_States.Remove(actionInstanceId))
                 return false;
             m_Storage.WriteAggregate(m_States);

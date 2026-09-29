@@ -735,6 +735,12 @@
 - 两域 Snapshot Hash 改为复用 ThreadStatic canonical writer，按原顺序写入域文本和三个 hash `Value`，字段间保留 `0x1f`，最后调用同一 `ComputeHash`。域文本、字段顺序、UTF-8 内容、分隔符和返回的 `SnapshotHash` 合同不变。
 - 每次 snapshot 身份计算去掉 params 数组和三次 64 字符临时字符串；首字段前不写分隔，后续三处字段间保留 `0x1f`。canonical writer 首次使用或扩容仍分配，快照 payload、checkpoint 对象和其余哈希所有权不变。静态核对两域唯一构造入口、StableHash 格式边界、checkpoint 消费链和差异；未编译、运行哈希对比、回放或采样。
 
+### AP95 Skill 执行只读进入复制聚合名单（2026-09-29，已实施，本轮未编译）
+
+- `GameplayAbilityExecutionManager.Enter` 在查找已有 frame 前总是调用 `EnsureMutableShell`，即使本次只读取默认值或最后原样退出，也会为共享 committed aggregate 新建 frame List；`Remove` 在目标不存在时也先建立 shell。
+- Enter 改为先在共享 aggregate 上查找；只有需要新增 frame 时建立可变 shell。Remove 先确认目标存在，再建立 shell。已有 frame 的首个 `BindGeneration`、状态写入或 reset 仍由 active frame 所有权检查在当前 shell 内只克隆目标 frame；generation 未变的只读退出继续共享 committed aggregate，事务相等性判断仍得到未变更。
+- 只读进入和 absent Remove 不再分配聚合名单；实际新增、移除或写 frame 时的 List/目标 frame 分配保留。查找、新增、移除、Savepoint、Commit 和 Discard 顺序不变。静态核对 Enter/Remove/Exit、MakeActiveFrameMutable、事务 Get/Set 和两域 ActionStateStore 调用链；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

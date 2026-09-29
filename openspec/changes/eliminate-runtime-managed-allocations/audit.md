@@ -615,6 +615,12 @@
 - 删除外层开始时的重复 completed 清理，保留 finally 唯一清理边界和每 step 后的 `SetCompletedSteps` 覆盖。Product 生命周期重置、step 连续性检查、egress 和 commit batch 生成不变；即使 `BeginOuterTransaction` 内部部分失败，finally 仍会完成 transient 清理。
 - 两个数值域同步修改，静态核对 Coordinator 成功、Pending、恢复、异常和 finally 调用顺序；未编译、运行回放或采样。
 
+### AP75 Source Egress 读取前重复清理工作区（2026-09-29，已实施，本轮未编译）
+
+- 两域 `ReadSourceEgress` 在复制前清空 `workspace.Egress`；Session workspace 在 `BeginTransaction` 重置，上一轮 finally 的 `EndTransaction` 也重置。`FreezeCommitBatch` 每个外层事务只调用一次该读取入口。
+- 删除读取前重复 Clear，保留 workspace 事务边界清理和按 slot count 覆盖写入。缺失 Source Egress 产品时返回空 workspace，冻结后的独立数组长度不变；异常路径仍由 workspace 结束边界清理。
+- 两个数值域同步修改，静态核对 workspace 重入检查、Begin/End 生命周期、唯一读取调用和容量增长；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

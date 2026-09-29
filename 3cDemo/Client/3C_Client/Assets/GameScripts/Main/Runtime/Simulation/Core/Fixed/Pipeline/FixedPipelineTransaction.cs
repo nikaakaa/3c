@@ -524,7 +524,6 @@ namespace ThirdPersonSimulation.Fixed
         IReadOnlyList<FixedSourceEgressRecord> ReadSourceEgress(
             ExecutionWorkspaceBuffer<FixedSourceEgressRecord> values)
         {
-            values.Clear();
             if (!m_Products.TryGet<FixedAppendProductSlot<FixedSourceEgressRecord>>(
                     SimulationPipelineProducts.SourceEgress,
                     out FixedAppendProductSlot<FixedSourceEgressRecord> slot))

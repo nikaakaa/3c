@@ -522,7 +522,6 @@ namespace ThirdPersonSimulation
         IReadOnlyList<Float32SourceEgressRecord> ReadSourceEgress(
             ExecutionWorkspaceBuffer<Float32SourceEgressRecord> values)
         {
-            values.Clear();
             if (!m_Products.TryGet<Float32AppendProductSlot<Float32SourceEgressRecord>>(
                     SimulationPipelineProducts.SourceEgress,
                     out Float32AppendProductSlot<Float32SourceEgressRecord> slot))

@@ -1390,3 +1390,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Final Publication 准备 pending page 时，bone 循环先对 `DenseLocalPoses[bone]` 做一次按值读取校验，再按值读取同一元素写入目标；循环内还重复读取 binding slice、pending page 和 bone count。
 - 准备阶段缓存 output slice 和 pose offset，每骨绑定 `NativeSlice` 元素的 `ref readonly` 引用；同一引用先完成 `IsValid` 校验，再写入 dense page。
 - 该改动把每骨两次整份 pose 读取收敛为一次目标写入拷贝，并删除循环内的重复 offset 计算；不改变布局校验、异常文本、页身份或写入顺序。静态核对 `NativeSlice<T>` 元素引用、原长度校验和 pending 页生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP179 publication contribution 循环定容（2026-09-30，已实施，本轮未编译）
+
+- Contribution 循环每次读取 primitive 和 weight 都重新取 read binding 的 `NativeSlice` 属性；resolved source 写入目标数组后又按值复制一次读取 Kind、SourceId 和 NodeId；每骨还重复计算同一个 contribution 的 weight offset。
+- 循环外缓存 primitive/weight slice、contribution 和 dense weight offset；resolved source 写入后用目标数组元素引用直接生成 clip sample，contribution 的 weight offset 每层只算一次。
+- 该改动删除 resolved contribution 的读回拷贝和循环内重复 offset 计算；不改变 Resolve 校验、Live clip sample 查询、权重校验、异常文本或数组写入顺序。静态核对 `NativeSlice` 引用合同、目标数组生命周期和 contribution/dense weight 容量；未编译、未采样，不能声称实测耗时收益。

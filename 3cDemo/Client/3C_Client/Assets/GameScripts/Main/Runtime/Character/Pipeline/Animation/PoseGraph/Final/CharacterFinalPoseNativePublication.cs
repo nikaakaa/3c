@@ -297,26 +297,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             int contributionOffset = m_Pending.BufferPage * m_ContributionCapacity;
             int denseWeightOffset = contributionOffset * m_BoneCount;
+            NativeSlice<AnimationPrimitivePoseContribution> primitives =
+                output.Contributions;
+            NativeSlice<float> primitiveWeights = output.DenseContributionWeights;
             for (int contribution = 0; contribution < contributionCount; contribution++)
             {
-                m_Contributions[contributionOffset + contribution] =
+                int contributionIndex = contributionOffset + contribution;
+                m_Contributions[contributionIndex] =
                     CharacterFinalPoseContributionResolver.Resolve(
-                        output.Contributions[contribution],
+                        primitives[contribution],
                         m_SourceModule,
                         m_PlayerNodeIds);
-                AnimationPoseSourceContribution source = m_Contributions[contributionOffset + contribution];
-                m_ClipSamples[contributionOffset + contribution] = source.Kind == AnimationPoseContributionKind.Live
+                ref readonly AnimationPoseSourceContribution source =
+                    ref m_Contributions[contributionIndex];
+                m_ClipSamples[contributionIndex] = source.Kind == AnimationPoseContributionKind.Live
                     ? m_SourceModule.RequireDominantClipSample(source.SourceId, source.NodeId, output.CompletionIdentity)
                     : default;
+                int weightOffset = contribution * m_BoneCount;
                 for (int bone = 0; bone < m_BoneCount; bone++)
                 {
-                    float weight = output.DenseContributionWeights[
-                        contribution * m_BoneCount + bone];
+                    float weight = primitiveWeights[weightOffset + bone];
                     if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
                         throw new InvalidOperationException(
                             $"Native Final Pose publication contribution #{contribution} Bone #{bone} weight is invalid.");
                     m_DenseContributionWeights[
-                        denseWeightOffset + contribution * m_BoneCount + bone] = weight;
+                        denseWeightOffset + weightOffset + bone] = weight;
                 }
             }
             byte hasFootFeatures = output.HasFootFeatures[0];

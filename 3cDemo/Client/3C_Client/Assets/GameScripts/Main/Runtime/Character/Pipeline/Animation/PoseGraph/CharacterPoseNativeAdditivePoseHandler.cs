@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_OverlayPoseInput;
         FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_WeightInput;
         float m_DefaultWeight;
+        AdditiveScalePolicy m_ScalePolicy;
         int m_PageIndex = -1;
         ulong m_NextContinuityIdentity = 1;
         ulong m_ContinuityIdentity;
@@ -82,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Additive Pose '{NodeId}' has an unsupported scale policy.");
             }
+            m_ScalePolicy = node.AdditiveScalePolicy;
             m_BasePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
                 node,
                 "base");
@@ -182,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in baseBinding,
                 in additiveBinding,
                 weight,
-                node.AdditiveScalePolicy);
+                m_ScalePolicy);
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
             m_Output = CharacterPoseNativeLocalPoseValue.Reuse(

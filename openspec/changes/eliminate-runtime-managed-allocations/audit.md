@@ -1246,3 +1246,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Clip Player、Blend Space Player、Selected Pose Player 和 Blend Stack 每次准备 source request 都重新通过 `node.PresentationPoseSourceSlot` switch/cast payload；Clip 还重复读取 `AnimationChannelId`，Blend Stack 对每个 source 重复读取同一 slot。这些配置来自 Initialize 已校验的固定 payload。
 - 四类 handler 在 Initialize 缓存 source slot；Clip 同时缓存 channel。Blend Stack 正式 source binding 接口从传入 node 改为传入已解析 slot，每个 source request 使用同一值。
 - 该改动消除 source request 准备期的重复 payload 分派；不改 source kind 校验、request 内容、延迟源分类和 Prepare/Evaluate 时序。静态核对 payload kind、slot 类型、唯一接口实现和四条 PrepareFrame 调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP155 AdditivePose scale policy 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Additive Pose 每次准备输出都通过 `node.AdditiveScalePolicy` switch/cast payload，再传给 additive job；Initialize 已完成 Multiply/AddDelta 正式边界校验。
+- handler 在 Initialize 缓存 scale policy，帧内直接使用同一值。reference pose/space 校验、base/additive 读取、weight continuity、delta 计算和输出页写入顺序不变。
+- 该改动消除 additive 输出准备期的重复 payload 分派；不新增第二数据源。静态核对 policy 校验位置、调用链和 ApplyAdditive 参数顺序；未编译、未采样，不能声称实测耗时收益。

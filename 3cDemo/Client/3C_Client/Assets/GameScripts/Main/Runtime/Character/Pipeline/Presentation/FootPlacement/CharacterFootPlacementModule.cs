@@ -194,15 +194,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     readonly struct CharacterFootLandingPredictionPair
     {
+        readonly CharacterFootLandingPredictionResult m_Selected;
+
         internal CharacterFootLandingPredictionPair(
-            CharacterFootLandingPredictionResult selected,
+            in CharacterFootLandingPredictionResult selected,
             CharacterFootLandingStepSource selectedSource)
         {
-            Selected = selected;
+            m_Selected = selected;
             SelectedSource = selectedSource;
         }
 
-        internal CharacterFootLandingPredictionResult Selected { get; }
+        internal ref readonly CharacterFootLandingPredictionResult Selected =>
+            ref m_Selected;
         internal CharacterFootLandingStepSource SelectedSource { get; }
     }
 
@@ -387,17 +390,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_RightLandingObservation,
                 committedBank?.RightLandingObservation,
                 out bank.RightLandingObservation);
-            CharacterFootLandingPredictionResult left = leftPair.Selected;
-            CharacterFootLandingPredictionResult right = rightPair.Selected;
+            ref readonly CharacterFootLandingPredictionResult leftPrediction =
+                ref leftPair.Selected;
+            ref readonly CharacterFootLandingPredictionResult rightPrediction =
+                ref rightPair.Selected;
             leftLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.LeftFoot,
                 in leftCurrentStep,
-                in left,
+                in leftPrediction,
                 m_Settings.FootMotion);
             rightLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.RightFoot,
                 in rightCurrentStep,
-                in right,
+                in rightPrediction,
                 m_Settings.FootMotion);
             bool hasLeftLastLanding = leftLanding.HasLastLanding;
             bool hasLeftNextSwingLanding = leftLanding.HasNextSwingLanding;
@@ -414,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      out leftContactLanding) ||
                  CharacterFootLandingRuntime.TryResolveCurrentContactCandidate(
                      in leftCurrentStep,
-                     in left,
+                     in leftPrediction,
                      out leftContactLanding));
             CharacterFootGroundPathLanding rightContactLanding = default;
             bool hasRightContactLanding = rightLockRequest.RequestsLock &&
@@ -423,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      out rightContactLanding) ||
                  CharacterFootLandingRuntime.TryResolveCurrentContactCandidate(
                      in rightCurrentStep,
-                     in right,
+                     in rightPrediction,
                      out rightContactLanding));
             bool leftPreparedPlantActive = IsPreparedPlantTargetActive(
                 in leftCurrentStep,
@@ -457,8 +462,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_RightGroundPath,
                 committedBank?.RightGroundPath,
                 out bank.RightGroundPath);
-            left = left.WithGroundPath(in leftGroundPath);
-            right = right.WithGroundPath(in rightGroundPath);
+            CharacterFootLandingPredictionResult left =
+                leftPrediction.WithGroundPath(in leftGroundPath);
+            CharacterFootLandingPredictionResult right =
+                rightPrediction.WithGroundPath(in rightGroundPath);
 
             float footPlacementWeight = frame.FootPlacementWeight;
             CharacterFootSwingMotionResult leftSwingMotion =

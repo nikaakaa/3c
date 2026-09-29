@@ -529,6 +529,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingPredictionResult
     {
+        readonly CharacterFootLandingObservationDiagnostics m_Observation;
+        readonly CharacterFootPlacementQueryRequest m_Query;
+        readonly CharacterFootLandingQuerySelectionDiagnostics m_QuerySelection;
+        readonly CharacterFootGroundPathResult m_GroundPath;
+
         internal CharacterFootLandingPredictionResult(
             CharacterFootSide side,
             CharacterFootLandingPredictionState state,
@@ -574,14 +579,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : default;
             CurrentAnimatedSole = currentAnimatedSole;
             RawLandingCandidate = rawLandingCandidate;
-            Observation = observation;
-            Query = query;
+            m_Observation = observation;
+            m_Query = query;
             SurfaceIdentity = support.SurfaceIdentity;
             LandingPoint = support.Point;
             LandingNormal = support.Normal;
             QueryDistance = support.Distance;
-            QuerySelection = querySelection;
-            GroundPath = default;
+            m_QuerySelection = querySelection;
+            m_GroundPath = default;
         }
 
         CharacterFootLandingPredictionResult(
@@ -589,7 +594,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathResult groundPath)
         {
             this = source;
-            GroundPath = groundPath;
+            m_GroundPath = groundPath;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -606,17 +611,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 FutureBodyTranslationVelocity { get; }
         public Vector3 CurrentAnimatedSole { get; }
         public Vector3 RawLandingCandidate { get; }
-        public CharacterFootLandingObservationDiagnostics Observation { get; }
-        public CharacterFootPlacementQueryRequest Query { get; }
+        public ref readonly CharacterFootLandingObservationDiagnostics Observation =>
+            ref m_Observation;
+        public ref readonly CharacterFootPlacementQueryRequest Query =>
+            ref m_Query;
         public int SurfaceIdentity { get; }
         public Vector3 LandingPoint { get; }
         public Vector3 LandingNormal { get; }
         public float QueryDistance { get; }
-        public CharacterFootLandingQuerySelectionDiagnostics QuerySelection
-        {
-            get;
-        }
-        internal CharacterFootGroundPathResult GroundPath { get; }
+        public ref readonly CharacterFootLandingQuerySelectionDiagnostics QuerySelection =>
+            ref m_QuerySelection;
+        internal ref readonly CharacterFootGroundPathResult GroundPath =>
+            ref m_GroundPath;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
         internal CharacterFootLandingPredictionResult WithGroundPath(
@@ -699,7 +705,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantVerificationAttempted = landing.PlantVerificationAttempted;
             PlantVerificationUnavailable = landing.PlantVerificationUnavailable;
             ApproachPlantTargetPrepared = approachPlantTargetPrepared;
-            CharacterFootGroundPathResult groundPath = result.GroundPath;
+            ref readonly CharacterFootGroundPathResult groundPath =
+                ref result.GroundPath;
             GroundPath = new CharacterFootGroundPathDiagnostics(in groundPath);
             FootMotion = new CharacterFootSwingMotionDiagnostics(in footMotion);
             CurrentSupport = new CharacterFootCurrentSupportDiagnostics(

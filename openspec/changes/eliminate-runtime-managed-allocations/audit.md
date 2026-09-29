@@ -1895,3 +1895,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Lifecycle `Completion` 的 Evaluation、PreTransition、Target、Interpolation、OutputSwing、Request、PreliminaryMotion、LifecycleTransition、OutputSupport、StateTargetSupport 自动属性每次读取复制完整结构；landing completion 会再次复制主要求值结果。
 - 十个结构属性改为 backing field 只读引用；`Complete` 直接绑定 frame、interpolation、target、transition、output swing、evaluation 和 request。`PreliminaryMotion` 写入 out result、新建 lifecycle transition 和输出 request 仍保留必要拷贝。
 - 该改动删除 Foot Placement landing completion 周期的结果容器重复拷贝。静态核对 completion 为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP263 Landing prediction result 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Landing prediction pair 的 Selected 每次读取复制完整 `CharacterFootLandingPredictionResult`；result 的 Observation、Query、QuerySelection、GroundPath 自动属性也会重复复制聚合结构。
+- Pair Selected 改为 backing field 只读引用并按引用接收构造结果。EvaluateFrame 先引用读取初步 prediction，注入 GroundPath 时生成唯一 final result；result 四个聚合属性改为 backing field 只读引用，diagnostics 展开绑定 GroundPath 引用。
+- 该改动删除 Foot Placement 每脚预测结果进入 pair、初步消费和诊断展开的重复拷贝。静态核对 result 和 pair 为 readonly struct、final result 仍保留 GroundPath、诊断结构与输出身份不变；未编译、未采样，不能声称实测耗时收益。

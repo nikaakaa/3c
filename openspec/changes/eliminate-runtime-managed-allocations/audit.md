@@ -1516,3 +1516,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Action Slot Source 的 `Materialize` 在写 sample、参数循环和构造三个 request buffer 时反复读取同一 row 的 clips、pose parameters、availability、offset、count 和 lease generation；参数循环还每项重复读取 input contract 的 `Parameters` 属性。
 - `PrepareRow` 返回后一次性绑定同一 row 的数组、offset、count、lease generation 和 contract 参数列表。clip 写入、animated property 默认值、事件图值读取、availability 写入、buffer 长度和构造参数顺序不变。
 - 该改动删除同一次 Materialize 内的重复只读结构读取；不改变 workspace 校验、lease 生命周期、request identity 或 Commit/Discard。静态核对 row 是 readonly struct、数组引用来自同一 prepared row 和唯一 `PrepareRow` 调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP200 BlendStack entry 只读引用化（2026-09-30，已实施，本轮未编译）
+
+- `ReadEntry` 和 `GetEntryState` 从 entry 数组按值返回整份 `AnimationBlendEntryState`；三个 `GetEntryState` 正式调用点只读取 entry identity 与 source 信息，但每次都复制包含 fade clock 的状态。
+- entry 数组读取和 `GetEntryState` 改为 `ref readonly` 返回，三个调用侧绑定只读引用。纯读取属性补充 `readonly` 合同，避免 readonly 接收器触发防御拷贝；内部仍按值消费 entry 的调用保持原拷贝语义。
+- 该改动删除周期 stack 遍历的整份 entry 拷贝；不改变 pending/committed 选择、entry 修改入口、索引校验或异常时机。静态核对 backing entry 数组生命周期、全部 `ReadEntry` 消费点和 readonly 属性不写状态；未编译、未采样，不能声称实测耗时收益。

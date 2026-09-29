@@ -98,7 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Requests;
             for (int i = 0; i < stack.EntryCount; i++)
             {
-                AnimationBlendEntryState entry = stack.GetEntryState(i);
+                ref readonly AnimationBlendEntryState entry =
+                    ref stack.GetEntryState(i);
                 if (entry.IsSourcePose || !m_SourceIds.Add(entry.SourceId))
                     continue;
                 if (entry.SourceId.SourceKind == AnimationPoseSourceKind.Timeline)

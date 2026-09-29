@@ -117,16 +117,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_Clock = default;
         }
 
-        public AnimationBlendEntryId EntryId { get; }
-        public AnimationPoseSourceId SourceId => EntryId.SourceId;
-        public bool IsSourcePose => EntryId.SourcePoseTarget;
-        public int SourceOwnerIndex { get; }
-        public float BaseDurationSeconds { get; }
-        public int CanonicalCurveIndex { get; }
-        public int BlendProfileIndex { get; }
-        public ulong ContributionContinuityIdentity { get; }
-        public int PushDepth { get; private set; }
-        public float ElapsedSeconds => m_Clock.ElapsedSeconds;
+        public readonly AnimationBlendEntryId EntryId { get; }
+        public readonly AnimationPoseSourceId SourceId => EntryId.SourceId;
+        public readonly bool IsSourcePose => EntryId.SourcePoseTarget;
+        public readonly int SourceOwnerIndex { get; }
+        public readonly float BaseDurationSeconds { get; }
+        public readonly int CanonicalCurveIndex { get; }
+        public readonly int BlendProfileIndex { get; }
+        public readonly ulong ContributionContinuityIdentity { get; }
+        public int PushDepth { readonly get; private set; }
+        public readonly float ElapsedSeconds => m_Clock.ElapsedSeconds;
 
         public void Advance(float deltaSeconds) => m_Clock.Advance(deltaSeconds);
 

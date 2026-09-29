@@ -258,7 +258,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ActionSlotSourceUsageKind? usage = null;
                 for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
                 {
-                    AnimationBlendEntryState entry = stack.GetEntryState(entryIndex);
+                    ref readonly AnimationBlendEntryState entry =
+                        ref stack.GetEntryState(entryIndex);
                     if (entry.IsSourcePose || !entry.SourceId.PlaybackId.Equals(frame.PlaybackId))
                         continue;
                     usage = stack.IsCurrentSource(entry.SourceId)
@@ -281,7 +282,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             for (int i = 0; i < stack.EntryCount; i++)
             {
-                AnimationBlendEntryState entry = stack.GetEntryState(i);
+                ref readonly AnimationBlendEntryState entry =
+                    ref stack.GetEntryState(i);
                 if (entry.IsSourcePose ||
                     entry.SourceId.SourceKind !=
                     AnimationPoseSourceKind.Timeline)

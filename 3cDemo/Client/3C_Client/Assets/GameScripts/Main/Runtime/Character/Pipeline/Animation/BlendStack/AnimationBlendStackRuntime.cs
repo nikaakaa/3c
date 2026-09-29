@@ -698,12 +698,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return ReadEntry(index).EntryId;
         }
 
-        internal AnimationBlendEntryState GetEntryState(int index)
+        internal ref readonly AnimationBlendEntryState GetEntryState(int index)
         {
             RequireAlive();
             if ((uint)index >= (uint)m_EntryCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return ReadEntry(index);
+            return ref ReadEntry(index);
         }
 
         internal void GetCurrentRoutingEndpoint(
@@ -2029,13 +2029,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return false;
         }
 
-        AnimationBlendEntryState ReadEntry(int index)
+        ref readonly AnimationBlendEntryState ReadEntry(int index)
         {
             if ((uint)index >= (uint)EntryCapacity)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_FrameOpen && m_PendingEntryVersions[index] == m_PendingEntryVersion
-                ? m_PendingEntries[index]
-                : m_CommittedEntries[index];
+            return ref (m_FrameOpen && m_PendingEntryVersions[index] == m_PendingEntryVersion
+                ? ref m_PendingEntries[index]
+                : ref m_CommittedEntries[index]);
         }
 
         void WriteEntry(int index, AnimationBlendEntryState entry)

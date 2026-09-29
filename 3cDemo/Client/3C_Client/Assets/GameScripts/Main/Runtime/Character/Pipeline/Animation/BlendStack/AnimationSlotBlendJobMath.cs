@@ -157,41 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         internal static bool IsValidFoot(AnimationFootFeatureSample sample) =>
-            sample.IsValid && AnimationPoseMath.IsFinite(sample.SoleLocalVelocity) &&
-            float.IsFinite(sample.SoleHeight) && IsNormalized(sample.PlantConfidence) &&
-            IsValidPrediction(sample.PredictedStep) &&
-            IsValidPrediction(sample.IncomingPredictedStep);
-
-        static bool IsValidPrediction(AnimationPredictedFootStepSample value) =>
-            !value.IsValid ||
-            IsNormalized(value.Confidence) &&
-            float.IsFinite(value.TimeToLandingSeconds) && value.TimeToLandingSeconds >= 0f &&
-            IsNormalized(value.EventPhase) && IsNormalized(value.LiftOffPhase) &&
-            IsValidRootLocalFootRoute(value);
-
-        static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
-        {
-            if (value.Route.RootLocalFoot.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.Route.RootLocalAnkle.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.Route.RootLocalHip.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.Route.AuthoredFootPlanar.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                value.Route.AnimationClearance.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
-                !IsNormalized(value.LandingPhase) ||
-                !IsFinite(value.OpposingRootLocalSoleRotation) ||
-                Quaternion.Dot(value.OpposingRootLocalSoleRotation, value.OpposingRootLocalSoleRotation) <= 0.000001f)
-                return false;
-            for (int i = 0; i < value.Route.RootLocalFoot.Length; i++)
-            {
-                if (!AnimationPoseMath.IsFinite(value.Route.RootLocalFoot[i]) ||
-                    !AnimationPoseMath.IsFinite(value.Route.RootLocalAnkle[i]) ||
-                    !AnimationPoseMath.IsFinite(value.Route.RootLocalHip[i]) ||
-                    !AnimationPoseMath.IsFinite(value.Route.AuthoredFootPlanar[i]) ||
-                    !float.IsFinite(value.Route.AnimationClearance[i]) ||
-                    value.Route.AnimationClearance[i] < 0f)
-                    return false;
-            }
-            return true;
-        }
+            sample.IsValid;
 
         internal static bool IsNormalized(float value) =>
             float.IsFinite(value) && value >= 0f && value <= 1f;

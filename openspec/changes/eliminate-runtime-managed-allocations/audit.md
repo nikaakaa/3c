@@ -1108,3 +1108,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `TryCreateComponent` 的 component 数组重载只服务 Modify Bone 与空间转换。两个调用方的父姿态有效边界已建立：Modify Bone 先逐骨骼拒绝无效 Component Pose；空间转换按父序生成并立即拒绝失败结果。原实现仍经公共 parent 重载对同一父姿态再次 `IsValid`。
 - 公共 parent 重载继续承担外部父输入校验，先检查后进入 `TryCreateComponentWithValidParent`；数组重载在父序有效的前提下直接进入同一核心。local 有效性、结果 finite/非零检查、归一化、失败返回和输出值不变。
 - 该改动删除已证明有效父姿态的重复逐骨骼校验，不新增调用路径或数据复制。静态核对两个数组重载唯一消费链、NativeArray 重载继续校验父输入、核心公式和失败语义；未编译、未采样，不能声称实测耗时收益。
+
+### AP132 Foot 特征消费端校验收敛（2026-09-30，已实施，本轮未编译）
+
+- `AnimationFootFeatureSample` 构造器已拒绝 non-finite 速度/高度并归一化 plant confidence；每个指定的 `AnimationPredictedFootStepSample` 构造器已校验 confidence、时间、phase、phase 顺序、opposing landing 配对，并通过 `AnimationBiomechanicalRoutePage` 构造器校验 25 点 foot/ankle/hip/planar/clearance 页。默认预测步允许存在且当前消费语义已视为通过。
+- Slot Blend 原来对同一 sample 的基础字段再查一遍，并对每个指定预测步重建 scalar/route 检查，每次最多重复扫描 100 个 route 元素。`IsValidFoot` 现在只区分正式构造样本与默认未指定样本，删除下游重复 scalar/route 扫描。
+- 特征输入、默认预测步行为、Accumulate 和 authoritative prediction 的返回结果不变；构造器继续是 foot feature 唯一业务校验边界。静态核对两个 feature 页构造来源、预测步所有构造器、`RoutePage` 校验和 Slot Blend 调用点；未编译、未采样，不能声称实测耗时收益。

@@ -564,7 +564,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason,
                 landingEventIdentity,
                 swing.GroundPathInputIdentity,
-                swing.SwingPathReference,
+                in swing.SwingPathReference,
                 originalSole,
                 originalAnkle,
                 swing.Distance,
@@ -590,8 +590,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasContact,
                 hasContact ? context.Contact.SurfaceIdentity : 0,
                 hasContact ? context.Contact.Normal : default,
-                continuityFact,
-                lifecycleTransition: lifecycleTransition);
+                in continuityFact,
+                false,
+                false,
+                in lifecycleTransition);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.Contact.EventIdentity,
@@ -855,8 +857,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 point = frame.PreparedPlantTarget.Point;
                 return true;
             }
-            CharacterFootSwingPathReference swingPath =
-                swing.SwingPathReference;
+            ref readonly CharacterFootSwingPathReference swingPath =
+                ref swing.SwingPathReference;
             if (supportEventIdentity != 0 &&
                 swing.Accepted &&
                 swingPath.IsAvailable &&

@@ -60,12 +60,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootSwingMotionResult
     {
+        readonly CharacterFootSwingPathReference m_SwingPathReference;
+        readonly CharacterFootPathContinuityFact m_PathContinuity;
+        readonly CharacterFootLifecycleTransitionFact m_LifecycleTransition;
+
         internal CharacterFootSwingMotionResult(
             CharacterFootSwingMotionState state,
             CharacterFootSwingMotionRejectReason rejectReason,
             ulong landingEventIdentity,
             ulong groundPathInputIdentity,
-            CharacterFootSwingPathReference swingPathReference,
+            in CharacterFootSwingPathReference swingPathReference,
             Vector3 originalSole,
             Vector3 originalAnkle,
             float distance,
@@ -89,16 +93,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool contactPlaneAvailable = false,
             int contactSurfaceIdentity = 0,
             Vector3 contactPlaneNormal = default,
-            CharacterFootPathContinuityFact pathContinuity = default,
+            in CharacterFootPathContinuityFact pathContinuity = default,
             bool landingReachEvaluated = false,
             bool landingReachAvailable = false,
-            CharacterFootLifecycleTransitionFact lifecycleTransition = default)
+            in CharacterFootLifecycleTransitionFact lifecycleTransition = default)
         {
             State = state;
             RejectReason = rejectReason;
             LandingEventIdentity = landingEventIdentity;
             GroundPathInputIdentity = groundPathInputIdentity;
-            SwingPathReference = swingPathReference;
+            m_SwingPathReference = swingPathReference;
             OriginalSole = originalSole;
             OriginalAnkle = originalAnkle;
             Distance = distance;
@@ -122,17 +126,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = contactPlaneAvailable;
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
-            PathContinuity = pathContinuity;
+            m_PathContinuity = pathContinuity;
             LandingReachEvaluated = landingReachEvaluated;
             LandingReachAvailable = landingReachAvailable;
-            LifecycleTransition = lifecycleTransition;
+            m_LifecycleTransition = lifecycleTransition;
         }
 
         public CharacterFootSwingMotionState State { get; }
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
         public ulong LandingEventIdentity { get; }
         public ulong GroundPathInputIdentity { get; }
-        internal CharacterFootSwingPathReference SwingPathReference { get; }
+        internal ref readonly CharacterFootSwingPathReference SwingPathReference =>
+            ref m_SwingPathReference;
         public Vector3 OriginalSole { get; }
         public Vector3 OriginalAnkle { get; }
         public float Distance { get; }
@@ -158,8 +163,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         public bool LandingReachEvaluated { get; }
         public bool LandingReachAvailable { get; }
-        internal CharacterFootPathContinuityFact PathContinuity { get; }
-        internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
+        internal ref readonly CharacterFootPathContinuityFact PathContinuity =>
+            ref m_PathContinuity;
+        internal ref readonly CharacterFootLifecycleTransitionFact LifecycleTransition =>
+            ref m_LifecycleTransition;
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 }

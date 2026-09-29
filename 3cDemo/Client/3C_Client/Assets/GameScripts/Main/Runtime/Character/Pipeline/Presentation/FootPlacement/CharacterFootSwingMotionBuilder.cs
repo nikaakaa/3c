@@ -266,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.RejectReason,
                 motion.LandingEventIdentity,
                 motion.GroundPathInputIdentity,
-                motion.SwingPathReference,
+                in motion.SwingPathReference,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 motion.Distance,
@@ -290,10 +290,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.ContactPlaneAvailable,
                 motion.ContactSurfaceIdentity,
                 motion.ContactPlaneNormal,
-                motion.PathContinuity,
+                in motion.PathContinuity,
                 evaluated,
                 available,
-                motion.LifecycleTransition);
+                in motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithPathContinuity(
             in CharacterFootSwingMotionResult motion,
@@ -303,7 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.RejectReason,
                 motion.LandingEventIdentity,
                 motion.GroundPathInputIdentity,
-                motion.SwingPathReference,
+                in motion.SwingPathReference,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 motion.Distance,
@@ -327,10 +327,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.ContactPlaneAvailable,
                 motion.ContactSurfaceIdentity,
                 motion.ContactPlaneNormal,
-                continuity,
+                in continuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                motion.LifecycleTransition);
+                in motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithLifecycleTransition(
             in CharacterFootSwingMotionResult motion,
@@ -340,7 +340,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.RejectReason,
                 motion.LandingEventIdentity,
                 motion.GroundPathInputIdentity,
-                motion.SwingPathReference,
+                in motion.SwingPathReference,
                 motion.OriginalSole,
                 motion.OriginalAnkle,
                 motion.Distance,
@@ -364,10 +364,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.ContactPlaneAvailable,
                 motion.ContactSurfaceIdentity,
                 motion.ContactPlaneNormal,
-                motion.PathContinuity,
+                in motion.PathContinuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                lifecycleTransition);
+                in lifecycleTransition);
 
         static bool TrySampleEnvelope(
             in CharacterFootGroundPathResult groundPath,

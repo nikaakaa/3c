@@ -1616,10 +1616,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSwingMotionDiagnostics(in CharacterFootSwingMotionResult result)
         {
             Core = new CharacterFootSwingCoreDiagnostics(in result);
-            CharacterFootLifecycleTransitionFact lifecycle =
-                result.LifecycleTransition;
+            ref readonly CharacterFootLifecycleTransitionFact lifecycle =
+                ref result.LifecycleTransition;
             Lifecycle = new CharacterFootLifecycleTransitionDiagnostics(in lifecycle);
-            CharacterFootPathContinuityFact path = result.PathContinuity;
+            ref readonly CharacterFootPathContinuityFact path =
+                ref result.PathContinuity;
             PathContinuity = new CharacterFootPathContinuityDiagnostics(in path);
             OutputStages = new CharacterFootOutputStagesDiagnostics(
                 in lifecycle, in path);

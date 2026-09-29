@@ -1937,3 +1937,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Swing motion result 的 SwingPathReference、PathContinuity、LifecycleTransition 自动属性每次读取复制完整事实；lifecycle、interpolation、builder 派生 result 和 diagnostics 会重复读取。
 - 三个结构属性改为 backing field 只读引用，构造入参改为 `in`；builder 派生 landing reach、path continuity 和 lifecycle transition 时显式引用转发。lifecycle 与 interpolation 的 path reference、diagnostics 的两个事实改为只读绑定。
 - 该改动删除 Foot Placement swing motion 输出与 completion 链中路径引用、连续性事实和过渡事实的重复拷贝。静态核对 result 为 readonly struct、默认值与 rejected/suppressed 分支不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP270 Current support observation 结构引用读取（2026-09-30，已实施，本轮未编译）
+
+- Current support observation 的 HeelRequest、ToeRequest、Heel、Toe、Target 自动属性每次读取复制完整结构；diagnostics 展开左右 probe 和 target 时会重复拷贝，state target 与 hard constraint 也会读取 target。
+- 五个结构属性改为 backing field 只读引用；diagnostics 左右 request/result 和 target 改为只读绑定。observation 构造仍保留必要字段写入，support target 输出仍保留一次必要拷贝。
+- 该改动删除 current support observation 进入 probe 诊断、state target 与高度约束消费的重复结构拷贝。静态核对 observation 为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。

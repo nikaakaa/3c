@@ -1342,3 +1342,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Source frame lease 包含整份开放帧 lineage；接口、Animancer/ACL backend、backend set、pending page 和 source module 的 Prepare/Validate/Barrier/Commit 阶段大多按值接收，每次转发都重复复制。
 - 56 个不会修改 lease 的正式参数改为 `in`；SourceModule 与 BackendSet 的 `DiscardFrame` 保留按值，因为清理 lambda 必须捕获 lease。接口两个实现同步更新，调用点继续传同一 lease。
 - 该改动删除 source 阶段转发的整份 lease 拷贝；不改变 lease identity、rollback 顺序或 commit/discard 语义。静态核对接口实现全集、lambda 捕获例外、方法组和阶段调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP171 constraint lease 参数引用化（2026-09-30，已实施，本轮未编译）
+
+- Constraint runtime 的 Complete、Seal、Discard 和 pending lease 校验都按值接收包含整份 lineage 的 lease；这些阶段只读取 identity 并推进同一 pending 帧。
+- 四个参数改为 `in`，RoleRuntime 可直接传字段引用；清理时先复制再清空字段的路径保留。identity 校验、Foot Placement 发布、bank 切换和 Discard 顺序不变。
+- 该改动删除 constraint 阶段转发的整份 lease 拷贝；不新增第二生命周期。静态核对全部按值参数、调用点、字段清空顺序和失败路径；未编译、未采样，不能声称实测耗时收益。

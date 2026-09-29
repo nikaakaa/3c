@@ -544,7 +544,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal CharacterPoseConstraintResult CompleteFrame(
-            CharacterPoseConstraintFrameLease lease,
+            in CharacterPoseConstraintFrameLease lease,
             in CharacterPoseNativeFrameLineage lineage,
             AnimationPoseAvailability outputAvailability,
             AnimationPoseNativeInvalidReason outputInvalidReason,
@@ -634,7 +634,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void SealFrame(
-            CharacterPoseConstraintFrameLease lease)
+            in CharacterPoseConstraintFrameLease lease)
         {
             RequirePendingLease(lease);
             if (!m_PendingResult.IsCompleted ||
@@ -657,7 +657,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void DiscardFrame(
-            CharacterPoseConstraintFrameLease lease)
+            in CharacterPoseConstraintFrameLease lease)
         {
             RequireAlive();
             RequirePendingLease(lease);
@@ -722,7 +722,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         void RequirePendingLease(
-            CharacterPoseConstraintFrameLease lease)
+            in CharacterPoseConstraintFrameLease lease)
         {
             RequireAlive();
             if (!m_HasPending ||

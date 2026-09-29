@@ -93,10 +93,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
             WorldBodyState[] bodies,
             IReadOnlyList<DeterministicKccBodyState> states)
         {
-            byte[] payload = DeterministicKccStateCodec.Write(
+            m_StateWriter.Reset();
+            DeterministicKccStateCodec.Write(
+                m_StateWriter,
                 m_CollisionWorld.ContentHash,
                 m_Configuration.ConfigurationHash,
                 states);
+            byte[] payload = m_StateWriter.ToArray();
             return WorldSimulationState.FromOwnedState(
                 Descriptor.NumericProfile,
                 Descriptor.ImplementationId,

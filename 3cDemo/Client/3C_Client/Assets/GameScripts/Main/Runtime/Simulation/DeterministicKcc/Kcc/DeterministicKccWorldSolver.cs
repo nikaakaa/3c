@@ -13,6 +13,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         static readonly SolverImplementationId s_ImplementationId = new SolverImplementationId(SolverId);
         readonly DeterministicCollisionWorldArtifact m_CollisionWorld;
         readonly DeterministicKccConfiguration m_Configuration;
+        readonly CanonicalWriter m_StateWriter = new CanonicalWriter();
         readonly DeterministicKccMotor[] m_Motors;
         readonly DeterministicKccMotor[] m_PredictionMotors;
         readonly int m_TickRate;

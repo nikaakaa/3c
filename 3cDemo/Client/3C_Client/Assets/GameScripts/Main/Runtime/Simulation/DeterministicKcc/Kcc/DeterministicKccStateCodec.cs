@@ -75,14 +75,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
         const uint Magic = 0x5343434B;
         const int Version = 3;
 
-        public static byte[] Write(
+        public static void Write(
+            CanonicalWriter writer,
             StableHash collisionWorldHash,
             StableHash configurationHash,
             IReadOnlyList<DeterministicKccBodyState> states)
         {
             if (!collisionWorldHash.IsValid || !configurationHash.IsValid || states == null)
                 throw new ArgumentException("Deterministic KCC state identity is incomplete.");
-            using var writer = new CanonicalWriter();
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             writer.WriteString(collisionWorldHash.Value);
@@ -107,7 +107,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 writer.WriteByte((byte)state.LedgeState);
                 writer.WriteBoolean(state.LastMovementIterationFoundAnyGround);
             }
-            return writer.ToArray();
         }
 
         public static void Read(

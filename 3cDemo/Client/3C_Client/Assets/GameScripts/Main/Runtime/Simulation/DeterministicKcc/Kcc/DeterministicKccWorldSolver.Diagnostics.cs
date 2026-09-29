@@ -273,6 +273,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public void Dispose()
         {
             m_Disposed = true;
+            m_StateWriter.Dispose();
             m_Current = null;
             m_KccStates = null;
             m_ContactTraces.Clear();

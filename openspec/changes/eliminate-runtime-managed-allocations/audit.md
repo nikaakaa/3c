@@ -434,6 +434,14 @@
 - 碰撞候选、纠正向量、接触标志、迭代次数、计数摘要和最终几何校验均保留；AddTrace 参数逐项核对仅为已计算局部值/只读字段，无业务状态写入。计时及摘要发布仍沿原 sink 状态处理，本项不宣称整个 KCC 诊断链全部无工作。返回世界快照分配也未改。
 - 核对六处记录构造、两份列表唯一写入入口、调用方编译条件及差异；未编译、回放或采样。KCC 运动算法及脚步预测未改，实际性能收益未知。
 
+### AP50 KCC 每次状态编码重建 writer 与临时缓冲（2026-09-29，已实施，未运行）
+
+- DeterministicKccStateCodec.Write 原先每次新建 CanonicalWriter，默认分配256字节缓冲，按状态大小扩容后再 ToArray 复制出结果；CreateState 在每次世界求解结束都会调用该入口。最终 payload 由世界历史独立持有，不能直接返回可复用缓冲。
+- Solver 实例现在持有唯一 m_StateWriter。CreateState 先 Reset，再调用唯一编码函数，最后 ToArray 创建独立 payload；Codec.Write 改为接收 writer 并只负责原有字段编码，删除内部临时 writer 和返回副本职责，没有保留旧重载。全仓正式调用点只有该 Solver。
+- 字段顺序、Magic/Version、UTF-8、定点原始值写入、Actor 排序检查全部保留；CanonicalWriter.Reset 只重置位置和长度，ToArray 复制有效范围，不向历史外借内部缓冲。编码失败不会创建/发布新 payload，后续调用仍先 Reset。writer 随 Solver.Dispose 释放，现有 Dispose 实现为空，不涉及新增资源释放协议。
+- 省掉周期 writer 对象及临时缓冲的重新分配/扩容，最终快照数组分配仍保留。首次写入超过256字节时仍会扩容：通常在 Create 初始化阶段完成，若从恢复状态开始而未执行 Create，则首次编码仍有扩容成本。本项不宣称完整0 GC；后续是否按固定名单预留容量仍需结合实际状态规模评估，未为初始化引入重复的序列化长度算法。
+- 静态核对唯一调用点、同步 writer 寿命、Reset/ToArray 实现及字段写入差异；未编译、回放或采样，未修改 KCC 数值算法或脚步预测。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

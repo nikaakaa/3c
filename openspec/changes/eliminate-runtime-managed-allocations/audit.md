@@ -2003,3 +2003,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Pelvis posture 按 support side 选择左右 pose 时，把整份 animated foot 复制到 supportPose；校验、posture interval、posture preference 和 primary reach request 会读取该结构。
 - supportPose 改为按 support side 绑定 pelvis frame 左右 pose 的只读引用。side 选择、leg length 选择、异常判断和构造字段顺序不变。
 - 该改动删除 StrideHips accepted 路径中每帧的 support pose 拷贝。静态核对 pose 为 readonly struct、pelvis frame 生命周期覆盖 ResolvePelvis、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP281 StrideHips pelvis input 引用绑定（2026-09-30，已实施，本轮未编译）
+
+- `PreparePelvis` 按 support side 选择 request 时复制整份 placement request，随后又复制左右 landing reach 和左右 placement request 用于 reach 输入与 contact ownership 判定。
+- support request 和左右 landing reach 改为 pair 成员的只读引用；左右 ownership 判定直接引用 pair 成员。support 判定、reach 承载开关、bilateral 判定和输出 ankle/goal weight 不变。
+- 该改动删除 StrideHips pelvis input 准备中的左右 request/result 重复拷贝。静态核对 request pair 为 readonly struct、request pair 生命周期覆盖 PreparePelvis、消费只读；未编译、未采样，不能声称实测耗时收益。

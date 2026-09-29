@@ -1240,15 +1240,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPrimarySupportResult primarySupport,
             in CharacterFootPelvisFrame frame)
         {
-            CharacterFootPlacementRequest support = intent.SupportSide == CharacterFootSide.Left
-                ? requests.Left : requests.Right;
+            ref readonly CharacterFootPlacementRequest support = ref
+                (intent.SupportSide == CharacterFootSide.Left
+                    ? ref requests.Left
+                    : ref requests.Right);
             bool supportAvailable = !(support.Outcome != CharacterFootResolvedOutcome.Ready ||
                 !support.Support.ReachReference.IsAvailable ||
                 support.Support.Weight <= CharacterPoseConstraintMath.Epsilon ||
                 support.Support.Eligibility == CharacterFootSupportEligibility.None ||
                 support.Support.EventIdentity != primarySupport.LandingEventIdentity);
-            CharacterFootLandingReachRequest leftReach = requests.Left.LandingReachRequest;
-            CharacterFootLandingReachRequest rightReach = requests.Right.LandingReachRequest;
+            ref readonly CharacterFootLandingReachRequest leftReach =
+                ref requests.Left.LandingReachRequest;
+            ref readonly CharacterFootLandingReachRequest rightReach =
+                ref requests.Right.LandingReachRequest;
             var reach = new CharacterFootPelvisReachInput(
                 requests.Left.LandingReachAdmitted, in leftReach,
                 requests.Right.LandingReachAdmitted, in rightReach);
@@ -1266,11 +1270,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.LeftCorrectedSole - frame.RightCorrectedSole,
                     frame.ComponentUp.normalized))
                 : 0f;
-            CharacterFootPlacementRequest leftRequest = requests.Left;
-            CharacterFootPlacementRequest rightRequest = requests.Right;
             bool bilateralSupportAvailable = pairTargetsAvailable &&
-                OwnsContactSupport(in leftRequest) &&
-                OwnsContactSupport(in rightRequest);
+                OwnsContactSupport(in requests.Left) &&
+                OwnsContactSupport(in requests.Right);
             return new CharacterFootPelvisInput(
                 in intent, in primarySupport, in frame, in reach,
                 pairTargetsAvailable, pairTargetHeightSpread,

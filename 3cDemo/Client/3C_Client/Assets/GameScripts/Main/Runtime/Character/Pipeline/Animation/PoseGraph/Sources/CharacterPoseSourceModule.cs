@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_HasDemand = true;
             }
 
-            internal CharacterPoseSourceDemand RequireDemand(
+            internal ref readonly CharacterPoseSourceDemand RequireDemand(
                 in CharacterPoseSourceFrameLease lease)
             {
                 RequireLease(lease);
@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     throw new InvalidOperationException(
                         "Pose Source Demand is not prepared.");
                 }
-                return m_Demand;
+                return ref m_Demand;
             }
 
             internal CharacterPoseSourcePreparation
@@ -480,9 +480,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Readiness.BeginDemand(demand.Lineage.CompletionIdentity);
         }
 
-        internal CharacterPoseSourceDemand RequireDemand(
+        internal ref readonly CharacterPoseSourceDemand RequireDemand(
             in CharacterPoseSourceFrameLease lease) =>
-            m_FramePage.RequireDemand(lease);
+            ref m_FramePage.RequireDemand(lease);
 
         internal CharacterPoseSourceFrameResult PrepareFrameResult(
             in CharacterPoseSourceFrameLease lease,
@@ -493,7 +493,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 PresentationPoseSourceSample> providerSources,
             in CharacterPoseSourceReadinessPageView readinessPage)
         {
-            CharacterPoseSourceDemand demand =
+            ref readonly CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
             var result = new CharacterPoseSourceFrameResult(
                 in demand,
@@ -533,7 +533,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             RequirePreparedResources(
                 in CharacterPoseSourceFrameLease lease)
         {
-            CharacterPoseSourceDemand demand =
+            ref readonly CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
             ref readonly CharacterPoseNativeFrameLineage lineage = ref demand.Lineage;
             return new CharacterPoseSourcePreparedResources(

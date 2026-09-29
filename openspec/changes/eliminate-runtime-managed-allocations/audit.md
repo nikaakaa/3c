@@ -1348,3 +1348,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Constraint runtime 的 Complete、Seal、Discard 和 pending lease 校验都按值接收包含整份 lineage 的 lease；这些阶段只读取 identity 并推进同一 pending 帧。
 - 四个参数改为 `in`，RoleRuntime 可直接传字段引用；清理时先复制再清空字段的路径保留。identity 校验、Foot Placement 发布、bank 切换和 Discard 顺序不变。
 - 该改动删除 constraint 阶段转发的整份 lease 拷贝；不新增第二生命周期。静态核对全部按值参数、调用点、字段清空顺序和失败路径；未编译、未采样，不能声称实测耗时收益。
+
+### AP172 source demand 返回引用化（2026-09-30，已实施，本轮未编译）
+
+- Pending page 和 SourceModule 的 `RequireDemand` 按值返回整份 demand；PrepareFrameResult 与 RequirePreparedResources 再复制到按值局部。demand 在 lease 校验后同一开放帧内只读。
+- 两个返回入口改为 `ref readonly`，两个局部改为 readonly 引用；构造 SourceFrame 与 PreparedResources 时继续传 `in`。lease 校验、错误时机、result 字段和输出页身份不变。
+- 该改动删除 source demand 返回和局部读取的整份拷贝；不暴露可变写入路径。静态核对 backing 字段生命周期、全部 RequireDemand 调用、构造参数和原有异常路径；未编译、未采样，不能声称实测耗时收益。

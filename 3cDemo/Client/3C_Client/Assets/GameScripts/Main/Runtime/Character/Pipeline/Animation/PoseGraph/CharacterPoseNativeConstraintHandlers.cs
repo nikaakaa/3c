@@ -606,6 +606,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
         ContributionInput[] m_ContributionInputs;
+        FlowCanvas.ValueInput<CharacterPoseNativeFullBodyIkGoalsValue> m_GoalsInput;
         int m_PageIndex = -1;
         int m_CommittedPageIndex = -1;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -656,6 +657,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     port.PortId.Value);
                 contributionIndex++;
             }
+            m_GoalsInput = runtime.RequireInputPort<CharacterPoseNativeFullBodyIkGoalsValue>(
+                node,
+                "goals");
         }
 
         protected override void OnBeginFrame()
@@ -707,7 +711,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_NodeId,
                         contribution.PortId);
             }
-            if (runtime.TryReadInput(node, "goals", out CharacterPoseNativeFullBodyIkGoalsValue goals))
+            if (runtime.TryReadInput(
+                    m_GoalsInput,
+                    m_NodeId,
+                    "goals",
+                    out CharacterPoseNativeFullBodyIkGoalsValue goals))
             {
                 CharacterFullBodyIkGoalSet goalSet = goals.Value;
                 m_Service.BindGoalSet(in goalSet);

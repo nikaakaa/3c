@@ -1216,3 +1216,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Blend Pose、Additive Pose、Layered Bone Blend 和 Foot Placement 每次输出都按 `(NodeId, "weight")` 哈希查找 optional weight 并重复类型测试；weight 端口在 graph 初始化后固定。
 - 四个 handler 在 Initialize 缓存 typed `ValueInput`；混合类同时缓存节点默认 weight。帧内用 AP148 的 typed Try 读取，未连接仍回退默认值或关闭 override，connected value 的 `[0,1]` 校验、continuity、Constraint 输入和输出顺序不变。
 - 该改动消除四类 optional weight 的每帧字典查找和类型测试；不新增第二数据源。静态核对端口形状、默认值来源、原错误文本、continuity 和 pending/Commit 语义；未编译、未采样，不能声称实测耗时收益。
+
+### AP150 FullBodyIK goals 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Full Body IK 每次输出都按 `(NodeId, "goals")` 哈希查找 optional goal set 并重复类型测试；端口在 graph 初始化后固定。
+- handler 在 AP147 的固定输入初始化中缓存 goals typed `ValueInput`，帧内用 typed Try 读取；未连接仍不绑定，connected goal set 的 BindPendingGoalSet、IK solve、输出页和 Commit 顺序不变。
+- 该改动消除 optional goals 的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对端口形状、未连接分支、goal 绑定生命周期和双缓冲语义；未编译、未采样，不能声称实测耗时收益。

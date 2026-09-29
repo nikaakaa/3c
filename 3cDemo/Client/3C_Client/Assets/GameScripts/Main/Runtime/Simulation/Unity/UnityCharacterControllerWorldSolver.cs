@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         const float RotationTolerance = 0.01f;
         static readonly SolverImplementationId Implementation = new SolverImplementationId("Unity.CharacterController.WorldSolver");
         readonly List<UnityCharacterControllerWorldBodyBinding> m_Bindings;
-        readonly int m_TickRate;
+        readonly Float32Scalar m_TickDelta;
         WorldSimulationState m_Current;
         bool m_Disposed;
 
@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         {
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
-            m_TickRate = tickRate;
+            m_TickDelta = Float32Scalar.One / Float32Scalar.FromInt64(tickRate);
             m_Bindings = bindings == null
                 ? new List<UnityCharacterControllerWorldBodyBinding>()
                 : new List<UnityCharacterControllerWorldBodyBinding>(bindings);
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
             try
             {
-                Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_TickRate);
+                Float32Scalar delta = m_TickDelta;
                 var bodies = new WorldBodyState[request.Requests.Count];
                 var results = new CharacterWorldSolveResult[request.Requests.Count];
                 for (int i = 0; i < request.Requests.Count; i++)

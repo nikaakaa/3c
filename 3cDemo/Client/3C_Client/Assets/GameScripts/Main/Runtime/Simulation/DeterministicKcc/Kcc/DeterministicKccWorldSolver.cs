@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly CanonicalWriter m_StateWriter = new CanonicalWriter();
         readonly DeterministicKccMotor[] m_Motors;
         readonly DeterministicKccMotor[] m_PredictionMotors;
-        readonly int m_TickRate;
+        readonly FixedScalar m_TickDelta;
         readonly ActorBinding[] m_Bindings;
         readonly ActorSolveCandidate[] m_Candidates;
         readonly DeterministicActorContactCandidate[] m_ActorContacts;
@@ -37,7 +37,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         {
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
-            m_TickRate = tickRate;
+            m_TickDelta = FixedScalar.One / FixedScalar.FromInt64(tickRate);
             m_CollisionWorld = collisionWorld ?? throw new ArgumentNullException(nameof(collisionWorld));
             m_Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (bindings == null || bindings.Count == 0)
@@ -204,7 +204,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             if (request.Requests.Count != m_Bindings.Length)
                 throw new InvalidOperationException("Deterministic KCC request roster count is stale.");
 
-            FixedScalar tickDelta = FixedScalar.One / FixedScalar.FromInt64(m_TickRate);
+            FixedScalar tickDelta = m_TickDelta;
             for (int i = 0; i < request.Requests.Count; i++)
             {
                 CharacterWorldSolveRequest actorRequest = request.Requests[i];

@@ -426,6 +426,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootGroundPathInput
     {
+        readonly CharacterFootGroundPathInputKey m_Key;
+        readonly CharacterFootGroundPathQueryRequest m_Query;
+
         internal CharacterFootGroundPathInput(
             ulong identity,
             in CharacterFootGroundPathInputKey key,
@@ -440,7 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathQueryRequest query)
         {
             Identity = identity;
-            Key = key;
+            m_Key = key;
             LastLanding = lastLanding;
             NextSwingLanding = nextSwingLanding;
             LastLandingNormal = lastLandingNormal;
@@ -449,11 +452,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextSwingLandingSurfaceIdentity = nextSwingLandingSurfaceIdentity;
             ComponentUp = componentUp;
             MaximumReachableVerticalEdge = maximumReachableVerticalEdge;
-            Query = query;
+            m_Query = query;
         }
 
         internal ulong Identity { get; }
-        internal CharacterFootGroundPathInputKey Key { get; }
+        internal ref readonly CharacterFootGroundPathInputKey Key =>
+            ref m_Key;
         internal Vector3 LastLanding { get; }
         internal Vector3 NextSwingLanding { get; }
         internal Vector3 LastLandingNormal { get; }
@@ -462,7 +466,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int NextSwingLandingSurfaceIdentity { get; }
         internal Vector3 ComponentUp { get; }
         internal float MaximumReachableVerticalEdge { get; }
-        internal CharacterFootGroundPathQueryRequest Query { get; }
+        internal ref readonly CharacterFootGroundPathQueryRequest Query =>
+            ref m_Query;
         internal bool IsValid =>
             Identity != 0 && Query.IsValid &&
             float.IsFinite(MaximumReachableVerticalEdge) &&

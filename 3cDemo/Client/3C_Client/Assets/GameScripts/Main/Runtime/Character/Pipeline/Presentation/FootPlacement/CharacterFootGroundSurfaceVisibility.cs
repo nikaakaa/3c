@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             invalid = default;
             m_EventCount = 0;
             edges.Clear();
-            if (!surfaces.IsReady || !surfaces.Matches(input.Query))
+            if (!surfaces.IsReady || !surfaces.Matches(in input.Query))
             {
                 reason = CharacterFootGroundPathRejectReason.SurfaceGeometryUnavailable;
                 return false;

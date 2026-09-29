@@ -970,9 +970,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return new CharacterFootGroundPathResult(pendingPage, false);
             }
 
-            CharacterFootGroundPathQueryRequest query = input.Query;
             CharacterFootGroundPathQueryResult result = m_WorldQuery.Query(
-                in query,
+                in input.Query,
                 pendingPage.Contacts);
             if (result.Accepted)
             {

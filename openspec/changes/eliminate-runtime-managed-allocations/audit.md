@@ -1943,3 +1943,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Current support observation 的 HeelRequest、ToeRequest、Heel、Toe、Target 自动属性每次读取复制完整结构；diagnostics 展开左右 probe 和 target 时会重复拷贝，state target 与 hard constraint 也会读取 target。
 - 五个结构属性改为 backing field 只读引用；diagnostics 左右 request/result 和 target 改为只读绑定。observation 构造仍保留必要字段写入，support target 输出仍保留一次必要拷贝。
 - 该改动删除 current support observation 进入 probe 诊断、state target 与高度约束消费的重复结构拷贝。静态核对 observation 为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP271 Ground path input key 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Ground path input 的 Key 和 Query 自动属性每次读取复制完整 landing identity key 或 ground query request；committed input 复用判定、surface visibility 匹配、world query 入口和 diagnostics 会重复读取。
+- Key 和 Query 改为 backing field 只读引用。world query 直接引用 input.Query，surface visibility 显式引用匹配请求；committed key 判定和 result 派生字段读取同一 backing field。
+- 该改动删除 ground path 输入进入查询、复用判定和 surface visibility 的重复拓扑/参数拷贝。静态核对 input 为 readonly struct、key/query 值和查询结果不变；未编译、未采样，不能声称实测耗时收益。

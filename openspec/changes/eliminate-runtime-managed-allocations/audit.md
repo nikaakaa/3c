@@ -777,6 +777,12 @@
 - 两域周期 `ReadInputs` 直接传入 binding identity 和 index，删除 `ValueSourceOutputPort` 周期合同查询；本地 binding 改为 `ref readonly`，不因新增 identity 字段复制更大结构。环检查工作区改为 `HashSet<long>`，用 operation handle 和端口 index 组成键，finally 移除键和容量准备不变。
 - 每条 Operation Value 输入少一次静态端口合同解析、字典查找和字符串哈希；环检查键比较不再读取端口文本。诊断、SubGraph 状态读取、GameplayEffect 输出选择和异常文本仍使用同一 identity；实际 evaluation 输出、求值顺序和 Cycle 拒绝语义不变。静态核对 binding 唯一构造点、Graph frame/contract 顺序、两域 Evaluate 调用链、trace 和差异检查；未编译、运行回放或采样。
 
+### AP102 GameplayEffect Freeze 重复判断 Tag 脏标（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 SimulationGameplayEffectState.Freeze 的快速路径连续判断两次 !m_TagsDirty；该字段是同一个实例布尔值，第二次不提供额外约束。
+- 删除重复判断，保留 attributes、active effects、periods、journal、change cursor 和 lifecycle revisions 的原判断顺序。全部未变时继续直接返回 baseline，任一变化时继续走 CreateChangedFrom，冻结对象和脏标语义不变。
+- 每次 Freeze 快速路径少一次布尔判断。静态核对 Freeze 成功、恢复后提交和异常保存点调用链，以及两域差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

@@ -1298,7 +1298,6 @@ namespace ThirdPersonSimulation
                     m_ChangeCursor);
             }
             if (!m_TagsDirty &&
-                !m_TagsDirty &&
                 !m_AttributesDirty &&
                 !m_ActiveEffectsDirty &&
                 !m_PeriodsDirty &&

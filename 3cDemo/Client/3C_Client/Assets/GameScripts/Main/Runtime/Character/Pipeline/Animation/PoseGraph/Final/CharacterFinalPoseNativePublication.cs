@@ -274,13 +274,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 contributionCount > m_ContributionCapacity)
                 throw new InvalidOperationException(
                     "Native Final Pose publication contribution count is invalid.");
+            NativeSlice<AnimationLocalBonePose> outputPoses = output.DenseLocalPoses;
+            int poseOffset = m_Pending.BufferPage * m_BoneCount;
             for (int bone = 0; bone < m_BoneCount; bone++)
             {
-                if (!output.DenseLocalPoses[bone].IsValid)
+                ref readonly AnimationLocalBonePose pose = ref outputPoses[bone];
+                if (!pose.IsValid)
                     throw new InvalidOperationException(
                         $"Native Final Pose publication Bone #{bone} is invalid.");
-                m_DenseLocalPoses[m_Pending.BufferPage * m_BoneCount + bone] =
-                    output.DenseLocalPoses[bone];
+                m_DenseLocalPoses[poseOffset + bone] = pose;
             }
             int parameterOffset = m_Pending.BufferPage * m_ParameterCount;
             for (int parameter = 0; parameter < m_ParameterCount; parameter++)
@@ -332,7 +334,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             FinalAnimationPoseFramePageLease pageLease =
                 m_PageLeases[m_Pending.BufferPage];
-            int poseOffset = m_Pending.BufferPage * m_BoneCount;
             var frame = new ComposedAnimationPoseFrame(
                 m_PoseGraphId,
                 m_GraphRevision,

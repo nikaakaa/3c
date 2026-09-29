@@ -1384,3 +1384,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Final Publication 的物理写回在每根骨骼循环中通过 `AnimationReadOnlyBuffer<T>` 索引器取值；`AnimationLocalBonePose` 包含 position、rotation 和 scale，索引器按值返回后在写回前重复复制整份 pose。
 - 物理 writer 改用已有 `ElementAt` 正式只读引用入口；root policy 分支直接绑定 root reference pose 或 dense pose 元素，随后按原顺序读取字段并写回 Transform。
 - 该改动删除逐骨的整份 pose 拷贝；不改变 bone 可用性校验、root 排除规则、Transform 写入顺序或 foot IK capture 时机。静态核对 buffer readonly struct、`ElementAt` 返回合同和 Write 唯一循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP178 publication dense pose 单次拷贝（2026-09-30，已实施，本轮未编译）
+
+- Final Publication 准备 pending page 时，bone 循环先对 `DenseLocalPoses[bone]` 做一次按值读取校验，再按值读取同一元素写入目标；循环内还重复读取 binding slice、pending page 和 bone count。
+- 准备阶段缓存 output slice 和 pose offset，每骨绑定 `NativeSlice` 元素的 `ref readonly` 引用；同一引用先完成 `IsValid` 校验，再写入 dense page。
+- 该改动把每骨两次整份 pose 读取收敛为一次目标写入拷贝，并删除循环内的重复 offset 计算；不改变布局校验、异常文本、页身份或写入顺序。静态核对 `NativeSlice<T>` 元素引用、原长度校验和 pending 页生命周期；未编译、未采样，不能声称实测耗时收益。

@@ -32,7 +32,7 @@
   "sources": [
     {
       "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CameraDelaySettings.cs",
-      "sha256": "8219ca8414f8f0c37cd87c840ba3b83b7de3a965ec5dc712aea04055ffaa477e"
+      "sha256": "de6dfe49e3b6b87062889efc76a86efeec3bbe7cf7f37d1b622b156edc1694b9"
     },
     {
       "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CharacterCameraProfile.cs",
@@ -44,7 +44,7 @@
     },
     {
       "path": "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/CorinCameraResourcesAuthoring.cs",
-      "sha256": "a84b2a7643434b047d3b4a3efdad482f0b7ec0913aca3fab0517d8283e4939d2"
+      "sha256": "2445b9a997caf4fdf4258be42dd7eb3705e245a0c97d6d1641cf215212ddd51c"
     }
   ],
   "responses": [
@@ -56,5 +56,6 @@
       "path": "Temp\\CameraDelayCompile\\corin-authoring.rsp",
       "sha256": "e16f2c15ac7ba0725a9707ad07645b5f155c82f24ac348cd13b071d61f583567"
     }
-  ]
+  ],
+  "latest_change": "补入camOverAxisProtectRadius；使用相同Unity响应文件和同版本Roslyn重新编译合同与Corin作者文件，均exit 0。整体Unity编译／正式资产生成未完成。"
 }

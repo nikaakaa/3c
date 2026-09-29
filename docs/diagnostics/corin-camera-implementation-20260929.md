@@ -394,3 +394,14 @@ JCCGIBAKPEE.NFOMHELEAFH（0x101D4180）接收CameraAvatarPrepareData与NEGKDBJNJ
 另一个关键字段修正：Accessor+0x3A8是Control，+0x3BC是LastControl，两者都是CameraControlFlag；+0x3BC处的bool是上一帧isRotateStart，绝非当前isRecoveringFromLock（后者在Control+0x10，即+0x3B8）。开启动画相关自动选择时，raw 2入队分支检查当前isRotateStart为false且LastControl.isRotateStart为true，并结合Idle，或带移动控制的Move/Evade tag。raw 3分支包含当前转镜控制及移动开始条件。这里只按原始编号记录触发证据，未按枚举声明顺序推断正式枚举名。控制开关0xF128030还依赖0x101D1D40的全局相机可控条件；该条件含其他状态，需要继续核对，不能无证据常置true。
 
 本批新证据决定了后续实现输入：朝向历史、前后帧转镜控制、角色tag事实三者分开；不能再用“是否正在位移”一个bool覆盖。上一批Delay C# authoring与v9投影仍为未生成资产的在途修改，本批没有更改其源码、运行Play/replay或重编动画／IK。尚未完成动态Delay消费，也没有新的可测版本。
+
+## 跟随位置阻尼与两种距离限制
+
+继续追到0x1596B3E0→0x1596CFC0的位置跟随链。0x1596FD50从CameraDelayData+0x20/+0x24/+0x28读取XYZ跟随阻尼；0x1596CFC0在0x1596DBE7、0x1596DBEC分别给X、Z乘先前方向曲线的结果，Y在这一处保持独立。之后进入相机偏移决定的局部空间求值，包含原作Damper调用；不能把一个方向系数乘到全部XYZ，也不能只替换当前SmoothDamp的时间值。完整空间变换及后续构图仍待实施，没有宣称只读到Damper就已证明整段与本地Cinemachine一致。
+
+两项距离约束已分清：
+
+- CameraModuleAvatarDataConfig.camOverAxisProtectRadius(+0xB0)由0x1596B792读取，用在跨轴的偏移限制。Default_Normal为0.2；上一批作者结构遗漏这一字段，本批已加入CameraDelaySettings.OverAxisProtectRadius并由同一PublishDelay直接导入，继续纳入Profile版本指纹及投影。
+- CameraDelayDatas.CAM_MINDISRATIO(+0x14)先由0x14A3A1A9～0x14A3A1AE写入solver+0x1B0，再由0x1596BD97～0x1596BDC7传给0x1596E2C0。该函数使用`offsetLength * max(0.2, modeMinimumDistanceRatio)`作为最小距离；0.2常量在RVA0x0281CB74已读取。它与上面的跨轴半径是两项独立参数，不可合并。Default_Normal多数模式比例0.6、模式2/11为0.5，所以不能直接照搬本地CinemachineTransposer固定0.2的最小距离比例。作者数据中此模式比例已保留。
+
+补入字段后，相机合同程序集及CorinCameraResourcesAuthoring.cs再次使用同版本Unity Roslyn、真实引用及原响应文件进行独立编译，均exit 0；Temp产物没有加载或替换Editor程序集。编译记录的源码哈希已更新。此批源码仍与前一批Delay迁移一并保留在工作区，等待完整消费链及正式资产统一生成；没有运行Play/replay、没有改IK、没有修改其他窗口的编译错误。

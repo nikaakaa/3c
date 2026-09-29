@@ -1,0 +1,37 @@
+{
+  "minimum_distance_ratio": {
+    "source_field": "CameraDelayDatas.CAM_MINDISRATIO +0x14",
+    "copy_instruction": "0x14A3A1A9 -> 0x14A3A1AE",
+    "solver_offset": "0x1B0",
+    "pass_instruction": "0x1596BD97 -> 0x1596BDC7",
+    "consume_function": "0x1596E2C0",
+    "floor_rva": "0x0281CB74",
+    "floor_raw_hex": "cdcc4c3e",
+    "floor_value": 0.20000000298023224,
+    "formula": "offsetLength * max(0.2, modeMinimumDistanceRatio)"
+  },
+  "over_axis_radius": {
+    "source_field": "CameraModuleAvatarDataConfig.camOverAxisProtectRadius +0xB0",
+    "read_instruction": "0x1596B792",
+    "config_key": "Default_Normal",
+    "config_value": 0.20000000298023224
+  },
+  "position_damping": {
+    "read_function": "0x1596FD50",
+    "source_offsets": [
+      "0x20",
+      "0x24",
+      "0x28"
+    ],
+    "direction_scale_instructions": [
+      "0x1596DBE7",
+      "0x1596DBEC"
+    ],
+    "axes_scaled": [
+      "X",
+      "Z"
+    ],
+    "y_rule": "此处没有乘方向系数，保留单独Y分量",
+    "limits": "完整空间变换、构图、重置与特殊控制器分支仍未实现；此记录不是运行验收。"
+  }
+}

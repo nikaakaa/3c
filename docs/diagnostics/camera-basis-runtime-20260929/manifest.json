@@ -393,7 +393,7 @@
     },
     {
       "path": "follow-delay-authoring-compile-check.json",
-      "sha256": "02a3354d76d79017d9fc3d6194764a4140585056a606e63d866d67aac435680e"
+      "sha256": "f3e9abd1cd1a96a91b5f11b87e06910691ecdfba0d69b02816472eedd2bf3f32"
     },
     {
       "path": "follow-delay-avatar-info-type.json",
@@ -430,6 +430,10 @@
     {
       "path": "follow-delay-direction-control-points.json",
       "sha256": "554172a520f065051dcef11dbc8578dfb745b6eb17d533f97e0036d8f686b13f"
+    },
+    {
+      "path": "follow-delay-distance-limits.json",
+      "sha256": "7168b560d1330bd113172c51ff903a15c6fff17f389078b0da1be14b10a653d7"
     },
     {
       "path": "follow-delay-elevation-curve-factory.json",
@@ -470,6 +474,22 @@
     {
       "path": "follow-delay-movement-64733.json",
       "sha256": "e88b2859a80600fcf13e7e4a14df265d0d4abc6e328d1a214fdf688938655760"
+    },
+    {
+      "path": "follow-delay-solve-0x1596b3e0.json",
+      "sha256": "9a8cf35821d6479e44aac33c4ebe7a5388033c8b93a7e804f02af3b299c5cc3e"
+    },
+    {
+      "path": "follow-delay-solve-0x1596cfc0.json",
+      "sha256": "2e4b8d6e90b4a4a962a96ae150a2369031e2c5b234a6943cb740643f13d4d2eb"
+    },
+    {
+      "path": "follow-delay-solve-0x1596e2c0.json",
+      "sha256": "fe46015ddab17443950c949151c7a8498435ac3dddfe699b608d1923b7292586"
+    },
+    {
+      "path": "follow-delay-solve-0x1596fd50.json",
+      "sha256": "9d6ad17e3e63a6b81686a81538769423fc2ad50fa099f98966854e528f02581f"
     },
     {
       "path": "follow-delay-solver-constructor.json",

@@ -189,8 +189,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 runtime.CurrentLineage.CompletionIdentity);
-            CharacterPoseNativePoseReadBinding source = sourcePose.Native;
-            CharacterPoseNativePoseReadBinding action = m_ActionPose.Native;
+            ref readonly CharacterPoseNativePoseReadBinding source = ref sourcePose.Native;
+            ref readonly CharacterPoseNativePoseReadBinding action = ref m_ActionPose.Native;
             if (!source.IsValid || !action.IsValid ||
                 source.Space != CharacterPoseSpace.Local ||
                 action.Space != CharacterPoseSpace.Local ||

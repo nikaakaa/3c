@@ -139,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_StatePose == null || !m_StatePose.Native.IsValid)
                 throw new InvalidOperationException(
                     $"StateMachine '{NodeId}' has no evaluated state Pose.");
-            CharacterPoseNativePoseReadBinding input = m_StatePose.Native;
+            ref readonly CharacterPoseNativePoseReadBinding input = ref m_StatePose.Native;
             if (input.Space != CharacterPoseSpace.Local ||
                 input.DenseLocalPoses.Length != m_OutputBuffer.BoneCount ||
                 input.PoseParameters.Length != m_OutputBuffer.ParameterCount)

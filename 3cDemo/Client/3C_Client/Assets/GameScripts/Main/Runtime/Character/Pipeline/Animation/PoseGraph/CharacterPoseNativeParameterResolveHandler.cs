@@ -375,7 +375,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeLocalPoseValue value,
             string branch)
         {
-            CharacterPoseNativePoseReadBinding binding = value.Native;
+            ref readonly CharacterPoseNativePoseReadBinding binding = ref value.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Local ||
                 binding.Availability[0] != AnimationPoseAvailability.Pose ||

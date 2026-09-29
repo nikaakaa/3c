@@ -800,7 +800,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void CopySingle(in CharacterPoseNativeLocalPoseValue value)
         {
-            CharacterPoseNativePoseReadBinding input = value.Native;
+            ref readonly CharacterPoseNativePoseReadBinding input = ref value.Native;
             AnimationPlayerPoseNativeWriteBinding output =
                 (m_PageIndex == 0
                     ? m_OutputBuffer
@@ -819,8 +819,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeLocalPoseValue source,
             in CharacterPoseNativeLocalPoseValue target)
         {
-            CharacterPoseNativePoseReadBinding sourcePose = source.Native;
-            CharacterPoseNativePoseReadBinding targetPose = target.Native;
+            ref readonly CharacterPoseNativePoseReadBinding sourcePose = ref source.Native;
+            ref readonly CharacterPoseNativePoseReadBinding targetPose = ref target.Native;
             if (sourcePose.Space != CharacterPoseSpace.Local ||
                 targetPose.Space != CharacterPoseSpace.Local ||
                 sourcePose.DenseLocalPoses.Length != targetPose.DenseLocalPoses.Length)

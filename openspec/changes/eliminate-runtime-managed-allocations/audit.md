@@ -1709,3 +1709,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Local/Component Native Pose 输出值的 `Native` 自动属性每次读取复制完整 read binding；binding 内含多份 native slice，Final Publication 在 Prepare 开头先复制一次再只读消费。
 - 两个输出值改用 backing field 保存 binding，`Native` 返回只读引用；构造与 Reuse/Refresh 仍保留一次必要写入。Final Publication 直接绑定同一 backing field，completion、space、availability、布局校验和后续 slice 读取不变。
 - 该改动删除 Final Publication 周期 Prepare 的整份 read binding 拷贝，并让后续 identity 读取不再复制。静态核对 binding 只在构造或 Refresh 写入、引用生命周期绑定输出值对象、Final 消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP232 Pose handler binding 局部引用化（2026-09-30，已实施，本轮未编译）
+
+- AP231 后 `Native` 已返回只读引用，但 Entry、Constraint、Blend、Additive、Layered、Inertialization、Motion Matching、Linked、Root Orientation、Modify Bone、Animation Slot、Parameter Resolve、StateMachine Handler/Source 仍把结果复制到按值局部。
+- 18 个只读局部改为 `ref readonly` 直接绑定输出值 backing field。各 handler 的校验顺序、写入目标、`in` 参数、返回值和异常文本不变；局部均无写入，方法结束时引用随目标对象生命周期释放。
+- 该改动删除周期 Pose 求值读取输入 binding 的重复结构拷贝。静态核对全部目标局部只读、未触碰其他窗口修改的 Graph Evaluator、返回拷贝保留；未编译、未采样，不能声称实测耗时收益。

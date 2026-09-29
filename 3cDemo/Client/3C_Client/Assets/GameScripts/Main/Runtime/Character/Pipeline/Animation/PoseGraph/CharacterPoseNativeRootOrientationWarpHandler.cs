@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireFrame();
             CharacterPoseNativeLocalPoseValue inputValue =
                 runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
-            CharacterPoseNativePoseReadBinding input = inputValue.Native;
+            ref readonly CharacterPoseNativePoseReadBinding input = ref inputValue.Native;
             if (!input.IsValid || input.Space != CharacterPoseSpace.Local ||
                 input.Availability[0] != AnimationPoseAvailability.Pose ||
                 input.CompletionIdentity != runtime.CurrentLineage.CompletionIdentity)

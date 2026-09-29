@@ -345,7 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
                 runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
-            CharacterPoseNativePoseReadBinding binding = input.Native;
+            ref readonly CharacterPoseNativePoseReadBinding binding = ref input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||
                 binding.Availability[0] != AnimationPoseAvailability.Pose ||
@@ -458,7 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
                 runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
-            CharacterPoseNativePoseReadBinding binding = input.Native;
+            ref readonly CharacterPoseNativePoseReadBinding binding = ref input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||
                 binding.Availability[0] != AnimationPoseAvailability.Pose ||
@@ -694,7 +694,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
                 runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
-            CharacterPoseNativePoseReadBinding binding = input.Native;
+            ref readonly CharacterPoseNativePoseReadBinding binding = ref input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||
                 binding.Availability[0] != AnimationPoseAvailability.Pose ||

@@ -131,7 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_SourcePose == null || !m_SourcePose.Native.IsValid)
                 throw new InvalidOperationException(
                     $"Motion Matching '{NodeId}' has no evaluated Pose.");
-            CharacterPoseNativePoseReadBinding input = m_SourcePose.Native;
+            ref readonly CharacterPoseNativePoseReadBinding input = ref m_SourcePose.Native;
             if (input.Space != CharacterPoseSpace.Local ||
                 input.DenseLocalPoses.Length != m_OutputBuffer.BoneCount ||
                 input.PoseParameters.Length != m_OutputBuffer.ParameterCount)

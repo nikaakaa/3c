@@ -124,6 +124,10 @@
       "sha256": "712b5100c6146273be2d5f0e77421b8c6728f08cddd4d5cbc5189cb8edcc98ae"
     },
     {
+      "path": "zoom-eligibility.json",
+      "sha256": "1a535cf4220f7c5e9053faa2ee6bd3f225e6b7a1dc7a774082d50233b44a9d1d"
+    },
+    {
       "path": "zoom-ended.json",
       "sha256": "d0038fa31be6084327fa506641d2a393a67fe15c4ab756cbda758d1622d45619"
     },

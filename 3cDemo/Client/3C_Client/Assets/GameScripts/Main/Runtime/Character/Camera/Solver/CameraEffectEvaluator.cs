@@ -11,6 +11,7 @@ namespace ThirdPersonCamera
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly CameraEffectRuntimeStateStore m_States;
         readonly ICameraEffectOwner[] m_Owners;
+        readonly CameraZoomEffectEvaluator m_Zoom;
         readonly List<CameraEffectContribution> m_Contributions;
         readonly ReadOnlyCollection<CameraEffectContribution> m_ContributionView;
         readonly List<PendingRetirement> m_PendingRetirements;
@@ -34,10 +35,11 @@ namespace ThirdPersonCamera
             m_VisibleStates = new List<CameraEffectRuntimeState>(capacity);
             m_CompletedEvents = new HashSet<CameraEffectEventKey>(capacity);
             m_CompletedToRemove = new List<CameraEffectEventKey>(capacity);
+            m_Zoom = new CameraZoomEffectEvaluator(projection);
             m_Owners = new ICameraEffectOwner[]
             {
                 new CameraOverrideEffectEvaluator(projection),
-                new CameraZoomEffectEvaluator(projection),
+                m_Zoom,
                 new CameraStretchEffectEvaluator(projection),
                 new CameraShakeEffectEvaluator(projection),
                 new CameraShotEffectEvaluator(projection)
@@ -54,6 +56,7 @@ namespace ThirdPersonCamera
         public void Reset()
         {
             m_States.Reset();
+            m_Zoom.Reset();
             m_Contributions.Clear();
             m_PendingRetirements.Clear();
             m_VisibleStates.Clear();

@@ -20,6 +20,9 @@ namespace ThirdPersonCamera
             ShakeSourceForward = default;
             ShakeDistance = 0f;
             ShakeEnvelope = 1f;
+            ZoomInitialized = false;
+            ZoomStartOffset = 0f;
+            ZoomTargetOffset = 0f;
         }
 
         public CameraEffectRequest Request { get; set; }
@@ -33,5 +36,8 @@ namespace ThirdPersonCamera
         public UnityEngine.Vector3 ShakeSourceForward;
         public float ShakeDistance;
         public float ShakeEnvelope;
+        public bool ZoomInitialized;
+        public float ZoomStartOffset;
+        public float ZoomTargetOffset;
     }
 }

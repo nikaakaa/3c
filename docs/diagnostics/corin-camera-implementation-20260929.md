@@ -125,3 +125,18 @@ Zoom 当前求值器尚只使用另一字段 `StackingType` 筛选，未消费 `
 实例生命周期尚有独立差异：`0x12BB4F70` 按 CameraConfigDataStacking 和 ValueVariationType 设置起始改变量、目标改变量与初始 FOV。其调用者 `0x11FE6090` 已定位：Base 传入 TargetCalcData.cameraFov（可由全局 FOV 栈正值覆盖）及上一帧 Base 改变量；Additive 传入 0 作为参考 FOV 及上一帧 Additive 改变量。当前求值已保留 Additive 的零参考，见 [初始化调用者](camera-basis-runtime-20260929/zoom-initialize-caller-0x11fe6090.json)。原作能继承组内当前改变量开始过渡；本项目仍使用既有包络／实例启动逻辑，尚未实现这项继承和全局 FOV 栈输入，不宣称 Zoom 的完整衔接已复刻。
 
 Unity 实际重载了新 `EvaluateOffset` 方法（3 个参数），编译后 Console 0 错误，18 项 Zoom 的正式 Profile 投影 Build/RequireValid 成功。只做源码、编译及投影检查；未运行 Play/replay，未新增测试。
+
+## Zoom 跨段起始值继承
+
+本批继续实现前节已定位的初始化合同。当前可琳 Zoom 的原始 CameraConfigDataStacking 均为 0，对应继承本组当前改变量：
+
+- `CameraZoomEffectEvaluator` 保存上一帧已选出的 Base／Additive 改变量。新实例初始化时读取所属组的值，保存起点及目标；本帧多个新实例使用同一份上一帧结果，不依赖本帧遍历到哪一项。
+- 绝对 FOV 的目标是配置值减去初始化时的参考 FOV；相对 FOV 的目标为继承起点加配置增量。Base 参考当前阶段输入 FOV，Additive 参考为 0。实例建立后不再随每帧基础 FOV 重算目标改变量。
+- 起始曲线在继承起点和目标改变量之间插值。保持期输出目标，正常退出向零插值。明确取消时按正式 RetireStartElapsed 采出取消点的改变量，再按 EndCurve／EndTime 退出。
+- `CameraEffectRuntimeState` 的三个 Zoom 字段随现有池槽 Reset 清空；`CameraEffectEvaluator.Reset` 同时清除 Zoom owner 的两组历史。没有新增每帧对象、容器或额外状态源。
+
+因此旧 Zoom 已造成 +2° 偏移时，新段可从 +2° 起步，避免新实例从零幅度起播造成的中间回落。这是源码行为说明，不是画面对照结果。
+
+Unity 编译与域重载完成，Console 0 错误；编辑器回读确认新 SampleOffset 方法、ZoomStartOffset 字段和 owner Reset 已加载，正式 Profile 投影 Build/RequireValid 通过。未运行 Play/replay，未新增测试。
+
+独立全局 FOV 覆盖栈尚未接入；本批使用现有相机阶段输入作为 Base 参考。原作其它实例接纳、优先级与资格规则仍需继续映射，不能把起始值继承完成等同于全部 Zoom 生命周期还原。新增资格函数 `0x12BB4AA0` 的完整指令保存为 [zoom-eligibility.json](camera-basis-runtime-20260929/zoom-eligibility.json)，本批未据未完成的字段映射改变资格行为。

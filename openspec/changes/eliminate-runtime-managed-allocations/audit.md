@@ -1264,3 +1264,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine 在 `PrepareEvaluation` 先由 `SynchronizeTransition` 调用 `CollectActiveStates`，随后又立即调用一次；同一 pending state/transition 在两次调用之间不变，每次都重复 state dictionary 查找和 active slot 排列。
 - `SynchronizeTransition` 改为接收已求得的 active state count；evaluation preparation 仍先调用一次收集，再用同一 count 做 phase 同步和子图准备。active states 内容、phase 同步阈值、异常时机和后续 Evaluate/Commit 语义不变。
 - 该改动删除同一准备阶段的重复 active state 收集；不在跨阶段引入缓存状态。静态核对 pending state/transition 的修改点、`CollectActiveStates` 排列和 PrepareEvaluation 调用顺序；未编译、未采样，不能声称实测耗时收益。
+
+### AP158 frame input 只读引用入口（2026-09-30，已实施，本轮未编译）
+
+- graph 与 role runtime 的 `CurrentInput` 按值返回 `CharacterPoseNativeFrameInput`；handler 每次直接读取 `ParameterFrame`、`FactFrame` 或 scalar 时都会先复制整份 readonly frame。字段在 BeginFrame 写入后整个帧阶段只被消费。
+- 两个 internal 属性改为返回 `ref readonly`，直接字段访问不再复制整份 frame；显式赋值给局部 frame 的调用仍按 C# 语义复制并保持多个字段消费方式不变。
+- 该改动统一 frame input 的正式只读入口，不新增第二数据源或可变写入路径。静态核对 `CharacterPoseNativeFrameInput` readonly struct、`m_FrameInput` 帧生命周期、两个 runtime 属性和现有直接访问/局部赋值调用；未编译、未采样，不能声称实测耗时收益。

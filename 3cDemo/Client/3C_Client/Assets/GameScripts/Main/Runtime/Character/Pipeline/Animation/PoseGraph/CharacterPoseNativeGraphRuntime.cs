@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsStarted => m_Started;
         internal bool HasOpenFrame => m_FrameLease.IsValid;
         internal CharacterPoseNativeFrameLineage CurrentLineage => m_CompletedLineage;
-        internal CharacterPoseNativeFrameInput CurrentInput => m_FrameInput;
+        internal ref readonly CharacterPoseNativeFrameInput CurrentInput => ref m_FrameInput;
 
         internal CharacterPoseNativeGraphPrepareResult PrepareChild(
             ulong requestId,

@@ -52,7 +52,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void Reset()
         {
             Count = 0;
-            Array.Clear(m_Scratch, 0, m_Scratch.Length);
         }
 
         internal void Add(CharacterAnimationBlendSpaceSampleId sampleId, float weight)
@@ -241,6 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool SolveLinear(CharacterAnimationBlendSpaceSolverPlan plan, float parameter, float[] weights)
         {
+            Array.Clear(weights, 0, plan.SampleCount);
             if (plan.SampleCount == 1)
             {
                 weights[0] = 1f;
@@ -328,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static bool Normalize(CharacterAnimationBlendSpaceSolverPlan plan, float[] weights, CharacterAnimationBlendSpaceWeightPage output)
         {
             float total = 0f;
-            for (int i = 0; i < weights.Length; i++)
+            for (int i = 0; i < plan.SampleCount; i++)
             {
                 if (!float.IsFinite(weights[i]) || weights[i] < 0f)
                     return false;
@@ -336,7 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (!float.IsFinite(total) || total <= 0f)
                 return false;
-            for (int i = 0; i < weights.Length; i++)
+            for (int i = 0; i < plan.SampleCount; i++)
             {
                 float normalized = weights[i] / total;
                 if (normalized > 0f)

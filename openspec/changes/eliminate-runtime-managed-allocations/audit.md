@@ -1582,3 +1582,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - committed sample history 在校验、window 重建、duplicate 检查、journal 身份校验、容量校验和最近 mutation 查找中把包含 raw sample 的 `Mutation` 按值复制为局部；多处直接索引还在同一迭代里重复读取元素。
 - 七个只读循环改为绑定 journal 数组的 `ref readonly` 元素。mutation 顺序、Sample upsert/remove 语义、prune、prepared entry 生命周期和异常文本不变；`WithHeader` 仍只在 append 时构造一次最终 journal 记录。
 - 该改动删除周期 mutation journal 消费链的重复结构拷贝；不新增缓存或第二 journal 数据源。静态核对全部循环只读、数组生命周期覆盖 active mutation lease、header 校验顺序不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP211 committed sample 排序引用化（2026-09-30，已实施，本轮未编译）
+
+- sample window 的插入排序每次比较把左右 raw sample 按值复制给比较器；顺序校验把前后样本各复制为局部后再只读字段。
+- 比较器边界改为 `in`，排序循环保持待插入样本的一次必要存储拷贝；顺序校验绑定前后数组元素只读引用。tick/sequence 排序键、重复检测、visual time 校验和异常文本不变。
+- 该改动删除 sample window 排序与校验中的读取拷贝；不改变插入排序的移位存储或窗口输出拷贝。静态核对唯一比较器调用、数组生命周期和比较器不写参数；未编译、未采样，不能声称实测耗时收益。

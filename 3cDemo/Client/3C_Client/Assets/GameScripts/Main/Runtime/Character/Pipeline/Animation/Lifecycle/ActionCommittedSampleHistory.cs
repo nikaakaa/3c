@@ -697,7 +697,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ActionCommittedRawSample value = samples[i];
                 int index = i - 1;
                 while (index >= 0 &&
-                       CompareSamples(samples[index], value) > 0)
+                       CompareSamples(in samples[index], in value) > 0)
                 {
                     samples[index + 1] = samples[index];
                     index--;
@@ -707,8 +707,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         static int CompareSamples(
-            ActionCommittedRawSample left,
-            ActionCommittedRawSample right)
+            in ActionCommittedRawSample left,
+            in ActionCommittedRawSample right)
         {
             int tick = left.LocalLogicTick.CompareTo(right.LocalLogicTick);
             return tick != 0
@@ -723,8 +723,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = 1; i < count; i++)
             {
-                ActionCommittedRawSample previous = samples[i - 1];
-                ActionCommittedRawSample current = samples[i];
+                ref readonly ActionCommittedRawSample previous =
+                    ref samples[i - 1];
+                ref readonly ActionCommittedRawSample current =
+                    ref samples[i];
                 if (previous.LocalLogicTick == current.LocalLogicTick &&
                     previous.CommittedSequence == current.CommittedSequence)
                 {

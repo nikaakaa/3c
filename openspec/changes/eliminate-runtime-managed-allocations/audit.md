@@ -1040,10 +1040,10 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Fixed/Float32 `CharacterActionRuntimeState` 现在各自持有 `InstanceId -> index` 定容字典。`AddActionInstance`、`ReplaceActionInstanceAt` 同步维护；`Restart`/`Restore` 整表替换后重建并在重建时拒绝重复正式身份。索引是 Action state 的正式读取结构，不是 Store 侧缓存或兼容旁路。
 - 两域 Store 的三条实例查找改为一次字典访问；`RequireActive`、`RequireActiveTransient`、`RequireActive(FixedActionInstanceReference)` 等调用沿用原状态检查和语义。按 Context/Skill/请求匹配的扫描保留，因为它们不是唯一身份查找。静态核对两域接口唯一实现、状态事务克隆、Restore 和 Store 写入链；未编译、未采样。
 
-### AP121 Pose 约束结果重复校验收敛（2026-09-30，已实施，本轮未编译）
+### AP121 Pose 约束结果重复校验收敛（2026-09-30，已实施，本轮静态修复重载缺陷）
 
 - capture.20260929-164123 的已解析 CPU 热点中，`CharacterPoseConstraintMath.TryCreateComponent` 约 0.432%、`AnimationLocalBonePose` 构造约 0.251%、`AnimationLocalBonePose.get_IsValid` 约 0.359%。这些函数位于 Pose 空间转换、Modify Bone 重建和虚拟骨骼派生链。
-- `TryCreateComponent` 先检查组合结果的 position、rotation、scale finite 和四元数非零，随后公共 `CharacterComponentBonePose` 构造器再次执行同一组检查。现在在原检查点完成校验后直接归一化，并用内部 `normalizedRotation` 构造器写入最终页；公共构造器继续保留外部输入校验和归一化合同。
+- `TryCreateComponent` 先检查组合结果的 position、rotation、scale finite 和四元数非零，随后公共 `CharacterComponentBonePose` 构造器再次执行同一组检查。现在在原检查点完成校验后直接归一化，并写入最终页；公共构造器继续保留外部输入校验和归一化合同。静态复查发现原先按同签名构造器表达内部入口会造成 C# 重载冲突，已改为 `CreateNormalized` 静态工厂并修正调用点。
 - `TryCreateLocal` 的 `AnimationLocalBonePose` 构造器会在结果非法时抛出异常，成功后原代码又调用 `local.IsValid` 重复执行同一 finite/非零检查。现在构造成功即返回 `true`，调用方的异常路径和输出局部姿态不变。
 - 该改动减少 PoseGraph 每骨骼转换链中的重复浮点检查和二次 `IsValid` 调用；不删除归一化，不改变无效输入失败语义、输出页身份或 Commit/Discard 时序。静态核对 NativeArray 转换、Modify Bone 派生和虚拟骨骼调用链；未编译、未采样，不能声称实测耗时收益。
 

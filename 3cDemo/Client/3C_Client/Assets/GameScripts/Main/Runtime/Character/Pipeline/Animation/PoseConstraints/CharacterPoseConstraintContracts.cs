@@ -614,7 +614,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Scale = scale;
         }
 
-        internal CharacterComponentBonePose(
+        internal static CharacterComponentBonePose CreateNormalized(
             Vector3 position,
             Quaternion normalizedRotation,
             Vector3 scale)
@@ -750,7 +750,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return false;
             }
-            component = new CharacterComponentBonePose(position, rotation.normalized, scale);
+            component = CharacterComponentBonePose.CreateNormalized(
+                position,
+                rotation.normalized,
+                scale);
             return true;
         }
 

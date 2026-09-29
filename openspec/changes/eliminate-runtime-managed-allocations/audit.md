@@ -1925,3 +1925,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing query result 的 Support 和 SelectionDiagnostics 自动属性先复制到 PredictEvent 局部，再复制进 prediction result；ObservationDiagnostics、Query、Support 和 SelectionDiagnostics 进入 result 构造时按值传参造成额外拷贝。
 - Query result 两个聚合属性改为 backing field 只读引用；prediction result 构造的四个聚合参数改为 `in` 接收。PredictEvent 删除 support/query selection 局部并直接引用传参，rejected result 直接传 query 引用。
 - 该改动删除每脚 landing query 聚合结果进入 prediction result 的重复拷贝。静态核对 query result 为 readonly struct、prediction result 字段仍保留必要落点、rejected 值不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP268 Ground path contact 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Ground path contact page 的内部 `ContactAt`、result 转发和 envelope 循环每次复制一个 ground contact；world query 后端按索引校验 surface 时也复制 contact。
+- 内部 contact 读取和 GroundPath result 转发改返回只读引用；envelope 构建引用绑定。公共 diagnostics `ContactAt` 仍按值返回，contact 数组写入和排序规则不变。
+- 该改动删除 ground path 构建 envelope 和 world query 校验周期内每 contact 的重复拷贝。静态核对 contact 为 readonly struct、数组仍由 contact page 独占、消费只读；未编译、未采样，不能声称实测耗时收益。

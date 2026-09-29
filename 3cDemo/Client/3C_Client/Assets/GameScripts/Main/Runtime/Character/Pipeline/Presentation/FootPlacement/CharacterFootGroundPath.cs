@@ -171,11 +171,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterFootGroundContact this[int index] => ContactAt(index);
 
-        internal CharacterFootGroundContact ContactAt(int index)
+        internal ref readonly CharacterFootGroundContact ContactAt(int index)
         {
             if ((uint)index >= (uint)Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Contacts[index];
+            return ref m_Contacts[index];
         }
 
         internal void Clear()
@@ -769,8 +769,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int EnvelopeVertexCount => Page.Envelope.Count;
         internal bool Accepted => State == CharacterFootGroundPathState.Accepted;
 
-        internal CharacterFootGroundContact ContactAt(int index) =>
-            Page.Contacts.ContactAt(index);
+        internal ref readonly CharacterFootGroundContact ContactAt(int index) =>
+            ref Page.Contacts.ContactAt(index);
 
         internal CharacterFootGroundEnvelopeVertex EnvelopeVertexAt(int index) =>
             Page.Envelope.VertexAt(index);

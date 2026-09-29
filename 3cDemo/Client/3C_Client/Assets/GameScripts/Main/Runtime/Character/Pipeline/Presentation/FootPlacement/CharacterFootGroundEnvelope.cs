@@ -283,7 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 forward = horizontal / pathLength;
             for (int i = 0; i < contacts.Count; i++)
             {
-                CharacterFootGroundContact contact = contacts.ContactAt(i);
+                ref readonly CharacterFootGroundContact contact =
+                    ref contacts.ContactAt(i);
                 if (!TryProjectContact(
                         in contact,
                         input.LastLanding,

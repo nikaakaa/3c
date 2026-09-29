@@ -126,11 +126,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int ContactCount { get; private set; }
         internal int ProfileCount { get; private set; }
 
-        internal CharacterFootGroundEnvelopeCandidate ContactAt(int index) =>
-            m_Contacts[index];
+        internal ref readonly CharacterFootGroundEnvelopeCandidate ContactAt(int index) =>
+            ref m_Contacts[index];
 
-        internal CharacterFootGroundEnvelopeCandidate ProfileAt(int index) =>
-            m_Profile[index];
+        internal ref readonly CharacterFootGroundEnvelopeCandidate ProfileAt(int index) =>
+            ref m_Profile[index];
 
         internal void SetProfile(int index, in CharacterFootGroundEnvelopeCandidate value) =>
             m_Profile[index] = value;
@@ -216,11 +216,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterFootGroundEnvelopeVertex this[int index] => VertexAt(index);
 
-        internal CharacterFootGroundEnvelopeVertex VertexAt(int index)
+        internal ref readonly CharacterFootGroundEnvelopeVertex VertexAt(int index)
         {
             if ((uint)index >= (uint)Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Vertices[index];
+            return ref m_Vertices[index];
         }
 
         internal void Clear()
@@ -413,8 +413,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             for (int i = 0; i + 1 < workspace.ContactCount; i++)
             {
-                CharacterFootGroundEnvelopeCandidate current = workspace.ContactAt(i);
-                CharacterFootGroundEnvelopeCandidate next = workspace.ContactAt(i + 1);
+                ref readonly CharacterFootGroundEnvelopeCandidate current =
+                    ref workspace.ContactAt(i);
+                ref readonly CharacterFootGroundEnvelopeCandidate next =
+                    ref workspace.ContactAt(i + 1);
                 CharacterFootGroundEnvelopeCandidate value = TryIntersect(
                     in current,
                     in next,
@@ -426,8 +428,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return false;
             }
 
-            CharacterFootGroundEnvelopeCandidate lastContact =
-                workspace.ContactAt(workspace.ContactCount - 1);
+            ref readonly CharacterFootGroundEnvelopeCandidate lastContact =
+                ref workspace.ContactAt(workspace.ContactCount - 1);
             if (!workspace.TryAddProfile(in lastContact))
                 return false;
 
@@ -512,16 +514,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     groupEnd++;
                 }
 
-                CharacterFootGroundEnvelopeCandidate highest = workspace.ProfileAt(read);
+                ref readonly CharacterFootGroundEnvelopeCandidate highest =
+                    ref workspace.ProfileAt(read);
                 CharacterFootGroundEnvelopeCandidate start = default;
                 CharacterFootGroundEnvelopeCandidate end = default;
                 bool hasStart = false;
                 bool hasEnd = false;
                 for (int i = read; i < groupEnd; i++)
                 {
-                    CharacterFootGroundEnvelopeCandidate value = workspace.ProfileAt(i);
+                    ref readonly CharacterFootGroundEnvelopeCandidate value =
+                        ref workspace.ProfileAt(i);
                     if (value.Height > highest.Height)
-                        highest = value;
+                        highest = ref value;
                     if (value.Endpoint == 1)
                     {
                         start = value;
@@ -556,8 +560,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             workspace.ReplaceProfileCount(write);
             if (write < 2)
                 return false;
-            CharacterFootGroundEnvelopeCandidate first = workspace.ProfileAt(0);
-            CharacterFootGroundEnvelopeCandidate last = workspace.ProfileAt(write - 1);
+            ref readonly CharacterFootGroundEnvelopeCandidate first =
+                ref workspace.ProfileAt(0);
+            ref readonly CharacterFootGroundEnvelopeCandidate last =
+                ref workspace.ProfileAt(write - 1);
             return first.Endpoint == 1 && last.Endpoint == 2 &&
                    Mathf.Abs(first.Distance) <= GeometryEpsilon &&
                    Mathf.Abs(last.Distance - pathLength) <= GeometryEpsilon;
@@ -573,7 +579,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             for (int i = 0; i < workspace.ProfileCount; i++)
             {
-                CharacterFootGroundEnvelopeCandidate value = workspace.ProfileAt(i);
+                ref readonly CharacterFootGroundEnvelopeCandidate value =
+                    ref workspace.ProfileAt(i);
                 Vector3 position = value.Endpoint == 1
                     ? origin
                     : value.Endpoint == 2
@@ -581,8 +588,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         : origin + forward * value.Distance + up * value.Height;
                 while (output.Count >= 2)
                 {
-                    Vector3 first = output.VertexAt(output.Count - 2).Position - origin;
-                    Vector3 second = output.VertexAt(output.Count - 1).Position - origin;
+                    ref readonly CharacterFootGroundEnvelopeVertex firstVertex =
+                        ref output.VertexAt(output.Count - 2);
+                    ref readonly CharacterFootGroundEnvelopeVertex secondVertex =
+                        ref output.VertexAt(output.Count - 1);
+                    Vector3 first = firstVertex.Position - origin;
+                    Vector3 second = secondVertex.Position - origin;
                     float firstDistance = Vector3.Dot(first, forward);
                     float firstHeight = Vector3.Dot(first, up);
                     float secondDistance = Vector3.Dot(second, forward);

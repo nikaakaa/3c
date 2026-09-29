@@ -1949,3 +1949,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground path input 的 Key 和 Query 自动属性每次读取复制完整 landing identity key 或 ground query request；committed input 复用判定、surface visibility 匹配、world query 入口和 diagnostics 会重复读取。
 - Key 和 Query 改为 backing field 只读引用。world query 直接引用 input.Query，surface visibility 显式引用匹配请求；committed key 判定和 result 派生字段读取同一 backing field。
 - 该改动删除 ground path 输入进入查询、复用判定和 surface visibility 的重复拓扑/参数拷贝。静态核对 input 为 readonly struct、key/query 值和查询结果不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP272 Ground envelope candidate 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Ground envelope workspace 的 ContactAt、ProfileAt 和 page 的 VertexAt 每次读取复制候选或顶点；surface profile、distance collapse、upper hull 和 swing sampling 会逐点重复读取。
+- 内部候选、profile 和 vertex 访问改返回只读引用，GroundPath result 的内部 vertex 转发同步引用；surface profile、collapse 和 upper hull 的循环绑定引用，collapse 的 highest 直接在只读引用间选择。公共 diagnostics 访问仍按值返回。
+- 该改动删除 Foot Placement ground envelope 构建和 swing 采样周期内每候选/顶点的重复拷贝。静态核对两个类型为 readonly struct、workspace/page 数组独占存储、消费只读、排序与 hull 决策不变；未编译、未采样，不能声称实测耗时收益。

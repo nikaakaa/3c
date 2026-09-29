@@ -777,8 +777,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ref readonly CharacterFootGroundContact ContactAt(int index) =>
             ref Page.Contacts.ContactAt(index);
 
-        internal CharacterFootGroundEnvelopeVertex EnvelopeVertexAt(int index) =>
-            Page.Envelope.VertexAt(index);
+        internal ref readonly CharacterFootGroundEnvelopeVertex EnvelopeVertexAt(int index) =>
+            ref Page.Envelope.VertexAt(index);
     }
 
 

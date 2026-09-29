@@ -996,6 +996,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.timeline")]
         internal void Present(in GameplayPresentationFrameContext context, IActionPresentationClockCoordinator clock,
             in Float32PresentationGraphFacts facts)
         {
@@ -1042,6 +1043,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.timeline.commit")]
         internal void CommitPresentationFrame(ulong frame, IActionPresentationClockCoordinator clock)
         {
             for (int i = 0; i < m_PresentationCandidates.Count; i++)

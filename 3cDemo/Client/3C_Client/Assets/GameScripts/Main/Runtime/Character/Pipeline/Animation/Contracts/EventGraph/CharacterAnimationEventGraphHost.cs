@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ulong ResetGeneration => m_Runtime.ResetGeneration;
         public CharacterAnimationVariableFrame LastFrame => m_LastFrame;
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.event-graph")]
         internal CharacterAnimationVariableUpdateResult Update(
             in CharacterPresentationFactFrame factFrame,
             float animationDeltaSeconds,

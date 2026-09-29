@@ -161,6 +161,7 @@ namespace ThirdPersonSimulation.Fixed
             return m_Control.Remove(request);
         }
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("simulation.gameplay-effect.advance")]
         public void Advance()
         {
             m_Control.Advance();

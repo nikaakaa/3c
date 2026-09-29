@@ -84,6 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_HasPendingSelections = true;
         }
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.equipment")]
         internal void Present()
         {
             RequireAlive();

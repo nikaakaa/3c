@@ -193,6 +193,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public static class SimulationWorldSnapshotFactory
     {
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("simulation.snapshot.world-capture")]
         public static SimulationWorldSnapshot Capture(
             FixedCharacterRuntime characterRuntime,
             SimulationTick tick,

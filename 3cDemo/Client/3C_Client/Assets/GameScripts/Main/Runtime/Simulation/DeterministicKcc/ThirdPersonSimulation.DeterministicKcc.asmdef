@@ -2,6 +2,7 @@
     "name": "ThirdPersonSimulation.DeterministicKcc",
     "rootNamespace": "ThirdPersonSimulation.DeterministicKcc",
     "references": [
+        "ThirdPerson.Performance.Instrumentation.Contracts",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed"
     ],

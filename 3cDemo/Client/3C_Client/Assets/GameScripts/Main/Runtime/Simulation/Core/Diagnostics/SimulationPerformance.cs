@@ -20,7 +20,11 @@ namespace ThirdPersonSimulation
             Metric("simulation.pipeline.state-publish", "ThirdPerson.Simulation.Pipeline.StatePublish", "simulation.pipeline.transaction", PerformanceSampleScope.LogicTick),
             Metric("simulation.pipeline.external-commit", "ThirdPerson.Simulation.Pipeline.ExternalCommit", "simulation.pipeline.transaction", PerformanceSampleScope.LogicTick),
             Metric("simulation.pipeline.step-other", "ThirdPerson.Simulation.Pipeline.StepOther", "simulation.pipeline.transaction", PerformanceSampleScope.LogicTick),
-            Metric("simulation.operation.ability-tick", "ThirdPerson.Simulation.Operation.AbilityTick", "simulation.pipeline.evaluate", PerformanceSampleScope.LogicTick)
+            Metric("simulation.operation.ability-tick", "ThirdPerson.Simulation.Operation.AbilityTick", "simulation.pipeline.evaluate", PerformanceSampleScope.LogicTick),
+            Metric("simulation.character.evaluate", "ThirdPerson.Simulation.Character.Evaluate", "simulation.pipeline.evaluate", PerformanceSampleScope.LogicTick),
+            Metric("simulation.gameplay-effect.advance", "ThirdPerson.Simulation.GameplayEffect.Advance", "simulation.character.evaluate", PerformanceSampleScope.LogicTick),
+            Metric("simulation.snapshot.world-capture", "ThirdPerson.Simulation.Snapshot.WorldCapture", string.Empty, PerformanceSampleScope.LogicTick),
+            Metric("simulation.world.kcc", "ThirdPerson.Simulation.World.Kcc", "simulation.pipeline.world-resolve", PerformanceSampleScope.LogicTick)
         };
 
         public static IReadOnlyList<PerformanceMetricDefinition> All => s_All;

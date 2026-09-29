@@ -26,6 +26,10 @@ Span 是同步方法进入和退出时的单调计时差值，包含被系统抢
 
 ## Pose 覆盖
 
+业务覆盖与旧采集完整指标见 [性能探针覆盖记录](../../docs/diagnostics/performance-coverage-20260929.md)。2026-09-29 新增 EventGraph、Timeline 采样/提交、Camera、装备表现、两域角色评估/GE 周期推进/世界快照，以及 KCC 批求解探针声明；KCC 同步进入织入程序集名单。这些新增入口尚未经过构建或采样验证，旧报告没有对应数据。Span 当前仅记录耗时，GC 仍是整帧计数，不能按业务阶段归因。
+
+报告应列出 Summary 的全部指标及调用点无样本范围，同时列明尚未插桩的模块。新增目录将改变探针身份，必须由新 Player 的 instrumentation manifest 确认实际覆盖；不同探针身份不绕过正式比较门禁。
+
 `presentation.animation` 包围表现事务，下面分为 Pose Prepare、Evaluate、Commit，以及 Source Barrier。Evaluate 下另有 Foot Placement 和 FullBodyIK 探针。Source Barrier 包含资源验证、回收准备和后端 Evaluate，不是纯骨骼计算时间。没有实际探针的旧阶段从指标目录删除；新增阶段要同时增加所属目录定义和方法声明。
 
 当前合同为 player/3、capture/3、summary/4、comparison/2、analysis-request/2、analysis/2；跨度使用 spans/2 和 layout revision 2。旧报告不进入当前比较，需要重新构建 Player 并使用当前 Controller 采集；旧证据保留原样。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。

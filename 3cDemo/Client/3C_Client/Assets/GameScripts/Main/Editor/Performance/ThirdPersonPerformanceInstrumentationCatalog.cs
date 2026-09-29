@@ -20,6 +20,7 @@ namespace ThirdPersonPerformance.Editor
             "ThirdPersonSimulation.Core",
             "ThirdPersonSimulation.Fixed",
             "ThirdPersonSimulation.Float32",
+            "ThirdPersonSimulation.DeterministicKcc",
             "ThirdPersonSimulation.Unity"
         };
 

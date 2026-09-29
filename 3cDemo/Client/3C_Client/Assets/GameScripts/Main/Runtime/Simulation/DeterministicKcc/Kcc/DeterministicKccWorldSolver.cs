@@ -187,6 +187,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         public void Restore(WorldSimulationState state) => Reconstruct(state);
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("simulation.world.kcc")]
         public WorldSolveBatchResult ResolveBatch(
             WorldSolveBatchRequest request,
             ISimulationDiagnosticsSink diagnostics)

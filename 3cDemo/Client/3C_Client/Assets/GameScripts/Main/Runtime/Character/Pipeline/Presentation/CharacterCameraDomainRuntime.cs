@@ -353,6 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingResetReason = CameraResetReason.Initialization;
         }
 
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.camera")]
         internal void Present(
             CharacterBodyPresentationFrame bodyFrame,
             in GameplayPresentationFrameContext context)

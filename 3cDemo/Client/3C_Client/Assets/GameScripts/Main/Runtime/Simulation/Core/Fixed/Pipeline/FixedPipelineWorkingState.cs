@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
             Identity = SimulationIdentity.Require(identity, nameof(identity));
             m_Previous = working.Current;
             m_Restored = restored;
-            m_RestoreHash = SimulationCanonicalPayloadHash.Compute(WorldSimulationStateCodec.Write(restored.WorldState));
+            m_RestoreHash = WorldSimulationStateCodec.ComputeHash(restored.WorldState);
         }
 
         public SimulationSessionRestoreParticipantKind Kind => SimulationSessionRestoreParticipantKind.World;
@@ -180,7 +180,7 @@ namespace ThirdPersonSimulation.Fixed
             if (!m_Applied || !ReferenceEquals(m_Working.Current, m_Restored))
                 throw new InvalidOperationException("World restore transaction is not fully applied.");
             WorldSimulationState captured = m_Solver.Capture(m_Restored.WorldState.WorldRevision);
-            StableHash capturedHash = SimulationCanonicalPayloadHash.Compute(WorldSimulationStateCodec.Write(captured));
+            StableHash capturedHash = WorldSimulationStateCodec.ComputeHash(captured);
             if (!capturedHash.Equals(m_RestoreHash))
                 throw new InvalidOperationException("World Solver state does not match the restored canonical World state.");
             m_Validated = true;

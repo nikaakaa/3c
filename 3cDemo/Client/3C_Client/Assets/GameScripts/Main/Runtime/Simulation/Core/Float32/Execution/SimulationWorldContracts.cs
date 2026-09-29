@@ -519,7 +519,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(RequestCanonicalIdentity);
             SimulationNumericProfileCodec.Write(writer, request.NumericProfile);
             writer.WriteUInt64(request.Tick.Value);
-            writer.WriteBytes(WorldSimulationStateCodec.Write(request.BeforeWorldState));
+            WorldSimulationStateCodec.WriteLengthPrefixed(writer, request.BeforeWorldState);
             writer.WriteUInt64((ulong)request.RequiredCapabilities);
             writer.WriteInt32(request.Requests.Count);
             for (int i = 0; i < request.Requests.Count; i++)
@@ -535,7 +535,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(result.Tick.Value);
             writer.WriteString(result.SolverId.Value);
             writer.WriteString(result.SolverVersion);
-            writer.WriteBytes(WorldSimulationStateCodec.Write(result.NextWorldState));
+            WorldSimulationStateCodec.WriteLengthPrefixed(writer, result.NextWorldState);
             writer.WriteInt32(result.Results.Count);
             for (int i = 0; i < result.Results.Count; i++)
                 WriteResult(writer, result.Results[i]);

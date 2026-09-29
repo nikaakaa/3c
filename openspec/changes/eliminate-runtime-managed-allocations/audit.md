@@ -456,6 +456,14 @@
 - payload 比较使用项目已使用的 ReadOnlySpan.SequenceEqual，删除唯一调用的手写逐字节 BytesEqual；长度及内容相等规则不变，不新增缓存或数组。没有将仅哈希相等、相同Tick或同版本当成状态相等。
 - 同实例路径省去随角色和序列化字节数增长的重复比较，不据源码推断实际命中率。静态核对状态持有方式、固定 Body 相等字段、空值分支和不同实例路径；未编译、回放或采样，未更改状态隔离、恢复校验和脚步预测。
 
+### AP53 世界状态哈希重复生成中间序列化数组（2026-09-29，已实施，未运行）
+
+- Fixed／Float32 的 WorldSolveBatchCodec 在请求和结果哈希中调用 WorldSimulationStateCodec.Write，先创建内层 CanonicalWriter 及其缓冲、ToArray 生成独立数组，再由外层 WriteBytes 复制整段世界状态。该数组只用于这次哈希，没有快照持有者。
+- 两域 WorldSimulationStateCodec 增加内部 WriteLengthPrefixed：使用已有 BeginLengthPrefixedBlock，调用唯一的 WriteCanonical，随后 EndLengthPrefixedBlock 回填长度。请求和结果直接写入各自原有 writer，删除内层 writer、缓冲、ToArray 数组及中间复制；没有新增序列化格式或另一套字段编码。
+- 原格式为小端 Int32 长度后接规范世界状态，回填长度为当前编码结束位置减起始位置再减4。WriteCanonical 不写绝对偏移，Magic/Version、字段顺序、数值编码、名单顺序和 payload 均未改变；请求/结果接收边界已确认世界状态非空，内部不重复检查。编码失败不会发布哈希。
+- 恢复事务的目标/捕获状态校验、启动世界状态身份改用已有 WorldSimulationStateCodec.ComputeHash，直接对编码缓冲有效范围运行同一个 SimulationCanonicalPayloadHash.Compute。恢复校验和 SHA-256 算法保留，仅省去 ToArray；这部分发生在恢复或启动阶段，不混作周期收益。
+- 真正持有独立字节的世界快照及预测协调器仍调用 Write；外层 writer/缓冲扩容、哈希对象及哈希字符串分配仍存在，不宣称整条链0 GC。静态核对两域全部变更、长度前缀回填、哈希入口与剩余 Write 调用，差异检查通过；未编译、执行字节对比、回放或采样，未改世界求解算法和脚步预测。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

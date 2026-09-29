@@ -174,6 +174,13 @@ namespace ThirdPersonSimulation
             return writer.ComputeHash();
         }
 
+        internal static void WriteLengthPrefixed(CanonicalWriter writer, WorldSimulationState state)
+        {
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
+            WriteCanonical(writer, state);
+            writer.EndLengthPrefixedBlock(prefixPosition);
+        }
+
         static void WriteCanonical(CanonicalWriter writer, WorldSimulationState state)
         {
             writer.WriteUInt32(Magic);

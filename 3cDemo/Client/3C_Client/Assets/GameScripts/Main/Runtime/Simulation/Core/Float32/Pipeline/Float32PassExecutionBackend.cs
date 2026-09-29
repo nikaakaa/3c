@@ -239,8 +239,7 @@ namespace ThirdPersonSimulation
                 SimulationInitialStateKind.World,
                 "float32-world-state",
                 1,
-                SimulationCanonicalPayloadHash.Compute(
-                    WorldSimulationStateCodec.Write(request.InitialState.WorldState))));
+                WorldSimulationStateCodec.ComputeHash(request.InitialState.WorldState)));
             states.Add(new SimulationInitialStateIdentity(
                 SimulationInitialStateKind.Pipeline,
                 "simulation-pipeline-state",

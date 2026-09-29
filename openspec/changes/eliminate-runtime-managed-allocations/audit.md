@@ -1072,3 +1072,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Fixed 与 Float32 `ActionStateStore` 的 `m_EvaluatedActions` 按 `InstanceId` 保存 Timeline motion 仍需消费的动作快照；`RetainEvaluatedAction` 在每次 `EnterSkillExecution` 和 `BindSkillExecution` 后线性查找替换点，`TryGetEvaluatedInstance` 再线性查找读取。
 - 两域 Store 增加构造期 `InstanceId -> list index` 字典，保留、读取和评估结束清理同步维护列表与索引。正式 InstanceId 唯一，替换原位置，新增写入列表尾部索引；`EndEvaluation` 同时清空列表和索引。
 - Timeline motion 的延迟读取从 evaluated action 数量级扫描收敛为一次 ulong 哈希查找，且不新增周期分配或第二动作数据源。静态核对两域保留、读取、清理和 Timeline 消费调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP126 FullBodyIK effector 正式索引（2026-09-30，已实施，本轮未编译）
+
+- capture.20260929-164123 中 FBBIK `SetComponentRotation` 约 0.240% CPU 样本。FullBodyIK 每处理一个 goal 都执行 `CharacterFullBodyIkEffectorSlot -> FullBodyBipedEffector` switch，再调用 FinalIK 的 `GetEffector` 二次 switch。这些映射由 rig 和 `SetToIndexedReferences` 一次建立，运行帧内不变化。
+- `CharacterFinalIkFullBodySolver` 在 `Prepare` 建立 references 后，把 9 个正式 effector 引用按业务 slot 写入定容数组；goal 应用、pre-solve 旋转、identity 判定、求解校验和诊断读取改为一次 slot 数组访问。`Prepare` 失败仍保持 `m_Prepared=false`，已缓存引用不会进入求解路径。
+- 该改动减少 goal 处理中的重复枚举映射和 vendor 查找，不改变 goal 验证、应用顺序、输出页、Commit/Discard 或诊断内容。静态核对 FinalIK `GetEffector` 返回稳定引用和 5 个运行时读取点；未编译、未采样，不能声称实测耗时收益。

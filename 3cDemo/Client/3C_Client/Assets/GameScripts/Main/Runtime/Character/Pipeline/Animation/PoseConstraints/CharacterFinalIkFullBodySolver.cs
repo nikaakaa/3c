@@ -181,6 +181,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFinalIkPoseBufferBackend m_Backend;
         readonly IndexedBipedReferences m_References;
         readonly IKSolverFullBodyBiped m_Solver = new IKSolverFullBodyBiped();
+        readonly IKEffector[] m_Effectors =
+            new IKEffector[(int)CharacterFullBodyIkEffectorSlot.RightFoot + 1];
         CharacterFullBodyIkBendReference m_BendReference;
         readonly CharacterFullBodyIkEffectorDiagnostics[] m_DiagnosticEffectors =
             new CharacterFullBodyIkEffectorDiagnostics[CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
@@ -300,6 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             try
             {
                 m_Solver.SetToIndexedReferences(m_Backend, m_References);
+                CacheEffectors();
                 ApplyProfile();
                 IKConstraintBend left = m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg);
                 IKConstraintBend right = m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg);
@@ -580,7 +583,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void ApplyEffectorGoal(CharacterFullBodyIkGoal goal)
         {
-            IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+            IKEffector effector = m_Effectors[(int)goal.Slot];
             switch (goal.Application)
             {
                 case CharacterFullBodyIkGoalApplication.AbsoluteEffectorTarget:
@@ -622,7 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
                 IKEffector effector =
-                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                    m_Effectors[(int)goal.Slot];
                 Quaternion current =
                     m_Backend.GetComponentRotation(effector.boneHandle);
                 Quaternion offset =
@@ -657,7 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
                 IKEffector effector =
-                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                    m_Effectors[(int)goal.Slot];
                 bool positionUnchanged =
                     goal.PositionWeight <= CharacterPoseConstraintMath.Epsilon ||
                     (goal.ComponentPosition -
@@ -1047,7 +1050,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
                 IKEffector effector =
-                    m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                    m_Effectors[(int)goal.Slot];
                 Vector3 solverPosition =
                     effector.GetNode(m_Solver).solverPosition;
                 Vector3 solvedPosition =
@@ -1151,8 +1154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     else
                     {
                         IKEffector effector =
-                            m_Solver.GetEffector(
-                                ToFinalIkEffector(goal.Slot));
+                            m_Effectors[(int)goal.Slot];
                         solvedPosition =
                             m_Backend.GetComponentPosition(
                                 effector.boneHandle);
@@ -1468,6 +1470,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 case CharacterFullBodyIkEffectorSlot.RightFoot: return FullBodyBipedEffector.RightFoot;
                 default: throw new ArgumentOutOfRangeException(nameof(slot));
             }
+        }
+
+        void CacheEffectors()
+        {
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.Body] =
+                m_Solver.GetEffector(FullBodyBipedEffector.Body);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.LeftShoulder] =
+                m_Solver.GetEffector(FullBodyBipedEffector.LeftShoulder);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.RightShoulder] =
+                m_Solver.GetEffector(FullBodyBipedEffector.RightShoulder);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.LeftThigh] =
+                m_Solver.GetEffector(FullBodyBipedEffector.LeftThigh);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.RightThigh] =
+                m_Solver.GetEffector(FullBodyBipedEffector.RightThigh);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.LeftHand] =
+                m_Solver.GetEffector(FullBodyBipedEffector.LeftHand);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.RightHand] =
+                m_Solver.GetEffector(FullBodyBipedEffector.RightHand);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.LeftFoot] =
+                m_Solver.GetEffector(FullBodyBipedEffector.LeftFoot);
+            m_Effectors[(int)CharacterFullBodyIkEffectorSlot.RightFoot] =
+                m_Solver.GetEffector(FullBodyBipedEffector.RightFoot);
         }
 
         static FBIKChain.Smoothing ToFinalIkSmoothing(CharacterFullBodyIkSmoothing smoothing)

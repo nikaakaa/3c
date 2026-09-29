@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 command);
             int insertion = m_Count;
             while (insertion > 0 &&
-                   CompareCommands(m_Entries[insertion - 1], entry) > 0)
+                   CompareCommands(in m_Entries[insertion - 1], in entry) > 0)
             {
                 m_Entries[insertion] = m_Entries[insertion - 1];
                 insertion--;
@@ -135,8 +135,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Publish(replacement);
                 return;
             }
-            ActionPlaybackInboxEntry current = m_Entries[index];
-            ActionAnimationPlaybackCommand currentCommand = current.Command;
+            ref readonly ActionPlaybackInboxEntry current =
+                ref ElementAt(index);
+            ref readonly ActionAnimationPlaybackCommand currentCommand =
+                ref current.CommandRef;
             bool currentTerminal =
                 currentCommand.Kind ==
                     ActionAnimationPlaybackCommandKind.Complete ||
@@ -159,14 +161,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException(
                     $"Action playback replacement EventId '{replacement.EventId}' already exists.");
             }
-            ValidateReplacementOrder(current.Sequence, replacement);
+            ulong currentSequence = current.Sequence;
+            ValidateReplacementOrder(currentSequence, replacement);
             RemoveAt(index);
             var entry = new ActionPlaybackInboxEntry(
-                current.Sequence,
+                currentSequence,
                 replacement);
             int insertion = m_Count;
             while (insertion > 0 &&
-                   CompareCommands(m_Entries[insertion - 1], entry) > 0)
+                   CompareCommands(in m_Entries[insertion - 1], in entry) > 0)
             {
                 m_Entries[insertion] = m_Entries[insertion - 1];
                 insertion--;
@@ -264,7 +267,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 return FindEvent(command.EventId);
             for (int i = 0; i < m_Count; i++)
             {
-                ActionAnimationPlaybackCommand candidate = m_Entries[i].Command;
+                ref readonly ActionAnimationPlaybackCommand candidate =
+                    ref ElementAt(i).CommandRef;
                 if (candidate.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample &&
                     candidate.PlaybackId.Equals(command.PlaybackId) &&
                     candidate.ProjectedSample.PresentationFrame == command.ProjectedSample.PresentationFrame)
@@ -277,8 +281,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = 0; i < m_Count; i++)
             {
-                if (m_Entries[i].Command.Kind != ActionAnimationPlaybackCommandKind.ProjectedSample &&
-                    m_Entries[i].Command.EventId.Equals(eventId))
+                ref readonly ActionAnimationPlaybackCommand command =
+                    ref ElementAt(i).CommandRef;
+                if (command.Kind != ActionAnimationPlaybackCommandKind.ProjectedSample &&
+                    command.EventId.Equals(eventId))
                     return i;
             }
             return -1;
@@ -317,20 +323,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         void ValidateAppendOrder(ActionAnimationPlaybackCommand command)
         {
             ulong latestSequence = 0;
-            ActionAnimationPlaybackCommand latest = default;
+            int latestIndex = -1;
             for (int i = 0; i < m_Count; i++)
             {
-                ActionPlaybackInboxEntry entry = m_Entries[i];
-                if (!entry.Command.PlaybackId.Equals(command.PlaybackId) ||
+                ref readonly ActionPlaybackInboxEntry entry = ref ElementAt(i);
+                if (!entry.CommandRef.PlaybackId.Equals(command.PlaybackId) ||
                     entry.Sequence <= latestSequence)
                 {
                     continue;
                 }
                 latestSequence = entry.Sequence;
-                latest = entry.Command;
+                latestIndex = i;
             }
-            if (latestSequence == 0)
+            if (latestIndex < 0)
                 return;
+            ref readonly ActionAnimationPlaybackCommand latest =
+                ref ElementAt(latestIndex).CommandRef;
             if (latest.ActionInstanceId != command.ActionInstanceId ||
                 !latest.AnimationChannelId.Equals(command.AnimationChannelId) ||
                 !string.Equals(
@@ -359,14 +367,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = 0; i < m_Count; i++)
             {
-                ActionPlaybackInboxEntry candidate = m_Entries[i];
+                ref readonly ActionPlaybackInboxEntry candidate = ref ElementAt(i);
                 if (candidate.Sequence == sequence ||
-                    !candidate.Command.PlaybackId.Equals(
+                    !candidate.CommandRef.PlaybackId.Equals(
                         replacement.PlaybackId))
                 {
                     continue;
                 }
-                ActionAnimationPlaybackCommand other = candidate.Command;
+                ref readonly ActionAnimationPlaybackCommand other =
+                    ref candidate.CommandRef;
                 if (other.ActionInstanceId != replacement.ActionInstanceId ||
                     !other.AnimationChannelId.Equals(
                         replacement.AnimationChannelId) ||
@@ -423,11 +432,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         static int CompareCommands(
-            ActionPlaybackInboxEntry left,
-            ActionPlaybackInboxEntry right)
+            in ActionPlaybackInboxEntry left,
+            in ActionPlaybackInboxEntry right)
         {
-            int tick = left.Command.LocalLogicTick.CompareTo(
-                right.Command.LocalLogicTick);
+            int tick = left.CommandRef.LocalLogicTick.CompareTo(
+                right.CommandRef.LocalLogicTick);
             return tick != 0
                 ? tick
                 : left.Sequence.CompareTo(right.Sequence);

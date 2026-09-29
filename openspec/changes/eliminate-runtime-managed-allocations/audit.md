@@ -1564,3 +1564,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Slot usage 批量替换仍通过 `IReadOnlyList` 按值读取每个 usage，再复制写入 registry entry；retirement 回放循环每次索引 permission 并读取 playback identity。
 - usage 正式批量入口改为接收固定容量 buffer，绑定只读元素引用后直接写入目标槽；retirement 回放定容 count 并绑定只读 permission。usage 重置、查重、容量、retirement 顺序和异常时机不变。
 - 该改动删除 usage 校验链的读取拷贝和 permission 回放的元素拷贝；保留 usage 写入 registry 的一次必要存储拷贝。静态核对唯一 batch 调用、固定 buffer 生命周期和 registry entry 数组生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP208 Action inbox 查找校验引用化（2026-09-30，已实施，本轮未编译）
+
+- inbox 发布侧的 duplicate 查找、event 查找、append/replacement 校验把整个 entry 或 command 复制为局部；排序比较也按值复制左右 entry。Replace 在 RemoveAt 前复制 current 是为了保留 sequence。
+- 查找与校验绑定 `ElementAt` / `CommandRef` 只读引用；Replace 只在 RemoveAt 前缓存 sequence，插入排序比较改为 `in` entry。命令验证、event 匹配、排序键、RemoveAt 后重建和异常文本不变。
+- 该改动删除命令发布链的 entry/command 中间拷贝；插入排序仍保留一次新 entry 存储和必要的移位拷贝。静态核对只读引用都在数组变更前消费、`latestIndex` 语义等价于原 latest command、比较函数不写参数；未编译、未采样，不能声称实测耗时收益。

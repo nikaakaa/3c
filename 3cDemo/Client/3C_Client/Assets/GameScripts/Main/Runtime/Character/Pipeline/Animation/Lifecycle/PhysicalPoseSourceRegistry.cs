@@ -369,8 +369,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal void RecordRelease(
-            PoseNodeId poseNodeId,
-            AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
             ulong completionIdentity)
         {
             RequireAlive();
@@ -484,8 +484,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal AnimationPhysicalSourceIdentity Register(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int sourceOwnerIndex,
             CharacterAnimationSamplingBackendKind backend,
             int resourceCatalogIndex)
@@ -530,7 +530,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return new AnimationPhysicalSourceIdentity(new AnimationPhysicalSourceIndex(index), generation);
         }
 
-        internal AnimationPhysicalSourceIdentity RequireIdentity(AnimationPoseSourceId sourceId, PoseNodeId nodeId)
+        internal AnimationPhysicalSourceIdentity RequireIdentity(
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId nodeId)
         {
             RequireAlive();
             if (!sourceId.IsValid || !nodeId.IsValid)
@@ -541,8 +543,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal bool ContainsCommitted(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId nodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId nodeId)
         {
             RequireAlive();
             if (!sourceId.IsValid || !nodeId.IsValid ||
@@ -653,7 +655,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal AnimationPhysicalSourceReleaseToken PrepareRelease(
             in AnimationPhysicalSourceIdentity identity,
-            AnimationPoseSourceId sourceId)
+            in AnimationPoseSourceId sourceId)
         {
             RequireAlive();
             if (!identity.IsValid ||
@@ -802,7 +804,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return index;
         }
 
-        bool TryFind(AnimationPoseSourceId sourceId, PoseNodeId nodeId, out int index)
+        bool TryFind(
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId nodeId,
+            out int index)
         {
             for (int i = 0; i < m_PendingSourceIds.Length; i++)
             {

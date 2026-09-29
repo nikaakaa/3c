@@ -1612,3 +1612,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - sample history 的内部 `Mutation.Sample` 属性每次按值返回包含 raw sample 的结构；window 重建在查找和写入时可多次读取，duplicate 检查每对 mutation 各复制一次，journal 校验又复制一次。
 - mutation 改用 readonly backing field，新增内部 `SampleRef` 只读引用；window 事件查找、window upsert、duplicate event 比较和 valid 校验绑定引用。写入 window/journal 仍各保留一次必要存储拷贝，`WithHeader` 也通过同一引用构造最终记录。
 - 该改动删除周期 sample mutation 消费链的重复 sample 读取拷贝，并删除无引用的按值属性。静态核对 backing field 生命周期与 mutation journal 一致、所有 `SampleRef` 消费只读和写入目标不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP216 physical source identity 查找引用化（2026-09-30，已实施，本轮未编译）
+
+- Physical source registry 的 `RecordRelease`、`Register`、`RequireIdentity`、`ContainsCommitted`、`PrepareRelease` 和 `TryFind` 按值接收 source id 与 pose node id；Source Module 的对应转发、注册和 backend 解析包装又各复制一次。
+- registry 七个正式 identity 边界改为 `in`，Source Module 的 `RecordRelease`、`RequireIdentity`、`RegisterSource`、`ResolveBackend`、`RequireCommittedBackend` 和 `IsCommittedInAnyBackend` 同步改为只读转发。`Register` 写入 pending 数组、`RecordRelease` 写入 release 快照仍各保留一次必要存储拷贝；pending/committed 选择、generation 比对、异常文本和 backend interface 合同不变。
+- 该改动删除 physical source 查找、注册和释放准备链的边界结构拷贝。静态核对全部新 `in` 参数只读、调用点继续传同一局部或结构属性、占用与异常时机不变；未编译、未采样，不能声称实测耗时收益。

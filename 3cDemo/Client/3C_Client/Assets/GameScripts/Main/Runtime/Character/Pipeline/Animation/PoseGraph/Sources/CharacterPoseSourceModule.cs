@@ -1156,8 +1156,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal AnimationPhysicalSourceIdentity RequireIdentity(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId) =>
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId) =>
             m_PhysicalSources.RequireIdentity(sourceId, poseNodeId);
 
         internal AnimationPoseSourceId RequireSourceId(
@@ -1269,8 +1269,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void RecordRelease(
-            PoseNodeId poseNodeId,
-            AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
             ulong completionIdentity) =>
             m_PhysicalSources.RecordRelease(
                 poseNodeId,
@@ -1342,8 +1342,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         AnimationPhysicalSourceIdentity RegisterSource(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int sourceOwnerIndex,
             IAnimationPoseSamplingBackend backend,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
@@ -1387,8 +1387,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         IAnimationPoseSamplingBackend ResolveBackend(
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog = default)
         {
             if (m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId))
@@ -1419,8 +1419,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         IAnimationPoseSamplingBackend RequireCommittedBackend(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId)
         {
             AnimationPhysicalSourceIdentity physical =
                 m_PhysicalSources.RequireIdentity(sourceId, poseNodeId);
@@ -1429,8 +1429,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         bool IsCommittedInAnyBackend(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId) =>
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId) =>
             m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId);
 
         IAnimationPoseSamplingBackend RequireBackend(

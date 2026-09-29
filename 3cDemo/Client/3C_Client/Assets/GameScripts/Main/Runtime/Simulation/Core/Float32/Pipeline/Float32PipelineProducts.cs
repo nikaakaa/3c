@@ -287,11 +287,11 @@ namespace ThirdPersonSimulation
             if (pipeline.LastCompletedTick != world.Tick.Value)
                 throw new ArgumentException("World and Pipeline snapshot Ticks do not match.");
             CompositionIdentity = compositionIdentity;
-            SnapshotHash = StableHash.Compute(
+            SnapshotHash = ComputeSnapshotHash(
                 "float32-session-snapshot/1",
-                compositionIdentity.ToString(),
-                world.WorldHash.ToString(),
-                pipeline.SnapshotHash.ToString());
+                compositionIdentity.Value,
+                world.WorldHash,
+                pipeline.SnapshotHash);
         }
 
         public SimulationSessionCompositionIdentity CompositionIdentity { get; }
@@ -299,6 +299,22 @@ namespace ThirdPersonSimulation
         public SimulationPipelineStateSnapshot Pipeline { get; }
         public SimulationTick Tick => World.Tick;
         public StableHash SnapshotHash { get; }
+
+        static StableHash ComputeSnapshotHash(string domain, StableHash composition, StableHash world, StableHash pipeline)
+        {
+            CanonicalWriter writer = StableHash.BeginHash();
+            WriteHashField(writer, domain);
+            WriteHashField(writer, composition);
+            WriteHashField(writer, world);
+            WriteHashField(writer, pipeline);
+            return writer.ComputeHash();
+        }
+
+        static void WriteHashField(CanonicalWriter writer, StableHash value)
+        {
+            writer.WriteByte(0x1f);
+            writer.WriteRawUtf8(value.Value.AsSpan());
+        }
     }
 
     public sealed class Float32SimulationStepSnapshot

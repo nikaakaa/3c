@@ -59,6 +59,7 @@ namespace ThirdPersonCamera
                     break;
                 case CameraFrameOnePointByTrackPayload value:
                     if (value.CameraOrbits.Count != 3 || value.ScreenOffsets.Count != value.CameraOrbits.Count ||
+                        value.TrackControl1.Count != 3 || value.TrackControl2.Count != 3 ||
                         !float.IsFinite(value.AspectRatio) || value.AspectRatio <= 0f ||
                         !float.IsFinite(value.FieldOfView) || value.FieldOfView <= 0f ||
                         !float.IsFinite(value.ElevationRatio) || !float.IsFinite(value.PolarAngle))
@@ -66,7 +67,8 @@ namespace ThirdPersonCamera
                     for (int i = 0; i < value.CameraOrbits.Count; i++)
                     {
                         value.CameraOrbits[i]?.RequireValid($"{source}.CameraOrbits[{i}]");
-                        if (value.CameraOrbits[i] == null || !Finite(value.ScreenOffsets[i]))
+                        if (value.CameraOrbits[i] == null || !Finite(value.ScreenOffsets[i]) ||
+                            !Finite(value.TrackControl1[i]) || !Finite(value.TrackControl2[i]))
                             throw new InvalidOperationException($"{source} contains invalid track framing.");
                     }
                     break;
@@ -129,5 +131,8 @@ namespace ThirdPersonCamera
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
+        static bool Finite(Vector4 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z) && float.IsFinite(value.w);
     }
 }

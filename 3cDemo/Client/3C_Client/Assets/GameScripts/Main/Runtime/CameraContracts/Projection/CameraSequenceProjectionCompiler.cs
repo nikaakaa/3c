@@ -1,4 +1,5 @@
 using System;
+using Cinemachine.Utility;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -45,20 +46,26 @@ namespace ThirdPersonCamera
                         byScreen.Radius);
                 case CameraFrameOnePointByTrackStage byTrack:
                     var cameraOrbits = new CameraTrackOrbitPayload[byTrack.CameraOrbits.Count];
+                    var screenOffsets = new Vector2[byTrack.ScreenOffsets.Count];
+                    var knots = new Vector4[cameraOrbits.Length];
+                    var control1 = new Vector4[cameraOrbits.Length];
+                    var control2 = new Vector4[cameraOrbits.Length];
                     for (int i = 0; i < cameraOrbits.Length; i++)
                     {
-                        CameraTrackOrbitDescriptor orbit = byTrack.CameraOrbits[i];
+                        CameraTrackOrbitDescriptor orbit = byTrack.CameraOrbits[cameraOrbits.Length - 1 - i];
                         cameraOrbits[i] = new CameraTrackOrbitPayload(orbit.Height, orbit.Radius);
-                    }
-                    var screenOffsets = new Vector2[byTrack.ScreenOffsets.Count];
-                    for (int i = 0; i < screenOffsets.Length; i++)
                         screenOffsets[i] = byTrack.ScreenOffsets[i];
+                        knots[i] = new Vector4(orbit.Height, orbit.Radius, screenOffsets[i].x, screenOffsets[i].y);
+                    }
+                    SplineHelpers.ComputeSmoothControlPoints(ref knots, ref control1, ref control2);
                     return new CameraFrameOnePointByTrackPayload(
                         byTrack.StageId,
                         cameraOrbits,
                         byTrack.AspectRatio,
                         byTrack.FieldOfView,
                         screenOffsets,
+                        control1,
+                        control2,
                         byTrack.ElevationRatio,
                         byTrack.PolarAngle);
                 case CameraFrameTwoPointsStage twoPoints:

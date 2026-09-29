@@ -10,8 +10,8 @@ namespace ThirdPersonCamera
 [Serializable]
     public sealed class CameraFrameOnePointByTrackStage : CameraSequenceStage
     {
-        [SerializeField] CameraTrackOrbitDescriptor[] m_CameraOrbits = Array.Empty<CameraTrackOrbitDescriptor>();
-        [SerializeField] Vector2[] m_ScreenOffsets = Array.Empty<Vector2>();
+        [SerializeField, Tooltip("Top, Middle, Bottom")] CameraTrackOrbitDescriptor[] m_CameraOrbits = Array.Empty<CameraTrackOrbitDescriptor>();
+        [SerializeField, Tooltip("Bottom, Middle, Top")] Vector2[] m_ScreenOffsets = Array.Empty<Vector2>();
         [SerializeField] float m_AspectRatio = 1.7777778f;
         [SerializeField] float m_FieldOfView = 60f;
         [SerializeField] float m_ElevationRatio;

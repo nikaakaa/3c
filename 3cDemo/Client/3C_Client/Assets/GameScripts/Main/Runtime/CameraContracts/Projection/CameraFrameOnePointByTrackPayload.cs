@@ -13,12 +13,16 @@ namespace ThirdPersonCamera
         [SerializeField] float m_ElevationRatio;
         [SerializeField] float m_PolarAngle;
         [SerializeField] CameraTrackOrbitPayload[] m_CameraOrbits;
+        [SerializeField] Vector4[] m_TrackControl1;
+        [SerializeField] Vector4[] m_TrackControl2;
         public CameraFrameOnePointByTrackPayload(
             string stageId,
             CameraTrackOrbitPayload[] cameraOrbits,
             float aspectRatio,
             float fieldOfView,
             Vector2[] screenOffsets,
+            Vector4[] trackControl1,
+            Vector4[] trackControl2,
             float elevationRatio,
             float polarAngle)
             : base(stageId, CameraSequenceStageKind.FrameOnePointByTrack)
@@ -27,6 +31,8 @@ namespace ThirdPersonCamera
             m_AspectRatio = aspectRatio;
             m_FieldOfView = fieldOfView;
             m_ScreenOffsets = screenOffsets ?? Array.Empty<Vector2>();
+            m_TrackControl1 = trackControl1;
+            m_TrackControl2 = trackControl2;
             m_ElevationRatio = elevationRatio;
             m_PolarAngle = polarAngle;
         }
@@ -35,6 +41,8 @@ namespace ThirdPersonCamera
         public float AspectRatio => m_AspectRatio;
         public float FieldOfView => m_FieldOfView;
         public IReadOnlyList<Vector2> ScreenOffsets => m_ScreenOffsets ?? Array.Empty<Vector2>();
+        public IReadOnlyList<Vector4> TrackControl1 => m_TrackControl1;
+        public IReadOnlyList<Vector4> TrackControl2 => m_TrackControl2;
         public float ElevationRatio => m_ElevationRatio;
         public float PolarAngle => m_PolarAngle;
     }

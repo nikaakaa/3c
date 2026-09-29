@@ -105,13 +105,13 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        var orbit = SampleTrack(byTrack.CameraOrbits, byTrack.ElevationRatio);
+                        Vector4 track = SampleTrack(byTrack, byTrack.ElevationRatio);
                         offset = ResolveScreenOffset(
-                            SampleTrack(byTrack.ScreenOffsets, byTrack.ElevationRatio),
+                            new Vector2(track.z, track.w),
                             byTrack.AspectRatio);
-                        radius = Mathf.Sqrt(orbit.Height * orbit.Height + orbit.Radius * orbit.Radius);
+                        radius = Mathf.Sqrt(track.x * track.x + track.y * track.y);
                         evaluatedPitch = Mathf.Clamp(
-                            Mathf.Atan2(orbit.Height, orbit.Radius) * Mathf.Rad2Deg + m_PitchOffset,
+                            Mathf.Atan2(track.x, track.y) * Mathf.Rad2Deg + m_PitchOffset,
                             m_Projection.Input.PitchLimit.x,
                             m_Projection.Input.PitchLimit.y);
                         evaluatedYaw = Mathf.Repeat(byTrack.PolarAngle + m_YawOffset, 360f);
@@ -414,36 +414,22 @@ namespace ThirdPersonCamera
             return new Vector2(offset.x * ReferenceAspectRatio / aspectRatio, offset.y);
         }
 
-        static (float Height, float Radius) SampleTrack(
-            IReadOnlyList<CameraTrackOrbitPayload> orbits,
+        static Vector4 SampleTrack(
+            CameraFrameOnePointByTrackPayload track,
             float elevationRatio)
         {
-            if (orbits.Count == 0)
-                return (0f, 0f);
-            if (orbits.Count == 1)
-                return (orbits[0].Height, orbits[0].Radius);
-            float t = Mathf.Clamp01(elevationRatio) * (orbits.Count - 1);
-            int index = Mathf.Min(Mathf.FloorToInt(t), orbits.Count - 2);
-            float alpha = t - index;
-            CameraTrackOrbitPayload left = orbits[index];
-            CameraTrackOrbitPayload right = orbits[index + 1];
-            return (
-                Mathf.Lerp(left.Height, right.Height, alpha),
-                Mathf.Lerp(left.Radius, right.Radius, alpha));
-        }
-
-        static Vector2 SampleTrack(
-            IReadOnlyList<Vector2> offsets,
-            float elevationRatio)
-        {
-            if (offsets.Count == 0)
-                return Vector2.zero;
-            if (offsets.Count == 1)
-                return offsets[0];
-            float t = Mathf.Clamp01(elevationRatio) * (offsets.Count - 1);
-            int index = Mathf.Min(Mathf.FloorToInt(t), offsets.Count - 2);
-            float alpha = t - index;
-            return Vector2.LerpUnclamped(offsets[index], offsets[index + 1], alpha);
+            float position = Mathf.Clamp01(elevationRatio) * (track.CameraOrbits.Count - 1);
+            int index = Mathf.Min(Mathf.FloorToInt(position), track.CameraOrbits.Count - 2);
+            float t = position - index;
+            float d = 1f - t;
+            CameraTrackOrbitPayload left = track.CameraOrbits[index];
+            CameraTrackOrbitPayload right = track.CameraOrbits[index + 1];
+            Vector2 leftOffset = track.ScreenOffsets[index];
+            Vector2 rightOffset = track.ScreenOffsets[index + 1];
+            Vector4 p0 = new Vector4(left.Height, left.Radius, leftOffset.x, leftOffset.y);
+            Vector4 p3 = new Vector4(right.Height, right.Radius, rightOffset.x, rightOffset.y);
+            return d * d * d * p0 + 3f * d * d * t * track.TrackControl1[index]
+                + 3f * d * t * t * track.TrackControl2[index] + t * t * t * p3;
         }
     }
 }

@@ -140,3 +140,21 @@ Unity 实际重载了新 `EvaluateOffset` 方法（3 个参数），编译后 Co
 Unity 编译与域重载完成，Console 0 错误；编辑器回读确认新 SampleOffset 方法、ZoomStartOffset 字段和 owner Reset 已加载，正式 Profile 投影 Build/RequireValid 通过。未运行 Play/replay，未新增测试。
 
 独立全局 FOV 覆盖栈尚未接入；本批使用现有相机阶段输入作为 Base 参考。原作其它实例接纳、优先级与资格规则仍需继续映射，不能把起始值继承完成等同于全部 Zoom 生命周期还原。新增资格函数 `0x12BB4AA0` 的完整指令保存为 [zoom-eligibility.json](camera-basis-runtime-20260929/zoom-eligibility.json)，本批未据未完成的字段映射改变资格行为。
+
+## 基础轨道曲线与坐标顺序
+
+用户已将命中链分给其他窗口，本批仅修改相机轨道投影及其求值器。
+
+原消费者 `track-prepare`（0x109EBE40）把 Top/Middle/Bottom 原始轨道数组反向构成归一化位置 0/0.5/1，即 Bottom/Middle/Top。ScreenY 同样按 Bottom/Middle/Top 建曲线。项目资产保存的 CameraOrbits 原来沿用原始 Top/Middle/Bottom 顺序，而 ScreenOffsets 为 Bottom/Middle/Top；旧求值器直接按相同索引线性插值，两个通道实际方向相反。
+
+此次继续取得向量和标量的完整曲线构建、控制点求解及求值函数：
+
+- 向量构建 0x10A1B620、控制点求解 0x10A1C9E0；标量构建 0x1E891F30、控制点求解 0x1E8932C0。两者使用相同的开曲线三对角方程：首行 (0,2,1)、内行 (1,4,1)、末行 (2,7,0)，右端为 p0+2p1、4pi+2pi+1、8pn-1+pn；消元与回代求第一控制点，第二控制点为 2pi+1-control1i+1，最后一个为 (pn+control1n-1)/2。
+- 该算法与本地 Cinemachine 2.10.7 `SplineHelpers.ComputeSmoothControlPoints` 一致。曲线运行时采用三次插值；原消费者把控制点转换为按区间时间归一化的切线后求值。
+- 新证据 JSON 已登记在 `camera-basis-runtime-20260929/manifest.json`，保留函数字节哈希。此次未再次扫描或重算此前震动资源对账。
+
+修改链路：作者资产继续保留 dump 的轨道数组顺序，Inspector 明确标记两组数组各自顺序。`CameraSequenceProjectionCompiler` 在投影构建时把轨道转换到 Bottom/Middle/Top，并将 Height、Radius、ScreenX、ScreenY 四个独立标量放入 Vector4，使用 Cinemachine 工具一次性计算各轴控制点。`CharacterCameraFramePlanner` 每帧按归一化位置直接求三次曲线，输出轨道高度、半径和屏幕位置；删除旧的两套线性插值及空轨道返回零分支。新增分配只发生在投影构建阶段。
+
+投影格式更新为 v4，携带控制点；既有 v3 投影需要由正式构建入口重新生成。当前基础轨道 ElevationRatio 仍为 0.5，输入仍走既有角度链；本批不将默认配置切换到 0.6，也不擅自推断输入到归一化轨道的映射。中点采样本身不会因此改变，不能用本批修改声称日常转视角手感已经复刻。TopOrbit 延伸、输入归一化及 Delay 消费仍未闭合。
+
+Unity 已完成编译重载，同一目标实例回读为 Edit／非编译状态；正式 CharacterCameraProjectionBuilder.Build 和产物 RequireValid 成功，返回 schema=v4、Profile dirty=false，Console 错误数为 0。运行装配 CharacterCameraRuntimeBindingBuilder.Prepare 会经同一入口重建投影，无需动画域烘焙。未运行 Play/replay，未新增测试；未进行运行时 GC 测量。

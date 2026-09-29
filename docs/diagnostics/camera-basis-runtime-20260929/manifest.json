@@ -60,6 +60,14 @@
       "sha256": "7e4a9b55df33d127432b7b2a32829b605778f36c8cf57df18f280a06bab4fba4"
     },
     {
+      "path": "orbit-cubic-evaluate.json",
+      "sha256": "e503c807c70971252382b19a23f0bffe25901c8db75a3918952361a16160c3a2"
+    },
+    {
+      "path": "orbit-curve-build.json",
+      "sha256": "2657fcc7e215e94bc061610b23a59a432b2b4265f7e18ef9939ace5574530d3a"
+    },
+    {
       "path": "orbit-curve-create.json",
       "sha256": "7bd79d931b5f2453f68a421e71f830a0d6721baac35762e61cb230a734c8b39a"
     },
@@ -84,6 +92,14 @@
       "sha256": "2657fcc7e215e94bc061610b23a59a432b2b4265f7e18ef9939ace5574530d3a"
     },
     {
+      "path": "screen-control-solve.json",
+      "sha256": "18b5398f5862658b70d680941cff5d3092c9e49aa27dfac76a0b988af7bcca13"
+    },
+    {
+      "path": "screen-curve-build.json",
+      "sha256": "8cb0245a91af32b5b01fcf497f705882ca113f04306f778ff4c21a412ef4045f"
+    },
+    {
       "path": "screen-curve-create.json",
       "sha256": "f3fbd5be70d446698c7d69b733a308a6a7d418823031423cf84f177b474560c0"
     },
@@ -94,6 +110,18 @@
     {
       "path": "screen-sample.json",
       "sha256": "5af7b64943bb41a2c1a3fcf3fff08087f7b38449ba5f51d57fc29e03846027f0"
+    },
+    {
+      "path": "screen-smooth-control-solve.json",
+      "sha256": "06a3d4b5169bff8b45445d88dea6e9956d65c4ccc223ff912bd22f01a8f9a05d"
+    },
+    {
+      "path": "screen-span-evaluate.json",
+      "sha256": "1b84681e0aa963fce27fa41387f71ca0f3e504c8c54ae51876ca02aec6f7f196"
+    },
+    {
+      "path": "smooth-control-solve.json",
+      "sha256": "7aff0483c108d02584cf184eca077749b4470c6530e6d44203c74257589be845"
     },
     {
       "path": "smooth-controls.json",

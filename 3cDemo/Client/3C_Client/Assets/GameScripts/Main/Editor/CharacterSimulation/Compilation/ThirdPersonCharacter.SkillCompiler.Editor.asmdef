@@ -1,0 +1,34 @@
+{
+    "name": "ThirdPersonCharacter.SkillCompiler.Editor",
+    "rootNamespace": "",
+    "references": [
+        "BTSMTL.Authoring",
+        "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Tree",
+        "FlowCanvas",
+        "NodeCanvas",
+        "ParadoxNotion",
+        "ThirdPersonCamera.Contracts",
+        "ThirdPersonCamera.Runtime",
+        "ThirdPersonCharacter.Pipeline.RootMotion",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonGameplay",
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Fixed",
+        "ThirdPersonSimulation.Fixed.Compiler",
+        "ThirdPersonSimulation.Fixed.Unity",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

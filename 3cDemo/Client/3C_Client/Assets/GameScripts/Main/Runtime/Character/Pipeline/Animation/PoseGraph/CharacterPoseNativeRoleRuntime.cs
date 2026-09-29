@@ -97,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string ResourceRevision => m_Graph.PreparedBinding.ResourceRevision;
         internal bool IsStarted => m_Graph.IsStarted;
         internal bool HasOpenFrame => m_Graph.HasOpenFrame;
-        internal CharacterPoseNativeFrameLineage CurrentLineage => m_Graph.CurrentLineage;
+        internal ref readonly CharacterPoseNativeFrameLineage CurrentLineage => ref m_Graph.CurrentLineage;
         internal ref readonly CharacterPoseNativeFrameInput CurrentInput => ref m_Graph.CurrentInput;
         internal CharacterPoseNativeFrameCoordinator CreateFrameCoordinator() =>
             new CharacterPoseNativeFrameCoordinator(this);

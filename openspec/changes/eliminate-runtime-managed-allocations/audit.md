@@ -1282,3 +1282,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine 在 phase 访问、PrepareEvaluation、Evaluate 和 Commit 重复执行 `CollectActiveStates`；同一帧 pending state/transition 在 PrepareFrame 完成推进后不再变化，重复执行只重复 dictionary 查找和 active slot 写入。
 - PrepareFrame 在 pending state/transition 完成本帧推进后收集一次 active states，并把 count 与 slots 作为帧内正式状态；phase、evaluation 和 commit 直接消费同一数组。discard/commit 清理子帧时同步清空 count。
 - 该改动删除同一打开帧内跨阶段的重复 active state 解析；不新增 fallback 或第二数据源。静态核对 pending state/transition 的全部修改点、PrepareFrame 收集时机、子帧 open/discard 生命周期和 phase 访问时序；未编译、未采样，不能声称实测耗时收益。
+
+### AP161 frame lineage 只读引用入口（2026-09-30，已实施，本轮未编译）
+
+- graph 与 role runtime 的 `CurrentLineage` 按值返回 readonly lineage；handler 每次读取 `CompletionIdentity` 或参与 identity 比较前都会复制包含 graph/rig/contract identity 的整份 lineage。completed lineage 在 commit 后整帧保持不变。
+- 两个 internal 属性改为返回 `ref readonly`，直接字段读取不再复制整份 lineage；显式赋值和按值 equality 参数仍按 C# 语义复制。
+- 该改动统一 lineage 的正式只读入口，不改变 identity 内容、输出页完成标记和 Commit/Discard 判定。静态核对 readonly lineage、completed lineage 生命周期、两个 runtime 属性和现有字段读取/局部赋值调用；未编译、未采样，不能声称实测耗时收益。

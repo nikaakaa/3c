@@ -39,9 +39,9 @@ R1／R2 的已有提交、R8 的保留结论、R9 的证据与专项归属记录
 
 ## 5. 按已有职责整理文件（R7）
 
-- [ ] 5.1 将 TimelineRuntimePreparation 中既有 Preparation、Playback、Evaluator、缓冲与合同按责任归文件，保持类型与运行语义。
-- [ ] 5.2 将 CharacterFootSwingMotionBuilder 中合同、诊断与算法按现有职责归文件，保持数值计算、字段布局和访问方式。
-- [ ] 5.3 将 CharacterTimelineHost 同文件中的独立服务／合同归到对应现有职责文件，保持新 GraphBindings 与唯一播放状态，不增加转发模块。
+- [x] 5.1 将 TimelineRuntimePreparation 中既有 Preparation、Playback、Evaluator、缓冲与合同按责任归文件，保持类型与运行语义。
+- [x] 5.2 将 CharacterFootSwingMotionBuilder 中合同、诊断与算法按现有职责归文件，保持数值计算、字段布局和访问方式。
+- [x] 5.3 将 CharacterTimelineHost 同文件中的独立服务／合同归到对应现有职责文件，保持新 GraphBindings 与唯一播放状态，不增加转发模块。
 - [ ] 5.4 清除 BtsmtlPreview.unity 与 GameplayLab.unity 中四个仍引用普通 C# TimelineHost 的失效 MonoBehaviour 对象及对应 Prefab m_AddedComponents fileID，保留 GameObject 和其他组件。
 
 ## 6. 收拢表现外围失败与释放（R1）

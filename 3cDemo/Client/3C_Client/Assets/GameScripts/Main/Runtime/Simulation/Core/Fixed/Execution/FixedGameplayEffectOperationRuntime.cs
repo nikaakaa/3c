@@ -276,7 +276,7 @@ namespace ThirdPersonSimulation.Fixed
                             SimulationEventHeader factHeader = m_Facts.Next(source);
                             m_Facts.Add(new GameplayFact(factHeader, new GameplayCueFact(
                                 cue.CueId,
-                                cue.Trigger.ToString(),
+                                PortableCueTriggerText.Identity(cue.Trigger),
                                 cue.Definition.Id,
                                 cue.InstanceId,
                                 cue.Context)));

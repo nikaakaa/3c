@@ -11,6 +11,19 @@ namespace ThirdPersonSimulation.Fixed
         Failure = 4
     }
 
+    internal static class PortableCueTriggerText
+    {
+        internal static string Identity(PortableCueTrigger trigger) => trigger switch
+        {
+            PortableCueTrigger.OnActive => nameof(PortableCueTrigger.OnActive),
+            PortableCueTrigger.WhileActive => nameof(PortableCueTrigger.WhileActive),
+            PortableCueTrigger.Executed => nameof(PortableCueTrigger.Executed),
+            PortableCueTrigger.Removed => nameof(PortableCueTrigger.Removed),
+            PortableCueTrigger.Expired => nameof(PortableCueTrigger.Expired),
+            _ => throw new ArgumentOutOfRangeException(nameof(trigger))
+        };
+    }
+
     internal abstract class PortableEffectRuntimeChange
     {
         protected PortableEffectRuntimeChange(PortableEffectChangeKind kind, ulong cursor)

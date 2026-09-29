@@ -717,6 +717,12 @@
 - `OperationExecutionTopology` 装配期为 State operation 预生成 `state:{handle}`；`OperationTraceText` 增加与原枚举名一致的 Entered/Exited 静态文本。两域事实输出读取固定字符串，fact 类型、字段顺序、数值和发布时机不变。
 - 每次状态 lifecycle 少两次临时字符串；首次装配增加定容数组。静态核对唯一 lifecycle 发布链、State operation 范围、枚举文本和差异；未编译、运行回放或采样。
 
+### AP92 Gameplay Cue Trigger 事实 ToString（2026-09-29，已实施，本轮未编译）
+
+- 两域 GameplayEffect projection 每个 Cue 变化都调用 `PortableCueTrigger.ToString()` 写入正式 Cue fact。trigger 是五值 byte 枚举，名称在合同中固定。
+- 两域 RuntimeChanges 合同旁增加静态 trigger 文本映射，覆盖 OnActive、Executed、WhileActive、Removed、Expired 并保持原枚举名。Cue projection 读取同一字符串；fact 字段、producer、presentation 命令和异常传播不变。
+- 每个 Cue fact 少一次枚举格式化分配。Catalog 文件当前有其它窗口改动，本次不触碰。静态核对枚举全集、两域唯一 projection 点和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

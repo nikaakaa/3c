@@ -699,6 +699,12 @@
 - 改为读取 `StableHash.Value` 直接比较；StableHash 构造边界已保证 64位小写十六进制，execution plan 的 FactIdentity 字符串排序与去重规则不变，异常条件和消息不变。
 - 每条每 step ingress 少一次整段身份字符串分配；匹配/不匹配行为不变。静态核对 StableHash 合同、两域唯一修改点、Ordinal 比较和差异；未编译、运行回放或采样。
 
+### AP89 Action Lifecycle Ingress 身份重复字符串化（2026-09-29，已实施，本轮未编译）
+
+- 两域 ActionRuntime 把 ingress header 的 StableHash 转成 string 后传给内部 `AbilityLifecycleIngress`，该 identity 只用于匹配失败异常文本，却每条 lifecycle ingress 都分配。StableHash 本身已承载 64字符正式身份。
+- 内部 ingress 结构 Identity 改为 StableHash，两个唯一 ActionRuntime 创建点直接传递 header 身份；匹配失败异常插值保持原字符串内容，仅在错误路径调用 ToString。匹配字段、优先级、状态更新和事实输出不变。
+- 每条 Action lifecycle ingress 少一次 64字符分配；异常路径文本不变。静态核对结构唯一创建/消费链、内部访问边界和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

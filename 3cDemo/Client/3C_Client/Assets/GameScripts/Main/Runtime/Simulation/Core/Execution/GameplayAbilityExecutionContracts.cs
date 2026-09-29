@@ -335,7 +335,7 @@ namespace ThirdPersonSimulation
     internal readonly struct AbilityLifecycleIngress
     {
         public AbilityLifecycleIngress(
-            string identity,
+            StableHash identity,
             ulong actionInstanceId,
             ulong predictionKey,
             ulong inputSequence,
@@ -347,7 +347,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Action lifecycle ingress requires an instance, prediction, or input identity.");
             if (transitionValue == 0)
                 throw new ArgumentOutOfRangeException(nameof(transitionValue));
-            Identity = identity ?? string.Empty;
+            Identity = identity;
             ActionInstanceId = actionInstanceId;
             PredictionKey = predictionKey;
             InputSequence = inputSequence;
@@ -356,7 +356,7 @@ namespace ThirdPersonSimulation
             Reason = reason ?? string.Empty;
         }
 
-        public string Identity { get; }
+        public StableHash Identity { get; }
         public ulong ActionInstanceId { get; }
         public ulong PredictionKey { get; }
         public ulong InputSequence { get; }

@@ -225,7 +225,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Action runtime cannot apply ingress kind '{ingress.Header.Kind}'.");
             SimulationActionLifecycleIngress payload = ingress.ActionLifecycle;
             m_Lifecycle.ApplyIngress(new AbilityLifecycleIngress(
-                ingress.Header.FactIdentity.ToString(),
+                ingress.Header.FactIdentity,
                 payload.ActionInstanceId,
                 payload.PredictionKey,
                 payload.InputSequence,

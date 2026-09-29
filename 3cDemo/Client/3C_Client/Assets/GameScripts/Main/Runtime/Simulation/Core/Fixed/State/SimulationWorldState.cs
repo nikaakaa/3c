@@ -157,11 +157,13 @@ namespace ThirdPersonSimulation.Fixed
         const uint Magic = 0x54535743;
         const int Version = 3;
 
+        [ThreadStatic] static CanonicalWriter s_Writer;
+
         public static byte[] Write(WorldSimulationState state)
         {
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareWriter();
             WriteCanonical(writer, state);
             return writer.ToArray();
         }
@@ -170,7 +172,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareWriter();
             WriteCanonical(writer, state);
             return writer.ComputeHash();
         }
@@ -180,6 +182,13 @@ namespace ThirdPersonSimulation.Fixed
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             WriteCanonical(writer, state);
             writer.EndLengthPrefixedBlock(prefixPosition);
+        }
+
+        static CanonicalWriter PrepareWriter()
+        {
+            s_Writer ??= new CanonicalWriter();
+            s_Writer.Reset();
+            return s_Writer;
         }
 
         static void WriteCanonical(CanonicalWriter writer, WorldSimulationState state)

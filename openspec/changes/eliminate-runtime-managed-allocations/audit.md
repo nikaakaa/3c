@@ -533,6 +533,14 @@
 - Requested 和 PreviousState 仍供 ReconstraintAfterMovement 使用，QuerySummary 仍按原 checked 规则汇总，均保留。Position/Ground/Collision、Actor 请求、Motor 内部步阶/阻挡/终止计算及结果结构保持；未通过减少记录字段去裁剪运动算法。BlockingContactAt(0) 原调用受 HasBlockingContact 控制，Move 先复制活动接触后返回计数，本次只消除供诊断读取的代表值。
 - 对变更前后两份文件进行条件静态展开：诊断开启分支去掉空白后源码一致，普通分支无这八类 candidate/motorResult 诊断读取；全部部分类型字段引用和构造调用已核对，差异检查通过。减少普通构建候选结构的诊断存储及传值工作，不报告未测结构尺寸、GC降幅或毫秒收益。未编译、回放或采样，脚步预测未改。
 
+### AP63 世界快照编码重复创建临时 writer（2026-09-29，已实施，未运行）
+
+- 两域 WorldSimulationStateCodec.Write 在生成世界快照字节时仍逐次 new CanonicalWriter；ComputeHash 在启动/恢复验证时也重建同类工作区。AP53/56 已优化批请求与结果的外层哈希，但不覆盖这里直接返回独立世界状态字节的入口。
+- 每个数值域的 codec 使用独立私有 ThreadStatic writer，Write/ComputeHash 在检查输入后由 PrepareWriter 重置位置和长度，再调用原唯一 WriteCanonical。Write 仍通过 ToArray 分配并复制独立结果，ComputeHash 仍返回独立哈希；不将 WrittenSpan 或内部数组借给快照。
+- WriteLengthPrefixed 继续只使用调用方提供的外层 writer，没有改为取内部工作区，不会重置批请求/结果已经写入的字段。原 Magic/Version、字段顺序、数值位、长度前缀、空值错误及读取端全部保持；源为封闭 WorldSimulationState 及其数组数据，编码没有业务回调或同 codec 重入。
+- Reset 后只读取本次有效长度；异常不返回部分结果，下一次编码重新 Reset。首次使用与超过已有容量仍会分配，每线程每域保留最大编码缓冲；独立快照字节、哈希对象和哈希字符串仍有分配。本项去掉容量稳定后的 writer/缓冲重建，不宣称快照链0 GC或实测收益。
+- 核对三个独立字节消费位置、启动/恢复哈希调用、外层长度前缀调用及 ToArray 所有权；差异静态检查通过，未编译、运行字节对比、回放或采样。世界快照已有数组内部构造入口，本次未重复改造；ActorSnapshot 的状态字节复制仍需沿独立所有权审计，未因同处快照链而擅自取消。脚步预测未改。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

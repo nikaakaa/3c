@@ -67,7 +67,8 @@ namespace ThirdPersonCamera
                         control1,
                         control2,
                         byTrack.ElevationRatio,
-                        byTrack.PolarAngle);
+                        byTrack.PolarAngle,
+                        byTrack.CameraLocateRatio);
                 case CameraFrameTwoPointsStage twoPoints:
                     return CompileTwoPoints(twoPoints);
                 case CameraFrameMultiplePointsStage multiplePoints:

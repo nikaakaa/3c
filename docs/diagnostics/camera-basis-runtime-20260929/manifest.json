@@ -20,6 +20,10 @@
       "sha256": "1ce9da445f11a11404d68f6ea040b87f073ef38f9428465f559a087057ddfce3"
     },
     {
+      "path": "camera-global-data-type.json",
+      "sha256": "1414476f7e1befe058b34215c7e2f4919991044dde06dc2a5f73df2e96cb7022"
+    },
+    {
       "path": "camera-stage-0x134db160.json",
       "sha256": "d1d351123f327682cb5f980156e29547b1f2ff3044da65e6481f0cf5a843cd04"
     },
@@ -46,6 +50,10 @@
     {
       "path": "controls-to-curve.json",
       "sha256": "f1b811b0909e85d52183fb98835532536f5143b5bf660f2be6d489529182d0c8"
+    },
+    {
+      "path": "default-orbit-ratio-audit.json",
+      "sha256": "2d2e5779318430ea51b531cafd2cd08e9c60501b5a842b057efb5a4589395515"
     },
     {
       "path": "delay-apply.json",
@@ -90,6 +98,26 @@
     {
       "path": "orbit-tangents.json",
       "sha256": "2657fcc7e215e94bc061610b23a59a432b2b4265f7e18ef9939ace5574530d3a"
+    },
+    {
+      "path": "radius-branch-flags.json",
+      "sha256": "1c36970de0fa2934efb0fcea421aaf14626955ff221b7a62ba9a7e6b80b330c1"
+    },
+    {
+      "path": "radius-consumer-0x134dd0c0.json",
+      "sha256": "cd3c2b162359160438d4ea5154a06cbe680d6b2082d11c5e6d7e20560ee4e84c"
+    },
+    {
+      "path": "radius-consumer-0x1596b3e0.json",
+      "sha256": "9a8cf35821d6479e44aac33c4ebe7a5388033c8b93a7e804f02af3b299c5cc3e"
+    },
+    {
+      "path": "radius-consumer-0x1596c520.json",
+      "sha256": "241f0a491a34caf939b5cee49a4bf41a44eb523926d6eca6cc8774ea2e1a9e44"
+    },
+    {
+      "path": "radius-consumers.json",
+      "sha256": "123435943edd2eee1b080fa24c3f4bd190511716d0d02d116b5eb73d1e5df0d4"
     },
     {
       "path": "screen-control-solve.json",

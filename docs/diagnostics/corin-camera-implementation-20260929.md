@@ -189,3 +189,21 @@ Unity 编译重载完成，目标实例为 Edit／非编译状态；回读确认
 半径参考已确认：原函数 `0x178854B0` 读取 TargetCalcData+0x2DC，对应 CameraFollowCalcData.cameraLocateRatio；它不是世界单位的相机距离。原实例把目标／起点换算为 `(ratio+1)/cameraLocateRatio-1`，最终管理器还用 anchorRadius 构造 anchorRadiusAppend，并带两组包络的交叉项。本项目目前没有这些完整中间量，本批继承的是现有 RadiusRatio 增量，尚未把动态比例、交叉项接入正式链。归一化仰角及跟随 Y 额外通道的继承也没有因此视为完成。后续应统一基础轨道到效果阶段的数据流，而不能把 plan.Radius 直接代作无量纲 cameraLocateRatio。
 
 Unity 编译重载完成，Console 错误数为 0；正式 PublishStacking 已保存 18 项 Stretch，回读资源及投影的 StackingType 均为原始值 0，dirtyResources=0，投影 Build/RequireValid 成功（v5）。磁盘与提交前逐项比较，18 项唯一内容变化均为新增 m_StackingType: 0，见 stretch-stacking-audit.json。未运行 Play/replay，未新增测试，未声称手感已通过画面对照。
+
+## 基础半径比例与 Stretch 换算闭合
+
+新增原消费者证据：`0x134DD0C0` 从基础相机状态给 TargetCalcData 写入 anchorRadius（+0x2E4）与 cameraLocateRatio（+0x2DC）；`0x1596C520` 以及其内联消费者 `0x1596B3E0` 明确使用 `(anchorRadiusAppend + anchorRadius) * cameraLocateRatio` 后减去基础半径，计算沿镜头方向的半径改变量。相关代码及分支状态见 radius-consumer 三份文件和 radius-branch-flags.json。与 CameraDataAccessor 的字段元数据和 CameraFollowCalcData 值类型偏移对照后才使用这些偏移，不把搜索到的其它同偏移函数视为相机证据。
+
+本批沿正式数据流增加 CameraLocateRatio：
+
+1. CorinCameraResourcesAuthoring.PublishDefaultOrbit 从已有 Default_Normal 基准来源读取 CAMERA_LOCATE_RADIUSRATIO，通过 CameraFrameOnePointByTrackStage 的正式 setter 保存。当前值为 1；没有更换配置键或默认仰角。
+2. 轨道投影携带该比例（v6），FramePlanner 用轨道几何半径乘比例得到帧计划的距离，并把比例显式写进 CameraFramePlan。直接以世界半径构图的阶段使用单位比例；只替换目标、不重新构图的 FrameOneEntity 保留原比例。Sequence 过渡随已有混合进度插值比例，后续 WorldBasicData 修改保留该输入。
+3. Stretch 初始化将上帧组内相对改变量转回 `(previousOffset+1)*ratio-1` 保存；零起点为 ratio-1。逐帧将保存起点和资源目标按 `(value+1)/ratio-1` 换算，再执行原进入／退出曲线。
+4. 半径选择同时保存该实例的 RadiusEnvelope。进入期为 max(继承包络, StartCurve)，保持期为 1，退出期为 1-EndCurve；它与其它旧通道使用的阶段包络分开表达。显式取消从取消点的半径开始退出，RadiusEnvelope 则按退出曲线更新。
+5. 最终半径为 `plan.Radius * (1 + baseOffset + additiveOffset + (1-1/ratio)*baseEnvelope*additiveEnvelope)`，与原管理器附加距离和最终比例相乘的组合一致；没有用相机米制距离代替无量纲比例。
+
+现有生成式相机采样增加 camera-locate-ratio、radius、pivot-location、screen-offset 四个字段，读取同一个 AppliedPlan，没有新增每帧字符串或对象。
+
+Unity 编译重载通过，Console 0 错误；正式 PublishDefaultOrbit 后 Build/RequireValid 成功，v6、ratio=1、dirty=false。磁盘原有全部数值按 float32 比较一致，仅新增比例字段；小数显示及 YAML 换行由 Unity 正式保存产生。未运行 Play/replay，未新增测试。
+
+当前 Default_Normal 比例恰为 1，因此交叉项为 0，基础距离不会因为补齐比例字段而改变；不能把这批数据链修正宣称为已经改变日常转视角手感。仍需对齐归一化仰角及其输入、TopOrbit 延伸、跟随 Delay、额外跟随 Y 通道，以及尚未完成的震动时钟／保持／静默输入。原作当前 Corin 实例是否选择 Default_Normal 的早先证据限制仍然成立。

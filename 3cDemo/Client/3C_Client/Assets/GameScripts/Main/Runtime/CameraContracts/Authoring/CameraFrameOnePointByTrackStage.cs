@@ -16,6 +16,7 @@ namespace ThirdPersonCamera
         [SerializeField] float m_FieldOfView = 60f;
         [SerializeField] float m_ElevationRatio;
         [SerializeField] float m_PolarAngle;
+        [SerializeField] float m_CameraLocateRatio = 1f;
 
         public override CameraSequenceStageKind Kind => CameraSequenceStageKind.FrameOnePointByTrack;
         public IReadOnlyList<CameraTrackOrbitDescriptor> CameraOrbits => m_CameraOrbits ?? Array.Empty<CameraTrackOrbitDescriptor>();
@@ -24,6 +25,12 @@ namespace ThirdPersonCamera
         public float FieldOfView => m_FieldOfView;
         public float ElevationRatio => m_ElevationRatio;
         public float PolarAngle => m_PolarAngle;
+        public float CameraLocateRatio => m_CameraLocateRatio;
+
+        public void ConfigureCameraLocateRatio(float cameraLocateRatio)
+        {
+            m_CameraLocateRatio = cameraLocateRatio;
+        }
 
         public override void RequireValid(string source)
         {
@@ -31,7 +38,7 @@ namespace ThirdPersonCamera
             if (CameraOrbits.Count != 3 || ScreenOffsets.Count != CameraOrbits.Count ||
                 !float.IsFinite(AspectRatio) || AspectRatio <= 0f ||
                 !float.IsFinite(FieldOfView) || FieldOfView <= 0f || !float.IsFinite(ElevationRatio) ||
-                !float.IsFinite(PolarAngle))
+                !float.IsFinite(PolarAngle) || !float.IsFinite(CameraLocateRatio) || CameraLocateRatio <= 0f)
                 throw new InvalidOperationException($"{source} contains invalid single-point track framing.");
             for (int i = 0; i < CameraOrbits.Count; i++)
             {

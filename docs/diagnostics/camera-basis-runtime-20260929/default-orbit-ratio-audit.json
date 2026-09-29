@@ -1,0 +1,7 @@
+{
+  "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/CorinCameraDefaultSequence.asset",
+  "source": "Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json/cameraAvatarGroup/Default_Normal/DEFAULTSPHEREDATA/CAMERA_LOCATE_RADIUSRATIO",
+  "camera_locate_ratio": 1.0,
+  "existing_numeric_fields_checked": 33,
+  "existing_numeric_fields_match_float32": true
+}

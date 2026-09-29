@@ -1,0 +1,69 @@
+{
+  "functions": [
+    {
+      "function": "radius-consumer-0x134dd0c0.json",
+      "instructions": [
+        [
+          323867078,
+          "movss",
+          "dword ptr [rcx + 0x2e4], xmm8"
+        ],
+        [
+          323867123,
+          "movss",
+          "dword ptr [rax + 0x2dc], xmm0"
+        ],
+        [
+          323868008,
+          "movss",
+          "xmm1, dword ptr [rax + 0x2dc]"
+        ]
+      ]
+    },
+    {
+      "function": "radius-consumer-0x1596b3e0.json",
+      "instructions": [
+        [
+          362198463,
+          "movss",
+          "xmm0, dword ptr [rax + 0x2e0]"
+        ],
+        [
+          362198471,
+          "addss",
+          "xmm0, dword ptr [rax + 0x2e4]"
+        ],
+        [
+          362198479,
+          "mulss",
+          "xmm0, dword ptr [rax + 0x2dc]"
+        ]
+      ]
+    },
+    {
+      "function": "radius-consumer-0x1596c520.json",
+      "instructions": [
+        [
+          362202426,
+          "movss",
+          "xmm0, dword ptr [rax + 0x2e0]"
+        ],
+        [
+          362202434,
+          "addss",
+          "xmm0, dword ptr [rax + 0x2e4]"
+        ],
+        [
+          362202442,
+          "mulss",
+          "xmm0, dword ptr [rax + 0x2dc]"
+        ]
+      ]
+    }
+  ],
+  "decode_errors": [
+    "Incomplete instruction decode: 0xc96c60",
+    "Incomplete instruction decode: 0xec9afb0"
+  ],
+  "search_note": "按同时访问 0x2dc 与 0x2e4 筛选后，保留与已知 CameraDataAccessor 链关联的三个函数；其它位移相同的候选不作为相机证据。"
+}

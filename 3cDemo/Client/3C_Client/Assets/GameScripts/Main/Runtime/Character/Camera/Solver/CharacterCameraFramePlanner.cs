@@ -82,6 +82,7 @@ namespace ThirdPersonCamera
             Vector3 pivot = selected.AimPoint;
             bool pivotIsExplicit = selected.AimPointIsExplicit;
             float radius = m_Projection.DefaultSphere.Radius;
+            float cameraLocateRatio = 1f;
             float fieldOfView = m_Projection.DefaultFieldOfView;
             Vector2 offset = Vector2.zero;
             float evaluatedYaw = m_YawOffset;
@@ -100,6 +101,7 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byHeight.ScreenOffset, ReferenceAspectRatio);
                         break;
                     case CameraFrameOnePointByScreenOffsetPayload byScreen:
+                        cameraLocateRatio = 1f;
                         radius = byScreen.Radius;
                         fieldOfView = byScreen.FieldOfView;
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
@@ -109,7 +111,8 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(
                             new Vector2(track.z, track.w),
                             byTrack.AspectRatio);
-                        radius = Mathf.Sqrt(track.x * track.x + track.y * track.y);
+                        cameraLocateRatio = byTrack.CameraLocateRatio;
+                        radius = Mathf.Sqrt(track.x * track.x + track.y * track.y) * cameraLocateRatio;
                         evaluatedPitch = Mathf.Clamp(
                             Mathf.Atan2(track.x, track.y) * Mathf.Rad2Deg + m_PitchOffset,
                             m_Projection.Input.PitchLimit.x,
@@ -119,6 +122,7 @@ namespace ThirdPersonCamera
                         fieldOfView = byTrack.FieldOfView;
                         break;
                     case CameraFrameTwoPointsPayload twoPoints:
+                        cameraLocateRatio = 1f;
                         ResolveTwoPointTargets(
                             input.Targets,
                             selected,
@@ -135,6 +139,7 @@ namespace ThirdPersonCamera
                         pivotIsExplicit = true;
                         break;
                     case CameraFrameMultiplePointsPayload multiplePoints:
+                        cameraLocateRatio = 1f;
                         BuildMultiplePointTargets(input.Targets, selected);
                         if (m_FramingTargets.Count < 2)
                         {
@@ -170,6 +175,7 @@ namespace ThirdPersonCamera
                             entity,
                             ref pivot,
                             ref radius,
+                            ref cameraLocateRatio,
                             ref evaluatedPitch,
                             ref fieldOfView);
                         pivotIsExplicit = true;
@@ -214,7 +220,8 @@ namespace ThirdPersonCamera
                 request.SourceActionInstanceId,
                 request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
-                true);
+                true,
+                cameraLocateRatio);
         }
 
         void ApplyEntityFrame(
@@ -222,6 +229,7 @@ namespace ThirdPersonCamera
             CameraEntityFramePayload stage,
             ref Vector3 pivot,
             ref float radius,
+            ref float cameraLocateRatio,
             ref float evaluatedPitch,
             ref float fieldOfView)
         {
@@ -253,6 +261,7 @@ namespace ThirdPersonCamera
                 ref radius,
                 ref evaluatedPitch,
                 ref fieldOfView);
+            cameraLocateRatio = 1f;
         }
 
         void ApplyEntityPointFrame(

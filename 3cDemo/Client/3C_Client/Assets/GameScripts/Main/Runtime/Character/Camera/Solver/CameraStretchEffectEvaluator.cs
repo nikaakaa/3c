@@ -53,15 +53,17 @@ namespace ThirdPersonCamera
                 {
                     StretchContribution previous = payload.PlayStackingType == CameraEffectStackingType.Add
                         ? m_AdditiveContribution : m_BaseContribution;
+                    state.StretchStartRadiusOffset = plan.CameraLocateRatio - 1f;
                     if (payload.StackingType == 0)
                     {
-                        state.StretchStartRadiusOffset = previous.RadiusOffset;
+                        state.StretchStartRadiusOffset = (previous.RadiusOffset + 1f) * plan.CameraLocateRatio - 1f;
+                        state.StretchStartRadiusEnvelope = previous.RadiusEnvelope;
                         state.StretchStartPositionOffset = previous.RawOffset;
                         state.StretchStartRollOffset = previous.RollOffset;
                     }
                     state.StretchInitialized = true;
                 }
-                StretchContribution sample = Sample(state, payload);
+                StretchContribution sample = Sample(state, payload, plan.CameraLocateRatio);
                 float envelope = sample.Envelope * state.Request.Weight;
                 Vector3 rawOffset = sample.RawOffset * state.Request.Weight;
                 Vector3 offset = ResolveWorldOffset(rawOffset, payload, plan, in input);
@@ -73,48 +75,55 @@ namespace ThirdPersonCamera
                 float radiusOffset = sample.RadiusOffset * state.Request.Weight;
                 float rollOffset = sample.RollOffset * state.Request.Weight;
                 if (payload.PlayStackingType == CameraEffectStackingType.Add)
-                    additiveContribution.Select(radiusOffset, rawOffset, offset, rollOffset);
+                    additiveContribution.Select(radiusOffset, sample.RadiusEnvelope, rawOffset, offset, rollOffset);
                 else
-                    baseContribution.Select(radiusOffset, rawOffset, offset, rollOffset);
+                    baseContribution.Select(radiusOffset, sample.RadiusEnvelope, rawOffset, offset, rollOffset);
                 if (state == elevationOwner || payload.PlayStackingType == CameraEffectStackingType.Add)
                     pitch = ResolvePitch(pitch, payload, envelope);
             }
             m_BaseContribution = baseContribution;
             m_AdditiveContribution = additiveContribution;
+            float crossOffset = (1f - 1f / plan.CameraLocateRatio)
+                * baseContribution.RadiusEnvelope * additiveContribution.RadiusEnvelope;
             Quaternion rotation = Quaternion.Euler(
                 pitch, euler.y, euler.z + baseContribution.RollOffset + additiveContribution.RollOffset);
             return plan.WithWorldBasicData(
                 plan.WorldBasicData
                     .WithPivotLocation(plan.PivotLocation + baseContribution.Offset + additiveContribution.Offset)
                     .WithRotation(rotation)
-                    .WithRadius(plan.Radius * (1f + baseContribution.RadiusOffset + additiveContribution.RadiusOffset)));
+                    .WithRadius(plan.Radius * (1f + baseContribution.RadiusOffset + additiveContribution.RadiusOffset + crossOffset)));
         }
 
         static StretchContribution Sample(
             CameraEffectRuntimeState state,
-            CameraStretchPayload payload)
+            CameraStretchPayload payload,
+            float cameraLocateRatio)
         {
             if (!state.Retired)
-                return SampleAt(state.Elapsed, state, payload);
+                return SampleAt(state.Elapsed, state, payload, cameraLocateRatio);
             if (payload.RecoilTime == 0f)
                 return default;
-            StretchContribution sample = SampleAt(state.RetireStartElapsed, state, payload);
-            sample.Scale(1f - Mathf.Clamp01(payload.EndCurve.Evaluate(state.RetireElapsed / payload.RecoilTime)));
+            StretchContribution sample = SampleAt(state.RetireStartElapsed, state, payload, cameraLocateRatio);
+            float weight = 1f - Mathf.Clamp01(payload.EndCurve.Evaluate(state.RetireElapsed / payload.RecoilTime));
+            sample.Scale(weight);
+            sample.RadiusEnvelope = weight;
             return sample;
         }
 
-        static StretchContribution SampleAt(float elapsed, CameraEffectRuntimeState state, CameraStretchPayload payload)
+        static StretchContribution SampleAt(float elapsed, CameraEffectRuntimeState state, CameraStretchPayload payload, float cameraLocateRatio)
         {
             float phaseElapsed = elapsed - payload.DelayTime;
             if (phaseElapsed < 0f)
                 return default;
+            float targetRadiusOffset = (payload.RadiusRatio + 1f) / cameraLocateRatio - 1f;
             if (payload.StretchTime > 0f && phaseElapsed < payload.StretchTime)
             {
                 float t = Mathf.Clamp01(payload.StartCurve.Evaluate(phaseElapsed / payload.StretchTime));
                 return new StretchContribution
                 {
                     Envelope = t,
-                    RadiusOffset = Mathf.LerpUnclamped(state.StretchStartRadiusOffset, payload.RadiusRatio, t),
+                    RadiusEnvelope = Mathf.Max(state.StretchStartRadiusEnvelope, t),
+                    RadiusOffset = Mathf.LerpUnclamped((state.StretchStartRadiusOffset + 1f) / cameraLocateRatio - 1f, targetRadiusOffset, t),
                     RawOffset = Vector3.LerpUnclamped(state.StretchStartPositionOffset, payload.CamOffset, t),
                     RollOffset = Mathf.LerpUnclamped(state.StretchStartRollOffset, payload.RotationZ, t)
                 };
@@ -123,7 +132,8 @@ namespace ThirdPersonCamera
             StretchContribution target = new StretchContribution
             {
                 Envelope = 1f,
-                RadiusOffset = payload.RadiusRatio,
+                RadiusEnvelope = 1f,
+                RadiusOffset = targetRadiusOffset,
                 RawOffset = payload.CamOffset,
                 RollOffset = payload.RotationZ
             };
@@ -157,6 +167,7 @@ namespace ThirdPersonCamera
         struct StretchContribution
         {
             public float Envelope;
+            public float RadiusEnvelope;
             public float RadiusOffset;
             public Vector3 RawOffset;
             public Vector3 Offset;
@@ -165,15 +176,19 @@ namespace ThirdPersonCamera
             public void Scale(float weight)
             {
                 Envelope *= weight;
+                RadiusEnvelope *= weight;
                 RadiusOffset *= weight;
                 RawOffset *= weight;
                 RollOffset *= weight;
             }
 
-            public void Select(float radiusOffset, Vector3 rawOffset, Vector3 offset, float rollOffset)
+            public void Select(float radiusOffset, float radiusEnvelope, Vector3 rawOffset, Vector3 offset, float rollOffset)
             {
                 if (Mathf.Abs(radiusOffset) > Mathf.Abs(RadiusOffset))
+                {
                     RadiusOffset = radiusOffset;
+                    RadiusEnvelope = radiusEnvelope;
+                }
                 if (offset.sqrMagnitude > Offset.sqrMagnitude)
                 {
                     RawOffset = rawOffset;

@@ -273,7 +273,8 @@ namespace ThirdPersonCamera
                 to.SourceActionInstanceId,
                 t,
                 to.ResetHistory,
-                to.Valid);
+                to.Valid,
+                Mathf.LerpUnclamped(from.CameraLocateRatio, to.CameraLocateRatio, t));
             return result
                 .WithIgnoreCollision(from.IgnoreCollision || to.IgnoreCollision)
                 .WithShotId(to.ShotId);

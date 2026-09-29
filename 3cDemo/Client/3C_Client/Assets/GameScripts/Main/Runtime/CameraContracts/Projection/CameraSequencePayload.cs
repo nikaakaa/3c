@@ -62,7 +62,8 @@ namespace ThirdPersonCamera
                         value.TrackControl1.Count != 3 || value.TrackControl2.Count != 3 ||
                         !float.IsFinite(value.AspectRatio) || value.AspectRatio <= 0f ||
                         !float.IsFinite(value.FieldOfView) || value.FieldOfView <= 0f ||
-                        !float.IsFinite(value.ElevationRatio) || !float.IsFinite(value.PolarAngle))
+                        !float.IsFinite(value.ElevationRatio) || !float.IsFinite(value.PolarAngle) ||
+                        !float.IsFinite(value.CameraLocateRatio) || value.CameraLocateRatio <= 0f)
                         throw new InvalidOperationException($"{source} contains invalid track framing.");
                     for (int i = 0; i < value.CameraOrbits.Count; i++)
                     {

@@ -21,22 +21,22 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 330000000000000001
-      type: {class: CameraFrameOnePointByTrackStage, ns: ThirdPersonCamera,
-        asm: ThirdPersonCamera.Contracts}
+      type: {class: CameraFrameOnePointByTrackStage, ns: ThirdPersonCamera, asm: ThirdPersonCamera.Contracts}
       data:
         m_StageId: corin.camera.default.normal.orbit
         m_CameraOrbits:
-        - m_Height: 2.2249999
+        - m_Height: 2.225
           m_Radius: 2.5
-        - m_Height: 0.22499999
+        - m_Height: 0.225
           m_Radius: 3.75
-        - m_Height: -0.77499998
+        - m_Height: -0.775
           m_Radius: 2.2
         m_ScreenOffsets:
-        - {x: 0, y: 0.34999999}
+        - {x: 0, y: 0.35}
         - {x: 0, y: 0.5}
         - {x: 0, y: 0.5}
         m_AspectRatio: 1.7777778
         m_FieldOfView: 50
         m_ElevationRatio: 0.5
         m_PolarAngle: 0
+        m_CameraLocateRatio: 1

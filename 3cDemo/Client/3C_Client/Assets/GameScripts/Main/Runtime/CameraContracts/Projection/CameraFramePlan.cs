@@ -29,6 +29,7 @@ namespace ThirdPersonCamera
         CameraCollisionResult m_Collision;
         bool m_IgnoreCollision;
         string m_ShotId;
+        float m_CameraLocateRatio;
 
         public CameraFramePlan(
             CameraWorldBasicData worldBasicData,
@@ -39,7 +40,8 @@ namespace ThirdPersonCamera
             ulong sourceActionInstanceId,
             float blendProgress,
             bool resetHistory,
-            bool valid)
+            bool valid,
+            float cameraLocateRatio)
         {
             m_WorldBasicData = worldBasicData;
             m_Lens = lens;
@@ -53,6 +55,7 @@ namespace ThirdPersonCamera
             m_Collision = default;
             m_IgnoreCollision = false;
             m_ShotId = string.Empty;
+            m_CameraLocateRatio = cameraLocateRatio;
         }
 
         public CameraWorldBasicData WorldBasicData => m_WorldBasicData;
@@ -67,6 +70,7 @@ namespace ThirdPersonCamera
         public float FarClipPlane => m_Lens.FarClipPlane;
         public Vector2 LookDelta => m_LookDelta;
         public float Radius => m_WorldBasicData.Radius;
+        public float CameraLocateRatio => m_CameraLocateRatio;
         public Vector2 Offset => m_WorldBasicData.Offset;
         public string SequenceId => m_SequenceId ?? string.Empty;
         public string SourceId => m_SourceId ?? string.Empty;

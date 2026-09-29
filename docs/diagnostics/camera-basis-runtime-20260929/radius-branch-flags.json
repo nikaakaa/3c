@@ -1,0 +1,86 @@
+[
+  {
+    "function": "radius-consumer-0x134dd0c0.json",
+    "instruction": "0x134dd10d",
+    "flag_rva": "0x53ca81e",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x134dd0c0.json",
+    "instruction": "0x134dd457",
+    "flag_rva": "0x53d9517",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x134dd0c0.json",
+    "instruction": "0x134dd75e",
+    "flag_rva": "0x53b0f7f",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x134dd0c0.json",
+    "instruction": "0x134dd796",
+    "flag_rva": "0x53b0f7f",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x134dd0c0.json",
+    "instruction": "0x134dd7ce",
+    "flag_rva": "0x53b0f7f",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596b455",
+    "flag_rva": "0x588ee0b",
+    "snapshot_byte": 1
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596b4c9",
+    "flag_rva": "0x53fe669",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596b4d6",
+    "flag_rva": "0x53fe67e",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596b566",
+    "flag_rva": "0x53fe684",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596b58f",
+    "flag_rva": "0x53fe68e",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596ba50",
+    "flag_rva": "0x53ad20b",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596be95",
+    "flag_rva": "0x536afe6",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596b3e0.json",
+    "instruction": "0x1596c221",
+    "flag_rva": "0x53fe684",
+    "snapshot_byte": 0
+  },
+  {
+    "function": "radius-consumer-0x1596c520.json",
+    "instruction": "0x1596c528",
+    "flag_rva": "0x53fe68e",
+    "snapshot_byte": 0
+  }
+]

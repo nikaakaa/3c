@@ -283,6 +283,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public Quaternion FinalRotation => m_Plan.Rotation;
         [DiagnosticField, DiagnosticKey("field-of-view"), DiagnosticGroup("camera-output")]
         public float FieldOfView => m_Plan.FieldOfView;
+        [DiagnosticField, DiagnosticKey("camera-locate-ratio"), DiagnosticGroup("camera-output")]
+        public float CameraLocateRatio => m_Plan.CameraLocateRatio;
+        [DiagnosticField, DiagnosticKey("radius"), DiagnosticGroup("camera-output")]
+        public float Radius => m_Plan.Radius;
+        [DiagnosticField, DiagnosticKey("pivot-location"), DiagnosticGroup("camera-output")]
+        public Vector3 PivotLocation => m_Plan.PivotLocation;
+        [DiagnosticField, DiagnosticKey("screen-offset"), DiagnosticGroup("camera-output")]
+        public Vector2 ScreenOffset => m_Plan.Offset;
         [DiagnosticField, DiagnosticKey("reset-tracking"), DiagnosticGroup("camera-output")]
         public bool ResetTracking => m_Plan.ResetHistory;
         [DiagnosticField, DiagnosticKey("sequence-id"), DiagnosticGroup("camera-output")]

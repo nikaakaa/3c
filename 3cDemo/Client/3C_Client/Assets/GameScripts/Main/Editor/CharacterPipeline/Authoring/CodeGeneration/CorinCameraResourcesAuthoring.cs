@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 throw new InvalidOperationException("Camera authoring requires an idle Editor.");
             var profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(Folder + "CorinCharacterCameraProfile.asset");
+            PublishDefaultOrbit(profile);
             PublishStacking(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
@@ -122,6 +123,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Undo.RecordObject(profile, "配置可琳相机资源");
             profile.ConfigureShakeResources(new List<CameraShakeAsset>(shakes.Values).ToArray(), new List<CameraCurveAsset>(curves.Values).ToArray());
             Save(profile);
+        }
+
+        public static void PublishDefaultOrbit(CharacterCameraProfile profile)
+        {
+            const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
+            JToken sphere = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"]["DEFAULTSPHEREDATA"];
+            CameraSequenceAsset sequence = profile.DefaultSequence;
+            Undo.RecordObject(sequence, "配置可琳基础轨道半径比例");
+            var track = (CameraFrameOnePointByTrackStage)sequence.Stages[0];
+            track.ConfigureCameraLocateRatio((float)sphere["CAMERA_LOCATE_RADIUSRATIO"]);
+            Save(sequence);
         }
 
         public static void PublishStacking(CharacterCameraProfile profile)

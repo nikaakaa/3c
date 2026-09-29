@@ -291,7 +291,7 @@ namespace ThirdPersonSimulation.Fixed
         static StableHash ComputeSnapshotHash(string domain, StableHash composition, StableHash world, StableHash pipeline)
         {
             CanonicalWriter writer = StableHash.BeginHash();
-            WriteHashField(writer, domain);
+            writer.WriteRawUtf8(domain.AsSpan());
             WriteHashField(writer, composition);
             WriteHashField(writer, world);
             WriteHashField(writer, pipeline);

@@ -351,7 +351,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (barrierIdentity == 0 || demand.Lineage != runtime.CurrentLineage)
+            if (barrierIdentity == 0 || !runtime.CurrentLineage.Matches(in demand.Lineage))
                 throw new InvalidOperationException(
                     $"Blend Stack '{NodeId}' evaluation preparation identity is invalid.");
             m_SourceBinding.PrepareEvaluation(

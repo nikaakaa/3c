@@ -383,7 +383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             if (runtime == null || node == null || node.NodeId != m_NodeId ||
-                !input.IsValid || lineage != runtime.CurrentLineage || m_FrameOpen)
+                !input.IsValid || !runtime.CurrentLineage.Matches(in lineage) || m_FrameOpen)
             {
                 throw new ArgumentException(
                     "Pose native StateMachine source frame input is invalid.");

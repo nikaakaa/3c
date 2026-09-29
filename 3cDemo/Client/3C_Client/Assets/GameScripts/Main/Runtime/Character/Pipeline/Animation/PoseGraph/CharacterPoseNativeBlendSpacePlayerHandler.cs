@@ -242,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             if (!m_CapturePrepared ||
-                demand.Lineage != runtime.CurrentLineage ||
+                !runtime.CurrentLineage.Matches(in demand.Lineage) ||
                 barrierIdentity == 0)
             {
                 throw new InvalidOperationException(

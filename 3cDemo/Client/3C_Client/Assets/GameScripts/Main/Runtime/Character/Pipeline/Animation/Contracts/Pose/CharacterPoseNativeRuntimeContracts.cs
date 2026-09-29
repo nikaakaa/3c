@@ -588,6 +588,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 InputContractHash,
                 InstanceId,
                 ResetGeneration));
+        internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
+            ActorId == lineage.ActorId && FrameIdentity == lineage.FrameIdentity &&
+            CompletionIdentity == lineage.CompletionIdentity &&
+            PresentationFrame == lineage.PresentationFrame &&
+            BodyTick == lineage.BodyTick && GraphId == lineage.GraphId &&
+            string.Equals(GraphRevision, lineage.GraphRevision, StringComparison.Ordinal) &&
+            string.Equals(RigId, lineage.RigId, StringComparison.Ordinal) &&
+            string.Equals(RigRevision, lineage.RigRevision, StringComparison.Ordinal) &&
+            string.Equals(InputContractHash, lineage.InputContractHash, StringComparison.Ordinal) &&
+            InstanceId == lineage.InstanceId && ResetGeneration == lineage.ResetGeneration;
         public static bool operator ==(CharacterPoseNativeFrameLineage left, CharacterPoseNativeFrameLineage right) => left.Equals(right);
         public static bool operator !=(CharacterPoseNativeFrameLineage left, CharacterPoseNativeFrameLineage right) => !left.Equals(right);
     }

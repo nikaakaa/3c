@@ -1288,3 +1288,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - graph 与 role runtime 的 `CurrentLineage` 按值返回 readonly lineage；handler 每次读取 `CompletionIdentity` 或参与 identity 比较前都会复制包含 graph/rig/contract identity 的整份 lineage。completed lineage 在 commit 后整帧保持不变。
 - 两个 internal 属性改为返回 `ref readonly`，直接字段读取不再复制整份 lineage；显式赋值和按值 equality 参数仍按 C# 语义复制。
 - 该改动统一 lineage 的正式只读入口，不改变 identity 内容、输出页完成标记和 Commit/Discard 判定。静态核对 readonly lineage、completed lineage 生命周期、两个 runtime 属性和现有字段读取/局部赋值调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP162 lineage 全量匹配引用化（2026-09-30，已实施，本轮未编译）
+
+- source demand barrier 与 StateMachine frame 输入使用 `!=` 比较 lineage；按值 operator 会把 readonly 引用两侧各复制一次。identity 比较本身只需要读取同一字段集合。
+- lineage 新增 `Matches(in lineage)` 逐字段正式匹配入口；BlendStack、Blend Space、Clip、Selected Pose 的 demand barrier 和 StateMachine PrepareFrame 输入改用该入口。匹配结果、异常时机、输出页完成判定和后续阶段不变。
+- 该改动删除这些全量 lineage 比较的两侧整份拷贝；不新增第二 identity 数据源。静态核对 `Matches` 字段集合与原 Equals 一致、readonly 引用入口和五个调用点；未编译、未采样，不能声称实测耗时收益。

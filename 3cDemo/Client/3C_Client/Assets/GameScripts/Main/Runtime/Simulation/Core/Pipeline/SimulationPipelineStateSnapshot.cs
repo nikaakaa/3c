@@ -118,13 +118,15 @@ namespace ThirdPersonSimulation
         StableHash ComputeHash()
         {
             CanonicalWriter writer = HashWriter();
+            Span<char> number = stackalloc char[20];
             writer.WriteRawUtf8("simulation-pipeline-state-snapshot/1");
             writer.WriteByte(0x1f);
             writer.WriteRawUtf8(Pipeline.Id.Value);
             writer.WriteRawUtf8("@");
             writer.WriteRawUtf8(Pipeline.Revision.Value);
             writer.WriteRawUtf8("/schema");
-            writer.WriteRawUtf8(Pipeline.SchemaVersion.Value.ToString());
+            Pipeline.SchemaVersion.Value.TryFormat(number, out int characterCount);
+            writer.WriteRawUtf8(number.Slice(0, characterCount));
             writer.WriteRawUtf8("/");
             writer.WriteRawUtf8(Pipeline.Hash.Value.Value);
             writer.WriteByte(0x1f);
@@ -132,7 +134,8 @@ namespace ThirdPersonSimulation
             writer.WriteByte(0x1f);
             writer.WriteRawUtf8(Backend.SemanticVersion);
             writer.WriteByte(0x1f);
-            writer.WriteRawUtf8(LastCompletedTick.ToString(CultureInfo.InvariantCulture));
+            LastCompletedTick.TryFormat(number, out characterCount, provider: CultureInfo.InvariantCulture);
+            writer.WriteRawUtf8(number.Slice(0, characterCount));
             for (int i = 0; i < m_Participants.Count; i++)
             {
                 SimulationPipelinePassStateSnapshot participant = m_Participants[i];
@@ -145,7 +148,8 @@ namespace ThirdPersonSimulation
                 writer.WriteRawUtf8(":");
                 writer.WriteRawUtf8(participant.StateSchemaId);
                 writer.WriteRawUtf8(":");
-                writer.WriteRawUtf8(participant.StateSchemaVersion.ToString());
+                participant.StateSchemaVersion.TryFormat(number, out characterCount);
+                writer.WriteRawUtf8(number.Slice(0, characterCount));
                 writer.WriteRawUtf8(":");
                 writer.WriteRawUtf8(participant.StateHash.Value);
             }

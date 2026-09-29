@@ -2033,3 +2033,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Continuity 的 unevaluated 构建、swing residual half-life 和 sliding correction 三个 helper 按值接收完整 FootMotion settings；每脚 suppressed、swing、plant 和 state target 求解会进入这些入口。
 - 三个 helper 的 settings 入参改为 `in`，正式调用点显式转发 frame 的只读 settings。tuning 字段、half-life、clamp、滑动权重和返回值不变。
 - 该改动删除 Foot Placement 周期中进入只读 settings helper 的整份配置拷贝。静态核对 settings 为 readonly struct、frame 生命周期覆盖调用、helper 只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP286 State plant support target 入参引用化（2026-09-30，已实施，本轮未编译）
+
+- Landing/Locked 状态构建 support target 后，`PlantTarget` 按值接收完整 target，再进入 `CharacterFootStateTarget` 构造。
+- 调用点先把 support target 绑定到局部，`PlantTarget` 改为 `in` 接收；target kind、normal source、contact lineage、state target 存储和后续 interpolation 语义不变。
+- 该改动删除 State Target plant 路径中 support target 的入参重复拷贝。静态核对 target 为 readonly struct、局部生命周期覆盖 PlantTarget、最终 state target 仍保留一次必要存储；未编译、未采样，不能声称实测耗时收益。

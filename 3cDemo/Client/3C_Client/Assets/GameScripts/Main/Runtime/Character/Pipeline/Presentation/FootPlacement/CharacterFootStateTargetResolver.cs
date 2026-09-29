@@ -239,6 +239,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
+            var supportTarget = new CharacterFootSupportTarget(
+                frame.FrameSequence,
+                frame.CompletionIdentity,
+                frame.Side,
+                originalSole + correction,
+                context.Contact.Normal,
+                context.Contact.SurfaceIdentity,
+                context.Contact.WorldRevision,
+                landing
+                    ? CharacterFootSupportTargetKind.VerifiedAnchor
+                    : response == CharacterFootLockResponse.FullAnchor
+                        ? CharacterFootSupportTargetKind.LockedFullAnchor
+                        : CharacterFootSupportTargetKind.LockedSliding,
+                CharacterFootSupportPositionSource.ContactAnchor,
+                context.Contact.AcquiredFrameSequence,
+                context.Contact.AcquiredCompletionIdentity,
+                context.Contact.EventIdentity,
+                0,
+                CharacterFootSupportNormalSource.ContactAnchor,
+                context.Contact.AcquiredFrameSequence,
+                context.Contact.AcquiredCompletionIdentity,
+                context.Contact.EventIdentity);
             return PlantTarget(
                 correction,
                 swingCorrection,
@@ -253,28 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 response,
                 context.ContactTransition.HasCompletedLockWeight(
                     context.Contact.EventIdentity),
-                new CharacterFootSupportTarget(
-                    frame.FrameSequence,
-                    frame.CompletionIdentity,
-                    frame.Side,
-                    originalSole + correction,
-                    context.Contact.Normal,
-                    context.Contact.SurfaceIdentity,
-                    context.Contact.WorldRevision,
-                    landing
-                        ? CharacterFootSupportTargetKind.VerifiedAnchor
-                        : response == CharacterFootLockResponse.FullAnchor
-                            ? CharacterFootSupportTargetKind.LockedFullAnchor
-                            : CharacterFootSupportTargetKind.LockedSliding,
-                    CharacterFootSupportPositionSource.ContactAnchor,
-                    context.Contact.AcquiredFrameSequence,
-                    context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity,
-                    0,
-                    CharacterFootSupportNormalSource.ContactAnchor,
-                    context.Contact.AcquiredFrameSequence,
-                    context.Contact.AcquiredCompletionIdentity,
-                    context.Contact.EventIdentity),
+                in supportTarget,
                 transition,
                 timeToLandingSeconds,
                 true,
@@ -320,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlantTargetKind targetKind,
             CharacterFootLockResponse lockResponse,
             bool lockWeightCompleted,
-            CharacterFootSupportTarget supportTarget,
+            in CharacterFootSupportTarget supportTarget,
             in CharacterFootTransitionDecision transition,
             float timeToLandingSeconds,
             bool directPlantFollow,

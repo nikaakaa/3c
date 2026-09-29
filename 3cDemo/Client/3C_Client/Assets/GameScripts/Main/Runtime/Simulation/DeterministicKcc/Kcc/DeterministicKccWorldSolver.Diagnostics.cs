@@ -127,12 +127,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
         {
             if (!diagnostics.IsEnabled)
                 return;
+            string detail = $"pairs={summary.PairCount};checks={summary.PairChecks};sweeps={summary.SweepCount};clips={summary.NormalClipCount};depenetrations={summary.DepenetrationCount};iterations={summary.IterationCount};validations={summary.ValidationCount}";
             for (int i = 0; i < m_Bindings.Length; i++)
             {
                 diagnostics.PublishWorld(new SimulationWorldTraceRecord(
                     success ? SimulationWorldTraceKind.Collision : SimulationWorldTraceKind.Failure,
                     "deterministic_actor_contact_batch",
-                    $"pairs={summary.PairCount};checks={summary.PairChecks};sweeps={summary.SweepCount};clips={summary.NormalClipCount};depenetrations={summary.DepenetrationCount};iterations={summary.IterationCount};validations={summary.ValidationCount}",
+                    detail,
                     tick,
                     m_Bindings[i].ActorId,
                     Descriptor.ImplementationId,

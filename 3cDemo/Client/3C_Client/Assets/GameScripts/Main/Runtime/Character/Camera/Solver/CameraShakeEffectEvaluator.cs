@@ -89,7 +89,11 @@ namespace ThirdPersonCamera
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input) =>
-            input.ScaledDeltaSeconds;
+            input.PresentationDeltaSeconds > 0f
+                ? m_Projection.MuteCameraShakeAdvancedProcess
+                    ? input.PresentationDeltaSeconds
+                    : input.ScaledDeltaSeconds
+                : 0f;
 
         public bool IsExpired(CameraEffectRuntimeState active)
         {

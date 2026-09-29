@@ -1,0 +1,75 @@
+{
+  "scope": "原作指定版本升降阻尼资格及计时证据；普通可琳不启用邦布变身专属分支。",
+  "session": "829",
+  "eligibility": {
+    "caller": "0x15971828: null owner调用0x17268130",
+    "generic_method_slot": "0x55f4ee0",
+    "generic_method": "0x50010c62918",
+    "generic_context": "0x500241b3c90",
+    "generic_argument": {
+      "descriptor_va": 140709401423632,
+      "raw_hex": "acf90000000000000000120000000000",
+      "kind": 18,
+      "attributes": 0,
+      "byref": false,
+      "data": 63916,
+      "type_definition_index": 63916,
+      "display": "BangbooGameSubsystem"
+    },
+    "field_offset": "0x76",
+    "field_name": "BangbooGameSubsystem.<isInHenshinBuddyStatus>k__BackingField",
+    "consumer": "0x15971838检测bool，false进入0x15971BF4，mode=0，currentRatio=1，返回1"
+  },
+  "velocity": {
+    "producer": "0x101D43BA读取Rigidbody.get_velocity内部调用槽0x540EC58，输出至AvatarInfoData.payload+0x48",
+    "named_wrapper": "UnityEngine.Rigidbody.get_velocity 0x1EDA9820，同一槽0x540EC58",
+    "consumer": "CameraDataAccessor.AvatarInfoData +0x230 + velocityY的payload偏移0x4C = +0x27C"
+  },
+  "timer": {
+    "consumer": "0x156231A0",
+    "formula": "elapsed先加delta；t=clamp01(elapsed/duration)；value=Lerp(from,to,curve.Evaluate(t))；from在上升/下降/阈值内状态变化时取当前值",
+    "downward": "velocityY < camDropVelocityY；目标camDropDumperY；Drop duration与curve",
+    "upward": "velocityY > camUpVelocityY；目标camUpDumperY；Up duration与curve",
+    "inside_thresholds": "使用独立计时器，仍取Up目标/时长/曲线，不能猜成固定回1",
+    "duration_nonpositive": "返回1"
+  },
+  "branch_bytes": [
+    {
+      "instruction": "0x17268141",
+      "rva": "0x53cc78c",
+      "value": 0
+    },
+    {
+      "instruction": "0x156231e8",
+      "rva": "0x53d8c11",
+      "value": 0
+    }
+  ],
+  "evidence_files": [
+    {
+      "path": "follow-delay-0x159717d0.json",
+      "sha256": "8fcf4cac4fac30ce641e00429ee0baafba326bca827d1925f7c3f931cc11d413"
+    },
+    {
+      "path": "follow-delay-vertical-eligibility-getter.json",
+      "sha256": "3023c46ec12324d1ecaee1c92514bb0ac068d858bf6c00e6a1ce7746a21f29d8"
+    },
+    {
+      "path": "follow-delay-bangboo-gate-type.json",
+      "sha256": "5f225c938508c4ebf97563a1ab61f8b0bd0796f0095285ab80659ded8398fefd"
+    },
+    {
+      "path": "follow-delay-vertical-rigidbody-velocity.json",
+      "sha256": "d4d0dd0828297d0970257b9985be90dce95abe09b385c54a85dd46d48b6d64b5"
+    },
+    {
+      "path": "follow-delay-avatar-producer-0x101d4180.json",
+      "sha256": "435de27dcddaeb1fc83a718ad78aa6e84a7a59d7876647b72648ac68d6ddf67a"
+    },
+    {
+      "path": "follow-delay-vertical-timer-0x156231a0.json",
+      "sha256": "a27893bcb0b70199a2465a25c554792087e33c89efc92d2558ba4acf51eefcd2"
+    }
+  ],
+  "implementation_decision": "当前可琳不存在BangbooGameSubsystem变身玩法，因此既有额外倍率1符合普通分支。本轮不新增速度输入、升降计时器或伪造邦布开关。原始Up/Drop配置保留为复刻来源。"
+}

@@ -1,0 +1,147 @@
+{
+  "project": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets",
+  "playing": false,
+  "clockSamples": [
+    {
+      "bypassAdvancedProcessing": false,
+      "presentation": 0.02,
+      "scaled": 0.01,
+      "actual": 0.01
+    },
+    {
+      "bypassAdvancedProcessing": false,
+      "presentation": 0.0,
+      "scaled": 0.01,
+      "actual": 0.0
+    },
+    {
+      "bypassAdvancedProcessing": false,
+      "presentation": 0.02,
+      "scaled": 0.0,
+      "actual": 0.0
+    },
+    {
+      "bypassAdvancedProcessing": true,
+      "presentation": 0.02,
+      "scaled": 0.01,
+      "actual": 0.02
+    },
+    {
+      "bypassAdvancedProcessing": true,
+      "presentation": 0.0,
+      "scaled": 0.01,
+      "actual": 0.0
+    },
+    {
+      "bypassAdvancedProcessing": true,
+      "presentation": 0.02,
+      "scaled": 0.0,
+      "actual": 0.02
+    }
+  ],
+  "framingSamples": [
+    {
+      "radiusRatio": 0.65,
+      "fov": 35.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 0.65,
+      "fov": 50.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 0.65,
+      "fov": 52.0,
+      "error": 1.86264515E-09
+    },
+    {
+      "radiusRatio": 0.65,
+      "fov": 60.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 0.65,
+      "fov": 85.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.0,
+      "fov": 35.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.0,
+      "fov": 50.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.0,
+      "fov": 52.0,
+      "error": 1.86264515E-09
+    },
+    {
+      "radiusRatio": 1.0,
+      "fov": 60.0,
+      "error": 7.67988251E-09
+    },
+    {
+      "radiusRatio": 1.0,
+      "fov": 85.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.1,
+      "fov": 35.0,
+      "error": 1.86264515E-09
+    },
+    {
+      "radiusRatio": 1.1,
+      "fov": 50.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.1,
+      "fov": 52.0,
+      "error": 7.450581E-09
+    },
+    {
+      "radiusRatio": 1.1,
+      "fov": 60.0,
+      "error": 1.86264515E-09
+    },
+    {
+      "radiusRatio": 1.1,
+      "fov": 85.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.8,
+      "fov": 35.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.8,
+      "fov": 50.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.8,
+      "fov": 52.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.8,
+      "fov": 60.0,
+      "error": 0.0
+    },
+    {
+      "radiusRatio": 1.8,
+      "fov": 85.0,
+      "error": 0.0
+    }
+  ],
+  "maxFramingError": 7.67988251E-09,
+  "scope": "Edit-mode invocation of production methods; no Play/replay or visual acceptance",
+  "sourceDirty": true
+}

@@ -1096,3 +1096,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - AP117 已为输出值建立 `(node, port) -> slot` 构造期索引，但 cycle detection 仍构造 `(node, port, stage)` 哈希键写入 `HashSet`，诊断观测也维护两个同键 Dictionary；capture.20260929-164123 仍记录 `CharacterPoseNativePortKey.Equals` 热点。
 - cycle 标记改为与输出缓存同长的 bool slot 数组，Prepare/Evaluate 观测改为定容 observation 数组并在 Commit 时原位交换。读取 miss、求值异常、TryObserve、Clear/Discard/Reset/Dispose 的记录和清理语义保持；输出 slot 索引继续是唯一正式端口身份。
 - 正常求值不再构造或哈希 `CharacterPoseNativePortKey`，该类型唯一使用点已删除。观测内容、fault 记录、Evaluate/Prepare 回退、InstanceId/CompletionIdentity 检查、输出值缓存和阶段边界不变。静态核对 BuildPortDefinitions、Read、TryObserve、Commit/Discard 和条件编译范围；未编译、未采样，不能声称实测耗时收益。
+
+### AP130 骨骼父子拓扑 handler 索引（2026-09-30，已实施，本轮未编译）
+
+- capture.20260929-164123 中 `CharacterAnimationRigPayload.GetPoseParentIndex` 约 0.056% exclusive、238 个包含样本；该入口每次检查索引并按 physical/virtual 分支访问 payload 列表。Modify Bone 的目标、每个子孙保存与重建，以及空间转换的每骨骼 local/component 变换都在运行帧重复查询不变拓扑。
+- Modify Bone 在 Initialize 解析目标父索引后，把子孙父索引与 descendant 数组同序缓存；空间转换在构造期缓存完整 PoseBone parent 数组。rig payload 构造后不可变，这些数组是 handler 对正式 rig 拓扑的定容读取结构，不是第二数据源。
+- 运行帧的父子解析收敛为数组访问；节点绑定、拓扑判定、变换公式、失败文本和输出写入顺序不变。静态核对 rig `RequireValid`、handler 初始化唯一调用和两条转换链；未编译、未采样，不能声称实测耗时收益。

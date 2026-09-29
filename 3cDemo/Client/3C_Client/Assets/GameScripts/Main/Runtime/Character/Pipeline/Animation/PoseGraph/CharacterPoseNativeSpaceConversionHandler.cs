@@ -117,6 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly PosePortId m_InputPort;
         readonly PosePortId m_OutputPort;
         readonly CharacterAnimationRigPayload m_Rig;
+        readonly int[] m_ParentIndices;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly CharacterComponentBonePose[] m_ComponentScratch;
@@ -141,6 +142,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native space conversion binding is invalid.");
             }
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
+            m_ParentIndices = new int[rig.PoseBoneCount];
+            for (int i = 0; i < m_ParentIndices.Length; i++)
+                m_ParentIndices[i] = rig.GetPoseParentIndex(i);
             m_NodeId = nodeId;
             m_Kind = kind;
             m_InputPort = new PosePortId(kind == CharacterPoseNodeKind.LocalToComponentPose
@@ -359,7 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose local = input.DenseLocalPoses[i];
                 if (!CharacterPoseConstraintMath.TryCreateComponent(
                         local,
-                        m_Rig.GetPoseParentIndex(i),
+                        m_ParentIndices[i],
                         m_ComponentScratch,
                         0,
                         out CharacterComponentBonePose component))
@@ -387,7 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
-                int parent = m_Rig.GetPoseParentIndex(i);
+                int parent = m_ParentIndices[i];
                 AnimationLocalBonePose local;
                 if (parent < 0)
                 {

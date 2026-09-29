@@ -18,8 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly AnimationLocalBonePose[] m_LocalScratch;
         CharacterModifyBonePosePayload m_Modification;
         int[] m_Descendants;
+        int[] m_DescendantParents;
         int[] m_AffectedVirtualBones;
         int m_BoneIndex = -1;
+        int m_TargetParent = -1;
         int m_PageIndex = -1;
         CharacterPoseNativeComponentPoseValue m_Output;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -59,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BoneIndex = m_Rig.RequirePoseBoneIndex(modification.BoneId);
             if (m_BoneIndex >= m_Rig.PhysicalBoneCount)
                 throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot target a virtual bone.");
+            m_TargetParent = m_Rig.GetPoseParentIndex(m_BoneIndex);
             var affected = new bool[m_Rig.PhysicalBoneCount];
             var descendants = new List<int>();
             affected[m_BoneIndex] = true;
@@ -72,6 +75,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             m_Descendants = descendants.ToArray();
+            m_DescendantParents = new int[m_Descendants.Length];
+            for (int i = 0; i < m_Descendants.Length; i++)
+                m_DescendantParents[i] = m_Rig.GetPoseParentIndex(m_Descendants[i]);
             var virtualBones = new List<int>();
             for (int i = 0; i < m_Rig.VirtualBoneCount; i++)
             {
@@ -311,7 +317,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ApplyModification(Vector3 position, Quaternion rotation, Vector3 scale, float weight)
         {
             CharacterComponentBonePose original = m_ComponentScratch[m_BoneIndex];
-            int parent = m_Rig.GetPoseParentIndex(m_BoneIndex);
+            int parent = m_TargetParent;
             bool parentLocal = m_Modification.ReferenceSpace == ModifyBoneReferenceSpace.ParentLocal && parent >= 0;
             if (parentLocal)
             {
@@ -351,7 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 int bone = m_Descendants[i];
                 if (!CharacterPoseConstraintMath.TryCreateLocal(m_ComponentScratch[bone],
-                        m_ComponentScratch[m_Rig.GetPoseParentIndex(bone)], out m_LocalScratch[bone]))
+                        m_ComponentScratch[m_DescendantParents[i]], out m_LocalScratch[bone]))
                     throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot preserve local bone #{bone}.");
             }
             if (!CharacterPoseConstraintMath.TryCreateComponent(blended, parentLocal ? parent : -1,
@@ -360,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < m_Descendants.Length; i++)
             {
                 int bone = m_Descendants[i];
-                if (!CharacterPoseConstraintMath.TryCreateComponent(m_LocalScratch[bone], m_Rig.GetPoseParentIndex(bone),
+                if (!CharacterPoseConstraintMath.TryCreateComponent(m_LocalScratch[bone], m_DescendantParents[i],
                         m_ComponentScratch, 0, out m_ComponentScratch[bone]))
                     throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot rebuild descendant #{bone}.");
             }

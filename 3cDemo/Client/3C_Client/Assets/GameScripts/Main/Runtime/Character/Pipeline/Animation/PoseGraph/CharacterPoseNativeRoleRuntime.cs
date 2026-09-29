@@ -269,7 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameLease lease = m_Graph.BeginFrame(in input);
             if (m_Source == null)
                 return lease;
-            CharacterPoseNativeFrameLineage openLineage = lease.Lineage;
+            ref readonly CharacterPoseNativeFrameLineage openLineage = ref lease.Lineage;
             try
             {
                 if (m_Constraints != null)
@@ -287,7 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePreparationResult PrepareFrame(
-            CharacterPoseNativeFrameLease lease) =>
+            in CharacterPoseNativeFrameLease lease) =>
             m_Graph.PrepareFrame(lease);
 
         internal void EvaluateAnimationGraph() =>
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Graph.BindGraphInput(portId, value);
 
         internal void PrepareEvaluation(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
@@ -312,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativeEvaluationResult Evaluate(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity) =>
             m_Graph.Evaluate(
@@ -321,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 barrierIdentity);
 
         internal CharacterPoseNativeValidationResult ValidatePending(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
             CharacterPoseNativeValidationResult validation =
@@ -353,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePublicationResult Commit(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation,
             bool captureFootIkDiagnostics)
         {
@@ -381,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void Discard(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             CharacterPoseNativeFailureCode reason)
         {
             Exception failure = null;

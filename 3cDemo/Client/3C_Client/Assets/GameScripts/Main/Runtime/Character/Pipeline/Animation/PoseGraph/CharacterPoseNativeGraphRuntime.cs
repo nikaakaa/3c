@@ -545,7 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         [PerformanceProbe("presentation.animation.pose-graph.prepare")]
         internal CharacterPoseNativePreparationResult PrepareFrame(
-            CharacterPoseNativeFrameLease lease)
+            in CharacterPoseNativeFrameLease lease)
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Frame);
@@ -749,7 +749,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void PrepareEvaluation(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
@@ -771,7 +771,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         [PerformanceProbe("presentation.animation.pose-graph.evaluate")]
         internal CharacterPoseNativeEvaluationResult Evaluate(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
@@ -823,7 +823,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativeValidationResult ValidatePending(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
             RequireLease(lease);
@@ -863,7 +863,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         [PerformanceProbe("presentation.animation.pose-graph.commit")]
         internal CharacterPoseNativePublicationResult Commit(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
             RequireLease(lease);
@@ -910,7 +910,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePublicationResult Commit(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation,
             CharacterFinalPoseNativePublication publication,
             bool captureFootIkDiagnostics)
@@ -995,7 +995,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void Discard(
-            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeFrameLease lease,
             CharacterPoseNativeFailureCode reason)
         {
             RequireLease(lease);
@@ -1365,7 +1365,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : null;
         }
 
-        void RequireLease(CharacterPoseNativeFrameLease lease)
+        void RequireLease(in CharacterPoseNativeFrameLease lease)
         {
             RequireStarted();
             if (!m_FrameLease.IsValid || !lease.Matches(m_FrameLease.Lineage))

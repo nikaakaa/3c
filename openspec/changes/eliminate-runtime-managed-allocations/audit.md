@@ -1306,3 +1306,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Source 与 Constraint frame lease 每次 `Matches` 都调用 `WithCompletion(0)` 构造新 lineage，再通过按值 operator 复制两侧；native frame lease 也使用按值 operator。三个 lease 的 `Lineage` 属性本身还按值返回整份 lineage。
 - lineage 新增忽略 CompletionIdentity 的正式引用匹配入口；source/constraint lease 用它保留原有开放帧 identity 合同，native lease 继续全字段匹配。三个 lease 的 Lineage 改为 readonly 字段加 `ref readonly` 属性，Matches 参数改为 `in`。比较结果、异常时机和阶段校验顺序不变。
 - 该改动删除 lease 匹配期的临时 lineage 与两侧整份拷贝；不新增第二数据源。静态核对三个 lease 的构造约束、新旧字段集合、全部 Matches 调用和 Lineage 消费语义；未编译、未采样，不能声称实测耗时收益。
+
+### AP165 native frame lease 参数引用化（2026-09-30，已实施，本轮未编译）
+
+- graph 与 role runtime 的 Prepare、PrepareEvaluation、Evaluate、ValidatePending、Commit、Discard 都按值接收 `CharacterPoseNativeFrameLease`；BeginFrame 还把 lease.Lineage 复制到局部 lineage。这些参数在阶段间不变。
+- graph 的 8 个阶段入口和 role 的 6 个转发入口统一改为 `in` 参数；BeginFrame 的 openLineage 改为 readonly 引用。调用点继续传同一 lease，RequireLease、异常时机、阶段推进和 Commit/Discard 语义不变。
+- 该改动删除每个阶段的整份 lease 拷贝；不新增第二生命周期路径。静态核对 graph/role 全部按值参数、调用绑定、readonly 引用生命周期和 BeginFrame 异常清理；未编译、未采样，不能声称实测耗时收益。

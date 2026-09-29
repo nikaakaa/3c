@@ -627,6 +627,12 @@
 - 删除根入口重复 Clear，保留深度计数、嵌套判定和 finally 清理。递归环检查、根操作重复停止、诊断和异常传播不变；下次 ForceStop 起点仍是空集合。
 - 静态核对 ForceStop 唯一根入口、嵌套递归、finally 异常路径和 HasTransientState；未编译、运行回放或采样。
 
+### AP77 Ability Action Store 评估开始重复清理名单（2026-09-29，已实施，本轮未编译）
+
+- Fixed 和 Float32 ActionStateStore 在 BeginEvaluation 清空 `m_EvaluatedActions`；上一轮 Complete 或 Abort 已通过 EndEvaluation 清空。Begin 的栈检查继续拒绝残留 skill execution stack，但不重复清理已建立为空的名单。
+- 删除 Begin 的重复 Clear，保留 End 唯一清理边界和每轮 RetainEvaluatedAction 写入。执行栈状态检查、技能执行上下文、评估名单顺序和异常 Abort 链不变。
+- 两个数值域同步修改，静态核对 Complete、Abort、Begin/End 生命周期和异常传播；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

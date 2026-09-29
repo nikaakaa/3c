@@ -317,7 +317,6 @@ namespace ThirdPersonSimulation.Fixed
             if (m_SkillExecutionStack.Count != 0)
                 throw new InvalidOperationException("Skill execution stack retained transient state across evaluations.");
             m_SkillExecution.BeginEvaluation();
-            m_EvaluatedActions.Clear();
         }
 
         public void EndEvaluation()

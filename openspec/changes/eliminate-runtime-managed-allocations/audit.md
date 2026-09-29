@@ -1787,3 +1787,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStateEvaluation.Frame` 自动属性每次读取复制完整 state frame；Lifecycle 的 Evaluate 和 Resolve 系列每次进入都复制，frame 内含 swing、ground path、support、lock、settings 等大结构。
 - Frame 改为 backing field 返回只读引用，五条主路径绑定同一只读局部。后续 resolver、interpolation、transition 和 support 查询仍按原 `in` 合同读取 frame，求值顺序与输出不变。
 - 该改动删除 Foot Placement lifecycle 周期中的整份 state frame 拷贝。静态核对 evaluation 为 `in` 参数、frame 生命周期覆盖调用、消费链只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP245 Foot lifecycle animated foot 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStateFrame.AnimatedFoot` 自动属性每次读取复制完整 animated foot；Lifecycle support 查询和 unavailable request 还先复制到局部，constraint、target、transition 和 interpolation 也会重复读取。
+- AnimatedFoot 改为 backing field 返回只读引用，Lifecycle 两个局部改为绑定同一引用；构造仍按 `in` 接收并只保留必要状态存储。状态时序、约束结果和输出身份不变。
+- 该改动删除 Foot lifecycle 周期中 animated foot 的重复拷贝。静态核对 frame 为只读引用、foot 生命周期覆盖调用、消费链只读；未编译、未采样，不能声称实测耗时收益。

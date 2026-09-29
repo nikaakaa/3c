@@ -1543,6 +1543,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootStateFrame
     {
+        readonly CharacterFootPlacementAnimatedFootPose m_AnimatedFoot;
+
         internal CharacterFootStateFrame(
             ulong frameSequence,
             ulong completionIdentity,
@@ -1576,7 +1578,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigId = rigId;
             RigRevision = rigRevision;
             Side = side;
-            AnimatedFoot = animatedFoot;
+            m_AnimatedFoot = animatedFoot;
             AnimatedHip = animatedHip;
             LegLength = legLength;
             SwingMotion = swingMotion;
@@ -1606,7 +1608,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootSide Side { get; }
-        internal CharacterFootPlacementAnimatedFootPose AnimatedFoot { get; }
+        internal ref readonly CharacterFootPlacementAnimatedFootPose AnimatedFoot =>
+            ref m_AnimatedFoot;
         internal Vector3 AnimatedHip { get; }
         internal float LegLength { get; }
         internal CharacterFootSwingMotionResult SwingMotion { get; }

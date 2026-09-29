@@ -371,7 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSupportTarget support)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
-            CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
+            ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
             float rotationWeight = context.Contact.HasContact
                 ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
             if (!evaluation.Grounded || frame.FootPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon ||
@@ -652,7 +652,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootResolvedOutcome outcome)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
-            CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
+            ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
             var identity = new CharacterFootPlacementIdentity(
                 frame.FrameSequence, frame.CompletionIdentity,
                 frame.RigId, frame.RigRevision, evaluation.Side);

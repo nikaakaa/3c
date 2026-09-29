@@ -104,17 +104,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float liftOffPhase,
             float durationSeconds,
             float timeToLandingSeconds)
+            : this(phase, liftOffPhase, durationSeconds, timeToLandingSeconds, false)
         {
-            Phase = RequireNormalized(phase, nameof(phase));
-            LiftOffPhase = RequireNormalized(liftOffPhase, nameof(liftOffPhase));
-            DurationSeconds = RequireNonNegative(durationSeconds, nameof(durationSeconds));
-            TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
         }
 
-        public float Phase { get; private set; }
-        public float LiftOffPhase { get; private set; }
-        public float DurationSeconds { get; private set; }
-        public float TimeToLandingSeconds { get; private set; }
+        internal AnimationActionStepClockSample(
+            float phase,
+            float liftOffPhase,
+            float durationSeconds,
+            float timeToLandingSeconds,
+            bool validateInputs)
+        {
+            if (!validateInputs)
+            {
+                phase = RequireNormalized(phase, nameof(phase));
+                liftOffPhase = RequireNormalized(liftOffPhase, nameof(liftOffPhase));
+                durationSeconds = RequireNonNegative(durationSeconds, nameof(durationSeconds));
+                timeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
+            }
+
+            Phase = phase;
+            LiftOffPhase = liftOffPhase;
+            DurationSeconds = durationSeconds;
+            TimeToLandingSeconds = timeToLandingSeconds;
+        }
+
+        public float Phase { get; }
+        public float LiftOffPhase { get; }
+        public float DurationSeconds { get; }
+        public float TimeToLandingSeconds { get; }
         public bool IsPreSwing => Phase < LiftOffPhase;
         public bool IsSwing => Phase >= LiftOffPhase && Phase < 0.9999f;
 
@@ -124,13 +142,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float durationSeconds,
             float timeToLandingSeconds)
         {
-            return new AnimationActionStepClockSample
-            {
-                Phase = phase,
-                LiftOffPhase = liftOffPhase,
-                DurationSeconds = durationSeconds,
-                TimeToLandingSeconds = timeToLandingSeconds
-            };
+            return new AnimationActionStepClockSample(
+                phase,
+                liftOffPhase,
+                durationSeconds,
+                timeToLandingSeconds,
+                true);
         }
 
         static float RequireNormalized(float value, string field)

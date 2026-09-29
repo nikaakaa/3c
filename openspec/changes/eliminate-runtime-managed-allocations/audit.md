@@ -1132,3 +1132,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationPredictedFootStepSample` 构造器在创建 clock 前已经验证 `EventPhase`、`LiftOffPhase` 和 `TimeToLandingSeconds`；公共 `AnimationActionStepClockSample` 构造器随后重复这三项。duration 仍属于预测步边界，原由 clock 内部再查。
 - 预测步先在原校验位置拒绝负 duration，再用 `FromValidated` 直接写入四个字段；公共构造器继续服务外部输入。异常触发位置保持，duration 的 `ParamName` 继续为 `durationSeconds`。
 - 该改动删除预测步采样链的重复 phase/time 校验，不改变 clock 输出、异常类型或后续字段赋值顺序。静态核对唯一 `FromValidated` 调用点、原 duration 校验顺序和公共构造器保留边界；未编译、未采样，不能声称实测耗时收益。
+
+### AP136 Action step clock 只读入口修复（2026-09-30，已实施，本轮未编译）
+
+- 静态复查发现 AP135 在 `readonly struct AnimationActionStepClockSample` 上使用 private setter 和对象初始化器；C# 只读结构不允许该实例状态写入方式，属于会阻断编译的结构缺陷。
+- 公共构造器委托给显式 `validateInputs` 内部构造器：外部入口先执行 phase、duration 和 time 校验；`FromValidated` 传入已验证边界并直接赋值。四个属性恢复只读 getter，字段值、异常类型和异常顺序不变。
+- 该修复保留 AP135 的已验证入口，不引入兼容路径或第二数据源。静态核对 struct 修饰、两个构造器委托、唯一 internal 调用点和公共构造器外部合同；未编译，本轮不做运行验证。

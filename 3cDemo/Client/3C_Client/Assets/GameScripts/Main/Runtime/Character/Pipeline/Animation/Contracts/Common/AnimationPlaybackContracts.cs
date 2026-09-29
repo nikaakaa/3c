@@ -121,6 +121,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct ClipSamplePlan
     {
+        readonly AnimationClip m_Clip;
+        readonly int m_ResourceCatalogIndex;
+        readonly int m_GroupClipIndex;
+
         public ClipSamplePlan(
             int clipBindingIndex,
             AnimationClip clip,
@@ -190,9 +194,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             ClipBindingIndex = clipBindingIndex;
             BlendSpaceSampleId = blendSpaceSampleId;
-            Clip = clip;
-            ResourceCatalogIndex = resourceCatalogIndex;
-            GroupClipIndex = groupClipIndex;
+            m_Clip = clip;
+            m_ResourceCatalogIndex = resourceCatalogIndex;
+            m_GroupClipIndex = groupClipIndex;
             DurationSecondsValue = durationSeconds;
             ClipTime = clipTime;
             ContinuousClipTime = continuousClipTime;
@@ -205,9 +209,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public int ClipBindingIndex { get; }
         public CharacterAnimationBlendSpaceSampleId BlendSpaceSampleId { get; }
-        public AnimationClip Clip { get; }
-        public int ResourceCatalogIndex { get; }
-        public int GroupClipIndex { get; }
+        public AnimationClip Clip => m_Clip;
+        public int ResourceCatalogIndex => m_ResourceCatalogIndex;
+        public int GroupClipIndex => m_GroupClipIndex;
+        internal ref readonly AnimationClip ClipRef => ref m_Clip;
+        internal ref readonly int ResourceCatalogIndexRef => ref m_ResourceCatalogIndex;
+        internal ref readonly int GroupClipIndexRef => ref m_GroupClipIndex;
         float DurationSecondsValue { get; }
         public CharacterAnimationSamplingBackendKind Backend => IsAcl
             ? CharacterAnimationSamplingBackendKind.Acl

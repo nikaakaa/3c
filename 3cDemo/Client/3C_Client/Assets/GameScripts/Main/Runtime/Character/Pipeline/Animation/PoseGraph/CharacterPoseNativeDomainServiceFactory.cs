@@ -228,7 +228,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (contribution.SourceIdRef.SourceKind == AnimationPoseSourceKind.Timeline)
             {
-                CharacterActionAnimationSourcePlan action = m_SourceCatalog.RequireActionPlan(clipSample);
+                CharacterActionAnimationSourcePlan action =
+                    m_SourceCatalog.RequireActionPlan(in clipSample);
                 return new CharacterPoseFootMotionSource(
                     action.ClipIdentity,
                     (ulong)action.FullDependencyHash.GetHashCode(),

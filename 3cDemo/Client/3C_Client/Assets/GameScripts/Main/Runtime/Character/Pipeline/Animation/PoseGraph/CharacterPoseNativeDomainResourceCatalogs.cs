@@ -92,12 +92,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterActionAnimationSourcePlan RequireActionPlan(
-            ClipSamplePlan sample)
+            in ClipSamplePlan sample)
         {
             if (!sample.IsAcl)
-                return RequireActionPlan(sample.Clip);
+                return RequireActionPlan(sample.ClipRef);
             if (m_AclActionPlans.TryGetValue(
-                    (sample.ResourceCatalogIndex, sample.GroupClipIndex),
+                    (sample.ResourceCatalogIndexRef, sample.GroupClipIndexRef),
                     out CharacterActionAnimationSourcePlan plan))
                 return plan;
             throw new InvalidOperationException("Action ACL sample has no compiled source plan.");

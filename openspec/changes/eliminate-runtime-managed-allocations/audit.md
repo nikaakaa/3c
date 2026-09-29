@@ -1697,3 +1697,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Motion 的匿名 `Func` 按值接收 contribution 与 clip sample；每次采样调用会复制两者，工厂 resolver 内部又只读取 identity 和 catalog 查找字段。
 - 用项目唯一的 `CharacterPoseFootMotionResolver` 委托替换匿名 `Func`，contribution 和 clip sample 改为 `in`；工厂 resolver 同步改为只读边界并绑定 contribution 的 source id 引用。Timeline 与 Presentation 两个分支、catalog 查找、display/source 输出和异常时机不变。
 - 该改动删除 Foot Motion 每次采样的委托边界拷贝。catalog 的 action plan 参数仍按原值接收，留待后续单独核对；静态核对唯一委托目标和调用点、参数只读且引用生命周期覆盖本次解析；未编译、未采样，不能声称实测耗时收益。
+
+### AP230 action plan sample 查找引用化（2026-09-30，已实施，本轮未编译）
+
+- Foot Motion Timeline 分支把 clip sample 按值传入 Source Resource Catalog；`ClipSamplePlan` 的 Clip、resource index 和 group index 自动属性每次读取还会复制字段。
+- catalog 的 sample 查找改为 `in`，`ClipSamplePlan` 保留公共属性与存储合同并新增正式 backing field 只读引用；catalog 在 Native Clip 和 ACL 两个分支绑定所需引用。工厂调用显式只读转发，查找键、异常文本和返回 plan 不变。
+- 该改动删除 Foot Motion action plan 查找的 sample 边界与查找字段拷贝。静态核对唯一 sample 查找消费点、引用生命周期覆盖字典查找和字段只读；未编译、未采样，不能声称实测耗时收益。

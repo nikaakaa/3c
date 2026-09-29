@@ -129,6 +129,7 @@ namespace ThirdPersonSimulation
     {
         public AbilityTimelineLogicMotion(
             SimulationExecutionSource source,
+            string sourceIdentity,
             CharacterSkillId abilityId,
             ulong sourceGeneration,
             FixedScalar displacementX,
@@ -149,6 +150,9 @@ namespace ThirdPersonSimulation
             if (weight < FixedScalar.Zero || weight > FixedScalar.One)
                 throw new ArgumentOutOfRangeException(nameof(weight));
             Source = source;
+            SourceIdentity = string.IsNullOrEmpty(sourceIdentity)
+                ? throw new ArgumentException("Timeline motion requires a source identity.", nameof(sourceIdentity))
+                : sourceIdentity;
             AbilityId = abilityId;
             SourceGeneration = sourceGeneration;
             DisplacementX = displacementX;
@@ -164,6 +168,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationExecutionSource Source { get; }
+        public string SourceIdentity { get; }
         public CharacterSkillId AbilityId { get; }
         public ulong SourceGeneration { get; }
         public FixedScalar DisplacementX { get; }

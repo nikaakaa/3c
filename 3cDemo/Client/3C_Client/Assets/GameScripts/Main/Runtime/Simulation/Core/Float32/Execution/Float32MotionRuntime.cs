@@ -60,6 +60,7 @@ namespace ThirdPersonSimulation
     {
         public SimulationMotionContribution(
             SimulationExecutionSource source,
+            string sourceIdentity,
             CharacterSkillId abilityId,
             ulong sourceGeneration,
             Float32Vector3 displacement,
@@ -77,6 +78,9 @@ namespace ThirdPersonSimulation
             if (!source.IsValid)
                 throw new ArgumentException("Motion contribution source is invalid.", nameof(source));
             Source = source;
+            SourceIdentity = string.IsNullOrEmpty(sourceIdentity)
+                ? throw new ArgumentException("Motion contribution source identity is incomplete.", nameof(sourceIdentity))
+                : sourceIdentity;
             AbilityId = abilityId;
             SourceGeneration = sourceGeneration;
             Displacement = displacement;
@@ -104,9 +108,9 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationExecutionSource Source { get; }
+        public string SourceIdentity { get; }
         public CharacterSkillId AbilityId { get; }
         public ulong SourceGeneration { get; }
-        public string SourceIdentity => Source.Identity;
         public Float32Vector3 Displacement { get; }
         public Float32Scalar YawDegrees { get; }
         public Float32Vector2 PlanarBasis { get; }
@@ -137,6 +141,7 @@ namespace ThirdPersonSimulation
             bool claimsLowerChannels,
             SimulationExecutionSource resolvedOwnerSource,
             CharacterSkillId resolvedOwnerAbilityId,
+            string resolvedOwnerIdentity,
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             Float32Vector3 resolvedOwnerDisplacement,
@@ -155,6 +160,7 @@ namespace ThirdPersonSimulation
             ClaimsLowerChannels = claimsLowerChannels;
             ResolvedOwnerSource = resolvedOwnerSource;
             ResolvedOwnerAbilityId = resolvedOwnerAbilityId;
+            ResolvedOwnerIdentity = resolvedOwnerIdentity;
             MovementPlaybackClock = movementPlaybackClock;
             LocomotionTimeline = locomotionTimeline;
             ResolvedOwnerDisplacement = resolvedOwnerDisplacement;
@@ -176,7 +182,7 @@ namespace ThirdPersonSimulation
         public bool ClaimsLowerChannels { get; }
         public SimulationExecutionSource ResolvedOwnerSource { get; }
         public CharacterSkillId ResolvedOwnerAbilityId { get; }
-        public string ResolvedOwnerIdentity => ResolvedOwnerSource.IsValid ? ResolvedOwnerSource.Identity : string.Empty;
+        public string ResolvedOwnerIdentity { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public Float32Vector3 ResolvedOwnerDisplacement { get; }
@@ -339,7 +345,7 @@ namespace ThirdPersonSimulation
                     traceSourceGeneration = contribution.SourceGeneration;
                 }
                 sourceCount++;
-                sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
+                sourceFingerprint = MixSource(sourceFingerprint, contribution.SourceIdentity);
                 Float32Vector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
                     ? Float32Angle.RotatePlanar(contribution.Displacement, bodyYaw)
                     : contribution.Displacement;
@@ -371,7 +377,7 @@ namespace ThirdPersonSimulation
                 }
             }
             if (!hasAdditive && !hasWeighted && !hasOverride)
-                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, default, default, default, default, Float32Vector3.Zero, Float32Scalar.Zero, default, default, 0, 0, 0);
+                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, default, default, string.Empty, default, default, Float32Vector3.Zero, Float32Scalar.Zero, default, default, 0, 0, 0);
 
             Float32Vector3 channelDisplacement = additiveDisplacement;
             Float32Scalar channelYaw = additiveYaw;
@@ -403,6 +409,7 @@ namespace ThirdPersonSimulation
                 hasOverride && overrideWinner.ConsumeLowerChannels,
                 hasOverride ? overrideWinner.Source : default,
                 hasOverride ? overrideWinner.AbilityId : default,
+                hasOverride ? overrideWinner.SourceIdentity : string.Empty,
                 movementPlaybackClock,
                 channel == SimulationMotionChannel.Locomotion && hasOverride
                     ? overrideWinner.LocomotionTimeline
@@ -1104,6 +1111,7 @@ namespace ThirdPersonSimulation
                 generation);
             m_Motion.Submit(new SimulationMotionContribution(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                Access.Services.SkillOperationIdentity(operation.Handle),
                 m_Ability.AbilityId,
                 generation,
                 displacement,

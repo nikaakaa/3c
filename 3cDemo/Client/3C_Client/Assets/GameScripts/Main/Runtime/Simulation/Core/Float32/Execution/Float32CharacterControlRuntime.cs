@@ -123,13 +123,13 @@ namespace ThirdPersonSimulation
                 ? checked((int)Math.Ceiling(descriptor.DurationSeconds * tickRate))
                 : 0;
             var movementPlaybackClock = new CommittedMovementPlaybackClock(
-                request.Source.Identity,
+                request.SourceIdentity,
                 request.PlaybackGeneration,
                 tick,
                 continuousTicks,
                 tickRate);
             var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
-                request.Source.Identity,
+                request.SourceIdentity,
                 request.PlaybackGeneration,
                 tick,
                 tickRate,
@@ -151,6 +151,7 @@ namespace ThirdPersonSimulation
 
             contributions[contributionCount++] = new SimulationMotionContribution(
                 request.Source,
+                request.SourceIdentity,
                 default,
                 request.PlaybackGeneration,
                 displacement,

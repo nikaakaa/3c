@@ -396,6 +396,7 @@ namespace ThirdPersonSimulation.Fixed
                 AbilityTimelineLogicMotion value = timelineMotion[i];
                 contributions.Append(new SimulationMotionContribution(
                     value.Source,
+                    value.SourceIdentity,
                     value.AbilityId,
                     value.SourceGeneration,
                     new FixedVector3(value.DisplacementX, value.DisplacementY, value.DisplacementZ),

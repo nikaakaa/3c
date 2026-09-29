@@ -395,6 +395,7 @@ namespace ThirdPersonSimulation
                 AbilityTimelineLogicMotion value = timelineMotion[i];
                 contributions.Append(new SimulationMotionContribution(
                     value.Source,
+                    value.SourceIdentity,
                     value.AbilityId,
                     value.SourceGeneration,
                     new Float32Vector3(

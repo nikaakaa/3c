@@ -537,6 +537,7 @@ namespace ThirdPersonSimulation
         GameplayAbilityExecutionIdentity Identity { get; }
         OperationExecutionTopology Topology { get; }
         string SourcePath(OperationHandle operation);
+        string SkillOperationIdentity(OperationHandle operation);
         void RequireIdentity(GameplayAbilityExecutionIdentity identity);
     }
 

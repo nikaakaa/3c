@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
         readonly StateMachine<string, string> m_Machine;
+        readonly Dictionary<CharacterControlStateId, ControlSource> m_Sources = new();
         bool m_Initialized;
         bool m_RestoringState;
 
@@ -119,28 +120,29 @@ namespace ThirdPersonCharacter.Control.Rules
         {
             int elapsed = m_State.ReadInt32(s_MotionElapsed);
             ulong playbackGeneration = m_State.ReadUInt64(s_EnteredTick);
+            ControlSource source = Source(stateId);
             if (stateId == WalkStart)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkStartMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkStartMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == WalkLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == RunLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == RunStopping)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunStoppingMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunStoppingMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == MovingTurn)
             {
                 string motion = elapsed < Ticks(m_Context, MovingTurnMotionSeconds)
                     ? s_MovingTurnMotion
                     : s_RunLoopMotion;
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), motion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, motion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
 
             if (stateId != Idle)
@@ -333,8 +335,27 @@ namespace ThirdPersonCharacter.Control.Rules
 
         bool IsAttackActive(ICharacterControlReadPort read) => read.IsAbilityActive(Attack);
 
-        SimulationExecutionSource Source(CharacterControlStateId stateId) =>
-            SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, default);
+        ControlSource Source(CharacterControlStateId stateId)
+        {
+            if (m_Sources.TryGetValue(stateId, out ControlSource source))
+                return source;
+            SimulationExecutionSource executionSource = SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, default);
+            source = new ControlSource(executionSource, executionSource.Identity);
+            m_Sources[stateId] = source;
+            return source;
+        }
+
+        readonly struct ControlSource
+        {
+            public ControlSource(SimulationExecutionSource source, string identity)
+            {
+                Source = source;
+                Identity = identity;
+            }
+
+            public SimulationExecutionSource Source { get; }
+            public string Identity { get; }
+        }
 
         void Trace(
             CharacterControlStateId stateId,

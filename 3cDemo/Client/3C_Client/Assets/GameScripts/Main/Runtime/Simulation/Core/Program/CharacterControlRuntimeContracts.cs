@@ -147,6 +147,7 @@ namespace ThirdPersonSimulation
     {
         public CharacterControlMotionRequest(
             SimulationExecutionSource source,
+            string sourceIdentity,
             string binding,
             SimulationInputValueId input,
             int continuousTicks,
@@ -158,6 +159,9 @@ namespace ThirdPersonSimulation
             if (playbackGeneration == 0)
                 throw new ArgumentException("Character control motion request playback generation is invalid.", nameof(playbackGeneration));
             Source = source;
+            SourceIdentity = string.IsNullOrEmpty(sourceIdentity)
+                ? throw new ArgumentException("Character control motion request source identity is incomplete.", nameof(sourceIdentity))
+                : sourceIdentity;
             Binding = SimulationIdentity.Require(binding, nameof(binding));
             Input = input;
             ContinuousTicks = continuousTicks;
@@ -166,6 +170,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationExecutionSource Source { get; }
+        public string SourceIdentity { get; }
         public string Binding { get; }
         public SimulationInputValueId Input { get; }
         public int ContinuousTicks { get; }

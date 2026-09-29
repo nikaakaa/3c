@@ -32,6 +32,7 @@ namespace ThirdPersonSimulation
     {
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly string[] m_OperationSourcePaths;
+        readonly string[] m_OperationSourceIdentities;
         readonly IReadOnlyDictionary<int, Float32GameplayAbilityCurve> m_ExecutionCurves;
         readonly PortableTagQuery[] m_TagQueries;
         readonly SimulationSetByCallerValue[][] m_SetByCallerValues;
@@ -61,6 +62,7 @@ namespace ThirdPersonSimulation
 
             m_Layout = layout;
             m_OperationSourcePaths = operationSourcePaths;
+            m_OperationSourceIdentities = BuildOperationSourceIdentities(operationSourcePaths);
             Identity = new GameplayAbilityExecutionIdentity(
                 data.AbilityId,
                 data.ContentHash,
@@ -113,6 +115,21 @@ namespace ThirdPersonSimulation
             if (!operation.IsValid || operation.Value >= m_OperationSourcePaths.Length)
                 throw new ArgumentOutOfRangeException(nameof(operation));
             return m_OperationSourcePaths[operation.Value];
+        }
+
+        public string SkillOperationIdentity(OperationHandle operation)
+        {
+            if (!operation.IsValid || operation.Value >= m_OperationSourceIdentities.Length)
+                throw new ArgumentOutOfRangeException(nameof(operation));
+            return m_OperationSourceIdentities[operation.Value];
+        }
+
+        static string[] BuildOperationSourceIdentities(string[] sourcePaths)
+        {
+            var identities = new string[sourcePaths.Length];
+            for (int i = 0; i < sourcePaths.Length; i++)
+                identities[i] = $"skill-operation:{sourcePaths[i]}";
+            return identities;
         }
 
         public void RequireIdentity(GameplayAbilityExecutionIdentity identity)

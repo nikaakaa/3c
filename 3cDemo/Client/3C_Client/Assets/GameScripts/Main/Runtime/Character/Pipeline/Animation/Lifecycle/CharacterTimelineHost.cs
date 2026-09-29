@@ -314,6 +314,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var source = SimulationExecutionSource.FromSkillOperation(
                 new OperationHandle(active.Provenance.SourceOperationIndex),
                 active.OperationExecutionPath);
+            string sourceIdentity = source.Identity;
             TimelineRuntimeSampleView<TimelineMotionCurveContribution> contributions =
                 pending.Result.Evaluation.MotionContributions;
             for (int index = 0; index < contributions.Count; index++)
@@ -321,6 +322,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 TimelineMotionCurveContribution contribution = contributions[index];
                 results.Add(new AbilityTimelineLogicMotion(
                     source,
+                    sourceIdentity,
                     new CharacterSkillId(active.ActionContext.ActionId),
                     active.Provenance.SourceActivationGeneration,
                     contribution.DisplacementX,

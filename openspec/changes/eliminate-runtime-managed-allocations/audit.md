@@ -705,6 +705,12 @@
 - 内部 ingress 结构 Identity 改为 StableHash，两个唯一 ActionRuntime 创建点直接传递 header 身份；匹配失败异常插值保持原字符串内容，仅在错误路径调用 ToString。匹配字段、优先级、状态更新和事实输出不变。
 - 每条 Action lifecycle ingress 少一次 64字符分配；异常路径文本不变。静态核对结构唯一创建/消费链、内部访问边界和差异；未编译、运行回放或采样。
 
+### AP90 Motion 来源身份周期拼接（2026-09-29，已实施，本轮未编译）
+
+- `SimulationExecutionSource.Identity` 每次访问都拼 `skill-operation:` 或 character-control 组合文本。Fixed/Float32 Motion 解析对每个贡献调用它计算 fingerprint，owner 输出再调用同一文本；控制运动还会在 clock、timeline 和 contribution 间重复调用，Timeline motion 也按 contribution 间接重复。
+- 两域 Ability Execution Services 在装配期从已有 SourcePath 预生成全部 `skill-operation:{path}` 身份。Corin control module 按状态缓存 execution source 和 identity；CharacterControlMotionRequest、AbilityTimelineLogicMotion 与 SimulationMotionContribution 携带来源 identity，Timeline 复制时一次生成并给所有 motion 复用。ResolvedMotionChannel 存储 owner identity，fingerprint 和输出直接读取。
+- 每个 Skill/Timeline motion contribution 在周期解析中不再生成 identity；控制运动由每 tick 多次生成收敛为按状态首次一次。贡献来源、fingerprint 输入、owner 文本、clock/timeline 匹配、混合顺序和异常文本不变。新增定容身份数组、状态缓存和请求字段，不加 fallback 或第二执行路径。静态核对全部创建点、接口实现、默认通道返回、消费链和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

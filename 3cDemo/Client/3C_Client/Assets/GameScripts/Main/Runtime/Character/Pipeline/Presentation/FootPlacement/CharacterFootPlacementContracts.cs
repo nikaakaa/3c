@@ -446,8 +446,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementRequest left,
             in CharacterFootPlacementRequest right)
         {
-            CharacterFootPlacementIdentity leftIdentity = left.Identity;
-            CharacterFootPlacementIdentity rightIdentity = right.Identity;
+            ref readonly CharacterFootPlacementIdentity leftIdentity = ref left.Identity;
+            ref readonly CharacterFootPlacementIdentity rightIdentity = ref right.Identity;
             CharacterFootPlacementContract.RequirePair(
                 in leftIdentity, in rightIdentity, left.Outcome, right.Outcome);
             FrameSequence = leftIdentity.FrameSequence;
@@ -475,8 +475,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterResolvedFootResult left,
             in CharacterResolvedFootResult right)
         {
-            CharacterFootPlacementIdentity leftIdentity = left.Identity;
-            CharacterFootPlacementIdentity rightIdentity = right.Identity;
+            ref readonly CharacterFootPlacementIdentity leftIdentity = ref left.Identity;
+            ref readonly CharacterFootPlacementIdentity rightIdentity = ref right.Identity;
             CharacterFootPlacementContract.RequirePair(
                 in leftIdentity, in rightIdentity, left.Outcome, right.Outcome);
             FrameSequence = leftIdentity.FrameSequence;

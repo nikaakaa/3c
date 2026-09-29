@@ -1823,3 +1823,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootPlacementRequest` 和 `CharacterResolvedFootResult` 构造函数的 identity、pose、support、landing reach、goal target、stride 仍按值接收；AP249 后属性已返回引用，但 BuildRequest、BuildUnavailableRequest 和 Publish 仍会在进入构造时先复制入参。
 - 六个内部构造入参改为 `in`，三处唯一构造点显式转发局部或只读属性。backing field 赋值仍保留一次必要输出存储，resolved outcome 和 landing reach 标量不变。
 - 该改动删除 Foot Placement 输出 request、resolved result 构造边界的入参拷贝。静态核对唯一调用点、参数只读、引用生命周期覆盖构造和输出写入；未编译、未采样，不能声称实测耗时收益。
+
+### AP251 Foot pair lineage identity 引用读取（2026-09-30，已实施，本轮未编译）
+
+- request pair 和 resolved pair 构造时把左右 `Identity` 复制到局部，再只读传入 lineage 校验和读取 header 字段。
+- 四个局部改为 backing field 只读绑定；`RequirePair` 参数、字段比较、FrameSequence/CompletionIdentity/RigId/RigRevision 写入和异常文本不变。
+- 该改动删除 Foot Placement pair 构造的 identity 拷贝。静态核对左右对象为 `in` 参数、identity 生命周期覆盖构造、消费只读；未编译、未采样，不能声称实测耗时收益。

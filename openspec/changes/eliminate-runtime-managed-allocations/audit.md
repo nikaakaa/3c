@@ -526,6 +526,13 @@
 - 查询/接触 summary 的原计算与 checked 算术仍保留，没有借编译裁剪顺带改变原错误边界；部分诊断字段和计数仍由求解器计算，本项不宣称整个 KCC 无诊断工作。已开启诊断但 sink 未启用时仍沿原计时规则，不引入中途启停时间不完整的缓存标志。
 - 对两份源文件进行预处理条件的静态文本展开：两个宏均关闭时 Stopwatch 调用和计时字段引用均为0；任一开启时保留原六个计时调用位置，构造调用/签名与字段赋值同步存在。核对全部私有发布和计时字段引用及差异；这不是 C# 编译验证，未启动编译、回放或采样。无新增测试，脚步预测和碰撞数值算法未改，实际收益未知。
 
+### AP62 KCC 普通构建仍复制候选页诊断字段（2026-09-29，已实施，未运行）
+
+- AP61 裁剪发布入口后，ActorSolveCandidate 仍无条件保存 StepDiagnostics、Remaining、MovementIterations、HasBlockingContact、BlockingContact、BlockingContactCount、Termination、NoProgressConfirmationCount 八个字段；它们的唯一读取点为已按诊断条件裁剪的 PublishDiagnostics 调用。候选页在接触修正、静态重约束及最终验证间按值读取/写回，普通构建仍携带这些不消费的字段。
+- 将八个字段、构造参数、赋值及 MotorResult 取值统一放入 UNITY_EDITOR 或 KK_DIAGNOSTIC_SAMPLING 分支。普通构建不再取代表阻挡接触或复制这些候选数据；开启诊断时仍保存并发布相同内容。没有另外建简化候选类型、运行时标志或第二条求解路径。
+- Requested 和 PreviousState 仍供 ReconstraintAfterMovement 使用，QuerySummary 仍按原 checked 规则汇总，均保留。Position/Ground/Collision、Actor 请求、Motor 内部步阶/阻挡/终止计算及结果结构保持；未通过减少记录字段去裁剪运动算法。BlockingContactAt(0) 原调用受 HasBlockingContact 控制，Move 先复制活动接触后返回计数，本次只消除供诊断读取的代表值。
+- 对变更前后两份文件进行条件静态展开：诊断开启分支去掉空白后源码一致，普通分支无这八类 candidate/motorResult 诊断读取；全部部分类型字段引用和构造调用已核对，差异检查通过。减少普通构建候选结构的诊断存储及传值工作，不报告未测结构尺寸、GC降幅或毫秒收益。未编译、回放或采样，脚步预测未改。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

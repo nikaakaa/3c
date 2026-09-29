@@ -294,6 +294,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 FixedVector3 position,
                 DeterministicKccGroundReport ground,
                 WorldCollisionSummary collision,
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 DeterministicKccStepDiagnostics stepDiagnostics,
                 FixedVector3 remaining,
                 int movementIterations,
@@ -302,6 +303,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 int blockingContactCount,
                 DeterministicKccMovementTermination termination,
                 int noProgressConfirmationCount,
+#endif
                 DeterministicKccQuerySummary querySummary,
                 DeterministicKccBodyState previousState
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
@@ -314,6 +316,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 Position = position;
                 Ground = ground;
                 Collision = collision;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 StepDiagnostics = stepDiagnostics;
                 Remaining = remaining;
                 MovementIterations = movementIterations;
@@ -322,6 +325,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 BlockingContactCount = blockingContactCount;
                 Termination = termination;
                 NoProgressConfirmationCount = noProgressConfirmationCount;
+#endif
                 QuerySummary = querySummary;
                 PreviousState = previousState;
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
@@ -334,6 +338,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             public FixedVector3 Position;
             public DeterministicKccGroundReport Ground;
             public WorldCollisionSummary Collision;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             public DeterministicKccStepDiagnostics StepDiagnostics;
             public FixedVector3 Remaining;
             public int MovementIterations;
@@ -342,6 +347,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             public int BlockingContactCount;
             public DeterministicKccMovementTermination Termination;
             public int NoProgressConfirmationCount;
+#endif
             public DeterministicKccQuerySummary QuerySummary;
             public DeterministicKccBodyState PreviousState;
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING

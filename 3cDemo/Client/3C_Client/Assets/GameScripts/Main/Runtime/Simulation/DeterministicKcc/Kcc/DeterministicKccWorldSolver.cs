@@ -243,6 +243,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     motorResult.Position,
                     motorResult.Ground,
                     motorResult.Collision,
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                     motorResult.StepDiagnostics,
                     motorResult.RemainingDisplacement,
                     motorResult.MovementIterations,
@@ -251,6 +252,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     motorResult.BlockingContactCount,
                     motorResult.Termination,
                     motorResult.NoProgressConfirmationCount,
+#endif
                     motorResult.QuerySummary,
                     m_KccStates[i]
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING

@@ -1066,3 +1066,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationPoseMath.BlendWeighted` 和 `AnimationSlotBlendJobMath.TryResolveWeightedPose` 先执行退化旋转、finite 值或 magnitude 检查，随后仍进入 `AnimationLocalBonePose` 公共构造器重复 finite、四元数非零检查并再次归一化。这些路径服务 Slot Blend 与 PoseGraph 加权姿态输出。
 - 两处现在在既有边界完成有限值检查后显式归一化一次，再使用 AP123 的内部已归一化构造器。`BlendWeighted` 保持退化旋转 `InvalidOperationException` 和非法值 `ArgumentException`；`TryResolveWeightedPose` 对除法后 rotation 可能溢出的极端路径保持与原公共构造器相同的 `ArgumentException`。
 - 加权姿态的位置、缩放、旋转数值、失败类型和输出页消费时序不变；不新增分配、缓存或第二合成路径。静态核对两处唯一调用链和 `AnimationLocalBonePose` 内部构造合同；未编译、未采样，不能声称实测耗时收益。
+
+### AP125 Evaluated Action 身份索引（2026-09-30，已实施，本轮未编译）
+
+- Fixed 与 Float32 `ActionStateStore` 的 `m_EvaluatedActions` 按 `InstanceId` 保存 Timeline motion 仍需消费的动作快照；`RetainEvaluatedAction` 在每次 `EnterSkillExecution` 和 `BindSkillExecution` 后线性查找替换点，`TryGetEvaluatedInstance` 再线性查找读取。
+- 两域 Store 增加构造期 `InstanceId -> list index` 字典，保留、读取和评估结束清理同步维护列表与索引。正式 InstanceId 唯一，替换原位置，新增写入列表尾部索引；`EndEvaluation` 同时清空列表和索引。
+- Timeline motion 的延迟读取从 evaluated action 数量级扫描收敛为一次 ulong 哈希查找，且不新增周期分配或第二动作数据源。静态核对两域保留、读取、清理和 Timeline 消费调用链；未编译、未采样，不能声称实测耗时收益。

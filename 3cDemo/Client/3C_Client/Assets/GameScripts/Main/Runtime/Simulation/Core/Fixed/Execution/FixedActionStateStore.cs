@@ -299,6 +299,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly Stack<SkillExecutionScope> m_SkillExecutionScopePool = new();
         readonly List<FixedActionInstanceState> m_EvaluatedActions = new(8);
+        readonly Dictionary<ulong, int> m_EvaluatedActionIndexes = new();
         readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
         readonly TraceExecutionScope m_TraceExecutionScope = new();
 
@@ -325,6 +326,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Skill execution stack has an unclosed runtime scope.");
             m_SkillExecution.EndEvaluation();
             m_EvaluatedActions.Clear();
+            m_EvaluatedActionIndexes.Clear();
         }
 
         public IDisposable EnterSkillExecution(FixedActionInstanceState action)
@@ -613,10 +615,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryGetEvaluatedInstance(ulong instanceId, out FixedActionInstanceState state)
         {
-            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            if (m_EvaluatedActionIndexes.TryGetValue(instanceId, out int index))
             {
-                if (m_EvaluatedActions[index].InstanceId != instanceId)
-                    continue;
                 state = m_EvaluatedActions[index];
                 return true;
             }
@@ -624,17 +624,16 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
+        // Timeline motion resolves after lifecycle changes and may outlive the action's state slot.
         void RetainEvaluatedAction(FixedActionInstanceState action)
         {
-            // Timeline motion resolves after lifecycle changes and may outlive the action's state slot.
-            for (int index = 0; index < m_EvaluatedActions.Count; index++)
+            if (m_EvaluatedActionIndexes.TryGetValue(action.InstanceId, out int index))
             {
-                if (m_EvaluatedActions[index].InstanceId != action.InstanceId)
-                    continue;
                 m_EvaluatedActions[index] = action;
                 return;
             }
             m_EvaluatedActions.Add(action);
+            m_EvaluatedActionIndexes.Add(action.InstanceId, m_EvaluatedActions.Count - 1);
         }
 
         public bool TryGetInstance(ulong instanceId, out FixedActionInstanceState state)

@@ -1258,3 +1258,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - AP154 将 BlendStack source binding 的正式入口改为已解析 source slot 后，AnimationSlot source 链仍把 `CharacterPoseCanvasNode` 传入该入口，静态复查发现会造成接口不匹配；同时 AnimationSlot 每帧还会重复读取 presentation source slot。
 - AnimationSlot handler 在 Initialize 缓存 source slot，`ICharacterPoseNativeAnimationSlotSource` 与 BlendStack binding 一样直接接收 source slot。Action source frame、slot selection、request 内容、retirement 和 Commit/Discard 顺序不变。
 - 该改动修复 AP154 静态复查发现的跨接口断点，并删除 AnimationSlot source 准备期的重复 payload 分派；不保留 node/slot 双路径。静态核对唯一接口实现、PrepareFrame 调用链和错误边界；未编译、未采样，不能声称实测耗时收益。
+
+### AP157 StateMachine active state 求值准备收敛（2026-09-30，已实施，本轮未编译）
+
+- StateMachine 在 `PrepareEvaluation` 先由 `SynchronizeTransition` 调用 `CollectActiveStates`，随后又立即调用一次；同一 pending state/transition 在两次调用之间不变，每次都重复 state dictionary 查找和 active slot 排列。
+- `SynchronizeTransition` 改为接收已求得的 active state count；evaluation preparation 仍先调用一次收集，再用同一 count 做 phase 同步和子图准备。active states 内容、phase 同步阈值、异常时机和后续 Evaluate/Commit 语义不变。
+- 该改动删除同一准备阶段的重复 active state 收集；不在跨阶段引入缓存状态。静态核对 pending state/transition 的修改点、`CollectActiveStates` 排列和 PrepareEvaluation 调用顺序；未编译、未采样，不能声称实测耗时收益。

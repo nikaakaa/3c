@@ -219,9 +219,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
-        void SynchronizeTransition()
+        void SynchronizeTransition(int activeStateCount)
         {
-            if (m_PendingTransition == null || CollectActiveStates() != 2)
+            if (m_PendingTransition == null || activeStateCount != 2)
                 return;
             ICharacterPoseNativePhaseSource outgoing = m_ActiveStates[0].Graph.PhaseSources;
             ICharacterPoseNativePhaseSource incoming = m_ActiveStates[1].Graph.PhaseSources;
@@ -498,8 +498,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
-            SynchronizeTransition();
             int activeStateCount = CollectActiveStates();
+            SynchronizeTransition(activeStateCount);
             for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];

@@ -185,8 +185,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void CommitFrame()
         {
-            if (!m_FrameOpen)
-                throw new InvalidOperationException("Camera frame candidate is not open.");
             for (int index = 0; index < m_ActiveRequests.Count; index++)
                 if (m_CandidateRetirements[index] != 0)
                     RetireRuntimeRequest(m_ActiveRequests[index].Command, m_CandidateRetirements[index]);

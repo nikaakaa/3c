@@ -140,8 +140,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void CommitSamplingFrame()
         {
-            if (!m_SamplingFrameActive)
-                throw new InvalidOperationException("Action sampling frame is not open.");
             m_SamplingFrameActive = false;
             Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
             Array.Clear(m_TimelineAnimationFrames, 0, m_TimelineAnimationFrames.Length);
@@ -370,7 +368,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void ValidateFrame()
         {
+            RequireAlive();
             RequireActiveFrame();
+            if (!m_SamplingFrameActive)
+                throw new InvalidOperationException("Action sampling frame is not open.");
             m_Playback.ValidateFrame();
             for (int i = 0; i < m_Playback.Retirements.Count; i++)
             {
@@ -384,8 +385,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void CommitFrame()
         {
-            RequireAlive();
-            RequireActiveFrame();
             m_Playback.CommitFrame();
             m_History.Commit(m_HistoryLease);
             m_HistoryActive = false;

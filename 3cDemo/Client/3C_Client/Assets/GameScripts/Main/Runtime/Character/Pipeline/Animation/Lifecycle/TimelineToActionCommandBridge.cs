@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
@@ -273,15 +274,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
+            m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
+            Exception failure = null;
             for (int i = 0; i < m_Playbacks.Length; i++)
             {
                 PlaybackState playback = m_Playbacks[i];
-                if (playback.Handle != 0)
-                    ReleaseAll(playback.Handle, playback.LogicTick, playback.PresentationFrame, "bridge-disposed");
+                if (playback.Handle == 0)
+                    continue;
+                for (int producerIndex = 0; producerIndex < m_Producers.Length; producerIndex++)
+                {
+                    ProducerState producer = m_Producers[producerIndex];
+                    if (producer.Handle != playback.Handle)
+                        continue;
+                    try
+                    {
+                        PublishRelease(producer, playback.LogicTick, playback.PresentationFrame, "bridge-disposed", false);
+                    }
+                    catch (Exception cleanup)
+                    {
+                        CharacterPresentationCleanup.Record(ref failure, cleanup);
+                    }
+                    m_Producers[producerIndex] = default;
+                }
             }
             Array.Clear(m_Playbacks, 0, m_Playbacks.Length);
-            m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
-            m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
+            ClearFrameSnapshot();
+            m_Samples.Clear();
+            m_SampleOrder.Clear();
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
     }
 
@@ -770,12 +792,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         if (m_Disposed)
             return;
-        Reset();
         m_Disposed = true;
         m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
         m_TimelineHost.PresentationGraphs.CameraPrepared -= OnGraphCamera;
         m_TimelineHost.PresentationGraphFramePreparing -= OnGraphFramePreparing;
         m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
+        Exception failure = null;
+        try { DiscardFrame(); }
+        catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+        foreach (CameraEventState state in m_Events.Values)
+        {
+            if (state.Suspended)
+                continue;
+            try { m_Runtime.Retire(state.Activation); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+        }
+        m_Events.Clear();
+        m_FrameBaseline.Clear();
+        m_Alive.Clear();
+        m_Retired.Clear();
+        if (failure != null)
+            ExceptionDispatchInfo.Capture(failure).Throw();
     }
 }
 }

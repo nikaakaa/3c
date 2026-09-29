@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using ThirdPersonSimulation;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
@@ -228,6 +229,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void RequireAvailable() => m_Session.Frame.RequireAvailable();
 
+        internal Exception RecordPresentationFault(in AnimationPresentationFault fault, Exception failure) =>
+            m_Session.Frame.RecordFault(in fault, failure);
+
         internal CharacterPoseNativePublicationResult RunFrame(
             in CharacterPoseNativeFrameInput input,
             Guid diagnosticRuntimeId,
@@ -309,8 +313,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void Dispose()
         {
-            m_Session.Dispose();
-            m_Services.Dispose();
+            Exception failure = null;
+            CharacterPresentationCleanup.Dispose(m_Session, ref failure);
+            CharacterPresentationCleanup.Dispose(m_Services, ref failure);
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
     }
 

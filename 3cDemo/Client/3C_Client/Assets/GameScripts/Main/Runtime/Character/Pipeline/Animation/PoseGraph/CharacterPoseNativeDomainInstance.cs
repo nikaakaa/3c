@@ -1,3 +1,5 @@
+using ThirdPersonCharacter.Pipeline.Presentation;
+using System.Runtime.ExceptionServices;
 using System;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -45,8 +47,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            DiscardFrame();
-            m_Session.Dispose();
+            Exception failure = null;
+            try
+            {
+                DiscardFrame();
+            }
+            catch (Exception cleanup)
+            {
+                failure = cleanup;
+            }
+            CharacterPresentationCleanup.Dispose(m_Session, ref failure);
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
     }
 }

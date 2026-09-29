@@ -11,7 +11,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         EvaluateBarrier = 4,
         Sealed = 5,
         Discarded = 6,
-        Faulted = 7
+        Faulted = 7,
+        TimelineCommit = 8,
+        ActionBridgeCommit = 9,
+        SamplingClockCommit = 10,
+        CameraCommit = 11,
+        PresentationBridgeCommit = 12,
+        CameraPresent = 13,
+        FrameCleanup = 14
     }
 
     public enum AnimationPresentationFrameOutcome : byte
@@ -108,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActorId.IsValid &&
             PresentationFrame != 0 &&
             Phase >= AnimationPresentationFramePhase.EvaluateBarrier &&
-            Phase <= AnimationPresentationFramePhase.Faulted;
+            Phase <= AnimationPresentationFramePhase.FrameCleanup;
     }
 
     public readonly struct AnimationPresentationRuntimeCapacityMetrics
@@ -211,7 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationPresentationFramePhase FaultPhase { get; }
         public bool HasFault =>
             FaultPhase >= AnimationPresentationFramePhase.EvaluateBarrier &&
-            FaultPhase <= AnimationPresentationFramePhase.Faulted;
+            FaultPhase <= AnimationPresentationFramePhase.FrameCleanup;
         public ulong DiagnosticsNoInterestSkipCount { get; }
     }
 

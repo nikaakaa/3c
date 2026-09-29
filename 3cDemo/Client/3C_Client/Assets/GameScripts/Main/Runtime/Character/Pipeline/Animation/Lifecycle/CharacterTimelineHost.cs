@@ -1046,11 +1046,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 TimelineRuntimePresentationFrame candidate = m_PresentationCandidates[i];
                 PresentationFrameProduced?.Invoke(candidate);
-                if (TryGetActivePlayback(candidate.Handle, out ActivePlayback active))
-                {
-                    CharacterTimelinePlaybackDiagnostics.PublishTimelineVisualTime(m_Diagnostics, active.Trace, candidate);
-                    CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
-                }
             }
             m_Host?.CommitPresentationFrame(frame);
             for (int i = 0; i < m_PresentationCandidates.Count; i++)
@@ -1094,6 +1089,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     }
                     else
                         m_ActivePlaybacks[index] = active;
+                }
+            }
+            for (int i = 0; i < m_PresentationCandidates.Count; i++)
+            {
+                TimelineRuntimePresentationFrame candidate = m_PresentationCandidates[i];
+                if (!TryGetActivePlayback(candidate.Handle, out ActivePlayback active))
+                    continue;
+                try
+                {
+                    CharacterTimelinePlaybackDiagnostics.PublishTimelineVisualTime(m_Diagnostics, active.Trace, candidate);
+                    CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
+                }
+                catch (Exception exception)
+                {
+                    Diagnostics.CharacterPoseCaptureFailure.Report(m_Diagnostics.CharacterRuntimeId,
+                        nameof(CharacterTimelinePlaybackDiagnostics), exception);
                 }
             }
             m_PresentationCandidates.Clear();

@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using System;
 using System.Globalization;
@@ -936,8 +937,11 @@ internal sealed class CharacterPoseNativeDomainServiceSet : IDisposable
         if (m_Disposed)
             return;
         m_Disposed = true;
+        Exception failure = null;
         for (int i = m_OwnedResources.Count - 1; i >= 0; i--)
-            m_OwnedResources[i].Dispose();
+            CharacterPresentationCleanup.Dispose(m_OwnedResources[i], ref failure);
+        if (failure != null)
+            ExceptionDispatchInfo.Capture(failure).Throw();
     }
 }
 }

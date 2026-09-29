@@ -100,11 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     var fault = new AnimationPresentationFault(input.ActorId, input.PresentationFrame,
                         input.BodyTick, phase, m_Role.CurrentLineage.CompletionIdentity);
-                    failure.Data[nameof(AnimationPresentationFault)] = fault;
-                    m_Failure = new InvalidOperationException(
-                        $"Pose runtime faulted: actor={fault.ActorId}, frame={fault.PresentationFrame}, " +
-                        $"bodyTick={fault.BodyTick}, completion={fault.CompletionIdentity}, phase={fault.Phase}.", failure);
-                    throw m_Failure;
+                    throw RecordFault(in fault, failure);
                 }
                 if (!ReferenceEquals(failure, exception))
                     throw failure;
@@ -114,6 +110,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Running = false;
             }
+        }
+
+        internal Exception RecordFault(in AnimationPresentationFault fault, Exception failure)
+        {
+            failure.Data[nameof(AnimationPresentationFault)] = fault;
+            m_Failure = new InvalidOperationException(
+                $"Actor presentation faulted: actor={fault.ActorId}, frame={fault.PresentationFrame}, " +
+                $"bodyTick={fault.BodyTick}, completion={fault.CompletionIdentity}, phase={fault.Phase}.", failure);
+            return m_Failure;
         }
 
         internal void Stop() => m_Role.Stop();

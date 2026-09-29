@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int count = target.Input switch
             {
                 CharacterPoseSourceReadinessTargetInput.ClipSamples =>
-                    ResolveClips(target.Clips, destination),
+                    ResolveClips(in target.Clips, destination),
                 CharacterPoseSourceReadinessTargetInput.Resource =>
                     ResolveSingleResource(
                         target.Backend,
@@ -46,14 +46,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         int ResolveClips(
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             CharacterPoseSourceResourceResolution[] destination)
         {
             int count = 0;
             bool hasInvalid = false;
             for (int i = 0; i < clips.Count; i++)
             {
-                ClipSamplePlan clip = clips[i];
+                ref readonly ClipSamplePlan clip = ref clips.ElementAt(i);
                 if (!clip.IsValid)
                 {
                     if (!hasInvalid)

@@ -12,13 +12,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     internal readonly struct CharacterPoseSourceReadinessTarget
     {
+        readonly AnimationPoseSourceId m_SourceId;
+        readonly PoseNodeId m_PoseNodeId;
+        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_Clips;
         CharacterPoseSourceReadinessTarget(
             CharacterPoseSourcePreparationKind kind,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int bindingIndex,
             CharacterPoseSourceReadinessTargetInput input,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             CharacterAnimationSamplingBackendKind backend,
             int resourceIndex,
             int groupClipIndex,
@@ -34,11 +37,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Character Pose source readiness target is invalid.");
             }
             Kind = kind;
-            SourceId = sourceId;
-            PoseNodeId = poseNodeId;
+            m_SourceId = sourceId;
+            m_PoseNodeId = poseNodeId;
             BindingIndex = bindingIndex;
             Input = input;
-            Clips = clips;
+            m_Clips = clips;
             Backend = backend;
             ResourceIndex = resourceIndex;
             GroupClipIndex = groupClipIndex;
@@ -49,11 +52,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourcePreparationKind Kind { get; }
-        internal AnimationPoseSourceId SourceId { get; }
-        internal PoseNodeId PoseNodeId { get; }
+        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+        internal ref readonly PoseNodeId PoseNodeId => ref m_PoseNodeId;
         internal int BindingIndex { get; }
         internal CharacterPoseSourceReadinessTargetInput Input { get; }
-        internal AnimationReadOnlyBuffer<ClipSamplePlan> Clips { get; }
+        internal ref readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips =>
+            ref m_Clips;
         internal CharacterAnimationSamplingBackendKind Backend { get; }
         internal int ResourceIndex { get; }
         internal int GroupClipIndex { get; }
@@ -76,10 +80,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal static CharacterPoseSourceReadinessTarget FromClips(
             CharacterPoseSourcePreparationKind kind,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int bindingIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips) =>
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips) =>
             new CharacterPoseSourceReadinessTarget(
                 kind,
                 sourceId,
@@ -94,8 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal static CharacterPoseSourceReadinessTarget FromResource(
             CharacterPoseSourcePreparationKind kind,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int bindingIndex,
             CharacterAnimationSamplingBackendKind backend,
             int resourceIndex,
@@ -114,8 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal static CharacterPoseSourceReadinessTarget FromBlendSpaceSamples(
             CharacterPoseSourcePreparationKind kind,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int bindingIndex,
             IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> samples) =>
             new CharacterPoseSourceReadinessTarget(
@@ -137,21 +141,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new ArgumentException(
                     "Character Pose source preparation is invalid.",
                     nameof(preparation));
+            bool useRequest =
+                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
+                preparation.Kind == CharacterPoseSourcePreparationKind.Provider;
+            ref readonly AnimationPoseSourceId sourceId = ref useRequest
+                ? ref preparation.Request.SourceId
+                : ref preparation.SourceId;
+            ref readonly AnimationReadOnlyBuffer<ClipSamplePlan> clips = ref useRequest
+                ? ref preparation.Request.Clips
+                : ref preparation.Clips;
             return FromClips(
                 preparation.Kind,
-                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
-                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
-                    ? preparation.Request.SourceId
-                    : preparation.SourceId,
+                in sourceId,
                 preparation.PoseNodeId,
-                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
-                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
-                    ? -1
-                    : preparation.BindingIndex,
-                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
-                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
-                    ? preparation.Request.Clips
-                    : preparation.Clips);
+                useRequest ? -1 : preparation.BindingIndex,
+                in clips);
         }
     }
 

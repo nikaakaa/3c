@@ -184,9 +184,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool modifies = ResolveModification(runtime, weight,
                     out Vector3 position, out Quaternion rotation, out Vector3 scale);
                 NativeSlice<AnimationLocalBonePose> outputPoses = m_WriteBinding.DenseLocalPoses;
+                NativeSlice<AnimationLocalBonePose> inputPoses =
+                    input.DenseLocalPoses;
                 for (int i = 0; i < m_Rig.PoseBoneCount; i++)
                 {
-                    AnimationLocalBonePose value = input.DenseLocalPoses[i];
+                    ref readonly AnimationLocalBonePose value = ref inputPoses[i];
                     if (!value.IsValid)
                         throw new InvalidOperationException(
                             $"Modify Bone '{NodeId}' received invalid Component bone #{i}.");
@@ -200,7 +202,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ApplyModification(position, rotation, scale, weight);
                     for (int i = 0; i < m_ComponentScratch.Length; i++)
                     {
-                        CharacterComponentBonePose value = m_ComponentScratch[i];
+                        ref readonly CharacterComponentBonePose value =
+                            ref m_ComponentScratch[i];
                         outputPoses[i] = new AnimationLocalBonePose(in value);
                     }
                 }
@@ -208,8 +211,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             else
             {
                 NativeSlice<AnimationLocalBonePose> emptyOutput = m_WriteBinding.DenseLocalPoses;
+                NativeSlice<AnimationLocalBonePose> inputPoses =
+                    input.DenseLocalPoses;
                 for (int i = 0; i < emptyOutput.Length; i++)
-                    emptyOutput[i] = input.DenseLocalPoses[i];
+                    emptyOutput[i] = inputPoses[i];
             }
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(

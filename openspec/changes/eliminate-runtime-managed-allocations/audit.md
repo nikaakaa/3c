@@ -1450,3 +1450,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine transition 追加 contribution 时每次读取 input/output 的 contribution 与 dense weight binding 属性；primitive 按值复制，每骨重复计算 `count * boneCount` 和 `i * boneCount`，循环条件还重复读 output pose 长度。
 - factor 分支后缓存 input/output 的 contribution 与 weight slice、bone count；primitive 绑定只读引用，每个 contribution 预计算两侧行 offset。容量校验、`ExtendContributionPrefix`、字段换算、权重公式和 source/target 顺序不变。
 - 该改动删除 contribution 追加链的重复 binding 读取、primitive 拷贝和逐骨重复乘法；不改变 count 推进或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和 `ExtendContributionPrefix` 只更新 count；未编译、未采样，不能声称实测耗时收益。
+
+### AP189 ModifyBone pose 输入引用化（2026-09-30，已实施，本轮未编译）
+
+- Modify Bone 的 pose 分支每骨按值复制 input pose，`modifies` 时再转换 scratch；输出阶段又按值复制每个 component scratch pose，NoPose 分支每次重复读取 input binding 属性。
+- pose 与 NoPose 分支缓存 input/output slice；input 绑定只读元素引用，修改输出绑定 scratch 数组只读引用。invalid 校验、`modifies` 分支、ApplyModification 写入 scratch 和输出转换顺序不变。
+- 该改动删除 Modify Bone 周期 pose 输入和输出阶段的中间结构拷贝；不改变 Component Pose 空间合同或输出页身份。静态核对 input/output 长度校验、readonly struct 的 `in` 构造合同和三条唯一循环；未编译、未采样，不能声称实测耗时收益。

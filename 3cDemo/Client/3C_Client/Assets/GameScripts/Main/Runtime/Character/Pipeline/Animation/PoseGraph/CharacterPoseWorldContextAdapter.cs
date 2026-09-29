@@ -188,8 +188,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 inputBinding.Contributions;
             for (int i = 0; i < count; i++)
             {
+                ref readonly AnimationPrimitivePoseContribution primitive =
+                    ref primitives[i];
                 m_Contributions[i] = CharacterFinalPoseContributionResolver.Resolve(
-                    primitives[i],
+                    in primitive,
                     m_SourceModule,
                     m_PlayerNodeIds);
             }

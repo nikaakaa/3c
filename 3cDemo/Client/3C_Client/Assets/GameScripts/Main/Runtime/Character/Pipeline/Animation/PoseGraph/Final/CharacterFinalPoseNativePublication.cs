@@ -306,9 +306,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = 0; contribution < contributionCount; contribution++)
             {
                 int contributionIndex = contributionOffset + contribution;
+                ref readonly AnimationPrimitivePoseContribution primitive =
+                    ref primitives[contribution];
                 m_Contributions[contributionIndex] =
                     CharacterFinalPoseContributionResolver.Resolve(
-                        primitives[contribution],
+                        in primitive,
                         m_SourceModule,
                         m_PlayerNodeIds);
                 ref readonly AnimationPoseSourceContribution source =

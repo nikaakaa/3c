@@ -1733,3 +1733,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationPoseValueNativeReadBinding` 的 14 个 slice 自动属性每次访问复制 `NativeSlice`；Foot Placement 的 contribution 解析、参数读取和 pose input 校验在同一周期重复触发。
 - binding 改为 backing field 保存 native slice，属性返回只读引用；构造仍从 native read binding 各复制一次必要 slice，Foot Placement 保存 dense component pose 仍保留一次必要存储拷贝。completion、value index 和调用方读取形态不变。
 - 该改动删除 Constraint 到 World Context 和 Foot Placement 的周期 slice 属性拷贝。静态核对 14 个 slice 只在构造写入、引用生命周期与 binding 一致、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP236 primitive contribution 元素引用化（2026-09-30，已实施，本轮未编译）
+
+- World Context 的 Foot Placement contribution 解析和 Final Publication Prepare 每次用 `NativeSlice` 索引按值取出一整份 primitive，再传入已支持 `in` 的 resolver。
+- 两个周期循环改为绑定 slice 元素只读引用并显式转发。resolver 的字段校验、source/node 查找、输出 contribution 构造、输出数组写入和异常文本不变。
+- 该改动删除 Foot Placement 与 Final Prepare 每 contribution 的 primitive 元素拷贝。静态核对两个正式调用点、元素引用生命周期覆盖 resolver 调用和输出写入；未编译、未采样，不能声称实测耗时收益。

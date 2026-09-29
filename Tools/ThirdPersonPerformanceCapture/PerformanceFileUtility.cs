@@ -226,6 +226,7 @@ internal static class PerformanceFileUtility
     static string Role(string path) => Path.GetFileName(path).ToLowerInvariant() switch
     {
         "summary.json" => "summary",
+        "summary.md" => "summary-report",
         "build-inputs.json" => "build-inputs",
         "comparison.json" => "comparison",
         "metric-samples.csv" => "metric-samples",

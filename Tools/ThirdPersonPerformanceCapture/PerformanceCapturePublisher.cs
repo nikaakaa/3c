@@ -241,6 +241,7 @@ internal static class PerformanceCapturePublisher
         }
         PerformanceSummaryDocument summary = BuildSummary(request, scenario, budget, playerManifest, runtime, catalog, profile);
         WriteJson(Path.Combine(request.staging_root, "summary.json"), summary);
+        WriteSummaryReport(Path.Combine(request.staging_root, "summary.md"), summary);
         var manifest = CreateManifest(
             request,
             scenario,
@@ -274,6 +275,144 @@ internal static class PerformanceCapturePublisher
         WriteJson(request.status_path + ".tmp", status);
         File.Move(request.status_path + ".tmp", request.status_path, true);
     }
+
+    static void WriteSummaryReport(string path, PerformanceSummaryDocument summary)
+    {
+        var text = new StringBuilder();
+        text.AppendLine("# 性能采集摘要");
+        text.AppendLine();
+        text.AppendLine($"- Capture ID：`{summary.capture_id}`");
+        text.AppendLine($"- 状态：{summary.status}");
+        text.AppendLine($"- 插桩模式：{summary.instrumentation_mode}");
+        text.AppendLine($"- 计时口径：{summary.timing_basis}");
+        text.AppendLine();
+
+        text.AppendLine("## 总览");
+        text.AppendLine();
+        text.AppendLine("| 指标 | 值 |");
+        text.AppendLine("| --- | ---: |");
+        text.AppendLine($"| 采集时长 | {Number(summary.capture_seconds)} s |");
+        text.AppendLine($"| 表现 FPS | {Number(summary.presentation_fps)} |");
+        text.AppendLine($"| 目标 FPS | {Number(summary.target_fps)} |");
+        text.AppendLine($"| FPS 预算超限 | {YesNo(summary.fps_budget_exceeded)} |");
+        text.AppendLine($"| 逻辑 Tick/s | {Number(summary.logic_ticks_per_second)} |");
+        text.AppendLine($"| 丢弃逻辑 Tick | {summary.dropped_logic_ticks} |");
+        text.AppendLine($"| 预算完整评估 | {YesNo(summary.budget_evaluated)} |");
+        text.AppendLine($"| 预算通过 | {YesNo(summary.budget_passed)} |");
+        text.AppendLine($"| 超限项数量 | {summary.budget_exceeded_count} |");
+        text.AppendLine($"| CPU exclusive 样本 | {Number(summary.total_exclusive_samples)} |");
+        text.AppendLine($"| 未解析样本 | {Number(summary.unresolved_exclusive_samples)}（{Percent(summary.unresolved_exclusive_samples, summary.total_exclusive_samples)}） |");
+        text.AppendLine($"| Logic Tick 渲染帧分布 | 样本 {summary.logic_tick_render_frame_distribution.sample_count}，均值 {Ms(summary.logic_tick_render_frame_distribution.mean)}，P95 {Ms(summary.logic_tick_render_frame_distribution.p95)}，P99 {Ms(summary.logic_tick_render_frame_distribution.p99)} |");
+        text.AppendLine();
+        if (summary.unavailable_budget_metrics.Length != 0)
+        {
+            text.AppendLine($"无法评估的预算指标：{string.Join(", ", summary.unavailable_budget_metrics.Select(Markdown))}");
+            text.AppendLine();
+        }
+
+        text.AppendLine("## 指标");
+        text.AppendLine();
+        text.AppendLine("| 指标 | 父级 | 范围 | 单位 | 样本 | 调用 | 均值 | 均值/调用 | P50 | P95 | P99 | 最大 | 总计 | 父级占比 | 超预算 |");
+        text.AppendLine("| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |");
+        foreach (PerformanceMetricSummaryDocument metric in summary.metrics)
+        {
+            PerformanceDistributionDocument value = metric.distribution;
+            text.AppendLine(
+                $"| `{Markdown(metric.metric_id)}` | `{Markdown(metric.parent_id)}` | {Markdown(metric.sample_scope)} | {Markdown(metric.unit)} | " +
+                $"{value.sample_count} | {value.invocation_count} | {Number(value.mean)} | {Number(metric.mean_per_invocation)} | {Number(value.p50)} | {Number(value.p95)} | " +
+                $"{Number(value.p99)} | {Number(value.max)} | {Number(metric.total)} | {PercentOfOne(metric.parent_inclusive_total_ratio)} | {YesNo(metric.budget_exceeded)} |");
+        }
+        text.AppendLine();
+
+        PerformanceInstrumentationPointSummaryDocument[] sampled = summary.instrumentation_points
+            .Where(value => value.distribution.sample_count > 0)
+            .ToArray();
+        PerformanceInstrumentationPointSummaryDocument[] unsampled = summary.instrumentation_points
+            .Where(value => value.distribution.sample_count == 0)
+            .ToArray();
+        if (sampled.Length != 0)
+        {
+            text.AppendLine($"## 已采样调用点摘要（前 {Math.Min(100, sampled.Length)} / {sampled.Length} 个）");
+            text.AppendLine();
+            text.AppendLine("| 指标 | 类型.方法 | 样本/调用 | 均值 | P50 | P95 | P99 | 最大 | 异常 |");
+            text.AppendLine("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
+            foreach (PerformanceInstrumentationPointSummaryDocument point in sampled.Take(100))
+            {
+                PerformanceDistributionDocument value = point.distribution;
+                text.AppendLine(
+                    $"| `{Markdown(point.metric_id)}` | `{Markdown(point.declaring_type + "." + point.method)}` | " +
+                    $"{value.sample_count}/{value.invocation_count} | {Ms(value.mean)} | {Ms(value.p50)} | {Ms(value.p95)} | {Ms(value.p99)} | " +
+                    $"{Ms(value.max)} | {point.exception_count} |");
+            }
+            text.AppendLine();
+        }
+        if (unsampled.Length != 0)
+        {
+            text.AppendLine($"## 未采样调用点（{unsampled.Length} 个）");
+            text.AppendLine();
+            text.AppendLine("| 指标 | 类型.方法 |");
+            text.AppendLine("| --- | --- |");
+            foreach (PerformanceInstrumentationPointSummaryDocument point in unsampled)
+                text.AppendLine($"| `{Markdown(point.metric_id)}` | `{Markdown(point.declaring_type + "." + point.method)}` |");
+            text.AppendLine();
+        }
+
+        var hotspots = summary.hotspots
+            .GroupBy(value => new { value.thread, value.module, value.function })
+            .Select(value => new
+            {
+            value.Key.thread,
+            value.Key.module,
+            Function = value.Key.function,
+                InclusiveSamples = value.Sum(item => item.inclusive_samples),
+                ExclusiveSamples = value.Sum(item => item.exclusive_samples)
+            })
+            .OrderByDescending(value => value.ExclusiveSamples)
+            .ThenByDescending(value => value.InclusiveSamples)
+            .ThenBy(value => value.Function, StringComparer.Ordinal)
+            .Take(100)
+            .ToArray();
+        text.AppendLine($"## CPU 热点摘要（前 {hotspots.Length} 行）");
+        text.AppendLine();
+        text.AppendLine("| 线程 | 模块 | 函数 | Inclusive | Exclusive |");
+        text.AppendLine("| --- | --- | --- | ---: | ---: |");
+        foreach (var hotspot in hotspots)
+            text.AppendLine($"| {Markdown(hotspot.Thread)} | {Markdown(hotspot.Module)} | `{Markdown(hotspot.Function)}` | {Number(hotspot.InclusiveSamples)} | {Number(hotspot.ExclusiveSamples)} |");
+        text.AppendLine();
+
+        text.AppendLine($"## 线程 CPU 摘要（前 {Math.Min(50, summary.thread_hotspots.Length)} 行）");
+        text.AppendLine();
+        text.AppendLine("| 进程 | 线程 | Exclusive | 占比 |");
+        text.AppendLine("| --- | --- | ---: | ---: |");
+        foreach (PerformanceThreadHotspotDocument thread in summary.thread_hotspots.Take(50))
+            text.AppendLine($"| {Markdown(thread.process)} | {Markdown(thread.thread)} | {Number(thread.exclusive_samples)} | {Percent(thread.exclusive_samples, summary.total_exclusive_samples)} |");
+        text.AppendLine();
+
+        text.AppendLine($"## 线程等待摘要（前 {Math.Min(50, summary.wait_evidence.Length)} 行）");
+        text.AppendLine();
+        text.AppendLine("| 进程 | 线程 | Ready（µs） | Wait（µs） | 切换次数 |");
+        text.AppendLine("| --- | --- | ---: | ---: | ---: |");
+        foreach (PerformanceWaitEvidenceDocument wait in summary.wait_evidence.Take(50))
+            text.AppendLine($"| {Markdown(wait.process)} | {Markdown(wait.thread)} | {Number(wait.ready_time)} | {Number(wait.wait_time)} | {wait.context_switches} |");
+        text.AppendLine();
+
+        text.AppendLine("完整指标保存在 `summary.json`，完整函数热点保存在 `cpu-hotspots.csv`。Span 是经过时间，父子阶段重叠且包含等待；CPU 表是采样计数，未解析样本不能归因到函数。");
+        text.AppendLine();
+        File.WriteAllText(path, text.ToString(), new UTF8Encoding(false));
+    }
+
+    static string Markdown(string value) =>
+        value.Replace("\\", "\\\\").Replace("|", "\\|").Replace('\r', ' ').Replace('\n', ' ');
+
+    static string Number(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    static string Ms(double value) => $"{Number(value)} ms";
+    static string YesNo(bool value) => value ? "是" : "否";
+
+    static string Percent(double value, double total) =>
+        total == 0d ? "N/A" : $"{Number(value * 100d / total)}%";
+
+    static string PercentOfOne(double value) =>
+        value == 0d ? "N/A" : $"{Number(value * 100d)}%";
 
     static void RequireCompletedArtifacts(string root)
     {

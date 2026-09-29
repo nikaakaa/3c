@@ -30,6 +30,8 @@ Span 是同步方法进入和退出时的单调计时差值，包含被系统抢
 
 报告应列出 Summary 的全部指标及调用点无样本范围，同时列明尚未插桩的模块。新增目录将改变探针身份，必须由新 Player 的 instrumentation manifest 确认实际覆盖；不同探针身份不绕过正式比较门禁。
 
+Completed Capture 会从同一份 `summary.json` 渲染 `summary.md`，先提供总览、全部指标、已采样/未采样调用点摘要、CPU 热点和线程等待表；它不引入新的统计 schema，也不替代完整 JSON、CSV、ETL 或 Span 证据。完整函数热点仍在 CSV 中，Markdown 只保留 exclusive 最高的前 100 行，避免把数万行函数表变成不可读报告。Span 表是经过时间，父子阶段重叠；CPU 表是采样计数，未解析样本不能归因到函数。
+
 `presentation.animation` 包围表现事务，下面分为 Pose Prepare、Evaluate、Commit，以及 Source Barrier。Evaluate 下另有 Foot Placement 和 FullBodyIK 探针。Source Barrier 包含资源验证、回收准备和后端 Evaluate，不是纯骨骼计算时间。没有实际探针的旧阶段从指标目录删除；新增阶段要同时增加所属目录定义和方法声明。
 
 当前合同为 player/3、capture/3、summary/4、comparison/2、analysis-request/2、analysis/2；跨度使用 spans/2 和 layout revision 2。旧报告不进入当前比较，需要重新构建 Player 并使用当前 Controller 采集；旧证据保留原样。源码编译通过不代表 Player 构建、真实采集、探针成本或 Gameplay 行为已验证。

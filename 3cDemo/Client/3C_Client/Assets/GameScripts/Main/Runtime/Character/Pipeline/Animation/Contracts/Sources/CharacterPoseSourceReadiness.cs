@@ -138,10 +138,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseSourceReadinessKey : IEquatable<CharacterPoseSourceReadinessKey>
     {
+        readonly AnimationPoseSourceId m_SourceId;
+        readonly PoseNodeId m_PoseNodeId;
         internal CharacterPoseSourceReadinessKey(
             CharacterPoseSourcePreparationKind kind,
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             int bindingIndex)
         {
             if (!CharacterPoseSourceReadinessEnumValues.IsValid(kind) ||
@@ -151,14 +153,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Character Pose source readiness key is invalid.");
             }
             Kind = kind;
-            SourceId = sourceId;
-            PoseNodeId = poseNodeId;
+            m_SourceId = sourceId;
+            m_PoseNodeId = poseNodeId;
             BindingIndex = bindingIndex;
         }
 
         internal CharacterPoseSourcePreparationKind Kind { get; }
-        internal AnimationPoseSourceId SourceId { get; }
-        internal PoseNodeId PoseNodeId { get; }
+        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+        internal ref readonly PoseNodeId PoseNodeId => ref m_PoseNodeId;
         internal int BindingIndex { get; }
         internal bool IsValid =>
             CharacterPoseSourceReadinessEnumValues.IsValid(Kind) &&
@@ -167,6 +169,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (SourceId.IsValid || BindingIndex >= 0);
 
         public bool Equals(CharacterPoseSourceReadinessKey other) =>
+            Equals(in other);
+
+        internal bool Equals(in CharacterPoseSourceReadinessKey other) =>
             Kind == other.Kind &&
             SourceId.Equals(other.SourceId) &&
             PoseNodeId.Equals(other.PoseNodeId) &&
@@ -181,6 +186,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseSourceReadinessEntry
     {
+        readonly CharacterPoseSourceReadinessKey m_Key;
+        readonly CharacterPoseSourceReadinessView m_Readiness;
         internal CharacterPoseSourceReadinessEntry(
             CharacterPoseSourceReadinessCategory category,
             in CharacterPoseSourceReadinessKey key,
@@ -192,13 +199,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Character Pose source readiness entry is invalid.");
             }
             Category = category;
-            Key = key;
-            Readiness = readiness;
+            m_Key = key;
+            m_Readiness = readiness;
         }
 
         internal CharacterPoseSourceReadinessCategory Category { get; }
-        internal CharacterPoseSourceReadinessKey Key { get; }
-        internal CharacterPoseSourceReadinessView Readiness { get; }
+        internal ref readonly CharacterPoseSourceReadinessKey Key => ref m_Key;
+        internal ref readonly CharacterPoseSourceReadinessView Readiness =>
+            ref m_Readiness;
     }
 
 }

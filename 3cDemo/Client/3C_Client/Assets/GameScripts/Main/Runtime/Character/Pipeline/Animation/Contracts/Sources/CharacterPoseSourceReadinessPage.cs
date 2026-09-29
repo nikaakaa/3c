@@ -48,22 +48,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in key,
                 readiness.ResourceCatalogIndex,
                 readiness.GroupClipIndex);
-            var entry = new CharacterPoseSourceReadinessEntry(
-                category,
-                in key,
-                in readiness);
             if (existing >= 0)
             {
                 if (m_Entries[existing].Readiness.IsInvalid &&
                     !readiness.IsInvalid)
                     return;
-                m_Entries[existing] = entry;
+                m_Entries[existing] = new CharacterPoseSourceReadinessEntry(
+                    category,
+                    in key,
+                    in readiness);
                 return;
             }
             if (m_Count >= m_Entries.Length)
                 throw new InvalidOperationException(
                     "Character Pose source readiness capacity was exceeded.");
-            m_Entries[m_Count++] = entry;
+            m_Entries[m_Count++] = new CharacterPoseSourceReadinessEntry(
+                category,
+                in key,
+                in readiness);
         }
 
         internal void Seal()
@@ -87,8 +89,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int writeIndex = 0;
             for (int readIndex = 0; readIndex < m_Count; readIndex++)
             {
-                CharacterPoseSourceReadinessEntry entry = m_Entries[readIndex];
-                if (entry.Category == category && entry.Key.Equals(key))
+                ref readonly CharacterPoseSourceReadinessEntry entry =
+                    ref m_Entries[readIndex];
+                if (entry.Category == category &&
+                    entry.Key.Equals(in key))
                     continue;
                 if (writeIndex != readIndex)
                     m_Entries[writeIndex] = entry;
@@ -141,23 +145,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool hasReady = false;
             for (int i = 0; i < m_Count; i++)
             {
-                CharacterPoseSourceReadinessEntry entry = m_Entries[i];
+                ref readonly CharacterPoseSourceReadinessEntry entry =
+                    ref m_Entries[i];
                 if (entry.Category != category)
                     continue;
-                if (entry.Readiness.IsInvalid)
-                    return entry.Readiness;
-                if (entry.Readiness.IsPending && !hasPending)
+                ref readonly CharacterPoseSourceReadinessView readiness =
+                    ref entry.Readiness;
+                if (readiness.IsInvalid)
+                    return readiness;
+                if (readiness.IsPending && !hasPending)
                 {
-                    pending = entry.Readiness;
+                    pending = readiness;
                     hasPending = true;
                     continue;
                 }
-                if (entry.Readiness.IsReady &&
+                if (readiness.IsReady &&
                     (!hasReady ||
                      ready.ResourceCatalogIndex < 0 &&
-                     entry.Readiness.ResourceCatalogIndex >= 0))
+                     readiness.ResourceCatalogIndex >= 0))
                 {
-                    ready = entry.Readiness;
+                    ready = readiness;
                     hasReady = true;
                 }
             }
@@ -194,9 +201,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             for (int i = 0; i < m_Count; i++)
             {
-                CharacterPoseSourceReadinessEntry entry = m_Entries[i];
+                ref readonly CharacterPoseSourceReadinessEntry entry =
+                    ref m_Entries[i];
                 if (entry.Category == category &&
-                    entry.Key.Equals(key) &&
+                    entry.Key.Equals(in key) &&
                     entry.Readiness.ResourceCatalogIndex == resourceCatalogIndex &&
                     entry.Readiness.GroupClipIndex == groupClipIndex)
                 {

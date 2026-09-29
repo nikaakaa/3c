@@ -268,8 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in CharacterPoseSourceReadinessTarget target) =>
             new CharacterPoseSourceReadinessKey(
                 target.Kind,
-                target.SourceId,
-                target.PoseNodeId,
+                in target.SourceId,
+                in target.PoseNodeId,
                 target.BindingIndex);
     }
 }

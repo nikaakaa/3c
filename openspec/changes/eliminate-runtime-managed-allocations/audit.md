@@ -1642,3 +1642,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - readiness journal 回放 deferred target 时复制整份 `DeferredSourceTarget`；resolution 聚合和 page 记录每个元素复制整份 resolution；resolution 的 `Resource` 属性每次返回 readiness result，`ToReadiness` 分支还会重复读取。
 - `BeginDemand` 绑定 deferred 数组元素只读引用，`Aggregate` 与 `RecordResolutions` 绑定 resolution 数组元素只读引用；resolution 的 readiness result 改为 backing field 只读引用，`ToReadiness` 在分支前绑定同一 result。
 - 该改动删除 readiness 回放、聚合和记录链的重复结构拷贝。invalid early return、pending/ready 聚合选择、page 记录存储、completion identity 和异常文本不变。静态核对数组在只读引用期间不被修改、`Resource` 全部消费只读和返回值仍保留一次必要拷贝；未编译、未采样，不能声称实测耗时收益。
+
+### AP221 readiness page entry 引用化（2026-09-30，已实施，本轮未编译）
+
+- readiness key 按值接收 source/node 并暴露按值属性；entry 的 key/readiness 属性每次读取都复制；page 的 Record 先构造中间 entry，Find、Remove 和 Aggregate 又逐项复制 entry，匹配比较也按值复制 key。
+- key 与 entry 的 source、node、key、readiness 改为 readonly backing field 只读引用；key 构造改为 `in`，新增内部 `Equals(in)`，public `IEquatable` 合同转发到同一实现。page 的 Record 直接构造目标槽内容，Find/Remove/Aggregate 绑定只读 entry，Remove 仅在搬移时复制一次。
+- 该改动删除 readiness page 查找、压缩和聚合链的重复 key/entry/readiness 拷贝。key 校验、页面 generation、记录容量、删除顺序、聚合优先级和异常文本不变。静态核对引用生命周期覆盖 page 调用、写入目标不变和按值 equality 合同保留；未编译、未采样，不能声称实测耗时收益。

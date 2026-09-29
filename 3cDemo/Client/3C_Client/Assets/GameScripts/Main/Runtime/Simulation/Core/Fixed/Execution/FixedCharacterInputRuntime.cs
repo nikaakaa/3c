@@ -6,6 +6,8 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedCharacterInputRuntime
     {
+        static readonly StringComparer s_RequestIdComparer = StringComparer.Ordinal;
+
         IFixedInputRequestStatePort m_InputRequests;
         readonly string[] m_RequestIds;
 
@@ -40,21 +42,25 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
                 if (state.IsValid && state.ExpireTick < m_InputRequests.Tick.Value)
                     state = default;
-                for (int inputIndex = 0; inputIndex < requests.Count; inputIndex++)
+                m_InputRequests.SetInputRequest(requestId, state);
+            }
+            for (int inputIndex = 0; inputIndex < requests.Count; inputIndex++)
+            {
+                SimulationInputRequest request = requests[inputIndex];
+                int requestIndex = Array.BinarySearch(m_RequestIds, request.RequestId, s_RequestIdComparer);
+                if (requestIndex < 0)
+                    continue;
+                string requestId = m_RequestIds[requestIndex];
+                SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
+                if (!state.IsValid || request.Priority > state.Priority ||
+                    request.Priority == state.Priority && request.Sequence > state.Sequence)
                 {
-                    SimulationInputRequest request = requests[inputIndex];
-                    if (!string.Equals(request.RequestId, requestId, StringComparison.Ordinal))
-                        continue;
-                    if (!state.IsValid || request.Priority > state.Priority ||
-                        request.Priority == state.Priority && request.Sequence > state.Sequence)
-                    {
-                        state = new SimulationInputRequestState(
-                            request.RequestId,
-                            request.Sequence,
-                            request.SourceTick,
-                            request.ExpireSimulationTick,
-                            request.Priority);
-                    }
+                    state = new SimulationInputRequestState(
+                        request.RequestId,
+                        request.Sequence,
+                        request.SourceTick,
+                        request.ExpireSimulationTick,
+                        request.Priority);
                 }
                 m_InputRequests.SetInputRequest(requestId, state);
             }

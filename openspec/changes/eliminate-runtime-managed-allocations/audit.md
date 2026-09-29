@@ -765,6 +765,12 @@
 - 改为持有当前 state 的预生成身份并做 `StringComparison.Ordinal` 比较；命中后仍读取同一 execution path slot。空串、其它 operation 身份和无效身份都不命中；命中条件、路径读取和返回值不变。该方法内不再保留解析入口，状态机自身的过渡 handle 解析不在此项范围内。
 - 每次激活、过渡评估、子图或 state 进入时少一次到两次固定数字字符串解析；无新增状态、缓存或第二执行路径。静态核对 identity slot 全部写入、Push scope 调用链和字符串比较边界；未编译、运行回放或采样。
 
+### AP100 Character Input 配置与请求交叉扫描（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 Character Input 的 `ApplyRequests` 原先对每个配置请求 ID 线性扫描整批 incoming requests，匹配同一 Tick 内多条请求和多个配置时形成乘积级字符串比较。配置 ID 已在构造期按 Ordinal 排序并拒绝重复。
+- 先按原顺序重置每个配置 ID 的过期状态；随后对每条 incoming request 用排序配置表做 Ordinal 二分定位，只访问命中的配置 ID，并沿用原有 validity、Priority、Sequence 决胜和字段顺序。未命中配置的请求仍被忽略，未命中的配置仍保留过期重置结果。
+- 请求应用从配置数乘请求数次比较收敛为配置数加请求数次对数定位访问；同一请求名单的最终 Priority/Sequence 状态不变。静态核对构造排序唯一性、空请求、过期重置、多条同 ID 请求和两域接口；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

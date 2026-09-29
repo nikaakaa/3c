@@ -454,7 +454,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_SourceRequests.Clear();
                 CollectActiveStates();
-                for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
+                int activeStateCount = m_ActiveStateCount;
+                for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
                 {
                     StateRuntime state = m_ActiveStates[activeIndex];
                     bool entering = state.Graph != null &&
@@ -479,7 +480,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ref state.Preparation.Demand;
                     IReadOnlyList<CharacterPoseNativeSourceRequest> requests =
                         demand.Requests;
-                    for (int i = 0; i < requests.Count; i++)
+                    int requestCount = requests.Count;
+                    for (int i = 0; i < requestCount; i++)
                         m_SourceRequests.Add(requests[i]);
                 }
                 return m_SourceRequests;
@@ -504,14 +506,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
             SynchronizeTransition(m_ActiveStateCount);
-            for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
+            int activeStateCount = m_ActiveStateCount;
+            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
                 ref readonly CharacterPoseNativeSourceDemand childDemand =
                     ref state.Preparation.Demand;
-                for (int requestIndex = 0;
-                     requestIndex < childDemand.Requests.Count;
-                     requestIndex++)
+                int requestCount = childDemand.Requests.Count;
+                for (int requestIndex = 0; requestIndex < requestCount; requestIndex++)
                 {
                     CharacterPoseNativeSourceRequest expected =
                         childDemand.Requests[requestIndex];
@@ -540,7 +542,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeLocalPoseValue firstValue = null;
             CharacterPoseNativeLocalPoseValue secondValue = null;
             int valueCount = 0;
-            for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
+            int activeStateCount = m_ActiveStateCount;
+            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
                 ref readonly CharacterPoseNativeSourceDemand demand =

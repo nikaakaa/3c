@@ -1540,3 +1540,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Action playback frame source 只暴露 `IReadOnlyList`，ActionSlot 的收集、排序、usage 和 Prune 每次索引都把 readonly frame 从固定容量数组复制成局部；插入排序每轮移位还会复制前一帧。
 - `FixedCapacityFrameBuffer` 增加正式 `ElementAt` 只读引用入口；frame source 合同改为返回同一固定容量 frame view，全部三处 ActionSlot 消费绑定 `ref readonly` 元素引用。frame count、排序、usage、report、pending 清理和异常检查顺序不变。
 - 该改动删除周期 frame 扫描的按值元素拷贝；不保留第二 frame 数据源或包装视图。静态核对唯一 `Frames` 实现返回 registry 的固定容量 view、引用生命周期覆盖开放 playback frame、buffer 未暴露写入接口；未编译、未采样，不能声称实测耗时收益。
+
+### AP204 StateMachine state/request 计数定容（2026-09-30，已实施，本轮未编译）
+
+- StateMachine source 的 active-state 准备、evaluation 校验和求值循环都重复读取 `m_ActiveStateCount`；准备收集和 child request 丢失校验还逐项重复读取 request list count。
+- `SynchronizeTransition` 或 `CollectActiveStates` 收敛 active 集合后绑定 state count；每个 child demand 绑定 request count。state 顺序、request 复制、丢失异常、求值聚合和失败清理顺序不变。
+- 该改动删除周期 active/request 循环中的重复 count 属性读取；不复制 demand 或新增请求索引。静态核对子图 Prepare/Evaluate 不修改 source active count，request list 在同一 demand 内不变；未编译、未采样，不能声称实测耗时收益。

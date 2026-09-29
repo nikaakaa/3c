@@ -395,9 +395,6 @@ namespace ThirdPersonSimulation
         internal void End()
         {
             Trace.End();
-            m_Facts.Clear();
-            m_Presentation.Clear();
-            m_Trace.Clear();
             m_ActionTraceInstanceId = 0;
             m_ActionTraceSkillId = string.Empty;
             m_ActionTraceEntryOperation = OperationHandle.Invalid;

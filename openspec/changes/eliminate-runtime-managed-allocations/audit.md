@@ -1721,3 +1721,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Additive、Blend、Layered、Parameter Resolve 的 `RequireAvailable` 与 Space Conversion 的 `RequireInput` 在校验后按值返回整份 read binding；调用点再复制到局部。
 - 五个唯一校验入口改为 `ref readonly` 返回，透传同一 backing field；九个调用点改为只读局部绑定。校验条件、分支选择、异常文本和后续输出写入不变。
 - 该改动删除 Blend/Additive/Layered/Parameter/Space Conversion 周期求值的校验返回与调用点拷贝。静态核对每个方法唯一正式出口、引用都指向输入输出值对象、调用局部只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP234 Native read binding slice 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPoseNativePoseReadBinding` 的 16 个 slice 自动属性每次访问复制一个 `NativeSlice`；Pose handler 在同一周期内读取布局、校验、骨骼、参数、contribution 和 foot metadata 时反复触发。
+- binding 改为 backing field 保存 native slice，属性返回只读引用；构造仍从 write binding 各复制一次必要 slice。CompletionIdentity、Space、IsValid 和所有调用方读取形态不变，binding 仍不可外部写入。
+- 该改动删除周期 Pose 求值对 read binding slice 的重复属性拷贝。静态核对 16 个 slice 只在构造写入、引用生命周期与 binding 一致、消费只读；未编译、未采样，不能声称实测耗时收益。

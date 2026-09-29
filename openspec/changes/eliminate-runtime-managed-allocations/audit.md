@@ -1594,3 +1594,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Source preparation page 按值返回数组元素，view `Get` 复制整份 preparation；PendingPage consume 再复制一次，Source Module `Prepare` 又将其复制为局部。preparation 包含 request、capture、provider sample 和 clip buffer。
 - page/view/consume 三层正式读取合同改为 `ref readonly`，数组元素引用直达 `Prepare` 的分发分支。open/lease 校验、index 校验、consumed count 递增和 switch 顺序不变。
 - 该改动删除 source preparation consume 链的两层中间拷贝；不暴露 preparation 数组写入路径。静态核对 backing 数组生命周期覆盖 open demand frame、唯一 `Require` 调用来自 view、consume 是唯一正式读取入口；未编译、未采样，不能声称实测耗时收益。
+
+### AP213 physical source identity 定容（2026-09-30，已实施，本轮未编译）
+
+- Physical source registry 的 `RequireOccupied` 每次 identity 校验都把当前 pending/committed 的 source id 和 pose node id 复制为按值局部，随后只读取 validity。
+- 两个局部改为 conditional `ref readonly`，直接绑定同一 index 的 pending 或 committed 数组元素。占用字段校验、generation 比对和异常时机不变。
+- 该改动删除周期 source identity 校验的两个结构拷贝；不改变 pending/committed 选择或数组生命周期。静态核对 conditional ref 两支指向同一 index、引用只读和唯一消费块；未编译、未采样，不能声称实测耗时收益。

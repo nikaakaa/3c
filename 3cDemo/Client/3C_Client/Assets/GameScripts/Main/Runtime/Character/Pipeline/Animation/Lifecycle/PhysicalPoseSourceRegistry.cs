@@ -774,8 +774,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new ArgumentOutOfRangeException(nameof(identity));
             int index = identity.Index.Value;
             bool pending = PendingIsOccupied(index);
-            AnimationPoseSourceId sourceId = pending ? m_PendingSourceIds[index] : m_SourceIds[index];
-            PoseNodeId nodeId = pending ? m_PendingPoseNodeIds[index] : m_PoseNodeIds[index];
+            ref readonly AnimationPoseSourceId sourceId = ref pending
+                ? ref m_PendingSourceIds[index]
+                : ref m_SourceIds[index];
+            ref readonly PoseNodeId nodeId = ref pending
+                ? ref m_PendingPoseNodeIds[index]
+                : ref m_PoseNodeIds[index];
             int ownerIndex = pending ? m_PendingSourceOwnerIndices[index] : m_SourceOwnerIndices[index];
             CharacterAnimationSamplingBackendKind backend =
                 pending ? m_PendingBackends[index] : m_Backends[index];

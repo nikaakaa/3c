@@ -26,7 +26,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.HasPlantTarget = false;
             if (state.ResponseHistory.HasValue)
             {
-                CharacterFootCorrectionResponseHistory history = state.ResponseHistory;
+                ref readonly CharacterFootCorrectionResponseHistory history =
+                    ref state.ResponseHistory;
                 state.ResponseHistory = new CharacterFootCorrectionResponseHistory(
                     history.Scalar * ratio, history.Domain, history.AppliedDirection);
             }
@@ -178,7 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.PreviousResponseOutputPoint += adjustment;
             if (!state.ResponseHistory.HasValue)
                 return;
-            CharacterFootCorrectionResponseHistory history = state.ResponseHistory;
+            ref readonly CharacterFootCorrectionResponseHistory history =
+                ref state.ResponseHistory;
             if (history.Domain == CharacterFootCorrectionResponseDomain.ContactWorldResidual)
             {
                 state.PlantWorldResidual += adjustment;
@@ -245,16 +247,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 false);
             bool previousResponseOutputAvailable =
                 state.HasPreviousResponseOutputPoint;
+            ref readonly CharacterFootCorrectionResponseHistory responseHistory =
+                ref state.ResponseHistory;
             Vector3 currentOutputBefore = previousResponseOutputAvailable
                 ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
             if (state.PendingReleaseResponseRebase &&
                 previousResponseOutputAvailable &&
-                state.ResponseHistory.HasValue &&
-                state.ResponseHistory.Domain ==
+                responseHistory.HasValue &&
+                responseHistory.Domain ==
                 CharacterFootCorrectionResponseDomain.AnimationRelativeScalar)
             {
-                float releaseResponseScalar = state.ResponseHistory.Scalar;
+                float releaseResponseScalar = responseHistory.Scalar;
                 float releaseResponseStep =
                     frame.Settings.CorrectionResponseDecreaseSpeed *
                     frame.DeltaSeconds;
@@ -262,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Mathf.Abs(releaseResponseScalar),
                     releaseResponseStep * 0.5f);
                 Vector3 releaseResponseRebaseVector =
-                    state.ResponseHistory.AppliedDirection *
+                    responseHistory.AppliedDirection *
                     Mathf.Sign(releaseResponseScalar) *
                     releaseResponseRebase;
                 currentOutputBefore -= releaseResponseRebaseVector;
@@ -496,7 +500,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 captureTransition,
                 in frame);
             Vector3 responseOutputPoint = response.OutputPoint;
-            CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
+            ref readonly CharacterFootCorrectionResponseFact correctionResponseFact =
+                ref response.Fact;
             state.EffectiveCorrection = responseOutputPoint - originalSole;
             CharacterFootVerticalContinuityOwner verticalContinuityOwners =
                 CharacterFootVerticalContinuityOwner.PlantTarget;
@@ -638,7 +643,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.StateEntered,
                 in frame);
             Vector3 releaseOutputPoint = response.OutputPoint;
-            CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
+            ref readonly CharacterFootCorrectionResponseFact correctionResponseFact =
+                ref response.Fact;
             state.SelectedSupportTarget = target.SupportTarget.WithSupportNormal(
                 response.AppliedDirection);
             state.EffectiveCorrection = releaseOutputPoint - originalSole;
@@ -1029,9 +1035,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 requestedDirection);
             bool initializedBefore = state.ResponseHistory.HasValue;
             bool initializedThisFrame = !initializedBefore;
+            ref readonly CharacterFootCorrectionResponseHistory responseHistory =
+                ref state.ResponseHistory;
             CharacterFootCorrectionResponseDomain previousDomain =
                 initializedBefore
-                    ? state.ResponseHistory.Domain
+                    ? responseHistory.Domain
                     : CharacterFootCorrectionResponseDomain.None;
             if (initializedBefore && previousDomain ==
                 CharacterFootCorrectionResponseDomain.None)
@@ -1052,8 +1060,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCorrectionResponseInitializationReason reason =
                 CharacterFootCorrectionResponseInitializationReason.None;
             Vector3 previousResponseDirection =
-                state.ResponseHistory.HasValue
-                    ? state.ResponseHistory.AppliedDirection
+                responseHistory.HasValue
+                    ? responseHistory.AppliedDirection
                     : requestedDirection;
             float maximumDirectionChangeDegrees = frame.Settings
                 .CorrectionResponseMaximumDirectionChangeDegrees;
@@ -1081,7 +1089,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float responseBeforeRebase = contactWorldResidual || exitingContact
                 ? 0f
                 : initializedBefore
-                    ? state.ResponseHistory.Scalar
+                    ? responseHistory.Scalar
                     : desiredResponse;
             float previousResponse = contactWorldResidual
                 ? 0f

@@ -1492,6 +1492,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootCorrectionResponseResult
     {
+        readonly CharacterFootCorrectionResponseFact m_Fact;
+
         internal CharacterFootCorrectionResponseResult(
             Vector3 outputPoint,
             Vector3 appliedDirection,
@@ -1499,12 +1501,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             OutputPoint = outputPoint;
             AppliedDirection = appliedDirection;
-            Fact = fact;
+            m_Fact = fact;
         }
 
         internal Vector3 OutputPoint { get; }
         internal Vector3 AppliedDirection { get; }
-        internal CharacterFootCorrectionResponseFact Fact { get; }
+        internal ref readonly CharacterFootCorrectionResponseFact Fact =>
+            ref m_Fact;
     }
 
     internal struct CharacterFootInterpolationState

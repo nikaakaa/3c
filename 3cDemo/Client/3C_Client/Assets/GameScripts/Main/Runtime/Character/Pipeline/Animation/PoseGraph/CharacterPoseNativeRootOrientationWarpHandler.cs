@@ -188,7 +188,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             poses.CopyFrom(input.DenseLocalPoses);
             ref readonly CharacterPoseNativeFrameInput frame =
                 ref runtime.CurrentInput;
-            EventGraphValue facingValue = frame.ParameterFrame.RequireValue(
+            ref readonly CharacterAnimationPoseInputFrame parameters =
+                ref frame.ParameterFrame;
+            ref readonly CharacterPresentationFactFrame facts =
+                ref frame.FactFrame;
+            EventGraphValue facingValue = parameters.RequireValue(
                 m_FacingErrorBinding);
             if (facingValue.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(facingValue.Float32Value))
@@ -208,7 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!m_PendingState.Relevant ||
                     m_PendingState.SourceId != m_Source.SourceId ||
                     m_PendingState.BodyDiscontinuityGeneration !=
-                    frame.FactFrame.BodyDiscontinuityGeneration)
+                    facts.BodyDiscontinuityGeneration)
                 {
                     m_PendingState.CapturedTargetAngle = Mathf.DeltaAngle(
                         0f,
@@ -217,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PendingState.Relevant = true;
                 m_PendingState.SourceId = m_Source.SourceId;
                 m_PendingState.BodyDiscontinuityGeneration =
-                    frame.FactFrame.BodyDiscontinuityGeneration;
+                    facts.BodyDiscontinuityGeneration;
                 m_PendingState.CurrentFacingError = Mathf.DeltaAngle(
                     0f,
                     facingValue.Float32Value);

@@ -259,7 +259,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
-            CharacterPresentationFactFrame factFrame = input.FactFrame;
+            ref readonly CharacterPresentationFactFrame factFrame =
+                ref input.FactFrame;
             m_ClockPolicy.DriveClock(
                 m_Player,
                 m_ChannelId,

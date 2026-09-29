@@ -52,9 +52,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseValueNativeReadBinding inputBinding =
                 new AnimationPoseValueNativeReadBinding(in componentPose);
             ref readonly CharacterPoseNativeFrameInput input = ref runtime.CurrentInput;
-            CharacterBodyPresentationFrame body = input.BodyFrame;
-            CharacterPresentationFactFrame facts = input.FactFrame;
-            CharacterAnimationPoseInputFrame parameters = input.ParameterFrame;
+            ref readonly CharacterBodyPresentationFrame body = ref input.BodyFrame;
+            ref readonly CharacterPresentationFactFrame facts = ref input.FactFrame;
+            ref readonly CharacterAnimationPoseInputFrame parameters =
+                ref input.ParameterFrame;
             CharacterFootPlacementFrameInput frame =
                 m_WorldContext.BuildFootPlacement(
                     input.ActorId,

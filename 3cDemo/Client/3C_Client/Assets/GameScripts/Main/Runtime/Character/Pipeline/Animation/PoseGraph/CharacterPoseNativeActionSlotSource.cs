@@ -310,8 +310,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Workspace.PrepareRow(state.SourceId);
             row.Clips[row.ClipOffset] =
                 state.Plan.CreateSample(in state.Sample);
-            CharacterAnimationPoseInputFrame parameters =
-                input.ParameterFrame;
+            ref readonly CharacterAnimationPoseInputFrame parameters =
+                ref input.ParameterFrame;
             for (int i = 0; i < row.ParameterCount; i++)
             {
                 CharacterPoseParameterDeclaration declaration =

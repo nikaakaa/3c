@@ -1294,3 +1294,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - source demand barrier 与 StateMachine frame 输入使用 `!=` 比较 lineage；按值 operator 会把 readonly 引用两侧各复制一次。identity 比较本身只需要读取同一字段集合。
 - lineage 新增 `Matches(in lineage)` 逐字段正式匹配入口；BlendStack、Blend Space、Clip、Selected Pose 的 demand barrier 和 StateMachine PrepareFrame 输入改用该入口。匹配结果、异常时机、输出页完成判定和后续阶段不变。
 - 该改动删除这些全量 lineage 比较的两侧整份拷贝；不新增第二 identity 数据源。静态核对 `Matches` 字段集合与原 Equals 一致、readonly 引用入口和五个调用点；未编译、未采样，不能声称实测耗时收益。
+
+### AP163 nested frame 只读引用入口（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPoseNativeFrameInput` 的 Body/Fact/Parameter frame 是按值属性；外层 `CurrentInput` 引用化后，handler 每次读取嵌套帧仍会复制整份。frame 在 BeginFrame 写入后同帧只被消费。
+- 三个嵌套帧改为 readonly 字段加 `ref readonly` 属性正式入口；Action Slot、Blend Space、Clip、Foot Placement、RootOrientationWarp 和 StateMachine 的按值局部引用改为 `ref readonly` 局部引用。字段读取、校验顺序、输出内容和 Commit/Discard 语义不变。
+- 该改动删除周期链中嵌套 frame 的整份拷贝；不新增第二数据源或可变写入路径。其他窗口持有的 GraphEvaluator 文件未修改，其直接嵌套帧访问会继续使用同一属性。静态核对构造赋值、全部当前调用点、readonly 局部生命周期和原有分支；未编译、未采样，不能声称实测耗时收益。

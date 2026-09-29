@@ -196,7 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
-            CharacterAnimationPoseInputFrame parameterFrame = input.ParameterFrame;
+            ref readonly CharacterAnimationPoseInputFrame parameterFrame =
+                ref input.ParameterFrame;
             m_Player.SetParameterFrame(in parameterFrame);
             m_Player.Advance(input.DeltaSeconds);
             m_Capture = m_Player.PrepareCapture(input.DeltaSeconds);

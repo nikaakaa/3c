@@ -405,8 +405,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             else if (m_PendingTransition == null)
             {
                 m_PendingTime = m_CommittedTime + input.DeltaSeconds;
-                CharacterPresentationFactFrame factFrame = input.FactFrame;
-                CharacterAnimationPoseInputFrame parameterFrame = input.ParameterFrame;
+                ref readonly CharacterPresentationFactFrame factFrame =
+                    ref input.FactFrame;
+                ref readonly CharacterAnimationPoseInputFrame parameterFrame =
+                    ref input.ParameterFrame;
                 CharacterPoseStateTransition transition = SelectTransition(
                     m_PendingState,
                     in factFrame,

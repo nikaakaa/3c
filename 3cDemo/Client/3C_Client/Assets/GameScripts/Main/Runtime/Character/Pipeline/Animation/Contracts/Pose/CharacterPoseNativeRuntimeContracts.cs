@@ -629,9 +629,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BodyTick = bodyTick;
             PresentationSampleTick = presentationSampleTick;
             DeltaSeconds = deltaSeconds;
-            BodyFrame = bodyFrame;
-            FactFrame = factFrame;
-            ParameterFrame = parameterFrame;
+            m_BodyFrame = bodyFrame;
+            m_FactFrame = factFrame;
+            m_ParameterFrame = parameterFrame;
             ActionCommands = actionCommands;
         }
 
@@ -641,9 +641,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong BodyTick { get; }
         internal double PresentationSampleTick { get; }
         internal float DeltaSeconds { get; }
-        internal CharacterBodyPresentationFrame BodyFrame { get; }
-        internal CharacterPresentationFactFrame FactFrame { get; }
-        internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
+        readonly CharacterBodyPresentationFrame m_BodyFrame;
+        readonly CharacterPresentationFactFrame m_FactFrame;
+        readonly CharacterAnimationPoseInputFrame m_ParameterFrame;
+        internal ref readonly CharacterBodyPresentationFrame BodyFrame => ref m_BodyFrame;
+        internal ref readonly CharacterPresentationFactFrame FactFrame => ref m_FactFrame;
+        internal ref readonly CharacterAnimationPoseInputFrame ParameterFrame => ref m_ParameterFrame;
         internal IReadOnlyList<ActionAnimationPlaybackCommand> ActionCommands { get; }
         internal bool IsValid => ActorId.IsValid && FrameIdentity != 0 && PresentationFrame != 0 &&
             BodyTick != 0 && double.IsFinite(PresentationSampleTick) && PresentationSampleTick >= BodyTick &&

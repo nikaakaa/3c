@@ -21,6 +21,17 @@ namespace ThirdPersonCamera
             FieldOfView = Mathf.Clamp(fieldOfView, 5f, 170f);
         }
 
+        CameraWorldBasicData(CameraWorldBasicData source, float radius, float fieldOfView)
+        {
+            PivotLocation = source.PivotLocation;
+            Rotation = source.Rotation;
+            Radius = radius;
+            FieldOfView = Mathf.Clamp(fieldOfView, 5f, 170f);
+            float projectionScale = Radius * Mathf.Tan(FieldOfView * 0.5f * Mathf.Deg2Rad) /
+                (source.Radius * Mathf.Tan(source.FieldOfView * 0.5f * Mathf.Deg2Rad));
+            Offset = source.Offset * projectionScale;
+        }
+
         public Vector3 PivotLocation { get; }
         public Quaternion Rotation { get; }
         public float Radius { get; }
@@ -35,14 +46,11 @@ namespace ThirdPersonCamera
         public CameraWorldBasicData WithRotation(Quaternion rotation) =>
             new CameraWorldBasicData(PivotLocation, rotation, Radius, Offset, FieldOfView);
 
-        public CameraWorldBasicData WithRadius(float radius) =>
-            new CameraWorldBasicData(PivotLocation, Rotation, radius, Offset, FieldOfView);
+        public CameraWorldBasicData WithFraming(float radius, float fieldOfView) =>
+            new CameraWorldBasicData(this, radius, fieldOfView);
 
         public CameraWorldBasicData WithOffset(Vector2 offset) =>
             new CameraWorldBasicData(PivotLocation, Rotation, Radius, offset, FieldOfView);
-
-        public CameraWorldBasicData WithFieldOfView(float fieldOfView) =>
-            new CameraWorldBasicData(PivotLocation, Rotation, Radius, Offset, fieldOfView);
 
         public CameraWorldBasicData WithLocation(Vector3 location)
         {

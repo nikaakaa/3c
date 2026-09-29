@@ -1,0 +1,56 @@
+{
+  "method": "Independent double-precision projection calculation using previously measured production base plan and dump Branch_02 target FOV/radius; not execution of newly edited C#",
+  "baseline": {
+    "radius": 3.7426796,
+    "fov": 50.0,
+    "offset_y": -0.0376972035,
+    "projected_screen_y": 0.5108,
+    "playing": false
+  },
+  "samples": [
+    {
+      "sample": "E Hold",
+      "radius": 4.116947565577028,
+      "fov": 52.0,
+      "old_offset": -0.0376972035,
+      "new_offset": -0.04337215952369977,
+      "old_projected_screen_y": 0.5093868964714412,
+      "new_projected_screen_y": 0.5108000045995932
+    },
+    {
+      "sample": "E Explode",
+      "radius": 3.7426796,
+      "fov": 60.0,
+      "old_offset": -0.0376972035,
+      "new_offset": -0.0466741006882342,
+      "old_projected_screen_y": 0.5087228241184822,
+      "new_projected_screen_y": 0.5108000045995932
+    },
+    {
+      "sample": "return",
+      "radius": 3.7426796,
+      "fov": 50.0,
+      "old_offset": -0.0376972035,
+      "new_offset": -0.0376972035,
+      "old_projected_screen_y": 0.5108000045995932,
+      "new_projected_screen_y": 0.5108000045995932
+    }
+  ],
+  "intentional_stretch_pivot_offset": "Excluded from anchor invariant; existing configured CamOffset remains a separate pivot translation",
+  "unity_compile": "Blocked by OperationStateMachineRuntime.cs:267 CS1503 int-to-ulong arguments from other in-progress changes",
+  "runtime_verified": false,
+  "isolated_builds": {
+    "ThirdPersonCamera.Contracts": {
+      "result": "passed",
+      "warnings": 0,
+      "errors": 0
+    },
+    "ThirdPersonClient.Runtime": {
+      "result": "failed",
+      "error": "CharacterTimelineHost.cs:323 CS1729 AbilityTimelineLogicMotion has no 14-argument constructor in the existing dependency outputs",
+      "limitation": "BuildProjectReferences=false uses existing dependency outputs; this mismatch is not proof of a new source error in that module."
+    },
+    "flags": "--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false /p:BuildProjectReferences=false",
+    "build_server_shutdown": "executed immediately after both builds"
+  }
+}

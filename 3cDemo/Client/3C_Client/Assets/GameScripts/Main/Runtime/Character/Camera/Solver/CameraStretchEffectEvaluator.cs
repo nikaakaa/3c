@@ -91,7 +91,9 @@ namespace ThirdPersonCamera
                 plan.WorldBasicData
                     .WithPivotLocation(plan.PivotLocation + baseContribution.Offset + additiveContribution.Offset)
                     .WithRotation(rotation)
-                    .WithRadius(plan.Radius * (1f + baseContribution.RadiusOffset + additiveContribution.RadiusOffset + crossOffset)));
+                    .WithFraming(
+                        plan.Radius * (1f + baseContribution.RadiusOffset + additiveContribution.RadiusOffset + crossOffset),
+                        plan.FieldOfView));
         }
 
         static StretchContribution Sample(

@@ -108,6 +108,34 @@
       "sha256": "437ee4e6d7107a098b182bc7500cbef5ad08cf671f3ff495f88e866ed2d69780"
     },
     {
+      "path": "composition-body-0x1596b3e0.json",
+      "sha256": "9a8cf35821d6479e44aac33c4ebe7a5388033c8b93a7e804f02af3b299c5cc3e"
+    },
+    {
+      "path": "composition-body-0x1596c3c0.json",
+      "sha256": "f12f2eccb28cccf5fd11dd91b7401a39c9dc7167948c377daf2739b0bd0d4dac"
+    },
+    {
+      "path": "composition-body-0x15970770.json",
+      "sha256": "6be3c8795e1102669a325248d0e47b8be5fc046791d1a3df4f621d613251454e"
+    },
+    {
+      "path": "composition-body-0x159710b0.json",
+      "sha256": "98e17f75893f8546948cb9c2e183aef6564d23b4f82043dead1b9349301f5eb5"
+    },
+    {
+      "path": "composition-lens-fields.json",
+      "sha256": "e41b23c174d878c53b4c2fe1c5be7285c15e30c5c82f8bda0d0f7cf9a9851c56"
+    },
+    {
+      "path": "composition-perspective-math.json",
+      "sha256": "dbe1ea3c616142d1650e4eac9520c2db4adaab4f42d18c81eec635ccd1cafaee"
+    },
+    {
+      "path": "composition-projection-after-lens.json",
+      "sha256": "56ee0aab0d08c8e0af9fda4289fb417e67d9d7f976b1e7fbb0bea50c948d35d9"
+    },
+    {
       "path": "consumer-0x11fe63b0.json",
       "sha256": "74ef8eba84e5743c4e61d8597609a815591669f9db8be967db809047aac45434"
     },
@@ -642,6 +670,10 @@
     {
       "path": "zoom-stretch-consumer-types.json",
       "sha256": "0b9296370b5c1ac1b51b791d62be5ebf54fee49565fa2032d40355ac4477d222"
+    },
+    {
+      "path": "zoom-stretch-framing-numeric-check.json",
+      "sha256": "f177cdde34214f44cf8b31d410a4a2faed6597bdf7521f50c0532286391cb3b7"
     },
     {
       "path": "zoom-stretch-instance-types.json",

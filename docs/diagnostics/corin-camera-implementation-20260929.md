@@ -333,3 +333,19 @@ Unity编译、域重载和Console检查通过，0错误。编译中发现初始�
 原始证据包括drag-notify、drag-trigger、drag-manager-mode、drag-exit-progress、pointer-smoothing-mode、pointer-smoothing-scalar/vector及pointer-smoothing-snapshot。BCFKAGODFJI另有共享配置表的调用者，相关getter／producer证据只用于追溯调查，当前拖动参数依据是已证明的CameraScreenDragConfig字段，不是旁支配置表或玩家设置猜测。选定IFix字节均为0。
 
 剩余工作仍包括TopOrbit延伸、完整Delay／死区／软区、效果改变FOV或距离后的构图连续性，以及震动的独立世界倍率和保持／静默输入。此次完成拖动退出，不代表完整相机复刻完成。
+
+## Zoom／Stretch 改变镜头参数后的构图换算
+
+当前基础轨道已经把归一化ScreenY换算为CameraWorldBasicData.Offset的米制值。旧Zoom只改FieldOfView、Stretch只改Radius，因此后续仍消费旧镜头下的米制偏移，原来的屏幕锚点随焦距／距离发生额外漂移。这与技能配置中主动给出的CamOffset平移是两件事。
+
+新增证据确认：原作CameraState.<Lens>k__BackingField与LensSettings.FieldOfView的值类型payload偏移均为0；0x15970770在0x15970817读取传入CameraState的当前FOV，0x15970A70起乘0.5和Deg2Rad，再经0xE58590与目标深度组合。该数学函数的小角分支为x+x³/3；配合其透视构图调用，与本地CinemachineFramingTransposer的`tan(FOV/2)*depth`及原ScreenToOrtho换算一致。证据见composition-lens-fields、composition-perspective-math与composition-body。另行保存的composition-projection-after-lens是旋转构图路径，不把它误称为平移构图函数。本批确认当前镜头参数参与构图的单位关系，没有据此宣称完整Delay分支和执行顺序已复刻。
+
+修改后的正式链：Zoom计算最终FOV、Stretch计算最终半径和配置位移 → CameraWorldBasicData.WithFraming将Offset按`newRadius*tan(newFov/2)/(oldRadius*tan(oldFov/2))`换算 → 原有震动、Shot和最终输出继续消费同一WorldBasicData。半径和FOV的修改由同一个入口保持屏幕锚点，没有新增屏幕位置缓存或第二套配置。特殊构造函数沿用已经归一化的旋转，对新FOV执行原有范围处理一次；运行路径没有新增托管分配。
+
+删除已迁移且没有其他源码／反射字符串调用的WithRadius、WithFieldOfView方法及FramePlan无职责包装。CameraWorldBasicData为普通不可变结构体，不是序列化行为组件；作者资产没有调用这些方法的外部绑定。主动位置偏移仍由Stretch的原有PivotLocation计算提供。
+
+独立数值检查以先前生产基础构图ScreenY=0.5108为输入：E Hold的FOV52、半径1.1倍下，旧算法约0.509387，修正后0.5108；E Explode的FOV60下，旧算法约0.508723，修正后0.5108。记录见zoom-stretch-framing-numeric-check.json。这是独立投影计算，不是新C#的运行证据。
+
+Unity编译尝试被其他窗口的OperationStateMachineRuntime.cs:267两处CS1503（int参数传给ulong）阻塞；未修改该逻辑链。相机改动diff检查通过，当前不能宣称新代码已通过Unity编译或生产函数检查，也未运行Play/replay。待整体编译恢复后，需用正式Profile的Branch_02 Zoom／Stretch跑编辑器内生产求值检查，再交付这一批为可用版本。配置资源数值未改，不需要重新生成技能、动画或IK资产。
+
+补充独立编译：使用Unity生成的csproj，`dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false /p:BuildProjectReferences=false`编译ThirdPersonCamera.Contracts成功，0警告0错误。相同方式编译ThirdPersonClient.Runtime时，由CharacterTimelineHost.cs:323引用的既有依赖输出不含14参数AbilityTimelineLogicMotion构造函数而失败；这属于独立编译采用现存依赖产物的版本不匹配，不能将其直接认定为该模块新增源码错误。两次构建结束均立即执行build-server shutdown。相机合同类型已通过C#编译，Zoom／Stretch完整消费链仍待Unity整体编译恢复后验证。

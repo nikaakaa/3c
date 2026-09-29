@@ -101,19 +101,9 @@ namespace ThirdPersonCamera
             return WithWorldBasicData(m_WorldBasicData.WithRotation(rotation));
         }
 
-        public CameraFramePlan WithRadius(float radius)
-        {
-            return WithWorldBasicData(m_WorldBasicData.WithRadius(radius));
-        }
-
         public CameraFramePlan WithOffset(Vector2 offset)
         {
             return WithWorldBasicData(m_WorldBasicData.WithOffset(offset));
-        }
-
-        public CameraFramePlan WithFieldOfView(float fieldOfView)
-        {
-            return WithWorldBasicData(m_WorldBasicData.WithFieldOfView(fieldOfView));
         }
 
         public CameraFramePlan WithPitchClamped(float minimum, float maximum)

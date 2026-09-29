@@ -66,7 +66,8 @@ namespace ThirdPersonCamera
             }
             m_BaseOffset = baseOffset;
             m_AdditiveOffset = additiveOffset;
-            return plan.WithFieldOfView(plan.FieldOfView + baseOffset + additiveOffset);
+            return plan.WithWorldBasicData(plan.WorldBasicData.WithFraming(
+                plan.Radius, plan.FieldOfView + baseOffset + additiveOffset));
         }
 
         static float EvaluateOffset(

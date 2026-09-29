@@ -1,0 +1,35 @@
+{
+  "session": "829",
+  "fields": [
+    {
+      "type": "Cinemachine.CameraState",
+      "type_index": 34727,
+      "field": "<Lens>k__BackingField",
+      "metadata_offset": 16,
+      "value_payload_offset": 0,
+      "runtime_matches_definition": true
+    },
+    {
+      "type": "Cinemachine.LensSettings",
+      "type_index": 34775,
+      "field": "FieldOfView",
+      "metadata_offset": 16,
+      "value_payload_offset": 0,
+      "runtime_matches_definition": true
+    }
+  ],
+  "constants": {
+    "0x2703f80": 0.5,
+    "0x281cb4c": 0.01745329238474369
+  },
+  "consumer": "0x15970770",
+  "field_read": "0x15970817",
+  "projection_math": "0x15970a70-0x15970a94",
+  "math_evidence": {
+    "rva": "0xe58590",
+    "small_angle_branch": "x + x^3/3",
+    "coefficient_rva": "0x2aa7be8",
+    "coefficient": 0.3333333333333333,
+    "comparison": "CinemachineFramingTransposer screenSize = tan(FOV * Deg2Rad / 2) * targetDepth"
+  }
+}

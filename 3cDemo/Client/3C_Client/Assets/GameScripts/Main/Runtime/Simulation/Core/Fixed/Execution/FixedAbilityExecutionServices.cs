@@ -48,7 +48,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Values.BeginEvaluation();
             m_GameplayEffects?.BeginEvaluation();
             m_Equipment?.BeginEvaluation();
-            m_Blackboard.BeginFrame();
         }
 
         public void EndEvaluation()

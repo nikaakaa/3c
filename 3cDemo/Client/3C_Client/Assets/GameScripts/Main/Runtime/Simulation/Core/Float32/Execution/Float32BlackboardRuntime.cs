@@ -150,12 +150,6 @@ namespace ThirdPersonSimulation
             m_TimelineBlackboardContexts = workspace.TimelineBlackboardContexts;
         }
 
-        public void BeginFrame()
-        {
-            m_ActionWindowProjections.Clear();
-            m_ActionWindowProjectionKeys.Clear();
-        }
-
         public void EndFrame()
         {
             FlushBlackboardProjections();

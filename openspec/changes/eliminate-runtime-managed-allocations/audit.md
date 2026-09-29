@@ -633,6 +633,12 @@
 - 删除 Begin 的重复 Clear，保留 End 唯一清理边界和每轮 RetainEvaluatedAction 写入。执行栈状态检查、技能执行上下文、评估名单顺序和异常 Abort 链不变。
 - 两个数值域同步修改，静态核对 Complete、Abort、Begin/End 生命周期和异常传播；未编译、运行回放或采样。
 
+### AP78 Blackboard 评估开始重复清理投影（2026-09-29，已实施，本轮未编译）
+
+- 两域 BlackboardRuntime 的 projection List 和 key HashSet 与 AbilityExecutionWorkspace 共享。上一轮 Complete/Abort 后 actor 调用 ClearWorkspaces，Workspace.Reset 已清理这两类容器；构造和首次评估时也为空。
+- 删除空职责 BeginFrame 入口及其重复 Clear，保留 EndFrame 在 Flush 后清空、Workspace.Reset 边界和投影去重键维护。投影查询、写入和提交顺序不变。
+- 两个数值域同步修改，静态核对共享容器唯一所有权、Begin/End 生命周期、异常 Abort 后 workspace 清理；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

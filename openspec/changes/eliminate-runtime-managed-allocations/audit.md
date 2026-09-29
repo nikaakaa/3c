@@ -1829,3 +1829,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - request pair 和 resolved pair 构造时把左右 `Identity` 复制到局部，再只读传入 lineage 校验和读取 header 字段。
 - 四个局部改为 backing field 只读绑定；`RequirePair` 参数、字段比较、FrameSequence/CompletionIdentity/RigId/RigRevision 写入和异常文本不变。
 - 该改动删除 Foot Placement pair 构造的 identity 拷贝。静态核对左右对象为 `in` 参数、identity 生命周期覆盖构造、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP252 Foot Placement final result 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPlacementResult` 的 Feet、PrimarySupport、Pelvis 和三个 FullBodyIK goal 自动属性每次读取复制完整结构；Constraint Runtime 每脚帧读取三个 goal 写入 pending contribution。
+- 六个结构属性改为 backing field 只读引用；result 构造校验仍读取 `in` 参数并保留一次必要字段写入。Constraint Runtime 写入 pending goal 数组仍保留一次存储拷贝，输出顺序和 lineage 不变。
+- 该改动删除 Foot Placement final result 属性读取的重复拷贝。静态核对 result 为 readonly struct、生命周期覆盖 Constraint Runtime 调用、消费只读；未编译、未采样，不能声称实测耗时收益。

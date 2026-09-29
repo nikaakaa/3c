@@ -747,13 +747,19 @@
 - 三个入口在修改前比较正式值：相同 generation、已存在且相同的写入值、已存在且已是默认值的 reset 直接返回成功。frame 中尚不存在的槽位仍按原路径物化，因为 codec 会写入 frame Values 数量，省略默认项会改变状态字节和回放合同。只有真实代数推进或值变化才克隆当前 shell 内的目标 frame 并写 aggregate。类型、slot 合同和值校验边界保持；代数为零或非零不匹配仍沿原有 ArgumentOutOfRange/InvalidOperationException 边界失败。
 - no-op 状态调用省去目标 frame 克隆、aggregate 写回和事务聚合相等扫描；真实变化路径与失败异常语义不变。静态核对 manager 值默认规则、两域 ActionStateStore 接口和 Transaction Set/Get 生命周期；未编译、运行回放或采样。
 
-## 可靠性问题独立保留
-
 ### AP97 Locomotion 周期重复解析 continuation 子树（2026-09-29，已实施，本轮未编译）
 
 - Fixed 与 Float32 Timed Locomotion 每次解析 timeline 时调用 `TryFindSingleLocomotion`，对 completion transition 目标 state 新建 `Stack<OperationHandle>` 并遍历 Child 子树查找唯一 locomotion。state 拓扑、Root 边和 operation code/Integer 常量装配后固定，这是周期重复拓扑查找和托管分配。
 - `OperationExecutionTopology` 构造期基于已有 Root 边和 Child 出边预解析每个 state 的唯一 LocomotionInputMotion；发现第二个则按原逻辑判定不唯一。Motion runtime 改为读取 `StateSingleLocomotion`，保留目标必须为 Continuous ConstantSpeed、Move Speed 类型和数值校验、owner identity 与 continuation velocity 语义。
 - Timed Locomotion 每 tick 少一次 state 子树遍历和 Stack 分配；装配期新增定容 handle 数组。目标无 Root、无 locomotion、多 locomotion 或 continuation 不满足模式时结果不变。静态核对 Root/Child 出边构造、装配期 Stack 清理、两域调用和差异；未编译、运行回放或采样。
+
+### AP98 Action Motion Curve 周期总量重复求值（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 Action Motion Curve 在 looping 模式下，X/Z 的 from 和 to 各自调用 `SampleCumulative`，每次都重新执行 `curve.Evaluate(duration)` 计算周期总量；同一 tick、同一曲线的该值重复计算四次。周期总量只依赖曲线、duration 和求值器纯函数。
+- 每条曲线在本次位移解析中先计算一次 `cycleTotal`，非 looping 仍按原 clamp 后求值，不预计算 endpoint。`SampleCumulative` 只接收并复用该总量，`cycle`、local time、from/to 和 local 求值顺序不变。
+- looping 位移解析从每轴四次求值收敛为三次（周期总量加 from/to），两轴从八次收敛为六次；数值顺序、舍入输入和可见输出不变。静态核对两域曲线求值器无状态、唯一调用链和差异；未编译、运行回放或采样。
+
+## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。
 

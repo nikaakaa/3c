@@ -1230,10 +1230,12 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
             FixedGameplayAbilityCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
             FixedScalar duration = durationConstant.Scalar;
-            FixedScalar localX = SampleCumulative(xCurve, toTime, duration, looping) -
-                SampleCumulative(xCurve, fromTime, duration, looping);
-            FixedScalar localZ = SampleCumulative(zCurve, toTime, duration, looping) -
-                SampleCumulative(zCurve, fromTime, duration, looping);
+            FixedScalar xCycleTotal = looping ? xCurve.Evaluate(duration, FixedScalar.Zero) : FixedScalar.Zero;
+            FixedScalar zCycleTotal = looping ? zCurve.Evaluate(duration, FixedScalar.Zero) : FixedScalar.Zero;
+            FixedScalar localX = SampleCumulative(xCurve, toTime, duration, looping, xCycleTotal) -
+                SampleCumulative(xCurve, fromTime, duration, looping, xCycleTotal);
+            FixedScalar localZ = SampleCumulative(zCurve, toTime, duration, looping, zCycleTotal) -
+                SampleCumulative(zCurve, fromTime, duration, looping, zCycleTotal);
 
             FixedVector2 forward = move.Normalized;
             FixedVector2 right = new FixedVector2(forward.Y, -forward.X);
@@ -1247,14 +1249,14 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityCurve curve,
             FixedScalar time,
             FixedScalar duration,
-            bool looping)
+            bool looping,
+            FixedScalar cycleTotal)
         {
             if (!looping)
                 return curve.Evaluate(FixedScalar.Clamp(time, FixedScalar.Zero, duration), FixedScalar.Zero);
             int cycle = (time / duration).TruncateToInt32();
             FixedScalar localTime = time - duration * FixedScalar.FromInt64(cycle);
-            FixedScalar total = curve.Evaluate(duration, FixedScalar.Zero);
-            return total * FixedScalar.FromInt64(cycle) + curve.Evaluate(localTime, FixedScalar.Zero);
+            return cycleTotal * FixedScalar.FromInt64(cycle) + curve.Evaluate(localTime, FixedScalar.Zero);
         }
     }
 }

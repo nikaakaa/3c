@@ -1225,10 +1225,12 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
             Float32GameplayAbilityCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
             Float32Scalar duration = durationConstant.Scalar;
-            Float32Scalar localX = SampleCumulative(xCurve, toTime, duration, looping) -
-                SampleCumulative(xCurve, fromTime, duration, looping);
-            Float32Scalar localZ = SampleCumulative(zCurve, toTime, duration, looping) -
-                SampleCumulative(zCurve, fromTime, duration, looping);
+            Float32Scalar xCycleTotal = looping ? xCurve.Evaluate(duration, Float32Scalar.Zero) : Float32Scalar.Zero;
+            Float32Scalar zCycleTotal = looping ? zCurve.Evaluate(duration, Float32Scalar.Zero) : Float32Scalar.Zero;
+            Float32Scalar localX = SampleCumulative(xCurve, toTime, duration, looping, xCycleTotal) -
+                SampleCumulative(xCurve, fromTime, duration, looping, xCycleTotal);
+            Float32Scalar localZ = SampleCumulative(zCurve, toTime, duration, looping, zCycleTotal) -
+                SampleCumulative(zCurve, fromTime, duration, looping, zCycleTotal);
 
             Float32Vector2 forward = move.Normalized;
             Float32Vector2 right = new Float32Vector2(forward.Y, -forward.X);
@@ -1242,14 +1244,14 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityCurve curve,
             Float32Scalar time,
             Float32Scalar duration,
-            bool looping)
+            bool looping,
+            Float32Scalar cycleTotal)
         {
             if (!looping)
                 return curve.Evaluate(Float32Scalar.Clamp(time, Float32Scalar.Zero, duration), Float32Scalar.Zero);
             int cycle = (int)Math.Floor((time / duration).ToDouble());
             Float32Scalar localTime = time - duration * Float32Scalar.FromInt64(cycle);
-            Float32Scalar total = curve.Evaluate(duration, Float32Scalar.Zero);
-            return total * Float32Scalar.FromInt64(cycle) + curve.Evaluate(localTime, Float32Scalar.Zero);
+            return cycleTotal * Float32Scalar.FromInt64(cycle) + curve.Evaluate(localTime, Float32Scalar.Zero);
         }
     }
 }

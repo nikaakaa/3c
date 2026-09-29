@@ -310,16 +310,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
             ref readonly AnimationFootMotionRuntimeFrame formalFootFrame =
                 ref poseInput.FootMotion;
-            AnimationFootMotionRuntimeSample leftCurrentStep =
-                formalFootFrame.Left;
-            AnimationFootMotionRuntimeSample rightCurrentStep =
-                formalFootFrame.Right;
+            ref readonly AnimationFootMotionRuntimeSample leftCurrentStep =
+                ref formalFootFrame.Left;
+            ref readonly AnimationFootMotionRuntimeSample rightCurrentStep =
+                ref formalFootFrame.Right;
             var leftLockRequest = new CharacterFootLockRequest(in leftCurrentStep);
             var rightLockRequest = new CharacterFootLockRequest(in rightCurrentStep);
             CharacterFutureBodyTranslation bodyTrajectory = ResolveBodyTrajectory(
                 bank,
-                leftCurrentStep,
-                rightCurrentStep,
+                in leftCurrentStep,
+                in rightCurrentStep,
                 in timeline,
                 currentSegmentRemainingSeconds,
                 frame.PresentationDeltaSeconds,
@@ -1344,8 +1344,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFutureBodyTranslation ResolveBodyTrajectory(
             CharacterFootPlacementBank bank,
-            AnimationFootMotionRuntimeSample leftFootMotion,
-            AnimationFootMotionRuntimeSample rightFootMotion,
+            in AnimationFootMotionRuntimeSample leftFootMotion,
+            in AnimationFootMotionRuntimeSample rightFootMotion,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
             float presentationDeltaSeconds,
@@ -1377,8 +1377,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in settings);
             bank.PredictionMotionResult = predictionMotion;
             float maximum = m_Settings.LandingPrediction.MaximumPredictionTimeSeconds;
-            float leftTime = ResolvePredictionTime(leftFootMotion, maximum);
-            float rightTime = ResolvePredictionTime(rightFootMotion, maximum);
+            float leftTime = ResolvePredictionTime(
+                in leftFootMotion, maximum);
+            float rightTime = ResolvePredictionTime(
+                in rightFootMotion, maximum);
             float duration = Mathf.Max(leftTime, rightTime);
             if (!predictionMotion.IsValid ||
                 m_FutureBodyTranslationSource == null)
@@ -1439,7 +1441,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static float ResolvePredictionTime(
-            AnimationFootMotionRuntimeSample step,
+            in AnimationFootMotionRuntimeSample step,
             float maximum) =>
             step.IsAuthoritative && step.HasConsistentLandingEventIdentity &&
             step.TimeToLandingSeconds > 0.000001f &&

@@ -199,6 +199,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly PoseNodeId m_NodeId;
         readonly AnimationPoseSourceId m_SourceId;
+        readonly AnimationFootMotionRuntimeSample m_Left;
+        readonly AnimationFootMotionRuntimeSample m_Right;
 
         internal AnimationFootMotionRuntimeFrame(
             ulong completionIdentity,
@@ -211,8 +213,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int cycle,
             float sourceWeight,
             float normalizedTime,
-            AnimationFootMotionRuntimeSample left,
-            AnimationFootMotionRuntimeSample right)
+            in AnimationFootMotionRuntimeSample left,
+            in AnimationFootMotionRuntimeSample right)
         {
             if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
                 contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
@@ -234,11 +236,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Cycle = cycle;
             SourceWeight = sourceWeight;
             NormalizedTime = normalizedTime;
-            Left = left.BindEventLineage(
+            m_Left = left.BindEventLineage(
                 sourceSampleIdentity,
                 contributionContinuityIdentity,
                 CharacterFootSide.Left);
-            Right = right.BindEventLineage(
+            m_Right = right.BindEventLineage(
                 sourceSampleIdentity,
                 contributionContinuityIdentity,
                 CharacterFootSide.Right);
@@ -258,8 +260,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Cycle { get; }
         internal float SourceWeight { get; }
         internal float NormalizedTime { get; }
-        internal AnimationFootMotionRuntimeSample Left { get; }
-        internal AnimationFootMotionRuntimeSample Right { get; }
+        internal ref readonly AnimationFootMotionRuntimeSample Left =>
+            ref m_Left;
+        internal ref readonly AnimationFootMotionRuntimeSample Right =>
+            ref m_Right;
         internal bool IsValid => m_IsSpecified != 0;
     }
 

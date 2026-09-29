@@ -2009,3 +2009,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `PreparePelvis` 按 support side 选择 request 时复制整份 placement request，随后又复制左右 landing reach 和左右 placement request 用于 reach 输入与 contact ownership 判定。
 - support request 和左右 landing reach 改为 pair 成员的只读引用；左右 ownership 判定直接引用 pair 成员。support 判定、reach 承载开关、bilateral 判定和输出 ankle/goal weight 不变。
 - 该改动删除 StrideHips pelvis input 准备中的左右 request/result 重复拷贝。静态核对 request pair 为 readonly struct、request pair 生命周期覆盖 PreparePelvis、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP282 Formal foot frame 左右 sample 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `AnimationFootMotionRuntimeFrame.Left/Right` 自动属性每次读取复制完整 formal foot sample；Foot Placement 每帧先复制左右 sample，body trajectory 求解入参又按值转发。
+- 左右 sample 改为 backing field 只读引用，构造入参改为 `in`；Foot Placement 局部直接绑定 formal frame，body trajectory 与 prediction time 入参改为 `in`。锁定请求、landing projection、swing 构建和 prediction 判定读取同一 sample，构造时仍保留一次必要存储。
+- 该改动删除 Foot Placement 每帧左右 formal foot sample 及其进入 body trajectory 的重复拷贝。静态核对 sample 为 readonly struct、formal frame 生命周期覆盖 EvaluateFrame、消费只读；未编译、未采样，不能声称实测耗时收益。

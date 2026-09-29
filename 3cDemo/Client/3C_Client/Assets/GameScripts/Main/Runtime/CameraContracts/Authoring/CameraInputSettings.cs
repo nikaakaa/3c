@@ -11,6 +11,9 @@ namespace ThirdPersonCamera
         [SerializeField] Vector2 m_DecelerationTime;
         [SerializeField] Vector2 m_PointerInputScale;
         [SerializeField] Vector2 m_StickInputScale;
+        [SerializeField] Vector2 m_PointerActivationThreshold;
+        [SerializeField] Vector2 m_StickActivationThreshold;
+        [SerializeField] float m_DragExitDuration;
         [SerializeField] Vector2 m_PointerAxisGain;
         [SerializeField] Vector2 m_StickAxisGain;
         [SerializeField] Vector2 m_AxisDirection = Vector2.one;
@@ -25,6 +28,9 @@ namespace ThirdPersonCamera
         public Vector2 DecelerationTime => m_DecelerationTime;
         public Vector2 PointerInputScale => m_PointerInputScale;
         public Vector2 StickInputScale => m_StickInputScale;
+        public Vector2 PointerActivationThreshold => m_PointerActivationThreshold;
+        public Vector2 StickActivationThreshold => m_StickActivationThreshold;
+        public float DragExitDuration => m_DragExitDuration;
         public Vector2 PointerAxisGain => m_PointerAxisGain;
         public Vector2 StickAxisGain => m_StickAxisGain;
         public Vector2 AxisDirection => m_AxisDirection;
@@ -41,6 +47,7 @@ namespace ThirdPersonCamera
             ConfigureAxes(source.MaxSpeed, source.AccelerationTime, source.DecelerationTime,
                 source.PointerInputScale, source.StickInputScale, source.PointerAxisGain,
                 source.StickAxisGain, source.AxisDirection, source.ElevationRange);
+            ConfigureDrag(source.PointerActivationThreshold, source.StickActivationThreshold, source.DragExitDuration);
             m_PitchLimit = source.PitchLimit;
             m_DefaultResponseWeight = source.DefaultResponseWeight;
             m_PitchResponseWeight = source.PitchResponseWeight;
@@ -62,10 +69,19 @@ namespace ThirdPersonCamera
             m_ElevationRange = elevationRange;
         }
 
+        public void ConfigureDrag(Vector2 pointerActivationThreshold, Vector2 stickActivationThreshold, float exitDuration)
+        {
+            m_PointerActivationThreshold = pointerActivationThreshold;
+            m_StickActivationThreshold = stickActivationThreshold;
+            m_DragExitDuration = exitDuration;
+        }
+
         public void RequireValid(string source)
         {
             if (!Positive(MaxSpeed) || !NonNegative(AccelerationTime) || !NonNegative(DecelerationTime) ||
                 !NonNegative(PointerInputScale) || !NonNegative(StickInputScale) ||
+                !NonNegative(PointerActivationThreshold) || !NonNegative(StickActivationThreshold) ||
+                !float.IsFinite(DragExitDuration) || DragExitDuration < 0f ||
                 !Positive(PointerAxisGain) || !Positive(StickAxisGain) ||
                 Mathf.Abs(AxisDirection.x) != 1f || Mathf.Abs(AxisDirection.y) != 1f ||
                 !Finite(ElevationRange) || ElevationRange.x >= ElevationRange.y ||

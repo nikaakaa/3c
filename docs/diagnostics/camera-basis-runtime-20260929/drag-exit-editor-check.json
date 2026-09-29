@@ -1,0 +1,66 @@
+{
+  "unity_instance": "e852139597e42532",
+  "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets",
+  "schema": "character-camera-projection/v8",
+  "method": "Edit-mode production ResolveLook invoked with formal Profile projection; no Play/replay or added test code",
+  "frame_delta": 0.016666666666666666,
+  "pointer_threshold": [
+    0.00208333344,
+    0.00145833346
+  ],
+  "stick_threshold": [
+    0.00333333365,
+    0.00233333348
+  ],
+  "exit_duration": 0.1,
+  "below_threshold_input_pixels": 0.01,
+  "below_threshold_60_frames_yaw": 0,
+  "before_release_60_frames_input_pixels": 10,
+  "before_release_yaw": 71.04179,
+  "before_release_axis_input": 0.0500000045,
+  "release_yaw": [
+    72.23351,
+    73.28843,
+    74.2006454,
+    74.97858,
+    75.63636,
+    76.18961,
+    76.65338,
+    76.65338,
+    76.65338,
+    76.65338
+  ],
+  "release_axis_input": [
+    0.0267920569,
+    0.0143562853,
+    0.00769268768,
+    0.0041220584,
+    0.00220876839,
+    0.001183549,
+    0.0006341942,
+    0.0006341942,
+    0.0006341942,
+    0.0006341942
+  ],
+  "release_phase": [
+    "Exiting",
+    "Exiting",
+    "Exiting",
+    "Exiting",
+    "Exiting",
+    "Exiting",
+    "Inactive",
+    "Inactive",
+    "Inactive",
+    "Inactive"
+  ],
+  "after_exit_additional_60_frames_yaw_delta": 0,
+  "restarted_first_frame_yaw_delta": 0.215278625,
+  "paused_during_exit_yaw_delta": 0,
+  "paused_phase_before": "Exiting",
+  "paused_phase_after": "Exiting",
+  "dirty": false,
+  "playing": false,
+  "console_errors": 0,
+  "limits": "Static production-function verification; no visual match claim or gameplay replay."
+}

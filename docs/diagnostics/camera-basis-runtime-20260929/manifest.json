@@ -180,6 +180,94 @@
       "sha256": "580a6f507bce1d8e85240ebef1af2a410efc00b3b39b5995326b7cd9ac0ec277"
     },
     {
+      "path": "drag-control-dispatch.json",
+      "sha256": "40bfe077b043e3856505a372a474c147c885d45cb3bbefd64d50dd4af13f3da7"
+    },
+    {
+      "path": "drag-duration-config-getter.json",
+      "sha256": "9974a12d9de666593ef81310d026b8f6250fcdc55bb5b727673987d539811b18"
+    },
+    {
+      "path": "drag-duration-config-source-types.json",
+      "sha256": "5aaf31368ac73e5a9935b9c1dcabca44723f7e1c1bad0bfa644437f7406861d4"
+    },
+    {
+      "path": "drag-event-0x1229e7c0.json",
+      "sha256": "d234116626d1f012f4177cbab810cd81114eecd6fd4c3dea0d86ce048304035e"
+    },
+    {
+      "path": "drag-event-0x134e0910.json",
+      "sha256": "98631c0a2284ced106b07fba873341045b10ec2fb457e16748e8548d513d1c4e"
+    },
+    {
+      "path": "drag-exit-0x11e7c9c0.json",
+      "sha256": "1fc2b857f3f818b31041ceee2690803d8ea7996504ea45e891afd96764d4a843"
+    },
+    {
+      "path": "drag-exit-0x11e7e500.json",
+      "sha256": "6ac16b5a90ed5e739ce2863172035230dbf50927f76922ac0b5780c4d888a48c"
+    },
+    {
+      "path": "drag-exit-0x14925130.json",
+      "sha256": "28a81c9370ae1b88f2400f528ab884bde7a61f0057532089d8f57670244c3563"
+    },
+    {
+      "path": "drag-exit-editor-check.json",
+      "sha256": "a16cbab5b9499f86bf7d488fd00fcf4653a4f15677afbb2b0c5fefb43f4f35b1"
+    },
+    {
+      "path": "drag-exit-progress.json",
+      "sha256": "1ccdb50aec98a762211a5bebf4aa2cd2627caf2b5c919022cd85d4a295d2ae64"
+    },
+    {
+      "path": "drag-lifecycle-0x11e7c5d0.json",
+      "sha256": "96068ac5db4d3e3ea52c2bce44f84b13a6d2ceac6e9d964f661f054e2f941e9a"
+    },
+    {
+      "path": "drag-lifecycle-0x1a282570.json",
+      "sha256": "9c154f44def758a13a2ce245f16a8a55bf05598e42cccc7cd4b5022fbf540345"
+    },
+    {
+      "path": "drag-lifecycle-0x1a283050.json",
+      "sha256": "88769f5c8cc14be867f4b66638bfe7de084f2a66518ba4ef2f706235fe3224cb"
+    },
+    {
+      "path": "drag-lifecycle-0x1a283560.json",
+      "sha256": "e9b4b0bed41f27a9b652d48b870d8986c322afcb3554f66ec663865db777c597"
+    },
+    {
+      "path": "drag-manager-mode-0x1a283bc0.json",
+      "sha256": "49935376961e87c49277e7fa519e34fd3304b2cd3ac234fe1e9c468c3b031e91"
+    },
+    {
+      "path": "drag-manager-mode-0x1a284ec0.json",
+      "sha256": "e92849ec3a214efb79471c4c6803678e61afa3598928c5331b5d06e472a48c80"
+    },
+    {
+      "path": "drag-mode-caller-0x1a283bc0.json",
+      "sha256": "49935376961e87c49277e7fa519e34fd3304b2cd3ac234fe1e9c468c3b031e91"
+    },
+    {
+      "path": "drag-mode-type.json",
+      "sha256": "52db7eb193bb961dcc719469a623b4d902c34e4247bb3ce051f345c0691c93f9"
+    },
+    {
+      "path": "drag-notify-0x101d1be0.json",
+      "sha256": "13c758dbcf0930f83ed3877292293391134dcf55d15bf7c22998785940a26704"
+    },
+    {
+      "path": "drag-notify-0x101d8d20.json",
+      "sha256": "c08ea287f0ddcc9ef644d5a6422c7f79e548b793a5b69773b559471e34d85304"
+    },
+    {
+      "path": "drag-trigger-0x134e0a90.json",
+      "sha256": "2bdc3cd854dd057aa3a7e6612b0cc83a8167533800619e4bb81a26250aadf614"
+    },
+    {
+      "path": "drag-trigger-0x134e0c50.json",
+      "sha256": "e633a8438d7b72046697580e9c1b1188c6d342abf1d9cfd98df3ec350d9e3d44"
+    },
+    {
       "path": "effect-clock-branch-flags.json",
       "sha256": "c91b3009a2e36be273920edf029833bae4f97b5b615b12584e98589a9174736e"
     },
@@ -190,6 +278,10 @@
     {
       "path": "hit-shake-assets.json",
       "sha256": "7e4a9b55df33d127432b7b2a32829b605778f36c8cf57df18f280a06bab4fba4"
+    },
+    {
+      "path": "input-axis-editor-check.json",
+      "sha256": "4e4c3ef2901ef9b65fe469d60329fa5e558957d468ed65aa9d2aaa5b75c291e8"
     },
     {
       "path": "main-camera-type.json",
@@ -253,7 +345,7 @@
     },
     {
       "path": "pointer-input-snapshot.json",
-      "sha256": "1e4ce38eb166a2cd5724829903c4aedf2aac8ebcc1048f83f8436a97aa7499ff"
+      "sha256": "9a64d461dc10c9201d38717c407da684f5e56743bcee90d4ac495dfa6e5c9f09"
     },
     {
       "path": "pointer-multiplatform-value.json",
@@ -262,6 +354,66 @@
     {
       "path": "pointer-prepare-input.json",
       "sha256": "9f1247e75c63d810d01811769d8af74dc0eb2601d629c79e9739c52d2661b16a"
+    },
+    {
+      "path": "pointer-release-0x11e7ca30.json",
+      "sha256": "4449af1cc32794f065def978128f954de85489eac28def18575fac68cb73a8d4"
+    },
+    {
+      "path": "pointer-release-0x11e7e5b0.json",
+      "sha256": "265d94ef39bbea7aaf0438b1ef732e78c4377f7aae87b0350c62ba6b323dadd5"
+    },
+    {
+      "path": "pointer-release-0x11e7e640.json",
+      "sha256": "06099802b6623ca987ff3a0e575d793a0a05181e4465e2dfd22d9e8ce9f3c0fa"
+    },
+    {
+      "path": "pointer-smoothing-config-0x14925250.json",
+      "sha256": "22441eb1fb9bac327a6a3225e0efafad94fc819c6e56b2c94c10e79391736dbf"
+    },
+    {
+      "path": "pointer-smoothing-config-0x14925320.json",
+      "sha256": "626e97447a8629e25db00ad8687c6277571695034d3a9a5b4eb930e4f9c67240"
+    },
+    {
+      "path": "pointer-smoothing-config-0x149255c0.json",
+      "sha256": "c9c8af63b6a6f11c162e8bdf4799bbcf6a0ad238011ab4b670c42173f55bf3d3"
+    },
+    {
+      "path": "pointer-smoothing-config-constructor.json",
+      "sha256": "3f41fd05388d508b0fa387d6e5cb11a9d5e18d72a56b12da55f6d7b7276d9c4d"
+    },
+    {
+      "path": "pointer-smoothing-config-type.json",
+      "sha256": "5314e8fa3fe50baf02fc2404934e7858297e36c802c4a5a44a64bd58b53dbc6c"
+    },
+    {
+      "path": "pointer-smoothing-mode-0x11e7cb00.json",
+      "sha256": "43be35e51ed223fb6eea890da46fea59df79c04f854a65dc8f6f83a88a231042"
+    },
+    {
+      "path": "pointer-smoothing-mode-0x11e7e0d0.json",
+      "sha256": "b642b15c3e7062f3ff88159f87359dcd828ea8197d2af6adac24c83e32ad227c"
+    },
+    {
+      "path": "pointer-smoothing-mode-0x11e7e700.json",
+      "sha256": "bd876afd3af9a412dddc46c362048a93fe2991facdbafcfaf780a53801b6a6fe"
+    },
+    {
+      "path": "pointer-smoothing-producer-0x16f45820.json",
+      "sha256": "4ca65882f86bacc1ba0454d61e884851366251b4ce959bef445e400346d8700e"
+    },
+    {
+      "path": "pointer-smoothing-scalar.json",
+      "sha256": "edc6779ddd26f1bb732a70a9199b6a7aa1ac05aab2feba5e2d4548a1fbc98568"
+    },
+    {
+      "path": "pointer-smoothing-snapshot.json",
+      "sha256": "5f7f4ebc0af1336eb685c1c4c1361964259a7ddab17916ace482fe990ff9f3b8"
+    },
+    {
+      "path": "pointer-smoothing-vector.json",
+      "sha256": "a17f0d8568db10cf7b37847f85fd39a0e7b0520857e8d9bc859469d1cf555e27"
     },
     {
       "path": "pointer-write-control.json",
@@ -506,10 +658,6 @@
     {
       "path": "zoom-update.json",
       "sha256": "9fd1cd2e224e12bdeb56dcc9dd076c2a5daa9696b3630520ee123745b7f93728"
-    },
-    {
-      "path": "input-axis-editor-check.json",
-      "sha256": "4e4c3ef2901ef9b65fe469d60329fa5e558957d468ed65aa9d2aaa5b75c291e8"
     }
   ]
 }

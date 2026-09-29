@@ -177,6 +177,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 new Vector2((bool)x["m_InvertInput"] ^ (bool)settings["0x1c4"] ? -1f : 1f,
                     (bool)y["m_InvertInput"] ^ (bool)settings["0x19b"] ? -1f : 1f),
                 new Vector2((float)source["DRAG_ELEVATION_REGIOIN"]["x"], (float)source["DRAG_ELEVATION_REGIOIN"]["y"]));
+            float activationThreshold = (float)snapshot["constants"]["drag_activation_threshold"]["value"];
+            profile.Input.ConfigureDrag(
+                playerGain * (prepareScale * activationThreshold),
+                playerGain * ((float)settings["0x1a8"] * prepareScale * activationThreshold),
+                (float)source["DragConfig"]["DRAG_TO_EXIT_DURATION"]);
             Save(profile);
         }
 

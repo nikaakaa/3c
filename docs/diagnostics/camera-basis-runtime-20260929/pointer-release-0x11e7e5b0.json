@@ -1,0 +1,163 @@
+{
+  "begin": 300410288,
+  "end": 300410432,
+  "unwind": 59921844,
+  "byte_sha256": "75189716164bca479c8d4b161237fec43bb9a063bd26e91409588b59bbbfa1d4",
+  "instructions": [
+    [
+      300410288,
+      "push",
+      "rsi"
+    ],
+    [
+      300410289,
+      "sub",
+      "rsp, 0x20"
+    ],
+    [
+      300410293,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      300410296,
+      "cmp",
+      "byte ptr [rip - 0xcab28f3], 0"
+    ],
+    [
+      300410303,
+      "jne",
+      "0x11e7e61b"
+    ],
+    [
+      300410305,
+      "movsd",
+      "xmm0, qword ptr [rsi + 0xf0]"
+    ],
+    [
+      300410313,
+      "movsd",
+      "qword ptr [rsi + 0x74], xmm0"
+    ],
+    [
+      300410318,
+      "movss",
+      "xmm0, dword ptr [rsi + 0xf8]"
+    ],
+    [
+      300410326,
+      "movss",
+      "dword ptr [rsi + 0x7c], xmm0"
+    ],
+    [
+      300410331,
+      "movzx",
+      "eax, byte ptr [rsi + 0xfc]"
+    ],
+    [
+      300410338,
+      "mov",
+      "byte ptr [rsi + 0x80], al"
+    ],
+    [
+      300410344,
+      "movsd",
+      "xmm0, qword ptr [rsi + 0xe0]"
+    ],
+    [
+      300410352,
+      "movsd",
+      "qword ptr [rsi + 0x9c], xmm0"
+    ],
+    [
+      300410360,
+      "movss",
+      "xmm0, dword ptr [rsi + 0xe8]"
+    ],
+    [
+      300410368,
+      "movss",
+      "dword ptr [rsi + 0xa4], xmm0"
+    ],
+    [
+      300410376,
+      "movzx",
+      "eax, byte ptr [rsi + 0xec]"
+    ],
+    [
+      300410383,
+      "mov",
+      "byte ptr [rsi + 0xa8], al"
+    ],
+    [
+      300410389,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      300410393,
+      "pop",
+      "rsi"
+    ],
+    [
+      300410394,
+      "ret",
+      ""
+    ],
+    [
+      300410395,
+      "mov",
+      "ecx, 0x2ea1c"
+    ],
+    [
+      300410400,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      300410405,
+      "test",
+      "rax, rax"
+    ],
+    [
+      300410408,
+      "je",
+      "0x11e7e63a"
+    ],
+    [
+      300410410,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      300410413,
+      "mov",
+      "rdx, rsi"
+    ],
+    [
+      300410416,
+      "add",
+      "rsp, 0x20"
+    ],
+    [
+      300410420,
+      "pop",
+      "rsi"
+    ],
+    [
+      300410421,
+      "jmp",
+      "0xb189870"
+    ],
+    [
+      300410426,
+      "call",
+      "0xac9120"
+    ],
+    [
+      300410431,
+      "int3",
+      ""
+    ]
+  ]
+}

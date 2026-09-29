@@ -97,6 +97,9 @@ MonoBehaviour:
     m_DecelerationTime: {x: 0.1, y: 0.1}
     m_PointerInputScale: {x: 0.00008333334, y: 0.00005833334}
     m_StickInputScale: {x: 0.13333334, y: 0.09333334}
+    m_PointerActivationThreshold: {x: 0.0020833334, y: 0.0014583335}
+    m_StickActivationThreshold: {x: 0.0033333336, y: 0.0023333335}
+    m_DragExitDuration: 0.1
     m_PointerAxisGain: {x: 1, y: 0.75}
     m_StickAxisGain: {x: 3, y: 2.1}
     m_AxisDirection: {x: 1, y: 1}

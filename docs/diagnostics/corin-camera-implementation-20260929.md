@@ -212,7 +212,7 @@ Unity 编译重载通过，Console 0 错误；正式 PublishDefaultOrbit 后 Bui
 
 本批补齐了此前未定位的输入轴所有者，未修改输入缩放或运行代码。
 
-调用链已确认：NapVirtual3DActionCamera_1.OverrideDragAxisConfig（0x134DE720）→ DFLBCIKIEPE+0x58 的 FEBAFIHIDGP → 该实例 +0x70／+0x98 的两份 VCameraAxisState。原模块从 CameraDataAccessor.Control 的 Vector2（实例 +0x3B0）取得输入，经过 0x11E7E3B0 写入本帧输入，再由 0x11E7CFC0 更新两根轴。写入函数在输入模式 raw 2 下另有平滑，尚未把该值根据枚举声明顺序擅自命名为某设备模式。
+调用链已确认：NapVirtual3DActionCamera_1.OverrideDragAxisConfig（0x134DE720）→ DFLBCIKIEPE+0x58 的 FEBAFIHIDGP → 该实例 +0x70／+0x98 的两份 VCameraAxisState。原模块从 CameraDataAccessor.Control 的 Vector2（实例 +0x3B0）取得输入，经过 0x11E7E3B0 写入本帧输入，再由 0x11E7CFC0 更新两根轴。写入函数在拖动阶段 raw 2 下另有平滑；后续已通过 OnCameraMoveEnd 写入确认它是 Exiting，不是设备枚举，见下方“拖动退出生命周期”。
 
 Default_Normal 的 DragConfig 原始参数为：
 
@@ -312,4 +312,24 @@ Unity编译、域重载和Console检查通过，0错误。编译中发现初始�
 
 性能工具现有正式camera trace生产者只生成全零固定镜头输入，按PointerDelta交入仍为零；本批没有为历史手工非零trace证明设备来源或兼容性，也没有运行它们。玩家倍率是829快照状态，不宣称为出厂默认；Default_Normal是否为原作当前Corin实例实际选择的键仍未证明。
 
-未完成项仍明确保留：鼠标输入预平滑、TopOrbit延伸、完整Delay及死区／软区跟随、Zoom/Stretch后屏幕锚点连续性、独立世界倍率和震动保持／静默输入。当前交付可供输入与轨道手测，不代表全相机手感已完全复刻，Goal保持active。
+本批当时的未完成项：拖动退出生命周期（后续已补齐，见下文）、TopOrbit延伸、完整Delay及死区／软区跟随、Zoom/Stretch后屏幕锚点连续性、独立世界倍率和震动保持／静默输入。当前交付可供输入与轨道手测，不代表全相机手感已完全复刻，Goal保持active。
+
+## 拖动退出生命周期
+
+此前把0x11E7E3B0的raw 2分支称作“鼠标预平滑”不准确。FEBAFIHIDGP+0x100是APHELGAKDFI拖动阶段，与输入设备raw值无关；不能给全部鼠标输入常开一个平滑器。
+
+本次追通的正式链：
+
+- 0x13A4BE70读取当前处理后输入。两轴精确为0时结束先前控制；开始控制要求至少一轴绝对值大于0.025，逐轴不超过阈值的输入清零。阈值来自0x0283943C。
+- 结束通知0x101D1BE0调用具名NapVirtual3DActionCamera_1.OnCameraMoveEnd（0x134E0A90），再经DFLBCIKIEPE.OJMDOHLGDMA（0x1A284EC0）把阶段写为2，并将CameraScreenDragConfig+0x30的DRAG_TO_EXIT_DURATION赋给BCFKAGODFJI+0x40。Default_Normal的值为0.1。
+- 开始通知0x101D8D20调用OnCameraMoveStart（0x134E0C50）。模块仍活动时切回Controlling，保留速度；已经关闭时由0x11E7CB00重新打开并清两轴速度，然后使用当前角度／仰角作为轴值。
+- 退出期间，先计算`deltaInput=currentInput-previousInput`，调用0x1F94B2B0／0x1F949C40，再保存`currentInput-Damp(deltaInput,duration,frameDelta)`。该Damp与本地Cinemachine.Utility.Damper一致：常量4.605170249938965、epsilon0.0001；原作稳定阻尼开关0x05368A80在829快照为0，本项目也未启用CINEMACHINE_EXPERIMENTAL_DAMPING。直接使用现有Cinemachine函数。
+- 轴求值完成后，退出计时用Time.deltaTime槽0x0540AC98推进；0x14924E00在elapsed严格大于duration时完成。0x11E7D7EE经虚表+0x1A0调用0x11E7CA30关闭拖动模块。没有把该计时误写成无限渐近减速。
+
+项目输入配置正式增加逐设备／逐轴的激活阈值及DragExitDuration，阈值按已经导入的玩家倍率换算到轴前输入单位。FramePlanner保持Inactive／Controlling／Exiting三个业务阶段；持续输入直接送轴，只有退出阶段消费Cinemachine阻尼，退出完成停止推进，完整停止后再次开始清速度。暂停保留阶段与计时。没有增加热路径对象分配或重复执行链。
+
+正式PublishInput及Build/RequireValid成功，投影v8，最终dirty=false；Unity编译、域重载通过，Console 0错误。编辑器内生产ResolveLook检查显示：持续60帧10像素输入仍得到71.04179°，与v7相同；释放后第7次60Hz更新转为Inactive，额外60帧角度增量为0；重新开始首帧0.215278625°，对应从零速度起步；0.01像素小输入60帧不启动，退出中暂停不推进。记录见drag-exit-editor-check.json。没有Play/replay、没有新增测试代码，不把这些检查当作画面完全匹配。
+
+原始证据包括drag-notify、drag-trigger、drag-manager-mode、drag-exit-progress、pointer-smoothing-mode、pointer-smoothing-scalar/vector及pointer-smoothing-snapshot。BCFKAGODFJI另有共享配置表的调用者，相关getter／producer证据只用于追溯调查，当前拖动参数依据是已证明的CameraScreenDragConfig字段，不是旁支配置表或玩家设置猜测。选定IFix字节均为0。
+
+剩余工作仍包括TopOrbit延伸、完整Delay／死区／软区、效果改变FOV或距离后的构图连续性，以及震动的独立世界倍率和保持／静默输入。此次完成拖动退出，不代表完整相机复刻完成。

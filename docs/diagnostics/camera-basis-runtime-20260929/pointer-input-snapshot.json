@@ -46,7 +46,11 @@
       "rva": "0x282d980",
       "value": 0.01666666753590107
     },
-    "device_time_call_slot": "0x540ac98"
+    "device_time_call_slot": "0x540ac98",
+    "drag_activation_threshold": {
+      "rva": "0x283943c",
+      "value": 0.02500000037252903
+    }
   },
   "limits": "Player values are snapshot state, not established defaults. Mouse scaling branch is confirmed through action field +0x28 and jump-table index 2; do not use enum declaration ordinal.",
   "player_inversion_evidence": {

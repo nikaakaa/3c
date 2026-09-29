@@ -1,0 +1,31 @@
+{
+  "session": "829",
+  "stable_damping_flag": {
+    "rva": "0x5368a80",
+    "value": 0
+  },
+  "instances": [],
+  "flags": {
+    "0x53cbcc2": "00",
+    "0x53cbccb": "00",
+    "0x53df3d5": "00",
+    "0x5368a80": "00"
+  },
+  "configuration": "Default_Normal.DragConfig.DRAG_TO_EXIT_DURATION",
+  "duration": 0.10000000149011612,
+  "activation_threshold": {
+    "rva": "0x283943c",
+    "value": 0.02500000037252903
+  },
+  "damping_constant": {
+    "rva": "0x29c7950",
+    "value": 4.605170249938965
+  },
+  "epsilon": {
+    "rva": "0x2818a9c",
+    "value": 9.999999747378752e-05
+  },
+  "exit_time_slot": "0x540ac98",
+  "drag_exit_virtual_target": "0x11e7ca30",
+  "limitation": "No live drag/config instance found in snapshot; mode and parameter mapping are established from setters, named OnCameraMoveStart/End and configuration field metadata, not assumed from input device enum."
+}

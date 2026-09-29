@@ -19,6 +19,11 @@ namespace ThirdPersonCamera
         CameraAxisRuntime m_YawAxis;
         CameraAxisRuntime m_ElevationAxis;
         CameraLookInputKind m_LookKind;
+        CameraDragPhase m_DragPhase;
+        Vector2 m_DragInput;
+        float m_DragExitElapsed;
+
+        enum CameraDragPhase : byte { Inactive, Controlling, Exiting }
 
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
@@ -33,6 +38,9 @@ namespace ThirdPersonCamera
             m_YawAxis = new CameraAxisRuntime(m_InitialYawOffset);
             m_ElevationAxis = new CameraAxisRuntime(m_InputTrack.ElevationRatio);
             m_LookKind = CameraLookInputKind.None;
+            m_DragPhase = CameraDragPhase.Inactive;
+            m_DragInput = Vector2.zero;
+            m_DragExitElapsed = 0f;
             m_YawOffset = Mathf.Repeat(m_InitialYawOffset, 360f);
             m_PitchOffset = Mathf.Clamp(
                 m_InitialPitchOffset,
@@ -61,12 +69,45 @@ namespace ThirdPersonCamera
             bool pointer = m_LookKind == CameraLookInputKind.PointerDelta;
             Vector2 scale = pointer ? settings.PointerInputScale / input.ScaledDeltaSeconds : settings.StickInputScale;
             Vector2 axisInput = Vector2.Scale(Vector2.Scale(look, scale), settings.AxisDirection);
+            Vector2 threshold = pointer ? settings.PointerActivationThreshold : settings.StickActivationThreshold;
+            if (Mathf.Abs(axisInput.x) <= threshold.x) axisInput.x = 0f;
+            if (Mathf.Abs(axisInput.y) <= threshold.y) axisInput.y = 0f;
+            if (axisInput.x != 0f || axisInput.y != 0f)
+            {
+                if (m_DragPhase == CameraDragPhase.Inactive)
+                {
+                    m_YawAxis = new CameraAxisRuntime(m_YawAxis.Value);
+                    m_ElevationAxis = new CameraAxisRuntime(m_ElevationAxis.Value);
+                }
+                m_DragPhase = CameraDragPhase.Controlling;
+            }
+            else if (look.x == 0f && look.y == 0f && m_DragPhase == CameraDragPhase.Controlling)
+            {
+                m_DragPhase = CameraDragPhase.Exiting;
+                m_DragExitElapsed = 0f;
+            }
+            if (m_DragPhase == CameraDragPhase.Inactive)
+                return look;
+            if (m_DragPhase == CameraDragPhase.Exiting)
+            {
+                axisInput.x -= Cinemachine.Utility.Damper.Damp(
+                    axisInput.x - m_DragInput.x, settings.DragExitDuration, delta);
+                axisInput.y -= Cinemachine.Utility.Damper.Damp(
+                    axisInput.y - m_DragInput.y, settings.DragExitDuration, delta);
+            }
+            m_DragInput = axisInput;
             Vector2 maxSpeed = Vector2.Scale(settings.MaxSpeed,
                 pointer ? settings.PointerAxisGain : settings.StickAxisGain);
             m_YawAxis.Step(axisInput.x, delta, maxSpeed.x, settings.AccelerationTime.x,
                 settings.DecelerationTime.x, 0f, 360f, true);
             m_ElevationAxis.Step(-axisInput.y, delta, maxSpeed.y, settings.AccelerationTime.y,
                 settings.DecelerationTime.y, settings.ElevationRange.x, settings.ElevationRange.y, false);
+            if (m_DragPhase == CameraDragPhase.Exiting)
+            {
+                m_DragExitElapsed += input.ScaledDeltaSeconds;
+                if (m_DragExitElapsed > settings.DragExitDuration)
+                    m_DragPhase = CameraDragPhase.Inactive;
+            }
             m_YawOffset = m_YawAxis.Value;
             Vector4 orbit = SampleTrack(m_InputTrack, m_ElevationAxis.Value);
             Vector4 initialOrbit = SampleTrack(m_InputTrack, m_InputTrack.ElevationRatio);

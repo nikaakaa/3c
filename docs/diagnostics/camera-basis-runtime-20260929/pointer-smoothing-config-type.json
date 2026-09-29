@@ -1,0 +1,1323 @@
+{
+  "type_index": 74038,
+  "name": "BCFKAGODFJI",
+  "namespace": "",
+  "full_name": "BCFKAGODFJI",
+  "klass": 5497652160536,
+  "klass_raw_hex": "80955c01000500000100000000000038000000000000000080f6710600050000000000000000000070f671060005000040f0710600050000000000000000000000000000000000000000000000000000388b990200050000c0f8165a94010000000000000000000000000000000000000000000000000000000000000000000036210100000000000000120000000000362101000000000000001240000000002784000218a89a050000000001001000486c5d0118a89a0500005000ffffffff00000400160000000002000131580c00",
+  "definition_va": 1736678242496,
+  "definition_raw_hex": "caf20900aaf20d0008000000b4c11100929c0500278400020100100060f5750ba7d1020001000000f4bd0100a7d10200ffffffff0f00ffff00000400000000000000ffffffffffff16000400000cffff",
+  "token": 33588263,
+  "attributes": 1048577,
+  "field_start": 367762,
+  "field_count": 15,
+  "method_start": 651978,
+  "method_count": 22,
+  "parent_descriptor_index": 1,
+  "declaring_descriptor_index": 4294967295,
+  "field_array": 5497666270848,
+  "method_array": 5497666269248,
+  "value_type": false,
+  "instance_size": 80,
+  "parent_klass": 5497581038664,
+  "parent_type_index": 401,
+  "parent_name": "Object",
+  "parent_type": "object",
+  "selection_reasons": [
+    "Camera pointer pre-smoothing configuration"
+  ],
+  "fields": [
+    {
+      "ordinal": 0,
+      "definition_index": 367762,
+      "definition_va": 1736668522428,
+      "raw_hex": "f00c75d0136a0afa3d5c6c03",
+      "token": 67294104,
+      "name_identity": 189558164,
+      "name": "MAEIGJLPFLM",
+      "type": {
+        "display": "Action",
+        "type_ref": "0x7ff975e67230",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 16,
+      "metadata_offset": 16,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 16,
+      "runtime_metadata_offset": 16,
+      "runtime_record_va": 5497666270848,
+      "runtime_raw_hex": "53586a3ac3b8c17a85ef9475437e6221551ec01b7b408165790b2a106adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 367763,
+      "definition_va": 1736668522440,
+      "raw_hex": "2a8f38724eeccd9baafe0da5",
+      "token": 67294105,
+      "name_identity": 187338183,
+      "name": "DHDHOLNNLJH",
+      "type": {
+        "display": "Action",
+        "type_ref": "0x7ff975e67230",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 24,
+      "metadata_offset": 24,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 24,
+      "runtime_metadata_offset": 24,
+      "runtime_record_va": 5497666270880,
+      "runtime_raw_hex": "53586a3ac3b8c17a85ef9475437e6221150fc1187b408165780b2a1072df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 2,
+      "definition_index": 367764,
+      "definition_va": 1736668522452,
+      "raw_hex": "a7a9d2e996c9641332e2a41c",
+      "token": 67294108,
+      "name_identity": 187339786,
+      "name": "CKIAMCKLDAO",
+      "type": {
+        "display": "List<FCNGPIHIKOF>",
+        "type_ref": "0x7ff9761a45b0",
+        "complete": true
+      },
+      "attributes": 4,
+      "static": false,
+      "literal": false,
+      "offset_flags": 32,
+      "metadata_offset": 32,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 32,
+      "runtime_metadata_offset": 32,
+      "runtime_record_va": 5497666270912,
+      "runtime_raw_hex": "53586a3ac3b8c17a05d86876437e6221bda5c11b7b4081657d0b2a107adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 3,
+      "definition_index": 367765,
+      "definition_va": 1736668522464,
+      "raw_hex": "c88d14f7ecf5a920f56f352a",
+      "token": 67294096,
+      "name_identity": 192279915,
+      "name": "CMELCAGDMGP",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e5c1a0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 40,
+      "metadata_offset": 40,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 40,
+      "runtime_metadata_offset": 40,
+      "runtime_record_va": 5497666270944,
+      "runtime_raw_hex": "53586a3ac3b8c17a155c9775437e6221ada5c11b7b408165710b2a1082df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 4,
+      "definition_index": 367766,
+      "definition_va": 1736668522476,
+      "raw_hex": "fa7db33065da485a6e54d463",
+      "token": 67294107,
+      "name_identity": 192279926,
+      "name": "CGLONJLOALH",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e67de0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 44,
+      "metadata_offset": 44,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 44,
+      "runtime_metadata_offset": 44,
+      "runtime_record_va": 5497666270976,
+      "runtime_raw_hex": "53586a3ac3b8c17a55e09475437e62215da5c11b7b4081657a0b2a1086df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 5,
+      "definition_index": 367767,
+      "definition_va": 1736668522488,
+      "raw_hex": "9f3a835672a818803c508b89",
+      "token": 67294109,
+      "name_identity": 190653241,
+      "name": "OBLHPHMBJNP",
+      "type": {
+        "display": "bool",
+        "type_ref": "0x7ff975e56780",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 48,
+      "metadata_offset": 48,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 48,
+      "runtime_metadata_offset": 48,
+      "runtime_record_va": 5497666271008,
+      "runtime_raw_hex": "53586a3ac3b8c17a35fa9775437e62214da5c11b7b4081657c0b2a108adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 6,
+      "definition_index": 367768,
+      "definition_va": 1736668522500,
+      "raw_hex": "39ed1e26045bb44f474d1659",
+      "token": 67294101,
+      "name_identity": 189558186,
+      "name": "LDEOEKMDMDH",
+      "type": {
+        "display": "bool",
+        "type_ref": "0x7ff975e56780",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 49,
+      "metadata_offset": 49,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 49,
+      "runtime_metadata_offset": 49,
+      "runtime_record_va": 5497666271040,
+      "runtime_raw_hex": "53586a3ac3b8c17a35fa9775437e6221751ec01b7b408165740b2a108bdf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 7,
+      "definition_index": 367769,
+      "definition_va": 1736668522512,
+      "raw_hex": "b100f930d4688e5a704ddf63",
+      "token": 67294095,
+      "name_identity": 188440573,
+      "name": "OBCNCDFOEGG",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e5c1a0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 52,
+      "metadata_offset": 52,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 52,
+      "runtime_metadata_offset": 52,
+      "runtime_record_va": 5497666271072,
+      "runtime_raw_hex": "53586a3ac3b8c17a155c9775437e6221954e161c7b4081656e0b2a108edf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 8,
+      "definition_index": 367770,
+      "definition_va": 1736668522524,
+      "raw_hex": "49fafc1915689243bb8dfd4c",
+      "token": 67294102,
+      "name_identity": 190161166,
+      "name": "BGMCHPLDENK",
+      "type": {
+        "display": "bool",
+        "type_ref": "0x7ff975e56780",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 56,
+      "metadata_offset": 56,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 56,
+      "runtime_metadata_offset": 56,
+      "runtime_record_va": 5497666271104,
+      "runtime_raw_hex": "53586a3ac3b8c17a35fa9775437e62217da5c11b7b408165770b2a1092df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 9,
+      "definition_index": 367771,
+      "definition_va": 1736668522536,
+      "raw_hex": "a3b96cb25b2802dc0b9b53e5",
+      "token": 67294103,
+      "name_identity": 188476953,
+      "name": "IIKJLJFFAMJ",
+      "type": {
+        "display": "bool",
+        "type_ref": "0x7ff975e558d0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 57,
+      "metadata_offset": 57,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 57,
+      "runtime_metadata_offset": 57,
+      "runtime_record_va": 5497666271136,
+      "runtime_raw_hex": "53586a3ac3b8c17a65c59775437e6221e5f3af187b408165760b2a1093df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 10,
+      "definition_index": 367772,
+      "definition_va": 1736668522548,
+      "raw_hex": "7d46d8cd31b56df74d2ff900",
+      "token": 67294099,
+      "name_identity": 192279937,
+      "name": "HIOHPDOGIBP",
+      "type": {
+        "display": "bool",
+        "type_ref": "0x7ff975e558d0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 58,
+      "metadata_offset": 58,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 58,
+      "runtime_metadata_offset": 58,
+      "runtime_record_va": 5497666271168,
+      "runtime_raw_hex": "53586a3ac3b8c17a65c59775437e62216da5c11b7b408165720b2a1094df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 11,
+      "definition_index": 367773,
+      "definition_va": 1736668522560,
+      "raw_hex": "209bc53245035b5c6e7de665",
+      "token": 67294097,
+      "name_identity": 192279948,
+      "name": "DMAFDGCMKJF",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e5c1a0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 60,
+      "metadata_offset": 60,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 60,
+      "runtime_metadata_offset": 60,
+      "runtime_record_va": 5497666271200,
+      "runtime_raw_hex": "53586a3ac3b8c17a155c9775437e62211da5c11b7b408165700b2a1096df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 12,
+      "definition_index": 367774,
+      "definition_va": 1736668522572,
+      "raw_hex": "dda912e14106a80a72803314",
+      "token": 67294100,
+      "name_identity": 192279959,
+      "name": "DGFCEEJGBPN",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e67de0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 64,
+      "metadata_offset": 64,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 64,
+      "runtime_metadata_offset": 64,
+      "runtime_record_va": 5497666271232,
+      "runtime_raw_hex": "53586a3ac3b8c17a55e09475437e62210da5c11b7b408165750b2a109adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 13,
+      "definition_index": 367775,
+      "definition_va": 1736668522584,
+      "raw_hex": "04d5d0926e3166bc9827b8c5",
+      "token": 67294106,
+      "name_identity": 188510614,
+      "name": "ANAFCDMCLFI",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e67de0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 68,
+      "metadata_offset": 68,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 68,
+      "runtime_metadata_offset": 68,
+      "runtime_record_va": 5497666271264,
+      "runtime_raw_hex": "53586a3ac3b8c17a55e09475437e6221e576121c7b4081657b0b2a109edf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 14,
+      "definition_index": 367776,
+      "definition_va": 1736668522596,
+      "raw_hex": "dd64b8d9dfd34d031d4ed90c",
+      "token": 67294098,
+      "name_identity": 192279970,
+      "name": "KMIKKEJMFEB",
+      "type": {
+        "display": "int",
+        "type_ref": "0x7ff975e553e0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 72,
+      "metadata_offset": 72,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 72,
+      "runtime_metadata_offset": 72,
+      "runtime_record_va": 5497666271296,
+      "runtime_raw_hex": "53586a3ac3b8c17a55ce9775437e62213da5c11b7b408165730b2a10a2df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    }
+  ],
+  "methods": [
+    {
+      "ordinal": 0,
+      "definition_index": 651978,
+      "definition_va": 1736658131236,
+      "rva": 345131472,
+      "raw_hex": "11510b0022000005ffffffff362101001e2104060000ffffffff86180001",
+      "token": 100933918,
+      "name_identity": 83886114,
+      "name": ".ctor",
+      "attributes": 6278,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666269424,
+      "runtime_raw_hex": "18a89a0500050000d0494f88f97f00000010bd73f97f0000ffffffff00000000caf20900000000001e210406ffff861800000010000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710481872,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 651979,
+      "definition_va": 1736658131266,
+      "rva": 345130768,
+      "raw_hex": "5a000000d9120008ffffffff362101001d21040600000300ffffc6000000",
+      "token": 100933917,
+      "name_identity": 134222553,
+      "name": "ToString",
+      "attributes": 198,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "string",
+        "type_ref": "0x7ff9752cf550",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666269488,
+      "runtime_raw_hex": "18a89a050005000010474f88f97f0000f015bd73f97f0000ffffffff00000000cbf20900000000001d2104060300c60000000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710481168,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 2,
+      "definition_index": 651980,
+      "definition_va": 1736658131296,
+      "rva": 345131488,
+      "raw_hex": "11510b003f311a0b9f3c0800362101001f2104060000ffffffff86000100",
+      "token": 100933919,
+      "name_identity": 186265919,
+      "name": "HHDCJCHLPAK",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539807,
+          "definition_va": 1736636712604,
+          "raw_hex": "b00657b9ec2a13c94ab4ed94",
+          "name_identity": 189546163,
+          "name": "AOKLEKIILII",
+          "token": 134470734,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e9d090",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666269552,
+      "runtime_raw_hex": "18a89a0500050000e0494f88f97f00002087bd73f97f0000ffffffff00000000ccf20900000000001f210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710481888,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 3,
+      "definition_index": 651981,
+      "definition_va": 1736658131326,
+      "rva": 345131648,
+      "raw_hex": "11510b00dc6d4c0ba03c080036210100202104060000ffffffff81080100",
+      "token": 100933920,
+      "name_identity": 189558236,
+      "name": "KJHALONLDPO",
+      "attributes": 2177,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539808,
+          "definition_va": 1736636712616,
+          "raw_hex": "409cc83b0832cf4db4195617",
+          "name_identity": 185614376,
+          "name": "DEHMEOBCJGL",
+          "token": 134470735,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666269616,
+      "runtime_raw_hex": "18a89a0500050000804a4f88f97f0000b01bbd73f97f0000ffffffff00000000cdf209000000000020210406ffff810800000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482048,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 4,
+      "definition_index": 651982,
+      "definition_va": 1736658131356,
+      "rva": 345132080,
+      "raw_hex": "eb030000b8f5750bffffffff36210100212104060000ffffffff86080000",
+      "token": 100933921,
+      "name_identity": 192279992,
+      "name": "NJNPFIONKMH",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "float",
+        "type_ref": "0x7ff9752d2e60",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666269680,
+      "runtime_raw_hex": "18a89a0500050000304c4f88f97f0000d0f0bd73f97f0000ffffffff00000000cef209000000000021210406ffff860800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482480,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 5,
+      "definition_index": 651983,
+      "definition_va": 1736658131386,
+      "rva": 345132176,
+      "raw_hex": "eb030000c3f5750bffffffff36210100222104060000ffffffff86000000",
+      "token": 100933922,
+      "name_identity": 192280003,
+      "name": "FNOFHKFLNAH",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "float",
+        "type_ref": "0x7ff9752d2e60",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666269744,
+      "runtime_raw_hex": "18a89a0500050000904c4f88f97f0000d0f0bd73f97f0000ffffffff00000000cff209000000000022210406ffff860000000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482576,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 6,
+      "definition_index": 651984,
+      "definition_va": 1736658131416,
+      "rva": 345132272,
+      "raw_hex": "11510b00b2e73e0ba13c080036210100232104060000ffffffff86000100",
+      "token": 100933923,
+      "name_identity": 188671922,
+      "name": "HLOJPBEENOD",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539809,
+          "definition_va": 1736636712628,
+          "raw_hex": "957930be31e538e4defbbda9",
+          "name_identity": 186001650,
+          "name": "CLGALOBICEO",
+          "token": 134470736,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666269808,
+      "runtime_raw_hex": "18a89a0500050000f04c4f88f97f0000b01bbd73f97f0000ffffffff00000000d0f209000000000023210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482672,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 7,
+      "definition_index": 651985,
+      "definition_va": 1736658131446,
+      "rva": 345132352,
+      "raw_hex": "11510b0059ce3f0ba23c080036210100242104060000ffffffff86000100",
+      "token": 100933924,
+      "name_identity": 188730969,
+      "name": "GIFACBAOFLJ",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539810,
+          "definition_va": 1736636712640,
+          "raw_hex": "e75298403d677e607166262c",
+          "name_identity": 185614376,
+          "name": "DEHMEOBCJGL",
+          "token": 134470737,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666269872,
+      "runtime_raw_hex": "18a89a0500050000404d4f88f97f0000b01bbd73f97f0000ffffffff00000000d1f209000000000024210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482752,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 8,
+      "definition_index": 651986,
+      "definition_va": 1736658131476,
+      "rva": 345132432,
+      "raw_hex": "11510b003bc03a0ba33c080036210100252104060000ffffffff86000100",
+      "token": 100933925,
+      "name_identity": 188399675,
+      "name": "NDJEFNGILLL",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539811,
+          "definition_va": 1736636712652,
+          "raw_hex": "bf79f7c26d10cde6454b8eae",
+          "name_identity": 187337775,
+          "name": "BADFOMGICBI",
+          "token": 134470738,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e9d090",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666269936,
+      "runtime_raw_hex": "18a89a0500050000904d4f88f97f00002087bd73f97f0000ffffffff00000000d2f209000000000025210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482832,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 9,
+      "definition_index": 651987,
+      "definition_va": 1736658131506,
+      "rva": 345132544,
+      "raw_hex": "11510b003bc03a0ba43c080036210100262104060000ffffffff86000200",
+      "token": 100933926,
+      "name_identity": 188399675,
+      "name": "NDJEFNGILLL",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539812,
+          "definition_va": 1736636712664,
+          "raw_hex": "67096845bad24465f96df630",
+          "name_identity": 187337775,
+          "name": "BADFOMGICBI",
+          "token": 134470739,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 539813,
+          "definition_va": 1736636712676,
+          "raw_hex": "fce6cfc75abfced969d05ea3",
+          "name_identity": 186353176,
+          "name": "NGJOJICJBJM",
+          "token": 134470740,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270000,
+      "runtime_raw_hex": "18a89a0500050000004e4f88f97f0000b01bbf73f97f0000ffffffff00000000d3f209000000000026210406ffff860000000200000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710482944,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 10,
+      "definition_index": 651988,
+      "definition_va": 1736658131536,
+      "rva": 345133360,
+      "raw_hex": "11510b003f311a0ba63c080036210100272104060000ffffffff86000200",
+      "token": 100933927,
+      "name_identity": 186265919,
+      "name": "HHDCJCHLPAK",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539814,
+          "definition_va": 1736636712688,
+          "raw_hex": "fbbf374a7b3d246061b5c625",
+          "name_identity": 186001650,
+          "name": "CLGALOBICEO",
+          "token": 134470741,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 539815,
+          "definition_va": 1736636712700,
+          "raw_hex": "6f6a98cca9ced1dc91182fa8",
+          "name_identity": 189546163,
+          "name": "AOKLEKIILII",
+          "token": 134470742,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e9d090",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270064,
+      "runtime_raw_hex": "18a89a050005000030514f88f97f0000f097c473f97f0000ffffffff00000000d4f209000000000027210406ffff860000000200000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710483760,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 11,
+      "definition_index": 651989,
+      "definition_va": 1736658131566,
+      "rva": 345133648,
+      "raw_hex": "11510b00a759100ba83c080036210100282104060000ffffffff86000300",
+      "token": 100933928,
+      "name_identity": 185620903,
+      "name": "CPIMPBNOGJJ",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539816,
+          "definition_va": 1736636712712,
+          "raw_hex": "d874074f879e38730e03973a",
+          "name_identity": 188601611,
+          "name": "HJEJOEJDJHH",
+          "token": 134470743,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 539817,
+          "definition_va": 1736636712724,
+          "raw_hex": "e1576fd1e1594ef10860ffbc",
+          "name_identity": 188445052,
+          "name": "FOJIBIGKDNP",
+          "token": 134470744,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 539818,
+          "definition_va": 1736636712736,
+          "raw_hex": "9378e053e7d48d75ba4a673f",
+          "name_identity": 188798673,
+          "name": "FHPNKBKKGFA",
+          "token": 134470745,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e9d090",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270128,
+      "runtime_raw_hex": "18a89a050005000050524f88f97f0000806cbf73f97f0000ffffffff00000000d5f209000000000028210406ffff860000000300000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484048,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 12,
+      "definition_index": 651990,
+      "definition_va": 1736658131596,
+      "rva": 345134000,
+      "raw_hex": "eb0300001c882a0bffffffff36210100292104060000ffffffff86080000",
+      "token": 100933929,
+      "name_identity": 187336732,
+      "name": "NHDEPEIABCG",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "float",
+        "type_ref": "0x7ff9752d2e60",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666270192,
+      "runtime_raw_hex": "18a89a0500050000b0534f88f97f0000d0f0bd73f97f0000ffffffff00000000d6f209000000000029210406ffff860800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484400,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 13,
+      "definition_index": 651991,
+      "definition_va": 1736658131626,
+      "rva": 345134016,
+      "raw_hex": "e1010000e76d4c0bffffffff362101002a2104060000ffffffff86080000",
+      "token": 100933930,
+      "name_identity": 189558247,
+      "name": "GMMLNLDGJDJ",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "bool",
+        "type_ref": "0x7ff9752d0dc0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666270256,
+      "runtime_raw_hex": "18a89a0500050000c0534f88f97f00007033bd73f97f0000ffffffff00000000d7f20900000000002a210406ffff860800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484416,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 14,
+      "definition_index": 651992,
+      "definition_va": 1736658131656,
+      "rva": 345134032,
+      "raw_hex": "11510b00cef5750bab3c0800362101002b2104060000ffffffff86080100",
+      "token": 100933931,
+      "name_identity": 192280014,
+      "name": "FGOABDBIKIB",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539819,
+          "definition_va": 1736636712748,
+          "raw_hex": "c30a3fd6939d25ec2c6dcfb1",
+          "name_identity": 185614376,
+          "name": "DEHMEOBCJGL",
+          "token": 134470746,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270320,
+      "runtime_raw_hex": "18a89a0500050000d0534f88f97f00002087bd73f97f0000ffffffff00000000d8f20900000000002b210406ffff860800000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484432,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 15,
+      "definition_index": 651993,
+      "definition_va": 1736658131686,
+      "rva": 345134048,
+      "raw_hex": "eb030000d9f5750bffffffff362101002c2104060000ffffffff86080000",
+      "token": 100933932,
+      "name_identity": 192280025,
+      "name": "CFJLCBKEMMM",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "float",
+        "type_ref": "0x7ff9752d2e60",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666270384,
+      "runtime_raw_hex": "18a89a0500050000e0534f88f97f0000d0f0bd73f97f0000ffffffff00000000d9f20900000000002c210406ffff860800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484448,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 16,
+      "definition_index": 651994,
+      "definition_va": 1736658131716,
+      "rva": 345134064,
+      "raw_hex": "11510b00e4f5750bac3c0800362101002d2104060000ffffffff86000100",
+      "token": 100933933,
+      "name_identity": 192280036,
+      "name": "MJOLAPPINKI",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539820,
+          "definition_va": 1736636712760,
+          "raw_hex": "ace5a658716ddc6836d23734",
+          "name_identity": 188798673,
+          "name": "FHPNKBKKGFA",
+          "token": 134470747,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270448,
+      "runtime_raw_hex": "18a89a0500050000f0534f88f97f00002087bd73f97f0000ffffffff00000000daf20900000000002d210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484464,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 17,
+      "definition_index": 651995,
+      "definition_va": 1736658131746,
+      "rva": 345134272,
+      "raw_hex": "5a0000005c131a0bffffffff362101002e2104060000ffffffff06000000",
+      "token": 100933934,
+      "name_identity": 186258268,
+      "name": "MNODAFDCKII",
+      "attributes": 6,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "string",
+        "type_ref": "0x7ff9752cf550",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666270512,
+      "runtime_raw_hex": "18a89a0500050000c0544f88f97f0000f015bd73f97f0000ffffffff00000000dbf20900000000002e210406ffff060000000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484672,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 18,
+      "definition_index": 651996,
+      "definition_va": 1736658131776,
+      "rva": 345134336,
+      "raw_hex": "11510b003449100bffffffff362101002f2104060000ffffffff86000000",
+      "token": 100933935,
+      "name_identity": 185616692,
+      "name": "LNLGCGMLIBA",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497666270576,
+      "runtime_raw_hex": "18a89a050005000000554f88f97f00000010bd73f97f0000ffffffff00000000dcf20900000000002f210406ffff860000000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484736,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 19,
+      "definition_index": 651997,
+      "definition_va": 1736658131806,
+      "rva": 345134432,
+      "raw_hex": "11510b00eff5750bad3c080036210100302104060000ffffffff86000100",
+      "token": 100933936,
+      "name_identity": 192280047,
+      "name": "IKJCNOPMKEF",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539821,
+          "definition_va": 1736636712772,
+          "raw_hex": "11c30edb3aaf1eef5cb49fb6",
+          "name_identity": 187349509,
+          "name": "JLPNHANBKMP",
+          "token": 134470748,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270640,
+      "runtime_raw_hex": "18a89a050005000060554f88f97f00002087bd73f97f0000ffffffff00000000ddf209000000000030210406ffff860000000100000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484832,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 20,
+      "definition_index": 651998,
+      "definition_va": 1736658131836,
+      "rva": 345134528,
+      "raw_hex": "11510b00a9ab490bae3c080036210100312104060000ffffffff96000300",
+      "token": 100933937,
+      "name_identity": 189377449,
+      "name": "ACBEGDGKFLD",
+      "attributes": 150,
+      "static": true,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539822,
+          "definition_va": 1736636712784,
+          "raw_hex": "de49835d2431486dcf1e0839",
+          "name_identity": 188440573,
+          "name": "OBCNCDFOEGG",
+          "token": 134470749,
+          "type": {
+            "display": "BCFKAGODFJI&",
+            "type_ref": "0x7ff9760c1a50",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 539823,
+          "definition_va": 1736636712796,
+          "raw_hex": "887bdedfb799e101d7fb6fcb",
+          "name_identity": 188601611,
+          "name": "HJEJOEJDJHH",
+          "token": 134470750,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 539824,
+          "definition_va": 1736636712808,
+          "raw_hex": "23534662a38e52884366d84d",
+          "name_identity": 186001650,
+          "name": "CLGALOBICEO",
+          "token": 134470751,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270704,
+      "runtime_raw_hex": "18a89a0500050000c0554f88f97f0000405ec473f97f0000ffffffff00000000def209000000000031210406ffff960000000300000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484928,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 21,
+      "definition_index": 651999,
+      "definition_va": 1736658131866,
+      "rva": 345133856,
+      "raw_hex": "11510b00a759100bb13c080036210100322104060000ffffffff86000300",
+      "token": 100933938,
+      "name_identity": 185620903,
+      "name": "CPIMPBNOGJJ",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 539825,
+          "definition_va": 1736636712820,
+          "raw_hex": "6a2eaee4d9d49104cf4840d0",
+          "name_identity": 188601611,
+          "name": "HJEJOEJDJHH",
+          "token": 134470752,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 539826,
+          "definition_va": 1736636712832,
+          "raw_hex": "730916678faf277bc76da842",
+          "name_identity": 188445052,
+          "name": "FOJIBIGKDNP",
+          "token": 134470753,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 539827,
+          "definition_va": 1736636712844,
+          "raw_hex": "ffe47de97f105ef95ad008c5",
+          "name_identity": 186001650,
+          "name": "CLGALOBICEO",
+          "token": 134470754,
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff9752d0dc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497666270768,
+      "runtime_raw_hex": "18a89a050005000020534f88f97f000010b6bf73f97f0000ffffffff00000000dff209000000000032210406ffff860000000300000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709710484256,
+      "signature_complete": true
+    }
+  ],
+  "issues": [],
+  "enum_type": false,
+  "layout": {
+    "index_va": 1736625890200,
+    "record_number": 22342,
+    "record_va": 1736696918600,
+    "record_hex": "00000000500008019e240300",
+    "instance_size": 80,
+    "offset_array_va": 1736718801728,
+    "offsets_hex": "100000001800000020000000280000002c00000030000000310000003400000038000000390000003a0000003c000000400000004400000048000000",
+    "offset_flags": [
+      16,
+      24,
+      32,
+      40,
+      44,
+      48,
+      49,
+      52,
+      56,
+      57,
+      58,
+      60,
+      64,
+      68,
+      72
+    ]
+  },
+  "layout_instance_size": 80,
+  "dependencies": [
+    158,
+    1556,
+    54860,
+    74038
+  ]
+}

@@ -596,18 +596,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!m_PendingHasFootFeatures || input.HasFootFeatures[0] == 0)
                 return;
+            NativeSlice<AnimationFootFeatureSample> inputLeftFoot =
+                input.LeftFootFeatures;
+            NativeSlice<AnimationFootFeatureSample> inputRightFoot =
+                input.RightFootFeatures;
             float leftEnvelope = m_EnvelopeSamples[m_BoneEnvelopeIndices[m_LeftFootBoneIndex]].Envelope;
             float rightEnvelope = m_EnvelopeSamples[m_BoneEnvelopeIndices[m_RightFootBoneIndex]].Envelope;
             AnimationFootFeatureBlendAccumulator left = default;
             if (leftEnvelope < 1f)
                 left.Add(m_PendingLeftFoot, 1f - leftEnvelope);
             if (leftEnvelope > 0f)
-                left.Add(input.LeftFootFeatures[0], leftEnvelope);
+                left.Add(inputLeftFoot[0], leftEnvelope);
             AnimationFootFeatureBlendAccumulator right = default;
             if (rightEnvelope < 1f)
                 right.Add(m_PendingRightFoot, 1f - rightEnvelope);
             if (rightEnvelope > 0f)
-                right.Add(input.RightFootFeatures[0], rightEnvelope);
+                right.Add(inputRightFoot[0], rightEnvelope);
             m_PendingLeftFoot = left.Resolve();
             m_PendingRightFoot = right.Resolve();
             m_PendingHasFootFeatures = true;
@@ -616,7 +620,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int count = output.ContributionCount[0];
             for (int contribution = 0; contribution < count; contribution++)
             {
-                AnimationPrimitivePoseContribution source = contributions[contribution];
+                ref readonly AnimationPrimitivePoseContribution source =
+                    ref contributions[contribution];
                 contributions[contribution] = new AnimationPrimitivePoseContribution(
                     source.PhysicalPlayerIndex,
                     source.PhysicalSourceIndex,

@@ -170,20 +170,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameInput input,
             AnimationBlendStackRuntime stack)
         {
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
+            FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> frames =
+                m_Playback.Frames;
             int count = 0;
             int frameCount = frames.Count;
             for (int i = 0; i < frameCount; i++)
             {
-                ActionAnimationPlaybackLifecycleFrame frame = frames[i];
+                ref readonly ActionAnimationPlaybackLifecycleFrame frame =
+                    ref frames.ElementAt(i);
                 if (frame.AnimationChannelId != m_ChannelId)
                     continue;
                 if (count == m_PushOrder.Length)
                     throw new InvalidOperationException($"Action Slot '{m_NodeId}' frame capacity was exceeded.");
                 int insert = count;
                 ulong commandSequence = frame.LatestCommandSequence;
-                while (insert > 0 && frames[m_PushOrder[insert - 1]].LatestCommandSequence > commandSequence)
+                while (insert > 0)
                 {
+                    ref readonly ActionAnimationPlaybackLifecycleFrame previous =
+                        ref frames.ElementAt(m_PushOrder[insert - 1]);
+                    if (previous.LatestCommandSequence <= commandSequence)
+                        break;
                     m_PushOrder[insert] = m_PushOrder[insert - 1];
                     insert--;
                 }
@@ -194,7 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool currentSourceEnded = false;
             for (int i = 0; i < count; i++)
             {
-                ActionAnimationPlaybackLifecycleFrame frame = frames[m_PushOrder[i]];
+                ref readonly ActionAnimationPlaybackLifecycleFrame frame =
+                    ref frames.ElementAt(m_PushOrder[i]);
                 AnimationPoseSourceId sourceId = SourceId(in frame);
                 if (frame.EndReason != ActionPlaybackEndReason.None)
                 {
@@ -252,11 +259,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void ReportUsage(AnimationBlendStackRuntime stack, ulong completionIdentity)
         {
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
+            FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> frames =
+                m_Playback.Frames;
             int frameCount = frames.Count;
             for (int i = 0; i < frameCount; i++)
             {
-                ActionAnimationPlaybackLifecycleFrame frame = frames[i];
+                ref readonly ActionAnimationPlaybackLifecycleFrame frame =
+                    ref frames.ElementAt(i);
                 if (frame.AnimationChannelId != m_ChannelId)
                     continue;
                 ActionSlotSourceUsageKind? usage = null;
@@ -384,7 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void Prune(AnimationBlendStackRuntime stack)
         {
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
+            FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> frames =
+                m_Playback.Frames;
             int frameCount = frames.Count;
             for (int i = 0; i < m_Pending.Length; i++)
             {
@@ -394,7 +404,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool selected = false;
                 for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
                 {
-                    ActionAnimationPlaybackLifecycleFrame frame = frames[frameIndex];
+                    ref readonly ActionAnimationPlaybackLifecycleFrame frame =
+                        ref frames.ElementAt(frameIndex);
                     if (frame.EndReason == ActionPlaybackEndReason.None && SourceId(in frame).Equals(sourceId))
                     {
                         selected = true;

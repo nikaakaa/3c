@@ -24,6 +24,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? m_Items[index]
                 : throw new ArgumentOutOfRangeException(nameof(index));
 
+        internal ref readonly T ElementAt(int index)
+        {
+            if ((uint)index >= (uint)Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ref m_Items[index];
+        }
+
         internal void Add(in T item)
         {
             if (Count == m_Items.Length)

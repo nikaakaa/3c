@@ -1534,3 +1534,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `ApplyFrames` 的收集循环在 channel 过滤和插入排序时重复索引同一 frame；`PrepareRetained` 每次循环读取 entry count；`Prune` 每个待清理 source 的 frame 循环重复读取 frame view count。
 - 三个循环分别定容 count；`ApplyFrames` 每个候选 frame 只按值读取一次，并把当前 command sequence 传入移位比较。排序键、插入位置、retained Materialize 和 pending 清理顺序不变。
 - 该改动删除同一次候选扫描内的重复 frame 拷贝和 count 读取；不改变容量异常时机或 stack push 语义。静态核对 `Materialize` 不修改 stack entries、Prune 不修改 frame view 和 frame view 由 playback frame lease 固定；未编译、未采样，不能声称实测耗时收益。
+
+### AP203 playback frame 元素引用化（2026-09-30，已实施，本轮未编译）
+
+- Action playback frame source 只暴露 `IReadOnlyList`，ActionSlot 的收集、排序、usage 和 Prune 每次索引都把 readonly frame 从固定容量数组复制成局部；插入排序每轮移位还会复制前一帧。
+- `FixedCapacityFrameBuffer` 增加正式 `ElementAt` 只读引用入口；frame source 合同改为返回同一固定容量 frame view，全部三处 ActionSlot 消费绑定 `ref readonly` 元素引用。frame count、排序、usage、report、pending 清理和异常检查顺序不变。
+- 该改动删除周期 frame 扫描的按值元素拷贝；不保留第二 frame 数据源或包装视图。静态核对唯一 `Frames` 实现返回 registry 的固定容量 view、引用生命周期覆盖开放 playback frame、buffer 未暴露写入接口；未编译、未采样，不能声称实测耗时收益。

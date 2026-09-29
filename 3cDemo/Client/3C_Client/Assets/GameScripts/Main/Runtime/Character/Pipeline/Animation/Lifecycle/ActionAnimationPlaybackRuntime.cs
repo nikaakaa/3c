@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     internal interface IActionAnimationPlaybackFrameSource
     {
-        IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> Frames { get; }
+        FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> Frames { get; }
         void ReportSlotUsage(
             in ActionAnimationPlaybackLifecycleFrame frame,
             AnimationSlotId slotId,
@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly FixedCapacityFrameBuffer<ActionSlotSourceUsage> m_Usages;
         readonly FixedCapacityFrameBuffer<ActionRetirementPermission> m_Retirements;
         ActionLifecycleMutationLease m_Lease;
-        IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> m_Frames;
+        FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> m_Frames;
         ulong m_CommandSequence;
 
         internal ActionAnimationPlaybackRuntime(int capacity, int commandCapacity)
@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Retirements = new FixedCapacityFrameBuffer<ActionRetirementPermission>(capacity);
         }
 
-        public IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> Frames =>
+        public FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> Frames =>
             m_Lease.IsValid ? m_Frames : throw new InvalidOperationException("Action playback frame is not open.");
         internal IReadOnlyList<ActionPlaybackInboxEntry> Commands => m_Commands;
         internal IReadOnlyList<ActionRetirementPermission> Retirements => m_Retirements;

@@ -27,8 +27,13 @@ namespace ThirdPersonCamera
         public float PolarAngle => m_PolarAngle;
         public float CameraLocateRatio => m_CameraLocateRatio;
 
-        public void ConfigureCameraLocateRatio(float cameraLocateRatio)
+        public void ConfigureOrbit(CameraTrackOrbitDescriptor[] cameraOrbits, Vector2[] screenOffsets,
+            float fieldOfView, float elevationRatio, float cameraLocateRatio)
         {
+            m_CameraOrbits = cameraOrbits;
+            m_ScreenOffsets = screenOffsets;
+            m_FieldOfView = fieldOfView;
+            m_ElevationRatio = elevationRatio;
             m_CameraLocateRatio = cameraLocateRatio;
         }
 

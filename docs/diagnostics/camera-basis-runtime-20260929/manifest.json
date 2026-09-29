@@ -36,6 +36,10 @@
       "sha256": "3cab9fceaaac63a706328f3f8099f18b4bbb5399b42688614b655db77bb621e3"
     },
     {
+      "path": "camera-axis-player-gain-snapshot.json",
+      "sha256": "7cb971e57fab9b41d984b64cec01dcde6cf87d0cfeaad4a3e8ae5c745499575d"
+    },
+    {
       "path": "camera-axis-runtime-type.json",
       "sha256": "0dda6840e513559cfbfd6653bb8f04e916de8f9aeb8e738c49492c02de469fb6"
     },

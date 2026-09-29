@@ -37,6 +37,6 @@ MonoBehaviour:
         - {x: 0, y: 0.5}
         m_AspectRatio: 1.7777778
         m_FieldOfView: 50
-        m_ElevationRatio: 0.5
+        m_ElevationRatio: 0.6
         m_PolarAngle: 0
         m_CameraLocateRatio: 1

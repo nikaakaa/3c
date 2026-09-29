@@ -1,0 +1,55 @@
+{
+  "session": "829",
+  "type_index": 52447,
+  "type_name": "JODKHBJPDKE",
+  "instance_klass_matches_catalog": true,
+  "global_rva": "0x55b31a8",
+  "second_gain_global_rva": "0x55b31a8",
+  "chain": {
+    "handle": "0x50004cd2ce8",
+    "klass": "0x50002569818",
+    "rgctx": "0x50004cd2e88",
+    "generic_klass": "0x50002569818",
+    "static_fields": "0x700146297f0",
+    "instance": "0x70014ca4200"
+  },
+  "fields": [
+    {
+      "offset": "0x164",
+      "name": "AEBHLKPDIBE",
+      "type": "float",
+      "runtime_matches_definition": true,
+      "axis": "horizontal",
+      "branch": "mode == 1",
+      "snapshot_value": 3.0
+    },
+    {
+      "offset": "0x174",
+      "name": "LEEKOMKLGIH",
+      "type": "float",
+      "runtime_matches_definition": true,
+      "axis": "vertical",
+      "branch": "mode == 1",
+      "snapshot_value": 2.0999999046325684
+    },
+    {
+      "offset": "0x17c",
+      "name": "FCDDENCEKED",
+      "type": "float",
+      "runtime_matches_definition": true,
+      "axis": "horizontal",
+      "branch": "mode != 1",
+      "snapshot_value": 1.0
+    },
+    {
+      "offset": "0x194",
+      "name": "GBJKCPGGPKL",
+      "type": "float",
+      "runtime_matches_definition": true,
+      "axis": "vertical",
+      "branch": "mode != 1",
+      "snapshot_value": 0.75
+    }
+  ],
+  "limitation": "Values are player state in snapshot 829, not proven default settings. Input mode names and upstream input units remain unresolved."
+}

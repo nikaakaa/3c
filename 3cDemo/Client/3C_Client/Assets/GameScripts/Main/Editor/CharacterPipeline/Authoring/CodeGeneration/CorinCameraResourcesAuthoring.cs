@@ -128,11 +128,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public static void PublishDefaultOrbit(CharacterCameraProfile profile)
         {
             const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
-            JToken sphere = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"]["DEFAULTSPHEREDATA"];
+            JToken source = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"];
+            JToken sphere = source["DEFAULTSPHEREDATA"];
+            var orbitSource = (JArray)sphere["Orbits"];
+            var orbits = new CameraTrackOrbitDescriptor[orbitSource.Count];
+            for (int i = 0; i < orbits.Length; i++)
+                orbits[i] = new CameraTrackOrbitDescriptor((float)orbitSource[i]["m_Height"], (float)orbitSource[i]["m_Radius"]);
+            JToken screen = sphere["ScreenYTrack"];
+            var screenOffsets = new[]
+            {
+                new Vector2(0f, (float)screen["Bottom"]),
+                new Vector2(0f, (float)screen["Middle"]),
+                new Vector2(0f, (float)screen["Top"])
+            };
             CameraSequenceAsset sequence = profile.DefaultSequence;
-            Undo.RecordObject(sequence, "配置可琳基础轨道半径比例");
+            Undo.RecordObject(sequence, "从解包配置可琳基础轨道");
             var track = (CameraFrameOnePointByTrackStage)sequence.Stages[0];
-            track.ConfigureCameraLocateRatio((float)sphere["CAMERA_LOCATE_RADIUSRATIO"]);
+            track.ConfigureOrbit(orbits, screenOffsets, (float)sphere["CAMERA_FOV"],
+                (float)source["ELEVATION_ANGLE"], (float)sphere["CAMERA_LOCATE_RADIUSRATIO"]);
             Save(sequence);
         }
 

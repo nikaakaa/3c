@@ -238,3 +238,13 @@ VCameraAxisState 的实际步进是 0x143583E0，速度边界是 0x14358770：
 后续实施边界：先对照原 CameraDataAccessor.Control 输入的生产／缩放及玩家倍率，再统一轴参数和归一化轨道消费。不能把未知上游缩放设为 1，也不能套入新的最大速度后用额外系数抵消。ScreenY 已确认仍需检查：本项目 CameraWorldBasicData.Offset 按世界单位参与 CameraToPivot，原数据的 DELAY_ScreenY 是构图参数；当前尚未把原 Delay 到最终构图的消费者完整追通，因此本批未猜测屏幕坐标换算公式。
 
 此批只有证据和文档变化，不需要重新编译或运行。未运行 Play/replay，未新增测试；输入、归一化仰角与 Delay 仍未交付，Goal 保持 active。
+
+## 默认轨道配置正式导入
+
+按用户最新分工，命中链由其他窗口负责，本窗口只处理相机。此次把 PublishDefaultOrbit 从只导入半径比例扩展为导入现有轨道合同能表达的完整基础构图：DEFAULTSPHEREDATA.Orbits、ScreenYTrack、CAMERA_FOV、CAMERA_LOCATE_RADIUSRATIO，以及同一 Default_Normal 下的 ELEVATION_ANGLE。ConfigureOrbit 替换原单字段 setter，唯一调用方同步迁移；未增加备用入口。
+
+原始轨道保持 Top／Middle／Bottom 顺序，ScreenY 保持 Bottom／Middle／Top 顺序，投影编译器继续承担已有顺序转换和控制点生成。资产发布后的唯一数值差异为 ElevationRatio 从 0.5 改成 dump 的 0.6；FOV=50、半径比例=1、三组轨道和屏幕配置未变。FramePlanner 因此改在 0.6 处取基础轨道；输入仍沿当前角度增量链，不把这一配置修正描述为输入轴已完整复刻。
+
+目标 Unity 实例已完成编译与域重载，ConfigureOrbit 已加载，Console 0 错误。正式 PublishDefaultOrbit 后 Build/RequireValid 成功，schema=v6、elevation=0.6、fov=50、ratio=1、sequence dirty=false；磁盘 diff 确认仅一项数值变化。未运行 Play/replay，未新增测试，画面由用户手测。Default_Normal 是否为原作当前可琳实例实际选中的配置，仍保留此前证据限制。
+
+输入倍率调查新增 camera-axis-player-gain-snapshot.json：沿原函数的 RIP 全局地址、泛型 singleton 静态字段及实例 klass，确认倍率来自 JODKHBJPDKE（type 52447），而非 CameraAxis 参数本身。829 快照中 mode==1 的横／纵倍率为 3／2.1，其它分支为 1／0.75。它们只是该快照的玩家状态，不能当作默认配置写进项目；输入模式名称和上游单位仍待确认。

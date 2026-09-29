@@ -53,8 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 ref readonly ActionPlaybackInboxEntry entry =
                     ref m_Inbox.ElementAt(i);
-                ActionAnimationPlaybackCommand command = entry.Command;
-                m_Commands.Add(in command);
+                m_Commands.Add(in entry.CommandRef);
             }
             m_FrameIdentity = frameIdentity;
         }

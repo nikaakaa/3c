@@ -7,19 +7,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     public readonly struct ActionPlaybackInboxEntry
     {
+        readonly ActionAnimationPlaybackCommand m_Command;
+
         internal ActionPlaybackInboxEntry(
             ulong sequence,
             ActionAnimationPlaybackCommand command)
         {
             Sequence = sequence;
-            Command = command;
+            m_Command = command;
             if (!IsValid)
                 throw new ArgumentException(
                     "Action playback inbox entry is invalid.");
         }
 
         public ulong Sequence { get; }
-        public ActionAnimationPlaybackCommand Command { get; }
+        public ActionAnimationPlaybackCommand Command => m_Command;
+        internal ref readonly ActionAnimationPlaybackCommand CommandRef => ref m_Command;
         public bool IsValid => Sequence != 0 && Command.IsValid;
     }
 

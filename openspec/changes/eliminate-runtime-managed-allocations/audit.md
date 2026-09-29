@@ -1552,3 +1552,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Action command frame 收集通过 `IReadOnlyList` 索引，每条命令先把整个 inbox entry 复制为临时值再读取 command；读租约提交压缩又先复制 entry 到局部再搬回数组。
 - inbox 增加正式 `ElementAt` 只读元素入口；command source 绑定只读 entry 后只复制 command 到既有 frame 快照，commit 直接比较数组元素 sequence 并做一次目标搬运。pending count、命令顺序、watermark 过滤、容量和 lease 协议不变。
 - 该改动删除命令收集与租约压缩中的 entry 中间拷贝；不删除 frame command 快照，因为现有 Commit 成功后清空快照，直接外借 inbox 会改变开放帧命令生命周期。静态核对唯一正式收集入口、数组生命周期和写入仍受 active read lease 禁止；未编译、未采样，不能声称实测耗时收益。
+
+### AP206 Action lifecycle command 引用化（2026-09-30，已实施，本轮未编译）
+
+- Registry 应用命令和退场权限时按 `IReadOnlyList` 按值复制每个元素；`AppendCommandMutation` 和 `ApplyCommand` 又按值转发 inbox entry，`ApplyCommand` 再复制整份 command。
+- 正式批量入口改为接收 source 的固定容量 buffer，循环绑定只读元素引用；mutation journal 保留一次命令存储，但转发、sequence 查重和 command 应用改为 `in` / `CommandRef` 只读读取。retirement 校验、journal 顺序、状态推进和异常时机不变。
+- 该改动删除周期命令/退场批处理的 entry、permission 和 command 中间拷贝；不改变 mutation journal 的持久页或 rollback 语义。静态核对唯一 Registry 批量调用、journal payload 生命周期、`CommandRef` 只读字段和 mutation 期间 inbox 禁写；未编译、未采样，不能声称实测耗时收益。

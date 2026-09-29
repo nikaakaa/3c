@@ -325,21 +325,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void ApplyCommands(
             ActionLifecycleMutationLease lease,
-            IReadOnlyList<ActionPlaybackInboxEntry> entries)
+            FixedCapacityFrameBuffer<ActionPlaybackInboxEntry> entries)
         {
             RequireLease(lease);
             if (entries == null)
                 throw new ArgumentNullException(nameof(entries));
-            for (int i = 0; i < entries.Count; i++)
+            int entryCount = entries.Count;
+            for (int i = 0; i < entryCount; i++)
             {
-                ActionPlaybackInboxEntry inboxEntry = entries[i];
+                ref readonly ActionPlaybackInboxEntry inboxEntry =
+                    ref entries.ElementAt(i);
                 if (!inboxEntry.IsValid)
                 {
                     throw new InvalidOperationException(
                         "Action lifecycle received an invalid inbox entry.");
                 }
-                int payloadIndex = AppendCommandMutation(inboxEntry);
-                ApplyCommand(m_CommandMutationPayloads[payloadIndex]);
+                int payloadIndex = AppendCommandMutation(in inboxEntry);
+                ApplyCommand(in m_CommandMutationPayloads[payloadIndex]);
             }
         }
 
@@ -454,14 +456,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void ApplyRetirementPermissions(
             ActionLifecycleMutationLease lease,
-            IReadOnlyList<ActionRetirementPermission> permissions)
+            FixedCapacityFrameBuffer<ActionRetirementPermission> permissions)
         {
             RequireLease(lease);
             if (permissions == null)
                 throw new ArgumentNullException(nameof(permissions));
-            for (int i = 0; i < permissions.Count; i++)
+            int permissionCount = permissions.Count;
+            for (int i = 0; i < permissionCount; i++)
             {
-                ActionRetirementPermission permission = permissions[i];
+                ref readonly ActionRetirementPermission permission =
+                    ref permissions.ElementAt(i);
                 Entry entry = FindReadable(permission.PlaybackId);
                 if (!permission.IsValid ||
                     entry == null ||
@@ -779,9 +783,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_FrameView.Clear();
         }
 
-        void ApplyCommand(ActionPlaybackInboxEntry inboxEntry)
+        void ApplyCommand(in ActionPlaybackInboxEntry inboxEntry)
         {
-            ActionAnimationPlaybackCommand command = inboxEntry.Command;
+            ref readonly ActionAnimationPlaybackCommand command =
+                ref inboxEntry.CommandRef;
             Entry existing = FindReadable(command.PlaybackId);
             if (command.Kind == ActionAnimationPlaybackCommandKind.Select)
             {
@@ -884,7 +889,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        int AppendCommandMutation(ActionPlaybackInboxEntry inboxEntry)
+        int AppendCommandMutation(in ActionPlaybackInboxEntry inboxEntry)
         {
             if (m_CommandMutationCount == m_CommandMutationPayloads.Length)
             {
@@ -904,7 +909,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_CommandMutationHeaders[payloadIndex] =
                 new AnimationPresentationMutationJournalHeader(
                     AnimationPresentationMutationOwnerDomain.ActionLifecycle,
-                    MapCommandOperation(inboxEntry.Command.Kind),
+                    MapCommandOperation(inboxEntry.CommandRef.Kind),
                     payloadIndex,
                     payloadIndex);
             m_CommandMutationCount++;

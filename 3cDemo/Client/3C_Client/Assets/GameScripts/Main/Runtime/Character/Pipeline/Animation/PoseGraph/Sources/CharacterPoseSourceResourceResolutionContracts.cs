@@ -161,13 +161,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     internal readonly struct CharacterPoseSourceResourceResolution
     {
+        readonly CharacterAclResourceReadinessResult m_Resource;
         internal CharacterPoseSourceResourceResolution(
             CharacterAclResourceReadinessResult resource,
             int resourceCatalogIndex,
             int groupClipIndex,
             ulong resourceGeneration)
         {
-            Resource = resource;
+            m_Resource = resource;
             ResourceCatalogIndex = resourceCatalogIndex;
             GroupClipIndex = groupClipIndex;
             ResourceGeneration = resourceGeneration;
@@ -176,7 +177,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Character Pose source resource resolution is invalid.");
         }
 
-        internal CharacterAclResourceReadinessResult Resource { get; }
+        internal ref readonly CharacterAclResourceReadinessResult Resource =>
+            ref m_Resource;
         internal int ResourceCatalogIndex { get; }
         internal int GroupClipIndex { get; }
         internal ulong ResourceGeneration { get; }
@@ -200,21 +202,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             if (!IsValid)
                 throw new InvalidOperationException(
                     "Character Pose source resource resolution is invalid.");
+            ref readonly CharacterAclResourceReadinessResult resource =
+                ref m_Resource;
             return IsInvalid
                 ? CharacterPoseSourceReadinessView.Invalid(
                     completionIdentity,
                     ResourceCatalogIndex,
                     GroupClipIndex,
                     ResourceGeneration,
-                    Resource.FailureCode,
-                    Resource.Message)
+                    resource.FailureCode,
+                    resource.Message)
                 : IsPending
                     ? CharacterPoseSourceReadinessView.Pending(
                         completionIdentity,
                         ResourceCatalogIndex,
                         GroupClipIndex,
                         ResourceGeneration,
-                        Resource.Message)
+                        resource.Message)
                     : ResourceCatalogIndex >= 0
                         ? CharacterPoseSourceReadinessView.Ready(
                             completionIdentity,

@@ -187,7 +187,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             bool hasReady = false;
             for (int i = 0; i < count; i++)
             {
-                CharacterPoseSourceResourceResolution resolution = resolutions[i];
+                ref readonly CharacterPoseSourceResourceResolution resolution =
+                    ref resolutions[i];
                 if (!resolution.IsValid)
                     throw new InvalidOperationException(
                         "Character Pose source resource resolution buffer contains an invalid value.");

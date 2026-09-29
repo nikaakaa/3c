@@ -54,7 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                  targetIndex < m_DeferredTargetCount;
                  targetIndex++)
             {
-                DeferredSourceTarget target = m_DeferredTargets[targetIndex];
+                ref readonly DeferredSourceTarget target =
+                    ref m_DeferredTargets[targetIndex];
                 RecordResolutions(
                     CharacterPoseSourceReadinessCategory.DeferredTarget,
                     in target.Target,
@@ -202,8 +203,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Page.Remove(category, in key);
             for (int i = 0; i < count; i++)
             {
+                ref readonly CharacterPoseSourceResourceResolution resolution =
+                    ref resolutions[start + i];
                 CharacterPoseSourceReadinessView readiness =
-                    resolutions[start + i].ToReadiness(completionIdentity);
+                    resolution.ToReadiness(completionIdentity);
                 m_Page.Record(category, in key, in readiness);
             }
         }

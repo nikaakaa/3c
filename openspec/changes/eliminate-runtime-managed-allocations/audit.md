@@ -1636,3 +1636,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - preparation 转 readiness target 时，request 的 source/clips 属性、preparation 的 source/node/clips 属性以及 target 构造和 resolver 再次按值复制；resolver 每个 clip 又复制一次 plan。
 - request 的 `SourceId`/`Clips`、readiness target 的 `SourceId`/`PoseNodeId`/`Clips` 改为只读 backing field 引用；target 构造与三个工厂边界改为 `in`。`FromPreparation` 用 conditional ref 直接选择 request 或 preparation 的同一字段，resolver 的 clip 入口改为 `in` 并绑定 `ElementAt` 只读引用。
 - 该改动删除 preparation 到 readiness resolver 的中间 source/clip 拷贝和逐项 plan 拷贝。target 自身仍保存一次必要 source/node/clips 存储拷贝；resolution 数组、聚合优先级、resource 查询和异常文本不变。静态核对 conditional ref 两支指向同一 preparation 生命周期、全部新引用只读、无属性写入调用点；未编译、未采样，不能声称实测耗时收益。
+
+### AP220 readiness journal 解析引用化（2026-09-30，已实施，本轮未编译）
+
+- readiness journal 回放 deferred target 时复制整份 `DeferredSourceTarget`；resolution 聚合和 page 记录每个元素复制整份 resolution；resolution 的 `Resource` 属性每次返回 readiness result，`ToReadiness` 分支还会重复读取。
+- `BeginDemand` 绑定 deferred 数组元素只读引用，`Aggregate` 与 `RecordResolutions` 绑定 resolution 数组元素只读引用；resolution 的 readiness result 改为 backing field 只读引用，`ToReadiness` 在分支前绑定同一 result。
+- 该改动删除 readiness 回放、聚合和记录链的重复结构拷贝。invalid early return、pending/ready 聚合选择、page 记录存储、completion identity 和异常文本不变。静态核对数组在只读引用期间不被修改、`Resource` 全部消费只读和返回值仍保留一次必要拷贝；未编译、未采样，不能声称实测耗时收益。

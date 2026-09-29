@@ -308,14 +308,15 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException($"World batch contains duplicate ActorId '{request.ActorId}'.", nameof(requests));
                 required |= request.RequiredCapabilities;
             }
-            for (int i = 0; i < observedConstraints.Constraints.Count; i++)
+            int activeIndex = 0;
+            for (int i = 0; i < observedConstraints.Constraints.Count && activeIndex < m_Requests.Length; i++)
             {
                 ObservedWorldConstraint observed = observedConstraints.Constraints[i];
-                for (int activeIndex = 0; activeIndex < m_Requests.Length; activeIndex++)
-                {
-                    if (m_Requests[activeIndex].ActorId == observed.ActorId)
-                        throw new ArgumentException($"Observed ActorId '{observed.ActorId}' is already active in the World batch.", nameof(observedWorldConstraints));
-                }
+                while (activeIndex < m_Requests.Length &&
+                       m_Requests[activeIndex].ActorId.CompareTo(observed.ActorId) < 0)
+                    activeIndex++;
+                if (activeIndex < m_Requests.Length && m_Requests[activeIndex].ActorId == observed.ActorId)
+                    throw new ArgumentException($"Observed ActorId '{observed.ActorId}' is already active in the World batch.", nameof(observedWorldConstraints));
             }
             Tick = tick;
             BeforeWorldState = worldState;

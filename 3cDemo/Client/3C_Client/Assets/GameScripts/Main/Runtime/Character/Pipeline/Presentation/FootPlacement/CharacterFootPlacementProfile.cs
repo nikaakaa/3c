@@ -569,22 +569,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootPlacementModuleSettings
     {
+        readonly CharacterFootCurrentSupportQuerySettings m_CurrentSupportQuery;
+        readonly CharacterFootLandingPredictionSettings m_LandingPrediction;
+        readonly CharacterFootGroundDetectionSettings m_GroundDetection;
+        readonly CharacterFootMotionSettings m_FootMotion;
+
         internal CharacterFootPlacementModuleSettings(
             string profileId,
             string profileRevision,
             string posePlanHash,
-            CharacterFootCurrentSupportQuerySettings currentSupportQuery,
-            CharacterFootLandingPredictionSettings landingPrediction,
-            CharacterFootGroundDetectionSettings groundDetection,
-            CharacterFootMotionSettings footMotion)
+            in CharacterFootCurrentSupportQuerySettings currentSupportQuery,
+            in CharacterFootLandingPredictionSettings landingPrediction,
+            in CharacterFootGroundDetectionSettings groundDetection,
+            in CharacterFootMotionSettings footMotion)
         {
             ProfileId = profileId;
             ProfileRevision = profileRevision;
             PosePlanHash = posePlanHash;
-            CurrentSupportQuery = currentSupportQuery;
-            LandingPrediction = landingPrediction;
-            GroundDetection = groundDetection;
-            FootMotion = footMotion;
+            m_CurrentSupportQuery = currentSupportQuery;
+            m_LandingPrediction = landingPrediction;
+            m_GroundDetection = groundDetection;
+            m_FootMotion = footMotion;
             if (string.IsNullOrWhiteSpace(ProfileId) ||
                 string.IsNullOrWhiteSpace(ProfileRevision) ||
                 string.IsNullOrWhiteSpace(PosePlanHash))
@@ -600,9 +605,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal string ProfileId { get; }
         internal string ProfileRevision { get; }
         internal string PosePlanHash { get; }
-        internal CharacterFootCurrentSupportQuerySettings CurrentSupportQuery { get; }
-        internal CharacterFootLandingPredictionSettings LandingPrediction { get; }
-        internal CharacterFootGroundDetectionSettings GroundDetection { get; }
-        internal CharacterFootMotionSettings FootMotion { get; }
+        internal ref readonly CharacterFootCurrentSupportQuerySettings CurrentSupportQuery =>
+            ref m_CurrentSupportQuery;
+        internal ref readonly CharacterFootLandingPredictionSettings LandingPrediction =>
+            ref m_LandingPrediction;
+        internal ref readonly CharacterFootGroundDetectionSettings GroundDetection =>
+            ref m_GroundDetection;
+        internal ref readonly CharacterFootMotionSettings FootMotion =>
+            ref m_FootMotion;
     }
 }

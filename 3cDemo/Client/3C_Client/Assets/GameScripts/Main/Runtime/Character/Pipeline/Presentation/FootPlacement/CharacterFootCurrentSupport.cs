@@ -1053,8 +1053,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootSoleSupportQuery(
             ICharacterFootCurrentSupportWorldQuery world,
-            CharacterFootCurrentSupportQuerySettings settings,
-            CharacterFootLandingPredictionSettings landingSettings)
+            in CharacterFootCurrentSupportQuerySettings settings,
+            in CharacterFootLandingPredictionSettings landingSettings)
         {
             m_World = world;
             m_Settings = settings;

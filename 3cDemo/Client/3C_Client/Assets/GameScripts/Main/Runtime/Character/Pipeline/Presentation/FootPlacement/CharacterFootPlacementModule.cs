@@ -398,12 +398,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in bank.LeftFoot,
                 in leftCurrentStep,
                 in leftPrediction,
-                m_Settings.FootMotion);
+                in m_Settings.FootMotion);
             rightLanding = CharacterFootLandingRuntime.ProjectAfterPrediction(
                 in bank.RightFoot,
                 in rightCurrentStep,
                 in rightPrediction,
-                m_Settings.FootMotion);
+                in m_Settings.FootMotion);
             bool hasLeftLastLanding = leftLanding.HasLastLanding;
             bool hasLeftNextSwingLanding = leftLanding.HasNextSwingLanding;
             bool hasRightLastLanding = rightLanding.HasLastLanding;
@@ -528,7 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 sourceLineage,
                 profileRevision,
                 worldRevision,
-                m_Settings.FootMotion);
+                in m_Settings.FootMotion);
             var rightConstraintFrame = new CharacterFootStateFrame(
                 frame.RenderFrame,
                 poseInput.CompletionIdentity,
@@ -557,7 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 sourceLineage,
                 profileRevision,
                 worldRevision,
-                m_Settings.FootMotion);
+                in m_Settings.FootMotion);
             var leftStrideRequest = new CharacterFootStrideRequest(
                 in leftCurrentStep, hasLeftNextSwingLanding,
                 in leftNextSwingLanding, leftGroundPath.Accepted);
@@ -573,7 +573,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    m_Settings.CurrentSupportQuery, m_Settings.LandingPrediction));
+                    in m_Settings.CurrentSupportQuery,
+                    in m_Settings.LandingPrediction));
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
                 in rightCurrentStep,
@@ -583,7 +584,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    m_Settings.CurrentSupportQuery, m_Settings.LandingPrediction));
+                    in m_Settings.CurrentSupportQuery,
+                    in m_Settings.LandingPrediction));
             CharacterFootPlacementRequest leftRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
@@ -628,7 +630,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in strideIntent, in requestPair, in primarySupport, in pelvisFrame);
             CharacterFootStrideHipsResult strideHips = CharacterFootStrideHipsBuilder.ResolvePelvis(
                 in pelvisInput,
-                m_Settings.FootMotion,
+                in m_Settings.FootMotion,
                 ref bank.PelvisSpring);
             bool leftReachAvailable = strideHips.LeftLandingReachAvailable;
             bool rightReachAvailable = strideHips.RightLandingReachAvailable;
@@ -854,8 +856,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             CharacterFootCurrentSupportObservationPage pending =
                 pool.AcquireWritable(committed);
-            CharacterFootCurrentSupportQuerySettings settings =
-                m_Settings.CurrentSupportQuery;
+            ref readonly CharacterFootCurrentSupportQuerySettings settings =
+                ref m_Settings.CurrentSupportQuery;
             CharacterFootCurrentSupportProbeRequest heelRequest =
                 CharacterFootCurrentSupportProbeRequest.Create(
                     side,
@@ -863,7 +865,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     foot.HeelPosition,
                     componentUp,
                     in settings,
-                    m_Settings.LandingPrediction);
+                    in m_Settings.LandingPrediction);
             CharacterFootCurrentSupportProbeRequest toeRequest =
                 CharacterFootCurrentSupportProbeRequest.Create(
                     side,
@@ -871,7 +873,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     foot.ToePosition,
                     componentUp,
                     in settings,
-                    m_Settings.LandingPrediction);
+                    in m_Settings.LandingPrediction);
             CharacterFootCurrentSupportObservation observation;
             if (!grounded)
             {
@@ -951,7 +953,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             pendingPage = pool.AcquireWritable(committedPage);
-            CharacterFootGroundDetectionSettings settings = m_Settings.GroundDetection;
+            ref readonly CharacterFootGroundDetectionSettings settings =
+                ref m_Settings.GroundDetection;
             if (!CharacterFootGroundPathInputBuilder.TryBuild(
                     in key,
                     lastLanding.Point,
@@ -1162,8 +1165,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default);
             }
-            CharacterFootLandingPredictionSettings settings =
-                m_Settings.LandingPrediction;
+            ref readonly CharacterFootLandingPredictionSettings settings =
+                ref m_Settings.LandingPrediction;
             if (!float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds < 0f ||
                 timeToLandingSeconds > settings.MaximumPredictionTimeSeconds)
@@ -1344,8 +1347,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame body)
         {
-            CharacterFootLandingPredictionSettings settings =
-                m_Settings.LandingPrediction;
+            ref readonly CharacterFootLandingPredictionSettings settings =
+                ref m_Settings.LandingPrediction;
             Vector2 rawCurrentVelocity = new Vector2(
                 body.TargetVelocity.x,
                 body.TargetVelocity.z);

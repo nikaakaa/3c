@@ -1961,3 +1961,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground surface page 的 SegmentAt 每次读取复制 surface identity、face identity 和两段坐标；surface visibility 构建与合并循环逐段读取，TryAdd 的重复段扫描也复制当前 segment。
 - Page 内部 SegmentAt 改返回只读引用，visibility 两个循环和 TryAdd 扫描绑定引用。公共 diagnostics SegmentAt 仍按值返回，segment 写入、排序和重复段判定不变。
 - 该改动删除 ground surface 覆盖进入 visibility 和重复扫描的逐段拷贝。静态核对 segment 为 readonly struct、数组由 surface page 独占、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP274 Foot Placement settings 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Foot Placement module settings 的 CurrentSupportQuery、LandingPrediction、GroundDetection、FootMotion 自动属性每次读取复制完整 settings；EvaluateFrame、PrepareCurrentSupport、PrepareGroundPath、PredictEvent 和 ResolveBodyTrajectory 每帧重复读取。
+- 四个 settings 改为 backing field 只读引用，构造入参改为 `in`。运行链局部直接绑定 backing field，FootMotion、support/landing settings 和 ground settings 的正式调用显式引用传递；标量 tuning 读取不变。
+- 该改动删除 Foot Placement 每脚/每帧从不可变模块配置复制 settings 的重复拷贝。静态核对四类 settings 为 readonly struct、模块 settings 构造后不可变、消费只读；未编译、未采样，不能声称实测耗时收益。

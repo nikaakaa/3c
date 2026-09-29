@@ -647,6 +647,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePortValue ReadInputValue(
+            FlowCanvas.ValueInput input,
+            PoseNodeId nodeId,
+            PosePortId portId,
+            CharacterPosePortKind kind)
+        {
+            RequireEvaluationStage();
+            return kind switch
+            {
+                CharacterPosePortKind.LocalPose =>
+                    ReadPortValue<CharacterPoseNativeLocalPoseValue>(input, nodeId, portId),
+                CharacterPosePortKind.ComponentPose =>
+                    ReadPortValue<CharacterPoseNativeComponentPoseValue>(input, nodeId, portId),
+                CharacterPosePortKind.Parameter =>
+                    ReadPortValue<CharacterPoseNativeParameterValue>(input, nodeId, portId),
+                CharacterPosePortKind.PoseDiscontinuity =>
+                    ReadPortValue<CharacterPoseNativeDiscontinuityValue>(input, nodeId, portId),
+                CharacterPosePortKind.ActionPlayback =>
+                    ReadPortValue<CharacterPoseNativeActionPlaybackValue>(input, nodeId, portId),
+                CharacterPosePortKind.FullBodyIkGoals =>
+                    ReadPortValue<CharacterPoseNativeFullBodyIkGoalsValue>(input, nodeId, portId),
+                CharacterPosePortKind.FullBodyIkGoalContribution =>
+                    ReadPortValue<CharacterPoseNativeGoalContributionValue>(input, nodeId, portId),
+                CharacterPosePortKind.PresentationFacts =>
+                    ReadPortValue<CharacterPoseNativeFactsValue>(input, nodeId, portId),
+                CharacterPosePortKind.MotionMatchingBinding =>
+                    ReadPortValue<CharacterPoseNativeMotionMatchingBindingValue>(input, nodeId, portId),
+                _ => throw new InvalidOperationException(
+                    $"Pose node '{nodeId.Value}' input '{portId}' has unsupported kind '{kind}'.")
+            };
+        }
+
+        internal CharacterPoseNativePortValue ReadInputValue(
             CharacterPoseCanvasNode node,
             CharacterPosePortDefinition definition)
         {
@@ -688,6 +720,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireEvaluationStage();
             return ReadInputValue(RequireBoundary(CharacterPoseNodeKind.GraphOutput), portId);
+        }
+
+        static T ReadPortValue<T>(
+            FlowCanvas.ValueInput input,
+            PoseNodeId nodeId,
+            PosePortId portId)
+            where T : CharacterPoseNativePortValue
+        {
+            if (input.value is not T value)
+                throw new InvalidOperationException(
+                    $"Pose node '{nodeId.Value}' input '{portId}' is not a typed native input.");
+            return value ??
+                throw new InvalidOperationException(
+                    $"Pose node '{nodeId.Value}' input '{portId}' has no value.");
         }
 
         internal CharacterPoseCanvasNode RequireBoundary(CharacterPoseNodeKind kind) =>

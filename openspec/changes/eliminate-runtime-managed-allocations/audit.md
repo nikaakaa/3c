@@ -1222,3 +1222,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Full Body IK 每次输出都按 `(NodeId, "goals")` 哈希查找 optional goal set 并重复类型测试；端口在 graph 初始化后固定。
 - handler 在 AP147 的固定输入初始化中缓存 goals typed `ValueInput`，帧内用 typed Try 读取；未连接仍不绑定，connected goal set 的 BindPendingGoalSet、IK solve、输出页和 Commit 顺序不变。
 - 该改动消除 optional goals 的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对端口形状、未连接分支、goal 绑定生命周期和双缓冲语义；未编译、未采样，不能声称实测耗时收益。
+
+### AP151 Subgraph input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Pose Subgraph 每次绑定 immediate/deferred 输入都按 parent port 重复查找 runtime port definition，再按 Kind switch 进入端口字典并做类型测试；接口绑定时已经定位并检查了连接。
+- input binding 在 Start 缓存 parent `ValueInput`、parent/child 端口和 Kind；runtime 新增已缓存端口的读取入口，先按 Kind 分派，再保留 null value 与 typed native 错误文案。BuildPortDefinitions 已在构造期校验同一端口的 FlowCanvas 原生类型。
+- 该改动消除每帧 parent/child interface 的重复 definition 查找和 tuple 端口二次查找；不改绑定顺序、deferred 分类、输出页身份和 graph input 提交合同。静态核对 Start 时子图端口表、连接检查、错误文案和 BindInputs 两条调用链；未编译、未采样，不能声称实测耗时收益。

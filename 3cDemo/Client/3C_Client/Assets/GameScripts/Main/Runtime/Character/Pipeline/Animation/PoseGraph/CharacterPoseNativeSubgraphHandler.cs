@@ -1,21 +1,45 @@
 using System;
 using System.Collections.Generic;
+using FlowCanvas;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseNativeSubgraphHandler :
         ICharacterPoseNativeNodeHandler, Diagnostics.ICharacterNativeStateCaptureSource, ICharacterPoseNativePhaseSource
     {
+        readonly struct SubgraphInputBinding
+        {
+            internal SubgraphInputBinding(
+                PoseNodeId nodeId,
+                PosePortId parent,
+                PosePortId child,
+                ValueInput input,
+                CharacterPosePortKind kind)
+            {
+                NodeId = nodeId;
+                Parent = parent;
+                Child = child;
+                Input = input;
+                Kind = kind;
+            }
+
+            internal PoseNodeId NodeId { get; }
+            internal PosePortId Parent { get; }
+            internal PosePortId Child { get; }
+            internal ValueInput Input { get; }
+            internal CharacterPosePortKind Kind { get; }
+        }
+
         readonly PoseNodeId m_NodeId;
         readonly ulong m_RequestId;
         readonly ulong m_InstanceId;
         readonly ulong m_ResetGeneration;
         readonly string m_Reason;
         readonly ICharacterPoseNativeNodeHandlerFactory m_Factory;
-        readonly List<(PosePortId Parent, PosePortId Child)> m_ImmediateInputs =
-            new List<(PosePortId, PosePortId)>();
-        readonly List<(PosePortId Parent, PosePortId Child)> m_DeferredInputs =
-            new List<(PosePortId, PosePortId)>();
+        readonly List<SubgraphInputBinding> m_ImmediateInputs =
+            new List<SubgraphInputBinding>();
+        readonly List<SubgraphInputBinding> m_DeferredInputs =
+            new List<SubgraphInputBinding>();
         readonly Dictionary<PosePortId, PosePortId> m_OutputPorts =
             new Dictionary<PosePortId, PosePortId>();
         CharacterPoseCanvasNode m_CallNode;
@@ -300,7 +324,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < bindings.Count; i++)
             {
                 var binding = bindings[i];
-                CharacterPoseNativePortValue value = runtime.ReadInputValue(m_CallNode, binding.Parent);
+                CharacterPoseNativePortValue value = runtime.ReadInputValue(
+                    binding.Input,
+                    binding.NodeId,
+                    binding.Parent,
+                    binding.Kind);
                 m_Child.BindGraphInput(binding.Child, value);
             }
         }
@@ -328,8 +356,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             $"Pose subgraph '{NodeId}' is missing required input '{childPort.InterfacePortId}'.");
                     continue;
                 }
-                FlowCanvas.Port inputPort = m_CallNode.GetInputPort(
-                    parentPort.PortId.Value);
+                var inputPort = m_CallNode.GetInputPort(
+                    parentPort.PortId.Value) as ValueInput;
                 if (inputPort == null || !inputPort.isConnected)
                 {
                     if (childPort.Required)
@@ -338,7 +366,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
                 var bindings = deferred ? m_DeferredInputs : m_ImmediateInputs;
-                bindings.Add((parentPort.PortId, childPort.PortId));
+                bindings.Add(new SubgraphInputBinding(
+                    m_NodeId,
+                    parentPort.PortId,
+                    childPort.PortId,
+                    inputPort,
+                    childPort.Kind));
             }
             CharacterPoseCanvasNode childOutput = m_Child.RequireBoundary(CharacterPoseNodeKind.GraphOutput);
             for (int i = 0; i < m_CallNode.DynamicPorts.Count; i++)

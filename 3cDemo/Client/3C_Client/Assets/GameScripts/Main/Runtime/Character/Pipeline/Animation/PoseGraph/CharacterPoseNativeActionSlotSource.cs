@@ -250,13 +250,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ReportUsage(AnimationBlendStackRuntime stack, ulong completionIdentity)
         {
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
-            for (int i = 0; i < frames.Count; i++)
+            int frameCount = frames.Count;
+            for (int i = 0; i < frameCount; i++)
             {
                 ActionAnimationPlaybackLifecycleFrame frame = frames[i];
                 if (frame.AnimationChannelId != m_ChannelId)
                     continue;
                 ActionSlotSourceUsageKind? usage = null;
-                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                int entryCount = stack.EntryCount;
+                for (int entryIndex = 0; entryIndex < entryCount; entryIndex++)
                 {
                     ref readonly AnimationBlendEntryState entry =
                         ref stack.GetEntryState(entryIndex);

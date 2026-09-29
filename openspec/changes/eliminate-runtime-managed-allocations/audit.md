@@ -1522,3 +1522,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `ReadEntry` 和 `GetEntryState` 从 entry 数组按值返回整份 `AnimationBlendEntryState`；三个 `GetEntryState` 正式调用点只读取 entry identity 与 source 信息，但每次都复制包含 fade clock 的状态。
 - entry 数组读取和 `GetEntryState` 改为 `ref readonly` 返回，三个调用侧绑定只读引用。纯读取属性补充 `readonly` 合同，避免 readonly 接收器触发防御拷贝；内部仍按值消费 entry 的调用保持原拷贝语义。
 - 该改动删除周期 stack 遍历的整份 entry 拷贝；不改变 pending/committed 选择、entry 修改入口、索引校验或异常时机。静态核对 backing entry 数组生命周期、全部 `ReadEntry` 消费点和 readonly 属性不写状态；未编译、未采样，不能声称实测耗时收益。
+
+### AP201 ActionSlot usage 计数定容（2026-09-30，已实施，本轮未编译）
+
+- `ReportUsage` 的 frame 循环条件每次读取 `Frames.Count`，每个 channel 匹配 frame 的 entry 循环又重复读取 `stack.EntryCount`。
+- frame 视图 count 在循环前绑定一次；entry count 在每个 frame 的内层循环前绑定一次。usage 判定、Sample 早退、OutgoingHandoff 后继续查找和 `ReportSlotUsage` 顺序不变。
+- 该改动删除报告循环中的重复 count 属性读取；不新增索引缓存或第二遍遍历。静态核对 `ReportSlotUsage` 只登记 playback 结果、不替换 frame 视图，也不修改 stack entry count；未编译、未采样，不能声称实测耗时收益。

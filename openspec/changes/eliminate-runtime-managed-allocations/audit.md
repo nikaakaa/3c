@@ -591,6 +591,12 @@
 - 删除每个 pass 每次执行前的逐 actor `Array.Clear` 和计数清零；保留 finally 边界清理和容量增长逻辑。pipeline 写入顺序、actor 排序检查、评估调用和异常传播不变。
 - 两个数值域同步修改，静态核对 pass 构造、上一轮 finally、catch 空结果处理、PrepareIngress 填充和 finally 清理；未编译、运行回放或采样。
 
+### AP71 Commit 批内重复清理值类型 Dispositions（2026-09-29，已实施，本轮未编译）
+
+- Fixed 和 Float32 Committer Adapter 在每个 step 前清除上一次 disposition 数组有效范围，finally 再次清除；数组元素是 `readonly struct`，唯一消费者 `SimulationCommitter.Commit` 在同一同步调用内按 count 索引后立即释放，不保存数组引用。
+- 删除两处 `Array.Clear`，保留每 step 写入前计数复位和 finally 计数复位。扩容时只复制上一轮有效数量，新增尾部不会被本轮 count 消费；输出事件数量检查、disposition 去重、排序和提交顺序不变。
+- 两个数值域同步修改，静态核对 `SimulationOutputDisposition` 类型、Adapter 到 Committer 的同步调用、count 构造和异常清理链；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

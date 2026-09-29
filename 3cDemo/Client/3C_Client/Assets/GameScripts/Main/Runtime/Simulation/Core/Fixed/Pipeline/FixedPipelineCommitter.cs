@@ -75,7 +75,6 @@ namespace ThirdPersonSimulation.Fixed
                 for (int stepIndex = 0; stepIndex < batch.Steps.Count; stepIndex++)
                 {
                     SimulationTickResult result = batch.Steps[stepIndex].Result;
-                    Array.Clear(m_StepDispositions, 0, m_StepDispositionCount);
                     m_StepDispositionCount = 0;
                     int outputEventCount = CountOutputEvents(result);
                     EnsureStepDispositionCapacity(outputEventCount);
@@ -94,7 +93,6 @@ namespace ThirdPersonSimulation.Fixed
             }
             finally
             {
-                Array.Clear(m_StepDispositions, 0, m_StepDispositionCount);
                 m_StepDispositionCount = 0;
                 m_DispositionsByEvent.Clear();
             }

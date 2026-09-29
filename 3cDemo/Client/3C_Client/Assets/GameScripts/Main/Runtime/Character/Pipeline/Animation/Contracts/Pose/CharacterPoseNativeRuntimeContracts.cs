@@ -810,7 +810,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FailureCode = failureCode;
             Source = source.Trim();
             Message = message.Trim();
-            Demand = demand;
+            m_Demand = demand;
         }
 
         readonly CharacterPoseNativeFrameLineage m_Lineage;
@@ -819,7 +819,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }
         internal string Message { get; }
-        internal CharacterPoseNativeSourceDemand Demand { get; }
+        readonly CharacterPoseNativeSourceDemand m_Demand;
+        internal ref readonly CharacterPoseNativeSourceDemand Demand => ref m_Demand;
         internal bool IsValid => Lineage.IsValid &&
             CharacterPoseNativeEnumValues.IsValid(Status) &&
             CharacterPoseNativeEnumValues.IsValid(FailureCode) &&

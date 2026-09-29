@@ -600,7 +600,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (!sourceFrame.IsReady ||
                 !m_CommittedDiagnostics.Result.IsCommitted ||
-                m_CommittedDiagnostics.Result.Lineage != sourceFrame.Lineage)
+                !sourceFrame.Lineage.Matches(in m_CommittedDiagnostics.Result.Lineage))
             {
                 throw new InvalidOperationException(
                     "Pose Source committed diagnostics are unavailable.");

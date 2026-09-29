@@ -259,12 +259,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Character Pose prepared source resources are invalid.");
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             m_Bindings = bindings;
         }
 
         readonly CharacterPoseSourceBindingPage m_Bindings;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal bool IsValid =>
             Lineage.IsValid &&
             m_Bindings != null &&
@@ -410,7 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!demand.IsValid ||
                 !preparedResources.IsValid ||
-                preparedResources.Lineage != demand.Lineage ||
+                !demand.Lineage.Matches(in preparedResources.Lineage) ||
                 !readinessPage.IsValid ||
                 readinessPage.CompletionIdentity != demand.Lineage.CompletionIdentity ||
                 actionSources == null ||
@@ -452,7 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 else if (sample.Availability == PresentationPoseSourceAvailability.Pending)
                     pending = true;
             }
-            Demand = demand;
+            m_Demand = demand;
             PreparedResources = preparedResources;
             ActionSources = actionSources;
             ProviderSources = providerSources;
@@ -478,9 +479,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : PresentationPoseSourceFailureReason.None;
         }
 
-        internal CharacterPoseSourceDemand Demand { get; }
+        readonly CharacterPoseSourceDemand m_Demand;
+        internal ref readonly CharacterPoseSourceDemand Demand => ref m_Demand;
         internal CharacterPoseSourcePreparedResources PreparedResources { get; }
-        internal CharacterPoseNativeFrameLineage Lineage => Demand.Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Demand.Lineage;
         internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
             AnimationResolvedPoseSourceSample> ActionSources { get; }
         internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
@@ -494,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsValid =>
             Demand.IsValid &&
             PreparedResources.IsValid &&
-            PreparedResources.Lineage == Demand.Lineage &&
+            Demand.Lineage.Matches(in PreparedResources.Lineage) &&
             ActionSources != null &&
             ProviderSources != null &&
             CurrentReadiness.IsValid &&
@@ -523,13 +525,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Character Pose source frame cannot publish a committed result.",
                     nameof(sourceFrame));
-            Lineage = sourceFrame.Lineage;
+            m_Lineage = sourceFrame.Lineage;
             Availability = sourceFrame.Availability;
             Outcome = sourceFrame.Outcome;
             FailureReason = sourceFrame.FailureReason;
         }
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal PresentationPoseSourceAvailability Availability { get; }
         internal CharacterPoseSourceFrameOutcome Outcome { get; }
         internal PresentationPoseSourceFailureReason FailureReason { get; }
@@ -587,7 +590,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool solverProduced,
             in CharacterFullBodyIkResult fullBodyIk)
         {
-            Lineage = lineage;
+            m_Lineage = lineage;
             Outcome = outcome;
             Availability = availability;
             InvalidReason = invalidReason;
@@ -610,7 +613,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal AnimationPresentationFrameOutcome Outcome { get; }
         internal AnimationPoseAvailability Availability { get; }
         internal AnimationPoseNativeInvalidReason InvalidReason { get; }

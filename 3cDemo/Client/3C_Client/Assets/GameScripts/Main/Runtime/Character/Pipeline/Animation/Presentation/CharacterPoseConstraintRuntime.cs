@@ -275,7 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCommitted &&
             m_CommittedResult.IsCompleted &&
             result.IsCompleted &&
-            m_CommittedResult.Lineage == result.Lineage &&
+            m_CommittedResult.Lineage.Matches(in result.Lineage) &&
             m_CommittedResult.GoalCount == result.GoalCount &&
             m_CommittedResult.SolverProduced == result.SolverProduced &&
             m_CommittedResult.FullBodyIk.AppliedGoalCount ==
@@ -553,7 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             if (!lineage.IsValid ||
                 !m_HasPending ||
-                m_Pending.Lease.Lineage != lease.Lineage ||
+                !lease.Lineage.Matches(in m_Pending.Lease.Lineage) ||
                 !lease.Matches(lineage))
             {
                 throw new InvalidOperationException(
@@ -728,7 +728,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!m_HasPending ||
                 !lease.IsValid ||
                 !m_Pending.Lease.IsValid ||
-                m_Pending.Lease.Lineage != lease.Lineage)
+                !lease.Lineage.Matches(in m_Pending.Lease.Lineage))
             {
                 throw new InvalidOperationException(
                     "Pose Constraint Pending lease is stale.");

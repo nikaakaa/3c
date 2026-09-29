@@ -1324,3 +1324,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Preparation、Evaluation、Publication、Validation result 的 `Lineage` 按值返回整份 identity；graph runtime 在 Validate 和两条 Commit 路径用按值 operator 与 completed lineage 比较。result 构造后同帧只被消费。
 - 四个 result 的 Lineage 改为 readonly 字段加 `ref readonly` 属性；graph runtime 的 5 处 identity 比较改用 `Matches(in lineage)`。result 状态、output、错误文案和异常时机不变。
 - 该改动删除 result 读取和 Validate/Commit 校验的整份 lineage 拷贝；不新增第二 result 路径。静态核对四个构造器、字段集合、全部 graph runtime 比较点和默认/失败结果生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP168 周期 result demand 与 lineage 引用化（2026-09-30，已实施，本轮未编译）
+
+- Native Preparation 的 source demand、Source Frame 的 demand、prepared resources、committed result 和 Constraint result 都按值返回或存储读取；`SourceFrame.Lineage` 还会先复制整份 demand。这些对象构造后同帧只读。
+- 相关 demand/lineage 入口改为 readonly 字段加 `ref readonly` 属性；source、constraint、final publication 和 physical diagnostics 的 10 处 identity 比较改用 `Matches(in lineage)`。请求集合、readiness、goal、输出页和异常文本不变。
+- 该改动删除周期 result 的整份 demand/lineage 读取拷贝；不新增第二数据源或可变路径。静态核对构造赋值、嵌套引用生命周期、10 个新旧比较字段集合和调用边界；未编译、未采样，不能声称实测耗时收益。

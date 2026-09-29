@@ -105,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     m_ConsumedPreparationCount !=
                         m_Demand.Preparations.Count ||
                     !result.IsValid ||
-                    result.Lineage != m_Demand.Lineage)
+                    !m_Demand.Lineage.Matches(in result.Lineage))
                 {
                     throw new ArgumentException(
                         "Pose Source Result does not match the Pending demand.",
@@ -126,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 if (!m_HasDemand ||
                     !m_HasResult ||
                     !m_Result.IsReady ||
-                    m_Result.Lineage != m_Demand.Lineage)
+                    !m_Demand.Lineage.Matches(in m_Result.Lineage))
                 {
                     throw new InvalidOperationException(
                         "Pose Source Pending page is incomplete.");

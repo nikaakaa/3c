@@ -81,7 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal void RequireLease(
                 CharacterPoseNativePublicationFrameLease lease)
             {
-                if (!IsOpen || !lease.IsValid || Lease.Lineage != lease.Lineage)
+                if (!IsOpen || !lease.IsValid ||
+                    !lease.Lineage.Matches(in Lease.Lineage))
                     throw new InvalidOperationException(
                         "Native Final Pose publication lease is stale.");
             }
@@ -237,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Pending.RequireLease(lease);
             if (!evaluation.IsValid ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
-                evaluation.Lineage != lease.Lineage ||
+                !lease.Lineage.Matches(in evaluation.Lineage) ||
                 !(evaluation.Output is CharacterPoseNativeLocalPoseValue local) ||
                 !local.Native.IsValid)
             {

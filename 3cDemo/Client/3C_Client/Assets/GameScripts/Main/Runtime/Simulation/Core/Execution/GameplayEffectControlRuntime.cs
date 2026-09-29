@@ -134,8 +134,6 @@ namespace ThirdPersonSimulation
                     for (int i = 0; i < activeEffects.Count; i++)
                     {
                         TActive active = activeEffects[i];
-                        if (m_Port.FindActiveByHandle(active.Handle) == null)
-                            continue;
                         if (RemovalRequirementMet(active))
                         {
                             RemoveActive(active, GameplayEffectLifecycleKind.Removed, true);

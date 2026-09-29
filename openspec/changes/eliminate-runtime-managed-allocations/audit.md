@@ -783,6 +783,12 @@
 - 删除重复判断，保留 attributes、active effects、periods、journal、change cursor 和 lifecycle revisions 的原判断顺序。全部未变时继续直接返回 baseline，任一变化时继续走 CreateChangedFrom，冻结对象和脏标语义不变。
 - 每次 Freeze 快速路径少一次布尔判断。静态核对 Freeze 成功、恢复后提交和异常保存点调用链，以及两域差异检查；未编译、运行回放或采样。
 
+### AP103 GameplayEffect Advance 重复扫描 Active 存在性（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 共用的 GameplayEffect Advance 先把当前 active 复制到 scratch 快照，再对每个快照项调用 FindActiveByHandle 做全表扫描。快照建立后，本轮循环内只会移除当前项，Additional effect 全部入队并在快照循环后的 FlushAdditional 执行，因此快照项不会因其它项先失效而变脏。
+- 删除每个 active 开始前的存在性扫描；RemoveActive 保留按 handle 查找的唯一存在边界，移除目标缺失时继续跳过。Removal、ongoing/inhibited、period、while-active、expiration 和异常回滚顺序不变。
+- 每次 Advance 从 active 数量级全表扫描收敛为只在实际移除时检查一次；效果越多收益越大。静态核对两域 AcquireActiveEffects 快照所有权、RemoveActive 调用链、Additional 队列时机和差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

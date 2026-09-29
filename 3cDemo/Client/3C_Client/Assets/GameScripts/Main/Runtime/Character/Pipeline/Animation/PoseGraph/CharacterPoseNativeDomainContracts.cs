@@ -48,9 +48,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Pose Action command frame is already open.");
             m_Lease = m_Inbox.BeginRead();
             m_Commands.Clear();
-            for (int i = 0; i < m_Inbox.Count; i++)
+            int pendingCount = m_Inbox.PendingCount;
+            for (int i = 0; i < pendingCount; i++)
             {
-                ActionAnimationPlaybackCommand command = m_Inbox[i].Command;
+                ref readonly ActionPlaybackInboxEntry entry =
+                    ref m_Inbox.ElementAt(i);
+                ActionAnimationPlaybackCommand command = entry.Command;
                 m_Commands.Add(in command);
             }
             m_FrameIdentity = frameIdentity;

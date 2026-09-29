@@ -1546,3 +1546,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine source 的 active-state 准备、evaluation 校验和求值循环都重复读取 `m_ActiveStateCount`；准备收集和 child request 丢失校验还逐项重复读取 request list count。
 - `SynchronizeTransition` 或 `CollectActiveStates` 收敛 active 集合后绑定 state count；每个 child demand 绑定 request count。state 顺序、request 复制、丢失异常、求值聚合和失败清理顺序不变。
 - 该改动删除周期 active/request 循环中的重复 count 属性读取；不复制 demand 或新增请求索引。静态核对子图 Prepare/Evaluate 不修改 source active count，request list 在同一 demand 内不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP205 Action command inbox 元素引用化（2026-09-30，已实施，本轮未编译）
+
+- Action command frame 收集通过 `IReadOnlyList` 索引，每条命令先把整个 inbox entry 复制为临时值再读取 command；读租约提交压缩又先复制 entry 到局部再搬回数组。
+- inbox 增加正式 `ElementAt` 只读元素入口；command source 绑定只读 entry 后只复制 command 到既有 frame 快照，commit 直接比较数组元素 sequence 并做一次目标搬运。pending count、命令顺序、watermark 过滤、容量和 lease 协议不变。
+- 该改动删除命令收集与租约压缩中的 entry 中间拷贝；不删除 frame command 快照，因为现有 Commit 成功后清空快照，直接外借 inbox 会改变开放帧命令生命周期。静态核对唯一正式收集入口、数组生命周期和写入仍受 active read lease 禁止；未编译、未采样，不能声称实测耗时收益。

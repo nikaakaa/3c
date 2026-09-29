@@ -60,6 +60,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             (uint)index < (uint)m_Count
                 ? m_Entries[index]
                 : throw new ArgumentOutOfRangeException(nameof(index));
+
+        internal ref readonly ActionPlaybackInboxEntry ElementAt(int index)
+        {
+            if ((uint)index >= (uint)m_Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ref m_Entries[index];
+        }
+
         public bool HasActiveReadLease => m_ActiveLease.IsValid;
 
         internal int Capacity => m_Entries.Length;
@@ -217,10 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int write = 0;
             for (int i = 0; i < m_Count; i++)
             {
-                ActionPlaybackInboxEntry entry = m_Entries[i];
-                if (entry.Sequence <= lease.SequenceHighWatermark)
+                if (m_Entries[i].Sequence <= lease.SequenceHighWatermark)
                     continue;
-                m_Entries[write++] = entry;
+                m_Entries[write++] = m_Entries[i];
             }
             if (write < m_Count)
                 Array.Clear(m_Entries, write, m_Count - write);

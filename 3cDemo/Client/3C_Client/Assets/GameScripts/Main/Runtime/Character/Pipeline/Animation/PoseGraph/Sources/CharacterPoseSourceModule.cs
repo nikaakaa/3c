@@ -543,9 +543,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourceBinding PrepareNativeClipPlayer(
             in CharacterPoseSourceFrameLease lease,
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId,
             int bindingIndex)
@@ -581,9 +581,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourceBinding PrepareNativeBlendSpacePlayer(
             in CharacterPoseSourceFrameLease lease,
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId,
             int bindingIndex)
@@ -872,9 +872,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         void PrepareActionAndConnect(
-            AnimationPoseSampleRequest request,
-            AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId poseNodeId)
+            in AnimationPoseSampleRequest request,
+            in AnimationPoseSourceCaptureBinding capture,
+            in PoseNodeId poseNodeId)
         {
             IAnimationPoseSamplingBackend backend =
                 ResolveBackend(request.Clips, request.SourceId, poseNodeId);
@@ -902,10 +902,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         void PrepareProviderAndConnect(
-            AnimationPoseSampleRequest request,
+            in AnimationPoseSampleRequest request,
             PresentationPoseSourceSample sample,
-            AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId poseNodeId)
+            in AnimationPoseSourceCaptureBinding capture,
+            in PoseNodeId poseNodeId)
         {
             bool committed = m_PhysicalSources.ContainsCommitted(
                 request.SourceId,
@@ -932,12 +932,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         void PrepareDirectAndConnect(
             int bindingIndex,
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             PresentationPoseSourceSample sample,
-            AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId poseNodeId)
+            in AnimationPoseSourceCaptureBinding capture,
+            in PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =
                 PreparePlayerAndConnect(
@@ -954,11 +954,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         void PrepareClipAndConnect(
             int bindingIndex,
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId poseNodeId)
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationPoseSourceCaptureBinding capture,
+            in PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =
                 PreparePlayerAndConnect(
@@ -975,11 +975,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         void PrepareBlendSpaceAndConnect(
             int bindingIndex,
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId poseNodeId)
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationPoseSourceCaptureBinding capture,
+            in PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =
                 PreparePlayerAndConnect(
@@ -997,9 +997,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         CharacterPoseSourceBinding PreparePlayerAndConnect(
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
                 clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
@@ -1346,8 +1346,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in PoseNodeId poseNodeId,
             int sourceOwnerIndex,
             IAnimationPoseSamplingBackend backend,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
         {
             CharacterAnimationSamplingBackendKind backendKind =
                 backend == m_NativeClipBackend
@@ -1365,31 +1365,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         int RequireResourceCatalogIndex(
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
         {
             if (clips.Count > 0)
             {
                 for (int i = 0; i < clips.Count; i++)
                 {
-                    if (clips[i].IsAcl)
-                        return clips[i].ResourceCatalogIndex;
+                    ref readonly ClipSamplePlan sample = ref clips.ElementAt(i);
+                    if (sample.IsAcl)
+                        return sample.ResourceCatalogIndex;
                 }
             }
             for (int i = 0; i < catalog.Count; i++)
             {
-                if (catalog[i].IsAcl)
-                    return catalog[i].ResourceCatalogIndex;
+                ref readonly AnimationPoseSourceClipBinding binding =
+                    ref catalog.ElementAt(i);
+                if (binding.IsAcl)
+                    return binding.ResourceCatalogIndex;
             }
             throw new InvalidOperationException(
                 "ACL pose source has no registered resource catalog entry.");
         }
 
         IAnimationPoseSamplingBackend ResolveBackend(
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             in AnimationPoseSourceId sourceId,
             in PoseNodeId poseNodeId,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog = default)
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog = default)
         {
             if (m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId))
             {

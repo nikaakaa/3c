@@ -1624,3 +1624,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPoseSourceCatalog.Build` 按值接收 clip sample buffer，再在每个 clip 循环把 `ClipSamplePlan` 复制为局部，随后只读取 validity、binding index、ACL 字段和 Clip。
 - 正式构建入口改为 `in` 接收同一 buffer，循环用 `ElementAt` 绑定只读元素引用。clip 数校验、数组分配、lease 检查顺序、binding 构造和异常文本不变。
 - 该改动删除 source catalog 周期构建链的 buffer 边界拷贝和逐项 plan 拷贝；输出 catalog 仍按本次构建新建数组。静态核对唯一 Build 实现、八个调用点兼容只读实参、引用生命周期覆盖循环和 `ClipSamplePlan` 只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP218 source preparation 分发引用化（2026-09-30，已实施，本轮未编译）
+
+- preparation 本体已通过 `ref readonly` 元素直达，但 `Request`、`SourceId`、`Clips`、`Capture` 和 `PoseNodeId` 属性每次读取都复制结构；Source Module 的 action/provider/player 分发和 clip resource 查找又按值接收这些结构。
+- preparation 五个结构属性改为 readonly backing field 的只读引用；Source Module 的 preparation 分发、Native Clip/BlendSpace 入口、`PreparePlayerAndConnect`、`RegisterSource`、backend resolve 和 resource index 查找改为 `in`。resource index 查找用 `ElementAt` 绑定 clip/binding 元素引用。
+- 该改动删除 consume 后分发链的重复 preparation 字段读取拷贝。`Register`、release 快照、readiness target 构造和 backend interface 的既有存储或按值边界保留；pending 选择、binding identity、lease 校验、异常文本和 Commit/Discard 不变。静态核对引用指向同一 backing preparation、引用生命周期覆盖分发调用、新 `in` 方法本体只读；未编译、未采样，不能声称实测耗时收益。

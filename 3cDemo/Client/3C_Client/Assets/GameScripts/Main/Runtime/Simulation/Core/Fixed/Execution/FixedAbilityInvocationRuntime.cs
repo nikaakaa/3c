@@ -181,8 +181,6 @@ namespace ThirdPersonSimulation.Fixed
         public void AddTimelineMotionWarp(AbilityTimelineLogicMotionWarp warp)
         {
             RequireEvaluation();
-            if (warp.AbilityId != AbilityId)
-                throw new InvalidOperationException("Timeline MotionWarp belongs to a different Ability invocation.");
             m_Workspace.TimelineMotionWarps.Add(warp);
         }
 

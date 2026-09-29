@@ -58,6 +58,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterControlMotionRuntime m_ControlMotion;
         readonly FixedMotionContributionScratch m_MotionContributions = new FixedMotionContributionScratch();
         readonly FixedAbilityInvocationRuntime[] m_Invocations;
+        readonly Dictionary<CharacterSkillId, FixedAbilityInvocationRuntime> m_InvocationByAbility;
         readonly Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_ActionRuntimes;
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
@@ -107,6 +108,8 @@ namespace ThirdPersonSimulation.Fixed
                 actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
             m_ActionState = new FixedCharacterActionRuntimeState(actionCapacity);
             m_Invocations = new FixedAbilityInvocationRuntime[AbilityInstallations.Installations.Count];
+            m_InvocationByAbility = new Dictionary<CharacterSkillId, FixedAbilityInvocationRuntime>(
+                AbilityInstallations.Installations.Count);
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);
             m_Workspaces = new FixedAbilityExecutionWorkspace[AbilityInstallations.Installations.Count];
@@ -141,6 +144,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_Workspaces[i],
                     installation.Control,
                     serviceFactory);
+                m_InvocationByAbility.Add(installation.Data.AbilityId, m_Invocations[i]);
             }
 
             m_CharacterTraceSink = new FixedCharacterTraceSink(m_EvaluationOutput.CharacterTrace);
@@ -169,6 +173,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         internal FixedMotionContributionScratch MotionContributions => m_MotionContributions;
         internal FixedAbilityInvocationRuntime[] Invocations => m_Invocations;
+        internal FixedAbilityInvocationRuntime GetInvocation(CharacterSkillId abilityId) => m_InvocationByAbility[abilityId];
         internal Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal FixedAbilityExecutionWorkspace[] Workspaces => m_Workspaces;

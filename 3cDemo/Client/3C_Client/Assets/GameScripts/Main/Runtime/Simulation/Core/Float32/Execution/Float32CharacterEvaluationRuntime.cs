@@ -153,15 +153,10 @@ namespace ThirdPersonSimulation
                     actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
                         timelineAdvances[advanceIndex].RuntimeHandle,
                         timelineLogicMotionWarps);
-                    for (int i = 0; i < invocationCount; i++)
+                    for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
                     {
-                        Float32AbilityInvocationRuntime invocation = invocations[i];
-                        for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
-                        {
-                            if (timelineLogicMotionWarps[warpIndex].AbilityId != invocation.AbilityId)
-                                continue;
-                            invocation.AddTimelineMotionWarp(timelineLogicMotionWarps[warpIndex]);
-                        }
+                        AbilityTimelineLogicMotionWarp warp = timelineLogicMotionWarps[warpIndex];
+                        actor.GetInvocation(warp.AbilityId).AddTimelineMotionWarp(warp);
                     }
                 }
 

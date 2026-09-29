@@ -843,6 +843,13 @@
 - 两域 GameplayEffectState 用同一个 List 保存 active effects，FindActiveByHandle、FindActiveByInstance、AddActive 去重和 attribute modifier 校验都反复全表扫描；active handle 与 instance 是正式唯一身份。
 - 为每个 state 实例增加 handle 和 instance 两个生命周期字典，Add/Remove 同步维护；Restore 替换 active list 后重建索引，ClearCollections 一并清理。查找改为字典访问，Add 去重不再两次查找。
 - Active 查找和 Advance 内的 modifier/period 校验从 effect 数量级收敛为一次 hash 查找；排序输出、Remove 语义、Restore/Validate 闭环和重复身份异常不变。静态核对两域 list 唯一写入点、Restore/Clear/Add/Remove、modifier 和 period 消费；未编译、运行回放或采样。
+
+### AP114 Timeline MotionWarp ability 交叉扫描（2026-09-29，已实施，本轮未编译）
+
+- 两域 Character Evaluation 复制每条 pending Timeline MotionWarp 后，先遍历全部 Ability invocation，再对每条 warp 比较 `AbilityId`，形成 invocation 数乘 warp 数的周期扫描。pending warp 由同一 actor 的 Timeline active playback 生成，其 AbilityId 来自启动该 playback 的 Action context；Timeline operation 又只在该 Ability invocation 执行时用当前 Action context 启动。Actor binding 构造期为每个已安装 Ability 建立唯一 invocation。
+- 两域 binding 新增构造期 `AbilityId -> invocation` 字典。周期复制后按 warp 的 `AbilityId` 直接取得 invocation 并加入 workspace；未知 identity 沿字典失败，不添加静默 fallback。`AddTimelineMotionWarp` 只保留 evaluation 生命周期边界，删除调用方已由同一构造期安装表保证的重复 ability 比较。
+- 每个 pending warp 从 invocation 数量级比较收敛为一次 Ordinal identity 哈希查找；Copy、Add 和应用顺序不变。静态核对 Timeline 启动、active playback provenance、pending 复制、唯一安装表和两域差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

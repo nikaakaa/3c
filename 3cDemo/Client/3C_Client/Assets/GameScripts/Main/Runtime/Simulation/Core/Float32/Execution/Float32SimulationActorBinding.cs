@@ -57,6 +57,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterControlMotionRuntime m_ControlMotion;
         readonly Float32MotionContributionScratch m_MotionContributions = new Float32MotionContributionScratch();
         readonly Float32AbilityInvocationRuntime[] m_Invocations;
+        readonly Dictionary<CharacterSkillId, Float32AbilityInvocationRuntime> m_InvocationByAbility;
         readonly Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_ActionRuntimes;
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
@@ -105,6 +106,8 @@ namespace ThirdPersonSimulation
                 actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
             m_ActionState = new Float32CharacterActionRuntimeState(actionCapacity);
             m_Invocations = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
+            m_InvocationByAbility = new Dictionary<CharacterSkillId, Float32AbilityInvocationRuntime>(
+                AbilityInstallations.Installations.Count);
             m_ActionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>(
                 AbilityInstallations.Installations.Count);
             m_Workspaces = new Float32AbilityExecutionWorkspace[AbilityInstallations.Installations.Count];
@@ -135,6 +138,7 @@ namespace ThirdPersonSimulation
                     m_Workspaces[i],
                     installation.Control,
                     serviceFactory);
+                m_InvocationByAbility.Add(installation.Data.AbilityId, m_Invocations[i]);
             }
 
             m_CharacterTraceSink = new Float32CharacterTraceSink(m_EvaluationOutput.CharacterTrace);
@@ -162,6 +166,7 @@ namespace ThirdPersonSimulation
         internal Float32CharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
         internal Float32AbilityInvocationRuntime[] Invocations => m_Invocations;
+        internal Float32AbilityInvocationRuntime GetInvocation(CharacterSkillId abilityId) => m_InvocationByAbility[abilityId];
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal Float32AbilityExecutionWorkspace[] Workspaces => m_Workspaces;

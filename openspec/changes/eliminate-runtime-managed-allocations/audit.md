@@ -1276,3 +1276,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Constraint 四条输出链和 RootOrientationWarp 仍把 `CurrentInput` 复制到按值局部变量；RootOrientationWarp 还两次直接读取 FactFrame。frame 在同一次输出求值内不变。
 - 这些调用点改为 `ref readonly` 局部引用，随后沿原顺序消费 Parameter/Fact frame 和 scalar；Foot Placement、Pose Bone IK Goals、Goal Assembler、Full Body IK 和 root warp 的校验、计算、输出页与 Commit 顺序不变。
 - 该改动删除 handler 输出链的整份 frame input 拷贝；不依赖或修改其他窗口的 GraphEvaluator。静态核对 AP158 readonly 引用入口、各局部使用字段和原有分支顺序；未编译、未采样，不能声称实测耗时收益。
+
+### AP160 StateMachine active state 帧内定容（2026-09-30，已实施，本轮未编译）
+
+- StateMachine 在 phase 访问、PrepareEvaluation、Evaluate 和 Commit 重复执行 `CollectActiveStates`；同一帧 pending state/transition 在 PrepareFrame 完成推进后不再变化，重复执行只重复 dictionary 查找和 active slot 写入。
+- PrepareFrame 在 pending state/transition 完成本帧推进后收集一次 active states，并把 count 与 slots 作为帧内正式状态；phase、evaluation 和 commit 直接消费同一数组。discard/commit 清理子帧时同步清空 count。
+- 该改动删除同一打开帧内跨阶段的重复 active state 解析；不新增 fallback 或第二数据源。静态核对 pending state/transition 的全部修改点、PrepareFrame 收集时机、子帧 open/discard 生命周期和 phase 访问时序；未编译、未采样，不能声称实测耗时收益。

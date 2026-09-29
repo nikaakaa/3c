@@ -159,6 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Dictionary<PoseStateId, float> m_StateDurations;
         readonly Dictionary<PoseStateId, CharacterPoseStateTransition[]> m_TransitionsByState;
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
+        int m_ActiveStateCount;
         FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest> m_SourceRequests;
         readonly Dictionary<CharacterPoseTransitionRuleGraph,
             Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> m_RuleOperationTables;
@@ -195,8 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!m_FrameOpen)
                     return 0;
                 int count = 0;
-                int stateCount = CollectActiveStates();
-                for (int i = 0; i < stateCount; i++)
+                for (int i = 0; i < m_ActiveStateCount; i++)
                     if (m_ActiveStates[i].FrameOpen)
                         count += m_ActiveStates[i].Graph.PhaseSources.PhasePlayerCount;
                 return count;
@@ -205,8 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public Presentation.AnimationClipPlayerRuntime ReadPhasePlayer(int index)
         {
-            int stateCount = CollectActiveStates();
-            for (int i = 0; i < stateCount; i++)
+            for (int i = 0; i < m_ActiveStateCount; i++)
             {
                 StateRuntime state = m_ActiveStates[i];
                 if (!state.FrameOpen)
@@ -452,8 +451,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             try
             {
                 m_SourceRequests.Clear();
-                int activeStateCount = CollectActiveStates();
-                for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
+                CollectActiveStates();
+                for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
                 {
                     StateRuntime state = m_ActiveStates[activeIndex];
                     bool entering = state.Graph != null &&
@@ -498,9 +497,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
-            int activeStateCount = CollectActiveStates();
-            SynchronizeTransition(activeStateCount);
-            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
+            SynchronizeTransition(m_ActiveStateCount);
+            for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
                 for (int requestIndex = 0;
@@ -535,8 +533,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeLocalPoseValue firstValue = null;
             CharacterPoseNativeLocalPoseValue secondValue = null;
             int valueCount = 0;
-            int activeStateCount = CollectActiveStates();
-            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
+            for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
                 CharacterPoseNativeSourceDemand demand = state.Preparation.Demand;
@@ -592,8 +589,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame(runtime, in lineage);
-            int activeStateCount = CollectActiveStates();
-            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
+            for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
                 state.Graph.ValidatePending(state.Lease, in state.Evaluation);
@@ -682,7 +678,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw failure;
         }
 
-        int CollectActiveStates()
+        void CollectActiveStates()
         {
             StateRuntime current = RequireState(m_PendingState);
             m_ActiveStates[0] = current;
@@ -693,10 +689,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!ReferenceEquals(current, target))
                 {
                     m_ActiveStates[1] = target;
-                    return 2;
+                    m_ActiveStateCount = 2;
+                    return;
                 }
             }
-            return 1;
+            m_ActiveStateCount = 1;
         }
 
         StateRuntime RequireState(PoseStateId stateId)
@@ -765,6 +762,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     state.Evaluation = default;
                 }
             }
+            m_ActiveStateCount = 0;
         }
 
         void ClearChildFrames()
@@ -776,6 +774,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 state.Preparation = default;
                 state.Evaluation = default;
             }
+            m_ActiveStateCount = 0;
         }
 
         void CopyCommittedState()

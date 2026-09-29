@@ -253,12 +253,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             coverage = default;
             if (!IsGroundRequestValid(in request))
                 return 0;
+            Vector3 origin = request.Origin;
+            Vector3 direction = request.Direction.normalized;
+            float maximumDistance = request.MaximumDistance;
+            float supportMaximumDistance = request.SupportMaximumDistance;
             int count = m_PhysicsScene.SphereCast(
-                request.Origin,
+                origin,
                 request.Radius,
-                request.Direction.normalized,
+                direction,
                 m_LandingHits,
-                request.MaximumDistance,
+                maximumDistance,
                 request.LayerMask,
                 QueryTriggerInteraction.Ignore);
             if (count >= m_LandingHits.Length)
@@ -269,9 +273,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return ResolveSupportCandidates(
                 m_LandingHits,
                 count,
-                request.Origin,
-                request.Direction.normalized,
-                request.SupportMaximumDistance,
+                origin,
+                direction,
+                supportMaximumDistance,
                 request.MinimumGroundNormalDot,
                 out coverage);
         }
@@ -434,12 +438,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     default);
             }
+            Vector3 origin = request.Origin;
+            Vector3 direction = request.Direction;
+            float maximumDistance = request.MaximumDistance;
+            float supportMaximumDistance = request.SupportMaximumDistance;
             int count = m_PhysicsScene.SphereCast(
-                request.Origin,
+                origin,
                 request.Radius,
-                request.Direction,
+                direction,
                 m_CurrentSupportHits,
-                request.MaximumDistance,
+                maximumDistance,
                 request.LayerMask,
                 QueryTriggerInteraction.Ignore);
             if (count >= m_CurrentSupportHits.Length)
@@ -454,9 +462,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int validCount = ResolveSupportCandidates(
                 m_CurrentSupportHits,
                 count,
-                request.Origin,
-                request.Direction,
-                request.SupportMaximumDistance,
+                origin,
+                direction,
+                supportMaximumDistance,
                 request.MinimumGroundNormalDot,
                 out CharacterFootSupportQueryDiagnostics coverage);
             if (validCount == 0)

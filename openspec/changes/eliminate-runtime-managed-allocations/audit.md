@@ -1985,3 +1985,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot state evaluation 的 Stride 和 SoleSupportQuery 自动属性每次读取复制完整 stride request 或 sole support query；placement request 构建会读取 stride，foot support 求解会读取 sole query。
 - 两个结构属性改为 backing field 只读引用，构造入参改为 `in`。request 构建继续显式转发 stride，support query 在 readonly struct 上执行原有查询。
 - 该改动删除每脚 state evaluation 进入 request 和 current support 求解的结构重复拷贝。静态核对两类结构为 readonly struct、evaluation 生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP278 Support query 派生值合并读取（2026-09-30，已实施，本轮未编译）
+
+- Ground query 的 `QueryAll` 每次重复读取 origin、maximum/support distance，并对同一 direction 做两次归一化；CurrentSupport `Query` 也多次调用 probe request 的派生 origin、direction 和距离属性。
+- 查询校验后把这些派生值绑定到局部，SphereCast 和候选筛选复用同一份数据。查询容量判断、direction 单位化合同、命中筛选顺序和 diagnostics 不变。
+- 该改动删除每次 support/landing 查询的重复向量归一化和派生距离计算。静态核对 request 为 readonly struct、局部生命周期覆盖同一次查询、消费只读；未编译、未采样，不能声称实测耗时收益。

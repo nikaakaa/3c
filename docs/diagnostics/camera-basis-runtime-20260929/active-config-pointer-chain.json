@@ -1,0 +1,284 @@
+{
+  "singleton_slot_rva": "0x55b3ce8",
+  "first": "0x50004e3f808",
+  "klass": "0x50001a22d98",
+  "context": "0x50004e3fa68",
+  "static_type": "0x50001a22d98",
+  "storage": "0x700146292f0",
+  "player": "0x70014daca80",
+  "cached_key_address": "0x70021223f40",
+  "cached_key": "MainCity_Normal",
+  "cached_config": "0x70015df1e00",
+  "config_dirty": 0,
+  "config_klass": "0x50003e0cbc0",
+  "current_key_address": "0x70021223f40",
+  "current_key": "MainCity_Normal",
+  "default_key_slot": "0x5815f30",
+  "default_key_address": "0x70015e22a40",
+  "default_key": "Default_Normal",
+  "session": "829",
+  "config_type": "MoleMole.CameraModuleAvatarDataConfigExt",
+  "configuration_source": "D:\\ZZZ_Dump\\output\\corin_replication\\replication-guide\\analysis\\camera-data\\Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json",
+  "configuration_source_sha256": "fa016f5e7fa792308ce4ee3164d3d070e4126dcb6fb1bc38dd205d085fb230f3",
+  "scalar_readback": [
+    {
+      "name": "NearClipPlane",
+      "offset": "0x10",
+      "actual": 0.029999999329447746,
+      "main_city_value": 0.029999999329447746,
+      "matches": true
+    },
+    {
+      "name": "FarClipPlane",
+      "offset": "0x14",
+      "actual": 5000.0,
+      "main_city_value": 5000.0,
+      "matches": true
+    },
+    {
+      "name": "CAMERA_LOCATE_RADIUS",
+      "offset": "0x20",
+      "actual": 2.75,
+      "main_city_value": 2.75,
+      "matches": true
+    },
+    {
+      "name": "ELEVATION_ANGLE",
+      "offset": "0x24",
+      "actual": 0.699999988079071,
+      "main_city_value": 0.699999988079071,
+      "matches": true
+    },
+    {
+      "name": "ROTATE_STATETRANSITION_TIME",
+      "offset": "0x30",
+      "actual": 3.0,
+      "main_city_value": 3.0,
+      "matches": true
+    },
+    {
+      "name": "CHANGEAVATAR_STATETRANSITION_TIME",
+      "offset": "0x40",
+      "actual": 0.30000001192092896,
+      "main_city_value": 0.30000001192092896,
+      "matches": true
+    },
+    {
+      "name": "MUTE_DELAY_USING",
+      "offset": "0x50",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "DEFAULT_SMOOTH_TIME",
+      "offset": "0x54",
+      "actual": 0.15000000596046448,
+      "main_city_value": 0.15000000596046448,
+      "matches": true
+    },
+    {
+      "name": "DELAY_ISAUTOCHANGECAMERASTATE",
+      "offset": "0x58",
+      "actual": true,
+      "main_city_value": true,
+      "matches": true
+    },
+    {
+      "name": "DELAY_ISCHANGEFOLLOWANIM",
+      "offset": "0x59",
+      "actual": true,
+      "main_city_value": true,
+      "matches": true
+    },
+    {
+      "name": "DELAY_SPEED_SMOOTH_TIME",
+      "offset": "0x70",
+      "actual": 0.009999999776482582,
+      "main_city_value": 0.009999999776482582,
+      "matches": true
+    },
+    {
+      "name": "camUpVelocityY",
+      "offset": "0x80",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camUpDumperY",
+      "offset": "0x84",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camUpDumperTimer",
+      "offset": "0x88",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camDropVelocityY",
+      "offset": "0x98",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camDropDumperY",
+      "offset": "0x9c",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camDropDumperTimer",
+      "offset": "0xa0",
+      "actual": 0.0,
+      "main_city_value": 0.0,
+      "matches": true
+    },
+    {
+      "name": "camOverAxisProtectRadius",
+      "offset": "0xb0",
+      "actual": 0.20000000298023224,
+      "main_city_value": 0.20000000298023224,
+      "matches": true
+    },
+    {
+      "name": "ENABLE_CAMERA_STATE_OVERRIDE",
+      "offset": "0xb4",
+      "actual": true,
+      "main_city_value": true,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_ZOOM",
+      "offset": "0xbc",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_SHAKE",
+      "offset": "0xbd",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_SHAKE_ADVANCED_PROCESS",
+      "offset": "0xbe",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_STRETCH",
+      "offset": "0xbf",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_STRETCH_END_AUTO_END_PITCH",
+      "offset": "0xc0",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    },
+    {
+      "name": "MUTE_CAMERA_COLLIDER",
+      "offset": "0xc1",
+      "actual": false,
+      "main_city_value": false,
+      "matches": true
+    }
+  ],
+  "branch_bytes": [
+    {
+      "instruction": "0x101d7ea9",
+      "byte_rva": "0x5896b19",
+      "snapshot_value": 1
+    },
+    {
+      "instruction": "0x101d7eb2",
+      "byte_rva": "0x53a7fde",
+      "snapshot_value": 0
+    },
+    {
+      "instruction": "0x101d7ebf",
+      "byte_rva": "0x5374dd4",
+      "snapshot_value": 0
+    },
+    {
+      "instruction": "0x101d7ef5",
+      "byte_rva": "0x53a7fde",
+      "snapshot_value": 0
+    },
+    {
+      "instruction": "0x1229d1da",
+      "byte_rva": "0x53a805b",
+      "snapshot_value": 0
+    },
+    {
+      "instruction": "0x1229d217",
+      "byte_rva": "0x58528db",
+      "snapshot_value": 1
+    }
+  ],
+  "conclusion": "829当时显式选择MainCity_Normal，缓存有效且缓存键一致。原作在未指定场景键时返回Default_Normal；这证明默认键来源，不证明829处于可琳战斗场景。",
+  "default_normal_difference_fields": [
+    "NearClipPlane",
+    "FarClipPlane",
+    "CAMERA_LOCATE_RADIUS",
+    "ELEVATION_ANGLE",
+    "DEFAULTSPHEREDATA",
+    "DELAYDATAS",
+    "DELAY_CustomBlendDatas",
+    "DragConfig",
+    "camUpVelocityY",
+    "camUpDumperY",
+    "camUpDumperTimer",
+    "CamUpDumperCurve",
+    "camDropVelocityY",
+    "camDropDumperY",
+    "camDropDumperTimer",
+    "CamDropDumperCurve",
+    "ENABLE_CAMERA_STATE_OVERRIDE",
+    "OverrideInlevelCameraState",
+    "CinemachineCollisionConfig"
+  ],
+  "evidence_files": [
+    {
+      "path": "active-config-host-getter.json",
+      "sha256": "3ffb36d1dcce3b5feaab035397ba45a38e87d45890227a959f7dbde2f140fedb"
+    },
+    {
+      "path": "active-config-player-getter.json",
+      "sha256": "9ea1c0cc99a00f16b4ff384d6fd39eb78a8bf3526ad57d6504e108b0b672b7d0"
+    },
+    {
+      "path": "active-config-key-getter.json",
+      "sha256": "8e0bf042405ff3a1a429a18ceb6af933bea83710eff3c9b50651823e2775c330"
+    },
+    {
+      "path": "active-config-dictionary-lookup.json",
+      "sha256": "f41c71bafadb5e2855895786343c468fc692724a3c12452c2c02b83f3f95715f"
+    },
+    {
+      "path": "camera-module-config-type.json",
+      "sha256": "9e6eacfecd50e862a34914acc463dc38ed6ffbe3cd0964910729d582f801866d"
+    },
+    {
+      "path": "active-config-runtime-type.json",
+      "sha256": "041d80eeb3bb0aeb1bd483a6d94101b153b1609c13e44205066c783e20cf96d2"
+    }
+  ],
+  "config_base_type": "MoleMole.CameraModuleAvatarDataConfig",
+  "config_inherits_expected_base": true,
+  "config_runtime_klass_matches": true,
+  "branch_byte_interpretation": "0x5896b19和0x58528db为初始化标志，值1；取键/配置查询的替换分支0x53a7fde、0x5374dd4、0x53a805b均为0。"
+}

@@ -449,6 +449,13 @@
 - 容量不足/溢出仍在修改主缓冲、Position、Length 前失败；覆盖已有内容时 TrackLength 仍保留原最大长度，长度前缀回填沿原 Position 恢复逻辑。WriteDouble 的有限性与负零处理、UTF-8 分块编码、Raw 写入、Reset、ToArray 和快照所有权均保持，不改协议版本。
 - 静态逐方法对照旧路径的写入宽度、容量检查与状态更新顺序，差异检查通过；未编译、执行字节对比或采样，实际 JIT/IL2CPP 是否已有消除中间复制及本次耗时收益未知。
 
+### AP52 KCC 每批重复比较同一个世界状态对象（2026-09-29，已实施，未运行）
+
+- ResolveBatch 使用 StateEquals 比较 request.BeforeWorldState 与 m_Current；WorldSolveBatchRequest 保留传入 WorldSimulationState 对象，不克隆。即使两者为同一实例，原实现仍逐字段比较身份、逐字节比较 SolverStatePayload，再逐角色比较所有定点 Body 字段。
+- 保留空对象返回false，在此之后对 ReferenceEquals 成立的状态直接返回true；这是现有固定数值、数组快照比较的自反关系，不保存跨 Tick 的校验结果。不同实例仍执行全部原有身份、角色数量、payload 及 BodyEquals 比较。请求与绑定名单、KCC 状态名单、能力和几何校验保持。
+- payload 比较使用项目已使用的 ReadOnlySpan.SequenceEqual，删除唯一调用的手写逐字节 BytesEqual；长度及内容相等规则不变，不新增缓存或数组。没有将仅哈希相等、相同Tick或同版本当成状态相等。
+- 同实例路径省去随角色和序列化字节数增长的重复比较，不据源码推断实际命中率。静态核对状态持有方式、固定 Body 相等字段、空值分支和不同实例路径；未编译、回放或采样，未更改状态隔离、恢复校验和脚步预测。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

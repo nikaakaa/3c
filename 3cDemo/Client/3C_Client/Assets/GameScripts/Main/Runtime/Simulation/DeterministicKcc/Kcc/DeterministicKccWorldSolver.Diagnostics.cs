@@ -230,26 +230,18 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         static bool StateEquals(WorldSimulationState left, WorldSimulationState right)
         {
-            if (left == null || right == null || left.NumericProfile != right.NumericProfile ||
+            if (left == null || right == null)
+                return false;
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left.NumericProfile != right.NumericProfile ||
                 !left.SolverId.Equals(right.SolverId) || !string.Equals(left.SolverVersion, right.SolverVersion, StringComparison.Ordinal) ||
                 !left.WorldRevision.Equals(right.WorldRevision) || left.PersistenceMode != right.PersistenceMode ||
-                left.Bodies.Count != right.Bodies.Count || !BytesEqual(left.SolverStatePayload.Span, right.SolverStatePayload.Span))
+                left.Bodies.Count != right.Bodies.Count || !left.SolverStatePayload.Span.SequenceEqual(right.SolverStatePayload.Span))
                 return false;
             for (int i = 0; i < left.Bodies.Count; i++)
             {
                 if (!WorldSolveBatchRequest.BodyEquals(left.Bodies[i], right.Bodies[i]))
-                    return false;
-            }
-            return true;
-        }
-
-        static bool BytesEqual(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right)
-        {
-            if (left.Length != right.Length)
-                return false;
-            for (int i = 0; i < left.Length; i++)
-            {
-                if (left[i] != right[i])
                     return false;
             }
             return true;

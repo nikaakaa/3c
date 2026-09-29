@@ -621,6 +621,12 @@
 - 删除读取前重复 Clear，保留 workspace 事务边界清理和按 slot count 覆盖写入。缺失 Source Egress 产品时返回空 workspace，冻结后的独立数组长度不变；异常路径仍由 workspace 结束边界清理。
 - 两个数值域同步修改，静态核对 workspace 重入检查、Begin/End 生命周期、唯一读取调用和容量增长；未编译、运行回放或采样。
 
+### AP76 ForceStop 访问集合入口重复清理（2026-09-29，已实施，本轮未编译）
+
+- `OperationExecutionLifecycleRuntime<TTarget>.ForceStop` 根层调用先清空 `m_ForceStopVisited`；同一根层 finally 也清空。构造时集合为空，任何成功、取消或异常路径都由 finally 建立唯一空集合边界，嵌套调用不会重复拥有。
+- 删除根入口重复 Clear，保留深度计数、嵌套判定和 finally 清理。递归环检查、根操作重复停止、诊断和异常传播不变；下次 ForceStop 起点仍是空集合。
+- 静态核对 ForceStop 唯一根入口、嵌套递归、finally 异常路径和 HasTransientState；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

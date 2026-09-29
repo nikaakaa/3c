@@ -166,8 +166,6 @@ namespace ThirdPersonSimulation
         public void ForceStop(OperationHandle handle, OperationStopContext context)
         {
             bool ownsVisited = m_ForceStopDepth == 0;
-            if (ownsVisited)
-                m_ForceStopVisited.Clear();
             m_ForceStopDepth++;
             try
             {

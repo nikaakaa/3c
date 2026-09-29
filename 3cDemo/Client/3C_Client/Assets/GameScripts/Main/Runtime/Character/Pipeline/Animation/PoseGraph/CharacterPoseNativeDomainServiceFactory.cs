@@ -223,10 +223,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         CharacterPoseFootMotionSource ResolveFootMotion(
-            AnimationPoseSourceContribution contribution,
-            ClipSamplePlan clipSample)
+            in AnimationPoseSourceContribution contribution,
+            in ClipSamplePlan clipSample)
         {
-            if (contribution.SourceId.SourceKind == AnimationPoseSourceKind.Timeline)
+            if (contribution.SourceIdRef.SourceKind == AnimationPoseSourceKind.Timeline)
             {
                 CharacterActionAnimationSourcePlan action = m_SourceCatalog.RequireActionPlan(clipSample);
                 return new CharacterPoseFootMotionSource(
@@ -235,7 +235,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     action.FootStepObservation);
             }
             CharacterPresentationPoseSourcePlan plan =
-                m_SourceCatalog.RequirePlan(contribution.SourceId.PresentationPoseSourceIndex);
+                m_SourceCatalog.RequirePlan(
+                    contribution.SourceIdRef.PresentationPoseSourceIndex);
             return new CharacterPoseFootMotionSource(
                 plan.DisplayName,
                 (ulong)plan.ContentRevision.GetHashCode(),

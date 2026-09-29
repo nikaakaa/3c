@@ -8,6 +8,10 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal delegate CharacterPoseFootMotionSource CharacterPoseFootMotionResolver(
+        in AnimationPoseSourceContribution contribution,
+        in ClipSamplePlan clipSample);
+
     internal readonly struct CharacterPoseFootMotionSource
     {
         internal CharacterPoseFootMotionSource(
@@ -36,8 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly string m_PosePlanHash;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly PoseNodeId[] m_PlayerNodeIds;
-        readonly Func<AnimationPoseSourceContribution, ClipSamplePlan,
-            CharacterPoseFootMotionSource> m_FootMotionResolver;
+        readonly CharacterPoseFootMotionResolver m_FootMotionResolver;
         readonly AnimationPoseSourceContribution[] m_Contributions;
         AnimationFootMotionRuntimeFrame m_LastSampledFootMotion;
         bool m_HasLastSampledFootMotion;
@@ -46,8 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string posePlanHash,
             CharacterPoseSourceModule sourceModule,
             IReadOnlyList<PoseNodeId> playerNodeIds,
-            Func<AnimationPoseSourceContribution, ClipSamplePlan,
-                CharacterPoseFootMotionSource> footMotionResolver,
+            CharacterPoseFootMotionResolver footMotionResolver,
             int contributionCapacity)
         {
             if (string.IsNullOrWhiteSpace(posePlanHash))
@@ -148,8 +150,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in nodeId,
                 completionIdentity);
             CharacterPoseFootMotionSource source = m_FootMotionResolver(
-                contribution,
-                clipSample);
+                in contribution,
+                in clipSample);
             int cycle = checked((int)Math.Floor(
                 clipSample.ContinuousClipTime / clipSample.DurationSeconds));
             AnimationFootMotionRuntimeFrame result = new AnimationFootMotionRuntimeFrame(

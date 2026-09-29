@@ -464,6 +464,14 @@
 - 恢复事务的目标/捕获状态校验、启动世界状态身份改用已有 WorldSimulationStateCodec.ComputeHash，直接对编码缓冲有效范围运行同一个 SimulationCanonicalPayloadHash.Compute。恢复校验和 SHA-256 算法保留，仅省去 ToArray；这部分发生在恢复或启动阶段，不混作周期收益。
 - 真正持有独立字节的世界快照及预测协调器仍调用 Write；外层 writer/缓冲扩容、哈希对象及哈希字符串分配仍存在，不宣称整条链0 GC。静态核对两域全部变更、长度前缀回填、哈希入口与剩余 Write 调用，差异检查通过；未编译、执行字节对比、回放或采样，未改世界求解算法和脚步预测。
 
+### AP54 身体运动计划在消费时重复编码与哈希（2026-09-29，已实施，未运行）
+
+- Fixed／Float32 的 CharacterBodyMotionRuntime.Prepare 使用 Actor、Tick、绑定身份、步长和已计算位移/速度生成计划哈希，Finalize 的 RequirePlan 又以计划的同一组字段调用 ComputeIdentity，创建 CanonicalWriter、缓冲、SHA-256 实例及结果字符串，再与原哈希比较。
+- 两域 BodyMotionIntegrationPlan 都是 readonly struct，字段为只读标量/向量/身份值及不可变字符串，构造入口 internal；当前各自唯一 new 调用是同文件 Prepare，哈希输入与构造字段逐项相同。检索客户端、服务端及 Tools 源码，没有计划反序列化、外部哈希注入或其它构造入口；请求编码只写出该计划，不建立另一条读回路径。
+- 删除 RequirePlan 中重复 ComputeIdentity 及哈希比较。Prepare 仍生成同一身份，请求仍检查 Actor/Tick、计划身份、原垂直速度与请求位移匹配，Finalize 仍检查 Actor、正步长、计划步长与求解前垂直速度；默认计划的零步长不能通过。没有通过新增有效标志或校验缓存绕过边界，也没有删除世界请求/结果哈希和恢复校验。
+- KCC 与 Unity CharacterController 的消费链都传递请求中原只读计划；原始输入到计划的重力、终端速度、位移积分，及碰撞后的落地/撞顶垂直速度规则、最终速度除法保持原样。每次成功 Finalize 少一次完整计划编码和 SHA-256 计算及其分配，Prepare 的编码/哈希分配仍存在，不能宣称完整0 GC或实际耗时降幅。
+- 静态核对所有构造/消费/编码引用、哈希与构造参数顺序、readonly 数据组成及差异；未编译、回放或采样。脚步预测、碰撞算法、数值公式及运算顺序未改动。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

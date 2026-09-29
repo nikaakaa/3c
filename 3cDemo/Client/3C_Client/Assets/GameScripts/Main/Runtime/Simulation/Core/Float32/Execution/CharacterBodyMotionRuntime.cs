@@ -170,20 +170,6 @@ namespace ThirdPersonSimulation
             {
                 throw new InvalidOperationException("Body Motion integration plan does not match the World solve input.");
             }
-            StableHash expected = ComputeIdentity(
-                plan.ActorId,
-                plan.Tick,
-                plan.DescriptorSourceIdentity,
-                plan.DescriptorContentRevision,
-                plan.SemanticVersion,
-                plan.TickDelta,
-                plan.PreviousVerticalVelocity,
-                plan.CandidateVerticalVelocity,
-                plan.GameplayVerticalDisplacement,
-                plan.GravityDisplacement,
-                plan.RequestedDisplacement);
-            if (!expected.Equals(plan.Identity))
-                throw new InvalidOperationException("Body Motion integration plan identity is invalid.");
         }
 
         static StableHash ComputeIdentity(

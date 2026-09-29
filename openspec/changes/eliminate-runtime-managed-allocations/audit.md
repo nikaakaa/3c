@@ -1889,3 +1889,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStateTarget` 的 SupportTarget、SupportIntent 与 `CharacterFootInterpolationResult` 的 SupportTarget、ContinuityFact、PlantFact、CorrectionResponseFact 自动属性每次读取复制完整结构；lifecycle completion、interpolation、diagnostics 和 hard constraint 会重复读取。
 - 六个结构属性改为 backing field 只读引用；lifecycle、interpolation、diagnostics 的只读局部直接绑定，state target resolver 显式转发 intent。输出字段、support target 修改、plant fact 读取和诊断展开不变。
 - 该改动删除 Foot Placement state target/interpolation 消费链的重复结构拷贝。静态核对容器和成员均为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP262 Lifecycle completion 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Lifecycle `Completion` 的 Evaluation、PreTransition、Target、Interpolation、OutputSwing、Request、PreliminaryMotion、LifecycleTransition、OutputSupport、StateTargetSupport 自动属性每次读取复制完整结构；landing completion 会再次复制主要求值结果。
+- 十个结构属性改为 backing field 只读引用；`Complete` 直接绑定 frame、interpolation、target、transition、output swing、evaluation 和 request。`PreliminaryMotion` 写入 out result、新建 lifecycle transition 和输出 request 仍保留必要拷贝。
+- 该改动删除 Foot Placement landing completion 周期的结果容器重复拷贝。静态核对 completion 为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。

@@ -643,14 +643,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landingEventIdentity, positionWeight,
                 in contactReference, in landingReachRequest);
             return new CharacterFootPlacementRequest(
-                identity, pose, support, landingReachRequest, goalTarget,
-                CharacterFootResolvedOutcome.Ready, landingReachAdmitted, evaluation.Stride);
+                in identity, in pose, in support, in landingReachRequest,
+                in goalTarget, CharacterFootResolvedOutcome.Ready,
+                landingReachAdmitted, in evaluation.Stride);
         }
 
         static CharacterResolvedFootResult Publish(in CharacterFootPlacementRequest request) =>
             new CharacterResolvedFootResult(
-                request.Identity, request.Pose, request.Support,
-                request.LandingReachRequest, request.GoalTarget, request.Outcome);
+                in request.Identity, in request.Pose, in request.Support,
+                in request.LandingReachRequest, in request.GoalTarget,
+                request.Outcome);
 
         static CharacterFootPlacementRequest BuildUnavailableRequest(
             in CharacterFootStateEvaluation evaluation,
@@ -668,7 +670,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGoalTarget goal = ResolveGoalTarget(
                 in foot, evaluation.GoalRoot, in pose, outcome);
             return new CharacterFootPlacementRequest(
-                identity, pose, default, default, goal, outcome, false, evaluation.Stride);
+                in identity, in pose, in default, in default, in goal,
+                outcome, false, in evaluation.Stride);
         }
 
         static bool AdmitLandingReach(

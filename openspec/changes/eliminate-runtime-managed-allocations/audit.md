@@ -1817,3 +1817,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Placement request 和 resolved result 的 Identity、Pose、Support、LandingReachRequest、GoalTarget 自动属性每次读取复制结构；Lifecycle 的 Publish 会读取 request 构造 resolved result，Goal encode 再复制 GoalTarget，resolved pair 的左右 result 也按值复制。
 - 两类输出 contract 的结构属性改为 backing field 只读引用，resolved pair 左右也返回只读引用；Foot goal encode 直接绑定 GoalTarget。输出构造字段、pair lineage 校验和 FullBodyIK goal 编码不变。
 - 该改动删除 Foot Placement 输出页构造和 goal 编码的重复结构拷贝。静态核对输出对象为 readonly struct、生命周期覆盖调用、消费点只读；输出存储仍保留一次必要拷贝；未编译、未采样，不能声称实测耗时收益。
+
+### AP250 Foot output constructor 入参引用化（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPlacementRequest` 和 `CharacterResolvedFootResult` 构造函数的 identity、pose、support、landing reach、goal target、stride 仍按值接收；AP249 后属性已返回引用，但 BuildRequest、BuildUnavailableRequest 和 Publish 仍会在进入构造时先复制入参。
+- 六个内部构造入参改为 `in`，三处唯一构造点显式转发局部或只读属性。backing field 赋值仍保留一次必要输出存储，resolved outcome 和 landing reach 标量不变。
+- 该改动删除 Foot Placement 输出 request、resolved result 构造边界的入参拷贝。静态核对唯一调用点、参数只读、引用生命周期覆盖构造和输出写入；未编译、未采样，不能声称实测耗时收益。

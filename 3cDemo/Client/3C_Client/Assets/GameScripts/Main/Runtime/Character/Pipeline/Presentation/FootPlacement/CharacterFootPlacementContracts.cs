@@ -374,14 +374,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootStrideRequest m_Stride;
 
         internal CharacterFootPlacementRequest(
-            CharacterFootPlacementIdentity identity,
-            CharacterFootPlacementPose pose,
-            CharacterFootSupportFacts support,
-            CharacterFootLandingReachRequest landingReachRequest,
-            CharacterFootGoalTarget goalTarget,
+            in CharacterFootPlacementIdentity identity,
+            in CharacterFootPlacementPose pose,
+            in CharacterFootSupportFacts support,
+            in CharacterFootLandingReachRequest landingReachRequest,
+            in CharacterFootGoalTarget goalTarget,
             CharacterFootResolvedOutcome outcome,
             bool landingReachAdmitted,
-            CharacterFootStrideRequest stride)
+            in CharacterFootStrideRequest stride)
         {
             m_Identity = identity;
             m_Pose = pose;
@@ -413,11 +413,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootGoalTarget m_GoalTarget;
 
         internal CharacterResolvedFootResult(
-            CharacterFootPlacementIdentity identity,
-            CharacterFootPlacementPose pose,
-            CharacterFootSupportFacts support,
-            CharacterFootLandingReachRequest landingReachRequest,
-            CharacterFootGoalTarget goalTarget,
+            in CharacterFootPlacementIdentity identity,
+            in CharacterFootPlacementPose pose,
+            in CharacterFootSupportFacts support,
+            in CharacterFootLandingReachRequest landingReachRequest,
+            in CharacterFootGoalTarget goalTarget,
             CharacterFootResolvedOutcome outcome)
         {
             m_Identity = identity;

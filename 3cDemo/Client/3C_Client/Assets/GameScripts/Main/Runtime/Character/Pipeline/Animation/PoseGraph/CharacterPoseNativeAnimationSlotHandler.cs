@@ -553,14 +553,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.Contributions;
             NativeSlice<float> outputWeights =
                 m_WriteBinding.DenseContributionWeights;
+            NativeSlice<AnimationPrimitivePoseContribution> inputContributions =
+                input.Contributions;
+            NativeSlice<float> inputWeights =
+                input.DenseContributionWeights;
             for (int contribution = 0; contribution < inputCount; contribution++)
             {
                 if (outputCount >= output.Length)
                     throw new InvalidOperationException(
                         $"Animation Slot '{NodeId}' contribution capacity was exceeded.");
-                AnimationPrimitivePoseContribution value =
-                    input.Contributions[contribution];
+                ref readonly AnimationPrimitivePoseContribution value =
+                    ref inputContributions[contribution];
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
+                int outputWeightOffset = outputCount * boneCount;
+                int inputWeightOffset = contribution * boneCount;
                 output[outputCount] = new AnimationPrimitivePoseContribution(
                     value.PhysicalPlayerIndex,
                     value.PhysicalSourceIndex,
@@ -572,8 +578,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     value.LeftFootWeight * factor,
                     value.RightFootWeight * factor);
                 for (int bone = 0; bone < boneCount; bone++)
-                    outputWeights[outputCount * boneCount + bone] =
-                        input.DenseContributionWeights[contribution * boneCount + bone] * factor;
+                    outputWeights[outputWeightOffset + bone] =
+                        inputWeights[inputWeightOffset + bone] * factor;
                 outputCount++;
             }
         }

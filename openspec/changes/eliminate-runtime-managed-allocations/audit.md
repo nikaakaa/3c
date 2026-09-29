@@ -1468,3 +1468,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animation Slot 参数混合每项重复读取 source/action 的 parameter 和 availability binding 属性；同一方法内的 output slice 已缓存，但输入 `NativeSlice` 每次索引都重新取。
 - 循环前缓存 source/action 的 parameter 与 availability slice；source/action 可用性仍逐项读取，并按原三分支完成参数混合或 fallback availability 写入。
 - 该改动删除 Animation Slot 参数链的重复 binding 结构读取；不改变参数公式、availability 合并、输出页身份或 Commit/Discard。静态核对 read binding 的参数/可用性等长校验、pose graph layout 校验和唯一 BlendParameters 调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP192 AnimationSlot contribution 定容（2026-09-30，已实施，本轮未编译）
+
+- Animation Slot 追加 contribution 时每层按值复制 input primitive，并重复读取 input 的 contribution 与 dense weight binding 属性；逐骨权重写入还重复计算 output/input 两侧行偏移。
+- 循环前缓存 input contribution 与 weight slice；primitive 绑定只读元素引用，每个 contribution 预计算 output/input 行偏移。output 容量校验、`ExtendContributionPrefix`、字段换算、权重公式和 source/action 追加顺序不变。
+- 该改动删除 Animation Slot contribution 链的 primitive 拷贝、重复 binding 读取和逐骨乘法；不改变 count 推进或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和唯一 AppendContributions 循环；未编译、未采样，不能声称实测耗时收益。

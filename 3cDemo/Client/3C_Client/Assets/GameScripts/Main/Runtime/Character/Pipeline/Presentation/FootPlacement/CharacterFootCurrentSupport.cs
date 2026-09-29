@@ -982,21 +982,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootCurrentSupportObservationPage
     {
+        CharacterFootCurrentSupportObservation m_Observation;
+
         internal bool HasValue { get; private set; }
-        internal CharacterFootCurrentSupportObservation Observation { get; private set; }
+        internal ref readonly CharacterFootCurrentSupportObservation Observation =>
+            ref m_Observation;
 
         internal void Set(in CharacterFootCurrentSupportObservation observation)
         {
             if (!observation.IsSpecified)
                 throw new ArgumentException("Current Support observation is invalid.");
             HasValue = true;
-            Observation = observation;
+            m_Observation = observation;
         }
 
         internal void Clear()
         {
             HasValue = false;
-            Observation = default;
+            m_Observation = default;
         }
     }
 

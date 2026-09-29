@@ -1901,3 +1901,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing prediction pair 的 Selected 每次读取复制完整 `CharacterFootLandingPredictionResult`；result 的 Observation、Query、QuerySelection、GroundPath 自动属性也会重复复制聚合结构。
 - Pair Selected 改为 backing field 只读引用并按引用接收构造结果。EvaluateFrame 先引用读取初步 prediction，注入 GroundPath 时生成唯一 final result；result 四个聚合属性改为 backing field 只读引用，diagnostics 展开绑定 GroundPath 引用。
 - 该改动删除 Foot Placement 每脚预测结果进入 pair、初步消费和诊断展开的重复拷贝。静态核对 result 和 pair 为 readonly struct、final result 仍保留 GroundPath、诊断结构与输出身份不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP264 Current support observation page 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Current support observation page 的 Observation 自动属性每次读取复制 heel/toe request、heel/toe result、support target 等完整 observation；EvaluateFrame 每脚读取一次后传给预测、约束与输出链。
+- Page 改用 observation backing field，getter 返回只读引用；EvaluateFrame 左右 support 改为引用绑定。Set 和 Clear 的页身份、Commit/Discard 与字段值不变。
+- 该改动删除每脚当前支持 observation 从页到运行链的一次重复拷贝。静态核对 observation 为 readonly struct、引用生命周期覆盖 EvaluateFrame、消费只读；未编译、未采样，不能声称实测耗时收益。

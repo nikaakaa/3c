@@ -343,10 +343,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 poseInput.CompletionIdentity,
                 m_RightCurrentSupport,
                 committedBank?.RightCurrentSupport);
-            CharacterFootCurrentSupportObservation leftCurrentSupport =
-                bank.LeftCurrentSupport.Observation;
-            CharacterFootCurrentSupportObservation rightCurrentSupport =
-                bank.RightCurrentSupport.Observation;
+            ref readonly CharacterFootCurrentSupportObservation leftCurrentSupport =
+                ref bank.LeftCurrentSupport.Observation;
+            ref readonly CharacterFootCurrentSupportObservation rightCurrentSupport =
+                ref bank.RightCurrentSupport.Observation;
 
             CharacterFootLandingSnapshot leftLanding =
                 CharacterFootLandingRuntime.ProjectBeforePrediction(

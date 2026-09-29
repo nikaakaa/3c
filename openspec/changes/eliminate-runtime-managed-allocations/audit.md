@@ -1835,3 +1835,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootPlacementResult` 的 Feet、PrimarySupport、Pelvis 和三个 FullBodyIK goal 自动属性每次读取复制完整结构；Constraint Runtime 每脚帧读取三个 goal 写入 pending contribution。
 - 六个结构属性改为 backing field 只读引用；result 构造校验仍读取 `in` 参数并保留一次必要字段写入。Constraint Runtime 写入 pending goal 数组仍保留一次存储拷贝，输出顺序和 lineage 不变。
 - 该改动删除 Foot Placement final result 属性读取的重复拷贝。静态核对 result 为 readonly struct、生命周期覆盖 Constraint Runtime 调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP253 StrideHips result 结构引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStrideHipsResult` 的 HeightTarget、PosturePreference、Reach、Response 自动属性每次读取复制完整结构；reach 判定、pelvis goal 和诊断会重复读取 Reach 与 Response。
+- 四个结构属性改为 backing field 只读引用；构造仍保留一次必要字段写入。State/Reject 标量、reach 判定、pelvis delta、诊断字段和输出语义不变。
+- 该改动删除 StrideHips 每脚帧的大结构属性拷贝。静态核对 result 为 readonly struct、生命周期覆盖 bank 与诊断调用、消费只读；未编译、未采样，不能声称实测耗时收益。

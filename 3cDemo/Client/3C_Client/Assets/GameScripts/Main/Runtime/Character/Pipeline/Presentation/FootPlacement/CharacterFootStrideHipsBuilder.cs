@@ -647,6 +647,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootStrideHipsResult
     {
+        readonly CharacterFootPelvisHeightTarget m_HeightTarget;
+        readonly CharacterFootPelvisPosturePreference m_PosturePreference;
+        readonly CharacterFootPelvisReachObservation m_Reach;
+        readonly CharacterFootPelvisSpringStep m_Response;
+
         internal CharacterFootStrideHipsResult(
             CharacterFootStrideState state,
             CharacterFootStrideRejectReason rejectReason,
@@ -679,10 +684,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
-            HeightTarget = heightTarget;
-            PosturePreference = posturePreference;
-            Reach = reach;
-            Response = response;
+            m_HeightTarget = heightTarget;
+            m_PosturePreference = posturePreference;
+            m_Reach = reach;
+            m_Response = response;
         }
 
         [DiagnosticField]
@@ -727,10 +732,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 AnimatedPelvisComponentPosition { get; }
-        public CharacterFootPelvisHeightTarget HeightTarget { get; }
-        internal CharacterFootPelvisPosturePreference PosturePreference { get; }
-        internal CharacterFootPelvisReachObservation Reach { get; }
-        public CharacterFootPelvisSpringStep Response { get; }
+        public ref readonly CharacterFootPelvisHeightTarget HeightTarget => ref m_HeightTarget;
+        internal ref readonly CharacterFootPelvisPosturePreference PosturePreference =>
+            ref m_PosturePreference;
+        internal ref readonly CharacterFootPelvisReachObservation Reach => ref m_Reach;
+        public ref readonly CharacterFootPelvisSpringStep Response => ref m_Response;
 
         internal bool Accepted => State == CharacterFootStrideState.Accepted;
         internal bool ProducesPelvisGoal =>

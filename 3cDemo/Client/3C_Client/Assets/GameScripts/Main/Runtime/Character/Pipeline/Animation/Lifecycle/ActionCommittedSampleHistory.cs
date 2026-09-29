@@ -149,14 +149,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void ApplyCommands(
             ActionSampleHistoryMutationLease lease,
-            IReadOnlyList<ActionPlaybackInboxEntry> entries)
+            FixedCapacityFrameBuffer<ActionPlaybackInboxEntry> entries)
         {
             RequireLease(lease);
             if (entries == null)
                 throw new ArgumentNullException(nameof(entries));
-            for (int i = 0; i < entries.Count; i++)
+            int entryCount = entries.Count;
+            for (int i = 0; i < entryCount; i++)
             {
-                ActionAnimationPlaybackCommand command = entries[i].Command;
+                ref readonly ActionAnimationPlaybackCommand command =
+                    ref entries.ElementAt(i).CommandRef;
                 if (command.Kind != ActionAnimationPlaybackCommandKind.Sample)
                     continue;
                 AppendMutation(

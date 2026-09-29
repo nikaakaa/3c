@@ -1570,3 +1570,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - inbox 发布侧的 duplicate 查找、event 查找、append/replacement 校验把整个 entry 或 command 复制为局部；排序比较也按值复制左右 entry。Replace 在 RemoveAt 前复制 current 是为了保留 sequence。
 - 查找与校验绑定 `ElementAt` / `CommandRef` 只读引用；Replace 只在 RemoveAt 前缓存 sequence，插入排序比较改为 `in` entry。命令验证、event 匹配、排序键、RemoveAt 后重建和异常文本不变。
 - 该改动删除命令发布链的 entry/command 中间拷贝；插入排序仍保留一次新 entry 存储和必要的移位拷贝。静态核对只读引用都在数组变更前消费、`latestIndex` 语义等价于原 latest command、比较函数不写参数；未编译、未采样，不能声称实测耗时收益。
+
+### AP209 Committed sample history 命令引用化（2026-09-30，已实施，本轮未编译）
+
+- Committed follow clock 将 playback commands 和 retirements 暴露为 `IReadOnlyList`；history 只读取 Sample command，retirement 回放只读取 playback identity，但每项都复制整份 command 或 permission。
+- commands/retirements 正式属性返回同一固定容量 buffer；history 与 coordinator 回放绑定 `ElementAt` / `CommandRef` 只读元素并定容 count。Sample 过滤、RemovePlayback、ValidateFrame 顺序和异常语义不变。
+- 该改动删除 committed sample history 与 retirement 回放的周期元素拷贝；不复制或替换 playback 内部缓冲。静态核对两个属性的唯一消费点、buffer 生命周期和 coordinator 采样帧协议；未编译、未采样，不能声称实测耗时收益。

@@ -34,8 +34,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleFrame> Frames =>
             m_Lease.IsValid ? m_Frames : throw new InvalidOperationException("Action playback frame is not open.");
-        internal IReadOnlyList<ActionPlaybackInboxEntry> Commands => m_Commands;
-        internal IReadOnlyList<ActionRetirementPermission> Retirements => m_Retirements;
+        internal FixedCapacityFrameBuffer<ActionPlaybackInboxEntry> Commands =>
+            m_Commands;
+        internal FixedCapacityFrameBuffer<ActionRetirementPermission>
+            Retirements => m_Retirements;
         internal bool IsFrameOpen => m_Lease.IsValid;
 
         internal void BeginFrame(IReadOnlyList<ActionAnimationPlaybackCommand> commands)

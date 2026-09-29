@@ -310,9 +310,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!m_SamplingFrameActive)
                 throw new InvalidOperationException("Action sampling frame is not open.");
             m_Playback.ValidateFrame();
-            for (int i = 0; i < m_Playback.Retirements.Count; i++)
+            int retirementCount = m_Playback.Retirements.Count;
+            for (int i = 0; i < retirementCount; i++)
             {
-                AnimationPlaybackId playbackId = m_Playback.Retirements[i].PlaybackId;
+                ref readonly ActionRetirementPermission permission =
+                    ref m_Playback.Retirements.ElementAt(i);
+                AnimationPlaybackId playbackId = permission.PlaybackId;
                 m_History.RemovePlayback(m_HistoryLease, playbackId);
                 m_Projector.RemovePlayback(m_ProjectorLease, playbackId);
             }

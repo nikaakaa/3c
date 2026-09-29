@@ -1372,3 +1372,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Source commit 回滚、backend discard 和 SourceModule discard 原先用 `Action` 包装每个清理步骤；discard 正常路径每帧会构造闭包/委托，源模块还会为 pending registration 循环分配捕获变量。
 - 周期清理改为专用正式方法或直接 try/catch，失败仍按原顺序记录；BackendSet 保留原有 AggregateException 规则，SourceModule 保留 pending count、倒序 disconnect、backend、frame page、physical source 的清理顺序。两个 DiscardFrame lease 参数随闭包消除改为 `in`。
 - 该改动删除 Source discard/commit 异常清理路径的周期委托分配；不改变失败聚合、rollback/discard 语义或数据生命周期。静态核对两文件的全部剩余 lambda 仅限一次性 Dispose、异常捕获顺序和大括号配对；未编译、未采样，不能声称实测耗时收益。
+
+### AP176 body branch replacement tick 复用（2026-09-30，已实施，本轮未编译）
+
+- Body Presentation 的 committed branch replacement 每次移除旧尾部时新建 `List<ulong>`；该路径由正式提交流分支替换触发，不是初始化专用。
+- runtime 持有复用 tick list；每次 Clear 后按当前 committed count 预留容量，再按原有序字典枚举顺序收集 `>= firstTick` 的 tick，并按同一顺序移除 body 和 yaw velocity。
+- 该改动删除分支替换的每次局部 List 分配；不改变 replacement 判定、tick 排序、retarget 或字典删除顺序。静态核对两个调用点、容量上界、枚举只读和 Dispose/Reset 生命周期；未编译、未采样，不能声称实测耗时收益。

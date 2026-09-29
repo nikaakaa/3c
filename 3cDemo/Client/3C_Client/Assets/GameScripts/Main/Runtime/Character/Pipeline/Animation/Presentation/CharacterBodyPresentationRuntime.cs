@@ -124,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new SortedDictionary<ulong, float>();
         readonly Queue<CharacterPresentationBodyInterval> m_SelectedIntervals =
             new Queue<CharacterPresentationBodyInterval>();
+        readonly List<ulong> m_BranchReplacementTicks = new List<ulong>();
 
         CharacterPresentationBodyInterval m_SelectedInterval;
         CharacterPresentationBodyState m_SelectedTailBody;
@@ -411,16 +412,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void RemoveCommittedBranchFrom(ulong firstTick)
         {
-            var obsolete = new List<ulong>();
+            m_BranchReplacementTicks.Clear();
+            if (m_BranchReplacementTicks.Capacity < m_CommittedBodies.Count)
+                m_BranchReplacementTicks.Capacity = m_CommittedBodies.Count;
             foreach (ulong tick in m_CommittedBodies.Keys)
             {
                 if (tick >= firstTick)
-                    obsolete.Add(tick);
+                    m_BranchReplacementTicks.Add(tick);
             }
-            for (int i = 0; i < obsolete.Count; i++)
+            for (int i = 0; i < m_BranchReplacementTicks.Count; i++)
             {
-                m_CommittedBodies.Remove(obsolete[i]);
-                m_CommittedYawVelocities.Remove(obsolete[i]);
+                m_CommittedBodies.Remove(m_BranchReplacementTicks[i]);
+                m_CommittedYawVelocities.Remove(m_BranchReplacementTicks[i]);
             }
         }
 

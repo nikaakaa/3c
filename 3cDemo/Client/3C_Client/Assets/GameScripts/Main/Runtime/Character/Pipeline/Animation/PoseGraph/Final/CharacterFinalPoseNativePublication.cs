@@ -247,7 +247,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Native Final Pose publication evaluation is invalid.",
                     nameof(evaluation));
             }
-            CharacterPoseNativePoseReadBinding output = local.Native;
+            ref readonly CharacterPoseNativePoseReadBinding output = ref local.Native;
             if (output.CompletionIdentity != lease.Lineage.CompletionIdentity ||
                 output.Space != CharacterPoseSpace.Local ||
                 output.Availability[0] != AnimationPoseAvailability.Pose ||

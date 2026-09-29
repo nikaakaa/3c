@@ -1703,3 +1703,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Motion Timeline 分支把 clip sample 按值传入 Source Resource Catalog；`ClipSamplePlan` 的 Clip、resource index 和 group index 自动属性每次读取还会复制字段。
 - catalog 的 sample 查找改为 `in`，`ClipSamplePlan` 保留公共属性与存储合同并新增正式 backing field 只读引用；catalog 在 Native Clip 和 ACL 两个分支绑定所需引用。工厂调用显式只读转发，查找键、异常文本和返回 plan 不变。
 - 该改动删除 Foot Motion action plan 查找的 sample 边界与查找字段拷贝。静态核对唯一 sample 查找消费点、引用生命周期覆盖字典查找和字段只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP231 Native port binding 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Local/Component Native Pose 输出值的 `Native` 自动属性每次读取复制完整 read binding；binding 内含多份 native slice，Final Publication 在 Prepare 开头先复制一次再只读消费。
+- 两个输出值改用 backing field 保存 binding，`Native` 返回只读引用；构造与 Reuse/Refresh 仍保留一次必要写入。Final Publication 直接绑定同一 backing field，completion、space、availability、布局校验和后续 slice 读取不变。
+- 该改动删除 Final Publication 周期 Prepare 的整份 read binding 拷贝，并让后续 identity 读取不再复制。静态核对 binding 只在构造或 Refresh 写入、引用生命周期绑定输出值对象、Final 消费只读；未编译、未采样，不能声称实测耗时收益。

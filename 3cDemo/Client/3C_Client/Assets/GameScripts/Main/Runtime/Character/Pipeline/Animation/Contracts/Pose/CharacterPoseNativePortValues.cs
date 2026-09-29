@@ -113,13 +113,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class CharacterPoseNativeLocalPoseValue : CharacterPoseNativePortValue
     {
+        CharacterPoseNativePoseReadBinding m_Native;
+
         internal CharacterPoseNativeLocalPoseValue(
             PoseNodeId producerNodeId,
             in CharacterPoseNativePoseReadBinding native)
             : base(producerNodeId, native.CompletionIdentity)
         {
             ValidateNative(producerNodeId, in native);
-            Native = native;
+            m_Native = native;
         }
 
         internal CharacterPoseNativeLocalPoseValue(
@@ -132,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Pose = pose;
         }
 
-        internal CharacterPoseNativePoseReadBinding Native { get; private set; }
+        internal ref readonly CharacterPoseNativePoseReadBinding Native => ref m_Native;
         internal AnimationPoseValue Pose { get; private set; }
 
         internal static CharacterPoseNativeLocalPoseValue Reuse(
@@ -152,7 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             ValidateNative(producerNodeId, in native);
             SetIdentity(producerNodeId, native.CompletionIdentity);
-            Native = native;
+            m_Native = native;
             Pose = default;
         }
 
@@ -175,13 +177,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class CharacterPoseNativeComponentPoseValue : CharacterPoseNativePortValue
     {
+        CharacterPoseNativePoseReadBinding m_Native;
+
         internal CharacterPoseNativeComponentPoseValue(
             PoseNodeId producerNodeId,
             in CharacterPoseNativePoseReadBinding native)
             : base(producerNodeId, native.CompletionIdentity)
         {
             ValidateNative(producerNodeId, in native);
-            Native = native;
+            m_Native = native;
         }
 
         internal CharacterPoseNativeComponentPoseValue(
@@ -194,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Pose = pose;
         }
 
-        internal CharacterPoseNativePoseReadBinding Native { get; private set; }
+        internal ref readonly CharacterPoseNativePoseReadBinding Native => ref m_Native;
         internal AnimationPoseValue Pose { get; private set; }
 
         internal static CharacterPoseNativeComponentPoseValue Reuse(
@@ -214,7 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             ValidateNative(producerNodeId, in native);
             SetIdentity(producerNodeId, native.CompletionIdentity);
-            Native = native;
+            m_Native = native;
             Pose = default;
         }
 

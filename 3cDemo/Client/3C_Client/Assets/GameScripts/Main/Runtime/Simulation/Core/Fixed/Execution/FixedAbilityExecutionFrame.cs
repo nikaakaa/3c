@@ -739,8 +739,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Enabled = enabled;
             CaptureValues = enabled && captureValues;
             CaptureControlFlow = enabled && captureControlFlow;
-            m_ValueSampleCount = 0;
-            m_Sequence.Reset();
         }
 
         public bool Enabled => m_Enabled;

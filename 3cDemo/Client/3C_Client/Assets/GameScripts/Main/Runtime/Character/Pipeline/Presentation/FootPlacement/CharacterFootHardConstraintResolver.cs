@@ -4,6 +4,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal readonly struct CharacterFootHardConstraintResult
     {
+        readonly Vector3 m_InputCorrection;
+        readonly Vector3 m_MinimumCorrection;
+        readonly Vector3 m_OutputCorrection;
+
         internal CharacterFootHardConstraintResult(
             bool resolved,
             bool available,
@@ -19,9 +23,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Owner = owner;
             SurfaceIdentity = surfaceIdentity;
             PathIdentity = pathIdentity;
-            InputCorrection = inputCorrection;
-            MinimumCorrection = minimumCorrection;
-            OutputCorrection = outputCorrection;
+            m_InputCorrection = inputCorrection;
+            m_MinimumCorrection = minimumCorrection;
+            m_OutputCorrection = outputCorrection;
         }
 
         internal bool Resolved { get; }
@@ -29,9 +33,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSafetyFloorOwner Owner { get; }
         internal int SurfaceIdentity { get; }
         internal ulong PathIdentity { get; }
-        internal Vector3 InputCorrection { get; }
-        internal Vector3 MinimumCorrection { get; }
-        internal Vector3 OutputCorrection { get; }
+        internal ref readonly Vector3 InputCorrection =>
+            ref m_InputCorrection;
+        internal ref readonly Vector3 MinimumCorrection =>
+            ref m_MinimumCorrection;
+        internal ref readonly Vector3 OutputCorrection =>
+            ref m_OutputCorrection;
     }
 
     internal static class CharacterFootHardConstraintResolver

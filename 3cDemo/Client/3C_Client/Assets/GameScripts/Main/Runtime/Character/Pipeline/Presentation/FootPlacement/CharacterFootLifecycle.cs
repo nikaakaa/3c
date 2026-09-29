@@ -415,10 +415,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out float displacement, out int surfaceIdentity))
                 return constraint;
             Vector3 up = frame.ComponentUp.normalized;
+            ref readonly Vector3 constraintMinimum = ref constraint.MinimumCorrection;
             float clearanceCorrection = displacement / frame.FootPlacementWeight;
             Vector3 minimum = interpolation.Correction + up * clearanceCorrection;
             if (constraint.Available && constraint.Owner != CharacterFootSafetyFloorOwner.PlantTarget &&
-                Vector3.Dot(constraint.MinimumCorrection - minimum, up) >= 0f)
+                Vector3.Dot(constraintMinimum - minimum, up) >= 0f)
                 return constraint;
             return new CharacterFootHardConstraintResult(
                 true, true, CharacterFootSafetyFloorOwner.OutputFootprint,
@@ -437,24 +438,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             bool available = hardConstraint.Resolved && hardConstraint.Available;
             Vector3 up = componentUp.normalized;
+            ref readonly Vector3 inputCorrection = ref hardConstraint.InputCorrection;
+            ref readonly Vector3 minimumCorrection = ref hardConstraint.MinimumCorrection;
+            ref readonly Vector3 outputCorrection = ref hardConstraint.OutputCorrection;
             float clampMeters = available
                 ? Mathf.Max(
                     0f,
                     Vector3.Dot(
-                        hardConstraint.OutputCorrection -
-                        hardConstraint.InputCorrection,
+                        outputCorrection -
+                        inputCorrection,
                         up))
                 : 0f;
             float clearanceBefore = available
                 ? Vector3.Dot(
-                    hardConstraint.InputCorrection -
-                    hardConstraint.MinimumCorrection,
+                    inputCorrection -
+                    minimumCorrection,
                     up)
                 : 0f;
             float clearanceAfter = available
                 ? Vector3.Dot(
-                    hardConstraint.OutputCorrection -
-                    hardConstraint.MinimumCorrection,
+                    outputCorrection -
+                    minimumCorrection,
                     up)
                 : 0f;
             return fact.Complete(
@@ -468,10 +472,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFootSafetyFloorOwner.None,
                 hardConstraint.Resolved ? hardConstraint.SurfaceIdentity : 0,
                 hardConstraint.Resolved ? hardConstraint.PathIdentity : 0,
-                hardConstraint.InputCorrection,
-                available ? hardConstraint.MinimumCorrection : default,
-                hardConstraint.OutputCorrection,
-                hardConstraint.OutputCorrection,
+                inputCorrection,
+                available ? minimumCorrection : default,
+                outputCorrection,
+                outputCorrection,
                 clampMeters > 0f,
                 clampMeters,
                 clearanceBefore,

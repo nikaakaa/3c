@@ -2039,3 +2039,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing/Locked 状态构建 support target 后，`PlantTarget` 按值接收完整 target，再进入 `CharacterFootStateTarget` 构造。
 - 调用点先把 support target 绑定到局部，`PlantTarget` 改为 `in` 接收；target kind、normal source、contact lineage、state target 存储和后续 interpolation 语义不变。
 - 该改动删除 State Target plant 路径中 support target 的入参重复拷贝。静态核对 target 为 readonly struct、局部生命周期覆盖 PlantTarget、最终 state target 仍保留一次必要存储；未编译、未采样，不能声称实测耗时收益。
+
+### AP287 Hard constraint correction 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Hard constraint result 的 input、minimum、output correction 自动属性每次读取复制 Vector3；ApplyHardConstraint、output support 覆盖判定和 Continuity completion 会重复读取。
+- 三个 correction 改为 backing field 只读引用，三个主消费点引用绑定；约束 owner、surface/path identity、RaiseToMinimum、clamp/clearance 和 Continuity 字段写入不变。
+- 该改动删除每脚 hard constraint 消费中的 correction 向量重复拷贝。静态核对 result 为 readonly struct、生命周期覆盖调用、消费只读，输出事实仍保留必要拷贝；未编译、未采样，不能声称实测耗时收益。

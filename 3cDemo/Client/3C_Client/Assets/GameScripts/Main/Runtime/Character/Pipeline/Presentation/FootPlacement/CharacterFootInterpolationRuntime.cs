@@ -169,10 +169,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootInterpolationState state,
             in CharacterFootHardConstraintResult constraint)
         {
-            Vector3 adjustment = constraint.OutputCorrection - constraint.InputCorrection;
+            ref readonly Vector3 inputCorrection = ref constraint.InputCorrection;
+            ref readonly Vector3 outputCorrection = ref constraint.OutputCorrection;
+            Vector3 adjustment = outputCorrection - inputCorrection;
             if (!constraint.Available || adjustment.sqrMagnitude == 0f)
                 return;
-            state.EffectiveCorrection = constraint.OutputCorrection;
+            state.EffectiveCorrection = outputCorrection;
             if (state.Policy == CharacterFootInterpolationPolicy.ReleaseResidual)
                 state.Residual += adjustment;
             if (state.HasPreviousResponseOutputPoint)

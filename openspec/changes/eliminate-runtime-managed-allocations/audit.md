@@ -687,6 +687,12 @@
 - 使用 `string.Create` 按父路径、固定文本、两个 handle 和 generation 的精确字符数分配一次最终字符串，静态局部函数用 InvariantCulture `TryFormat` 写入。原路径格式 `parent/sm:machine/state:state@generation`、handle 十进制、generation 非零范围和写入 slot 的所有权不变。
 - 每次状态激活去掉 generation 临时字符串，并合并中间拼接目标；最终 path 字符串仍必须分配。静态核对长度公式、ulong 位数、文本顺序、插槽消费和差异；未编译、运行回放或采样。
 
+### AP87 Action 拒绝记录先构造后判断采样（2026-09-29，已实施，本轮未编译）
+
+- `ActionSkillActivationFlow` 的 immediate、pending control 和 pending replacement 拒绝路径先插值生成 detail，再交给内部检查 `TraceEnabled` 的 Trace；pending control 还直接调用结果记录。关闭采样时仍构造 rejection 字符串。请求源缺失路径也先访问 Tick 再格式化。
+- 四处将 `!TraceEnabled` 提前返回移到 detail 构造前；同一条拒绝的 action trace 和 action result 继续共用同一字符串，记录类型、代码、顺序和返回值不变。请求不可用时先设置 default request 再跳过 trace。Trace 开关由评估期 TraceSink 固定，单次流程内不会中途切换。
+- 关闭采样时这些 rejection/请求缺失路径不再做字符串插值；开启采样时输出不变。静态核对四个入口、共用 detail、Trace/TraceActionResult 内部边界和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

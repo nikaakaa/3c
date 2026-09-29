@@ -556,6 +556,8 @@ namespace ThirdPersonSimulation
                 ActionAdmissionEvaluationMode.CommitActivation);
             if (!admission.Allowed)
             {
+                if (!m_Port.TraceEnabled)
+                    return false;
                 string detail =
                     $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}";
                 Trace(
@@ -675,6 +677,8 @@ namespace ThirdPersonSimulation
                 if (admission.RejectReason == ActionAdmissionRejectReason.SourceActionStillActive)
                     return false;
                 m_Port.ClearPendingRequest(request);
+                if (!m_Port.TraceEnabled)
+                    return false;
                 string detail =
                     $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}";
                 Trace(
@@ -720,6 +724,8 @@ namespace ThirdPersonSimulation
             {
                 if (admission.RejectReason != ActionAdmissionRejectReason.SourceActionStillActive)
                 {
+                    if (!m_Port.TraceEnabled)
+                        return false;
                     string detail =
                         $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}";
                     Trace(
@@ -744,6 +750,8 @@ namespace ThirdPersonSimulation
                     candidate.ReplacementActionInstanceId);
                 if (!replacement.Allowed)
                 {
+                    if (!m_Port.TraceEnabled)
+                        return false;
                     string detail =
                         $"{profile.ActionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}:{replacement.ActiveSourceActionInstanceId}";
                     Trace(
@@ -811,6 +819,11 @@ namespace ThirdPersonSimulation
             {
                 if (!m_Port.TryReadInputSequence(candidate.SourceInputRequestId, out inputSequence))
                 {
+                    if (!m_Port.TraceEnabled)
+                    {
+                        request = default;
+                        return false;
+                    }
                     Trace(
                         candidate,
                         "action_request_unavailable",

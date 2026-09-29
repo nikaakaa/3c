@@ -9,7 +9,8 @@
         "ThirdPersonClient.Editor",
         "ThirdPersonSimulation.Core",
         "KK.GeneratedDiagnosticSampling",
-        "KK.GeneratedDiagnosticSampling.Host"
+        "KK.GeneratedDiagnosticSampling.Host",
+        "ThirdPersonCharacter.Animation"
     ],
     "includePlatforms": [
         "Editor"

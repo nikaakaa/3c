@@ -11,7 +11,8 @@
         "ThirdPerson.ProductStartup",
         "GUID:ad2f696d8ed24f38a061c52c6b7ed9f7",
         "UniTask",
-        "YooAsset"
+        "YooAsset",
+        "ThirdPersonCharacter.Animation"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -36,14 +36,14 @@ MonoBehaviour:
     Grounded\",\"_position\":{\"x\":160.0,\"y\":620.0},\"$type\":\"FlowCanvas.Nodes.SwitchBool\",\"$id\":\"13\"},{\"_UID\":\"corin.animation-event-graph.branch.grounded-moving\",\"_name\":\"Branch
     Grounded Moving\",\"_position\":{\"x\":420.0,\"y\":560.0},\"$type\":\"FlowCanvas.Nodes.SwitchBool\",\"$id\":\"14\"},{\"targetVariable\":{\"_name\":\"Motion
     Phase\",\"_targetVariableID\":\"animation.motion-phase\"},\"_UID\":\"corin.animation-event-graph.set.motion-phase-grounded-moving\",\"_position\":{\"x\":680.0,\"y\":500.0},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationMotionPhase,
-    ThirdPersonClient.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"15\"},{\"targetVariable\":{\"_name\":\"Motion
+    ThirdPersonCharacter.Animation, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"15\"},{\"targetVariable\":{\"_name\":\"Motion
     Phase\",\"_targetVariableID\":\"animation.motion-phase\"},\"_UID\":\"corin.animation-event-graph.set.motion-phase-grounded-stationary\",\"_position\":{\"x\":680.0,\"y\":620.0},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationMotionPhase,
-    ThirdPersonClient.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"16\"},{\"_UID\":\"corin.animation-event-graph.branch.airborne-rising\",\"_name\":\"Branch
+    ThirdPersonCharacter.Animation, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"16\"},{\"_UID\":\"corin.animation-event-graph.branch.airborne-rising\",\"_name\":\"Branch
     Airborne Rising\",\"_position\":{\"x\":420.0,\"y\":780.0},\"$type\":\"FlowCanvas.Nodes.SwitchBool\",\"$id\":\"17\"},{\"targetVariable\":{\"_name\":\"Motion
     Phase\",\"_targetVariableID\":\"animation.motion-phase\"},\"_UID\":\"corin.animation-event-graph.set.motion-phase-airborne-rising\",\"_position\":{\"x\":680.0,\"y\":740.0},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationMotionPhase,
-    ThirdPersonClient.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"18\"},{\"targetVariable\":{\"_name\":\"Motion
+    ThirdPersonCharacter.Animation, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"18\"},{\"targetVariable\":{\"_name\":\"Motion
     Phase\",\"_targetVariableID\":\"animation.motion-phase\"},\"_UID\":\"corin.animation-event-graph.set.motion-phase-airborne-falling\",\"_position\":{\"x\":680.0,\"y\":860.0},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationMotionPhase,
-    ThirdPersonClient.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"19\"},{\"targetVariable\":{\"_name\":\"Previous
+    ThirdPersonCharacter.Animation, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"19\"},{\"targetVariable\":{\"_name\":\"Previous
     Planar Velocity\",\"_targetVariableID\":\"animation.history.previous-planar-velocity\"},\"_UID\":\"corin.animation-event-graph.history.set-previous-planar\",\"_position\":{\"x\":420.0,\"y\":1040.0},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[UnityEngine.Vector2,
     UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\",\"$id\":\"20\"},{\"targetVariable\":{\"_name\":\"Has
     Previous Sample\",\"_targetVariableID\":\"animation.history.has-previous-sample\"},\"_UID\":\"corin.animation-event-graph.history.set-has-previous\",\"_position\":{\"x\":680.682373046875,\"y\":1040.6669921875},\"$type\":\"FlowCanvas.Nodes.SetVariable`1[[System.Boolean,
@@ -271,7 +271,7 @@ MonoBehaviour:
     Error\":{\"_name\":\"Facing Error\",\"_id\":\"animation.facing-error\",\"_isPublic\":true,\"$type\":\"NodeCanvas.Framework.Variable`1[[System.Single,
     mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]\"},\"Motion
     Phase\":{\"_value\":1,\"_name\":\"Motion Phase\",\"_id\":\"animation.motion-phase\",\"_isPublic\":true,\"$type\":\"NodeCanvas.Framework.Variable`1[[ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationMotionPhase,
-    ThirdPersonClient.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\"},\"Previous
+    ThirdPersonCharacter.Animation, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\"},\"Previous
     Planar Velocity\":{\"_name\":\"Previous Planar Velocity\",\"_id\":\"animation.history.previous-planar-velocity\",\"_isPublic\":true,\"$type\":\"NodeCanvas.Framework.Variable`1[[UnityEngine.Vector2,
     UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]\"},\"Has
     Previous Sample\":{\"_name\":\"Has Previous Sample\",\"_id\":\"animation.history.has-previous-sample\",\"_isPublic\":true,\"$type\":\"NodeCanvas.Framework.Variable`1[[System.Boolean,

@@ -17,7 +17,9 @@
         "BTSMTL.Diagnostics",
         "BTSMTL.Timeline",
         "Fantasy.Unity",
-        "Kybernetik.Animancer"
+        "Kybernetik.Animancer",
+        "ThirdPersonCharacter.Animation",
+        "ThirdPersonCamera.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
-    internal sealed class CameraEnvironmentConstraintSolver
+    public sealed class CameraEnvironmentConstraintSolver
     {
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly ICameraEnvironmentQuery m_Query;

@@ -10,7 +10,8 @@
         "ThirdPersonSimulation.Core",
         "MCPForUnity.Editor",
         "ThirdPersonCharacter.PresentationReplicationDiagnosticSampling",
-        "ThirdPersonCharacter.PresentationReplicationDiagnosticAnalysis.Editor"
+        "ThirdPersonCharacter.PresentationReplicationDiagnosticAnalysis.Editor",
+        "ThirdPersonCharacter.Animation"
     ],
     "includePlatforms": [
         "Editor"

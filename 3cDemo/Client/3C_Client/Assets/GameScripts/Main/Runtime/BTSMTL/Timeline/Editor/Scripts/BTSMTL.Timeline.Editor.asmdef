@@ -16,7 +16,8 @@
         "GUID:ad2f696d8ed24f38a061c52c6b7ed9f7",
         "NodeCanvas",
         "ParadoxNotion",
-        "FlowCanvas"
+        "FlowCanvas",
+        "ThirdPersonCamera.Runtime"
     ],
     "includePlatforms": [
         "Editor"

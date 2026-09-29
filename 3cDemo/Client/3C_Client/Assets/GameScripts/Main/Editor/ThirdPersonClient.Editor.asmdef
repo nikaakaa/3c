@@ -57,7 +57,9 @@
         "Unity.InputSystem",
         "Cinemachine",
         "YooAsset",
-        "YooAsset.Editor"
+        "YooAsset.Editor",
+        "ThirdPersonCharacter.Animation",
+        "ThirdPersonCamera.Runtime"
     ],
     "includePlatforms": [
         "Editor"

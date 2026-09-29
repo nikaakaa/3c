@@ -7,7 +7,8 @@
     "ThirdPersonCharacter.Animation.TransitionRouting",
     "ThirdPersonClient.Runtime",
     "ThirdPersonCamera.Contracts",
-    "ThirdPersonGameplay"
+    "ThirdPersonGameplay",
+    "ThirdPersonCharacter.Animation"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

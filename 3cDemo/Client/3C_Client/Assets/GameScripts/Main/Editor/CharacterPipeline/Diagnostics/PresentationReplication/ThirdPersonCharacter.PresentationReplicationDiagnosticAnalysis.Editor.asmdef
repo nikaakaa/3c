@@ -7,7 +7,8 @@
         "KK.GeneratedDiagnosticSampling.Host",
         "ThirdPersonClient.Runtime",
         "ThirdPersonClient.Editor",
-        "ThirdPersonCharacter.PresentationReplicationDiagnosticSampling"
+        "ThirdPersonCharacter.PresentationReplicationDiagnosticSampling",
+        "ThirdPersonCharacter.Animation"
     ],
     "includePlatforms": [
         "Editor"

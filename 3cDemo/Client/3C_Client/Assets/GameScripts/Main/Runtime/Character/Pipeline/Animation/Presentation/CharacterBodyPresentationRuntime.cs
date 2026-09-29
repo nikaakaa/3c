@@ -1,0 +1,814 @@
+using System;
+using System.Collections.Generic;
+using BTSMTL.Diagnostics;
+using ThirdPersonGameplay.Tick;
+using ThirdPersonPerformance.Instrumentation;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Presentation
+{
+    internal enum CharacterBodyPresentationSourceMode : byte
+    {
+        CommittedStream = 1,
+        SelectedStream = 2
+    }
+
+    public enum CharacterBodyPresentationResetReason : byte
+    {
+        Initialization = 1,
+        CommittedBranchReplacement = 2,
+        SelectedStreamReset = 3
+    }
+
+    internal readonly struct CharacterBodyPresentationFrame
+    {
+        public CharacterBodyPresentationFrame(
+            ulong previousTick,
+            ulong currentTick,
+            float sampleAlpha,
+            float sampleAgeSeconds,
+            CharacterBodyPresentationSourceMode sourceMode,
+            CharacterBodyCorrectionMode correctionMode,
+            CharacterVisualTrajectorySample target,
+            CharacterVisualTrajectoryResult visible,
+            Vector3 sourceTranslationDelta,
+            Vector3 visibleTranslationDelta,
+            bool groundedBefore,
+            bool groundedAfter,
+            ulong resetSequence,
+            CharacterBodyPresentationResetReason resetReason)
+        {
+            IsValid = currentTick != 0;
+            PreviousTick = previousTick;
+            CurrentTick = currentTick;
+            SampleAlpha = Mathf.Clamp01(sampleAlpha);
+            if (!float.IsFinite(sampleAgeSeconds) || sampleAgeSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(sampleAgeSeconds));
+            SampleAgeSeconds = sampleAgeSeconds;
+            SourceMode = sourceMode;
+            CorrectionMode = correctionMode;
+            VisiblePosition = visible.Position;
+            VisibleRotation = visible.Rotation;
+            VisibleVelocity = visible.Velocity;
+            VisibleYawVelocityDegreesPerSecond = visible.YawVelocityDegreesPerSecond;
+            SourceTranslationDelta = sourceTranslationDelta;
+            VisibleTranslationDelta = visibleTranslationDelta;
+            GroundedBefore = groundedBefore;
+            GroundedAfter = groundedAfter;
+            TargetPosition = target.Position;
+            TargetRotation = target.Rotation;
+            TargetVelocity = target.LinearVelocity;
+            TargetYawVelocityDegreesPerSecond = target.YawVelocityDegreesPerSecond;
+            TargetGrounded = target.Grounded;
+            PositionError = visible.PositionError.magnitude;
+            RotationError = Mathf.Abs(visible.YawErrorDegrees);
+            CorrectionPositionError = visible.PositionError;
+            CorrectionPositionVelocity = visible.CorrectionVelocity;
+            CorrectionYawVelocityDegreesPerSecond = visible.YawCorrectionVelocityDegreesPerSecond;
+            CorrectionActive = visible.CorrectionActive;
+            CorrectionClamped = visible.CorrectionClamped;
+            CorrectionSettled = visible.Settled;
+            ResetSequence = resetSequence;
+            ResetReason = resetReason;
+        }
+
+        public bool IsValid { get; }
+        public ulong PreviousTick { get; }
+        public ulong CurrentTick { get; }
+        public float SampleAlpha { get; }
+        public float SampleAgeSeconds { get; }
+        public ulong AnimationSampleTick => CurrentTick;
+        public float AnimationSampleAlpha => SampleAlpha;
+        public CharacterBodyPresentationSourceMode SourceMode { get; }
+        public CharacterBodyCorrectionMode CorrectionMode { get; }
+        public Vector3 VisiblePosition { get; }
+        public Quaternion VisibleRotation { get; }
+        public Vector3 VisibleVelocity { get; }
+        public float VisibleYawVelocityDegreesPerSecond { get; }
+        public Vector3 SourceTranslationDelta { get; }
+        public Vector3 VisibleTranslationDelta { get; }
+        public bool GroundedBefore { get; }
+        public bool GroundedAfter { get; }
+        public Vector3 TargetPosition { get; }
+        public Quaternion TargetRotation { get; }
+        public Vector3 TargetVelocity { get; }
+        public float TargetYawVelocityDegreesPerSecond { get; }
+        public bool TargetGrounded { get; }
+        public float PositionError { get; }
+        public float RotationError { get; }
+        public Vector3 CorrectionPositionError { get; }
+        public Vector3 CorrectionPositionVelocity { get; }
+        public float CorrectionYawVelocityDegreesPerSecond { get; }
+        public bool CorrectionActive { get; }
+        public bool CorrectionClamped { get; }
+        public bool CorrectionSettled { get; }
+        public ulong ResetSequence { get; }
+        public CharacterBodyPresentationResetReason ResetReason { get; }
+    }
+
+    internal sealed class CharacterBodyPresentationRuntime : IDisposable
+    {
+        readonly ThirdPersonSimulation.ActorId m_ActorId;
+        readonly int m_SimulationTickRate;
+        readonly float m_TickDurationSeconds;
+        readonly CharacterBodyPresentationSourceMode m_SourceMode;
+        readonly CharacterVisualTrajectoryFollower m_Follower;
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
+        readonly Vector3 m_VisualBindPosition;
+        readonly Quaternion m_VisualBindRotation;
+        readonly CharacterPresentationBodyState m_InitialBody;
+        readonly RuntimeDiagnosticsContext m_Diagnostics;
+        readonly SortedDictionary<ulong, CharacterPresentationBodyState> m_CommittedBodies =
+            new SortedDictionary<ulong, CharacterPresentationBodyState>();
+        readonly SortedDictionary<ulong, float> m_CommittedYawVelocities =
+            new SortedDictionary<ulong, float>();
+        readonly Queue<CharacterPresentationBodyInterval> m_SelectedIntervals =
+            new Queue<CharacterPresentationBodyInterval>();
+
+        CharacterPresentationBodyInterval m_SelectedInterval;
+        CharacterPresentationBodyState m_SelectedTailBody;
+        ulong m_SelectedTailTick;
+        ulong m_LatestTick;
+        double m_CommittedPresentationTick;
+        bool m_CommittedClockInitialized;
+        bool m_CommittedClockNeedsReset = true;
+        bool m_HasSelectedInterval;
+        bool m_HasSelectedTail;
+        float m_SelectedElapsedSeconds;
+        ulong m_ResetSequence;
+        ulong m_NextResetSequence;
+        CharacterBodyPresentationResetReason m_ResetReason;
+        ulong m_BranchReplacementCount;
+        CharacterBodyPresentationFrame m_LastPresentedFrame;
+        bool m_Disposed;
+
+        public CharacterBodyPresentationRuntime(
+            ThirdPersonSimulation.ActorId actorId,
+            int simulationTickRate,
+            CharacterBodyPresentationSourceMode sourceMode,
+            CharacterBodyPresentationSettings settings,
+            CharacterRootHierarchyBinding rootHierarchy,
+            CharacterPresentationBodyState initialBody,
+            RuntimeDiagnosticsContext diagnostics)
+        {
+            if (!actorId.IsValid || initialBody.ActorId != actorId)
+                throw new ArgumentException("Presentation Body Runtime Actor identity is invalid.");
+            if (simulationTickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(simulationTickRate));
+            if (sourceMode != CharacterBodyPresentationSourceMode.CommittedStream &&
+                sourceMode != CharacterBodyPresentationSourceMode.SelectedStream)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sourceMode));
+            }
+            settings.RequireValid(nameof(CharacterBodyPresentationRuntime));
+            m_ActorId = actorId;
+            m_SimulationTickRate = simulationTickRate;
+            m_TickDurationSeconds = 1f / simulationTickRate;
+            m_SourceMode = sourceMode;
+            m_Follower = new CharacterVisualTrajectoryFollower(settings);
+            m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
+            m_InitialBody = initialBody;
+            m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
+            m_VisualBindPosition = inverse * (m_RootHierarchy.VisualRoot.position - initialBody.Position);
+            m_VisualBindRotation = inverse * m_RootHierarchy.VisualRoot.rotation;
+            InitializeState();
+        }
+
+        public CharacterBodyPresentationSourceMode SourceMode => m_SourceMode;
+        internal Transform VisualRoot => m_RootHierarchy.VisualRoot;
+        internal float TickDurationSeconds => m_TickDurationSeconds;
+        public ulong LatestTick => m_LatestTick;
+        public ulong ResetSequence => m_ResetSequence;
+        internal CharacterBodyPresentationResetReason ResetReason => m_ResetReason;
+        public ulong BranchReplacementCount => m_BranchReplacementCount;
+        public float FollowerPositionCorrectionMeters => m_LastPresentedFrame.PositionError;
+        public float FollowerYawCorrectionDegrees => m_LastPresentedFrame.RotationError;
+
+        internal bool TryGetLatestBody(out CharacterPresentationBodyState body)
+        {
+            if (m_LatestTick != 0 &&
+                m_CommittedBodies.TryGetValue(m_LatestTick, out body))
+            {
+                return true;
+            }
+            if (m_LastPresentedFrame.IsValid)
+            {
+                body = new CharacterPresentationBodyState(
+                    m_ActorId,
+                    m_LastPresentedFrame.TargetPosition,
+                    m_LastPresentedFrame.TargetRotation,
+                    m_LastPresentedFrame.TargetVelocity,
+                    m_LastPresentedFrame.TargetGrounded);
+                return true;
+            }
+            body = default;
+            return false;
+        }
+
+        public void CaptureStreamTransaction(CharacterPresentationBodyInterval[] intervals, int count)
+        {
+            RequireAlive();
+            if (intervals == null || count == 0)
+                throw new ArgumentException("Presentation Body transaction requires at least one interval.", nameof(intervals));
+            if (m_SourceMode == CharacterBodyPresentationSourceMode.SelectedStream)
+            {
+                ValidateSelectedTransaction(intervals, count);
+                for (int i = 0; i < count; i++)
+                    CaptureSelected(intervals[i]);
+                return;
+            }
+            ValidateCommittedTransaction(intervals, count);
+            bool replacesBranch = ReplacesCommittedBranch(intervals[0]);
+            bool changesBranch = replacesBranch && ChangesCommittedBranch(intervals, count);
+            if (!replacesBranch && intervals[0].PreviousTick != m_LatestTick)
+            {
+                throw new InvalidOperationException(
+                    $"Committed Presentation Body transaction starts at Tick '{intervals[0].PreviousTick}' but latest Tick is '{m_LatestTick}'.");
+            }
+            if (replacesBranch && m_CommittedClockInitialized &&
+                intervals[count - 1].CurrentTick < m_CommittedPresentationTick)
+            {
+                throw new InvalidOperationException(
+                    "Committed Presentation branch replacement does not cover the current Presentation cursor.");
+            }
+            if (replacesBranch)
+                RemoveCommittedBranchFrom(intervals[0].PreviousTick);
+            for (int i = 0; i < count; i++)
+                StoreCommitted(intervals[i]);
+            if (changesBranch)
+            {
+                m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
+                RetargetCommittedBranch();
+            }
+        }
+
+        void ValidateSelectedTransaction(CharacterPresentationBodyInterval[] intervals, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                CharacterPresentationBodyInterval interval = intervals[i];
+                if (interval.ActorId != m_ActorId)
+                    throw new InvalidOperationException("Presentation Body interval targets another Actor.");
+                if (i == 0)
+                {
+                    if (interval.UpdateKind == CharacterPresentationBodyStreamUpdateKind.Append &&
+                        (!m_HasSelectedTail ||
+                         interval.PreviousTick != m_SelectedTailTick ||
+                         !interval.PreviousBody.KinematicallyMatches(m_SelectedTailBody) ||
+                         interval.CurrentTick <= m_LatestTick))
+                    {
+                        throw new InvalidOperationException(
+                            "Selected Presentation Body transaction requires an explicit Reset for a discontinuous stream.");
+                    }
+                    continue;
+                }
+                CharacterPresentationBodyInterval previous = intervals[i - 1];
+                if (interval.UpdateKind != CharacterPresentationBodyStreamUpdateKind.Append ||
+                    interval.PreviousTick != previous.CurrentTick ||
+                    !interval.PreviousBody.KinematicallyMatches(previous.CurrentBody))
+                {
+                    throw new InvalidOperationException(
+                        "Selected Presentation Body transaction is discontinuous after its first interval.");
+                }
+            }
+        }
+
+        [PerformanceProbe("presentation.body")]
+        public CharacterBodyPresentationFrame Present(GameplayPresentationFrameContext context)
+        {
+            RequireAlive();
+            if (m_LatestTick == 0)
+                return default;
+            CharacterBodyPresentationFrame frame = m_SourceMode == CharacterBodyPresentationSourceMode.CommittedStream
+                ? PresentCommitted(context)
+                : PresentSelected(context);
+            m_LastPresentedFrame = frame;
+            ApplyVisualRoot(frame);
+            PublishDiagnostics(frame, context.PresentationDeltaSeconds);
+            return frame;
+        }
+
+        public void Reset()
+        {
+            if (m_Disposed)
+                return;
+            InitializeState();
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            InitializeState();
+            m_Follower.Clear();
+            m_Disposed = true;
+        }
+
+        void CaptureCommitted(CharacterPresentationBodyInterval interval)
+        {
+            ValidateCommittedInterval(interval);
+            bool replacesBranch = ReplacesCommittedBranch(interval);
+            bool changesBranch = replacesBranch && ChangesCommittedBranch(interval);
+            if (!replacesBranch && interval.PreviousTick != m_LatestTick)
+            {
+                throw new InvalidOperationException(
+                    $"Committed Presentation Body interval starts at Tick '{interval.PreviousTick}' but latest Tick is '{m_LatestTick}'.");
+            }
+            if (replacesBranch && m_CommittedClockInitialized && interval.CurrentTick < m_CommittedPresentationTick)
+            {
+                throw new InvalidOperationException(
+                    "Committed Presentation branch replacement does not cover the current Presentation cursor.");
+            }
+            if (replacesBranch)
+                RemoveCommittedBranchFrom(interval.PreviousTick);
+            StoreCommitted(interval);
+            if (changesBranch)
+            {
+                m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
+                RetargetCommittedBranch();
+            }
+        }
+
+        void ValidateCommittedTransaction(CharacterPresentationBodyInterval[] intervals, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                CharacterPresentationBodyInterval interval = intervals[i];
+                ValidateCommittedInterval(interval);
+                if (i == 0)
+                    continue;
+                CharacterPresentationBodyInterval previous = intervals[i - 1];
+                if (interval.PreviousTick != previous.CurrentTick ||
+                    !HasSameKinematicState(interval.PreviousBody, previous.CurrentBody))
+                {
+                    throw new InvalidOperationException(
+                        $"Committed Presentation Body transaction is discontinuous at Tick '{interval.CurrentTick}'.");
+                }
+            }
+        }
+
+        void ValidateCommittedInterval(CharacterPresentationBodyInterval interval)
+        {
+            if (interval.ActorId != m_ActorId)
+                throw new InvalidOperationException("Presentation Body interval targets another Actor.");
+            if (interval.UpdateKind == CharacterPresentationBodyStreamUpdateKind.Reset)
+            {
+                throw new InvalidOperationException(
+                    "Committed Presentation Body stream does not accept selected-stream Reset updates.");
+            }
+        }
+
+        bool ReplacesCommittedBranch(CharacterPresentationBodyInterval interval)
+        {
+            bool replacesLatestPrevious = interval.PreviousTick == m_LatestTick &&
+                m_CommittedBodies.TryGetValue(interval.PreviousTick, out CharacterPresentationBodyState existingPrevious) &&
+                !HasSameKinematicState(existingPrevious, interval.PreviousBody);
+            return m_LatestTick != 0 &&
+                (interval.PreviousTick < m_LatestTick || interval.CurrentTick <= m_LatestTick || replacesLatestPrevious);
+        }
+
+        bool ChangesCommittedBranch(CharacterPresentationBodyInterval[] intervals, int count)
+        {
+            if (intervals[count - 1].CurrentTick < m_LatestTick)
+                return true;
+            for (int i = 0; i < count; i++)
+            {
+                CharacterPresentationBodyInterval interval = intervals[i];
+                if (DiffersFromCommitted(interval.PreviousTick, interval.PreviousBody) ||
+                    DiffersFromCommitted(interval.CurrentTick, interval.CurrentBody))
+                    return true;
+            }
+            return false;
+        }
+
+        bool ChangesCommittedBranch(CharacterPresentationBodyInterval interval)
+        {
+            return interval.CurrentTick < m_LatestTick ||
+                   DiffersFromCommitted(interval.PreviousTick, interval.PreviousBody) ||
+                   DiffersFromCommitted(interval.CurrentTick, interval.CurrentBody);
+        }
+
+        bool DiffersFromCommitted(ulong tick, CharacterPresentationBodyState body)
+        {
+            return m_CommittedBodies.TryGetValue(tick, out CharacterPresentationBodyState existing) &&
+                   !HasSameKinematicState(existing, body);
+        }
+
+        void RetargetCommittedBranch()
+        {
+            AdvanceReset(CharacterBodyPresentationResetReason.CommittedBranchReplacement);
+            if (!m_CommittedClockInitialized)
+                return;
+            if (!TrySampleCommittedTarget(m_CommittedPresentationTick, out CharacterBodyTargetFrame target))
+            {
+                throw new InvalidOperationException(
+                    "Committed Presentation branch replacement cannot sample the current Presentation cursor.");
+            }
+            m_Follower.Retarget(target.Sample);
+        }
+
+        void RemoveCommittedBranchFrom(ulong firstTick)
+        {
+            var obsolete = new List<ulong>();
+            foreach (ulong tick in m_CommittedBodies.Keys)
+            {
+                if (tick >= firstTick)
+                    obsolete.Add(tick);
+            }
+            for (int i = 0; i < obsolete.Count; i++)
+            {
+                m_CommittedBodies.Remove(obsolete[i]);
+                m_CommittedYawVelocities.Remove(obsolete[i]);
+            }
+        }
+
+        void StoreCommitted(CharacterPresentationBodyInterval interval)
+        {
+            m_CommittedBodies[interval.PreviousTick] = interval.PreviousBody;
+            m_CommittedBodies[interval.CurrentTick] = interval.CurrentBody;
+            m_CommittedYawVelocities[interval.CurrentTick] = interval.YawVelocityDegreesPerSecond;
+            m_LatestTick = interval.CurrentTick;
+        }
+
+        void CaptureSelected(CharacterPresentationBodyInterval interval)
+        {
+            if (interval.UpdateKind == CharacterPresentationBodyStreamUpdateKind.Reset)
+            {
+                ResetSelectedSource(interval.PreviousBody, interval.PreviousTick);
+            }
+            else
+            {
+                if (!m_HasSelectedTail ||
+                    interval.PreviousTick != m_SelectedTailTick ||
+                    !HasSameKinematicState(interval.PreviousBody, m_SelectedTailBody))
+                {
+                    throw new InvalidOperationException(
+                        "Selected Presentation Body interval is discontinuous without an explicit stream Reset.");
+                }
+                if (interval.CurrentTick <= m_LatestTick)
+                {
+                    throw new InvalidOperationException(
+                        "Selected Presentation Body Tick duplicated or regressed without an explicit stream Reset.");
+                }
+            }
+
+            if (m_HasSelectedInterval)
+                m_SelectedIntervals.Enqueue(interval);
+            else
+            {
+                m_SelectedInterval = interval;
+                m_SelectedElapsedSeconds = 0f;
+                m_HasSelectedInterval = true;
+            }
+            m_SelectedTailTick = interval.CurrentTick;
+            m_SelectedTailBody = interval.CurrentBody;
+            m_HasSelectedTail = true;
+            m_LatestTick = interval.CurrentTick;
+        }
+
+        CharacterBodyPresentationFrame PresentCommitted(GameplayPresentationFrameContext context)
+        {
+            if (m_CommittedBodies.Count == 0)
+                throw new InvalidOperationException("Committed Presentation Body stream has no samples.");
+            ulong firstTick = FirstCommittedTick();
+            ulong latestTick = LastCommittedTick();
+            if (!m_CommittedClockInitialized || m_CommittedClockNeedsReset)
+            {
+                double initial = latestTick > firstTick
+                    ? latestTick - 1d + Mathf.Clamp01(context.InterpolationAlpha)
+                    : latestTick;
+                m_CommittedPresentationTick = Math.Max(firstTick, Math.Min(latestTick, initial));
+                m_CommittedClockInitialized = true;
+                m_CommittedClockNeedsReset = false;
+            }
+            else
+            {
+                if (latestTick < m_CommittedPresentationTick)
+                    throw new InvalidOperationException("Committed Presentation cursor cannot move backward.");
+                m_CommittedPresentationTick = Math.Min(
+                    latestTick,
+                    m_CommittedPresentationTick + Math.Max(0f, context.PresentationDeltaSeconds) * m_SimulationTickRate);
+                if (m_CommittedPresentationTick < firstTick)
+                    m_CommittedPresentationTick = firstTick;
+            }
+
+            if (!TrySampleCommittedTarget(m_CommittedPresentationTick, out CharacterBodyTargetFrame target))
+                throw new InvalidOperationException("Committed Presentation Body target cannot be sampled.");
+            CharacterVisualTrajectoryResult visible = m_Follower.Evaluate(
+                target.Sample,
+                context.PresentationDeltaSeconds);
+            TrimCommittedBodies(target.PreviousTick);
+            return BuildFrame(target, visible);
+        }
+
+        CharacterBodyPresentationFrame PresentSelected(GameplayPresentationFrameContext context)
+        {
+            if (!m_HasSelectedInterval)
+                return default;
+            float deltaSeconds = Math.Max(0f, context.PresentationDeltaSeconds);
+            float intervalDuration = SelectedIntervalDuration(m_SelectedInterval);
+            float remainingSeconds = deltaSeconds;
+            while (remainingSeconds > 0f)
+            {
+                float intervalRemaining = Math.Max(0f, intervalDuration - m_SelectedElapsedSeconds);
+                float consumed = Math.Min(intervalRemaining, remainingSeconds);
+                m_SelectedElapsedSeconds += consumed;
+                remainingSeconds -= consumed;
+                if (m_SelectedElapsedSeconds < intervalDuration || m_SelectedIntervals.Count == 0)
+                    break;
+                m_SelectedInterval = m_SelectedIntervals.Dequeue();
+                m_SelectedElapsedSeconds = 0f;
+                intervalDuration = SelectedIntervalDuration(m_SelectedInterval);
+            }
+            float alpha = intervalDuration <= 0f
+                ? 1f
+                : Mathf.Clamp01(m_SelectedElapsedSeconds / intervalDuration);
+            CharacterBodyTargetFrame target = BuildTarget(
+                m_SelectedInterval.PreviousTick,
+                m_SelectedInterval.PreviousBody,
+                m_SelectedInterval.CurrentTick,
+                m_SelectedInterval.CurrentBody,
+                m_SelectedInterval.YawVelocityDegreesPerSecond,
+                alpha);
+            CharacterVisualTrajectoryResult visible = m_Follower.Evaluate(target.Sample, deltaSeconds);
+            return BuildFrame(target, visible);
+        }
+
+        bool TrySampleCommittedTarget(double sampleTick, out CharacterBodyTargetFrame target)
+        {
+            target = default;
+            if (!m_CommittedClockInitialized || m_CommittedBodies.Count == 0)
+                return false;
+            ulong firstTick = FirstCommittedTick();
+            ulong latestTick = LastCommittedTick();
+            if (sampleTick < firstTick || sampleTick > latestTick)
+                return false;
+            ulong previousTick = firstTick;
+            CharacterPresentationBodyState previousBody = m_CommittedBodies[firstTick];
+            foreach (KeyValuePair<ulong, CharacterPresentationBodyState> pair in m_CommittedBodies)
+            {
+                if (pair.Key <= sampleTick)
+                {
+                    previousTick = pair.Key;
+                    previousBody = pair.Value;
+                    continue;
+                }
+                float alpha = Mathf.Clamp01((float)((sampleTick - previousTick) / (pair.Key - previousTick)));
+                target = BuildTarget(
+                    previousTick,
+                    previousBody,
+                    pair.Key,
+                    pair.Value,
+                    CommittedYawVelocity(pair.Key),
+                    alpha);
+                return true;
+            }
+            target = BuildTarget(
+                previousTick,
+                previousBody,
+                previousTick,
+                previousBody,
+                CommittedYawVelocity(previousTick),
+                1f);
+            return true;
+        }
+
+        CharacterBodyTargetFrame BuildTarget(
+            ulong previousTick,
+            CharacterPresentationBodyState previousBody,
+            ulong currentTick,
+            CharacterPresentationBodyState currentBody,
+            float yawVelocityDegreesPerSecond,
+            float alpha)
+        {
+            float clampedAlpha = Mathf.Clamp01(alpha);
+            var sample = new CharacterVisualTrajectorySample(
+                Vector3.Lerp(previousBody.Position, currentBody.Position, clampedAlpha),
+                Quaternion.Slerp(previousBody.Rotation, currentBody.Rotation, clampedAlpha),
+                Vector3.Lerp(previousBody.LinearVelocity, currentBody.LinearVelocity, clampedAlpha),
+                yawVelocityDegreesPerSecond,
+                clampedAlpha < 1f
+                    ? previousBody.Grounded && currentBody.Grounded
+                    : currentBody.Grounded);
+            return new CharacterBodyTargetFrame(
+                previousTick,
+                currentTick,
+                clampedAlpha,
+                sample,
+                currentBody.Position - previousBody.Position,
+                previousBody.Grounded,
+                currentBody.Grounded);
+        }
+
+        CharacterBodyPresentationFrame BuildFrame(
+            CharacterBodyTargetFrame target,
+            CharacterVisualTrajectoryResult visible)
+        {
+            Vector3 visibleTranslationDelta = m_LastPresentedFrame.IsValid &&
+                                              m_LastPresentedFrame.ResetSequence == m_ResetSequence
+                ? visible.Position - m_LastPresentedFrame.VisiblePosition
+                : Vector3.zero;
+            double sampleTick = target.PreviousTick +
+                                (target.CurrentTick - target.PreviousTick) * (double)target.SampleAlpha;
+            float sampleAgeSeconds = m_SourceMode == CharacterBodyPresentationSourceMode.SelectedStream
+                ? (float)(Math.Max(0d, m_LatestTick - sampleTick) * m_TickDurationSeconds)
+                : 0f;
+            return new CharacterBodyPresentationFrame(
+                target.PreviousTick,
+                target.CurrentTick,
+                target.SampleAlpha,
+                sampleAgeSeconds,
+                m_SourceMode,
+                m_Follower.CorrectionMode,
+                target.Sample,
+                visible,
+                target.SourceTranslationDelta,
+                visibleTranslationDelta,
+                target.GroundedBefore,
+                target.GroundedAfter,
+                m_ResetSequence,
+                m_ResetReason);
+        }
+
+        void ApplyVisualRoot(CharacterBodyPresentationFrame frame)
+        {
+            if (!frame.IsValid)
+                return;
+            m_RootHierarchy.ApplyVisualWorldPose(
+                frame.VisiblePosition + frame.VisibleRotation * m_VisualBindPosition,
+                frame.VisibleRotation * m_VisualBindRotation);
+        }
+
+        void PublishDiagnostics(CharacterBodyPresentationFrame frame, float presentationDeltaSeconds)
+        {
+            if (!frame.IsValid ||
+                !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.PresentationInterpolated))
+            {
+                return;
+            }
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.PresentationInterpolated,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = frame.CorrectionActive ? "Correcting" : "Settled",
+                    Time = frame.SampleAlpha,
+                    SecondaryTime = presentationDeltaSeconds,
+                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};correctionMode={frame.CorrectionMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};logicRoot={m_RootHierarchy.LogicRoot.position};visualRootLocal={m_RootHierarchy.VisualRoot.localPosition};visualRootWorld={m_RootHierarchy.VisualRoot.position};poseRootLocal={m_RootHierarchy.PoseRoot.localPosition};poseRootWorld={m_RootHierarchy.PoseRoot.position};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
+                    Value = DebugValueSnapshot.Capture(frame.VisiblePosition)
+                });
+        }
+
+        void InitializeState()
+        {
+            m_CommittedBodies.Clear();
+            m_CommittedYawVelocities.Clear();
+            m_CommittedPresentationTick = 0d;
+            m_CommittedClockInitialized = false;
+            m_CommittedClockNeedsReset = true;
+            m_SelectedInterval = default;
+            m_SelectedIntervals.Clear();
+            m_HasSelectedInterval = false;
+            m_SelectedElapsedSeconds = 0f;
+            m_SelectedTailTick = 0;
+            m_SelectedTailBody = m_InitialBody;
+            m_HasSelectedTail = true;
+            m_LatestTick = 0;
+            m_ResetSequence = 0;
+            m_ResetReason = CharacterBodyPresentationResetReason.Initialization;
+            m_BranchReplacementCount = 0;
+            m_LastPresentedFrame = default;
+            m_Follower.Reset(ToAnchorSample(m_InitialBody));
+            if (m_SourceMode == CharacterBodyPresentationSourceMode.CommittedStream)
+                m_CommittedBodies.Add(0, m_InitialBody);
+            AdvanceReset(CharacterBodyPresentationResetReason.Initialization);
+        }
+
+        void ResetSelectedSource(CharacterPresentationBodyState anchor, ulong anchorTick)
+        {
+            if (anchor.ActorId != m_ActorId)
+                throw new InvalidOperationException("Selected Presentation reset anchor targets another Actor.");
+            m_SelectedInterval = default;
+            m_SelectedIntervals.Clear();
+            m_HasSelectedInterval = false;
+            m_SelectedElapsedSeconds = 0f;
+            m_SelectedTailTick = anchorTick;
+            m_SelectedTailBody = anchor;
+            m_HasSelectedTail = true;
+            m_LatestTick = anchorTick;
+            m_Follower.Retarget(ToAnchorSample(anchor));
+            AdvanceReset(CharacterBodyPresentationResetReason.SelectedStreamReset);
+        }
+
+        float SelectedIntervalDuration(CharacterPresentationBodyInterval interval)
+        {
+            return Math.Max(
+                m_TickDurationSeconds,
+                (interval.CurrentTick - interval.PreviousTick) * m_TickDurationSeconds);
+        }
+
+        void AdvanceReset(CharacterBodyPresentationResetReason reason)
+        {
+            if (m_NextResetSequence == ulong.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "Character Body presentation reset sequence was exhausted.");
+            }
+            m_NextResetSequence++;
+            m_ResetSequence = m_NextResetSequence;
+            m_ResetReason = reason;
+        }
+
+        ulong FirstCommittedTick()
+        {
+            foreach (ulong tick in m_CommittedBodies.Keys)
+                return tick;
+            throw new InvalidOperationException("Committed Presentation Body history is empty.");
+        }
+
+        ulong LastCommittedTick()
+        {
+            ulong tick = 0;
+            foreach (ulong candidate in m_CommittedBodies.Keys)
+                tick = candidate;
+            return tick;
+        }
+
+        void TrimCommittedBodies(ulong retainTick)
+        {
+            while (m_CommittedBodies.Count > 2 && FirstCommittedTick() < retainTick)
+            {
+                ulong firstTick = FirstCommittedTick();
+                m_CommittedBodies.Remove(firstTick);
+                m_CommittedYawVelocities.Remove(firstTick);
+            }
+        }
+
+        float CommittedYawVelocity(ulong currentTick)
+        {
+            return m_CommittedYawVelocities.TryGetValue(currentTick, out float velocity)
+                ? velocity
+                : 0f;
+        }
+
+        void RequireAlive()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(CharacterBodyPresentationRuntime));
+        }
+
+        static CharacterVisualTrajectorySample ToAnchorSample(CharacterPresentationBodyState body)
+        {
+            return new CharacterVisualTrajectorySample(
+                body.Position,
+                body.Rotation,
+                body.LinearVelocity,
+                0f,
+                body.Grounded);
+        }
+
+        static bool HasSameKinematicState(
+            CharacterPresentationBodyState left,
+            CharacterPresentationBodyState right)
+        {
+            return left.Position.Equals(right.Position) &&
+                   left.Rotation.Equals(right.Rotation) &&
+                   left.LinearVelocity.Equals(right.LinearVelocity) &&
+                   left.Grounded == right.Grounded;
+        }
+
+        readonly struct CharacterBodyTargetFrame
+        {
+            public CharacterBodyTargetFrame(
+                ulong previousTick,
+                ulong currentTick,
+                float sampleAlpha,
+                CharacterVisualTrajectorySample sample,
+                Vector3 sourceTranslationDelta,
+                bool groundedBefore,
+                bool groundedAfter)
+            {
+                PreviousTick = previousTick;
+                CurrentTick = currentTick;
+                SampleAlpha = sampleAlpha;
+                Sample = sample;
+                SourceTranslationDelta = sourceTranslationDelta;
+                GroundedBefore = groundedBefore;
+                GroundedAfter = groundedAfter;
+            }
+
+            public ulong PreviousTick { get; }
+            public ulong CurrentTick { get; }
+            public float SampleAlpha { get; }
+            public CharacterVisualTrajectorySample Sample { get; }
+            public Vector3 SourceTranslationDelta { get; }
+            public bool GroundedBefore { get; }
+            public bool GroundedAfter { get; }
+        }
+    }
+}

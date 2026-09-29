@@ -17,7 +17,9 @@
         "BTSMTL.Timeline.Runtime",
         "Kybernetik.Animancer",
         "Cinemachine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "ThirdPersonCharacter.Animation",
+        "ThirdPersonCamera.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

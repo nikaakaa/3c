@@ -6,6 +6,7 @@
         "ThirdPerson.Performance.Instrumentation.Core",
         "ThirdPerson.Performance.Instrumentation.Contracts",
         "ThirdPersonClient.Runtime",
+        "ThirdPersonCharacter.Animation",
         "ThirdPersonCamera.Contracts",
         "ThirdPersonGameplay",
         "ThirdPersonSimulation.Core",

@@ -4,7 +4,8 @@
     "references": [
         "KK.GeneratedDiagnosticSampling.Annotations",
         "ThirdPersonClient.Runtime",
-        "KK.GeneratedDiagnosticSampling"
+        "KK.GeneratedDiagnosticSampling",
+        "ThirdPersonCharacter.Animation"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

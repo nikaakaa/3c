@@ -1263,8 +1263,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     currentContact ? animatedFoot.ToePosition - currentSole : default);
             CharacterFootLandingObservationPage observationPage =
                 observation.Page;
-            CharacterFootLandingQueryResult queryResult =
-                observationPage.Result;
+            ref readonly CharacterFootLandingQueryResult queryResult =
+                ref observationPage.Result;
             bool accepted = queryResult.Accepted;
             CharacterFootLandingQueryRejectReason queryRejectReason =
                 queryResult.RejectReason;

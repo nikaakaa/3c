@@ -1907,3 +1907,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Current support observation page 的 Observation 自动属性每次读取复制 heel/toe request、heel/toe result、support target 等完整 observation；EvaluateFrame 每脚读取一次后传给预测、约束与输出链。
 - Page 改用 observation backing field，getter 返回只读引用；EvaluateFrame 左右 support 改为引用绑定。Set 和 Clear 的页身份、Commit/Discard 与字段值不变。
 - 该改动删除每脚当前支持 observation 从页到运行链的一次重复拷贝。静态核对 observation 为 readonly struct、引用生命周期覆盖 EvaluateFrame、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP265 Landing observation page result 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Landing observation page 的 Query 和 Result 自动属性每次读取复制完整 ground query request/result；PredictEvent 每脚读取 Result 后继续消费 support、selection diagnostics，并把 Query 写入 prediction result。
+- Page 的 Query 和 Result 改为 backing field 只读引用，PredictEvent 的 Result 改为引用绑定。Set、Clear、ReuseCommitted 和 Discard 页语义不变，prediction result 的 Query 字段仍保留一次必要拷贝。
+- 该改动删除每脚 landing query request/result 从页到 prediction 组装的重复拷贝。静态核对 query result 为 readonly struct、页面写入点只在 Set/Clear、引用生命周期覆盖 PredictEvent；未编译、未采样，不能声称实测耗时收益。

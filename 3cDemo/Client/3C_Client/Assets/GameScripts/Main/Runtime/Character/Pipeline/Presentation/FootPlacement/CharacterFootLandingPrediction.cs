@@ -342,10 +342,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootLandingObservationPage
     {
+        CharacterFootPlacementQueryRequest m_Query;
+        CharacterFootLandingQueryResult m_Result;
+
         internal bool HasValue { get; private set; }
         internal CharacterFootLandingObservationKey Key { get; private set; }
-        internal CharacterFootPlacementQueryRequest Query { get; private set; }
-        internal CharacterFootLandingQueryResult Result { get; private set; }
+        internal ref readonly CharacterFootPlacementQueryRequest Query =>
+            ref m_Query;
+        internal ref readonly CharacterFootLandingQueryResult Result =>
+            ref m_Result;
 
         internal void Set(
             in CharacterFootLandingObservationKey key,
@@ -354,16 +359,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             HasValue = true;
             Key = key;
-            Query = query;
-            Result = result;
+            m_Query = query;
+            m_Result = result;
         }
 
         internal void Clear()
         {
             HasValue = false;
             Key = default;
-            Query = default;
-            Result = default;
+            m_Query = default;
+            m_Result = default;
         }
     }
 

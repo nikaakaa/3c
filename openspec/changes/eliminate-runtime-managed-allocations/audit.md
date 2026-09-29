@@ -1685,3 +1685,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Final Publication 和 Foot Motion 读取 committed dominant clip sample 时，Source Module 的转发边界按值复制 source id 与 pose node id；后端接口和实现已是 `in` 接收。
 - Source Module 的正式 `RequireDominantClipSample` 改为 `in` source/node，并继续转发到同一 committed backend 查找。调用点仍传 contribution 的同一 identity 属性，identity 校验、Evaluate Barrier 校验、completion 校验、异常文本和返回 plan 语义不变。
 - 该改动删除周期 dominant sample 查询的 Source Module 边界拷贝。静态核对两个调用点、唯一转发实现和只读参数；未编译、未采样，不能声称实测耗时收益。此前怀疑的 Final Property Writer 循环绑定已排除：binding 是 sealed class 引用，不是结构拷贝。
+
+### AP228 source contribution identity 引用读取（2026-09-30，已实施，本轮未编译）
+
+- contribution 的 node 和 source id 自动属性每次读取复制完整结构；Final Publication 的 dominant sample 查询和 Foot Motion 采样在同一 contribution 上重复触发。
+- 公共 `NodeId`/`SourceId` 属性和存储合同保持不变，新增正式 backing field 只读引用；Final Publication 与 Foot Motion 的周期读取绑定同一引用。Source Module 查询仍按 AP227 的 `in` 边界转发，foot motion 构造仍保留一次必要存储拷贝。
+- 该改动删除 committed contribution 周期读取的重复 identity 拷贝。Live/Stored 选择、completion 校验、选中权重、foot motion 数值和输出 identity 不变。静态核对两个正式消费点、引用生命周期覆盖本次采样和字段只读；未编译、未采样，不能声称实测耗时收益。

@@ -141,9 +141,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in AnimationPoseSourceContribution contribution,
             ulong completionIdentity)
         {
+            ref readonly AnimationPoseSourceId sourceId = ref contribution.SourceIdRef;
+            ref readonly PoseNodeId nodeId = ref contribution.NodeIdRef;
             ClipSamplePlan clipSample = m_SourceModule.RequireDominantClipSample(
-                contribution.SourceId,
-                contribution.NodeId,
+                in sourceId,
+                in nodeId,
                 completionIdentity);
             CharacterPoseFootMotionSource source = m_FootMotionResolver(
                 contribution,
@@ -152,8 +154,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 clipSample.ContinuousClipTime / clipSample.DurationSeconds));
             AnimationFootMotionRuntimeFrame result = new AnimationFootMotionRuntimeFrame(
                     completionIdentity,
-                    contribution.NodeId,
-                    contribution.SourceId,
+                    nodeId,
+                    sourceId,
                     contribution.ContributionContinuityIdentity,
                     source.SourceIdentity,
                     source.SourceSampleIdentity,

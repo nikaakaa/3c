@@ -314,7 +314,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ref readonly AnimationPoseSourceContribution source =
                     ref m_Contributions[contributionIndex];
                 m_ClipSamples[contributionIndex] = source.Kind == AnimationPoseContributionKind.Live
-                    ? m_SourceModule.RequireDominantClipSample(source.SourceId, source.NodeId, output.CompletionIdentity)
+                    ? m_SourceModule.RequireDominantClipSample(
+                        in source.SourceIdRef,
+                        in source.NodeIdRef,
+                        output.CompletionIdentity)
                     : default;
                 int weightOffset = contribution * m_BoneCount;
                 for (int bone = 0; bone < m_BoneCount; bone++)

@@ -276,6 +276,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisReachInput
     {
+        readonly CharacterFootLandingReachRequest m_Left;
+        readonly CharacterFootLandingReachRequest m_Right;
+
         internal CharacterFootPelvisReachInput(
             bool leftRequested,
             in CharacterFootLandingReachRequest left,
@@ -286,15 +289,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightRequested && !right.IsAvailable)
                 throw new ArgumentException("Pelvis Reach requires a formal foot request.");
             LeftRequested = leftRequested;
-            Left = leftRequested ? left : default;
+            m_Left = leftRequested ? left : default;
             RightRequested = rightRequested;
-            Right = rightRequested ? right : default;
+            m_Right = rightRequested ? right : default;
         }
 
         internal bool LeftRequested { get; }
-        internal CharacterFootLandingReachRequest Left { get; }
+        internal ref readonly CharacterFootLandingReachRequest Left => ref m_Left;
         internal bool RightRequested { get; }
-        internal CharacterFootLandingReachRequest Right { get; }
+        internal ref readonly CharacterFootLandingReachRequest Right => ref m_Right;
     }
 
     internal readonly struct CharacterFootPelvisLegReach
@@ -358,14 +361,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisReachObservation
     {
+        readonly CharacterFootPelvisLegReach m_Left;
+        readonly CharacterFootPelvisLegReach m_Right;
+
         internal CharacterFootPelvisReachObservation(
             Vector3 componentUp,
             in CharacterFootPelvisLegReach left,
             in CharacterFootPelvisLegReach right)
         {
             ComponentUp = componentUp;
-            Left = left;
-            Right = right;
+            m_Left = left;
+            m_Right = right;
             Status = CharacterFootPelvisReachStatus.NotRequested;
             IntersectionEvaluated = false;
             IntersectionMinimumAlongUp = 0f;
@@ -394,8 +400,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal Vector3 ComponentUp { get; }
-        internal CharacterFootPelvisLegReach Left { get; }
-        internal CharacterFootPelvisLegReach Right { get; }
+        internal ref readonly CharacterFootPelvisLegReach Left => ref m_Left;
+        internal ref readonly CharacterFootPelvisLegReach Right => ref m_Right;
         internal CharacterFootPelvisReachStatus Status { get; }
         internal bool IntersectionEvaluated { get; }
         internal float IntersectionMinimumAlongUp { get; }
@@ -1551,7 +1557,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (input.LeftRequested)
             {
                 left = new CharacterFootPelvisLegReach(
-                    input.Left,
+                    in input.Left,
                     CharacterFootPelvisLegReachRole.FootTarget |
                     (leftPrimary ? CharacterFootPelvisLegReachRole.PrimarySupport : 0),
                     up);
@@ -1564,7 +1570,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (input.RightRequested)
             {
                 right = new CharacterFootPelvisLegReach(
-                    input.Right,
+                    in input.Right,
                     CharacterFootPelvisLegReachRole.FootTarget |
                     (rightPrimary ? CharacterFootPelvisLegReachRole.PrimarySupport : 0),
                     up);

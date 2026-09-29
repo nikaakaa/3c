@@ -39,6 +39,7 @@ namespace ThirdPersonSimulation
                     ProcessExisting(m_CurrentActions[i], skill, m_StoppingInstances);
 
                 m_Actions.TryCommitPendingControl(skill.SkillId);
+                m_CurrentActions.Clear();
                 m_ActionStore.CopyCurrentActions(skill.SkillId, m_CurrentActions);
                 for (int i = 0; i < m_CurrentActions.Count; i++)
                     TickActive(m_CurrentActions[i], skill, m_StoppingInstances);

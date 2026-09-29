@@ -463,7 +463,6 @@ namespace ThirdPersonSimulation
 		{
 			if (results == null)
 				throw new ArgumentNullException(nameof(results));
-			results.Clear();
 			foreach (Float32ActionInstanceState candidate in m_Frame.ActionState.GetActionInstances())
 			{
 				if (candidate.IsValid && candidate.SkillId == skillId)

@@ -657,6 +657,12 @@
 - 删除 Frame.End 的重复列表 Clear，保留 trace 状态释放和 action trace context 复位。Complete 的复制顺序、Savepoint 截断、异常 Abort 和 workspace 唯一清理边界不变。
 - 两个数值域同步修改，静态核对 End 唯一调用点、Complete 复制、Abort 生命周期和 Workspace.Reset 边界；未编译、运行回放或采样。
 
+### AP82 Ability Domain 首次名单复制重复清理（2026-09-29，已实施，本轮未编译）
+
+- 两域 AbilityDomainRuntime 每次 Tick 调用 CopyCurrentActions 两次；方法原先每次清空 results。第一次进入时，上一轮 finally 已清空 m_CurrentActions，构造和首次评估也为空；第二次是提交 pending control 后刷新同一名单，仍需要清空。
+- 将 Clear 移到第二次调用前，CopyCurrentActions 只负责按当前 Action 状态追加。ProcessExisting/TickActive 读取的名单、删除实例后的刷新结果和 finally 清理边界不变。
+- 两个数值域同步修改，静态核对唯一调用链、首次空列表前提、第二次刷新和异常 finally；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

@@ -467,7 +467,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (results == null)
                 throw new ArgumentNullException(nameof(results));
-            results.Clear();
             foreach (FixedActionInstanceState candidate in m_Frame.ActionState.GetActionInstances())
             {
                 if (candidate.IsValid && candidate.SkillId == skillId)

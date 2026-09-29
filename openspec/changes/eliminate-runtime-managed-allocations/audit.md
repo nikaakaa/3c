@@ -1432,3 +1432,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Inertialization 在 BeginTransition、ApplyResiduals 和 CommitHistory 的逐骨循环中按值复制 input、history 或 output 的 pose/velocity；ApplyResiduals 还复制 envelope sample。
 - 三段循环分别缓存 input/output slice；history、target、velocity 绑定数组或 `NativeSlice` 元素只读引用，envelope sample 改为只读引用。residual 公式、有效值校验、异常文本、参数/foot 应用和 history swap 顺序不变。
 - 该改动删除 inertialization 周期 bone 链的中间结构拷贝和重复 binding 读取；不改变事件 identity、pending/committed 页语义或 Commit/Discard。静态核对三个唯一循环、字段消费只读和 `EnvelopeSample` 生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP186 StateMachine transition bone 引用化（2026-09-30，已实施，本轮未编译）
+
+- StateMachine transition 混合每根骨骼重复读取 source/target/output 的 pose 和 velocity binding 属性，并把 source/target pose 与两个 velocity 复制为按值局部。
+- bone 循环前缓存六个 `NativeSlice`；source/target pose 和 velocity 绑定 `ref readonly` 元素引用，输出仍写原 dense page。全局权重、混合公式、参数、contribution、foot 和输出页顺序不变。
+- 该改动删除 transition 每骨的四类结构拷贝和重复属性读取；不改变 child 输出身份、active state 生命周期或 Commit/Discard。静态核对布局校验、`NativeSlice` 引用合同和唯一 BlendTransition bone 循环；未编译、未采样，不能声称实测耗时收益。

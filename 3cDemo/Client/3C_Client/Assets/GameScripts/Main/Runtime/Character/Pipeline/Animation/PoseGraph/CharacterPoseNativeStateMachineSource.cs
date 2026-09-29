@@ -846,10 +846,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!float.IsFinite(totalWeight) || totalWeight <= 0f)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' transition has no visible output.");
-            for (int bone = 0; bone < output.DenseLocalPoses.Length; bone++)
+            NativeSlice<AnimationLocalBonePose> sourceBones =
+                sourcePose.DenseLocalPoses;
+            NativeSlice<AnimationLocalBonePose> targetBones =
+                targetPose.DenseLocalPoses;
+            NativeSlice<AnimationLocalBonePose> outputPoses =
+                output.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> sourceVelocities =
+                sourcePose.DenseVelocities;
+            NativeSlice<AnimationBlendBoneVelocity> targetVelocities =
+                targetPose.DenseVelocities;
+            NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
+                output.DenseVelocities;
+            for (int bone = 0; bone < outputPoses.Length; bone++)
             {
-                AnimationLocalBonePose sourceBone = sourcePose.DenseLocalPoses[bone];
-                AnimationLocalBonePose targetBone = targetPose.DenseLocalPoses[bone];
+                ref readonly AnimationLocalBonePose sourceBone = ref sourceBones[bone];
+                ref readonly AnimationLocalBonePose targetBone = ref targetBones[bone];
                 Vector3 position =
                     (sourceBone.Position * sourceWeight * sourceOutputWeight +
                      targetBone.Position * targetWeight * targetOutputWeight) /
@@ -868,18 +880,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         targetBone.Rotation,
                         sourceBone.Rotation,
                         targetWeight * targetOutputWeight);
-                output.DenseLocalPoses[bone] =
+                outputPoses[bone] =
                     AnimationPoseMath.BlendWeighted(
                         position * totalWeight,
                         rotation,
                         scale * totalWeight,
                         totalWeight,
                         sourceBone);
-                AnimationBlendBoneVelocity sourceVelocity =
-                    sourcePose.DenseVelocities[bone];
-                AnimationBlendBoneVelocity targetVelocity =
-                    targetPose.DenseVelocities[bone];
-                output.DenseVelocities[bone] =
+                ref readonly AnimationBlendBoneVelocity sourceVelocity =
+                    ref sourceVelocities[bone];
+                ref readonly AnimationBlendBoneVelocity targetVelocity =
+                    ref targetVelocities[bone];
+                outputVelocities[bone] =
                     new AnimationBlendBoneVelocity(
                         (sourceVelocity.Linear * sourceWeight * sourceOutputWeight +
                          targetVelocity.Linear * targetWeight * targetOutputWeight) /

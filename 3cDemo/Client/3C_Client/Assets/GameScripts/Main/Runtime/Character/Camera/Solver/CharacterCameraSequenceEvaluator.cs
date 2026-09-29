@@ -82,7 +82,7 @@ namespace ThirdPersonCamera
                 m_Initialized = true;
             }
             Vector2 look = m_FramePlanner.ResolveLook(
-                input.Paused ? Vector2.zero : input.LookInput,
+                in input,
                 in response);
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
             return m_WorldBasicHistory.Apply(target, in input);

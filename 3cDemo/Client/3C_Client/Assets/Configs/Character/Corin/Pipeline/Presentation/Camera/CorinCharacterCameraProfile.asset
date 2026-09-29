@@ -92,7 +92,15 @@ MonoBehaviour:
   m_DefaultSmoothTime: 0.15
   m_RotationTransitionSeconds: 3
   m_Input:
-    m_Sensitivity: {x: 0.12, y: 0.12}
+    m_MaxSpeed: {x: 1550, y: 25}
+    m_AccelerationTime: {x: 0.1, y: 0.2}
+    m_DecelerationTime: {x: 0.1, y: 0.1}
+    m_PointerInputScale: {x: 0.00008333334, y: 0.00005833334}
+    m_StickInputScale: {x: 0.13333334, y: 0.09333334}
+    m_PointerAxisGain: {x: 1, y: 0.75}
+    m_StickAxisGain: {x: 3, y: 2.1}
+    m_AxisDirection: {x: 1, y: 1}
+    m_ElevationRange: {x: 0, y: 1}
     m_PitchLimit: {x: -70, y: 70}
     m_DefaultResponseWeight: 1
     m_PitchResponseWeight: 1

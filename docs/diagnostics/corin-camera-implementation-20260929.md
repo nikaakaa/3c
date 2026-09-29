@@ -297,3 +297,19 @@ Unity 编译重载完成，Console 0 错误。编辑器内构建正式 Profile �
 项目当前实际资产也已回读：Corin Profile 的 Sensitivity 为 (0.12,0.12)，不是 CameraInputSettings 类初始化器里的 (0.12,0.0025)。Look 动作共用 <Gamepad>/rightStick、<Pointer>/delta 和 Joystick；Pointer 绑定带 InvertVector2(invertX=false,invertY=true)。现有相机只取得合并后的 Vector2，没有设备来源。下一步需沿正式表现输入携带设备类别，统一处理鼠标 delta 与摇杆速率，再接轴状态及归一化仰角；不能先对混合输入统一除以 deltaTime 或重复反转 Y。
 
 本批只提交新的输入证据与复刻文档，未改运行代码或配置，未编译、Play 或 replay。输入轴交付仍未完成；已发布的 ScreenY 修正不受本批影响。
+
+## 输入轴配置与归一化轨道交付
+
+本次将已经取证的输入参数接入正式 Profile 和相机求值链，没有修改命中生产链、IK 或运行 replay。
+
+1. UnityFixedCharacterInputAdapter 在读取 Look 的同时保存 PointerDelta／Stick 来源，经 ICharacterPresentationLookInput、CharacterCameraDomainRuntime、CameraFrameInput 交给 FramePlanner。删除 Pointer 绑定上的 Y 反转，由相机统一处理轴方向；没有保留旧 Sensitivity 路径。
+2. CorinCameraResourcesAuthoring.PublishInput 从 Default_Normal 读取 MaxSpeed=(1550,25)、Accel=(0.1,0.2)、Decel=(0.1,0.1)、仰角范围=(0,1)；从已保存的829玩家快照导入鼠标／手柄倍率。玩家 +0x1c4／+0x19b 的实读字节均为00，已与配置反转合并。原始指令中来源flags4对应设备2、flags2对应设备1，分别由鼠标与GamepadRightStick生产；未按枚举声明顺序取值。
+3. 鼠标增量按原作 Time.deltaTime 对应的 ScaledDeltaSeconds 归一化，手柄按速率处理；轴积分仍按正式 PresentationDeltaSeconds 推进，暂停或任一所需时间为0时不推进。实时模式两种时间相同，表现调速模式保持输入单位与推进时间分开。
+4. CameraAxisRuntime 保存轴值和速度，执行已取证的加减速、范围末端10%限速及越界停止。轨道以归一化仰角采样，其他构图继续取得轨道几何角变化量。现有 Profile.RequireDefaultTrack 已要求默认 Sequence 恰有一个轨道阶段，本批未缩窄合法作者配置或新增兜底。
+5. 投影版本更新到v7，全部输入字段参与Profile Revision。正式发布后资产新增上述配置，移除Sensitivity；调用Build/RequireValid成功，最终dirty=false。没有新增热路径对象分配；本批未做分配测量。
+
+Unity编译、域重载和Console检查通过，0错误。编译中发现初始化Apply调用漏传输入类别，已补为None并重新编译。编辑器内调用生产ResolveLook检查鼠标、手柄、暂停、零时间、上下边界和松开后的减速，结果保存在input-axis-editor-check.json。1秒松开后的单帧角度增量约0.0000229°，保留原作没有微小速度清零的行为。此检查不是画面验收。
+
+性能工具现有正式camera trace生产者只生成全零固定镜头输入，按PointerDelta交入仍为零；本批没有为历史手工非零trace证明设备来源或兼容性，也没有运行它们。玩家倍率是829快照状态，不宣称为出厂默认；Default_Normal是否为原作当前Corin实例实际选择的键仍未证明。
+
+未完成项仍明确保留：鼠标输入预平滑、TopOrbit延伸、完整Delay及死区／软区跟随、Zoom/Stretch后屏幕锚点连续性、独立世界倍率和震动保持／静默输入。当前交付可供输入与轨道手测，不代表全相机手感已完全复刻，Goal保持active。

@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new InvalidOperationException("Camera authoring requires an idle Editor.");
             var profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(Folder + "CorinCharacterCameraProfile.asset");
             PublishDefaultOrbit(profile);
+            PublishInput(profile);
             PublishStacking(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
@@ -147,6 +148,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             track.ConfigureOrbit(orbits, screenOffsets, (float)sphere["CAMERA_FOV"],
                 (float)source["ELEVATION_ANGLE"], (float)sphere["CAMERA_LOCATE_RADIUSRATIO"]);
             Save(sequence);
+        }
+
+        public static void PublishInput(CharacterCameraProfile profile)
+        {
+            const string sourcePath = "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-data/Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json";
+            string snapshotPath = Path.GetFullPath(Path.Combine(Application.dataPath,
+                "../../../../docs/diagnostics/camera-basis-runtime-20260929/pointer-input-snapshot.json"));
+            JToken source = JObject.Parse(File.ReadAllText(sourcePath, Encoding.UTF8))["cameraAvatarGroup"]["Default_Normal"];
+            JToken snapshot = JObject.Parse(File.ReadAllText(snapshotPath, Encoding.UTF8));
+            JToken settings = snapshot["player_fields"];
+            JToken x = source["DragConfig"]["Drag_XAxis"];
+            JToken y = source["DragConfig"]["Drag_YAxis"];
+            Vector2 playerGain = new Vector2((float)settings["0x150"], (float)settings["0x19c"]);
+            float referenceRate = (float)snapshot["constants"]["device_normalization_rate"]["value"];
+            float prepareScale = (float)snapshot["constants"]["prepare_rate"]["value"];
+            Vector2 processorScale = new Vector2((float)snapshot["action"]["processor_scale"]["x"],
+                (float)snapshot["action"]["processor_scale"]["y"]);
+            Undo.RecordObject(profile, "从解包和829玩家配置导入相机输入轴");
+            profile.Input.ConfigureAxes(
+                new Vector2((float)x["m_MaxSpeed"], (float)y["m_MaxSpeed"]),
+                new Vector2((float)x["m_AccelTime"], (float)y["m_AccelTime"]),
+                new Vector2((float)x["m_DecelTime"], (float)y["m_DecelTime"]),
+                Vector2.Scale(processorScale, playerGain) * ((float)settings["0x1bc"] * prepareScale / referenceRate),
+                playerGain * ((float)settings["0x1a8"] * prepareScale),
+                new Vector2((float)settings["0x17c"], (float)settings["0x194"]),
+                new Vector2((float)settings["0x164"], (float)settings["0x174"]),
+                new Vector2((bool)x["m_InvertInput"] ^ (bool)settings["0x1c4"] ? -1f : 1f,
+                    (bool)y["m_InvertInput"] ^ (bool)settings["0x19b"] ? -1f : 1f),
+                new Vector2((float)source["DRAG_ELEVATION_REGIOIN"]["x"], (float)source["DRAG_ELEVATION_REGIOIN"]["y"]));
+            Save(profile);
         }
 
         public static void PublishStacking(CharacterCameraProfile profile)

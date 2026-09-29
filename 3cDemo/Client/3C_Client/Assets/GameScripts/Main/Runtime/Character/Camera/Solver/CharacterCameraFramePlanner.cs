@@ -15,14 +15,24 @@ namespace ThirdPersonCamera
         float m_InitialPitchOffset;
         float m_YawOffset;
         float m_PitchOffset;
+        readonly CameraFrameOnePointByTrackPayload m_InputTrack;
+        CameraAxisRuntime m_YawAxis;
+        CameraAxisRuntime m_ElevationAxis;
+        CameraLookInputKind m_LookKind;
 
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
+            for (int i = 0; i < projection.DefaultSequence.Stages.Count; i++)
+                if (projection.DefaultSequence.Stages[i] is CameraFrameOnePointByTrackPayload track)
+                    m_InputTrack = track;
         }
 
         public void Reset()
         {
+            m_YawAxis = new CameraAxisRuntime(m_InitialYawOffset);
+            m_ElevationAxis = new CameraAxisRuntime(m_InputTrack.ElevationRatio);
+            m_LookKind = CameraLookInputKind.None;
             m_YawOffset = Mathf.Repeat(m_InitialYawOffset, 360f);
             m_PitchOffset = Mathf.Clamp(
                 m_InitialPitchOffset,
@@ -38,15 +48,30 @@ namespace ThirdPersonCamera
         }
 
         public Vector2 ResolveLook(
-            Vector2 lookInput,
+            in CameraFrameInput input,
             in CameraResponseRequest response)
         {
-            Vector2 look = response.Apply(lookInput);
-            m_YawOffset = Mathf.Repeat(m_YawOffset + look.x * m_Projection.Input.Sensitivity.x, 360f);
-            m_PitchOffset = Mathf.Clamp(
-                m_PitchOffset - look.y * m_Projection.Input.Sensitivity.y,
-                m_Projection.Input.PitchLimit.x,
-                m_Projection.Input.PitchLimit.y);
+            Vector2 look = response.Apply(input.LookInput);
+            float delta = input.PresentationDeltaSeconds;
+            if (input.Paused || delta == 0f || input.ScaledDeltaSeconds == 0f)
+                return Vector2.zero;
+            if (input.LookInputKind != CameraLookInputKind.None)
+                m_LookKind = input.LookInputKind;
+            CameraInputSettings settings = m_Projection.Input;
+            bool pointer = m_LookKind == CameraLookInputKind.PointerDelta;
+            Vector2 scale = pointer ? settings.PointerInputScale / input.ScaledDeltaSeconds : settings.StickInputScale;
+            Vector2 axisInput = Vector2.Scale(Vector2.Scale(look, scale), settings.AxisDirection);
+            Vector2 maxSpeed = Vector2.Scale(settings.MaxSpeed,
+                pointer ? settings.PointerAxisGain : settings.StickAxisGain);
+            m_YawAxis.Step(axisInput.x, delta, maxSpeed.x, settings.AccelerationTime.x,
+                settings.DecelerationTime.x, 0f, 360f, true);
+            m_ElevationAxis.Step(-axisInput.y, delta, maxSpeed.y, settings.AccelerationTime.y,
+                settings.DecelerationTime.y, settings.ElevationRange.x, settings.ElevationRange.y, false);
+            m_YawOffset = m_YawAxis.Value;
+            Vector4 orbit = SampleTrack(m_InputTrack, m_ElevationAxis.Value);
+            Vector4 initialOrbit = SampleTrack(m_InputTrack, m_InputTrack.ElevationRatio);
+            m_PitchOffset = m_InitialPitchOffset +
+                (Mathf.Atan2(orbit.x, orbit.y) - Mathf.Atan2(initialOrbit.x, initialOrbit.y)) * Mathf.Rad2Deg;
             return look;
         }
 
@@ -107,7 +132,7 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        Vector4 track = SampleTrack(byTrack, byTrack.ElevationRatio);
+                        Vector4 track = SampleTrack(byTrack, byTrack.ElevationRatio + m_ElevationAxis.Value - m_InputTrack.ElevationRatio);
                         cameraLocateRatio = byTrack.CameraLocateRatio;
                         radius = Mathf.Sqrt(track.x * track.x + track.y * track.y) * cameraLocateRatio;
                         float screenHeight = 2f * radius * Mathf.Tan(byTrack.FieldOfView * 0.5f * Mathf.Deg2Rad);
@@ -115,7 +140,7 @@ namespace ThirdPersonCamera
                             new Vector2(track.z, (0.5f - track.w) * screenHeight),
                             byTrack.AspectRatio);
                         evaluatedPitch = Mathf.Clamp(
-                            Mathf.Atan2(track.x, track.y) * Mathf.Rad2Deg + m_PitchOffset,
+                            Mathf.Atan2(track.x, track.y) * Mathf.Rad2Deg + m_InitialPitchOffset,
                             m_Projection.Input.PitchLimit.x,
                             m_Projection.Input.PitchLimit.y);
                         evaluatedYaw = Mathf.Repeat(byTrack.PolarAngle + m_YawOffset, 360f);
@@ -442,4 +467,54 @@ namespace ThirdPersonCamera
                 + 3f * d * t * t * track.TrackControl2[index] + t * t * t * p3;
         }
     }
+
+    internal struct CameraAxisRuntime
+    {
+        public float Value;
+        float m_Speed;
+
+        public CameraAxisRuntime(float value)
+        {
+            Value = value;
+            m_Speed = 0f;
+        }
+
+        public void Step(float input, float delta, float maxSpeed, float accelerationTime,
+            float decelerationTime, float minimum, float maximum, bool wrap)
+        {
+            float target = input * maxSpeed;
+            if (Mathf.Abs(target) < 0.0001f ||
+                (Mathf.Sign(m_Speed) == Mathf.Sign(target) && Mathf.Abs(target) < Mathf.Abs(m_Speed)))
+            {
+                float acceleration = Mathf.Abs(target - m_Speed) / Mathf.Max(0.0001f, decelerationTime);
+                m_Speed -= Mathf.Sign(m_Speed) * Mathf.Min(acceleration * delta, Mathf.Abs(m_Speed));
+            }
+            else
+            {
+                float acceleration = Mathf.Abs(target - m_Speed) / Mathf.Max(0.0001f, accelerationTime);
+                m_Speed += Mathf.Sign(target) * acceleration * delta;
+                if (Mathf.Sign(m_Speed) == Mathf.Sign(target) && Mathf.Abs(m_Speed) > Mathf.Abs(target))
+                    m_Speed = target;
+            }
+            float limit = maxSpeed;
+            if (!wrap)
+            {
+                float threshold = (maximum - minimum) / 10f;
+                if (m_Speed > 0f && maximum - Value < threshold)
+                    limit *= Mathf.Clamp01((maximum - Value) / threshold);
+                else if (m_Speed < 0f && Value - minimum < threshold)
+                    limit *= Mathf.Clamp01((Value - minimum) / threshold);
+            }
+            m_Speed = Mathf.Clamp(m_Speed, -limit, limit);
+            Value += m_Speed * delta;
+            if (wrap)
+                Value = Mathf.Repeat(Value - minimum, maximum - minimum) + minimum;
+            else if (Value < minimum || Value > maximum)
+            {
+                Value = Mathf.Clamp(Value, minimum, maximum);
+                m_Speed = 0f;
+            }
+        }
+    }
+
 }

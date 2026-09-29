@@ -4,12 +4,20 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
-public readonly struct CameraFrameInput
+    public enum CameraLookInputKind : byte
+    {
+        None,
+        PointerDelta,
+        Stick
+    }
+
+    public readonly struct CameraFrameInput
     {
         public CameraFrameInput(
             Vector3 bodyPosition,
             Quaternion bodyRotation,
             Vector2 lookInput,
+            CameraLookInputKind lookInputKind,
             float scaledDeltaSeconds,
             float unscaledDeltaSeconds,
             float presentationDeltaSeconds,
@@ -27,6 +35,7 @@ public readonly struct CameraFrameInput
             BodyPosition = bodyPosition;
             BodyRotation = bodyRotation;
             LookInput = lookInput;
+            LookInputKind = lookInputKind;
             ScaledDeltaSeconds = RequireDelta(scaledDeltaSeconds, nameof(scaledDeltaSeconds));
             UnscaledDeltaSeconds = RequireDelta(unscaledDeltaSeconds, nameof(unscaledDeltaSeconds));
             PresentationDeltaSeconds = RequireDelta(presentationDeltaSeconds, nameof(presentationDeltaSeconds));
@@ -50,6 +59,7 @@ public readonly struct CameraFrameInput
         public Vector3 BodyPosition { get; }
         public Quaternion BodyRotation { get; }
         public Vector2 LookInput { get; }
+        public CameraLookInputKind LookInputKind { get; }
         public float ScaledDeltaSeconds { get; }
         public float UnscaledDeltaSeconds { get; }
         public float PresentationDeltaSeconds { get; }

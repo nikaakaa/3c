@@ -1,0 +1,38 @@
+{
+  "unity_instance": "e852139597e42532",
+  "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets",
+  "schema": "character-camera-projection/v7",
+  "method": "Edit mode: build formal Profile projection and invoke production CharacterCameraFramePlanner.ResolveLook; no Play/replay or test code added",
+  "delta": 0.016666666666666666,
+  "samples": {
+    "pointer_60_frames_input_10_1": [
+      71.04179,
+      0.54634124
+    ],
+    "stick_60_frames_input_0_1_0_01": [
+      56.83343,
+      0.5599349
+    ],
+    "paused_60_frames": [
+      0,
+      0.6
+    ],
+    "zero_time_60_frames": [
+      0,
+      0.6
+    ],
+    "upper_180_frames_input_0_minus100": [
+      0,
+      1
+    ],
+    "lower_180_frames_input_0_100": [
+      0,
+      0
+    ],
+    "release_first_yaw_delta": 1.07637024,
+    "release_after_one_second_yaw_delta": 2.28881836e-05
+  },
+  "published_asset_dirty": false,
+  "console_errors": 0,
+  "limits": "Static production-function checks only; no visual validation, mouse pre-smoothing, TopOrbit extension or full Delay replication."
+}

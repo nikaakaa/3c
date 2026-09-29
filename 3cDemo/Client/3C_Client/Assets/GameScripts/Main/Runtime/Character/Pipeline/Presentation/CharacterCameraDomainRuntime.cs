@@ -140,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     initialBody.Position,
                     initialBody.Rotation,
                     Vector2.zero,
+                    CameraLookInputKind.None,
                     0f,
                     0f,
                     0f,
@@ -359,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             if (!bodyFrame.IsValid)
                 throw new InvalidOperationException("Camera domain requires a valid Body Presentation frame.");
-            Vector2 look = m_Input.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
+            Vector2 look = m_Input.TryGetLatchedLook(m_LookInputId, out Vector2 value, out CameraLookInputKind lookKind)
                 ? value
                 : Vector2.zero;
             if (!UnityEngine.Application.isFocused)
@@ -377,6 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyFrame.VisiblePosition,
                 bodyFrame.VisibleRotation,
                 look,
+                lookKind,
                 context.ScaledDeltaSeconds,
                 context.UnscaledDeltaSeconds,
                 context.PresentationDeltaSeconds,
@@ -422,6 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 position,
             Quaternion rotation,
             Vector2 look,
+            CameraLookInputKind lookKind,
             float scaledDeltaSeconds,
             float unscaledDeltaSeconds,
             float presentationDeltaSeconds,
@@ -494,6 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 position,
                 rotation,
                 look,
+                lookKind,
                 scaledDeltaSeconds,
                 unscaledDeltaSeconds,
                 presentationDeltaSeconds,

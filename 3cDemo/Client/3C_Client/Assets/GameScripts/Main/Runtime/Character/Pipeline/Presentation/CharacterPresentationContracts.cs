@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public interface ICharacterPresentationLookInput
     {
-        bool TryGetLatchedVector2(string inputId, out Vector2 value);
+        bool TryGetLatchedLook(string inputId, out Vector2 value, out CameraLookInputKind kind);
     }
 
     public enum CharacterPresentationBodyStreamUpdateKind : byte

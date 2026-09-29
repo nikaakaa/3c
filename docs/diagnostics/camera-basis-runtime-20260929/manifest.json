@@ -253,7 +253,7 @@
     },
     {
       "path": "pointer-input-snapshot.json",
-      "sha256": "a9d9443d923c35a0d1073bef3c07e8b2ed4f0e555bf589eed190d2ca27366454"
+      "sha256": "1e4ce38eb166a2cd5724829903c4aedf2aac8ebcc1048f83f8436a97aa7499ff"
     },
     {
       "path": "pointer-multiplatform-value.json",
@@ -506,6 +506,10 @@
     {
       "path": "zoom-update.json",
       "sha256": "9fd1cd2e224e12bdeb56dcc9dd076c2a5daa9696b3630520ee123745b7f93728"
+    },
+    {
+      "path": "input-axis-editor-check.json",
+      "sha256": "4e4c3ef2901ef9b65fe469d60329fa5e558957d468ed65aa9d2aaa5b75c291e8"
     }
   ]
 }

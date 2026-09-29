@@ -251,13 +251,7 @@ namespace ThirdPersonCamera
 
         static void AppendInput(StringBuilder value, CameraInputSettings input)
         {
-            value.Append('|').Append(input.Sensitivity.x.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.Sensitivity.y.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.PitchLimit.x.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.PitchLimit.y.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.DefaultResponseWeight.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.PitchResponseWeight.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(input.YawResponseWeight.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(JsonUtility.ToJson(input));
         }
 
         static void AppendCollision(StringBuilder value, CameraCollisionSettings collision)

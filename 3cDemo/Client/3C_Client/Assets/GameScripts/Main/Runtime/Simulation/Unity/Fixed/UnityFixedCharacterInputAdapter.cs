@@ -368,10 +368,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return new FixedCharacterControlSourceDiagnosticsSnapshot(count, oldestCaptureTick, oldestEligibleTick);
         }
 
-        public bool TryGetLatchedVector2(string inputId, out Vector2 value)
+        public bool TryGetLatchedLook(string inputId, out Vector2 value, out CameraLookInputKind kind)
         {
+            kind = CameraLookInputKind.None;
             if (PerformanceCameraInputOverride.TryGet(inputId, out value))
+            {
+                kind = CameraLookInputKind.PointerDelta;
                 return true;
+            }
             value = Vector2.zero;
             if (string.IsNullOrEmpty(inputId) ||
                 !m_LatchedValues.TryGetValue(inputId, out LatchedInputValue input) ||
@@ -380,6 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 return false;
             }
             value = input.Vector2;
+            kind = input.LookKind;
             return true;
         }
 
@@ -518,7 +523,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     return LatchedInputValue.FromScalar(binding.Action.ReadValue<float>());
                 case CharacterInputValueType.Vector2:
                     Vector2 value = binding.Action.ReadValue<Vector2>();
-                    return LatchedInputValue.FromVector2(binding.ConflictResolver?.Resolve(value) ?? value);
+                    CameraLookInputKind kind = binding.Action.activeControl == null
+                        ? CameraLookInputKind.None
+                        : binding.Action.activeControl.device is Pointer
+                            ? CameraLookInputKind.PointerDelta
+                            : CameraLookInputKind.Stick;
+                    return LatchedInputValue.FromVector2(binding.ConflictResolver?.Resolve(value) ?? value, kind);
                 default:
                     throw new InvalidOperationException($"Input value '{binding.InputId}' has unsupported type '{binding.Kind}'.");
             }
@@ -719,24 +729,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         readonly struct LatchedInputValue
         {
-            LatchedInputValue(CharacterInputValueType kind, bool boolean, float scalar, Vector2 vector2)
+            LatchedInputValue(CharacterInputValueType kind, bool boolean, float scalar, Vector2 vector2, CameraLookInputKind lookKind)
             {
                 Kind = kind;
                 Boolean = boolean;
                 Scalar = scalar;
                 Vector2 = vector2;
+                LookKind = lookKind;
             }
 
             public CharacterInputValueType Kind { get; }
             public bool Boolean { get; }
             public float Scalar { get; }
             public Vector2 Vector2 { get; }
+            public CameraLookInputKind LookKind { get; }
             public static LatchedInputValue FromBoolean(bool value) =>
-                new LatchedInputValue(CharacterInputValueType.Bool, value, 0f, Vector2.zero);
+                new LatchedInputValue(CharacterInputValueType.Bool, value, 0f, Vector2.zero, CameraLookInputKind.None);
             public static LatchedInputValue FromScalar(float value) =>
-                new LatchedInputValue(CharacterInputValueType.Float, false, value, Vector2.zero);
-            public static LatchedInputValue FromVector2(Vector2 value) =>
-                new LatchedInputValue(CharacterInputValueType.Vector2, false, 0f, value);
+                new LatchedInputValue(CharacterInputValueType.Float, false, value, Vector2.zero, CameraLookInputKind.None);
+            public static LatchedInputValue FromVector2(Vector2 value, CameraLookInputKind kind) =>
+                new LatchedInputValue(CharacterInputValueType.Vector2, false, 0f, value, kind);
         }
     }
 }

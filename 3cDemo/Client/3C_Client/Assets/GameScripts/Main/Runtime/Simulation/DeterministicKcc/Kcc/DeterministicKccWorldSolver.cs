@@ -217,12 +217,15 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 FixedVector3 requested = actorRequest.Motion.Space == WorldMotionSpace.ActorLocal
                     ? FixedAngle.RotatePlanar(actorRequest.Motion.Displacement, before.Yaw)
                     : actorRequest.Motion.Displacement;
-                long solveStarted = Stopwatch.GetTimestamp();
                 DeterministicKccMotorResult motorResult;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
+                long solveStarted = Stopwatch.GetTimestamp();
                 try
+#endif
                 {
                     motorResult = m_Motors[i].Move(before.Position, m_KccStates[i], requested);
                 }
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 catch (DeterministicKccQueryException exception)
                 {
                     PublishFailure(diagnostics, request.Tick, actorRequest.ActorId, requested, exception, Stopwatch.GetTimestamp() - solveStarted);
@@ -233,6 +236,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     request.Tick,
                     actorRequest.ActorId,
                     motorResult);
+#endif
                 m_Candidates[i] = new ActorSolveCandidate(
                     actorRequest,
                     requested,
@@ -248,8 +252,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     motorResult.Termination,
                     motorResult.NoProgressConfirmationCount,
                     motorResult.QuerySummary,
-                    m_KccStates[i],
-                    Stopwatch.GetTimestamp() - solveStarted);
+                    m_KccStates[i]
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
+                    , Stopwatch.GetTimestamp() - solveStarted
+#endif
+                    );
                 m_ActorContacts[i] = new DeterministicActorContactCandidate(
                     actorRequest.ActorId,
                     before.Position,
@@ -257,12 +264,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     m_Configuration.ActorContactShape);
             }
 
-            long contactStarted = Stopwatch.GetTimestamp();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
+            long contactStarted = Stopwatch.GetTimestamp();
             m_ContactTraces.Clear();
 #endif
             DeterministicActorContactSummary contactSummary = default;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             try
+#endif
             {
                 DeterministicActorContactBatchResult contactResult = DeterministicActorContactSolver.Resolve(
                     m_ActorContacts,
@@ -311,6 +320,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 for (int i = 0; i < m_Candidates.Length; i++)
                     ValidateStaticWorldResult(i);
             }
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             catch (DeterministicActorContactSolveException exception)
             {
                 AppendTraces(exception.Traces);
@@ -331,6 +341,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 contactSummary,
                 Stopwatch.GetTimestamp() - contactStarted,
                 true);
+#endif
 
             var bodies = new WorldBodyState[m_Candidates.Length];
             var results = new CharacterWorldSolveResult[m_Candidates.Length];
@@ -379,6 +390,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     bodies[i],
                     applied,
                     appliedYaw);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 PublishDiagnostics(
                     diagnostics,
                     request.Tick,
@@ -396,6 +408,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     candidate.NoProgressConfirmationCount,
                     querySummary,
                     candidate.ElapsedStopwatchTicks);
+#endif
             }
             m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies, m_KccStates);
             return WorldSolveBatchResult.FromOwnedResults(

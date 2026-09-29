@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 using ThirdPersonSimulation.Fixed;
 
@@ -8,6 +7,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
 {
     public sealed partial class DeterministicKccWorldSolver
     {
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         void PublishNoProgressDiagnostics(
             ISimulationDiagnosticsSink diagnostics,
             SimulationTick tick,
@@ -181,6 +181,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 success: success));
         }
 
+#endif
+
         int FindBinding(ActorId actorId)
         {
             int low = 0;
@@ -301,8 +303,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 DeterministicKccMovementTermination termination,
                 int noProgressConfirmationCount,
                 DeterministicKccQuerySummary querySummary,
-                DeterministicKccBodyState previousState,
-                long elapsedStopwatchTicks)
+                DeterministicKccBodyState previousState
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
+                , long elapsedStopwatchTicks
+#endif
+                )
             {
                 Request = request;
                 Requested = requested;
@@ -319,7 +324,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 NoProgressConfirmationCount = noProgressConfirmationCount;
                 QuerySummary = querySummary;
                 PreviousState = previousState;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 ElapsedStopwatchTicks = elapsedStopwatchTicks;
+#endif
             }
 
             public CharacterWorldSolveRequest Request;
@@ -337,7 +344,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
             public int NoProgressConfirmationCount;
             public DeterministicKccQuerySummary QuerySummary;
             public DeterministicKccBodyState PreviousState;
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             public long ElapsedStopwatchTicks;
+#endif
         }
     }
 }

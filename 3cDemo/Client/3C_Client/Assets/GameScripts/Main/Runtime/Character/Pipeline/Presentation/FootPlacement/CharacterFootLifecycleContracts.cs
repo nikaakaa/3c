@@ -176,6 +176,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPathContinuityFact
     {
+        readonly CharacterFootSupportTarget m_SelectedSupportTarget;
+
         internal CharacterFootPathContinuityFact(
             bool evaluated,
             CharacterFootPathRevisionReason revisionReason,
@@ -282,7 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockWeightCompleted = false;
             PlantDesiredPoint = default;
             PlantFilteredPoint = default;
-            SelectedSupportTarget = default;
+            m_SelectedSupportTarget = default;
             PlantTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed = 0f;
             PlantTargetHeightBefore = 0f;
@@ -443,7 +445,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = plant.FilteredPoint;
             ref readonly CharacterFootSupportTarget selectedSupport =
                 ref interpolation.SupportTarget;
-            SelectedSupportTarget = selectedSupport;
+            m_SelectedSupportTarget = selectedSupport;
             PlantTargetHeightAdoptionMode = plant.Evaluated
                 ? plant.TargetHeightAdoptionMode
                 : source.PlantTargetHeightAdoptionMode;
@@ -604,7 +606,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantLockWeightCompleted { get; }
         internal Vector3 PlantDesiredPoint { get; }
         internal Vector3 PlantFilteredPoint { get; }
-        internal CharacterFootSupportTarget SelectedSupportTarget { get; }
+        internal ref readonly CharacterFootSupportTarget SelectedSupportTarget =>
+            ref m_SelectedSupportTarget;
         internal CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
         internal float PlantTargetMaximumVerticalSpeed { get; }
         internal float PlantTargetHeightBefore { get; }

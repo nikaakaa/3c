@@ -2051,3 +2051,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 静态行配对检查发现七处 `ref readonly` 局部初始化缺少 RHS `ref`，覆盖 Lifecycle 的 continuity、support intent、support target 以及 Continuity 构造中的 support target、response fact。
 - 七处绑定额外语法补上 `ref`，不改变源数据、读取路径或生命周期。该修正是静态可判定的编译合同修正，不是新的性能假设。
 - 该改动恢复这些只读引用局部能通过 C# 静态语法的正式路径。仍受用户约束限制，未编译、未采样；不能声称行为已运行验证。
+
+### AP289 Continuity selected support 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Path Continuity fact 的 SelectedSupportTarget 自动属性每次读取复制完整 support target；Swing Motion 诊断展开还会先复制到局部，再构造 target diagnostics。
+- 属性改为 backing field 只读引用；continuity 构造仍保留一次必要存储，诊断直接引用读取。support target 的 event、position、normal、source lineage 和 diagnostics 字段不变。
+- 该改动删除 continuity 输出进入诊断展开的重复 support target 拷贝。静态核对 target 为 readonly struct、fact 生命周期覆盖诊断构造、消费只读；未编译、未采样，不能声称实测耗时收益。

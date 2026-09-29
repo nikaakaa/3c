@@ -1625,8 +1625,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             OutputStages = new CharacterFootOutputStagesDiagnostics(
                 in lifecycle, in path);
             Response = new CharacterFootCorrectionResponseDiagnostics(in path);
-            CharacterFootSupportTarget selectedSupportTarget = path.SelectedSupportTarget;
-            SelectedSupportTarget = new CharacterFootSupportTargetDiagnostics(in selectedSupportTarget);
+            SelectedSupportTarget = new CharacterFootSupportTargetDiagnostics(
+                in path.SelectedSupportTarget);
         }
 
         public CharacterFootSwingCoreDiagnostics Core { get; }

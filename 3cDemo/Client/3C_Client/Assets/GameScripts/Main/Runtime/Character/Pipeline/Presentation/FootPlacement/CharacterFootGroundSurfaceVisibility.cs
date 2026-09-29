@@ -40,7 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AddEvent(surfaces.Length);
             for (int i = 0; i < surfaces.Count; i++)
             {
-                CharacterFootGroundSurfaceSegment segment = surfaces.SegmentAt(i);
+                ref readonly CharacterFootGroundSurfaceSegment segment =
+                    ref surfaces.SegmentAt(i);
                 AddEvent(segment.Start.x);
                 AddEvent(segment.End.x);
             }
@@ -159,7 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float sample = distance + side * GeometryEpsilon;
             for (int i = 0; i < surfaces.Count; i++)
             {
-                CharacterFootGroundSurfaceSegment segment = surfaces.SegmentAt(i);
+                ref readonly CharacterFootGroundSurfaceSegment segment =
+                    ref surfaces.SegmentAt(i);
                 bool contains = side < 0
                     ? segment.Start.x < sample && segment.End.x >= sample
                     : side > 0

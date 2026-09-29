@@ -1955,3 +1955,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground envelope workspace 的 ContactAt、ProfileAt 和 page 的 VertexAt 每次读取复制候选或顶点；surface profile、distance collapse、upper hull 和 swing sampling 会逐点重复读取。
 - 内部候选、profile 和 vertex 访问改返回只读引用，GroundPath result 的内部 vertex 转发同步引用；surface profile、collapse 和 upper hull 的循环绑定引用，collapse 的 highest 直接在只读引用间选择。公共 diagnostics 访问仍按值返回。
 - 该改动删除 Foot Placement ground envelope 构建和 swing 采样周期内每候选/顶点的重复拷贝。静态核对两个类型为 readonly struct、workspace/page 数组独占存储、消费只读、排序与 hull 决策不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP273 Ground surface segment 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Ground surface page 的 SegmentAt 每次读取复制 surface identity、face identity 和两段坐标；surface visibility 构建与合并循环逐段读取，TryAdd 的重复段扫描也复制当前 segment。
+- Page 内部 SegmentAt 改返回只读引用，visibility 两个循环和 TryAdd 扫描绑定引用。公共 diagnostics SegmentAt 仍按值返回，segment 写入、排序和重复段判定不变。
+- 该改动删除 ground surface 覆盖进入 visibility 和重复扫描的逐段拷贝。静态核对 segment 为 readonly struct、数组由 surface page 独占、消费只读；未编译、未采样，不能声称实测耗时收益。

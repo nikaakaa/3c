@@ -101,11 +101,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Query.MaximumDistance.Equals(query.MaximumDistance) &&
             m_Query.LayerMask == query.LayerMask;
 
-        internal CharacterFootGroundSurfaceSegment SegmentAt(int index)
+        internal ref readonly CharacterFootGroundSurfaceSegment SegmentAt(int index)
         {
             if ((uint)index >= (uint)Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Segments[index];
+            return ref m_Segments[index];
         }
 
         internal bool TryAdd(
@@ -122,7 +122,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 start.y = end.y = Mathf.Max(start.y, end.y);
             for (int i = 0; i < Count; i++)
             {
-                CharacterFootGroundSurfaceSegment value = m_Segments[i];
+                ref readonly CharacterFootGroundSurfaceSegment value =
+                    ref m_Segments[i];
                 if (value.SurfaceIdentity == surfaceIdentity &&
                     value.FaceIdentity == faceIdentity &&
                     value.Start.Equals(start) && value.End.Equals(end))

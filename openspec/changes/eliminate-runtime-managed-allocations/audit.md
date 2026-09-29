@@ -826,6 +826,12 @@
 - 两域 Equipment 每次 BeginEvaluation 先调用 InitializeContributions 读取并冻结完整 Equipment aggregate，再调用 CancelOrphanedPending 再次读取；两次调用之间没有其它状态写入。EndEvaluation 保留 orphan pending 检查。
 - EquipmentRuntimeControl 新增 PrepareEvaluation，一次读取 aggregate 后判断并安装缺失 contribution；mutation 提交后的本地 aggregate 已包含写入结果，继续用同一 aggregate 判断并取消 orphan pending。原 mutation try/catch、WriteState、effect 提交和 lifecycle 顺序不变。
 - 每个 Equipment enabled Ability evaluation 少一次完整 aggregate 冻结和 slots 复制；contribution 缺失与 pending 取消同帧时的最终状态不变。静态核对两域 Begin/End 调用链、mutation 异常路径和 aggregate WithSlot/ResolvePending 所有权；未编译、运行回放或采样。
+### AP111 Equipment Slot 状态线性扫描（2026-09-29，已实施，本轮未编译）
+
+- EquipmentStateAggregate 构造和 AdoptPrepared 都把 Slots 按 SlotId Ordinal 排序并拒绝重复，但 RequireSlot、WithSlot 和 WithSlotAndResolvedPending 每次从头线性比较；Equipment operation 和 mutation 会重复访问同一 aggregate。
+- 增加 FindSlot 在既有排序合同上做 Ordinal 二分定位；Require/替换/同 slot 提交使用同一索引，未命中异常、no-op 返回、数组复制和 pending 解析语义不变。
+- Slot 查找从 Slot 数量级收敛为对数比较；无新集合和第二数据源。静态核对 aggregate 构造排序唯一性、三条消费路径、异常文本和两域调用；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

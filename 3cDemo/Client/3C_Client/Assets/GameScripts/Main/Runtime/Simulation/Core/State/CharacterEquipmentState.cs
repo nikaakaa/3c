@@ -890,12 +890,28 @@ namespace ThirdPersonSimulation
 
         public EquipmentSlotState RequireSlot(EquipmentSlotId slotId)
         {
-            for (int i = 0; i < m_Slots.Length; i++)
-            {
-                if (m_Slots[i].SlotId == slotId)
-                    return m_Slots[i];
-            }
+            int index = FindSlot(slotId);
+            if (index >= 0)
+                return m_Slots[index];
             throw new InvalidOperationException($"Equipment state Slot '{slotId}' is absent.");
+        }
+
+        int FindSlot(EquipmentSlotId slotId)
+        {
+            int low = 0;
+            int high = m_Slots.Length - 1;
+            while (low <= high)
+            {
+                int middle = low + ((high - low) >> 1);
+                int comparison = string.CompareOrdinal(m_Slots[middle].SlotId.Value, slotId.Value);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    low = middle + 1;
+                else
+                    high = middle - 1;
+            }
+            return -1;
         }
 
         public EquipmentRuntimeStateValue RequireLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
@@ -908,23 +924,20 @@ namespace ThirdPersonSimulation
 
         public EquipmentStateAggregate WithSlot(EquipmentSlotState slot)
         {
-            for (int i = 0; i < m_Slots.Length; i++)
-            {
-                if (m_Slots[i].SlotId != slot.SlotId)
-                    continue;
-                if (m_Slots[i].Equals(slot))
-                    return this;
-                var values = new EquipmentSlotState[m_Slots.Length];
-                Array.Copy(m_Slots, values, m_Slots.Length);
-                values[i] = slot;
-                return new EquipmentStateAggregate(
-                    CatalogHash,
-                    values,
-                    m_LocalStates,
-                    PendingChange,
-                    LastResolvedChange);
-            }
-            throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
+            int index = FindSlot(slot.SlotId);
+            if (index < 0)
+                throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
+            if (m_Slots[index].Equals(slot))
+                return this;
+            var values = new EquipmentSlotState[m_Slots.Length];
+            Array.Copy(m_Slots, values, m_Slots.Length);
+            values[index] = slot;
+            return new EquipmentStateAggregate(
+                CatalogHash,
+                values,
+                m_LocalStates,
+                PendingChange,
+                LastResolvedChange);
         }
 
         public EquipmentStateAggregate WithLocalState(
@@ -985,25 +998,22 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Equipment aggregate has no active pending change.");
             if (slot.SlotId != PendingChange.SlotId)
                 throw new InvalidOperationException($"Equipment pending change targets '{PendingChange.SlotId.Value}', not '{slot.SlotId.Value}'.");
-            for (int i = 0; i < m_Slots.Length; i++)
+            int index = FindSlot(slot.SlotId);
+            if (index < 0)
+                throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
+            EquipmentSlotState[] values = m_Slots;
+            if (!m_Slots[index].Equals(slot))
             {
-                if (m_Slots[i].SlotId != slot.SlotId)
-                    continue;
-                EquipmentSlotState[] values = m_Slots;
-                if (!m_Slots[i].Equals(slot))
-                {
-                    values = new EquipmentSlotState[m_Slots.Length];
-                    Array.Copy(m_Slots, values, m_Slots.Length);
-                    values[i] = slot;
-                }
-                return new EquipmentStateAggregate(
-                    CatalogHash,
-                    values,
-                    m_LocalStates,
-                    default,
-                    PendingChange.Resolve(state, resolvedTick));
+                values = new EquipmentSlotState[m_Slots.Length];
+                Array.Copy(m_Slots, values, m_Slots.Length);
+                values[index] = slot;
             }
-            throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
+            return new EquipmentStateAggregate(
+                CatalogHash,
+                values,
+                m_LocalStates,
+                default,
+                PendingChange.Resolve(state, resolvedTick));
         }
     }
 

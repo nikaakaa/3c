@@ -614,6 +614,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Scale = scale;
         }
 
+        internal CharacterComponentBonePose(
+            Vector3 position,
+            Quaternion normalizedRotation,
+            Vector3 scale)
+        {
+            Position = position;
+            Rotation = normalizedRotation;
+            Scale = scale;
+        }
+
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }
         public Vector3 Scale { get; }
@@ -740,7 +750,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return false;
             }
-            component = new CharacterComponentBonePose(position, rotation, scale);
+            component = new CharacterComponentBonePose(position, rotation.normalized, scale);
             return true;
         }
 
@@ -771,7 +781,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 component.Scale.y / parent.Scale.y,
                 component.Scale.z / parent.Scale.z);
             local = new AnimationLocalBonePose(position, rotation, scale);
-            return local.IsValid;
+            return true;
         }
     }
 }

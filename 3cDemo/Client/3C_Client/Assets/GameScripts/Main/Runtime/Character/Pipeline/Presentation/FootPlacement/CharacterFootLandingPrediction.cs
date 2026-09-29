@@ -133,20 +133,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingQueryResult
     {
+        readonly CharacterFootLandingSupport m_Support;
+        readonly CharacterFootLandingQuerySelectionDiagnostics m_SelectionDiagnostics;
+
         internal CharacterFootLandingQueryResult(
             CharacterFootLandingQueryRejectReason rejectReason,
             CharacterFootLandingSupport support,
             CharacterFootLandingQuerySelectionDiagnostics selectionDiagnostics)
         {
             RejectReason = rejectReason;
-            Support = support;
-            SelectionDiagnostics = selectionDiagnostics;
+            m_Support = support;
+            m_SelectionDiagnostics = selectionDiagnostics;
         }
 
         internal CharacterFootLandingQueryRejectReason RejectReason { get; }
-        internal CharacterFootLandingSupport Support { get; }
-        internal CharacterFootLandingQuerySelectionDiagnostics
-            SelectionDiagnostics { get; }
+        internal ref readonly CharacterFootLandingSupport Support =>
+            ref m_Support;
+        internal ref readonly CharacterFootLandingQuerySelectionDiagnostics
+            SelectionDiagnostics => ref m_SelectionDiagnostics;
         internal bool Accepted => RejectReason == CharacterFootLandingQueryRejectReason.None;
     }
 
@@ -554,10 +558,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in ThirdPersonSimulation.CharacterFutureBodyTranslationSample futureBodyTranslation,
             Vector3 currentAnimatedSole,
             Vector3 rawLandingCandidate,
-            CharacterFootLandingObservationDiagnostics observation,
-            CharacterFootPlacementQueryRequest query,
-            CharacterFootLandingSupport support,
-            CharacterFootLandingQuerySelectionDiagnostics querySelection)
+            in CharacterFootLandingObservationDiagnostics observation,
+            in CharacterFootPlacementQueryRequest query,
+            in CharacterFootLandingSupport support,
+            in CharacterFootLandingQuerySelectionDiagnostics querySelection)
         {
             Side = side;
             State = state;

@@ -1268,9 +1268,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool accepted = queryResult.Accepted;
             CharacterFootLandingQueryRejectReason queryRejectReason =
                 queryResult.RejectReason;
-            CharacterFootLandingSupport support = queryResult.Support;
-            CharacterFootLandingQuerySelectionDiagnostics querySelection =
-                queryResult.SelectionDiagnostics;
             var observationDiagnostics =
                 new CharacterFootLandingObservationDiagnostics(in observation);
             return new CharacterFootLandingPredictionResult(
@@ -1299,10 +1296,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in bodyTranslation,
                 currentSole,
                 rawLanding,
-                observationDiagnostics,
-                observationPage.Query,
-                support,
-                querySelection);
+                in observationDiagnostics,
+                in observationPage.Query,
+                in queryResult.Support,
+                in queryResult.SelectionDiagnostics);
         }
 
         static CharacterFootLandingPredictionResult RejectedEvent(
@@ -1335,7 +1332,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSole,
                 rawLanding,
                 default,
-                query,
+                in query,
                 default,
                 default);
 

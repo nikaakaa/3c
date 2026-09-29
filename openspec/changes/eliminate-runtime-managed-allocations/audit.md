@@ -1600,3 +1600,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Physical source registry 的 `RequireOccupied` 每次 identity 校验都把当前 pending/committed 的 source id 和 pose node id 复制为按值局部，随后只读取 validity。
 - 两个局部改为 conditional `ref readonly`，直接绑定同一 index 的 pending 或 committed 数组元素。占用字段校验、generation 比对和异常时机不变。
 - 该改动删除周期 source identity 校验的两个结构拷贝；不改变 pending/committed 选择或数组生命周期。静态核对 conditional ref 两支指向同一 index、引用只读和唯一消费块；未编译、未采样，不能声称实测耗时收益。
+
+### AP214 physical source identity 参数引用化（2026-09-30，已实施，本轮未编译）
+
+- Physical source registry 的 source id、node id、owner index、backend kind、catalog index 和 release prepare 都按值接收 identity，再复制给内部校验；Source Module 的三个转发包装也复制一次。
+- registry 内部七个正式边界和 Source Module 三个转发边界改为 `in`。index/generation 校验、pending 选择、返回值、release 校验和异常文本不变；外部调用继续传同一局部或数组引用。
+- 该改动删除 identity 查询和 release 准备链的重复结构拷贝；不改变 backend interface 的更大合同。静态核对全部方法不写 identity、调用点兼容按值实参和 readonly struct 字段只读；未编译、未采样，不能声称实测耗时收益。

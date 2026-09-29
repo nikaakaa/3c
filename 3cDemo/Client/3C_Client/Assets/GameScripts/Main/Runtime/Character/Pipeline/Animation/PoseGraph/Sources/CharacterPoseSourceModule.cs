@@ -1161,15 +1161,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.RequireIdentity(sourceId, poseNodeId);
 
         internal AnimationPoseSourceId RequireSourceId(
-            AnimationPhysicalSourceIdentity physical) =>
+            in AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequireSourceId(physical);
 
         internal PoseNodeId RequirePoseNodeId(
-            AnimationPhysicalSourceIdentity physical) =>
+            in AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequirePoseNodeId(physical);
 
         internal int RequireSourceOwnerIndex(
-            AnimationPhysicalSourceIdentity physical) =>
+            in AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequireSourceOwnerIndex(physical);
 
         internal void RegisterRetirementOwner(ICharacterPoseSourceRetirementOwner owner) =>

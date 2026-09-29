@@ -609,7 +609,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_CommittedDiagnostics);
         }
 
-        internal AnimationPoseSourceId RequireSourceId(AnimationPhysicalSourceIdentity identity)
+        internal AnimationPoseSourceId RequireSourceId(in AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
             return PendingIsOccupied(value)
@@ -617,7 +617,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 : m_SourceIds[value];
         }
 
-        internal PoseNodeId RequirePoseNodeId(AnimationPhysicalSourceIdentity identity)
+        internal PoseNodeId RequirePoseNodeId(in AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
             return PendingIsOccupied(value)
@@ -625,7 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 : m_PoseNodeIds[value];
         }
 
-        internal int RequireSourceOwnerIndex(AnimationPhysicalSourceIdentity identity)
+        internal int RequireSourceOwnerIndex(in AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
             return PendingIsOccupied(value)
@@ -634,7 +634,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal CharacterAnimationSamplingBackendKind RequireBackendKind(
-            AnimationPhysicalSourceIdentity identity)
+            in AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
             return PendingIsOccupied(value)
@@ -643,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal int RequireResourceCatalogIndex(
-            AnimationPhysicalSourceIdentity identity)
+            in AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
             return PendingIsOccupied(value)
@@ -652,7 +652,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal AnimationPhysicalSourceReleaseToken PrepareRelease(
-            AnimationPhysicalSourceIdentity identity,
+            in AnimationPhysicalSourceIdentity identity,
             AnimationPoseSourceId sourceId)
         {
             RequireAlive();
@@ -767,7 +767,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 generation);
         }
 
-        int RequireOccupied(AnimationPhysicalSourceIdentity identity)
+        int RequireOccupied(in AnimationPhysicalSourceIdentity identity)
         {
             RequireAlive();
             if (!identity.IsValid || identity.Index.Value < 0 || identity.Index.Value >= m_SourceIds.Length)

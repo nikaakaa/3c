@@ -1174,3 +1174,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Additive Pose 每次求输出都按 `(NodeId, port)` 分别哈希查找 base 与 overlay，并重复做 Local Pose 类型测试；两个端口在 graph 初始化后固定。
 - handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取。optional weight 继续使用原 Try 读取合同；可用性校验、reference delta、scale policy 和 continuity 顺序不变。
 - 该改动消除两个主姿态输入的每帧 tuple 查找；不新增第二数据源。静态核对端口名、类型、Initialize 唯一绑定和 additive 调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP143 LayeredBoneBlend typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Layered Bone Blend 每次求输出都按 `(NodeId, port)` 分别哈希查找 base 与 overlay，并重复做 Local Pose 类型测试；两个端口在 graph 初始化后固定。
+- handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取。optional weight 继续使用原 Try 读取合同；bone mask、可用性校验、continuity 和逐骨骼混合顺序不变。
+- 该改动消除两个主姿态输入的每帧 tuple 查找；不新增第二数据源。静态核对端口名、类型、formal Bone Mask 边界和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。

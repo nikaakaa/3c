@@ -15,6 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly float[] m_BoneMask;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_BasePoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_OverlayPoseInput;
         int m_PageIndex = -1;
         ulong m_NextContinuityIdentity = 1;
         ulong m_ContinuityIdentity;
@@ -72,6 +74,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node.Kind != Kind || !node.BoneMaskSlot)
                 throw new InvalidOperationException(
                     $"Layered Bone Blend handler '{NodeId}' has no formal Bone Mask resource.");
+            m_BasePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "base");
+            m_OverlayPoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "overlay");
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -133,9 +141,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue basePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(node, "base");
+                runtime.ReadInput(
+                    m_BasePoseInput,
+                    m_NodeId,
+                    "base");
             CharacterPoseNativeLocalPoseValue overlayPose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(node, "overlay");
+                runtime.ReadInput(
+                    m_OverlayPoseInput,
+                    m_NodeId,
+                    "overlay");
             CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");
             CharacterPoseNativePoseReadBinding overlayBinding =

@@ -1078,3 +1078,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - capture.20260929-164123 中 FBBIK `SetComponentRotation` 约 0.240% CPU 样本。FullBodyIK 每处理一个 goal 都执行 `CharacterFullBodyIkEffectorSlot -> FullBodyBipedEffector` switch，再调用 FinalIK 的 `GetEffector` 二次 switch。这些映射由 rig 和 `SetToIndexedReferences` 一次建立，运行帧内不变化。
 - `CharacterFinalIkFullBodySolver` 在 `Prepare` 建立 references 后，把 9 个正式 effector 引用按业务 slot 写入定容数组；goal 应用、pre-solve 旋转、identity 判定、求解校验和诊断读取改为一次 slot 数组访问。`Prepare` 失败仍保持 `m_Prepared=false`，已缓存引用不会进入求解路径。
 - 该改动减少 goal 处理中的重复枚举映射和 vendor 查找，不改变 goal 验证、应用顺序、输出页、Commit/Discard 或诊断内容。静态核对 FinalIK `GetEffector` 返回稳定引用和 5 个运行时读取点；未编译、未采样，不能声称实测耗时收益。
+
+### AP127 FullBodyIK 旋转写入重复校验收敛（2026-09-30，已实施，本轮未编译）
+
+- 同一份热点中 `SetComponentRotation` 的 exclusive 成本来自每次足部 pre-solve 旋转写入。入口 `RequireFinite` 已完成 finite 和非零检查，随后主骨骼 `AnimationLocalBonePose` 公共构造器重复同一检查并再次归一化。
+- 主骨骼现在在既有写入边界归一化一次，并使用 AP123 的内部已归一化构造器；子孙骨骼的位置差、旋转合成和公共构造行为保持不变。绑定入口继续验证整页姿态，旋转入口继续拒绝无效参数。
+- 该改动减少每次旋转写入的主骨骼重复浮点检查，不改变有效输入输出、无效输入失败类型、子孙传播顺序或输出页身份。静态核对 TryBind、位置/旋转写入和 FBBIK 调用链；未编译、未采样，不能声称实测耗时收益。

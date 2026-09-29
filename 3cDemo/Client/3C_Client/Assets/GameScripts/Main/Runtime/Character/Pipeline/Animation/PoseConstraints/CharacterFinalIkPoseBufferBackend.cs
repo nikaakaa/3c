@@ -160,7 +160,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index = RequireWritableBone(bone);
             RequireFinite(rotation, nameof(rotation));
             AnimationLocalBonePose current = m_ComponentPose[index];
-            var updated = new AnimationLocalBonePose(current.Position, rotation, current.Scale);
+            var updated = new AnimationLocalBonePose(
+                rotation.normalized,
+                current.Position,
+                current.Scale);
             Quaternion delta = updated.Rotation * Quaternion.Inverse(current.Rotation);
             m_ComponentPose[index] = updated;
             int end = m_DescendantOffsets[index + 1];

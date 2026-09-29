@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal static class CharacterFinalPoseContributionResolver
     {
         internal static AnimationPoseSourceContribution Resolve(
-            AnimationPrimitivePoseContribution primitive,
+            in AnimationPrimitivePoseContribution primitive,
             CharacterPoseSourceModule sourceModule,
             IReadOnlyList<PoseNodeId> playerNodeIds)
         {

@@ -1498,3 +1498,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Inertialization 应用 foot feature 时分别重复读取 input 的 left/right foot binding；重写 contribution 前还把每个 primitive 按值复制到 source 局部。
 - pending/active 检查通过后缓存 input left/right foot slice 和 output contribution slice；每个 primitive 绑定只读元素引用，envelope 判断、accumulator 添加顺序、pending 更新和 contribution 字段换算不变。
 - 该改动删除 foot feature 周期链的重复 binding 读取和 primitive 中间拷贝；不改变 contribution count、foot 输出或输出页身份。静态核对 foot slice 单元素合同、readonly struct 字段只读和唯一 ApplyFootFeatures 循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP197 Foot Placement 输入定容（2026-09-30，已实施，本轮未编译）
+
+- Foot Placement 构建输入时重复读取 contribution count、parameter 和 availability binding；`ResolveContributions` 再次读取 count，每个 primitive 按值传入 resolver。
+- 入口缓存 count、parameter、availability 和 primitive slice；count 校验后作为唯一实参传入 void resolution。`CharacterFinalPoseContributionResolver.Resolve` 的 primitive 边界改为 `in`，Final Publication 与 Foot Placement 两个调用点共享同一只读合同。
+- 该改动删除 Foot Placement 周期输入的重复 binding 读取和 primitive 拷贝；不改变 count 校验、Live source 选择、resolver 异常或输出 frame 顺序。静态核对 read binding slice 生命周期、两个唯一 Resolve 调用和方法本体不写 primitive；未编译、未采样，不能声称实测耗时收益。

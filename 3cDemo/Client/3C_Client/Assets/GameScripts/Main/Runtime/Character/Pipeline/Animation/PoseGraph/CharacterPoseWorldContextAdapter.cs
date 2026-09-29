@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -88,14 +89,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in AnimationPoseValueNativeReadBinding inputBinding,
             int parameterIndex)
         {
-            if (inputBinding.ContributionCount.Length != 1 ||
-                inputBinding.ContributionCount[0] <= 0 ||
-                inputBinding.ContributionCount[0] > m_Contributions.Length)
+            NativeSlice<int> contributionCounts =
+                inputBinding.ContributionCount;
+            if (contributionCounts.Length != 1 ||
+                contributionCounts[0] <= 0 ||
+                contributionCounts[0] > m_Contributions.Length)
             {
                 throw new InvalidOperationException(
                     "Foot Placement Component Pose has no resolvable contributions.");
             }
-            int contributionCount = ResolveContributions(in inputBinding);
+            int contributionCount = contributionCounts[0];
+            NativeSlice<float> poseParameters = inputBinding.PoseParameters;
+            NativeSlice<byte> parameterAvailability =
+                inputBinding.PoseParameterAvailability;
+            ResolveContributions(in inputBinding, contributionCount);
             m_HasLastSampledFootMotion = false;
             AnimationPoseSourceContribution contribution =
                 RequireFootMotionContribution(contributionCount);
@@ -107,9 +114,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Contributions,
                 contributionCount);
             if ((uint)parameterIndex >=
-                    (uint)inputBinding.PoseParameters.Length ||
-                inputBinding.PoseParameterAvailability[parameterIndex] == 0 ||
-                !float.IsFinite(inputBinding.PoseParameters[parameterIndex]))
+                    (uint)poseParameters.Length ||
+                parameterAvailability[parameterIndex] == 0 ||
+                !float.IsFinite(poseParameters[parameterIndex]))
             {
                 throw new InvalidOperationException(
                     "Foot Placement input Pose curve is unavailable.");
@@ -118,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 actorId,
                 renderFrame,
                 presentationDeltaSeconds,
-                inputBinding.PoseParameters[parameterIndex],
+                poseParameters[parameterIndex],
                 bodyFrame,
                 in factFrame,
                 in parameterFrame,
@@ -169,18 +176,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return result;
         }
 
-        int ResolveContributions(
-            in AnimationPoseValueNativeReadBinding inputBinding)
+        void ResolveContributions(
+            in AnimationPoseValueNativeReadBinding inputBinding,
+            int count)
         {
-            int count = inputBinding.ContributionCount[0];
+            NativeSlice<AnimationPrimitivePoseContribution> primitives =
+                inputBinding.Contributions;
             for (int i = 0; i < count; i++)
             {
                 m_Contributions[i] = CharacterFinalPoseContributionResolver.Resolve(
-                    inputBinding.Contributions[i],
+                    primitives[i],
                     m_SourceModule,
                     m_PlayerNodeIds);
             }
-            return count;
         }
 
         AnimationPoseSourceContribution RequireFootMotionContribution(

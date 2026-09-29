@@ -8,6 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal readonly struct CharacterPoseNativePublicationFrameLease
     {
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
         internal CharacterPoseNativePublicationFrameLease(
             in CharacterPoseNativeFrameLineage lineage)
         {
@@ -15,15 +16,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Native Final Pose publication lineage is invalid.",
                     nameof(lineage));
-            Lineage = lineage;
+            m_Lineage = lineage;
             m_IsValid = true;
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal bool IsValid => m_IsValid && Lineage.IsValid;
         internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
-            IsValid && Lineage == lineage;
+            IsValid && Lineage.Matches(in lineage);
     }
 
     internal sealed class CharacterFinalPoseNativePublication : IDisposable
@@ -41,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool IsOpen => Lease.IsValid;
 
             internal void Begin(
-                CharacterPoseNativePublicationFrameLease lease,
+                in CharacterPoseNativePublicationFrameLease lease,
                 int bufferPage)
             {
                 if (IsOpen || !lease.IsValid || bufferPage < 0 || bufferPage > 1)
@@ -58,10 +59,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             internal void SetFrame(
-                CharacterPoseNativePublicationFrameLease lease,
+                in CharacterPoseNativePublicationFrameLease lease,
                 in ComposedAnimationPoseFrame frame)
             {
-                RequireLease(lease);
+                RequireLease(in lease);
                 if (HasFrame)
                     throw new InvalidOperationException(
                         "Native Final Pose publication frame is already set.");
@@ -70,16 +71,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             internal void RequireFrame(
-                CharacterPoseNativePublicationFrameLease lease)
+                in CharacterPoseNativePublicationFrameLease lease)
             {
-                RequireLease(lease);
+                RequireLease(in lease);
                 if (!HasFrame || BufferPage < 0)
                     throw new InvalidOperationException(
                         "Native Final Pose publication page is incomplete.");
             }
 
             internal void RequireLease(
-                CharacterPoseNativePublicationFrameLease lease)
+                in CharacterPoseNativePublicationFrameLease lease)
             {
                 if (!IsOpen || !lease.IsValid ||
                     !lease.Lineage.Matches(in Lease.Lineage))
@@ -226,16 +227,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var lease = new CharacterPoseNativePublicationFrameLease(in lineage);
             int page = m_CommittedPage < 0 ? 0 : 1 - m_CommittedPage;
             m_PageLeases[page].BeginWrite(lineage.CompletionIdentity);
-            m_Pending.Begin(lease, page);
+            m_Pending.Begin(in lease, page);
             return lease;
         }
 
         internal void PreparePending(
-            CharacterPoseNativePublicationFrameLease lease,
+            in CharacterPoseNativePublicationFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
             RequireAlive();
-            m_Pending.RequireLease(lease);
+            m_Pending.RequireLease(in lease);
             if (!evaluation.IsValid ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
                 !lease.Lineage.Matches(in evaluation.Lineage) ||
@@ -391,15 +392,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.ContinuityIdentity[0],
                 pageLease,
                 output.CompletionIdentity);
-            m_Pending.SetFrame(lease, in frame);
+            m_Pending.SetFrame(in lease, in frame);
         }
 
         internal void WritePhysicalPose(
-            CharacterPoseNativePublicationFrameLease lease,
+            in CharacterPoseNativePublicationFrameLease lease,
             bool captureFootIkDiagnostics)
         {
             RequireAlive();
-            m_Pending.RequireFrame(lease);
+            m_Pending.RequireFrame(in lease);
             m_PropertyWriter.ValidateBeforeWrite(in m_Pending.Frame);
             m_PhysicalWriter.Write(
                 in m_Pending.Frame,
@@ -412,10 +413,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePublicationResult Commit(
-            CharacterPoseNativePublicationFrameLease lease)
+            in CharacterPoseNativePublicationFrameLease lease)
         {
             RequireAlive();
-            m_Pending.RequireFrame(lease);
+            m_Pending.RequireFrame(in lease);
             if (m_Pending.PhysicalCompletionIdentity == 0 ||
                 m_Pending.PhysicalCompletionIdentity != lease.Lineage.CompletionIdentity)
             {
@@ -440,10 +441,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void Discard(
-            CharacterPoseNativePublicationFrameLease lease)
+            in CharacterPoseNativePublicationFrameLease lease)
         {
             RequireAlive();
-            m_Pending.RequireLease(lease);
+            m_Pending.RequireLease(in lease);
             if (m_Pending.BufferPage >= 0)
                 m_PageLeases[m_Pending.BufferPage].Invalidate();
             m_Pending.Clear();

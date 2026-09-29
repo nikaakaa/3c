@@ -1673,3 +1673,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animancer 三段只读循环改为绑定 pending 数组元素引用；sample batch 新增正式 `ElementAt` 只读引用并删除唯一按值 indexer。`ApplySamples` 与 `CopyFrom` 改为只读 buffer/元素转发，RequireDominant 仍按合同返回一次 plan。
 - ACL Source Graph Apply 的唯一 batch 消费同步改为 `ElementAt` 只读 plan，用于读取 clip binding index 和设置 mixer weight。
 - 该改动删除 Animancer 与 ACL 周期 clip 求值链的重复 plan 读取拷贝。source 校验、duplicate 检查、权重归一化、pending plan 写入、数组清理、范围异常和输出 plan 语义不变。静态核对旧 indexer 无引用、引用生命周期覆盖只读消费和 plan 存储仍各保留一次必要拷贝；未编译、未采样，不能声称实测耗时收益。
+
+### AP226 Final Publication lease 引用化（2026-09-30，已实施，本轮未编译）
+
+- Final Publication 的 frame lease 按值进入 PendingPage 的 begin/set/require 校验；`Lineage` 自动属性每次读取复制完整 lineage，外层 Prepare、Physical、Commit 和 Discard 再按值传递同一 lease。
+- lease 的 lineage 改为 backing field 只读引用，PendingPage 四个正式边界和 Publication 四个阶段入口改为 `in`；lease 匹配改用 lineage 现有 `Matches(in)` 字段比较，外层调用显式只读转发。
+- 该改动删除 Final Publication 周期 Begin/Prepare/Physical/Commit/Discard 链的重复 lease 与 lineage 拷贝。PendingPage 仍存储一次 lease，`ComposedAnimationPoseFrame` 仍按一次必要存储写入；页选择、物理写入前置、Commit/Discard 顺序和异常文本不变。静态核对唯一外层调用链、引用生命周期覆盖 open page、`Matches(in)` 与原 `==` 字段等价；未编译、未采样，不能声称实测耗时收益。

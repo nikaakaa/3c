@@ -937,15 +937,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 publicationLease = publication.BeginFrame(in m_CompletedLineage);
                 publicationOpen = true;
-                publication.PreparePending(publicationLease, in evaluation);
+                publication.PreparePending(
+                    in publicationLease,
+                    in evaluation);
                 publication.WritePhysicalPose(
-                    publicationLease,
+                    in publicationLease,
                     captureFootIkDiagnostics);
                 m_Stage = CharacterPoseNativeExecutionStage.Commit;
                 CommitGraphOutput(in evaluation);
                 graphCommitted = true;
                 CharacterPoseNativePublicationResult result =
-                    publication.Commit(publicationLease);
+                    publication.Commit(in publicationLease);
                 CloseFrame();
                 return result;
             }
@@ -955,7 +957,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 try
                 {
                     if (publicationOpen)
-                        publication.Discard(publicationLease);
+                        publication.Discard(in publicationLease);
                 }
                 catch (Exception cleanup)
                 {

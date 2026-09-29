@@ -21,7 +21,7 @@ namespace ThirdPersonRendering
         [SerializeField] bool playOnEnable;
         [SerializeField] bool useMainCameraBillboard = true;
 
-        readonly MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+        MaterialPropertyBlock propertyBlock;
         BlockImpactVfxRequest activeRequest;
         float elapsed;
         bool playing;
@@ -46,6 +46,7 @@ namespace ThirdPersonRendering
 
         void OnEnable()
         {
+            propertyBlock ??= new MaterialPropertyBlock();
             ResolveRuntimeReferences();
             if (playOnEnable)
                 PlayDefault();

@@ -17,7 +17,7 @@ namespace ThirdPersonRendering
         [SerializeField] bool applyOnEnable = true;
         [SerializeField] bool clearOnDisable = true;
 
-        readonly MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+        MaterialPropertyBlock propertyBlock;
 
         public ScreenSpaceDotTransparencyProfile Profile
         {
@@ -48,6 +48,7 @@ namespace ThirdPersonRendering
 
         void OnEnable()
         {
+            propertyBlock ??= new MaterialPropertyBlock();
             if (applyOnEnable)
                 TryApplyProfile();
         }

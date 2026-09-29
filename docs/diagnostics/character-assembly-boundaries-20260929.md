@@ -41,7 +41,7 @@ CameraEnvironmentConstraintSolver 是表现领域实际调用的求解入口，�
 - 性能 IL 织入名单加入 ThirdPersonCharacter.Animation，防止 Pose Prepare/Evaluate/Commit 探针随程序集迁移而漏掉。
 - Fixed、Rollback、ServerAuthoritative 角色宿主、诊断采样与分析、Timeline 编辑器、性能采集和 GameLogic 增加其实际使用的新程序集引用。
 
-## 检查与限制
+## 第一阶段检查与当时限制
 
 - 145 个项目 Assets/Packages 程序集的名称和 GUID 引用图无循环。
 - 搬迁的 18 个脚本执行体与原件一致，meta GUID 全部保留。
@@ -56,3 +56,11 @@ CameraEnvironmentConstraintSolver 是表现领域实际调用的求解入口，�
 - 检查使用 Unity 正式生成的 response file 和编译器。并行任务正在修改的外部依赖使用当前源码的 metadata-only 参考，只核对调用合同，不代替这些任务的方法体编译和整体 Editor 验证；产物仅位于系统临时目录。
 - 本步 18 个整文件搬迁（15 个 Timeline 接入、3 个内容辅助）的源码和 meta 保持不变；移出的已提交动作时钟类体保持不变。
 - 用户明确要求不处理并行任务的编译错误，因此不以它们暂停本次重构，也不修改相关业务代码。此前尝试的状态机参数转换已原样撤回。
+
+## 后续编译闭环
+
+用户随后明确要求修复工作区报错，修复了装备局部变量重名、状态机路径数字参数类型、Corin 控制请求来源解包、Fixed/Float32 快照哈希解包，以及跨程序集 UTF-8 原始写入入口可见性。上述修改保留既有业务与哈希字节格式。
+
+编译通过后的域重载暴露两个渲染组件在字段初始化阶段创建 MaterialPropertyBlock 的异常，已改为 OnEnable 首次创建并在重复启用时复用，避免对象池每次激活重新分配。
+
+2026-09-29 15:09（本地时间），目标实例 e852139597e42532 完成正式 Unity 编译与域重载；检查时为 Edit/idle，未在编译或重载，Console error 为 0。此前记录的整体编译阻塞已经解除。未运行 replay、Player 构建或业务端到端验收。

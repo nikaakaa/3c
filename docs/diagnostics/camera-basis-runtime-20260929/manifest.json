@@ -20,8 +20,28 @@
       "sha256": "1ce9da445f11a11404d68f6ea040b87f073ef38f9428465f559a087057ddfce3"
     },
     {
+      "path": "camera-stage-0x134db160.json",
+      "sha256": "d1d351123f327682cb5f980156e29547b1f2ff3044da65e6481f0cf5a843cd04"
+    },
+    {
+      "path": "camera-stage-0x134db1e0.json",
+      "sha256": "4ed497da689be0569ca526b26189a2a9dc07d766c3c1d342744ae14ed2c3134b"
+    },
+    {
+      "path": "camera-stage-0x134db300.json",
+      "sha256": "58b1d2cdee55e8017fdd3d581660827624b56785b1024c48ad02a37f2c20c7e3"
+    },
+    {
+      "path": "camera-stage-0x134db450.json",
+      "sha256": "62b03177c94c87ee712ceb23f87cfcfa5f0ec701190c3a02ceba62ebb0ae38fe"
+    },
+    {
       "path": "camera-update.json",
       "sha256": "437ee4e6d7107a098b182bc7500cbef5ad08cf671f3ff495f88e866ed2d69780"
+    },
+    {
+      "path": "consumer-0x11fe63b0.json",
+      "sha256": "74ef8eba84e5743c4e61d8597609a815591669f9db8be967db809047aac45434"
     },
     {
       "path": "controls-to-curve.json",
@@ -96,6 +116,38 @@
       "sha256": "aeb53172fe3ad5f95fd50a8625e610c15812f08634dc61f83f1c372ce57d284b"
     },
     {
+      "path": "zoom-branch-flags.json",
+      "sha256": "d7360c8d4b621e125e6970d28e7fb927deee13a2fa301282c907d5b0734e206a"
+    },
+    {
+      "path": "zoom-delay.json",
+      "sha256": "712b5100c6146273be2d5f0e77421b8c6728f08cddd4d5cbc5189cb8edcc98ae"
+    },
+    {
+      "path": "zoom-ended.json",
+      "sha256": "d0038fa31be6084327fa506641d2a393a67fe15c4ab756cbda758d1622d45619"
+    },
+    {
+      "path": "zoom-enter.json",
+      "sha256": "4b3be669c3c41ad06b5a4c7c6e81dc23d0c8940f93a8528664831325f0c12035"
+    },
+    {
+      "path": "zoom-exit.json",
+      "sha256": "454ee249e0ebcf9b9566b39155c19bc3f65d263635bc336fb2be382b10b58363"
+    },
+    {
+      "path": "zoom-initialize-caller-0x11fe6090.json",
+      "sha256": "125fcc232fc0d6621be1082bf44fa70d54ea72cba6ede0015d3feaa97e3204d1"
+    },
+    {
+      "path": "zoom-initialize-callers.json",
+      "sha256": "5ebf788dc15a1080090027daa5c780974f64d830861820005d85ccaf196c59c9"
+    },
+    {
+      "path": "zoom-stretch-callers.json",
+      "sha256": "3d885df08a18582cd55427e99a3c37286e881d312619399e524aad2c959afb17"
+    },
+    {
       "path": "zoom-stretch-config-types.json",
       "sha256": "8ffb8ef9450be4ddb192f90fb3a660e8ddf715e5a846ec12cc29efc068198df9"
     },
@@ -104,8 +156,20 @@
       "sha256": "0b9296370b5c1ac1b51b791d62be5ebf54fee49565fa2032d40355ac4477d222"
     },
     {
+      "path": "zoom-stretch-instance-types.json",
+      "sha256": "3f55f801072abcc7184a4821a60a6147e7bc38399d5f0ebc79abc2f83f116332"
+    },
+    {
       "path": "zoom-stretch-stacking-audit.json",
       "sha256": "f023e2075b6ee7f11666b9112b8f3beca65b564a93ab9747cde1e5df26ed6796"
+    },
+    {
+      "path": "zoom-transition.json",
+      "sha256": "a0f68bca109f25e956fde4025d3a51bc3927668729410f6b186d683d39e10deb"
+    },
+    {
+      "path": "zoom-update.json",
+      "sha256": "9fd1cd2e224e12bdeb56dcc9dd076c2a5daa9696b3630520ee123745b7f93728"
     }
   ]
 }

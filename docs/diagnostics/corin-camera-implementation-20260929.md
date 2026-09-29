@@ -109,3 +109,19 @@
 Zoom 当前求值器尚只使用另一字段 `StackingType` 筛选，未消费 `PlayStackingType`。本批修正 Zoom 正式资源的映射，不将其描述为已经实现原作完整的播放仲裁。两种 Stacking 字段的职责不同，不能将它们合并。
 
 正式 Publish 后 Profile 为 21 Shake、18 Zoom、18 Stretch，dirty=false；投影 Build/RequireValid 成功。36 项磁盘资产与提交前比较，唯一业务字段变化是 PlayStackingType；其他小数变化均验证为同一 float32 数值。见 [36 项对账](camera-basis-runtime-20260929/zoom-stretch-stacking-audit.json)。源码编译重载完成，发布前 Console 0 错误；未运行 Play/replay，未新增测试。
+
+## Zoom 输出选择消费者与修正
+
+进一步沿 `CameraDataAccessor.Zoom` 的实例列表找到原作实际消费者 RVA `0x11FE63B0`。直接调用关系和完整指令分别见 [调用者](camera-basis-runtime-20260929/zoom-stretch-callers.json)、[Zoom 组选择](camera-basis-runtime-20260929/consumer-0x11fe63b0.json)。
+
+- `0x11FE6494–0x11FE64A0` 对实例调用 `HGGGKJKDEEI.EMPJHIKLNHB`（`0x12BB3F80`）更新当前值。
+- 实例 `+0x3C` 为 PlayStackingType，`+0x58` 为当前有符号 FOV 改变量。raw 0 与 raw 1 分别进入两个候选组。
+- `0x11FE64D3–0x11FE64F7` 和 `0x11FE64FC–0x11FE6520` 分别比较当前改变量的绝对值；只有严格更大才替换，绝对值相等保留先遇到者。两组都取一项，Additive 组也不是全部累加。
+- `0x11FE6587–0x11FE65AB` 把两组有符号改变量相加，再加到 `TargetCalcData.cameraFov`。本层没有按请求身份、代次或 DataPriority 排序。
+- 对应 IFix 分支在 829 快照均为 0；初始化字节与 IFix 开关分别解释，见 [分支状态](camera-basis-runtime-20260929/zoom-branch-flags.json)。
+
+当前 `CameraZoomEffectEvaluator.Apply` 已按这一输出层规则修改：各项求得当前改变量，依 PlayStackingType 在 Base/Additive 组内取绝对值最大项，最终一次性加回基础 FOV。删除了该 owner 对通用 Select 和旧逐项改写 FOV 的依赖。字段资源查询直接依赖请求接纳时已有的 HasResource 约束，清理了该 owner 在推进、到期、退出中的重复资源校验与返回零的兜底；循环内没有新增分配。
+
+实例生命周期尚有独立差异：`0x12BB4F70` 按 CameraConfigDataStacking 和 ValueVariationType 设置起始改变量、目标改变量与初始 FOV。其调用者 `0x11FE6090` 已定位：Base 传入 TargetCalcData.cameraFov（可由全局 FOV 栈正值覆盖）及上一帧 Base 改变量；Additive 传入 0 作为参考 FOV 及上一帧 Additive 改变量。当前求值已保留 Additive 的零参考，见 [初始化调用者](camera-basis-runtime-20260929/zoom-initialize-caller-0x11fe6090.json)。原作能继承组内当前改变量开始过渡；本项目仍使用既有包络／实例启动逻辑，尚未实现这项继承和全局 FOV 栈输入，不宣称 Zoom 的完整衔接已复刻。
+
+Unity 实际重载了新 `EvaluateOffset` 方法（3 个参数），编译后 Console 0 错误，18 项 Zoom 的正式 Profile 投影 Build/RequireValid 成功。只做源码、编译及投影检查；未运行 Play/replay，未新增测试。

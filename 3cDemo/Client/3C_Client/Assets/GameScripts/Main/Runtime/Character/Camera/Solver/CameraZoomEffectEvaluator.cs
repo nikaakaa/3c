@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,24 +24,28 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState selected = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (selected == null)
-                return plan;
-            CameraFramePlan result = plan;
+            float baseOffset = 0f;
+            float additiveOffset = 0f;
             for (int i = 0; i < active.Count; i++)
             {
                 CameraEffectRuntimeState state = active[i];
-                if (state.Request.Kind != Kind ||
-                    !m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload) ||
-                    state != selected && payload.StackingType != CameraEffectStackingType.Add)
+                if (state.Request.Kind != Kind)
                     continue;
-                result = ApplySingle(result, state, payload);
+                m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload);
+                float offset = EvaluateOffset(plan.FieldOfView, state, payload);
+                if (payload.PlayStackingType == CameraEffectStackingType.Add)
+                {
+                    if (Mathf.Abs(offset) > Mathf.Abs(additiveOffset))
+                        additiveOffset = offset;
+                }
+                else if (Mathf.Abs(offset) > Mathf.Abs(baseOffset))
+                    baseOffset = offset;
             }
-            return result;
+            return plan.WithFieldOfView(plan.FieldOfView + baseOffset + additiveOffset);
         }
 
-        CameraFramePlan ApplySingle(
-            CameraFramePlan plan,
+        static float EvaluateOffset(
+            float baseFieldOfView,
             CameraEffectRuntimeState state,
             CameraZoomPayload payload)
         {
@@ -64,26 +67,18 @@ namespace ThirdPersonCamera
                     payload.StartCurve,
                     payload.EndCurve);
             float weight = state.Request.Weight * envelope;
-            float fov = payload.FovVariationType switch
+            float referenceFov = payload.PlayStackingType == CameraEffectStackingType.Add ? 0f : baseFieldOfView;
+            return payload.FovVariationType switch
             {
-                CameraFovVariationType.Additive => plan.FieldOfView + payload.FieldOfView * weight,
-                CameraFovVariationType.Multiplicative => plan.FieldOfView * Mathf.LerpUnclamped(
-                    1f,
-                    payload.FieldOfView,
-                    weight),
-                _ => Mathf.LerpUnclamped(plan.FieldOfView, payload.FieldOfView, weight)
+                CameraFovVariationType.Additive => payload.FieldOfView * weight,
+                CameraFovVariationType.Multiplicative => baseFieldOfView * (payload.FieldOfView - 1f) * weight,
+                _ => (payload.FieldOfView - referenceFov) * weight
             };
-            return plan.WithFieldOfView(fov);
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
         {
-            CameraZoomPayload payload = m_Projection.TryGetZoom(
-                active.Request.ResourceId,
-                out CameraZoomPayload value)
-                ? value
-                : throw new InvalidOperationException(
-                    $"Camera Zoom resource '{active.Request.ResourceId}' is not present in the Projection.");
+            m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload);
             return CameraEffectEvaluationMath.ResolveDelta(
                 payload.IgnoreWorldTimeScale,
                 payload.IgnoreOwnerTimeScale,
@@ -93,16 +88,15 @@ namespace ThirdPersonCamera
 
         public bool IsExpired(CameraEffectRuntimeState active)
         {
-            return m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload) &&
-                   payload.LastTime >= 0f &&
+            m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload);
+            return payload.LastTime >= 0f &&
                    active.Elapsed >= payload.DelayTime + payload.StartTime + payload.LastTime + payload.EndTime;
         }
 
         public float RetireDuration(CameraEffectRuntimeState active)
         {
-            return m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload)
-                ? payload.EndTime
-                : 0f;
+            m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload);
+            return payload.EndTime;
         }
     }
 }

@@ -1,0 +1,116 @@
+[
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe63d3",
+    "flag_rva": "0x58803d9",
+    "value": 0
+  },
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe63e0",
+    "flag_rva": "0x53e7d2f",
+    "value": 0
+  },
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe6479",
+    "flag_rva": "0x53f2d4d",
+    "value": 0
+  },
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe64a5",
+    "flag_rva": "0x53f2d50",
+    "value": 0
+  },
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe6623",
+    "flag_rva": "0x53f2d4d",
+    "value": 0
+  },
+  {
+    "function": "consumer-0x11fe63b0",
+    "instruction": "0x11fe6728",
+    "flag_rva": "0x53e7d2f",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb3f9d",
+    "flag_rva": "0x587de25",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb3faa",
+    "flag_rva": "0x53f2d3e",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb3ffa",
+    "flag_rva": "0x53f2d4d",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb4057",
+    "flag_rva": "0x53f2d41",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb40c0",
+    "flag_rva": "0x53f2d52",
+    "value": 0
+  },
+  {
+    "function": "zoom-update",
+    "instruction": "0x12bb4101",
+    "flag_rva": "0x53f2d3e",
+    "value": 0
+  },
+  {
+    "function": "zoom-transition",
+    "instruction": "0x12bb4f99",
+    "flag_rva": "0x53f2d51",
+    "value": 0
+  },
+  {
+    "function": "zoom-transition",
+    "instruction": "0x12bb5009",
+    "flag_rva": "0x53f2d41",
+    "value": 0
+  },
+  {
+    "function": "zoom-enter",
+    "instruction": "0x12bb457b",
+    "flag_rva": "0x53f2d47",
+    "value": 0
+  },
+  {
+    "function": "zoom-enter",
+    "instruction": "0x12bb4613",
+    "flag_rva": "0x53f2d41",
+    "value": 0
+  },
+  {
+    "function": "zoom-enter",
+    "instruction": "0x12bb4659",
+    "flag_rva": "0x53f2d41",
+    "value": 0
+  },
+  {
+    "function": "zoom-exit",
+    "instruction": "0x12bb4865",
+    "flag_rva": "0x53f2d42",
+    "value": 0
+  },
+  {
+    "function": "zoom-exit",
+    "instruction": "0x12bb48e5",
+    "flag_rva": "0x53f2d41",
+    "value": 0
+  }
+]

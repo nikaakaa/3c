@@ -1,0 +1,36 @@
+{
+  "unity_instance": "e852139597e42532",
+  "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets",
+  "method": "Build formal Profile projection, invoke production BuildTargetPlan in Edit mode, project PivotLocation using resulting camera pose",
+  "input": {
+    "body_position": [
+      0,
+      0,
+      0
+    ],
+    "body_rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "look": [
+      0,
+      0
+    ],
+    "initial_yaw_pitch": [
+      0,
+      0
+    ],
+    "delta": 0,
+    "pixel_height": 1080
+  },
+  "output": {
+    "radius": 3.7426796,
+    "fov": 50.0,
+    "offset_y": -0.0376972035,
+    "projected_screen_y": 0.5108,
+    "playing": false
+  },
+  "limits": "Static composition only. No Play/replay, damping, later Zoom/Stretch or visual comparison."
+}

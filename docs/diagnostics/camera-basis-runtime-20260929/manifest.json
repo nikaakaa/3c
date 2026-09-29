@@ -120,6 +120,42 @@
       "sha256": "874ea7663ae428a1d34505c4cc4e8fda08413841652624df99d92f913dc719e5"
     },
     {
+      "path": "delay-composition-types.json",
+      "sha256": "e06460b3b22cdf0ad91ac292011244035f433e3071473b5a9415fdbc54c3168c"
+    },
+    {
+      "path": "delay-composition-update.json",
+      "sha256": "2f44877e8d8a846d2e88bfcd287341de98718908e114f5bfdb5841302000ba31"
+    },
+    {
+      "path": "delay-dead-zone-rect.json",
+      "sha256": "47f826f5755d5a75655e4e12b40403dde4359987a7015fe81fc365169b660965"
+    },
+    {
+      "path": "delay-effect-register.json",
+      "sha256": "3ce073e1efb773540da640890fb6f33f69bfe166f8c3b4043a4d40e77d1f4319"
+    },
+    {
+      "path": "delay-screen-branch-flags.json",
+      "sha256": "2ad4f0d1fd4694646269a234b20240f2648fa7eb5dfddad8852b4a16adab8d88"
+    },
+    {
+      "path": "delay-screen-constants.json",
+      "sha256": "55417a089e95000d28eb2d338316c1a6f2f69db26e536ebe259d7979f4424b55"
+    },
+    {
+      "path": "delay-screen-rect.json",
+      "sha256": "d242583142fc06aea85dc3966332e4cd0e4f293332498228d7cd0ca14cffe55e"
+    },
+    {
+      "path": "delay-screen-to-ortho.json",
+      "sha256": "33d3588d8239ad3d3b0576fa310dd8548a9566c772905c2dbe8bca592b37c874"
+    },
+    {
+      "path": "delay-screen-y.json",
+      "sha256": "7424ef93c6e8af555d11987cf70fb9e12754c48fcf40ee00daf2c1ac966e86e3"
+    },
+    {
       "path": "delay-update.json",
       "sha256": "875dc143722bf4b4b6382d6eb76c2e2a318cd6a829ec36a7cef95a6b2d2dab41"
     },
@@ -354,6 +390,10 @@
     {
       "path": "track-sample.json",
       "sha256": "f39fd2322b81197ead9705aea9edda9a252203e8da0dca612379a000ad9f05a8"
+    },
+    {
+      "path": "track-screen-y-editor-check.json",
+      "sha256": "3543b1ec3af9984d4265aace605aad7966cadd672af7ac37ba093f8517c9d3fb"
     },
     {
       "path": "track-types.json",

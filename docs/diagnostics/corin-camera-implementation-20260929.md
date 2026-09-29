@@ -264,3 +264,19 @@ VCameraAxisState 的实际步进是 0x143583E0，速度边界是 0x14358770：
 因此计时不会再因 IgnoreLocalAvatar=false 而多乘一次本地角色倍率，也不会因这个资格字段要求存在 LocalAvatarTimeScale。当前 Tick 提供的该倍率为 1，所以不能宣称本批已经改变正常速度下的镜头手感。资格输入、原作独立世界倍率和暂停生产链尚未接通；现有 IgnoreWorldTimeScale 的时钟选择仍需调整，本次只删除有明确证据的错误职责，不能将完整计时复刻标记完成。
 
 Unity 编译与域重载通过，反射回读 ResolveDelta 参数数为 3（两个标志和 FrameInput），Console 0 错误。git diff --check 通过；未运行 Play/replay，未新增或修改测试，没有修改命中链和 IK。
+
+## 基础轨道 ScreenY 的单位和方向
+
+本批继续追到 EJKKEBPOLME+0x58 的 IGOIAKCMOCO（type 90872），它保存 CameraDelayData 并执行构图。此前发现的 OEFNMPPHFFI+0x18 委托是 AACPAEKAACH 衍生效果模块注册的回调；0x171A7DA0 是注册入口，不能仅根据该委托称其为 Cinemachine FramingTransposer。
+
+已经确认的构图链：
+
+1. 0x1596B2B0 从 CameraDataAccessor.TargetCalcData 的仰角（+0x2EC）经轨道管理器取得 ScreenY。
+2. 0x1596F9B0 用 DELAY_ScreenX、上述 ScreenY 和 DeadZoneWidth/Height 构造内框；0x159742B0 用相同中心、SoftZoneWidth/Height 和 Bias 构造外框。0x15971F90 在 0x15972281／0x15972291 读取两框交给后续构图。
+3. 同一 solver 的 0x15974D90 将归一化矩形换算为相机平面距离：yMin=2*orthoSize*(0.5-screen.yMax)，yMax=2*orthoSize*(0.5-screen.yMin)；X 使用 aspect 和减去 0.5 的坐标。常量 1 与 -0.5 已从二进制读取。该换算与本地 CinemachineFramingTransposer.ScreenToOrtho 一致；透视相机的 orthoSize 为深度乘 tan(FOV/2)。完整方法、类型和分支字节已保存为 delay-screen-*、delay-composition-*、delay-dead-zone-rect；不把这项对应关系扩大为整个 Delay 算法一致。
+
+项目原来将 SampleTrack 的 ScreenY 直接交给 CameraWorldBasicData.Offset.y。该 Offset 参与 CameraToPivot 的世界距离计算，0.5 因而被解释成半米，而不是屏幕中线。CharacterCameraFramePlanner 的轨道分支现改为先取得半径，再用 `(0.5-ScreenY)*2*radius*tan(FOV/2)` 求纵向距离，输出仍进入同一帧计划和相机求解链。没有增加运行分配或备用路径；X 仍使用已有作者合同，可琳当前 X 全为 0。
+
+Unity 编译重载完成，Console 0 错误。编辑器内构建正式 Profile 投影、调用生产 BuildTargetPlan，在零输入／零初始角偏移下取得半径 3.7426796、FOV 50、offsetY=-0.0376972035；将 PivotLocation 按所得相机位置与旋转重新投影，ScreenY=0.5108，与默认仰角 0.6 处的轨道曲线值一致。记录见 track-screen-y-editor-check.json。这个检查只覆盖静态基础构图，不包含 Play/replay、动态阻尼、后续 Zoom/Stretch 或画面对照。
+
+完整 Delay、死区／软区动态求值、输入归一化和效果修改 FOV／距离后的屏幕锚点连续性仍未完成。此次修复不等同于相机整体手感已经还原。

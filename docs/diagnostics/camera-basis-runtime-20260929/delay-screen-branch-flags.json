@@ -1,0 +1,236 @@
+[
+  {
+    "function": "delay-screen-y",
+    "instruction": "0x1596b2bd",
+    "target_rva": "0x53fe667",
+    "value": 0
+  },
+  {
+    "function": "delay-screen-y",
+    "instruction": "0x1596b2d7",
+    "target_rva": "0x53d8ed1",
+    "value": 0
+  },
+  {
+    "function": "delay-screen-rect",
+    "instruction": "0x159742cf",
+    "target_rva": "0x53fe695",
+    "value": 0
+  },
+  {
+    "function": "delay-screen-to-ortho",
+    "instruction": "0x15974dac",
+    "target_rva": "0x53fe697",
+    "value": 0
+  },
+  {
+    "function": "delay-dead-zone-rect",
+    "instruction": "0x1596f9c7",
+    "target_rva": "0x53fe66e",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15971ff8",
+    "target_rva": "0x588ee12",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597200d",
+    "target_rva": "0x53fe681",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597207c",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972541",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159726d5",
+    "target_rva": "0x536afe4",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972700",
+    "target_rva": "0x53fe681",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597279d",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159727f6",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972bc0",
+    "target_rva": "0x536afe4",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972c74",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972c95",
+    "target_rva": "0x58565cf",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972d5c",
+    "target_rva": "0x536afe4",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972e0e",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15972e2f",
+    "target_rva": "0x58565cf",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597308c",
+    "target_rva": "0x5856285",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159730c6",
+    "target_rva": "0x5856285",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159730d1",
+    "target_rva": "0x5856285",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159730eb",
+    "target_rva": "0x5856286",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597310b",
+    "target_rva": "0x5856286",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973129",
+    "target_rva": "0x5856286",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597314a",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597325f",
+    "target_rva": "0x5856285",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973293",
+    "target_rva": "0x5856285",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159732e0",
+    "target_rva": "0x5374548",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973432",
+    "target_rva": "0x536afe4",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973447",
+    "target_rva": "0x536afe4",
+    "value": 0
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159734f9",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597351a",
+    "target_rva": "0x58565cf",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x159738f8",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x1597392f",
+    "target_rva": "0x58565cf",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973960",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973997",
+    "target_rva": "0x58565cf",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973a19",
+    "target_rva": "0x58565e2",
+    "value": 1
+  },
+  {
+    "function": "delay-composition-update",
+    "instruction": "0x15973a50",
+    "target_rva": "0x58565cf",
+    "value": 1
+  }
+]

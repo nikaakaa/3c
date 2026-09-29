@@ -108,11 +108,12 @@ namespace ThirdPersonCamera
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
                         Vector4 track = SampleTrack(byTrack, byTrack.ElevationRatio);
-                        offset = ResolveScreenOffset(
-                            new Vector2(track.z, track.w),
-                            byTrack.AspectRatio);
                         cameraLocateRatio = byTrack.CameraLocateRatio;
                         radius = Mathf.Sqrt(track.x * track.x + track.y * track.y) * cameraLocateRatio;
+                        float screenHeight = 2f * radius * Mathf.Tan(byTrack.FieldOfView * 0.5f * Mathf.Deg2Rad);
+                        offset = ResolveScreenOffset(
+                            new Vector2(track.z, (0.5f - track.w) * screenHeight),
+                            byTrack.AspectRatio);
                         evaluatedPitch = Mathf.Clamp(
                             Mathf.Atan2(track.x, track.y) * Mathf.Rad2Deg + m_PitchOffset,
                             m_Projection.Input.PitchLimit.x,

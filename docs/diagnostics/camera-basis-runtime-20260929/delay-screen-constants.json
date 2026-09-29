@@ -1,0 +1,14 @@
+{
+  "one": {
+    "rva": "0x2703f7c",
+    "value": 1.0
+  },
+  "minus_half": {
+    "rva": "0x281cb70",
+    "value": -0.5
+  },
+  "screen_conversion_ifix": {
+    "rva": "0x53fe697",
+    "snapshot_value": 0
+  }
+}

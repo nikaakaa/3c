@@ -284,29 +284,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         public AnimationPoseSourcePrepareResult PrepareOrUpdate(
             in AnimationPoseSampleRequest request,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId)
+            in PoseNodeId playerNodeId)
         {
             RequireAvailable();
             if (!request.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("Resolved animation pose request is invalid.", nameof(request));
             return PrepareOrUpdate(
-                request.SourceId,
+                in request.SourceId,
                 physicalIdentity,
-                request.Clips,
-                clipCatalog,
+                in request.Clips,
+                in clipCatalog,
                 in capture,
-                playerNodeId);
+                in playerNodeId);
         }
 
         public AnimationPoseSourcePrepareResult PrepareOrUpdate(
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId)
+            in PoseNodeId playerNodeId)
         {
             RequireAvailable();
             RequireFramePhase(SourceFramePhase.Preparing);
@@ -397,8 +397,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public AnimationPoseSourceReleaseToken StageRelease(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             AnimationPhysicalSourceIdentity physicalIdentity)
         {
             RequireAvailable();
@@ -657,8 +657,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public bool ContainsCommitted(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             RequireAvailable();
             return FindCommittedSourceSlot(
@@ -666,8 +666,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public ClipSamplePlan RequireDominantClipSample(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             ulong completionIdentity)
         {
             RequireAvailable();
@@ -772,7 +772,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         SourceVisual CreateSource(
             AnimationPlayerSourceKey key,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog)
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog)
         {
             var mixer = new ManualMixerState
             {
@@ -813,7 +813,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     componentScratch,
                     clipCatalog.Count);
                 for (int i = 0; i < clipCatalog.Count; i++)
-                    visual.AddClip(clipCatalog[i]);
+                {
+                    ref readonly AnimationPoseSourceClipBinding binding =
+                        ref clipCatalog.ElementAt(i);
+                    visual.AddClip(binding);
+                }
                 return visual;
             }
             catch
@@ -835,23 +839,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         static void ValidateClipCatalog(
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
         {
             for (int i = 0; i < catalog.Count; i++)
             {
-                AnimationPoseSourceClipBinding current = catalog[i];
+                ref readonly AnimationPoseSourceClipBinding current =
+                    ref catalog.ElementAt(i);
                 if (!current.IsValid)
                     throw new InvalidOperationException("Animation pose source clip catalog contains an invalid binding.");
                 for (int j = 0; j < i; j++)
                 {
-                    if (catalog[j].ClipBindingIndex == current.ClipBindingIndex)
+                    ref readonly AnimationPoseSourceClipBinding previous =
+                        ref catalog.ElementAt(j);
+                    if (previous.ClipBindingIndex == current.ClipBindingIndex)
                         throw new InvalidOperationException($"Animation pose source clip catalog duplicates binding #{current.ClipBindingIndex}.");
                 }
             }
         }
 
         void PrepareClipPlans(
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             SourceVisual visual,
             int clipOffset)
         {
@@ -859,7 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             int clipCount = clips.Count;
             for (int i = 0; i < clipCount; i++)
             {
-                ClipSamplePlan plan = clips[i];
+                ref readonly ClipSamplePlan plan = ref clips.ElementAt(i);
                 if (!plan.IsValid)
                     throw new InvalidOperationException("Animation pose source clip plan is invalid.");
                 for (int previous = 0; previous < i; previous++)

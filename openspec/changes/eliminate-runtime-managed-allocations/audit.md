@@ -1648,3 +1648,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - readiness key 按值接收 source/node 并暴露按值属性；entry 的 key/readiness 属性每次读取都复制；page 的 Record 先构造中间 entry，Find、Remove 和 Aggregate 又逐项复制 entry，匹配比较也按值复制 key。
 - key 与 entry 的 source、node、key、readiness 改为 readonly backing field 只读引用；key 构造改为 `in`，新增内部 `Equals(in)`，public `IEquatable` 合同转发到同一实现。page 的 Record 直接构造目标槽内容，Find/Remove/Aggregate 绑定只读 entry，Remove 仅在搬移时复制一次。
 - 该改动删除 readiness page 查找、压缩和聚合链的重复 key/entry/readiness 拷贝。key 校验、页面 generation、记录容量、删除顺序、聚合优先级和异常文本不变。静态核对引用生命周期覆盖 page 调用、写入目标不变和按值 equality 合同保留；未编译、未采样，不能声称实测耗时收益。
+
+### AP222 pose backend 合同引用化（2026-09-30，已实施，本轮未编译）
+
+- `IAnimationPoseSamplingBackend` 的两条 PrepareOrUpdate 按值接收 clip catalog、source id 和 player node；StageRelease、ContainsCommitted 和 RequireDominantClipSample 也按值复制 identity。两个正式 backend 的 prepare 循环还复制每个 clip plan 或 catalog binding。
+- interface 与 ACL/Animancer 实现统一改为 `in` source/node/catalog/buffer；prepare、catalog 校验和 Animancer source 创建循环绑定 `ElementAt` 只读引用。Source Module 的 direct/player prepare 调用显式只读转发。
+- 该改动删除正式 backend 准备、释放登记、committed 查询和 dominant sample 查询的边界结构拷贝与逐项读取拷贝。request 参数、phase 校验、key 构造、journal 存储、conditional catalog 临时量、Clip 输出和异常文本不变。静态核对 interface 只有两个实现、方法本体不写只读参数和引用生命周期覆盖循环；未编译、未采样，不能声称实测耗时收益。

@@ -14,19 +14,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         AnimationPoseSourcePrepareResult PrepareOrUpdate(
             in AnimationPoseSampleRequest request,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId);
+            in PoseNodeId playerNodeId);
         AnimationPoseSourcePrepareResult PrepareOrUpdate(
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId);
+            in PoseNodeId playerNodeId);
         AnimationPoseSourceReleaseToken StageRelease(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             AnimationPhysicalSourceIdentity physicalIdentity);
         void ValidateFrame(in CharacterPoseSourceFrameLease lease);
         void EnterEvaluateBarrier(in CharacterPoseSourceFrameLease lease);
@@ -36,10 +36,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         void RollbackAppliedFrame(in CharacterPoseSourceFrameLease lease);
         void DiscardFrame(in CharacterPoseSourceFrameLease lease);
         void Release(in AnimationPoseSourceReleaseToken token);
-        bool ContainsCommitted(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId);
+        bool ContainsCommitted(
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId);
         ClipSamplePlan RequireDominantClipSample(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             ulong completionIdentity);
         void ExecuteDeferredReleases();
         void Clear();

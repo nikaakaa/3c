@@ -120,28 +120,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         public AnimationPoseSourcePrepareResult PrepareOrUpdate(
             in AnimationPoseSampleRequest request,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId)
+            in PoseNodeId playerNodeId)
         {
             if (!request.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("ACL pose source request is invalid.");
             return PrepareOrUpdate(
-                request.SourceId,
+                in request.SourceId,
                 physicalIdentity,
-                request.Clips,
-                clipCatalog,
+                in request.Clips,
+                in clipCatalog,
                 in capture,
-                playerNodeId);
+                in playerNodeId);
         }
 
         public AnimationPoseSourcePrepareResult PrepareOrUpdate(
-            AnimationPoseSourceId sourceId,
+            in AnimationPoseSourceId sourceId,
             AnimationPhysicalSourceIdentity physicalIdentity,
-            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
-            PoseNodeId playerNodeId)
+            in PoseNodeId playerNodeId)
         {
             RequireAvailable();
             RequireFramePhase(FramePhase.Preparing);
@@ -177,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 for (int i = 0; i < clips.Count; i++)
                 {
-                    ClipSamplePlan plan = clips[i];
+                    ref readonly ClipSamplePlan plan = ref clips.ElementAt(i);
                     if (!plan.IsValid || !plan.IsAcl ||
                         !instance.Matches(
                             plan.ClipBindingIndex,
@@ -220,8 +220,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public AnimationPoseSourceReleaseToken StageRelease(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             AnimationPhysicalSourceIdentity physicalIdentity)
         {
             RequireAvailable();
@@ -371,15 +371,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_DeferredReleases[m_DeferredReleaseCount++] = instance;
         }
 
-        public bool ContainsCommitted(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId)
+        public bool ContainsCommitted(
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             RequireAvailable();
             return SourcePool.ContainsCommitted(sourceId, playerNodeId);
         }
 
         public ClipSamplePlan RequireDominantClipSample(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId,
             ulong completionIdentity)
         {
             RequireAvailable();
@@ -445,11 +447,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             => m_Journal.ContainsRelease(key);
 
         static void ValidateCatalog(
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
         {
             for (int i = 0; i < catalog.Count; i++)
             {
-                AnimationPoseSourceClipBinding binding = catalog[i];
+                ref readonly AnimationPoseSourceClipBinding binding =
+                    ref catalog.ElementAt(i);
                 if (!binding.IsValid || !binding.IsAcl || binding.ClipBindingIndex != i)
                     throw new InvalidOperationException("ACL source catalog is invalid.");
             }

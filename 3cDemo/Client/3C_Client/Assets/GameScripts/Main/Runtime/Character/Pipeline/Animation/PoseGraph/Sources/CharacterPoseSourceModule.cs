@@ -1027,12 +1027,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     clipCatalog);
             AnimationPoseSourcePrepareResult prepared =
                 backend.PrepareOrUpdate(
-                    sourceId,
+                    in sourceId,
                     physical,
-                    clips,
+                    in clips,
                     committed ? default : clipCatalog,
                     in capture,
-                    poseNodeId);
+                    in poseNodeId);
             if (!prepared.ScalarReadView.IsValid ||
                 prepared.ScalarReadView.PhysicalIdentity != physical ||
                 prepared.ScalarReadView.SourceId != sourceId)

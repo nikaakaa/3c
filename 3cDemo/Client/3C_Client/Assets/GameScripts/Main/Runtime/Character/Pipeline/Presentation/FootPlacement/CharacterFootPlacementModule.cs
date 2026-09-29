@@ -291,6 +291,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose = m_Rig.CaptureAnimatedPose(
                 frame.RenderFrame,
                 poseInput.DenseComponentPoses);
+            ref readonly CharacterFootPlacementAnimatedFootPose leftPose = ref pose.Left;
+            ref readonly CharacterFootPlacementAnimatedFootPose rightPose = ref pose.Right;
+            ref readonly Vector3 pelvisLocalPosition = ref pose.PelvisLocalPosition;
             ref readonly CommittedLocomotionPlanarMotionTimeline timeline =
                 ref facts.LocomotionMotionTimeline;
             CharacterFootActionOccupancy leftAction = ResolveActionOccupancy(
@@ -321,7 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentUp = body.VisibleRotation * Vector3.up;
             bank.LeftCurrentSupport = PrepareCurrentSupport(
                 CharacterFootSide.Left,
-                pose.Left,
+                in leftPose,
                 componentUp,
                 facts.Grounded,
                 frame.RenderFrame,
@@ -330,7 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 committedBank?.LeftCurrentSupport);
             bank.RightCurrentSupport = PrepareCurrentSupport(
                 CharacterFootSide.Right,
-                pose.Right,
+                in rightPose,
                 componentUp,
                 facts.Grounded,
                 frame.RenderFrame,
@@ -361,7 +364,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionPair leftPair = PredictFootPair(
                 CharacterFootSide.Left,
                 leftCurrentStep,
-                pose.Left,
+                in leftPose,
                 in timeline,
                 currentSegmentRemainingSeconds,
                 bodyTrajectory,
@@ -374,7 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingPredictionPair rightPair = PredictFootPair(
                 CharacterFootSide.Right,
                 rightCurrentStep,
-                pose.Right,
+                in rightPose,
                 in timeline,
                 currentSegmentRemainingSeconds,
                 bodyTrajectory,
@@ -460,7 +463,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float footPlacementWeight = frame.FootPlacementWeight;
             CharacterFootSwingMotionResult leftSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
-                    pose.Left,
+                    in leftPose,
                     in leftCurrentStep,
                     footPlacementWeight,
                     componentUp,
@@ -470,7 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     leftLanding.NextSwingPredictionError);
             CharacterFootSwingMotionResult rightSwingMotion =
                 CharacterFootSwingMotionBuilder.Build(
-                    pose.Right,
+                    in rightPose,
                     in rightCurrentStep,
                     footPlacementWeight,
                     componentUp,
@@ -496,8 +499,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 CharacterFootSide.Left,
-                pose.Left,
-                pose.Left.HipPosition,
+                in leftPose,
+                leftPose.HipPosition,
                 m_Rig.LeftLegLength,
                 in leftSwingMotion,
                 in leftGroundPath,
@@ -525,8 +528,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new FixedString64Bytes(m_Rig.Rig.RigId),
                 new FixedString64Bytes(m_Rig.Rig.RigRevision),
                 CharacterFootSide.Right,
-                pose.Right,
-                pose.Right.HipPosition,
+                in rightPose,
+                rightPose.HipPosition,
                 m_Rig.RightLegLength,
                 in rightSwingMotion,
                 in rightGroundPath,
@@ -603,8 +606,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var pelvisFrame = new CharacterFootPelvisFrame(
                 componentUp,
                 m_Rig.PoseRoot.position,
-                m_Rig.PoseRoot.TransformPoint(pose.PelvisLocalPosition),
-                pose.PelvisLocalPosition,
+                m_Rig.PoseRoot.TransformPoint(pelvisLocalPosition),
+                pelvisLocalPosition,
                 in pose,
                 leftRequest.GoalTarget.EffectiveSole,
                 rightRequest.GoalTarget.EffectiveSole,
@@ -666,7 +669,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
-                        pose.Left,
+                        in leftPose,
                         new CharacterFootStepSelectionDiagnostics(
                             leftLanding.LastLandingEventIdentity,
                             leftPair.SelectedSource,
@@ -684,7 +687,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
-                        pose.Right,
+                        in rightPose,
                         new CharacterFootStepSelectionDiagnostics(
                             rightLanding.LastLandingEventIdentity,
                             rightPair.SelectedSource,
@@ -834,7 +837,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootCurrentSupportObservationPage PrepareCurrentSupport(
             CharacterFootSide side,
-            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootPlacementAnimatedFootPose foot,
             Vector3 componentUp,
             bool grounded,
             ulong frameSequence,
@@ -1013,8 +1016,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootLandingPredictionPair PredictFootPair(
             CharacterFootSide side,
-            AnimationFootMotionRuntimeSample footMotion,
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in AnimationFootMotionRuntimeSample footMotion,
+            in CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
             CharacterFutureBodyTranslation bodyTrajectory,
@@ -1114,7 +1117,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingStepSource stepSource,
             float timeToLandingSeconds,
             bool currentContact,
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in CharacterFootPlacementAnimatedFootPose animatedFoot,
             in CommittedLocomotionPlanarMotionTimeline timeline,
             float currentSegmentRemainingSeconds,
             CharacterFutureBodyTranslation bodyTrajectory,

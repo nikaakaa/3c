@@ -1549,7 +1549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
             CharacterFootSide side,
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in CharacterFootPlacementAnimatedFootPose animatedFoot,
             Vector3 animatedHip,
             float legLength,
             in CharacterFootSwingMotionResult swingMotion,

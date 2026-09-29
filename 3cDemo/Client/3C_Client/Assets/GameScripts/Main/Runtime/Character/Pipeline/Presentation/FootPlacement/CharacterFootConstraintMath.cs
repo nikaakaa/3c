@@ -7,23 +7,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal const float GeometryEpsilon = 0.0001f;
 
         internal static Vector3 ResolveOriginalSole(
-            CharacterFootPlacementAnimatedFootPose foot) =>
+            in CharacterFootPlacementAnimatedFootPose foot) =>
             (foot.HeelPosition + foot.ToePosition) * 0.5f;
 
         internal static Vector3 ResolveSwingCorrection(
-            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootPlacementAnimatedFootPose foot,
             in CharacterFootSwingMotionResult swing) =>
             swing.Accepted
                 ? swing.CorrectedAnkle - foot.AnklePosition
                 : default;
 
         internal static Vector3 ResolveContactCorrection(
-            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootPlacementAnimatedFootPose foot,
             Vector3 contactAnchor) =>
             contactAnchor - ResolveOriginalSole(foot);
 
         internal static Vector3 ResolvePointMinimumCorrection(
-            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFootPlacementAnimatedFootPose foot,
             Vector3 point,
             Vector3 componentUp)
         {

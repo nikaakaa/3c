@@ -1775,3 +1775,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPresentationFactFrame.LocomotionMotionTimeline` 自动属性每次读取复制完整 timeline；Foot Placement 主路径先复制，再进入多个 `in` 辅助方法，动作 movement clock 同步也复制一次。
 - timeline 改为 backing field 返回只读引用。Foot Placement 直接绑定同一引用，剩余段时长辅助改为 `in` 接收；`SynchronizeMovementClock` 的 timeline 参数改为 `in`，动作 clock policy 直接传入引用。timeline 校验、播放同步和诊断字段读取不变。
 - 该改动删除周期 facts 消费的整份 locomotion timeline 拷贝。静态核对 timeline 为 readonly struct、消费点均只读、引用生命周期覆盖调用；未编译、未采样，不能声称实测耗时收益。
+
+### AP243 Foot Placement animated foot 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Animated Pose 的左右脚、pelvis local position 自动属性每次读取复制结构；单只 animated foot 含 11 个 Vector3/Quaternion 字段，support、prediction、swing、constraint frame 和诊断每帧多次读取。
+- Animated Pose 改为 backing field 返回只读引用；EvaluateFrame 绑定左右脚与 pelvis 位置。support、prediction、swing、constraint frame 和 Foot Placement math 的只读 animated foot 入口改为 `in` 接收。采样、求值顺序和输出写入不变。
+- 该改动删除 Foot Placement 周期中 animated foot 的重复结构拷贝。静态核对调用链只读、引用生命周期覆盖调用、输出存储仍保留必要拷贝；未编译、未采样，不能声称实测耗时收益。

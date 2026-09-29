@@ -97,6 +97,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootPlacementAnimatedPose
     {
+        readonly Vector3 m_PelvisLocalPosition;
+        readonly CharacterFootPlacementAnimatedFootPose m_Left;
+        readonly CharacterFootPlacementAnimatedFootPose m_Right;
+
         public CharacterFootPlacementAnimatedPose(
             ulong renderFrame,
             Vector3 pelvisLocalPosition,
@@ -104,15 +108,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose right)
         {
             RenderFrame = renderFrame;
-            PelvisLocalPosition = pelvisLocalPosition;
-            Left = left;
-            Right = right;
+            m_PelvisLocalPosition = pelvisLocalPosition;
+            m_Left = left;
+            m_Right = right;
         }
 
         public ulong RenderFrame { get; }
-        public Vector3 PelvisLocalPosition { get; }
-        public CharacterFootPlacementAnimatedFootPose Left { get; }
-        public CharacterFootPlacementAnimatedFootPose Right { get; }
+        public ref readonly Vector3 PelvisLocalPosition => ref m_PelvisLocalPosition;
+        public ref readonly CharacterFootPlacementAnimatedFootPose Left => ref m_Left;
+        public ref readonly CharacterFootPlacementAnimatedFootPose Right => ref m_Right;
     }
 
     public enum CharacterFootConstraintState : byte

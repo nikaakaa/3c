@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float EndpointTolerance = 0.005f;
 
         internal static CharacterFootSwingMotionResult Build(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in CharacterFootPlacementAnimatedFootPose animatedFoot,
             in AnimationFootMotionRuntimeSample step,
             float footPlacementWeight,
             Vector3 componentUp,
@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterFootSwingMotionResult BuildForSwing(
-            CharacterFootPlacementAnimatedFootPose animatedFoot,
+            in CharacterFootPlacementAnimatedFootPose animatedFoot,
             in AnimationFootMotionRuntimeSample step,
             ulong landingEventIdentity,
             float footPlacementWeight,

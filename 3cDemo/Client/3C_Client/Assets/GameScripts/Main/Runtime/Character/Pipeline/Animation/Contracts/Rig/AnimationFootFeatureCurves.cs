@@ -266,7 +266,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationPredictedFootStepSample SamplePrepared(float normalizedTime)
         {
-            float time = Mathf.Clamp01(normalizedTime);
+            return SamplePreparedAt(Mathf.Clamp01(normalizedTime));
+        }
+
+        internal AnimationPredictedFootStepSample SamplePreparedAt(float time)
+        {
             var rootLocalFootRoute = new FixedList512Bytes<Vector3>();
             var rootLocalAnkleRoute = new FixedList512Bytes<Vector3>();
             var rootLocalHipRoute = new FixedList512Bytes<Vector3>();
@@ -463,7 +467,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationFootFeatureSample SamplePrepared(float normalizedTime)
         {
-            float time = Mathf.Clamp01(normalizedTime);
+            return SamplePreparedAt(Mathf.Clamp01(normalizedTime));
+        }
+
+        internal AnimationFootFeatureSample SamplePreparedAt(float time)
+        {
             return new AnimationFootFeatureSample(
                 new Vector3(
                     m_SoleLocalVelocityX.Evaluate(time),
@@ -471,8 +479,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_SoleLocalVelocityZ.Evaluate(time)),
                 m_SoleHeight.Evaluate(time),
                 m_PlantConfidence.Evaluate(time),
-                m_PredictedStep.SamplePrepared(time),
-                m_IncomingPredictedStep.SamplePrepared(time));
+                m_PredictedStep.SamplePreparedAt(time),
+                m_IncomingPredictedStep.SamplePreparedAt(time));
         }
 
         public void RequireValid()

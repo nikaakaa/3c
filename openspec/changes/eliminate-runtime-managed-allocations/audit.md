@@ -1120,3 +1120,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - AP119 的 `SampleCurrent` 是 `SamplePrepared` 的唯一调用点，调用方已经执行 `Mathf.Clamp01(normalizedTime)` 并传入 `time`；方法签名仍接收 normalized time 并重复 clamp。
 - `SampleCurrent` 改为 internal 已准备时间入口，参数与公式直接使用 `time`；整条 25 点 `Sample` 编辑器校验入口保持自己的 clamp。采样、索引和输出公式不变。
 - 该改动删除 foot 路由每次采样的重复 clamp，并保持唯一正式运行入口。静态核对全仓库唯一调用点和 public `Sample` 的编辑器消费边界；未编译、未采样，不能声称实测耗时收益。
+
+### AP134 Foot feature 已准备时间分层（2026-09-30，已实施，本轮未编译）
+
+- `AnimationFootFeatureCurveSet.SamplePrepared` 先 clamp 得到 `time`，当前与 incoming 两个 `AnimationPredictedFootStepCurveSet.SamplePrepared` 又各自重复 clamp。运行时同一 feature 采样会执行 3 次同一 clamp。
+- 两个预测步入口拆出 `SamplePreparedAt`；feature 入口仍负责 normalized time 边界一次，随后 current/incoming 直接消费同一已准备时间。原 `SamplePrepared` 继续作为 normalized time 边界，采样公式和输出顺序不变。
+- 该改动删除同一 feature 的两次重复 clamp，不增加第二数据源或兼容入口。静态核对三个入口的唯一调用链、public Sample 边界和 current/incoming 参数；未编译、未采样，不能声称实测耗时收益。

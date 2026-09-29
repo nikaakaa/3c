@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeAnimationSlotSource m_Source;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_SourcePoseInput;
         CharacterPoseNativeLocalPoseValue m_ActionPose;
         CharacterPoseNativeLocalPoseValue m_Output;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -103,6 +104,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Animation Slot handler '{NodeId}' does not match its graph node.");
             }
+            m_SourcePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "source-pose");
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -175,8 +179,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Animation Slot '{NodeId}' has no evaluated Action Pose.");
             CharacterPoseNativeLocalPoseValue sourcePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_SourcePoseInput,
+                    m_NodeId,
                     "source-pose");
             m_WriteBinding = (m_PageIndex == 0
                     ? m_OutputBuffer

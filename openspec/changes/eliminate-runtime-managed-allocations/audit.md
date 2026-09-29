@@ -1234,3 +1234,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Pose Subgraph 每次求输出都通过 child `ReadGraphOutput` 重新定位 GraphOutput 边界、查找 port definition、分派 Kind、查端口字典并做类型测试；输出映射和 child GraphOutput 输入端口在 Start 后固定。
 - input/output binding 统一缓存源节点、child 端口、typed `ValueInput` 和 Kind；EvaluateOutput 用缓存绑定直接读取 child GraphOutput。缺失输出仍按 parent port 报原错误，child graph input 读取的 null value 与类型错误文案保持。
 - 该改动消除每次 subgraph 输出的重复边界和 definition 查找，并删除全仓库无调用的 `ReadGraphOutput` 入口；不改输出页映射、求值阶段、Commit/Discard 和输出值身份。静态核对 Start 缓存、GraphOutput NativeNodeId、Kind 分派和 EvaluateOutput 调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP153 LinkedPose output 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Linked Pose 每次输出都重新扫描 dynamic ports 查找并复验 Local Pose output；Initialize 已经要求该节点有且只有一个 Local Pose output。
+- handler 在 Initialize 扫描同一集合时缓存唯一 output `PosePortId`，帧内先比较 output 身份再进入原求值缓存和双缓冲流程。无对应 Local Pose output 的错误文案不变，Source Prepare/Evaluate/Commit/Discard 不变。
+- 该改动消除每次输出的 dynamic port 扫描和重复 Kind 判断，并删除无调用的 `FindOutputPort`；不新增第二数据源。静态核对唯一输出约束、`PosePortId` 比较、错误路径和输出页身份；未编译、未采样，不能声称实测耗时收益。

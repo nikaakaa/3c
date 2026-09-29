@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeLinkedPoseSource m_Source;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        PosePortId m_OutputPortId;
         CharacterPoseNativeLocalPoseValue m_SourcePose;
         CharacterPoseNativeLocalPoseValue m_Output;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
@@ -77,16 +78,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Linked Pose handler '{NodeId}' does not match its graph node.");
             }
             int outputCount = 0;
+            PosePortId outputPortId = default;
             for (int i = 0; i < node.DynamicPorts.Count; i++)
             {
                 CharacterPoseDynamicPort port = node.DynamicPorts[i];
                 if (port.Direction == CharacterPosePortDirection.Output &&
                     port.Kind == CharacterPosePortKind.LocalPose)
+                {
                     outputCount++;
+                    outputPortId = port.PortId;
+                }
             }
             if (outputCount != 1)
                 throw new InvalidOperationException(
                     $"Linked Pose handler '{NodeId}' requires one Local Pose output port.");
+            m_OutputPortId = outputPortId;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -136,8 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeExecutionStage stage)
         {
             RequireAlive();
-            CharacterPoseDynamicPort port = FindOutputPort(node, portId);
-            if (port == null || port.Kind != CharacterPosePortKind.LocalPose)
+            if (portId != m_OutputPortId)
                 throw new InvalidOperationException(
                     $"Linked Pose '{NodeId}' has no Local Pose output '{portId}'.");
             if (m_Output != null &&
@@ -280,20 +285,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputBuffer.Dispose();
             m_SecondaryOutputBuffer.Dispose();
             ClearFrame();
-        }
-
-        static CharacterPoseDynamicPort FindOutputPort(
-            CharacterPoseCanvasNode node,
-            PosePortId portId)
-        {
-            for (int i = 0; i < node.DynamicPorts.Count; i++)
-            {
-                CharacterPoseDynamicPort port = node.DynamicPorts[i];
-                if (port.Direction == CharacterPosePortDirection.Output &&
-                    port.PortId == portId)
-                    return port;
-            }
-            return null;
         }
 
         void RequireFrame()

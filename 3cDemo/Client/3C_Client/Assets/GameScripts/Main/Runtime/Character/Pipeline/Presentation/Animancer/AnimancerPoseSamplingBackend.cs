@@ -255,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         public bool HasOpenFrame => m_FramePhase != SourceFramePhase.Closed;
 
         public void BeginFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             if (!lease.IsValid ||
@@ -271,7 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void RequireOpenFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             if (m_FramePhase == SourceFramePhase.Closed ||
@@ -429,7 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void ValidateFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             RequireFrame(lease.FrameIdentity, SourceFramePhase.Preparing);
@@ -513,7 +513,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void EnterEvaluateBarrier(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             RequireFrame(lease.FrameIdentity, SourceFramePhase.Validated);
@@ -535,7 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void ApplyFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
@@ -559,7 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void ValidateAppliedFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
@@ -568,7 +568,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void FinalizeAppliedFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             if (m_FramePhase != SourceFramePhase.EvaluateBarrier ||
                 !m_FrameApplied)
@@ -588,7 +588,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void RollbackAppliedFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             if (m_FramePhase == SourceFramePhase.Closed)
@@ -613,7 +613,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         public void DiscardFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             if (m_FramePhase == SourceFramePhase.EvaluateBarrier)

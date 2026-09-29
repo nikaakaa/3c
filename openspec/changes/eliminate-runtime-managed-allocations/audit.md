@@ -1336,3 +1336,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - FrameCoordinator、RoleRuntime、Subgraph、StateMachineSource、FinalPublication 和 SourceModule 在阶段转发前仍把 readonly result 的 demand 或 lease 的 lineage 显式复制到按值局部；共 8 个周期路径调用点。这些局部同方法内只读。
 - 8 个局部改为 `ref readonly` 引用，继续沿原顺序传给 `in` 参数或构造器；FinalPublication 保持读取 lineage、Clear pending、再用同一 lineage 构造 committed result 的顺序。请求集合、约束完成、输出页和异常语义不变。
 - 该改动删除周期阶段间的 demand/lineage 局部拷贝；不延长数据生命周期或新增缓存。静态核对每个引用的宿主生命周期、全部消费点、Clear 顺序和原有失败路径；未编译、未采样，不能声称实测耗时收益。
+
+### AP170 source frame lease 参数引用化（2026-09-30，已实施，本轮未编译）
+
+- Source frame lease 包含整份开放帧 lineage；接口、Animancer/ACL backend、backend set、pending page 和 source module 的 Prepare/Validate/Barrier/Commit 阶段大多按值接收，每次转发都重复复制。
+- 56 个不会修改 lease 的正式参数改为 `in`；SourceModule 与 BackendSet 的 `DiscardFrame` 保留按值，因为清理 lambda 必须捕获 lease。接口两个实现同步更新，调用点继续传同一 lease。
+- 该改动删除 source 阶段转发的整份 lease 拷贝；不改变 lease identity、rollback 顺序或 commit/discard 语义。静态核对接口实现全集、lambda 捕获例外、方法组和阶段调用链；未编译、未采样，不能声称实测耗时收益。

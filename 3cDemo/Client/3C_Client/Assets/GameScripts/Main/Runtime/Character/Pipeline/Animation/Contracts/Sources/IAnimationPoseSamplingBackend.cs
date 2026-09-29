@@ -9,8 +9,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         int SourceCapacity { get; }
         int ClipCapacity { get; }
         bool HasOpenFrame { get; }
-        void BeginFrame(CharacterPoseSourceFrameLease lease);
-        void RequireOpenFrame(CharacterPoseSourceFrameLease lease);
+        void BeginFrame(in CharacterPoseSourceFrameLease lease);
+        void RequireOpenFrame(in CharacterPoseSourceFrameLease lease);
         AnimationPoseSourcePrepareResult PrepareOrUpdate(
             in AnimationPoseSampleRequest request,
             AnimationPhysicalSourceIdentity physicalIdentity,
@@ -28,13 +28,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             AnimationPoseSourceId sourceId,
             PoseNodeId playerNodeId,
             AnimationPhysicalSourceIdentity physicalIdentity);
-        void ValidateFrame(CharacterPoseSourceFrameLease lease);
-        void EnterEvaluateBarrier(CharacterPoseSourceFrameLease lease);
-        void ApplyFrame(CharacterPoseSourceFrameLease lease);
-        void ValidateAppliedFrame(CharacterPoseSourceFrameLease lease);
-        void FinalizeAppliedFrame(CharacterPoseSourceFrameLease lease);
-        void RollbackAppliedFrame(CharacterPoseSourceFrameLease lease);
-        void DiscardFrame(CharacterPoseSourceFrameLease lease);
+        void ValidateFrame(in CharacterPoseSourceFrameLease lease);
+        void EnterEvaluateBarrier(in CharacterPoseSourceFrameLease lease);
+        void ApplyFrame(in CharacterPoseSourceFrameLease lease);
+        void ValidateAppliedFrame(in CharacterPoseSourceFrameLease lease);
+        void FinalizeAppliedFrame(in CharacterPoseSourceFrameLease lease);
+        void RollbackAppliedFrame(in CharacterPoseSourceFrameLease lease);
+        void DiscardFrame(in CharacterPoseSourceFrameLease lease);
         void Release(in AnimationPoseSourceReleaseToken token);
         bool ContainsCommitted(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId);
         ClipSamplePlan RequireDominantClipSample(

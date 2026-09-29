@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 _ => throw new ArgumentOutOfRangeException(nameof(backend))
             };
 
-        internal void BeginFrame(CharacterPoseSourceFrameLease lease)
+        internal void BeginFrame(in CharacterPoseSourceFrameLease lease)
         {
             m_NativeClip.BeginFrame(lease);
             try
@@ -45,25 +45,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        internal void RequireOpenFrame(CharacterPoseSourceFrameLease lease)
+        internal void RequireOpenFrame(in CharacterPoseSourceFrameLease lease)
         {
             m_NativeClip.RequireOpenFrame(lease);
             m_Acl?.RequireOpenFrame(lease);
         }
 
-        internal void ValidateFrame(CharacterPoseSourceFrameLease lease)
+        internal void ValidateFrame(in CharacterPoseSourceFrameLease lease)
         {
             m_NativeClip.ValidateFrame(lease);
             m_Acl?.ValidateFrame(lease);
         }
 
-        internal void EnterEvaluateBarrier(CharacterPoseSourceFrameLease lease)
+        internal void EnterEvaluateBarrier(in CharacterPoseSourceFrameLease lease)
         {
             m_NativeClip.EnterEvaluateBarrier(lease);
             m_Acl?.EnterEvaluateBarrier(lease);
         }
 
-        internal void CommitFrame(CharacterPoseSourceFrameLease lease)
+        internal void CommitFrame(in CharacterPoseSourceFrameLease lease)
         {
             bool nativeOpen = m_NativeClip.HasOpenFrame;
             bool aclOpen = m_Acl?.HasOpenFrame == true;

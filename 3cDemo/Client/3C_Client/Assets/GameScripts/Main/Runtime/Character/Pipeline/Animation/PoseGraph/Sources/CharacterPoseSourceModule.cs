@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal void BindDemand(
-                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceFrameLease lease,
                 in CharacterPoseSourceDemand demand)
             {
                 RequireLease(lease);
@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal CharacterPoseSourceDemand RequireDemand(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
             {
                 RequireLease(lease);
                 if (!m_HasDemand)
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
             internal CharacterPoseSourcePreparation
                 ConsumePreparation(
-                    CharacterPoseSourceFrameLease lease,
+                    in CharacterPoseSourceFrameLease lease,
                     in CharacterPoseSourcePreparationView preparations,
                     int index)
             {
@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal void BindResult(
-                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceFrameLease lease,
                 in CharacterPoseSourceFrameResult result)
             {
                 RequireLease(lease);
@@ -116,11 +116,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal void RequireOpen(
-                CharacterPoseSourceFrameLease lease) =>
+                in CharacterPoseSourceFrameLease lease) =>
                 RequireLease(lease);
 
             internal void RequireReady(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
             {
                 RequireLease(lease);
                 if (!m_HasDemand ||
@@ -134,14 +134,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal void Seal(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
             {
                 RequireReady(lease);
                 Clear();
             }
 
             internal void Discard(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
             {
                 RequireLease(lease);
                 Clear();
@@ -158,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             void RequireLease(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
             {
                 if (!lease.IsValid ||
                     !m_Lease.IsValid ||
@@ -472,7 +472,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void BindDemand(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourceDemand demand)
         {
             BeginBindingFrame(demand.Lineage.CompletionIdentity);
@@ -481,11 +481,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourceDemand RequireDemand(
-            CharacterPoseSourceFrameLease lease) =>
+            in CharacterPoseSourceFrameLease lease) =>
             m_FramePage.RequireDemand(lease);
 
         internal CharacterPoseSourceFrameResult PrepareFrameResult(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourcePreparedResources preparedResources,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSources,
@@ -531,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourcePreparedResources
             RequirePreparedResources(
-                CharacterPoseSourceFrameLease lease)
+                in CharacterPoseSourceFrameLease lease)
         {
             CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
@@ -542,7 +542,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourceBinding PrepareNativeClipPlayer(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
@@ -580,7 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourceBinding PrepareNativeBlendSpacePlayer(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
@@ -618,7 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourceBinding PrepareNativeSelectedPosePlayer(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             PresentationPoseSourceSample sample,
             int sourceOwnerIndex,
             in AnimationPoseSourceCaptureBinding capture,
@@ -667,7 +667,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void PrepareNativeActionSource(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             in AnimationPoseSampleRequest request,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
@@ -695,7 +695,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void PrepareNativeProviderSource(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             PresentationPoseSourceSample sample,
             int sourceOwnerIndex,
             in AnimationPoseSourceCaptureBinding capture,
@@ -746,14 +746,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void ClearUsage() => m_UsagePage.Clear();
 
         internal void RequirePendingOpen(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
             m_Backends.RequireOpenFrame(lease);
         }
 
         internal void RequirePendingReady(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireReady(lease);
             m_Backends.RequireOpenFrame(lease);
@@ -794,7 +794,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void Prepare(
-            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourcePreparationView preparations,
             int preparationIndex)
         {
@@ -1051,7 +1051,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         [PerformanceProbe("presentation.animation.source-barrier")]
         internal void EnterEvaluateBarrier(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
             BeginReleaseDiagnostics(false);
@@ -1063,7 +1063,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void CommitFrame(
-            CharacterPoseSourceFrameLease lease)
+            in CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
             m_Backends.CommitFrame(lease);

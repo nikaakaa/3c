@@ -1991,3 +1991,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground query 的 `QueryAll` 每次重复读取 origin、maximum/support distance，并对同一 direction 做两次归一化；CurrentSupport `Query` 也多次调用 probe request 的派生 origin、direction 和距离属性。
 - 查询校验后把这些派生值绑定到局部，SphereCast 和候选筛选复用同一份数据。查询容量判断、direction 单位化合同、命中筛选顺序和 diagnostics 不变。
 - 该改动删除每次 support/landing 查询的重复向量归一化和派生距离计算。静态核对 request 为 readonly struct、局部生命周期覆盖同一次查询、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP279 Placement request animated foot 引用绑定（2026-09-30，已实施，本轮未编译）
+
+- `BuildRequest` 在已有 state frame 只读引用后，又把 `AnimatedFoot` 复制到局部；pose 投影和 goal target 会继续读取这份大结构，landing reach 仍读取独立的 AnimatedHip。
+- 局部改为绑定 frame 的 animated foot 只读引用，原始 sole/ankle、pose 投影和 goal target 复用同一引用；landing reach 继续读取 frame 的独立 AnimatedHip。投影失败分支、success 分支、输出字段和异常时机不变。
+- 该改动删除每脚 placement request 构建中整份 animated foot 拷贝。静态核对 animated foot 为 readonly struct、frame 生命周期覆盖 BuildRequest、消费只读；未编译、未采样，不能声称实测耗时收益。

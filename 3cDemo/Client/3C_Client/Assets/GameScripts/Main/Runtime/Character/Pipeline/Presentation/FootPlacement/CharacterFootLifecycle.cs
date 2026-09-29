@@ -492,17 +492,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             bool hasContact = context.Contact.HasContact;
+            ref readonly CharacterFootPlacementAnimatedFootPose animatedFoot =
+                ref frame.AnimatedFoot;
             Vector3 originalSole =
-                CharacterFootConstraintMath.ResolveOriginalSole(
-                    frame.AnimatedFoot);
-            Vector3 originalAnkle = frame.AnimatedFoot.AnklePosition;
+                CharacterFootConstraintMath.ResolveOriginalSole(in animatedFoot);
+            Vector3 originalAnkle = animatedFoot.AnklePosition;
             Vector3 finalSole = originalSole + outputCorrection;
             float rotationWeight = hasContact
                 ? frame.FootPlacementWeight * frame.LockRequest.Weight
                 : 0f;
             float positionWeight = frame.FootPlacementWeight;
-            CharacterFootPlacementAnimatedFootPose animatedFoot =
-                frame.AnimatedFoot;
             if (!TryResolveFootGoalPose(
                     in animatedFoot,
                     finalSole,

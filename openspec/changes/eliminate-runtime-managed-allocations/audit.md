@@ -1102,3 +1102,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - capture.20260929-164123 中 `CharacterAnimationRigPayload.GetPoseParentIndex` 约 0.056% exclusive、238 个包含样本；该入口每次检查索引并按 physical/virtual 分支访问 payload 列表。Modify Bone 的目标、每个子孙保存与重建，以及空间转换的每骨骼 local/component 变换都在运行帧重复查询不变拓扑。
 - Modify Bone 在 Initialize 解析目标父索引后，把子孙父索引与 descendant 数组同序缓存；空间转换在构造期缓存完整 PoseBone parent 数组。rig payload 构造后不可变，这些数组是 handler 对正式 rig 拓扑的定容读取结构，不是第二数据源。
 - 运行帧的父子解析收敛为数组访问；节点绑定、拓扑判定、变换公式、失败文本和输出写入顺序不变。静态核对 rig `RequireValid`、handler 初始化唯一调用和两条转换链；未编译、未采样，不能声称实测耗时收益。
+
+### AP131 数组父姿态重复校验收敛（2026-09-30，已实施，本轮未编译）
+
+- `TryCreateComponent` 的 component 数组重载只服务 Modify Bone 与空间转换。两个调用方的父姿态有效边界已建立：Modify Bone 先逐骨骼拒绝无效 Component Pose；空间转换按父序生成并立即拒绝失败结果。原实现仍经公共 parent 重载对同一父姿态再次 `IsValid`。
+- 公共 parent 重载继续承担外部父输入校验，先检查后进入 `TryCreateComponentWithValidParent`；数组重载在父序有效的前提下直接进入同一核心。local 有效性、结果 finite/非零检查、归一化、失败返回和输出值不变。
+- 该改动删除已证明有效父姿态的重复逐骨骼校验，不新增调用路径或数据复制。静态核对两个数组重载唯一消费链、NativeArray 重载继续校验父输入、核心公式和失败语义；未编译、未采样，不能声称实测耗时收益。

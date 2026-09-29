@@ -727,7 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 component = new CharacterComponentBonePose(in local);
                 return true;
             }
-            return TryCreateComponent(
+            return TryCreateComponentWithValidParent(
                 local,
                 componentPoses[componentOffset + parentIndex],
                 out component);
@@ -741,6 +741,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             component = default;
             if (!parent.IsValid)
                 return false;
+            return TryCreateComponentWithValidParent(local, parent, out component);
+        }
+
+        static bool TryCreateComponentWithValidParent(
+            AnimationLocalBonePose local,
+            CharacterComponentBonePose parent,
+            out CharacterComponentBonePose component)
+        {
+            component = default;
             Vector3 position = parent.Position +
                                parent.Rotation * Vector3.Scale(parent.Scale, local.Position);
             Quaternion rotation = parent.Rotation * local.Rotation;

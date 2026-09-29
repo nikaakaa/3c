@@ -152,25 +152,29 @@ namespace ThirdPersonSimulation.Fixed
             ulong absoluteNumerator = AbsoluteRaw(numerator);
             ulong absoluteDenominator = AbsoluteRaw(denominator);
             bool negative = numerator < 0 != denominator < 0;
-            ulong quotient = 0UL;
-            ulong remainder = 0UL;
+            ulong whole = absoluteNumerator / absoluteDenominator;
+            if (whole > uint.MaxValue)
+                throw new OverflowException("Fixed arithmetic overflowed Q32.32.");
+            ulong quotient = whole << FractionalBits;
+            ulong remainderHigh = 0UL;
+            ulong remainderLow = absoluteNumerator % absoluteDenominator;
 
-            for (int bitIndex = 95; bitIndex >= 0; bitIndex--)
+            for (int bitIndex = FractionalBits - 1; bitIndex >= 0; bitIndex--)
             {
-                ulong bit = bitIndex >= FractionalBits
-                    ? (absoluteNumerator >> (bitIndex - FractionalBits)) & 1UL
-                    : 0UL;
-                remainder = (remainder << 1) | bit;
-                if (remainder < absoluteDenominator)
+                ulong carry = remainderHigh >> 63;
+                remainderHigh = (remainderHigh << 1) | (remainderLow >> 63);
+                remainderLow <<= 1;
+                if (carry == 0UL && remainderHigh == 0UL && remainderLow < absoluteDenominator)
                     continue;
 
-                remainder -= absoluteDenominator;
-                if (bitIndex >= 64)
-                    throw new OverflowException("Fixed arithmetic overflowed Q32.32.");
+                ulong previousLow = remainderLow;
+                remainderLow -= absoluteDenominator;
+                if (previousLow < absoluteDenominator)
+                    remainderHigh--;
                 quotient |= 1UL << bitIndex;
             }
 
-            return FromRoundedMagnitude(quotient, remainder, absoluteDenominator, negative);
+            return FromRoundedMagnitude(quotient, remainderLow, absoluteDenominator, negative);
         }
 
         static FixedScalar FromRoundedMagnitude(ulong quotient, ulong remainder, ulong denominator, bool negative)

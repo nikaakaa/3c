@@ -1046,3 +1046,10 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `TryCreateComponent` 先检查组合结果的 position、rotation、scale finite 和四元数非零，随后公共 `CharacterComponentBonePose` 构造器再次执行同一组检查。现在在原检查点完成校验后直接归一化，并用内部 `normalizedRotation` 构造器写入最终页；公共构造器继续保留外部输入校验和归一化合同。
 - `TryCreateLocal` 的 `AnimationLocalBonePose` 构造器会在结果非法时抛出异常，成功后原代码又调用 `local.IsValid` 重复执行同一 finite/非零检查。现在构造成功即返回 `true`，调用方的异常路径和输出局部姿态不变。
 - 该改动减少 PoseGraph 每骨骼转换链中的重复浮点检查和二次 `IsValid` 调用；不删除归一化，不改变无效输入失败语义、输出页身份或 Commit/Discard 时序。静态核对 NativeArray 转换、Modify Bone 派生和虚拟骨骼调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP122 Q32.32 除法位循环收敛（2026-09-30，已实施，本轮未编译）
+
+- capture.20260929-164123 的已解析 CPU 热点中，`FixedScalar.DivideScaled` 约 0.391%。该私有函数同时服务 `FixedScalar.operator /` 和 `FromRatio`，当前每次调用从 bit 95 到 bit 0 做 96 次长除法循环。
+- 新实现先用一次 64/64 整除和取余得到商的整数部分，再只对 32 个小数位执行原长除法；128 位余数用高低两个 `ulong` 承载。这样避免对已确定的整数商逐位试减，同时保持最终商和余数与原 96 位算法一致。
+- 商整数部分超过 `uint.MaxValue` 时在移位前按原 Q32.32 溢出语义失败；后续仍沿用 `FromRoundedMagnitude` 的银行家舍入、最小值、符号和溢出检查。零除数仍由 `operator /` 和 `FromRatio` 的现有边界拒绝。
+- 该改动减少逻辑链高频定点除法的循环次数，不引入新集合、托管分配或第二数值路径。静态核对两个私有调用点、绝对值转换、符号计算和舍入合同；未编译、未执行数值对比或采样，不能声称实测耗时收益。

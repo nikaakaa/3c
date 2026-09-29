@@ -125,8 +125,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativePreparedBinding m_PreparedBinding;
         readonly CharacterPoseNativeCreateInstanceRequest m_CreateRequest;
         readonly ICharacterPoseNativeNodeEvaluator m_Evaluator;
-        readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue> m_OutputCache =
-            new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
+        readonly Dictionary<(PoseNodeId NodeId, string PortId), int> m_OutputSlotIndices =
+            new Dictionary<(PoseNodeId, string), int>();
+        CharacterPoseNativePortValue[] m_OutputCacheSlots = Array.Empty<CharacterPoseNativePortValue>();
         readonly Dictionary<(PoseNodeId NodeId, string PortId), FlowCanvas.ValueInput> m_InputPorts =
             new Dictionary<(PoseNodeId, string), FlowCanvas.ValueInput>();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
@@ -491,6 +492,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             $"Pose node '{node.NativeNodeId}' contains duplicate input port '{port.PortId}'.");
                     if (port.Direction == CharacterPosePortDirection.Output)
                     {
+                        if (!m_OutputSlotIndices.TryAdd((node.NativeNodeId, port.PortId.Value), outputPortCount))
+                            throw new InvalidOperationException(
+                                $"Pose node '{node.NativeNodeId}' contains duplicate output port '{port.PortId}'.");
                         outputPortCount++;
                         if (node.Kind == CharacterPoseNodeKind.GraphInput)
                             graphInputCount++;
@@ -498,7 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             int frameOutputCount = checked(outputPortCount * 2);
-            m_OutputCache.EnsureCapacity(frameOutputCount);
+            m_OutputCacheSlots = new CharacterPoseNativePortValue[frameOutputCount];
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.EnsureCapacity(frameOutputCount);
             m_CommittedObservations.EnsureCapacity(frameOutputCount);
@@ -547,7 +551,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluation = default;
             m_Validation = default;
             m_GraphInputs.Clear();
-            m_OutputCache.Clear();
+            ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
 #endif
@@ -1035,7 +1039,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ResetState(ulong resetGeneration)
         {
             m_Evaluator.Reset(this, resetGeneration);
-            m_OutputCache.Clear();
+            ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
             m_CommittedObservations.Clear();
@@ -1086,7 +1090,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             catch (Exception exception)
             {
                 StopInstance();
-                m_OutputCache.Clear();
+                ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations.Clear();
                 m_CommittedObservations.Clear();
@@ -1156,7 +1160,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node == null || !portId.IsValid)
                 throw new ArgumentException("Pose native output request is invalid.");
             var key = new CharacterPoseNativePortKey(node.NativeNodeId, portId, m_Stage);
-            if (m_OutputCache.TryGetValue(key, out CharacterPoseNativePortValue cached))
+            if (!m_OutputSlotIndices.TryGetValue((node.NativeNodeId, portId.Value), out int slotIndex))
+                throw new InvalidOperationException(
+                    $"Pose native output '{node.NativeNodeId}/{portId}' is not a registered output port.");
+            int cacheIndex = checked(slotIndex * 2 + ((int)m_Stage - (int)CharacterPoseNativeExecutionStage.Prepare));
+            CharacterPoseNativePortValue cached = m_OutputCacheSlots[cacheIndex];
+            if (cached != null)
                 return RequireTyped<T>(cached, node, portId);
             if (!m_Evaluating.Add(key))
                 throw new InvalidOperationException(
@@ -1167,7 +1176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_Evaluator.EvaluateOutput(this, node, portId, m_Stage) ??
                     throw new InvalidOperationException(
                         $"Pose native node '{node.NodeId}' output '{portId}' is missing.");
-                m_OutputCache.Add(key, value);
+                m_OutputCacheSlots[cacheIndex] = value;
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
                 m_Observations[key] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
@@ -1312,6 +1321,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose native runtime is in stage '{m_Stage}', expected '{stage}'.");
         }
 
+        void ClearOutputCache()
+        {
+            Array.Clear(m_OutputCacheSlots, 0, m_OutputCacheSlots.Length);
+        }
+
         void RequireEvaluationStage()
         {
             if (m_Stage != CharacterPoseNativeExecutionStage.Prepare &&
@@ -1350,7 +1364,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 UnityEngine.Object.Destroy(m_Graph);
                 m_Graph = null;
             }
-            m_OutputCache.Clear();
+            ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_Observations.Clear();
             m_CommittedObservations.Clear();

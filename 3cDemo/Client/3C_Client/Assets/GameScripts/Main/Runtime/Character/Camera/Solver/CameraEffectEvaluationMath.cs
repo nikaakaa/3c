@@ -8,7 +8,6 @@ namespace ThirdPersonCamera
         public static float ResolveDelta(
             bool ignoreWorldTimeScale,
             bool ignoreOwnerTimeScale,
-            bool ignoreLocalAvatar,
             in CameraFrameInput input)
         {
             float delta = ignoreWorldTimeScale
@@ -19,12 +18,6 @@ namespace ThirdPersonCamera
                 if (!input.HasOwnerTimeScale)
                     throw new InvalidOperationException("Camera effect requires an OwnerTimeScale input.");
                 delta *= input.OwnerTimeScale;
-            }
-            if (!ignoreLocalAvatar)
-            {
-                if (!input.HasLocalAvatarTimeScale)
-                    throw new InvalidOperationException("Camera effect requires a LocalAvatarTimeScale input.");
-                delta *= input.LocalAvatarTimeScale;
             }
             return delta;
         }

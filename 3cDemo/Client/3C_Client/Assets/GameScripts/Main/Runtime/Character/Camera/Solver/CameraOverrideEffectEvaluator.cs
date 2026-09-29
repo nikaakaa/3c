@@ -78,7 +78,6 @@ namespace ThirdPersonCamera
             return CameraEffectEvaluationMath.ResolveDelta(
                 payload.IgnoreWorldTimeScale,
                 payload.IgnoreOwnerTimeScale,
-                payload.IgnoreLocalAvatar,
                 in input);
         }
 

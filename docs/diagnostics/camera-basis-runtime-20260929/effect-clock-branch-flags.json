@@ -1,0 +1,170 @@
+[
+  {
+    "function": "zoom-config-copy",
+    "instruction": "0x14059cef",
+    "target_rva": "0x5883d3c",
+    "value": 0
+  },
+  {
+    "function": "zoom-config-copy",
+    "instruction": "0x14059d0d",
+    "target_rva": "0x539de7b",
+    "value": 0
+  },
+  {
+    "function": "zoom-config-copy",
+    "instruction": "0x14059e66",
+    "target_rva": "0x539de7b",
+    "value": 0
+  },
+  {
+    "function": "zoom-clock",
+    "instruction": "0x12bb428b",
+    "target_rva": "0x587de26",
+    "value": 0
+  },
+  {
+    "function": "zoom-clock",
+    "instruction": "0x12bb4294",
+    "target_rva": "0x53f2d45",
+    "value": 0
+  },
+  {
+    "function": "zoom-clock",
+    "instruction": "0x12bb42a6",
+    "target_rva": "0x53ab8ec",
+    "value": 0
+  },
+  {
+    "function": "zoom-clock",
+    "instruction": "0x12bb4305",
+    "target_rva": "0x53f2d45",
+    "value": 0
+  },
+  {
+    "function": "stretch-config-copy",
+    "instruction": "0x15dbe432",
+    "target_rva": "0x5883d7c",
+    "value": 0
+  },
+  {
+    "function": "stretch-config-copy",
+    "instruction": "0x15dbe43f",
+    "target_rva": "0x539dec0",
+    "value": 0
+  },
+  {
+    "function": "stretch-config-copy",
+    "instruction": "0x15dbe5a8",
+    "target_rva": "0x539dec0",
+    "value": 0
+  },
+  {
+    "function": "stretch-clock",
+    "instruction": "0x1788633c",
+    "target_rva": "0x58915ed",
+    "value": 0
+  },
+  {
+    "function": "stretch-clock",
+    "instruction": "0x17886345",
+    "target_rva": "0x53f003c",
+    "value": 0
+  },
+  {
+    "function": "stretch-clock",
+    "instruction": "0x17886357",
+    "target_rva": "0x53ab8ec",
+    "value": 0
+  },
+  {
+    "function": "stretch-clock",
+    "instruction": "0x178863b7",
+    "target_rva": "0x53f003c",
+    "value": 0
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x1788598a",
+    "target_rva": "0x58915eb",
+    "value": 0
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x17885997",
+    "target_rva": "0x53f0037",
+    "value": 0
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x178859bd",
+    "target_rva": "0x53ab8ec",
+    "value": 0
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x178859ee",
+    "target_rva": "0x536ac6d",
+    "value": 1
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x17885a35",
+    "target_rva": "0x53f0037",
+    "value": 0
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x17885a94",
+    "target_rva": "0x536ac6d",
+    "value": 1
+  },
+  {
+    "function": "stretch-eligibility",
+    "instruction": "0x17885ae2",
+    "target_rva": "0x53c4313",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a29852",
+    "target_rva": "0x589e481",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a2985f",
+    "target_rva": "0x53e43b7",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a29875",
+    "target_rva": "0x53ab8ec",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a298a7",
+    "target_rva": "0x53ab8ec",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a299da",
+    "target_rva": "0x53ce46b",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a29a19",
+    "target_rva": "0x53e43b7",
+    "value": 0
+  },
+  {
+    "function": "effect-owner-world-scale",
+    "instruction": "0x13a29b0d",
+    "target_rva": "0x53ce46b",
+    "value": 0
+  }
+]

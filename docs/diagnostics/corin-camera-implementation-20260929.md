@@ -248,3 +248,19 @@ VCameraAxisState 的实际步进是 0x143583E0，速度边界是 0x14358770：
 目标 Unity 实例已完成编译与域重载，ConfigureOrbit 已加载，Console 0 错误。正式 PublishDefaultOrbit 后 Build/RequireValid 成功，schema=v6、elevation=0.6、fov=50、ratio=1、sequence dirty=false；磁盘 diff 确认仅一项数值变化。未运行 Play/replay，未新增测试，画面由用户手测。Default_Normal 是否为原作当前可琳实例实际选中的配置，仍保留此前证据限制。
 
 输入倍率调查新增 camera-axis-player-gain-snapshot.json：沿原函数的 RIP 全局地址、泛型 singleton 静态字段及实例 klass，确认倍率来自 JODKHBJPDKE（type 52447），而非 CameraAxis 参数本身。829 快照中 mode==1 的横／纵倍率为 3／2.1，其它分支为 1／0.75。它们只是该快照的玩家状态，不能当作默认配置写进项目；输入模式名称和上游单位仍待确认。
+
+## IgnoreLocalAvatar 与效果计时职责修正
+
+本批追通配置到实例的赋值，确认 IgnoreLocalAvatar 不属于计时参数：
+
+- Zoom：0x14059CD0 的 0x1405A145～0x1405A170，将 ConfigCameraZoom 的 IgnoreOwnerTimeScale(+0x27)、IgnoreWorldTimeScale(+0x25)、IgnoreLocalAvatar(+0x26) 分别写入实例 +0x4B、+0x4E、+0x4D。0x12BB4280 仅取前两项传给 0x13A29830；+0x4D 由资格函数 0x12BB4AA0 读取，为 true 时直接允许，否则检查实体有效性及当前角色资格。
+- Stretch：0x15DBE3E0 的 0x15DBE9E9～0x15DBEA24，将同三项配置 +0x4F、+0x3A、+0x2C 写入实例 +0xC8、+0x52、+0x4A。0x17886330 只把前两项传给同一计时倍率函数；0x17885980 使用 +0x4A 控制资格检查。
+- 0x13A29830 组合 owner／world 倍率；它没有 LocalAvatarTimeScale 参数。Zoom 更新函数 0x12BB3F80 再把倍率乘本次传入 delta。原作 IgnoreWorldTimeScale 在这里是绕过独立倍率，不能据名称直接等同于读取 Unity unscaledDeltaTime。
+
+完整指令及哈希已保存到 camera-basis-runtime-20260929 下的 zoom-config-copy、zoom-clock、stretch-config-copy、stretch-clock、stretch-eligibility、effect-owner-world-scale；effect-clock-branch-flags 保存快照字节。主要函数 IFix 分支为 0。资格函数读取的 0x536AC6D 为 1，是走实体资格工具的业务分支，不能将所有 0x53 前缀地址都称为 IFix。
+
+项目修正：CameraEffectEvaluationMath.ResolveDelta 删除 ignoreLocalAvatar 参数及其 LocalAvatarTimeScale 乘法；Zoom、Stretch、Override 三个现有调用方同步迁移，没有保留旧重载。配置中的 IgnoreLocalAvatar 字段仍保留其原始值。显式 CameraTimeDomain.LocalAvatarScaled 仍有独立业务用途，本批不删除该时钟域或 FrameInput 的对应输入。
+
+因此计时不会再因 IgnoreLocalAvatar=false 而多乘一次本地角色倍率，也不会因这个资格字段要求存在 LocalAvatarTimeScale。当前 Tick 提供的该倍率为 1，所以不能宣称本批已经改变正常速度下的镜头手感。资格输入、原作独立世界倍率和暂停生产链尚未接通；现有 IgnoreWorldTimeScale 的时钟选择仍需调整，本次只删除有明确证据的错误职责，不能将完整计时复刻标记完成。
+
+Unity 编译与域重载通过，反射回读 ResolveDelta 参数数为 3（两个标志和 FrameInput），Console 0 错误。git diff --check 通过；未运行 Play/replay，未新增或修改测试，没有修改命中链和 IK。

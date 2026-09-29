@@ -140,6 +140,14 @@
       "sha256": "580a6f507bce1d8e85240ebef1af2a410efc00b3b39b5995326b7cd9ac0ec277"
     },
     {
+      "path": "effect-clock-branch-flags.json",
+      "sha256": "c91b3009a2e36be273920edf029833bae4f97b5b615b12584e98589a9174736e"
+    },
+    {
+      "path": "effect-owner-world-scale.json",
+      "sha256": "f35455220a27f880a00e24ff344afbd35d22b31a16d6787399728b0a9e63a297"
+    },
+    {
       "path": "hit-shake-assets.json",
       "sha256": "7e4a9b55df33d127432b7b2a32829b605778f36c8cf57df18f280a06bab4fba4"
     },
@@ -296,8 +304,20 @@
       "sha256": "37949c498f18e16116f60bd12ee3e430461ec360d1088c83100fea11d8c14405"
     },
     {
+      "path": "stretch-clock.json",
+      "sha256": "b732d31507a01f8092b5fce43dfc664b2f860f16dbc4da3aa4d0028dcb8c4fd6"
+    },
+    {
+      "path": "stretch-config-copy.json",
+      "sha256": "a9e74a087538184351eef1c863ce9313a4892f44574d535eab443437c07147f8"
+    },
+    {
       "path": "stretch-consumer-0x101b6210.json",
       "sha256": "97e1926dac66f1cfbe6c735bec1ee3bfbb62d614c80e88e2803c84690872683d"
+    },
+    {
+      "path": "stretch-eligibility.json",
+      "sha256": "e6645867fba513099d9e1602ae9b8cb14c3aa47c37bfd18df55dc20766c9054d"
     },
     {
       "path": "stretch-enter-sample.json",
@@ -342,6 +362,14 @@
     {
       "path": "zoom-branch-flags.json",
       "sha256": "d7360c8d4b621e125e6970d28e7fb927deee13a2fa301282c907d5b0734e206a"
+    },
+    {
+      "path": "zoom-clock.json",
+      "sha256": "33ee46c38e0e0d08b8974a7881f00203f9aad12e5bfc50a4845642403ed87f46"
+    },
+    {
+      "path": "zoom-config-copy.json",
+      "sha256": "f1f2585b910fb0f6d623a532db1cfbc0c2fe4eda493644c59dd48dde0c5bdc2a"
     },
     {
       "path": "zoom-delay.json",

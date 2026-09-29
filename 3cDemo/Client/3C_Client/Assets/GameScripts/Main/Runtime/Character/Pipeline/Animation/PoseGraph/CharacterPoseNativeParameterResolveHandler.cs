@@ -25,6 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly PoseNodeId m_NodeId;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_BasePoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_SourcePoseInput;
         BoundParameterPolicy[] m_ParameterPolicies;
         int m_PageIndex = -1;
         CharacterPoseNativeLocalPoseValue m_Output;
@@ -57,6 +59,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node.Kind != Kind)
                 throw new InvalidOperationException(
                     $"Parameter Resolve handler '{NodeId}' does not match its graph node.");
+            m_BasePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "base-pose");
+            m_SourcePoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "parameter-source-pose");
             IReadOnlyList<CharacterPoseParameterPolicy> policies = node.ParameterPolicies;
             m_ParameterPolicies = new BoundParameterPolicy[policies.Count];
             for (int i = 0; i < policies.Count; i++)
@@ -126,12 +134,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue basePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_BasePoseInput,
+                    m_NodeId,
                     "base-pose");
             CharacterPoseNativeLocalPoseValue sourcePose =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_SourcePoseInput,
+                    m_NodeId,
                     "parameter-source-pose");
             CharacterPoseNativePoseReadBinding baseBinding =
                 RequireAvailable(basePose, "Base");

@@ -1150,3 +1150,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Modify Bone 每次求输出都通过 `(NodeId, "pose")` 哈希查找并类型测试同一个 Component Pose 输入；该端口在 graph 初始化后固定。
 - handler 在 Initialize 用 AP137 的 typed port 解析入口缓存 `FlowCanvas.ValueInput<ComponentPoseValue>`，帧内直接读取 port value。求值阶段检查、空值错误、输出页复制和修改应用顺序不变。
 - 该改动消除 Modify Bone 主姿态输入的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对 Initialize 唯一绑定点、帧读取点和 Component Pose 合同；未编译、未采样，不能声称实测耗时收益。
+
+### AP139 ParameterResolve typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Parameter Resolve 每次求输出都按 `(NodeId, port)` 分别哈希查找 base pose 与 parameter source pose，并重复做 Local Pose 类型测试；两个输入端口在 graph 初始化后固定。
+- handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取 port value。求值阶段检查、空值错误、可用性校验、骨骼复制和参数合成顺序不变。
+- 该改动把每帧四次查找合并为构造期两次端口解析，输出页身份不变。静态核对两个端口名、类型、Initialize 唯一调用和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。

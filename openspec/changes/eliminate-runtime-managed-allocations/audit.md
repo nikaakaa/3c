@@ -1847,3 +1847,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStrideHipsResult` 构造的 HeightTarget、PosturePreference、Reach、Response 仍按值接收；accepted、bilateral、release 和 rejected 四个唯一构造点在写入 backing field 前先复制入参。
 - 四个构造入参改为 `in`，局部和只读默认值显式转发；`BuildRejected` 的 reach/response 可选参数也改为 `in default`。backing field 写入仍保留一次必要存储，标量输入和输出语义不变。
 - 该改动删除 StrideHips result 构造边界的入参拷贝。静态核对四个构造点、参数只读、引用生命周期覆盖构造；未编译、未采样，不能声称实测耗时收益。
+
+### AP255 Pelvis input 结构引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPelvisInput` 的 Intent、PrimarySupport、Frame、Reach 自动属性每次读取复制完整结构；`ResolvePelvis` 开头先复制四个局部，Frame 和 Reach 再反复进入校验、目标、reach 与 response 求解。
+- 四个结构属性改为 backing field 只读引用；`ResolvePelvis` 的四个局部直接绑定同一 backing field。构造入参、接受/释放/双边支持分支、posture、reach、spring 计算和异常时机不变。
+- 该改动删除 Pelvis 求解入口的整份 intent、primary support、frame 和 reach input 拷贝。静态核对 input 为 readonly struct、生命周期覆盖方法调用、消费点只读；未编译、未采样，不能声称实测耗时收益。

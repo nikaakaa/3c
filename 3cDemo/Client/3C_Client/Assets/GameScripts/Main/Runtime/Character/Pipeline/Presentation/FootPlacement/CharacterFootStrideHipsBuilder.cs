@@ -900,6 +900,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisInput
     {
+        readonly CharacterFootStrideIntentResult m_Intent;
+        readonly CharacterFootPrimarySupportResult m_PrimarySupport;
+        readonly CharacterFootPelvisFrame m_Frame;
+        readonly CharacterFootPelvisReachInput m_Reach;
+
         internal CharacterFootPelvisInput(
             in CharacterFootStrideIntentResult intent,
             in CharacterFootPrimarySupportResult primarySupport,
@@ -912,10 +917,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 supportAnkle,
             float supportGoalWeight)
         {
-            Intent = intent;
-            PrimarySupport = primarySupport;
-            Frame = frame;
-            Reach = reach;
+            m_Intent = intent;
+            m_PrimarySupport = primarySupport;
+            m_Frame = frame;
+            m_Reach = reach;
             PairTargetsAvailable = pairTargetsAvailable;
             PairTargetHeightSpread = pairTargetHeightSpread;
             BilateralSupportAvailable = bilateralSupportAvailable;
@@ -924,10 +929,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportGoalWeight = supportGoalWeight;
         }
 
-        internal CharacterFootStrideIntentResult Intent { get; }
-        internal CharacterFootPrimarySupportResult PrimarySupport { get; }
-        internal CharacterFootPelvisFrame Frame { get; }
-        internal CharacterFootPelvisReachInput Reach { get; }
+        internal ref readonly CharacterFootStrideIntentResult Intent => ref m_Intent;
+        internal ref readonly CharacterFootPrimarySupportResult PrimarySupport =>
+            ref m_PrimarySupport;
+        internal ref readonly CharacterFootPelvisFrame Frame => ref m_Frame;
+        internal ref readonly CharacterFootPelvisReachInput Reach => ref m_Reach;
         internal bool PairTargetsAvailable { get; }
         internal float PairTargetHeightSpread { get; }
         internal bool BilateralSupportAvailable { get; }
@@ -1276,10 +1282,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
-            CharacterFootStrideIntentResult intent = input.Intent;
-            CharacterFootPrimarySupportResult primarySupport = input.PrimarySupport;
-            CharacterFootPelvisFrame frame = input.Frame;
-            CharacterFootPelvisReachInput reachInput = input.Reach;
+            ref readonly CharacterFootStrideIntentResult intent = ref input.Intent;
+            ref readonly CharacterFootPrimarySupportResult primarySupport =
+                ref input.PrimarySupport;
+            ref readonly CharacterFootPelvisFrame frame = ref input.Frame;
+            ref readonly CharacterFootPelvisReachInput reachInput = ref input.Reach;
             if (frame.FootPlacementWeight <= GeometryEpsilon)
             {
                 spring.Clear();

@@ -838,6 +838,11 @@
 - 增加 FindLocalState，用原 CompareJoinedIdentity 对既有排序做二分定位；Require、no-op 返回、value kind 检查、数组复制和 aggregate 替换语义不变。
 - LocalState 查找从 state 数量级收敛为对数比较；比较仍使用原无分配 joined 合同，无新字典。静态核对构造排序、两条消费路径、异常和两域换装链；未编译、运行回放或采样。
 
+### AP113 GameplayEffect Active 身份线性查找（2026-09-29，已实施，本轮未编译）
+
+- 两域 GameplayEffectState 用同一个 List 保存 active effects，FindActiveByHandle、FindActiveByInstance、AddActive 去重和 attribute modifier 校验都反复全表扫描；active handle 与 instance 是正式唯一身份。
+- 为每个 state 实例增加 handle 和 instance 两个生命周期字典，Add/Remove 同步维护；Restore 替换 active list 后重建索引，ClearCollections 一并清理。查找改为字典访问，Add 去重不再两次查找。
+- Active 查找和 Advance 内的 modifier/period 校验从 effect 数量级收敛为一次 hash 查找；排序输出、Remove 语义、Restore/Validate 闭环和重复身份异常不变。静态核对两域 list 唯一写入点、Restore/Clear/Add/Remove、modifier 和 period 消费；未编译、运行回放或采样。
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

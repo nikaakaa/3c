@@ -938,6 +938,8 @@ namespace ThirdPersonSimulation
         readonly SortedDictionary<string, string[]> m_TagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
         readonly SortedDictionary<string, PortableAttributeState> m_Attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
         readonly List<PortableActiveEffectState> m_ActiveEffects = new List<PortableActiveEffectState>();
+        readonly Dictionary<ulong, PortableActiveEffectState> m_ActiveByHandle = new Dictionary<ulong, PortableActiveEffectState>();
+        readonly Dictionary<ulong, PortableActiveEffectState> m_ActiveByInstance = new Dictionary<ulong, PortableActiveEffectState>();
         readonly SortedDictionary<ulong, ulong> m_Periods = new SortedDictionary<ulong, ulong>();
         readonly SortedDictionary<ulong, List<PortablePredictionRecord>> m_Journal = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
         readonly SortedDictionary<ulong, ulong> m_LastLifecycleRevisions = new SortedDictionary<ulong, ulong>();
@@ -1218,31 +1220,23 @@ namespace ThirdPersonSimulation
 
         public PortableActiveEffectState FindActiveByHandle(ulong handle)
         {
-            for (int i = 0; i < m_ActiveEffects.Count; i++)
-            {
-                if (m_ActiveEffects[i].Handle == handle)
-                    return m_ActiveEffects[i];
-            }
-            return null;
+            return m_ActiveByHandle.TryGetValue(handle, out PortableActiveEffectState active) ? active : null;
         }
 
         public PortableActiveEffectState FindActiveByInstance(ulong instanceId)
         {
-            for (int i = 0; i < m_ActiveEffects.Count; i++)
-            {
-                if (m_ActiveEffects[i].InstanceId == instanceId)
-                    return m_ActiveEffects[i];
-            }
-            return null;
+            return m_ActiveByInstance.TryGetValue(instanceId, out PortableActiveEffectState active) ? active : null;
         }
 
         public void AddActive(PortableActiveEffectState active)
         {
             if (active == null || active.Handle == 0 || active.InstanceId == 0 || active.Spec == null)
                 throw new ArgumentException("Active Gameplay Effect identity is incomplete.", nameof(active));
-            if (FindActiveByHandle(active.Handle) != null || FindActiveByInstance(active.InstanceId) != null)
+            if (m_ActiveByHandle.ContainsKey(active.Handle) || m_ActiveByInstance.ContainsKey(active.InstanceId))
                 throw new InvalidOperationException($"Duplicate Active Gameplay Effect '{active.Handle}/{active.InstanceId}'.");
             m_ActiveEffects.Add(active);
+            m_ActiveByHandle.Add(active.Handle, active);
+            m_ActiveByInstance.Add(active.InstanceId, active);
             m_ActiveEffects.Sort(CompareActive);
             RefreshActiveEffectsDirty();
         }
@@ -1251,6 +1245,8 @@ namespace ThirdPersonSimulation
         {
             if (active == null || !m_ActiveEffects.Remove(active))
                 throw new InvalidOperationException("Active Gameplay Effect removal target is missing.");
+            m_ActiveByHandle.Remove(active.Handle);
+            m_ActiveByInstance.Remove(active.InstanceId);
             RefreshActiveEffectsDirty();
             if (m_Periods.Remove(active.InstanceId))
                 RefreshPeriodsDirty();
@@ -1362,6 +1358,7 @@ namespace ThirdPersonSimulation
             {
                 m_ActiveEffects.Clear();
                 aggregate.CopyActiveEffectsTo(m_ActiveEffects);
+                RebuildActiveIndexes();
             }
             if (!periodsMatch)
             {
@@ -1419,6 +1416,8 @@ namespace ThirdPersonSimulation
             m_OwnedTagsSnapshot = null;
             m_Attributes.Clear();
             m_ActiveEffects.Clear();
+            m_ActiveByHandle.Clear();
+            m_ActiveByInstance.Clear();
             m_Periods.Clear();
             m_Journal.Clear();
             m_LastLifecycleRevisions.Clear();
@@ -1433,6 +1432,18 @@ namespace ThirdPersonSimulation
             m_JournalDirty = false;
             m_ChangeCursorDirty = false;
             m_LastLifecycleRevisionsDirty = false;
+        }
+
+        void RebuildActiveIndexes()
+        {
+            m_ActiveByHandle.Clear();
+            m_ActiveByInstance.Clear();
+            for (int i = 0; i < m_ActiveEffects.Count; i++)
+            {
+                PortableActiveEffectState active = m_ActiveEffects[i];
+                m_ActiveByHandle.Add(active.Handle, active);
+                m_ActiveByInstance.Add(active.InstanceId, active);
+            }
         }
 
         void RefreshTagsDirty()

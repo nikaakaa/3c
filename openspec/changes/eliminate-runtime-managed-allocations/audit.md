@@ -855,6 +855,12 @@
 - 两域 Character Evaluation 对每个 Ability invocation 处理 ActionLifecycle ingress 时，都调用 `OwnsAction` 线性扫描 source state 的全部 ActionInstances，形成 invocation 数、ingress 数和 action 数的周期乘积。ActionInstanceId 由 Character Handle Allocator 生成唯一非零句柄，source state 的 ActionInstances 是正式 owner 名单。
 - 两域 binding 新增按正式 action capacity 预留的生命周期字典；每次 Evaluate 先用 source ActionInstances 重建 `InstanceId -> invocation`，周期分发用一次 ulong 查找定位 owner，未知 instance 继续忽略。删除重复线性 `OwnsAction`，用 invocation 引用相等判定目标。
 - owner 重建从 action 数量级执行一次；ingress 分发从每次全 action 扫描收敛为一次哈希查找。ingress 顺序、未知行为、ability 过滤和 ApplyActionIngress 时序不变。静态核对 allocator 唯一性、两域调用链、字典生命周期和差异检查；未编译、运行回放或采样。
+### AP116 Action Window ability 线性查找（2026-09-29，已实施，本轮未编译）
+
+- 两域 Character Runtime Ports 把窗口查询委托回 Character Evaluation，每次都按 skill 线性遍历全部 invocation；Control module 的连招、恢复和退出窗口检查会重复这项定位。AP114 已建立构造期 `AbilityId -> invocation` 唯一索引。
+- 两域 binding 增加正式窗口查询：未知 skill 继续返回 false，命中 skill 直接定位 invocation 并读取 projection；两域 Runtime Ports 改为绑定该方法，删除 Character Evaluation 的重复线性辅助。projection 扫描和 evaluation 生命周期边界保持。
+- 每次窗口查询从 invocation 数量级比较收敛为一次 Ordinal identity 哈希查找；可见输出、未知 skill 行为和查询时序不变。静态核对 Control delegate 合同、窗口 projection 唯一消费、两域 Runtime 构造和差异检查；未编译、运行回放或采样。
+
 
 ## 可靠性问题独立保留
 

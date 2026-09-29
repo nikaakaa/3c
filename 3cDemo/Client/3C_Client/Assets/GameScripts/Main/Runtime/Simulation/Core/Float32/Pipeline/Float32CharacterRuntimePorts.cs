@@ -128,10 +128,7 @@ namespace ThirdPersonSimulation
                     actor.ControlMotion,
                     actor.CharacterTraceSink,
                     actor.ActionRuntimes,
-                    (skill, window) => Float32CharacterEvaluationRuntime.IsActionWindowActive(
-                        actor.Invocations,
-                        skill,
-                        window),
+                    actor.IsActionWindowActive,
                     route => Float32CharacterEvaluationRuntime.ReadEquipmentActionContext(
                         actor.Invocations,
                         route)));

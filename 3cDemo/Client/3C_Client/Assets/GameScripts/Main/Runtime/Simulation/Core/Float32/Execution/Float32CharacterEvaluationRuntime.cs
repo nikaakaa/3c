@@ -307,21 +307,6 @@ namespace ThirdPersonSimulation
                         "Float32 Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
         }
 
-        internal static bool IsActionWindowActive(
-            Float32AbilityInvocationRuntime[] invocations,
-            CharacterSkillId skillId,
-            string windowType)
-        {
-            for (int i = 0; i < invocations.Length; i++)
-            {
-                Float32AbilityInvocationRuntime invocation = invocations[i];
-                if (invocation.AbilityId != skillId)
-                    continue;
-                return invocation.HasActionWindowProjection(windowType);
-            }
-            return false;
-        }
-
         internal static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
             Float32AbilityInvocationRuntime[] invocations,
             EquipmentActionRouteId route)

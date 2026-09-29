@@ -308,21 +308,6 @@ namespace ThirdPersonSimulation.Fixed
                         "Fixed Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
         }
 
-        internal static bool IsActionWindowActive(
-            FixedAbilityInvocationRuntime[] invocations,
-            CharacterSkillId skillId,
-            string windowType)
-        {
-            for (int i = 0; i < invocations.Length; i++)
-            {
-                FixedAbilityInvocationRuntime invocation = invocations[i];
-                if (invocation.AbilityId != skillId)
-                    continue;
-                return invocation.HasActionWindowProjection(windowType);
-            }
-            return false;
-        }
-
         internal static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
             FixedAbilityInvocationRuntime[] invocations,
             EquipmentActionRouteId route)

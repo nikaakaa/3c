@@ -176,6 +176,9 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedMotionContributionScratch MotionContributions => m_MotionContributions;
         internal FixedAbilityInvocationRuntime[] Invocations => m_Invocations;
         internal FixedAbilityInvocationRuntime GetInvocation(CharacterSkillId abilityId) => m_InvocationByAbility[abilityId];
+        internal bool IsActionWindowActive(CharacterSkillId abilityId, string windowType) =>
+            m_InvocationByAbility.TryGetValue(abilityId, out FixedAbilityInvocationRuntime invocation) &&
+            invocation.HasActionWindowProjection(windowType);
         internal Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal FixedAbilityExecutionWorkspace[] Workspaces => m_Workspaces;

@@ -169,6 +169,9 @@ namespace ThirdPersonSimulation
         internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
         internal Float32AbilityInvocationRuntime[] Invocations => m_Invocations;
         internal Float32AbilityInvocationRuntime GetInvocation(CharacterSkillId abilityId) => m_InvocationByAbility[abilityId];
+        internal bool IsActionWindowActive(CharacterSkillId abilityId, string windowType) =>
+            m_InvocationByAbility.TryGetValue(abilityId, out Float32AbilityInvocationRuntime invocation) &&
+            invocation.HasActionWindowProjection(windowType);
         internal Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort> ActionRuntimes => m_ActionRuntimes;
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal Float32AbilityExecutionWorkspace[] Workspaces => m_Workspaces;

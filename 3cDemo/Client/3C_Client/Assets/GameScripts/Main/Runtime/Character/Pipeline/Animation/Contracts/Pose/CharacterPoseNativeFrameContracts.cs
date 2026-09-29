@@ -14,17 +14,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose Source Frame Lease lineage is invalid.",
                     nameof(lineage));
-            Lineage = lineage;
+            m_Lineage = lineage;
             m_IsValid = true;
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal ulong FrameIdentity => Lineage.FrameIdentity;
         internal bool IsValid => m_IsValid;
-        internal bool Matches(CharacterPoseNativeFrameLineage lineage) =>
+        internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
             m_IsValid &&
-            lineage.WithCompletion(0) == Lineage;
+            m_Lineage.MatchesIgnoringCompletion(in lineage);
     }
 
     internal readonly struct CharacterPoseConstraintFrameLease
@@ -36,18 +37,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose Constraint Frame Lease lineage is invalid.",
                     nameof(lineage));
-            Lineage = lineage;
+            m_Lineage = lineage;
             m_IsValid = true;
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal ulong FrameIdentity => Lineage.FrameIdentity;
         internal ulong PresentationFrame => Lineage.PresentationFrame;
         internal bool IsValid => m_IsValid;
-        internal bool Matches(CharacterPoseNativeFrameLineage lineage) =>
+        internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
             m_IsValid &&
-            lineage.WithCompletion(0) == Lineage;
+            m_Lineage.MatchesIgnoringCompletion(in lineage);
     }
 
     internal readonly struct CharacterPoseSourceDemand

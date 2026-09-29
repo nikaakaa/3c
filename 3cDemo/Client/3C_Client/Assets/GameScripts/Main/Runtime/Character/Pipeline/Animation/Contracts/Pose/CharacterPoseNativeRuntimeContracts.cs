@@ -598,6 +598,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string.Equals(RigRevision, lineage.RigRevision, StringComparison.Ordinal) &&
             string.Equals(InputContractHash, lineage.InputContractHash, StringComparison.Ordinal) &&
             InstanceId == lineage.InstanceId && ResetGeneration == lineage.ResetGeneration;
+        internal bool MatchesIgnoringCompletion(in CharacterPoseNativeFrameLineage lineage) =>
+            ActorId == lineage.ActorId && FrameIdentity == lineage.FrameIdentity &&
+            PresentationFrame == lineage.PresentationFrame &&
+            BodyTick == lineage.BodyTick && GraphId == lineage.GraphId &&
+            string.Equals(GraphRevision, lineage.GraphRevision, StringComparison.Ordinal) &&
+            string.Equals(RigId, lineage.RigId, StringComparison.Ordinal) &&
+            string.Equals(RigRevision, lineage.RigRevision, StringComparison.Ordinal) &&
+            string.Equals(InputContractHash, lineage.InputContractHash, StringComparison.Ordinal) &&
+            InstanceId == lineage.InstanceId && ResetGeneration == lineage.ResetGeneration;
         public static bool operator ==(CharacterPoseNativeFrameLineage left, CharacterPoseNativeFrameLineage right) => left.Equals(right);
         public static bool operator !=(CharacterPoseNativeFrameLineage left, CharacterPoseNativeFrameLineage right) => !left.Equals(right);
     }
@@ -660,15 +669,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!lineage.IsOpenValid)
                 throw new ArgumentException("Pose native frame lease lineage is invalid.", nameof(lineage));
-            Lineage = lineage;
+            m_Lineage = lineage;
             m_IsValid = true;
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal bool IsValid => m_IsValid && Lineage.IsOpenValid;
         internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
-            IsValid && lineage == Lineage;
+            IsValid && m_Lineage.Matches(in lineage);
     }
 
     internal readonly struct CharacterPoseNativeSourceRequest

@@ -1300,3 +1300,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPoseNativeFrameInput` 的 Body/Fact/Parameter frame 是按值属性；外层 `CurrentInput` 引用化后，handler 每次读取嵌套帧仍会复制整份。frame 在 BeginFrame 写入后同帧只被消费。
 - 三个嵌套帧改为 readonly 字段加 `ref readonly` 属性正式入口；Action Slot、Blend Space、Clip、Foot Placement、RootOrientationWarp 和 StateMachine 的按值局部引用改为 `ref readonly` 局部引用。字段读取、校验顺序、输出内容和 Commit/Discard 语义不变。
 - 该改动删除周期链中嵌套 frame 的整份拷贝；不新增第二数据源或可变写入路径。其他窗口持有的 GraphEvaluator 文件未修改，其直接嵌套帧访问会继续使用同一属性。静态核对构造赋值、全部当前调用点、readonly 局部生命周期和原有分支；未编译、未采样，不能声称实测耗时收益。
+
+### AP164 frame lease 匹配引用化（2026-09-30，已实施，本轮未编译）
+
+- Source 与 Constraint frame lease 每次 `Matches` 都调用 `WithCompletion(0)` 构造新 lineage，再通过按值 operator 复制两侧；native frame lease 也使用按值 operator。三个 lease 的 `Lineage` 属性本身还按值返回整份 lineage。
+- lineage 新增忽略 CompletionIdentity 的正式引用匹配入口；source/constraint lease 用它保留原有开放帧 identity 合同，native lease 继续全字段匹配。三个 lease 的 Lineage 改为 readonly 字段加 `ref readonly` 属性，Matches 参数改为 `in`。比较结果、异常时机和阶段校验顺序不变。
+- 该改动删除 lease 匹配期的临时 lineage 与两侧整份拷贝；不新增第二数据源。静态核对三个 lease 的构造约束、新旧字段集合、全部 Matches 调用和 Lineage 消费语义；未编译、未采样，不能声称实测耗时收益。

@@ -182,6 +182,8 @@
 - 可在图中显式保存确实复用的中间结果，代价是作者维护少量变量和明确写入顺序。同一帧 SetVariable 后必须能读到新值，禁止整帧缓存。
 - 本轮解析 Corin 正式 EventGraph 的序列化连接，已确认共享纯计算：`calculate.velocity-planar` 有4条输出连接，`calculate.horizontal-speed`、`calculate.vertical-speed`各2条，`lean.eligible`有3条，`lean.direction-angle`与`lean.return-before-switch`各2条。连接数不等于实际每帧执行次数，分支与下游重复读取还会影响次数。历史方向、当前倾角在同一更新中有写入，不能以节点共享为由做整帧缓存。当前尚未改图资产；这项需要沿正式 authoring 链重接写入与读取顺序，不直接编辑序列化连接或另建运行时缓存。
 - 原生 Pose 已有 [节点/端口/执行阶段输出缓存](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs#L1056)，不应再为它添加重复的整帧缓存。
+- 2026-09-29 静态续查：正式生成源已准备新增 `animation.current-planar-velocity`、`animation.lean.direction-angle` 和 `animation.lean.return-target-angle`。Corin 更新 Split 先保存当前平面速度，再按原相对顺序执行水平速度、垂直速度、方向、期望方向、朝向误差、加速度分支、运动阶段分支和历史保存；Lean 在保存 eligible 前保存方向角，在保存平滑角前保存回正目标。原纯函数改为一次写入，消费者读变量；FlowCanvas Instant Split、SetVariable 赋值与 GetVariable 读取时机已静态核对。该改动尚未由 Unity 内正式 authoring 重建 `CorinAnimationEventGraph.asset`，运行图仍是旧结构，不能计为运行行为已实施或宣称收益。
+- 继续核对方向角与回正目标的分支语义：`AND` 对第二输入短路，而三分支 `EventGraphFloatSelectNode` 的三个输入在 `Invoke` 前求值；旧图的 `save-turn-rate` 和 `save-angle` 无条件执行，方向角与回正目标在 false 分支仍会被读取。新的先保存后读取保持可见输出不变，只把旧的一次或两次求值收敛为一次。当前图资产已含 Lean 常量，生成源中的同一常量在重建时会重新写入；这是正式重建的既有行为，不是本次新增 fallback。
 
 ### AP13 ACL 每帧重设不变 Clip Job，并全容量清权重（已实施，未实跑）
 
@@ -752,40 +754,48 @@
 - Fixed 与 Float32 Timed Locomotion 每次解析 timeline 时调用 `TryFindSingleLocomotion`，对 completion transition 目标 state 新建 `Stack<OperationHandle>` 并遍历 Child 子树查找唯一 locomotion。state 拓扑、Root 边和 operation code/Integer 常量装配后固定，这是周期重复拓扑查找和托管分配。
 - `OperationExecutionTopology` 构造期基于已有 Root 边和 Child 出边预解析每个 state 的唯一 LocomotionInputMotion；发现第二个则按原逻辑判定不唯一。Motion runtime 改为读取 `StateSingleLocomotion`，保留目标必须为 Continuous ConstantSpeed、Move Speed 类型和数值校验、owner identity 与 continuation velocity 语义。
 - Timed Locomotion 每 tick 少一次 state 子树遍历和 Stack 分配；装配期新增定容 handle 数组。目标无 Root、无 locomotion、多 locomotion 或 continuation 不满足模式时结果不变。静态核对 Root/Child 出边构造、装配期 Stack 清理、两域调用和差异；未编译、运行回放或采样。
+
 ### AP98 Action Motion Curve 周期总量重复求值（2026-09-29，已实施，本轮未编译）
+
 - Fixed 与 Float32 Action Motion Curve 在 looping 模式下，X/Z 的 from 和 to 各自调用 `SampleCumulative`，每次都重新执行 `curve.Evaluate(duration)` 计算周期总量；同一 tick、同一曲线的该值重复计算四次。周期总量只依赖曲线、duration 和求值器纯函数。
 - 每条曲线在本次位移解析中先计算一次 `cycleTotal`，非 looping 仍按原 clamp 后求值，不预计算 endpoint。`SampleCumulative` 只接收并复用该总量，`cycle`、local time、from/to 和 local 求值顺序不变。
 - looping 位移解析从每轴四次求值收敛为三次（周期总量加 from/to），两轴从八次收敛为六次；数值顺序、舍入输入和可见输出不变。静态核对两域曲线求值器无状态、唯一调用链和差异；未编译、运行回放或采样。
+
 ### AP99 State 执行路径身份周期解析（2026-09-29，已实施，本轮未编译）
+
 - `OperationControlRuntime.FindStateExecutionPath` 每次 Push state scope 都读取 active/exiting identity slot，并用 `int.TryParse` 解析回 OperationHandle 后与当前 state 比较。identity slot 只写入 `OperationExecutionTopology.OperationIdentity` 预生成字符串或空串，解析结果不参与其它语义。
 - 改为持有当前 state 的预生成身份并做 `StringComparison.Ordinal` 比较；命中后仍读取同一 execution path slot。空串、其它 operation 身份和无效身份都不命中；命中条件、路径读取和返回值不变。该方法内不再保留解析入口，状态机自身的过渡 handle 解析不在此项范围内。
 - 每次激活、过渡评估、子图或 state 进入时少一次到两次固定数字字符串解析；无新增状态、缓存或第二执行路径。静态核对 identity slot 全部写入、Push scope 调用链和字符串比较边界；未编译、运行回放或采样。
+
 ### AP100 Character Input 配置与请求交叉扫描（2026-09-29，已实施，本轮未编译）
+
 - Fixed 与 Float32 Character Input 的 `ApplyRequests` 原先对每个配置请求 ID 线性扫描整批 incoming requests，匹配同一 Tick 内多条请求和多个配置时形成乘积级字符串比较。配置 ID 已在构造期按 Ordinal 排序并拒绝重复。
 - 先按原顺序重置每个配置 ID 的过期状态；随后对每条 incoming request 用排序配置表做 Ordinal 二分定位，只访问命中的配置 ID，并沿用原有 validity、Priority、Sequence 决胜和字段顺序。未命中配置的请求仍被忽略，未命中的配置仍保留过期重置结果。
 - 请求应用从配置数乘请求数次比较收敛为配置数加请求数次对数定位访问；同一请求名单的最终 Priority/Sequence 状态不变。静态核对构造排序唯一性、空请求、过期重置、多条同 ID 请求和两域接口；未编译、运行回放或采样。
+
 ### AP101 Value 输入周期端口合同查找和字符串环检查（2026-09-29，已实施，本轮未编译）
 
 - Fixed 与 Float32 Value Graph 每读取一条 Operation 输入，都调用 `ValueSourceOutputPort` 重新解析源操作端口合同并取出 identity；同一 identity 随后成为环检查键，`FixedValueEvaluationKey`／`Float32ValueEvaluationKey` 每次对它计算 Ordinal 哈希并做字符串相等比较。
 - `CompiledValueInputBinding` 在装配期固化 `SourceOutputPortIdentity`。Value 边构造时已有 `sourcePort`，SubGraph 的 graph frame 输出按 ParameterName/PortId 排序后生成连续 Order，`ReadSubGraphOutput` 消费的同一 frame 输出列表也保持该顺序，因此 identity 和 `SourceOutputPortIndex` 可以随 binding 一起正式保存。
 - 两域周期 `ReadInputs` 直接传入 binding identity 和 index，删除 `ValueSourceOutputPort` 周期合同查询；本地 binding 改为 `ref readonly`，不因新增 identity 字段复制更大结构。环检查工作区改为 `HashSet<long>`，用 operation handle 和端口 index 组成键，finally 移除键和容量准备不变。
 - 每条 Operation Value 输入少一次静态端口合同解析、字典查找和字符串哈希；环检查键比较不再读取端口文本。诊断、SubGraph 状态读取、GameplayEffect 输出选择和异常文本仍使用同一 identity；实际 evaluation 输出、求值顺序和 Cycle 拒绝语义不变。静态核对 binding 唯一构造点、Graph frame/contract 顺序、两域 Evaluate 调用链、trace 和差异检查；未编译、运行回放或采样。
+
 ### AP102 GameplayEffect Freeze 重复判断 Tag 脏标（2026-09-29，已实施，本轮未编译）
 
-- Fixed 与 Float32 SimulationGameplayEffectState.Freeze 的快速路径连续判断两次 !m_TagsDirty；该字段是同一个实例布尔值，第二次不提供额外约束。
-- 删除重复判断，保留 attributes、active effects、periods、journal、change cursor 和 lifecycle revisions 的原判断顺序。全部未变时继续直接返回 baseline，任一变化时继续走 CreateChangedFrom，冻结对象和脏标语义不变。
-- 每次 Freeze 快速路径少一次布尔判断。静态核对 Freeze 成功、恢复后提交和异常保存点调用链，以及两域差异检查；未编译、运行回放或采样。
+- Fixed 与 Float32 `SimulationGameplayEffectState.Freeze` 的快速路径连续判断两次 `!m_TagsDirty`；该字段是同一个实例布尔值，第二次不提供额外约束。
+- 删除重复判断，保留 attributes、active effects、periods、journal、change cursor 和 lifecycle revisions 的原判断顺序。全部未变时继续直接返回 baseline，任一变化时继续走 `CreateChangedFrom`，冻结对象和脏标语义不变。
+- 每次 Freeze 快速路径少一次布尔判断。静态核对 `Freeze` 成功、恢复后提交和异常保存点调用链，以及两域差异检查；未编译、运行回放或采样。
 
 ### AP103 GameplayEffect Advance 重复扫描 Active 存在性（2026-09-29，已实施，本轮未编译）
 
-- Fixed 与 Float32 共用的 GameplayEffect Advance 先把当前 active 复制到 scratch 快照，再对每个快照项调用 FindActiveByHandle 做全表扫描。快照建立后，本轮循环内只会移除当前项，Additional effect 全部入队并在快照循环后的 FlushAdditional 执行，因此快照项不会因其它项先失效而变脏。
-- 删除每个 active 开始前的存在性扫描；RemoveActive 保留按 handle 查找的唯一存在边界，移除目标缺失时继续跳过。Removal、ongoing/inhibited、period、while-active、expiration 和异常回滚顺序不变。
-- 每次 Advance 从 active 数量级全表扫描收敛为只在实际移除时检查一次；效果越多收益越大。静态核对两域 AcquireActiveEffects 快照所有权、RemoveActive 调用链、Additional 队列时机和差异检查；未编译、运行回放或采样。
+- Fixed 与 Float32 共用的 GameplayEffect `Advance` 先把当前 active 复制到 scratch 快照，再对每个快照项调用 `FindActiveByHandle` 做全表扫描。快照建立后，本轮循环内只会移除当前项，Additional effect 全部入队并在快照循环后的 `FlushAdditional` 执行，因此快照项不会因其它项先失效而变脏。
+- 删除每个 active 开始前的存在性扫描；`RemoveActive` 保留按 handle 查找的唯一存在边界，移除目标缺失时继续跳过。Removal、ongoing/inhibited、period、while-active、expiration 和异常回滚顺序不变。
+- 每次 Advance 从 active 数量级全表扫描收敛为只在实际移除时检查一次；效果越多收益越大。静态核对两域 `AcquireActiveEffects` 快照所有权、`RemoveActive` 调用链、Additional 队列时机和差异检查；未编译、运行回放或采样。
 
 ### AP104 Equipment Action Route 周期线性扫描（2026-09-29，已实施，本轮未编译）
 
-- Fixed 与 Float32 Equipment Runtime 的 HasActionRoute 每次线性扫描固定 Routes 名单；EquipmentProgramLayout 构造期已经用 m_RouteById 建立唯一 Route 索引。
-- Layout 增加正式 HasRoute，有效 route 直接查询现有索引；两域 Runtime 在 capability 和 route 有效性检查后统一调用。未知 route、无效 route、capability disabled 和后续 TryReadActionContext 行为不变。
+- Fixed 与 Float32 Equipment Runtime 的 `HasActionRoute` 每次线性扫描固定 Routes 名单；EquipmentProgramLayout 构造期已经用 `m_RouteById` 建立唯一 Route 索引。
+- Layout 增加正式 `HasRoute`，有效 route 直接查询现有索引；两域 Runtime 在 capability 和 route 有效性检查后统一调用。未知 route、无效 route、capability disabled 和后续 `TryReadActionContext` 行为不变。
 - Action event/context 解析中的 route 存在检查从 route 数量级字符串/结构比较收敛为一次字典查找；无新增缓存、fallback 或第二配置源。静态核对 layout 构造唯一索引、两域接口调用链和差异检查；未编译、运行回放或采样。
 
 ### AP105 Action Admission 父链重复解析（2026-09-29，已实施，本轮未编译）
@@ -810,12 +820,9 @@
 
 - Fixed 与 Float32 Locomotion 的 Action Motion Curve 每次 X/Z 位移解析都通过 `RequireTimelineCurve` 在 `Dictionary<int, Curve>` 中查找两次；曲线、constant index 和 Ability 执行数据在装配后固定。
 - 两域执行曲线改为与 `data.Constants` 对齐的定容数组，装配期按原去重规则解码 Timeline Clip、Motion Curve 和 Action Motion 曲线；运行期用 constant index 直接定位，缺失 curve 仍按原异常失败。
-
 - 每次 Action Motion Curve 解析少两次 hash 查找，曲线求值次数、AP98 的周期总量复用和输出不变。静态核对 `RequireTimelineCurve` 唯一周期消费、两域 BuildExecutionCurves 去重和差异检查；未编译、运行回放或采样。
 
 ### AP109 Locomotion 常量周期重复解析（2026-09-29，已实施，本轮未编译）
-
-
 
 - Fixed 与 Float32 Locomotion 每次 Submit 都重新定位并校验 Turn/Move/Duration/Action Motion Curve 常量；同一 operation 的模式、数值和曲线来自装配后固定 layout，重复校验不产生新业务约束。
 - 两域 Locomotion Runtime 构造期按原检查顺序编译 per-operation profile，保存执行模式、位移模式、Turn/Move 速度、曲线时长、Timed duration ticks 和已解码 X/Z 曲线。周期 Submit、位移解析和 timeline duration 直接读取 profile，删除重复 FindConstant 与逐帧校验。
@@ -826,6 +833,7 @@
 - 两域 Equipment 每次 BeginEvaluation 先调用 InitializeContributions 读取并冻结完整 Equipment aggregate，再调用 CancelOrphanedPending 再次读取；两次调用之间没有其它状态写入。EndEvaluation 保留 orphan pending 检查。
 - EquipmentRuntimeControl 新增 PrepareEvaluation，一次读取 aggregate 后判断并安装缺失 contribution；mutation 提交后的本地 aggregate 已包含写入结果，继续用同一 aggregate 判断并取消 orphan pending。原 mutation try/catch、WriteState、effect 提交和 lifecycle 顺序不变。
 - 每个 Equipment enabled Ability evaluation 少一次完整 aggregate 冻结和 slots 复制；contribution 缺失与 pending 取消同帧时的最终状态不变。静态核对两域 Begin/End 调用链、mutation 异常路径和 aggregate WithSlot/ResolvePending 所有权；未编译、运行回放或采样。
+
 ### AP111 Equipment Slot 状态线性扫描（2026-09-29，已实施，本轮未编译）
 
 - EquipmentStateAggregate 构造和 AdoptPrepared 都把 Slots 按 SlotId Ordinal 排序并拒绝重复，但 RequireSlot、WithSlot 和 WithSlotAndResolvedPending 每次从头线性比较；Equipment operation 和 mutation 会重复访问同一 aggregate。
@@ -855,12 +863,12 @@
 - 两域 Character Evaluation 对每个 Ability invocation 处理 ActionLifecycle ingress 时，都调用 `OwnsAction` 线性扫描 source state 的全部 ActionInstances，形成 invocation 数、ingress 数和 action 数的周期乘积。ActionInstanceId 由 Character Handle Allocator 生成唯一非零句柄，source state 的 ActionInstances 是正式 owner 名单。
 - 两域 binding 新增按正式 action capacity 预留的生命周期字典；每次 Evaluate 先用 source ActionInstances 重建 `InstanceId -> invocation`，周期分发用一次 ulong 查找定位 owner，未知 instance 继续忽略。删除重复线性 `OwnsAction`，用 invocation 引用相等判定目标。
 - owner 重建从 action 数量级执行一次；ingress 分发从每次全 action 扫描收敛为一次哈希查找。ingress 顺序、未知行为、ability 过滤和 ApplyActionIngress 时序不变。静态核对 allocator 唯一性、两域调用链、字典生命周期和差异检查；未编译、运行回放或采样。
+
 ### AP116 Action Window ability 线性查找（2026-09-29，已实施，本轮未编译）
 
 - 两域 Character Runtime Ports 把窗口查询委托回 Character Evaluation，每次都按 skill 线性遍历全部 invocation；Control module 的连招、恢复和退出窗口检查会重复这项定位。AP114 已建立构造期 `AbilityId -> invocation` 唯一索引。
 - 两域 binding 增加正式窗口查询：未知 skill 继续返回 false，命中 skill 直接定位 invocation 并读取 projection；两域 Runtime Ports 改为绑定该方法，删除 Character Evaluation 的重复线性辅助。projection 扫描和 evaluation 生命周期边界保持。
 - 每次窗口查询从 invocation 数量级比较收敛为一次 Ordinal identity 哈希查找；可见输出、未知 skill 行为和查询时序不变。静态核对 Control delegate 合同、窗口 projection 唯一消费、两域 Runtime 构造和差异检查；未编译、运行回放或采样。
-
 
 ## 可靠性问题独立保留
 
@@ -889,3 +897,145 @@
 用户已授权开始性能优化。上文未实施条目继续作为候选，标明“已实施”的条目不再计为未修复；编译、运行和耗时证据分别记录，不用源码修改代替验证结果。
 
 Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964ebf61c4cd3a5300db396ad91a5`。修改前正式 compile 返回 `WorkspaceEditorInUse`，没有产生 RunId，也没有启动 Unity。随后用户明确“不用你起进程”，本轮不再启动 Unity、编译或采样进程，不建立替代验证路径。仅做代码与差异检查；不新增测试，运行结果和性能收益未验证。
+
+## 2026-09-29 续查：Span Capture 39KB/帧静态复核
+
+本轮基于 capture.20260929-134336.3c5acd66f8e340e78cb73390ef29c09e（Player 7eda33a33be80142a355f59d，Span 模式，instrumentation_identity 4c905aef...）。该 Player 已包含 AP01–AP116 全部已实施改动。仅做静态检查和原始采集数据解析，未启动 Unity、编译或采样。
+
+### 已确认数据
+
+| 指标 | 结果 |
+| --- | ---: |
+| GC 总量 | 332,888,717 B |
+| GC 均值/帧 | 39,172.6 B |
+| GC 中位数/帧 | 2,698 B |
+| GC P75 / P95 / P99 | 46,829 / 124,207 / 199,744 B |
+| 零分配帧 | 0 / 8498 |
+| 分配 >20KB 帧 | 2536 帧（29.9%），贡献约 224.8 MB |
+| 最大帧 | 16.65 MB × 4 帧（render_frame 2088、4980、5803、6353），合计 66.5 MB |
+
+写屏障 GC_end_stubborn_change 占 1819/83074 = 2.19% CPU 样本。实际分配入口（Object::New、Array::NewSpecific、GC_malloc_kind、GC_gcj_malloc、GC_allocobj）合计约 0.08%。GC 相关 CPU 主要来自引用字段写入的 dirty 标记，不是分配调用本身。
+
+### 本轮逐路径静态排查结果
+
+以下路径已逐文件读源码并确认当前无周期性托管分配：
+
+| 路径 | 结论 |
+| --- | --- |
+| CharacterPoseNativeGraphRuntime m_OutputCache | 已用 Reuse 模式，PortValue 对象逐 handler 复用；每帧仅 Dictionary.Add 写已有实例引用 |
+| CharacterPoseNativePortValues.cs 全部 8 种 PortValue | sealed class，静态 Reuse 方法刷新字段，new 仅首次 handler 调用触发 |
+| CharacterPoseNativeGraphEvaluator PrepareFrame/EvaluateFrame | 字段集合 m_PrepareOrder/m_ActiveHandlers/m_SourceRequests 构造期持有，帧内 Clear/Add |
+| CharacterPoseNativeFrameCoordinator.RunFrame | 返回 readonly struct CharacterPoseNativePublicationResult |
+| CharacterPoseNativeEvaluationResult | readonly struct |
+| TimelineRuntimePresentationEvaluator | TimelineRuntimeEvaluationSegments/Operations/ScenePresentationSample 均 readonly struct |
+| TimelineRuntimePlaybackSnapshot | 仅 Capture 调用（快照入口，非逐帧） |
+| TimelineRuntimeService.Prepare 路径 timeline:{...} | 创建路径，非逐帧 |
+| AnimationSlotBlendJob | 所有 new 为 struct 写入预分配数组，无托管分配 |
+| AnimationBlendStackRuntime.BuildBoneAlphaLayout | 仅构造期调用（line 460） |
+| FootPlacement 全部 Result 类型 | readonly struct（HardConstraintResult、LandingQueryResult、InterpolationResult、ResolvedFootResult 等） |
+| ACL SourceGraph/CaptureJob | NativeArray + struct job，无 managed alloc |
+| CharacterPoseNativeDomainInstance/FrameCoordinator | 委托包装，无帧内 new |
+
+异常路径字符串拼接（CharacterPoseNativeGraphRuntime.cs 等）仅在 catch 块触发，不构成周期分配。
+
+### 剩余边界
+
+39 KB/帧 均值来源分散，静态分析无法进一步归因到具体单行代码。剩余因素包括：
+
+1. **写屏障压力**：m_OutputCache.Add(key, value) 每帧为每个节点每个端口写一次 class 引用到 Dictionary。Dictionary 内部 bucket 和 PortValue 对象都在老生代，触发 Boehm GC 的 stubborn change 检查。改为定容数组索引可消除哈希查找成本，但写引用到数组同样触发写屏障，写屏障本身不因替换容器消除。
+2. **Unity 引擎内部分配**：SkinnedMesh 更新、渲染管线、开发构建 Profiler 采样自身均可能在 GC 堆上分配。不在本仓库源码控制范围内。
+3. **IL2CPP 运行时**：泛型共享、接口调用等有元数据/委托开销，但不是代码级可修的周期分配。
+4. **分配调用栈缺口**：当前 unity-profiler.raw 未解析为分配调用栈，无法把每帧 39 KB 对齐到具体函数。需要 Editor 内开 Allocation Call Stacks 重新采集后才能继续归因。
+
+### 2026-09-29 仿真链与 Camera/EventGraph 续查
+
+以下路径已逐文件读源码并确认当前无周期性托管分配：
+
+| 路径 | 结论 |
+| --- | --- |
+| CameraDomainRuntime 逐帧路径 | ActiveCameraRequest/CameraSequenceRequest/CameraEffectRequest/CameraResponseRequest/CameraTargetSelectionRequest/CameraFrameInput 均 readonly struct，写入 field-held List |
+| NativeEventGraphRuntime Execute | 正常路径无 new 引用类型；EventGraphExecutionFailure 仅异常路径 |
+
+### 仿真 Pipeline 合同周期分配
+
+每次 Fixed Pipeline Transaction Execute 的托管分配链（Fixed 域）：
+
+1. FixedCharacterEvaluationRuntime.Evaluate 返回 `new FixedCharacterEvaluationResult(...)`（sealed class），内含 `facts.ToArray()`、`presentation.ToArray()`、`trace.ToArray()`、`timelineAdvances.ToArray()`、`timelineStops.ToArray()` 共 5 个数组。
+2. FixedPipelineTransaction.CompleteStep 构造 `new SimulationActorTickResult[finalizedCount]`（class 数组）和 `new SimulationActorState[...]`（struct 数组）。
+3. `SimulationActorTickResult.FromOwnedOutputs` 每角色 `new SimulationActorTickResult(...)`（sealed class），持有上述评估结果中的 3 个数组。
+4. `SimulationTickResult.FromSortedOwnedActors` 每次 `new SimulationTickResult(...)`（sealed class）。
+
+2 角色每 Tick 约 17 个托管分配（2 评估结果 + 10 数组 + 2 TickResult + 3 外层）。这些是管线不可变结果所有权合同的一部分：评估内部工作 List 每帧复用，结果必须拷贝到独立数组供下游只读消费，否则复用会覆盖已发布数据。消除此分配需要改为池化+消费后归还的生命周期管理，涉及 Commit/Discard 语义变更，需要业务决策后实施。
+
+### 结论
+
+业务代码层面，逐帧/逐 Tick 路径已无可静态消除的托管分配。剩余 39 KB/帧 均值中：
+- 写屏障来自 PoseGraph 输出缓存 Dictionary.Add 写 class 引用（不可通过替换容器消除）。
+- 仿真合同分配约 17 个/ Tick，需要所有权模型变更。
+- Unity 引擎内部和 IL2CPP 运行时分配不在本仓库控制范围内。
+- 具体函数归因需要 Allocation Call Stacks 采集。
+
+### AP117 PoseGraph 输出缓存定容数组（2026-09-29，已实施，本轮未编译）
+
+- CharacterPoseNativeGraphRuntime 的 m_OutputCache 原为 Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>，每次 Read 输出端口时按 (NodeId, PortId, Stage) 三元组哈希查找，每帧 Clear 后逐端口 Add class 引用。
+- 改为 m_OutputSlotIndices（Dictionary<(PoseNodeId, string), int>，Initialize 时按输出端口注册顺序分配连续索引）和 m_OutputCacheSlots（CharacterPoseNativePortValue[]，容量 = outputPortCount * 2）。Read 路径从 slot 字典取索引后按 stage 偏移直接数组读写，消除 PortKey 哈希计算和 Dictionary bucket 遍历。
+- 4 处 Clear 统一走 ClearOutputCache() 内 Array.Clear。PoseNodeId 实现 IEquatable，string 用 Ordinal 比较，tuple key 语义与既有 m_InputPorts 一致。
+- 减少的是逐端口哈希查找成本；写引用到数组仍触发 Boehm GC 写屏障，不因容器替换消除。静态核对端口注册唯一性、stage 枚举范围（Prepare=2/Evaluate=3 偏移 0/1）和 Clear 调用点语义；未编译。
+
+### 补充排查确认（2026-09-29 第二轮）
+
+| 路径 | 结论 |
+| --- | --- |
+| AnimationBlendStackRuntime BeginFrame/Advance/PrepareSlotJob | 字段预分配数组和 struct 操作，无托管分配 |
+| TimelineRuntimeStepCoordinator | 无周期 new 引用类型 |
+| TimelineRuntimeComposition.PresentationPlaybackState | 构造期分配，非逐帧 |
+| CharacterFinalPoseNativePublication / PropertyWriter | 构造期数组，帧路径无 new |
+| m_GraphInputs Dictionary | graph input 端口数量远小于 output，保留 Dictionary（收益不够大，不为此增加映射结构） |
+
+### 独立缺陷：EventIdBuilder.Transform 栈溢出越界（2026-09-29，偶发）
+
+- Capture capture.20260929-230200（Player 7eda33a33be80142a355f59d，Span 模式）中 Player transport 在 800 帧后断开。
+- Player log 中 `EventIdBuilder.Transform()` 抛出 `IndexOutOfRangeException`，沿 `WriteByte` → `WriteText` → `Append` → `TimelineToActionCommandBridge.CreateEventId` 调用。
+- `EventIdBuilder` 是 `ref struct` SHA-256 实现，`m_Block` 固定 `Span<byte>` 64 字节。`Transform` 内 `stackalloc uint[64]`（256B）和 `WriteText` 内 `stackalloc byte[768]` 在调用链深度较大时合计超过 1KB 栈分配。WPR 采样增加 CPU 压力，偶发触发栈溢出破坏 `m_Block` 指针。
+- 同一 Player 后续 Capture capture.20260929-230500 正常完成（8611 帧/2536 tick/0 丢弃），确认这是偶发条件。
+- 该 bug 与托管分配无关，属于 `ref struct` 栈分配在高压下的可靠性缺陷。修复方向：将 `WriteText` 和 `Transform` 的 stackalloc 改为 `stackalloc` 上限或预分配字段，或限制递归深度。需业务决策后实施。
+
+### 2026-09-29 Capture capture.20260929-230500 结果（与基线同构建身份）
+
+| 指标 | 值 |
+| --- | ---: |
+| FPS | 203.85 |
+| Tick/s | 60.04 |
+| 丢弃 Tick | 0 |
+| GC 均值/帧 | 38,671 B |
+| GC P95 | 124,199 B |
+| Main Thread 均值 | 4.88 ms |
+| Main Thread P95 | 6.52 ms |
+
+该 Player 未包含 AP117 PoseGraph 输出缓存改动（改动在工作区但未构建）。FPS 和 GC 与基线差异属运行波动范围。
+
+### AP118 表现域 Actor 上下文探针补齐（2026-09-29，已实施，本轮未编译）
+
+- `CharacterPresentationDomainRuntime.PresentationFrame` 在方法体开头调用 `PerformanceInstrumentationContextRuntime.BeginActor(m_ActorId.Value, 0, 0)`，在 finally 块的清理路径末尾调用 `EndActor()`。
+- 此前 `BeginActor` 在整个仓库无调用者，导致所有 Span 采集的 `actorId` 均为 0（global），无法在采集数据中按角色拆分 PoseGraph Evaluate、Foot Placement 等表现阶段耗时。
+- 加上后，`PresentationFrame` 内的所有嵌套探针（`pose-graph.evaluate`、`pose-graph.prepare`、`foot-placement`、`full-body-ik` 等）会继承 actor 上下文，Span 记录的 `actorId` 字段将携带真实 ActorId。
+- `presentation.animation` 外层探针仍在 `BeginActor` 之前由织入器捕获上下文，外层保持 global；拆分在子探针级别生效。
+- 静态核对 `EndActor` 在 finally 块中位于所有资源清理之后，确保异常路径也能正确弹出上下文。未编译。
+
+## 2026-09-29 补充采集与 Foot 路由续查
+
+按用户要求重新采集：`capture.20260929-164123.11c54cf735404c29b63af6a4fe309738`，Player `c0dd70576c417e0e223ec658`，Span 模式，固定输入 2536 Tick，耗时约 42.246 秒。该 Player 包含 AP01–AP116 及 AP117 的当时工作区输入，不包含 AP118 和本节 AP119。结果为 FPS 约 151.54、Tick/s 约 60.03、0 丢弃 Tick、Main Thread 均值约 6.57 ms、GC 均值约 50.1 KiB/帧。表现事务均值约 3.74 ms/帧，Pose Evaluate 均值约 1.90 ms/帧，Foot Placement 均值约 0.35 ms/帧；逻辑 Tick 均值约 1.67 ms，KCC 约 0.30 ms。单个 Tick 322 的 Character Evaluate 慢样本约 44.66 ms，其中 Ability Tick 约 36.28 ms，需要按原始 Span 定位到具体业务调用后再改。
+
+### AP119 Foot 生物力学路由只求运行时消费点（2026-09-29，已实施，本轮未编译）
+
+- 新采集的解析热点包含 `AnimationFootBiomechanicalStepCurveSet.Sample`（约 1200 个包含样本）。源码核对发现运行链把 25 个路由点先构造进 `FixedList4096Bytes<AnimationFootBiomechanicalRouteSample>`，随后只按事件相位取相邻两点并调用 `Interpolate` 得到一个当前样本；其余 23 个点不进入运行时输出。
+- `AnimationFootBiomechanicalStepCurveSet` 新增 `SampleCurrent`：保留 landing phase、opposing rotation、索引计算和两点构造的同一公式，只求相邻两点后复用原 `Interpolate`。`AnimationPredictedFootStepCurveSet.SamplePrepared` 改走该方法，删除临时 25 点列表和二次索引。
+- 整条 25 点路由的 `Sample` 保留，编辑器 Foot 重建校验仍用它核对每个路由点；这不是兼容旁路。预测步根骨骼、踝、髋、planar route 和 clearance 仍由正式 `AnimationBiomechanicalRoutePage` 承载，Blend 校验、Motion Matching 编解码和 Bind 复制继续消费这些完整页。
+- 静态核对唯一运行时调用点、编辑器整条路由校验、样本构造公式和插值边界；未编译、未重新构建 Player、未重新采样，不能声称实测耗时或分配收益。
+
+### AP120 Action Instance 生命周期索引（2026-09-30，已实施，本轮未编译）
+
+- Tick 322 的原始 Span 树显示整 Tick 约 59.77 ms、Character Evaluate 约 44.66 ms、Ability Tick 聚合约 36.28 ms；`ability-tick` 下没有更深业务探针，因此沿源码继续排查。`OperationExecutionTopology` 的状态槽查找已经按 operation/semantic 定容索引，不是周期扫描来源。
+- 两域 `ActionStateStore` 的 `TryGetInstance`、`TryFindInstanceIndex` 和 `ContainsInstance` 原来都线性扫描全部 Action instance；这些入口服务技能执行栈、action lifecycle 和写入替换，属于运行链重复拓扑查找。
+- Fixed/Float32 `CharacterActionRuntimeState` 现在各自持有 `InstanceId -> index` 定容字典。`AddActionInstance`、`ReplaceActionInstanceAt` 同步维护；`Restart`/`Restore` 整表替换后重建并在重建时拒绝重复正式身份。索引是 Action state 的正式读取结构，不是 Store 侧缓存或兼容旁路。
+- 两域 Store 的三条实例查找改为一次字典访问；`RequireActive`、`RequireActiveTransient`、`RequireActive(FixedActionInstanceReference)` 等调用沿用原状态检查和语义。按 Context/Skill/请求匹配的扫描保留，因为它们不是唯一身份查找。静态核对两域接口唯一实现、状态事务克隆、Restore 和 Store 写入链；未编译、未采样。

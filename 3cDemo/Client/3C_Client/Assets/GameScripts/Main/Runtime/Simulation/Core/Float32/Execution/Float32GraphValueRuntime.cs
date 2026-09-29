@@ -88,8 +88,6 @@ namespace ThirdPersonSimulation
         internal void Reset()
         {
             ValueStack.Clear();
-            for (int index = 0; index < InputBuffers.Count; index++)
-                InputBuffers[index].Clear();
         }
     }
 
@@ -213,7 +211,6 @@ namespace ThirdPersonSimulation
             int depth = m_InputBufferDepth;
             Float32ValueInputBuffer buffer = RequireInputBuffer(depth);
             m_InputBufferDepth++;
-            buffer.Clear();
             try
             {
                 for (int i = 0; i < inputs.Length; i++)

@@ -53,8 +53,6 @@ namespace ThirdPersonSimulation.Fixed
             Presentation.Clear();
             Trace.Clear();
             ValueStack.Clear();
-            for (int i = 0; i < ValueBuffers.Count; i++)
-                ValueBuffers[i].Clear();
             TimelineMotionWarps.Clear();
             ActionWindowProjections.Clear();
             ActionWindowProjectionKeys.Clear();

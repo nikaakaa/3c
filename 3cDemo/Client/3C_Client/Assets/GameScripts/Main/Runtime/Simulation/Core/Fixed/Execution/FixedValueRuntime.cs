@@ -346,7 +346,6 @@ namespace ThirdPersonSimulation.Fixed
             ReadOnlySpan<CompiledValueInputBinding> inputs = m_Layout.ValueInputs(operation.Handle);
             int depth = m_InputBufferDepth++;
             FixedValueInputBuffer buffer = RequireInputBuffer(depth);
-            buffer.Clear();
             try
             {
                 for (int i = 0; i < inputs.Length; i++)

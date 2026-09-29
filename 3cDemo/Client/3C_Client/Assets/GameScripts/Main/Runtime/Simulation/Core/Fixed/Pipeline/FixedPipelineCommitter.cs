@@ -64,7 +64,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!batch.IsValid)
                 throw new ArgumentException("Commit batch is invalid.", nameof(batch));
-            m_DispositionsByEvent.Clear();
             try
             {
                 for (int i = 0; i < batch.OutputDispositions.Dispositions.Count; i++)

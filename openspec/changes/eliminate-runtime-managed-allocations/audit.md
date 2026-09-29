@@ -603,6 +603,12 @@
 - 删除逐 Actor `Array.Clear`，保留写入前计数复位。同一 Commit 内新 Actor 覆盖当前有效范围；扩容只复制旧有效数量，容量尾部不进入排序或发布。输出数量检查、排序键、Suppress、Replace/Retire 和异常传播不变。
 - 两个数值域同步修改，静态核对 OrderedOutput 字段、数组唯一消费边界、容量增长和异常路径；未编译、运行回放或采样。
 
+### AP73 Commit Disposition 字典入口重复清理（2026-09-29，已实施，本轮未编译）
+
+- 两域 Committer Adapter 在 Commit 入口清空 disposition 字典，finally 又清空一次。字典由同一 Adapter 私有复用，值是 readonly struct；上一轮成功或异常的 finally 已经形成唯一空表边界。
+- 删除入口重复 Clear，保留 finally 清理。批内 disposition 仍按 SourceEventId 加入并检查重复，随后由 Commit 消费；异常时保留的中间表不会跨 Commit 暴露。
+- 两个数值域同步修改，静态核对字典唯一写入消费边界、上一轮 finally、异常传播和重复 disposition 检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

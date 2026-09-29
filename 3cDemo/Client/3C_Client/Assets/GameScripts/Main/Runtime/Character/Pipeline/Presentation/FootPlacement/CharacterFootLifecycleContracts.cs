@@ -1633,6 +1633,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootStateEvaluation
     {
+        readonly CharacterFootStateFrame m_Frame;
+
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
             in AnimationFootMotionRuntimeSample formalFootMotion,
@@ -1646,7 +1648,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             FormalFootMotion = formalFootMotion;
             LandingPrediction = landingPrediction;
-            Frame = frame;
+            m_Frame = frame;
             Stride = stride;
             Grounded = grounded;
             GoalRoot = goalRoot;
@@ -1656,7 +1658,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSide Side { get; }
         internal AnimationFootMotionRuntimeSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
-        internal CharacterFootStateFrame Frame { get; }
+        internal ref readonly CharacterFootStateFrame Frame => ref m_Frame;
         internal CharacterFootStrideRequest Stride { get; }
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }

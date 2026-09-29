@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateEvaluation evaluation,
             out Completion receipt)
         {
-            CharacterFootStateFrame frame = evaluation.Frame;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             var formalFootMotion = evaluation.FormalFootMotion;
             var landingPrediction = evaluation.LandingPrediction;
             CharacterFootMotionSettings settings = frame.Settings;
@@ -152,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out CharacterFootSwingMotionResult result,
             out Completion receipt)
         {
-            CharacterFootStateFrame frame = evaluation.Frame;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             AnimationFootMotionRuntimeSample formalFootMotion = evaluation.FormalFootMotion;
             CharacterFootLandingPredictionResult landingPrediction = evaluation.LandingPrediction;
             float timeToLandingSeconds = formalFootMotion.HasPredictiveLanding
@@ -370,7 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correction,
             in CharacterFootSupportTarget support)
         {
-            CharacterFootStateFrame frame = evaluation.Frame;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
             float rotationWeight = context.Contact.HasContact
                 ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
@@ -473,7 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleTransitionFact lifecycleTransition,
             out CharacterFootSwingMotionResult result)
         {
-            CharacterFootStateFrame frame = evaluation.Frame;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             bool hasContact = context.Contact.HasContact;
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
@@ -651,7 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateEvaluation evaluation,
             CharacterFootResolvedOutcome outcome)
         {
-            CharacterFootStateFrame frame = evaluation.Frame;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             CharacterFootPlacementAnimatedFootPose foot = frame.AnimatedFoot;
             var identity = new CharacterFootPlacementIdentity(
                 frame.FrameSequence, frame.CompletionIdentity,

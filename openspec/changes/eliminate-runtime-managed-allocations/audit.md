@@ -1781,3 +1781,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animated Pose 的左右脚、pelvis local position 自动属性每次读取复制结构；单只 animated foot 含 11 个 Vector3/Quaternion 字段，support、prediction、swing、constraint frame 和诊断每帧多次读取。
 - Animated Pose 改为 backing field 返回只读引用；EvaluateFrame 绑定左右脚与 pelvis 位置。support、prediction、swing、constraint frame 和 Foot Placement math 的只读 animated foot 入口改为 `in` 接收。采样、求值顺序和输出写入不变。
 - 该改动删除 Foot Placement 周期中 animated foot 的重复结构拷贝。静态核对调用链只读、引用生命周期覆盖调用、输出存储仍保留必要拷贝；未编译、未采样，不能声称实测耗时收益。
+
+### AP244 Foot lifecycle evaluation frame 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStateEvaluation.Frame` 自动属性每次读取复制完整 state frame；Lifecycle 的 Evaluate 和 Resolve 系列每次进入都复制，frame 内含 swing、ground path、support、lock、settings 等大结构。
+- Frame 改为 backing field 返回只读引用，五条主路径绑定同一只读局部。后续 resolver、interpolation、transition 和 support 查询仍按原 `in` 合同读取 frame，求值顺序与输出不变。
+- 该改动删除 Foot Placement lifecycle 周期中的整份 state frame 拷贝。静态核对 evaluation 为 `in` 参数、frame 生命周期覆盖调用、消费链只读；未编译、未采样，不能声称实测耗时收益。

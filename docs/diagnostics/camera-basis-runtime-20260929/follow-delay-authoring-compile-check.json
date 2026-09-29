@@ -1,0 +1,60 @@
+{
+  "scope": "C#编译检查；未加载Temp产物，未执行PublishDelay，未生成v9资产或运行画面。",
+  "compiler": "C:/Program Files/Unity/Hub/Editor/2022.3.62f2c1/Editor/Data/DotNetSdkRoslyn/csc.dll",
+  "checks": [
+    {
+      "name": "Unity整体编译",
+      "result": "blocked",
+      "errors": [
+        "OperationStateMachineRuntime.cs:267 参数2/3 int不能转换为ulong"
+      ]
+    },
+    {
+      "name": "相机合同程序集",
+      "result": "passed",
+      "response": "Temp/CameraDelayCompile/contracts.rsp",
+      "basis": "Unity生成的1900b0aEDbg.dag响应文件，仅将输出重定向到Temp"
+    },
+    {
+      "name": "完整Content.Editor程序集",
+      "result": "blocked",
+      "errors": [
+        "缺少ThirdPersonCharacter.Animation.ref.dll"
+      ]
+    },
+    {
+      "name": "CorinCameraResourcesAuthoring.cs",
+      "result": "passed",
+      "response": "Temp/CameraDelayCompile/corin-authoring.rsp",
+      "basis": "Unity同版本编译器、框架/编辑器/Newtonsoft真实引用及本次相机合同输出；只编译此生产作者文件"
+    }
+  ],
+  "sources": [
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CameraDelaySettings.cs",
+      "sha256": "8219ca8414f8f0c37cd87c840ba3b83b7de3a965ec5dc712aea04055ffaa477e"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CharacterCameraProfile.cs",
+      "sha256": "dd5201118ceab675d4178c2cb81bf0f88b8c5cc61d060b1b55c45e041925df25"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CharacterCameraProjectionPayload.cs",
+      "sha256": "e480dbe36eef486df835988a3188c37f9d7bfb8247153cb3825f4bbdc2e7d67a"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/CorinCameraResourcesAuthoring.cs",
+      "sha256": "a84b2a7643434b047d3b4a3efdad482f0b7ec0913aca3fab0517d8283e4939d2"
+    }
+  ],
+  "responses": [
+    {
+      "path": "Temp\\CameraDelayCompile\\contracts.rsp",
+      "sha256": "4963dee62e7d57455fd368934180a108d75bbeb6ecefe6ee610e4fa932708b58"
+    },
+    {
+      "path": "Temp\\CameraDelayCompile\\corin-authoring.rsp",
+      "sha256": "e16f2c15ac7ba0725a9707ad07645b5f155c82f24ac348cd13b071d61f583567"
+    }
+  ]
+}

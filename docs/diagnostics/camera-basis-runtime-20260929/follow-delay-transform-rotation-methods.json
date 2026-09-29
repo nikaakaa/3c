@@ -1,0 +1,95 @@
+{
+  "type_index": 5417,
+  "methods": [
+    {
+      "ordinal": 16,
+      "definition_index": 44101,
+      "definition_va": 1736639894926,
+      "rva": 513923296,
+      "raw_hex": "58240000dcbd0a0bffffffff29150000ad1100060000ffffffff86080000",
+      "token": 100667821,
+      "name_identity": 185253340,
+      "name": "get_forward",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Vector3",
+        "type_ref": "0x7ff9752f3530",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497582907736,
+      "runtime_raw_hex": "58e1790100050000e0d85e92f97f0000400cbf73f97f0000ffffffff0000000045ac000000000000ad110006ffff8608000000000000000080abdc0a00050000",
+      "runtime_matches_definition": true,
+      "code_va": 140709879273696,
+      "runtime_name_matches": true,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 18,
+      "definition_index": 44103,
+      "definition_va": 1736639894986,
+      "rva": 513921760,
+      "raw_hex": "b7260000afb90a0cffffffff29150000af1100060000ffffffff86080000",
+      "token": 100667823,
+      "name_identity": 202029487,
+      "name": "get_rotation",
+      "attributes": 2182,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Quaternion",
+        "type_ref": "0x7ff9752f5b20",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497582907864,
+      "runtime_raw_hex": "58e1790100050000e0d25e92f97f0000b085bd73f97f0000ffffffff0000000047ac000000000000af110006ffff86080000000000000000d0abdc0a00050000",
+      "runtime_matches_definition": true,
+      "code_va": 140709879272160,
+      "runtime_name_matches": true,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 104,
+      "definition_index": 44189,
+      "definition_va": 1736639897566,
+      "rva": 513923744,
+      "raw_hex": "11510b0000c70a15a4ca000029150000051200060010ffffffff81080100",
+      "token": 100667909,
+      "name_identity": 353027840,
+      "name": "get_rotation_Injected",
+      "attributes": 2177,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 51876,
+          "definition_va": 1736630857432,
+          "raw_hex": "ccb6310675d91e24a1c6b4e1",
+          "name_identity": 50502561,
+          "name": "ret",
+          "token": 134223936,
+          "type": {
+            "display": "Quaternion&",
+            "type_ref": "0x7ff975e97420",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497582913368,
+      "runtime_raw_hex": "58e1790100050000a0da5e92f97f0000d015bd73f97f0000ffffffff000000009dac00000000000005120006ffff8108001001000000000098b8dc0a00050000",
+      "runtime_matches_definition": true,
+      "code_va": 140709879274144,
+      "runtime_name_matches": true,
+      "signature_complete": true
+    }
+  ]
+}

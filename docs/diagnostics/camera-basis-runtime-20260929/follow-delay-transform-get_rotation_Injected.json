@@ -1,0 +1,16 @@
+{
+  "begin": 513923744,
+  "instructions": [
+    [
+      513923744,
+      "mov",
+      "rax, qword ptr [rip - 0x19611a5f]"
+    ],
+    [
+      513923751,
+      "jmp",
+      "rax"
+    ]
+  ],
+  "boundary": "\u8bfb\u53d6\u5230\u5c3e\u8df3\u8f6c\uff0c\u65e0unwind\u8303\u56f4"
+}

@@ -1,0 +1,83 @@
+{
+  "begin": 513921760,
+  "end": 513921810,
+  "unwind": 73618576,
+  "byte_sha256": "1b8bdac6996e5ae63bc84cdebdcb747797fe4c5fc72e6bdb9637fb025e22b5ef",
+  "instructions": [
+    [
+      513921760,
+      "push",
+      "rsi"
+    ],
+    [
+      513921761,
+      "sub",
+      "rsp, 0x30"
+    ],
+    [
+      513921765,
+      "mov",
+      "rax, rdx"
+    ],
+    [
+      513921768,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      513921771,
+      "xorps",
+      "xmm0, xmm0"
+    ],
+    [
+      513921774,
+      "movaps",
+      "xmmword ptr [rsp + 0x20], xmm0"
+    ],
+    [
+      513921779,
+      "lea",
+      "rdx, [rsp + 0x20]"
+    ],
+    [
+      513921784,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      513921787,
+      "call",
+      "qword ptr [rip - 0x196112b9]"
+    ],
+    [
+      513921793,
+      "movaps",
+      "xmm0, xmmword ptr [rsp + 0x20]"
+    ],
+    [
+      513921798,
+      "movups",
+      "xmmword ptr [rsi], xmm0"
+    ],
+    [
+      513921801,
+      "mov",
+      "rax, rsi"
+    ],
+    [
+      513921804,
+      "add",
+      "rsp, 0x30"
+    ],
+    [
+      513921808,
+      "pop",
+      "rsi"
+    ],
+    [
+      513921809,
+      "ret",
+      ""
+    ]
+  ]
+}

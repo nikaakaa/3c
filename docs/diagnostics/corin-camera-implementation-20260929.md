@@ -368,3 +368,29 @@ Unity编译尝试被其他窗口的OperationStateMachineRuntime.cs:267两处CS15
 本批检查连接时8080无监听，使用已安装正式server CLI恢复服务，随后同一 e852139597e42532 实例重新注册；没有重启Editor、改变全局实例或运行Play。实例回读项目路径正确、compiling=false、playing=false。Console仍存在OperationStateMachineRuntime.cs:267两处int→ulong编译错误，已加载程序集列表没有相机程序集，WithFraming反射检查为false。因此上一批Zoom／Stretch修正仍未完成生产求值验证，不能当作新可测版本。没有因这些外部错误修改逻辑模块；本批只做证据／文档检查，不新增测试、不运行replay。
 
 下一实施所需缺口已缩小为：模式枚举原始值与角色tag的对应、方向历史窗口长度与向量生产、状态过渡曲线选择与稳定时间、方向控制点算法逐项对应、跟随／构图阻尼最终消费。必须沿现有Profile→投影→SequenceEvaluator正式链整体接入，不能先把0.15机械替换为0.5或增加未被消费的备用配置。
+
+## Delay 的正式作者数据链（待统一生成资产）
+
+本批按“其他窗口编译受阻时先完成C# authoring，之后统一生成”的授权修改生产源码：CorinCameraResourcesAuthoring.Publish加入PublishDelay；它从同一Default_Normal读取9个模式的27组轨道参数、9条模式过渡及升降阻尼。CameraDelaySettings作为Profile的唯一Delay配置，CharacterCameraProjectionPayload携带同一配置，投影版本更新到v9。没有另写运行时JSON读取、备用配置或硬编码的模式名称。
+
+数据覆盖：自动模式选择／动画相关开关、默认raw模式、速度平滑时间、仰角插值分母、每个模式的FOV与最小距离比例、上中下的跟随位置／旋转阻尼与方向倍率、构图阻尼／屏幕中心／死区／软区／bias、状态与tag倍率表、From／To／Style原始值、过渡时间／稳定时间／曲线，以及向上／向下的速度阈值、阻尼倍率、时间和曲线。当前所有动画状态／tag倍率表为空，仍按原始空表导入。曲线保留时间、值、入／出切线、权重、WeightedMode和wrap；m_TangentMode是编辑器切线编辑元信息，求值使用已导入的数值切线。未把模式编号按枚举字段顺序命名。
+
+Profile.Revision加入Delay的Unity序列化正文，缺失Delay在原有Profile完整性边界报错；不在内部逐层增加校验。DefaultSmoothTime沿原Profile字段保存，导入使用同源DEFAULT_SMOOTH_TIME，没有复制第二份同义值。当前数据只进入作者与投影，SequenceEvaluator尚未消费它替换现有SmoothDamp；不得将此次配置链改动写成动态跟随已复刻。现存磁盘Profile尚未PublishDelay，正式投影仍待整体编译恢复后统一生成v9，源码保持在途，不把依赖未生成资产的中间状态提交为可用交付。
+
+检查：定向diff --check通过。Unity刷新编译仍被OperationStateMachineRuntime.cs:267的两处int→ulong错误阻塞。普通dotnet独立构建先遇到缺少project.assets.json，恢复后仍缺失Temp/bin/Debug依赖产物；每次结束均立即关闭build-server。随后使用当前Unity生成的正式编译响应文件和同版本Roslyn，仅将输出重定向到Temp，完整相机合同程序集编译成功。完整Content.Editor编译仍缺少ThirdPersonCharacter.Animation.ref.dll；将检查范围明确缩到本次生产CorinCameraResourcesAuthoring.cs，并使用真实Unity/Editor/Newtonsoft引用与本次合同输出，编译成功。临时编译产物没有装入Editor，不能替代Unity整体编译、正式资产发布、序列化回读或画面验证。证据为follow-delay-authoring-compile-check.json。
+
+方向历史窗口进一步确认：0x13C563A0在0x13C5673A传入3构造+0x58历史对象；0x12CB09E0在0x12CB0A32把该参数写入容量+0x30，覆盖初始化器中的20。结合已有更新函数的循环槽取模与平均方向读取，当前solver使用最近3次更新的向量窗口，不是默认20次，也不是按秒滑动窗口。Accessor+0x254的生产和模式／tag映射仍未闭合。
+
+## Delay 输入生产边界修正：朝向、上一帧控制与状态 tag
+
+本批继续追生产端，修正前文“历史移动方向”的过早概括。CameraDataAccessor.AvatarInfoData位于+0x230，其值类型NEGKDBJNJJL的HNPCBFOEDNP在payload+0x24，正好对应solver读取的Accessor+0x254。不能仅从direction参数名判断它是速度。
+
+JCCGIBAKPEE.NFOMHELEAFH（0x101D4180）接收CameraAvatarPrepareData与NEGKDBJNJJL引用，在0x101D4324～0x101D432D写入这个向量。普通模型分支调用LMEACFFOIMO.EONJLJBFBOF（0x15023480）：从模型+0x1D0取得Transform，读取rotation，再旋转(0,0,1)。该向量常量在829快照RVA0x5363108已读取为00000000/00000000/0000803f；内部调用槽RVA0x540C048与具名UnityEngine.Transform.get_rotation_Injected的尾跳槽一致。因此普通模型分支的输入是模型世界前向，经最近3次更新的平均／归一化后进入方向曲线，不能用BodyPosition差分或输入MoveAxis替换。当前CameraFrameInput已有BodyRotation，但是否与原作模型Transform完全对应仍须沿装配核对。
+
+模型+0xB8非空的另一分支从其+0x10对象取+0xC8向量，当前元数据字段声明为CLJINMONOIB；未证明当前Corin实例选择此分支或此向量的生产，所以不把普通模型结论扩大为全部角色／控制器。通过函数地址搜索元数据可能命中共享代码的另一方法所有者，不能以第一次地址匹配的类型名就给这一分支定性。选定生产函数与IFix分支字节保存为follow-delay-input-branch-bytes，829所读值均为0。
+
+自动模式选择的两组tag已读出：0x14A3BF30通过RVA0x5360730根及+0x2F480静态存储读取+0xC0和+0xC8；它们是List<string>，分别为["Idle"]和["Move","Evade"]，不是枚举数组。0x13A0F700逐个查询，命中任一条即返回true；0x1777AF70从角色BaseData的字符串计数表读取计数并要求大于0。因此后续应对接角色正式tag事实，不能用动画片段显示名或Pose节点名代替。证据为follow-delay-mode-tag-snapshot、follow-delay-mode-0x13a0f700及follow-delay-tag-predicate。
+
+另一个关键字段修正：Accessor+0x3A8是Control，+0x3BC是LastControl，两者都是CameraControlFlag；+0x3BC处的bool是上一帧isRotateStart，绝非当前isRecoveringFromLock（后者在Control+0x10，即+0x3B8）。开启动画相关自动选择时，raw 2入队分支检查当前isRotateStart为false且LastControl.isRotateStart为true，并结合Idle，或带移动控制的Move/Evade tag。raw 3分支包含当前转镜控制及移动开始条件。这里只按原始编号记录触发证据，未按枚举声明顺序推断正式枚举名。控制开关0xF128030还依赖0x101D1D40的全局相机可控条件；该条件含其他状态，需要继续核对，不能无证据常置true。
+
+本批新证据决定了后续实现输入：朝向历史、前后帧转镜控制、角色tag事实三者分开；不能再用“是否正在位移”一个bool覆盖。上一批Delay C# authoring与v9投影仍为未生成资产的在途修改，本批没有更改其源码、运行Play/replay或重编动画／IK。尚未完成动态Delay消费，也没有新的可测版本。

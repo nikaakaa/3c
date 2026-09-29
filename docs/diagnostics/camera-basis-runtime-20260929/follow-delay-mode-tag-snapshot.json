@@ -1,0 +1,27 @@
+{
+  "session": "829",
+  "storage": "0x70017953540",
+  "rows": [
+    {
+      "offset": "0xc0",
+      "list_va": "0x70016679c40",
+      "array_va": "0x70015fca780",
+      "array_type": "String[]",
+      "count": 1,
+      "tags": [
+        "Idle"
+      ]
+    },
+    {
+      "offset": "0xc8",
+      "list_va": "0x70016679c20",
+      "array_va": "0x70015fca750",
+      "array_type": "String[]",
+      "count": 2,
+      "tags": [
+        "Move",
+        "Evade"
+      ]
+    }
+  ]
+}

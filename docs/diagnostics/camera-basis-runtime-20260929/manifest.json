@@ -384,8 +384,32 @@
       "sha256": "a9fbe1d32883c09804801e0aad106a6ee1aee476a1045acd7776b560d7a691f7"
     },
     {
+      "path": "follow-delay-accessor-owner-type.json",
+      "sha256": "2d7484bddd68886da5d54f76d4fbcdd56ab543922829459b2aeae03b0baa2698"
+    },
+    {
+      "path": "follow-delay-accessor-type.json",
+      "sha256": "052a840ef90503e705a97f556ec30b12853964f1d5f92c2d3b5e29c71515a07f"
+    },
+    {
+      "path": "follow-delay-authoring-compile-check.json",
+      "sha256": "02a3354d76d79017d9fc3d6194764a4140585056a606e63d866d67aac435680e"
+    },
+    {
+      "path": "follow-delay-avatar-info-type.json",
+      "sha256": "579228c8f09a484893156997cc41fd74856fed13bca18af47299236f0d555983"
+    },
+    {
+      "path": "follow-delay-avatar-producer-0x101d4180.json",
+      "sha256": "435de27dcddaeb1fc83a718ad78aa6e84a7a59d7876647b72648ac68d6ddf67a"
+    },
+    {
       "path": "follow-delay-branch-bytes.json",
       "sha256": "44263daeb7b3b744bebdcbfdc63e9b088ce846b14bb5cf0eb8a66e1debcd0f17"
+    },
+    {
+      "path": "follow-delay-camera-control-enabled.json",
+      "sha256": "c75ddf6b7426332ceea16fa3d01dd0736b5448cf0fe7b50a65c50b829db71549"
     },
     {
       "path": "follow-delay-config-summary.json",
@@ -412,8 +436,64 @@
       "sha256": "e6aa8f6991a4f6819d44a8391f31922b32c3ebb5dda5a22f73fc286bf4fc2656"
     },
     {
+      "path": "follow-delay-history-constructor.json",
+      "sha256": "20bda9be8bf7bbcfe54a45e2505d751e8614eedd5e64d7d35f32d12356b00387"
+    },
+    {
+      "path": "follow-delay-input-branch-bytes.json",
+      "sha256": "9a0adb2056d206bc60d35e6e56bd21a6e4635a6895fff1aea95f7dbc57158412"
+    },
+    {
+      "path": "follow-delay-mode-0x13a0f700.json",
+      "sha256": "998228b8794f514d2ee2a9d53c446f5d36b9414c4149fdb2a38982a82b21bcec"
+    },
+    {
+      "path": "follow-delay-mode-0xf128030.json",
+      "sha256": "b85343868a59e80b04cb815e1cfb17e92b3dd7808d40ba4ca4fedd3ef590f5f9"
+    },
+    {
+      "path": "follow-delay-mode-tag-snapshot.json",
+      "sha256": "50f55092e307199f4164505c0635158d054c2373f19ee4a64517501076ab2b89"
+    },
+    {
       "path": "follow-delay-mode-type.json",
       "sha256": "415f90b3cfe47a61494cdc52a8a00a7bdacb846a24f9a57cd37f40230d9cee72"
+    },
+    {
+      "path": "follow-delay-model-0x15023480.json",
+      "sha256": "920745cefe4469386acf89b07b959172f564c6557888f80b104031300772fef5"
+    },
+    {
+      "path": "follow-delay-model-forward-constant.json",
+      "sha256": "d6f41c22c6cfc7fc4c69a779f1dd6655237a56ae372280d63de1dc5bb0edb2f0"
+    },
+    {
+      "path": "follow-delay-movement-64733.json",
+      "sha256": "e88b2859a80600fcf13e7e4a14df265d0d4abc6e328d1a214fdf688938655760"
+    },
+    {
+      "path": "follow-delay-solver-constructor.json",
+      "sha256": "7d0ff4947f76afee6d3bf35e07b82333a941b3bcc9de0537f15c28b4dfd256b4"
+    },
+    {
+      "path": "follow-delay-tag-predicate-type.json",
+      "sha256": "9136fa39f0e03cc4e39cacc80a006cde8bf85353abc49503d9f036b6439c6949"
+    },
+    {
+      "path": "follow-delay-tag-predicate.json",
+      "sha256": "e2bd5eb731a7826d126daf05ee050945dd1a2638c6781ce588bffdad2f75dec2"
+    },
+    {
+      "path": "follow-delay-transform-get_rotation.json",
+      "sha256": "9aa1a317c7d92e3dc64b1f82832c897ebb2547e9f2789e7265733a2929b4e6e5"
+    },
+    {
+      "path": "follow-delay-transform-get_rotation_Injected.json",
+      "sha256": "d18b3053a743d8060f7d110d2398e86f854431619b275e2829dc5eba70648fa6"
+    },
+    {
+      "path": "follow-delay-transform-rotation-methods.json",
+      "sha256": "2c0cd51bb9f8dd075e1c6da9b996505f89a2c08e204bf7dba159c94228006a80"
     },
     {
       "path": "hit-shake-assets.json",

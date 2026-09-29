@@ -109,9 +109,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         internal CharacterAclSourceInstance Prepare(
-            AnimationPhysicalSourceIdentity physicalIdentity,
-            CharacterAclSourceKey key,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog,
+            in AnimationPhysicalSourceIdentity physicalIdentity,
+            in CharacterAclSourceKey key,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog,
             in AnimationPoseSourceCaptureBinding capture)
         {
             RequireAlive();
@@ -127,42 +127,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         internal CharacterAclSourceInstance RequireCommitted(
-            AnimationPhysicalSourceIdentity physicalIdentity,
-            CharacterAclSourceKey key)
+            in AnimationPhysicalSourceIdentity physicalIdentity,
+            in CharacterAclSourceKey key)
         {
             int index = RequireIndex(physicalIdentity);
             CharacterAclSourceInstance instance = m_Instances[index];
             if (instance == null || m_Pending[index] != 0 || m_Retired[index] != 0 ||
-                m_Identities[index] != physicalIdentity || !instance.Key.Equals(key))
+                m_Identities[index] != physicalIdentity ||
+                !instance.Key.Equals(in key))
                 throw new InvalidOperationException("ACL source physical identity is not committed.");
             return instance;
         }
 
         internal bool ContainsCommitted(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             RequireAlive();
-            CharacterAclSourceKey key = new CharacterAclSourceKey(sourceId, playerNodeId);
+            CharacterAclSourceKey key = new CharacterAclSourceKey(
+                in sourceId,
+                in playerNodeId);
             for (int i = 0; i < m_Instances.Length; i++)
             {
                 if (m_Pending[i] == 0 && m_Retired[i] == 0 &&
-                    m_Instances[i] != null && m_Instances[i].Key.Equals(key))
+                    m_Instances[i] != null &&
+                    m_Instances[i].Key.Equals(in key))
                     return true;
             }
             return false;
         }
 
         internal CharacterAclSourceInstance RequireCommitted(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             RequireAlive();
-            CharacterAclSourceKey key = new CharacterAclSourceKey(sourceId, playerNodeId);
+            CharacterAclSourceKey key = new CharacterAclSourceKey(
+                in sourceId,
+                in playerNodeId);
             for (int i = 0; i < m_Instances.Length; i++)
             {
                 if (m_Pending[i] == 0 && m_Retired[i] == 0 &&
-                    m_Instances[i] != null && m_Instances[i].Key.Equals(key))
+                    m_Instances[i] != null &&
+                    m_Instances[i].Key.Equals(in key))
                     return m_Instances[i];
             }
             throw new InvalidOperationException("ACL source key is not committed.");
@@ -201,13 +208,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         internal CharacterAclSourceInstance Retire(
-            AnimationPhysicalSourceIdentity physicalIdentity,
-            CharacterAclSourceKey key)
+            in AnimationPhysicalSourceIdentity physicalIdentity,
+            in CharacterAclSourceKey key)
         {
             int index = RequireIndex(physicalIdentity);
             CharacterAclSourceInstance instance = m_Instances[index];
             if (instance == null || m_Pending[index] != 0 || m_Retired[index] != 0 ||
-                m_Identities[index] != physicalIdentity || !instance.Key.Equals(key))
+                m_Identities[index] != physicalIdentity ||
+                !instance.Key.Equals(in key))
                 throw new InvalidOperationException("ACL source retirement identity is stale.");
             m_Identities[index] = default;
             m_Retired[index] = 1;

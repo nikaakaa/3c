@@ -9,20 +9,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 {
     internal readonly struct CharacterAclSourceKey : IEquatable<CharacterAclSourceKey>
     {
+        readonly AnimationPoseSourceId m_SourceId;
+        readonly PoseNodeId m_PlayerNodeId;
         internal CharacterAclSourceKey(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             if (!sourceId.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("ACL source key is invalid.");
-            SourceId = sourceId;
-            PlayerNodeId = playerNodeId;
+            m_SourceId = sourceId;
+            m_PlayerNodeId = playerNodeId;
         }
 
-        internal AnimationPoseSourceId SourceId { get; }
-        internal PoseNodeId PlayerNodeId { get; }
+        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+        internal ref readonly PoseNodeId PlayerNodeId => ref m_PlayerNodeId;
         internal bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid;
         public bool Equals(CharacterAclSourceKey other) =>
+            Equals(in other);
+
+        internal bool Equals(in CharacterAclSourceKey other) =>
             SourceId == other.SourceId && PlayerNodeId == other.PlayerNodeId;
         public override bool Equals(object obj) =>
             obj is CharacterAclSourceKey other && Equals(other);
@@ -32,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
     internal sealed class CharacterAclSourceInstance : IDisposable
     {
+        CharacterAclSourceKey m_Key;
         readonly CharacterAclResourceStore m_Store;
         readonly CharacterAclResourceLeaseTable m_LeaseTable;
         readonly CharacterAnimationRigPayload m_Rig;
@@ -155,14 +161,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal CharacterAclSourceKey Key { get; private set; }
+        internal ref readonly CharacterAclSourceKey Key => ref m_Key;
         internal AnimationScriptPlayable Output => m_Graph.Output;
         internal CharacterClipSampleBatch Samples => m_SampleBatch;
         internal int ClipCount => m_ClipCount;
 
         internal void Configure(
-            CharacterAclSourceKey key,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog,
+            in CharacterAclSourceKey key,
+            in AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog,
             in AnimationPoseSourceCaptureBinding capture)
         {
             RequireAlive();
@@ -173,7 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 for (int i = 0; i < catalog.Count; i++)
                 {
-                    AnimationPoseSourceClipBinding binding = catalog[i];
+                    ref readonly AnimationPoseSourceClipBinding binding =
+                        ref catalog.ElementAt(i);
                     if (!binding.IsValid || !binding.IsAcl || binding.ClipBindingIndex != i)
                         throw new InvalidOperationException("ACL source catalog contains a non-ACL binding.");
                     int resourceIndex = binding.ResourceCatalogIndex;
@@ -212,7 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     BindTransformTracks(manifest, i == 0);
                 }
                 m_ClipCount = catalog.Count;
-                Key = key;
+                m_Key = key;
             }
             catch (Exception exception)
             {
@@ -301,7 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 m_TrackByPoseBone[i] = -1;
             m_LeaseCount = 0;
             m_ClipCount = 0;
-            Key = default;
+            m_Key = default;
         }
 
         public void Dispose()

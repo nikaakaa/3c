@@ -149,7 +149,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 clips.Count <= 0 || clips.Count > m_ClipCapacity ||
                 capture.SourceId != sourceId || capture.CompletionIdentity == 0)
                 throw new ArgumentException("ACL pose source request exceeds its compiled contract.");
-            CharacterAclSourceKey key = new CharacterAclSourceKey(sourceId, playerNodeId);
+            CharacterAclSourceKey key = new CharacterAclSourceKey(
+                in sourceId,
+                in playerNodeId);
             if (m_Journal.FindMutation(key) >= 0 || HasRelease(key))
                 throw new InvalidOperationException("ACL pose source has a duplicate frame mutation.");
             bool preparedResource = !SourcePool.ContainsCommitted(sourceId, playerNodeId);
@@ -226,13 +228,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
             RequireAvailable();
             RequireFramePhase(FramePhase.Preparing);
-            CharacterAclSourceKey key = new CharacterAclSourceKey(sourceId, playerNodeId);
+            CharacterAclSourceKey key = new CharacterAclSourceKey(
+                in sourceId,
+                in playerNodeId);
             if (m_Journal.FindMutation(key) >= 0 || HasRelease(key))
                 throw new InvalidOperationException("ACL pose source cannot be updated and released in one frame.");
             CharacterAclSourceInstance instance = SourcePool.RequireCommitted(
                 physicalIdentity,
                 key);
-            return m_Journal.AddRelease(physicalIdentity, key, instance);
+            return m_Journal.AddRelease(
+                in physicalIdentity,
+                in key,
+                instance);
         }
 
         public void ValidateFrame(in CharacterPoseSourceFrameLease lease)
@@ -241,8 +248,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireFrame(lease, FramePhase.Preparing);
             for (int i = 0; i < m_Journal.MutationCount; i++)
             {
-                CharacterAclFrameJournal.Mutation mutation =
-                    m_Journal.RequireMutation(i);
+                ref readonly CharacterAclFrameJournal.Mutation mutation =
+                    ref m_Journal.RequireMutation(i);
                 if (!mutation.IsValid)
                     throw new InvalidOperationException("ACL source mutation journal is invalid.");
             }
@@ -259,8 +266,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_FramePhase = FramePhase.EvaluateBarrier;
             for (int i = 0; i < m_Journal.MutationCount; i++)
             {
-                CharacterAclFrameJournal.Mutation mutation =
-                    m_Journal.RequireMutation(i);
+                ref readonly CharacterAclFrameJournal.Mutation mutation =
+                    ref m_Journal.RequireMutation(i);
                 var plans = new AnimationReadOnlyBuffer<ClipSamplePlan>(
                     m_PendingPlans,
                     mutation.PlanOffset,
@@ -278,8 +285,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_FrameApplied = true;
             for (int i = 0; i < m_Journal.MutationCount; i++)
             {
-                CharacterAclFrameJournal.Mutation mutation =
-                    m_Journal.RequireMutation(i);
+                ref readonly CharacterAclFrameJournal.Mutation mutation =
+                    ref m_Journal.RequireMutation(i);
                 if (mutation.Kind == AnimationPoseSourcePrepareKind.PreparedResource)
                     SourcePool.Commit(mutation.PhysicalIdentity);
             }
@@ -312,8 +319,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireFrame(lease, FramePhase.EvaluateBarrier);
             for (int i = m_Journal.MutationCount - 1; i >= 0; i--)
             {
-                CharacterAclFrameJournal.Mutation mutation =
-                    m_Journal.RequireMutation(i);
+                ref readonly CharacterAclFrameJournal.Mutation mutation =
+                    ref m_Journal.RequireMutation(i);
                 Array.Clear(m_PendingPlans, mutation.PlanOffset, mutation.PlanCount);
                 if (mutation.Kind == AnimationPoseSourcePrepareKind.PreparedResource)
                 {
@@ -342,8 +349,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException("ACL pose source frame cannot be discarded.");
             for (int i = m_Journal.MutationCount - 1; i >= 0; i--)
             {
-                CharacterAclFrameJournal.Mutation mutation =
-                    m_Journal.RequireMutation(i);
+                ref readonly CharacterAclFrameJournal.Mutation mutation =
+                    ref m_Journal.RequireMutation(i);
                 Array.Clear(m_PendingPlans, mutation.PlanOffset, mutation.PlanCount);
                 if (mutation.Kind == AnimationPoseSourcePrepareKind.PreparedResource)
                     SourcePool.DiscardPending(mutation.PhysicalIdentity);
@@ -388,12 +395,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireFramePhase(FramePhase.EvaluateBarrier);
             if (completionIdentity == 0)
                 throw new ArgumentOutOfRangeException(nameof(completionIdentity));
-            CharacterAclSourceKey key = new CharacterAclSourceKey(sourceId, playerNodeId);
+            CharacterAclSourceKey key = new CharacterAclSourceKey(
+                in sourceId,
+                in playerNodeId);
             int mutationIndex = m_Journal.FindMutation(key);
             if (mutationIndex < 0)
                 throw new InvalidOperationException("ACL source has no sample in the current Evaluate Barrier.");
-            CharacterAclFrameJournal.Mutation mutation =
-                m_Journal.RequireMutation(mutationIndex);
+            ref readonly CharacterAclFrameJournal.Mutation mutation =
+                ref m_Journal.RequireMutation(mutationIndex);
             if (mutation.Capture.CompletionIdentity != completionIdentity)
                 throw new InvalidOperationException("ACL dominant sample completion is stale.");
             return mutation.Instance.Samples.RequireDominant();
@@ -443,7 +452,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        bool HasRelease(CharacterAclSourceKey key)
+        bool HasRelease(in CharacterAclSourceKey key)
             => m_Journal.ContainsRelease(key);
 
         static void ValidateCatalog(

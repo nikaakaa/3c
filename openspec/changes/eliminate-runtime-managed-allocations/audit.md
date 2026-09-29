@@ -1654,3 +1654,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `IAnimationPoseSamplingBackend` 的两条 PrepareOrUpdate 按值接收 clip catalog、source id 和 player node；StageRelease、ContainsCommitted 和 RequireDominantClipSample 也按值复制 identity。两个正式 backend 的 prepare 循环还复制每个 clip plan 或 catalog binding。
 - interface 与 ACL/Animancer 实现统一改为 `in` source/node/catalog/buffer；prepare、catalog 校验和 Animancer source 创建循环绑定 `ElementAt` 只读引用。Source Module 的 direct/player prepare 调用显式只读转发。
 - 该改动删除正式 backend 准备、释放登记、committed 查询和 dominant sample 查询的边界结构拷贝与逐项读取拷贝。request 参数、phase 校验、key 构造、journal 存储、conditional catalog 临时量、Clip 输出和异常文本不变。静态核对 interface 只有两个实现、方法本体不写只读参数和引用生命周期覆盖循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP223 ACL source key journal 引用化（2026-09-30，已实施，本轮未编译）
+
+- ACL source key 按值接收并复制 source/node，属性每次读取再复制；frame journal 查找、release 查重、mutation 回放和 pool committed 查询把 key、mutation 或 permission 复制为局部；instance 配置时又复制 catalog binding。
+- key 的 source/node 改为 backing field 只读引用，构造与内部 equality 改为 `in`，public equality 合同转发。journal/pool/instance 正式查找、回放和配置边界改为 `in`，数组元素绑定只读引用；instance 的 key 改为 backing field 并保留 reset/configure 写入。
+- 该改动删除 ACL key 查找、journal 校验、frame 回放、release 查重和 committed pool 查询的重复读取拷贝。key 存储、mutation/release 存储、generation、pending/retired 状态、异常文本和 public equality 不变。静态核对 ref mutation 在回放期间只读、key backing field 生命周期与 instance 一致；未编译、未采样，不能声称实测耗时收益。

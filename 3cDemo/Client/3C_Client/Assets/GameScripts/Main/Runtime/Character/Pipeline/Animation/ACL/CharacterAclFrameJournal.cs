@@ -52,11 +52,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         internal int ReleaseCount => m_ReleaseCount;
         internal int UnconsumedReleaseCount => m_UnconsumedReleaseCount;
 
-        internal int FindMutation(CharacterAclSourceKey key)
+        internal int FindMutation(in CharacterAclSourceKey key)
         {
             for (int i = 0; i < m_MutationCount; i++)
             {
-                if (m_Mutations[i].Key.Equals(key))
+                ref readonly Mutation mutation = ref m_Mutations[i];
+                if (mutation.Key.Equals(in key))
                     return i;
             }
             return -1;
@@ -75,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException("ACL source mutation capacity was exceeded.");
             for (int i = 0; i < m_MutationCount; i++)
             {
-                if (m_Mutations[i].Key.Equals(mutation.Key) ||
+                ref readonly Mutation existing = ref m_Mutations[i];
+                if (existing.Key.Equals(in mutation.Key) ||
                     m_Mutations[i].PhysicalIdentity == mutation.PhysicalIdentity)
                     throw new InvalidOperationException("ACL source mutation identity is duplicated.");
             }
@@ -83,8 +85,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         internal AnimationPoseSourceReleaseToken AddRelease(
-            AnimationPhysicalSourceIdentity physicalIdentity,
-            CharacterAclSourceKey key,
+            in AnimationPhysicalSourceIdentity physicalIdentity,
+            in CharacterAclSourceKey key,
             CharacterAclSourceInstance instance)
         {
             if (!physicalIdentity.IsValid || !key.IsValid || instance == null ||
@@ -92,7 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException("ACL source release capacity was exceeded.");
             for (int i = 0; i < m_ReleaseCount; i++)
             {
-                if (m_Releases[i].IsValid && m_Releases[i].Key.Equals(key))
+                ref readonly ReleasePermission existing = ref m_Releases[i];
+                if (existing.IsValid && existing.Key.Equals(in key))
                     throw new InvalidOperationException("ACL source release mutation is duplicated.");
             }
             ulong generation = ++m_LastReleaseGeneration;
@@ -115,11 +118,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 key.PlayerNodeId);
         }
 
-        internal bool ContainsRelease(CharacterAclSourceKey key)
+        internal bool ContainsRelease(in CharacterAclSourceKey key)
         {
             for (int i = 0; i < m_ReleaseCount; i++)
             {
-                if (m_Releases[i].IsValid && m_Releases[i].Key.Equals(key))
+                ref readonly ReleasePermission permission = ref m_Releases[i];
+                if (permission.IsValid && permission.Key.Equals(in key))
                     return true;
             }
             return false;

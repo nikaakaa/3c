@@ -127,6 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeNodeEvaluator m_Evaluator;
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue> m_OutputCache =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
+        readonly Dictionary<(PoseNodeId NodeId, string PortId), FlowCanvas.ValueInput> m_InputPorts =
+            new Dictionary<(PoseNodeId, string), FlowCanvas.ValueInput>();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
         Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
@@ -466,13 +468,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < shape.Count; i++)
                 {
                     CharacterPosePortDefinition port = shape[i];
-                    var key = new CharacterPoseNativePortDefinitionKey(
-                        node.NodeId,
+                    var runtimePortKey = new CharacterPoseNativePortDefinitionKey(
+                        node.NativeNodeId,
                         port.PortId,
                         port.Direction);
-                    if (!m_PortDefinitions.TryAdd(key, port))
+                    FlowCanvas.ValueInput inputPort = null;
+                    if (port.Direction == CharacterPosePortDirection.Input)
+                    {
+                        inputPort = node.GetInputPort(port.PortId.Value) as FlowCanvas.ValueInput;
+                        if (inputPort == null || inputPort.type !=
+                            CharacterPoseCanvasNativePorts.RuntimeBindingType(port.Kind))
+                        {
+                            throw new InvalidOperationException(
+                                $"Pose node '{node.NativeNodeId}' input '{port.PortId}' does not match its declared native type.");
+                        }
+                    }
+                    if (!m_PortDefinitions.TryAdd(runtimePortKey, port))
                         throw new InvalidOperationException(
-                            $"Pose node '{node.NodeId}' contains duplicate port '{port.PortId}'.");
+                            $"Pose node '{node.NativeNodeId}' contains duplicate port '{port.PortId}'.");
+                    if (inputPort != null && !m_InputPorts.TryAdd((node.NativeNodeId, port.PortId.Value), inputPort))
+                        throw new InvalidOperationException(
+                            $"Pose node '{node.NativeNodeId}' contains duplicate input port '{port.PortId}'.");
                     if (port.Direction == CharacterPosePortDirection.Output)
                     {
                         outputPortCount++;
@@ -667,23 +683,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return definition.Kind switch
             {
                 CharacterPosePortKind.LocalPose =>
-                    ReadInput<CharacterPoseNativeLocalPoseValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeLocalPoseValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.ComponentPose =>
-                    ReadInput<CharacterPoseNativeComponentPoseValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeComponentPoseValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.Parameter =>
-                    ReadInput<CharacterPoseNativeParameterValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeParameterValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.PoseDiscontinuity =>
-                    ReadInput<CharacterPoseNativeDiscontinuityValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeDiscontinuityValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.ActionPlayback =>
-                    ReadInput<CharacterPoseNativeActionPlaybackValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeActionPlaybackValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.FullBodyIkGoals =>
-                    ReadInput<CharacterPoseNativeFullBodyIkGoalsValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeFullBodyIkGoalsValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.FullBodyIkGoalContribution =>
-                    ReadInput<CharacterPoseNativeGoalContributionValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeGoalContributionValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.PresentationFacts =>
-                    ReadInput<CharacterPoseNativeFactsValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeFactsValue>(node.NativeNodeId, portId.Value),
                 CharacterPosePortKind.MotionMatchingBinding =>
-                    ReadInput<CharacterPoseNativeMotionMatchingBindingValue>(node, portId.Value),
+                    ReadInput<CharacterPoseNativeMotionMatchingBindingValue>(node.NativeNodeId, portId.Value),
                 _ => throw new InvalidOperationException(
                     $"Pose node '{node.NodeId}' input '{portId}' has unsupported kind '{definition.Kind}'.")
             };
@@ -1092,13 +1108,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             where T : CharacterPoseNativePortValue
         {
             RequireEvaluationStage();
-            FlowCanvas.ValueInput<T> input = node.GetInputPort(portId) as FlowCanvas.ValueInput<T>;
-            if (input == null)
+            return ReadInput<T>(node.NativeNodeId, portId);
+        }
+
+        internal bool TryReadInput<T>(
+            CharacterPoseCanvasNode node,
+            string portId,
+            out T value)
+            where T : CharacterPoseNativePortValue
+        {
+            RequireEvaluationStage();
+            if (!m_InputPorts.TryGetValue((node.NativeNodeId, portId), out FlowCanvas.ValueInput input) ||
+                input is not FlowCanvas.ValueInput<T> typedInput ||
+                !typedInput.isConnected)
+            {
+                value = default;
+                return false;
+            }
+            value = typedInput.value ??
                 throw new InvalidOperationException(
-                    $"Pose node '{node.NodeId}' input '{portId}' is not a typed native input.");
-            return input.value ??
+                    $"Pose node '{node.NativeNodeId}' input '{portId}' has no value.");
+            return true;
+        }
+
+        T ReadInput<T>(
+            PoseNodeId nodeId,
+            string portId)
+            where T : CharacterPoseNativePortValue
+        {
+            RequireEvaluationStage();
+            if (!m_InputPorts.TryGetValue((nodeId, portId), out FlowCanvas.ValueInput input) ||
+                input is not FlowCanvas.ValueInput<T> typedInput)
+            {
                 throw new InvalidOperationException(
-                    $"Pose node '{node.NodeId}' input '{portId}' has no value.");
+                    $"Pose node '{nodeId}' input '{portId}' is not a typed native input.");
+            }
+            return typedInput.value ??
+                throw new InvalidOperationException(
+                    $"Pose node '{nodeId}' input '{portId}' has no value.");
         }
 
         T ICharacterPoseCanvasNativeRuntime.Read<T>(
@@ -1311,6 +1358,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluating.Clear();
             m_GraphInputs.Clear();
             m_PortDefinitions.Clear();
+            m_InputPorts.Clear();
             m_Started = false;
             Nodes = null;
             m_GraphInputNode = null;

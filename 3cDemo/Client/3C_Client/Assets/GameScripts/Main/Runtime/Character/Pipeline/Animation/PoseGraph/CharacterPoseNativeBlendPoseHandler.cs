@@ -264,13 +264,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeGraphRuntime runtime,
             CharacterPoseCanvasNode node)
         {
-            ValueInput<CharacterPoseNativeParameterValue> input =
-                node.GetInputPort("weight") as
-                ValueInput<CharacterPoseNativeParameterValue>;
-            if (input == null || !input.isConnected)
+            if (!runtime.TryReadInput(node, "weight", out CharacterPoseNativeParameterValue value))
                 return node.Weight;
-            CharacterPoseNativeParameterValue value = runtime.ReadInput<
-                CharacterPoseNativeParameterValue>(node, "weight");
             if (value.Value.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(value.Value.Float32Value) ||
                 value.Value.Float32Value < 0f ||

@@ -8,6 +8,8 @@ namespace ThirdPersonSimulation
 {
     public static class SimulationCanonicalPayloadHash
     {
+        [ThreadStatic] static SHA256 s_SharedHasher;
+
         public static StableHash Compute(byte[] payload)
         {
             if (payload == null)
@@ -17,7 +19,7 @@ namespace ThirdPersonSimulation
 
         public static StableHash Compute(ReadOnlySpan<byte> payload)
         {
-            using SHA256 sha = SHA256.Create();
+            SHA256 sha = s_SharedHasher ??= SHA256.Create();
             Span<byte> hash = stackalloc byte[32];
             if (!sha.TryComputeHash(payload, hash, out int written) || written != hash.Length)
                 throw new CryptographicException("SHA-256 did not produce a complete digest.");

@@ -343,23 +343,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             bool hasWeightOverride = false;
             float weightOverride = 0f;
-            ValueInput<CharacterPoseNativeParameterValue> weight =
-                node.GetInputPort("weight") as
-                ValueInput<CharacterPoseNativeParameterValue>;
-            if (weight != null && weight.isConnected)
+            if (runtime.TryReadInput(node, "weight", out CharacterPoseNativeParameterValue weightValue))
             {
-                CharacterPoseNativeParameterValue value = runtime.ReadInput<
-                    CharacterPoseNativeParameterValue>(node, "weight");
-                if (value.Value.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Float32 ||
-                    !float.IsFinite(value.Value.Float32Value) ||
-                    value.Value.Float32Value < 0f ||
-                    value.Value.Float32Value > 1f)
+                if (weightValue.Value.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Float32 ||
+                    !float.IsFinite(weightValue.Value.Float32Value) ||
+                    weightValue.Value.Float32Value < 0f ||
+                    weightValue.Value.Float32Value > 1f)
                 {
                     throw new InvalidOperationException(
                         $"Foot Placement '{NodeId}' weight override must be a Float32 in [0, 1].");
                 }
                 hasWeightOverride = true;
-                weightOverride = value.Value.Float32Value;
+                weightOverride = weightValue.Value.Float32Value;
             }
             CharacterFootPlacementConstraintOperationResult result =
                 m_Service.EvaluateFootPlacement(
@@ -640,17 +635,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (contribution.Direction != CharacterPosePortDirection.Input ||
                     contribution.Kind != CharacterPosePortKind.FullBodyIkGoalContribution)
                     continue;
-                if (contribution.Required || node.GetInputPort(contribution.PortId.Value).isConnected)
+                if (contribution.Required ||
+                    runtime.TryReadInput(
+                        node,
+                        contribution.PortId.Value,
+                        out CharacterPoseNativeGoalContributionValue _))
                     runtime.ReadInput<CharacterPoseNativeGoalContributionValue>(
                         node, contribution.PortId.Value);
             }
-            ValueInput<CharacterPoseNativeFullBodyIkGoalsValue> goalsInput =
-                node.GetInputPort("goals") as
-                ValueInput<CharacterPoseNativeFullBodyIkGoalsValue>;
-            if (goalsInput != null && goalsInput.isConnected)
+            if (runtime.TryReadInput(node, "goals", out CharacterPoseNativeFullBodyIkGoalsValue goals))
             {
-                CharacterPoseNativeFullBodyIkGoalsValue goals = runtime.ReadInput<
-                    CharacterPoseNativeFullBodyIkGoalsValue>(node, "goals");
                 CharacterFullBodyIkGoalSet goalSet = goals.Value;
                 m_Service.BindGoalSet(in goalSet);
             }

@@ -484,8 +484,8 @@
 - AP53 去除嵌套世界状态临时数组后，两域 WorldSolveBatchCodec 的请求/结果哈希仍各自 new CanonicalWriter；AP54 去除消费端重复哈希后，身体运动 Prepare 仍逐角色创建 writer。Float32 的 ObservedWorldConstraintCodec.ComputeHash 也在每次生成观察帧身份时创建 writer，包括空观察帧。每次都会新建默认256字节缓冲，并可能重复扩容。
 - 沿项目既有线程内哈希工作区方式，两个数值域的批哈希、身体运动哈希以及 Float32 观察帧哈希分别持有私有 ThreadStatic writer。每次完整编码前 Reset，批请求和批结果在同一 codec 内复用同一工作区，其余编码模块各自持有；没有新增进程、线程、对象池或另一套编码实现。
 - 静态核对入口均为同步执行：计划为只读值，批请求/结果、世界状态、观察帧为封闭类型且集合由内部数组持有；写入只读取字段和数值位，不调用外部枚举器、业务回调或再次进入同一哈希入口。批请求中的观察约束使用 Write 接收外层 writer，不调用观察帧 ComputeHash。线程之间通过 ThreadStatic 隔离，不把可变 writer 存进返回结果。
-- Reset 同时归零 Position/Length，后续完整覆盖本次有效范围，ComputeHash 只读取该范围，因此短记录不会包含之前长记录的尾部；编码异常不发布哈希，下次调用仍先 Reset。SHA-256 及其输出字符串每次独立生成，身份、格式、数值位、字段顺序和快照所有权保持。CanonicalWriter 只持有托管数组，Dispose 当前为空，不存在被省略的非托管释放。
-- 代价为每个实际调用线程、每个上述模块保留其最大编码缓冲；首次使用、编码超过已有容量仍会分配，没有承诺准备阶段已覆盖所有线程/数据规模。只消除容量稳定后的周期 writer 与缓冲重建，SHA-256 对象、哈希字符串、业务快照分配仍保留，不宣称全链0 GC或耗时收益。
+- Reset 同时归零 Position/Length，后续完整覆盖本次有效范围，ComputeHash 只读取该范围，因此短记录不会包含之前长记录的尾部；编码异常不发布哈希，下次调用仍先 Reset。SHA-256 输出字符串每次独立生成，身份、格式、数值位、字段顺序和快照所有权保持；SHA-256 对象复用后续单独收口见 AP66。CanonicalWriter 只持有托管数组，Dispose 当前为空，不存在被省略的非托管释放。
+- 代价为每个实际调用线程、每个上述模块保留其最大编码缓冲；首次使用、编码超过已有容量仍会分配，没有承诺准备阶段已覆盖所有线程/数据规模。只消除容量稳定后的周期 writer 与缓冲重建，哈希字符串、业务快照分配仍保留，不宣称全链0 GC或耗时收益。
 - 完成调用链、线程内非重入范围、失败后重置、长短记录范围与差异静态检查；未编译、执行字节对比、回放或采样。脚步预测、碰撞算法及提交规则未改动。
 
 ### AP57 文本哈希拼接与整段 UTF-8 临时数组（2026-09-29，已实施，未运行）
@@ -548,6 +548,20 @@
 - 快照生成每 Actor、省去对整份状态的一次新数组与复制；读回也去掉 ReadBytes 之后的第二次复制。最初编码/读取的独立数组仍保留，没有共享可复用缓冲、取消历史隔离或增加复制开关/兼容构造入口。
 - 复核纠正：Float32 当前已经直接接管 ownedStateBytes，不能把 Fixed 的 Clone 推断到另一数值域。Float32 权威基线合并原本使用基线持有的字节，本次未改变该已存在的共享规则，也没有新增 Clone；实际代码改动仅在 Fixed 世界快照文件。
 - 静态核对全部 SimulationActorSnapshot 源码引用、两个 Fixed 生产者、读取/编码消费者、ToArray/ReadBytes 独立数组语义及差异；未编译、运行快照隔离/哈希对比、回放或采样。独立快照数组和对象分配仍存在，不宣称全链0 GC或实测收益，脚步预测未改。
+
+### AP65 Pose Graph 输入端口重复解析（2026-09-29，已实施，本轮未编译）
+
+- GraphRuntime 原已在 `ReadInput<T>` 每次调用 `node.GetInputPort` 并做类型转换；Additive、Blend Pose、Layered Bone Blend、Modify Bone、Foot Placement 和 FullBodyIK 的可选权重/目标输入还会先查一次连接，再通过 `ReadInput` 第二次查同一端口。这些输入都在正式 RuntimeShape 中，节点和端口身份在图装配后固定。
+- `BuildPortDefinitions` 在 `BindNativeIdentity` 后解析正式端口定义时，一次性取得每条 Input 的 `FlowCanvas.ValueInput`，核对其 `type` 等于 `RuntimeBindingType(kind)`，按 NativeNodeId 和 PortId 缓存。`ReadInput`、`ReadInputValue` 改读缓存；端口缺失、类型不符和重复端口仍在图初始化边界失败。
+- 新增 `TryReadInput` 沿缓存执行同一次类型检查和 `isConnected` 判断；未连接返回 false，连接后读取值并保留原“值缺失”错误。Additive、Blend Pose、Layered、Modify Bone 的未连接默认权重，Foot Placement 的 weight override，FullBodyIK 的 optional contribution/goals 改为一次查询。Required contribution 仍短路后由 `ReadInput` 报缺失；端口形状、连接语义、默认值和异常边界不变。
+- 子图 `BindInterface` 中的 `GetInputPort` 保留：它在 Start 后的接口绑定阶段执行一次，用于建立父/子端口映射，不是帧路径重复拓扑查找。图实例新增一个定容输入端口字典；这是装配期常驻状态，未新增配置、fallback 或第二条运行路径。
+- 已静态核对 `RuntimeShape` 对全部相关可选端口的声明、初始化与运行阶段顺序、可选连接和 Required 分支、Dispose 清理及差异。本轮只做静态检查，未编译、回放或采样；不宣称耗时收益。
+
+### AP66 周期哈希反复创建 SHA-256 对象（2026-09-29，已实施，本轮未编译）
+
+- `SimulationCanonicalPayloadHash.Compute` 每次调用 `SHA256.Create()`；该入口被 pipeline snapshot、world/batch/body/observation 等正式哈希共用，AP53–AP56 已复用编码 writer，但 cryptograhy 对象仍在每次 Compute 重建。
+- 改为线程内 `ThreadStatic SHA256`，首次使用创建；`TryComputeHash` 仍写入栈上32字节结果，摘要、十六进制输出字符串、字段顺序和错误检查保持。线程之间不共享可变 cryptography 对象，返回值不借用内部状态。
+- 首次使用和线程创建仍分配；最终64字符哈希字符串与业务快照所有权分配保留。该修改不宣称 SHA256 CPU 耗时、GC 字节或整链收益。已静态核对 Compute 两个入口、using 生命周期替换、ThreadStatic 边界和调用者同步消费；本轮未编译、运行哈希对比、回放或采样。
 
 ## 可靠性问题独立保留
 

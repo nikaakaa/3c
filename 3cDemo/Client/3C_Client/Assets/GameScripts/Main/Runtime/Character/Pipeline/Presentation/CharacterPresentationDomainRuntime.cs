@@ -445,6 +445,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
+            PerformanceInstrumentationContextRuntime.BeginActor(
+                PerformanceInstrumentationIdentity.Hash64(m_ActorId.Value), 0, 0);
             if (!bodyFrame.IsValid)
                 return;
             m_PresentationClockCoordinator?.BeginSamplingFrame();
@@ -550,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         var fault = new AnimationPresentationFault(m_ActorId, context.RenderFrame,
                             bodyFrame.CurrentTick, phase, publication.Lineage.CompletionIdentity);
                         failure = m_PoseDomain.Session.RecordPresentationFault(in fault, failure);
+                PerformanceInstrumentationContextRuntime.EndActor();
                     }
 #if KK_DIAGNOSTIC_SAMPLING
                     Animation.Diagnostics.CharacterPoseCaptureFailure.Report(m_Diagnostics.CharacterRuntimeId,

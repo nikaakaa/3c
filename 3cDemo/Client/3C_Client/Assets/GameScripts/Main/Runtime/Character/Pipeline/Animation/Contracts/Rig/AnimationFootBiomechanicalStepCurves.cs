@@ -253,14 +253,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public void SampleCurrent(
-            float normalizedTime,
+        internal void SampleCurrent(
+            float time,
             float eventPhase,
             out float landingPhase,
             out Quaternion opposingRootLocalSoleRotation,
             out AnimationFootBiomechanicalRouteSample currentSample)
         {
-            float time = Mathf.Clamp01(normalizedTime);
             landingPhase = m_LandingPhase.Evaluate(time);
             opposingRootLocalSoleRotation = Normalize(new Quaternion(
                 m_OpposingRootLocalSoleRotationX.Evaluate(time),

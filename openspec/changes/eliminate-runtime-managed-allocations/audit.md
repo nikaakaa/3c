@@ -1114,3 +1114,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationFootFeatureSample` 构造器已拒绝 non-finite 速度/高度并归一化 plant confidence；每个指定的 `AnimationPredictedFootStepSample` 构造器已校验 confidence、时间、phase、phase 顺序、opposing landing 配对，并通过 `AnimationBiomechanicalRoutePage` 构造器校验 25 点 foot/ankle/hip/planar/clearance 页。默认预测步允许存在且当前消费语义已视为通过。
 - Slot Blend 原来对同一 sample 的基础字段再查一遍，并对每个指定预测步重建 scalar/route 检查，每次最多重复扫描 100 个 route 元素。`IsValidFoot` 现在只区分正式构造样本与默认未指定样本，删除下游重复 scalar/route 扫描。
 - 特征输入、默认预测步行为、Accumulate 和 authoritative prediction 的返回结果不变；构造器继续是 foot feature 唯一业务校验边界。静态核对两个 feature 页构造来源、预测步所有构造器、`RoutePage` 校验和 Slot Blend 调用点；未编译、未采样，不能声称实测耗时收益。
+
+### AP133 Foot 已准备时间入口收敛（2026-09-30，已实施，本轮未编译）
+
+- AP119 的 `SampleCurrent` 是 `SamplePrepared` 的唯一调用点，调用方已经执行 `Mathf.Clamp01(normalizedTime)` 并传入 `time`；方法签名仍接收 normalized time 并重复 clamp。
+- `SampleCurrent` 改为 internal 已准备时间入口，参数与公式直接使用 `time`；整条 25 点 `Sample` 编辑器校验入口保持自己的 clamp。采样、索引和输出公式不变。
+- 该改动删除 foot 路由每次采样的重复 clamp，并保持唯一正式运行入口。静态核对全仓库唯一调用点和 public `Sample` 的编辑器消费边界；未编译、未采样，不能声称实测耗时收益。

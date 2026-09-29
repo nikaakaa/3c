@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
@@ -249,11 +251,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 runtime = new CharacterPoseNativeRoleRuntime(graph, publication);
                 return adopted;
             }
-            catch
+            catch (Exception exception)
             {
-                graph?.Dispose();
-                publication.Dispose();
+                Exception failure = exception;
+                CharacterPresentationCleanup.Dispose(graph, ref failure);
+                CharacterPresentationCleanup.Dispose(publication, ref failure);
                 runtime = null;
+                if (!ReferenceEquals(failure, exception))
+                    throw failure;
                 throw;
             }
         }
@@ -273,9 +278,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_SourceLease = m_Source.BeginFrame(in openLineage);
                 return lease;
             }
-            catch
+            catch (Exception exception)
             {
-                Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid);
+                try { Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid); }
+                catch (Exception cleanup) { throw new AggregateException(exception, cleanup); }
                 throw;
             }
         }
@@ -378,15 +384,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameLease lease,
             CharacterPoseNativeFailureCode reason)
         {
+            Exception failure = null;
             try
             {
                 if (m_Graph.HasOpenFrame)
                     m_Graph.Discard(lease, reason);
             }
-            finally
+            catch (Exception cleanup)
             {
-                DiscardPendingModules();
+                failure = cleanup;
             }
+            try { DiscardPendingModules(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
 
         void DiscardPendingModules()
@@ -428,14 +439,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Stop()
         {
-            try
-            {
-                m_Graph.StopInstance();
-            }
-            finally
-            {
-                DiscardPendingModules();
-            }
+            Exception failure = null;
+            try { m_Graph.StopInstance(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            try { DiscardPendingModules(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
 
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING

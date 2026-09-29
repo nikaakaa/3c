@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -394,17 +395,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void DiscardFrame()
         {
+            Exception failure = null;
             if (m_ProjectorActive)
             {
-                m_Projector.Discard(m_ProjectorLease);
+                try { m_Projector.Discard(m_ProjectorLease); }
+                catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
                 m_ProjectorActive = false;
             }
             if (m_HistoryActive)
             {
-                m_History.Discard(m_HistoryLease);
+                try { m_History.Discard(m_HistoryLease); }
+                catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
                 m_HistoryActive = false;
             }
-            m_Playback.DiscardFrame();
+            try { m_Playback.DiscardFrame(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
 
         public void Reset()
@@ -502,9 +509,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (m_Disposed)
                 return;
-            DiscardFrame();
-            DiscardSamplingFrame();
             m_Disposed = true;
+            Exception failure = null;
+            try { DiscardFrame(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            try { DiscardSamplingFrame(); }
+            catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
 
         void RequireAlive()

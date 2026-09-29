@@ -48,7 +48,7 @@ R1／R2 的已有提交、R8 的保留结论、R9 的证据与专项归属记录
 
 - [x] 6.1 在现有 Presentation owner 收拢 Pose 成功后 Timeline／桥／时钟／Camera 业务收尾的失败归属，使用同一 Actor 表现故障结果阻止后续帧，不重复建立 Pose 阶段驱动。
 - [x] 6.2 将会拒绝的业务检查放回正式准备／验证阶段，明确 Timeline 业务事件与纯观察输出的处理，已提交后不伪装物理回滚或吞掉业务失败。
-- [ ] 6.3 完成 DomainSession／Services 和 Presentation 各资源 owner 的异常收尾，保证一个释放失败不跳过剩余已取得资源，并保留首故障与清理错误。
+- [x] 6.3 完成 DomainSession／Services 和 Presentation 各资源 owner 的异常收尾，保证一个释放失败不跳过剩余已取得资源，并保留首故障与清理错误。
 
 ## 7. 文档与迁移收尾（R10）
 

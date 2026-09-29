@@ -341,6 +341,7 @@ namespace ThirdPersonSimulation
         readonly IActionAdmissionReadPort m_Port;
         readonly HashSet<string> m_OwnedTags = new HashSet<string>(StringComparer.Ordinal);
         readonly HashSet<string> m_ActiveSourceTags = new HashSet<string>(StringComparer.Ordinal);
+        readonly Dictionary<string, string[]> m_TagAncestors = new Dictionary<string, string[]>(StringComparer.Ordinal);
 
         public ActionAdmissionControl(IActionAdmissionReadPort port)
         {
@@ -354,7 +355,7 @@ namespace ThirdPersonSimulation
             try
             {
                 foreach (string tag in m_Port.OwnedGameplayTags)
-                    AddTag(m_Port, m_OwnedTags, tag);
+                    AddTag(m_OwnedTags, tag);
 
                 if (!request.TargetProfile.Required.IsEmpty && !MatchesQuery(request.TargetProfile.Required, m_OwnedTags))
                     return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty, 0);
@@ -394,7 +395,7 @@ namespace ThirdPersonSimulation
                         return Reject(ActionAdmissionRejectReason.ReplacementSourceMissing, string.Empty, 0);
 
                     ActionAdmissionProfile activeSourceProfile = m_Port.RequireAdmissionProfile(replacementSource.SkillId, replacementSource.ActionId);
-                    AddTags(m_Port, m_ActiveSourceTags, activeSourceProfile.Tags);
+                    AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
                     if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
                         return Reject(ActionAdmissionRejectReason.SourceActionStillActive, replacementSource.ActionId, replacementSource.InstanceId);
                     return !request.TargetProfile.Cancel.IsEmpty &&
@@ -448,29 +449,39 @@ namespace ThirdPersonSimulation
         bool HasMatchingTag(HashSet<string> owned, string query)
             => owned.Contains(query);
 
-        static void AddTags(
-            IActionAdmissionReadPort port,
-            HashSet<string> destination,
-            IReadOnlyList<string> tags)
+        void AddTags(HashSet<string> destination, IReadOnlyList<string> tags)
         {
             for (int i = 0; i < tags.Count; i++)
-                AddTag(port, destination, tags[i]);
+                AddTag(destination, tags[i]);
         }
 
-        static void AddTag(IActionAdmissionReadPort port, HashSet<string> destination, string tag)
+        void AddTag(HashSet<string> destination, string tag)
         {
             if (!string.IsNullOrWhiteSpace(tag))
             {
-                string current = tag;
-                for (int depth = 0; depth < 64 && !string.IsNullOrEmpty(current); depth++)
+                if (!m_TagAncestors.TryGetValue(tag, out string[] ancestors))
                 {
-                    if (!destination.Add(current))
-                        return;
-                    if (!port.TryGetGameplayTagParent(current, out string parent))
-                        return;
-                    if (string.Equals(parent, current, StringComparison.Ordinal))
-                        throw new InvalidOperationException($"Gameplay tag '{current}' is its own parent.");
-                    current = parent;
+                    var chain = new List<string>();
+                    string current = tag;
+                    for (int depth = 0; depth < 64 && !string.IsNullOrEmpty(current); depth++)
+                    {
+                        chain.Add(current);
+                        if (!m_Port.TryGetGameplayTagParent(current, out string parent))
+                            break;
+                        if (string.Equals(parent, current, StringComparison.Ordinal))
+                            throw new InvalidOperationException($"Gameplay tag '{current}' is its own parent.");
+                        current = parent;
+                    }
+                    ancestors = chain.ToArray();
+                    m_TagAncestors.Add(tag, ancestors);
+                }
+                if (!destination.Add(tag))
+                    return;
+                for (int i = 0; i < ancestors.Length; i++)
+                {
+                    if (string.Equals(ancestors[i], tag, StringComparison.Ordinal))
+                        continue;
+                    destination.Add(ancestors[i]);
                 }
             }
         }

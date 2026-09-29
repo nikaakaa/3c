@@ -801,6 +801,12 @@
 - 现在将 owned tag 和 active source tag 装入私有 HashSet 时一次性加入其全部祖先，保留 64 层上限、自身父节点错误和空白 tag 规则。查询匹配改为直接 `HashSet.Contains`；候选或父节点已存在时停止重复展开。
 - Required/Block/Cancel 的匹配结果不变，包括父 tag 命中子 owned tag、None 阻断和跨 Required/Block 的祖先共享。静态核对两域 `TryGetGameplayTagParent`、profile Tags/queries 消费、私有集合生命周期和差异检查；未编译、运行回放或采样。
 
+### AP106 Action Admission 父链跨评估重复解析（2026-09-29，已实施，本轮未编译）
+
+- AP105 后每次 Admission 仍会对相同 owned/source tag 重新调用 GameplayTag catalog 解析父链；`ActionAdmissionControl` 与两域 Action Runtime 生命周期相同，而 Parent 关系来自装配后固定的 catalog。
+- 为每个 tag 在 Control 实例内缓存从自身到根的 ancestor 数组；首次解析保留 64 层上限和自身父节点错误，后续装载路径直接展开缓存。owned/source HashSet 仍每次 Evaluate 清理，不跨评估保留业务标签。
+- 相同 tag 的重复激活不再重复 catalog 查找和父链构造；配置更换沿正式 runtime 重建生命周期，不引入运行时 fallback。静态核对 Control 生命周期、catalog 只读合同、缓存字段唯一消费和差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

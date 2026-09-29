@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref readonly CharacterFootTransitionDecision preTransition = ref PreTransition;
                 ref readonly CharacterFootStateTarget target = ref Target;
                 ref readonly CharacterFootPathContinuityFact interpolationContinuity =
-                    interpolation.ContinuityFact;
+                    ref interpolation.ContinuityFact;
                 ref readonly CharacterFootSwingMotionResult outputSwing = ref OutputSwing;
                 CharacterFootTransitionDecision postTransition =
                     CharacterFootTransitionResolver.ResolvePostInterpolation(
@@ -118,9 +118,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in target,
                     in frame);
                 ref readonly CharacterFootSupportIntent supportIntent =
-                    target.SupportIntent;
+                    ref target.SupportIntent;
                 ref readonly CharacterFootSupportTarget selectedSupportTarget =
-                    interpolation.SupportTarget;
+                    ref interpolation.SupportTarget;
                 ref readonly CharacterFootStateEvaluation evaluation = ref Evaluation;
                 CharacterFootPlacementRequest completed = BuildRequest(
                     in context,
@@ -227,7 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result = CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in unavailableSwing);
                 ref readonly CharacterFootPathContinuityFact unavailableContinuity =
-                    interpolation.ContinuityFact;
+                    ref interpolation.ContinuityFact;
                 result = CharacterFootSwingMotionBuilder.WithPathContinuity(
                     in result,
                     in unavailableContinuity);
@@ -330,7 +330,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame);
             ref readonly CharacterFootSupportIntent supportIntent = ref target.SupportIntent;
             ref readonly CharacterFootSupportTarget selectedSupportTarget =
-                interpolation.SupportTarget;
+                ref interpolation.SupportTarget;
             CharacterFootPlacementRequest request = BuildRequest(
                 in context,
                 in evaluation,

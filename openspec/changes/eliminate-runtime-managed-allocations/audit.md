@@ -2045,3 +2045,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Hard constraint result 的 input、minimum、output correction 自动属性每次读取复制 Vector3；ApplyHardConstraint、output support 覆盖判定和 Continuity completion 会重复读取。
 - 三个 correction 改为 backing field 只读引用，三个主消费点引用绑定；约束 owner、surface/path identity、RaiseToMinimum、clamp/clearance 和 Continuity 字段写入不变。
 - 该改动删除每脚 hard constraint 消费中的 correction 向量重复拷贝。静态核对 result 为 readonly struct、生命周期覆盖调用、消费只读，输出事实仍保留必要拷贝；未编译、未采样，不能声称实测耗时收益。
+
+### AP288 Ref readonly 绑定语法修正（2026-09-30，已实施，本轮未编译）
+
+- 静态行配对检查发现七处 `ref readonly` 局部初始化缺少 RHS `ref`，覆盖 Lifecycle 的 continuity、support intent、support target 以及 Continuity 构造中的 support target、response fact。
+- 七处绑定额外语法补上 `ref`，不改变源数据、读取路径或生命周期。该修正是静态可判定的编译合同修正，不是新的性能假设。
+- 该改动恢复这些只读引用局部能通过 C# 静态语法的正式路径。仍受用户约束限制，未编译、未采样；不能声称行为已运行验证。

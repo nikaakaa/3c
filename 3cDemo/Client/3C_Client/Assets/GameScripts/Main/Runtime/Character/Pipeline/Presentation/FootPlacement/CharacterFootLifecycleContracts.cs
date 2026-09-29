@@ -442,7 +442,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantDesiredPoint = plant.DesiredPoint;
             PlantFilteredPoint = plant.FilteredPoint;
             ref readonly CharacterFootSupportTarget selectedSupport =
-                interpolation.SupportTarget;
+                ref interpolation.SupportTarget;
             SelectedSupportTarget = selectedSupport;
             PlantTargetHeightAdoptionMode = plant.Evaluated
                 ? plant.TargetHeightAdoptionMode
@@ -467,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plant.PreviousSelectedWorldTarget;
             PlantSelectedWorldTarget = plant.SelectedWorldTarget;
             ref readonly CharacterFootCorrectionResponseFact correctionResponse =
-                interpolation.CorrectionResponseFact;
+                ref interpolation.CorrectionResponseFact;
             PreviousResponseOutputAvailable =
                 correctionResponse.PreviousOutputAvailable;
             PreviousResponseOutputPoint =

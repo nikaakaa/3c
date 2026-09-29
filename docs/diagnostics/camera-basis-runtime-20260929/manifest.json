@@ -84,6 +84,10 @@
       "sha256": "9e6eacfecd50e862a34914acc463dc38ed6ffbe3cd0964910729d582f801866d"
     },
     {
+      "path": "camera-pointer-input-types.json",
+      "sha256": "e6116b8e28b6f52d28be5fc432a9de507704135b493f6f9002bf8805d6ae5f7e"
+    },
+    {
       "path": "camera-stage-0x134db160.json",
       "sha256": "d1d351123f327682cb5f980156e29547b1f2ff3044da65e6481f0cf5a843cd04"
     },
@@ -226,6 +230,42 @@
     {
       "path": "override-drag-axis.json",
       "sha256": "7bd9c7ba1d54ca1ede828741a98547af61da07b8a79141fa1b7c307ad38744c2"
+    },
+    {
+      "path": "pointer-axis-device-read.json",
+      "sha256": "058ffa2511ee3685dbfa5423964a612985b99e55a463c2c23922031514ef5b1b"
+    },
+    {
+      "path": "pointer-axis-event-resolve.json",
+      "sha256": "2f9aea3a7e3d6f44ac2eb0f994c9b373636212eaa4d91eeb72bc05786ec4e5ea"
+    },
+    {
+      "path": "pointer-before-world-update.json",
+      "sha256": "77e5b66a179264b355ba7cb0a7263789a3b939386e8724235e085e1abcc900c1"
+    },
+    {
+      "path": "pointer-event-read.json",
+      "sha256": "22df412a003cc46f92e8a6f39bb3dc7b2e6c77eb332b02621cbf92de2a3eb294"
+    },
+    {
+      "path": "pointer-input-branch-flags.json",
+      "sha256": "be7389000a7b838699b4f12e3d75bb904bf470ff2b3e21485c10d207032747a6"
+    },
+    {
+      "path": "pointer-input-snapshot.json",
+      "sha256": "a9d9443d923c35a0d1073bef3c07e8b2ed4f0e555bf589eed190d2ca27366454"
+    },
+    {
+      "path": "pointer-multiplatform-value.json",
+      "sha256": "ebb435fb79bb7d5a4778a4841c336b752176eaf2ad78deee72f4c2c3765942e3"
+    },
+    {
+      "path": "pointer-prepare-input.json",
+      "sha256": "9f1247e75c63d810d01811769d8af74dc0eb2601d629c79e9739c52d2661b16a"
+    },
+    {
+      "path": "pointer-write-control.json",
+      "sha256": "1e1a65d1b3bdb3e563af064835cce4b95b8241a128c8195459becf7091e7b07f"
     },
     {
       "path": "radius-branch-flags.json",

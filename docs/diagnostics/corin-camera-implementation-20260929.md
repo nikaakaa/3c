@@ -280,3 +280,20 @@ Unity 编译与域重载通过，反射回读 ResolveDelta 参数数为 3（两�
 Unity 编译重载完成，Console 0 错误。编辑器内构建正式 Profile 投影、调用生产 BuildTargetPlan，在零输入／零初始角偏移下取得半径 3.7426796、FOV 50、offsetY=-0.0376972035；将 PivotLocation 按所得相机位置与旋转重新投影，ScreenY=0.5108，与默认仰角 0.6 处的轨道曲线值一致。记录见 track-screen-y-editor-check.json。这个检查只覆盖静态基础构图，不包含 Play/replay、动态阻尼、后续 Zoom/Stretch 或画面对照。
 
 完整 Delay、死区／软区动态求值、输入归一化和效果修改 FOV／距离后的屏幕锚点连续性仍未完成。此次修复不等同于相机整体手感已经还原。
+
+## 鼠标输入单位与符号生产链
+
+本批定位到输入生产者，替代此前只知道 CameraDataAccessor.Control 消费端的证据缺口。新增原始指令、类型和快照存于 pointer-* 与 camera-pointer-input-types.json；不再次推断枚举声明顺序。
+
+- UIInLevelPlayerCameraChildWindowController.OnInputAction（0x164E9210）通过 JODKHBJPDKE 的 0x172587B0 分别取得处理后和原始向量，保存到 +0x328／+0x330。OnBeforeWorldUpdate（0x164EB1F0）将两个向量引用、旋转状态和最后输入设备交给 0x13A4BE70；该函数读取后清空本帧向量。
+- 0x158AC130 的跳转表数值 2 指向 +0x28 的 InputAction。829 快照回读该动作名为 InLevelCameraMousePositionDelta，绑定 <Mouse>/delta，动作处理器为 ScaleVector2(x=0.1,y=0.1)，绑定处理器及 override 为空。同对象 +0x18／+0x40 的动作分别为 GampadLeftStick／GamepadRightStick；因此这里的设备来源由实例内容确认。
+- 开启处理的该鼠标分支先乘 JODKHBJPDKE+0x1BC，再除以 Time.deltaTime*60。0x158AC5F8 使用槽 0x0540AC98，与先前由 CinemachineBrain 确认的 Time.deltaTime 槽一致；60 位于 RVA 0x02818AA0。
+- 世界更新前的 0x13A4BE70 处理 X／Y 反转设置（+0x1C4／+0x19B），取公共倍率 1/60（RVA 0x0282D980）；最后设备 raw 1 另乘 +0x1A8，不能将这个分支仅凭数值命名成某枚举。还会乘 ShootingGroundSubsystem 的瞄准辅助倍率；该子系统不存在时原代码用 1。随后分别乘玩家横向 +0x150 和纵向 +0x19C，交给 0x1229F130。
+- JCCGIBAKPEE.0x1229F130 取得 +0xC8 的 CameraDataAccessor，将 X／Y 浮点符号位翻转后写入 +0x3B0 的 pointerDragDelta，并置旋转开始／持续标志。之前按类名过滤把 JCCGIBAKPEE 当作无关类会漏掉这条链；实际持有字段和写入指令才是依据。
+- FEBAFIHIDGP 的 0x11E7CDF0 直接读取 pointerDragDelta；0x11E7CFC0 再以减号应用横向轴速度。两个负号不能被错误合并成项目鼠标应倒转。CameraControlFlag.get_pointerDragDeltaMultiPlatform（0x167EBD20）另有 +0x1B0 倍率，但基础拖动路径不经过该 getter，不能重复套用。
+
+快照玩家参数为 +0x150=5、+0x19C=3.5、+0x1BC=0.6、+0x1A8=1.6；轴的非 raw-1 倍率为横向 1、纵向 0.75。它们作为 829 玩家状态保存，未宣称是出厂默认值。以无反转、非 raw-1 设备分支、无瞄准辅助为例，鼠标像素增量到轴前输入的幅值系数是 `0.1 * 0.6 / (deltaTime*60) * (1/60) * (5,3.5)`；之后仍须执行轴最大速度、加减速及轨道仰角规则，不能直接用该式替换最终角度。
+
+项目当前实际资产也已回读：Corin Profile 的 Sensitivity 为 (0.12,0.12)，不是 CameraInputSettings 类初始化器里的 (0.12,0.0025)。Look 动作共用 <Gamepad>/rightStick、<Pointer>/delta 和 Joystick；Pointer 绑定带 InvertVector2(invertX=false,invertY=true)。现有相机只取得合并后的 Vector2，没有设备来源。下一步需沿正式表现输入携带设备类别，统一处理鼠标 delta 与摇杆速率，再接轴状态及归一化仰角；不能先对混合输入统一除以 deltaTime 或重复反转 Y。
+
+本批只提交新的输入证据与复刻文档，未改运行代码或配置，未编译、Play 或 replay。输入轴交付仍未完成；已发布的 ScreenY 修正不受本批影响。

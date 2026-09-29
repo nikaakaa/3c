@@ -1,0 +1,46 @@
+{
+  "session": "829",
+  "action": {
+    "name": "InLevelCameraMousePositionDelta",
+    "id": "e886a7ab-b215-4451-91f6-1fc7fe823a85",
+    "processors": "ScaleVector2(x=0.1,y=0.1)",
+    "bindings": [
+      {
+        "path": "<Mouse>/delta",
+        "processors": null,
+        "action": "InLevelCameraMousePositionDelta",
+        "overridePath": null,
+        "overrideProcessors": null
+      }
+    ]
+  },
+  "input_actions": {
+    "0x10": "MouseScroll",
+    "0x18": "GampadLeftStick",
+    "0x28": "InLevelCameraMousePositionDelta",
+    "0x40": "GamepadRightStick"
+  },
+  "player_fields": {
+    "0x150": 5.0,
+    "0x164": 3.0,
+    "0x174": 2.0999999046325684,
+    "0x17c": 1.0,
+    "0x194": 0.75,
+    "0x19c": 3.5,
+    "0x1a8": 1.600000023841858,
+    "0x1b0": 3.0,
+    "0x1bc": 0.6000000238418579
+  },
+  "constants": {
+    "device_normalization_rate": {
+      "rva": "0x2818aa0",
+      "value": 60.0
+    },
+    "prepare_rate": {
+      "rva": "0x282d980",
+      "value": 0.01666666753590107
+    },
+    "device_time_call_slot": "0x540ac98"
+  },
+  "limits": "Player values are snapshot state, not established defaults. Mouse scaling branch is confirmed through action field +0x28 and jump-table index 2; do not use enum declaration ordinal."
+}

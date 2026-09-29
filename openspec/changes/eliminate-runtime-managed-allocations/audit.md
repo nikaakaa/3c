@@ -795,6 +795,12 @@
 - Layout 增加正式 HasRoute，有效 route 直接查询现有索引；两域 Runtime 在 capability 和 route 有效性检查后统一调用。未知 route、无效 route、capability disabled 和后续 TryReadActionContext 行为不变。
 - Action event/context 解析中的 route 存在检查从 route 数量级字符串/结构比较收敛为一次字典查找；无新增缓存、fallback 或第二配置源。静态核对 layout 构造唯一索引、两域接口调用链和差异检查；未编译、运行回放或采样。
 
+### AP105 Action Admission 父链重复解析（2026-09-29，已实施，本轮未编译）
+
+- 两域共用的 Action Admission 在每次 tag query 匹配时，对每个 owned candidate 反复沿 GameplayTag Parent 链调用 catalog 查找；同一 Admission、同一批 owned/source tags 会随 Required/Block/Cancel 各段重复解析同一父链。
+- 现在将 owned tag 和 active source tag 装入私有 HashSet 时一次性加入其全部祖先，保留 64 层上限、自身父节点错误和空白 tag 规则。查询匹配改为直接 `HashSet.Contains`；候选或父节点已存在时停止重复展开。
+- Required/Block/Cancel 的匹配结果不变，包括父 tag 命中子 owned tag、None 阻断和跨 Required/Block 的祖先共享。静态核对两域 `TryGetGameplayTagParent`、profile Tags/queries 消费、私有集合生命周期和差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

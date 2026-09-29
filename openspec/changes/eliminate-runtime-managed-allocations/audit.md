@@ -1156,3 +1156,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Parameter Resolve 每次求输出都按 `(NodeId, port)` 分别哈希查找 base pose 与 parameter source pose，并重复做 Local Pose 类型测试；两个输入端口在 graph 初始化后固定。
 - handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取 port value。求值阶段检查、空值错误、可用性校验、骨骼复制和参数合成顺序不变。
 - 该改动把每帧四次查找合并为构造期两次端口解析，输出页身份不变。静态核对两个端口名、类型、Initialize 唯一调用和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。
+
+### AP140 BlendPose typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Blend Pose 每次求输出都按 `(NodeId, port)` 哈希查找 base 与 overlay 的 Local Pose 输入并重复类型测试；两个端口在 graph 初始化后固定。optional weight 仍走原 Try 读取合同，本项不改变其存在性语义。
+- handler 在 Initialize 缓存 base/overlay 的 typed `ValueInput`，帧内直接读取。空值错误、可用性校验、权重解析、continuity 生成和混合顺序不变。
+- 该改动消除两个主姿态输入的每帧 tuple 查找；不新增第二数据源或兼容入口。静态核对端口名、类型、Initialize 唯一绑定和混合调用链；未编译、未采样，不能声称实测耗时收益。

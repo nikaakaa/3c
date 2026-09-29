@@ -475,8 +475,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             $"Pose StateMachine '{m_NodeId}' state '{state.Definition.StateId}' source preparation failed: {state.Preparation.Message}");
                     }
                     state.FrameOpen = true;
-                    for (int i = 0; i < state.Preparation.Demand.Requests.Count; i++)
-                        m_SourceRequests.Add(state.Preparation.Demand.Requests[i]);
+                    ref readonly CharacterPoseNativeSourceDemand demand =
+                        ref state.Preparation.Demand;
+                    IReadOnlyList<CharacterPoseNativeSourceRequest> requests =
+                        demand.Requests;
+                    for (int i = 0; i < requests.Count; i++)
+                        m_SourceRequests.Add(requests[i]);
                 }
                 return m_SourceRequests;
             }
@@ -503,18 +507,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
+                ref readonly CharacterPoseNativeSourceDemand childDemand =
+                    ref state.Preparation.Demand;
                 for (int requestIndex = 0;
-                     requestIndex < state.Preparation.Demand.Requests.Count;
+                     requestIndex < childDemand.Requests.Count;
                      requestIndex++)
                 {
                     CharacterPoseNativeSourceRequest expected =
-                        state.Preparation.Demand.Requests[requestIndex];
+                        childDemand.Requests[requestIndex];
                     if (!demand.Contains(in expected))
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
                 }
-                ref readonly CharacterPoseNativeSourceDemand childDemand =
-                    ref state.Preparation.Demand;
                 state.Graph.PrepareEvaluation(
                     state.Lease,
                     in childDemand,

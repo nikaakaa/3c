@@ -1360,3 +1360,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 旧 `CharacterPoseSourceDemand` 的 Lineage 和 Preparations 仍按值属性返回；pending page 比对 preparation 前还会复制 expected view。这是 SourceFrame.Lineage 引用链底层的重复读取。
 - Lineage 与 Preparations 改为 readonly 字段加 `ref readonly` 属性；ConsumePreparation 的 expected 改为只读引用后直接 Matches。provider demand、计数、lease 校验和错误文本不变。
 - 该改动删除 source demand 嵌入 lineage/view 的整份拷贝；不新增第二 preparation 数据源。静态核对构造赋值、全部 Preparations/Lineage 消费点、Matches 参数和 page 生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP174 StateMachine demand 循环定容（2026-09-30，已实施，本轮未编译）
+
+- StateMachine 在 PrepareFrame 收集请求和 PrepareEvaluation 校验子请求时，循环条件与索引访问反复执行 `state.Preparation.Demand.Requests`。Preparation 是状态对象字段，demand 同帧只读。
+- 每个状态把 demand 定成 `ref readonly` 局部，request list 缓存为同一 `IReadOnlyList` 引用；收集、丢失校验和 child PrepareEvaluation 使用同一 demand。请求顺序、错误文本和 barrier 语义不变。
+- 该改动删除周期循环中的重复只读入口调用；不复制 demand 或 request。静态核对三个状态 demand 入口、原有循环边界、异常路径和活跃状态生命周期；未编译、未采样，不能声称实测耗时收益。

@@ -32,17 +32,17 @@ R1／R2 的已有提交、R8 的保留结论、R9 的证据与专项归属记录
 
 本轮证据支持 design R6 所列完整旧簇退役；实际实施前核对工作区新增消费者，不扩大到同名第三方类型和正式 Flow 合同。
 
-- [ ] 4.1 清理已不需要的 TreeDesigner import 和正式 C# 导出模板；同步已生成代码，修正 EnumMenu.uxml 旧路径并保留其共享样式 GUID。
-- [ ] 4.2 删除 design 列出的七文件三十九个旧类型、ActionTargetSnapshotExposedProperty 和孤立的 ISubmitActionLifecycleAuthoring；保留 ActionTargetSnapshot、其余正式接口与 Camera Flow 节点。
-- [ ] 4.3 删除 GameplayAbilitySemanticFrontendCompiler 中不可达的三个旧 Equipment 类型判断、requiresEquipment 状态及对应能力声明，不引入新的 Equipment Flow 功能。
-- [ ] 4.4 在同一个完整旧簇提交中删除 TreeDesigner 包、反射发现机制、三个 BaseTreeAsset 旧菜单和目录 meta，并移除 Character Runtime／Editor 两个 asmdef 依赖；不留无法编译的中间提交。
+- [x] 4.1 清理已不需要的 TreeDesigner import 和正式 C# 导出模板；同步已生成代码，修正 EnumMenu.uxml 旧路径并保留其共享样式 GUID。
+- [x] 4.2 删除 design 列出的七文件三十九个旧类型、ActionTargetSnapshotExposedProperty 和孤立的 ISubmitActionLifecycleAuthoring；保留 ActionTargetSnapshot、其余正式接口与 Camera Flow 节点。
+- [x] 4.3 删除 GameplayAbilitySemanticFrontendCompiler 中不可达的三个旧 Equipment 类型判断、requiresEquipment 状态及对应能力声明，不引入新的 Equipment Flow 功能。
+- [x] 4.4 在同一个完整旧簇提交中删除 TreeDesigner 包、反射发现机制、三个 BaseTreeAsset 旧菜单和目录 meta，并移除 Character Runtime／Editor 两个 asmdef 依赖；不留无法编译的中间提交。
 
 ## 5. 按已有职责整理文件（R7）
 
 - [ ] 5.1 将 TimelineRuntimePreparation 中既有 Preparation、Playback、Evaluator、缓冲与合同按责任归文件，保持类型与运行语义。
 - [ ] 5.2 将 CharacterFootSwingMotionBuilder 中合同、诊断与算法按现有职责归文件，保持数值计算、字段布局和访问方式。
 - [ ] 5.3 将 CharacterTimelineHost 同文件中的独立服务／合同归到对应现有职责文件，保持新 GraphBindings 与唯一播放状态，不增加转发模块。
-- [ ] 5.4 清除 BtsmtlPreview.unity 与 GameplayLab.unity 中四个仍引用普通 C# TimelineHost 的失效 MonoBehaviour 对象及对应 m_Component fileID，保留 GameObject 和其他组件。
+- [ ] 5.4 清除 BtsmtlPreview.unity 与 GameplayLab.unity 中四个仍引用普通 C# TimelineHost 的失效 MonoBehaviour 对象及对应 Prefab m_AddedComponents fileID，保留 GameObject 和其他组件。
 
 ## 6. 收拢表现外围失败与释放（R1）
 

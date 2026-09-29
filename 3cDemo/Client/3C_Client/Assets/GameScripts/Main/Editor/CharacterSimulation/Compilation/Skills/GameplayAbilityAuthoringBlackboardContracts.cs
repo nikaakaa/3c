@@ -4,7 +4,6 @@ using FlowCanvas;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor

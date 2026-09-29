@@ -48,12 +48,6 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         string TargetSnapshotOwnerId { get; }
     }
 
-    public interface ISubmitActionLifecycleAuthoring : IActionContextAuthoring
-    {
-        ActionLifecycleTransitionType TransitionType { get; }
-        string Reason { get; }
-    }
-
     public interface IGameplayTagAuthoring
     {
         GameplayTagId Tag { get; }
@@ -102,21 +96,10 @@ namespace ThirdPersonCharacter.Pipeline.Motion
 
     public static class CharacterActionAuthoringRules
     {
-        public const ActionLifecycleTransitionType DefaultLifecycleTransition =
-            ActionLifecycleTransitionType.Complete;
-        public const string DefaultLifecycleTransitionText = "Complete";
-
         public static void ValidateTargetSnapshot(string declarationId, string ownerId)
         {
             if (string.IsNullOrWhiteSpace(declarationId) != string.IsNullOrWhiteSpace(ownerId))
                 throw new ArgumentException("Target snapshot declaration and owner must be specified together.");
-        }
-
-        public static void ValidateLifecycle(ActionLifecycleTransitionType transitionType)
-        {
-            if (!Enum.IsDefined(typeof(ActionLifecycleTransitionType), transitionType) ||
-                transitionType == ActionLifecycleTransitionType.None)
-                throw new ArgumentOutOfRangeException(nameof(transitionType));
         }
 
         public static string RequireWindowType(string value)

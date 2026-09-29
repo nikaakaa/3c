@@ -6,7 +6,6 @@ using ThirdPersonCamera;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration

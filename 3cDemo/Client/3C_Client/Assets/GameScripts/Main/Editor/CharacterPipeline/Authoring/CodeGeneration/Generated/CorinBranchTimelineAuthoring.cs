@@ -4,7 +4,6 @@ using FlowCanvas.Nodes;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 using UnityAnimationClip = UnityEngine.AnimationClip;
 

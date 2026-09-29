@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
@@ -120,14 +119,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             bool requiresGameplayEffect = model.Definition.Effects.Count > 0 ||
                 RequiresGameplayEffect(model.Definition.AdmissionProfile);
-            bool requiresEquipment = false;
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
                 if (occurrence.Role == BtsmtlSkillFlowGraphRole.StateMachine)
                     builder.RequireGameplayCapability("StateMachine");
                 if (occurrence.Timelines.Count > 0)
                     builder.RequireGameplayCapability("Timeline");
-                foreach (object node in occurrence.Nodes)
+                foreach (var node in occurrence.Nodes)
                 {
                     if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
                         node is BtsmtlSkillRemoveGameplayEffectFlowNode ||
@@ -136,16 +134,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         node is BtsmtlSkillCanActivateActionFlowNode admission &&
                         RequiresGameplayEffect(admission.AdmissionProfile))
                         requiresGameplayEffect = true;
-                    if (node is ReadEquipmentIdentityNode ||
-                        node is ReadEquipmentParameterNode ||
-                        node is EquipmentChangeOperationNode)
-                        requiresEquipment = true;
                 }
             }
             if (requiresGameplayEffect)
                 builder.RequireGameplayCapability("GameplayEffect");
-            if (requiresEquipment)
-                builder.RequireGameplayCapability("Equipment");
         }
 
         static bool RequiresGameplayEffect(GameplayAbilityAdmissionProfile profile) =>

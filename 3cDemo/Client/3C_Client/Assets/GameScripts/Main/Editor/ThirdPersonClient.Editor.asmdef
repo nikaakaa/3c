@@ -45,7 +45,6 @@
         "BTSMTL.Timeline.Editor",
         "BTSMTL.Timeline.Tree",
         "BTSMTL.Timeline.Tree.Editor",
-        "BTSMTL.TreeDesigner",
         "NodeCanvas",
         "FlowCanvas",
         "ParadoxNotion",

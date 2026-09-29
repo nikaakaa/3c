@@ -1,7 +1,6 @@
 using System;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Control.Authoring;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration

@@ -18,7 +18,6 @@ using ThirdPersonGameplay.Tags;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline

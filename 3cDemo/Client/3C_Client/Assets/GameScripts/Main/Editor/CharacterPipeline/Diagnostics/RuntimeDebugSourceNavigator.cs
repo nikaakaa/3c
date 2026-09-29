@@ -8,7 +8,6 @@ using BTSMTL.Timeline.Editor;
 using FlowCanvas;
 using NodeCanvas.Editor;
 using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline.Graph;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor

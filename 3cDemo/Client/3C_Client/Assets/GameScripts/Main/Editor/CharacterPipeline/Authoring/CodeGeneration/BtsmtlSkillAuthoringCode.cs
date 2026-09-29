@@ -15,7 +15,6 @@ using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEditor;
 using UnityEngine;
 

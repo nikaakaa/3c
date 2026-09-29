@@ -14,7 +14,6 @@ using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using BTSMTL.Authoring.Graph;
 using UnityEditor;
 using UnityEngine;
@@ -75,7 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             context.AddUsing("ThirdPersonGameplay.Effects");
             context.AddUsing("ThirdPersonGameplay.Tags");
             context.AddUsing("ThirdPersonSimulation");
-            context.AddUsing("TreeDesigner");
             context.AddUsing("BTSMTL.Authoring.Blackboard");
             context.AddUsing("UnityEngine");
         }

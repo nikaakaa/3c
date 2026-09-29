@@ -1,5 +1,4 @@
 using System;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.ActionSystem
@@ -26,8 +25,4 @@ namespace ThirdPersonCharacter.ActionSystem
         public bool HasTarget => !string.IsNullOrEmpty(TargetId);
     }
 
-    [Serializable]
-    public sealed class ActionTargetSnapshotExposedProperty : BaseExposedProperty<ActionTargetSnapshot>
-    {
-    }
 }

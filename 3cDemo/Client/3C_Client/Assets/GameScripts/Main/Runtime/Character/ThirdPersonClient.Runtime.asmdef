@@ -23,7 +23,6 @@
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
         "BTSMTL.Timeline.Runtime",
-        "BTSMTL.TreeDesigner",
         "NodeCanvas",
         "FlowCanvas",
         "ParadoxNotion",

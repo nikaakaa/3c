@@ -6,7 +6,6 @@ using System.Linq;
 using FlowCanvas;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.ActionSystem;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring

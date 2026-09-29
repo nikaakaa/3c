@@ -832,6 +832,12 @@
 - 增加 FindSlot 在既有排序合同上做 Ordinal 二分定位；Require/替换/同 slot 提交使用同一索引，未命中异常、no-op 返回、数组复制和 pending 解析语义不变。
 - Slot 查找从 Slot 数量级收敛为对数比较；无新集合和第二数据源。静态核对 aggregate 构造排序唯一性、三条消费路径、异常文本和两域调用；未编译、运行回放或采样。
 
+### AP112 Equipment LocalState 线性扫描（2026-09-29，已实施，本轮未编译）
+
+- EquipmentStateAggregate 的 LocalStates 构造期按 FeatureId 加 StateId 的 joined identity 排序并拒绝重复，但 RequireLocalState 和 WithLocalState 每次线性比较；Equipment 换装时会为同一 Feature 的多个 state 重复进入。
+- 增加 FindLocalState，用原 CompareJoinedIdentity 对既有排序做二分定位；Require、no-op 返回、value kind 检查、数组复制和 aggregate 替换语义不变。
+- LocalState 查找从 state 数量级收敛为对数比较；比较仍使用原无分配 joined 合同，无新字典。静态核对构造排序、两条消费路径、异常和两域换装链；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

@@ -916,10 +916,32 @@ namespace ThirdPersonSimulation
 
         public EquipmentRuntimeStateValue RequireLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
         {
-            for (int i = 0; i < m_LocalStates.Length; i++)
-                if (m_LocalStates[i].FeatureId == featureId && m_LocalStates[i].StateId == stateId)
-                    return m_LocalStates[i].Value;
+            int index = FindLocalState(featureId, stateId);
+            if (index >= 0)
+                return m_LocalStates[index].Value;
             throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
+        }
+
+        int FindLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
+        {
+            int low = 0;
+            int high = m_LocalStates.Length - 1;
+            while (low <= high)
+            {
+                int middle = low + ((high - low) >> 1);
+                int comparison = CompareJoinedIdentity(
+                    m_LocalStates[middle].FeatureId.Value,
+                    m_LocalStates[middle].StateId.Value,
+                    featureId.Value,
+                    stateId.Value);
+                if (comparison == 0)
+                    return middle;
+                if (comparison < 0)
+                    low = middle + 1;
+                else
+                    high = middle - 1;
+            }
+            return -1;
         }
 
         public EquipmentStateAggregate WithSlot(EquipmentSlotState slot)
@@ -948,25 +970,22 @@ namespace ThirdPersonSimulation
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
 
-            for (int i = 0; i < m_LocalStates.Length; i++)
-            {
-                if (m_LocalStates[i].FeatureId != featureId || m_LocalStates[i].StateId != stateId)
-                    continue;
-                if (m_LocalStates[i].Value.Equals(value))
-                    return this;
-                if (m_LocalStates[i].Value.Kind != value.Kind)
-                    throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
-                var values = new EquipmentLocalStateValue[m_LocalStates.Length];
-                Array.Copy(m_LocalStates, values, m_LocalStates.Length);
-                values[i] = new EquipmentLocalStateValue(featureId, stateId, value);
-                return new EquipmentStateAggregate(
-                    CatalogHash,
-                    m_Slots,
-                    values,
-                    PendingChange,
-                    LastResolvedChange);
-            }
-            throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
+            int index = FindLocalState(featureId, stateId);
+            if (index < 0)
+                throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
+            if (m_LocalStates[index].Value.Equals(value))
+                return this;
+            if (m_LocalStates[index].Value.Kind != value.Kind)
+                throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
+            var values = new EquipmentLocalStateValue[m_LocalStates.Length];
+            Array.Copy(m_LocalStates, values, m_LocalStates.Length);
+            values[index] = new EquipmentLocalStateValue(featureId, stateId, value);
+            return new EquipmentStateAggregate(
+                CatalogHash,
+                m_Slots,
+                values,
+                PendingChange,
+                LastResolvedChange);
         }
 
         public EquipmentStateAggregate WithPending(PendingEquipmentChange pending) =>

@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 throw new InvalidOperationException("Camera authoring requires an idle Editor.");
             var profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(Folder + "CorinCharacterCameraProfile.asset");
-            PublishPlaybackStacking(profile);
+            PublishStacking(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
             var shakes = new Dictionary<string, CameraShakeAsset>(StringComparer.Ordinal);
@@ -124,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Save(profile);
         }
 
-        static void PublishPlaybackStacking(CharacterCameraProfile profile)
+        public static void PublishStacking(CharacterCameraProfile profile)
         {
             const string sourceFolder = "D:/ZZZ_Dump/output/corin_replication/replication-guide/data/variants/";
             JToken zooms = JObject.Parse(File.ReadAllText(sourceFolder + "zoom-0.json", Encoding.UTF8))["cameraZooms"];
@@ -138,7 +138,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             foreach (CameraStretchAsset stretch in profile.Stretches)
             {
                 Undo.RecordObject(stretch, "配置可琳位移镜头播放叠加");
-                stretch.ConfigurePlaybackStacking(DecodePlaybackStacking((int)stretches[stretch.StretchId]["PlayStackingType"]));
+                JToken source = stretches[stretch.StretchId];
+                stretch.ConfigureStacking(
+                    DecodePlaybackStacking((int)source["PlayStackingType"]), (int)source["StackingType"]);
                 Save(stretch);
             }
         }

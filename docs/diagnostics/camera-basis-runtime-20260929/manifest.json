@@ -208,6 +208,10 @@
       "sha256": "5fef4cc9f02986cb6c81f69dbab6cd4b023764662333b2c94d589729700c1378"
     },
     {
+      "path": "stretch-stacking-audit.json",
+      "sha256": "6c4775eef74b853206ca615724a94e7f9fdd74cdf78d0420f0f9916aa2fb40d0"
+    },
+    {
       "path": "track-prepare.json",
       "sha256": "119b677d11b32fb822b834ff6cf599082745d0a8ad85d72b5acb17573f209ddc"
     },

@@ -23,6 +23,10 @@ namespace ThirdPersonCamera
             ZoomInitialized = false;
             ZoomStartOffset = 0f;
             ZoomTargetOffset = 0f;
+            StretchInitialized = false;
+            StretchStartRadiusOffset = 0f;
+            StretchStartPositionOffset = default;
+            StretchStartRollOffset = 0f;
         }
 
         public CameraEffectRequest Request { get; set; }
@@ -39,5 +43,9 @@ namespace ThirdPersonCamera
         public bool ZoomInitialized;
         public float ZoomStartOffset;
         public float ZoomTargetOffset;
+        public bool StretchInitialized;
+        public float StretchStartRadiusOffset;
+        public UnityEngine.Vector3 StretchStartPositionOffset;
+        public float StretchStartRollOffset;
     }
 }

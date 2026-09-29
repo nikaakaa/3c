@@ -22,6 +22,7 @@ MonoBehaviour:
   m_IsAppliedElevationRatio: 0
   m_IsAppliedEndElevationAngle: 1
   m_PlayStackingType: 1
+  m_StackingType: 0
   m_RuntimeCamFollowYOffsetRatio: 0
   m_IsElevationAngleAbsolute: 1
   m_IgnorePriorityInEndTime: 0

@@ -175,3 +175,17 @@ Unity 已完成编译重载，同一目标实例回读为 Edit／非编译状态
 进一步定位到初始化函数 `0x17887240` 及调用者 `0x101B6210`：原始 StackingType=0 时继承所属组上一帧的半径、位置和滚转；当前 Stretch 作者资产及投影缺少这一字段。进入求值 0x17885330、退出求值 0x17886E40 及相关 phase 函数均已保留。本轮未强行以 Zoom 初始化规则代替这条链；接下来应补齐正式 StackingType 配置、原始半径参考比例及跨段继承。
 
 Unity 编译重载完成，目标实例为 Edit／非编译状态；回读确认 StretchContribution 已加载，正式 Profile 的 18 项 Stretch 投影构建与 RequireValid 成功，Profile dirty=false，Console 错误数为 0。未运行 Play/replay，未新增测试；未做运行时 GC 或原作画面对照。
+
+## Stretch 正式 StackingType 与跨段起点
+
+依据前节 `0x101B6210` → `0x17887240` 的初始化链，Stretch 的两个叠加字段分开保留：PlayStackingType 决定 Base／Additive 组，原始 StackingType=0 决定从该组当前输出继承起点；初始化函数对非零值使用零起点。本批未根据枚举声明 ordinal 推断另两个非零值的接纳或多实例规则。
+
+- `CameraStretchAsset` 增加原始整型 StackingType，`ConfigureStacking` 同时接收播放分组及原始实例叠加值。`CorinCameraResourcesAuthoring.PublishStacking` 从同一 stretch-0.json 正式写入；18 个可琳键的原始 StackingType 全为 0。旧的 Stretch ConfigurePlaybackStacking 入口已替换，Zoom 原有入口继续承担 Zoom 自身配置。
+- `CameraStretchProjectionCompiler` 将值传入唯一正式 payload，投影版本更新为 v5。原资产的其它时间、曲线与偏移参数不手工改写。
+- `CameraStretchEffectEvaluator` 保留上一帧各组已经选出的半径改变量、原坐标偏移和滚转。新实例首次消费时依据原始 StackingType 捕获这些起点；同一帧创建的实例读同一份历史，不读取本帧遍历中的中间结果。
+- 进入期分别从起点到资源目标插值；保持期输出目标；退出期向零插值。明确取消从 RetireStartElapsed 的实际值开始衰减，不把继承段重新当成从零开始的单一包络。
+- 位移先在配置坐标内插值，再经既有坐标转换参与通道选择；历史保留被选中的原坐标值。池槽 Reset 清除初始化标记和三项起点；owner Reset 或没有活跃 Stretch 时清除组历史。每帧只增加值类型运算，无新增容器或对象。
+
+半径参考已确认：原函数 `0x178854B0` 读取 TargetCalcData+0x2DC，对应 CameraFollowCalcData.cameraLocateRatio；它不是世界单位的相机距离。原实例把目标／起点换算为 `(ratio+1)/cameraLocateRatio-1`，最终管理器还用 anchorRadius 构造 anchorRadiusAppend，并带两组包络的交叉项。本项目目前没有这些完整中间量，本批继承的是现有 RadiusRatio 增量，尚未把动态比例、交叉项接入正式链。归一化仰角及跟随 Y 额外通道的继承也没有因此视为完成。后续应统一基础轨道到效果阶段的数据流，而不能把 plan.Radius 直接代作无量纲 cameraLocateRatio。
+
+Unity 编译重载完成，Console 错误数为 0；正式 PublishStacking 已保存 18 项 Stretch，回读资源及投影的 StackingType 均为原始值 0，dirtyResources=0，投影 Build/RequireValid 成功（v5）。磁盘与提交前逐项比较，18 项唯一内容变化均为新增 m_StackingType: 0，见 stretch-stacking-audit.json。未运行 Play/replay，未新增测试，未声称手感已通过画面对照。

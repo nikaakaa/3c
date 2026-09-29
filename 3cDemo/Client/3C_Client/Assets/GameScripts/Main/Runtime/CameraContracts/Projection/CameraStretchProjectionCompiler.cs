@@ -25,6 +25,7 @@ namespace ThirdPersonCamera
                 asset.IsAppliedElevationRatio,
                 asset.IsAppliedEndElevationAngle,
                 asset.PlayStackingType,
+                asset.StackingType,
                 asset.RuntimeCamFollowYOffsetRatio,
                 asset.IsElevationAngleAbsolute,
                 asset.IgnorePriorityInEndTime,

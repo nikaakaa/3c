@@ -1,0 +1,131 @@
+{
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\replication-guide\\data\\variants\\stretch-0.json",
+  "assets": [
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_AssaultAid_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "5dce6f249b300d0af6e298a1a02153d45f998fcba756347ecf234f25f2b6c635"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_AssaultAid_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "e5b96aef22c75a8d148f0d4aaec9f2a14f142fd3e7d7e1b1c4685c24266d2d82"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_BeHitAid_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "5f4454544ebd19dace0ff12baa4df9134471822fb11cdb5f4609a711c9c4c7ce"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_01_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "51afd6f0145339579f5b9aebbc08872c47c14bb167f527c58c050c578e525b8c"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_01_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "56c1b0bd6b1a8783fd5e59132f2e9d2405e91c113273aedd993b4628cb297abc"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_02_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "a767db6f28154ba1cf4ae3f9185ade952605628548b499e0723513815913462a"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_02_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "fc585600c7003c3f731fb8ffd021a4837cf71b73a6836aab616ba23a5176a327"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_03_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "dac5bb8b8e16e1b0ea4488dc97c2712a08bee000236b1c5f81ebdaeb853df7df"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_03_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "4f6e245dacec406f68281d7ec097350af99b52de9fd1cbe65d5bd0e566083696"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Counter_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "9b727149bc95986f62398ff6372a2f1b7b39983d43b86d2fe5d8e10efb49e48c"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_03_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "f6390135498d2057ecc68cc09ddd4cd6d44d8fde22948ba3ec21675fff9682dc"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_05_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "492b2e08bb18bb7ac258ae0f34deb671dc21a8148adddbd431ae708adf3a9d75"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_05_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "cf2dd8f88ffc078a7c3d002e15290f641b04433ddd74e9a36e78ca4087fa5156"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_SwitchIn_Attack_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "24a751e646df7cca8307343f01ece3a52c0007454625bdc2b393fa3f9c83f42a"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_SwitchIn_Attack_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "e7b98b1ebff2db34246bb358117326e088385f0c57eb75e47e62315874df15da"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_SwitchIn_Attack_Ex_CamStretch_01.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "c06c6ed87d2fdd35ce4252c5fdf39d63ceef311398456aa6c60fee1c9581a12c"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_SwitchIn_Attack_Ex_CamStretch_02.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "c3da61d9c3276d2bc931453732f1d4c77ae76d132e986f264633ae6167d0ee72"
+    },
+    {
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_SwitchIn_Attack_Ex_CamStretch_03.asset",
+      "source_stacking_type": 0,
+      "only_expected_field_added": true,
+      "field_present": true,
+      "file_sha256": "f90a20f53c151b2ecb310ecc5d5eb4a97d68e37aa54bf6a5b3cff9718eba5f52"
+    }
+  ]
+}

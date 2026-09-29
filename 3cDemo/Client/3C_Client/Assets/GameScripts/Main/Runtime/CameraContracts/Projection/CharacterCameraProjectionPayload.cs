@@ -7,7 +7,7 @@ namespace ThirdPersonCamera
 [Serializable]
     public sealed class CharacterCameraProjectionPayload
     {
-        public const string SchemaVersion = "character-camera-projection/v4";
+        public const string SchemaVersion = "character-camera-projection/v5";
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_ProfileId = string.Empty;

@@ -22,6 +22,7 @@ namespace ThirdPersonCamera
         [SerializeField] bool m_IsAppliedElevationRatio;
         [SerializeField] bool m_IsAppliedEndElevationAngle;
         [SerializeField] CameraEffectStackingType m_PlayStackingType = CameraEffectStackingType.Add;
+        [SerializeField] int m_StackingType;
         [SerializeField] float m_RuntimeCamFollowYOffsetRatio;
         [SerializeField] bool m_IsElevationAngleAbsolute;
         [SerializeField] bool m_IgnorePriorityInEndTime;
@@ -54,6 +55,7 @@ namespace ThirdPersonCamera
         public bool IsAppliedElevationRatio => m_IsAppliedElevationRatio;
         public bool IsAppliedEndElevationAngle => m_IsAppliedEndElevationAngle;
         public CameraEffectStackingType PlayStackingType => m_PlayStackingType;
+        public int StackingType => m_StackingType;
         public float RuntimeCamFollowYOffsetRatio => m_RuntimeCamFollowYOffsetRatio;
         public bool IsElevationAngleAbsolute => m_IsElevationAngleAbsolute;
         public bool IgnorePriorityInEndTime => m_IgnorePriorityInEndTime;
@@ -79,9 +81,10 @@ namespace ThirdPersonCamera
         public float StretchTime => m_StretchTime;
         public CameraFovVariationType FovVariationType => m_FovVariationType;
 
-        public void ConfigurePlaybackStacking(CameraEffectStackingType stackingType)
+        public void ConfigureStacking(CameraEffectStackingType playStackingType, int stackingType)
         {
-            m_PlayStackingType = stackingType;
+            m_PlayStackingType = playStackingType;
+            m_StackingType = stackingType;
         }
 
         public void RequireValid()

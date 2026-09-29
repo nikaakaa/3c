@@ -172,14 +172,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
             int count = 0;
-            for (int i = 0; i < frames.Count; i++)
+            int frameCount = frames.Count;
+            for (int i = 0; i < frameCount; i++)
             {
-                if (frames[i].AnimationChannelId != m_ChannelId)
+                ActionAnimationPlaybackLifecycleFrame frame = frames[i];
+                if (frame.AnimationChannelId != m_ChannelId)
                     continue;
                 if (count == m_PushOrder.Length)
                     throw new InvalidOperationException($"Action Slot '{m_NodeId}' frame capacity was exceeded.");
                 int insert = count;
-                while (insert > 0 && frames[m_PushOrder[insert - 1]].LatestCommandSequence > frames[i].LatestCommandSequence)
+                ulong commandSequence = frame.LatestCommandSequence;
+                while (insert > 0 && frames[m_PushOrder[insert - 1]].LatestCommandSequence > commandSequence)
                 {
                     m_PushOrder[insert] = m_PushOrder[insert - 1];
                     insert--;
@@ -282,7 +285,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameInput input,
             AnimationBlendStackRuntime stack)
         {
-            for (int i = 0; i < stack.EntryCount; i++)
+            int entryCount = stack.EntryCount;
+            for (int i = 0; i < entryCount; i++)
             {
                 ref readonly AnimationBlendEntryState entry =
                     ref stack.GetEntryState(i);
@@ -381,13 +385,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void Prune(AnimationBlendStackRuntime stack)
         {
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> frames = m_Playback.Frames;
+            int frameCount = frames.Count;
             for (int i = 0; i < m_Pending.Length; i++)
             {
                 AnimationPoseSourceId sourceId = m_Pending[i].SourceId;
                 if (!sourceId.IsValid || stack.ContainsSource(sourceId))
                     continue;
                 bool selected = false;
-                for (int frameIndex = 0; frameIndex < frames.Count; frameIndex++)
+                for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
                 {
                     ActionAnimationPlaybackLifecycleFrame frame = frames[frameIndex];
                     if (frame.EndReason == ActionPlaybackEndReason.None && SourceId(in frame).Equals(sourceId))

@@ -1528,3 +1528,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `ReportUsage` 的 frame 循环条件每次读取 `Frames.Count`，每个 channel 匹配 frame 的 entry 循环又重复读取 `stack.EntryCount`。
 - frame 视图 count 在循环前绑定一次；entry count 在每个 frame 的内层循环前绑定一次。usage 判定、Sample 早退、OutgoingHandoff 后继续查找和 `ReportSlotUsage` 顺序不变。
 - 该改动删除报告循环中的重复 count 属性读取；不新增索引缓存或第二遍遍历。静态核对 `ReportSlotUsage` 只登记 playback 结果、不替换 frame 视图，也不修改 stack entry count；未编译、未采样，不能声称实测耗时收益。
+
+### AP202 ActionSlot frame 遍历定容（2026-09-30，已实施，本轮未编译）
+
+- `ApplyFrames` 的收集循环在 channel 过滤和插入排序时重复索引同一 frame；`PrepareRetained` 每次循环读取 entry count；`Prune` 每个待清理 source 的 frame 循环重复读取 frame view count。
+- 三个循环分别定容 count；`ApplyFrames` 每个候选 frame 只按值读取一次，并把当前 command sequence 传入移位比较。排序键、插入位置、retained Materialize 和 pending 清理顺序不变。
+- 该改动删除同一次候选扫描内的重复 frame 拷贝和 count 读取；不改变容量异常时机或 stack push 语义。静态核对 `Materialize` 不修改 stack entries、Prune 不修改 frame view 和 frame view 由 playback frame lease 固定；未编译、未采样，不能声称实测耗时收益。

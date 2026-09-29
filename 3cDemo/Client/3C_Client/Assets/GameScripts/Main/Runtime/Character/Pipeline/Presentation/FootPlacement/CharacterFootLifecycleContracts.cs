@@ -1107,6 +1107,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLifecycleTransitionFact
     {
+        readonly CharacterFootContactHistoryFact m_PreviousContext;
+        readonly CharacterFootContactHistoryFact m_CurrentContext;
+        readonly CharacterFootContactAnchorFact m_PreviousAnchor;
+        readonly CharacterFootContactAnchorFact m_CurrentAnchor;
+        readonly CharacterFootLockRequest m_Request;
+        readonly CharacterFootTransitionDecision m_PreTransition;
+        readonly CharacterFootTransitionDecision m_PostTransition;
+
         CharacterFootLifecycleTransitionFact(
             bool evaluated,
             in CharacterFootContactHistoryFact previousContext,
@@ -1121,29 +1129,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootTransitionDecision postTransition)
         {
             Evaluated = evaluated;
-            PreviousContext = previousContext;
-            CurrentContext = currentContext;
-            PreviousAnchor = previousAnchor;
-            CurrentAnchor = currentAnchor;
-            Request = request;
+            m_PreviousContext = previousContext;
+            m_CurrentContext = currentContext;
+            m_PreviousAnchor = previousAnchor;
+            m_CurrentAnchor = currentAnchor;
+            m_Request = request;
             LockResponseBefore = lockResponseBefore;
             OwnershipLossReason = ownershipLossReason;
             FormalFootPlacementWeight = formalFootPlacementWeight;
-            PreTransition = preTransition;
-            PostTransition = postTransition;
+            m_PreTransition = preTransition;
+            m_PostTransition = postTransition;
         }
 
         internal bool Evaluated { get; }
-        internal CharacterFootContactHistoryFact PreviousContext { get; }
-        internal CharacterFootContactHistoryFact CurrentContext { get; }
-        internal CharacterFootContactAnchorFact PreviousAnchor { get; }
-        internal CharacterFootContactAnchorFact CurrentAnchor { get; }
-        internal CharacterFootLockRequest Request { get; }
+        internal ref readonly CharacterFootContactHistoryFact PreviousContext =>
+            ref m_PreviousContext;
+        internal ref readonly CharacterFootContactHistoryFact CurrentContext =>
+            ref m_CurrentContext;
+        internal ref readonly CharacterFootContactAnchorFact PreviousAnchor =>
+            ref m_PreviousAnchor;
+        internal ref readonly CharacterFootContactAnchorFact CurrentAnchor =>
+            ref m_CurrentAnchor;
+        internal ref readonly CharacterFootLockRequest Request => ref m_Request;
         internal CharacterFootLockResponse LockResponseBefore { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
         internal float FormalFootPlacementWeight { get; }
-        internal CharacterFootTransitionDecision PreTransition { get; }
-        internal CharacterFootTransitionDecision PostTransition { get; }
+        internal ref readonly CharacterFootTransitionDecision PreTransition =>
+            ref m_PreTransition;
+        internal ref readonly CharacterFootTransitionDecision PostTransition =>
+            ref m_PostTransition;
         internal bool PostTransitionEvaluated =>
             PostTransition.Phase == CharacterFootTransitionPhase.PostInterpolation;
         internal bool SameEventContactReentryRefreshed =>
@@ -1200,9 +1214,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in context.ContactTransition);
             var currentAnchor = new CharacterFootContactAnchorFact(
                 in context.Contact);
-            CharacterFootContactHistoryFact previousContext = PreviousContext;
-            CharacterFootContactAnchorFact previousAnchor = PreviousAnchor;
-            CharacterFootLockRequest request = Request;
+            ref readonly CharacterFootContactHistoryFact previousContext = ref PreviousContext;
+            ref readonly CharacterFootContactAnchorFact previousAnchor = ref PreviousAnchor;
+            ref readonly CharacterFootLockRequest request = ref Request;
             return new CharacterFootLifecycleTransitionFact(
                 true,
                 in previousContext,

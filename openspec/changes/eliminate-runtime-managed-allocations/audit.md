@@ -1877,3 +1877,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStateFrame` 的 ContactLanding、PreparedPlantTarget 自动属性每次读取复制完整 landing 结构；transition、interpolation completion、target resolver 和 hard constraint 会重复读取 identity、point、normal 和 surface identity。
 - 两个 landing 属性改为 backing field 只读引用；构造仍保留一次必要字段写入。contact 事件匹配、prepared plant 几何、hard constraint 和 completion 判定不变。
 - 该改动删除 Foot Placement lifecycle 周期中 landing 结构的重复拷贝。静态核对 landing 类型为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP260 Lifecycle transition fact 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootLifecycleTransitionFact` 的 PreviousContext、CurrentContext、PreviousAnchor、CurrentAnchor、Request、PreTransition、PostTransition 自动属性每次读取复制完整结构；事件重入、anchor 保留、completion 重建和诊断会重复读取。
+- 七个结构属性改为 backing field 只读引用；`Complete` 的 previous context/anchor/request 改为只读绑定。Begin/Complete 构造仍保留必要字段写入，transition 决策和 contact/anchor 事实不变。
+- 该改动删除 Foot Placement lifecycle 过渡事实的重复结构拷贝。静态核对容器为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。

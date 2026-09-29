@@ -295,6 +295,7 @@ namespace ThirdPersonSimulation
         readonly int[] m_StateMachineOwners;
         readonly OperationHandle[] m_StateMachineInitialEntries;
         readonly OperationHandle[] m_StateMachineAnyStateEntries;
+        readonly string[] m_StateIdentities;
         readonly ProgramControlFlowEdge[] m_StateOnEnter;
         readonly ProgramControlFlowEdge[] m_StateRoot;
         readonly ProgramControlFlowEdge[] m_StateOnExit;
@@ -342,6 +343,7 @@ namespace ThirdPersonSimulation
 
             m_Operations = operationList.AsReadOnly();
             m_Identities = BuildIdentities(operationList.Count);
+            m_StateIdentities = BuildStateIdentities(operationList, m_Identities);
             m_Outgoing = BuildOutgoing(operationList.Count, edges);
             m_References = BuildReferences(operationList.Count, referenceList);
             m_OperationStateSlots = BuildOperationStateSlots(operationList, stateSlots);
@@ -373,6 +375,12 @@ namespace ThirdPersonSimulation
         {
             RequireOperation(handle);
             return m_Identities[handle.Value];
+        }
+
+        public string StateIdentity(OperationHandle state)
+        {
+            RequireOperation(state);
+            return m_StateIdentities[state.Value];
         }
 
         public IReadOnlyList<ProgramControlFlowEdge> Outgoing(OperationHandle source, ProgramControlFlowKind kind)
@@ -469,6 +477,19 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < operationCount; i++)
                 identities[i] = i.ToString(CultureInfo.InvariantCulture);
             return identities;
+        }
+
+        static string[] BuildStateIdentities(
+            IReadOnlyList<OperationExecutionDescriptor> operations,
+            string[] identities)
+        {
+            var stateIdentities = new string[operations.Count];
+            for (int i = 0; i < operations.Count; i++)
+            {
+                if (operations[i].Code == SimulationOperationCode.State)
+                    stateIdentities[i] = $"state:{identities[i]}";
+            }
+            return stateIdentities;
         }
 
         static void ValidateEdges(IReadOnlyList<ProgramControlFlowEdge> edges, int operationCount)

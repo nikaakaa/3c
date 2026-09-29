@@ -608,8 +608,8 @@ namespace ThirdPersonSimulation.Fixed
             m_Facts.Add(new GameplayFact(
                 header,
                 GameplayFactKind.State,
-                $"state:{state.Value}",
-                phase.ToString(),
+                m_Access.Topology.StateIdentity(state),
+                OperationTraceText.LifecyclePhase(phase),
                 FixedScalar.Zero));
         }
 

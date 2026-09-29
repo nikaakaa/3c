@@ -103,6 +103,13 @@ namespace ThirdPersonSimulation
             OperationStopCause.ActionContextEnded => "ActionContextEnded",
             _ => throw new ArgumentOutOfRangeException(nameof(cause))
         };
+
+        public static string LifecyclePhase(OperationStateLifecyclePhase phase) => phase switch
+        {
+            OperationStateLifecyclePhase.Entered => "Entered",
+            OperationStateLifecyclePhase.Exited => "Exited",
+            _ => throw new ArgumentOutOfRangeException(nameof(phase))
+        };
     }
 
     public enum OperationStateLifecyclePhase : byte

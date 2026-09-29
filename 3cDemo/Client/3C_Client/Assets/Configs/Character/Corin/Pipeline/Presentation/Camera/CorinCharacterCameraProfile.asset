@@ -72,6 +72,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: eb3648e10f97d3e4f89a828569d7a5ac, type: 2}
   - {fileID: 11400000, guid: a54df55c26a30cb4e9ab445c76e7b98b, type: 2}
   - {fileID: 11400000, guid: 17e16da512847ce45bff88f7d2c0df07, type: 2}
+  - {fileID: 11400000, guid: c9c9857a902c0794c9ac39838515c7f6, type: 2}
+  - {fileID: 11400000, guid: 4f1948ae5e981a242904196e9b1e0492, type: 2}
+  - {fileID: 11400000, guid: 27090fcbfb9790541b02a459df30b71f, type: 2}
+  - {fileID: 11400000, guid: 08393c233b3558a43872999ff3f21e00, type: 2}
+  - {fileID: 11400000, guid: 3deaa982b77dbf748a758332b31a0283, type: 2}
+  - {fileID: 11400000, guid: 892d1e6da6dfaa74da95e83c12fecc8c, type: 2}
   m_Shots: []
   m_Curves:
   - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}

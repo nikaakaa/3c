@@ -4,6 +4,10 @@
   "metadata_session": "829",
   "files": [
     {
+      "path": "additional-hit-shake-assets.json",
+      "sha256": "65331652120a81f46342a520191d49291d5009e9ae60ca0229ea57afe0b62726"
+    },
+    {
       "path": "basis-types.json",
       "sha256": "efd894516299ef67827ab83f1d86741eb89c271bed9e450c171bb8be11c34a7d"
     },

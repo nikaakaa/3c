@@ -1,0 +1,1033 @@
+{
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\replication-guide\\data\\variants\\shake-0.json",
+  "source_sha256": "180d49275be5d2a115ae66e9a372fb0210e49725baa2e7b6a63c17a2c25868e8",
+  "assets": [
+    {
+      "key": "Corin_Attack_Normal_02_CamShake_A_01",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_02_CamShake_A_01.asset",
+      "sha256": "27a8ebe18ca0c8cc0cfa168b7d6d72672a0f491e634db44c429c76a789ffaea1",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 260.0,
+          "asset": "260",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.02500000037252903,
+          "asset": "0.025",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 12.0,
+          "asset": "12",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_01",
+          "asset": "CamShake_A_01",
+          "match": true
+        }
+      ]
+    },
+    {
+      "key": "Corin_Attack_Normal_03_CamShake_A_01",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_03_CamShake_A_01.asset",
+      "sha256": "4ae79754755b1621477a4dc4e43790c34203b11752c46880841c8f34437fde36",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 90.0,
+          "asset": "90",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.02500000037252903,
+          "asset": "0.025",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 12.0,
+          "asset": "12",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_01",
+          "asset": "CamShake_A_01",
+          "match": true
+        }
+      ]
+    },
+    {
+      "key": "Corin_Attack_Normal_04_CamShake_A_01",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_04_CamShake_A_01.asset",
+      "sha256": "94f5b9d6a8da1fc17aea0ebb13f19150f650df9a3874d91be62af46387dece63",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.02500000037252903,
+          "asset": "0.025",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 12.0,
+          "asset": "12",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_01",
+          "asset": "CamShake_A_01",
+          "match": true
+        }
+      ]
+    },
+    {
+      "key": "Corin_Attack_Normal_04_CamShake_A_02",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_04_CamShake_A_02.asset",
+      "sha256": "9a73fd5f5da8e1ab9a637392c0a9d393b027d1998cd765351469c25303e0546d",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 80.0,
+          "asset": "80",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.02500000037252903,
+          "asset": "0.025",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 12.0,
+          "asset": "12",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_01",
+          "asset": "CamShake_A_01",
+          "match": true
+        }
+      ]
+    },
+    {
+      "key": "Corin_Attack_Normal_05_CamShake_A_01",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_05_CamShake_A_01.asset",
+      "sha256": "920591a0fd12238c2ef04e7b5bbc652241324a3fa28eec22b9e75ec613f7dba7",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 110.0,
+          "asset": "110",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.02500000037252903,
+          "asset": "0.025",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 12.0,
+          "asset": "12",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_01",
+          "asset": "CamShake_A_01",
+          "match": true
+        }
+      ]
+    },
+    {
+      "key": "Corin_Attack_Branch_02_CamShake_A_02",
+      "asset": "3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Branch_02_CamShake_A_02.asset",
+      "sha256": "834808f408bf9731583da96eeb600851036dbb4a18097958c308c6d20089f1d8",
+      "profile_registered": true,
+      "source_attach_point": null,
+      "fields": [
+        {
+          "field": "ShakeType",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CameraShakePropConfigEnum",
+          "source": 1,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "AngleVertical",
+          "source": 180.0,
+          "asset": "180",
+          "match": true
+        },
+        {
+          "field": "NoiseAngle",
+          "source": 10.0,
+          "asset": "10",
+          "match": true
+        },
+        {
+          "field": "RadiusLength",
+          "source": 0.05000000074505806,
+          "asset": "0.05",
+          "match": true
+        },
+        {
+          "field": "DistanceToPlane",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "NoiseRatio",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "ShakeTotalTime",
+          "source": 0.6000000238418579,
+          "asset": "0.6",
+          "match": true
+        },
+        {
+          "field": "Frequency",
+          "source": 20.0,
+          "asset": "20",
+          "match": true
+        },
+        {
+          "field": "RollAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "PitchAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "YawAmplitude",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "RealtimeVibration",
+          "source": false,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationMode",
+          "source": 5,
+          "asset": "5",
+          "match": true
+        },
+        {
+          "field": "ImpactRadius",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DissipationDistance",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "CustomCurveKey",
+          "source": "Camera_ShakeSpatial_Curve_01",
+          "asset": "Camera_ShakeSpatial_Curve_01",
+          "match": true
+        },
+        {
+          "field": "FadeInDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeInCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "FadeOutDuration",
+          "source": 0.0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "FadeOutCurve",
+          "source": null,
+          "asset": "{fileID: 0}",
+          "match": true
+        },
+        {
+          "field": "CurveKey",
+          "source": "Camera_ShakeDecay_Curve_02",
+          "asset": "{fileID: 11400000, guid: f2e65e6c633b628448eb797ad374216a, type: 2}",
+          "match": true
+        },
+        {
+          "field": "IngoreTimeScale",
+          "source": true,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayStackingType",
+          "source": 0,
+          "asset": "1",
+          "match": true
+        },
+        {
+          "field": "PlayPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "DataPriority",
+          "source": 0,
+          "asset": "0",
+          "match": true
+        },
+        {
+          "field": "StandardConfigKey",
+          "source": "CamShake_A_03",
+          "asset": "CamShake_A_03",
+          "match": true
+        }
+      ]
+    }
+  ],
+  "note": "Raw PlayStackingType 0 maps to project Replace 1. CameraSpace is not an original attach-point value."
+}

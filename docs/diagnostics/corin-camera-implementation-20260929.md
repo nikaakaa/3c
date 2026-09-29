@@ -2,6 +2,8 @@
 
 ## 范围与状态
 
+最新分工：用户已将命中链交给其他窗口，本窗口只负责相机配置。此前已进行的命中数据修改与真实执行缺口见 [命中链交接](corin-hit-chain-handoff-20260929.md)；下文早先的整链授权保留为过程记录，不再代表当前工作分配。
+
 2026-09-29，用户已创建实现 goal，并明确不运行 replay。本文记录第一项可独立交付的震动核心修正；整个相机 goal 尚未完成。
 
 依据：[震动消费者调研](corin-camera-shake-replication-20260928.md)。本次保留既有技能触发和 OnExit 选择性取消入口，没有重建角色动画、IK 或技能资产。
@@ -70,3 +72,24 @@
 已通过正式资源作者入口补齐 Branch_02、Rush 的 A_01 命中震动，Profile 现有 15 项 Shake，投影构建通过。两项资源各 24 个标量／字符串字段及曲线引用已与 dump 对齐。真实命中结果与触发链尚未完成；用户已授权本轮一并补正式命中链。
 
 新增基础轨道消费者证据、当前命中链缺口及授权范围见 [基础镜头与命中链补缺](corin-camera-basis-and-hit-20260929.md)。该文档明确区分已发布资源、已取得证据和未实施的链路，不把资料齐全等同于运行效果已经一致。
+
+## 分工调整后的相机资源补齐
+
+用户将命中链分给其他窗口后，本窗口继续核对三个现有技能的相机引用。Attack 作者目录的 20 项攻击配置需要 6 个 A 类震动键，RushAttack 的 3 项需要 1 个，BranchAttack 的 6 项需要 2 个。
+
+原 Profile 的 15 个资源缺少下列 6 项，现已由 `CorinCameraResourcesAuthoring.Publish()` 正式保存并登记：
+
+| 资源后缀 | AngleVertical | RadiusLength | Frequency | StandardConfigKey |
+| --- | --- | --- | --- | --- |
+| Normal_02_CamShake_A_01 | 260 | 0.025 | 12 | CamShake_A_01 |
+| Normal_03_CamShake_A_01 | 90 | 0.025 | 12 | CamShake_A_01 |
+| Normal_04_CamShake_A_01 | 0 | 0.025 | 12 | CamShake_A_01 |
+| Normal_04_CamShake_A_02 | 80 | 0.025 | 12 | CamShake_A_01 |
+| Normal_05_CamShake_A_01 | 110 | 0.025 | 12 | CamShake_A_01 |
+| Branch_02_CamShake_A_02 | 180 | 0.05 | 20 | CamShake_A_03 |
+
+所有键均以前缀 `Corin_Attack_` 开始。全部采用 dump 的时长 0.6000000238418579、NoiseAngle=10、NoiseRatio=0、IngoreTimeScale=true、空间曲线 01 与衰减曲线 02；数值以 float32 对账，不以表格显示精度判断。
+
+新增 6 项共 162 个字段／曲线引用检查全部一致，Profile GUID 引用全部存在。证据见 [新增资源对账](camera-basis-runtime-20260929/additional-hit-shake-assets.json)。Unity 编译重载后 Edit/非编译、Console 0 错误；正式 Profile 投影 Build/RequireValid 成功，Shake 数量 21，dirty=false。
+
+本批没有启动 Play/replay，没有新增测试，没有继续修改命中运行链。资源齐全不等于命中消费者已经接通；相机基础轨道和额外时钟输入的早先未完成项也没有因此视为完成。

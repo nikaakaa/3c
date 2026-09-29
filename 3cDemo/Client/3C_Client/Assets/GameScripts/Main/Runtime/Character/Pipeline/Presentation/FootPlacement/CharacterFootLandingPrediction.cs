@@ -346,11 +346,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootLandingObservationPage
     {
+        CharacterFootLandingObservationKey m_Key;
         CharacterFootPlacementQueryRequest m_Query;
         CharacterFootLandingQueryResult m_Result;
 
         internal bool HasValue { get; private set; }
-        internal CharacterFootLandingObservationKey Key { get; private set; }
+        internal ref readonly CharacterFootLandingObservationKey Key =>
+            ref m_Key;
         internal ref readonly CharacterFootPlacementQueryRequest Query =>
             ref m_Query;
         internal ref readonly CharacterFootLandingQueryResult Result =>
@@ -362,7 +364,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingQueryResult result)
         {
             HasValue = true;
-            Key = key;
+            m_Key = key;
             m_Query = query;
             m_Result = result;
         }
@@ -370,7 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Clear()
         {
             HasValue = false;
-            Key = default;
+            m_Key = default;
             m_Query = default;
             m_Result = default;
         }
@@ -460,15 +462,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingObservationResult result)
         {
             CharacterFootLandingObservationPage page = result.Page;
-            Identity = page.Key.Identity;
-            WorldRevision = page.Key.WorldRevision;
-            SourceSampleIdentity = page.Key.SourceSampleIdentity;
-            SourceSampleCycle = page.Key.SourceSampleCycle;
+            ref readonly CharacterFootLandingObservationKey key = ref page.Key;
+            Identity = key.Identity;
+            WorldRevision = key.WorldRevision;
+            SourceSampleIdentity = key.SourceSampleIdentity;
+            SourceSampleCycle = key.SourceSampleCycle;
             CacheState = result.CacheState;
             QueryExecutedThisFrame = result.QueryExecutedThisFrame;
             QueryPurpose = page.Query.Purpose;
-            CanonicalRawLanding = page.Key.CanonicalRawLanding;
-            CanonicalComponentUp = page.Key.CanonicalComponentUp;
+            CanonicalRawLanding = key.CanonicalRawLanding;
+            CanonicalComponentUp = key.CanonicalComponentUp;
             QueryReason = result.QueryReason;
             RefreshMode = result.RefreshMode;
             CandidateRawLanding = result.CandidateRawLanding;
@@ -1472,8 +1475,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             else
             {
-                CharacterFootLandingObservationKey committedKey =
-                    committedPage.Key;
+                ref readonly CharacterFootLandingObservationKey committedKey =
+                    ref committedPage.Key;
                 queryInputDistance = Vector3.Distance(
                     rawLandingCandidate,
                     committedKey.CanonicalRawLanding);

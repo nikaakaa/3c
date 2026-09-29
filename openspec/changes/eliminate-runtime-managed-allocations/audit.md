@@ -1967,3 +1967,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Placement module settings 的 CurrentSupportQuery、LandingPrediction、GroundDetection、FootMotion 自动属性每次读取复制完整 settings；EvaluateFrame、PrepareCurrentSupport、PrepareGroundPath、PredictEvent 和 ResolveBodyTrajectory 每帧重复读取。
 - 四个 settings 改为 backing field 只读引用，构造入参改为 `in`。运行链局部直接绑定 backing field，FootMotion、support/landing settings 和 ground settings 的正式调用显式引用传递；标量 tuning 读取不变。
 - 该改动删除 Foot Placement 每脚/每帧从不可变模块配置复制 settings 的重复拷贝。静态核对四类 settings 为 readonly struct、模块 settings 构造后不可变、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP275 Landing observation key 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Landing observation page 的 Key 自动属性每次读取复制完整 landing observation key；cache 复用判定先复制 committed key 到局部，diagnostics 展开还会重复读取 identity、world revision 和 canonical landing。
+- Page Key 改为 backing field 只读引用；cache 判定绑定 committed key 引用，diagnostics 绑定同一 key 引用。Set、Clear、ReuseCommitted、Discard 和 query reason 位计算不变。
+- 该改动删除 landing observation cache 判定与诊断展开的完整 key 重复拷贝。静态核对 key 为 readonly struct、页面写入点只在 Set/Clear、消费只读；未编译、未采样，不能声称实测耗时收益。

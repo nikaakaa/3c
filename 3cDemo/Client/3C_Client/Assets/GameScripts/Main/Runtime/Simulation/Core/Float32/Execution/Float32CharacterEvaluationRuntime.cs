@@ -5,6 +5,7 @@ namespace ThirdPersonSimulation
 {
     internal static class Float32CharacterEvaluationRuntime
     {
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("simulation.character.evaluate")]
         public static Float32CharacterEvaluationResult Evaluate(
             Float32CharacterRuntime characterRuntime,
             SimulationActorBinding actor,
@@ -59,10 +60,17 @@ namespace ThirdPersonSimulation
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;
             List<SimulationTraceRecord> characterTrace = evaluationOutput.CharacterTrace;
+            Dictionary<ulong, Float32AbilityInvocationRuntime> actionOwners = actor.ActionOwnerByInstanceId;
             Float32AbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
                 abilityInput.Begin(input, ingress, ingressCount);
+                actionOwners.Clear();
+                for (int i = 0; i < sourceState.ActionInstances.Length; i++)
+                {
+                    Float32ActionInstanceState action = sourceState.ActionInstances[i];
+                    actionOwners.Add(action.InstanceId, actor.GetInvocation(action.SkillId));
+                }
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 Float32MotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -107,7 +115,7 @@ namespace ThirdPersonSimulation
                 for (int i = 0; i < invocationCount; i++)
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
-                    ApplyIngress(invocation, ingress, ingressCount, sourceState);
+                    ApplyIngress(invocation, ingress, ingressCount, actionOwners);
                     if (!effectAdvanced && invocation.HasGameplayEffects)
                     {
                         ApplyGameplayEffectIngress(invocation, ingress, ingressCount);
@@ -266,13 +274,14 @@ namespace ThirdPersonSimulation
             Float32AbilityInvocationRuntime invocation,
             SimulationIngress[] ingress,
             int ingressCount,
-            Float32CharacterRuntimeState sourceState)
+            Dictionary<ulong, Float32AbilityInvocationRuntime> actionOwners)
         {
             for (int i = 0; i < ingressCount; i++)
             {
                 SimulationIngress value = ingress[i];
                 if (value.Header.Kind != SimulationIngressKind.ActionLifecycle ||
-                    !OwnsAction(sourceState, value.ActionLifecycle.ActionInstanceId, invocation.AbilityId))
+                    !actionOwners.TryGetValue(value.ActionLifecycle.ActionInstanceId, out Float32AbilityInvocationRuntime owner) ||
+                    !ReferenceEquals(owner, invocation))
                     continue;
                 invocation.ApplyActionIngress(value);
             }
@@ -296,20 +305,6 @@ namespace ThirdPersonSimulation
                     ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     throw new InvalidOperationException(
                         "Float32 Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
-        }
-
-        static bool OwnsAction(
-            Float32CharacterRuntimeState state,
-            ulong actionInstanceId,
-            CharacterSkillId abilityId)
-        {
-            for (int i = 0; i < state.ActionInstances.Length; i++)
-            {
-                Float32ActionInstanceState action = state.ActionInstances[i];
-                if (action.InstanceId == actionInstanceId)
-                    return action.SkillId == abilityId;
-            }
-            return false;
         }
 
         internal static bool IsActionWindowActive(

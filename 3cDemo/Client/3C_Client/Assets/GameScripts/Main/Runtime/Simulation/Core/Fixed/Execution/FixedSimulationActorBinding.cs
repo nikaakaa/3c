@@ -63,6 +63,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
         readonly List<AbilityTimelineStopPending> m_TimelineStops = new List<AbilityTimelineStopPending>();
+        readonly Dictionary<ulong, FixedAbilityInvocationRuntime> m_ActionOwnerByInstanceId;
         readonly List<AbilityTimelineLogicMotion> m_TimelineLogicMotion = new List<AbilityTimelineLogicMotion>();
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineLogicMotionWarps =
             new List<AbilityTimelineLogicMotionWarp>();
@@ -107,6 +108,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
                 actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
             m_ActionState = new FixedCharacterActionRuntimeState(actionCapacity);
+            m_ActionOwnerByInstanceId = new Dictionary<ulong, FixedAbilityInvocationRuntime>(actionCapacity);
             m_Invocations = new FixedAbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_InvocationByAbility = new Dictionary<CharacterSkillId, FixedAbilityInvocationRuntime>(
                 AbilityInstallations.Installations.Count);
@@ -179,6 +181,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedAbilityExecutionWorkspace[] Workspaces => m_Workspaces;
         internal List<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
         internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
+        internal Dictionary<ulong, FixedAbilityInvocationRuntime> ActionOwnerByInstanceId => m_ActionOwnerByInstanceId;
         internal List<AbilityTimelineLogicMotion> TimelineLogicMotion => m_TimelineLogicMotion;
         internal List<AbilityTimelineLogicMotionWarp> TimelineLogicMotionWarps => m_TimelineLogicMotionWarps;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;

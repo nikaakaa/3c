@@ -850,6 +850,12 @@
 - 两域 binding 新增构造期 `AbilityId -> invocation` 字典。周期复制后按 warp 的 `AbilityId` 直接取得 invocation 并加入 workspace；未知 identity 沿字典失败，不添加静默 fallback。`AddTimelineMotionWarp` 只保留 evaluation 生命周期边界，删除调用方已由同一构造期安装表保证的重复 ability 比较。
 - 每个 pending warp 从 invocation 数量级比较收敛为一次 Ordinal identity 哈希查找；Copy、Add 和应用顺序不变。静态核对 Timeline 启动、active playback provenance、pending 复制、唯一安装表和两域差异；未编译、运行回放或采样。
 
+### AP115 Action lifecycle owner 交叉扫描（2026-09-29，已实施，本轮未编译）
+
+- 两域 Character Evaluation 对每个 Ability invocation 处理 ActionLifecycle ingress 时，都调用 `OwnsAction` 线性扫描 source state 的全部 ActionInstances，形成 invocation 数、ingress 数和 action 数的周期乘积。ActionInstanceId 由 Character Handle Allocator 生成唯一非零句柄，source state 的 ActionInstances 是正式 owner 名单。
+- 两域 binding 新增按正式 action capacity 预留的生命周期字典；每次 Evaluate 先用 source ActionInstances 重建 `InstanceId -> invocation`，周期分发用一次 ulong 查找定位 owner，未知 instance 继续忽略。删除重复线性 `OwnsAction`，用 invocation 引用相等判定目标。
+- owner 重建从 action 数量级执行一次；ingress 分发从每次全 action 扫描收敛为一次哈希查找。ingress 顺序、未知行为、ability 过滤和 ApplyActionIngress 时序不变。静态核对 allocator 唯一性、两域调用链、字典生命周期和差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

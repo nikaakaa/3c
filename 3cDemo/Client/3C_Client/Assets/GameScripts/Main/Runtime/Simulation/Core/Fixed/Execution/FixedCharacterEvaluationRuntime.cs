@@ -6,6 +6,7 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal static class FixedCharacterEvaluationRuntime
     {
+        [ThirdPersonPerformance.Instrumentation.PerformanceProbe("simulation.character.evaluate")]
         public static FixedCharacterEvaluationResult Evaluate(
             FixedCharacterRuntime characterRuntime,
             SimulationActorBinding actor,
@@ -60,10 +61,17 @@ namespace ThirdPersonSimulation.Fixed
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;
             List<SimulationTraceRecord> characterTrace = evaluationOutput.CharacterTrace;
+            Dictionary<ulong, FixedAbilityInvocationRuntime> actionOwners = actor.ActionOwnerByInstanceId;
             FixedAbilityExecutionInput abilityInput = actor.AbilityExecutionInput;
             try
             {
                 abilityInput.Begin(input, ingress, ingressCount);
+                actionOwners.Clear();
+                for (int i = 0; i < sourceState.ActionInstances.Length; i++)
+                {
+                    FixedActionInstanceState action = sourceState.ActionInstances[i];
+                    actionOwners.Add(action.InstanceId, actor.GetInvocation(action.SkillId));
+                }
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 FixedMotionContributionScratch motionContributions = actor.MotionContributions;
                 motionContributions.Begin();
@@ -108,7 +116,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < invocationCount; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
-                    ApplyIngress(invocation, ingress, ingressCount, sourceState);
+                    ApplyIngress(invocation, ingress, ingressCount, actionOwners);
                     if (!effectAdvanced && invocation.HasGameplayEffects)
                     {
                         ApplyGameplayEffectIngress(invocation, ingress, ingressCount);
@@ -267,13 +275,14 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityInvocationRuntime invocation,
             SimulationIngress[] ingress,
             int ingressCount,
-            FixedCharacterRuntimeState sourceState)
+            Dictionary<ulong, FixedAbilityInvocationRuntime> actionOwners)
         {
             for (int i = 0; i < ingressCount; i++)
             {
                 SimulationIngress value = ingress[i];
                 if (value.Header.Kind != SimulationIngressKind.ActionLifecycle ||
-                    !OwnsAction(sourceState, value.ActionLifecycle.ActionInstanceId, invocation.AbilityId))
+                    !actionOwners.TryGetValue(value.ActionLifecycle.ActionInstanceId, out FixedAbilityInvocationRuntime owner) ||
+                    !ReferenceEquals(owner, invocation))
                     continue;
                 invocation.ApplyActionIngress(value);
             }
@@ -297,20 +306,6 @@ namespace ThirdPersonSimulation.Fixed
                     ingress[i].Header.Kind != SimulationIngressKind.ActionEvent)
                     throw new InvalidOperationException(
                         "Fixed Character evaluation received Gameplay Effect ingress without an installed Gameplay Effect service.");
-        }
-
-        static bool OwnsAction(
-            FixedCharacterRuntimeState state,
-            ulong actionInstanceId,
-            CharacterSkillId abilityId)
-        {
-            for (int i = 0; i < state.ActionInstances.Length; i++)
-            {
-                FixedActionInstanceState action = state.ActionInstances[i];
-                if (action.InstanceId == actionInstanceId)
-                    return action.SkillId == abilityId;
-            }
-            return false;
         }
 
         internal static bool IsActionWindowActive(

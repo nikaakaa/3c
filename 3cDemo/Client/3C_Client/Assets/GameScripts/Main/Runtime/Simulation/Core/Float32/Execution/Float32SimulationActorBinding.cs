@@ -62,6 +62,7 @@ namespace ThirdPersonSimulation
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances = new List<AbilityTimelineAdvancePending>();
         readonly List<AbilityTimelineStopPending> m_TimelineStops = new List<AbilityTimelineStopPending>();
+        readonly Dictionary<ulong, Float32AbilityInvocationRuntime> m_ActionOwnerByInstanceId;
         readonly List<AbilityTimelineLogicMotion> m_TimelineLogicMotion = new List<AbilityTimelineLogicMotion>();
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineLogicMotionWarps =
             new List<AbilityTimelineLogicMotionWarp>();
@@ -105,6 +106,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
                 actionCapacity = checked(actionCapacity + AbilityInstallations.Installations[i].Layout.ActionInstanceCapacity);
             m_ActionState = new Float32CharacterActionRuntimeState(actionCapacity);
+            m_ActionOwnerByInstanceId = new Dictionary<ulong, Float32AbilityInvocationRuntime>(actionCapacity);
             m_Invocations = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             m_InvocationByAbility = new Dictionary<CharacterSkillId, Float32AbilityInvocationRuntime>(
                 AbilityInstallations.Installations.Count);
@@ -172,6 +174,7 @@ namespace ThirdPersonSimulation
         internal Float32AbilityExecutionWorkspace[] Workspaces => m_Workspaces;
         internal List<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
         internal List<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
+        internal Dictionary<ulong, Float32AbilityInvocationRuntime> ActionOwnerByInstanceId => m_ActionOwnerByInstanceId;
         internal List<AbilityTimelineLogicMotion> TimelineLogicMotion => m_TimelineLogicMotion;
         internal List<AbilityTimelineLogicMotionWarp> TimelineLogicMotionWarps => m_TimelineLogicMotionWarps;
         internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;

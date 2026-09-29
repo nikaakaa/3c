@@ -1180,3 +1180,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Layered Bone Blend 每次求输出都按 `(NodeId, port)` 分别哈希查找 base 与 overlay，并重复做 Local Pose 类型测试；两个端口在 graph 初始化后固定。
 - handler 在 Initialize 缓存两个 typed `ValueInput`，帧内直接读取。optional weight 继续使用原 Try 读取合同；bone mask、可用性校验、continuity 和逐骨骼混合顺序不变。
 - 该改动消除两个主姿态输入的每帧 tuple 查找；不新增第二数据源。静态核对端口名、类型、formal Bone Mask 边界和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。
+
+### AP144 Inertialization typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Inertialization 每次求输出都按 `(NodeId, "pose")` 哈希查找并类型测试同一个 Local Pose 输入；端口在 graph 初始化后固定。
+- handler 在 Initialize 缓存 typed `ValueInput`，帧内直接读取 port value。Local Pose 校验、pending/history 捕获、foot feature、residual 和输出页写入顺序不变。
+- 该改动消除输入姿态的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对端口名、类型、policy 绑定和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。

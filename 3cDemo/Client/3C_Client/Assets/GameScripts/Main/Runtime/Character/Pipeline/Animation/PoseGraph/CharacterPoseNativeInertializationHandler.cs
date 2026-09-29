@@ -63,6 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly PoseParameterInertializationMode[] m_ParameterModes;
         readonly int m_LeftFootBoneIndex;
         readonly int m_RightFootBoneIndex;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_PoseInput;
         AnimationLocalBonePose[] m_CommittedHistory;
         AnimationLocalBonePose[] m_PendingHistory;
         AnimationBlendBoneVelocity[] m_CommittedHistoryVelocities;
@@ -173,6 +174,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Inertialization handler '{NodeId}' does not match its graph node.");
             }
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                node,
+                "pose");
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -232,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue inputValue =
-                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(node, "pose");
+                runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
             CharacterPoseNativePoseReadBinding input = inputValue.Native;
             if (!input.IsValid || input.Space != CharacterPoseSpace.Local)
                 throw new InvalidOperationException(

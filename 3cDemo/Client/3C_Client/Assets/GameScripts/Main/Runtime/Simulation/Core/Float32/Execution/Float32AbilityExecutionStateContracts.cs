@@ -31,6 +31,8 @@ namespace ThirdPersonSimulation
         void AddActivationRequest(SimulationActionActivationRequestState request);
         void RemoveActivationRequestAt(int index);
         IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
+        bool TryGetActionInstance(ulong instanceId, out Float32ActionInstanceState action);
+        bool TryFindActionInstanceIndex(ulong instanceId, out int index);
         void ReplaceActionInstanceAt(int index, Float32ActionInstanceState action);
         void AddActionInstance(Float32ActionInstanceState action);
     }

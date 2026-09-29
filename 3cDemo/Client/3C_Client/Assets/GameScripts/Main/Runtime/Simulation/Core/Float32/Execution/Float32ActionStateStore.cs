@@ -602,15 +602,10 @@ namespace ThirdPersonSimulation
                 : default;
         }
 
-        public bool ContainsInstance(ulong instanceId)
-        {
-            foreach (Float32ActionInstanceState current in m_Frame.ActionState.GetActionInstances())
-            {
-                if (current.InstanceId == instanceId)
-                    return true;
-            }
-            return false;
-        }
+		public bool ContainsInstance(ulong instanceId)
+		{
+			return m_Frame.ActionState.TryGetActionInstance(instanceId, out _);
+		}
 
         public bool TryGetEvaluatedInstance(ulong instanceId, out Float32ActionInstanceState state)
         {
@@ -638,18 +633,10 @@ namespace ThirdPersonSimulation
             m_EvaluatedActions.Add(action);
         }
 
-        public bool TryGetInstance(ulong instanceId, out Float32ActionInstanceState state)
-        {
-            foreach (Float32ActionInstanceState current in m_Frame.ActionState.GetActionInstances())
-            {
-                if (current.InstanceId != instanceId)
-                    continue;
-                state = current;
-                return true;
-            }
-            state = default;
-            return false;
-        }
+		public bool TryGetInstance(ulong instanceId, out Float32ActionInstanceState state)
+		{
+			return m_Frame.ActionState.TryGetActionInstance(instanceId, out state);
+		}
 
         public void WriteState(Float32ActionInstanceState action)
         {
@@ -791,17 +778,7 @@ namespace ThirdPersonSimulation
 
 		bool TryFindInstanceIndex(ulong instanceId, out int index)
 		{
-			IReadOnlyList<Float32ActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
-			for (int i = 0; i < actions.Count; i++)
-			{
-				if (actions[i].InstanceId == instanceId)
-				{
-					index = i;
-					return true;
-				}
-			}
-			index = -1;
-			return false;
+			return m_Frame.ActionState.TryFindActionInstanceIndex(instanceId, out index);
 		}
 
 		int FindEmptyInstanceIndex(string actionId)

@@ -32,6 +32,8 @@ namespace ThirdPersonSimulation.Fixed
         void AddActivationRequest(SimulationActionActivationRequestState request);
         void RemoveActivationRequestAt(int index);
         IReadOnlyList<FixedActionInstanceState> GetActionInstances();
+        bool TryGetActionInstance(ulong instanceId, out FixedActionInstanceState action);
+        bool TryFindActionInstanceIndex(ulong instanceId, out int index);
         void ReplaceActionInstanceAt(int index, FixedActionInstanceState action);
         void AddActionInstance(FixedActionInstanceState action);
     }

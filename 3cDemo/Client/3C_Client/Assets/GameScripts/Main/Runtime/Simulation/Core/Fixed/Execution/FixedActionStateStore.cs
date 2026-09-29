@@ -608,12 +608,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool ContainsInstance(ulong instanceId)
         {
-            foreach (FixedActionInstanceState current in m_Frame.ActionState.GetActionInstances())
-            {
-                if (current.InstanceId == instanceId)
-                    return true;
-            }
-            return false;
+            return m_Frame.ActionState.TryGetActionInstance(instanceId, out _);
         }
 
         public bool TryGetEvaluatedInstance(ulong instanceId, out FixedActionInstanceState state)
@@ -644,15 +639,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryGetInstance(ulong instanceId, out FixedActionInstanceState state)
         {
-            foreach (FixedActionInstanceState current in m_Frame.ActionState.GetActionInstances())
-            {
-                if (current.InstanceId != instanceId)
-                    continue;
-                state = current;
-                return true;
-            }
-            state = default;
-            return false;
+            return m_Frame.ActionState.TryGetActionInstance(instanceId, out state);
         }
 
         public void WriteState(FixedActionInstanceState action)
@@ -795,17 +782,7 @@ namespace ThirdPersonSimulation.Fixed
 
         bool TryFindInstanceIndex(ulong instanceId, out int index)
         {
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
-            for (int i = 0; i < actions.Count; i++)
-            {
-                if (actions[i].InstanceId == instanceId)
-                {
-                    index = i;
-                    return true;
-                }
-            }
-            index = -1;
-            return false;
+            return m_Frame.ActionState.TryFindActionInstanceIndex(instanceId, out index);
         }
 
         int FindEmptyInstanceIndex(string actionId)

@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<FixedActionInstanceState> m_ActionInstances;
         readonly int m_Capacity;
+        readonly Dictionary<ulong, int> m_ActionInstanceIndices;
         bool m_ActivationRequestsDirty;
         bool m_InstancesDirty;
         ulong m_ActionEventSequence;
@@ -21,6 +22,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Capacity = capacity;
             m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(capacity);
             m_ActionInstances = new List<FixedActionInstanceState>(capacity);
+            m_ActionInstanceIndices = new Dictionary<ulong, int>(capacity);
         }
 
         public FixedCharacterActionRuntimeState Restart(
@@ -61,12 +63,32 @@ namespace ThirdPersonSimulation.Fixed
             return m_ActionInstances;
         }
 
+        public bool TryGetActionInstance(ulong instanceId, out FixedActionInstanceState action)
+        {
+            RequireActive();
+            if (m_ActionInstanceIndices.TryGetValue(instanceId, out int index))
+            {
+                action = m_ActionInstances[index];
+                return true;
+            }
+            action = default;
+            return false;
+        }
+
+        public bool TryFindActionInstanceIndex(ulong instanceId, out int index)
+        {
+            RequireActive();
+            return m_ActionInstanceIndices.TryGetValue(instanceId, out index);
+        }
+
         public void ReplaceActionInstanceAt(int index, FixedActionInstanceState action)
         {
             RequireActive();
             if (index < 0 || index >= m_ActionInstances.Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
+            FixedActionInstanceState previous = m_ActionInstances[index];
             m_ActionInstances[index] = action;
+            UpdateActionInstanceIndex(index, previous, action);
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
@@ -76,6 +98,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_ActionInstances.Count >= m_Capacity)
                 throw new InvalidOperationException("Character action state capacity is exhausted.");
             m_ActionInstances.Add(action);
+            UpdateActionInstanceIndex(m_ActionInstances.Count - 1, default, action);
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
         }
 
@@ -148,7 +171,29 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Restored character action state exceeds capacity.");
                 m_ActionInstances.AddRange(actions);
             }
+            RebuildActionInstanceIndex();
             m_InstancesDirty = !Same(m_ActionInstances, m_BaseActionInstances);
+        }
+
+        void UpdateActionInstanceIndex(
+            int index,
+            FixedActionInstanceState previous,
+            FixedActionInstanceState action)
+        {
+            if (previous.IsValid && previous.InstanceId != action.InstanceId)
+                m_ActionInstanceIndices.Remove(previous.InstanceId);
+            m_ActionInstanceIndices[action.InstanceId] = index;
+        }
+
+        void RebuildActionInstanceIndex()
+        {
+            m_ActionInstanceIndices.Clear();
+            for (int index = 0; index < m_ActionInstances.Count; index++)
+            {
+                FixedActionInstanceState action = m_ActionInstances[index];
+                if (action.IsValid && !m_ActionInstanceIndices.TryAdd(action.InstanceId, index))
+                    throw new InvalidOperationException($"Action instance '{action.InstanceId}' is duplicated.");
+            }
         }
 
         internal void Dispose()

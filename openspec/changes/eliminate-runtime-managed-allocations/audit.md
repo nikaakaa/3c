@@ -1997,3 +1997,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `BuildRequest` 在已有 state frame 只读引用后，又把 `AnimatedFoot` 复制到局部；pose 投影和 goal target 会继续读取这份大结构，landing reach 仍读取独立的 AnimatedHip。
 - 局部改为绑定 frame 的 animated foot 只读引用，原始 sole/ankle、pose 投影和 goal target 复用同一引用；landing reach 继续读取 frame 的独立 AnimatedHip。投影失败分支、success 分支、输出字段和异常时机不变。
 - 该改动删除每脚 placement request 构建中整份 animated foot 拷贝。静态核对 animated foot 为 readonly struct、frame 生命周期覆盖 BuildRequest、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP280 StrideHips support pose 引用绑定（2026-09-30，已实施，本轮未编译）
+
+- Pelvis posture 按 support side 选择左右 pose 时，把整份 animated foot 复制到 supportPose；校验、posture interval、posture preference 和 primary reach request 会读取该结构。
+- supportPose 改为按 support side 绑定 pelvis frame 左右 pose 的只读引用。side 选择、leg length 选择、异常判断和构造字段顺序不变。
+- 该改动删除 StrideHips accepted 路径中每帧的 support pose 拷贝。静态核对 pose 为 readonly struct、pelvis frame 生命周期覆盖 ResolvePelvis、消费只读；未编译、未采样，不能声称实测耗时收益。

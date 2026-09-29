@@ -1375,8 +1375,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFootStrideSlope.Flat;
             CharacterFootPelvisHeightTarget heightTarget =
                 BuildHeightTarget(in frame);
-            CharacterFootPlacementAnimatedFootPose supportPose =
-                intent.SupportSide == CharacterFootSide.Left ? frame.Pose.Left : frame.Pose.Right;
+            ref readonly CharacterFootPlacementAnimatedFootPose supportPose = ref
+                (intent.SupportSide == CharacterFootSide.Left
+                    ? ref frame.Pose.Left
+                    : ref frame.Pose.Right);
             float supportLegLength = intent.SupportSide == CharacterFootSide.Left
                 ? frame.LeftLegLength : frame.RightLegLength;
             if (!float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||

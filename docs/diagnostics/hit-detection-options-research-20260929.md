@@ -93,6 +93,45 @@
 - `DeterministicCollisionWorldBaker.AddMesh` 读取 Mesh 顶点与三角形并量化；这种表面数据不能自动提供封闭攻击体内部的命中语义。
 - 因此可以复用定点数和已有几何能力，尚不能声称任意旋转 Box、扇形、凸包及其连续查询都已支持。
 
+## 7. 通用查询先做扫掠：可复用库调查
+
+用户当前范围：通用模块，先实现扫掠，开放正式调用接口；射线/线段以后再扩展，不以可琳专用脚本实现。以下仅为源码适配评估，未接入或编译外部库。
+
+本地 `ProjectVersion.txt` 是 Unity `2022.3.62f2c1`；此前工具讨论中按 Unity 6 估计兼容性不准确。当前 `FixedScalar` 是 Q32.32。
+
+| 候选 | 实际核对到的扫掠能力 | 数值/接入限制 | 本项目适用性 |
+| --- | --- | --- | --- |
+| BEPUphysics1int | GJKToolbox.ConvexCast、MPRToolbox.Sweep；接受双方凸形状、初始姿态和双方平移，返回 RayHit | C#、FixedMath.NET Q32.32；接口没有结束朝向/角速度；仓库最后推送时间为 2019-02-03 | 定点凸体平移扫掠源码的优先移植候选，不能当成完整旋转 Mesh 扫掠 |
+| BEPUphysics2 | SweepDemo 实际覆盖多种基础形状、凸包、复合形状、Mesh 组合；ConvexSweepTaskCommon 处理双方线速度/角速度 | C# 浮点/SIMD；依赖其形状系统、SweepTaskRegistry 和 BufferPool | 功能较完整的参考，移植为现有定点数需要较大改造 |
+| Jitter2 | DynamicTree.SweepCast 泛型 support mapping，提供球/Box/胶囊/圆柱入口 | float/double；所查接口为固定朝向+平移；当前 csproj 面向 net8.0/net9.0/net10.0 | 可参考窄相与查询接口，不可直接当成 Unity 2022.3 定点数包安装 |
+| Bullet | btContinuousConvexCollision 接受双方起止变换，考虑旋转与平移 | C++，默认 float/可选 double；需要绑定或算法移植 | 旋转连续凸体求交参考，直接采用会改变现有数值后端 |
+| IPC Toolkit | 连续 point-edge、edge-edge、point-triangle；非线性轨迹分段检测 | C++/Eigen，double 和相关依赖；不是 Unity 战斗插件 | 更接近移动网格表面的连续检测，适配量较大 |
+
+### BEPUphysics1int 源码与边界
+
+版本 `9237daa68c3014fd7c2e93c6a99326ba5248d60b`。
+
+- [GJKToolbox.ConvexCast](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionTests/CollisionAlgorithms/GJK/GJKToolbox.cs#L269)。
+- [MPRToolbox.Sweep](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionTests/CollisionAlgorithms/MPRToolbox.cs#L1314)。两者是同一需求的不同算法入口，正式实现应选定路径，不把另一套作为 fallback。
+- [ConvexShape](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionShapes/ConvexShapes/ConvexShape.cs) 提供方向极值点方法，但继承 EntityShape；ConvexHullShape 还依赖其几何构建、资源管理等代码。不能说复制单个方法就可独立运行。
+- [Fix64](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/FixedMath.Net/src/Fix64.cs) 和项目同为 Q32.32，但同格式不证明乘除舍入、溢出及容差行为相同。拟移植时使用项目现有数学类型，不长期保留第二套定点数路径。
+- [LICENSE.md](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/LICENSE.md) 分别列出 fork、FixedMath.Net 与原 BEPU 的许可；移植保留对应来源和许可。
+- README 报告其历史整库性能约为浮点版的四倍耗时，并列出数值范围和多线程确定性限制。这是作者对旧版本的报告，不是本项目扫掠性能实测，不能直接套用。
+
+### 其他候选源码
+
+- [BEPU2 SweepDemo](https://github.com/bepu/bepuphysics2/blob/c230dd1178d6f481d8b3f03c0f595f8ad910b725/Demos/Demos/SweepDemo.cs)、[ConvexSweepTaskCommon](https://github.com/bepu/bepuphysics2/blob/c230dd1178d6f481d8b3f03c0f595f8ad910b725/BepuPhysics/CollisionDetection/SweepTasks/ConvexSweepTaskCommon.cs)。原库 Apache-2.0。
+- [Jitter2 SweepCast](https://github.com/notgiven688/jitterphysics2/blob/9e62240e264d444bfe9a61d63361c13c5edcb6ea/src/Jitter2/Collision/DynamicTree/DynamicTree.SweepCast.cs)、[csproj](https://github.com/notgiven688/jitterphysics2/blob/9e62240e264d444bfe9a61d63361c13c5edcb6ea/src/Jitter2/Jitter2.csproj)。MIT。该树查询返回最近命中，不能直接冒充攻击所需的全部目标查询。
+
+### 接口和形状表达建议，尚未实施
+
+- 模块公开扫掠查询，接收形状、运动描述、目标过滤和调用方结果存储。目标身份、命中时间、位置/法线与初始重叠状态需要明确合同；初始重叠不能伪造唯一接触点。
+- 核心几何求交不含可琳、技能名、伤害和震动；攻击业务负责命中节奏、次数及正式事实输出。
+- 射线/线段以后复用目标数据、过滤及结果类型，届时增加入口；现在不声明未实现的方法或额外实现选择器。
+- 泛用凸体可通过方向极值点表达，Box、胶囊、凸包共用凸体算法。凹 Mesh 不能直接按其全部顶点取极值：那得到的是整体凸包，会填掉凹处。凹形状须明确采用凸分解或三角表面语义。
+- 旋转运动不能默默降级为起始朝向的平移扫掠。BEPU1int 的现有接口只覆盖平移部分；如果交付范围包含旋转，需要实现相应运动算法或有误差界的细分方案后再声称支持。
+- 结论：有可复用核心实现，没有在本轮核查中找到同时满足“本项目定点数、Unity 2022.3、旋转、任意 Mesh、直接安装”的完整包。优先评估 BEPU1int 的定点凸体算法依赖，旋转能力另按明确算法补齐；此结论不是已批准引入整套物理世界。
+
 ## ZZZ 证据边界
 
 元数据目录：`D:/ZZZ_Dump/PIK分析包/元数据/控制器与战斗`。

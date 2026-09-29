@@ -1,0 +1,98 @@
+{
+  "begin": 508109728,
+  "end": 508109797,
+  "unwind": 73236916,
+  "byte_sha256": "3fc44c50293e1e9d2b301bc61614e2f9cfce0bd4051b05e32e27655ca5b052ca",
+  "instructions": [
+    [
+      508109728,
+      "push",
+      "rsi"
+    ],
+    [
+      508109729,
+      "sub",
+      "rsp, 0x30"
+    ],
+    [
+      508109733,
+      "movaps",
+      "xmm2, xmm3"
+    ],
+    [
+      508109736,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      508109739,
+      "mov",
+      "dword ptr [rsp + 0x28], 0"
+    ],
+    [
+      508109747,
+      "mov",
+      "qword ptr [rsp + 0x20], 0"
+    ],
+    [
+      508109756,
+      "lea",
+      "r9, [rsp + 0x20]"
+    ],
+    [
+      508109761,
+      "mov",
+      "rcx, rdx"
+    ],
+    [
+      508109764,
+      "mov",
+      "rdx, r8"
+    ],
+    [
+      508109767,
+      "call",
+      "qword ptr [rip - 0x1908956d]"
+    ],
+    [
+      508109773,
+      "mov",
+      "eax, dword ptr [rsp + 0x28]"
+    ],
+    [
+      508109777,
+      "mov",
+      "dword ptr [rsi + 8], eax"
+    ],
+    [
+      508109780,
+      "mov",
+      "rax, qword ptr [rsp + 0x20]"
+    ],
+    [
+      508109785,
+      "mov",
+      "qword ptr [rsi], rax"
+    ],
+    [
+      508109788,
+      "mov",
+      "rax, rsi"
+    ],
+    [
+      508109791,
+      "add",
+      "rsp, 0x30"
+    ],
+    [
+      508109795,
+      "pop",
+      "rsi"
+    ],
+    [
+      508109796,
+      "ret",
+      ""
+    ]
+  ]
+}

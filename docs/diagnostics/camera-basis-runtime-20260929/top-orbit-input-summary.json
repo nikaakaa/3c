@@ -1,0 +1,152 @@
+{
+  "scope": "829快照与指定二进制的原生轨道/Pitch写回；未运行原游戏或Unity。",
+  "track_vector_function": "0x10a1a890",
+  "declared_method_parallel_body": "0x109eba20",
+  "consumer": "0x14a3c720",
+  "consumer_inputs": {
+    "elevation": "调用者第一个float参数",
+    "top_extension": "TargetCalcData._anchorElevationRatio + TargetCalcData.anchorOverrunElevationRatioDelta - CamGlobalCommonData.仰角上限",
+    "accessor_offsets": [
+      "0x2ec",
+      "0x2f0",
+      "0x2c8"
+    ]
+  },
+  "overrun_writer": {
+    "function": "0x1c3e3df0",
+    "input_manager": "CameraDataAccessor.Pitch (+0x400)",
+    "formula": "max(0, selectedPitch - clamp(selectedPitch, minimumElevation, maximumElevation))",
+    "base_elevation_write": "同一selectedPitch经0x12a1a790写入受限基础仰角",
+    "not_claimed": "该函数是已证明的生产者，不宣称它是全游戏唯一写入者。"
+  },
+  "blend": {
+    "base": "普通三点曲线采样(0,height,-radius)",
+    "top": "(0,TopOrbit.height,-TopOrbit.radius)",
+    "t": "clamp01(2 * top_extension)",
+    "curvature": "clamp01(TopCurvature)",
+    "position": "lerp(lerp(base,top,t), Vector3.Slerp(base,top,t), curvature)",
+    "engine_slot": "0x5408e60",
+    "slot_pointer_829": "0x7ff995afe8d0",
+    "engine_wrapper": "UnityEngine.Vector3.Slerp 0x1e4923a0在0x1e4923c7调用同一0x5408e60槽。"
+  },
+  "branch_bytes": [
+    {
+      "instruction": "0x10a1a906",
+      "byte_rva": "0x53b0afe",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x10a1a913",
+      "byte_rva": "0x53b0b01",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x10a1a92c",
+      "byte_rva": "0x53b0b0a",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x10a1a9be",
+      "byte_rva": "0x53b0b0c",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x10a1aa71",
+      "byte_rva": "0x53b0b0d",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x10a1abb9",
+      "byte_rva": "0x53b0b0a",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x14a3c737",
+      "byte_rva": "0x53c9c91",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x14a3c76d",
+      "byte_rva": "0x53d8f0c",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e3e26",
+      "byte_rva": "0x58a09e7",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e3e33",
+      "byte_rva": "0x53d7c0e",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e3ec9",
+      "byte_rva": "0x53ac20f",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e3f38",
+      "byte_rva": "0x53ac216",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e3f7f",
+      "byte_rva": "0x53ac213",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e40e4",
+      "byte_rva": "0x53ac20f",
+      "snapshot_byte": 0
+    },
+    {
+      "instruction": "0x1c3e4276",
+      "byte_rva": "0x53d7c0e",
+      "snapshot_byte": 0
+    }
+  ],
+  "limitations": [
+    "完整Pitch实例的配置、状态与目标值生产尚未接入项目；不能用鼠标轴超限猜测替代。",
+    "CameraDataAccessor的布局与内嵌值类型字段偏移按对象头16字节修正。"
+  ],
+  "evidence_files": [
+    {
+      "path": "top-orbit-caller-0x10a1a890.json",
+      "sha256": "d5c24d4470182a3514c2b8d685ca9590d5477ccd0d39d7465dacde1039c8758d"
+    },
+    {
+      "path": "top-orbit-caller-0x14a3c720.json",
+      "sha256": "5d47d98bc72e5f009376fbde0149ea00c94b3d10923f8be8e4dfd108fffa04cb"
+    },
+    {
+      "path": "top-orbit-overrun-producer-0x1c3e3df0.json",
+      "sha256": "e73fd43c6e497eb3ffe7224e2795bf3193cfe81b7a10f822e0af362f2cffd947"
+    },
+    {
+      "path": "top-orbit-vector3-slerp.json",
+      "sha256": "605f4d8dc373e655bf532aadacfa9f6bcb73b3bd6c9c6fc55a67835a0840f678"
+    },
+    {
+      "path": "top-orbit-vector-pitch-types.json",
+      "sha256": "56743b1cef18f32b8de31e0bef18a149345f5740cf7d7b8503af34e16abd925d"
+    },
+    {
+      "path": "follow-delay-accessor-type.json",
+      "sha256": "052a840ef90503e705a97f556ec30b12853964f1d5f92c2d3b5e29c71515a07f"
+    },
+    {
+      "path": "camera-global-data-type.json",
+      "sha256": "1414476f7e1befe058b34215c7e2f4919991044dde06dc2a5f73df2e96cb7022"
+    },
+    {
+      "path": "basis-types.json",
+      "sha256": "efd894516299ef67827ab83f1d86741eb89c271bed9e450c171bb8be11c34a7d"
+    },
+    {
+      "path": "calc-elevation-set.json",
+      "sha256": "7d070f4cd0663b9fec2e74d841be831e8df6c80a821f4394e239f5de9e330a02"
+    }
+  ],
+  "branch_byte_interpretation": "0x58a09e7是初始化字节；所列0x53b/0x53c/0x53d/0x53a字段是对应函数的替换分支开关。不把初始化标志称为IFix。"
+}

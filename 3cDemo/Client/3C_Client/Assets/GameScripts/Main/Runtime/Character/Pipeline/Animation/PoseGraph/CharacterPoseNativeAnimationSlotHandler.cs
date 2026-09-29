@@ -378,12 +378,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.DenseLocalPoses;
             NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
                 m_WriteBinding.DenseVelocities;
+            NativeSlice<AnimationLocalBonePose> sourcePoses =
+                source.DenseLocalPoses;
+            NativeSlice<AnimationLocalBonePose> actionPoses =
+                action.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> sourceVelocities =
+                source.DenseVelocities;
+            NativeSlice<AnimationBlendBoneVelocity> actionVelocities =
+                action.DenseVelocities;
             for (int bone = 0; bone < outputPoses.Length; bone++)
             {
                 float actionBoneWeight = BoneOutputWeight(in action, bone);
                 float sourceBoneWeight = 1f - actionBoneWeight;
-                AnimationLocalBonePose sourcePose = source.DenseLocalPoses[bone];
-                AnimationLocalBonePose actionPose = action.DenseLocalPoses[bone];
+                ref readonly AnimationLocalBonePose sourcePose =
+                    ref sourcePoses[bone];
+                ref readonly AnimationLocalBonePose actionPose =
+                    ref actionPoses[bone];
                 float total = sourceBoneWeight + actionBoneWeight;
                 if (!sourcePose.IsValid || !actionPose.IsValid || total <= 0f)
                     throw new InvalidOperationException(
@@ -410,10 +420,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     scale * total,
                     total,
                     sourcePose);
-                AnimationBlendBoneVelocity sourceVelocity =
-                    source.DenseVelocities[bone];
-                AnimationBlendBoneVelocity actionVelocity =
-                    action.DenseVelocities[bone];
+                ref readonly AnimationBlendBoneVelocity sourceVelocity =
+                    ref sourceVelocities[bone];
+                ref readonly AnimationBlendBoneVelocity actionVelocity =
+                    ref actionVelocities[bone];
                 outputVelocities[bone] = new AnimationBlendBoneVelocity(
                     Vector3.LerpUnclamped(
                         sourceVelocity.Linear,

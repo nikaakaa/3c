@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSupportTarget selectedTarget,
             Vector3 correction)
         {
-            CharacterFootSwingMotionResult swing = frame.SwingMotion;
+            ref readonly CharacterFootSwingMotionResult swing = ref frame.SwingMotion;
             bool ownsSwingPath = selectedTarget.Kind ==
                 CharacterFootSupportTargetKind.SwingGround && swing.Accepted;
             switch (context.Discrete.State)

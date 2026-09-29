@@ -1865,3 +1865,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Pelvis reach input 和 reach observation 的 Left/Right 自动属性每次读取复制结构；resolve 时左右 request 进入 leg reach 计算，result 的左右 leg reach 又被 reach 判定、pelvis delta 和诊断重复读取。
 - 两层左右结构属性改为 backing field 只读引用；resolve 显式转发 input request，构造 observation 仍保留左右 leg reach 的必要字段写入。请求开关、reach interval、状态、intersection 和诊断输出不变。
 - 该改动删除 Pelvis reach 求解与判定的左右结构重复拷贝。静态核对容器为 readonly struct、生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP258 Foot state frame 周期结构引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStateFrame` 的 SwingMotion、GroundPath、CurrentSupport、LockRequest、Settings 自动属性每次读取复制完整结构；transition、interpolation、hard constraint、lifecycle fact 和 landing evaluation 会重复读取。
+- 五个结构属性改为 backing field 只读引用；八个只读局部改为绑定同一 backing field。`outputSwing` 仍保留一次必要输出拷贝。transition 分支、interpolation 计算、hard constraint、lifecycle fact 和 settings 读取不变。
+- 该改动删除 Foot Placement lifecycle 周期中 state frame 大结构的重复拷贝。静态核对 state frame 为只读引用、五个类型均为 readonly struct、生命周期覆盖调用；未编译、未采样，不能声称实测耗时收益。

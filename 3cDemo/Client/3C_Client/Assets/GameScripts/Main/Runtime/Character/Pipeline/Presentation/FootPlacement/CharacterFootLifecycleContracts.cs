@@ -1175,7 +1175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var history = new CharacterFootContactHistoryFact(
                 in context.ContactTransition);
             var anchor = new CharacterFootContactAnchorFact(in context.Contact);
-            CharacterFootLockRequest request = frame.LockRequest;
+            ref readonly CharacterFootLockRequest request = ref frame.LockRequest;
             CharacterFootTransitionDecision decision = default;
             return new CharacterFootLifecycleTransitionFact(
                 false,
@@ -1544,6 +1544,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterFootStateFrame
     {
         readonly CharacterFootPlacementAnimatedFootPose m_AnimatedFoot;
+        readonly CharacterFootSwingMotionResult m_SwingMotion;
+        readonly CharacterFootGroundPathResult m_GroundPath;
+        readonly CharacterFootCurrentSupportObservation m_CurrentSupport;
+        readonly CharacterFootLockRequest m_LockRequest;
+        readonly CharacterFootMotionSettings m_Settings;
 
         internal CharacterFootStateFrame(
             ulong frameSequence,
@@ -1581,14 +1586,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_AnimatedFoot = animatedFoot;
             AnimatedHip = animatedHip;
             LegLength = legLength;
-            SwingMotion = swingMotion;
-            GroundPath = groundPath;
+            m_SwingMotion = swingMotion;
+            m_GroundPath = groundPath;
             HasContactLanding = hasContactLanding;
             ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
-            CurrentSupport = currentSupport;
-            LockRequest = lockRequest;
+            m_CurrentSupport = currentSupport;
+            m_LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
             OwnershipLossReason = footPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon
@@ -1600,7 +1605,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceLineage = sourceLineage;
             ProfileRevision = profileRevision;
             WorldRevision = worldRevision;
-            Settings = settings;
+            m_Settings = settings;
         }
 
         internal ulong FrameSequence { get; }
@@ -1612,14 +1617,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref m_AnimatedFoot;
         internal Vector3 AnimatedHip { get; }
         internal float LegLength { get; }
-        internal CharacterFootSwingMotionResult SwingMotion { get; }
-        internal CharacterFootGroundPathResult GroundPath { get; }
+        internal ref readonly CharacterFootSwingMotionResult SwingMotion =>
+            ref m_SwingMotion;
+        internal ref readonly CharacterFootGroundPathResult GroundPath =>
+            ref m_GroundPath;
         internal bool HasContactLanding { get; }
         internal CharacterFootGroundPathLanding ContactLanding { get; }
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
-        internal CharacterFootCurrentSupportObservation CurrentSupport { get; }
-        internal CharacterFootLockRequest LockRequest { get; }
+        internal ref readonly CharacterFootCurrentSupportObservation CurrentSupport =>
+            ref m_CurrentSupport;
+        internal ref readonly CharacterFootLockRequest LockRequest => ref m_LockRequest;
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
@@ -1631,7 +1639,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString128Bytes SourceLineage { get; }
         internal FixedString128Bytes ProfileRevision { get; }
         internal ulong WorldRevision { get; }
-        internal CharacterFootMotionSettings Settings { get; }
+        internal ref readonly CharacterFootMotionSettings Settings => ref m_Settings;
     }
 
     internal readonly struct CharacterFootStateEvaluation

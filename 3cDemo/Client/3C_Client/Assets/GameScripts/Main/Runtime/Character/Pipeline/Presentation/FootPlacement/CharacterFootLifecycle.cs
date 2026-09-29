@@ -135,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref evaluation.FormalFootMotion;
             ref readonly CharacterFootLandingPredictionResult landingPrediction =
                 ref evaluation.LandingPrediction;
-            CharacterFootMotionSettings settings = frame.Settings;
+            ref readonly CharacterFootMotionSettings settings = ref frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
                 in formalFootMotion,
@@ -210,8 +210,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         ref context.Interpolation,
                         in target,
                         in frame);
-                CharacterFootSwingMotionResult unavailableSwing =
-                    frame.SwingMotion;
+                ref readonly CharacterFootSwingMotionResult unavailableSwing =
+                    ref frame.SwingMotion;
                 result = CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in unavailableSwing);
                 CharacterFootPathContinuityFact unavailableContinuity =
@@ -269,7 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref context.Interpolation,
                 in postTransition);
 
-            CharacterFootSwingMotionResult frameSwing = frame.SwingMotion;
+            ref readonly CharacterFootSwingMotionResult frameSwing = ref frame.SwingMotion;
             CharacterFootSwingMotionResult outputSwing = preTransition.SuppressOutput
                 ? CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in frameSwing)

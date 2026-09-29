@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
+            ref readonly CharacterFootLockRequest request = ref frame.LockRequest;
             CharacterFootContactEdge edge = ResolveContactEdge(
                 in context.ContactTransition,
                 in request);
@@ -134,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootContactEdge edge)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
+            ref readonly CharacterFootLockRequest request = ref frame.LockRequest;
             bool wantsLock = request.Contact > 0f &&
                              request.Mode !=
                              AnimationFootStepObservationLockMode.Unlocked;
@@ -329,7 +329,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootContactEdge edge)
         {
             CharacterFootDiscreteStateContext discrete = context.Discrete;
-            CharacterFootLockRequest request = frame.LockRequest;
+            ref readonly CharacterFootLockRequest request = ref frame.LockRequest;
             if (!request.RequestsLock || !CanAcquire(in frame))
                 return NoChange(in discrete, edge);
             float horizontalError = ResolveHorizontalError(in frame);

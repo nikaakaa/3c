@@ -674,7 +674,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousTargetCorrection =
                 state.PreviousSwingTargetCorrection;
             Vector3 residualBeforeRevision = state.SwingResidual;
-            CharacterFootSwingMotionResult swing = frame.SwingMotion;
+            ref readonly CharacterFootSwingMotionResult swing = ref frame.SwingMotion;
             CharacterFootSwingPathReference swingPath =
                 swing.SwingPathReference;
             bool hasPath = target.SupportTarget.Kind ==

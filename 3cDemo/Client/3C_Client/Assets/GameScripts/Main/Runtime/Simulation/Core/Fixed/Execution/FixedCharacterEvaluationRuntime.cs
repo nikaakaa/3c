@@ -49,19 +49,13 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityInvocationRuntime[] invocations = actor.Invocations;
             int invocationCount = invocations.Length;
             Dictionary<CharacterSkillId, IFixedAbilityActionControlPort> actionRuntimes = actor.ActionRuntimes;
-            actionRuntimes.Clear();
             FixedGameplayEffectExecutionScratch sharedEffectScratch = actor.EffectExecutionScratch;
-            sharedEffectScratch.Reset();
             FixedAbilityExecutionWorkspace[] workspaces = actor.Workspaces;
-            for (int i = 0; i < workspaces.Length; i++)
-                workspaces[i].Reset();
-            actor.ClearTimelineTransfers();
             List<AbilityTimelineAdvancePending> timelineAdvances = actor.TimelineAdvances;
             List<AbilityTimelineStopPending> timelineStops = actor.TimelineStops;
             List<AbilityTimelineLogicMotion> timelineLogicMotion = actor.TimelineLogicMotion;
             List<AbilityTimelineLogicMotionWarp> timelineLogicMotionWarps = actor.TimelineLogicMotionWarps;
             FixedCharacterEvaluationOutput evaluationOutput = actor.EvaluationOutput;
-            evaluationOutput.Clear();
             List<GameplayFact> facts = evaluationOutput.Facts;
             List<PresentationCommand> presentation = evaluationOutput.Presentation;
             List<SimulationTraceRecord> trace = evaluationOutput.Trace;

@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation.Fixed
             StableHash stateSchemaHash,
             CharacterStateHash stateHash,
             string stateCodecIdentity,
-            byte[] stateBytes)
+            byte[] ownedStateBytes)
         {
             if (!actorId.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid || !stateHash.IsValid ||
                 !string.Equals(stateCodecIdentity, FixedCharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal))
@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
             StateSchemaHash = stateSchemaHash;
             StateHash = stateHash;
             StateCodecIdentity = stateCodecIdentity;
-            m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
+            m_StateBytes = ownedStateBytes ?? throw new ArgumentNullException(nameof(ownedStateBytes));
         }
 
         public ActorId ActorId { get; }
@@ -230,14 +230,14 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state schema does not match Character Runtime binding.");
                 if (actor.State.NumericProfile != characterRuntime.NumericProfile)
                     throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state Numeric Profile does not match Character Runtime.");
-                byte[] stateBytes = FixedCharacterRuntimeStateCodec.Write(actor.State);
+                byte[] ownedStateBytes = FixedCharacterRuntimeStateCodec.Write(actor.State);
                 snapshots[i] = new SimulationActorSnapshot(
                     actor.ActorId,
                     actor.State.GameplayContentHash,
                     actor.State.StateSchemaHash,
                     FixedCharacterRuntimeStateCodec.ComputeHash(actor.State),
                     FixedCharacterRuntimeStateCodec.CodecIdentity,
-                    stateBytes);
+                    ownedStateBytes);
                 for (int abilityIndex = 0; abilityIndex < binding.AbilityInstallations.Installations.Count; abilityIndex++)
                 {
                     FixedGameplayAbilityExecutionData ability = binding.AbilityInstallations.Installations[abilityIndex].Data;

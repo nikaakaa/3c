@@ -541,6 +541,14 @@
 - Reset 后只读取本次有效长度；异常不返回部分结果，下一次编码重新 Reset。首次使用与超过已有容量仍会分配，每线程每域保留最大编码缓冲；独立快照字节、哈希对象和哈希字符串仍有分配。本项去掉容量稳定后的 writer/缓冲重建，不宣称快照链0 GC或实测收益。
 - 核对三个独立字节消费位置、启动/恢复哈希调用、外层长度前缀调用及 ToArray 所有权；差异静态检查通过，未编译、运行字节对比、回放或采样。世界快照已有数组内部构造入口，本次未重复改造；ActorSnapshot 的状态字节复制仍需沿独立所有权审计，未因同处快照链而擅自取消。脚步预测未改。
 
+### AP64 Fixed ActorSnapshot 重复复制已独立的状态字节（2026-09-29，已实施，未运行）
+
+- 当前 Fixed SimulationActorSnapshot 构造对输入字节再次 Clone；两个正式构造调用分别来自快照生成的 FixedCharacterRuntimeStateCodec.Write 和快照读回的 CanonicalReader.ReadBytes。前者用 ToArray 产生独立数组，后者按长度复制输入字节，不是工作区借用或历史页引用。生成端在构造后不再保存或修改该数组，StateBytesBuffer 的唯一后续用途为编码读取。
+- 将 Fixed 参数及生成端局部变量明确命名为 ownedStateBytes，构造直接接管数组，沿用项目 Float32 已有的同一所有权约定。调用方交付后不得写入；两个现有 Fixed 调用都满足此约定。身份/codec 检查、非空检查、解码与哈希验证保持，空参错误参数名随正式参数改为 ownedStateBytes。
+- 快照生成每 Actor、省去对整份状态的一次新数组与复制；读回也去掉 ReadBytes 之后的第二次复制。最初编码/读取的独立数组仍保留，没有共享可复用缓冲、取消历史隔离或增加复制开关/兼容构造入口。
+- 复核纠正：Float32 当前已经直接接管 ownedStateBytes，不能把 Fixed 的 Clone 推断到另一数值域。Float32 权威基线合并原本使用基线持有的字节，本次未改变该已存在的共享规则，也没有新增 Clone；实际代码改动仅在 Fixed 世界快照文件。
+- 静态核对全部 SimulationActorSnapshot 源码引用、两个 Fixed 生产者、读取/编码消费者、ToArray/ReadBytes 独立数组语义及差异；未编译、运行快照隔离/哈希对比、回放或采样。独立快照数组和对象分配仍存在，不宣称全链0 GC或实测收益，脚步预测未改。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

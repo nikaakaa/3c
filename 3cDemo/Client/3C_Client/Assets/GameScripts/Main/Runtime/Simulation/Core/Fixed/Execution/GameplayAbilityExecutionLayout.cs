@@ -255,18 +255,6 @@ namespace ThirdPersonSimulation.Fixed
             return new ReadOnlySpan<CompiledValueInputBinding>(m_ValueInputs, range.Offset, range.Count);
         }
 
-        public string ValueSourceOutputPort(CompiledValueInputBinding binding)
-        {
-            if (binding.SourceKind != CompiledValueInputSourceKind.Operation)
-                throw new InvalidOperationException("Constant Value input has no source output port.");
-            IReadOnlyList<OperationValuePortDefinition> outputs = GameplayAbilityValuePortContracts
-                .Require(Operation(binding.SourceOperation).Code, binding.SourceOperation, m_GraphCallFrames)
-                .Outputs;
-            if (binding.SourceOutputPortIndex < 0 || binding.SourceOutputPortIndex >= outputs.Count)
-                throw new InvalidOperationException("Compiled Value source output port index is invalid.");
-            return outputs[binding.SourceOutputPortIndex].Identity;
-        }
-
         public IReadOnlyList<ProgramControlFlowEdge> Outgoing(OperationHandle source, ProgramControlFlowKind kind) =>
             Topology.Outgoing(source, kind);
 
@@ -431,6 +419,7 @@ namespace ThirdPersonSimulation.Fixed
                         CompiledValueInputSourceKind.Operation,
                         source.Handle,
                         sourcePort.Order,
+                        sourcePort.Identity,
                         -1),
                     target);
             }
@@ -456,6 +445,7 @@ namespace ThirdPersonSimulation.Fixed
                         CompiledValueInputSourceKind.Constant,
                         OperationHandle.Invalid,
                         -1,
+                        null,
                         input.ConstantIndex),
                     target);
             }

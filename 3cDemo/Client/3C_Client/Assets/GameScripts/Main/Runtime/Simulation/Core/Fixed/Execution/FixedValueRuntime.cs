@@ -4,24 +4,6 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal readonly struct FixedValueEvaluationKey : IEquatable<FixedValueEvaluationKey>
-    {
-        public FixedValueEvaluationKey(int operation, string outputPort)
-        {
-            Operation = operation;
-            OutputPort = outputPort ?? string.Empty;
-        }
-
-        public int Operation { get; }
-        public string OutputPort { get; }
-
-        public bool Equals(FixedValueEvaluationKey other) =>
-            Operation == other.Operation && string.Equals(OutputPort, other.OutputPort, StringComparison.Ordinal);
-
-        public override bool Equals(object obj) => obj is FixedValueEvaluationKey other && Equals(other);
-        public override int GetHashCode() => unchecked(Operation * 397 ^ StringComparer.Ordinal.GetHashCode(OutputPort));
-    }
-
     internal sealed class FixedValueInputBuffer
     {
         public List<AbilityStateValue> Values { get; } = new List<AbilityStateValue>();
@@ -77,7 +59,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedBlackboardPort m_Blackboard;
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedStatePort m_ControlState;
-        readonly HashSet<FixedValueEvaluationKey> m_ValueStack;
+        readonly HashSet<long> m_ValueStack;
         readonly List<FixedValueInputBuffer> m_InputBuffers;
         int m_InputBufferDepth;
 
@@ -135,11 +117,12 @@ namespace ThirdPersonSimulation.Fixed
 		public AbilityStateValue Evaluate<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			OperationHandle handle,
-			string outputPort = "")
+			string outputPort = "",
+			int outputPortIndex = -1)
 			where TTarget : struct, IOperationControlTarget<TTarget>
 		{
 			cursor.RequireExecution(handle);
-			var valueKey = new FixedValueEvaluationKey(handle.Value, outputPort);
+			long valueKey = (long)handle.Value << 32 | (uint)outputPortIndex;
 			if (!m_ValueStack.Add(valueKey))
 				throw new InvalidOperationException($"Value operation cycle reached '{handle}/{outputPort}'.");
 			try
@@ -350,9 +333,13 @@ namespace ThirdPersonSimulation.Fixed
             {
                 for (int i = 0; i < inputs.Length; i++)
                 {
-                    CompiledValueInputBinding input = inputs[i];
+                    ref readonly CompiledValueInputBinding input = ref inputs[i];
                     AbilityStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
-                        ? Evaluate(cursor, input.SourceOperation, m_Layout.ValueSourceOutputPort(input))
+                        ? Evaluate(
+                            cursor,
+                            input.SourceOperation,
+                            input.SourceOutputPortIdentity,
+                            input.SourceOutputPortIndex)
                         : ValueFromConstant(m_Ability.Constants[input.ConstantIndex]);
                     buffer.Values.Add(value);
                     if (!cursor.IsPredictiveEvaluation && (m_Frame.Trace.CaptureValues ||

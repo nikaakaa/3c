@@ -35,7 +35,7 @@ namespace ThirdPersonSimulation.Fixed
         public List<PresentationCommand> Presentation { get; } = new List<PresentationCommand>();
         public List<SimulationTraceRecord> Trace { get; } = new List<SimulationTraceRecord>();
         public FixedGameplayEffectExecutionScratch GameplayEffects { get; }
-        public HashSet<FixedValueEvaluationKey> ValueStack { get; } = new HashSet<FixedValueEvaluationKey>();
+        public HashSet<long> ValueStack { get; } = new HashSet<long>();
         public List<FixedValueInputBuffer> ValueBuffers { get; } = new List<FixedValueInputBuffer>();
         public List<AbilityTimelineLogicMotionWarp> TimelineMotionWarps { get; } =
             new List<AbilityTimelineLogicMotionWarp>();

@@ -770,6 +770,12 @@
 - Fixed 与 Float32 Character Input 的 `ApplyRequests` 原先对每个配置请求 ID 线性扫描整批 incoming requests，匹配同一 Tick 内多条请求和多个配置时形成乘积级字符串比较。配置 ID 已在构造期按 Ordinal 排序并拒绝重复。
 - 先按原顺序重置每个配置 ID 的过期状态；随后对每条 incoming request 用排序配置表做 Ordinal 二分定位，只访问命中的配置 ID，并沿用原有 validity、Priority、Sequence 决胜和字段顺序。未命中配置的请求仍被忽略，未命中的配置仍保留过期重置结果。
 - 请求应用从配置数乘请求数次比较收敛为配置数加请求数次对数定位访问；同一请求名单的最终 Priority/Sequence 状态不变。静态核对构造排序唯一性、空请求、过期重置、多条同 ID 请求和两域接口；未编译、运行回放或采样。
+### AP101 Value 输入周期端口合同查找和字符串环检查（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 Value Graph 每读取一条 Operation 输入，都调用 `ValueSourceOutputPort` 重新解析源操作端口合同并取出 identity；同一 identity 随后成为环检查键，`FixedValueEvaluationKey`／`Float32ValueEvaluationKey` 每次对它计算 Ordinal 哈希并做字符串相等比较。
+- `CompiledValueInputBinding` 在装配期固化 `SourceOutputPortIdentity`。Value 边构造时已有 `sourcePort`，SubGraph 的 graph frame 输出按 ParameterName/PortId 排序后生成连续 Order，`ReadSubGraphOutput` 消费的同一 frame 输出列表也保持该顺序，因此 identity 和 `SourceOutputPortIndex` 可以随 binding 一起正式保存。
+- 两域周期 `ReadInputs` 直接传入 binding identity 和 index，删除 `ValueSourceOutputPort` 周期合同查询；本地 binding 改为 `ref readonly`，不因新增 identity 字段复制更大结构。环检查工作区改为 `HashSet<long>`，用 operation handle 和端口 index 组成键，finally 移除键和容量准备不变。
+- 每条 Operation Value 输入少一次静态端口合同解析、字典查找和字符串哈希；环检查键比较不再读取端口文本。诊断、SubGraph 状态读取、GameplayEffect 输出选择和异常文本仍使用同一 identity；实际 evaluation 输出、求值顺序和 Cycle 拒绝语义不变。静态核对 binding 唯一构造点、Graph frame/contract 顺序、两域 Evaluate 调用链、trace 和差异检查；未编译、运行回放或采样。
 
 ## 可靠性问题独立保留
 

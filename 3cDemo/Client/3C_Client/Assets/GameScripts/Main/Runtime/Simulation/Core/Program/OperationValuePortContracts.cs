@@ -62,6 +62,7 @@ namespace ThirdPersonSimulation
             CompiledValueInputSourceKind sourceKind,
             OperationHandle sourceOperation,
             int sourceOutputPortIndex,
+            string sourceOutputPortIdentity,
             int constantIndex)
         {
             if (targetPortIndex < 0 || sourceOutputPortIndex < -1 || constantIndex < -1)
@@ -71,6 +72,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException();
             if (sourceKind == CompiledValueInputSourceKind.Operation && (!sourceOperation.IsValid || sourceOutputPortIndex < 0 || constantIndex >= 0))
                 throw new ArgumentException("Operation Value source is incomplete.");
+            if (sourceKind == CompiledValueInputSourceKind.Operation)
+                SimulationIdentity.Require(sourceOutputPortIdentity, nameof(sourceOutputPortIdentity));
             if (sourceKind == CompiledValueInputSourceKind.Constant && (sourceOperation.IsValid || sourceOutputPortIndex >= 0 || constantIndex < 0))
                 throw new ArgumentException("Constant Value source is incomplete.");
             TargetPortIndex = targetPortIndex;
@@ -78,6 +81,7 @@ namespace ThirdPersonSimulation
             SourceKind = sourceKind;
             SourceOperation = sourceOperation;
             SourceOutputPortIndex = sourceOutputPortIndex;
+            SourceOutputPortIdentity = sourceOutputPortIdentity ?? string.Empty;
             ConstantIndex = constantIndex;
         }
 
@@ -86,6 +90,7 @@ namespace ThirdPersonSimulation
         public CompiledValueInputSourceKind SourceKind { get; }
         public OperationHandle SourceOperation { get; }
         public int SourceOutputPortIndex { get; }
+        public string SourceOutputPortIdentity { get; }
         public int ConstantIndex { get; }
     }
 

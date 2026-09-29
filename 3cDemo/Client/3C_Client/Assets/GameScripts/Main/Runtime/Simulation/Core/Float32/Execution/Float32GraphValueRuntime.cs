@@ -3,24 +3,6 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal readonly struct Float32ValueEvaluationKey : IEquatable<Float32ValueEvaluationKey>
-    {
-        public Float32ValueEvaluationKey(int operation, string outputPort)
-        {
-            Operation = operation;
-            OutputPort = outputPort ?? string.Empty;
-        }
-
-        public int Operation { get; }
-        public string OutputPort { get; }
-
-        public bool Equals(Float32ValueEvaluationKey other) =>
-            Operation == other.Operation && string.Equals(OutputPort, other.OutputPort, StringComparison.Ordinal);
-
-        public override bool Equals(object obj) => obj is Float32ValueEvaluationKey other && Equals(other);
-        public override int GetHashCode() => unchecked(Operation * 397 ^ StringComparer.Ordinal.GetHashCode(OutputPort));
-    }
-
     internal sealed class Float32ValueInputBuffer
     {
         public List<AbilityStateValue> Values { get; } = new List<AbilityStateValue>();
@@ -68,7 +50,7 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32GraphValueWorkspace
     {
-        internal readonly HashSet<Float32ValueEvaluationKey> ValueStack = new();
+        internal readonly HashSet<long> ValueStack = new();
         internal readonly List<Float32ValueInputBuffer> InputBuffers = new();
 
         public Float32GraphValueWorkspace(Float32GameplayAbilityExecutionData data, GameplayAbilityExecutionLayout layout)
@@ -95,7 +77,7 @@ namespace ThirdPersonSimulation
     {
         protected readonly Float32GameplayAbilityExecutionData m_Ability;
         protected readonly GameplayAbilityExecutionLayout m_Layout;
-        readonly HashSet<Float32ValueEvaluationKey> m_ValueStack;
+        readonly HashSet<long> m_ValueStack;
         readonly List<Float32ValueInputBuffer> m_InputBuffers;
         int m_InputBufferDepth;
 
@@ -144,11 +126,12 @@ namespace ThirdPersonSimulation
 		public AbilityStateValue Evaluate<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			OperationHandle handle,
-			string outputPort = "")
+			string outputPort = "",
+			int outputPortIndex = -1)
 			where TTarget : struct, IOperationControlTarget<TTarget>
 		{
 			cursor.RequireExecution(handle);
-			var valueKey = new Float32ValueEvaluationKey(handle.Value, outputPort);
+			long valueKey = (long)handle.Value << 32 | (uint)outputPortIndex;
 			if (!m_ValueStack.Add(valueKey))
 				throw new InvalidOperationException($"Value operation cycle reached '{handle}/{outputPort}'.");
 			try
@@ -215,9 +198,13 @@ namespace ThirdPersonSimulation
             {
                 for (int i = 0; i < inputs.Length; i++)
                 {
-                    CompiledValueInputBinding input = inputs[i];
+                    ref readonly CompiledValueInputBinding input = ref inputs[i];
                     AbilityStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
-                        ? Evaluate(cursor, input.SourceOperation, m_Layout.ValueSourceOutputPort(input))
+                        ? Evaluate(
+                            cursor,
+                            input.SourceOperation,
+                            input.SourceOutputPortIdentity,
+                            input.SourceOutputPortIndex)
                         : ValueFromConstant(m_Ability.Constants[input.ConstantIndex]);
                     buffer.Values.Add(value);
                     TraceInput(operation, input, value, cursor.IsPredictiveEvaluation);

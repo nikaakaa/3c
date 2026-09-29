@@ -108,6 +108,11 @@ namespace ThirdPersonSimulation
             WriteInt32(byteCount);
             if (byteCount == 0)
                 return;
+            WriteRawUtf8(value.AsSpan());
+        }
+
+        internal void WriteRawUtf8(ReadOnlySpan<char> value)
+        {
             const int characterCapacity = 256;
             Span<byte> buffer = stackalloc byte[characterCapacity * 3];
             int offset = 0;
@@ -118,7 +123,7 @@ namespace ThirdPersonSimulation
                     char.IsHighSurrogate(value[offset + count - 1]) &&
                     char.IsLowSurrogate(value[offset + count]))
                     count--;
-                int written = Encoding.UTF8.GetBytes(value.AsSpan(offset, count), buffer);
+                int written = Encoding.UTF8.GetBytes(value.Slice(offset, count), buffer);
                 WriteRaw(buffer.Slice(0, written));
                 offset += count;
             }

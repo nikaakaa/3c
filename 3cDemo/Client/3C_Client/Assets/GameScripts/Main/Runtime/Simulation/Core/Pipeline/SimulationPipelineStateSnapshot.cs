@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace ThirdPersonSimulation
 {
@@ -119,63 +118,38 @@ namespace ThirdPersonSimulation
         StableHash ComputeHash()
         {
             CanonicalWriter writer = HashWriter();
-            WriteHashText(writer, "simulation-pipeline-state-snapshot/1");
-            WriteSeparator(writer);
-            WriteHashText(writer, Pipeline.Id.Value);
-            WriteHashText(writer, "@");
-            WriteHashText(writer, Pipeline.Revision.Value);
-            WriteHashText(writer, "/schema");
-            WriteHashText(writer, Pipeline.SchemaVersion.Value.ToString());
-            WriteHashText(writer, "/");
-            WriteHashText(writer, Pipeline.Hash.Value.Value);
-            WriteSeparator(writer);
-            WriteHashText(writer, Backend.ComponentId);
-            WriteSeparator(writer);
-            WriteHashText(writer, Backend.SemanticVersion);
-            WriteSeparator(writer);
-            WriteHashText(writer, LastCompletedTick.ToString(CultureInfo.InvariantCulture));
+            writer.WriteRawUtf8("simulation-pipeline-state-snapshot/1");
+            writer.WriteByte(0x1f);
+            writer.WriteRawUtf8(Pipeline.Id.Value);
+            writer.WriteRawUtf8("@");
+            writer.WriteRawUtf8(Pipeline.Revision.Value);
+            writer.WriteRawUtf8("/schema");
+            writer.WriteRawUtf8(Pipeline.SchemaVersion.Value.ToString());
+            writer.WriteRawUtf8("/");
+            writer.WriteRawUtf8(Pipeline.Hash.Value.Value);
+            writer.WriteByte(0x1f);
+            writer.WriteRawUtf8(Backend.ComponentId);
+            writer.WriteByte(0x1f);
+            writer.WriteRawUtf8(Backend.SemanticVersion);
+            writer.WriteByte(0x1f);
+            writer.WriteRawUtf8(LastCompletedTick.ToString(CultureInfo.InvariantCulture));
             for (int i = 0; i < m_Participants.Count; i++)
             {
                 SimulationPipelinePassStateSnapshot participant = m_Participants[i];
-                WriteSeparator(writer);
-                WriteHashText(writer, participant.PassId.Value);
-                WriteHashText(writer, ":");
-                WriteHashText(writer, participant.ImplementationVersion.Value);
-                WriteHashText(writer, ":");
-                WriteHashText(writer, participant.StateOwner);
-                WriteHashText(writer, ":");
-                WriteHashText(writer, participant.StateSchemaId);
-                WriteHashText(writer, ":");
-                WriteHashText(writer, participant.StateSchemaVersion.ToString());
-                WriteHashText(writer, ":");
-                WriteHashText(writer, participant.StateHash.Value);
+                writer.WriteByte(0x1f);
+                writer.WriteRawUtf8(participant.PassId.Value);
+                writer.WriteRawUtf8(":");
+                writer.WriteRawUtf8(participant.ImplementationVersion.Value);
+                writer.WriteRawUtf8(":");
+                writer.WriteRawUtf8(participant.StateOwner);
+                writer.WriteRawUtf8(":");
+                writer.WriteRawUtf8(participant.StateSchemaId);
+                writer.WriteRawUtf8(":");
+                writer.WriteRawUtf8(participant.StateSchemaVersion.ToString());
+                writer.WriteRawUtf8(":");
+                writer.WriteRawUtf8(participant.StateHash.Value);
             }
             return writer.ComputeHash();
-        }
-
-        static void WriteSeparator(CanonicalWriter writer)
-        {
-            Span<byte> separator = stackalloc byte[1];
-            separator[0] = 0x1f;
-            writer.WriteRawBytes(separator);
-        }
-
-        static void WriteHashText(CanonicalWriter writer, string value)
-        {
-            const int characterCapacity = 256;
-            Span<byte> buffer = stackalloc byte[characterCapacity * 3];
-            int offset = 0;
-            while (offset < value.Length)
-            {
-                int count = Math.Min(characterCapacity, value.Length - offset);
-                if (offset + count < value.Length &&
-                    char.IsHighSurrogate(value[offset + count - 1]) &&
-                    char.IsLowSurrogate(value[offset + count]))
-                    count--;
-                int written = Encoding.UTF8.GetBytes(value.AsSpan(offset, count), buffer);
-                writer.WriteRawBytes(buffer.Slice(0, written));
-                offset += count;
-            }
         }
 
         static CanonicalWriter HashWriter()

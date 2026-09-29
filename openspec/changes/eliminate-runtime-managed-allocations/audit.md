@@ -488,6 +488,15 @@
 - 代价为每个实际调用线程、每个上述模块保留其最大编码缓冲；首次使用、编码超过已有容量仍会分配，没有承诺准备阶段已覆盖所有线程/数据规模。只消除容量稳定后的周期 writer 与缓冲重建，SHA-256 对象、哈希字符串、业务快照分配仍保留，不宣称全链0 GC或耗时收益。
 - 完成调用链、线程内非重入范围、失败后重置、长短记录范围与差异静态检查；未编译、执行字节对比、回放或采样。脚步预测、碰撞算法及提交规则未改动。
 
+### AP57 文本哈希拼接与整段 UTF-8 临时数组（2026-09-29，已实施，未运行）
+
+- StableHash.Compute 原先调用 SimulationIdentity.Hash，先以 U+001F 连接所有文本生成 joined 字符串，再 Encoding.UTF8.GetBytes 分配整段字节数组；SHA-256 已返回经过检查的 StableHash，调用链却取出 Value 后再构造一次 StableHash，重复扫描64位小写十六进制。两域 SessionSnapshot 等消费此入口，配置期调用与快照期调用不混为同一种频率。
+- StableHash.Compute 使用私有线程内 CanonicalWriter，Reset 后依次写入字段及字段间0x1F字节，直接返回 writer.ComputeHash 的值。删除只返回字符串的 SimulationIdentity.Hash；仅有的两个 Timeline 空目录调用改用 StableHash.Compute(...).Value，目录身份内容、时序与 Timeline 行为不变。
+- 将 CanonicalWriter.WriteString 原有256字符分块编码提取为内部 WriteRawUtf8(ReadOnlySpan<char>)，保留代理对跨块时回退一字符、相同 UTF-8 编码器和写入顺序；WriteString 仍先写原长度前缀。流水线快照已有的同样分块实现迁到此入口，删除重复 WriteHashText 与单字节 WriteSeparator，不并存两套编码逻辑，现有快照文本片段顺序及数值格式化不变。
+- 空参数数组/null数组仍编码零字节，null/空字段仍不写内容但保留字段间分隔符；分隔符阻断相邻字段的代理对连接，同一字段的有效代理对不会在块边界被拆开，沿原 UTF-8 规则编码非法代理字符。外部字符串创建 StableHash 的格式检查保留，仅去掉生成结果拆成字符串后再校验一次的往返。
+- 容量稳定后省去 joined 字符串与整段 UTF-8 byte[]，以及重复64字符检查；params 数组、调用方 ToString、SHA-256对象及最终哈希字符串仍可能分配。线程首次使用和容量增长仍分配，线程保留最大编码缓冲。不声称实测收益或全链0 GC。
+- 静态核对所有旧入口调用、程序集边界、编码分块、分隔符/空值规则、快照字段序列及差异；未编译、运行字节或哈希对比、回放或采样。脚步预测和数值算法未改。另确认 Unity CharacterController 周期转换会拼错误来源字符串，但绑定身份仍可运行时重配，尚未将其缓存以改变重绑定后的报错来源。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

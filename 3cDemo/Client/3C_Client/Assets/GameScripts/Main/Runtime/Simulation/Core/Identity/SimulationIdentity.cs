@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Text;
 
 namespace ThirdPersonSimulation
 {
@@ -11,12 +10,6 @@ namespace ThirdPersonSimulation
             if (string.IsNullOrWhiteSpace(value))
                 throw new ArgumentException("Identity is required.", parameter);
             return value.Trim();
-        }
-
-        public static string Hash(params string[] values)
-        {
-            string joined = string.Join("\u001f", values ?? Array.Empty<string>());
-            return SimulationCanonicalPayloadHash.Compute(Encoding.UTF8.GetBytes(joined)).Value;
         }
     }
 
@@ -50,6 +43,8 @@ namespace ThirdPersonSimulation
 
     public readonly struct StableHash : IEquatable<StableHash>, IComparable<StableHash>
     {
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public StableHash(string value)
         {
             if (string.IsNullOrEmpty(value) || value.Length != 64)
@@ -70,7 +65,21 @@ namespace ThirdPersonSimulation
         public override bool Equals(object obj) => obj is StableHash other && Equals(other);
         public override int GetHashCode() => Value == null ? 0 : StringComparer.Ordinal.GetHashCode(Value);
         public override string ToString() => Value ?? string.Empty;
-        public static StableHash Compute(params string[] values) => new StableHash(SimulationIdentity.Hash(values));
+        public static StableHash Compute(params string[] values)
+        {
+            CanonicalWriter writer = s_HashWriter ??= new CanonicalWriter();
+            writer.Reset();
+            if (values != null)
+            {
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (i > 0)
+                        writer.WriteByte(0x1f);
+                    writer.WriteRawUtf8(values[i].AsSpan());
+                }
+            }
+            return writer.ComputeHash();
+        }
         public static bool operator ==(StableHash left, StableHash right) => left.Equals(right);
         public static bool operator !=(StableHash left, StableHash right) => !left.Equals(right);
     }

@@ -212,7 +212,6 @@ namespace ThirdPersonSimulation.Fixed
         public void BeginOuterTransaction()
         {
             m_Products.BeginOuterTransaction();
-            m_CompletedStepPort.Clear();
         }
 
         public void BeginSimulationStep(FixedPipelineWorkingState workingState, FixedSimulationStep step)

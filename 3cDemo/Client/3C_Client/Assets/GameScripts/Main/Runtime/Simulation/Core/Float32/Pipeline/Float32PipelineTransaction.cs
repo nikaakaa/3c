@@ -210,7 +210,6 @@ namespace ThirdPersonSimulation
         public void BeginOuterTransaction()
         {
             m_Products.BeginOuterTransaction();
-            m_CompletedStepPort.Clear();
         }
 
         public void BeginSimulationStep(Float32PipelineWorkingState workingState, Float32SimulationStep step)

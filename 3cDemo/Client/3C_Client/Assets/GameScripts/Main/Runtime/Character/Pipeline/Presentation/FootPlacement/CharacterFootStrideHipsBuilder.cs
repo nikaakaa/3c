@@ -1034,8 +1034,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ? requestPair.Left.Support.ReachReference.Point
                     : requestPair.Right.Support.ReachReference.Point
                 : default;
-            CharacterFootStrideRequest left = requestPair.Left.Stride;
-            CharacterFootStrideRequest right = requestPair.Right.Stride;
+            ref readonly CharacterFootStrideRequest left = ref requestPair.Left.Stride;
+            ref readonly CharacterFootStrideRequest right = ref requestPair.Right.Stride;
             if (!TryResolveStride(
                     in left,
                     in right,

@@ -1799,3 +1799,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStateEvaluation` 的 `FormalFootMotion`、`LandingPrediction` 自动属性每次读取复制完整结构；Lifecycle 的 Evaluate、Resolve 和 landing reach 判定先复制局部，再进入 landing context 提交。
 - 两个属性改为 backing field 返回只读引用；三个只读局部直接绑定同一 backing field。`Stride` 保留按值输出构造，后续单独核对。formal motion 校验、landing context 提交和 reach 判定顺序不变。
 - 该改动删除 Foot lifecycle 每脚每帧的 formal motion 与 landing prediction 拷贝。静态核对两个结构均为 readonly struct、生命周期绑定 evaluation、消费点只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP247 Foot request pair stride 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPlacementRequestPair` 的 Left/Right 和 `CharacterFootPlacementRequest.Stride` 自动属性每次读取复制结构；StrideHips 的 `ResolveIntent` 读取 support anchor 时复制整份 request，又复制两个 stride 局部。
+- pair 的左右 request 和 request 的 stride 改为 backing field 只读引用；`ResolveIntent` 的 stride 局部直接绑定引用。pair 构造的 identity 校验、输出 intent 和 reject 分支不变。
+- 该改动删除 StrideHips intent 求解前的整份 request 与 stride 局部拷贝。静态核对 pair/request 为 readonly struct、生命周期覆盖调用、消费点只读；未编译、未采样，不能声称实测耗时收益。

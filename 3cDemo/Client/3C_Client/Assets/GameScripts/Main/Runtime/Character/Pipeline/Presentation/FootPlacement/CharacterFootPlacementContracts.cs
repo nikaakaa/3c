@@ -361,6 +361,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementRequest
     {
+        readonly CharacterFootStrideRequest m_Stride;
+
         internal CharacterFootPlacementRequest(
             CharacterFootPlacementIdentity identity,
             CharacterFootPlacementPose pose,
@@ -378,7 +380,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalTarget = goalTarget;
             Outcome = outcome;
             LandingReachAdmitted = landingReachAdmitted;
-            Stride = stride;
+            m_Stride = stride;
         }
 
         internal CharacterFootPlacementIdentity Identity { get; }
@@ -388,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGoalTarget GoalTarget { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
         internal bool LandingReachAdmitted { get; }
-        internal CharacterFootStrideRequest Stride { get; }
+        internal ref readonly CharacterFootStrideRequest Stride => ref m_Stride;
     }
 
     internal readonly struct CharacterResolvedFootResult
@@ -419,6 +421,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementRequestPair
     {
+        readonly CharacterFootPlacementRequest m_Left;
+        readonly CharacterFootPlacementRequest m_Right;
+
         internal CharacterFootPlacementRequestPair(
             in CharacterFootPlacementRequest left,
             in CharacterFootPlacementRequest right)
@@ -431,16 +436,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = leftIdentity.CompletionIdentity;
             RigId = leftIdentity.RigId;
             RigRevision = leftIdentity.RigRevision;
-            Left = left;
-            Right = right;
+            m_Left = left;
+            m_Right = right;
         }
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
-        internal CharacterFootPlacementRequest Left { get; }
-        internal CharacterFootPlacementRequest Right { get; }
+        internal ref readonly CharacterFootPlacementRequest Left => ref m_Left;
+        internal ref readonly CharacterFootPlacementRequest Right => ref m_Right;
     }
 
     internal readonly struct CharacterResolvedFootPair

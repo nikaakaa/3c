@@ -1793,3 +1793,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootStateFrame.AnimatedFoot` 自动属性每次读取复制完整 animated foot；Lifecycle support 查询和 unavailable request 还先复制到局部，constraint、target、transition 和 interpolation 也会重复读取。
 - AnimatedFoot 改为 backing field 返回只读引用，Lifecycle 两个局部改为绑定同一引用；构造仍按 `in` 接收并只保留必要状态存储。状态时序、约束结果和输出身份不变。
 - 该改动删除 Foot lifecycle 周期中 animated foot 的重复拷贝。静态核对 frame 为只读引用、foot 生命周期覆盖调用、消费链只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP246 Foot lifecycle formal motion 与 prediction 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootStateEvaluation` 的 `FormalFootMotion`、`LandingPrediction` 自动属性每次读取复制完整结构；Lifecycle 的 Evaluate、Resolve 和 landing reach 判定先复制局部，再进入 landing context 提交。
+- 两个属性改为 backing field 返回只读引用；三个只读局部直接绑定同一 backing field。`Stride` 保留按值输出构造，后续单独核对。formal motion 校验、landing context 提交和 reach 判定顺序不变。
+- 该改动删除 Foot lifecycle 每脚每帧的 formal motion 与 landing prediction 拷贝。静态核对两个结构均为 readonly struct、生命周期绑定 evaluation、消费点只读；未编译、未采样，不能声称实测耗时收益。

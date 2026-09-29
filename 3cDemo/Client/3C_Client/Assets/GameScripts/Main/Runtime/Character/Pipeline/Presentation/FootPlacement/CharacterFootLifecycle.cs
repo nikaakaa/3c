@@ -131,8 +131,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out Completion receipt)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
-            var formalFootMotion = evaluation.FormalFootMotion;
-            var landingPrediction = evaluation.LandingPrediction;
+            ref readonly AnimationFootMotionRuntimeSample formalFootMotion =
+                ref evaluation.FormalFootMotion;
+            ref readonly CharacterFootLandingPredictionResult landingPrediction =
+                ref evaluation.LandingPrediction;
             CharacterFootMotionSettings settings = frame.Settings;
             CharacterFootLandingRuntime.Evaluate(
                 ref context.Landing,
@@ -153,8 +155,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out Completion receipt)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
-            AnimationFootMotionRuntimeSample formalFootMotion = evaluation.FormalFootMotion;
-            CharacterFootLandingPredictionResult landingPrediction = evaluation.LandingPrediction;
+            ref readonly AnimationFootMotionRuntimeSample formalFootMotion =
+                ref evaluation.FormalFootMotion;
+            ref readonly CharacterFootLandingPredictionResult landingPrediction =
+                ref evaluation.LandingPrediction;
             float timeToLandingSeconds = formalFootMotion.HasPredictiveLanding
                 ? formalFootMotion.TimeToLandingSeconds : 0f;
             RequireValid(in frame);
@@ -631,7 +635,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGoalTarget goalTarget = ResolveGoalTarget(
                 in animatedFoot, evaluation.GoalRoot, in pose,
                 CharacterFootResolvedOutcome.Ready);
-            AnimationFootMotionRuntimeSample selectedStep = evaluation.FormalFootMotion;
+            ref readonly AnimationFootMotionRuntimeSample selectedStep =
+                ref evaluation.FormalFootMotion;
             bool landingReachAdmitted = evaluation.Grounded && AdmitLandingReach(
                 in selectedStep, context.Discrete.State,
                 outputState == CharacterFootSwingMotionState.Accepted,

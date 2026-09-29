@@ -72,6 +72,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 m_CandidatePositions[i] = m_Candidates[i].Position;
         }
 
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        [System.Diagnostics.Conditional("KK_DIAGNOSTIC_SAMPLING")]
         void AppendTraces(IReadOnlyList<DeterministicActorContactTrace> source)
         {
             if (source == null)

@@ -69,9 +69,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 m_Bindings.Length,
                 configuration.MaximumActorPairs,
                 configuration.MaximumActorContactIterations);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             int traceCapacity = checked(
                 configuration.MaximumActorPairs * (configuration.MaximumActorContactIterations * 5 + 2));
             m_ContactTraces = new List<DeterministicActorContactTrace>(traceCapacity);
+#else
+            m_ContactTraces = new List<DeterministicActorContactTrace>();
+#endif
             Descriptor = new CharacterWorldSolverDescriptor(
                 FixedSimulationNumericProfile.Value,
                 s_ImplementationId,
@@ -253,7 +257,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
             }
 
             long contactStarted = Stopwatch.GetTimestamp();
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             m_ContactTraces.Clear();
+#endif
             DeterministicActorContactSummary contactSummary = default;
             try
             {

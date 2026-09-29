@@ -164,8 +164,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
             Positions = new FixedVector3[actorCapacity];
             Corrections = new FixedVector3[actorCapacity];
             Contacts = new bool[actorCapacity];
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             int traceCapacity = checked(maximumPairs * (maximumIterations * 4 + 1));
             Traces = new List<DeterministicActorContactTrace>(traceCapacity);
+#else
+            Traces = new List<DeterministicActorContactTrace>();
+#endif
         }
 
         public int ActorCapacity => Origins.Length;
@@ -183,9 +187,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
             if (count <= 0 || count > ActorCapacity)
                 throw new InvalidOperationException($"Deterministic Actor contact roster '{count}' exceeds capacity '{ActorCapacity}'.");
             Array.Clear(Contacts, 0, count);
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             Traces.Clear();
+#endif
         }
 
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        [System.Diagnostics.Conditional("KK_DIAGNOSTIC_SAMPLING")]
         public void AddTrace(DeterministicActorContactTrace trace)
         {
             if (Traces.Count >= Traces.Capacity)

@@ -216,10 +216,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose source = m_ComponentPose[descriptor.SourcePhysicalBoneIndex];
                 AnimationLocalBonePose target = m_ComponentPose[descriptor.TargetPhysicalBoneIndex];
                 CharacterComponentBonePose derived = CharacterPoseConstraintMath.CreateVirtualComponent(
-                    new CharacterComponentBonePose(source.Position, source.Rotation, source.Scale),
-                    new CharacterComponentBonePose(target.Position, target.Rotation, target.Scale));
+                    source,
+                    target);
                 m_ComponentPose[descriptor.PoseBoneIndex] = new AnimationLocalBonePose(
-                    derived.Position, derived.Rotation, derived.Scale);
+                    derived.Rotation,
+                    derived.Position,
+                    derived.Scale);
             }
         }
 

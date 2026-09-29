@@ -100,7 +100,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         descriptor.VirtualBoneId);
                 }
                 outputPose[descriptor.PoseBoneIndex] =
-                    new AnimationLocalBonePose(localPosition, localRotation, Vector3.one);
+                    new AnimationLocalBonePose(
+                        localRotation.normalized,
+                        localPosition,
+                        Vector3.one);
             }
 
             return CharacterVirtualBonePoseResult.Success();

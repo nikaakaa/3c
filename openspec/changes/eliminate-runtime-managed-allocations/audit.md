@@ -1084,3 +1084,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 同一份热点中 `SetComponentRotation` 的 exclusive 成本来自每次足部 pre-solve 旋转写入。入口 `RequireFinite` 已完成 finite 和非零检查，随后主骨骼 `AnimationLocalBonePose` 公共构造器重复同一检查并再次归一化。
 - 主骨骼现在在既有写入边界归一化一次，并使用 AP123 的内部已归一化构造器；子孙骨骼的位置差、旋转合成和公共构造行为保持不变。绑定入口继续验证整页姿态，旋转入口继续拒绝无效参数。
 - 该改动减少每次旋转写入的主骨骼重复浮点检查，不改变有效输入输出、无效输入失败类型、子孙传播顺序或输出页身份。静态核对 TryBind、位置/旋转写入和 FBBIK 调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP128 虚拟骨骼合成重复校验收敛（2026-09-30，已实施，本轮未编译）
+
+- source capture 和 FBBIK 输出重建都会派生虚拟骨骼。source capture 已在外层拒绝无效 source pose，FBBIK `TryBind` 已验证整页 component pose；随后 `CreateVirtualComponent` 又用公共构造器对 target position/rotation 和 source scale 重复 finite/非零检查并重复归一化 target rotation，输出 `AnimationLocalBonePose` 再次检查和归一化。
+- 虚拟组件合成的两个重载现在只接受正式 local/component 页并使用 `CreateNormalized`；派生前已按原合同检查 local position/rotation finite 和非零，输出 local pose 改用已归一化构造器。FBBIK 不再把已验证 local pose 复制成 component pose 后再合成。
+- 该改动减少每虚拟骨骼每帧的重复浮点检查和归一化，保持虚拟骨骼位置、旋转、缩放、失败码和输出页写入顺序不变。静态核对 source capture、rig 构造、Modify Bone 和 FBBIK 的页面有效性边界；未编译、未采样，不能声称实测耗时收益。

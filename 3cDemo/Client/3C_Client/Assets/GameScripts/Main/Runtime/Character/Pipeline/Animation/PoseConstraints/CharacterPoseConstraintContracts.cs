@@ -759,7 +759,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static CharacterComponentBonePose CreateVirtualComponent(
             CharacterComponentBonePose source, CharacterComponentBonePose target) =>
-            new CharacterComponentBonePose(target.Position, target.Rotation, source.Scale);
+            CharacterComponentBonePose.CreateNormalized(
+                target.Position,
+                target.Rotation,
+                source.Scale);
+
+        internal static CharacterComponentBonePose CreateVirtualComponent(
+            AnimationLocalBonePose source, AnimationLocalBonePose target) =>
+            CharacterComponentBonePose.CreateNormalized(
+                target.Position,
+                target.Rotation,
+                source.Scale);
 
         internal static Vector3 TransformPoint(CharacterComponentBonePose pose, Vector3 localPoint) =>
             pose.Position + pose.Rotation * Vector3.Scale(pose.Scale, localPoint);

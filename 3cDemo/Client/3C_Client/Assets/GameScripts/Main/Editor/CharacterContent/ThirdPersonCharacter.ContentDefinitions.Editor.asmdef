@@ -1,0 +1,32 @@
+{
+    "name": "ThirdPersonCharacter.ContentDefinitions.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ThirdPersonCharacter.Content.Editor",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonCharacter.Animation",
+        "ThirdPersonCharacter.Animation.TransitionRouting",
+        "ThirdPersonCharacter.Pipeline.RootMotion",
+        "ThirdPersonCamera.Contracts",
+        "ThirdPersonGameplay",
+        "ThirdPersonSimulation.Core",
+        "BTSMTL.Authoring",
+        "BTSMTL.EventGraphs",
+        "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Tree",
+        "FlowCanvas",
+        "NodeCanvas",
+        "ParadoxNotion"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -30,7 +30,8 @@
         "ThirdPersonSimulation.Fixed.Unity",
         "ThirdPersonSimulation.Unity",
         "Unity.Collections",
-        "YooAsset"
+        "YooAsset",
+        "ThirdPersonCharacter.Pipeline.RootMotion.Editor"
     ],
     "includePlatforms": [
         "Editor"

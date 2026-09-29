@@ -1060,6 +1060,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedValueInputReader m_Values;
         readonly IFixedMotionContributionSink m_Motion;
         readonly FixedAbilityExecutionFrame m_Frame;
+        readonly LocomotionProfile[] m_Profiles;
 
         public FixedLocomotionRuntime(
             FixedGameplayAbilityExecutionAccess access,
@@ -1071,6 +1072,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Values = values ?? throw new ArgumentNullException(nameof(values));
             m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_Profiles = BuildProfiles(Access.Layout, Access.Services);
         }
 
         public void Submit<TTarget>(
@@ -1094,11 +1096,9 @@ namespace ThirdPersonSimulation.Fixed
                 committedTicks,
                 m_Ability.TickRate);
             FixedScalar delta = FixedScalar.One / FixedScalar.FromInt64(m_Ability.TickRate);
-            ProgramConstant turnConstant = FindConstant(operation, OperationNamedConstant.TurnSpeedDegrees);
-            if (turnConstant == null || turnConstant.Kind != ProgramConstantKind.Scalar)
-                throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid turn speed.");
-            FixedScalar maxYaw = turnConstant.Scalar * delta;
-            FixedVector3 displacement = ResolveDisplacement(operation, move, delta, committedTicks - 1);
+            ref readonly LocomotionProfile profile = ref m_Profiles[operation.Handle.Value];
+            FixedScalar maxYaw = profile.TurnSpeed * delta;
+            FixedVector3 displacement = ResolveDisplacement(in profile, move, delta, committedTicks - 1);
             FixedScalar yaw = FixedScalar.Zero;
             if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
             {
@@ -1111,7 +1111,7 @@ namespace ThirdPersonSimulation.Fixed
                 move,
                 displacement,
                 yaw,
-                turnConstant.Scalar,
+                profile.TurnSpeed,
                 delta,
                 generation);
             m_Motion.Submit(new SimulationMotionContribution(
@@ -1143,7 +1143,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong generation)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
-            int durationTicks = ResolveDurationTicks(operation);
+            ref readonly LocomotionProfile profile = ref m_Profiles[operation.Handle.Value];
+            int durationTicks = profile.DurationTicks;
             string continuationOwner = string.Empty;
             FixedVector2 continuationVelocity = FixedVector2.Zero;
             if ((LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Timed)
@@ -1182,54 +1183,29 @@ namespace ThirdPersonSimulation.Fixed
                 continuationVelocity.Y.ToSingle());
         }
 
-        int ResolveDurationTicks(SimulationOperation operation)
-        {
-            if ((LocomotionInputMotionExecutionMode)operation.Integer0 != LocomotionInputMotionExecutionMode.Timed)
-                return 0;
-            ProgramConstant duration = FindConstant(operation, OperationNamedConstant.DurationSeconds);
-            if (duration == null || duration.Kind != ProgramConstantKind.Scalar || duration.Scalar <= FixedScalar.Zero)
-                throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid duration.");
-            return checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Ability.TickRate));
-        }
-
         FixedVector3 ResolveDisplacement(
-            SimulationOperation operation,
+            in LocomotionProfile profile,
             FixedVector2 move,
             FixedScalar delta,
             int elapsedTicks)
         {
-            var mode = (LocomotionInputMotionDisplacementMode)operation.Integer1;
-            if (mode == LocomotionInputMotionDisplacementMode.ConstantSpeed)
+            if (profile.DisplacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed)
             {
-                ProgramConstant speed = FindConstant(operation, OperationNamedConstant.MoveSpeed);
-                if (speed == null || speed.Kind != ProgramConstantKind.Scalar)
-                    throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has no Move Speed.");
                 return new FixedVector3(
-                    move.X * speed.Scalar * delta,
+                    move.X * profile.MoveSpeed * delta,
                     FixedScalar.Zero,
-                    move.Y * speed.Scalar * delta);
+                    move.Y * profile.MoveSpeed * delta);
             }
-            if (mode != LocomotionInputMotionDisplacementMode.ActionMotionCurve)
-                throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid displacement mode '{operation.Integer1}'.");
             if (move == FixedVector2.Zero)
                 return FixedVector3.Zero;
-
-            ProgramConstant xConstant = FindConstant(operation, OperationNamedConstant.ActionMotionPositionX);
-            ProgramConstant zConstant = FindConstant(operation, OperationNamedConstant.ActionMotionPositionZ);
-            ProgramConstant durationConstant = FindConstant(operation, OperationNamedConstant.ActionMotionDuration);
-            if (xConstant == null || xConstant.Kind != ProgramConstantKind.Bytes ||
-                zConstant == null || zConstant.Kind != ProgramConstantKind.Bytes ||
-                durationConstant == null || durationConstant.Kind != ProgramConstantKind.Scalar ||
-                durationConstant.Scalar <= FixedScalar.Zero)
-                throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid Action Motion Curve constants.");
 
             FixedScalar tickRate = FixedScalar.FromInt64(m_Ability.TickRate);
             FixedScalar fromTime = FixedScalar.FromInt64(elapsedTicks) / tickRate;
             FixedScalar toTime = FixedScalar.FromInt64(checked(elapsedTicks + 1)) / tickRate;
-            bool looping = (LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Continuous;
-            FixedGameplayAbilityCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
-            FixedGameplayAbilityCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
-            FixedScalar duration = durationConstant.Scalar;
+            bool looping = profile.ExecutionMode == LocomotionInputMotionExecutionMode.Continuous;
+            FixedGameplayAbilityCurve xCurve = profile.XCurve;
+            FixedGameplayAbilityCurve zCurve = profile.ZCurve;
+            FixedScalar duration = profile.CurveDuration;
             FixedScalar xCycleTotal = looping ? xCurve.Evaluate(duration, FixedScalar.Zero) : FixedScalar.Zero;
             FixedScalar zCycleTotal = looping ? zCurve.Evaluate(duration, FixedScalar.Zero) : FixedScalar.Zero;
             FixedScalar localX = SampleCumulative(xCurve, toTime, duration, looping, xCycleTotal) -
@@ -1257,6 +1233,108 @@ namespace ThirdPersonSimulation.Fixed
             int cycle = (time / duration).TruncateToInt32();
             FixedScalar localTime = time - duration * FixedScalar.FromInt64(cycle);
             return cycleTotal * FixedScalar.FromInt64(cycle) + curve.Evaluate(localTime, FixedScalar.Zero);
+        }
+
+        static LocomotionProfile[] BuildProfiles(
+            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionServices services)
+        {
+            var profiles = new LocomotionProfile[layout.Operations.Count];
+            for (int i = 0; i < layout.Operations.Count; i++)
+            {
+                SimulationOperation operation = layout.Operations[i];
+                if (operation.Code != SimulationOperationCode.LocomotionInputMotion)
+                    continue;
+
+                ProgramConstant turn = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.TurnSpeedDegrees);
+                if (turn == null || turn.Kind != ProgramConstantKind.Scalar)
+                    throw new InvalidOperationException($"Locomotion operation '{services.SourcePath(operation.Handle)}' has invalid turn speed.");
+
+                var executionMode = (LocomotionInputMotionExecutionMode)operation.Integer0;
+                var displacementMode = (LocomotionInputMotionDisplacementMode)operation.Integer1;
+                FixedScalar moveSpeed = FixedScalar.Zero;
+                FixedScalar curveDuration = FixedScalar.Zero;
+                FixedGameplayAbilityCurve xCurve = null;
+                FixedGameplayAbilityCurve zCurve = null;
+                int durationTicks = 0;
+                if (executionMode == LocomotionInputMotionExecutionMode.Timed)
+                {
+                    ProgramConstant duration = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.DurationSeconds);
+                    if (duration == null || duration.Kind != ProgramConstantKind.Scalar || duration.Scalar <= FixedScalar.Zero)
+                        throw new InvalidOperationException($"Locomotion operation '{services.SourcePath(operation.Handle)}' has invalid duration.");
+                    durationTicks = checked((int)Math.Ceiling(duration.Scalar.ToDouble() * layout.TickRate));
+                }
+
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed)
+                {
+                    ProgramConstant speed = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.MoveSpeed);
+                    if (speed == null || speed.Kind != ProgramConstantKind.Scalar)
+                        throw new InvalidOperationException($"Locomotion operation '{services.SourcePath(operation.Handle)}' has no Move Speed.");
+                    moveSpeed = speed.Scalar;
+                }
+                else if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve)
+                {
+                    ProgramConstant xConstant = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.ActionMotionPositionX);
+                    ProgramConstant zConstant = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.ActionMotionPositionZ);
+                    ProgramConstant durationConstant = layout.FindNamedConstant(operation.Handle, OperationNamedConstant.ActionMotionDuration);
+                    if (xConstant == null || xConstant.Kind != ProgramConstantKind.Bytes ||
+                        zConstant == null || zConstant.Kind != ProgramConstantKind.Bytes ||
+                        durationConstant == null || durationConstant.Kind != ProgramConstantKind.Scalar ||
+                        durationConstant.Scalar <= FixedScalar.Zero)
+                        throw new InvalidOperationException($"Locomotion operation '{services.SourcePath(operation.Handle)}' has invalid Action Motion Curve constants.");
+                    xCurve = services.RequireTimelineCurve(xConstant, xConstant.Identity);
+                    zCurve = services.RequireTimelineCurve(zConstant, zConstant.Identity);
+                    curveDuration = durationConstant.Scalar;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Locomotion operation '{services.SourcePath(operation.Handle)}' has invalid displacement mode '{operation.Integer1}'.");
+                }
+
+                profiles[i] = new LocomotionProfile(
+                    executionMode,
+                    displacementMode,
+                    turn.Scalar,
+                    moveSpeed,
+                    curveDuration,
+                    durationTicks,
+                    xCurve,
+                    zCurve);
+            }
+
+            return profiles;
+        }
+
+        readonly struct LocomotionProfile
+        {
+            public LocomotionProfile(
+                LocomotionInputMotionExecutionMode executionMode,
+                LocomotionInputMotionDisplacementMode displacementMode,
+                FixedScalar turnSpeed,
+                FixedScalar moveSpeed,
+                FixedScalar curveDuration,
+                int durationTicks,
+                FixedGameplayAbilityCurve xCurve,
+                FixedGameplayAbilityCurve zCurve)
+            {
+                ExecutionMode = executionMode;
+                DisplacementMode = displacementMode;
+                TurnSpeed = turnSpeed;
+                MoveSpeed = moveSpeed;
+                CurveDuration = curveDuration;
+                DurationTicks = durationTicks;
+                XCurve = xCurve;
+                ZCurve = zCurve;
+            }
+
+            public LocomotionInputMotionExecutionMode ExecutionMode { get; }
+            public LocomotionInputMotionDisplacementMode DisplacementMode { get; }
+            public FixedScalar TurnSpeed { get; }
+            public FixedScalar MoveSpeed { get; }
+            public FixedScalar CurveDuration { get; }
+            public int DurationTicks { get; }
+            public FixedGameplayAbilityCurve XCurve { get; }
+            public FixedGameplayAbilityCurve ZCurve { get; }
         }
     }
 }

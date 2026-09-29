@@ -752,21 +752,15 @@
 - Fixed 与 Float32 Timed Locomotion 每次解析 timeline 时调用 `TryFindSingleLocomotion`，对 completion transition 目标 state 新建 `Stack<OperationHandle>` 并遍历 Child 子树查找唯一 locomotion。state 拓扑、Root 边和 operation code/Integer 常量装配后固定，这是周期重复拓扑查找和托管分配。
 - `OperationExecutionTopology` 构造期基于已有 Root 边和 Child 出边预解析每个 state 的唯一 LocomotionInputMotion；发现第二个则按原逻辑判定不唯一。Motion runtime 改为读取 `StateSingleLocomotion`，保留目标必须为 Continuous ConstantSpeed、Move Speed 类型和数值校验、owner identity 与 continuation velocity 语义。
 - Timed Locomotion 每 tick 少一次 state 子树遍历和 Stack 分配；装配期新增定容 handle 数组。目标无 Root、无 locomotion、多 locomotion 或 continuation 不满足模式时结果不变。静态核对 Root/Child 出边构造、装配期 Stack 清理、两域调用和差异；未编译、运行回放或采样。
-
 ### AP98 Action Motion Curve 周期总量重复求值（2026-09-29，已实施，本轮未编译）
-
 - Fixed 与 Float32 Action Motion Curve 在 looping 模式下，X/Z 的 from 和 to 各自调用 `SampleCumulative`，每次都重新执行 `curve.Evaluate(duration)` 计算周期总量；同一 tick、同一曲线的该值重复计算四次。周期总量只依赖曲线、duration 和求值器纯函数。
 - 每条曲线在本次位移解析中先计算一次 `cycleTotal`，非 looping 仍按原 clamp 后求值，不预计算 endpoint。`SampleCumulative` 只接收并复用该总量，`cycle`、local time、from/to 和 local 求值顺序不变。
 - looping 位移解析从每轴四次求值收敛为三次（周期总量加 from/to），两轴从八次收敛为六次；数值顺序、舍入输入和可见输出不变。静态核对两域曲线求值器无状态、唯一调用链和差异；未编译、运行回放或采样。
-
 ### AP99 State 执行路径身份周期解析（2026-09-29，已实施，本轮未编译）
-
 - `OperationControlRuntime.FindStateExecutionPath` 每次 Push state scope 都读取 active/exiting identity slot，并用 `int.TryParse` 解析回 OperationHandle 后与当前 state 比较。identity slot 只写入 `OperationExecutionTopology.OperationIdentity` 预生成字符串或空串，解析结果不参与其它语义。
 - 改为持有当前 state 的预生成身份并做 `StringComparison.Ordinal` 比较；命中后仍读取同一 execution path slot。空串、其它 operation 身份和无效身份都不命中；命中条件、路径读取和返回值不变。该方法内不再保留解析入口，状态机自身的过渡 handle 解析不在此项范围内。
 - 每次激活、过渡评估、子图或 state 进入时少一次到两次固定数字字符串解析；无新增状态、缓存或第二执行路径。静态核对 identity slot 全部写入、Push scope 调用链和字符串比较边界；未编译、运行回放或采样。
-
 ### AP100 Character Input 配置与请求交叉扫描（2026-09-29，已实施，本轮未编译）
-
 - Fixed 与 Float32 Character Input 的 `ApplyRequests` 原先对每个配置请求 ID 线性扫描整批 incoming requests，匹配同一 Tick 内多条请求和多个配置时形成乘积级字符串比较。配置 ID 已在构造期按 Ordinal 排序并拒绝重复。
 - 先按原顺序重置每个配置 ID 的过期状态；随后对每条 incoming request 用排序配置表做 Ordinal 二分定位，只访问命中的配置 ID，并沿用原有 validity、Priority、Sequence 决胜和字段顺序。未命中配置的请求仍被忽略，未命中的配置仍保留过期重置结果。
 - 请求应用从配置数乘请求数次比较收敛为配置数加请求数次对数定位访问；同一请求名单的最终 Priority/Sequence 状态不变。静态核对构造排序唯一性、空请求、过期重置、多条同 ID 请求和两域接口；未编译、运行回放或采样。
@@ -776,7 +770,6 @@
 - `CompiledValueInputBinding` 在装配期固化 `SourceOutputPortIdentity`。Value 边构造时已有 `sourcePort`，SubGraph 的 graph frame 输出按 ParameterName/PortId 排序后生成连续 Order，`ReadSubGraphOutput` 消费的同一 frame 输出列表也保持该顺序，因此 identity 和 `SourceOutputPortIndex` 可以随 binding 一起正式保存。
 - 两域周期 `ReadInputs` 直接传入 binding identity 和 index，删除 `ValueSourceOutputPort` 周期合同查询；本地 binding 改为 `ref readonly`，不因新增 identity 字段复制更大结构。环检查工作区改为 `HashSet<long>`，用 operation handle 和端口 index 组成键，finally 移除键和容量准备不变。
 - 每条 Operation Value 输入少一次静态端口合同解析、字典查找和字符串哈希；环检查键比较不再读取端口文本。诊断、SubGraph 状态读取、GameplayEffect 输出选择和异常文本仍使用同一 identity；实际 evaluation 输出、求值顺序和 Cycle 拒绝语义不变。静态核对 binding 唯一构造点、Graph frame/contract 顺序、两域 Evaluate 调用链、trace 和差异检查；未编译、运行回放或采样。
-
 ### AP102 GameplayEffect Freeze 重复判断 Tag 脏标（2026-09-29，已实施，本轮未编译）
 
 - Fixed 与 Float32 SimulationGameplayEffectState.Freeze 的快速路径连续判断两次 !m_TagsDirty；该字段是同一个实例布尔值，第二次不提供额外约束。
@@ -819,6 +812,15 @@
 - 两域执行曲线改为与 `data.Constants` 对齐的定容数组，装配期按原去重规则解码 Timeline Clip、Motion Curve 和 Action Motion 曲线；运行期用 constant index 直接定位，缺失 curve 仍按原异常失败。
 
 - 每次 Action Motion Curve 解析少两次 hash 查找，曲线求值次数、AP98 的周期总量复用和输出不变。静态核对 `RequireTimelineCurve` 唯一周期消费、两域 BuildExecutionCurves 去重和差异检查；未编译、运行回放或采样。
+
+### AP109 Locomotion 常量周期重复解析（2026-09-29，已实施，本轮未编译）
+
+
+
+- Fixed 与 Float32 Locomotion 每次 Submit 都重新定位并校验 Turn/Move/Duration/Action Motion Curve 常量；同一 operation 的模式、数值和曲线来自装配后固定 layout，重复校验不产生新业务约束。
+- 两域 Locomotion Runtime 构造期按原检查顺序编译 per-operation profile，保存执行模式、位移模式、Turn/Move 速度、曲线时长、Timed duration ticks 和已解码 X/Z 曲线。周期 Submit、位移解析和 timeline duration 直接读取 profile，删除重复 FindConstant 与逐帧校验。
+- 周期路径少 3 到 6 次常量定位和全部重复类型/范围校验；无效配置仍在 runtime 构造期以原异常语义失败，输出公式和 AP98 曲线求值不变。静态核对两域常量字段、原校验顺序、Timed 与 Continuous 分支和差异检查；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

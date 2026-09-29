@@ -701,7 +701,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootPathContinuityFact CreateUnevaluated(
             float timeToLandingSeconds,
-            CharacterFootMotionSettings settings,
+            in CharacterFootMotionSettings settings,
             Vector3 interpolationComponentUp) =>
             new CharacterFootPathContinuityFact(
                 false,

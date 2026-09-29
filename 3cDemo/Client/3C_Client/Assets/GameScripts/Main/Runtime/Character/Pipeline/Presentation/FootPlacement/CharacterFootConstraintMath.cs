@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 fullCorrection,
             Vector3 componentUp,
             float horizontalError,
-            CharacterFootMotionSettings settings)
+            in CharacterFootMotionSettings settings)
         {
             Vector3 up = componentUp.normalized;
             Vector3 horizontal = Vector3.ProjectOnPlane(fullCorrection, up);

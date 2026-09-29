@@ -2027,3 +2027,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Weight rebase、hard constraint、plant release rebase 和 correction response 求解反复按值读取 `state.ResponseHistory`；correction result 的 Fact 属性也会复制完整响应诊断事实。
 - History 字段读取改为状态字段的只读引用，correction result 的 Fact 改为 backing field 只读引用；Plant/Release 的 fact 局部直接引用 result。response 标量、方向、domain transfer、限速、输出点和诊断字段不变。
 - 该改动删除 Interpolation 周期中 response history 和 response fact 的重复拷贝。静态核对 history/result/fact 均为 readonly struct、state 或 response 生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP285 Foot Placement settings 辅助入参引用化（2026-09-30，已实施，本轮未编译）
+
+- Continuity 的 unevaluated 构建、swing residual half-life 和 sliding correction 三个 helper 按值接收完整 FootMotion settings；每脚 suppressed、swing、plant 和 state target 求解会进入这些入口。
+- 三个 helper 的 settings 入参改为 `in`，正式调用点显式转发 frame 的只读 settings。tuning 字段、half-life、clamp、滑动权重和返回值不变。
+- 该改动删除 Foot Placement 周期中进入只读 settings helper 的整份配置拷贝。静态核对 settings 为 readonly struct、frame 生命周期覆盖调用、helper 只读；未编译、未采样，不能声称实测耗时收益。

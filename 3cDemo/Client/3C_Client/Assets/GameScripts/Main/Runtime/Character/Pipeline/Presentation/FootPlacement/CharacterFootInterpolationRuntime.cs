@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     CharacterFootPathContinuityFact.CreateUnevaluated(
                         target.TimeToLandingSeconds,
-                        frame.Settings,
+                        in frame.Settings,
                         frame.ComponentUp.normalized),
                     default,
                     default);
@@ -471,7 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
                     state.PlantWorldResidual,
                     target.TimeToLandingSeconds,
-                    frame.Settings,
+                    in frame.Settings,
                     out residualDeadlineHalfLifeAvailable,
                     out residualDeadlineHalfLifeSeconds);
                 residualDecayApplied = true;
@@ -894,7 +894,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float halfLifeSeconds = ResolveSwingResidualHalfLife(
                 state.SwingResidual,
                 target.TimeToLandingSeconds,
-                frame.Settings,
+                in frame.Settings,
                 out bool deadlineHalfLifeAvailable,
                 out float deadlineHalfLifeSeconds);
             state.SwingResidual = Advance(
@@ -1000,7 +1000,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame) =>
             CharacterFootPathContinuityFact.CreateUnevaluated(
                 target.TimeToLandingSeconds,
-                frame.Settings,
+                in frame.Settings,
                 frame.ComponentUp.normalized);
 
         static CharacterFootCorrectionResponseResult ApplyCorrectionResponse(
@@ -1296,7 +1296,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static float ResolveSwingResidualHalfLife(
             Vector3 residual,
             float timeToLandingSeconds,
-            CharacterFootMotionSettings settings,
+            in CharacterFootMotionSettings settings,
             out bool deadlineHalfLifeAvailable,
             out float deadlineHalfLifeSeconds)
         {

@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         fullCorrection,
                         frame.ComponentUp,
                         horizontalError,
-                        frame.Settings);
+                        in frame.Settings);
             }
             else
             {

@@ -111,12 +111,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
         }
 
-        public float Phase { get; }
-        public float LiftOffPhase { get; }
-        public float DurationSeconds { get; }
-        public float TimeToLandingSeconds { get; }
+        public float Phase { get; private set; }
+        public float LiftOffPhase { get; private set; }
+        public float DurationSeconds { get; private set; }
+        public float TimeToLandingSeconds { get; private set; }
         public bool IsPreSwing => Phase < LiftOffPhase;
         public bool IsSwing => Phase >= LiftOffPhase && Phase < 0.9999f;
+
+        internal static AnimationActionStepClockSample FromValidated(
+            float phase,
+            float liftOffPhase,
+            float durationSeconds,
+            float timeToLandingSeconds)
+        {
+            return new AnimationActionStepClockSample
+            {
+                Phase = phase,
+                LiftOffPhase = liftOffPhase,
+                DurationSeconds = durationSeconds,
+                TimeToLandingSeconds = timeToLandingSeconds
+            };
+        }
 
         static float RequireNormalized(float value, string field)
         {
@@ -610,10 +625,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ApproachContactPhase);
             if (LandingPhase + 0.000001f < ApproachContactPhase)
                 throw new ArgumentOutOfRangeException(nameof(landingPhase));
-            ActionStepClock = new AnimationActionStepClockSample(
+            float durationSeconds = actionStepDurationSeconds;
+            RequireNonNegative(durationSeconds, nameof(durationSeconds));
+            ActionStepClock = AnimationActionStepClockSample.FromValidated(
                 EventPhase,
                 LiftOffPhase,
-                actionStepDurationSeconds,
+                durationSeconds,
                 TimeToLandingSeconds);
             OpposingEventOrdinal = opposingEventOrdinal;
             OpposingLandingDelaySeconds = RequireNonNegative(

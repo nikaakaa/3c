@@ -1126,3 +1126,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationFootFeatureCurveSet.SamplePrepared` 先 clamp 得到 `time`，当前与 incoming 两个 `AnimationPredictedFootStepCurveSet.SamplePrepared` 又各自重复 clamp。运行时同一 feature 采样会执行 3 次同一 clamp。
 - 两个预测步入口拆出 `SamplePreparedAt`；feature 入口仍负责 normalized time 边界一次，随后 current/incoming 直接消费同一已准备时间。原 `SamplePrepared` 继续作为 normalized time 边界，采样公式和输出顺序不变。
 - 该改动删除同一 feature 的两次重复 clamp，不增加第二数据源或兼容入口。静态核对三个入口的唯一调用链、public Sample 边界和 current/incoming 参数；未编译、未采样，不能声称实测耗时收益。
+
+### AP135 Action step clock 已验证入口（2026-09-30，已实施，本轮未编译）
+
+- `AnimationPredictedFootStepSample` 构造器在创建 clock 前已经验证 `EventPhase`、`LiftOffPhase` 和 `TimeToLandingSeconds`；公共 `AnimationActionStepClockSample` 构造器随后重复这三项。duration 仍属于预测步边界，原由 clock 内部再查。
+- 预测步先在原校验位置拒绝负 duration，再用 `FromValidated` 直接写入四个字段；公共构造器继续服务外部输入。异常触发位置保持，duration 的 `ParamName` 继续为 `durationSeconds`。
+- 该改动删除预测步采样链的重复 phase/time 校验，不改变 clock 输出、异常类型或后续字段赋值顺序。静态核对唯一 `FromValidated` 调用点、原 duration 校验顺序和公共构造器保留边界；未编译、未采样，不能声称实测耗时收益。

@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly string[] m_OperationSourcePaths;
         readonly string[] m_OperationSourceIdentities;
-        readonly IReadOnlyDictionary<int, Float32GameplayAbilityCurve> m_ExecutionCurves;
+        readonly Float32GameplayAbilityCurve[] m_ExecutionCurves;
         readonly PortableTagQuery[] m_TagQueries;
         readonly SimulationSetByCallerValue[][] m_SetByCallerValues;
         readonly IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> m_GameplayCueProducers;
@@ -141,7 +141,8 @@ namespace ThirdPersonSimulation
         {
             if (constant == null)
                 throw new ArgumentNullException(nameof(constant));
-            if (!m_ExecutionCurves.TryGetValue(constant.Index, out Float32GameplayAbilityCurve curve))
+            Float32GameplayAbilityCurve curve = m_ExecutionCurves[constant.Index];
+            if (curve == null)
                 throw new InvalidDataException($"Ability execution curve '{identity}' was not compiled into Ability execution services.");
             return curve;
         }
@@ -219,9 +220,9 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        static IReadOnlyDictionary<int, Float32GameplayAbilityCurve> BuildExecutionCurves(Float32GameplayAbilityExecutionData data)
+        static Float32GameplayAbilityCurve[] BuildExecutionCurves(Float32GameplayAbilityExecutionData data)
         {
-            var result = new Dictionary<int, Float32GameplayAbilityCurve>();
+            var result = new Float32GameplayAbilityCurve[data.Constants.Count];
             for (int entryIndex = 0; entryIndex < data.CatalogEntries.Count; entryIndex++)
             {
                 ProgramCatalogEntry entry = data.CatalogEntries[entryIndex];
@@ -236,25 +237,25 @@ namespace ThirdPersonSimulation
                     if (field.Kind != ProgramCatalogFieldKind.Constant)
                         continue;
                     ProgramConstant constant = data.Constants[field.ConstantIndex];
-                    if (constant.Kind != ProgramConstantKind.Bytes || result.ContainsKey(constant.Index))
+                    if (constant.Kind != ProgramConstantKind.Bytes || result[constant.Index] != null)
                         continue;
                     byte[] bytes = constant.Bytes.ToArray();
                     if (bytes.Length == 0)
                         throw new InvalidDataException($"Timeline curve '{entry.Identity}/{field.Name}' is empty.");
-                    result.Add(constant.Index, Float32GameplayAbilityCurveCodec.Read(bytes));
+                    result[constant.Index] = Float32GameplayAbilityCurveCodec.Read(bytes);
                 }
             }
             for (int i = 0; i < data.Constants.Count; i++)
             {
                 ProgramConstant constant = data.Constants[i];
-                if (constant.Kind != ProgramConstantKind.Bytes || result.ContainsKey(constant.Index) ||
+                if (constant.Kind != ProgramConstantKind.Bytes || result[constant.Index] != null ||
                     !OperationNamedConstantSchema.TryParseIdentity(constant.Identity, out OperationNamedConstant field) ||
                     field != OperationNamedConstant.ActionMotionPositionX && field != OperationNamedConstant.ActionMotionPositionZ)
                     continue;
                 byte[] bytes = constant.Bytes.ToArray();
                 if (bytes.Length == 0)
                     throw new InvalidDataException($"Ability execution curve '{constant.Identity}' is empty.");
-                result.Add(constant.Index, Float32GameplayAbilityCurveCodec.Read(bytes));
+                result[constant.Index] = Float32GameplayAbilityCurveCodec.Read(bytes);
             }
             return result;
         }

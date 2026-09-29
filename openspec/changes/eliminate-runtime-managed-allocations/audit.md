@@ -813,6 +813,12 @@
 - `OperationExecutionTopology` 装配期已有 `m_Identities`，现在同时建立唯一的 identity 到 handle 的 Ordinal 字典；状态机读取 slot 后通过 `TryResolveOperation` 直接取得 handle，删除原 `ParseHandle`。identity slot 的正式写入仍只有拓扑数字身份或空串，过渡和停止状态不变。
 - 每次状态机推进少一次整数字符串解析；未知或空 identity 继续按无效 handle 处理。静态核对 identity slot 全部写入点、Restore/Stop 读取链、两域和 Presentation 控制目标调用；未编译、运行回放或采样。
 
+### AP108 Locomotion 曲线周期字典查找（2026-09-29，已实施，本轮未编译）
+
+- Fixed 与 Float32 Locomotion 的 Action Motion Curve 每次 X/Z 位移解析都通过 `RequireTimelineCurve` 在 `Dictionary<int, Curve>` 中查找两次；曲线、constant index 和 Ability 执行数据在装配后固定。
+- 两域执行曲线改为与 `data.Constants` 对齐的定容数组，装配期按原去重规则解码 Timeline Clip、Motion Curve 和 Action Motion 曲线；运行期用 constant index 直接定位，缺失 curve 仍按原异常失败。
+
+- 每次 Action Motion Curve 解析少两次 hash 查找，曲线求值次数、AP98 的周期总量复用和输出不变。静态核对 `RequireTimelineCurve` 唯一周期消费、两域 BuildExecutionCurves 去重和差异检查；未编译、运行回放或采样。
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

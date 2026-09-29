@@ -1618,3 +1618,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Physical source registry 的 `RecordRelease`、`Register`、`RequireIdentity`、`ContainsCommitted`、`PrepareRelease` 和 `TryFind` 按值接收 source id 与 pose node id；Source Module 的对应转发、注册和 backend 解析包装又各复制一次。
 - registry 七个正式 identity 边界改为 `in`，Source Module 的 `RecordRelease`、`RequireIdentity`、`RegisterSource`、`ResolveBackend`、`RequireCommittedBackend` 和 `IsCommittedInAnyBackend` 同步改为只读转发。`Register` 写入 pending 数组、`RecordRelease` 写入 release 快照仍各保留一次必要存储拷贝；pending/committed 选择、generation 比对、异常文本和 backend interface 合同不变。
 - 该改动删除 physical source 查找、注册和释放准备链的边界结构拷贝。静态核对全部新 `in` 参数只读、调用点继续传同一局部或结构属性、占用与异常时机不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP217 source catalog 构建引用化（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPoseSourceCatalog.Build` 按值接收 clip sample buffer，再在每个 clip 循环把 `ClipSamplePlan` 复制为局部，随后只读取 validity、binding index、ACL 字段和 Clip。
+- 正式构建入口改为 `in` 接收同一 buffer，循环用 `ElementAt` 绑定只读元素引用。clip 数校验、数组分配、lease 检查顺序、binding 构造和异常文本不变。
+- 该改动删除 source catalog 周期构建链的 buffer 边界拷贝和逐项 plan 拷贝；输出 catalog 仍按本次构建新建数组。静态核对唯一 Build 实现、八个调用点兼容只读实参、引用生命周期覆盖循环和 `ClipSamplePlan` 只读；未编译、未采样，不能声称实测耗时收益。

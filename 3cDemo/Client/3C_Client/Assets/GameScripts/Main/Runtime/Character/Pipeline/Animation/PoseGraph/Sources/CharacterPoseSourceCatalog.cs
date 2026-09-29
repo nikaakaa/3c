@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-            Build(AnimationReadOnlyBuffer<ClipSamplePlan> clips)
+            Build(in AnimationReadOnlyBuffer<ClipSamplePlan> clips)
         {
             if (clips.Count <= 0 || clips.Count > m_ClipCapacity)
                 throw new ArgumentException(
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             var bindings = new AnimationPoseSourceClipBinding[clips.Count];
             for (int i = 0; i < bindings.Length; i++)
             {
-                ClipSamplePlan sample = clips[i];
+                ref readonly ClipSamplePlan sample = ref clips.ElementAt(i);
                 if (!sample.IsValid || sample.ClipBindingIndex != i)
                     throw new InvalidOperationException(
                         "Animation pose source clip plans are not contiguous or contain an invalid sample.");

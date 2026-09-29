@@ -600,6 +600,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Scale = scale;
         }
 
+        internal AnimationLocalBonePose(Quaternion normalizedRotation, Vector3 position, Vector3 scale)
+        {
+            Position = position;
+            Rotation = normalizedRotation;
+            Scale = scale;
+        }
+
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }
         public Vector3 Scale { get; }

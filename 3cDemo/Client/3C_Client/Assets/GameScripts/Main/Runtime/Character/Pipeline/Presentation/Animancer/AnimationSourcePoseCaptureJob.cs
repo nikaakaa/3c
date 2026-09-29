@@ -121,32 +121,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 Vector3 position = handle.GetLocalPosition(stream);
                 Quaternion rotation = handle.GetLocalRotation(stream);
                 Vector3 scale = handle.GetLocalScale(stream);
-                if (!IsFinite(position) || !IsFinite(rotation) || !IsFinite(scale) ||
-                    Quaternion.Dot(rotation, rotation) <= 0f)
-                {
-                    failure[m_SourceIndex] = AnimationSourcePoseCaptureFailure.PhysicalPoseInvalid;
-                    return;
-                }
-
                 AnimationLocalBonePose pose;
                 if (m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
                     boneIndex == m_RootBoneIndex)
                 {
                     pose = m_ReferencePose[boneIndex];
+                    if (!pose.IsValid)
+                    {
+                        failure[m_SourceIndex] = AnimationSourcePoseCaptureFailure.PhysicalPoseInvalid;
+                        return;
+                    }
                 }
                 else
                 {
+                    if (!IsFinite(position) || !IsFinite(rotation) || !IsFinite(scale) ||
+                        Quaternion.Dot(rotation, rotation) <= 0f)
+                    {
+                        failure[m_SourceIndex] = AnimationSourcePoseCaptureFailure.PhysicalPoseInvalid;
+                        return;
+                    }
                     pose = new AnimationLocalBonePose(
+                        rotation.normalized,
                         position,
-                        rotation,
                         m_ScalePolicy == CharacterAnimationScalePolicy.PreserveReferenceScale
                             ? m_ReferencePose[boneIndex].Scale
                             : scale);
-                }
-                if (!pose.IsValid)
-                {
-                    failure[m_SourceIndex] = AnimationSourcePoseCaptureFailure.PhysicalPoseInvalid;
-                    return;
                 }
                 currentPose[boneIndex] = pose;
             }

@@ -1053,3 +1053,10 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 新实现先用一次 64/64 整除和取余得到商的整数部分，再只对 32 个小数位执行原长除法；128 位余数用高低两个 `ulong` 承载。这样避免对已确定的整数商逐位试减，同时保持最终商和余数与原 96 位算法一致。
 - 商整数部分超过 `uint.MaxValue` 时在移位前按原 Q32.32 溢出语义失败；后续仍沿用 `FromRoundedMagnitude` 的银行家舍入、最小值、符号和溢出检查。零除数仍由 `operator /` 和 `FromRatio` 的现有边界拒绝。
 - 该改动减少逻辑链高频定点除法的循环次数，不引入新集合、托管分配或第二数值路径。静态核对两个私有调用点、绝对值转换、符号计算和舍入合同；未编译、未执行数值对比或采样，不能声称实测耗时收益。
+
+### AP123 源姿态采集重复校验收敛（2026-09-30，已实施，本轮未编译）
+
+- capture.20260929-164123 的已解析 CPU 热点包含 `Quaternion.get_normalized` 约 0.597%、`AnimationLocalBonePose.get_IsValid` 约 0.359% 和本地骨骼姿态构造约 0.251%。`AnimationSourcePoseCaptureJob.ProcessAnimation` 对每个源骨骼先手动检查 position/rotation/scale finite 与四元数非零，再进入本地姿态构造器重复检查，最后又调用 `pose.IsValid` 重复检查。
+- `AnimationLocalBonePose` 增加仅内部使用的已归一化构造器，构造器参数顺序明确 `normalizedRotation -> position -> scale`。源姿态采集在外层完成一次业务边界校验后调用该构造器，保留必要归一化，删除公共构造器和循环尾部的重复 finite/非零检查。
+- 排除源根骨骼时改为只校验正式 reference pose；普通源骨骼路径外层校验后直接写入当前姿态页。失败状态仍写入 `PhysicalPoseInvalid` 并终止本次源采集，当前姿态、速度差分和虚拟骨骼派生的消费时序不变。
+- 该改动减少每骨骼每次采集的重复浮点检查，不新增分配、缓存或第二姿态数据源。静态核对 Animancer 源捕获 Job、reference pose 路径和本地姿态消费链；未编译、未采样，不能声称实测耗时收益。

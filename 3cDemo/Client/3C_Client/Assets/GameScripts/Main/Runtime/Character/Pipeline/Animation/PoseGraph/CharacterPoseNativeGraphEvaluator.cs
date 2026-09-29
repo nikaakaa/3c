@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.EventGraphs;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -524,6 +525,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         sealed class ParameterInputHandler : ICharacterPoseNativeNodeHandler
         {
+            PoseParameterId m_ParameterId;
             PoseParameterValueType m_ValueType;
             EventGraphVariableBinding m_Binding;
             CharacterPoseNativeParameterValue m_Output;
@@ -541,14 +543,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose parameter node '{NodeId}' was initialized twice.");
                 CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
-                if (!node.ParameterId.IsValid)
+                m_ParameterId = node.ParameterId;
+                if (!m_ParameterId.IsValid)
                     throw new InvalidOperationException(
                         $"Pose parameter node '{NodeId}' has no parameter identity.");
                 CharacterPoseParameterDeclaration declaration =
                     runtime.PreparedBinding.InputContract.Parameters
                         .SingleOrDefault(value =>
                             value != null &&
-                            value.ParameterId.Equals(node.ParameterId));
+                            value.ParameterId.Equals(m_ParameterId));
                 if (declaration == null ||
                     declaration.Usage != CharacterPoseParameterUsage.Control ||
                     !CharacterPoseParameterAccess.IsBlackboardInput(declaration))
@@ -557,7 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose parameter node '{NodeId}' does not reference a read-only EventGraph Control parameter.");
                 }
                 m_ValueType = declaration.ValueType;
-                m_Binding = runtime.InstanceContext.VariableContract.Bind(node.ParameterId.Value);
+                m_Binding = runtime.InstanceContext.VariableContract.Bind(m_ParameterId.Value);
                 m_Initialized = true;
             }
             public void Start(CharacterPoseNativeGraphRuntime runtime) { }
@@ -582,7 +585,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (portId.Value != "parameter")
                     throw new InvalidOperationException(
-                        $"Pose parameter node '{node.NodeId}' has no output '{portId}'.");
+                        $"Pose parameter node '{NodeId}' has no output '{portId}'.");
                 EventGraphValue value =
                     runtime.CurrentInput.ParameterFrame.RequireValue(m_Binding);
                 if (m_ValueType == PoseParameterValueType.Float &&
@@ -595,13 +598,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_ValueType == PoseParameterValueType.Quaternion && value.Kind != EventGraphValueKind.Quaternion)
                 {
                     throw new InvalidOperationException(
-                        $"Pose parameter '{node.ParameterId}' EventGraph value type does not match its declaration.");
+                        $"Pose parameter '{m_ParameterId}' EventGraph value type does not match its declaration.");
                 }
                 m_Output = CharacterPoseNativeParameterValue.Reuse(
                     m_Output,
-                    node.NodeId,
+                    NodeId,
                     runtime.CurrentLineage.CompletionIdentity,
-                    node.ParameterId,
+                    m_ParameterId,
                     value);
                 return m_Output;
             }
@@ -639,6 +642,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         sealed class ActionPlaybackInputHandler : ICharacterPoseNativeNodeHandler
         {
+            AnimationChannelId m_AnimationChannelId;
             CharacterPoseNativeActionPlaybackValue m_Output;
 
             internal ActionPlaybackInputHandler(PoseNodeId nodeId) => NodeId = nodeId;
@@ -647,7 +651,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             public CharacterPoseNodeKind Kind =>
                 CharacterPoseNodeKind.ActionPlaybackInput;
 
-            public void Initialize(CharacterPoseNativeGraphRuntime runtime) { }
+            public void Initialize(CharacterPoseNativeGraphRuntime runtime) =>
+                m_AnimationChannelId = runtime.Graph.RequireNode(NodeId).AnimationChannelId;
             public void Start(CharacterPoseNativeGraphRuntime runtime) { }
             public void Reset(
                 CharacterPoseNativeGraphRuntime runtime,
@@ -670,22 +675,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (portId.Value != "action-playback")
                     throw new InvalidOperationException(
-                        $"Pose action input node '{node.NodeId}' has no output '{portId}'.");
+                        $"Pose action input node '{NodeId}' has no output '{portId}'.");
                 for (int i = runtime.CurrentInput.ActionCommands.Count - 1; i >= 0; i--)
                 {
                     ActionAnimationPlaybackCommand command =
                         runtime.CurrentInput.ActionCommands[i];
-                    if (command.AnimationChannelId != node.AnimationChannelId)
+                    if (command.AnimationChannelId != m_AnimationChannelId)
                         continue;
                     m_Output = CharacterPoseNativeActionPlaybackValue.Reuse(
                         m_Output,
-                        node.NodeId,
+                        NodeId,
                         runtime.CurrentLineage.CompletionIdentity,
                         command);
                     return m_Output;
                 }
                 throw new InvalidOperationException(
-                    $"Pose action input node '{node.NodeId}' has no command for channel '{node.AnimationChannelId}'.");
+                    $"Pose action input node '{NodeId}' has no command for channel '{m_AnimationChannelId}'.");
             }
 
             public void EvaluateFrame(

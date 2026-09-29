@@ -312,6 +312,7 @@
 
 - Canvas Node 的 NodeId getter 每次都构造 PoseNodeId 并扫描字符串；图端口缓存、观察记录、端口定义索引和 handler 查找在求值中反复走它。现在图实例 Initialize 时绑定非序列化 NativeNodeId，运行索引及观察读取该身份；authoring 的 NodeId 解析仍用于编辑和装配，未修改序列化数据。图变化按原合同重建实例。
 - Clip Player、BlendSpace Player 和 Blend Stack 在各自构造期保存编译描述符的 NodeId，播放、相位、来源、过渡检查统一读取同一值。空间转换节点的输入输出 PosePortId 也在构造期解析。
+- 续查内置 ParameterInputHandler 与 ActionPlaybackInputHandler：两者 Reuse 输出包装时仍读取 authoring NodeId；参数节点还每次解析 ParameterId，动作节点每比较一条命令就解析 AnimationChannelId。现在复用 handler 自有 NodeId，在 Initialize 保存参数/通道身份；参数仍沿原布局绑定读取当前变量，动作仍逆序扫描当前命令并选择首个同通道项，未缓存值或动作结果。仅固定身份移到装配阶段，缺失输出、类型不符及无匹配命令的失败语义保留；更换配置按既有图重装配合同生效。端口值包装经核对已持有并复用，未将其首次创建误记为周期分配。
 - 没有关闭逐帧身份匹配、租约或 Commit/Discard 校验，没有按帧缓存计算结果。减少的是固定字符串格式扫描；不宣称这些值类型构造本身存在 GC。仅静态核对初始化顺序与调用路径，未编译或采样。
 
 ### AP33 BlendSpace 参数与采样时间逐帧线性查找（2026-09-29，已实施，未运行）

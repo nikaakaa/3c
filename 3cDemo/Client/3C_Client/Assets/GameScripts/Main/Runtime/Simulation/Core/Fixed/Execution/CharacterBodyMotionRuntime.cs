@@ -66,6 +66,8 @@ namespace ThirdPersonSimulation.Fixed
 
     public static class CharacterBodyMotionRuntime
     {
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public static BodyMotionPrepareResult Prepare(
             ActorId actorId,
             SimulationTick tick,
@@ -186,7 +188,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar gravityDisplacement,
             FixedVector3 requestedDisplacement)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = s_HashWriter ??= new CanonicalWriter();
+            writer.Reset();
             writer.WriteString("fixed-body-motion-plan/1");
             writer.WriteString(actorId.Value);
             writer.WriteUInt64(tick.Value);

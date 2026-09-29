@@ -344,9 +344,11 @@ namespace ThirdPersonSimulation.Fixed
     {
         public const string RequestCanonicalIdentity = "fixed-world-solve-request/2";
 
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public static StableHash ComputeRequestHash(WorldSolveBatchRequest request)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareHashWriter();
             writer.WriteString(RequestCanonicalIdentity);
             SimulationNumericProfileCodec.Write(writer, request.NumericProfile);
             writer.WriteUInt64(request.Tick.Value);
@@ -360,7 +362,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public static StableHash ComputeResultHash(WorldSolveBatchResult result)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareHashWriter();
             SimulationNumericProfileCodec.Write(writer, result.Request.NumericProfile);
             writer.WriteUInt64(result.Tick.Value);
             writer.WriteString(result.SolverId.Value);
@@ -370,6 +372,13 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < result.Results.Count; i++)
                 WriteResult(writer, result.Results[i]);
             return writer.ComputeHash();
+        }
+
+        static CanonicalWriter PrepareHashWriter()
+        {
+            s_HashWriter ??= new CanonicalWriter();
+            s_HashWriter.Reset();
+            return s_HashWriter;
         }
 
         static void WriteRequest(CanonicalWriter writer, CharacterWorldSolveRequest request)

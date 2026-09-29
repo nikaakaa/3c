@@ -65,6 +65,8 @@ namespace ThirdPersonSimulation
 
     public static class CharacterBodyMotionRuntime
     {
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public static BodyMotionPrepareResult Prepare(
             ActorId actorId,
             SimulationTick tick,
@@ -185,7 +187,8 @@ namespace ThirdPersonSimulation
             Float32Scalar gravityDisplacement,
             Float32Vector3 requestedDisplacement)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = s_HashWriter ??= new CanonicalWriter();
+            writer.Reset();
             writer.WriteString("float32-body-motion-plan/1");
             writer.WriteString(actorId.Value);
             writer.WriteUInt64(tick.Value);

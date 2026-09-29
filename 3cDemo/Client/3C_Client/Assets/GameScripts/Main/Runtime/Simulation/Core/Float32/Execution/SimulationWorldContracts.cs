@@ -212,11 +212,14 @@ namespace ThirdPersonSimulation
     {
         public const string CanonicalIdentity = "float32-observed-world-constraint-frame/1";
 
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public static StableHash ComputeHash(ObservedWorldConstraintFrame frame)
         {
             if (frame == null)
                 throw new ArgumentNullException(nameof(frame));
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = s_HashWriter ??= new CanonicalWriter();
+            writer.Reset();
             Write(writer, frame);
             return writer.ComputeHash();
         }
@@ -513,9 +516,11 @@ namespace ThirdPersonSimulation
     {
         public const string RequestCanonicalIdentity = "float32-world-solve-request/3";
 
+        [ThreadStatic] static CanonicalWriter s_HashWriter;
+
         public static StableHash ComputeRequestHash(WorldSolveBatchRequest request)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareHashWriter();
             writer.WriteString(RequestCanonicalIdentity);
             SimulationNumericProfileCodec.Write(writer, request.NumericProfile);
             writer.WriteUInt64(request.Tick.Value);
@@ -530,7 +535,7 @@ namespace ThirdPersonSimulation
 
         public static StableHash ComputeResultHash(WorldSolveBatchResult result)
         {
-            using var writer = new CanonicalWriter();
+            CanonicalWriter writer = PrepareHashWriter();
             SimulationNumericProfileCodec.Write(writer, result.Request.NumericProfile);
             writer.WriteUInt64(result.Tick.Value);
             writer.WriteString(result.SolverId.Value);
@@ -540,6 +545,13 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < result.Results.Count; i++)
                 WriteResult(writer, result.Results[i]);
             return writer.ComputeHash();
+        }
+
+        static CanonicalWriter PrepareHashWriter()
+        {
+            s_HashWriter ??= new CanonicalWriter();
+            s_HashWriter.Reset();
+            return s_HashWriter;
         }
 
         static void WriteRequest(CanonicalWriter writer, CharacterWorldSolveRequest request)

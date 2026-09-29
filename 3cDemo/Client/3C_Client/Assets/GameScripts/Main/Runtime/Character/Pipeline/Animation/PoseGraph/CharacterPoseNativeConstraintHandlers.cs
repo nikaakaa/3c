@@ -300,6 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly CharacterFootPlacementConstraintHandle m_Handle;
         FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_WeightInput;
         CharacterPoseNativeGoalContributionValue m_Output;
 
         internal CharacterPoseNativeFootPlacementHandler(
@@ -318,9 +319,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override void Initialize(CharacterPoseNativeGraphRuntime runtime)
         {
             base.Initialize(runtime);
+            CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
             m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
-                runtime.Graph.RequireNode(NodeId),
+                node,
                 "pose");
+            m_WeightInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                node,
+                "weight");
         }
 
         public override CharacterPoseNativePortValue EvaluateOutput(
@@ -350,7 +355,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             bool hasWeightOverride = false;
             float weightOverride = 0f;
-            if (runtime.TryReadInput(node, "weight", out CharacterPoseNativeParameterValue weightValue))
+            if (runtime.TryReadInput(
+                    m_WeightInput,
+                    m_NodeId,
+                    "weight",
+                    out CharacterPoseNativeParameterValue weightValue))
             {
                 if (weightValue.Value.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Float32 ||
                     !float.IsFinite(weightValue.Value.Float32Value) ||

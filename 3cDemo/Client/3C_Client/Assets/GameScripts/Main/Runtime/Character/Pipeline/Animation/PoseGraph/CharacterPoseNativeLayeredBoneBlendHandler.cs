@@ -17,6 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_BasePoseInput;
         FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_OverlayPoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_WeightInput;
+        float m_DefaultWeight;
         int m_PageIndex = -1;
         ulong m_NextContinuityIdentity = 1;
         ulong m_ContinuityIdentity;
@@ -80,6 +82,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OverlayPoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
                 node,
                 "overlay");
+            m_WeightInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                node,
+                "weight");
+            m_DefaultWeight = node.Weight;
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -154,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 RequireAvailable(basePose, "Base");
             CharacterPoseNativePoseReadBinding overlayBinding =
                 RequireAvailable(overlayPose, "Overlay");
-            float weight = ResolveWeight(runtime, node);
+            float weight = ResolveWeight(runtime);
             m_ContinuityIdentity = ResolveContinuity(
                 baseBinding.ContinuityIdentity[0],
                 overlayBinding.ContinuityIdentity[0],
@@ -288,19 +294,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return binding;
         }
 
-        static float ResolveWeight(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node)
+        float ResolveWeight(CharacterPoseNativeGraphRuntime runtime)
         {
-            if (!runtime.TryReadInput(node, "weight", out CharacterPoseNativeParameterValue value))
-                return node.Weight;
+            if (!runtime.TryReadInput(
+                    m_WeightInput,
+                    m_NodeId,
+                    "weight",
+                    out CharacterPoseNativeParameterValue value))
+                return m_DefaultWeight;
             if (value.Value.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(value.Value.Float32Value) ||
                 value.Value.Float32Value < 0f ||
                 value.Value.Float32Value > 1f)
             {
                 throw new InvalidOperationException(
-                    $"Layered Bone Blend '{node.NodeId}' weight input must be a Float32 in [0, 1].");
+                    $"Layered Bone Blend '{m_NodeId}' weight input must be a Float32 in [0, 1].");
             }
             return value.Value.Float32Value;
         }

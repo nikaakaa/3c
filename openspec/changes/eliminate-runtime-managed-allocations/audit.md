@@ -1210,3 +1210,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Modify Bone 每次输出都重复判断 payload 是否使用 position/rotation/scale 端口，并按 `(NodeId, port)` 哈希读取 weight 和参数；optional weight 还重复字典查找和类型测试。这些端口由固定 payload 和 graph 端口表决定。
 - runtime 新增已缓存端口的 typed Try 读取，保留 `isConnected`、null value 和错误文案合同；Modify Bone 在 Initialize 缓存 weight，并只在 payload 使用对应 transform 时缓存该端口。帧内直接用缓存端口读取，同帧与 Kind 校验顺序不变。
 - 该改动消除 weight 与 transform 参数的每帧 tuple 查找、类型测试和重复 payload 判断；不改变未连接 weight 回退 payload weight 的语义。静态核对端口形状、缓存唯一入口、原错误文本和输出页写入顺序；未编译、未采样，不能声称实测耗时收益。
+
+### AP149 optional weight 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Blend Pose、Additive Pose、Layered Bone Blend 和 Foot Placement 每次输出都按 `(NodeId, "weight")` 哈希查找 optional weight 并重复类型测试；weight 端口在 graph 初始化后固定。
+- 四个 handler 在 Initialize 缓存 typed `ValueInput`；混合类同时缓存节点默认 weight。帧内用 AP148 的 typed Try 读取，未连接仍回退默认值或关闭 override，connected value 的 `[0,1]` 校验、continuity、Constraint 输入和输出顺序不变。
+- 该改动消除四类 optional weight 的每帧字典查找和类型测试；不新增第二数据源。静态核对端口形状、默认值来源、原错误文本、continuity 和 pending/Commit 语义；未编译、未采样，不能声称实测耗时收益。

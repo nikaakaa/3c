@@ -7,9 +7,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseNativeSubgraphHandler :
         ICharacterPoseNativeNodeHandler, Diagnostics.ICharacterNativeStateCaptureSource, ICharacterPoseNativePhaseSource
     {
-        readonly struct SubgraphInputBinding
+        readonly struct SubgraphPortBinding
         {
-            internal SubgraphInputBinding(
+            internal SubgraphPortBinding(
                 PoseNodeId nodeId,
                 PosePortId parent,
                 PosePortId child,
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Kind = kind;
             }
 
-            internal PoseNodeId NodeId { get; }
+            internal PoseNodeId SourceNodeId { get; }
             internal PosePortId Parent { get; }
             internal PosePortId Child { get; }
             internal ValueInput Input { get; }
@@ -36,12 +36,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ulong m_ResetGeneration;
         readonly string m_Reason;
         readonly ICharacterPoseNativeNodeHandlerFactory m_Factory;
-        readonly List<SubgraphInputBinding> m_ImmediateInputs =
-            new List<SubgraphInputBinding>();
-        readonly List<SubgraphInputBinding> m_DeferredInputs =
-            new List<SubgraphInputBinding>();
-        readonly Dictionary<PosePortId, PosePortId> m_OutputPorts =
-            new Dictionary<PosePortId, PosePortId>();
+        readonly List<SubgraphPortBinding> m_ImmediateInputs =
+            new List<SubgraphPortBinding>();
+        readonly List<SubgraphPortBinding> m_DeferredInputs =
+            new List<SubgraphPortBinding>();
+        readonly Dictionary<PosePortId, SubgraphPortBinding> m_OutputPorts =
+            new Dictionary<PosePortId, SubgraphPortBinding>();
         CharacterPoseCanvasNode m_CallNode;
         CharacterPoseNativeGraphRuntime m_Child;
         CharacterPoseNativeFrameLease m_ChildLease;
@@ -179,10 +179,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireChild();
-            if (!m_OutputPorts.TryGetValue(portId, out PosePortId childPortId))
+            if (!m_OutputPorts.TryGetValue(portId, out SubgraphPortBinding binding))
                 throw new InvalidOperationException(
                     $"Pose subgraph '{NodeId}' has no output '{portId}'.");
-            return m_Child.ReadGraphOutput(childPortId);
+            return m_Child.ReadInputValue(
+                binding.Input,
+                binding.SourceNodeId,
+                binding.Child,
+                binding.Kind);
         }
 
         public void EvaluateFrame(
@@ -326,7 +330,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 var binding = bindings[i];
                 CharacterPoseNativePortValue value = runtime.ReadInputValue(
                     binding.Input,
-                    binding.NodeId,
+                    binding.SourceNodeId,
                     binding.Parent,
                     binding.Kind);
                 m_Child.BindGraphInput(binding.Child, value);
@@ -366,7 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
                 var bindings = deferred ? m_DeferredInputs : m_ImmediateInputs;
-                bindings.Add(new SubgraphInputBinding(
+                bindings.Add(new SubgraphPortBinding(
                     m_NodeId,
                     parentPort.PortId,
                     childPort.PortId,
@@ -386,7 +390,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (childPort == null)
                     throw new InvalidOperationException(
                         $"Pose subgraph '{NodeId}' output '{parentPort.PortId}' has no child GraphOutput binding.");
-                m_OutputPorts.Add(parentPort.PortId, childPort.PortId);
+                var childInputPort = childOutput.GetInputPort(
+                    childPort.PortId.Value) as ValueInput;
+                m_OutputPorts.Add(parentPort.PortId, new SubgraphPortBinding(
+                    childOutput.NativeNodeId,
+                    parentPort.PortId,
+                    childPort.PortId,
+                    childInputPort,
+                    childPort.Kind));
             }
         }
 

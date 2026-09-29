@@ -1228,3 +1228,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Pose Subgraph 每次绑定 immediate/deferred 输入都按 parent port 重复查找 runtime port definition，再按 Kind switch 进入端口字典并做类型测试；接口绑定时已经定位并检查了连接。
 - input binding 在 Start 缓存 parent `ValueInput`、parent/child 端口和 Kind；runtime 新增已缓存端口的读取入口，先按 Kind 分派，再保留 null value 与 typed native 错误文案。BuildPortDefinitions 已在构造期校验同一端口的 FlowCanvas 原生类型。
 - 该改动消除每帧 parent/child interface 的重复 definition 查找和 tuple 端口二次查找；不改绑定顺序、deferred 分类、输出页身份和 graph input 提交合同。静态核对 Start 时子图端口表、连接检查、错误文案和 BindInputs 两条调用链；未编译、未采样，不能声称实测耗时收益。
+
+### AP152 Subgraph output 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Pose Subgraph 每次求输出都通过 child `ReadGraphOutput` 重新定位 GraphOutput 边界、查找 port definition、分派 Kind、查端口字典并做类型测试；输出映射和 child GraphOutput 输入端口在 Start 后固定。
+- input/output binding 统一缓存源节点、child 端口、typed `ValueInput` 和 Kind；EvaluateOutput 用缓存绑定直接读取 child GraphOutput。缺失输出仍按 parent port 报原错误，child graph input 读取的 null value 与类型错误文案保持。
+- 该改动消除每次 subgraph 输出的重复边界和 definition 查找，并删除全仓库无调用的 `ReadGraphOutput` 入口；不改输出页映射、求值阶段、Commit/Discard 和输出值身份。静态核对 Start 缓存、GraphOutput NativeNodeId、Kind 分派和 EvaluateOutput 调用链；未编译、未采样，不能声称实测耗时收益。

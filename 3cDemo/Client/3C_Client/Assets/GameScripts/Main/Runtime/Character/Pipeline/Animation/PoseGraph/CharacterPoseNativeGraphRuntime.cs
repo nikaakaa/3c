@@ -715,13 +715,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             };
         }
 
-        internal CharacterPoseNativePortValue ReadGraphOutput(
-            PosePortId portId)
-        {
-            RequireEvaluationStage();
-            return ReadInputValue(RequireBoundary(CharacterPoseNodeKind.GraphOutput), portId);
-        }
-
         static T ReadPortValue<T>(
             FlowCanvas.ValueInput input,
             PoseNodeId nodeId,

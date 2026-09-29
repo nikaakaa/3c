@@ -203,14 +203,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             in CharacterFootSupportIntent supportIntent)
         {
-            Vector3 fullCorrection =
-                CharacterFootConstraintMath.ResolveContactCorrection(
-                    frame.AnimatedFoot,
-                    context.Contact.Anchor);
+            Vector3 originalSole =
+                CharacterFootConstraintMath.ResolveOriginalSole(frame.AnimatedFoot);
+            Vector3 fullCorrection = context.Contact.Anchor - originalSole;
             bool landing = context.Discrete.State == CharacterFootConstraintState.Landing;
             CharacterFootLockResponse response = landing
                 ? frame.LockRequest.Response
                 : context.Discrete.LockResponse;
+            Vector3 up = default;
             Vector3 correction;
             if (response ==
                 CharacterFootLockResponse.FullAnchor)
@@ -220,14 +220,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             else if (response ==
                      CharacterFootLockResponse.Sliding)
             {
+                up = frame.ComponentUp.normalized;
                 float horizontalError =
                     CharacterFootConstraintMath.ResolveHorizontalError(
                         fullCorrection,
-                        frame.ComponentUp);
+                        up);
                 correction =
                     CharacterFootConstraintMath.ResolveSlidingCorrection(
                         fullCorrection,
-                        frame.ComponentUp,
+                        up,
                         horizontalError,
                         in frame.Settings);
             }
@@ -236,9 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Contact Foot response is invalid.");
             }
-            Vector3 originalSole =
-                CharacterFootConstraintMath.ResolveOriginalSole(
-                    frame.AnimatedFoot);
             var supportTarget = new CharacterFootSupportTarget(
                 frame.FrameSequence,
                 frame.CompletionIdentity,

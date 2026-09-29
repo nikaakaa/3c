@@ -35,26 +35,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static Vector3 ResolveSlidingCorrection(
             Vector3 fullCorrection,
-            Vector3 componentUp,
+            Vector3 unitUp,
             float horizontalError,
             in CharacterFootMotionSettings settings)
         {
-            Vector3 up = componentUp.normalized;
-            Vector3 horizontal = Vector3.ProjectOnPlane(fullCorrection, up);
+            Vector3 horizontal = Vector3.ProjectOnPlane(fullCorrection, unitUp);
             float horizontalWeight = Mathf.InverseLerp(
                 settings.SlideDistance,
                 settings.LockDistance,
                 horizontalError);
             return horizontal * horizontalWeight +
-                   up * Vector3.Dot(fullCorrection, up);
+                   unitUp * Vector3.Dot(fullCorrection, unitUp);
         }
 
         internal static float ResolveHorizontalError(
             Vector3 correction,
-            Vector3 componentUp) =>
+            Vector3 unitUp) =>
             Vector3.ProjectOnPlane(
                 correction,
-                componentUp.normalized).magnitude;
+                unitUp).magnitude;
 
         internal static Vector3 RaiseToMinimum(
             Vector3 correction,

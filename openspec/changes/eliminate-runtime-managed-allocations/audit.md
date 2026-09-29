@@ -2069,3 +2069,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 静态行配对检查发现 PoseGraph 混合、参数、空间转换和 Source Module 的 14 处 `ref readonly` 局部缺少 RHS `ref`；对应 helper、view、page 与 preparation 访问均返回只读引用。
 - 初始化补上 `ref`，不改变返回引用、生命周期、读取路径或写入绑定。该修正是静态可判定的 C# 引用局部语法合同修正，不是新的性能假设。
 - 该改动恢复动画正式求值链中这些只读绑定可静态通过编译语法。仍受用户约束限制，未编译、未采样；不能声称行为已运行验证。
+
+### AP292 Foot Placement plant 派生值合并（2026-09-30，已实施，本轮未编译）
+
+- `ResolvePlant` 先调用 contact correction 复制一次 sole，sliding correction 又复制一次投影用 up，最终 support target 和 plant point 再复制一次 sole；landing/locked 每脚状态目标求解重复计算同一 sole 中点和归一化 up。
+- 方法入口绑定 sole，contact correction 直接由 anchor 与 sole 相减；sliding 分支绑定一次 unit up 并传给 horizontal error 与 sliding correction。`ResolveHorizontalError` 和 `ResolveSlidingCorrection` 的合同改为接收 unit up，Transition Resolver 两处调用入口同步归一化。
+- Landing/Locked 的 full anchor、sliding correction、support target 和 plant point 输入保持同一公式与分支；transition 的 contact horizontal error 公式不变。静态核对全部调用点、readonly frame 生命周期和只读消费；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

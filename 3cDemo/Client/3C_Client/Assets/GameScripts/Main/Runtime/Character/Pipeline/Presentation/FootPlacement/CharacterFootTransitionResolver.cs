@@ -445,7 +445,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.ContactLanding.Point);
             return CharacterFootConstraintMath.ResolveHorizontalError(
                 correction,
-                frame.ComponentUp);
+                frame.ComponentUp.normalized);
         }
 
         static float ResolveAnchorHorizontalError(
@@ -457,7 +457,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Contact.Anchor);
             return CharacterFootConstraintMath.ResolveHorizontalError(
                 correction,
-                frame.ComponentUp);
+                frame.ComponentUp.normalized);
         }
     }
 }

@@ -25,29 +25,49 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState selected = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (selected == null)
+            CameraEffectRuntimeState elevationOwner = CameraEffectRuntimeStateStore.Select(active, Kind);
+            if (elevationOwner == null)
                 return plan;
-            CameraFramePlan result = plan;
+            StretchContribution baseContribution = default;
+            StretchContribution additiveContribution = default;
+            Vector3 euler = plan.Rotation.eulerAngles;
+            float pitch = NormalizeAngle(euler.x);
             for (int i = 0; i < active.Count; i++)
             {
                 CameraEffectRuntimeState state = active[i];
-                if (state.Request.Kind != Kind ||
-                    !m_Projection.TryGetStretch(state.Request.ResourceId, out CameraStretchPayload payload) ||
-                    state != selected && payload.PlayStackingType != CameraEffectStackingType.Add)
+                if (state.Request.Kind != Kind)
                     continue;
-                result = ApplySingle(result, state, payload, in input);
+                m_Projection.TryGetStretch(state.Request.ResourceId, out CameraStretchPayload payload);
+                float envelope = SampleEnvelope(state, payload) * state.Request.Weight;
+                Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
+                if (payload.ApplyRuntimeCamFollowYOffset)
+                    offset += input.BodyRotation * Vector3.up *
+                        (payload.RuntimeCamFollowYOffsetRatio * plan.Radius * envelope);
+                if (payload.ApplyAimPointsCameraFollowYOffset)
+                    offset += Vector3.up * (payload.RuntimeCamFollowYPoints * envelope);
+                float radiusOffset = payload.RadiusRatio * envelope;
+                float rollOffset = payload.RotationZ * envelope;
+                if (payload.PlayStackingType == CameraEffectStackingType.Add)
+                    additiveContribution.Select(radiusOffset, offset, rollOffset);
+                else
+                    baseContribution.Select(radiusOffset, offset, rollOffset);
+                if (state == elevationOwner || payload.PlayStackingType == CameraEffectStackingType.Add)
+                    pitch = ResolvePitch(pitch, payload, envelope);
             }
-            return result;
+            Quaternion rotation = Quaternion.Euler(
+                pitch, euler.y, euler.z + baseContribution.RollOffset + additiveContribution.RollOffset);
+            return plan.WithWorldBasicData(
+                plan.WorldBasicData
+                    .WithPivotLocation(plan.PivotLocation + baseContribution.Offset + additiveContribution.Offset)
+                    .WithRotation(rotation)
+                    .WithRadius(plan.Radius * (1f + baseContribution.RadiusOffset + additiveContribution.RadiusOffset)));
         }
 
-        static CameraFramePlan ApplySingle(
-            CameraFramePlan plan,
+        static float SampleEnvelope(
             CameraEffectRuntimeState state,
-            CameraStretchPayload payload,
-            in CameraFrameInput input)
+            CameraStretchPayload payload)
         {
-            float envelope = state.Retired
+            return state.Retired
                 ? CameraEffectEvaluationMath.ResolveRetiredWeight(
                     state,
                     payload.DelayTime,
@@ -64,16 +84,10 @@ namespace ThirdPersonCamera
                     payload.RecoilTime,
                     payload.StartCurve,
                     payload.EndCurve);
-            envelope *= state.Request.Weight;
-            float radiusScale = 1f + payload.RadiusRatio * envelope;
-            Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
-            if (payload.ApplyRuntimeCamFollowYOffset)
-                offset += input.BodyRotation * Vector3.up *
-                    (payload.RuntimeCamFollowYOffsetRatio * plan.Radius * envelope);
-            if (payload.ApplyAimPointsCameraFollowYOffset)
-                offset += Vector3.up * (payload.RuntimeCamFollowYPoints * envelope);
-            Vector3 euler = plan.Rotation.eulerAngles;
-            float pitch = NormalizeAngle(euler.x);
+        }
+
+        static float ResolvePitch(float pitch, CameraStretchPayload payload, float envelope)
+        {
             bool useEndAngle = payload.IsAppliedEndElevationAngle && envelope > 0.5f;
             float angleMin = useEndAngle ? payload.EndElevationAngleMin : payload.ElevationAngleMin;
             float angleMax = useEndAngle ? payload.EndElevationAngleMax : payload.ElevationAngleMax;
@@ -87,12 +101,24 @@ namespace ThirdPersonCamera
                     ? Mathf.LerpUnclamped(pitch, targetPitch, envelope)
                     : pitch + targetPitch * envelope;
             }
-            Quaternion rotation = Quaternion.Euler(pitch, euler.y, euler.z + payload.RotationZ * envelope);
-            return plan.WithWorldBasicData(
-                plan.WorldBasicData
-                    .WithPivotLocation(plan.PivotLocation + offset)
-                    .WithRotation(rotation)
-                    .WithRadius(plan.Radius * radiusScale));
+            return pitch;
+        }
+
+        struct StretchContribution
+        {
+            public float RadiusOffset;
+            public Vector3 Offset;
+            public float RollOffset;
+
+            public void Select(float radiusOffset, Vector3 offset, float rollOffset)
+            {
+                if (Mathf.Abs(radiusOffset) > Mathf.Abs(RadiusOffset))
+                    RadiusOffset = radiusOffset;
+                if (offset.sqrMagnitude > Offset.sqrMagnitude)
+                    Offset = offset;
+                if (Mathf.Abs(rollOffset) > Mathf.Abs(RollOffset))
+                    RollOffset = rollOffset;
+            }
         }
 
         static Vector3 ResolveWorldOffset(
@@ -118,12 +144,7 @@ namespace ThirdPersonCamera
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
         {
-            CameraStretchPayload payload = m_Projection.TryGetStretch(
-                active.Request.ResourceId,
-                out CameraStretchPayload value)
-                ? value
-                : throw new InvalidOperationException(
-                    $"Camera Stretch resource '{active.Request.ResourceId}' is not present in the Projection.");
+            m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload);
             return CameraEffectEvaluationMath.ResolveDelta(
                 payload.IgnoreWorldTimeScale,
                 payload.IgnoreOwnerTimeScale,
@@ -133,16 +154,15 @@ namespace ThirdPersonCamera
 
         public bool IsExpired(CameraEffectRuntimeState active)
         {
-            return m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload) &&
-                   payload.HoldTime >= 0f &&
+            m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload);
+            return payload.HoldTime >= 0f &&
                    active.Elapsed >= payload.DelayTime + payload.StretchTime + payload.HoldTime + payload.RecoilTime;
         }
 
         public float RetireDuration(CameraEffectRuntimeState active)
         {
-            return m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload)
-                ? payload.RecoilTime
-                : 0f;
+            m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload);
+            return payload.RecoilTime;
         }
     }
 }

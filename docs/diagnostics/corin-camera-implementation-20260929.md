@@ -158,3 +158,20 @@ Unity 编译与域重载完成，Console 0 错误；编辑器回读确认新 Sam
 投影格式更新为 v4，携带控制点；既有 v3 投影需要由正式构建入口重新生成。当前基础轨道 ElevationRatio 仍为 0.5，输入仍走既有角度链；本批不将默认配置切换到 0.6，也不擅自推断输入到归一化轨道的映射。中点采样本身不会因此改变，不能用本批修改声称日常转视角手感已经复刻。TopOrbit 延伸、输入归一化及 Delay 消费仍未闭合。
 
 Unity 已完成编译重载，同一目标实例回读为 Edit／非编译状态；正式 CharacterCameraProjectionBuilder.Build 和产物 RequireValid 成功，返回 schema=v4、Profile dirty=false，Console 错误数为 0。运行装配 CharacterCameraRuntimeBindingBuilder.Prepare 会经同一入口重建投影，无需动画域烘焙。未运行 Play/replay，未新增测试；未进行运行时 GC 测量。
+
+## Stretch 分通道输出选择
+
+原 Stretch 输出消费者已定位为 `0x101B6330`，见 `stretch-output.json`。它直接遍历 CameraDataAccessor+0x3F8 的实例列表并更新实例，然后对 PlayStackingType 的 Base／Additive 两组分别处理：
+
+- 半径：比较实例 +0xA0 的绝对值，严格更大才替换（0x101B64EB～0x101B6519；Additive 对应 0x101B655D～0x101B658B）。
+- 位置：先经 0x101B7470 转换当前实例的坐标，再加当前跟随 Y 偏移；比较世界偏移向量长度，严格更大才替换。选择的是整个向量，不是各轴分别取最大（0x101B65F0～0x101B6835，Additive 对应 0x101B670C～0x101B68C9）。
+- 滚转：比较实例 +0x9C 的绝对值，严格更大才替换（0x101B6839～0x101B6859、0x101B68CD～0x101B68ED）。
+- 两组各自选择后再相加；本层不按 DataPriority 或事件身份选中一整条实例。对应 IFix 开关在 829 快照均为 0，初始化字节单独保留在 `stretch-branch-flags.json` 中。
+
+当前 `CameraStretchEffectEvaluator.Apply` 已将原来的“选一整条 Base，再把 Add 逐条改写到 plan”替换为上述三通道选择。每项从同一个输入 plan 求贡献，避免前项修改后的镜头方向又改变后项偏移的坐标系；两组选择结束后一次性合成输出。局部贡献是值类型，无每帧容器或对象分配。资源缺失仍由请求接纳的 HasResource 边界处理，删除本 owner 求值、推进、到期和退出时的重复资源保护／返回零分支。
+
+此批只替换已确认的三通道输出选择，不代表整个 Stretch 已还原。归一化仰角仍经过原来的单独规则；当前技能使用的 Branch_02、Normal_03、Normal_05 资源没有开启仰角修改。现有半径参考比例、跟随偏移变换与实例进入／退出计算仍需继续对齐，不能将其描述为已通过原作动态画面对照。
+
+进一步定位到初始化函数 `0x17887240` 及调用者 `0x101B6210`：原始 StackingType=0 时继承所属组上一帧的半径、位置和滚转；当前 Stretch 作者资产及投影缺少这一字段。进入求值 0x17885330、退出求值 0x17886E40 及相关 phase 函数均已保留。本轮未强行以 Zoom 初始化规则代替这条链；接下来应补齐正式 StackingType 配置、原始半径参考比例及跨段继承。
+
+Unity 编译重载完成，目标实例为 Edit／非编译状态；回读确认 StretchContribution 已加载，正式 Profile 的 18 项 Stretch 投影构建与 RequireValid 成功，Profile dirty=false，Console 错误数为 0。未运行 Play/replay，未新增测试；未做运行时 GC 或原作画面对照。

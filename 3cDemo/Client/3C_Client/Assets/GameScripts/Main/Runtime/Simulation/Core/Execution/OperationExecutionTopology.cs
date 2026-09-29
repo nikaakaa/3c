@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
@@ -285,6 +286,7 @@ namespace ThirdPersonSimulation
     public sealed class OperationExecutionTopology
     {
         readonly ReadOnlyCollection<OperationExecutionDescriptor> m_Operations;
+        readonly string[] m_Identities;
         readonly IReadOnlyList<ProgramControlFlowEdge>[][] m_Outgoing;
         readonly IReadOnlyList<ProgramReference>[][] m_References;
         readonly int[][] m_OperationStateSlots;
@@ -339,6 +341,7 @@ namespace ThirdPersonSimulation
             ValidateStateSlots(operationList, stateSlots);
 
             m_Operations = operationList.AsReadOnly();
+            m_Identities = BuildIdentities(operationList.Count);
             m_Outgoing = BuildOutgoing(operationList.Count, edges);
             m_References = BuildReferences(operationList.Count, referenceList);
             m_OperationStateSlots = BuildOperationStateSlots(operationList, stateSlots);
@@ -364,6 +367,12 @@ namespace ThirdPersonSimulation
         {
             RequireOperation(handle);
             return m_Operations[handle.Value];
+        }
+
+        public string OperationIdentity(OperationHandle handle)
+        {
+            RequireOperation(handle);
+            return m_Identities[handle.Value];
         }
 
         public IReadOnlyList<ProgramControlFlowEdge> Outgoing(OperationHandle source, ProgramControlFlowKind kind)
@@ -452,6 +461,14 @@ namespace ThirdPersonSimulation
         {
             if (!operation.IsValid || operation.Value >= m_Operations.Count)
                 throw new ArgumentOutOfRangeException(nameof(operation), $"Operation handle '{operation}' is outside this topology.");
+        }
+
+        static string[] BuildIdentities(int operationCount)
+        {
+            var identities = new string[operationCount];
+            for (int i = 0; i < operationCount; i++)
+                identities[i] = i.ToString(CultureInfo.InvariantCulture);
+            return identities;
         }
 
         static void ValidateEdges(IReadOnlyList<ProgramControlFlowEdge> edges, int operationCount)

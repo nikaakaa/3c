@@ -675,6 +675,12 @@
 - `OperationExecutionTopology` 构造期按既有排序后的 Enter 边预解析 StateMachine 的 initial 和 AnyState 目标。initial 保持原两段逻辑：先取第一条非 AnyState，否则取第一条边；AnyState 仍取第一条 AnyState。状态机 Tick 直接读取预解析结果，删除原周期扫描入口。
 - 每个状态机每次 Tick 少一次 Enter 边扫描，首次激活少两次；无 AnyState 或仅有 AnyState 的图结果不变。拓扑新增两个定容目标数组，不新增运行时配置、fallback 或第二条执行路径。静态核对唯一调用链、边排序、端口匹配、OperationHandle 默认无效值和差异；未编译、运行回放或采样。
 
+### AP85 状态机身份槽周期生成 handle 字符串（2026-09-29，已实施，本轮未编译）
+
+- 状态机激活和过渡每次用 `FormatHandle` 把 active/exiting/pending 的固定 OperationHandle 转成十进制字符串；诊断记录也重复生成同一字符串。OperationHandle 由拓扑装配固定，十进制身份不变。
+- `OperationExecutionTopology` 构造期为全部 operation 预生成 InvariantCulture 身份字符串，新增 `OperationIdentity`。状态机写身份槽与状态过渡诊断改为读取同一字符串，删除状态机私有 `FormatHandle`。身份槽存储内容、诊断字段顺序和空 handle 不出现在这些正式路径的规则不变。
+- 每次状态激活或过渡少两次到三次临时字符串；首次装配增加定容字符串数组。路径、过渡身份和状态槽检查顺序不变。静态核对全部旧调用、目标身份语义、诊断专属字符串和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

@@ -97,10 +97,10 @@ namespace ThirdPersonSimulation
                     operation,
                     "state_transition_selected",
                     OperationControlTraceSeverity.Detail,
-                    $"{transition.Identity}:{FormatHandle(active)}->{FormatHandle(transition.Target)}");
+                    $"{transition.Identity}:{m_Host.Topology.OperationIdentity(active)}->{m_Host.Topology.OperationIdentity(transition.Target)}");
             }
-            m_Host.WriteIdentity(exitingSlot, FormatHandle(active));
-            m_Host.WriteIdentity(pendingSlot, FormatHandle(transition.Target));
+            m_Host.WriteIdentity(exitingSlot, m_Host.Topology.OperationIdentity(active));
+            m_Host.WriteIdentity(pendingSlot, m_Host.Topology.OperationIdentity(transition.Target));
             m_Host.WriteIdentity(transitionSlot, transition.Identity);
             return ContinueStateTransition(operation, activeSlot, pendingSlot, exitingSlot, transitionSlot, active);
         }
@@ -222,7 +222,7 @@ namespace ThirdPersonSimulation
                 ClearStateMachineExecutionPath(machine);
                 return OperationStopStatus.Completed;
             }
-            m_Host.WriteIdentity(exitingSlot, FormatHandle(exiting));
+            m_Host.WriteIdentity(exitingSlot, m_Host.Topology.OperationIdentity(exiting));
             OperationStopStatus stop = m_Host.RequestStop(exiting, context);
             if (stop != OperationStopStatus.Completed)
                 return stop;
@@ -259,7 +259,7 @@ namespace ThirdPersonSimulation
 
         void ActivateState(OperationExecutionDescriptor machine, int activeSlot, OperationHandle state)
         {
-            m_Host.WriteIdentity(activeSlot, FormatHandle(state));
+            m_Host.WriteIdentity(activeSlot, m_Host.Topology.OperationIdentity(state));
             ulong generation = checked(m_Host.ReadGeneration(state) + 1);
             if (generation == 0)
                 generation = 1;
@@ -319,9 +319,6 @@ namespace ThirdPersonSimulation
                 scope.Dispose();
             }
         }
-
-        static string FormatHandle(OperationHandle value) =>
-            value.IsValid ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
 
         static int MapExitCause(OperationStopCause cause)
         {

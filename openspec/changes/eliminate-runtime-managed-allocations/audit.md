@@ -1504,3 +1504,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Foot Placement 构建输入时重复读取 contribution count、parameter 和 availability binding；`ResolveContributions` 再次读取 count，每个 primitive 按值传入 resolver。
 - 入口缓存 count、parameter、availability 和 primitive slice；count 校验后作为唯一实参传入 void resolution。`CharacterFinalPoseContributionResolver.Resolve` 的 primitive 边界改为 `in`，Final Publication 与 Foot Placement 两个调用点共享同一只读合同。
 - 该改动删除 Foot Placement 周期输入的重复 binding 读取和 primitive 拷贝；不改变 count 校验、Live source 选择、resolver 异常或输出 frame 顺序。静态核对 read binding slice 生命周期、两个唯一 Resolve 调用和方法本体不写 primitive；未编译、未采样，不能声称实测耗时收益。
+
+### AP198 AnimationSlot bone weight 定容（2026-09-30，已实施，本轮未编译）
+
+- Animation Slot 每根骨骼调用 `BoneOutputWeight` 时重复读取 action 的 contribution count、pose count 和 dense contribution weight binding；这些数据在同一个 `BlendPoses` 调用内不变。
+- bone 循环前缓存三项并传入专用求和入口；仍逐 contribution 累加同一行权重并执行 `Clamp01`。per-bone contribution 权重、混合公式和异常时机不变。
+- 该改动删除逐骨重复 binding 结构读取；不降低贡献求和的业务复杂度，也不新增缓存结果。静态核对唯一调用点、read binding 长度合同和 `NativeSlice` 生命周期；未编译、未采样，不能声称实测耗时收益。

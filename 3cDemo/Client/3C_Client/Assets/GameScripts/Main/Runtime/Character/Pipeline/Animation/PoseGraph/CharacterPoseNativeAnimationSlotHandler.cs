@@ -386,9 +386,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 source.DenseVelocities;
             NativeSlice<AnimationBlendBoneVelocity> actionVelocities =
                 action.DenseVelocities;
+            int actionContributionCount = action.ContributionCount[0];
+            int actionBoneCount = action.DenseLocalPoses.Length;
+            NativeSlice<float> actionContributionWeights =
+                action.DenseContributionWeights;
             for (int bone = 0; bone < outputPoses.Length; bone++)
             {
-                float actionBoneWeight = BoneOutputWeight(in action, bone);
+                float actionBoneWeight = BoneOutputWeight(
+                    bone,
+                    actionContributionCount,
+                    actionBoneCount,
+                    actionContributionWeights);
                 float sourceBoneWeight = 1f - actionBoneWeight;
                 ref readonly AnimationLocalBonePose sourcePose =
                     ref sourcePoses[bone];
@@ -625,14 +633,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         float BoneOutputWeight(
-            in CharacterPoseNativePoseReadBinding input,
-            int bone)
+            int bone,
+            int contributionCount,
+            int boneCount,
+            NativeSlice<float> contributionWeights)
         {
             float weight = 0f;
-            int count = input.ContributionCount[0];
-            for (int contribution = 0; contribution < count; contribution++)
-                weight += input.DenseContributionWeights[
-                    contribution * input.DenseLocalPoses.Length + bone];
+            for (int contribution = 0; contribution < contributionCount; contribution++)
+                weight += contributionWeights[
+                    contribution * boneCount + bone];
             return Mathf.Clamp01(weight);
         }
 

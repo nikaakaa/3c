@@ -318,7 +318,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             if (!capture.SourceId.Equals(sourceId) || capture.CompletionIdentity == 0)
                 throw new ArgumentException("Animation pose capture identity does not match the request.", nameof(capture));
 
-            var key = new AnimationPlayerSourceKey(sourceId, playerNodeId);
+            var key = new AnimationPlayerSourceKey(
+                in sourceId,
+                in playerNodeId);
             RequireNoFrameMutation(key);
             if (m_FrameMutationCount >= m_FrameMutations.Length)
                 throw new InvalidOperationException("Animancer pose source mutation capacity was exceeded.");
@@ -403,7 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
             RequireAvailable();
             RequireFramePhase(SourceFramePhase.Preparing);
-            var key = RequireKey(sourceId, playerNodeId);
+            var key = RequireKey(in sourceId, in playerNodeId);
             int ownerSlotIndex = FindCommittedSourceSlot(key);
             if (ownerSlotIndex < 0)
                 throw new InvalidOperationException($"Animation pose source '{key}' is not committed.");
@@ -442,7 +444,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             int occupiedSlotCount = 0;
             for (int i = 0; i < m_SourceOwnerSlots.Length; i++)
             {
-                SourceOwnerSlot slot = m_SourceOwnerSlots[i];
+                ref readonly SourceOwnerSlot slot = ref m_SourceOwnerSlots[i];
                 if (slot.IsOccupied != slot.Key.IsValid)
                     throw new InvalidOperationException("Animancer pose source owner slot is invalid.");
                 if (slot.IsOccupied)
@@ -452,13 +454,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException("Animancer pose source owner slot count is invalid.");
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
-                SourceFrameMutation mutation = m_FrameMutations[i];
+                ref readonly SourceFrameMutation mutation = ref m_FrameMutations[i];
                 if (!mutation.IsValid ||
                     (uint)mutation.OwnerSlotIndex >=
                     (uint)m_SourceOwnerSlots.Length)
                     throw new InvalidOperationException("Animancer pose source mutation journal is invalid.");
-                SourceOwnerSlot slot =
-                    m_SourceOwnerSlots[mutation.OwnerSlotIndex];
+                ref readonly SourceOwnerSlot slot =
+                    ref m_SourceOwnerSlots[mutation.OwnerSlotIndex];
                 if (mutation.Kind ==
                     AnimationPoseSourcePrepareKind.PreparedResource)
                 {
@@ -472,7 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 else if (mutation.Kind ==
                          AnimationPoseSourcePrepareKind.CommittedUpdate)
                 {
-                    if (!slot.Key.Equals(mutation.Key) ||
+                    if (!slot.Key.Equals(in mutation.Key) ||
                         !ReferenceEquals(slot.Visual, mutation.Visual))
                     {
                         throw new InvalidOperationException("Animancer committed pose source owner slot is invalid.");
@@ -493,17 +495,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
             for (int i = 0; i < m_ReleasePermissionEntryCount; i++)
             {
-                SourceReleasePermission permission =
-                    m_ReleasePermissions[i];
+                ref readonly SourceReleasePermission permission =
+                    ref m_ReleasePermissions[i];
                 if (!permission.IsValid ||
                     (uint)permission.OwnerSlotIndex >=
                     (uint)m_SourceOwnerSlots.Length)
                 {
                     throw new InvalidOperationException("Animancer pose source release permission is invalid.");
                 }
-                SourceOwnerSlot slot =
-                    m_SourceOwnerSlots[permission.OwnerSlotIndex];
-                if (!slot.Key.Equals(permission.Key) ||
+                ref readonly SourceOwnerSlot slot =
+                    ref m_SourceOwnerSlots[permission.OwnerSlotIndex];
+                if (!slot.Key.Equals(in permission.Key) ||
                     !ReferenceEquals(slot.Visual, permission.Visual))
                 {
                     throw new InvalidOperationException("Animancer pose source release owner slot is invalid.");
@@ -520,7 +522,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_FramePhase = SourceFramePhase.EvaluateBarrier;
             for (int mutationIndex = 0; mutationIndex < m_FrameMutationCount; mutationIndex++)
             {
-                SourceFrameMutation mutation = m_FrameMutations[mutationIndex];
+                ref readonly SourceFrameMutation mutation =
+                    ref m_FrameMutations[mutationIndex];
                 int clipOffset = checked(mutationIndex * m_ClipCapacity);
                 PrepareClips(
                     mutation.Visual,
@@ -543,7 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException("Animancer pose source frame was already applied.");
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
-                SourceFrameMutation mutation = m_FrameMutations[i];
+                ref readonly SourceFrameMutation mutation = ref m_FrameMutations[i];
                 if (mutation.Kind == AnimationPoseSourcePrepareKind.PreparedResource)
                 {
                     m_SourceOwnerSlots[mutation.OwnerSlotIndex] =
@@ -596,10 +599,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
-                SourceFrameMutation mutation = m_FrameMutations[i];
+                ref readonly SourceFrameMutation mutation = ref m_FrameMutations[i];
                 if (mutation.Kind != AnimationPoseSourcePrepareKind.PreparedResource)
                     continue;
-                SourceOwnerSlot slot = m_SourceOwnerSlots[mutation.OwnerSlotIndex];
+                ref readonly SourceOwnerSlot slot =
+                    ref m_SourceOwnerSlots[mutation.OwnerSlotIndex];
                 if (!ReferenceEquals(slot.Visual, mutation.Visual))
                     continue;
                 m_SourceOwnerSlots[mutation.OwnerSlotIndex].Clear();
@@ -644,8 +648,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 throw new InvalidOperationException("Animation pose source release token is outside the committed batch.");
             }
-            SourceReleasePermission permission =
-                m_ReleasePermissions[token.PermissionIndex];
+            ref readonly SourceReleasePermission permission =
+                ref m_ReleasePermissions[token.PermissionIndex];
             if (!permission.IsValid || permission.Generation != token.Generation)
                 throw new InvalidOperationException("Animation pose source release token is stale or already consumed.");
             m_SourceOwnerSlots[permission.OwnerSlotIndex].Clear();
@@ -662,7 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
             RequireAvailable();
             return FindCommittedSourceSlot(
-                RequireKey(sourceId, playerNodeId)) >= 0;
+                RequireKey(in sourceId, in playerNodeId)) >= 0;
         }
 
         public ClipSamplePlan RequireDominantClipSample(
@@ -674,14 +678,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             RequireFramePhase(SourceFramePhase.EvaluateBarrier);
             if (completionIdentity == 0)
                 throw new ArgumentOutOfRangeException(nameof(completionIdentity));
-            var key = RequireKey(sourceId, playerNodeId);
+            var key = RequireKey(in sourceId, in playerNodeId);
             int mutationIndex = FindFrameMutation(key);
             if (mutationIndex < 0)
             {
                 throw new InvalidOperationException(
                     $"Animation pose source '{key}' has no sample in the current Evaluate Barrier.");
             }
-            SourceFrameMutation mutation = m_FrameMutations[mutationIndex];
+            ref readonly SourceFrameMutation mutation =
+                ref m_FrameMutations[mutationIndex];
             if (mutation.Capture.CompletionIdentity != completionIdentity)
             {
                 throw new InvalidOperationException(
@@ -700,7 +705,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
             if (selectedIndex < 0)
                 throw new InvalidOperationException($"Animation pose source '{key}' has no dominant Clip sample.");
-            ClipSamplePlan sample = m_PendingClipPlans[clipOffset + selectedIndex];
+            ref readonly ClipSamplePlan sample =
+                ref m_PendingClipPlans[clipOffset + selectedIndex];
             if (!sample.IsValid)
                 throw new InvalidOperationException($"Animation pose source '{key}' dominant Clip sample is invalid.");
             return sample;
@@ -927,17 +933,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             return count;
         }
 
-        int FindFrameMutation(AnimationPlayerSourceKey key)
+        int FindFrameMutation(in AnimationPlayerSourceKey key)
         {
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
-                if (m_FrameMutations[i].Key.Equals(key))
+                ref readonly SourceFrameMutation mutation =
+                    ref m_FrameMutations[i];
+                if (mutation.Key.Equals(in key))
                     return i;
             }
             return -1;
         }
 
-        void RequireNoFrameMutation(AnimationPlayerSourceKey key)
+        void RequireNoFrameMutation(in AnimationPlayerSourceKey key)
         {
             if (FindFrameMutation(key) >= 0)
                 throw new InvalidOperationException($"Animation pose source '{key}' has a duplicate frame mutation.");
@@ -945,12 +953,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new InvalidOperationException($"Animation pose source '{key}' cannot be captured and released in the same frame.");
         }
 
-        int FindReleasePermission(AnimationPlayerSourceKey key)
+        int FindReleasePermission(in AnimationPlayerSourceKey key)
         {
             for (int i = 0; i < m_ReleasePermissionEntryCount; i++)
             {
-                if (m_ReleasePermissions[i].IsValid &&
-                    m_ReleasePermissions[i].Key.Equals(key))
+                ref readonly SourceReleasePermission permission =
+                    ref m_ReleasePermissions[i];
+                if (permission.IsValid &&
+                    permission.Key.Equals(in key))
                     return i;
             }
             return -1;
@@ -977,11 +987,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_UnconsumedReleasePermissionCount = 0;
         }
 
-        int FindCommittedSourceSlot(AnimationPlayerSourceKey key)
+        int FindCommittedSourceSlot(in AnimationPlayerSourceKey key)
         {
             for (int i = 0; i < m_SourceOwnerSlots.Length; i++)
             {
-                if (m_SourceOwnerSlots[i].Key.Equals(key))
+                ref readonly SourceOwnerSlot slot = ref m_SourceOwnerSlots[i];
+                if (slot.Key.Equals(in key))
                     return i;
             }
             return -1;
@@ -1005,7 +1016,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             PlayableGraph graph = m_Graph.PlayableGraph;
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
-                SourceFrameMutation mutation = m_FrameMutations[i];
+                ref readonly SourceFrameMutation mutation = ref m_FrameMutations[i];
                 if (destroyPreparedResources &&
                     mutation.Kind == AnimationPoseSourcePrepareKind.PreparedResource)
                 {
@@ -1030,12 +1041,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         static AnimationPlayerSourceKey RequireKey(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId playerNodeId)
         {
             if (!sourceId.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("Animation pose source identity is invalid.");
-            return new AnimationPlayerSourceKey(sourceId, playerNodeId);
+            return new AnimationPlayerSourceKey(
+                in sourceId,
+                in playerNodeId);
         }
 
         void RequireFrame(ulong frameIdentity, SourceFramePhase phase)
@@ -1240,19 +1253,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         readonly struct AnimationPlayerSourceKey : IEquatable<AnimationPlayerSourceKey>
         {
-            public AnimationPlayerSourceKey(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId)
+            readonly AnimationPoseSourceId m_SourceId;
+            readonly PoseNodeId m_PlayerNodeId;
+
+            public AnimationPlayerSourceKey(
+                in AnimationPoseSourceId sourceId,
+                in PoseNodeId playerNodeId)
             {
                 if (!sourceId.IsValid || !playerNodeId.IsValid)
                     throw new ArgumentException("Animation Player source key is invalid.");
-                SourceId = sourceId;
-                PlayerNodeId = playerNodeId;
+                m_SourceId = sourceId;
+                m_PlayerNodeId = playerNodeId;
             }
 
-            public AnimationPoseSourceId SourceId { get; }
-            public PoseNodeId PlayerNodeId { get; }
+            public ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+            public ref readonly PoseNodeId PlayerNodeId => ref m_PlayerNodeId;
             public bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid;
 
             public bool Equals(AnimationPlayerSourceKey other) =>
+                Equals(in other);
+
+            internal bool Equals(in AnimationPlayerSourceKey other) =>
                 SourceId.Equals(other.SourceId) && PlayerNodeId.Equals(other.PlayerNodeId);
 
             public override bool Equals(object obj) => obj is AnimationPlayerSourceKey other && Equals(other);

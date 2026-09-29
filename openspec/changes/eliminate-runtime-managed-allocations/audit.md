@@ -1660,3 +1660,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - ACL source key 按值接收并复制 source/node，属性每次读取再复制；frame journal 查找、release 查重、mutation 回放和 pool committed 查询把 key、mutation 或 permission 复制为局部；instance 配置时又复制 catalog binding。
 - key 的 source/node 改为 backing field 只读引用，构造与内部 equality 改为 `in`，public equality 合同转发。journal/pool/instance 正式查找、回放和配置边界改为 `in`，数组元素绑定只读引用；instance 的 key 改为 backing field 并保留 reset/configure 写入。
 - 该改动删除 ACL key 查找、journal 校验、frame 回放、release 查重和 committed pool 查询的重复读取拷贝。key 存储、mutation/release 存储、generation、pending/retired 状态、异常文本和 public equality 不变。静态核对 ref mutation 在回放期间只读、key backing field 生命周期与 instance 一致；未编译、未采样，不能声称实测耗时收益。
+
+### AP224 Animancer source journal 引用化（2026-09-30，已实施，本轮未编译）
+
+- Animancer source key 按值接收并复制 source/node，属性每次读取再复制；owner slot、frame mutation 和 release permission 的校验、求值、commit、rollback、release 与 dominant sample 读取被复制为局部，三个查找函数也逐项复制 entry。
+- key 改为 backing field 只读引用，构造与内部 equality 改为 `in`，public equality 合同转发。三个查找改用 `in` key 并绑定数组元素只读引用；Validate、Enter/Apply/Rollback、Release、Clear 和 dominant sample 读取改为只读元素引用。
+- 该改动删除 Animancer source journal 周期校验与求值链的重复 key/entry/plan 拷贝。mutation 和 owner slot 写入、release permission 清除、generation、committed 计数、输出 Clip 返回和异常文本不变。静态核对只读引用都在目标数组修改前消费、`ref readonly` 均绑定同一数组元素和 public equality 保留；未编译、未采样，不能声称实测耗时收益。

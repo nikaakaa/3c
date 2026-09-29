@@ -774,12 +774,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
                 }
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             Requests = requests;
             m_RequestKeys = duplicateKeys;
         }
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal IReadOnlyList<CharacterPoseNativeSourceRequest> Requests { get; }
         internal bool IsValid => Lineage.IsValid && Requests != null;
         internal bool Contains(in CharacterPoseNativeSourceRequest request) =>

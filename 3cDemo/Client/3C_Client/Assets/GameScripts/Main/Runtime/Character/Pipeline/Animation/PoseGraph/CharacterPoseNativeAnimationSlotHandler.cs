@@ -245,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
+            if (!demand.IsValid || !lineage.Matches(in demand.Lineage) || barrierIdentity == 0)
                 throw new InvalidOperationException(
                     $"Animation Slot '{NodeId}' evaluation preparation identity is invalid.");
             m_Source.PrepareEvaluation(
@@ -766,8 +766,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong barrierIdentity)
         {
             RequireAlive();
-            if (!m_FrameOpen || !demand.IsValid || demand.Lineage != lineage ||
-                barrierIdentity == 0)
+            if (!m_FrameOpen || !demand.IsValid ||
+                !lineage.Matches(in demand.Lineage) || barrierIdentity == 0)
             {
                 throw new InvalidOperationException(
                     $"Animation Slot source '{m_Stack.PoseNodeId}' evaluation preparation is invalid.");

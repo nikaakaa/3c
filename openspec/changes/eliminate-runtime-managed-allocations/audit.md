@@ -1312,3 +1312,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - graph 与 role runtime 的 Prepare、PrepareEvaluation、Evaluate、ValidatePending、Commit、Discard 都按值接收 `CharacterPoseNativeFrameLease`；BeginFrame 还把 lease.Lineage 复制到局部 lineage。这些参数在阶段间不变。
 - graph 的 8 个阶段入口和 role 的 6 个转发入口统一改为 `in` 参数；BeginFrame 的 openLineage 改为 readonly 引用。调用点继续传同一 lease，RequireLease、异常时机、阶段推进和 Commit/Discard 语义不变。
 - 该改动删除每个阶段的整份 lease 拷贝；不新增第二生命周期路径。静态核对 graph/role 全部按值参数、调用绑定、readonly 引用生命周期和 BeginFrame 异常清理；未编译、未采样，不能声称实测耗时收益。
+
+### AP166 source demand lineage 引用化（2026-09-30，已实施，本轮未编译）
+
+- `CharacterPoseNativeSourceDemand.Lineage` 按值返回整份 identity；graph、StateMachine handler/source 和 AnimationSlot source 在 barrier 校验中还用按值 operator 比较。demand 在构造后同一帧保持只读。
+- demand Lineage 改为 readonly 字段加 `ref readonly` 属性；5 处 identity 比较改为现有 `Matches(in lineage)`。Requests、request key、错误文案和异常时机不变。
+- 该改动删除 demand 读取和 identity 校验的整份 lineage 拷贝；不新增第二 demand 数据源。静态核对构造赋值、全部按值 equality 消失、5 个比较点字段集合和 barrier 顺序；未编译、未采样，不能声称实测耗时收益。

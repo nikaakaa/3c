@@ -496,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame(runtime, in lineage);
-            if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
+            if (!demand.IsValid || !lineage.Matches(in demand.Lineage) || barrierIdentity == 0)
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
             SynchronizeTransition(m_ActiveStateCount);

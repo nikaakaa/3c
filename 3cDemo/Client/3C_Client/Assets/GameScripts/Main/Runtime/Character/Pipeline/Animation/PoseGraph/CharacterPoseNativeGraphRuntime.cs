@@ -755,7 +755,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Prepare);
-            if (!demand.IsValid || demand.Lineage != m_CompletedLineage ||
+            if (!demand.IsValid || !m_CompletedLineage.Matches(in demand.Lineage) ||
                 barrierIdentity == 0)
             {
                 throw new ArgumentException(
@@ -777,7 +777,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Prepare);
-            if (!demand.IsValid || demand.Lineage != m_CompletedLineage || barrierIdentity == 0)
+            if (!demand.IsValid ||
+                !m_CompletedLineage.Matches(in demand.Lineage) ||
+                barrierIdentity == 0)
                 throw new ArgumentException("Pose native evaluation input is invalid.", nameof(demand));
             try
             {

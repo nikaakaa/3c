@@ -174,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame();
-            if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
+            if (!demand.IsValid || !lineage.Matches(in demand.Lineage) || barrierIdentity == 0)
                 throw new InvalidOperationException(
                     $"StateMachine '{NodeId}' evaluation preparation is invalid.");
             m_Source.PrepareEvaluation(

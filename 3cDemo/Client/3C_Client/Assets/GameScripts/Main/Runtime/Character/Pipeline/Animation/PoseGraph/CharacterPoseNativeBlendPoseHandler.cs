@@ -478,10 +478,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_WriteBinding.Contributions;
             NativeSlice<float> outputContributionWeights =
                 m_WriteBinding.DenseContributionWeights;
+            NativeSlice<AnimationPrimitivePoseContribution> inputContributions =
+                input.Contributions;
+            NativeSlice<float> inputContributionWeights =
+                input.DenseContributionWeights;
             for (int contribution = 0; contribution < inputCount; contribution++)
             {
-                AnimationPrimitivePoseContribution value =
-                    input.Contributions[contribution];
+                ref readonly AnimationPrimitivePoseContribution value =
+                    ref inputContributions[contribution];
                 float weight = value.Weight * factor;
                 if (weight <= 0f)
                     continue;
@@ -489,6 +493,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Blend Pose '{NodeId}' contribution capacity was exceeded.");
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
+                int outputWeightOffset = outputCount * boneCount;
+                int inputWeightOffset = contribution * boneCount;
                 outputContributions[outputCount] =
                     new AnimationPrimitivePoseContribution(
                         value.PhysicalPlayerIndex,
@@ -502,9 +508,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         value.RightFootWeight * factor);
                 for (int bone = 0; bone < boneCount; bone++)
                     outputContributionWeights[
-                        outputCount * boneCount + bone] =
-                        input.DenseContributionWeights[
-                            contribution * boneCount + bone] * factor;
+                        outputWeightOffset + bone] =
+                        inputContributionWeights[
+                            inputWeightOffset + bone] * factor;
                 outputCount++;
             }
         }

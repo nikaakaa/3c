@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly CharacterComponentBonePose[] m_ComponentScratch;
         readonly AnimationLocalBonePose[] m_LocalScratch;
+        FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
         CharacterModifyBonePosePayload m_Modification;
         int[] m_Descendants;
         int[] m_DescendantParents;
@@ -61,6 +62,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BoneIndex = m_Rig.RequirePoseBoneIndex(modification.BoneId);
             if (m_BoneIndex >= m_Rig.PhysicalBoneCount)
                 throw new InvalidOperationException($"Modify Bone '{NodeId}' cannot target a virtual bone.");
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
+                node,
+                "pose");
             m_TargetParent = m_Rig.GetPoseParentIndex(m_BoneIndex);
             var affected = new bool[m_Rig.PhysicalBoneCount];
             var descendants = new List<int>();
@@ -135,8 +139,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue inputValue =
-                runtime.ReadInput<CharacterPoseNativeComponentPoseValue>(
-                    node,
+                runtime.ReadInput(
+                    m_PoseInput,
+                    m_NodeId,
                     "pose");
             CharacterPoseNativePoseReadBinding input = inputValue.Native;
             if (!input.IsValid ||

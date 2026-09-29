@@ -1144,3 +1144,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - SpaceConversion 每次求输出时先按 `(NodeId, PortId)` 查端口 definition，再按 Kind switch 选择值类型，最后在 `m_InputPorts` Dictionary 中重复 tuple 哈希并做类型测试。其输入端口和类型在 graph 初始化后固定。
 - runtime 新增构造期 `RequireInputPort<T>` 和已绑定端口的 `ReadInput<T>` 正式入口；SpaceConversion 在 Initialize 解析唯一 Local/Component typed port，帧内直接读取该 port。`RequireEvaluationStage`、空值错误、类型错误和输出处理时序保持。
 - 该改动把每帧三次查找收敛为构造期一次，随后只有 port value 读取；不新增 fallback 或第二数据源。静态核对 BuildPortDefinitions 先于 evaluator Initialize、graph clone 生命周期、两个输入 Kind 和原错误文本；未编译、未采样，不能声称实测耗时收益。
+
+### AP138 ModifyBone typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Modify Bone 每次求输出都通过 `(NodeId, "pose")` 哈希查找并类型测试同一个 Component Pose 输入；该端口在 graph 初始化后固定。
+- handler 在 Initialize 用 AP137 的 typed port 解析入口缓存 `FlowCanvas.ValueInput<ComponentPoseValue>`，帧内直接读取 port value。求值阶段检查、空值错误、输出页复制和修改应用顺序不变。
+- 该改动消除 Modify Bone 主姿态输入的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对 Initialize 唯一绑定点、帧读取点和 Component Pose 合同；未编译、未采样，不能声称实测耗时收益。

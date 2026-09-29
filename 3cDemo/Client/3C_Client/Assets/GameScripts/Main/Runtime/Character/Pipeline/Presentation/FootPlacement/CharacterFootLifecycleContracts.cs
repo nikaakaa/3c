@@ -792,19 +792,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingSnapshot
     {
+        readonly CharacterFootGroundPathLanding m_LastLanding;
+        readonly CharacterFootGroundPathLanding m_NextSwingLanding;
+        readonly CharacterFootGroundPathLanding m_PromotedLanding;
+        readonly CharacterFootGroundPathLanding m_PlantTarget;
+
         internal CharacterFootLandingSnapshot(
             CharacterFootNextLandingTrackingState nextTrackingState,
             ulong nextTrackingEventIdentity,
             bool hasLastLanding,
-            CharacterFootGroundPathLanding lastLanding,
+            in CharacterFootGroundPathLanding lastLanding,
             bool hasNextSwingLanding,
-            CharacterFootGroundPathLanding nextSwingLanding,
+            in CharacterFootGroundPathLanding nextSwingLanding,
             float nextSwingPredictionError,
             bool hasPromotedLanding,
-            CharacterFootGroundPathLanding promotedLanding,
+            in CharacterFootGroundPathLanding promotedLanding,
             CharacterFootPlantTargetState plantTargetState,
             bool hasPlantTarget,
-            CharacterFootGroundPathLanding plantTarget,
+            in CharacterFootGroundPathLanding plantTarget,
             bool plantTargetUpdated,
             bool plantVerificationAttempted,
             bool plantVerificationUnavailable)
@@ -812,15 +817,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextTrackingState = nextTrackingState;
             NextTrackingEventIdentity = nextTrackingEventIdentity;
             HasLastLanding = hasLastLanding;
-            LastLanding = lastLanding;
+            m_LastLanding = lastLanding;
             HasNextSwingLanding = hasNextSwingLanding;
-            NextSwingLanding = nextSwingLanding;
+            m_NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
             HasPromotedLanding = hasPromotedLanding;
-            PromotedLanding = promotedLanding;
+            m_PromotedLanding = promotedLanding;
             PlantTargetState = plantTargetState;
             HasPlantTarget = hasPlantTarget;
-            PlantTarget = plantTarget;
+            m_PlantTarget = plantTarget;
             PlantTargetUpdated = plantTargetUpdated;
             PlantVerificationAttempted = plantVerificationAttempted;
             PlantVerificationUnavailable = plantVerificationUnavailable;
@@ -829,17 +834,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootNextLandingTrackingState NextTrackingState { get; }
         internal ulong NextTrackingEventIdentity { get; }
         internal bool HasLastLanding { get; }
-        internal CharacterFootGroundPathLanding LastLanding { get; }
+        internal ref readonly CharacterFootGroundPathLanding LastLanding =>
+            ref m_LastLanding;
         internal ulong LastLandingEventIdentity =>
             HasLastLanding ? LastLanding.LandingEventIdentity : 0;
         internal bool HasNextSwingLanding { get; }
-        internal CharacterFootGroundPathLanding NextSwingLanding { get; }
+        internal ref readonly CharacterFootGroundPathLanding NextSwingLanding =>
+            ref m_NextSwingLanding;
         internal float NextSwingPredictionError { get; }
         internal bool HasPromotedLanding { get; }
-        internal CharacterFootGroundPathLanding PromotedLanding { get; }
+        internal ref readonly CharacterFootGroundPathLanding PromotedLanding =>
+            ref m_PromotedLanding;
         internal CharacterFootPlantTargetState PlantTargetState { get; }
         internal bool HasPlantTarget { get; }
-        internal CharacterFootGroundPathLanding PlantTarget { get; }
+        internal ref readonly CharacterFootGroundPathLanding PlantTarget =>
+            ref m_PlantTarget;
         internal bool PlantTargetUpdated { get; }
         internal bool PlantVerificationAttempted { get; }
         internal bool PlantVerificationUnavailable { get; }

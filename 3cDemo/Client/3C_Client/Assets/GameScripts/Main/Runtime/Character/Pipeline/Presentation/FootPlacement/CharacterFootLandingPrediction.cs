@@ -694,24 +694,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 landing.VerifiedLastLandingEventIdentity;
             PlantTargetState = landing.PlantTargetState;
             PlantTargetAvailable = landing.HasPlantTarget;
+            ref readonly CharacterFootGroundPathLanding plantTarget =
+                ref landing.PlantTarget;
             PlantTargetEventIdentity = landing.HasPlantTarget
-                ? landing.PlantTarget.LandingEventIdentity
+                ? plantTarget.LandingEventIdentity
                 : 0;
             PlantTargetSurfaceIdentity = landing.HasPlantTarget
-                ? landing.PlantTarget.SurfaceIdentity
+                ? plantTarget.SurfaceIdentity
                 : 0;
             PlantTargetPoint = landing.HasPlantTarget
-                ? landing.PlantTarget.Point
+                ? plantTarget.Point
                 : default;
             PlantTargetNormal = landing.HasPlantTarget
-                ? landing.PlantTarget.Normal
+                ? plantTarget.Normal
                 : default;
             PlantTargetTrajectoryGeneration = landing.HasPlantTarget
-                ? landing.PlantTarget.TrajectoryGeneration
+                ? plantTarget.TrajectoryGeneration
                 : 0;
             PlantTargetFutureBodyTranslationSourceIdentity =
                 landing.HasPlantTarget
-                    ? landing.PlantTarget.FutureBodyTranslationSourceIdentity
+                    ? plantTarget.FutureBodyTranslationSourceIdentity
                     : string.Empty;
             PlantTargetUpdated = landing.PlantTargetUpdated;
             PlantVerificationAttempted = landing.PlantVerificationAttempted;

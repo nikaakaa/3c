@@ -408,10 +408,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasLeftNextSwingLanding = leftLanding.HasNextSwingLanding;
             bool hasRightLastLanding = rightLanding.HasLastLanding;
             bool hasRightNextSwingLanding = rightLanding.HasNextSwingLanding;
-            CharacterFootGroundPathLanding leftLastLanding = leftLanding.LastLanding;
-            CharacterFootGroundPathLanding leftNextSwingLanding = leftLanding.NextSwingLanding;
-            CharacterFootGroundPathLanding rightLastLanding = rightLanding.LastLanding;
-            CharacterFootGroundPathLanding rightNextSwingLanding = rightLanding.NextSwingLanding;
+            ref readonly CharacterFootGroundPathLanding leftLastLanding =
+                ref leftLanding.LastLanding;
+            ref readonly CharacterFootGroundPathLanding leftNextSwingLanding =
+                ref leftLanding.NextSwingLanding;
+            ref readonly CharacterFootGroundPathLanding rightLastLanding =
+                ref rightLanding.LastLanding;
+            ref readonly CharacterFootGroundPathLanding rightNextSwingLanding =
+                ref rightLanding.NextSwingLanding;
             CharacterFootGroundPathLanding leftContactLanding = default;
             bool hasLeftContactLanding = leftLockRequest.RequestsLock &&
                 (leftLanding.TryResolveVerifiedLanding(
@@ -443,9 +447,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathResult leftGroundPath = PrepareGroundPath(
                 CharacterFootSide.Left,
                 hasLeftLastLanding,
-                leftLastLanding,
+                in leftLastLanding,
                 hasLeftNextSwingLanding,
-                leftNextSwingLanding,
+                in leftNextSwingLanding,
                 componentUp,
                 timeline.IsValid ? timeline.AuthorityTick.Value : 0,
                 m_LeftGroundPath,
@@ -454,9 +458,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathResult rightGroundPath = PrepareGroundPath(
                 CharacterFootSide.Right,
                 hasRightLastLanding,
-                rightLastLanding,
+                in rightLastLanding,
                 hasRightNextSwingLanding,
-                rightNextSwingLanding,
+                in rightNextSwingLanding,
                 componentUp,
                 timeline.IsValid ? timeline.AuthorityTick.Value : 0,
                 m_RightGroundPath,
@@ -906,9 +910,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterFootGroundPathResult PrepareGroundPath(
             CharacterFootSide side,
             bool hasLastLanding,
-            CharacterFootGroundPathLanding lastLanding,
+            in CharacterFootGroundPathLanding lastLanding,
             bool hasNextSwingLanding,
-            CharacterFootGroundPathLanding nextSwingLanding,
+            in CharacterFootGroundPathLanding nextSwingLanding,
             Vector3 componentUp,
             ulong authorityTick,
             CharacterFootGroundPathPagePool pool,

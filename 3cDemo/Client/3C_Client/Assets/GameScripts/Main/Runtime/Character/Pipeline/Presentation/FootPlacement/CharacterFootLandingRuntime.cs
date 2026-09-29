@@ -152,12 +152,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 events.Phase == AnimationFootMotionEventPhase.PreSwing ||
                 events.Phase == AnimationFootMotionEventPhase.Swing ||
                 events.Phase == AnimationFootMotionEventPhase.ApproachContact;
-            CharacterFootLandingSnapshot snapshot = context.Snapshot;
             bool validCandidate = next.IsBound &&
                                   predictivePhase &&
                                   events.TimeToLandingSeconds > 0.000001f &&
                                   next.Identity !=
-                                  snapshot.LastLandingEventIdentity;
+                                  (context.LastLanding.HasValue
+                                      ? context.LastLanding.LandingEventIdentity
+                                      : 0);
             if (!validCandidate)
             {
                 if (!next.IsBound ||

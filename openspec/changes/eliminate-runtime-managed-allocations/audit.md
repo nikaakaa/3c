@@ -1973,3 +1973,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing observation page 的 Key 自动属性每次读取复制完整 landing observation key；cache 复用判定先复制 committed key 到局部，diagnostics 展开还会重复读取 identity、world revision 和 canonical landing。
 - Page Key 改为 backing field 只读引用；cache 判定绑定 committed key 引用，diagnostics 绑定同一 key 引用。Set、Clear、ReuseCommitted、Discard 和 query reason 位计算不变。
 - 该改动删除 landing observation cache 判定与诊断展开的完整 key 重复拷贝。静态核对 key 为 readonly struct、页面写入点只在 Set/Clear、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP276 Landing snapshot landing 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Landing snapshot 的 LastLanding、NextSwingLanding、PromotedLanding、PlantTarget 自动属性每次读取复制完整 ground path landing；EvaluateFrame 的 ground path 输入、landing diagnostics 和 prepared plant 检查会重复读取。
+- 四个 landing 属性改为 backing field 只读引用，snapshot 构造入参改为 `in`。EvaluateFrame 的 last/next landing 直接绑定 snapshot，`PrepareGroundPath` 按引用接收；landing diagnostics 绑定 plant target。`CaptureNextSwing` 只需要 last landing identity 时不再构造整份 snapshot。
+- 该改动删除 Foot Placement 每脚 landing snapshot 进入 ground path 构建和诊断展开的重复 landing 拷贝，并删除只读 identity 检查的整份 snapshot 构造。静态核对 landing 为 readonly struct、snapshot 为临时只读容器、tracking context 写入语义不变；未编译、未采样，不能声称实测耗时收益。

@@ -663,6 +663,12 @@
 - 将 Clear 移到第二次调用前，CopyCurrentActions 只负责按当前 Action 状态追加。ProcessExisting/TickActive 读取的名单、删除实例后的刷新结果和 finally 清理边界不变。
 - 两个数值域同步修改，静态核对唯一调用链、首次空列表前提、第二次刷新和异常 finally；未编译、运行回放或采样。
 
+### AP83 Skill 执行评估开始重复清空状态缓存（2026-09-29，已实施，本轮未编译）
+
+- 两域共用的 `GameplayAbilityExecutionManager<TValue>` 在 `BeginEvaluation` 清空 `m_States` 和 `m_StatesShared`；上一轮成功或异常的 `EndEvaluation` 在 active frame 检查通过后执行同一清空。构造和首次评估也为空，active frame 残留时 Begin 与 End 都直接报错，不会清理。
+- 删除 Begin 的重复复位，保留 End 唯一空缓存边界。评估内 Enter/Remove/写状态仍通过该缓存读写 storage，评估外 `WriteState` 触发的 `Remove` 会重新从 storage 建立共享聚合；`HasFrame` 本来只读 storage。Action 执行栈检查、frame 身份检查、克隆/写入和异常传播不变。
+- 静态核对 manager 全部字段引用、ActionStateStore Begin/End 唯一调用、评估内 Enter/Exit 和评估外写状态链；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

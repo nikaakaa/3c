@@ -307,8 +307,6 @@ namespace ThirdPersonSimulation
         {
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution state retained an active frame across evaluations.");
-            m_States = null;
-            m_StatesShared = false;
         }
 
         public void EndEvaluation()

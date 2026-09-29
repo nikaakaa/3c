@@ -25,6 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         readonly struct Mutation
         {
+            readonly ActionCommittedRawSample m_Sample;
+
             internal Mutation(
                 MutationKind kind,
                 AnimationPlaybackId playbackId,
@@ -42,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Header = header;
                 Kind = kind;
                 PlaybackId = playbackId;
-                Sample = sample;
+                m_Sample = sample;
             }
 
             internal AnimationPresentationMutationJournalHeader Header
@@ -51,7 +53,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             internal MutationKind Kind { get; }
             internal AnimationPlaybackId PlaybackId { get; }
-            internal ActionCommittedRawSample Sample { get; }
+            internal ref readonly ActionCommittedRawSample SampleRef =>
+                ref m_Sample;
 
             internal Mutation WithHeader(
                 AnimationPresentationMutationJournalHeader header) =>
@@ -59,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     header,
                     Kind,
                     PlaybackId,
-                    Sample);
+                    SampleRef);
         }
 
         sealed class Entry
@@ -393,10 +396,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 int sampleIndex = FindEvent(
                     m_WindowSamples,
                     m_WindowSampleCount,
-                    mutation.Sample.EventId);
+                    mutation.SampleRef.EventId);
                 if (sampleIndex >= 0)
                 {
-                    m_WindowSamples[sampleIndex] = mutation.Sample;
+                    m_WindowSamples[sampleIndex] = mutation.SampleRef;
                     continue;
                 }
                 if (m_WindowSampleCount == m_WindowSamples.Length)
@@ -404,7 +407,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException(
                         "Action committed sample history capacity was exceeded.");
                 }
-                m_WindowSamples[m_WindowSampleCount++] = mutation.Sample;
+                m_WindowSamples[m_WindowSampleCount++] = mutation.SampleRef;
             }
             SortSamples(m_WindowSamples, m_WindowSampleCount);
             ValidateOrder(m_WindowSamples, m_WindowSampleCount);
@@ -510,7 +513,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (existing.Kind == MutationKind.RemovePlayback ||
                     existing.Kind == MutationKind.Upsert &&
                     mutation.Kind == MutationKind.Upsert &&
-                    existing.Sample.EventId.Equals(mutation.Sample.EventId))
+                    existing.SampleRef.EventId.Equals(mutation.SampleRef.EventId))
                 {
                     throw new InvalidOperationException(
                         "Action sample history mutation journal contains a duplicate or invalid order.");
@@ -547,7 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     header.SequenceIndex != i ||
                     !mutation.PlaybackId.IsValid ||
                     mutation.Kind == MutationKind.Upsert &&
-                    !mutation.Sample.IsValid)
+                    !mutation.SampleRef.IsValid)
                 {
                     throw new InvalidOperationException(
                         "Action sample history mutation journal identity or order is invalid.");

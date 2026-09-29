@@ -1606,3 +1606,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Physical source registry 的 source id、node id、owner index、backend kind、catalog index 和 release prepare 都按值接收 identity，再复制给内部校验；Source Module 的三个转发包装也复制一次。
 - registry 内部七个正式边界和 Source Module 三个转发边界改为 `in`。index/generation 校验、pending 选择、返回值、release 校验和异常文本不变；外部调用继续传同一局部或数组引用。
 - 该改动删除 identity 查询和 release 准备链的重复结构拷贝；不改变 backend interface 的更大合同。静态核对全部方法不写 identity、调用点兼容按值实参和 readonly struct 字段只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP215 committed sample mutation sample 引用化（2026-09-30，已实施，本轮未编译）
+
+- sample history 的内部 `Mutation.Sample` 属性每次按值返回包含 raw sample 的结构；window 重建在查找和写入时可多次读取，duplicate 检查每对 mutation 各复制一次，journal 校验又复制一次。
+- mutation 改用 readonly backing field，新增内部 `SampleRef` 只读引用；window 事件查找、window upsert、duplicate event 比较和 valid 校验绑定引用。写入 window/journal 仍各保留一次必要存储拷贝，`WithHeader` 也通过同一引用构造最终记录。
+- 该改动删除周期 sample mutation 消费链的重复 sample 读取拷贝，并删除无引用的按值属性。静态核对 backing field 生命周期与 mutation journal 一致、所有 `SampleRef` 消费只读和写入目标不变；未编译、未采样，不能声称实测耗时收益。

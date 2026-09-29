@@ -1727,3 +1727,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPoseNativePoseReadBinding` 的 16 个 slice 自动属性每次访问复制一个 `NativeSlice`；Pose handler 在同一周期内读取布局、校验、骨骼、参数、contribution 和 foot metadata 时反复触发。
 - binding 改为 backing field 保存 native slice，属性返回只读引用；构造仍从 write binding 各复制一次必要 slice。CompletionIdentity、Space、IsValid 和所有调用方读取形态不变，binding 仍不可外部写入。
 - 该改动删除周期 Pose 求值对 read binding slice 的重复属性拷贝。静态核对 16 个 slice 只在构造写入、引用生命周期与 binding 一致、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP235 Foot Placement read binding slice 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `AnimationPoseValueNativeReadBinding` 的 14 个 slice 自动属性每次访问复制 `NativeSlice`；Foot Placement 的 contribution 解析、参数读取和 pose input 校验在同一周期重复触发。
+- binding 改为 backing field 保存 native slice，属性返回只读引用；构造仍从 native read binding 各复制一次必要 slice，Foot Placement 保存 dense component pose 仍保留一次必要存储拷贝。completion、value index 和调用方读取形态不变。
+- 该改动删除 Constraint 到 World Context 和 Foot Placement 的周期 slice 属性拷贝。静态核对 14 个 slice 只在构造写入、引用生命周期与 binding 一致、消费只读；未编译、未采样，不能声称实测耗时收益。

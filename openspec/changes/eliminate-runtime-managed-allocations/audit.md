@@ -1138,3 +1138,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 静态复查发现 AP135 在 `readonly struct AnimationActionStepClockSample` 上使用 private setter 和对象初始化器；C# 只读结构不允许该实例状态写入方式，属于会阻断编译的结构缺陷。
 - 公共构造器委托给显式 `validateInputs` 内部构造器：外部入口先执行 phase、duration 和 time 校验；`FromValidated` 传入已验证边界并直接赋值。四个属性恢复只读 getter，字段值、异常类型和异常顺序不变。
 - 该修复保留 AP135 的已验证入口，不引入兼容路径或第二数据源。静态核对 struct 修饰、两个构造器委托、唯一 internal 调用点和公共构造器外部合同；未编译，本轮不做运行验证。
+
+### AP137 SpaceConversion typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- SpaceConversion 每次求输出时先按 `(NodeId, PortId)` 查端口 definition，再按 Kind switch 选择值类型，最后在 `m_InputPorts` Dictionary 中重复 tuple 哈希并做类型测试。其输入端口和类型在 graph 初始化后固定。
+- runtime 新增构造期 `RequireInputPort<T>` 和已绑定端口的 `ReadInput<T>` 正式入口；SpaceConversion 在 Initialize 解析唯一 Local/Component typed port，帧内直接读取该 port。`RequireEvaluationStage`、空值错误、类型错误和输出处理时序保持。
+- 该改动把每帧三次查找收敛为构造期一次，随后只有 port value 读取；不新增 fallback 或第二数据源。静态核对 BuildPortDefinitions 先于 evaluator Initialize、graph clone 生命周期、两个输入 Kind 和原错误文本；未编译、未采样，不能声称实测耗时收益。

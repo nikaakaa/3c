@@ -1090,6 +1090,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return ReadInput<T>(node.NativeNodeId, portId);
         }
 
+        internal FlowCanvas.ValueInput<T> RequireInputPort<T>(
+            CharacterPoseCanvasNode node,
+            string portId)
+            where T : CharacterPoseNativePortValue
+        {
+            if (!m_InputPorts.TryGetValue((node.NativeNodeId, portId), out FlowCanvas.ValueInput input) ||
+                input is not FlowCanvas.ValueInput<T> typedInput)
+            {
+                throw new InvalidOperationException(
+                    $"Pose node '{node.NativeNodeId}' input '{portId}' is not a typed native input.");
+            }
+
+            return typedInput;
+        }
+
+        internal T ReadInput<T>(
+            FlowCanvas.ValueInput<T> input,
+            PoseNodeId nodeId,
+            string portId)
+            where T : CharacterPoseNativePortValue
+        {
+            RequireEvaluationStage();
+            return input.value ??
+                throw new InvalidOperationException(
+                    $"Pose node '{nodeId.Value}' input '{portId}' has no value.");
+        }
+
         internal bool TryReadInput<T>(
             CharacterPoseCanvasNode node,
             string portId,

@@ -121,6 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly CharacterComponentBonePose[] m_ComponentScratch;
+        FlowCanvas.ValueInput<CharacterPoseNativeLocalPoseValue> m_LocalPoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_ComponentPoseInput;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
         CharacterPoseNativePortValue m_Output;
         bool m_FrameOpen;
@@ -176,6 +178,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (node.Kind != Kind)
                 throw new InvalidOperationException(
                     $"Pose space conversion handler '{NodeId}' does not match its graph node.");
+            if (m_InputSpace == CharacterPoseSpace.Local)
+                m_LocalPoseInput = runtime.RequireInputPort<CharacterPoseNativeLocalPoseValue>(
+                    node,
+                    m_InputPort.Value);
+            else
+                m_ComponentPoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
+                    node,
+                    m_InputPort.Value);
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
@@ -225,9 +235,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
-            CharacterPoseNativePortValue inputValue = runtime.ReadInputValue(
-                node,
-                m_InputPort);
+            CharacterPoseNativePortValue inputValue = m_InputSpace == CharacterPoseSpace.Local
+                ? runtime.ReadInput(m_LocalPoseInput, m_NodeId, m_InputPort.Value)
+                : runtime.ReadInput(m_ComponentPoseInput, m_NodeId, m_InputPort.Value);
             CharacterPoseNativePoseReadBinding input =
                 RequireInput(inputValue);
             if (input.Availability[0] != AnimationPoseAvailability.Pose)

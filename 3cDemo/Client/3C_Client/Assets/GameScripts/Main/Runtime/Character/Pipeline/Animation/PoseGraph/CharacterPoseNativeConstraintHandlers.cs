@@ -299,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeConstraintNodeHandler
     {
         readonly CharacterFootPlacementConstraintHandle m_Handle;
+        FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
         CharacterPoseNativeGoalContributionValue m_Output;
 
         internal CharacterPoseNativeFootPlacementHandler(
@@ -312,6 +313,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native Foot Placement handle is invalid.",
                     nameof(handle));
             m_Handle = handle;
+        }
+
+        public override void Initialize(CharacterPoseNativeGraphRuntime runtime)
+        {
+            base.Initialize(runtime);
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
+                runtime.Graph.RequireNode(NodeId),
+                "pose");
         }
 
         public override CharacterPoseNativePortValue EvaluateOutput(
@@ -329,9 +338,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
-                runtime.ReadInput<CharacterPoseNativeComponentPoseValue>(
-                    node,
-                    "pose");
+                runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
             CharacterPoseNativePoseReadBinding binding = input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||
@@ -417,6 +424,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Handle = handle;
         }
 
+        public override void Initialize(CharacterPoseNativeGraphRuntime runtime)
+        {
+            base.Initialize(runtime);
+            m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
+                runtime.Graph.RequireNode(NodeId),
+                "pose");
+        }
+
         public override CharacterPoseNativePortValue EvaluateOutput(
             CharacterPoseNativeGraphRuntime runtime,
             CharacterPoseCanvasNode node,
@@ -432,9 +447,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeComponentPoseValue input =
-                runtime.ReadInput<CharacterPoseNativeComponentPoseValue>(
-                    node,
-                    "pose");
+                runtime.ReadInput(m_PoseInput, m_NodeId, "pose");
             CharacterPoseNativePoseReadBinding binding = input.Native;
             if (!binding.IsValid ||
                 binding.Space != CharacterPoseSpace.Component ||

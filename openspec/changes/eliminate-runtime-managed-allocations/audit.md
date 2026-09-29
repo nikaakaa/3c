@@ -1192,3 +1192,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Root Orientation Warp 每次求输出都按 `(NodeId, "pose")` 哈希查找并类型测试同一个 Local Pose 输入；端口在 graph 初始化后固定。
 - handler 在 Initialize 与 FacingError contract 一起缓存 typed `ValueInput`，帧内直接读取 port value。当前帧校验、FacingError 读取、yaw warp 和 pending/commit 顺序不变。
 - 该改动消除输入姿态的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对端口名、类型、formal yaw curve 边界和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。
+
+### AP146 Constraint pose typed input 定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Foot Placement 与 Pose Bone IK Goals 每次求输出都按 `(NodeId, "pose")` 哈希查找并类型测试同一个 Component Pose 输入；端口在 graph 初始化后固定。
+- 两个 handler 在 base Initialize 校验节点身份后分别缓存 typed `ValueInput`，帧内直接读取 port value。Pose 可用性校验、weight override、Constraint 调用、goal header 和 pending 校验顺序不变。
+- 该改动消除两个 Constraint 主姿态输入的每帧 tuple 查找和类型测试；不新增第二数据源。静态核对 base 生命周期、端口名、类型和 Evaluate 读取链；未编译、未采样，不能声称实测耗时收益。

@@ -508,7 +508,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (!header.ActorId.Equals(ingress.ActorId) ||
                     !header.NumericProfile.Equals(numericProfile) ||
                     header.SourceTick != ingress.Source.SourceTick || header.Sequence != ingress.Sequence ||
-                    !string.Equals(header.FactIdentity.ToString(), ingress.FactIdentity, StringComparison.Ordinal))
+                    !string.Equals(header.FactIdentity.Value, ingress.FactIdentity, StringComparison.Ordinal))
                 {
                     throw Failure("execution_plan_ingress_mismatch", "ExecutionPlan typed ingress identity is invalid.");
                 }

@@ -693,6 +693,12 @@
 - 四处将 `!TraceEnabled` 提前返回移到 detail 构造前；同一条拒绝的 action trace 和 action result 继续共用同一字符串，记录类型、代码、顺序和返回值不变。请求不可用时先设置 default request 再跳过 trace。Trace 开关由评估期 TraceSink 固定，单次流程内不会中途切换。
 - 关闭采样时这些 rejection/请求缺失路径不再做字符串插值；开启采样时输出不变。静态核对四个入口、共用 detail、Trace/TraceActionResult 内部边界和差异；未编译、运行回放或采样。
 
+### AP88 Execution Plan ingress 身份周期 ToString（2026-09-29，已实施，本轮未编译）
+
+- 两域 Pipeline Transaction 的 `ValidateIngress` 每条 ingress 都把 header 的 `StableHash.FactIdentity` 转成 64字符字符串，再与 execution plan 已持有的 string 身份做 Ordinal 比较。该验证每 step 执行，身份本身已固定。
+- 改为读取 `StableHash.Value` 直接比较；StableHash 构造边界已保证 64位小写十六进制，execution plan 的 FactIdentity 字符串排序与去重规则不变，异常条件和消息不变。
+- 每条每 step ingress 少一次整段身份字符串分配；匹配/不匹配行为不变。静态核对 StableHash 合同、两域唯一修改点、Ordinal 比较和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

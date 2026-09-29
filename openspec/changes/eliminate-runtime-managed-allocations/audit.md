@@ -1378,3 +1378,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Body Presentation 的 committed branch replacement 每次移除旧尾部时新建 `List<ulong>`；该路径由正式提交流分支替换触发，不是初始化专用。
 - runtime 持有复用 tick list；每次 Clear 后按当前 committed count 预留容量，再按原有序字典枚举顺序收集 `>= firstTick` 的 tick，并按同一顺序移除 body 和 yaw velocity。
 - 该改动删除分支替换的每次局部 List 分配；不改变 replacement 判定、tick 排序、retarget 或字典删除顺序。静态核对两个调用点、容量上界、枚举只读和 Dispose/Reset 生命周期；未编译、未采样，不能声称实测耗时收益。
+
+### AP177 physical pose per-bone 只读引用化（2026-09-30，已实施，本轮未编译）
+
+- Final Publication 的物理写回在每根骨骼循环中通过 `AnimationReadOnlyBuffer<T>` 索引器取值；`AnimationLocalBonePose` 包含 position、rotation 和 scale，索引器按值返回后在写回前重复复制整份 pose。
+- 物理 writer 改用已有 `ElementAt` 正式只读引用入口；root policy 分支直接绑定 root reference pose 或 dense pose 元素，随后按原顺序读取字段并写回 Transform。
+- 该改动删除逐骨的整份 pose 拷贝；不改变 bone 可用性校验、root 排除规则、Transform 写入顺序或 foot IK capture 时机。静态核对 buffer readonly struct、`ElementAt` 返回合同和 Write 唯一循环；未编译、未采样，不能声称实测耗时收益。

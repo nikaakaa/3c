@@ -95,11 +95,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
                 Transform bone = m_Bones[boneIndex];
-                AnimationLocalBonePose pose =
-                    m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
-                    boneIndex == m_RootBoneIndex
-                        ? m_RootReferencePose
-                        : poses[boneIndex];
+                ref readonly AnimationLocalBonePose pose;
+                if (m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
+                    boneIndex == m_RootBoneIndex)
+                    pose = ref m_RootReferencePose;
+                else
+                    pose = ref poses.ElementAt(boneIndex);
                 bone.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
                 bone.localScale = pose.Scale;
             }

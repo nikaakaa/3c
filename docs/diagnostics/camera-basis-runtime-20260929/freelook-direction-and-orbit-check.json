@@ -1,0 +1,235 @@
+{
+  "vertical_before": {
+    "samples": [
+      {
+        "frame": 0,
+        "lookY": -0.147755116,
+        "cameraY": 0.5902835,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 30,
+        "lookY": 0.0241836589,
+        "cameraY": -0.114775874,
+        "radius": 3.71145582,
+        "targetRadius": 3.610636
+      },
+      {
+        "frame": 60,
+        "lookY": 0.05387355,
+        "cameraY": -0.301695079,
+        "radius": 3.514028,
+        "targetRadius": 3.5117228
+      }
+    ],
+    "maxRadiusError": 0.12127161,
+    "maxOffsetError": 0.0550226532
+  },
+  "vertical_after": {
+    "samples": [
+      {
+        "frame": 0,
+        "lookY": -0.147755116,
+        "cameraY": 0.5902835,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 30,
+        "lookY": -0.405829638,
+        "cameraY": 1.44758391,
+        "radius": 3.47998381,
+        "targetRadius": 3.47998381
+      },
+      {
+        "frame": 60,
+        "lookY": -0.468809962,
+        "cameraY": 1.6331861,
+        "radius": 3.425874,
+        "targetRadius": 3.425874
+      }
+    ],
+    "maxRadiusError": 0.0,
+    "maxOffsetError": 0.0
+  },
+  "horizontal_after": {
+    "samples": [
+      {
+        "frame": 0,
+        "yaw": 0.0,
+        "cameraY": 0.5902835,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 30,
+        "yaw": 32.3188858,
+        "cameraY": 0.5902836,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 45,
+        "yaw": 37.91093,
+        "cameraY": 0.590283453,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 46,
+        "yaw": 37.91093,
+        "cameraY": 0.590283453,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      },
+      {
+        "frame": 60,
+        "yaw": 37.91093,
+        "cameraY": 0.590283453,
+        "radius": 3.7426796,
+        "targetRadius": 3.7426796
+      }
+    ],
+    "maxRadiusError": 0.0,
+    "maxOffsetError": 0.0
+  },
+  "published_readback": {
+    "schema": "character-camera-projection/v9",
+    "modes": 9,
+    "blends": 9,
+    "shakes": 21,
+    "stretches": [
+      {
+        "id": "Corin_Attack_Branch_01_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Branch_01_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Branch_02_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Branch_02_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Normal_03_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Normal_05_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Counter_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_SwitchIn_Attack_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_SwitchIn_Attack_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_SwitchIn_Attack_Ex_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_SwitchIn_Attack_Ex_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_SwitchIn_Attack_Ex_CamStretch_03",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_BeHitAid_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_AssaultAid_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_AssaultAid_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Normal_05_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Branch_03_CamStretch_01",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      },
+      {
+        "id": "Corin_Attack_Branch_03_CamStretch_02",
+        "schema": "character-camera-stretch/v2",
+        "points": 0,
+        "dirty": false
+      }
+    ],
+    "topHeight": 2.225,
+    "topRadius": 0.2,
+    "curvature": 0.25,
+    "follow": "(0.00, -0.23, 0.00)",
+    "aim": "(0.00, -0.23, 0.00)",
+    "dirty": true,
+    "maxSpeed": "(1550.00, 25.00)",
+    "dragExit": 0.1
+  },
+  "unity_instance": "e852139597e42532",
+  "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client",
+  "method": "Edit mode invocation of production ResolveLook, BuildTargetPlan and Evaluate; 60 FPS; mouse delta 10 on frames 1 through 30; no Play or replay",
+  "console_errors": 0,
+  "profile_dirty_after_targeted_save": false,
+  "limitations": [
+    "Input direction change applies to the shared mouse/stick elevation axis; device gameplay not tested.",
+    "Horizontal release still adds 5.5920442 degrees in this scenario; this change does not prove input tail parity with ZZZ.",
+    "Full Delay and top orbit runtime consumption remain incomplete."
+  ],
+  "source_sha256": {
+    "3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Runtime\\Character\\Camera\\Solver\\CharacterCameraFramePlanner.cs": "d9815820c27f8038eb049795b576be831f78dbd07daf35c651a2af7dee38ee43",
+    "3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Runtime\\Character\\Camera\\Solver\\CharacterCameraSequenceEvaluator.cs": "a0973ee1b3a73b77cb1e8910a9566fd4f49437bbaf2d0e496b80c48fae48aedb"
+  }
+}

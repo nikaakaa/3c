@@ -95,8 +95,6 @@ namespace ThirdPersonCamera
         readonly float m_SmoothTime;
         CameraWorldBasicData m_Current;
         Vector3 m_PivotVelocity;
-        float m_RadiusVelocity;
-        Vector2 m_OffsetVelocity;
         bool m_Initialized;
 
         public CameraWorldBasicHistory(float smoothTime)
@@ -108,8 +106,6 @@ namespace ThirdPersonCamera
         {
             m_Current = default;
             m_PivotVelocity = Vector3.zero;
-            m_RadiusVelocity = 0f;
-            m_OffsetVelocity = Vector2.zero;
             m_Initialized = false;
         }
 
@@ -134,21 +130,7 @@ namespace ThirdPersonCamera
                 m_SmoothTime,
                 Mathf.Infinity,
                 deltaTime);
-            float radius = Mathf.SmoothDamp(
-                m_Current.Radius,
-                target.Radius,
-                ref m_RadiusVelocity,
-                m_SmoothTime,
-                Mathf.Infinity,
-                deltaTime);
-            Vector2 offset = Vector2.SmoothDamp(
-                m_Current.Offset,
-                target.Offset,
-                ref m_OffsetVelocity,
-                m_SmoothTime,
-                Mathf.Infinity,
-                deltaTime);
-            SetCurrent(new CameraWorldBasicData(pivot, target.Rotation, radius, offset, target.FieldOfView), false);
+            SetCurrent(target.WorldBasicData.WithPivotLocation(pivot), false);
             return target.WithWorldBasicData(m_Current);
         }
 
@@ -158,8 +140,6 @@ namespace ThirdPersonCamera
             if (resetVelocity)
             {
                 m_PivotVelocity = Vector3.zero;
-                m_RadiusVelocity = 0f;
-                m_OffsetVelocity = Vector2.zero;
             }
             m_Initialized = true;
         }

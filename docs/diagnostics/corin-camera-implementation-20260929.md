@@ -2,6 +2,12 @@
 
 ## 范围与状态
 
+当前交付状态：**鼠标上下方向修正及轨道额外滞后修正已完成 Unity 编译，可进入用户手测；完整相机复刻仍未完成**。目标实例 e852139597e42532 的项目路径正确，Edit 模式、compiling=false、building=false，Console 当前 0 条错误。先前外部状态机编译阻塞已解除，下文各批次的阻塞描述只代表当时状态。
+
+此前在途配置已通过 CorinCameraResourcesAuthoring.Publish 正式生成：投影 v9，Delay 9 模式和 9 过渡，21 项 Shake，18 项 Stretch 全部为 v2。正式 Build/RequireValid 与资产回读成功；TopOrbit=(2.225,0.2)、TopCurvature=0.25、Follow/Aim 偏移已进入投影。回读时 Profile 标记 dirty，随后仅保存该 Profile，确认 dirty=false；18 项 Stretch 回读时均为非 dirty。
+
+尚未完成：完整 Delay 模式与正式状态输入、Pitch/Stretch 到顶端轨道及 Follow/Aim 偏移的运行消费、震动静默/保持与独立时间倍率。数据发布不能代替这些消费者；默认跟随 Pivot 仍用现有 SmoothDamp。Goal 工具仍保留旧 blocked 状态，本轮没有把整体目标标成 complete。
+
 最新分工：用户已将命中链交给其他窗口，本窗口只负责相机配置。此前已进行的命中数据修改与真实执行缺口见 [命中链交接](corin-hit-chain-handoff-20260929.md)；下文早先的整链授权保留为过程记录，不再代表当前工作分配。
 
 2026-09-29，用户已创建实现 goal，并明确不运行 replay。本文记录第一项可独立交付的震动核心修正；整个相机 goal 尚未完成。
@@ -405,3 +411,71 @@ JCCGIBAKPEE.NFOMHELEAFH（0x101D4180）接收CameraAvatarPrepareData与NEGKDBJNJ
 - CameraDelayDatas.CAM_MINDISRATIO(+0x14)先由0x14A3A1A9～0x14A3A1AE写入solver+0x1B0，再由0x1596BD97～0x1596BDC7传给0x1596E2C0。该函数使用`offsetLength * max(0.2, modeMinimumDistanceRatio)`作为最小距离；0.2常量在RVA0x0281CB74已读取。它与上面的跨轴半径是两项独立参数，不可合并。Default_Normal多数模式比例0.6、模式2/11为0.5，所以不能直接照搬本地CinemachineTransposer固定0.2的最小距离比例。作者数据中此模式比例已保留。
 
 补入字段后，相机合同程序集及CorinCameraResourcesAuthoring.cs再次使用同版本Unity Roslyn、真实引用及原响应文件进行独立编译，均exit 0；Temp产物没有加载或替换Editor程序集。编译记录的源码哈希已更新。此批源码仍与前一批Delay迁移一并保留在工作区，等待完整消费链及正式资产统一生成；没有运行Play/replay、没有改IK、没有修改其他窗口的编译错误。
+
+## 正式状态输入缺口与投影数据隔离
+
+项目接入核对：CharacterCameraDomainRuntime.Present目前只从CharacterBodyPresentationFrame拿VisiblePosition／VisibleRotation，再合并Look输入与时间；没有tag输入。CharacterPresentationFactSchema声明了运动模式和速度等事实，但没有角色tag。当前CorinGameplayTagCatalog只有Dodge、Movement、Locomotion等分类，没有原作Idle／Move／Evade。逻辑域虽然有OwnedTagsSnapshot和按来源授予tag的机制，现有角色状态生产以及提交到相机的链没有这些原作事实。因此不能在相机里凭速度非零或动画显示名合成它们。用户已限定本窗口只做相机配置，本批已就补角色状态事实生产→逻辑提交→相机输入的范围发出确认，答复前不修改该跨模块链。
+
+相机内部已修正上一批在途源码的一处数据归属问题：CharacterCameraProjectionPayload通过CameraDelaySettings复制构造生成独立配置；模式数组、各轨道状态／tag数组、过渡曲线和升降曲线均复制，值类型数值直接拷贝。编辑器修改Profile曲线不会直接改动既有投影。复制发生在构建阶段，高频帧链没有新增复制或分配。相机合同与CorinCameraResourcesAuthoring生产文件重新单独编译均exit 0，源码指纹已更新；未新增测试、未加载Temp产物、未发布v9资产。运行时消费仍未完成，Goal保持active。
+
+## 本窗口范围收敛：相机配置
+
+用户再次明确命中链已分给其他窗口，本窗口只做相机配置。此前对角色状态事实生产、逻辑提交和相机输入链的扩展询问不作为当前待办继续等待；本轮不扩展这些职责。配置数据齐全与运行时完整消费是两个交付状态，不能混称复刻完成。
+
+本轮核对现有 PublishDelay 源码和 Default_Normal：9种模式、27组轨道参数、9条过渡均有导入路径；递归核对模式、过渡及升降曲线的叶字段，只有曲线编辑元信息 m_TangentMode 和序列化版本 ver 没有进入运行参数。时间、值、数值切线、权重及 wrap 均已覆盖。原文件 SHA256 为 fa016f5e7fa792308ce4ee3164d3d070e4126dcb6fb1bc38dd205d085fb230f3。此项是源码字段覆盖核对，不是生成资产逐值回读。
+
+四个生产源码文件的 SHA256 与 follow-delay-authoring-compile-check.json 中上次成功独立编译的指纹全部一致，因此没有重复运行同一编译。目标 Editor 为 e852139597e42532，项目路径正确，Edit 模式且没有正在编译。Console 及当前磁盘源码仍指向 OperationStateMachineRuntime.cs:267 的两个 int→ulong 参数错误，正式发布继续受阻。本轮没有重复刷新、加载临时程序集或手写序列化资产。
+
+配置正式发布入口仍为 CorinCameraResourcesAuthoring.Publish；完成后应回读 Profile.Delay 和 v9 投影。当前未执行这一发布，不能把在途 C# authoring 称为已可手测的相机更新。完整 Delay 运行消费、静默与独立时钟等此前研究缺口仍未实现，本轮范围收敛不把这些缺口标为完成。
+
+## 震动模块开关进入正式配置
+
+本批补上两项此前未导入的 Default_Normal 配置，均按原值 false 导入：MUTE_CAMERA_SHAKE 和 MUTE_CAMERA_SHAKE_ADVANCED_PROCESS。CorinCameraResourcesAuthoring.Publish 调用 PublishShakeProcessing，经 CharacterCameraProfile.ConfigureShakeProcessing 写入正式 Profile，再复制到 CharacterCameraProjectionPayload；两项均参与 Profile.Revision。沿用尚未发布的 v9，不另造运行 JSON 配置或备用资源路径。轨道、Delay、输入轴和震动处理的原文件路径及 Default_Normal 选择统一为同一个 ReadAvatarConfiguration 入口。
+
+原作证据进一步明确：host-IDLJBLBBIOH.json（0x174DE6A0）在配置存在、Accessor+0x188为0的分支检查配置+0xBD；MUTE_CAMERA_SHAKE=false时才返回true。它是执行资格条件的一部分，不能据此把它实现成单纯清空最终输出，更不能当成AnimatorZoneMuteCameraShake触发的0.12秒渐静默。host-LMFCLMLPJLJ.json（0x174DDA40）读取配置+0xBE并返回该布尔值；host-MEIBNMFIBPN.json在0x174DD43A与0x174DD482使用同字段控制时间选择和非正时间处理。字段身份由camera-module-config-type.json的189/190偏移确认，不根据名称猜测。
+
+本批只交付配置与投影源码，不接角色状态、额外时间倍率或命中生产链；震动求值器尚未消费这两个开关。当前原始值均为false，补齐配置本身不等于已改善画面。相机合同完整程序集和CorinCameraResourcesAuthoring生产文件使用Unity原响应文件及同版本Roslyn独立编译均exit 0，随后关闭构建服务器。没有运行Play/replay，没有新增测试，没有加载Temp程序集。Unity整体编译仍受外部状态机错误阻塞，因此未执行Publish和资产回读，不能称为已经发布。
+
+## 基础轨道缺项与Stretch点位列表修正
+
+本轮只推进相机配置迁移及其必要调用方，没有接入命中、IK或角色tag生产。
+
+基础轨道：Default_Normal.DEFAULTSPHEREDATA中的TopOrbit、TopCurvature、DEFAULT_FOLLOWOFFSET、DEFAULT_LOOKATOFFSET此前未进入默认轨道阶段。现由PublishDefaultOrbit读取，并经CameraFrameOnePointByTrackStage.ConfigureOrbit、CameraSequenceProjectionCompiler传给CameraFrameOnePointByTrackPayload。原值为TopOrbit=(height=2.2249999,radius=0.2)、TopCurvature=0.25，Follow/Aim偏移均为(0,-0.225,0)。TopOrbit仍是独立延伸数据，没有放进Top/Middle/Bottom三点数组。Sequence序列化内容已经进入CameraAssetRevision，因此新增字段无需再建一套版本状态。当前资产中的该阶段仅发现CorinCameraDefaultSequence一处；所有C#构造调用方已一起更新。运行采样尚未消费这些新增字段，不能把数据补齐称为轨道延伸已实现。
+
+Stretch有一处真实类型错误：zoom-stretch-config-types.json的ConfigCameraStretch.RuntimeCamFollowYPoints为List<string>，偏移0x20，项目旧合同却是float，并在ApplyAimPointsCameraFollowYOffset分支把它当成米数相乘。现将Asset/Payload改成string[]，投影编译复制名称数组，删除两处针对旧float的有限数校验及那条错误算术。资产schema升至character-camera-stretch/v2，由ConfigureFollowPoints在正式导入时更新；不保留旧float兼容字段。CorinCameraResourcesAuthoring.PublishEffectSettings统一导入叠加参数及点位名称，原始null列表映射为空名称集合。Aim点位的正式偏移输入尚未接通，启用该分支的资产在投影编译边界明确报错；没有增加运行帧校验或伪造点位。
+
+已逐项核对当前18个Stretch资产的11个特殊仰角/FollowY标量，共198项，float按float32比较，全部一致；18项RuntimeCamFollowYPoints原始值均为null，两个FollowY开关均为false。因此这项类型迁移不会启用任何当前可琳资源原本关闭的分支，也不能据此宣称解决了当前画面手感。特殊仰角运行公式及额外FollowY的原作对齐仍未完成。核对记录见stretch-follow-points-authoring-audit.json。
+
+相机合同程序集、CorinCameraResourcesAuthoring生产文件、相机运行程序集均使用当前Unity生成响应文件和同版本Roslyn独立编译exit 0；运行程序集只将输出重定向到Temp，并引用本批合同ref产物。未加载这些程序集进Editor，未新增测试，未运行Play/replay。结束时目标Editor Console仍为OperationStateMachineRuntime.cs:267两处int→ulong错误，因此v9投影、新轨道数据和Stretch v2资产均未发布。整个配置迁移批次保留在工作区，等待正式生成和回读，未提交成已可用版本。
+
+## 顶端轨道延伸输入与Cinemachine/Unity数学边界
+
+本轮继续查到实际调用链：原先按元数据定位的0x109EBA20没有直接call/jmp调用点；二进制还有同一采样流程的0x10A1A890实现，实际跟随模块0x14A3C720调用这一入口。不能用某个元数据RVA没有直接引用推断业务不用该算法。
+
+0x14A3C751～0x14A3C761计算顶端延伸量为Accessor[0x2F0]+Accessor[0x2EC]-Accessor[0x2C8]，即TargetCalcData.anchorOverrunElevationRatioDelta + _anchorElevationRatio - 全局仰角上限；普通曲线采样的仰角是独立参数。布局来自CameraDataAccessor.TargetCalcData(+0x2D8)、CameraFollowCalcData的值类型字段，按16字节对象头修正后对应0x2EC/0x2F0。min/max范围也由已取证的calc-elevation-set/final确认。
+
+已证明的一条超出量生产路径是0x1C3E3DF0，它读取Accessor.Pitch(+0x400)中的实例；选出的俯仰值在0x1C3E4177～0x1C3E41B6拆成受限基础仰角与max(0,选值-clamp(选值,min,max))，后者写0x2F0。这里没有把鼠标轴自动扩展到1以上；也没有证明它是全游戏唯一写入者。项目当前Stretch直接修改欧拉角，不具备原作这条完整Pitch求值与轨道重新采样链，不能给新增TopOrbit字段随便传一个鼠标越界值就宣称完成。
+
+顶端空间公式已确认：普通轨道点A=(0,height,-radius)，顶点B=(0,TopOrbit.height,-TopOrbit.radius)，t=clamp01(2*延伸量)，c=clamp01(TopCurvature)，输出lerp(lerp(A,B,t),Vector3.Slerp(A,B,t),c)。采样代码0x10A1AA5D和具名UnityEngine.Vector3.Slerp的0x1E4923C7都调用0x5408E60槽，829快照指针一致。这次可明确复用Unity的Vector3.Slerp原语，但不能据此把整个轨道系统等同于某版Cinemachine。
+
+证据与逐文件哈希见top-orbit-input-summary.json及其evidence_files。所列替换分支开关在829中为0；0x58A09E7单列为初始化标志，不混称IFix。无新增运行代码或编译；前一轮编译通过的配置源码保持不变。外部状态机源码仍有int→ulong错误，正式资产生成仍未执行。后续需要沿相机自身Pitch/Stretch消费链闭合这些输入，不需要扩展命中或IK职责。
+
+## Default_Normal默认键与829实际场景核对
+
+本轮补齐了配置键选择证据，不能继续把“829玩家快照”与“当时正在用Default_Normal”混为一谈。0x17802E60沿静态持有链找到JCCGIBAKPEE实例，交给0x1229D1D0取当前相机模块配置。829实例地址0x70014DACA80，其+0x78场景键和+0xA8缓存键指向同一个MainCity_Normal字符串；+0xB0缓存配置为0x70015DF1E00，+0x36B脏标记为0。实际对象类型是CameraModuleAvatarDataConfigExt，继承已导出布局的CameraModuleAvatarDataConfig。以父类型字段偏移读取的25项float/bool都与原JSON的MainCity_Normal逐项相同。
+
+原作默认键也已直接证明：0x101D7EA0在场景键为空时读取RVA0x5815F30的字符串，829内容为Default_Normal。相应取键与缓存查询的替换分支开关均为0；初始化标志单独记录。因此当前C#作者选择Default_Normal有原作“未指定场景键”的来源，不是根据名字猜出的组；但仍没有据此声称829处于可琳战斗场景，或Default_Normal是所有场景/角色的唯一键。
+
+MainCity_Normal与Default_Normal在Near/Far、基础半径、仰角、球面轨道、Delay表/过渡、拖动参数、升降阻尼以及碰撞配置等项不同。当前Corin资产的Near=0.1、Far=2000、CameraLocateRadius=3.75与Default_Normal一致，没有因829城市场景而改用另一组。829取得的玩家输入倍率仍仅标记为该快照的玩家设置，未提升为原作出厂默认。
+
+新增指针链、类型关系、25项读回、配置组差异清单与逐文件哈希保存在active-config-pointer-chain.json。这一轮没有改生产源码，没有重复编译或运行replay。目标Editor仍报外部OperationStateMachineRuntime.cs:267的两处类型错误，正式资产发布继续受阻；前几轮的相机作者迁移仍在工作区等待统一生成。
+
+## 鼠标上下方向与自由镜头轨道滞后修正
+
+用户确认“上下翻转”指鼠标上下方向反了。Look 输入经 CharacterCameraFramePlanner.ResolveLook 后进入仰角轴，删除这里额外的负号；同一正式轴路径目前也供手柄使用。这是根据用户反馈反转当前方向，不将本次输入方向选择冒称为新取得的原作证据。速度、加减速和退出时间配置未修改。
+
+CharacterCameraSequenceEvaluator 的 CameraWorldBasicHistory 原来同时平滑 Pivot、Radius 和 Offset。输入轴已经推进轨道仰角，但最终半径和构图仍落后目标，转镜时相机不在当帧计算的轨道上。本次删除 Radius/Offset 两个速度状态及额外 SmoothDamp，让旋转、半径、构图使用同帧目标；角色跟随 Pivot 保留现有平滑。
+
+在目标 Editor 的 Edit 模式调用正式 ResolveLook、BuildTargetPlan、Evaluate：60 FPS，前 30 帧鼠标 Y=10。旧版半径最大落后 0.12127161 米、Offset 最大落后 0.0550226532 米；新版两项误差均为 0。第 30 帧 cameraY 从 -0.114775874 变为 1.44758391，确认方向反转。水平同输入检查第 30 帧 yaw=32.3188858°，第 45/46/60 帧均为 37.91093°；释放后仍有约 5.6° 的输入尾段，尚未凭原作证据判定该尾段是否正确，不能据此声称所有粘滞已经解决。
+
+证据：camera-basis-runtime-20260929/freelook-direction-and-orbit-check.json。Unity 编译完成、Console 0 错误、正式投影构建成功。未运行 Play/replay，未新增测试，未验证实机手感或 GC；未改 IK/命中业务，也未提交其他窗口的 CameraRig 修改。

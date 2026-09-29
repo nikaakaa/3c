@@ -1204,3 +1204,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Full Body IK 每次求输出都按 `(NodeId, "pose")` 哈希查找 Component Pose，并重新遍历 dynamic ports 过滤 Goal Contribution；对 optional contribution 连接时还会重复执行 Try 查找和泛型 Read 查找。这些端口集合在 graph 初始化后固定。
 - handler 在 Initialize 缓存 pose typed `ValueInput`，并按原 `DynamicPorts` 顺序缓存 contribution 的 typed `ValueInput`、required 标记和端口名。帧内 required 或 connected 才读取；未连接的 optional contribution 仍跳过，goal binding、solve、输出页和 Commit 语义不变。
 - 该改动消除主 pose 的每帧查找和 dynamic contribution 的每帧过滤与重复查找；不新增第二数据源。静态核对初始化前端口表、原 dynamic 顺序、required/optional 分支、null value 错误文案和双缓冲 Commit；未编译、未采样，不能声称实测耗时收益。
+
+### AP148 ModifyBone 参数端口定容绑定（2026-09-30，已实施，本轮未编译）
+
+- Modify Bone 每次输出都重复判断 payload 是否使用 position/rotation/scale 端口，并按 `(NodeId, port)` 哈希读取 weight 和参数；optional weight 还重复字典查找和类型测试。这些端口由固定 payload 和 graph 端口表决定。
+- runtime 新增已缓存端口的 typed Try 读取，保留 `isConnected`、null value 和错误文案合同；Modify Bone 在 Initialize 缓存 weight，并只在 payload 使用对应 transform 时缓存该端口。帧内直接用缓存端口读取，同帧与 Kind 校验顺序不变。
+- 该改动消除 weight 与 transform 参数的每帧 tuple 查找、类型测试和重复 payload 判断；不改变未连接 weight 回退 payload weight 的语义。静态核对端口形状、缓存唯一入口、原错误文本和输出页写入顺序；未编译、未采样，不能声称实测耗时收益。

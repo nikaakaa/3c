@@ -1118,6 +1118,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool TryReadInput<T>(
+            FlowCanvas.ValueInput<T> input,
+            PoseNodeId nodeId,
+            string portId,
+            out T value)
+            where T : CharacterPoseNativePortValue
+        {
+            RequireEvaluationStage();
+            if (!input.isConnected)
+            {
+                value = default;
+                return false;
+            }
+            value = input.value ??
+                throw new InvalidOperationException(
+                    $"Pose node '{nodeId.Value}' input '{portId}' has no value.");
+            return true;
+        }
+
+        internal bool TryReadInput<T>(
             CharacterPoseCanvasNode node,
             string portId,
             out T value)

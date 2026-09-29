@@ -17,6 +17,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterComponentBonePose[] m_ComponentScratch;
         readonly AnimationLocalBonePose[] m_LocalScratch;
         FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_WeightInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_PositionInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_RotationInput;
+        FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> m_ScaleInput;
         CharacterModifyBonePosePayload m_Modification;
         int[] m_Descendants;
         int[] m_DescendantParents;
@@ -65,6 +69,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseInput = runtime.RequireInputPort<CharacterPoseNativeComponentPoseValue>(
                 node,
                 "pose");
+            m_WeightInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                node,
+                "weight");
+            if (modification.UsesPort("position"))
+                m_PositionInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                    node,
+                    "position");
+            if (modification.UsesPort("rotation"))
+                m_RotationInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                    node,
+                    "rotation");
+            if (modification.UsesPort("scale"))
+                m_ScaleInput = runtime.RequireInputPort<CharacterPoseNativeParameterValue>(
+                    node,
+                    "scale");
             m_TargetParent = m_Rig.GetPoseParentIndex(m_BoneIndex);
             var affected = new bool[m_Rig.PhysicalBoneCount];
             var descendants = new List<int>();
@@ -152,7 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Modify Bone '{NodeId}' received an unavailable Component Pose.");
             }
-            float weight = ResolveWeight(runtime, node);
+            float weight = ResolveWeight(runtime);
             m_WriteBinding = (m_PageIndex == 0
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
@@ -162,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_WriteBinding);
             if (input.Availability[0] == AnimationPoseAvailability.Pose)
             {
-                bool modifies = ResolveModification(runtime, node, weight,
+                bool modifies = ResolveModification(runtime, weight,
                     out Vector3 position, out Quaternion rotation, out Vector3 scale);
                 NativeSlice<AnimationLocalBonePose> outputPoses = m_WriteBinding.DenseLocalPoses;
                 for (int i = 0; i < m_Rig.PoseBoneCount; i++)
@@ -276,35 +295,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearFrame();
         }
 
-        static float ResolveWeight(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node)
+        float ResolveWeight(CharacterPoseNativeGraphRuntime runtime)
         {
-            if (!runtime.TryReadInput(node, "weight", out CharacterPoseNativeParameterValue value))
-                return ((CharacterModifyBonePosePayload)node.Payload).Weight;
+            if (!runtime.TryReadInput(
+                    m_WeightInput,
+                    m_NodeId,
+                    "weight",
+                    out CharacterPoseNativeParameterValue value))
+                return m_Modification.Weight;
             if (value.Value.Kind != EventGraphValueKind.Float32 ||
                 !float.IsFinite(value.Value.Float32Value) ||
                 value.Value.Float32Value < 0f ||
                 value.Value.Float32Value > 1f)
             {
                 throw new InvalidOperationException(
-                    $"Modify Bone '{node.NodeId}' weight input must be a Float32 in [0, 1].");
+                    $"Modify Bone '{m_NodeId}' weight input must be a Float32 in [0, 1].");
             }
             return value.Value.Float32Value;
         }
 
-        bool ResolveModification(CharacterPoseNativeGraphRuntime runtime, CharacterPoseCanvasNode node, float weight,
+        bool ResolveModification(CharacterPoseNativeGraphRuntime runtime, float weight,
             out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
             position = m_Modification.Position;
             rotation = m_Modification.Rotation;
             scale = m_Modification.Scale;
-            if (m_Modification.UsesPort("position"))
-                position = ReadTransform(runtime, node, "position", EventGraphValueKind.Vector3).Vector3Value;
-            if (m_Modification.UsesPort("rotation"))
-                rotation = ReadTransform(runtime, node, "rotation", EventGraphValueKind.Quaternion).QuaternionValue;
-            if (m_Modification.UsesPort("scale"))
-                scale = ReadTransform(runtime, node, "scale", EventGraphValueKind.Vector3).Vector3Value;
+            if (m_PositionInput != null)
+                position = ReadTransform(
+                    runtime,
+                    m_PositionInput,
+                    "position",
+                    EventGraphValueKind.Vector3).Vector3Value;
+            if (m_RotationInput != null)
+                rotation = ReadTransform(
+                    runtime,
+                    m_RotationInput,
+                    "rotation",
+                    EventGraphValueKind.Quaternion).QuaternionValue;
+            if (m_ScaleInput != null)
+                scale = ReadTransform(
+                    runtime,
+                    m_ScaleInput,
+                    "scale",
+                    EventGraphValueKind.Vector3).Vector3Value;
             if (!CharacterPoseConstraintMath.IsFinite(position) ||
                 !CharacterPoseConstraintMath.IsFinite(rotation) || Quaternion.Dot(rotation, rotation) <= 0f ||
                 !CharacterPoseConstraintMath.IsUsableScale(scale))
@@ -384,12 +417,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        static EventGraphValue ReadTransform(CharacterPoseNativeGraphRuntime runtime, CharacterPoseCanvasNode node,
+        EventGraphValue ReadTransform(CharacterPoseNativeGraphRuntime runtime,
+            FlowCanvas.ValueInput<CharacterPoseNativeParameterValue> input,
             string port, EventGraphValueKind kind)
         {
-            CharacterPoseNativeParameterValue value = runtime.ReadInput<CharacterPoseNativeParameterValue>(node, port);
-            if (value.CompletionIdentity != runtime.CurrentLineage.CompletionIdentity || value.Value.Kind != kind)
-                throw new InvalidOperationException($"Modify Bone '{runtime.Graph.GraphId}/{node.NodeId}/{port}' requires a same-frame {kind}.");
+            CharacterPoseNativeParameterValue value = runtime.ReadInput(
+                input,
+                m_NodeId,
+                port);
+            if (value.CompletionIdentity != runtime.CurrentLineage.CompletionIdentity ||
+                value.Value.Kind != kind)
+            {
+                throw new InvalidOperationException(
+                    $"Modify Bone '{runtime.Graph.GraphId}/{m_NodeId}/{port}' requires a same-frame {kind}.");
+            }
             return value.Value;
         }
 

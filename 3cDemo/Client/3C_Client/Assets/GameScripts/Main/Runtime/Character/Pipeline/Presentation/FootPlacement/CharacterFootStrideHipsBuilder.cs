@@ -210,6 +210,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisFrame
     {
+        readonly CharacterFootPlacementAnimatedPose m_Pose;
+
         internal CharacterFootPelvisFrame(
             Vector3 componentUp,
             Vector3 poseRootPosition,
@@ -227,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
-            Pose = pose;
+            m_Pose = pose;
             LeftCorrectedSole = leftCorrectedSole;
             RightCorrectedSole = rightCorrectedSole;
             LeftLegLength = leftLegLength;
@@ -240,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PoseRootPosition { get; }
         internal Vector3 AnimatedPelvis { get; }
         internal Vector3 AnimatedPelvisComponentPosition { get; }
-        internal CharacterFootPlacementAnimatedPose Pose { get; }
+        internal ref readonly CharacterFootPlacementAnimatedPose Pose => ref m_Pose;
         internal Vector3 LeftCorrectedSole { get; }
         internal Vector3 RightCorrectedSole { get; }
         internal float LeftLegLength { get; }

@@ -1853,3 +1853,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootPelvisInput` 的 Intent、PrimarySupport、Frame、Reach 自动属性每次读取复制完整结构；`ResolvePelvis` 开头先复制四个局部，Frame 和 Reach 再反复进入校验、目标、reach 与 response 求解。
 - 四个结构属性改为 backing field 只读引用；`ResolvePelvis` 的四个局部直接绑定同一 backing field。构造入参、接受/释放/双边支持分支、posture、reach、spring 计算和异常时机不变。
 - 该改动删除 Pelvis 求解入口的整份 intent、primary support、frame 和 reach input 拷贝。静态核对 input 为 readonly struct、生命周期覆盖方法调用、消费点只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP256 Pelvis frame pose 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootPelvisFrame.Pose` 自动属性每次读取复制完整 AnimatedPose；`BuildHeightTarget` 连续读取左右脚 sole，`ResolvePelvis` 选择 support posture 又读取左右脚。
+- Pose 改为 backing field 只读引用。构造仍从 `in AnimatedPose` 保留一次必要 frame 字段写入；height target、posture 选择和几何校验字段不变。
+- 该改动删除 Pelvis height/posture 求解中的整份 AnimatedPose 重复拷贝。静态核对 frame 为只读输入、pose 生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。

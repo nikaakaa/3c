@@ -205,7 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose subgraph '{NodeId}' has no prepared child demand.");
             }
             BindInputs(runtime, true);
-            CharacterPoseNativeSourceDemand childDemand = m_ChildPreparation.Demand;
+            ref readonly CharacterPoseNativeSourceDemand childDemand =
+                ref m_ChildPreparation.Demand;
             m_ChildEvaluation = m_Child.Evaluate(
                 m_ChildLease,
                 in childDemand,
@@ -232,7 +233,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose subgraph '{NodeId}' has no prepared child demand.");
             }
-            CharacterPoseNativeSourceDemand childDemand = m_ChildPreparation.Demand;
+            ref readonly CharacterPoseNativeSourceDemand childDemand =
+                ref m_ChildPreparation.Demand;
             m_Child.PrepareEvaluation(
                 m_ChildLease,
                 in childDemand,

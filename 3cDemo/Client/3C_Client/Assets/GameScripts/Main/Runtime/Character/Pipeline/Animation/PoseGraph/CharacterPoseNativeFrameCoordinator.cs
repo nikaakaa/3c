@@ -48,7 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose frame preparation failed ({preparation.Source}): {preparation.Message}");
                 }
-                CharacterPoseNativeSourceDemand demand = preparation.Demand;
+                ref readonly CharacterPoseNativeSourceDemand demand =
+                    ref preparation.Demand;
                 m_Role.PrepareEvaluation(lease, in demand, input.PresentationFrame);
                 phase = AnimationPresentationFramePhase.EvaluateBarrier;
                 enteredBarrier = true;

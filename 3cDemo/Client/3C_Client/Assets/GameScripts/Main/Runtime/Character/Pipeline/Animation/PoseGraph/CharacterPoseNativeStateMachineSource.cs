@@ -513,7 +513,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
                 }
-                CharacterPoseNativeSourceDemand childDemand = state.Preparation.Demand;
+                ref readonly CharacterPoseNativeSourceDemand childDemand =
+                    ref state.Preparation.Demand;
                 state.Graph.PrepareEvaluation(
                     state.Lease,
                     in childDemand,
@@ -538,7 +539,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int activeIndex = 0; activeIndex < m_ActiveStateCount; activeIndex++)
             {
                 StateRuntime state = m_ActiveStates[activeIndex];
-                CharacterPoseNativeSourceDemand demand = state.Preparation.Demand;
+                ref readonly CharacterPoseNativeSourceDemand demand =
+                    ref state.Preparation.Demand;
                 state.Evaluation = state.Graph.Evaluate(
                     state.Lease,
                     in demand,

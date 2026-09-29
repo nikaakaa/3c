@@ -535,7 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         {
             CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
-            CharacterPoseNativeFrameLineage lineage = demand.Lineage;
+            ref readonly CharacterPoseNativeFrameLineage lineage = ref demand.Lineage;
             return new CharacterPoseSourcePreparedResources(
                 in lineage,
                 m_BindingPage);

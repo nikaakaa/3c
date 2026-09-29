@@ -420,7 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedPhysicalCapture = m_Pending.PhysicalCapture;
 #endif
             m_HasCommitted = true;
-            CharacterPoseNativeFrameLineage lineage = lease.Lineage;
+            ref readonly CharacterPoseNativeFrameLineage lineage = ref lease.Lineage;
             m_Pending.Clear();
             return new CharacterPoseNativePublicationResult(
                 in lineage,

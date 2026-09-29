@@ -328,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Graph.ValidatePending(lease, in evaluation);
             if (!validation.IsValidated || m_Constraints == null)
                 return validation;
-            CharacterPoseNativeFrameLineage lineage = evaluation.Lineage;
+            ref readonly CharacterPoseNativeFrameLineage lineage = ref evaluation.Lineage;
             try
             {
                 CharacterPoseConstraintResult constraints = m_Constraints.CompleteFrame(

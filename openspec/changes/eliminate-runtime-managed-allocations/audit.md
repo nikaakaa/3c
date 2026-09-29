@@ -639,6 +639,12 @@
 - 删除空职责 BeginFrame 入口及其重复 Clear，保留 EndFrame 在 Flush 后清空、Workspace.Reset 边界和投影去重键维护。投影查询、写入和提交顺序不变。
 - 两个数值域同步修改，静态核对共享容器唯一所有权、Begin/End 生命周期、异常 Abort 后 workspace 清理；未编译、运行回放或采样。
 
+### AP79 GameplayEffect Target 开始重复清理暂存（2026-09-29，已实施，本轮未编译）
+
+- 两域 GameplayEffectTarget 的 `Changes` 和 `Causes` 是 shared Execution Scratch 的唯一容器。上一轮 Target.End 清空，actor 完成后 Scratch.Reset 再建立空边界；首次构造也为空。
+- 删除 Target.Begin 对 Changes/Causes 的重复 Clear，保留 End 唯一生命周期清理和 Begin 重建 active causes。变更追加、Trim、causes 重建、Savepoint/Discard 和异常传播不变。
+- 两个数值域同步修改，静态核对 Begin/End 调用、shared scratch Reset、嵌套暂存生命周期和异常路径；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

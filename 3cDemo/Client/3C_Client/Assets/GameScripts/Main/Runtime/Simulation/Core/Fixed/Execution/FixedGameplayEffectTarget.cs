@@ -86,8 +86,6 @@ namespace ThirdPersonSimulation.Fixed
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));
             m_State = null;
             m_CurrentPrediction = null;
-            m_Changes.Clear();
-            m_Causes.Clear();
             m_CommittedState.CollectActiveEffectIdentities(m_Scratch.ActiveIdentities);
             foreach (GameplayEffectActiveIdentity active in m_Scratch.ActiveIdentities)
                 m_Causes[active.Handle] = new PortableEffectCause(active.Definition, active.InstanceId, active.Context);

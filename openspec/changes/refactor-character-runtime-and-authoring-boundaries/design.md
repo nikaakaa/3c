@@ -2,11 +2,11 @@
 
 ## Context
 
-更新：2026-09-29。状态：已完成 R1—R10 排查，用户已启动完整实施 goal；实施进度以 tasks 为准，不能再将排查完成作为整体 goal 完成。本轮结果、精确证据、切片与限制见文末“本轮排查结果”，该节取代下表的初始状态快照。动机与能力增量见 [proposal.md](proposal.md)。
+更新：2026-09-29。状态：完整实施及规格同步已收口；29 项实施任务的当前证据见文末“实施收口与完成核对”。下方方案和“本轮排查结果”保留排查当时事实，不再代表未实施状态。运行验收与性能测量的限制单独记录。动机与能力增量见 [proposal.md](proposal.md)。
 
 当前架构以 [project.md](../../project.md) 与现行 specs 为准；本文件记录增量方案、证据和偏差。不得把 archive 或旧评估中的目录、行数和状态当作当前事实。路径默认相对仓库根，源码入口的共同前缀为 `3cDemo/Client/3C_Client/Assets/GameScripts/Main/`。
 
-### 已有基线与未完成状态
+### 排查开始时的基线快照（历史记录）
 
 | 编号 | 范围 | 2026-09-29 核对到的状态 | 后续性质 |
 | --- | --- | --- | --- |
@@ -30,14 +30,14 @@
 - 每个业务输入、输出、可变状态、校验、提交和释放点都有唯一明确 owner；调用方不必理解被调模块全部内部阶段。
 - 对本清单所有条目形成有证据的“已完成／实施／保留／转交专项／等待业务决策”结论，避免只做前几项便称全部完成。
 - 删除已经被正式链替代的代码、字段、状态、生成入口和依赖；保存需要的业务能力、资产身份、数值顺序与运行时预分配策略。
-- 长任务的第一份交付是完整排查结果及方案；实际实施以用户后续指令为准。
+- 已依据用户后续完整实施指令执行全部 tasks；排查与方案只是输入，不能替代实施完成。
 
 ### 排除范围
 
 - 不恢复 Pose IR、整角色 Program／Projection、独立 TreeRunner、Timeline IR、第二 Preview Session 或备用执行路径。
 - 不改变 Foot／IK／Blend 数值算法、角色配置、动画时钟与输入回放语义；发现业务问题列出同级方案及成本，不借重构擅自改行为。
 - 不因为文件大就拆接口、增加 Manager、分多个 partial 或搬成薄转发；不为假设变化点新增抽象。
-- 不自动创建 goal、worktree，不新增或修改测试；不因本规划启动 Unity、Player、构建、replay 或采集。
+- 用户已明确创建完整实施 goal；本次使用目标 Editor 做正式编译检查，不运行 replay、Player 或采集，不新增／修改测试，不创建 worktree。
 - 不将整个性能、相机复刻、网络、AI、Foot 稳定化项目吸收入本 change；它们仅在实际交叉处进入证据与依赖清单。
 
 ## Decisions
@@ -379,7 +379,7 @@ TimelineRuntimePreparation 当前顶层类型多于初评，文件行数不能�
 
 FootSwing 文件当前有 33 个顶层类型，无 Unity 对象基类或序列化属性：`:9–386` 输入／结果和约束合同；`:387–677` ResolvedFoot 诊断；`:678–834` Swing 合同；`:835–2174` Swing／连续性／输出阶段诊断；`:2175` 才开始实际 Builder。方案保留 Builder 原文件及 meta，另归 FootPlacementContracts、FootSwingMotionContracts 与 FootPlacementDiagnostics，保留全部字段布局、namespace 和数值代码；不逐 struct 建文件。
 
-真正的资产残留：普通 C# `CharacterTimelineHost : IDisposable` 的脚本 GUID `39951ece6cf593042bd3d137276bfb21` 仍作为 MonoBehaviour 的 m_Script 出现在 `Assets/Scenes/Authoring/BtsmtlPreview.unity:656` 与 `Assets/Scenes/GameplayLab/GameplayLab.unity:191/209/1277`。需删四个已失效组件对象及所属 GameObject 的对应 m_Component fileID，不删 GameObject、不加回 MonoBehaviour、不覆盖整个场景。这是静态格式和类型不匹配证据，未开 Editor 复现 Missing Script。
+真正的资产残留：普通 C# `CharacterTimelineHost : IDisposable` 的脚本 GUID `39951ece6cf593042bd3d137276bfb21` 仍作为 MonoBehaviour 的 m_Script 出现在 `Assets/Scenes/Authoring/BtsmtlPreview.unity:656` 与 `Assets/Scenes/GameplayLab/GameplayLab.unity:191/209/1277`。需删四个已失效组件对象及所属 GameObject 的对应 Prefab m_AddedComponents fileID，不删 GameObject、不加回 MonoBehaviour、不覆盖整个场景。这是静态格式和类型不匹配证据，未开 Editor 复现 Missing Script。
 
 BlendStack 保留核心所有权：`AnimationBlendStackRuntime.cs:580/633` 开帧／提交同时驱动来源、槽位、entry、release 与权重页；`:1240` PushCrossFade 同时压缩历史、保留 Stored Pose、暂存来源退休；`:1557` 根据计划权重判定历史退休。拆独立历史或退休 Manager 会要求每次中断跨多个 owner 同步。无状态诊断格式化可单独整理但目前收益不足，不列为必做任务；SourcePoseWorkspace 和 SlotPoseWorkspace 已分离且有真实资源职责。
 
@@ -418,3 +418,62 @@ Foot 跨状态关系的完整质量门槛目前没有从上述单 Clip 编译链
 7. 同步对应规格增量、剩余缺口与专项交接。实施任务只有代码和直接消费者已交付才勾选；未运行闭环／采样继续明确标注。
 
 本阶段的完成是 R1—R10 每项都有证据、决定和可执行切片。它不代表代码已实施、所有角色支持恢复、整条 Tick 链已零 GC，或该次历史 Capture 覆盖了当前工作区。
+
+
+## 实施收口与完成核对（2026-09-29）
+
+本节为当前结果，取代前文初始状态表与排查段落中的“未实施／待收口”状态；历史证据不重写为运行证明。当前 29 项实施范围已经完成，未运行 replay、未新增或修改测试、未构建或采集 Player，未自动归档。
+
+### 各职责的交付与保留
+
+| 范围 | 最终输入、处理与输出 | 提交或结论 |
+| --- | --- | --- |
+| R1 | Presentation 输入同帧事实和动作；Pose 完整帧协调点处理图、Source、Constraint、FinalPublication；成功后外壳提交 Timeline、桥、采样时钟和 Camera。外围失败把实际阶段写入同一故障 owner，下一帧入口拒绝；各 owner 清理失败不覆盖首故障 | `418303f85`、`67c12591b`；既有整帧入口基线保留 |
+| R2 | ContentStore 管内容；Host 管播放；DependencyResolver 精确绑定已编译图；TreeClip／Marker 服务、表现执行和观察各归既有模块。GraphBindings 合入同名 DependencyResolver，不建立第二播放状态 | 既有提交保留，文件归位见 `12ff37a89` |
+| R3 | Host 提供唯一 runtime／roster／完成 Tick，History 管检查点、裁剪、分支和恢复事务；失败优先级、错误文案和实际回滚沿原协议，在真正释放 runtime 前解除借用 | `f023914fb` |
+| R4 | Analyzer 请求规范样本；Sampler 独占临时场景、实例、PlayableGraph、NativeArray 和临时 Clip；数值分析使用原数组及时刻，输出交回既有 Artifact／原生曲线链 | `535f29692`；算法段归一化换行后相同 |
+| R5 | UI 只提供创建意图、选择与导航；mutation 负责状态／图／布局和 Undo；统一报告直接携带定位身份；纯图与 Profile 模式共用拓扑检查，后者额外校验 Rig／外部输入；持久化和 C# 写 owner 事务覆盖实际修改资源 | `635dc1746`、`2d44c3ba3`、`92d445eec` |
+| R6 | 完整删除旧 TreeDesigner 包、七个旧节点文件、两处孤立类型、旧菜单、反射发现、不可达 Equipment 判支、生成 import 与 asmdef 引用；保留真实 Flow 合同、Snapshot 值类型及 Camera Flow 节点 | `b9e0d0ae4`，297 文件变化，15,309 行删除、7 行增加 |
+| R7 | 37 个 Timeline 类型、33 个 Foot 类型、11 个 Host 同文件类型按现有职责归位；Foot 输入／结果合入已有 CharacterFootPlacementContracts。四个失效 TimelineHost 组件及对应 Prefab 新增组件引用删除 | `12ff37a89`、`ee00df922`；80 个完整类型体逐字比较未变，另一个 resolver 仅合并原 partial 内容 |
+| R8 | 保留 BlendStack 对 entry、混合时钟、Stored Pose、权重与来源退休的共同提交责任；SourcePoseWorkspace、SlotPoseWorkspace 继续承担真实资源职责 | 不拆出独立历史／退休 Manager，不改数值算法或状态布局 |
+| R9 | 保留既有 Span Capture 证据与工具，明确它不覆盖本轮全部改动；本次没有性能差值、Player 结果或全链零分配证明 | 性能与分配归因继续由原专项处理 |
+| R10 | 五份能力 delta 已同步，project.md 与入口文档更新，现行 spec 与增量严格校验通过；旧行数／未提交状态仅作为历史证据 | 本节、tasks、proposal、五份现行 spec |
+
+技能仍然编译：正式 FlowCanvas 技能作者图经过 Semantic IR／正式后端进入既有执行链。本次删除的是无正式消费者的 TreeDesigner 作者和旧编译判支，不是取消 Skill 编译。Pose 保持原生 FlowCanvas 图执行，不恢复 Pose IR、ProgramImage 或加载期编译计划。
+
+### 故障与清理状态核对
+
+| 触发位置 | 已提交事实 | 处理及后续行为 |
+| --- | --- | --- |
+| Pose Barrier 前失败 | 未物理提交 Pose | 关闭取得的图、Source、Constraint 与外围 Pending；保留原失败，清理失败追加到同一异常 |
+| Pose Barrier 内／后失败 | 可能已有不可逆求值或写入 | 原 FrameCoordinator 记录 Actor／Frame／BodyTick／Completion／阶段，拒绝后续帧，不宣称回滚骨骼 |
+| Pose 成功后 Timeline／桥／时钟／Camera 失败 | Pose 和内部动作确认可能已经提交 | Presentation 保留返回的 committed publication，记录具体外围阶段并写入同一个故障 owner，所有清理步骤仍逐一尝试 |
+| 纯观察输出失败 | 业务结果不因观察失败撤回 | Foot、Pose／Camera capture、Timeline 诊断经正式诊断错误通道报告；诊断错误订阅者自身抛错时记录原错误与报告错误，不升级为业务回滚 |
+| 正常停止／Dispose 遇到一个 owner 失败 | 已取得的其它 owner 仍需释放 | 先解除桥接器事件订阅；Session、Services、各服务资源、时钟租约和表现外围资源逐一尝试释放；首故障与后续清理错误均保留 |
+
+正常帧没有为这套故障协议创建委托、集合或异常对象；聚合异常与 ExceptionDispatchInfo 仅进入失败路径。此为源码分配检查，不等于对整个角色运行时的零 GC 测量。原 History 周期 checkpoint 创建快照的分配仍属性能专项，未借提取修改存储语义。
+
+### 完成依据与限制
+
+- 1.1—1.3：Host 的历史字段和事务入口已迁出；四类恢复入口进入 History；正常与失败释放共用真实 runtime 释放边界。
+- 2.1—2.3：Analyzer 正式入口用 using 管理同一 Sampler；采样数组、时间、loop、空间与数值算法对账未变；没有第二采样实现。
+- 3.1—3.9：Graph 创建 Undo 在 mutation owner 登记一次；State／Alias 数据构造离开窗口；报告携带错误位置，UI 不重查；纯图也覆盖连线、环、必需输入和输出数；保存覆盖有／无 Profile；C# 实际写 owner 共享快照／保存／回退；只读目录独立；死 tuning、假 Compile 和未使用成员已删除。最终审计另删除前置已完成的能力／子图签名重复校验、无输出的旧可达性遍历及恒不可达的局部门控。
+- 4.1—4.4：删除前再次核对 151 个候选 GUID 对 26,286 个包外文本文件，无引用；包外脚本类型命中仅为列明删除簇和不可达 Equipment 判支。二进制资产沿用本节之前记录的只读解析证据，不冒充重新解析了全部二进制。删除后 Assets／Packages 的源码、asmdef／asmref、UXML、link.xml／rsp 未发现 TreeDesigner 残留；Unity Runtime／Editor 编译通过。
+- 5.1—5.4：80 个完整类型体对提交前源码逐字比较相同；DependencyResolver 保留原定义与 GraphBindings 方法体及 meta 身份。两场景实际是 Prefab m_AddedComponents，已删四个对象和四条精确引用，保留其它对象与组件。
+- 6.1—6.3：沿 Presentation → DomainSession → FrameCoordinator 的故障入口及完整释放调用链核对；没有新增第二故障状态或恢复分支。编译通过不代表已经注入各阶段异常运行验证。
+- 7.1—7.3：Native Pose 整帧、Dense Pending、作者 UI、BlendStack 装配和 Foot 领域资源边界已同步；保留现行全部场景身份与质量门槛，专项归属如下。
+- 正式 Unity 实例：`e852139597e42532`，projectRoot 为 `D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`，Unity 2022.3.62f2c1。代码编译后再次确认 Edit／idle／非编译、Console error 0；Csc 的相关 Runtime／Editor 输出为 exit 0。本任务仅恢复已停止的本机 HTTP 服务，未发起 Editor 重启、切换全局实例或运行 batchmode。
+- `openspec validate --specs --strict --no-interactive`：101 passed／0 failed；本 change 的 strict 校验通过；相关 diff 检查通过。
+- 未执行 replay、端到端场景验收、异常注入、Player 构建、性能采集或探针校准。本任务的完成依据是已授权结构实施、静态对账和 Unity 编译；不宣称这些未执行行为已通过。
+
+### 专项归属与不被此次完成覆盖的事项
+
+| 事项 | 当前归属与限制 |
+| --- | --- |
+| HoldLastFrame、时钟模式、端点规则 | `add-timeline-clock-domain-config`，核对时其 tasks 为 56／56；保留其他窗口实施，不在本次重新设计或冒领验证 |
+| 性能归因、GC、符号、多轮基线、Disabled／MarkerOnly／Span 校准 | `eliminate-runtime-managed-allocations` 与 `add-compile-time-performance-instrumentation`；既有 Capture 不是本轮性能结论 |
+| Foot 跨状态可达关系质量门槛 | 现行 Foot Artifact spec 保留全部要求；本轮只确认单 Clip 相位锚点／覆盖链，尚无完整跨关系实现证据。具体补齐应单列 Foot 质量方案，不能将 `stabilize-character-foot-path-and-landing` 或此次文件整理当作这项已交付证明 |
+| 表现检查点捕获／恢复 | 当前 Presentation 明确拒绝未装配能力；本次 History 提取没有新增表现恢复功能。需要另行明确该业务能力和恢复语义 |
+| Pose Live／只读及作者工作台产品行为 | `design-btsmtl-authoring-runtime-workbench` 及既有预览／黑板专项；保留真实消费者，不在本次重设产品语义 |
+
+撤回方式是按上述独立提交逆向恢复源码与 meta；本轮没有迁移磁盘业务数据格式或发布外部产物。其它窗口的代码、资源、构建产物和独立提交均保留，工作区整体不一定为空。完成的是本 change 的约定范围，不是“整个项目再无任何重构或业务缺口”。

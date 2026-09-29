@@ -33,6 +33,7 @@
 ```
 
 - `SimulationSessionHost` 是唯一运行装配根，显式组合 Control、Ability、Timeline、Effect、Equipment、Presentation、Pipeline、Session Source 与 WorldSolver，并拥有准备、roster 锁定、tick 生命周期和销毁顺序。
+- Session 的检查点集合、历史分支、裁剪和恢复事务由 `SimulationSessionHistory` 唯一持有；Host 提供同一 runtime、roster 与已完成 Tick，并在真实释放边界解除借用。
 - `CharacterPipelineHost` 只负责 Actor registration、领域 binding、Presentation 和 diagnostics 接口；它不创建第二套 Source、Solver、Pipeline 或 Preview runtime。
 - 每个领域只保存自己的正式状态。角色和世界状态只在同一 Step 的事务中从 Evaluate 延续到 Finalize，再执行一次 Commit；表现、网络和诊断只消费已提交事实。
 - Float32 与 Fixed 分别拥有必要的数值状态、codec 和运行数据。Local、DeterministicRollback 和 ServerAuthoritative 的差异由各自 Variant、Session Source、Pipeline 与 Network Model 装配，不能由节点、作者 UI 或隐式 fallback 推断。
@@ -42,11 +43,12 @@
 - Timeline 不拥有 `ActionCueTrack`、`ActionCueClip` 或 `ActionCueCommitted` 事件链。一次性 Gameplay、Camera、VFX 和 Audio 行为都在对应 TreeClip 内由正式节点表达，并经节点所属的正式 domain emitter 输出。
 - Corin 的攻击碰撞和攻击属性由 TreeClip 内的 Gameplay 节点提交给 GameplayEffect / Ability 执行域；Timeline 只拥有 TreeClip 的内容身份、时间和求值边界，不解析命中效果、碰撞形状或属性数值。
 - TreeClip 节点输出必须携带正式 Action Context、播放身份、图／节点身份和提交事务身份。Timeline 不把节点输出重新包装成另一套 Cue 事件，也不在 PresentationFrame 重发 Logic 输出。
+- 旧 TreeDesigner 作者包及其旧节点、反射发现和创建菜单已退役；正式 Skill 仍由 FlowCanvas 作者图进入语义编译与正式执行器，不要求恢复 TreeDesigner port。
 - Timeline 的旧 TreeDesigner 自制 UI 已删除；唯一 Timeline 编辑面是嵌入 Slate，FlowCanvas 只负责 TreeClip / Marker 触发图等正式图的可视化与作者入口。
 
 ### Presentation
 
-- 表现只从 committed Body、Action、Timeline、Effect 与领域事实开始。动画帧保持唯一 `Prepare -> Validate -> Animancer Evaluate Barrier -> Seal` 事务；Barrier 前失败只丢弃 Pending，Barrier 后失败使该 Actor 的动画 runtime 进入 Faulted。
+- 表现只从 committed Body、Action、Timeline、Effect 与领域事实开始。角色外壳调用 Pose 完整帧入口；Pose 内部唯一协调点完成准备、Animancer Evaluate Barrier、Pending 验证与提交。Barrier 前失败只丢弃 Pending；Barrier 内及之后的失败，包括 Pose 已成功后 Timeline、桥、时钟和 Camera 的业务收尾失败，均使同一 Actor 表现进入 Faulted，阻止后续帧且不宣称物理回滚。纯诊断观察失败走诊断通道。
 - Pose 的正式链是 `Presentation Fact -> PoseStateMachine -> state-local source -> AnimationSlot -> Pose stages -> typed Goal Contributions -> Goal Assembly -> FullBodyIK -> FinalAnimationPoseFrame`。每帧最多一次 Foot Placement 事务、一次 Goal Assembly、一次 FBBIK 与一次 final writer。
 - FBBIK、Pose Graph、Blend Stack 的资源 schema、枚举和值域在 authoring/content preparation 通过后才进入正式运行；运行期只保留帧输入、事务血缘、缓冲形状、目标唯一性和求解结果等运行事实校验。
 - Foot Placement、Goal Assembly、FullBodyIK 和 final writer 各有唯一 owner；不得增加第二个 Grounding、Goal Set、FBBIK、骨骼写入或图外修正路径。

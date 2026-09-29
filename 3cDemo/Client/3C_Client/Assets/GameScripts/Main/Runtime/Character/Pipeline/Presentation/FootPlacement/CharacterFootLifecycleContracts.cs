@@ -1549,6 +1549,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootCurrentSupportObservation m_CurrentSupport;
         readonly CharacterFootLockRequest m_LockRequest;
         readonly CharacterFootMotionSettings m_Settings;
+        readonly CharacterFootGroundPathLanding m_ContactLanding;
+        readonly CharacterFootGroundPathLanding m_PreparedPlantTarget;
 
         internal CharacterFootStateFrame(
             ulong frameSequence,
@@ -1589,9 +1591,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_SwingMotion = swingMotion;
             m_GroundPath = groundPath;
             HasContactLanding = hasContactLanding;
-            ContactLanding = contactLanding;
+            m_ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
-            PreparedPlantTarget = preparedPlantTarget;
+            m_PreparedPlantTarget = preparedPlantTarget;
             m_CurrentSupport = currentSupport;
             m_LockRequest = lockRequest;
             FormalSupport = formalSupport;
@@ -1622,9 +1624,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ref readonly CharacterFootGroundPathResult GroundPath =>
             ref m_GroundPath;
         internal bool HasContactLanding { get; }
-        internal CharacterFootGroundPathLanding ContactLanding { get; }
+        internal ref readonly CharacterFootGroundPathLanding ContactLanding =>
+            ref m_ContactLanding;
         internal bool PreparedPlantActive { get; }
-        internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
+        internal ref readonly CharacterFootGroundPathLanding PreparedPlantTarget =>
+            ref m_PreparedPlantTarget;
         internal ref readonly CharacterFootCurrentSupportObservation CurrentSupport =>
             ref m_CurrentSupport;
         internal ref readonly CharacterFootLockRequest LockRequest => ref m_LockRequest;

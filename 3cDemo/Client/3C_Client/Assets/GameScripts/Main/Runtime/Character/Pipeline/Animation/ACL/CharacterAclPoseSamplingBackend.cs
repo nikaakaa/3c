@@ -272,7 +272,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     m_PendingPlans,
                     mutation.PlanOffset,
                     mutation.PlanCount);
-                mutation.Instance.ApplySamples(plans, in mutation.Capture);
+                mutation.Instance.ApplySamples(
+                    in plans,
+                    in mutation.Capture);
             }
         }
 

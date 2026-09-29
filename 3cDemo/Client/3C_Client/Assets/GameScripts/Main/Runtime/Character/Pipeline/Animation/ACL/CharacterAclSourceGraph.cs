@@ -93,7 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             ClearInputs();
             for (int i = 0; i < batch.Count; i++)
             {
-                int clipIndex = batch[i].ClipBindingIndex;
+                ref readonly ClipSamplePlan plan = ref batch.ElementAt(i);
+                int clipIndex = plan.ClipBindingIndex;
                 m_Mixer.SetInputWeight(
                     clipIndex,
                     batch.GetNormalizedWeight(i));

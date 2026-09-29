@@ -17,10 +17,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal int Count => m_Count;
-        internal ClipSamplePlan this[int index] =>
-            (uint)index < (uint)m_Count
-                ? m_Plans[index]
-                : throw new ArgumentOutOfRangeException(nameof(index));
+        internal ref readonly ClipSamplePlan ElementAt(int index)
+        {
+            if ((uint)index >= (uint)m_Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ref m_Plans[index];
+        }
         internal float GetNormalizedWeight(int index) =>
             (uint)index < (uint)m_Count
                 ? m_NormalizedWeights[index]
@@ -36,23 +38,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (m_NormalizedWeights[i] > m_NormalizedWeights[selectedIndex])
                     selectedIndex = i;
             }
-            return m_Plans[selectedIndex];
+            ref readonly ClipSamplePlan selected = ref m_Plans[selectedIndex];
+            return selected;
         }
 
         internal void CopyFrom(
-            AnimationReadOnlyBuffer<ClipSamplePlan> source)
+            in AnimationReadOnlyBuffer<ClipSamplePlan> source)
         {
             if (source.Count <= 0 || source.Count > m_Plans.Length)
                 throw new ArgumentException("Animation Clip sample batch count is invalid.", nameof(source));
             float totalWeight = 0f;
             for (int i = 0; i < source.Count; i++)
             {
-                ClipSamplePlan plan = source[i];
+                ref readonly ClipSamplePlan plan = ref source.ElementAt(i);
                 if (!plan.IsValid || plan.Weight <= 0f)
                     throw new InvalidOperationException("Animation Clip sample batch contains an invalid plan.");
                 for (int previous = 0; previous < i; previous++)
                 {
-                    if (m_Plans[previous].ClipBindingIndex == plan.ClipBindingIndex)
+                    ref readonly ClipSamplePlan existing = ref m_Plans[previous];
+                    if (existing.ClipBindingIndex == plan.ClipBindingIndex)
                         throw new InvalidOperationException("Animation Clip sample batch contains a duplicate Clip binding.");
                 }
                 m_Plans[i] = plan;
@@ -61,7 +65,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!float.IsFinite(totalWeight) || totalWeight <= 0f)
                 throw new InvalidOperationException("Animation Clip sample batch has no positive total weight.");
             for (int i = 0; i < source.Count; i++)
-                m_NormalizedWeights[i] = m_Plans[i].Weight / totalWeight;
+            {
+                ref readonly ClipSamplePlan plan = ref m_Plans[i];
+                m_NormalizedWeights[i] = plan.Weight / totalWeight;
+            }
             Array.Clear(m_Plans, source.Count, m_Plans.Length - source.Count);
             Array.Clear(m_NormalizedWeights, source.Count, m_NormalizedWeights.Length - source.Count);
             m_Count = source.Count;

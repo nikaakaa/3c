@@ -877,7 +877,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     throw new InvalidOperationException("Animation pose source clip plan is invalid.");
                 for (int previous = 0; previous < i; previous++)
                 {
-                    if (m_PendingClipPlans[clipOffset + previous].ClipBindingIndex == plan.ClipBindingIndex)
+                    ref readonly ClipSamplePlan pending =
+                        ref m_PendingClipPlans[clipOffset + previous];
+                    if (pending.ClipBindingIndex == plan.ClipBindingIndex)
                         throw new InvalidOperationException($"Animation pose source clip plan duplicates binding #{plan.ClipBindingIndex}.");
                 }
                 int index = clipOffset + i;
@@ -891,8 +893,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             for (int i = 0; i < clipCount; i++)
             {
                 int index = clipOffset + i;
+                ref readonly ClipSamplePlan pending = ref m_PendingClipPlans[index];
                 m_PendingNormalizedClipWeights[index] =
-                    m_PendingClipPlans[index].Weight * inverseTotalWeight;
+                    pending.Weight * inverseTotalWeight;
             }
         }
 
@@ -908,7 +911,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             for (int clipIndex = 0; clipIndex < clipCount; clipIndex++)
             {
                 int index = clipOffset + clipIndex;
-                ClipSamplePlan plan = clips[index];
+                ref readonly ClipSamplePlan plan = ref clips[index];
                 ClipState child = clipStates[index];
                 child.IsPlaying = true;
                 child.Speed = 0f;

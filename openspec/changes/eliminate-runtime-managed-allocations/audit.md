@@ -1666,3 +1666,10 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Animancer source key 按值接收并复制 source/node，属性每次读取再复制；owner slot、frame mutation 和 release permission 的校验、求值、commit、rollback、release 与 dominant sample 读取被复制为局部，三个查找函数也逐项复制 entry。
 - key 改为 backing field 只读引用，构造与内部 equality 改为 `in`，public equality 合同转发。三个查找改用 `in` key 并绑定数组元素只读引用；Validate、Enter/Apply/Rollback、Release、Clear 和 dominant sample 读取改为只读元素引用。
 - 该改动删除 Animancer source journal 周期校验与求值链的重复 key/entry/plan 拷贝。mutation 和 owner slot 写入、release permission 清除、generation、committed 计数、输出 Clip 返回和异常文本不变。静态核对只读引用都在目标数组修改前消费、`ref readonly` 均绑定同一数组元素和 public equality 保留；未编译、未采样，不能声称实测耗时收益。
+
+### AP225 clip sample plan 求值引用化（2026-09-30，已实施，本轮未编译）
+
+- Animancer 的 pending plan 重复检查、权重归一化和 Evaluate Barrier 应用循环每个 clip 复制一份 `ClipSamplePlan`；ACL 的 `CharacterClipSampleBatch` 按值 indexer 每次返回整份 plan，`ApplySamples` 再复制，`CopyFrom` 的 source、duplicate 检查和归一化也重复复制。
+- Animancer 三段只读循环改为绑定 pending 数组元素引用；sample batch 新增正式 `ElementAt` 只读引用并删除唯一按值 indexer。`ApplySamples` 与 `CopyFrom` 改为只读 buffer/元素转发，RequireDominant 仍按合同返回一次 plan。
+- ACL Source Graph Apply 的唯一 batch 消费同步改为 `ElementAt` 只读 plan，用于读取 clip binding index 和设置 mixer weight。
+- 该改动删除 Animancer 与 ACL 周期 clip 求值链的重复 plan 读取拷贝。source 校验、duplicate 检查、权重归一化、pending plan 写入、数组清理、范围异常和输出 plan 语义不变。静态核对旧 indexer 无引用、引用生命周期覆盖只读消费和 plan 存储仍各保留一次必要拷贝；未编译、未采样，不能声称实测耗时收益。

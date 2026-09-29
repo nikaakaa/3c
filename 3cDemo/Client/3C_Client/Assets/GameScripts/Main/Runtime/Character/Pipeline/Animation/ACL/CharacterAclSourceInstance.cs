@@ -250,17 +250,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_GroupClipIndices[clipBindingIndex] == groupClipIndex;
 
         internal void ApplySamples(
-            AnimationReadOnlyBuffer<ClipSamplePlan> plans,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> plans,
             in AnimationPoseSourceCaptureBinding capture)
         {
             RequireAlive();
             if (m_ClipCount <= 0)
                 throw new InvalidOperationException("ACL source instance has no configured catalog.");
-            m_SampleBatch.CopyFrom(plans);
+            m_SampleBatch.CopyFrom(in plans);
             m_ScalarMixer.Clear();
             for (int i = 0; i < m_SampleBatch.Count; i++)
             {
-                ClipSamplePlan plan = m_SampleBatch[i];
+                ref readonly ClipSamplePlan plan = ref m_SampleBatch.ElementAt(i);
                 if (!plan.IsAcl || (uint)plan.ClipBindingIndex >= (uint)m_ClipCount ||
                     !Matches(
                         plan.ClipBindingIndex,

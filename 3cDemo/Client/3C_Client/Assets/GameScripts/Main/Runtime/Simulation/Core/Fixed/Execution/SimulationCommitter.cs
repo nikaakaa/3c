@@ -62,7 +62,6 @@ namespace ThirdPersonSimulation.Fixed
             for (int actor = 0; actor < result.Actors.Count; actor++)
             {
                 SimulationActorTickResult actorResult = result.Actors[actor];
-                Array.Clear(m_Outputs, 0, m_OutputCount);
                 m_OutputCount = 0;
                 for (int i = 0; i < actorResult.GameplayFacts.Count; i++)
                     AddOutput(new OrderedOutput(actorResult.GameplayFacts[i]));

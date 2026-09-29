@@ -1913,3 +1913,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing observation page 的 Query 和 Result 自动属性每次读取复制完整 ground query request/result；PredictEvent 每脚读取 Result 后继续消费 support、selection diagnostics，并把 Query 写入 prediction result。
 - Page 的 Query 和 Result 改为 backing field 只读引用，PredictEvent 的 Result 改为引用绑定。Set、Clear、ReuseCommitted 和 Discard 页语义不变，prediction result 的 Query 字段仍保留一次必要拷贝。
 - 该改动删除每脚 landing query request/result 从页到 prediction 组装的重复拷贝。静态核对 query result 为 readonly struct、页面写入点只在 Set/Clear、引用生命周期覆盖 PredictEvent；未编译、未采样，不能声称实测耗时收益。
+
+### AP266 Ground path page input 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Ground path page 的 Input 自动属性每次读取复制 last/next landing、query、component up 和 landing identities 组成的完整输入；state target resolver 会复制该结构后读取 normal、surface identity 和 next landing identity。
+- Page Input 改为 backing field 只读引用，state target resolver 直接引用绑定。SetRejected、SetAccepted、Clear 的输入值、校验和页状态不变；GroundPath result 派生字段读取同一 page 输入。
+- 该改动删除 Foot Placement state target 与 hard constraint 读取 ground path 输入的重复拓扑拷贝。静态核对 input 为 readonly struct、页面写入点只在 Set/Clear、引用生命周期覆盖状态求值；未编译、未采样，不能声称实测耗时收益。

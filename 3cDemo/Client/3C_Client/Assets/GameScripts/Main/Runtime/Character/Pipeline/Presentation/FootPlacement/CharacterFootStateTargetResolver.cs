@@ -359,7 +359,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : default;
                 return target.IsValid;
             }
-            CharacterFootGroundPathInput path = frame.GroundPath.Page.Input;
+            ref readonly CharacterFootGroundPathInput path =
+                ref frame.GroundPath.Page.Input;
             target = new CharacterFootSupportTarget(
                 frame.FrameSequence,
                 frame.CompletionIdentity,

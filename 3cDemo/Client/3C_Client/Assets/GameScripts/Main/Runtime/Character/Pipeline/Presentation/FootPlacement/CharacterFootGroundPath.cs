@@ -611,6 +611,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootGroundPathPage
     {
+        CharacterFootGroundPathInput m_Input;
+
         internal CharacterFootGroundPathPage(int contactCapacity)
         {
             Contacts = new CharacterFootGroundContactPage(contactCapacity);
@@ -622,7 +624,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathRejectReason RejectReason { get; private set; }
         internal bool QueryExecuted { get; private set; }
         internal int SegmentCount { get; private set; }
-        internal CharacterFootGroundPathInput Input { get; private set; }
+        internal ref readonly CharacterFootGroundPathInput Input =>
+            ref m_Input;
         internal CharacterFootGroundInvalidSegment InvalidSegment { get; private set; }
         internal CharacterFootGroundContactPage Contacts { get; }
         internal CharacterFootGroundEdgeSummary Edges { get; }
@@ -645,7 +648,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = reason;
             QueryExecuted = queryExecuted;
             SegmentCount = segmentCount;
-            Input = input;
+            m_Input = input;
             InvalidSegment = invalidSegment;
             if (!queryExecuted)
             {
@@ -668,7 +671,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = CharacterFootGroundPathRejectReason.None;
             QueryExecuted = true;
             SegmentCount = segmentCount;
-            Input = input;
+            m_Input = input;
             InvalidSegment = default;
         }
 
@@ -678,7 +681,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = default;
             QueryExecuted = false;
             SegmentCount = 0;
-            Input = default;
+            m_Input = default;
             InvalidSegment = default;
             Contacts.Clear();
             Edges.Clear();

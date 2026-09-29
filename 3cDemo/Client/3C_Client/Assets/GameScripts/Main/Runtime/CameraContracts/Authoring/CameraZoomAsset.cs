@@ -51,6 +51,11 @@ namespace ThirdPersonCamera
         public override string EffectId => ZoomId;
         public override int EffectPriority => DataPriority;
 
+        public void ConfigurePlaybackStacking(CameraEffectStackingType stackingType)
+        {
+            m_PlayStackingType = stackingType;
+        }
+
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ZoomId) ||

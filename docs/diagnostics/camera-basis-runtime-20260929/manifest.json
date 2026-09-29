@@ -16,6 +16,10 @@
       "sha256": "da7b3729d46b845456385766d1e7e7e7d97a25663c562bea2c3c3301f1dce67a"
     },
     {
+      "path": "camera-config-enums.json",
+      "sha256": "1ce9da445f11a11404d68f6ea040b87f073ef38f9428465f559a087057ddfce3"
+    },
+    {
       "path": "camera-update.json",
       "sha256": "437ee4e6d7107a098b182bc7500cbef5ad08cf671f3ff495f88e866ed2d69780"
     },
@@ -90,6 +94,18 @@
     {
       "path": "track-types.json",
       "sha256": "aeb53172fe3ad5f95fd50a8625e610c15812f08634dc61f83f1c372ce57d284b"
+    },
+    {
+      "path": "zoom-stretch-config-types.json",
+      "sha256": "8ffb8ef9450be4ddb192f90fb3a660e8ddf715e5a846ec12cc29efc068198df9"
+    },
+    {
+      "path": "zoom-stretch-consumer-types.json",
+      "sha256": "0b9296370b5c1ac1b51b791d62be5ebf54fee49565fa2032d40355ac4477d222"
+    },
+    {
+      "path": "zoom-stretch-stacking-audit.json",
+      "sha256": "f023e2075b6ee7f11666b9112b8f3beca65b564a93ab9747cde1e5df26ed6796"
     }
   ]
 }

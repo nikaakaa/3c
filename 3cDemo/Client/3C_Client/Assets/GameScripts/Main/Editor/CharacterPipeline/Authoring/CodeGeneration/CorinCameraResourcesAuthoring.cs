@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Newtonsoft.Json.Linq;
 using ThirdPersonCamera;
 using UnityEditor;
 using UnityEngine;
@@ -15,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 throw new InvalidOperationException("Camera authoring requires an idle Editor.");
             var profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(Folder + "CorinCharacterCameraProfile.asset");
+            PublishPlaybackStacking(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
             var shakes = new Dictionary<string, CameraShakeAsset>(StringComparer.Ordinal);
@@ -119,6 +123,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             profile.ConfigureShakeResources(new List<CameraShakeAsset>(shakes.Values).ToArray(), new List<CameraCurveAsset>(curves.Values).ToArray());
             Save(profile);
         }
+
+        static void PublishPlaybackStacking(CharacterCameraProfile profile)
+        {
+            const string sourceFolder = "D:/ZZZ_Dump/output/corin_replication/replication-guide/data/variants/";
+            JToken zooms = JObject.Parse(File.ReadAllText(sourceFolder + "zoom-0.json", Encoding.UTF8))["cameraZooms"];
+            JToken stretches = JObject.Parse(File.ReadAllText(sourceFolder + "stretch-0.json", Encoding.UTF8))["cameraStretchs"];
+            foreach (CameraZoomAsset zoom in profile.Zooms)
+            {
+                Undo.RecordObject(zoom, "配置可琳推镜播放叠加");
+                zoom.ConfigurePlaybackStacking(DecodePlaybackStacking((int)zooms[zoom.ZoomId]["PlayStackingType"]));
+                Save(zoom);
+            }
+            foreach (CameraStretchAsset stretch in profile.Stretches)
+            {
+                Undo.RecordObject(stretch, "配置可琳位移镜头播放叠加");
+                stretch.ConfigurePlaybackStacking(DecodePlaybackStacking((int)stretches[stretch.StretchId]["PlayStackingType"]));
+                Save(stretch);
+            }
+        }
+
+        static CameraEffectStackingType DecodePlaybackStacking(int value) => value switch
+        {
+            0 => CameraEffectStackingType.Replace,
+            1 => CameraEffectStackingType.Add,
+            _ => throw new NotSupportedException($"Unknown ConfigDataPlayStacking value '{value}'.")
+        };
 
         static T LoadOrCreate<T>(string id) where T : ScriptableObject
         {

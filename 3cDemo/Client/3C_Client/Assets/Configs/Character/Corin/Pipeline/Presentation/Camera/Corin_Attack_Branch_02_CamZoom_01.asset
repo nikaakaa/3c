@@ -28,4 +28,4 @@ MonoBehaviour:
   m_FovVariationType: 1
   m_DelayTime: 0
   m_EndTime: 1.5
-  m_PlayStackingType: 2
+  m_PlayStackingType: 1

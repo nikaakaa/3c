@@ -22,10 +22,10 @@ MonoBehaviour:
   m_IgnoreLocalAvatar: 0
   m_IgnoreOwnerTimeScale: 0
   m_LastTime: -1
-  m_StartTime: 0.400000005960464
+  m_StartTime: 0.4
   m_StackingType: 1
   m_FieldOfView: 55
   m_FovVariationType: 1
   m_DelayTime: 0
   m_EndTime: 1.5
-  m_PlayStackingType: 2
+  m_PlayStackingType: 1

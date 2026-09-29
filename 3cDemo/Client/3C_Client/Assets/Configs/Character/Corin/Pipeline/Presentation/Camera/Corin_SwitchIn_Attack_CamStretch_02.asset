@@ -21,25 +21,25 @@ MonoBehaviour:
   m_IgnoreLocalAvatar: 0
   m_IsAppliedElevationRatio: 1
   m_IsAppliedEndElevationAngle: 1
-  m_PlayStackingType: 2
+  m_PlayStackingType: 1
   m_RuntimeCamFollowYOffsetRatio: 0
   m_IsElevationAngleAbsolute: 1
   m_IgnorePriorityInEndTime: 0
   m_IgnoreWorldTimeScale: 0
   m_IsEndElevationAngleAbsolute: 1
-  m_ElevationAngleMin: 0.649999976158142
+  m_ElevationAngleMin: 0.65
   m_RecoilTime: 1.5
   m_DataPriority: 0
-  m_EndElevationAngleMax: 0.699999988079071
+  m_EndElevationAngleMax: 0.7
   m_ApplyAimPointsCameraFollowYOffset: 0
   m_ApplyRuntimeCamFollowYOffset: 0
   m_CamOffsetSpace: 1
   m_IgnoreOwnerTimeScale: 0
-  m_ElevationAngleMax: 0.649999976158142
+  m_ElevationAngleMax: 0.65
   m_HoldTime: -1
   m_DelayTime: 0
-  m_CamOffset: {x: 0, y: -0.400000005960464, z: 0}
-  m_EndElevationAngleMin: 0.699999988079071
+  m_CamOffset: {x: 0, y: -0.4, z: 0}
+  m_EndElevationAngleMin: 0.7
   m_RadiusRatio: 0
-  m_StretchTime: 0.400000005960464
+  m_StretchTime: 0.4
   m_FovVariationType: 1

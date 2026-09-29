@@ -93,3 +93,19 @@
 新增 6 项共 162 个字段／曲线引用检查全部一致，Profile GUID 引用全部存在。证据见 [新增资源对账](camera-basis-runtime-20260929/additional-hit-shake-assets.json)。Unity 编译重载后 Edit/非编译、Console 0 错误；正式 Profile 投影 Build/RequireValid 成功，Shake 数量 21，dirty=false。
 
 本批没有启动 Play/replay，没有新增测试，没有继续修改命中运行链。资源齐全不等于命中消费者已经接通；相机基础轨道和额外时钟输入的早先未完成项也没有因此视为完成。
+
+## Zoom／Stretch 播放叠加映射修正
+
+本批确认了一个真实配置错误：现有 18 项 Zoom、18 项 Stretch 的原始 `PlayStackingType` 均为 0，但作者资产保存为项目 `Add=2`。
+
+证据不是按枚举声明顺序猜数值：829 元数据中 ConfigCameraZoom、ConfigCameraStretch 与 ConfigCameraShake 的该字段均引用同一 `ConfigDataPlayStacking` 类型描述符 `0x7ff97608ed20`；已取得的原 Shake 管理器消费者明确将 raw 0 纳入 Base 候选、raw 1 加入 Additive。对应项目值为 Replace=1、Add=2。类型与字段证据见 [Zoom/Stretch 配置类型](camera-basis-runtime-20260929/zoom-stretch-config-types.json)、[枚举类型](camera-basis-runtime-20260929/camera-config-enums.json)，分支证据沿用震动复刻文档第七节。枚举导出器没有展开 literal 常量表，因此没有把导出的字段 ordinal 当成枚举值。
+
+修改链路：
+
+1. `CorinCameraResourcesAuthoring.PublishPlaybackStacking` 从原始 zoom-0 / stretch-0 JSON 读取当前 Profile 对应资源的 PlayStackingType。
+2. 通过 `CameraZoomAsset.ConfigurePlaybackStacking`、`CameraStretchAsset.ConfigurePlaybackStacking` 正式作者入口写入映射值，并逐资产保存。
+3. 原有 Projection 编译器把该值交给相机运行数据；当前 Stretch 求值器据此区分 Base 候选与 Additive，修正后不会再因这批错误的 Add 配置将所有存活的 Stretch 逐项叠加。
+
+Zoom 当前求值器尚只使用另一字段 `StackingType` 筛选，未消费 `PlayStackingType`。本批修正 Zoom 正式资源的映射，不将其描述为已经实现原作完整的播放仲裁。两种 Stacking 字段的职责不同，不能将它们合并。
+
+正式 Publish 后 Profile 为 21 Shake、18 Zoom、18 Stretch，dirty=false；投影 Build/RequireValid 成功。36 项磁盘资产与提交前比较，唯一业务字段变化是 PlayStackingType；其他小数变化均验证为同一 float32 数值。见 [36 项对账](camera-basis-runtime-20260929/zoom-stretch-stacking-audit.json)。源码编译重载完成，发布前 Console 0 错误；未运行 Play/replay，未新增测试。

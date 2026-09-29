@@ -21,11 +21,11 @@ MonoBehaviour:
   m_IgnoreWorldTimeScale: 0
   m_IgnoreLocalAvatar: 0
   m_IgnoreOwnerTimeScale: 0
-  m_LastTime: 0.150000005960464
-  m_StartTime: 0.150000005960464
+  m_LastTime: 0.15
+  m_StartTime: 0.15
   m_StackingType: 1
   m_FieldOfView: 50
   m_FovVariationType: 1
   m_DelayTime: 0
   m_EndTime: 1.5
-  m_PlayStackingType: 2
+  m_PlayStackingType: 1

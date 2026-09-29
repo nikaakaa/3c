@@ -79,6 +79,11 @@ namespace ThirdPersonCamera
         public float StretchTime => m_StretchTime;
         public CameraFovVariationType FovVariationType => m_FovVariationType;
 
+        public void ConfigurePlaybackStacking(CameraEffectStackingType stackingType)
+        {
+            m_PlayStackingType = stackingType;
+        }
+
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(StretchId) ||

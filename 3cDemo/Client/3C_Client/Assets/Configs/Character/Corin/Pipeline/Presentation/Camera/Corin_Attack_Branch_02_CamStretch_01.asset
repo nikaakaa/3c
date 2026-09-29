@@ -21,7 +21,7 @@ MonoBehaviour:
   m_IgnoreLocalAvatar: 0
   m_IsAppliedElevationRatio: 0
   m_IsAppliedEndElevationAngle: 0
-  m_PlayStackingType: 2
+  m_PlayStackingType: 1
   m_RuntimeCamFollowYOffsetRatio: 0
   m_IsElevationAngleAbsolute: 0
   m_IgnorePriorityInEndTime: 0
@@ -38,8 +38,8 @@ MonoBehaviour:
   m_ElevationAngleMax: 0
   m_HoldTime: -1
   m_DelayTime: 0
-  m_CamOffset: {x: 0, y: -0.200000002980232, z: 0}
+  m_CamOffset: {x: 0, y: -0.2, z: 0}
   m_EndElevationAngleMin: 0
-  m_RadiusRatio: 0.100000001490116
+  m_RadiusRatio: 0.1
   m_StretchTime: 0.25
   m_FovVariationType: 1

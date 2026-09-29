@@ -1,0 +1,440 @@
+{
+  "raw_to_project_mapping": {
+    "0": "Base -> Replace(1)",
+    "1": "Additive -> Add(2)"
+  },
+  "assets": [
+    {
+      "resource": "Corin_Attack_AssaultAid_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "cd94f2baff5cc8670dc5cb3de9da68d8ab211e354fe7b09461bb3410f896e729"
+    },
+    {
+      "resource": "Corin_Attack_AssaultAid_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "ded4c882d90c58ae8549e2400765f8a2de9b772ff949b281966fc2e944a28d21"
+    },
+    {
+      "resource": "Corin_Attack_BeHitAid_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_LastTime",
+        "m_StartTime"
+      ],
+      "asset_sha256": "96a53b07bc093f12b3821254011eb3610843aa9339377cfb946435c0b3a8a7ad"
+    },
+    {
+      "resource": "Corin_Attack_Branch_01_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [],
+      "asset_sha256": "8e149cc512806c7c74dc29615abe4796a350e27aa8b55fc9742c2647445baab8"
+    },
+    {
+      "resource": "Corin_Attack_Branch_01_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "808c75ce9e7f853729a836a6cb534e91a3c4fcf0ee693207186732aa5a9f0716"
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [],
+      "asset_sha256": "1e595f5a6463b6aec47f0a1b709861cea3e50208f7a4267049b293a630b95077"
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "0a5498f1d1b721a35f01e08132d75a3d8ecc0025f6ea7a95c44c7b4bf29a2317"
+    },
+    {
+      "resource": "Corin_Attack_Branch_03_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [],
+      "asset_sha256": "765cd4395a5a199357cffdf2349e01a63b2ede27c4e9066ee3b5774ee5f77244"
+    },
+    {
+      "resource": "Corin_Attack_Branch_03_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "33f21fab61e81d7e9c23248562d1c28730b65f16434aa196049af4baf3ca3699"
+    },
+    {
+      "resource": "Corin_Attack_Counter_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_LastTime",
+        "m_StartTime"
+      ],
+      "asset_sha256": "e1103e76fe03ab0cb50f4590dd64a71a8f82895110fe4f15438fbdfb1d6000cd"
+    },
+    {
+      "resource": "Corin_Attack_Normal_03_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "25c4b4283799c0158470d9fd4e56d78508b0e1b26ca08cf0eec4f733d05365f0"
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "6567a42f9e3e8ee59a5bfbb4ab9d384acf9a0cd5461b10e1555b339f5ed78bbe"
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "79d5a2524431b832c8f731ede245bff20d4f8ca1e685ccc584e4c065fdc88db2"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "0f57eec8657e3f9771a9a4cbf33517b2a7d216c64cc4bb1ca972340c7e6610ff"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "e44e4ecd91690538220fd17065584f7fa4c5ad770b3e41ec0a410f597f14dac4"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamZoom_01",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [],
+      "asset_sha256": "71f566c7eb8082ef002e18c6a18cbab2d96655e99eae92d433a74e369af01452"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamZoom_02",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StartTime"
+      ],
+      "asset_sha256": "515d4340b6e7ed52483764c0b2061720ce51ca3bbfc2bacbe78fc809abc03a1a"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamZoom_03",
+      "kind": "Zoom",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_LastTime",
+        "m_StartTime"
+      ],
+      "asset_sha256": "c41ea7368cf604765f9fd2b7d1893a1178ada9d5e4d95c4c609f51449006e4c9"
+    },
+    {
+      "resource": "Corin_Attack_AssaultAid_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_CamOffset",
+        "m_EndElevationAngleMin",
+        "m_RadiusRatio",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "40541ef3aa114480e29149ed148505bb51e8074be9b609d0f454469497c82160"
+    },
+    {
+      "resource": "Corin_Attack_AssaultAid_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_EndElevationAngleMax",
+        "m_EndElevationAngleMin",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "f8b4917378c0a50027a4cd5d6f7698bd1dbe8ad2bf8e18d055f2f726d6fe251d"
+    },
+    {
+      "resource": "Corin_Attack_BeHitAid_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_HoldTime",
+        "m_CamOffset",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "fb961ad84ee39cf13bc1241d4246c2b669ab05a2726c537b0d31da654e10a02a"
+    },
+    {
+      "resource": "Corin_Attack_Branch_01_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [],
+      "asset_sha256": "e171823ba13d9256ebeb67ee1524e567a7f104c25c451a8c5ce7e4605f3baafc"
+    },
+    {
+      "resource": "Corin_Attack_Branch_01_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StretchTime"
+      ],
+      "asset_sha256": "e0e34dbe167d18fcfa072a0b1a94a0ff83612341bfd4c4e02bccfd1a15371ede"
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_CamOffset",
+        "m_RadiusRatio"
+      ],
+      "asset_sha256": "d8b717c579f540dae350f1bb36bd19c99e6dac578e069a612e1d4be1c34099c6"
+    },
+    {
+      "resource": "Corin_Attack_Branch_02_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StretchTime"
+      ],
+      "asset_sha256": "f7013f8522ef6f95412bfcacbc57c72e5f2c11dfb89205886f1d772ed8f99e3c"
+    },
+    {
+      "resource": "Corin_Attack_Branch_03_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_CamOffset",
+        "m_RadiusRatio"
+      ],
+      "asset_sha256": "5ae81c9c42173b5d3b0c60b430c39e8bcea512e085f70a4f3db47311b7a3ba13"
+    },
+    {
+      "resource": "Corin_Attack_Branch_03_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StretchTime"
+      ],
+      "asset_sha256": "07c395ee747789f0abf63c4b5de2c932923f4fa2e1a2e7856a48ebda8f51283f"
+    },
+    {
+      "resource": "Corin_Attack_Counter_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_HoldTime",
+        "m_CamOffset",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "ad31bec46c317153853edb7692907967aa4fed853c6ec4eb8592d353673a1376"
+    },
+    {
+      "resource": "Corin_Attack_Normal_03_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_CamOffset",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "4e31e6f1e4c2d4bfa2c511093f49ad64f96c739d8479a13b65c878bcaa81b831"
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_StretchTime"
+      ],
+      "asset_sha256": "b7e9a93247db8008ca6d1c30989d37b8925c458d3fb54749b3aa6c1a17f70862"
+    },
+    {
+      "resource": "Corin_Attack_Normal_05_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_CamOffset",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "bdc45a0443622b9aa0c2cac3dad8f800052a845856fbab55f2ebbabda052fd5f"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_EndElevationAngleMin",
+        "m_RadiusRatio",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "22e869cf4a35c8a0899dfd939b53e28aaa9a6458fb8908110b3e234dbddff14c"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_CamOffset",
+        "m_EndElevationAngleMin",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "9f6e864e1aa6060c95efdb8931f18c0070d104e388999da9b8f8421aabc4d0d0"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamStretch_01",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_EndElevationAngleMin",
+        "m_RadiusRatio"
+      ],
+      "asset_sha256": "2b88d6490e4b725f9b3aad233600f471880cff5726e6fcc545f0200627bf15c0"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamStretch_02",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_CamOffset",
+        "m_EndElevationAngleMin",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "7cc46263f938656f32f53dd631f3f8f0accc9cbbd9993c69b77dbea3e468899f"
+    },
+    {
+      "resource": "Corin_SwitchIn_Attack_Ex_CamStretch_03",
+      "kind": "Stretch",
+      "source_play_stacking": 0,
+      "published_play_stacking": 1,
+      "only_play_stacking_changed": true,
+      "unchanged_float32_fields_with_text_rounding": [
+        "m_ElevationAngleMin",
+        "m_EndElevationAngleMax",
+        "m_ElevationAngleMax",
+        "m_HoldTime",
+        "m_CamOffset",
+        "m_EndElevationAngleMin",
+        "m_RadiusRatio",
+        "m_StretchTime"
+      ],
+      "asset_sha256": "12e24efd0ca84b9347451c269f1004d475431a6c6fa88ea44d836cca0230b43a"
+    }
+  ],
+  "errors": []
+}

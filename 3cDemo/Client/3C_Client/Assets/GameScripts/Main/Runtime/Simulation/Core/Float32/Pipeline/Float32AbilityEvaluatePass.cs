@@ -72,9 +72,9 @@ namespace ThirdPersonSimulation
                 state.Actors.Count != m_Evaluations.Length)
                 throw new InvalidOperationException("Ability Evaluate Pass Step does not match the working roster.");
 
-            PrepareIngress(step, readPorts.CharacterRuntime);
             try
             {
+                PrepareIngress(step, readPorts.CharacterRuntime);
                 for (int i = 0; i < m_Evaluations.Length; i++)
                 {
                     SimulationActorBinding actor = readPorts.CharacterRuntime.Runtime.Roster[i];
@@ -128,11 +128,6 @@ namespace ThirdPersonSimulation
 
         void PrepareIngress(Float32SimulationStep step, IFloat32CharacterRuntimePort runtime)
         {
-            for (int i = 0; i < m_Ingress.Length; i++)
-            {
-                Array.Clear(m_Ingress[i], 0, m_IngressCounts[i]);
-                m_IngressCounts[i] = 0;
-            }
             for (int i = 0; i < step.Ingress.Count; i++)
             {
                 int actorIndex = runtime.Runtime.GetActorIndex(step.Ingress[i].ActorId);

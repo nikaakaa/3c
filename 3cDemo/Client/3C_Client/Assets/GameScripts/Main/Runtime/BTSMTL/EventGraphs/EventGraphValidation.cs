@@ -134,7 +134,7 @@ namespace BTSMTL.EventGraphs
                         ValidateVariableNode(root, node, errors);
                         break;
                     case EventGraphCapabilityKind.HostInput:
-                        ValidateHostInput(root, contract, node, errors);
+                        ValidateHostInput(contract, node, errors);
                         break;
                     case EventGraphCapabilityKind.Macro:
                         if (node is MacroNodeWrapper wrapper)
@@ -251,53 +251,17 @@ namespace BTSMTL.EventGraphs
         }
 
         static void ValidateHostInput(
-            HostEventGraph graph,
             EventGraphHostContract contract,
             Node node,
             List<string> errors)
         {
-            string inputId = null;
-            Type valueType = null;
-            if (node is EventGraphStringInputNode stringInput)
+            if (node is not EventGraphHostInputNodeMarker inputNode)
             {
-                inputId = stringInput.InputId;
-                valueType = typeof(string);
+                errors.Add($"node '{node.UID}' is not a host input node");
+                return;
             }
-            else if (node is EventGraphFloatInputNode floatInput)
-            {
-                inputId = floatInput.InputId;
-                valueType = typeof(float);
-            }
-            else if (node is EventGraphIntInputNode intInput)
-            {
-                inputId = intInput.InputId;
-                valueType = typeof(int);
-            }
-            else if (node is EventGraphBoolInputNode boolInput)
-            {
-                inputId = boolInput.InputId;
-                valueType = typeof(bool);
-            }
-            else if (node is EventGraphVector2InputNode vector2Input)
-            {
-                inputId = vector2Input.InputId;
-                valueType = typeof(UnityEngine.Vector2);
-            }
-            else if (node is EventGraphVector3InputNode vector3Input)
-            {
-                inputId = vector3Input.InputId;
-                valueType = typeof(UnityEngine.Vector3);
-            }
-            else if (node is EventGraphQuaternionInputNode quaternionInput)
-            {
-                inputId = quaternionInput.InputId;
-                valueType = typeof(UnityEngine.Quaternion);
-            }
-            else if (node is EventGraphDeltaNode)
-            {
-                inputId = EventGraphHostInputIds.DeltaSeconds;
-                valueType = typeof(float);
-            }
+            string inputId = inputNode.InputId;
+            Type valueType = inputNode.ValueType;
             if (string.IsNullOrWhiteSpace(inputId) ||
                 !contract.TryGetInput(
                     inputId,
@@ -328,5 +292,8 @@ namespace BTSMTL.EventGraphs
 
     public interface EventGraphHostInputNodeMarker
     {
+        string InputId { get; }
+        Type ValueType { get; }
+        void BindInput(EventGraphInputDescriptor descriptor);
     }
 }

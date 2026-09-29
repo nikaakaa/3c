@@ -252,20 +252,14 @@ namespace BTSMTL.EventGraphs
             m_RuntimeContract = null;
         }
 
-        internal T ReadInput<T>(string inputId)
+        internal EventGraphValue ReadInput(EventGraphInputDescriptor descriptor)
         {
             if (m_HostContext == null || m_RuntimeContract == null)
                 throw new InvalidOperationException("Event graph input was read outside an active host invocation.");
-            if (!m_RuntimeContract.TryGetInput(inputId, out EventGraphInputDescriptor descriptor))
+            if (!m_HostContext.TryRead(descriptor.InputId, descriptor.ValueKind, out EventGraphValue value))
                 throw new InvalidOperationException(
-                    $"Event graph input '{inputId}' is not declared by host contract '{m_RuntimeContract.ContractId}'.");
-            if (descriptor.ValueType != typeof(T))
-                throw new InvalidOperationException(
-                    $"Event graph input '{inputId}' requires '{descriptor.ValueType.FullName}', not '{typeof(T).FullName}'.");
-            if (!m_HostContext.TryRead(inputId, descriptor.ValueKind, out EventGraphValue value))
-                throw new InvalidOperationException(
-                    $"Event graph host did not provide input '{inputId}' for invocation '{m_HostContext.Invocation.Identity}'.");
-            return value.As<T>();
+                    $"Event graph host did not provide input '{descriptor.InputId}' for invocation '{m_HostContext.Invocation.Identity}'.");
+            return value;
         }
 
         interface IVariableReader
@@ -305,7 +299,14 @@ namespace BTSMTL.EventGraphs
             }
             for (int i = 0; i < allNodes.Count; i++)
             {
-                if (allNodes[i] is ParameterVariableNode node &&
+                if (allNodes[i] is EventGraphHostInputNodeMarker inputNode)
+                {
+                    if (!hostContract.TryGetInput(inputNode.InputId, out EventGraphInputDescriptor input))
+                        throw new InvalidOperationException(
+                            $"Event graph host input '{inputNode.InputId}' does not match its contract.");
+                    inputNode.BindInput(input);
+                }
+                else if (allNodes[i] is ParameterVariableNode node &&
                     (node.parameter.varRef == null || !ReferenceEquals(node.parameter.varRef,
                         blackboard.GetVariableByID(node.parameter.targetVariableID))))
                     throw new InvalidOperationException($"Event graph variable node '{node.UID}' is not bound to its instance.");

@@ -563,6 +563,13 @@
 - 改为线程内 `ThreadStatic SHA256`，首次使用创建；`TryComputeHash` 仍写入栈上32字节结果，摘要、十六进制输出字符串、字段顺序和错误检查保持。线程之间不共享可变 cryptography 对象，返回值不借用内部状态。
 - 首次使用和线程创建仍分配；最终64字符哈希字符串与业务快照所有权分配保留。该修改不宣称 SHA256 CPU 耗时、GC 字节或整链收益。已静态核对 Compute 两个入口、using 生命周期替换、ThreadStatic 边界和调用者同步消费；本轮未编译、运行哈希对比、回放或采样。
 
+### AP67 EventGraph 宿主输入重复解析合同（2026-09-29，已实施，本轮未编译）
+
+- `HostEventGraph.ReadInput<T>` 原来每次都按字符串扫描 `EventGraphHostContract` 输入数组，再做节点类型与描述符类型检查；`EventGraphHostInputNode<T>` 和 Delta 节点的每个输出读取都会重复这条合同查找。输入节点数量与消费者数量增大时，周期扫描按读取次数增长。
+- `EventGraphHostInputNodeMarker` 现在统一暴露正式 `InputId`、`ValueType` 和 `BindInput`。源图校验删除逐个具体输入节点类型的分支，改用同一 marker 合同核对输入 ID 和类型；克隆实例在 `InitializeVariableOutput` 阶段按合同定位描述符并绑定到节点。类型匹配仍只在源图 `EventGraphAssetValidator.Require` 边界确认，实例绑定只负责找到对应描述符，不重复类型校验。
+- 运行时 `ReadInput` 改为直接消费已绑定描述符，仅检查当前 invocation 和 `IEventGraphHostContext.TryRead`；普通节点读取仍调用一次 `EventGraphValue.As<T>`。激活 invocation、缺失输入、类型不匹配的校验时机和异常传播保持。没有新增输入缓存值、整帧缓存、fallback 或第二条图执行路径。
+- 装配期增加每个输入节点的描述符引用；Reset 后重建克隆时沿原初始化链重新绑定。该修改减少周期合同数组扫描和重复类型检查，不宣称宿主上下文自身查找、EventGraph 总帧耗时或 GC 的实测收益。已静态核对正式输入节点、Delta 节点、源图校验、克隆初始化和旧 `ReadInput<T>` 调用清理；未编译、运行或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

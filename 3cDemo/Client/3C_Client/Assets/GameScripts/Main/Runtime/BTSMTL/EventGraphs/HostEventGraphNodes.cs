@@ -1,3 +1,4 @@
+using System;
 using FlowCanvas;
 using FlowCanvas.Nodes;
 using ParadoxNotion.Design;
@@ -8,8 +9,11 @@ namespace BTSMTL.EventGraphs
     public abstract class EventGraphHostInputNode<T> : FlowScriptNode, EventGraphHostInputNodeMarker
     {
         [SerializeField] string m_InputId = string.Empty;
+        [NonSerialized] EventGraphInputDescriptor m_Descriptor;
 
         public string InputId => m_InputId ?? string.Empty;
+
+        public Type ValueType => typeof(T);
 
         public override string name =>
             string.IsNullOrEmpty(InputId)
@@ -28,11 +32,13 @@ namespace BTSMTL.EventGraphs
             m_InputId = inputId.Trim();
         }
 
+        public void BindInput(EventGraphInputDescriptor descriptor) => m_Descriptor = descriptor;
+
         T ReadValue()
         {
             if (graph is not HostEventGraph host)
                 throw new System.InvalidOperationException("Event graph host input node is outside a HostEventGraph.");
-            return host.ReadInput<T>(m_InputId);
+            return host.ReadInput(m_Descriptor).As<T>();
         }
     }
 
@@ -97,6 +103,8 @@ namespace BTSMTL.EventGraphs
     [Description("Reads the delta seconds supplied by the host.")]
     public sealed class EventGraphDeltaNode : FlowScriptNode
     {
+        [NonSerialized] EventGraphInputDescriptor m_Descriptor;
+
         protected override void RegisterPorts()
         {
             AddValueOutput<float>(
@@ -106,10 +114,15 @@ namespace BTSMTL.EventGraphs
                     if (graph is not HostEventGraph host)
                         throw new System.InvalidOperationException(
                             "Event graph delta node is outside a HostEventGraph.");
-                    return host.ReadInput<float>(
-                        EventGraphHostInputIds.DeltaSeconds);
+                    return host.ReadInput(m_Descriptor).As<float>();
                 });
         }
+
+        public string InputId => EventGraphHostInputIds.DeltaSeconds;
+
+        public Type ValueType => typeof(float);
+
+        public void BindInput(EventGraphInputDescriptor descriptor) => m_Descriptor = descriptor;
     }
 
     public static class EventGraphHostInputIds

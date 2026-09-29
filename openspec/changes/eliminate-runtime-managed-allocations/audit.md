@@ -807,6 +807,12 @@
 - 为每个 tag 在 Control 实例内缓存从自身到根的 ancestor 数组；首次解析保留 64 层上限和自身父节点错误，后续装载路径直接展开缓存。owned/source HashSet 仍每次 Evaluate 清理，不跨评估保留业务标签。
 - 相同 tag 的重复激活不再重复 catalog 查找和父链构造；配置更换沿正式 runtime 重建生命周期，不引入运行时 fallback。静态核对 Control 生命周期、catalog 只读合同、缓存字段唯一消费和差异检查；未编译、运行回放或采样。
 
+### AP107 State Machine 身份周期字符串解析（2026-09-29，已实施，本轮未编译）
+
+- `OperationStateMachineRuntime` 每次 Tick、继续过渡和停止状态机时，把 active/exiting/pending identity slot 的预生成数字字符串用 `int.TryParse` 解析回 `OperationHandle`；AP99 已收口 Push state scope 的解析，但状态机自身过渡 handle 解析仍是周期重复工作。
+- `OperationExecutionTopology` 装配期已有 `m_Identities`，现在同时建立唯一的 identity 到 handle 的 Ordinal 字典；状态机读取 slot 后通过 `TryResolveOperation` 直接取得 handle，删除原 `ParseHandle`。identity slot 的正式写入仍只有拓扑数字身份或空串，过渡和停止状态不变。
+- 每次状态机推进少一次整数字符串解析；未知或空 identity 继续按无效 handle 处理。静态核对 identity slot 全部写入点、Restore/Stop 读取链、两域和 Presentation 控制目标调用；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 GameplayAbilityExecution 写时复制别名：`CreateMutableShell` 只复制 frame 名单，`MakeActiveFrameMutable` 在脱离共享后没有继续克隆 active frame；现有 frame 的 `BindGeneration`、`TrySet` 和 `TryReset` 会写穿到 committed aggregate 持有的同一对象。事务随后用聚合相等性判断变更时可能得到 false，破坏 Savepoint/Commit/Discard 语义。现在 manager 跟踪 active frame 所有权，脱离共享后首个写入只在当前 shell 内克隆目标 frame；新增 frame 与移除路径维持原语义。静态核对两域 ActionStateStore、事务 Get/Set、聚合相等性和生命周期调用链；未编译、运行回放或采样。

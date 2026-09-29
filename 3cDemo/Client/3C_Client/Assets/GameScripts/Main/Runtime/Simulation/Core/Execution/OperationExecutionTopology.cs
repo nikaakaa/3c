@@ -287,6 +287,7 @@ namespace ThirdPersonSimulation
     {
         readonly ReadOnlyCollection<OperationExecutionDescriptor> m_Operations;
         readonly string[] m_Identities;
+        readonly Dictionary<string, OperationHandle> m_OperationByIdentity;
         readonly IReadOnlyList<ProgramControlFlowEdge>[][] m_Outgoing;
         readonly IReadOnlyList<ProgramReference>[][] m_References;
         readonly int[][] m_OperationStateSlots;
@@ -345,6 +346,7 @@ namespace ThirdPersonSimulation
             m_Operations = operationList.AsReadOnly();
             m_Identities = BuildIdentities(operationList.Count);
             m_StateIdentities = BuildStateIdentities(operationList, m_Identities);
+            m_OperationByIdentity = BuildOperationIdentities(m_Identities);
             m_Outgoing = BuildOutgoing(operationList.Count, edges);
             m_References = BuildReferences(operationList.Count, referenceList);
             m_OperationStateSlots = BuildOperationStateSlots(operationList, stateSlots);
@@ -377,6 +379,11 @@ namespace ThirdPersonSimulation
         {
             RequireOperation(handle);
             return m_Identities[handle.Value];
+        }
+
+        public bool TryResolveOperation(string identity, out OperationHandle operation)
+        {
+            return m_OperationByIdentity.TryGetValue(identity, out operation);
         }
 
         public string StateIdentity(OperationHandle state)
@@ -485,6 +492,14 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < operationCount; i++)
                 identities[i] = i.ToString(CultureInfo.InvariantCulture);
             return identities;
+        }
+
+        static Dictionary<string, OperationHandle> BuildOperationIdentities(string[] identities)
+        {
+            var operationByIdentity = new Dictionary<string, OperationHandle>(identities.Length, StringComparer.Ordinal);
+            for (int i = 0; i < identities.Length; i++)
+                operationByIdentity.Add(identities[i], new OperationHandle(i));
+            return operationByIdentity;
         }
 
         static string[] BuildStateIdentities(

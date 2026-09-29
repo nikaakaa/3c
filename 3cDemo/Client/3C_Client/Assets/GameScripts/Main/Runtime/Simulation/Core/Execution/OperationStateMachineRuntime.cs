@@ -61,11 +61,11 @@ namespace ThirdPersonSimulation
             int pendingSlot = m_Host.RequireOperationSlot(operation, ProgramStateSemantic.StateMachinePending);
             int exitingSlot = m_Host.RequireOperationSlot(operation, ProgramStateSemantic.StateMachineExiting);
             int transitionSlot = m_Host.RequireOperationSlot(operation, ProgramStateSemantic.StateMachineTransition);
-            OperationHandle exiting = ParseHandle(m_Host.ReadIdentity(exitingSlot));
+            OperationHandle exiting = ResolveOperationIdentity(m_Host.ReadIdentity(exitingSlot));
             if (exiting.IsValid)
                 return ContinueStateTransition(operation, activeSlot, pendingSlot, exitingSlot, transitionSlot, exiting);
 
-            OperationHandle active = ParseHandle(m_Host.ReadIdentity(activeSlot));
+            OperationHandle active = ResolveOperationIdentity(m_Host.ReadIdentity(activeSlot));
             if (!active.IsValid)
             {
                 OperationHandle enter = m_Host.Topology.StateMachineInitialEntry(operation.Handle);
@@ -113,7 +113,7 @@ namespace ThirdPersonSimulation
             int transitionSlot,
             OperationHandle exiting)
         {
-            OperationHandle target = ParseHandle(m_Host.ReadIdentity(pendingSlot));
+            OperationHandle target = ResolveOperationIdentity(m_Host.ReadIdentity(pendingSlot));
             OperationStopContext context = OperationStopContext.StateTransition(exiting, target);
             OperationStopStatus stop = m_Host.RequestStop(exiting, context);
             if (stop == OperationStopStatus.Running)
@@ -211,9 +211,9 @@ namespace ThirdPersonSimulation
             int pendingSlot = m_Host.RequireOperationSlot(machine, ProgramStateSemantic.StateMachinePending);
             int exitingSlot = m_Host.RequireOperationSlot(machine, ProgramStateSemantic.StateMachineExiting);
             int transitionSlot = m_Host.RequireOperationSlot(machine, ProgramStateSemantic.StateMachineTransition);
-            OperationHandle exiting = ParseHandle(m_Host.ReadIdentity(exitingSlot));
+            OperationHandle exiting = ResolveOperationIdentity(m_Host.ReadIdentity(exitingSlot));
             if (!exiting.IsValid)
-                exiting = ParseHandle(m_Host.ReadIdentity(activeSlot));
+                exiting = ResolveOperationIdentity(m_Host.ReadIdentity(activeSlot));
             m_Host.WriteIdentity(pendingSlot, string.Empty);
             m_Host.WriteIdentity(transitionSlot, string.Empty);
             if (!exiting.IsValid)
@@ -248,8 +248,8 @@ namespace ThirdPersonSimulation
         {
             int activeSlot = m_Host.Topology.FindOperationStateSlot(machine.Handle, ProgramStateSemantic.StateMachineActive);
             int exitingSlot = m_Host.Topology.FindOperationStateSlot(machine.Handle, ProgramStateSemantic.StateMachineExiting);
-            OperationHandle active = activeSlot >= 0 ? ParseHandle(m_Host.ReadIdentity(activeSlot)) : OperationHandle.Invalid;
-            OperationHandle exiting = exitingSlot >= 0 ? ParseHandle(m_Host.ReadIdentity(exitingSlot)) : OperationHandle.Invalid;
+            OperationHandle active = activeSlot >= 0 ? ResolveOperationIdentity(m_Host.ReadIdentity(activeSlot)) : OperationHandle.Invalid;
+            OperationHandle exiting = exitingSlot >= 0 ? ResolveOperationIdentity(m_Host.ReadIdentity(exitingSlot)) : OperationHandle.Invalid;
             if (active.IsValid)
                 m_Host.ForceStop(active, context);
             if (exiting.IsValid && !exiting.Equals(active))
@@ -380,10 +380,10 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static OperationHandle ParseHandle(string value)
+        OperationHandle ResolveOperationIdentity(string identity)
         {
-            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-                ? new OperationHandle(parsed)
+            return m_Host.Topology.TryResolveOperation(identity, out OperationHandle operation)
+                ? operation
                 : OperationHandle.Invalid;
         }
 

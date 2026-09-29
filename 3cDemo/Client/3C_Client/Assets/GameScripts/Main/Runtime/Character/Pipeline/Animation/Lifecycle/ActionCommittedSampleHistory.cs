@@ -268,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ClearPreparedEntries();
             for (int i = 0; i < m_MutationCount; i++)
             {
-                Mutation mutation = m_Mutations[i];
+                ref readonly Mutation mutation = ref m_Mutations[i];
                 if (!IsFirstMutationForPlayback(
                         i,
                         mutation.PlaybackId))
@@ -382,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             for (int i = 0; i < m_MutationCount; i++)
             {
-                Mutation mutation = m_Mutations[i];
+                ref readonly Mutation mutation = ref m_Mutations[i];
                 if (!mutation.PlaybackId.Equals(playbackId))
                     continue;
                 if (mutation.Kind == MutationKind.RemovePlayback)
@@ -504,7 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             for (int i = 0; i < m_MutationCount; i++)
             {
-                Mutation existing = m_Mutations[i];
+                ref readonly Mutation existing = ref m_Mutations[i];
                 if (!existing.PlaybackId.Equals(mutation.PlaybackId))
                     continue;
                 if (existing.Kind == MutationKind.RemovePlayback ||
@@ -532,7 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = 0; i < m_MutationCount; i++)
             {
-                Mutation mutation = m_Mutations[i];
+                ref readonly Mutation mutation = ref m_Mutations[i];
                 AnimationPresentationMutationJournalHeader header =
                     mutation.Header;
                 AnimationPresentationMutationOperationKind operation =
@@ -571,7 +571,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             for (int i = 0; i < m_MutationCount; i++)
             {
-                Mutation mutation = m_Mutations[i];
+                ref readonly Mutation mutation = ref m_Mutations[i];
                 if (FindEntry(mutation.PlaybackId) >= 0 ||
                     !IsFirstMutationForPlayback(i, mutation.PlaybackId) ||
                     LastMutationKind(mutation.PlaybackId) ==
@@ -592,8 +592,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = m_MutationCount - 1; i >= 0; i--)
             {
-                if (m_Mutations[i].PlaybackId.Equals(playbackId))
-                    return m_Mutations[i].Kind;
+                ref readonly Mutation mutation = ref m_Mutations[i];
+                if (mutation.PlaybackId.Equals(playbackId))
+                    return mutation.Kind;
             }
             return default;
         }
@@ -604,7 +605,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             for (int i = 0; i < mutationIndex; i++)
             {
-                if (m_Mutations[i].PlaybackId.Equals(playbackId))
+                ref readonly Mutation mutation = ref m_Mutations[i];
+                if (mutation.PlaybackId.Equals(playbackId))
                     return false;
             }
             return true;

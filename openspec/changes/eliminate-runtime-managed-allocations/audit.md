@@ -1576,3 +1576,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Committed follow clock 将 playback commands 和 retirements 暴露为 `IReadOnlyList`；history 只读取 Sample command，retirement 回放只读取 playback identity，但每项都复制整份 command 或 permission。
 - commands/retirements 正式属性返回同一固定容量 buffer；history 与 coordinator 回放绑定 `ElementAt` / `CommandRef` 只读元素并定容 count。Sample 过滤、RemovePlayback、ValidateFrame 顺序和异常语义不变。
 - 该改动删除 committed sample history 与 retirement 回放的周期元素拷贝；不复制或替换 playback 内部缓冲。静态核对两个属性的唯一消费点、buffer 生命周期和 coordinator 采样帧协议；未编译、未采样，不能声称实测耗时收益。
+
+### AP210 committed sample mutation 引用化（2026-09-30，已实施，本轮未编译）
+
+- committed sample history 在校验、window 重建、duplicate 检查、journal 身份校验、容量校验和最近 mutation 查找中把包含 raw sample 的 `Mutation` 按值复制为局部；多处直接索引还在同一迭代里重复读取元素。
+- 七个只读循环改为绑定 journal 数组的 `ref readonly` 元素。mutation 顺序、Sample upsert/remove 语义、prune、prepared entry 生命周期和异常文本不变；`WithHeader` 仍只在 append 时构造一次最终 journal 记录。
+- 该改动删除周期 mutation journal 消费链的重复结构拷贝；不新增缓存或第二 journal 数据源。静态核对全部循环只读、数组生命周期覆盖 active mutation lease、header 校验顺序不变；未编译、未采样，不能声称实测耗时收益。

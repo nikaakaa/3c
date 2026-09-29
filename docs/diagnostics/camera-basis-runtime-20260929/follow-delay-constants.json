@@ -1,0 +1,86 @@
+[
+  {
+    "instruction": "0x13c57c5a",
+    "rva": "0x2703f80",
+    "raw_hex": "0000003f",
+    "float_values": [
+      0.5
+    ]
+  },
+  {
+    "instruction": "0x13c57ca9",
+    "rva": "0x2703f7c",
+    "raw_hex": "0000803f",
+    "float_values": [
+      1.0
+    ]
+  },
+  {
+    "instruction": "0x13c57d38",
+    "rva": "0x281cb70",
+    "raw_hex": "000000bf",
+    "float_values": [
+      -0.5
+    ]
+  },
+  {
+    "instruction": "0x15971716",
+    "rva": "0x2818b28",
+    "raw_hex": "000034c3",
+    "float_values": [
+      -180.0
+    ]
+  },
+  {
+    "instruction": "0x1597171e",
+    "rva": "0x2703f7c",
+    "raw_hex": "0000803f",
+    "float_values": [
+      1.0
+    ]
+  },
+  {
+    "instruction": "0x13c56b7b",
+    "rva": "0x2838cc0",
+    "raw_hex": "00000000cdccac3f",
+    "float_values": [
+      0.0,
+      1.350000023841858
+    ]
+  },
+  {
+    "instruction": "0x13c56c18",
+    "rva": "0x2839910",
+    "raw_hex": "cdccac3f",
+    "float_values": [
+      1.350000023841858
+    ]
+  },
+  {
+    "instruction": "0x13c56cab",
+    "rva": "0x2838cc0",
+    "raw_hex": "00000000cdccac3f",
+    "float_values": [
+      0.0,
+      1.350000023841858
+    ]
+  },
+  {
+    "instruction": "0x13c56d5d",
+    "rva": "0x2838cc0",
+    "raw_hex": "00000000cdccac3f",
+    "float_values": [
+      0.0,
+      1.350000023841858
+    ]
+  },
+  {
+    "instruction": "0x13c56df1",
+    "rva": "0x2838cc0",
+    "raw_hex": "00000000cdccac3f",
+    "float_values": [
+      0.0,
+      1.350000023841858
+    ]
+  }
+]

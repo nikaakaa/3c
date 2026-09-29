@@ -1,0 +1,684 @@
+{
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\replication-guide\\analysis\\camera-data\\Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json",
+  "source_sha256": "fa016f5e7fa792308ce4ee3164d3d070e4126dcb6fb1bc38dd205d085fb230f3",
+  "config_key": "Default_Normal",
+  "limits": "整理已选配置的原始数值，不证明原作可琳实例选择此键；mode_raw没有按枚举声明顺序命名。",
+  "elevation_blend_duration": 1.0,
+  "modes": [
+    {
+      "mode_raw": 0,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.30000001192092896
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 0,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 1.0,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 1.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.4000000059604645
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 0,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.10000000149011612
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 3,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.30000001192092896
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 3,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.20000000298023224
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 3,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.10000000149011612
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 2,
+      "orbit": "Bottom",
+      "fov": 60.0,
+      "min_distance_ratio": 0.5,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.30000001192092896
+      },
+      "soft_zone": [
+        0.800000011920929,
+        0.800000011920929
+      ]
+    },
+    {
+      "mode_raw": 2,
+      "orbit": "Middle",
+      "fov": 60.0,
+      "min_distance_ratio": 0.5,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 1.0,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 1.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.4000000059604645
+      },
+      "soft_zone": [
+        0.800000011920929,
+        0.800000011920929
+      ]
+    },
+    {
+      "mode_raw": 2,
+      "orbit": "Top",
+      "fov": 60.0,
+      "min_distance_ratio": 0.5,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.20000000298023224
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 1,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.800000011920929,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.019999999552965164
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 1,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.800000011920929,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.019999999552965164
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 1,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.800000011920929,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.019999999552965164
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 4,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        3.0
+      ],
+      "composition_xy": [
+        0.5,
+        3.0
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.30000001192092896
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 4,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        3.0
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 1.0,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 1.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.4000000059604645
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 4,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        3.0
+      ],
+      "composition_xy": [
+        0.5,
+        3.0
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.6000000238418579,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.10000000149011612
+      },
+      "soft_zone": [
+        0.800000011920929,
+        0.800000011920929
+      ]
+    },
+    {
+      "mode_raw": 12,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 12,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 12,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 11,
+      "orbit": "Bottom",
+      "fov": 60.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        0.800000011920929
+      ]
+    },
+    {
+      "mode_raw": 11,
+      "orbit": "Middle",
+      "fov": 60.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        0.800000011920929
+      ]
+    },
+    {
+      "mode_raw": 11,
+      "orbit": "Top",
+      "fov": 60.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.0,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.10000000149011612,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.0
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 20,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.20000000298023224,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.30000001192092896,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.10000000149011612
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 20,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.30000001192092896,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.4000000059604645,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.05000000074505806
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 20,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 0.20000000298023224,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 0.30000001192092896,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.10000000149011612
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    },
+    {
+      "mode_raw": 25,
+      "orbit": "Bottom",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 1.7999999523162842,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 1.7999999523162842,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.8999999761581421
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 25,
+      "orbit": "Middle",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 3.0,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 3.0,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 1.2000000476837158
+      },
+      "soft_zone": [
+        0.800000011920929,
+        1.0
+      ]
+    },
+    {
+      "mode_raw": 25,
+      "orbit": "Top",
+      "fov": 40.0,
+      "min_distance_ratio": 0.6000000238418579,
+      "follow_xyz": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "composition_xy": [
+        0.5,
+        0.5
+      ],
+      "follow_direction": {
+        "RATIO_CAMERA_DIRECTION_IDLE": 0.0,
+        "RATIO_CAMERA_DIRECTION_SIDE": 2.4000000953674316,
+        "RATIO_CAMERA_DIRECTION_FORWARD": 1.600000023841858,
+        "RATIO_CAMERA_DIRECTION_BACKWARD": 0.4000000059604645
+      },
+      "soft_zone": [
+        0.800000011920929,
+        2.0
+      ]
+    }
+  ]
+}

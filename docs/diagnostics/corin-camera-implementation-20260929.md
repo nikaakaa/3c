@@ -349,3 +349,22 @@ Unity编译、域重载和Console检查通过，0错误。编译中发现初始�
 Unity编译尝试被其他窗口的OperationStateMachineRuntime.cs:267两处CS1503（int参数传给ulong）阻塞；未修改该逻辑链。相机改动diff检查通过，当前不能宣称新代码已通过Unity编译或生产函数检查，也未运行Play/replay。待整体编译恢复后，需用正式Profile的Branch_02 Zoom／Stretch跑编辑器内生产求值检查，再交付这一批为可用版本。配置资源数值未改，不需要重新生成技能、动画或IK资产。
 
 补充独立编译：使用Unity生成的csproj，`dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false /p:BuildProjectReferences=false`编译ThirdPersonCamera.Contracts成功，0警告0错误。相同方式编译ThirdPersonClient.Runtime时，由CharacterTimelineHost.cs:323引用的既有依赖输出不含14参数AbilityTimelineLogicMotion构造函数而失败；这属于独立编译采用现存依赖产物的版本不匹配，不能将其直接认定为该模块新增源码错误。两次构建结束均立即执行build-server shutdown。相机合同类型已通过C#编译，Zoom／Stretch完整消费链仍待Unity整体编译恢复后验证。
+
+## Delay 模式、仰角与方向消费的进一步取证
+
+本批没有修改相机运行源码或作者配置。当前统一 SmoothDamp(DefaultSmoothTime) 的实现仍未替换，完整 Delay 交付仍未完成。新增证据统一为 camera-basis-runtime-20260929/follow-delay-*，包括原始指令、字段布局、常量字节及配置摘录。
+
+输入到输出已经确认以下层次：
+
+1. 镜头控制标志、角色 tag 与模式队列进入 0x14A3BF30。配置 +0x58/+0x59 决定是否自动选模式及是否考虑动画状态；有队列项时出队，没有项时读取配置 +0x5C。0x14A3C400 使用主相机 +0x27C 的 CameraDelayMoveMode 在配置 +0x60 的 DELAYDATAS 字典查找。字典键不是 FOV 分档。枚举字段的 constant_value_status 仍为“默认值表尚未展开”，不能按声明顺序给 raw 0/2/3 等值取具名含义；角色 tag 的具体映射也尚未确认。
+2. 状态混合之后，0x13C57C20 按归一化仰角选底→中或中→顶。半区坐标分别为 2*elevation、2*(elevation-0.5)。0x11919390 把 CameraScreenDragConfig.NapCamOrbitLerpTime(+0x34) 保存为分母，0x11919A70 以半区坐标除该分母后调用曲线，再交给 CameraDelayData.Lerp。0x1EA804F0 的工厂指令创建 (0,0)→(1,1) 且有效段切线为1的线性曲线。当前 Default_Normal 的 NapCamOrbitLerpTime=1，因此当前配置的仰角混合确实等同于分段线性；不能把该分母误称为每帧推进的时间平滑，也不能忽略它对其他配置的影响。
+3. 0x116CB660 对 FollowOffset、XYZ damping、旋转 damping、屏幕中心、死区／软区与 bias 执行夹紧到[0,1]的插值，并通过 0x134D4390 混合方向倍率。动画状态／tag倍率对象在未替换分支直接采用目标端对象，不逐条插值；这一选择还需在状态消费者端进一步核实。本批保存了所读分支字节，初始化标志、IFix分支和业务开关不能混称。
+4. 0x15971550 把 CameraDataAccessor+0x254 的向量送入 0x12CB0FE0；后者用循环槽保存向量、长度和传入时间，并维护向量总和。0x15974F90 以槽数取得平均向量后归一化，所以方向输入存在历史窗口，不能直接使用当前帧方向。窗口长度及 +0x254 上游生产仍待追通。
+5. 0x15971550 读取前次 CameraState 的旋转，将其前向取反并投影到水平面，与上述历史方向求角。原始常量确认角度参数为 1-abs(angle)/180。0x13C56A40 用方向配置生成五个点：(0,1.35,0)、(0,1.35,forward)、(side,1.35,0)、(0,1.35,-backward)、(0,1.35,0)，调用 0x1F39A430 生成控制点。0x15970400 选择中间两段执行三次贝塞尔，0x15971550 最后取采样点 XZ 长度作为系数。不能将这些数值实现为方向枚举的三个硬切倍率，也不能仅凭函数形状声称 0x1F39A430 已与某版本 Cinemachine 函数逐项比对完成。
+6. 0x15971D60 先把 Accessor+0x140 的当前FOV写入CameraState，再计算构图阻尼；它读取 CameraDelayData 的 HorizontalDamping(+0x48) 与 VerticalDamping(+0x4C)。其中垂直值还会受方向系数和 +0x224 的额外纵向系数影响，后者由 0x159717D0 的升降速度、计时及曲线分支产生。因此配置 mFOV 不能直接代替这里读取的当前FOV，构图阻尼也不能统一写成一个 SmoothDamp 时间。
+
+配置数值保存为 follow-delay-config-summary.json，带原文件SHA256、键名、9个模式和27个仰角条目。纠正先前概括：并非各模式XYZ和构图阻尼均为0.5。中轨道 raw 2/11 的XYZ为(0,0.5,1)，raw 4 的水平／纵向构图阻尼为(0.5,3)；其他列出的中轨道XYZ为(0.5,0.5,0.5)。顶部／底部也保留独立条目，不能复制中轨道数值。当前 Default_Normal 是否是原作可琳实例实际选用键，仍未证明。
+
+本批检查连接时8080无监听，使用已安装正式server CLI恢复服务，随后同一 e852139597e42532 实例重新注册；没有重启Editor、改变全局实例或运行Play。实例回读项目路径正确、compiling=false、playing=false。Console仍存在OperationStateMachineRuntime.cs:267两处int→ulong编译错误，已加载程序集列表没有相机程序集，WithFraming反射检查为false。因此上一批Zoom／Stretch修正仍未完成生产求值验证，不能当作新可测版本。没有因这些外部错误修改逻辑模块；本批只做证据／文档检查，不新增测试、不运行replay。
+
+下一实施所需缺口已缩小为：模式枚举原始值与角色tag的对应、方向历史窗口长度与向量生产、状态过渡曲线选择与稳定时间、方向控制点算法逐项对应、跟随／构图阻尼最终消费。必须沿现有Profile→投影→SequenceEvaluator正式链整体接入，不能先把0.15机械替换为0.5或增加未被消费的备用配置。

@@ -1,0 +1,485 @@
+{
+  "note": "原始分支字节集合；同时包含初始化与业务开关，不统一标记为IFix。",
+  "branches": [
+    {
+      "function": "0x11919390",
+      "instruction": "0x119193a7",
+      "rva": "0x5885380",
+      "value": 1
+    },
+    {
+      "function": "0x11919a70",
+      "instruction": "0x11919a7a",
+      "rva": "0x53eb911",
+      "value": 0
+    },
+    {
+      "function": "0x11919a70",
+      "instruction": "0x11919a8b",
+      "rva": "0x53eb909",
+      "value": 0
+    },
+    {
+      "function": "0x12cb0fe0",
+      "instruction": "0x12cb0fff",
+      "rva": "0x53ac6c9",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56a77",
+      "rva": "0x588ee06",
+      "value": 1
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56a84",
+      "rva": "0x53fe65d",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56b6e",
+      "rva": "0x53fe682",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56c05",
+      "rva": "0x53fe682",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56c9e",
+      "rva": "0x53fe682",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56d50",
+      "rva": "0x53fe682",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56de4",
+      "rva": "0x53fe682",
+      "value": 0
+    },
+    {
+      "function": "0x13c56a40",
+      "instruction": "0x13c56f67",
+      "rva": "0x53fe65d",
+      "value": 0
+    },
+    {
+      "function": "0x13c57c20",
+      "instruction": "0x13c57c40",
+      "rva": "0x588ee09",
+      "value": 1
+    },
+    {
+      "function": "0x13c57c20",
+      "instruction": "0x13c57c4d",
+      "rva": "0x53fe661",
+      "value": 0
+    },
+    {
+      "function": "0x13c57c20",
+      "instruction": "0x13c57e42",
+      "rva": "0x53fe661",
+      "value": 0
+    },
+    {
+      "function": "0x14a39b90",
+      "instruction": "0x14a39bb5",
+      "rva": "0x53c9c96",
+      "value": 0
+    },
+    {
+      "function": "0x14a39b90",
+      "instruction": "0x14a39bcc",
+      "rva": "0x53c9c97",
+      "value": 0
+    },
+    {
+      "function": "0x14a39b90",
+      "instruction": "0x14a39ce6",
+      "rva": "0x53c9c97",
+      "value": 0
+    },
+    {
+      "function": "0x14a3b0a0",
+      "instruction": "0x14a3b0ab",
+      "rva": "0x588e6cb",
+      "value": 1
+    },
+    {
+      "function": "0x14a3b0a0",
+      "instruction": "0x14a3b0b4",
+      "rva": "0x53c9c83",
+      "value": 0
+    },
+    {
+      "function": "0x14a3b0a0",
+      "instruction": "0x14a3b114",
+      "rva": "0x53c9c83",
+      "value": 0
+    },
+    {
+      "function": "0x14a3b160",
+      "instruction": "0x14a3b178",
+      "rva": "0x53c9c84",
+      "value": 0
+    },
+    {
+      "function": "0x14a3b160",
+      "instruction": "0x14a3b1d2",
+      "rva": "0x53eb65b",
+      "value": 0
+    },
+    {
+      "function": "0x14a3b160",
+      "instruction": "0x14a3b223",
+      "rva": "0x53eb65b",
+      "value": 0
+    },
+    {
+      "function": "0x14a3bf30",
+      "instruction": "0x14a3bf47",
+      "rva": "0x588e6d1",
+      "value": 1
+    },
+    {
+      "function": "0x14a3bf30",
+      "instruction": "0x14a3bf54",
+      "rva": "0x53c9c95",
+      "value": 0
+    },
+    {
+      "function": "0x14a3bf30",
+      "instruction": "0x14a3c320",
+      "rva": "0x53c9c95",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c400",
+      "instruction": "0x14a3c40a",
+      "rva": "0x588e6d3",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c400",
+      "instruction": "0x14a3c417",
+      "rva": "0x53c9c99",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c400",
+      "instruction": "0x14a3c4ed",
+      "rva": "0x53c9c99",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c575",
+      "rva": "0x588e6cf",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c582",
+      "rva": "0x53c9c92",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c5a7",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c5c8",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c5fd",
+      "rva": "0x53de1cd",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c63f",
+      "rva": "0x53c9c92",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c669",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c560",
+      "instruction": "0x14a3c6a0",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x14a3c720",
+      "instruction": "0x14a3c737",
+      "rva": "0x53c9c91",
+      "value": 0
+    },
+    {
+      "function": "0x14a3c720",
+      "instruction": "0x14a3c76d",
+      "rva": "0x53d8f0c",
+      "value": 0
+    },
+    {
+      "function": "0x1596ebe0",
+      "instruction": "0x1596ec00",
+      "rva": "0x53fe66d",
+      "value": 0
+    },
+    {
+      "function": "0x1596ecf0",
+      "instruction": "0x1596ed03",
+      "rva": "0x588ee11",
+      "value": 1
+    },
+    {
+      "function": "0x1596ecf0",
+      "instruction": "0x1596ed10",
+      "rva": "0x53fe680",
+      "value": 0
+    },
+    {
+      "function": "0x1596ecf0",
+      "instruction": "0x1596ed78",
+      "rva": "0x586e57f",
+      "value": 1
+    },
+    {
+      "function": "0x1596ecf0",
+      "instruction": "0x1596efdf",
+      "rva": "0x53fe680",
+      "value": 0
+    },
+    {
+      "function": "0x1596ecf0",
+      "instruction": "0x1596f03a",
+      "rva": "0x586e57f",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f0b2",
+      "rva": "0x588ee0f",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f14c",
+      "rva": "0x53fe679",
+      "value": 0
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f1f5",
+      "rva": "0x536afe4",
+      "value": 0
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f2a7",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f2c8",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f48e",
+      "rva": "0x536afe4",
+      "value": 0
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f542",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f563",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f768",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f79f",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f821",
+      "rva": "0x58565e2",
+      "value": 1
+    },
+    {
+      "function": "0x1596f090",
+      "instruction": "0x1596f858",
+      "rva": "0x58565cf",
+      "value": 1
+    },
+    {
+      "function": "0x15970400",
+      "instruction": "0x15970420",
+      "rva": "0x53fe675",
+      "value": 0
+    },
+    {
+      "function": "0x15971550",
+      "instruction": "0x15971595",
+      "rva": "0x53fe685",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x159717ed",
+      "rva": "0x588ee15",
+      "value": 1
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x159717fa",
+      "rva": "0x53fe68a",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x1597181b",
+      "rva": "0x53e4445",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x159718a3",
+      "rva": "0x53f0558",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x159718d5",
+      "rva": "0x53f0558",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x159719d7",
+      "rva": "0x53f0558",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x15971a09",
+      "rva": "0x53f0558",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x15971b7a",
+      "rva": "0x53fe68a",
+      "value": 0
+    },
+    {
+      "function": "0x159717d0",
+      "instruction": "0x15971bc4",
+      "rva": "0x53e4445",
+      "value": 0
+    },
+    {
+      "function": "0x15971d60",
+      "instruction": "0x15971d77",
+      "rva": "0x53fe68b",
+      "value": 0
+    },
+    {
+      "function": "0x15971d60",
+      "instruction": "0x15971e42",
+      "rva": "0x53fe688",
+      "value": 0
+    },
+    {
+      "function": "0x15971d60",
+      "instruction": "0x15971e7c",
+      "rva": "0x53fe65f",
+      "value": 0
+    },
+    {
+      "function": "0x15971d60",
+      "instruction": "0x15971f40",
+      "rva": "0x53fe65f",
+      "value": 0
+    },
+    {
+      "function": "0x15974f90",
+      "instruction": "0x15974f9d",
+      "rva": "0x53fe694",
+      "value": 0
+    },
+    {
+      "function": "0x15974f90",
+      "instruction": "0x15974fb7",
+      "rva": "0x53ac6c7",
+      "value": 0
+    },
+    {
+      "function": "0x116cb660",
+      "instruction": "0x116cb68f",
+      "rva": "0x589a02f",
+      "value": 1
+    },
+    {
+      "function": "0x116cb660",
+      "instruction": "0x116cb69c",
+      "rva": "0x53f7375",
+      "value": 0
+    },
+    {
+      "function": "0x116cb660",
+      "instruction": "0x116cb7c0",
+      "rva": "0x53ad4cf",
+      "value": 0
+    },
+    {
+      "function": "0x116cb660",
+      "instruction": "0x116cb86d",
+      "rva": "0x53ad4cf",
+      "value": 0
+    },
+    {
+      "function": "0x116cb660",
+      "instruction": "0x116cb8c2",
+      "rva": "0x53f7375",
+      "value": 0
+    }
+  ]
+}

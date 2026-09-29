@@ -1,0 +1,803 @@
+{
+  "begin": 362212592,
+  "end": 362213510,
+  "unwind": 64442948,
+  "byte_sha256": "8662449e61b9b44e750d6e1f0135eddacea22f78cedd99d42149514c7311f8c7",
+  "instructions": [
+    [
+      362212592,
+      "push",
+      "rsi"
+    ],
+    [
+      362212593,
+      "push",
+      "rdi"
+    ],
+    [
+      362212594,
+      "push",
+      "rbx"
+    ],
+    [
+      362212595,
+      "sub",
+      "rsp, 0x360"
+    ],
+    [
+      362212602,
+      "mov",
+      "rdi, r8"
+    ],
+    [
+      362212605,
+      "mov",
+      "rbx, rdx"
+    ],
+    [
+      362212608,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      362212611,
+      "cmp",
+      "byte ptr [rip - 0x100dfef9], 0"
+    ],
+    [
+      362212618,
+      "je",
+      "0x1596efce"
+    ],
+    [
+      362212624,
+      "cmp",
+      "byte ptr [rip - 0x10570697], 0"
+    ],
+    [
+      362212631,
+      "jne",
+      "0x1596efec"
+    ],
+    [
+      362212637,
+      "mov",
+      "rax, qword ptr [rbx + 0x30]"
+    ],
+    [
+      362212641,
+      "test",
+      "rax, rax"
+    ],
+    [
+      362212644,
+      "je",
+      "0x1596f02b"
+    ],
+    [
+      362212650,
+      "mov",
+      "rdx, qword ptr [rax + 0x10]"
+    ],
+    [
+      362212654,
+      "test",
+      "rdx, rdx"
+    ],
+    [
+      362212657,
+      "je",
+      "0x1596f030"
+    ],
+    [
+      362212663,
+      "mov",
+      "rax, qword ptr [rdx]"
+    ],
+    [
+      362212666,
+      "lea",
+      "rbx, [rsp + 0x278]"
+    ],
+    [
+      362212674,
+      "mov",
+      "rcx, rbx"
+    ],
+    [
+      362212677,
+      "xor",
+      "r8d, r8d"
+    ],
+    [
+      362212680,
+      "call",
+      "qword ptr [rax + 0x198]"
+    ],
+    [
+      362212686,
+      "lea",
+      "rcx, [rsp + 0x190]"
+    ],
+    [
+      362212694,
+      "mov",
+      "r8d, 0xe8"
+    ],
+    [
+      362212700,
+      "mov",
+      "rdx, rbx"
+    ],
+    [
+      362212703,
+      "call",
+      "0xe2a570"
+    ],
+    [
+      362212708,
+      "mov",
+      "rcx, qword ptr [rip - 0x10525d8b]"
+    ],
+    [
+      362212715,
+      "cmp",
+      "byte ptr [rcx + 0xcb], 0"
+    ],
+    [
+      362212722,
+      "je",
+      "0x1596f035"
+    ],
+    [
+      362212728,
+      "cmp",
+      "byte ptr [rip - 0x10100800], 0"
+    ],
+    [
+      362212735,
+      "je",
+      "0x1596f047"
+    ],
+    [
+      362212741,
+      "mov",
+      "rcx, qword ptr [rip - 0x10525da4]"
+    ],
+    [
+      362212748,
+      "cmp",
+      "byte ptr [rcx + 0xcb], 0"
+    ],
+    [
+      362212755,
+      "je",
+      "0x1596f06c"
+    ],
+    [
+      362212761,
+      "movaps",
+      "xmm0, xmmword ptr [rip - 0x10606340]"
+    ],
+    [
+      362212768,
+      "movaps",
+      "xmmword ptr [rsp + 0x50], xmm0"
+    ],
+    [
+      362212773,
+      "movaps",
+      "xmm0, xmmword ptr [rip - 0x1060635c]"
+    ],
+    [
+      362212780,
+      "movaps",
+      "xmmword ptr [rsp + 0x40], xmm0"
+    ],
+    [
+      362212785,
+      "movaps",
+      "xmm0, xmmword ptr [rip - 0x10606378]"
+    ],
+    [
+      362212792,
+      "movaps",
+      "xmmword ptr [rsp + 0x30], xmm0"
+    ],
+    [
+      362212797,
+      "mov",
+      "eax, dword ptr [rip - 0x1060bc8f]"
+    ],
+    [
+      362212803,
+      "mov",
+      "dword ptr [rsp + 0x68], eax"
+    ],
+    [
+      362212807,
+      "mov",
+      "rax, qword ptr [rip - 0x1060bca2]"
+    ],
+    [
+      362212814,
+      "mov",
+      "qword ptr [rsp + 0x60], rax"
+    ],
+    [
+      362212819,
+      "mov",
+      "rcx, qword ptr [rip - 0x10525dfa]"
+    ],
+    [
+      362212826,
+      "cmp",
+      "byte ptr [rcx + 0xcb], 0"
+    ],
+    [
+      362212833,
+      "je",
+      "0x1596f076"
+    ],
+    [
+      362212839,
+      "mov",
+      "rax, qword ptr [rip - 0x1060637e]"
+    ],
+    [
+      362212846,
+      "mov",
+      "qword ptr [rsp + 0x6c], rax"
+    ],
+    [
+      362212851,
+      "mov",
+      "eax, dword ptr [rip - 0x10606381]"
+    ],
+    [
+      362212857,
+      "mov",
+      "dword ptr [rsp + 0x74], eax"
+    ],
+    [
+      362212861,
+      "mov",
+      "rax, qword ptr [rip - 0x1060bd08]"
+    ],
+    [
+      362212868,
+      "mov",
+      "qword ptr [rsp + 0x78], rax"
+    ],
+    [
+      362212873,
+      "mov",
+      "ecx, dword ptr [rip - 0x1060bd0b]"
+    ],
+    [
+      362212879,
+      "mov",
+      "dword ptr [rsp + 0x80], ecx"
+    ],
+    [
+      362212886,
+      "movaps",
+      "xmm0, xmmword ptr [rip - 0x1060b8ed]"
+    ],
+    [
+      362212893,
+      "movups",
+      "xmmword ptr [rsp + 0x84], xmm0"
+    ],
+    [
+      362212901,
+      "mov",
+      "qword ptr [rsp + 0x94], rax"
+    ],
+    [
+      362212909,
+      "mov",
+      "dword ptr [rsp + 0x9c], ecx"
+    ],
+    [
+      362212916,
+      "movaps",
+      "xmm0, xmmword ptr [rsp + 0x30]"
+    ],
+    [
+      362212921,
+      "movaps",
+      "xmm1, xmmword ptr [rsp + 0x40]"
+    ],
+    [
+      362212926,
+      "movaps",
+      "xmm2, xmmword ptr [rsp + 0x50]"
+    ],
+    [
+      362212931,
+      "movaps",
+      "xmmword ptr [rsp + 0xa0], xmm0"
+    ],
+    [
+      362212939,
+      "movaps",
+      "xmmword ptr [rsp + 0xb0], xmm1"
+    ],
+    [
+      362212947,
+      "movaps",
+      "xmmword ptr [rsp + 0xc0], xmm2"
+    ],
+    [
+      362212955,
+      "movaps",
+      "xmm0, xmmword ptr [rsp + 0x60]"
+    ],
+    [
+      362212960,
+      "movaps",
+      "xmmword ptr [rsp + 0xd0], xmm0"
+    ],
+    [
+      362212968,
+      "mov",
+      "eax, dword ptr [rsp + 0x70]"
+    ],
+    [
+      362212972,
+      "mov",
+      "dword ptr [rsp + 0xe0], eax"
+    ],
+    [
+      362212979,
+      "mov",
+      "eax, dword ptr [rsp + 0x74]"
+    ],
+    [
+      362212983,
+      "mov",
+      "dword ptr [rsp + 0xe4], eax"
+    ],
+    [
+      362212990,
+      "mov",
+      "rax, qword ptr [rsp + 0x78]"
+    ],
+    [
+      362212995,
+      "mov",
+      "qword ptr [rsp + 0xe8], rax"
+    ],
+    [
+      362213003,
+      "movaps",
+      "xmm0, xmmword ptr [rsp + 0x80]"
+    ],
+    [
+      362213011,
+      "movaps",
+      "xmmword ptr [rsp + 0xf0], xmm0"
+    ],
+    [
+      362213019,
+      "mov",
+      "rax, qword ptr [rsp + 0x90]"
+    ],
+    [
+      362213027,
+      "mov",
+      "qword ptr [rsp + 0x100], rax"
+    ],
+    [
+      362213035,
+      "mov",
+      "eax, dword ptr [rsp + 0x98]"
+    ],
+    [
+      362213042,
+      "mov",
+      "dword ptr [rsp + 0x108], eax"
+    ],
+    [
+      362213049,
+      "mov",
+      "eax, dword ptr [rsp + 0x9c]"
+    ],
+    [
+      362213056,
+      "mov",
+      "dword ptr [rsp + 0x10c], eax"
+    ],
+    [
+      362213063,
+      "movaps",
+      "xmm0, xmmword ptr [rip - 0x1060b99e]"
+    ],
+    [
+      362213070,
+      "movaps",
+      "xmmword ptr [rsp + 0x120], xmm0"
+    ],
+    [
+      362213078,
+      "xorps",
+      "xmm0, xmm0"
+    ],
+    [
+      362213081,
+      "movaps",
+      "xmmword ptr [rsp + 0x170], xmm0"
+    ],
+    [
+      362213089,
+      "movaps",
+      "xmmword ptr [rsp + 0x160], xmm0"
+    ],
+    [
+      362213097,
+      "movaps",
+      "xmmword ptr [rsp + 0x150], xmm0"
+    ],
+    [
+      362213105,
+      "movaps",
+      "xmmword ptr [rsp + 0x140], xmm0"
+    ],
+    [
+      362213113,
+      "movaps",
+      "xmmword ptr [rsp + 0x130], xmm0"
+    ],
+    [
+      362213121,
+      "mov",
+      "qword ptr [rsp + 0x180], 0"
+    ],
+    [
+      362213133,
+      "mov",
+      "dword ptr [rsp + 0x110], 0x3f800000"
+    ],
+    [
+      362213144,
+      "mov",
+      "eax, dword ptr [rip - 0x1060be1a]"
+    ],
+    [
+      362213150,
+      "mov",
+      "dword ptr [rsp + 0x11c], eax"
+    ],
+    [
+      362213157,
+      "mov",
+      "rax, qword ptr [rip - 0x1060be30]"
+    ],
+    [
+      362213164,
+      "mov",
+      "qword ptr [rsp + 0x114], rax"
+    ],
+    [
+      362213172,
+      "mov",
+      "rax, qword ptr [rsp + 0x1d8]"
+    ],
+    [
+      362213180,
+      "mov",
+      "qword ptr [rsp + 0xe8], rax"
+    ],
+    [
+      362213188,
+      "mov",
+      "eax, dword ptr [rsp + 0x1e0]"
+    ],
+    [
+      362213195,
+      "mov",
+      "dword ptr [rsp + 0xf0], eax"
+    ],
+    [
+      362213202,
+      "movups",
+      "xmm0, xmmword ptr [rsp + 0x1e4]"
+    ],
+    [
+      362213210,
+      "movups",
+      "xmmword ptr [rsp + 0xf4], xmm0"
+    ],
+    [
+      362213218,
+      "mov",
+      "eax, dword ptr [rdi + 8]"
+    ],
+    [
+      362213221,
+      "mov",
+      "dword ptr [rsp + 0xd8], eax"
+    ],
+    [
+      362213228,
+      "mov",
+      "rax, qword ptr [rdi]"
+    ],
+    [
+      362213231,
+      "mov",
+      "qword ptr [rsp + 0xd0], rax"
+    ],
+    [
+      362213239,
+      "movups",
+      "xmm0, xmmword ptr [rsp + 0x190]"
+    ],
+    [
+      362213247,
+      "movups",
+      "xmm1, xmmword ptr [rsp + 0x1a0]"
+    ],
+    [
+      362213255,
+      "movups",
+      "xmm2, xmmword ptr [rsp + 0x1b0]"
+    ],
+    [
+      362213263,
+      "movaps",
+      "xmmword ptr [rsp + 0xc0], xmm2"
+    ],
+    [
+      362213271,
+      "movaps",
+      "xmmword ptr [rsp + 0xb0], xmm1"
+    ],
+    [
+      362213279,
+      "movaps",
+      "xmmword ptr [rsp + 0xa0], xmm0"
+    ],
+    [
+      362213287,
+      "lea",
+      "rdi, [rsp + 0xa0]"
+    ],
+    [
+      362213295,
+      "mov",
+      "r8d, 0xe8"
+    ],
+    [
+      362213301,
+      "mov",
+      "rcx, rsi"
+    ],
+    [
+      362213304,
+      "mov",
+      "rdx, rdi"
+    ],
+    [
+      362213307,
+      "call",
+      "0xe2a570"
+    ],
+    [
+      362213312,
+      "mov",
+      "rax, rsi"
+    ],
+    [
+      362213315,
+      "add",
+      "rsp, 0x360"
+    ],
+    [
+      362213322,
+      "pop",
+      "rbx"
+    ],
+    [
+      362213323,
+      "pop",
+      "rdi"
+    ],
+    [
+      362213324,
+      "pop",
+      "rsi"
+    ],
+    [
+      362213325,
+      "ret",
+      ""
+    ],
+    [
+      362213326,
+      "mov",
+      "ecx, 0x3d421"
+    ],
+    [
+      362213331,
+      "call",
+      "0x2793e0"
+    ],
+    [
+      362213336,
+      "mov",
+      "byte ptr [rip - 0x100e01ce], 1"
+    ],
+    [
+      362213343,
+      "cmp",
+      "byte ptr [rip - 0x10570966], 0"
+    ],
+    [
+      362213350,
+      "je",
+      "0x1596ed1d"
+    ],
+    [
+      362213356,
+      "mov",
+      "ecx, 0x613d0"
+    ],
+    [
+      362213361,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      362213366,
+      "test",
+      "rax, rax"
+    ],
+    [
+      362213369,
+      "je",
+      "0x1596f080"
+    ],
+    [
+      362213375,
+      "mov",
+      "ecx, dword ptr [rdi + 8]"
+    ],
+    [
+      362213378,
+      "mov",
+      "dword ptr [rsp + 0x28], ecx"
+    ],
+    [
+      362213382,
+      "mov",
+      "rcx, qword ptr [rdi]"
+    ],
+    [
+      362213385,
+      "mov",
+      "qword ptr [rsp + 0x20], rcx"
+    ],
+    [
+      362213390,
+      "lea",
+      "rdi, [rsp + 0x190]"
+    ],
+    [
+      362213398,
+      "lea",
+      "r9, [rsp + 0x20]"
+    ],
+    [
+      362213403,
+      "mov",
+      "rcx, rdi"
+    ],
+    [
+      362213406,
+      "mov",
+      "rdx, rax"
+    ],
+    [
+      362213409,
+      "mov",
+      "r8, rbx"
+    ],
+    [
+      362213412,
+      "call",
+      "0xc460da0"
+    ],
+    [
+      362213417,
+      "jmp",
+      "0x1596efaf"
+    ],
+    [
+      362213419,
+      "call",
+      "0xac9120"
+    ],
+    [
+      362213424,
+      "call",
+      "0xac9120"
+    ],
+    [
+      362213429,
+      "call",
+      "0x271e50"
+    ],
+    [
+      362213434,
+      "cmp",
+      "byte ptr [rip - 0x10100ac2], 0"
+    ],
+    [
+      362213441,
+      "jne",
+      "0x1596ed85"
+    ],
+    [
+      362213447,
+      "mov",
+      "ecx, 0x1cb8f"
+    ],
+    [
+      362213452,
+      "call",
+      "0x2793e0"
+    ],
+    [
+      362213457,
+      "mov",
+      "byte ptr [rip - 0x10100ad9], 1"
+    ],
+    [
+      362213464,
+      "mov",
+      "rcx, qword ptr [rip - 0x10526077]"
+    ],
+    [
+      362213471,
+      "cmp",
+      "byte ptr [rcx + 0xcb], 0"
+    ],
+    [
+      362213478,
+      "jne",
+      "0x1596ed99"
+    ],
+    [
+      362213484,
+      "call",
+      "0x271e50"
+    ],
+    [
+      362213489,
+      "jmp",
+      "0x1596ed99"
+    ],
+    [
+      362213494,
+      "call",
+      "0x271e50"
+    ],
+    [
+      362213499,
+      "jmp",
+      "0x1596ede7"
+    ],
+    [
+      362213504,
+      "call",
+      "0xac9120"
+    ],
+    [
+      362213509,
+      "int3",
+      ""
+    ]
+  ]
+}

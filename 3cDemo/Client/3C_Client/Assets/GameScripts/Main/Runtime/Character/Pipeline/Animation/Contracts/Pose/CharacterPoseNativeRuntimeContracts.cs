@@ -805,7 +805,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Pose native preparation result is invalid.");
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             Status = status;
             FailureCode = failureCode;
             Source = source.Trim();
@@ -813,7 +813,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Demand = demand;
         }
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal CharacterPoseNativeFrameStatus Status { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }
@@ -850,7 +851,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Pose native evaluation result is invalid.");
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             Status = status;
             FailureCode = failureCode;
             Source = source.Trim();
@@ -858,7 +859,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Output = output;
         }
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal CharacterPoseNativeFrameStatus Status { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }
@@ -891,7 +893,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Pose native publication result is invalid.");
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             Status = status;
             FailureCode = failureCode;
             AppliedCompletionIdentity = appliedCompletionIdentity;
@@ -899,7 +901,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Message = message.Trim();
         }
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal CharacterPoseNativeFrameStatus Status { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal ulong AppliedCompletionIdentity { get; }
@@ -933,7 +936,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Pose native validation result is invalid.");
             }
-            Lineage = lineage;
+            m_Lineage = lineage;
             Status = status;
             FailureCode = failureCode;
             Source = source.Trim();
@@ -965,7 +968,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 source,
                 message);
 
-        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        readonly CharacterPoseNativeFrameLineage m_Lineage;
+        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
         internal CharacterPoseNativeFrameStatus Status { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }

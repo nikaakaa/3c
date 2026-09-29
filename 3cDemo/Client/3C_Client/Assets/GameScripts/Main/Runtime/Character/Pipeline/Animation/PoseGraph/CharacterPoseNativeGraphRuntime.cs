@@ -830,7 +830,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Evaluate);
-            if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
+            if (!evaluation.IsValid || !m_CompletedLineage.Matches(in evaluation.Lineage) ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
             {
                 throw new ArgumentException(
@@ -870,10 +870,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Validate);
-            if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
+            if (!evaluation.IsValid || !m_CompletedLineage.Matches(in evaluation.Lineage) ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
                 !m_Validation.IsValidated ||
-                m_Validation.Lineage != m_CompletedLineage)
+                !m_CompletedLineage.Matches(in m_Validation.Lineage))
             {
                 throw new ArgumentException("Pose native commit evaluation is invalid.", nameof(evaluation));
             }
@@ -919,10 +919,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireLease(lease);
             RequireStage(CharacterPoseNativeExecutionStage.Validate);
-            if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
+            if (!evaluation.IsValid || !m_CompletedLineage.Matches(in evaluation.Lineage) ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
                 !m_Validation.IsValidated ||
-                m_Validation.Lineage != m_CompletedLineage)
+                !m_CompletedLineage.Matches(in m_Validation.Lineage))
             {
                 throw new ArgumentException(
                     "Pose native final publication evaluation is invalid.",

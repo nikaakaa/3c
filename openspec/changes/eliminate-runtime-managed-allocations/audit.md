@@ -1318,3 +1318,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterPoseNativeSourceDemand.Lineage` 按值返回整份 identity；graph、StateMachine handler/source 和 AnimationSlot source 在 barrier 校验中还用按值 operator 比较。demand 在构造后同一帧保持只读。
 - demand Lineage 改为 readonly 字段加 `ref readonly` 属性；5 处 identity 比较改为现有 `Matches(in lineage)`。Requests、request key、错误文案和异常时机不变。
 - 该改动删除 demand 读取和 identity 校验的整份 lineage 拷贝；不新增第二 demand 数据源。静态核对构造赋值、全部按值 equality 消失、5 个比较点字段集合和 barrier 顺序；未编译、未采样，不能声称实测耗时收益。
+
+### AP167 native result lineage 引用化（2026-09-30，已实施，本轮未编译）
+
+- Preparation、Evaluation、Publication、Validation result 的 `Lineage` 按值返回整份 identity；graph runtime 在 Validate 和两条 Commit 路径用按值 operator 与 completed lineage 比较。result 构造后同帧只被消费。
+- 四个 result 的 Lineage 改为 readonly 字段加 `ref readonly` 属性；graph runtime 的 5 处 identity 比较改用 `Matches(in lineage)`。result 状态、output、错误文案和异常时机不变。
+- 该改动删除 result 读取和 Validate/Commit 校验的整份 lineage 拷贝；不新增第二 result 路径。静态核对四个构造器、字段集合、全部 graph runtime 比较点和默认/失败结果生命周期；未编译、未采样，不能声称实测耗时收益。

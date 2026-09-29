@@ -431,7 +431,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SafetyFloorClampMeters = safetyFloorClampMeters;
             SafetyFloorClearanceBeforeMeters = safetyFloorClearanceBeforeMeters;
             SafetyFloorClearanceAfterMeters = safetyFloorClearanceAfterMeters;
-            CharacterFootPlantInterpolationFact plant = interpolation.PlantFact;
+            ref readonly CharacterFootPlantInterpolationFact plant =
+                ref interpolation.PlantFact;
             PlantInterpolationEvaluated = plant.Evaluated;
             PlantTargetEventIdentity = plant.EventIdentity;
             PlantTargetVerified = plant.Verified;
@@ -440,7 +441,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockWeightCompleted = stateTarget.LockWeightCompleted;
             PlantDesiredPoint = plant.DesiredPoint;
             PlantFilteredPoint = plant.FilteredPoint;
-            CharacterFootSupportTarget selectedSupport =
+            ref readonly CharacterFootSupportTarget selectedSupport =
                 interpolation.SupportTarget;
             SelectedSupportTarget = selectedSupport;
             PlantTargetHeightAdoptionMode = plant.Evaluated
@@ -465,7 +466,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPreviousSelectedWorldTarget =
                 plant.PreviousSelectedWorldTarget;
             PlantSelectedWorldTarget = plant.SelectedWorldTarget;
-            CharacterFootCorrectionResponseFact correctionResponse =
+            ref readonly CharacterFootCorrectionResponseFact correctionResponse =
                 interpolation.CorrectionResponseFact;
             PreviousResponseOutputAvailable =
                 correctionResponse.PreviousOutputAvailable;
@@ -1736,6 +1737,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootStateTarget
     {
+        readonly CharacterFootSupportTarget m_SupportTarget;
+        readonly CharacterFootSupportIntent m_SupportIntent;
+
         internal CharacterFootStateTarget(
             Vector3 correction,
             Vector3 swingCorrection,
@@ -1767,13 +1771,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = plantLockResponse;
             LockWeightCompleted = lockWeightCompleted;
             SupportTargetAvailable = supportTargetAvailable;
-            SupportTarget = supportTarget;
+            m_SupportTarget = supportTarget;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
             DirectPlantFollow = directPlantFollow;
             SuppressOutput = suppressOutput;
             TimeToLandingSeconds = timeToLandingSeconds;
-            SupportIntent = supportIntent;
+            m_SupportIntent = supportIntent;
         }
 
         internal Vector3 Correction { get; }
@@ -1787,17 +1791,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse PlantLockResponse { get; }
         internal bool LockWeightCompleted { get; }
         internal bool SupportTargetAvailable { get; }
-        internal CharacterFootSupportTarget SupportTarget { get; }
+        internal ref readonly CharacterFootSupportTarget SupportTarget =>
+            ref m_SupportTarget;
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }
         internal bool DirectPlantFollow { get; }
         internal bool SuppressOutput { get; }
         internal float TimeToLandingSeconds { get; }
-        internal CharacterFootSupportIntent SupportIntent { get; }
+        internal ref readonly CharacterFootSupportIntent SupportIntent =>
+            ref m_SupportIntent;
     }
 
     internal readonly struct CharacterFootInterpolationResult
     {
+        readonly CharacterFootSupportTarget m_SupportTarget;
+        readonly CharacterFootPathContinuityFact m_ContinuityFact;
+        readonly CharacterFootPlantInterpolationFact m_PlantFact;
+        readonly CharacterFootCorrectionResponseFact m_CorrectionResponseFact;
+
         internal CharacterFootInterpolationResult(
             Vector3 correction,
             bool completed,
@@ -1808,20 +1819,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Correction = correction;
             Completed = completed;
-            SupportTarget = supportTarget;
-            ContinuityFact = continuityFact;
-            PlantFact = plantFact;
-            CorrectionResponseFact = correctionResponseFact;
+            m_SupportTarget = supportTarget;
+            m_ContinuityFact = continuityFact;
+            m_PlantFact = plantFact;
+            m_CorrectionResponseFact = correctionResponseFact;
         }
 
         internal Vector3 Correction { get; }
         internal bool Completed { get; }
-        internal CharacterFootSupportTarget SupportTarget { get; }
-        internal CharacterFootPathContinuityFact ContinuityFact { get; }
-        internal CharacterFootPlantInterpolationFact PlantFact { get; }
-        internal CharacterFootCorrectionResponseFact CorrectionResponseFact
-        {
-            get;
-        }
+        internal ref readonly CharacterFootSupportTarget SupportTarget =>
+            ref m_SupportTarget;
+        internal ref readonly CharacterFootPathContinuityFact ContinuityFact =>
+            ref m_ContinuityFact;
+        internal ref readonly CharacterFootPlantInterpolationFact PlantFact =>
+            ref m_PlantFact;
+        internal ref readonly CharacterFootCorrectionResponseFact CorrectionResponseFact =>
+            ref m_CorrectionResponseFact;
     }
 }

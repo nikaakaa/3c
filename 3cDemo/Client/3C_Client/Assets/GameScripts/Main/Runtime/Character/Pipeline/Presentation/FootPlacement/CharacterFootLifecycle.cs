@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootTransitionDecision preTransition =
                     PreTransition;
                 CharacterFootStateTarget target = Target;
-                CharacterFootPathContinuityFact interpolationContinuity =
+                ref readonly CharacterFootPathContinuityFact interpolationContinuity =
                     interpolation.ContinuityFact;
                 CharacterFootSwingMotionResult outputSwing = OutputSwing;
                 CharacterFootTransitionDecision postTransition =
@@ -105,9 +105,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in context,
                     in target,
                     in frame);
-                CharacterFootSupportIntent supportIntent =
+                ref readonly CharacterFootSupportIntent supportIntent =
                     target.SupportIntent;
-                CharacterFootSupportTarget selectedSupportTarget =
+                ref readonly CharacterFootSupportTarget selectedSupportTarget =
                     interpolation.SupportTarget;
                 CharacterFootStateEvaluation evaluation = Evaluation;
                 CharacterFootPlacementRequest completed = BuildRequest(
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref frame.SwingMotion;
                 result = CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in unavailableSwing);
-                CharacterFootPathContinuityFact unavailableContinuity =
+                ref readonly CharacterFootPathContinuityFact unavailableContinuity =
                     interpolation.ContinuityFact;
                 result = CharacterFootSwingMotionBuilder.WithPathContinuity(
                     in result,
@@ -316,8 +316,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in context,
                 in target,
                 in frame);
-            CharacterFootSupportIntent supportIntent = target.SupportIntent;
-            CharacterFootSupportTarget selectedSupportTarget =
+            ref readonly CharacterFootSupportIntent supportIntent = ref target.SupportIntent;
+            ref readonly CharacterFootSupportTarget selectedSupportTarget =
                 interpolation.SupportTarget;
             CharacterFootPlacementRequest request = BuildRequest(
                 in context,
@@ -395,7 +395,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportObservation outputSupport,
             Vector3 correction)
         {
-            CharacterFootSupportTarget selectedTarget = interpolation.SupportTarget;
+            ref readonly CharacterFootSupportTarget selectedTarget =
+                ref interpolation.SupportTarget;
             CharacterFootHardConstraintResult constraint = CharacterFootHardConstraintResolver.Resolve(
                 in context, in frame, in selectedTarget, correction);
             if (!outputSupport.TryResolveHeightConstraint(

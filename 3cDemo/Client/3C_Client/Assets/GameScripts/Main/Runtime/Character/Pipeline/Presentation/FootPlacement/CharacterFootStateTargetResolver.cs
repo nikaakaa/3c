@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.PlantTargetKind, target.PlantLockResponse, target.LockWeightCompleted,
                 target.SupportTargetAvailable, in supportTarget, target.StateEntered,
                 target.ResponseEntered, target.DirectPlantFollow, target.SuppressOutput,
-                target.TimeToLandingSeconds, target.SupportIntent);
+                target.TimeToLandingSeconds, in target.SupportIntent);
         }
 
         static CharacterFootStateTarget ResolvePlant(

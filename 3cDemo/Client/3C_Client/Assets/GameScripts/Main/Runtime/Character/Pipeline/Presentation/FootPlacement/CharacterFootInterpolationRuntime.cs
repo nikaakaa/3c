@@ -219,7 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
-            CharacterFootSupportIntent supportIntent = target.SupportIntent;
+            ref readonly CharacterFootSupportIntent supportIntent = ref target.SupportIntent;
             CharacterFootInterpolationResult swing = EvaluateSwing(
                 ref state,
                 new CharacterFootStateTarget(

@@ -50,6 +50,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootCurrentSupportProbeRequest
     {
+        readonly Vector3 m_Origin;
+        readonly Vector3 m_Direction;
+
         internal CharacterFootCurrentSupportProbeRequest(
             CharacterFootSide side,
             CharacterFootCurrentSupportProbeKind kind,
@@ -62,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float minimumGroundNormalDot,
             int hitCapacity)
         {
+            Vector3 up = componentUp.normalized;
             Side = side;
             Kind = kind;
             ProbePosition = probePosition;
@@ -72,6 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LayerMask = layerMask;
             MinimumGroundNormalDot = minimumGroundNormalDot;
             HitCapacity = hitCapacity;
+            m_Origin = probePosition + up * castAbove;
+            m_Direction = -up;
         }
 
         internal static CharacterFootCurrentSupportProbeRequest Create(
@@ -99,8 +105,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal int HitCapacity { get; }
         internal CharacterFootPlacementQueryPurpose Purpose =>
             CharacterFootPlacementQueryPurpose.CurrentSupport;
-        internal Vector3 Origin => ProbePosition + ComponentUp.normalized * CastAbove;
-        internal Vector3 Direction => -ComponentUp.normalized;
+        internal Vector3 Origin => m_Origin;
+        internal Vector3 Direction => m_Direction;
         internal float MaximumDistance => CastAbove + CastBelow;
         internal float SupportMaximumDistance => MaximumDistance + Radius;
         internal bool IsValid =>

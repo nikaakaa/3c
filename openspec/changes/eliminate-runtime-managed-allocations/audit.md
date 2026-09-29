@@ -2075,3 +2075,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `ResolvePlant` 先调用 contact correction 复制一次 sole，sliding correction 又复制一次投影用 up，最终 support target 和 plant point 再复制一次 sole；landing/locked 每脚状态目标求解重复计算同一 sole 中点和归一化 up。
 - 方法入口绑定 sole，contact correction 直接由 anchor 与 sole 相减；sliding 分支绑定一次 unit up 并传给 horizontal error 与 sliding correction。`ResolveHorizontalError` 和 `ResolveSlidingCorrection` 的合同改为接收 unit up，Transition Resolver 两处调用入口同步归一化。
 - Landing/Locked 的 full anchor、sliding correction、support target 和 plant point 输入保持同一公式与分支；transition 的 contact horizontal error 公式不变。静态核对全部调用点、readonly frame 生命周期和只读消费；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP293 Current support probe 几何派生预绑定（2026-09-30，已实施，本轮未编译）
+
+- `CharacterFootCurrentSupportProbeRequest.Origin` 和 `Direction` 每次读取都归一化同一 ComponentUp；Current Support world query 读取两者，diagnostics 展开再读取一次，同一 probe 重复执行相同归一化。
+- Request 构造时归一化一次并绑定 origin 与 direction backing field；两个属性改为字段读取。ProbePosition、ComponentUp、IsValid 对原始 ComponentUp 的校验、SphereCast 输入、候选筛选和 diagnostics 字段不变。
+- 该改动删除同一 probe 内的重复归一化；heel/toe 仍各自构造 request。静态核对构造边界、字段生命周期和消费只读；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

@@ -278,7 +278,7 @@ namespace ThirdPersonSimulation.Fixed
             SnapshotHash = ComputeSnapshotHash(
                 "fixed-session-snapshot/2",
                 compositionIdentity.Value,
-                world.WorldHash,
+                world.WorldHash.Value,
                 pipeline.SnapshotHash);
         }
 

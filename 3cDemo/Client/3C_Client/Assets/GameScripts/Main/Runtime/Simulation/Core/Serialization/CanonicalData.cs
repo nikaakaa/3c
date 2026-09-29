@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation
             WriteRawUtf8(value.AsSpan());
         }
 
-        internal void WriteRawUtf8(ReadOnlySpan<char> value)
+        public void WriteRawUtf8(ReadOnlySpan<char> value)
         {
             const int characterCapacity = 256;
             Span<byte> buffer = stackalloc byte[characterCapacity * 3];

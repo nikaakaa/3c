@@ -209,7 +209,7 @@ namespace ThirdPersonCharacter.Control.Rules
 
         void SubmitAbilityRequests(CharacterControlStateId stateId)
         {
-            SimulationExecutionSource source = Source(stateId);
+            SimulationExecutionSource source = Source(stateId).Source;
             if (m_Read.HasInputRequest(s_DodgeRequest))
             {
                 CharacterSkillId skill = MoveAbove(m_Read) ? DodgeForward : DodgeBack;
@@ -290,7 +290,7 @@ namespace ThirdPersonCharacter.Control.Rules
             ulong replacementActionInstanceId,
             string activationEntryId) =>
             m_Output.SubmitAbility(new CharacterControlAbilityRequest(
-                Source(stateId),
+                Source(stateId).Source,
                 Attack,
                 s_AttackRequest,
                 true,
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Control.Rules
 
         void SubmitRushAttack(CharacterControlStateId stateId, ulong replacementActionInstanceId) =>
             m_Output.SubmitAbility(new CharacterControlAbilityRequest(
-                Source(stateId),
+                Source(stateId).Source,
                 RushAttack,
                 s_AttackRequest,
                 true,
@@ -313,7 +313,7 @@ namespace ThirdPersonCharacter.Control.Rules
                 !m_Read.IsAbilityWindowActive(ability, "RecoveryOpen"))
                 return;
             m_Output.SubmitAbilityStop(new CharacterControlAbilityStopRequest(
-                Source(stateId), ability, CharacterControlAbilityStopMode.Graceful,
+                Source(stateId).Source, ability, CharacterControlAbilityStopMode.Graceful,
                 "DodgeRecoveryMovement", instanceId, "RecoveryOpen"));
             m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
         }
@@ -324,7 +324,7 @@ namespace ThirdPersonCharacter.Control.Rules
                 !m_Read.IsAbilityWindowActive(RushAttack, s_RushMoveExitWindow))
                 return;
             m_Output.SubmitAbilityStop(new CharacterControlAbilityStopRequest(
-                Source(stateId), RushAttack, CharacterControlAbilityStopMode.Graceful,
+                Source(stateId).Source, RushAttack, CharacterControlAbilityStopMode.Graceful,
                 "RushMovement", instanceId, s_RushMoveExitWindow));
             m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
         }

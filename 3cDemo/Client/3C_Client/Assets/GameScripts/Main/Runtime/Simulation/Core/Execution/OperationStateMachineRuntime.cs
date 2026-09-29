@@ -264,7 +264,7 @@ namespace ThirdPersonSimulation
             if (generation == 0)
                 generation = 1;
             string parent = m_Host.CurrentStateExecutionPath;
-            string path = BuildStateExecutionPath(parent, machine.Handle.Value, state.Value, generation);
+            string path = BuildStateExecutionPath(parent, (ulong)machine.Handle.Value, (ulong)state.Value, generation);
             int pathSlot = m_Host.RequireOperationSlot(machine, ProgramStateSemantic.StateMachineExecutionPath);
             m_Host.WriteIdentity(pathSlot, path);
             m_Host.NotifyStateLifecycle(machine, state, OperationStateLifecyclePhase.Entered);

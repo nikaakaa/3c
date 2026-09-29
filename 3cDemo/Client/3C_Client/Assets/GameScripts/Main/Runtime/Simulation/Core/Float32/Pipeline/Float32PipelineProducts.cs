@@ -290,7 +290,7 @@ namespace ThirdPersonSimulation
             SnapshotHash = ComputeSnapshotHash(
                 "float32-session-snapshot/1",
                 compositionIdentity.Value,
-                world.WorldHash,
+                world.WorldHash.Value,
                 pipeline.SnapshotHash);
         }
 

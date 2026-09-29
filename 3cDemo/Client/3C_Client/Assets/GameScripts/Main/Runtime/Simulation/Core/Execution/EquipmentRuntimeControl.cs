@@ -136,9 +136,9 @@ namespace ThirdPersonSimulation
             PendingEquipmentChange pending = state.PendingChange;
             if (!pending.IsPending || pending.SourceActionInstanceId == 0 || m_Port.IsActionActive(pending.SourceActionInstanceId))
                 return;
-            EquipmentSlotState slot = state.RequireSlot(pending.SlotId);
+            EquipmentSlotState pendingSlot = state.RequireSlot(pending.SlotId);
             m_Port.WriteState(state.ResolvePending(PendingEquipmentChangeState.Cancelled, m_Port.Tick));
-            m_Port.EmitLifecycle(source, slot, slot, PendingEquipmentChangeState.Cancelled, pending.ChangeId);
+            m_Port.EmitLifecycle(source, pendingSlot, pendingSlot, PendingEquipmentChangeState.Cancelled, pending.ChangeId);
         }
 
         public void CancelOrphanedPending(OperationHandle source)

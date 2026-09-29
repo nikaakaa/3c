@@ -46,7 +46,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 pose = default;
                 return false;
             }
-            pose = new AnimationLocalBonePose(position, rotation, scale);
+            if (!AnimationPoseMath.IsFinite(rotation))
+                throw new ArgumentException("Animation local Bone pose is invalid.");
+            pose = new AnimationLocalBonePose(rotation.normalized, position, scale);
             return true;
         }
 

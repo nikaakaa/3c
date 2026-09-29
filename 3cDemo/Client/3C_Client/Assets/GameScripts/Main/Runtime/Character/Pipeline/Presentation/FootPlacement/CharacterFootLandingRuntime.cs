@@ -53,8 +53,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootLandingContext context,
             in AnimationFootMotionRuntimeSample formalFootMotion)
         {
-            AnimationFootMotionEventOccurrence current =
-                formalFootMotion.Events.CurrentContact;
+            ref readonly AnimationFootMotionEventOccurrence current =
+                ref formalFootMotion.Events.CurrentContact;
             bool hasCurrentEvent = current.IsBound;
             ulong currentEventIdentity = hasCurrentEvent ? current.Identity : 0;
             if (hasCurrentEvent &&
@@ -84,8 +84,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return false;
             }
-            AnimationFootMotionEventOccurrence current =
-                formalFootMotion.Events.CurrentContact;
+            ref readonly AnimationFootMotionEventOccurrence current =
+                ref formalFootMotion.Events.CurrentContact;
             if (!current.IsBound ||
                 diagnostics.LandingEventIdentity != current.Identity)
             {
@@ -106,8 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (diagnostics.StepSource !=
                 CharacterFootLandingStepSource.FormalCurrentContact)
                 return;
-            AnimationFootMotionEventOccurrence current =
-                formalFootMotion.Events.CurrentContact;
+            ref readonly AnimationFootMotionEventOccurrence current =
+                ref formalFootMotion.Events.CurrentContact;
             if (!current.IsBound ||
                 diagnostics.LandingEventIdentity != current.Identity)
             {
@@ -146,7 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLandingPredictionResult diagnostics,
             in CharacterFootMotionSettings settings)
         {
-            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            ref readonly AnimationFootMotionEventFrame events =
+                ref formalFootMotion.Events;
             AnimationFootMotionEventOccurrence next = events.NextLanding;
             bool predictivePhase =
                 events.Phase == AnimationFootMotionEventPhase.PreSwing ||
@@ -220,11 +221,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootLandingContext context,
             in AnimationFootMotionRuntimeSample formalFootMotion)
         {
-            AnimationFootMotionEventFrame events = formalFootMotion.Events;
+            ref readonly AnimationFootMotionEventFrame events =
+                ref formalFootMotion.Events;
             if (!events.InApproachContactToLanding)
             {
-                AnimationFootMotionEventOccurrence current =
-                    events.CurrentContact;
+                ref readonly AnimationFootMotionEventOccurrence current =
+                    ref events.CurrentContact;
                 bool retainsCurrentPlant =
                     context.PlantTargetState ==
                         CharacterFootPlantTargetState.Tracking &&
@@ -237,7 +239,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ClearTrackingPlantTarget();
                 return;
             }
-            AnimationFootMotionEventOccurrence next = events.NextLanding;
+            ref readonly AnimationFootMotionEventOccurrence next =
+                ref events.NextLanding;
             bool available = next.IsBound &&
                              context.NextSwingLanding.HasValue &&
                              context.NextSwingLanding.LandingEventIdentity ==

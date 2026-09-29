@@ -987,8 +987,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Weight = sample.LockWeight;
             bool requestsLock = Contact > 0f &&
                                 Mode != AnimationFootStepObservationLockMode.Unlocked;
-            AnimationFootMotionEventOccurrence current =
-                sample.Events.CurrentContact;
+            ref readonly AnimationFootMotionEventOccurrence current =
+                ref sample.Events.CurrentContact;
             EventIdentity = current.IsBound ? current.Identity : 0;
             Availability = requestsLock && EventIdentity == 0
                 ? CharacterFootLockRequestAvailability.ContactEventUnavailable

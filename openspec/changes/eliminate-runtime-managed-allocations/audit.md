@@ -2015,3 +2015,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `AnimationFootMotionRuntimeFrame.Left/Right` 自动属性每次读取复制完整 formal foot sample；Foot Placement 每帧先复制左右 sample，body trajectory 求解入参又按值转发。
 - 左右 sample 改为 backing field 只读引用，构造入参改为 `in`；Foot Placement 局部直接绑定 formal frame，body trajectory 与 prediction time 入参改为 `in`。锁定请求、landing projection、swing 构建和 prediction 判定读取同一 sample，构造时仍保留一次必要存储。
 - 该改动删除 Foot Placement 每帧左右 formal foot sample 及其进入 body trajectory 的重复拷贝。静态核对 sample 为 readonly struct、formal frame 生命周期覆盖 EvaluateFrame、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP283 Formal event frame 引用读取（2026-09-30，已实施，本轮未编译）
+
+- `AnimationFootMotionRuntimeSample.Events` 每次读取复制完整 event frame；Foot Placement 的 landing 判定和 prediction 求解复制 frame 后再读取 CurrentContact、NextLanding，两个 occurrence 属性又各自复制。
+- Event frame 的两个 occurrence 与 sample 的 Events 改为 backing field 只读引用，构造入参改为 `in`；现有 events、current 和 next 局部直接引用绑定。事件有效性、identity、phase 和 prediction 分支不变，构造时仍保留必要存储。
+- 该改动删除 formal motion 事件 frame 与 occurrence 的周期重复拷贝。静态核对类型均为 readonly struct、sample 生命周期覆盖消费、消费只读；未编译、未采样，不能声称实测耗时收益。

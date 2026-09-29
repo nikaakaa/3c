@@ -1018,7 +1018,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             }
             ulong eventIdentity = landing.PlantTarget.LandingEventIdentity;
-            AnimationFootMotionEventFrame events = footMotion.Events;
+            ref readonly AnimationFootMotionEventFrame events =
+                ref footMotion.Events;
             bool approachMatches = events.InApproachContactToLanding &&
                                    events.NextLanding.IsBound &&
                                    events.NextLanding.Identity == eventIdentity;
@@ -1044,9 +1045,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             pendingObservation = committedObservation;
             Vector3 currentSole =
                 (animatedFoot.HeelPosition + animatedFoot.ToePosition) * 0.5f;
-            AnimationFootMotionEventFrame events = footMotion.Events;
-            AnimationFootMotionEventOccurrence current = events.CurrentContact;
-            AnimationFootMotionEventOccurrence next = events.NextLanding;
+            ref readonly AnimationFootMotionEventFrame events =
+                ref footMotion.Events;
+            ref readonly AnimationFootMotionEventOccurrence current =
+                ref events.CurrentContact;
+            ref readonly AnimationFootMotionEventOccurrence next =
+                ref events.NextLanding;
             bool hasNextCandidate = IsPredictiveLanding(
                 in footMotion,
                 in next,

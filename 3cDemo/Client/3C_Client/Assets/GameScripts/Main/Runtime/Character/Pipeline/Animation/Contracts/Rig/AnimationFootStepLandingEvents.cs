@@ -129,9 +129,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct AnimationFootMotionEventFrame
     {
+        readonly AnimationFootMotionEventOccurrence m_CurrentContact;
+        readonly AnimationFootMotionEventOccurrence m_NextLanding;
+
         internal AnimationFootMotionEventFrame(
-            AnimationFootMotionEventOccurrence currentContact,
-            AnimationFootMotionEventOccurrence nextLanding,
+            in AnimationFootMotionEventOccurrence currentContact,
+            in AnimationFootMotionEventOccurrence nextLanding,
             AnimationFootMotionEventPhase phase,
             float timeToLandingSeconds,
             float swingProgress,
@@ -157,8 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Foot Motion Event frame is invalid.");
             }
-            CurrentContact = currentContact;
-            NextLanding = nextLanding;
+            m_CurrentContact = currentContact;
+            m_NextLanding = nextLanding;
             Phase = phase;
             TimeToLandingSeconds = timeToLandingSeconds;
             SwingProgress = swingProgress;
@@ -168,8 +171,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly byte m_IsSpecified;
-        public AnimationFootMotionEventOccurrence CurrentContact { get; }
-        public AnimationFootMotionEventOccurrence NextLanding { get; }
+        public ref readonly AnimationFootMotionEventOccurrence CurrentContact =>
+            ref m_CurrentContact;
+        public ref readonly AnimationFootMotionEventOccurrence NextLanding =>
+            ref m_NextLanding;
         [DiagnosticField]
         [DiagnosticGroup("formal-event")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]

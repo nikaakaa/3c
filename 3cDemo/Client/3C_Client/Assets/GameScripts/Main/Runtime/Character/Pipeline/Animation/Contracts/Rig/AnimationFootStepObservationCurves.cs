@@ -14,6 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct AnimationFootMotionRuntimeSample
     {
+        readonly AnimationFootMotionEventFrame m_Events;
+
         internal AnimationFootMotionRuntimeSample(
             float footHeight,
             float toeHeight,
@@ -41,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Support = NormalizeCurveWeight(support, nameof(support));
             if (!events.IsValid)
                 throw new ArgumentException("Foot observation event frame is invalid.", nameof(events));
-            Events = events;
+            m_Events = events;
             m_IsSpecified = 1;
         }
 
@@ -82,7 +84,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [DiagnosticGroup("formal-motion")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]
         public float Support { get; }
-        public AnimationFootMotionEventFrame Events { get; }
+        public ref readonly AnimationFootMotionEventFrame Events =>
+            ref m_Events;
         [DiagnosticField]
         [DiagnosticGroup("formal-motion")]
         public bool IsValid => m_IsSpecified != 0;

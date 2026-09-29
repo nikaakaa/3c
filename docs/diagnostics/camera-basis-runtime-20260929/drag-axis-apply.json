@@ -1,0 +1,398 @@
+{
+  "begin": 300409776,
+  "end": 300410105,
+  "unwind": 59921804,
+  "byte_sha256": "7d8ed1f5af055274d5ca2f9c1b84e4c5ab6834bf9f4eb2116b81ba7df8fd3450",
+  "instructions": [
+    [
+      300409776,
+      "push",
+      "rsi"
+    ],
+    [
+      300409777,
+      "push",
+      "rdi"
+    ],
+    [
+      300409778,
+      "push",
+      "rbx"
+    ],
+    [
+      300409779,
+      "sub",
+      "rsp, 0x70"
+    ],
+    [
+      300409783,
+      "movaps",
+      "xmmword ptr [rsp + 0x60], xmm8"
+    ],
+    [
+      300409789,
+      "movaps",
+      "xmmword ptr [rsp + 0x50], xmm7"
+    ],
+    [
+      300409794,
+      "movaps",
+      "xmmword ptr [rsp + 0x40], xmm6"
+    ],
+    [
+      300409799,
+      "mov",
+      "rdi, r8"
+    ],
+    [
+      300409802,
+      "movaps",
+      "xmm6, xmm1"
+    ],
+    [
+      300409805,
+      "mov",
+      "rsi, rcx"
+    ],
+    [
+      300409808,
+      "cmp",
+      "byte ptr [rip - 0xcab270c], 0"
+    ],
+    [
+      300409815,
+      "jne",
+      "0x11e7e4b2"
+    ],
+    [
+      300409821,
+      "mov",
+      "rcx, qword ptr [rsi + 0x20]"
+    ],
+    [
+      300409825,
+      "test",
+      "rcx, rcx"
+    ],
+    [
+      300409828,
+      "je",
+      "0x11e7e4e9"
+    ],
+    [
+      300409834,
+      "mov",
+      "rbx, rdi"
+    ],
+    [
+      300409837,
+      "shr",
+      "rbx, 0x20"
+    ],
+    [
+      300409841,
+      "call",
+      "0xf128030"
+    ],
+    [
+      300409846,
+      "test",
+      "al, al"
+    ],
+    [
+      300409848,
+      "je",
+      "0x11e7e401"
+    ],
+    [
+      300409850,
+      "mov",
+      "byte ptr [rsi + 0xc0], 1"
+    ],
+    [
+      300409857,
+      "cmp",
+      "dword ptr [rsi + 0x100], 2"
+    ],
+    [
+      300409864,
+      "jne",
+      "0x11e7e48e"
+    ],
+    [
+      300409870,
+      "mov",
+      "rax, qword ptr [rsi + 0x60]"
+    ],
+    [
+      300409874,
+      "test",
+      "rax, rax"
+    ],
+    [
+      300409877,
+      "je",
+      "0x11e7e4ee"
+    ],
+    [
+      300409883,
+      "movd",
+      "xmm7, edi"
+    ],
+    [
+      300409887,
+      "movdqa",
+      "xmm0, xmm7"
+    ],
+    [
+      300409891,
+      "subss",
+      "xmm0, dword ptr [rsi + 0xc4]"
+    ],
+    [
+      300409899,
+      "movd",
+      "xmm8, ebx"
+    ],
+    [
+      300409904,
+      "movdqa",
+      "xmm1, xmm8"
+    ],
+    [
+      300409909,
+      "subss",
+      "xmm1, dword ptr [rsi + 0xc8]"
+    ],
+    [
+      300409917,
+      "movss",
+      "xmm2, dword ptr [rax + 0x40]"
+    ],
+    [
+      300409922,
+      "movss",
+      "dword ptr [rsp + 0x24], xmm0"
+    ],
+    [
+      300409928,
+      "movss",
+      "dword ptr [rsp + 0x28], xmm1"
+    ],
+    [
+      300409934,
+      "mov",
+      "dword ptr [rsp + 0x2c], 0"
+    ],
+    [
+      300409942,
+      "lea",
+      "rcx, [rsp + 0x30]"
+    ],
+    [
+      300409947,
+      "lea",
+      "rdx, [rsp + 0x24]"
+    ],
+    [
+      300409952,
+      "movaps",
+      "xmm3, xmm6"
+    ],
+    [
+      300409955,
+      "call",
+      "0x1f94b2b0"
+    ],
+    [
+      300409960,
+      "subss",
+      "xmm8, dword ptr [rsp + 0x34]"
+    ],
+    [
+      300409967,
+      "subss",
+      "xmm7, dword ptr [rsp + 0x30]"
+    ],
+    [
+      300409973,
+      "movd",
+      "eax, xmm7"
+    ],
+    [
+      300409977,
+      "movd",
+      "ecx, xmm8"
+    ],
+    [
+      300409982,
+      "shl",
+      "rcx, 0x20"
+    ],
+    [
+      300409986,
+      "or",
+      "rax, rcx"
+    ],
+    [
+      300409989,
+      "mov",
+      "qword ptr [rsi + 0xc4], rax"
+    ],
+    [
+      300409996,
+      "jmp",
+      "0x11e7e49a"
+    ],
+    [
+      300409998,
+      "mov",
+      "dword ptr [rsi + 0xc4], edi"
+    ],
+    [
+      300410004,
+      "mov",
+      "dword ptr [rsi + 0xc8], ebx"
+    ],
+    [
+      300410010,
+      "movaps",
+      "xmm6, xmmword ptr [rsp + 0x40]"
+    ],
+    [
+      300410015,
+      "movaps",
+      "xmm7, xmmword ptr [rsp + 0x50]"
+    ],
+    [
+      300410020,
+      "movaps",
+      "xmm8, xmmword ptr [rsp + 0x60]"
+    ],
+    [
+      300410026,
+      "add",
+      "rsp, 0x70"
+    ],
+    [
+      300410030,
+      "pop",
+      "rbx"
+    ],
+    [
+      300410031,
+      "pop",
+      "rdi"
+    ],
+    [
+      300410032,
+      "pop",
+      "rsi"
+    ],
+    [
+      300410033,
+      "ret",
+      ""
+    ],
+    [
+      300410034,
+      "mov",
+      "ecx, 0x2ea1b"
+    ],
+    [
+      300410039,
+      "call",
+      "0x1017d760"
+    ],
+    [
+      300410044,
+      "test",
+      "rax, rax"
+    ],
+    [
+      300410047,
+      "je",
+      "0x11e7e4f3"
+    ],
+    [
+      300410049,
+      "mov",
+      "rcx, rax"
+    ],
+    [
+      300410052,
+      "mov",
+      "rdx, rsi"
+    ],
+    [
+      300410055,
+      "movaps",
+      "xmm2, xmm6"
+    ],
+    [
+      300410058,
+      "mov",
+      "r9, rdi"
+    ],
+    [
+      300410061,
+      "movaps",
+      "xmm6, xmmword ptr [rsp + 0x40]"
+    ],
+    [
+      300410066,
+      "movaps",
+      "xmm7, xmmword ptr [rsp + 0x50]"
+    ],
+    [
+      300410071,
+      "movaps",
+      "xmm8, xmmword ptr [rsp + 0x60]"
+    ],
+    [
+      300410077,
+      "add",
+      "rsp, 0x70"
+    ],
+    [
+      300410081,
+      "pop",
+      "rbx"
+    ],
+    [
+      300410082,
+      "pop",
+      "rdi"
+    ],
+    [
+      300410083,
+      "pop",
+      "rsi"
+    ],
+    [
+      300410084,
+      "jmp",
+      "0xc464aa0"
+    ],
+    [
+      300410089,
+      "call",
+      "0xac9120"
+    ],
+    [
+      300410094,
+      "call",
+      "0xac9120"
+    ],
+    [
+      300410099,
+      "call",
+      "0xac9120"
+    ],
+    [
+      300410104,
+      "int3",
+      ""
+    ]
+  ]
+}

@@ -207,3 +207,34 @@ Unity 编译重载完成，Console 错误数为 0；正式 PublishStacking 已�
 Unity 编译重载通过，Console 0 错误；正式 PublishDefaultOrbit 后 Build/RequireValid 成功，v6、ratio=1、dirty=false。磁盘原有全部数值按 float32 比较一致，仅新增比例字段；小数显示及 YAML 换行由 Unity 正式保存产生。未运行 Play/replay，未新增测试。
 
 当前 Default_Normal 比例恰为 1，因此交叉项为 0，基础距离不会因为补齐比例字段而改变；不能把这批数据链修正宣称为已经改变日常转视角手感。仍需对齐归一化仰角及其输入、TopOrbit 延伸、跟随 Delay、额外跟随 Y 通道，以及尚未完成的震动时钟／保持／静默输入。原作当前 Corin 实例是否选择 Default_Normal 的早先证据限制仍然成立。
+
+## 输入轴与归一化仰角消费者证据
+
+本批补齐了此前未定位的输入轴所有者，未修改输入缩放或运行代码。
+
+调用链已确认：NapVirtual3DActionCamera_1.OverrideDragAxisConfig（0x134DE720）→ DFLBCIKIEPE+0x58 的 FEBAFIHIDGP → 该实例 +0x70／+0x98 的两份 VCameraAxisState。原模块从 CameraDataAccessor.Control 的 Vector2（实例 +0x3B0）取得输入，经过 0x11E7E3B0 写入本帧输入，再由 0x11E7CFC0 更新两根轴。写入函数在输入模式 raw 2 下另有平滑，尚未把该值根据枚举声明顺序擅自命名为某设备模式。
+
+Default_Normal 的 DragConfig 原始参数为：
+
+| 轴 | MaxSpeed | AccelTime | DecelTime | InvertInput |
+| --- | --- | --- | --- | --- |
+| X | 1550 | 0.10000000149 | 0.10000000149 | false |
+| Y | 25 | 0.20000000298 | 0.10000000149 | false |
+
+这些数值直接来自既有 Pipeline_Camera_Avatar_Config__1021078955_DFB680A125EE4808.json，不是项目 Sensitivity=(0.12,0.0025) 的来源证明。
+
+VCameraAxisState 的实际步进是 0x143583E0，速度边界是 0x14358770：
+
+- 先按轴类型取得玩家灵敏度倍率，再乘 m_MaxSpeed；两个倍率函数分别为 0x14358050、0x143588B0，按输入模式读取不同配置字段。不能直接将 1550／25 当作鼠标每像素角度／轨道比例。
+- 目标速度为 input×有效 MaxSpeed；按目标速度与当前速度的符号、绝对值决定加速或减速。加减速分别使用 AccelTime／DecelTime，之后积分 Value += CurrentSpeed×deltaTime。
+- 非循环轴进入两端各 10% 区域时逐步降低速度上限；越界时夹到范围内并把速度设为 0。常量 0.0001 和范围除数 10 已从指令读取。
+- 与本地 Cinemachine 2.10.7 AxisState.MaxSpeedUpdate 的核心加减速／边界算法一致，但原函数还加入玩家倍率，并且本地 Cinemachine 在限速后把绝对值低于 Epsilon 的速度清零，当前原函数没有该步骤。不能直接宣称调用本地 AxisState 就完整复刻。
+- VCameraAxisState.Value 与 CameraFollowCalcData.anchorElevation 分开保存；原模块用速度增量更新目标数据。0x12A1A790 对仰角按全局上下界夹取；0x12A1A8F0 把 anchorElevation、anchorOverrunElevationRatioDelta、anchorElevationDeltaRatio 相加后再夹取。对应 Default_Normal 的 DRAG_ELEVATION_REGIOIN 为 0～1。
+
+证据包含 main-camera-type、camera-axis-config-types、camera-module-config-type、camera-drag-runtime-types、camera-axis-runtime-type、drag-axis-*、camera-axis-step、camera-axis-speed-limit、camera-axis-horizontal-gain、camera-axis-vertical-gain、calc-elevation-*。camera-axis-branch-flags.json 保留 IFix 与初始化字节，相关 IFix 分支均为 0；非零 0x58... 字节为初始化状态。
+
+当前项目输入由 UnityFixedCharacterInputAdapter.ReadValue 读取 InputAction Vector2，经 TryGetLatchedVector2 直接交给相机；相机读取的是表现输入，不是 ToSimulationValue 中另行归一化的向量。当前消费者使用 Sensitivity 后直接累加角度，没有原作的速度状态。两个现有 CameraInitialState 构造调用均传 pitch=0；它们只恢复录制朝向，不能据此把整个初始状态协议当成归一化仰角协议。
+
+后续实施边界：先对照原 CameraDataAccessor.Control 输入的生产／缩放及玩家倍率，再统一轴参数和归一化轨道消费。不能把未知上游缩放设为 1，也不能套入新的最大速度后用额外系数抵消。ScreenY 已确认仍需检查：本项目 CameraWorldBasicData.Offset 按世界单位参与 CameraToPivot，原数据的 DELAY_ScreenY 是构图参数；当前尚未把原 Delay 到最终构图的消费者完整追通，因此本批未猜测屏幕坐标换算公式。
+
+此批只有证据和文档变化，不需要重新编译或运行。未运行 Play/replay，未新增测试；输入、归一化仰角与 Delay 仍未交付，Goal 保持 active。

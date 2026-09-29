@@ -1,0 +1,336 @@
+{
+  "flags": [
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x1435840a",
+      "flag_rva": "0x53da8ca",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x14358417",
+      "flag_rva": "0x53da8cb",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-speed-limit",
+      "instruction": "0x14358778",
+      "flag_rva": "0x53da8cc",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-speed-limit",
+      "instruction": "0x14358785",
+      "flag_rva": "0x53da8cb",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-main",
+      "instruction": "0x11e7ce02",
+      "flag_rva": "0x53cbcb8",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-main",
+      "instruction": "0x11e7ce1d",
+      "flag_rva": "0x53da8cd",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-main",
+      "instruction": "0x11e7ce52",
+      "flag_rva": "0x53cbcc9",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-main",
+      "instruction": "0x11e7cef9",
+      "flag_rva": "0x53da8cd",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7cff7",
+      "flag_rva": "0x588e857",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d00f",
+      "flag_rva": "0x53cbcc8",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d028",
+      "flag_rva": "0x53da8c9",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d062",
+      "flag_rva": "0x53da8c9",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d1d1",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d240",
+      "flag_rva": "0x589091f",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d2a6",
+      "flag_rva": "0x53d245d",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d33b",
+      "flag_rva": "0x53d245d",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d4ae",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d4fb",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d54c",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d606",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d679",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d707",
+      "flag_rva": "0x53ad20b",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d7b5",
+      "flag_rva": "0x53df3d5",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d7ee",
+      "flag_rva": "0x53d8eae",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d8f1",
+      "flag_rva": "0x53cbcc8",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7d983",
+      "flag_rva": "0x53da8c9",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7da0b",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7da56",
+      "flag_rva": "0x589091f",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "drag-axis-update",
+      "instruction": "0x11e7dafe",
+      "flag_rva": "0x589091e",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x14358059",
+      "flag_rva": "0x5876409",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x14358066",
+      "flag_rva": "0x53da8c8",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x143580ca",
+      "flag_rva": "0x5895529",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x143580d7",
+      "flag_rva": "0x53aa745",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x1435816e",
+      "flag_rva": "0x53da8c8",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x143581fa",
+      "flag_rva": "0x5895529",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-horizontal-gain",
+      "instruction": "0x14358218",
+      "flag_rva": "0x53aa745",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x143588b9",
+      "flag_rva": "0x587640a",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x143588c6",
+      "flag_rva": "0x53da8ce",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x1435892a",
+      "flag_rva": "0x5895529",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x14358937",
+      "flag_rva": "0x53aa745",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x143589ce",
+      "flag_rva": "0x53da8ce",
+      "snapshot_byte": 0
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x14358a5a",
+      "flag_rva": "0x5895529",
+      "snapshot_byte": 1
+    },
+    {
+      "function": "camera-axis-vertical-gain",
+      "instruction": "0x14358a78",
+      "flag_rva": "0x53aa745",
+      "snapshot_byte": 0
+    }
+  ],
+  "constants": [
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x1435843e",
+      "mnemonic": "ucomiss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x14358459",
+      "mnemonic": "ucomiss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x14358467",
+      "mnemonic": "movss",
+      "value": 1.0
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x14358474",
+      "mnemonic": "ucomiss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x1435848f",
+      "mnemonic": "movss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x143584bc",
+      "mnemonic": "movss",
+      "value": -1.0
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x143584cd",
+      "mnemonic": "movss",
+      "value": 1.0
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x14358652",
+      "mnemonic": "ucomiss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-step",
+      "instruction": "0x143586d9",
+      "mnemonic": "ucomiss",
+      "value": 9.999999747378752e-05
+    },
+    {
+      "function": "camera-axis-speed-limit",
+      "instruction": "0x143587cc",
+      "mnemonic": "movss",
+      "value": 1.0
+    },
+    {
+      "function": "camera-axis-speed-limit",
+      "instruction": "0x143587f8",
+      "mnemonic": "divss",
+      "value": 10.0
+    },
+    {
+      "function": "camera-axis-speed-limit",
+      "instruction": "0x1435882c",
+      "mnemonic": "movss",
+      "value": 1.0
+    }
+  ]
+}

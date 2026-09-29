@@ -16,12 +16,68 @@
       "sha256": "da7b3729d46b845456385766d1e7e7e7d97a25663c562bea2c3c3301f1dce67a"
     },
     {
+      "path": "calc-elevation-final.json",
+      "sha256": "32de9292806cfb82f690c6a299ab632b3cfbcaf2741f719f0f9ebe4a86b47ca7"
+    },
+    {
+      "path": "calc-elevation-set.json",
+      "sha256": "7d070f4cd0663b9fec2e74d841be831e8df6c80a821f4394e239f5de9e330a02"
+    },
+    {
+      "path": "camera-axis-branch-flags.json",
+      "sha256": "89af65257667cfa4e5a8d38850b86fd1b6befaec15bec75dda162ceb974539ca"
+    },
+    {
+      "path": "camera-axis-config-types.json",
+      "sha256": "5d56d659284779433e827b6bf640cf5e3986877f7c4385c05ba9fbb62a63a89f"
+    },
+    {
+      "path": "camera-axis-horizontal-gain.json",
+      "sha256": "3cab9fceaaac63a706328f3f8099f18b4bbb5399b42688614b655db77bb621e3"
+    },
+    {
+      "path": "camera-axis-runtime-type.json",
+      "sha256": "0dda6840e513559cfbfd6653bb8f04e916de8f9aeb8e738c49492c02de469fb6"
+    },
+    {
+      "path": "camera-axis-speed-limit.json",
+      "sha256": "1327ca8f8e5c7d2cac9fcdac31807f44e02bb14b392d58b55e6f66bf39821d01"
+    },
+    {
+      "path": "camera-axis-step.json",
+      "sha256": "5e96647adaf4a9c7c8b0e5de7485fabc40d6aecf8b7c802876a8e95a8d6c1fb2"
+    },
+    {
+      "path": "camera-axis-vertical-gain.json",
+      "sha256": "7a24f73409a3ea4b5a7b85b85f376a944a764f989ba18a1a8413db9450efbffd"
+    },
+    {
       "path": "camera-config-enums.json",
       "sha256": "1ce9da445f11a11404d68f6ea040b87f073ef38f9428465f559a087057ddfce3"
     },
     {
+      "path": "camera-delay-solver-type.json",
+      "sha256": "6b105975e324a51e12be50a44cf219e97c924eb8675cef930e9a9376552fae38"
+    },
+    {
+      "path": "camera-drag-delay-types.json",
+      "sha256": "4433ac295eafeee57f2704fdb39ba5165ec9766cef541db86eb5ad2cf28f4edf"
+    },
+    {
+      "path": "camera-drag-runtime-types.json",
+      "sha256": "0543976daac09c7f9217311a9cedf604d69a54a0ee6b1af1256613dfecb5e5c6"
+    },
+    {
       "path": "camera-global-data-type.json",
       "sha256": "1414476f7e1befe058b34215c7e2f4919991044dde06dc2a5f73df2e96cb7022"
+    },
+    {
+      "path": "camera-module-base-type.json",
+      "sha256": "23358a8bca0bcd5ffd7ca5d764879e622bc710cd96b72e8bb1b4d07ddecb00d9"
+    },
+    {
+      "path": "camera-module-config-type.json",
+      "sha256": "9e6eacfecd50e862a34914acc463dc38ed6ffbe3cd0964910729d582f801866d"
     },
     {
       "path": "camera-stage-0x134db160.json",
@@ -64,8 +120,28 @@
       "sha256": "875dc143722bf4b4b6382d6eb76c2e2a318cd6a829ec36a7cef95a6b2d2dab41"
     },
     {
+      "path": "drag-axis-apply.json",
+      "sha256": "356b371180fc1e23f0ef58594ab401c3a5f435b78bf9e614ebd3887160448b46"
+    },
+    {
+      "path": "drag-axis-input.json",
+      "sha256": "2a36a2259efc8cd1a246b909c550dfa5edd633e3c70bf188c8493fbee13e187b"
+    },
+    {
+      "path": "drag-axis-main.json",
+      "sha256": "3676b9e688b8da3225617bb8b9885a9427d475a36a3b9c58de14627a40377ed2"
+    },
+    {
+      "path": "drag-axis-update.json",
+      "sha256": "580a6f507bce1d8e85240ebef1af2a410efc00b3b39b5995326b7cd9ac0ec277"
+    },
+    {
       "path": "hit-shake-assets.json",
       "sha256": "7e4a9b55df33d127432b7b2a32829b605778f36c8cf57df18f280a06bab4fba4"
+    },
+    {
+      "path": "main-camera-type.json",
+      "sha256": "17adeb09374de91ca6bb8c799c703e9389f6882309bde9040e0b8a412390d0f2"
     },
     {
       "path": "orbit-cubic-evaluate.json",
@@ -100,6 +176,10 @@
       "sha256": "2657fcc7e215e94bc061610b23a59a432b2b4265f7e18ef9939ace5574530d3a"
     },
     {
+      "path": "override-drag-axis.json",
+      "sha256": "7bd9c7ba1d54ca1ede828741a98547af61da07b8a79141fa1b7c307ad38744c2"
+    },
+    {
       "path": "radius-branch-flags.json",
       "sha256": "1c36970de0fa2934efb0fcea421aaf14626955ff221b7a62ba9a7e6b80b330c1"
     },
@@ -118,6 +198,10 @@
     {
       "path": "radius-consumers.json",
       "sha256": "123435943edd2eee1b080fa24c3f4bd190511716d0d02d116b5eb73d1e5df0d4"
+    },
+    {
+      "path": "read-sphere-xy.json",
+      "sha256": "9c8e1ce572aa5b730ca4a9f0299280a991bccfa5769216e0a9ac4c19bafd3aa9"
     },
     {
       "path": "screen-control-solve.json",

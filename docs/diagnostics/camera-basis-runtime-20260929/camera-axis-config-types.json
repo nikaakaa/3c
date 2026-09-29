@@ -1,0 +1,279 @@
+{
+  "types": [
+    {
+      "type_index": 90178,
+      "name": "CameraAxis",
+      "namespace": "MoleMole",
+      "full_name": "MoleMole.CameraAxis",
+      "klass": 5497657888232,
+      "klass_raw_hex": "80955c01000500000000000000000000000000000000000040cb6e0800050000000000000000000028cb6e08000500000000000000000000000000000000000000000000000000000000000000000000d075cb020005000080ac2a5a940100000000000000000000000000000000000000000000000000000000000000000000426001000000000000001100000000004260010000000000000011400000000033c30002e80df205000000000921100028725d01e80df20500002000ffff100000000400000000000003000121190c00",
+      "definition_va": 1736679533696,
+      "definition_raw_hex": "ffffffff026b0f002a821008c4a71600d4e2060033c30002092110003f308b0ac6e30700d4130000ffffffffc6e30700ffffffff0400ffff00000400000000000000ffffffffffff00000000010cffff",
+      "token": 33604403,
+      "attributes": 1057033,
+      "field_start": 451284,
+      "field_count": 4,
+      "method_start": 4294967295,
+      "method_count": 0,
+      "parent_descriptor_index": 5076,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 5497699617600,
+      "method_array": 0,
+      "value_type": true,
+      "instance_size": 32,
+      "parent_klass": 5497581040168,
+      "parent_type_index": 435,
+      "parent_name": "ValueType",
+      "parent_type": "ValueType",
+      "selection_reasons": [
+        "Camera normalized input"
+      ],
+      "fields": [
+        {
+          "ordinal": 0,
+          "definition_index": 451284,
+          "definition_va": 1736669524692,
+          "raw_hex": "9ad54df20084e41bd1b72a24",
+          "token": 67377618,
+          "name_identity": 171046261,
+          "name": "m_MaxSpeed",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 16,
+          "metadata_offset": 16,
+          "storage_flags": 0,
+          "value_payload_offset": 0,
+          "runtime_offset_flags": 16,
+          "runtime_metadata_offset": 16,
+          "runtime_record_va": 5497699617600,
+          "runtime_raw_hex": "a3fd023ac3b8c17a155c9775437e62214542de197b40816533c12c106adf2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 451285,
+          "definition_va": 1736669524704,
+          "raw_hex": "dc12675643c1fd7f1df54389",
+          "token": 67377619,
+          "name_identity": 187823487,
+          "name": "m_AccelTime",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 20,
+          "metadata_offset": 20,
+          "storage_flags": 0,
+          "value_payload_offset": 4,
+          "runtime_offset_flags": 20,
+          "runtime_metadata_offset": 20,
+          "runtime_record_va": 5497699617632,
+          "runtime_raw_hex": "a3fd023ac3b8c17a155c9775437e62219dd2251a7b40816532c12c106edf2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 451286,
+          "definition_va": 1736669524716,
+          "raw_hex": "61cff806c97d8f30adb1d539",
+          "token": 67377620,
+          "name_identity": 187823498,
+          "name": "m_DecelTime",
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff975e5c1a0",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 24,
+          "metadata_offset": 24,
+          "storage_flags": 0,
+          "value_payload_offset": 8,
+          "runtime_offset_flags": 24,
+          "runtime_metadata_offset": 24,
+          "runtime_record_va": 5497699617664,
+          "runtime_raw_hex": "a3fd023ac3b8c17a155c9775437e62218dd2251a7b40816535c12c1072df2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 451287,
+          "definition_va": 1736669524728,
+          "raw_hex": "b9ec77ccc4a00ef6d1d45401",
+          "token": 67377621,
+          "name_identity": 221377972,
+          "name": "m_InvertInput",
+          "type": {
+            "display": "bool",
+            "type_ref": "0x7ff975e56780",
+            "complete": true
+          },
+          "attributes": 6,
+          "static": false,
+          "literal": false,
+          "offset_flags": 28,
+          "metadata_offset": 28,
+          "storage_flags": 0,
+          "value_payload_offset": 12,
+          "runtime_offset_flags": 28,
+          "runtime_metadata_offset": 28,
+          "runtime_record_va": 5497699617696,
+          "runtime_raw_hex": "a3fd023ac3b8c17a35fa9775437e6221bdd2251a7b40816534c12c1076df2e36",
+          "runtime_matches_definition": true,
+          "runtime_name_matches": true,
+          "complete": true
+        }
+      ],
+      "methods": [],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625954760,
+        "record_number": 26162,
+        "record_va": 1736696964440,
+        "record_hex": "000000002000040053000000",
+        "instance_size": 32,
+        "offset_array_va": 1736717978132,
+        "offsets_hex": "1000000014000000180000001c000000",
+        "offset_flags": [
+          16,
+          20,
+          24,
+          28
+        ]
+      },
+      "layout_instance_size": 32,
+      "dependencies": []
+    },
+    {
+      "type_index": 47847,
+      "name": "CameraModuleAvatarDataConfigExt",
+      "namespace": "MoleMole",
+      "full_name": "MoleMole.CameraModuleAvatarDataConfigExt",
+      "klass": 5497623202752,
+      "klass_raw_hex": "80955c01000500000100000060244d05000000000000000000000000000000000000000000000000a8d6e0030005000018d6e00300050000000000000000000000000000000000000000000000000000b0904802000500001000f759940100000000000000000000000000000000000000000000000000000000000000000000e7ba0000000000000000120000000000e7ba0000000000000000124000000000d81d0002c0cbe003000000000120100020853403c0cbe0030000d800ffffffff00000400020000000003000131580c00",
+      "definition_va": 1736676147216,
+      "definition_raw_hex": "00b306004ecc0d002a82100800e20900ffffffffd81d000201201000f35d4b1f186304002f630400ffffffff18630400ffffffff0000ffff00000400000000000000ffffffffffff02000000000cffff",
+      "token": 33562072,
+      "attributes": 1056769,
+      "field_start": 4294967295,
+      "field_count": 0,
+      "method_start": 439040,
+      "method_count": 2,
+      "parent_descriptor_index": 287535,
+      "declaring_descriptor_index": 4294967295,
+      "field_array": 0,
+      "method_array": 5497623205400,
+      "value_type": false,
+      "instance_size": 216,
+      "parent_klass": 5497611912480,
+      "parent_type_index": 47384,
+      "parent_name": "CameraModuleAvatarDataConfig",
+      "parent_type": "CameraModuleAvatarDataConfig",
+      "selection_reasons": [
+        "Camera normalized input"
+      ],
+      "fields": [],
+      "methods": [
+        {
+          "ordinal": 0,
+          "definition_index": 439040,
+          "definition_va": 1736651743096,
+          "rva": 309982208,
+          "raw_hex": "11510b0022000005ffffffffe7ba000054e100060000ffffffff86180001",
+          "token": 100720980,
+          "name_identity": 83886114,
+          "name": ".ctor",
+          "attributes": 6278,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [],
+          "runtime_record_va": 5497623205416,
+          "runtime_raw_hex": "c0cbe0030005000000f43686f97f00000010bd73f97f0000ffffffff0000000000b306000000000054e10006ffff861800000010000000000000000000000000",
+          "runtime_matches_definition": true,
+          "code_va": 140709675332608,
+          "signature_complete": true
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 439041,
+          "definition_va": 1736651743126,
+          "rva": 309981456,
+          "raw_hex": "11510b00db6400048b0d0500e7ba000053e100060000ffffffff86000100",
+          "token": 100720979,
+          "name_identity": 67134683,
+          "name": "Init",
+          "attributes": 134,
+          "static": false,
+          "abstract": false,
+          "return_type": {
+            "display": "void",
+            "type_ref": "0x7ff975e200c0",
+            "complete": true
+          },
+          "parameters": [
+            {
+              "ordinal": 0,
+              "definition_index": 331147,
+              "definition_va": 1736634208684,
+              "raw_hex": "ae22dfe513f0f4fc38a472c1",
+              "name_identity": 203815475,
+              "name": "globalConfig",
+              "token": 134262229,
+              "type": {
+                "display": "PipelineCameraAvatarConfigData",
+                "type_ref": "0x7ff975732600",
+                "complete": true
+              }
+            }
+          ],
+          "runtime_record_va": 5497623205480,
+          "runtime_raw_hex": "c0cbe0030005000010f13686f97f0000d015bd73f97f0000ffffffff0000000001b306000000000053e10006ffff86000000010000000000a877090a00050000",
+          "runtime_matches_definition": true,
+          "code_va": 140709675331856,
+          "runtime_name_matches": true,
+          "signature_complete": true
+        }
+      ],
+      "issues": [],
+      "enum_type": false,
+      "layout": {
+        "index_va": 1736625785436,
+        "record_number": 3611,
+        "record_va": 1736696693828,
+        "record_hex": "00000000d800080100000000",
+        "instance_size": 216,
+        "offset_array_va": 1736717977800,
+        "offsets_hex": "",
+        "offset_flags": []
+      },
+      "layout_instance_size": 216,
+      "dependencies": [
+        51333
+      ]
+    }
+  ]
+}

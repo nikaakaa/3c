@@ -1291,8 +1291,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal ClipSamplePlan RequireDominantClipSample(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
+            in AnimationPoseSourceId sourceId,
+            in PoseNodeId poseNodeId,
             ulong completionIdentity) =>
             RequireCommittedBackend(sourceId, poseNodeId).RequireDominantClipSample(
                 sourceId,

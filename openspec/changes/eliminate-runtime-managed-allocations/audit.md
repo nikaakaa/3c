@@ -1679,3 +1679,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Final Publication 的 frame lease 按值进入 PendingPage 的 begin/set/require 校验；`Lineage` 自动属性每次读取复制完整 lineage，外层 Prepare、Physical、Commit 和 Discard 再按值传递同一 lease。
 - lease 的 lineage 改为 backing field 只读引用，PendingPage 四个正式边界和 Publication 四个阶段入口改为 `in`；lease 匹配改用 lineage 现有 `Matches(in)` 字段比较，外层调用显式只读转发。
 - 该改动删除 Final Publication 周期 Begin/Prepare/Physical/Commit/Discard 链的重复 lease 与 lineage 拷贝。PendingPage 仍存储一次 lease，`ComposedAnimationPoseFrame` 仍按一次必要存储写入；页选择、物理写入前置、Commit/Discard 顺序和异常文本不变。静态核对唯一外层调用链、引用生命周期覆盖 open page、`Matches(in)` 与原 `==` 字段等价；未编译、未采样，不能声称实测耗时收益。
+
+### AP227 dominant sample Source Module 边界引用化（2026-09-30，已实施，本轮未编译）
+
+- Final Publication 和 Foot Motion 读取 committed dominant clip sample 时，Source Module 的转发边界按值复制 source id 与 pose node id；后端接口和实现已是 `in` 接收。
+- Source Module 的正式 `RequireDominantClipSample` 改为 `in` source/node，并继续转发到同一 committed backend 查找。调用点仍传 contribution 的同一 identity 属性，identity 校验、Evaluate Barrier 校验、completion 校验、异常文本和返回 plan 语义不变。
+- 该改动删除周期 dominant sample 查询的 Source Module 边界拷贝。静态核对两个调用点、唯一转发实现和只读参数；未编译、未采样，不能声称实测耗时收益。此前怀疑的 Final Property Writer 循环绑定已排除：binding 是 sealed class 引用，不是结构拷贝。

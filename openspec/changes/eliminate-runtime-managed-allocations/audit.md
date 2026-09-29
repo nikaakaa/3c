@@ -681,6 +681,12 @@
 - `OperationExecutionTopology` 构造期为全部 operation 预生成 InvariantCulture 身份字符串，新增 `OperationIdentity`。状态机写身份槽与状态过渡诊断改为读取同一字符串，删除状态机私有 `FormatHandle`。身份槽存储内容、诊断字段顺序和空 handle 不出现在这些正式路径的规则不变。
 - 每次状态激活或过渡少两次到三次临时字符串；首次装配增加定容字符串数组。路径、过渡身份和状态槽检查顺序不变。静态核对全部旧调用、目标身份语义、诊断专属字符串和差异；未编译、运行回放或采样。
 
+### AP86 状态机执行路径临时数字字符串（2026-09-29，已实施，本轮未编译）
+
+- 每次激活状态生成 execution path 时，机器 handle、状态 handle 和 generation 仍先调用 `ToString`/插值再拼接。AP85 已去掉 handle 临时字符串，但 generation 的临时字符串和最终拼接分配仍在。
+- 使用 `string.Create` 按父路径、固定文本、两个 handle 和 generation 的精确字符数分配一次最终字符串，静态局部函数用 InvariantCulture `TryFormat` 写入。原路径格式 `parent/sm:machine/state:state@generation`、handle 十进制、generation 非零范围和写入 slot 的所有权不变。
+- 每次状态激活去掉 generation 临时字符串，并合并中间拼接目标；最终 path 字符串仍必须分配。静态核对长度公式、ulong 位数、文本顺序、插槽消费和差异；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

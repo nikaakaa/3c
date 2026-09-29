@@ -264,7 +264,7 @@ namespace ThirdPersonSimulation
             if (generation == 0)
                 generation = 1;
             string parent = m_Host.CurrentStateExecutionPath;
-            string path = $"{parent}/sm:{machine.Handle.Value.ToString(CultureInfo.InvariantCulture)}/state:{state.Value.ToString(CultureInfo.InvariantCulture)}@{generation.ToString(CultureInfo.InvariantCulture)}";
+            string path = BuildStateExecutionPath(parent, machine.Handle.Value, state.Value, generation);
             int pathSlot = m_Host.RequireOperationSlot(machine, ProgramStateSemantic.StateMachineExecutionPath);
             m_Host.WriteIdentity(pathSlot, path);
             m_Host.NotifyStateLifecycle(machine, state, OperationStateLifecyclePhase.Entered);
@@ -275,6 +275,55 @@ namespace ThirdPersonSimulation
             int slot = m_Host.Topology.FindOperationStateSlot(machine.Handle, ProgramStateSemantic.StateMachineExecutionPath);
             if (slot >= 0)
                 m_Host.WriteIdentity(slot, string.Empty);
+        }
+
+        static string BuildStateExecutionPath(
+            string parent,
+            ulong machine,
+            ulong state,
+            ulong generation)
+        {
+            int length = parent.Length
+                + "/sm:".Length + CountDigits(machine)
+                + "/state:".Length + CountDigits(state)
+                + "@".Length + CountDigits(generation);
+            return string.Create(
+                length,
+                (parent, machine, state, generation),
+                static (characters, context) =>
+                {
+                    int position = 0;
+                    WriteLiteral(context.parent, characters, ref position);
+                    WriteLiteral("/sm:", characters, ref position);
+                    WriteNumber(context.machine, characters, ref position);
+                    WriteLiteral("/state:", characters, ref position);
+                    WriteNumber(context.state, characters, ref position);
+                    WriteLiteral("@", characters, ref position);
+                    WriteNumber(context.generation, characters, ref position);
+                });
+        }
+
+        static void WriteLiteral(ReadOnlySpan<char> literal, Span<char> characters, ref int position)
+        {
+            literal.CopyTo(characters.Slice(position));
+            position += literal.Length;
+        }
+
+        static void WriteNumber(ulong value, Span<char> characters, ref int position)
+        {
+            value.TryFormat(characters.Slice(position), out int written, provider: CultureInfo.InvariantCulture);
+            position += written;
+        }
+
+        static int CountDigits(ulong value)
+        {
+            int count = 1;
+            while (value >= 10)
+            {
+                value /= 10;
+                count++;
+            }
+            return count;
         }
 
         ProgramControlFlowEdge SelectTransition(

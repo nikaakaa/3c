@@ -167,13 +167,13 @@ namespace ThirdPersonSimulation.DotRecast
         }
 
         internal ActorContactBatchResult Resolve(
-            IReadOnlyList<ActorContactCandidate> candidates,
+            ReadOnlySpan<ActorContactCandidate> candidates,
             bool collectTraces)
         {
-            if (candidates == null || candidates.Count == 0)
+            if (candidates.IsEmpty)
                 throw new ArgumentException("Actor contact solver requires a candidate roster.", nameof(candidates));
             RequireStableRoster(candidates);
-            int count = candidates.Count;
+            int count = candidates.Length;
             EnsureCapacity(count, collectTraces);
             m_ResolveTraces.Clear();
             double[] originX = m_OriginX;
@@ -225,21 +225,21 @@ namespace ThirdPersonSimulation.DotRecast
                     candidates[i].CandidatePosition.Y,
                     Float32Scalar.FromDouble(originZ[i] + displacementZ[i]));
             }
-            ValidateFinal(candidates, positions, collectTraces);
+            ValidateFinal(candidates, positions.AsSpan(0, count), collectTraces, m_ResolveTraces);
             return new ActorContactBatchResult(positions, contacts, m_ResolveTraces, count);
         }
 
         internal IReadOnlyList<ActorContactTrace> ValidateFinal(
-            IReadOnlyList<ActorContactCandidate> candidates,
-            IReadOnlyList<Float32Vector3> finalPositions,
+            ReadOnlySpan<ActorContactCandidate> candidates,
+            ReadOnlySpan<Float32Vector3> finalPositions,
             bool collectTraces)
         {
-            if (candidates == null || candidates.Count == 0)
+            if (candidates.IsEmpty)
                 throw new ArgumentException("Actor contact solver requires a candidate roster.", nameof(candidates));
             RequireStableRoster(candidates);
-            EnsureCapacity(candidates.Count, collectTraces);
+            EnsureCapacity(candidates.Length, collectTraces);
             m_ValidationTraces.Clear();
-            ValidateFinal(candidates, finalPositions, collectTraces);
+            ValidateFinal(candidates, finalPositions, collectTraces, m_ValidationTraces);
             return m_ValidationTraces;
         }
 
@@ -267,7 +267,7 @@ namespace ThirdPersonSimulation.DotRecast
         }
 
         void ResolveInitialOverlaps(
-            IReadOnlyList<ActorContactCandidate> candidates,
+            ReadOnlySpan<ActorContactCandidate> candidates,
             bool collectTraces,
             double[] originX,
             double[] originZ,
@@ -280,15 +280,15 @@ namespace ThirdPersonSimulation.DotRecast
         {
             double tolerance = m_Configuration.ContactTolerance.ToDouble();
             double maximum = m_Configuration.MaximumDepenetrationDistance.ToDouble();
-            int actorCount = candidates.Count;
+            int actorCount = candidates.Length;
             for (int iteration = 0; iteration < m_Configuration.IterationCount; iteration++)
             {
                 Array.Clear(correctionX, 0, actorCount);
                 Array.Clear(correctionZ, 0, actorCount);
                 bool corrected = false;
-                for (int a = 0; a < candidates.Count - 1; a++)
+                for (int a = 0; a < candidates.Length - 1; a++)
                 {
-                    for (int b = a + 1; b < candidates.Count; b++)
+                    for (int b = a + 1; b < candidates.Length; b++)
                     {
                         bool activeA = candidates[a].Mobility == ActorContactMobility.ActiveSimulated;
                         bool activeB = candidates[b].Mobility == ActorContactMobility.ActiveSimulated;
@@ -353,7 +353,7 @@ namespace ThirdPersonSimulation.DotRecast
                 }
                 if (!corrected)
                     return;
-                for (int i = 0; i < candidates.Count; i++)
+                for (int i = 0; i < candidates.Length; i++)
                 {
                     totalDepenetrationX[i] += correctionX[i];
                     totalDepenetrationZ[i] += correctionZ[i];
@@ -388,7 +388,7 @@ namespace ThirdPersonSimulation.DotRecast
         }
 
         void ResolveSweeps(
-            IReadOnlyList<ActorContactCandidate> candidates,
+            ReadOnlySpan<ActorContactCandidate> candidates,
             bool collectTraces,
             double[] originX,
             double[] originZ,
@@ -400,15 +400,15 @@ namespace ThirdPersonSimulation.DotRecast
             List<ActorContactTrace> traces)
         {
             double tolerance = m_Configuration.ContactTolerance.ToDouble();
-            int actorCount = candidates.Count;
+            int actorCount = candidates.Length;
             for (int iteration = 0; iteration < m_Configuration.IterationCount; iteration++)
             {
                 Array.Clear(correctionX, 0, actorCount);
                 Array.Clear(correctionZ, 0, actorCount);
                 bool clipped = false;
-                for (int a = 0; a < candidates.Count - 1; a++)
+                for (int a = 0; a < candidates.Length - 1; a++)
                 {
-                    for (int b = a + 1; b < candidates.Count; b++)
+                    for (int b = a + 1; b < candidates.Length; b++)
                     {
                         bool activeA = candidates[a].Mobility == ActorContactMobility.ActiveSimulated;
                         bool activeB = candidates[b].Mobility == ActorContactMobility.ActiveSimulated;
@@ -501,7 +501,7 @@ namespace ThirdPersonSimulation.DotRecast
                 }
                 if (!clipped)
                     return;
-                for (int i = 0; i < candidates.Count; i++)
+                for (int i = 0; i < candidates.Length; i++)
                 {
                     displacementX[i] += correctionX[i];
                     displacementZ[i] += correctionZ[i];
@@ -510,17 +510,17 @@ namespace ThirdPersonSimulation.DotRecast
         }
 
         void ValidateFinal(
-            IReadOnlyList<ActorContactCandidate> candidates,
-            IReadOnlyList<Float32Vector3> positions,
+            ReadOnlySpan<ActorContactCandidate> candidates,
+            ReadOnlySpan<Float32Vector3> positions,
             bool collectTraces,
             List<ActorContactTrace> traces)
         {
-            if (positions == null || positions.Count != candidates.Count)
+            if (positions.Length != candidates.Length)
                 throw new ArgumentException("Actor contact final position roster is invalid.", nameof(positions));
             double tolerance = m_Configuration.ContactTolerance.ToDouble();
-            for (int a = 0; a < candidates.Count - 1; a++)
+            for (int a = 0; a < candidates.Length - 1; a++)
             {
-                for (int b = a + 1; b < candidates.Count; b++)
+                for (int b = a + 1; b < candidates.Length; b++)
                 {
                     if (candidates[a].Mobility == ActorContactMobility.ObservedKinematic &&
                         candidates[b].Mobility == ActorContactMobility.ObservedKinematic)
@@ -574,9 +574,9 @@ namespace ThirdPersonSimulation.DotRecast
             }
         }
 
-        static void RequireStableRoster(IReadOnlyList<ActorContactCandidate> candidates)
+        static void RequireStableRoster(ReadOnlySpan<ActorContactCandidate> candidates)
         {
-            for (int i = 0; i < candidates.Count; i++)
+            for (int i = 0; i < candidates.Length; i++)
             {
                 if (!candidates[i].ActorId.IsValid)
                     throw new ArgumentException("Actor contact candidate roster contains an invalid ActorId.", nameof(candidates));

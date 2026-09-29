@@ -419,7 +419,16 @@
 - 两个数值域各由 AbilityExecutionInput.ReadValue 执行 Ordinal 二分查找，技能输入端口、移动输入和条件输入统一调用；删除控制模块的重复查找实现。无每 Tick 新索引或额外数组，不缓存值，不假定不同 Tick 的输入布局相同。空输入、缺失 ID、类型不匹配仍报原 InvalidOperationException，命中后返回同一份当前值，数值计算不变。
 - 比较次数由最坏线性改为对数级，输入很少时实际耗时不保证更低。静态核对两域构造/所有权入口、全部 Begin 调用、三个消费类别和差异；未编译、回放或采样，未修改网络、状态事务、快照持有规则或脚步预测。
 
+### AP48 DotRecast 接触候选接口转换装箱（2026-09-29，已实施，未运行）
+
+- G12 复核确认候选集合已经改为 Solver 持有数组复用，初始审计的逐批 new List 已不成立。当前 DotRecastWorldSolver 将 ArraySegment<ActorContactCandidate> 传入 Resolve 与 ValidateFinal 的 IReadOnlyList 参数，值类型转接口会装箱；不是数组片段构造本身分配。
+- 候选写入页改为当前有效范围的 Span，Resolve、初始重叠、扫掠、最终验证和名单检查统一接收 ReadOnlySpan；最终位置也按本批数量传入只读切片。读取无接口转换，不增集合或复制；不读取数组扩容后的无效尾部。
+- 全链同步使用，无异步等待、迭代器、字段保存或闭包捕获 Span；候选仍由原数组持有，排序、成对顺序、迭代次数和数值公式不改。返回的世界状态与结果数组继续按原快照所有权创建，未将其改成可变共享页；观察对象增加时工作区扩容仍存在，不能宣称整个 Solver 零分配。
+- 同链发现的 ValidateFinal 自递归错误已修复，详见可靠性段，不能把修复后能执行验证计为 CPU 优化收益。本项未运行 DotRecast，不把该路径当作当前 KCC 场景的实测热点；仅核对唯一正式消费者、切片寿命、接口类型与差异，未编译或采样。
+
 ## 可靠性问题独立保留
+
+- 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。
 
 - 续查 ParameterResolve 发现独立输出页未写入骨骼：EvaluateOutput 仅调用 CopyMetadata，而该公共方法只复制参数/贡献/速度及帧元数据，随后 ResolveParameters 也不写骨骼。现显式将 base 的 DenseLocalPoses 批量复制到本节点输出页，保持“base骨骼＋按策略合成参数”的完整输出。沿现有 CopyMetadata 的布局检查和独立双页提交，不直接返回输入页。该项是正确性修复，会补上必需的复制工作，不计为 CPU 优化收益；未编译、未实跑，当前资产是否执行此节点尚未采样。
 

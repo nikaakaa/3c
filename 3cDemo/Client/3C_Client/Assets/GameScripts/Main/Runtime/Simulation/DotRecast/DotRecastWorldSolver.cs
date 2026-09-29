@@ -270,10 +270,7 @@ namespace ThirdPersonSimulation.DotRecast
                 contactCandidateStorage = new ActorContactCandidate[contactCandidateCount];
                 m_ContactCandidates = contactCandidateStorage;
             }
-            ArraySegment<ActorContactCandidate> contactCandidates = new ArraySegment<ActorContactCandidate>(
-                contactCandidateStorage,
-                0,
-                contactCandidateCount);
+            Span<ActorContactCandidate> contactCandidates = contactCandidateStorage.AsSpan(0, contactCandidateCount);
             try
             {
                 SurfaceCandidate[] surfaceCandidates = m_SurfaceCandidates;
@@ -343,7 +340,7 @@ namespace ThirdPersonSimulation.DotRecast
                 {
                     finalValidationTraces = m_ActorContactSolver.ValidateFinal(
                         contactCandidates,
-                        finalPositions,
+                        finalPositions.AsSpan(0, contactCandidateCount),
                         diagnostics.IsEnabled);
                 }
                 catch (ActorContactSolveException exception)

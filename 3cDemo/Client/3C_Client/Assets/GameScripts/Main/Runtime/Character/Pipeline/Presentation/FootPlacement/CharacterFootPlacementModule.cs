@@ -1457,16 +1457,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float selectedWeight = 0f;
             for (int i = 0; i < pose.ContributionCount; i++)
             {
-                AnimationPoseSourceContribution contribution = pose.Contributions[i];
+                ref readonly AnimationPoseSourceContribution contribution = ref pose.Contributions[i];
                 if (contribution.Kind != AnimationPoseContributionKind.Live ||
-                    contribution.SourceId.SourceActionInstanceId == 0)
+                    contribution.SourceIdRef.SourceActionInstanceId == 0)
                 {
                     continue;
                 }
                 float weight = side == CharacterFootSide.Left
                     ? contribution.LeftFootWeight
                     : contribution.RightFootWeight;
-                ulong candidateIdentity = contribution.SourceId.SourceActionInstanceId;
+                ulong candidateIdentity = contribution.SourceIdRef.SourceActionInstanceId;
                 if (weight <= 0.0001f ||
                     weight < selectedWeight ||
                     Mathf.Abs(weight - selectedWeight) <= 0.0001f &&

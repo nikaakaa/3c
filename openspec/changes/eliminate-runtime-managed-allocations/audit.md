@@ -1739,3 +1739,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - World Context 的 Foot Placement contribution 解析和 Final Publication Prepare 每次用 `NativeSlice` 索引按值取出一整份 primitive，再传入已支持 `in` 的 resolver。
 - 两个周期循环改为绑定 slice 元素只读引用并显式转发。resolver 的字段校验、source/node 查找、输出 contribution 构造、输出数组写入和异常文本不变。
 - 该改动删除 Foot Placement 与 Final Prepare 每 contribution 的 primitive 元素拷贝。静态核对两个正式调用点、元素引用生命周期覆盖 resolver 调用和输出写入；未编译、未采样，不能声称实测耗时收益。
+
+### AP237 Foot Motion identity 与候选引用读取（2026-09-30，已实施，本轮未编译）
+
+- Foot Motion frame 的 node/source 自动属性每次读取复制结构；Foot Placement 选中 contribution、identity 校验和 Action Occupancy 又把候选 contribution 数组元素复制为局部。
+- Foot Motion 的公共 Node/Source 属性保留，新增 backing field 只读引用；三个周期候选循环绑定数组元素引用，identity 比较和 Action id 读取直达 backing field。选中的 contribution 仍保留一次必要局部存储，公共数组、foot motion frame 和输出 occupancy 不变。
+- 该改动删除 Foot Placement 周期 contribution 校验和 occupancy 统计的重复 identity/候选拷贝。静态核对候选只读、引用生命周期覆盖循环、选中输出语义和比较字段不变；未编译、未采样，不能声称实测耗时收益。

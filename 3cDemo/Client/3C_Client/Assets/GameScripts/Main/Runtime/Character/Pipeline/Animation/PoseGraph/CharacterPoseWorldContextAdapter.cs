@@ -204,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float selectedWeight = -1f;
             for (int i = 0; i < contributionCount; i++)
             {
-                AnimationPoseSourceContribution candidate = m_Contributions[i];
+                ref readonly AnimationPoseSourceContribution candidate = ref m_Contributions[i];
                 if (candidate.Kind != AnimationPoseContributionKind.Live ||
                     candidate.Weight <= selectedWeight)
                 {
@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 selected = candidate;
                 selectedWeight = candidate.Weight;
             }
-            if (!selected.SourceId.IsValid)
+            if (!selected.SourceIdRef.IsValid)
                 throw new InvalidOperationException(
                     "Foot Placement has no Live Foot Motion source.");
             return selected;

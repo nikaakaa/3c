@@ -74,12 +74,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasObservationContribution = false;
             for (int i = 0; i < contributionCount; i++)
             {
-                AnimationPoseSourceContribution contribution = contributions[i];
+                ref readonly AnimationPoseSourceContribution contribution = ref contributions[i];
                 if (contribution.Kind != AnimationPoseContributionKind.Live ||
-                    !contribution.NodeId.Equals(footStepObservation.NodeId) ||
-                    !contribution.SourceId.Equals(footStepObservation.SourceId) ||
+                    !contribution.NodeIdRef.Equals(footStepObservation.NodeIdRef) ||
+                    !contribution.SourceIdRef.Equals(footStepObservation.SourceIdRef) ||
                     contribution.ContributionContinuityIdentity !=
-                    footStepObservation.ContributionContinuityIdentity)
+                        footStepObservation.ContributionContinuityIdentity)
                 {
                     continue;
                 }

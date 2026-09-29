@@ -197,6 +197,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct AnimationFootMotionRuntimeFrame
     {
+        readonly PoseNodeId m_NodeId;
+        readonly AnimationPoseSourceId m_SourceId;
+
         internal AnimationFootMotionRuntimeFrame(
             ulong completionIdentity,
             PoseNodeId nodeId,
@@ -222,8 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Foot Step observation frame is invalid.");
             }
             CompletionIdentity = completionIdentity;
-            NodeId = nodeId;
-            SourceId = sourceId;
+            m_NodeId = nodeId;
+            m_SourceId = sourceId;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             SourceIdentity = sourceIdentity.Trim();
             SourceSampleIdentity = sourceSampleIdentity;
@@ -244,8 +247,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly byte m_IsSpecified;
         internal ulong CompletionIdentity { get; }
-        internal PoseNodeId NodeId { get; }
-        internal AnimationPoseSourceId SourceId { get; }
+        internal PoseNodeId NodeId => m_NodeId;
+        internal AnimationPoseSourceId SourceId => m_SourceId;
+        internal ref readonly PoseNodeId NodeIdRef => ref m_NodeId;
+        internal ref readonly AnimationPoseSourceId SourceIdRef => ref m_SourceId;
         internal ulong ContributionContinuityIdentity { get; }
         internal string SourceIdentity { get; }
         internal ulong SourceSampleIdentity { get; }

@@ -463,15 +463,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PendingResiduals.ScaleVelocity[bone] =
                     previousVelocity.Scale - targetVelocity.Scale;
             }
+            NativeSlice<byte> inputAvailability =
+                input.PoseParameterAvailability;
+            NativeSlice<byte> historyAvailability =
+                m_CommittedHistoryParameterAvailability;
+            NativeSlice<float> inputParameters =
+                input.PoseParameters;
+            NativeSlice<float> historyParameters =
+                m_CommittedHistoryParameters;
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
                 m_PendingResiduals.Parameters[parameter] =
                     m_ParameterModes[parameter] ==
                     PoseParameterInertializationMode.Inertialize &&
-                    m_CommittedHistoryParameterAvailability[parameter] != 0 &&
-                    input.PoseParameterAvailability[parameter] != 0
-                        ? m_CommittedHistoryParameters[parameter] -
-                          input.PoseParameters[parameter]
+                    historyAvailability[parameter] != 0 &&
+                    inputAvailability[parameter] != 0
+                        ? historyParameters[parameter] -
+                          inputParameters[parameter]
                         : 0f;
             }
             m_PendingLeftFoot = m_CommittedLeftFoot;
@@ -567,13 +575,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out _);
             NativeSlice<float> parameters = output.PoseParameters;
             float[] residuals = (m_HasPendingResiduals ? m_PendingResiduals : m_CommittedResiduals).Parameters;
+            NativeSlice<byte> inputAvailability =
+                input.PoseParameterAvailability;
+            NativeSlice<float> inputParameters = input.PoseParameters;
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
                 if (m_ParameterModes[parameter] ==
                         PoseParameterInertializationMode.Inertialize &&
-                    input.PoseParameterAvailability[parameter] != 0)
+                    inputAvailability[parameter] != 0)
                 {
-                    parameters[parameter] = input.PoseParameters[parameter] +
+                    parameters[parameter] = inputParameters[parameter] +
                         residualWeight * residuals[parameter];
                 }
             }
@@ -625,6 +636,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.DenseLocalPoses;
             NativeSlice<AnimationBlendBoneVelocity> outputVelocities =
                 output.DenseVelocities;
+            NativeSlice<float> outputParameters =
+                output.PoseParameters;
+            NativeSlice<byte> outputAvailability =
+                output.PoseParameterAvailability;
             for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
             {
                 m_PendingHistory[bone] = outputPoses[bone];
@@ -632,9 +647,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
-                m_PendingHistoryParameters[parameter] = output.PoseParameters[parameter];
+                m_PendingHistoryParameters[parameter] = outputParameters[parameter];
                 m_PendingHistoryParameterAvailability[parameter] =
-                    output.PoseParameterAvailability[parameter];
+                    outputAvailability[parameter];
             }
             m_PendingLeftFoot = output.LeftFootFeatures[0];
             m_PendingRightFoot = output.RightFootFeatures[0];

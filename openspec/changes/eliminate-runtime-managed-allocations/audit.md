@@ -1486,3 +1486,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Layered Bone Blend 追加 contribution 时每层按值复制 input primitive，并重复读取 input 的 contribution 与 dense weight binding 属性；逐骨权重写入重复计算 output/input 行偏移。
 - global factor 早退后缓存 input slice；primitive 绑定只读元素引用，每个 contribution 预计算两侧行偏移。weight 过滤、容量校验、`ExtendContributionPrefix`、bone mask 因子和 base/overlay 顺序不变。
 - 该改动删除 Layered Bone Blend contribution 链的 primitive 拷贝、重复 binding 读取和重复行乘法；不改变 per-bone mask 权重或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和唯一 AppendContributions 循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP195 Inertialization parameter 定容（2026-09-30，已实施，本轮未编译）
+
+- Inertialization 的 residual 构造、residual 应用和 history 提交逐参数重复读取 input/output/history 的 parameter 与 availability binding；这些数据在同一方法调用内不变。
+- 三段参数循环前分别缓存 input、history 或 output 的 `NativeSlice`；Inertialize 判断、residual 计算、权重应用、history 参数与 availability 写入顺序不变。
+- 该改动删除 Inertialization 参数链的重复 binding 结构读取；不改变 pending/committed history 生命周期、输出页身份或 Commit/Discard。静态核对 buffer 参数布局、字段 swap 边界和三个唯一循环；diff 复核中已修正首轮缓存误置循环内与缺失 output 声明；未编译、未采样，不能声称实测耗时收益。

@@ -2063,3 +2063,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `BuildRequest` 成功路径中对同一 frame component up 分别做 horizontal contact、support reach 和 output correction 三次归一化。
 - 方法入口归一化一次并绑定局部，三个投影复用同一 `up`。失败投影分支、error 计算、swing fact 字段和输出请求不变。
 - 该改动删除每脚 placement request 成功路径中的两次重复向量归一化。静态核对 frame 只读、局部生命周期覆盖 BuildRequest；未编译、未采样，不能声称实测耗时收益。
+
+### AP291 PoseGraph ref readonly 绑定语法修正（2026-09-30，已实施，本轮未编译）
+
+- 静态行配对检查发现 PoseGraph 混合、参数、空间转换和 Source Module 的 14 处 `ref readonly` 局部缺少 RHS `ref`；对应 helper、view、page 与 preparation 访问均返回只读引用。
+- 初始化补上 `ref`，不改变返回引用、生命周期、读取路径或写入绑定。该修正是静态可判定的 C# 引用局部语法合同修正，不是新的性能假设。
+- 该改动恢复动画正式求值链中这些只读绑定可静态通过编译语法。仍受用户约束限制，未编译、未采样；不能声称行为已运行验证。

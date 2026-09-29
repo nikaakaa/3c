@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             {
                 RequireLease(lease);
                 ref readonly CharacterPoseSourcePreparationView expected =
-                    m_Demand.Preparations;
+                    ref m_Demand.Preparations;
                 if (!m_HasDemand ||
                     !expected.Matches(in preparations) ||
                     index != m_ConsumedPreparationCount)
@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                         "Pose Source preparation does not match the Pending demand.");
                 }
                 ref readonly CharacterPoseSourcePreparation preparation =
-                    preparations.Get(index);
+                    ref preparations.Get(index);
                 m_ConsumedPreparationCount++;
                 return ref preparation;
             }
@@ -494,7 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in CharacterPoseSourceReadinessPageView readinessPage)
         {
             ref readonly CharacterPoseSourceDemand demand =
-                m_FramePage.RequireDemand(lease);
+                ref m_FramePage.RequireDemand(lease);
             var result = new CharacterPoseSourceFrameResult(
                 in demand,
                 in preparedResources,
@@ -534,7 +534,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in CharacterPoseSourceFrameLease lease)
         {
             ref readonly CharacterPoseSourceDemand demand =
-                m_FramePage.RequireDemand(lease);
+                ref m_FramePage.RequireDemand(lease);
             ref readonly CharacterPoseNativeFrameLineage lineage = ref demand.Lineage;
             return new CharacterPoseSourcePreparedResources(
                 in lineage,
@@ -799,7 +799,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int preparationIndex)
         {
             ref readonly CharacterPoseSourcePreparation preparation =
-                m_FramePage.ConsumePreparation(
+                ref m_FramePage.ConsumePreparation(
                     lease,
                     in preparations,
                     preparationIndex);

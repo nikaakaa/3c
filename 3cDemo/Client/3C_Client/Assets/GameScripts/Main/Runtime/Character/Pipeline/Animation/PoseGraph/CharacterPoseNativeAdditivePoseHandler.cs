@@ -165,9 +165,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_NodeId,
                     "overlay");
             ref readonly CharacterPoseNativePoseReadBinding baseBinding =
-                RequireAvailable(basePose, "Base");
+                ref RequireAvailable(basePose, "Base");
             ref readonly CharacterPoseNativePoseReadBinding additiveBinding =
-                RequireAvailable(additivePose, "Additive");
+                ref RequireAvailable(additivePose, "Additive");
             float weight = ResolveWeight(runtime);
             m_ContinuityIdentity = ResolveContinuity(
                 baseBinding.ContinuityIdentity[0],

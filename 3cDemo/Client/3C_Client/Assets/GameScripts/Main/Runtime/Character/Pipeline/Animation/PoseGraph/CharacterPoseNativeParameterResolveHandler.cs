@@ -144,9 +144,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_NodeId,
                     "parameter-source-pose");
             ref readonly CharacterPoseNativePoseReadBinding baseBinding =
-                RequireAvailable(basePose, "Base");
+                ref RequireAvailable(basePose, "Base");
             ref readonly CharacterPoseNativePoseReadBinding sourceBinding =
-                RequireAvailable(sourcePose, "Parameter source");
+                ref RequireAvailable(sourcePose, "Parameter source");
             m_WriteBinding = (m_PageIndex == 0
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(

@@ -239,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? runtime.ReadInput(m_LocalPoseInput, m_NodeId, m_InputPort.Value)
                 : runtime.ReadInput(m_ComponentPoseInput, m_NodeId, m_InputPort.Value);
             ref readonly CharacterPoseNativePoseReadBinding input =
-                RequireInput(inputValue);
+                ref RequireInput(inputValue);
             if (input.Availability[0] != AnimationPoseAvailability.Pose)
                 throw new InvalidOperationException(
                     $"Pose space conversion '{NodeId}' requires an available Pose.");

@@ -980,14 +980,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (factor <= 0f)
                 return;
+            NativeSlice<AnimationPrimitivePoseContribution> inputContributions =
+                input.Contributions;
+            NativeSlice<float> inputWeights =
+                input.DenseContributionWeights;
+            NativeSlice<AnimationPrimitivePoseContribution> outputContributions =
+                output.Contributions;
+            NativeSlice<float> outputWeights =
+                output.DenseContributionWeights;
+            int boneCount = output.DenseLocalPoses.Length;
             for (int i = 0; i < input.ContributionCount[0]; i++)
             {
-                if (count >= output.Contributions.Length)
+                if (count >= outputContributions.Length)
                     throw new InvalidOperationException(
                         "Pose StateMachine transition contribution capacity was exceeded.");
-                AnimationPrimitivePoseContribution value = input.Contributions[i];
+                ref readonly AnimationPrimitivePoseContribution value =
+                    ref inputContributions[i];
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in output, count + 1);
-                output.Contributions[count] = new AnimationPrimitivePoseContribution(
+                int outputWeightOffset = count * boneCount;
+                int inputWeightOffset = i * boneCount;
+                outputContributions[count] = new AnimationPrimitivePoseContribution(
                     value.PhysicalPlayerIndex,
                     value.PhysicalSourceIndex,
                     value.PhysicalSourceGeneration,
@@ -997,9 +1009,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     value.Weight * factor,
                     value.LeftFootWeight * factor,
                     value.RightFootWeight * factor);
-                for (int bone = 0; bone < output.DenseLocalPoses.Length; bone++)
-                    output.DenseContributionWeights[count * output.DenseLocalPoses.Length + bone] =
-                        input.DenseContributionWeights[i * input.DenseLocalPoses.Length + bone] * factor;
+                for (int bone = 0; bone < boneCount; bone++)
+                    outputWeights[outputWeightOffset + bone] =
+                        inputWeights[inputWeightOffset + bone] * factor;
                 count++;
             }
         }

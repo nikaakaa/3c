@@ -1444,3 +1444,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - StateMachine transition 参数循环每项重复读取 source/target 的 parameter 与 availability binding 属性，以及 output 的 parameter 与 availability binding 属性；这些 `NativeSlice` 在同一输出页内不变。
 - 循环前缓存六个 slice；source/target availability 仍逐项读取并按原三分支合并，参数公式和输出 availability 写入顺序不变。
 - 该改动删除 transition 参数链的重复 binding 结构读取；不改变参数数量合同、输出页身份或 Commit/Discard。静态核对 layout 校验中 pose parameter 与 availability 等长、`NativeSlice` 结构合同和唯一 BlendParameters 循环；未编译、未采样，不能声称实测耗时收益。
+
+### AP188 StateMachine transition contribution 定容（2026-09-30，已实施，本轮未编译）
+
+- StateMachine transition 追加 contribution 时每次读取 input/output 的 contribution 与 dense weight binding 属性；primitive 按值复制，每骨重复计算 `count * boneCount` 和 `i * boneCount`，循环条件还重复读 output pose 长度。
+- factor 分支后缓存 input/output 的 contribution 与 weight slice、bone count；primitive 绑定只读引用，每个 contribution 预计算两侧行 offset。容量校验、`ExtendContributionPrefix`、字段换算、权重公式和 source/target 顺序不变。
+- 该改动删除 contribution 追加链的重复 binding 读取、primitive 拷贝和逐骨重复乘法；不改变 count 推进或输出页身份。静态核对 read binding 的 dense weight 行容量、output 容量校验和 `ExtendContributionPrefix` 只更新 count；未编译、未采样，不能声称实测耗时收益。

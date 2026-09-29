@@ -584,6 +584,13 @@
 - 删除入口的重复字典清空、scratch Reset、workspace Reset、timeline 名单清理和 output 清理。结果数组先复制后清理，异常路径仍丢弃 pending 并清理；求值顺序、候选状态、Commit/Discard 和异常传播不变。
 - 每个 Float32 actor 每次 Evaluate 少一轮重复容器清理；字典、集合和 List 的实际工作随能力和成员数量变化。静态核对唯一 Evaluate 调用、actor 容器构造、成功/异常清理链；未编译、运行回放或采样。
 
+### AP70 Evaluate Pass 入口重复清理 Ingress（2026-09-29，已实施，本轮未编译）
+
+- Fixed 和 Float32 `AbilityEvaluatePass` 原来在 `PrepareIngress` 前逐 actor 清空 ingress 数组和计数；同一次 `Execute` 的 finally 也执行同一清理。上一轮成功或异常后，finally 已把数组有效长度清零并复位计数，因此入口清理维护的是不存在的残留状态。
+- 将 `PrepareIngress` 移入现有 try。若复制 ingress 中途异常，catch 仍只重新抛出；此时上一轮结果已被 finally 置空，catch 的 `DiscardUnconsumed` 不会重复处理。finally 立即清理本轮已填充的有效长度，构造新数组时的 Array.Copy 行为不变。
+- 删除每个 pass 每次执行前的逐 actor `Array.Clear` 和计数清零；保留 finally 边界清理和容量增长逻辑。pipeline 写入顺序、actor 排序检查、评估调用和异常传播不变。
+- 两个数值域同步修改，静态核对 pass 构造、上一轮 finally、catch 空结果处理、PrepareIngress 填充和 finally 清理；未编译、运行回放或采样。
+
 ## 可靠性问题独立保留
 
 - 2026-09-29 DotRecast ActorContactSolver：三参数 ValidateFinal 本应将独立诊断列表传给四参数验证实现，却调用了自身；Resolve 也进入该递归入口。现在 Resolve 将当前有效位置切片交给四参数实现并使用 m_ResolveTraces，外部重约束验证使用 m_ValidationTraces。两条诊断记录仍分别归属原结果；按有效数量传入位置，避免工作区曾扩容后将容量误作名单长度。静态可确认原调用自递归及新调用落到现有成对验证实现，但尚未编译或运行；该项是正确性修复，独立于装箱优化。

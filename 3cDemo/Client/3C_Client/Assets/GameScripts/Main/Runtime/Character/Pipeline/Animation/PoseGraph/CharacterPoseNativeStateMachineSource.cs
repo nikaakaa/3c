@@ -924,27 +924,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float totalWeight,
             AnimationPlayerPoseNativeWriteBinding output)
         {
-            for (int i = 0; i < output.PoseParameters.Length; i++)
+            NativeSlice<byte> sourceAvailability =
+                source.PoseParameterAvailability;
+            NativeSlice<byte> targetAvailability =
+                target.PoseParameterAvailability;
+            NativeSlice<float> sourceParameters = source.PoseParameters;
+            NativeSlice<float> targetParameters = target.PoseParameters;
+            NativeSlice<float> outputParameters = output.PoseParameters;
+            NativeSlice<byte> outputAvailability =
+                output.PoseParameterAvailability;
+            for (int i = 0; i < outputParameters.Length; i++)
             {
-                byte sourceAvailable = source.PoseParameterAvailability[i];
-                byte targetAvailable = target.PoseParameterAvailability[i];
+                byte sourceAvailable = sourceAvailability[i];
+                byte targetAvailable = targetAvailability[i];
                 if (sourceAvailable != 0 && targetAvailable != 0)
                 {
-                    output.PoseParameters[i] =
-                        (source.PoseParameters[i] * sourceWeight +
-                         target.PoseParameters[i] * targetWeight) /
+                    outputParameters[i] =
+                        (sourceParameters[i] * sourceWeight +
+                         targetParameters[i] * targetWeight) /
                         totalWeight;
-                    output.PoseParameterAvailability[i] = 1;
+                    outputAvailability[i] = 1;
                 }
                 else if (targetAvailable != 0)
                 {
-                    output.PoseParameters[i] = target.PoseParameters[i];
-                    output.PoseParameterAvailability[i] = 1;
+                    outputParameters[i] = targetParameters[i];
+                    outputAvailability[i] = 1;
                 }
                 else
                 {
-                    output.PoseParameters[i] = source.PoseParameters[i];
-                    output.PoseParameterAvailability[i] = sourceAvailable;
+                    outputParameters[i] = sourceParameters[i];
+                    outputAvailability[i] = sourceAvailable;
                 }
             }
         }

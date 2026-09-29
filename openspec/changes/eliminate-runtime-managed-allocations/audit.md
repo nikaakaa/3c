@@ -1979,3 +1979,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Landing snapshot 的 LastLanding、NextSwingLanding、PromotedLanding、PlantTarget 自动属性每次读取复制完整 ground path landing；EvaluateFrame 的 ground path 输入、landing diagnostics 和 prepared plant 检查会重复读取。
 - 四个 landing 属性改为 backing field 只读引用，snapshot 构造入参改为 `in`。EvaluateFrame 的 last/next landing 直接绑定 snapshot，`PrepareGroundPath` 按引用接收；landing diagnostics 绑定 plant target。`CaptureNextSwing` 只需要 last landing identity 时不再构造整份 snapshot。
 - 该改动删除 Foot Placement 每脚 landing snapshot 进入 ground path 构建和诊断展开的重复 landing 拷贝，并删除只读 identity 检查的整份 snapshot 构造。静态核对 landing 为 readonly struct、snapshot 为临时只读容器、tracking context 写入语义不变；未编译、未采样，不能声称实测耗时收益。
+
+### AP277 State evaluation query 引用读取（2026-09-30，已实施，本轮未编译）
+
+- Foot state evaluation 的 Stride 和 SoleSupportQuery 自动属性每次读取复制完整 stride request 或 sole support query；placement request 构建会读取 stride，foot support 求解会读取 sole query。
+- 两个结构属性改为 backing field 只读引用，构造入参改为 `in`。request 构建继续显式转发 stride，support query 在 readonly struct 上执行原有查询。
+- 该改动删除每脚 state evaluation 进入 request 和 current support 求解的结构重复拷贝。静态核对两类结构为 readonly struct、evaluation 生命周期覆盖调用、消费只读；未编译、未采样，不能声称实测耗时收益。

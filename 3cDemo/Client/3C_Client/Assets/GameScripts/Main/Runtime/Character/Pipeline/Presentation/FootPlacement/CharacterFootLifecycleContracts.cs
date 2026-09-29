@@ -1675,6 +1675,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootStateFrame m_Frame;
         readonly AnimationFootMotionRuntimeSample m_FormalFootMotion;
         readonly CharacterFootLandingPredictionResult m_LandingPrediction;
+        readonly CharacterFootStrideRequest m_Stride;
+        readonly CharacterFootSoleSupportQuery m_SoleSupportQuery;
 
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
@@ -1684,16 +1686,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStrideRequest stride,
             bool grounded,
             Transform goalRoot,
-            CharacterFootSoleSupportQuery soleSupportQuery)
+            in CharacterFootSoleSupportQuery soleSupportQuery)
         {
             Side = side;
             m_FormalFootMotion = formalFootMotion;
             m_LandingPrediction = landingPrediction;
             m_Frame = frame;
-            Stride = stride;
+            m_Stride = stride;
             Grounded = grounded;
             GoalRoot = goalRoot;
-            SoleSupportQuery = soleSupportQuery;
+            m_SoleSupportQuery = soleSupportQuery;
         }
 
         internal CharacterFootSide Side { get; }
@@ -1702,10 +1704,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ref readonly CharacterFootLandingPredictionResult LandingPrediction =>
             ref m_LandingPrediction;
         internal ref readonly CharacterFootStateFrame Frame => ref m_Frame;
-        internal CharacterFootStrideRequest Stride { get; }
+        internal ref readonly CharacterFootStrideRequest Stride =>
+            ref m_Stride;
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }
-        internal CharacterFootSoleSupportQuery SoleSupportQuery { get; }
+        internal ref readonly CharacterFootSoleSupportQuery SoleSupportQuery =>
+            ref m_SoleSupportQuery;
     }
 
     internal readonly struct CharacterFootTransitionDecision

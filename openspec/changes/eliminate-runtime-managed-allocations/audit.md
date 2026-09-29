@@ -1090,3 +1090,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - source capture 和 FBBIK 输出重建都会派生虚拟骨骼。source capture 已在外层拒绝无效 source pose，FBBIK `TryBind` 已验证整页 component pose；随后 `CreateVirtualComponent` 又用公共构造器对 target position/rotation 和 source scale 重复 finite/非零检查并重复归一化 target rotation，输出 `AnimationLocalBonePose` 再次检查和归一化。
 - 虚拟组件合成的两个重载现在只接受正式 local/component 页并使用 `CreateNormalized`；派生前已按原合同检查 local position/rotation finite 和非零，输出 local pose 改用已归一化构造器。FBBIK 不再把已验证 local pose 复制成 component pose 后再合成。
 - 该改动减少每虚拟骨骼每帧的重复浮点检查和归一化，保持虚拟骨骼位置、旋转、缩放、失败码和输出页写入顺序不变。静态核对 source capture、rig 构造、Modify Bone 和 FBBIK 的页面有效性边界；未编译、未采样，不能声称实测耗时收益。
+
+### AP129 PoseGraph cycle 与观测定容索引（2026-09-30，已实施，本轮未编译）
+
+- AP117 已为输出值建立 `(node, port) -> slot` 构造期索引，但 cycle detection 仍构造 `(node, port, stage)` 哈希键写入 `HashSet`，诊断观测也维护两个同键 Dictionary；capture.20260929-164123 仍记录 `CharacterPoseNativePortKey.Equals` 热点。
+- cycle 标记改为与输出缓存同长的 bool slot 数组，Prepare/Evaluate 观测改为定容 observation 数组并在 Commit 时原位交换。读取 miss、求值异常、TryObserve、Clear/Discard/Reset/Dispose 的记录和清理语义保持；输出 slot 索引继续是唯一正式端口身份。
+- 正常求值不再构造或哈希 `CharacterPoseNativePortKey`，该类型唯一使用点已删除。观测内容、fault 记录、Evaluate/Prepare 回退、InstanceId/CompletionIdentity 检查、输出值缓存和阶段边界不变。静态核对 BuildPortDefinitions、Read、TryObserve、Commit/Discard 和条件编译范围；未编译、未采样，不能声称实测耗时收益。

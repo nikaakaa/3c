@@ -16,29 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Commit = 5
     }
 
-    internal readonly struct CharacterPoseNativePortKey : IEquatable<CharacterPoseNativePortKey>
-    {
-        internal CharacterPoseNativePortKey(
-            PoseNodeId nodeId,
-            PosePortId portId,
-            CharacterPoseNativeExecutionStage stage)
-        {
-            NodeId = nodeId;
-            PortId = portId;
-            Stage = stage;
-        }
-
-        internal PoseNodeId NodeId { get; }
-        internal PosePortId PortId { get; }
-        internal CharacterPoseNativeExecutionStage Stage { get; }
-        public bool Equals(CharacterPoseNativePortKey other) =>
-            NodeId == other.NodeId && PortId.Equals(other.PortId) && Stage == other.Stage;
-        public override bool Equals(object obj) =>
-            obj is CharacterPoseNativePortKey other && Equals(other);
-        public override int GetHashCode() =>
-            HashCode.Combine(NodeId, PortId, (byte)Stage);
-    }
-
     internal readonly struct CharacterPoseNativePortDefinitionKey :
         IEquatable<CharacterPoseNativePortDefinitionKey>
     {
@@ -131,15 +108,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Dictionary<(PoseNodeId NodeId, string PortId), FlowCanvas.ValueInput> m_InputPorts =
             new Dictionary<(PoseNodeId, string), FlowCanvas.ValueInput>();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-        Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
-            new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
-        Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
-            new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
+        CharacterPoseNativeNodeObservation[] m_ObservationSlots = Array.Empty<CharacterPoseNativeNodeObservation>();
+        CharacterPoseNativeNodeObservation[] m_CommittedObservationSlots = Array.Empty<CharacterPoseNativeNodeObservation>();
 #endif
+        bool[] m_EvaluatingSlots = Array.Empty<bool>();
         readonly Dictionary<PosePortId, CharacterPoseNativePortValue> m_GraphInputs =
             new Dictionary<PosePortId, CharacterPoseNativePortValue>();
-        readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
-            new HashSet<CharacterPoseNativePortKey>();
         readonly HashSet<CharacterPoseNativeSourceDemandKey> m_SourceDemandKeys;
         readonly Dictionary<CharacterPoseNativePortDefinitionKey,
             CharacterPosePortDefinition> m_PortDefinitions =
@@ -504,10 +478,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int frameOutputCount = checked(outputPortCount * 2);
             m_OutputCacheSlots = new CharacterPoseNativePortValue[frameOutputCount];
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-            m_Observations.EnsureCapacity(frameOutputCount);
-            m_CommittedObservations.EnsureCapacity(frameOutputCount);
+            m_ObservationSlots = new CharacterPoseNativeNodeObservation[frameOutputCount];
+            m_CommittedObservationSlots = new CharacterPoseNativeNodeObservation[frameOutputCount];
 #endif
-            m_Evaluating.EnsureCapacity(frameOutputCount);
+            m_EvaluatingSlots = new bool[frameOutputCount];
             m_GraphInputs.EnsureCapacity(graphInputCount);
         }
         internal CharacterPoseNativeFrameLease BeginFrame(
@@ -553,9 +527,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_GraphInputs.Clear();
             ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-            m_Observations.Clear();
+            ClearObservations();
 #endif
-            m_Evaluating.Clear();
+            ClearEvaluating();
             m_Stage = CharacterPoseNativeExecutionStage.Frame;
             try
             {
@@ -883,7 +857,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     in m_CompletedLineage,
                     CharacterPoseNativeFailureCode.PublicationFailed);
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-                m_Observations.Clear();
+                ClearObservations();
 #endif
                 CloseFrame();
                 return new CharacterPoseNativePublicationResult(
@@ -967,7 +941,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-                m_Observations.Clear();
+                ClearObservations();
 #endif
                 CharacterPoseNativeFrameLineage lineage = m_CompletedLineage;
                 CloseFrame();
@@ -995,7 +969,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             finally
             {
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-                m_Observations.Clear();
+                ClearObservations();
 #endif
                 CloseFrame();
             }
@@ -1009,8 +983,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_CompletedLineage,
                 evaluation.Output);
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-            (m_CommittedObservations, m_Observations) = (m_Observations, m_CommittedObservations);
-            m_Observations.Clear();
+            (m_CommittedObservationSlots, m_ObservationSlots) =
+                (m_ObservationSlots, m_CommittedObservationSlots);
+            ClearObservations();
 #endif
             m_LastCommittedLineage = m_CompletedLineage;
         }
@@ -1041,10 +1016,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluator.Reset(this, resetGeneration);
             ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-            m_Observations.Clear();
-            m_CommittedObservations.Clear();
+            ClearObservations();
+            ClearCommittedObservations();
 #endif
-            m_Evaluating.Clear();
+            ClearEvaluating();
             m_LastCommittedLineage = default;
         }
 
@@ -1092,10 +1067,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 StopInstance();
                 ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-                m_Observations.Clear();
-                m_CommittedObservations.Clear();
+                ClearObservations();
+                ClearCommittedObservations();
 #endif
-                m_Evaluating.Clear();
+                ClearEvaluating();
                 m_LastCommittedLineage = default;
                 return CharacterPoseNativeResetResult.Failed(
                     m_CreateRequest.Context.ActorId,
@@ -1159,7 +1134,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireEvaluationStage();
             if (node == null || !portId.IsValid)
                 throw new ArgumentException("Pose native output request is invalid.");
-            var key = new CharacterPoseNativePortKey(node.NativeNodeId, portId, m_Stage);
             if (!m_OutputSlotIndices.TryGetValue((node.NativeNodeId, portId.Value), out int slotIndex))
                 throw new InvalidOperationException(
                     $"Pose native output '{node.NativeNodeId}/{portId}' is not a registered output port.");
@@ -1167,9 +1141,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativePortValue cached = m_OutputCacheSlots[cacheIndex];
             if (cached != null)
                 return RequireTyped<T>(cached, node, portId);
-            if (!m_Evaluating.Add(key))
+            if (m_EvaluatingSlots[cacheIndex])
                 throw new InvalidOperationException(
                     $"Pose native graph output cycle reached at '{node.NodeId}/{portId}'.");
+            m_EvaluatingSlots[cacheIndex] = true;
             try
             {
                 CharacterPoseNativePortValue value =
@@ -1178,7 +1153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose native node '{node.NodeId}' output '{portId}' is missing.");
                 m_OutputCacheSlots[cacheIndex] = value;
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-                m_Observations[key] = new CharacterPoseNativeNodeObservation(
+                m_ObservationSlots[cacheIndex] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
                     node.NativeNodeId,
                     portId,
@@ -1195,7 +1170,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
             catch (Exception exception)
             {
-                m_Observations[key] = new CharacterPoseNativeNodeObservation(
+                m_ObservationSlots[cacheIndex] = new CharacterPoseNativeNodeObservation(
                     m_PreparedBinding.GraphId,
                     node.NativeNodeId,
                     portId,
@@ -1211,7 +1186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 #endif
             finally
             {
-                m_Evaluating.Remove(key);
+                m_EvaluatingSlots[cacheIndex] = false;
             }
         }
 
@@ -1225,20 +1200,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed || !nodeId.IsValid || !portId.IsValid ||
                 !m_LastCommittedLineage.IsValid)
                 return false;
-            CharacterPoseNativePortKey key = new CharacterPoseNativePortKey(
-                nodeId,
-                portId,
-                CharacterPoseNativeExecutionStage.Evaluate);
-            if (!m_CommittedObservations.TryGetValue(key, out observation) ||
-                observation.InstanceId != InstanceId ||
+            if (!m_OutputSlotIndices.TryGetValue((nodeId, portId.Value), out int slotIndex))
+                return false;
+            int evaluateIndex = slotIndex * 2 +
+                ((int)CharacterPoseNativeExecutionStage.Evaluate -
+                 (int)CharacterPoseNativeExecutionStage.Prepare);
+            observation = m_CommittedObservationSlots[evaluateIndex];
+            if (observation.InstanceId != InstanceId ||
                 observation.CompletionIdentity != m_LastCommittedLineage.CompletionIdentity)
             {
-                key = new CharacterPoseNativePortKey(
-                    nodeId,
-                    portId,
-                    CharacterPoseNativeExecutionStage.Prepare);
-                if (!m_CommittedObservations.TryGetValue(key, out observation) ||
-                    observation.InstanceId != InstanceId ||
+                int prepareIndex = slotIndex * 2;
+                observation = m_CommittedObservationSlots[prepareIndex];
+                if (observation.InstanceId != InstanceId ||
                     observation.CompletionIdentity != m_LastCommittedLineage.CompletionIdentity)
                 {
                     observation = default;
@@ -1326,6 +1299,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Clear(m_OutputCacheSlots, 0, m_OutputCacheSlots.Length);
         }
 
+        void ClearEvaluating()
+        {
+            Array.Clear(m_EvaluatingSlots, 0, m_EvaluatingSlots.Length);
+        }
+
+#if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
+        void ClearObservations()
+        {
+            Array.Clear(m_ObservationSlots, 0, m_ObservationSlots.Length);
+        }
+
+        void ClearCommittedObservations()
+        {
+            Array.Clear(m_CommittedObservationSlots, 0, m_CommittedObservationSlots.Length);
+        }
+#endif
+
         void RequireEvaluationStage()
         {
             if (m_Stage != CharacterPoseNativeExecutionStage.Prepare &&
@@ -1366,10 +1356,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             ClearOutputCache();
 #if UNITY_EDITOR || KK_DIAGNOSTIC_SAMPLING
-            m_Observations.Clear();
-            m_CommittedObservations.Clear();
+            ClearObservations();
+            ClearCommittedObservations();
 #endif
-            m_Evaluating.Clear();
+            ClearEvaluating();
             m_GraphInputs.Clear();
             m_PortDefinitions.Clear();
             m_InputPorts.Clear();

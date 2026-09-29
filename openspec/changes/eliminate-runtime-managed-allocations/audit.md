@@ -1588,3 +1588,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - sample window 的插入排序每次比较把左右 raw sample 按值复制给比较器；顺序校验把前后样本各复制为局部后再只读字段。
 - 比较器边界改为 `in`，排序循环保持待插入样本的一次必要存储拷贝；顺序校验绑定前后数组元素只读引用。tick/sequence 排序键、重复检测、visual time 校验和异常文本不变。
 - 该改动删除 sample window 排序与校验中的读取拷贝；不改变插入排序的移位存储或窗口输出拷贝。静态核对唯一比较器调用、数组生命周期和比较器不写参数；未编译、未采样，不能声称实测耗时收益。
+
+### AP212 source preparation 引用化（2026-09-30，已实施，本轮未编译）
+
+- Source preparation page 按值返回数组元素，view `Get` 复制整份 preparation；PendingPage consume 再复制一次，Source Module `Prepare` 又将其复制为局部。preparation 包含 request、capture、provider sample 和 clip buffer。
+- page/view/consume 三层正式读取合同改为 `ref readonly`，数组元素引用直达 `Prepare` 的分发分支。open/lease 校验、index 校验、consumed count 递增和 switch 顺序不变。
+- 该改动删除 source preparation consume 链的两层中间拷贝；不暴露 preparation 数组写入路径。静态核对 backing 数组生命周期覆盖 open demand frame、唯一 `Require` 调用来自 view、consume 是唯一正式读取入口；未编译、未采样，不能声称实测耗时收益。

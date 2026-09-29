@@ -272,14 +272,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_Count;
         }
 
-        internal CharacterPoseSourcePreparation Require(
+        internal ref readonly CharacterPoseSourcePreparation Require(
             int index,
             ulong completionIdentity)
         {
             RequireOpen(completionIdentity);
             if ((uint)index >= (uint)m_Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Preparations[index];
+            return ref m_Preparations[index];
         }
 
         internal void Clear()
@@ -321,8 +321,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Page != null &&
             m_Page.Matches(CompletionIdentity);
 
-        internal CharacterPoseSourcePreparation Get(int index) =>
-            m_Page.Require(index, CompletionIdentity);
+        internal ref readonly CharacterPoseSourcePreparation Get(int index) =>
+            ref m_Page.Require(index, CompletionIdentity);
 
         internal bool Matches(
             in CharacterPoseSourcePreparationView other) =>

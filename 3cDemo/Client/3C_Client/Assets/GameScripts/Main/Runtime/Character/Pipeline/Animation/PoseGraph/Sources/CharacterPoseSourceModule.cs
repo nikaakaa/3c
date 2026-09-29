@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 return ref m_Demand;
             }
 
-            internal CharacterPoseSourcePreparation
+            internal ref readonly CharacterPoseSourcePreparation
                 ConsumePreparation(
                     in CharacterPoseSourceFrameLease lease,
                     in CharacterPoseSourcePreparationView preparations,
@@ -89,10 +89,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     throw new InvalidOperationException(
                         "Pose Source preparation does not match the Pending demand.");
                 }
-                CharacterPoseSourcePreparation preparation =
+                ref readonly CharacterPoseSourcePreparation preparation =
                     preparations.Get(index);
                 m_ConsumedPreparationCount++;
-                return preparation;
+                return ref preparation;
             }
 
             internal void BindResult(
@@ -798,7 +798,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in CharacterPoseSourcePreparationView preparations,
             int preparationIndex)
         {
-            CharacterPoseSourcePreparation preparation =
+            ref readonly CharacterPoseSourcePreparation preparation =
                 m_FramePage.ConsumePreparation(
                     lease,
                     in preparations,

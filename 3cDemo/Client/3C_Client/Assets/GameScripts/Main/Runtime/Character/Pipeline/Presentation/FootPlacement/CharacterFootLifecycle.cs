@@ -496,6 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             bool hasContact = context.Contact.HasContact;
+            Vector3 componentUp = frame.ComponentUp.normalized;
             ref readonly CharacterFootPlacementAnimatedFootPose animatedFoot =
                 ref frame.AnimatedFoot;
             Vector3 originalSole =
@@ -530,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float horizontalError = hasContact
                 ? Vector3.ProjectOnPlane(
                     context.Contact.Anchor - originalSole,
-                    frame.ComponentUp.normalized).magnitude
+                    componentUp).magnitude
                 : 0f;
             float contactOwnership = ResolveContactOwnership(in context);
             bool hasSupportReachReference =
@@ -551,7 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 horizontalError = Vector3.ProjectOnPlane(
                     supportReachPoint - originalSole,
-                    frame.ComponentUp.normalized).magnitude;
+                    componentUp).magnitude;
             }
             CharacterFootSwingMotionState outputState = hasContact
                 ? CharacterFootSwingMotionState.Accepted
@@ -577,7 +578,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 swing.FormalTargetHeightAlongUp,
                 Vector3.Dot(
                     outputCorrection,
-                    frame.ComponentUp.normalized),
+                    componentUp),
                 swing.LandingPredictionError,
                 finalSole,
                 finalAnkle,

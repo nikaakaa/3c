@@ -2057,3 +2057,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Path Continuity fact 的 SelectedSupportTarget 自动属性每次读取复制完整 support target；Swing Motion 诊断展开还会先复制到局部，再构造 target diagnostics。
 - 属性改为 backing field 只读引用；continuity 构造仍保留一次必要存储，诊断直接引用读取。support target 的 event、position、normal、source lineage 和 diagnostics 字段不变。
 - 该改动删除 continuity 输出进入诊断展开的重复 support target 拷贝。静态核对 target 为 readonly struct、fact 生命周期覆盖诊断构造、消费只读；未编译、未采样，不能声称实测耗时收益。
+
+### AP290 Placement request component up 合并归一化（2026-09-30，已实施，本轮未编译）
+
+- `BuildRequest` 成功路径中对同一 frame component up 分别做 horizontal contact、support reach 和 output correction 三次归一化。
+- 方法入口归一化一次并绑定局部，三个投影复用同一 `up`。失败投影分支、error 计算、swing fact 字段和输出请求不变。
+- 该改动删除每脚 placement request 成功路径中的两次重复向量归一化。静态核对 frame 只读、局部生命周期覆盖 BuildRequest；未编译、未采样，不能声称实测耗时收益。

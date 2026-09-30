@@ -2147,3 +2147,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Current Support 的 heel/toe request 已在调用边界共享 unit component up，但 request 只用它生成 origin/direction；Observation Resolve 后续又读取原始 ComponentUp 并重新归一化。
 - Request 增加只读 unit component up backing field；Resolve 直接读取 heel request 的同一向量。原始 ComponentUp、IsValid、query 几何、selection 和 target 公式不变。
 - 该改动删除每脚 Current Support accepted resolve 路径中的重复归一化。静态核对两个构造入口共享同一调用边界值、request 生命周期覆盖 Resolve；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP305 Surface visibility end height 复用（2026-09-30，已实施，本轮未编译）
+
+- Ground Surface Visibility 的 end 分支在事件循环内重复执行 `NextSwingLanding - Origin` 和沿 surface up 的 Dot；path length 处的 segment end 和显式 length event 都可能触发该分支。
+- 循环前绑定 NextSwing landing offset 和高度，end 分支复用同一结果。LastLanding start 高度、事件排序、跳过规则、surface identity 和 edge 输出不变。
+- 该改动删除每次 Ground Path surface visibility 构建中的重复 end 减法和 Dot。静态核对 offset 只在循环前计算一次且生命周期覆盖事件循环；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

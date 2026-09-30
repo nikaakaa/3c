@@ -410,8 +410,8 @@ namespace ThirdPersonSimulation.Fixed
                     }
                     values.Add(new SimulationSetByCallerValue(binding.ChildParameterId, value));
                 }
-                foreach (KeyValuePair<string, FixedScalar> pair in parent.SourceAttributes)
-                    attributes.Add(new SimulationAttributeCapture(pair.Key, pair.Value));
+                for (int i = 0; i < parent.SourceAttributes.Count; i++)
+                    attributes.Add(new SimulationAttributeCapture(parent.SourceAttributes.Keys[i], parent.SourceAttributes.Values[i]));
                 return new SimulationGameplayEffectApplication(
                     definition.Id,
                     definition.Revision,

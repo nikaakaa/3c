@@ -13,8 +13,6 @@ namespace ThirdPersonSimulation.Fixed
             new NestedExecutionWorkspaceBuffer<PortableActiveEffectState>();
         public NestedExecutionWorkspaceBuffer<ulong> PredictionKeys { get; } =
             new NestedExecutionWorkspaceBuffer<ulong>();
-        public NestedExecutionWorkspaceBuffer<string> PredictionAttributes { get; } =
-            new NestedExecutionWorkspaceBuffer<string>();
         public NestedExecutionWorkspaceBuffer<SimulationSetByCallerValue> AdditionalSetByCallerValues { get; } =
             new NestedExecutionWorkspaceBuffer<SimulationSetByCallerValue>();
         public NestedExecutionWorkspaceBuffer<SimulationAttributeCapture> AdditionalSourceAttributes { get; } =
@@ -47,7 +45,6 @@ namespace ThirdPersonSimulation.Fixed
             Causes.Clear();
             ActiveEffects.Reset();
             PredictionKeys.Reset();
-            PredictionAttributes.Reset();
             AdditionalSetByCallerValues.Reset();
             AdditionalSourceAttributes.Reset();
             AttributeBefore.Clear();

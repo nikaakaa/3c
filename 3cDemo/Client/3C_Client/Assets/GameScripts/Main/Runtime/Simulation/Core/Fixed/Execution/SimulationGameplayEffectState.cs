@@ -76,9 +76,9 @@ namespace ThirdPersonSimulation.Fixed
     {
         public PortableEffectDefinition Definition;
         public SimulationGameplayEffectContext Context;
-        public SortedDictionary<string, FixedScalar> SetByCaller { get; } = new SortedDictionary<string, FixedScalar>(StringComparer.Ordinal);
-        public SortedDictionary<string, FixedScalar> SourceAttributes { get; } = new SortedDictionary<string, FixedScalar>(StringComparer.Ordinal);
-        public SortedDictionary<string, FixedScalar> TargetAttributes { get; } = new SortedDictionary<string, FixedScalar>(StringComparer.Ordinal);
+        public SortedList<string, FixedScalar> SetByCaller { get; } = new SortedList<string, FixedScalar>(StringComparer.Ordinal);
+        public SortedList<string, FixedScalar> SourceAttributes { get; } = new SortedList<string, FixedScalar>(StringComparer.Ordinal);
+        public SortedList<string, FixedScalar> TargetAttributes { get; } = new SortedList<string, FixedScalar>(StringComparer.Ordinal);
         public string[] SourceTags = Array.Empty<string>();
         public string[] TargetTags = Array.Empty<string>();
         public ulong DurationTicks;
@@ -150,12 +150,12 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class GameplayEffectStateAggregate
     {
-        readonly SortedDictionary<string, string[]> m_TagSources;
-        readonly SortedDictionary<string, PortableAttributeState> m_Attributes;
+        readonly KeyValuePair<string, string[]>[] m_TagSources;
+        readonly KeyValuePair<string, PortableAttributeState>[] m_Attributes;
         readonly List<PortableActiveEffectState> m_ActiveEffects;
-        readonly SortedDictionary<ulong, ulong> m_Periods;
-        readonly SortedDictionary<ulong, List<PortablePredictionRecord>> m_Journal;
-        readonly SortedDictionary<ulong, ulong> m_LastLifecycleRevisions;
+        readonly KeyValuePair<ulong, ulong>[] m_Periods;
+        readonly KeyValuePair<ulong, List<PortablePredictionRecord>>[] m_Journal;
+        readonly KeyValuePair<ulong, ulong>[] m_LastLifecycleRevisions;
         readonly string[] m_OwnedTags;
 
         internal GameplayEffectStateAggregate(
@@ -192,29 +192,25 @@ namespace ThirdPersonSimulation.Fixed
             bool lastLifecycleRevisionsChanged,
             ulong changeCursor)
         {
-            SortedDictionary<string, string[]> changedTags = m_TagSources;
-            bool tagsUnchanged = true;
-            if (tagsChanged)
-            {
-                changedTags = AdoptChangedTagSources(tagSources, m_TagSources);
-                tagsUnchanged = ReferenceEquals(changedTags, m_TagSources);
-            }
-            SortedDictionary<string, PortableAttributeState> changedAttributes = attributesChanged
+            KeyValuePair<string, string[]>[] changedTags = tagsChanged
+                ? AdoptChangedTagSources(tagSources, m_TagSources)
+                : m_TagSources;
+            KeyValuePair<string, PortableAttributeState>[] changedAttributes = attributesChanged
                 ? CloneChangedAttributes(attributes, m_Attributes)
                 : m_Attributes;
             List<PortableActiveEffectState> changedActiveEffects = activeEffectsChanged
                 ? CloneChangedActiveEffects(activeEffects, m_ActiveEffects)
                 : m_ActiveEffects;
-            SortedDictionary<ulong, ulong> changedPeriods = periodsChanged
-                ? CloneChangedMap(periods, m_Periods)
+            KeyValuePair<ulong, ulong>[] changedPeriods = periodsChanged
+                ? CloneMap(periods)
                 : m_Periods;
-            SortedDictionary<ulong, List<PortablePredictionRecord>> changedJournal = journalChanged
+            KeyValuePair<ulong, List<PortablePredictionRecord>>[] changedJournal = journalChanged
                 ? CloneChangedJournal(journal, m_Journal)
                 : m_Journal;
-            SortedDictionary<ulong, ulong> changedRevisions = lastLifecycleRevisionsChanged
-                ? CloneChangedMap(lastLifecycleRevisions, m_LastLifecycleRevisions)
+            KeyValuePair<ulong, ulong>[] changedRevisions = lastLifecycleRevisionsChanged
+                ? CloneMap(lastLifecycleRevisions)
                 : m_LastLifecycleRevisions;
-            string[] ownedTags = tagsUnchanged ? m_OwnedTags : CollectOwnedTags(changedTags);
+            string[] ownedTags = tagsChanged ? CollectOwnedTags(changedTags) : m_OwnedTags;
             return new GameplayEffectStateAggregate(
                 changedTags,
                 changedAttributes,
@@ -227,12 +223,12 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         GameplayEffectStateAggregate(
-            SortedDictionary<string, string[]> tagSources,
-            SortedDictionary<string, PortableAttributeState> attributes,
+            KeyValuePair<string, string[]>[] tagSources,
+            KeyValuePair<string, PortableAttributeState>[] attributes,
             List<PortableActiveEffectState> activeEffects,
-            SortedDictionary<ulong, ulong> periods,
-            SortedDictionary<ulong, List<PortablePredictionRecord>> journal,
-            SortedDictionary<ulong, ulong> lastLifecycleRevisions,
+            KeyValuePair<ulong, ulong>[] periods,
+            KeyValuePair<ulong, List<PortablePredictionRecord>>[] journal,
+            KeyValuePair<ulong, ulong>[] lastLifecycleRevisions,
             string[] ownedTags,
             ulong changeCursor)
         {
@@ -248,10 +244,16 @@ namespace ThirdPersonSimulation.Fixed
 
         internal ulong ChangeCursor { get; }
         internal int ActiveEffectCount => m_ActiveEffects.Count;
+        internal ReadOnlySpan<KeyValuePair<string, string[]>> TagSources => m_TagSources;
+        internal ReadOnlySpan<KeyValuePair<string, PortableAttributeState>> Attributes => m_Attributes;
+        internal IReadOnlyList<PortableActiveEffectState> ActiveEffects => m_ActiveEffects;
+        internal ReadOnlySpan<KeyValuePair<ulong, ulong>> Periods => m_Periods;
+        internal ReadOnlySpan<KeyValuePair<ulong, List<PortablePredictionRecord>>> Journal => m_Journal;
+        internal ReadOnlySpan<KeyValuePair<ulong, ulong>> LastLifecycleRevisions => m_LastLifecycleRevisions;
 
         internal bool MatchesTagSources(IReadOnlyDictionary<string, string[]> sources)
         {
-            if (sources == null || m_TagSources.Count != sources.Count)
+            if (sources == null || m_TagSources.Length != sources.Count)
                 return false;
             foreach (KeyValuePair<string, string[]> pair in m_TagSources)
             {
@@ -264,7 +266,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal bool MatchesPeriods(IReadOnlyDictionary<ulong, ulong> periods)
         {
-            if (periods == null || m_Periods.Count != periods.Count)
+            if (periods == null || m_Periods.Length != periods.Count)
                 return false;
             foreach (KeyValuePair<ulong, ulong> pair in m_Periods)
             {
@@ -276,7 +278,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal bool MatchesAttributes(IReadOnlyDictionary<string, PortableAttributeState> attributes)
         {
-            if (attributes == null || m_Attributes.Count != attributes.Count)
+            if (attributes == null || m_Attributes.Length != attributes.Count)
                 return false;
             foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
             {
@@ -325,7 +327,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal bool MatchesLastLifecycleRevisions(IReadOnlyDictionary<ulong, ulong> revisions)
         {
-            if (revisions == null || m_LastLifecycleRevisions.Count != revisions.Count)
+            if (revisions == null || m_LastLifecycleRevisions.Length != revisions.Count)
                 return false;
             foreach (KeyValuePair<ulong, ulong> pair in m_LastLifecycleRevisions)
             {
@@ -366,7 +368,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal bool MatchesJournal(IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> journal)
         {
-            if (journal == null || m_Journal.Count != journal.Count)
+            if (journal == null || m_Journal.Length != journal.Count)
                 return false;
             foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in m_Journal)
             {
@@ -440,13 +442,14 @@ namespace ThirdPersonSimulation.Fixed
                 left.PeriodTicks == right.PeriodTicks;
         }
 
-        static bool MatchesValues(IReadOnlyDictionary<string, FixedScalar> left, IReadOnlyDictionary<string, FixedScalar> right)
+        static bool MatchesValues(SortedList<string, FixedScalar> left, SortedList<string, FixedScalar> right)
         {
             if (left.Count != right.Count)
                 return false;
-            foreach (KeyValuePair<string, FixedScalar> pair in left)
+            for (int i = 0; i < left.Count; i++)
             {
-                if (!right.TryGetValue(pair.Key, out FixedScalar value) || !pair.Value.Equals(value))
+                if (!string.Equals(left.Keys[i], right.Keys[i], StringComparison.Ordinal) ||
+                    !left.Values[i].Equals(right.Values[i]))
                     return false;
             }
             return true;
@@ -465,16 +468,17 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static bool MatchesAttributes(
-            IReadOnlyDictionary<string, PortablePredictionAttributeSnapshot> left,
-            IReadOnlyDictionary<string, PortablePredictionAttributeSnapshot> right)
+            SortedList<string, PortablePredictionAttributeSnapshot> left,
+            SortedList<string, PortablePredictionAttributeSnapshot> right)
         {
             if (left.Count != right.Count)
                 return false;
-            foreach (KeyValuePair<string, PortablePredictionAttributeSnapshot> pair in left)
+            for (int i = 0; i < left.Count; i++)
             {
-                if (!right.TryGetValue(pair.Key, out PortablePredictionAttributeSnapshot value))
+                if (!string.Equals(left.Keys[i], right.Keys[i], StringComparison.Ordinal))
                     return false;
-                PortablePredictionAttributeSnapshot leftValue = pair.Value;
+                PortablePredictionAttributeSnapshot value = right.Values[i];
+                PortablePredictionAttributeSnapshot leftValue = left.Values[i];
                 if (!string.Equals(leftValue.AttributeId, value.AttributeId, StringComparison.Ordinal) ||
                     !leftValue.BaseValue.Equals(value.BaseValue) ||
                     !leftValue.CurrentValue.Equals(value.CurrentValue) ||
@@ -525,10 +529,10 @@ namespace ThirdPersonSimulation.Fixed
             out FixedScalar currentValue,
             out ulong revision)
         {
-            if (m_Attributes.TryGetValue(
-                FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId),
-                out PortableAttributeState value))
+            int index = FindEntry(m_Attributes, FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId), StringComparer.Ordinal);
+            if (index >= 0)
             {
+                PortableAttributeState value = m_Attributes[index].Value;
                 baseValue = value.BaseValue;
                 currentValue = value.CurrentValue;
                 revision = value.Revision;
@@ -547,22 +551,6 @@ namespace ThirdPersonSimulation.Fixed
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
             return new SimulationGameplayEffectState(catalog, null, scratch).Freeze();
-        }
-
-        internal void CopyTo(
-            IDictionary<string, string[]> tagSources,
-            IDictionary<string, PortableAttributeState> attributes,
-            IList<PortableActiveEffectState> activeEffects,
-            IDictionary<ulong, ulong> periods,
-            IDictionary<ulong, List<PortablePredictionRecord>> journal,
-            IDictionary<ulong, ulong> lastLifecycleRevisions)
-        {
-            CopyTagSourcesTo(tagSources);
-            CopyAttributesTo(attributes);
-            CopyActiveEffectsTo(activeEffects);
-            CopyPeriodsTo(periods);
-            CopyJournalTo(journal);
-            CopyLastLifecycleRevisionsTo(lastLifecycleRevisions);
         }
 
         internal void CopyTagSourcesTo(IDictionary<string, string[]> tagSources)
@@ -606,85 +594,68 @@ namespace ThirdPersonSimulation.Fixed
                 lastLifecycleRevisions.Add(pair.Key, pair.Value);
         }
 
-        static SortedDictionary<string, string[]> CloneTagSources(IReadOnlyDictionary<string, string[]> source)
+        static KeyValuePair<string, string[]>[] CloneTagSources(IReadOnlyDictionary<string, string[]> source)
         {
-            var result = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
-            if (source == null)
-                return result;
+            if (source == null || source.Count == 0)
+                return Array.Empty<KeyValuePair<string, string[]>>();
+            var result = new KeyValuePair<string, string[]>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<string, string[]> pair in source)
-                result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+                result[index++] = new KeyValuePair<string, string[]>(pair.Key,
+                    pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
+            Array.Sort(result, StringEntryComparer<string[]>.Instance);
             return result;
         }
 
-        static SortedDictionary<string, PortableAttributeState> CloneAttributes(IReadOnlyDictionary<string, PortableAttributeState> source)
+        static KeyValuePair<string, PortableAttributeState>[] CloneAttributes(IReadOnlyDictionary<string, PortableAttributeState> source)
         {
-            var result = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
-            if (source == null)
-                return result;
+            if (source == null || source.Count == 0)
+                return Array.Empty<KeyValuePair<string, PortableAttributeState>>();
+            var result = new KeyValuePair<string, PortableAttributeState>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<string, PortableAttributeState> pair in source)
-                result.Add(pair.Key, CloneAttribute(pair.Value));
+                result[index++] = new KeyValuePair<string, PortableAttributeState>(pair.Key, CloneAttribute(pair.Value));
+            Array.Sort(result, StringEntryComparer<PortableAttributeState>.Instance);
             return result;
         }
 
-        static SortedDictionary<string, string[]> AdoptChangedTagSources(
+        static KeyValuePair<string, string[]>[] AdoptChangedTagSources(
             IReadOnlyDictionary<string, string[]> source,
-            SortedDictionary<string, string[]> baseline)
+            KeyValuePair<string, string[]>[] baseline)
         {
-            if (source.Count == baseline.Count)
-            {
-                bool matches = true;
-                foreach (KeyValuePair<string, string[]> pair in source)
-                {
-                    if (!baseline.TryGetValue(pair.Key, out string[] baselineValue) ||
-                        !EqualStrings(pair.Value, baselineValue))
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-                if (matches)
-                    return baseline;
-            }
-            var result = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
+            if (source.Count == 0)
+                return Array.Empty<KeyValuePair<string, string[]>>();
+            var result = new KeyValuePair<string, string[]>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<string, string[]> pair in source)
             {
-                if (baseline.TryGetValue(pair.Key, out string[] baselineValue) &&
-                    EqualStrings(pair.Value, baselineValue))
-                    result.Add(pair.Key, baselineValue);
-                else
-                    result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : pair.Value);
+                int baselineIndex = FindEntry(baseline, pair.Key, StringComparer.Ordinal);
+                string[] values = baselineIndex >= 0 && EqualStrings(pair.Value, baseline[baselineIndex].Value)
+                    ? baseline[baselineIndex].Value
+                    : pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : pair.Value;
+                result[index++] = new KeyValuePair<string, string[]>(pair.Key, values);
             }
+            Array.Sort(result, StringEntryComparer<string[]>.Instance);
             return result;
         }
 
-        static SortedDictionary<string, PortableAttributeState> CloneChangedAttributes(
+        static KeyValuePair<string, PortableAttributeState>[] CloneChangedAttributes(
             IReadOnlyDictionary<string, PortableAttributeState> source,
-            SortedDictionary<string, PortableAttributeState> baseline)
+            KeyValuePair<string, PortableAttributeState>[] baseline)
         {
-            if (source.Count == baseline.Count)
-            {
-                bool matches = true;
-                foreach (KeyValuePair<string, PortableAttributeState> pair in source)
-                {
-                    if (!baseline.TryGetValue(pair.Key, out PortableAttributeState baselineValue) ||
-                        !MatchesAttribute(pair.Value, baselineValue))
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-                if (matches)
-                    return baseline;
-            }
-            var result = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
+            if (source.Count == 0)
+                return Array.Empty<KeyValuePair<string, PortableAttributeState>>();
+            var result = new KeyValuePair<string, PortableAttributeState>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<string, PortableAttributeState> pair in source)
             {
-                if (baseline.TryGetValue(pair.Key, out PortableAttributeState baselineValue) &&
-                    MatchesAttribute(pair.Value, baselineValue))
-                    result.Add(pair.Key, baselineValue);
-                else
-                    result.Add(pair.Key, CloneAttribute(pair.Value));
+                int baselineIndex = FindEntry(baseline, pair.Key, StringComparer.Ordinal);
+                PortableAttributeState value = baselineIndex >= 0 && MatchesAttribute(pair.Value, baseline[baselineIndex].Value)
+                    ? baseline[baselineIndex].Value
+                    : CloneAttribute(pair.Value);
+                result[index++] = new KeyValuePair<string, PortableAttributeState>(pair.Key, value);
             }
+            Array.Sort(result, StringEntryComparer<PortableAttributeState>.Instance);
             return result;
         }
 
@@ -786,67 +757,65 @@ namespace ThirdPersonSimulation.Fixed
             };
         }
 
-        static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneJournal(
+        static KeyValuePair<ulong, List<PortablePredictionRecord>>[] CloneJournal(
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source)
         {
-            var result = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
-            if (source == null)
-                return result;
+            if (source == null || source.Count == 0)
+                return Array.Empty<KeyValuePair<ulong, List<PortablePredictionRecord>>>();
+            var result = new KeyValuePair<ulong, List<PortablePredictionRecord>>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
             {
                 var records = new List<PortablePredictionRecord>(pair.Value.Count);
                 for (int i = 0; i < pair.Value.Count; i++)
                     records.Add(ClonePrediction(pair.Value[i]));
-                result.Add(pair.Key, records);
+                result[index++] = new KeyValuePair<ulong, List<PortablePredictionRecord>>(pair.Key, records);
             }
+            Array.Sort(result, UlongEntryComparer<List<PortablePredictionRecord>>.Instance);
             return result;
         }
 
-        static SortedDictionary<ulong, List<PortablePredictionRecord>> CloneChangedJournal(
+        static KeyValuePair<ulong, List<PortablePredictionRecord>>[] CloneChangedJournal(
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> source,
-            SortedDictionary<ulong, List<PortablePredictionRecord>> baseline)
+            KeyValuePair<ulong, List<PortablePredictionRecord>>[] baseline)
         {
-            if (source != null && source.Count == baseline.Count)
-            {
-                bool matches = true;
-                foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
-                {
-                    if (!baseline.TryGetValue(pair.Key, out List<PortablePredictionRecord> baselineRecords) ||
-                        pair.Value.Count != baselineRecords.Count ||
-                        !MatchesRecords(pair.Value, baselineRecords))
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-                if (matches)
-                    return baseline;
-            }
-            var result = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
+            if (source.Count == 0)
+                return Array.Empty<KeyValuePair<ulong, List<PortablePredictionRecord>>>();
+            var result = new KeyValuePair<ulong, List<PortablePredictionRecord>>[source.Count];
+            int index = 0;
             foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in source)
             {
-                if (!baseline.TryGetValue(pair.Key, out List<PortablePredictionRecord> baselineRecords) ||
-                    pair.Value.Count != baselineRecords.Count)
+                int baselineIndex = FindEntry(baseline, pair.Key, Comparer<ulong>.Default);
+                List<PortablePredictionRecord> baselineRecords = baselineIndex >= 0 ? baseline[baselineIndex].Value : null;
+                if (baselineRecords == null || pair.Value.Count != baselineRecords.Count)
                 {
                     var changedRecords = new List<PortablePredictionRecord>(pair.Value.Count);
                     for (int i = 0; i < pair.Value.Count; i++)
                         changedRecords.Add(ClonePrediction(pair.Value[i]));
-                    result.Add(pair.Key, changedRecords);
+                    result[index++] = new KeyValuePair<ulong, List<PortablePredictionRecord>>(pair.Key, changedRecords);
                     continue;
                 }
-                bool matches = MatchesRecords(pair.Value, baselineRecords);
-                if (matches)
+                int firstChanged = -1;
+                for (int i = 0; i < pair.Value.Count; i++)
                 {
-                    result.Add(pair.Key, baselineRecords);
+                    if (MatchesRecord(pair.Value[i], baselineRecords[i]))
+                        continue;
+                    firstChanged = i;
+                    break;
+                }
+                if (firstChanged < 0)
+                {
+                    result[index++] = new KeyValuePair<ulong, List<PortablePredictionRecord>>(pair.Key, baselineRecords);
                     continue;
                 }
                 var records = new List<PortablePredictionRecord>(pair.Value.Count);
                 for (int i = 0; i < pair.Value.Count; i++)
-                    records.Add(MatchesRecord(pair.Value[i], baselineRecords[i])
+                    records.Add(i < firstChanged || i > firstChanged && MatchesRecord(pair.Value[i], baselineRecords[i])
                         ? baselineRecords[i]
                         : ClonePrediction(pair.Value[i]));
-                result.Add(pair.Key, records);
+                result[index++] = new KeyValuePair<ulong, List<PortablePredictionRecord>>(pair.Key, records);
             }
+            Array.Sort(result, UlongEntryComparer<List<PortablePredictionRecord>>.Instance);
             return result;
         }
 
@@ -863,46 +832,25 @@ namespace ThirdPersonSimulation.Fixed
                 Confirmed = source.Confirmed
             };
             result.CueIds.AddRange(source.CueIds);
-            foreach (KeyValuePair<string, PortablePredictionAttributeSnapshot> pair in source.Attributes)
-                result.Attributes.Add(pair.Key, pair.Value);
+            result.Attributes.Capacity = source.Attributes.Count;
+            for (int i = 0; i < source.Attributes.Count; i++)
+                result.Attributes.Add(source.Attributes.Keys[i], source.Attributes.Values[i]);
             return result;
         }
 
-        static SortedDictionary<ulong, ulong> CloneMap(IReadOnlyDictionary<ulong, ulong> source)
+        static KeyValuePair<ulong, ulong>[] CloneMap(IReadOnlyDictionary<ulong, ulong> source)
         {
-            var result = new SortedDictionary<ulong, ulong>();
-            if (source != null)
-            {
-                foreach (KeyValuePair<ulong, ulong> pair in source)
-                    result.Add(pair.Key, pair.Value);
-            }
+            if (source == null || source.Count == 0)
+                return Array.Empty<KeyValuePair<ulong, ulong>>();
+            var result = new KeyValuePair<ulong, ulong>[source.Count];
+            int index = 0;
+            foreach (KeyValuePair<ulong, ulong> pair in source)
+                result[index++] = pair;
+            Array.Sort(result, UlongEntryComparer<ulong>.Instance);
             return result;
         }
 
-        static SortedDictionary<ulong, ulong> CloneChangedMap(
-            IReadOnlyDictionary<ulong, ulong> source,
-            SortedDictionary<ulong, ulong> baseline)
-        {
-            if (source == null)
-                return baseline;
-            if (source.Count == baseline.Count)
-            {
-                bool matches = true;
-                foreach (KeyValuePair<ulong, ulong> pair in source)
-                {
-                    if (!baseline.TryGetValue(pair.Key, out ulong value) || value != pair.Value)
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-                if (matches)
-                    return baseline;
-            }
-            return CloneMap(source);
-        }
-
-        static string[] CollectOwnedTags(SortedDictionary<string, string[]> sources)
+        static string[] CollectOwnedTags(KeyValuePair<string, string[]>[] sources)
         {
             var tags = new HashSet<string>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, string[]> sourcePair in sources)
@@ -917,10 +865,41 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static void Copy<T>(IReadOnlyList<T> source, IList<T> destination)
+        static int FindEntry<TKey, TValue>(
+            KeyValuePair<TKey, TValue>[] entries,
+            TKey key,
+            IComparer<TKey> comparer)
         {
-            for (int i = 0; i < source.Count; i++)
-                destination.Add(source[i]);
+            int lower = 0;
+            int upper = entries.Length - 1;
+            while (lower <= upper)
+            {
+                int index = lower + (upper - lower) / 2;
+                int comparison = comparer.Compare(entries[index].Key, key);
+                if (comparison == 0)
+                    return index;
+                if (comparison < 0)
+                    lower = index + 1;
+                else
+                    upper = index - 1;
+            }
+            return -1;
+        }
+
+        sealed class StringEntryComparer<TValue> : IComparer<KeyValuePair<string, TValue>>
+        {
+            internal static readonly StringEntryComparer<TValue> Instance = new StringEntryComparer<TValue>();
+
+            public int Compare(KeyValuePair<string, TValue> left, KeyValuePair<string, TValue> right) =>
+                string.CompareOrdinal(left.Key, right.Key);
+        }
+
+        sealed class UlongEntryComparer<TValue> : IComparer<KeyValuePair<ulong, TValue>>
+        {
+            internal static readonly UlongEntryComparer<TValue> Instance = new UlongEntryComparer<TValue>();
+
+            public int Compare(KeyValuePair<ulong, TValue> left, KeyValuePair<ulong, TValue> right) =>
+                left.Key.CompareTo(right.Key);
         }
     }
 

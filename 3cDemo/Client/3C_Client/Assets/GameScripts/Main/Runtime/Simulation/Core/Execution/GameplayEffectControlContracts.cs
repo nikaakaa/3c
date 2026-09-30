@@ -349,7 +349,7 @@ namespace ThirdPersonSimulation
         public GameplayEffectActiveControlSnapshot ActiveBefore { get; set; }
         public bool Confirmed { get; set; }
         public List<string> CueIds { get; } = new List<string>();
-        public SortedDictionary<string, TAttributeSnapshot> Attributes { get; } = new SortedDictionary<string, TAttributeSnapshot>(StringComparer.Ordinal);
+        public SortedList<string, TAttributeSnapshot> Attributes { get; } = new SortedList<string, TAttributeSnapshot>(StringComparer.Ordinal);
 
         ulong IGameplayEffectPredictionControl<TSpec>.PredictionKey => DescribeContext().PredictionKey;
         ulong IGameplayEffectPredictionControl<TSpec>.SourceActionInstanceId => DescribeContext().SourceActionInstanceId;

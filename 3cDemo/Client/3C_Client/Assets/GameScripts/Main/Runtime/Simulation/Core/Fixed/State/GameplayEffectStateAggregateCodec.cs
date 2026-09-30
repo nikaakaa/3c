@@ -2,7 +2,6 @@ using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
 {
@@ -14,6 +13,7 @@ namespace ThirdPersonSimulation.Fixed
         const uint PeriodsMagic = 0x32504745;
         const uint JournalMagic = 0x324A4745;
         const int StateVersion = 1;
+        [ThreadStatic] static List<string> s_CueIds;
 
         internal static void Write(
             CanonicalWriter writer,
@@ -23,19 +23,11 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(writer));
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
-            var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
-            var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
-            var activeEffects = new List<PortableActiveEffectState>();
-            var periods = new SortedDictionary<ulong, ulong>();
-            var journal = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
-            var lifecycleRevisions = new SortedDictionary<ulong, ulong>();
-            aggregate.CopyTo(tagSources, attributes, activeEffects, periods, journal, lifecycleRevisions);
-
-            WriteTags(writer, tagSources);
-            WriteAttributes(writer, attributes);
-            WriteActiveEffects(writer, activeEffects);
-            WritePeriods(writer, periods);
-            WriteJournal(writer, journal, lifecycleRevisions);
+            WriteTags(writer, aggregate.TagSources);
+            WriteAttributes(writer, aggregate.Attributes);
+            WriteActiveEffects(writer, aggregate.ActiveEffects);
+            WritePeriods(writer, aggregate.Periods);
+            WriteJournal(writer, aggregate.Journal, aggregate.LastLifecycleRevisions);
             writer.WriteUInt64(aggregate.ChangeCursor);
         }
 
@@ -75,14 +67,15 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationGameplayEffectState(catalog, aggregate, scratch).Freeze();
         }
 
-        static void WriteTags(CanonicalWriter writer, IReadOnlyDictionary<string, string[]> tagSources)
+        static void WriteTags(CanonicalWriter writer, ReadOnlySpan<KeyValuePair<string, string[]>> tagSources)
         {
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(TagsMagic);
             writer.WriteInt32(StateVersion);
-            writer.WriteInt32(tagSources.Count);
-            foreach (KeyValuePair<string, string[]> pair in tagSources)
+            writer.WriteInt32(tagSources.Length);
+            for (int i = 0; i < tagSources.Length; i++)
             {
+                KeyValuePair<string, string[]> pair = tagSources[i];
                 writer.WriteString(pair.Key);
                 WriteStrings(writer, pair.Value);
             }
@@ -105,14 +98,15 @@ namespace ThirdPersonSimulation.Fixed
             reader.RequireComplete();
         }
 
-        static void WriteAttributes(CanonicalWriter writer, IReadOnlyDictionary<string, PortableAttributeState> attributes)
+        static void WriteAttributes(CanonicalWriter writer, ReadOnlySpan<KeyValuePair<string, PortableAttributeState>> attributes)
         {
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(AttributesMagic);
             writer.WriteInt32(StateVersion);
-            writer.WriteInt32(attributes.Count);
-            foreach (KeyValuePair<string, PortableAttributeState> pair in attributes)
+            writer.WriteInt32(attributes.Length);
+            for (int index = 0; index < attributes.Length; index++)
             {
+                KeyValuePair<string, PortableAttributeState> pair = attributes[index];
                 PortableAttributeState attribute = pair.Value;
                 writer.WriteString(pair.Key);
                 writer.WriteScalar(attribute.BaseValue);
@@ -181,14 +175,15 @@ namespace ThirdPersonSimulation.Fixed
             activeEffects.Sort(CompareActive);
         }
 
-        static void WritePeriods(CanonicalWriter writer, IReadOnlyDictionary<ulong, ulong> periods)
+        static void WritePeriods(CanonicalWriter writer, ReadOnlySpan<KeyValuePair<ulong, ulong>> periods)
         {
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(PeriodsMagic);
             writer.WriteInt32(StateVersion);
-            writer.WriteInt32(periods.Count);
-            foreach (KeyValuePair<ulong, ulong> pair in periods)
+            writer.WriteInt32(periods.Length);
+            for (int i = 0; i < periods.Length; i++)
             {
+                KeyValuePair<ulong, ulong> pair = periods[i];
                 writer.WriteUInt64(pair.Key);
                 writer.WriteUInt64(pair.Value);
             }
@@ -214,23 +209,25 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteJournal(
             CanonicalWriter writer,
-            IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> journal,
-            IReadOnlyDictionary<ulong, ulong> lifecycleRevisions)
+            ReadOnlySpan<KeyValuePair<ulong, List<PortablePredictionRecord>>> journal,
+            ReadOnlySpan<KeyValuePair<ulong, ulong>> lifecycleRevisions)
         {
             long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(JournalMagic);
             writer.WriteInt32(StateVersion);
-            writer.WriteInt32(journal.Count);
-            foreach (KeyValuePair<ulong, List<PortablePredictionRecord>> pair in journal)
+            writer.WriteInt32(journal.Length);
+            for (int index = 0; index < journal.Length; index++)
             {
+                KeyValuePair<ulong, List<PortablePredictionRecord>> pair = journal[index];
                 writer.WriteUInt64(pair.Key);
                 writer.WriteInt32(pair.Value.Count);
                 for (int i = 0; i < pair.Value.Count; i++)
                     WritePredictionRecord(writer, pair.Value[i]);
             }
-            writer.WriteInt32(lifecycleRevisions.Count);
-            foreach (KeyValuePair<ulong, ulong> pair in lifecycleRevisions)
+            writer.WriteInt32(lifecycleRevisions.Length);
+            for (int i = 0; i < lifecycleRevisions.Length; i++)
             {
+                KeyValuePair<ulong, ulong> pair = lifecycleRevisions[i];
                 writer.WriteUInt64(pair.Key);
                 writer.WriteUInt64(pair.Value);
             }
@@ -354,12 +351,17 @@ namespace ThirdPersonSimulation.Fixed
             if (record.HasActiveBefore)
                 WriteActiveSnapshot(writer, record.ActiveBefore);
             writer.WriteBoolean(record.Confirmed);
-            WriteStrings(writer, record.CueIds.OrderBy(value => value, StringComparer.Ordinal));
+            List<string> cues = s_CueIds ??= new List<string>();
+            cues.Clear();
+            cues.AddRange(record.CueIds);
+            cues.Sort(StringComparer.Ordinal);
+            WriteStrings(writer, cues);
+            cues.Clear();
             writer.WriteInt32(record.Attributes.Count);
-            foreach (KeyValuePair<string, PortablePredictionAttributeSnapshot> pair in record.Attributes)
+            for (int i = 0; i < record.Attributes.Count; i++)
             {
-                PortablePredictionAttributeSnapshot value = pair.Value;
-                writer.WriteString(pair.Key);
+                PortablePredictionAttributeSnapshot value = record.Attributes.Values[i];
+                writer.WriteString(record.Attributes.Keys[i]);
                 writer.WriteScalar(value.BaseValue);
                 writer.WriteScalar(value.CurrentValue);
                 writer.WriteUInt64(value.BeforeRevision);
@@ -487,19 +489,19 @@ namespace ThirdPersonSimulation.Fixed
             return modifier;
         }
 
-        static void WriteScalarMap(CanonicalWriter writer, SortedDictionary<string, FixedScalar> values)
+        static void WriteScalarMap(CanonicalWriter writer, SortedList<string, FixedScalar> values)
         {
             writer.WriteInt32(values.Count);
-            foreach (KeyValuePair<string, FixedScalar> pair in values)
+            for (int i = 0; i < values.Count; i++)
             {
-                writer.WriteString(pair.Key);
-                writer.WriteScalar(pair.Value);
+                writer.WriteString(values.Keys[i]);
+                writer.WriteScalar(values.Values[i]);
             }
         }
 
         static void ReadScalarMap(
             CanonicalReader reader,
-            SortedDictionary<string, FixedScalar> destination,
+            SortedList<string, FixedScalar> destination,
             Func<string, string> normalize)
         {
             int count = ReadCount(reader, "scalar map");
@@ -514,12 +516,12 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static void WriteStrings(CanonicalWriter writer, IEnumerable<string> values)
+        static void WriteStrings(CanonicalWriter writer, IReadOnlyList<string> values)
         {
-            string[] items = values == null ? Array.Empty<string>() : values.ToArray();
-            writer.WriteInt32(items.Length);
-            for (int i = 0; i < items.Length; i++)
-                writer.WriteString(items[i]);
+            int count = values?.Count ?? 0;
+            writer.WriteInt32(count);
+            for (int i = 0; i < count; i++)
+                writer.WriteString(values[i]);
         }
 
         static string[] ReadStrings(CanonicalReader reader, Func<string, string> normalize)

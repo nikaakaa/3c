@@ -193,20 +193,11 @@ namespace ThirdPersonSimulation.Fixed
 
         void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.CompletePrediction(PortablePredictionRecord prediction)
         {
-            List<string> attributes = m_Scratch.PredictionAttributes.Acquire();
-            try
+            for (int i = 0; i < prediction.Attributes.Count; i++)
             {
-                foreach (string attribute in prediction.Attributes.Keys)
-                    attributes.Add(attribute);
-                for (int i = 0; i < attributes.Count; i++)
-                {
-                    PortableAttributeState value = m_State.RequireAttribute(attributes[i]);
-                    prediction.Attributes[attributes[i]] = prediction.Attributes[attributes[i]].WithAfterRevision(value.Revision);
-                }
-            }
-            finally
-            {
-                m_Scratch.PredictionAttributes.Release(attributes);
+                string attribute = prediction.Attributes.Keys[i];
+                PortableAttributeState value = m_State.RequireAttribute(attribute);
+                prediction.Attributes[attribute] = prediction.Attributes.Values[i].WithAfterRevision(value.Revision);
             }
         }
 
@@ -245,8 +236,9 @@ namespace ThirdPersonSimulation.Fixed
         bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.RestorePredictionAttributes(PortablePredictionRecord prediction)
         {
             bool restored = true;
-            foreach (PortablePredictionAttributeSnapshot attribute in prediction.Attributes.Values)
+            for (int i = 0; i < prediction.Attributes.Count; i++)
             {
+                PortablePredictionAttributeSnapshot attribute = prediction.Attributes.Values[i];
                 if (m_State.RestorePredictedAttribute(attribute, prediction.Handle, out IReadOnlyList<PortableAttributeChange> changes))
                     AddAttributeChanges(changes);
                 else

@@ -19,7 +19,7 @@
   <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.09.30 · 交互解释</span></div>
   <header class="hero">
     <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">本页包含采样事实、原因判断和候选行为。三者证据强度不同，不能把右侧示意当成已经证明正确的修复方案。先看本轮核对结论，再查看各项数据。</p></div>
-    <div class="status-note"><b>Releasing 历史连续对照已完成。</b><span>当前版消除了本窗口的旧版硬抬，却引入停脚与腿长冲突；测试通过不等于方案修好。第四项仍只有局部目标交接证据，其余右侧行为仍为未验证候选。</span></div>
+    <div class="status-note"><b>历史连续对照完成，一项候选已被否决。</b><span>仅在有净空时提前放开，虽减轻腿长冲突，却把恢复步长增到 26.43 cm；运行时试改已撤销。第四项仍只有局部目标交接证据，其余右侧行为仍为未验证候选。</span></div>
   </header>
   <details id="audit-verdict" open><summary>严格核对结论：哪些已证实，哪些还不能照着改</summary><div class="detail-body">
     <ul class="reference-list">
@@ -36,6 +36,7 @@
     <p><b>第四项的连续采样函数实验已通过：</b><a href="ik-tests/expired-contact.html">查看同样 100 帧输入的真实旧、新函数对照</a>。历史版重现 27 帧目标缺失，当前版为 0；前 45 帧目标类型与位置一致，53 帧无接触摆腿均正常接管。这是插值前目标交接的证据。最终权重、重新查询的脚掌碰撞和骨骼输出尚未验证，不能据此宣布 Landing / Releasing 伸直消失。后续按两个完整场景规划，见<a href="ik-tests/README.md">场景范围</a>。</p>
   </div></details>
   <section class="detail-body"><p><b>本轮 Releasing 验证边界：</b>正式 EditMode 为 1 个用例、1 个通过；每版核对 368 个原探针，当前输出与原采样逐帧重合，两版预热后的计算分配均为 0 B。冻结前历史版取自 413e931de，当前版保留现有代码。腿长对照固定使用采样髋姿态；未重跑骨盆与腿 IK，23 点向下查询不等于鞋网格连续扫掠。更早的 4107 / 4127 / 4131 硬抬样例仅保留历史记录，本轮未连续重跑。运行时代码本轮未修改。</p></section>
+  <section class="detail-body"><p><b>新增反证：</b>“本帧插值脚掌已有净空就立即放开”的候选，把最大腿长需求从 115.625% 降到 101.498%，但真正恢复前移时的步长从 20.162 cm 增到 26.435 cm。恢复帧从 12575 提前到了 12574，只盯 12575 会得到假改善。按实际恢复事件对齐后断言失败，候选运行时改动已撤销。<a href="ik-tests/release-clearance.html">同一页面的红线保留失败实验</a>，不能把它当作可测修复版。</p></section>
   <noscript><p class="noscript">启用 JavaScript 后可操作六个交互演示。核对结论、现有链路和历史记录仍可直接阅读。</p></noscript>
   <nav class="tabs" role="tablist" aria-label="选择要理解的问题">
     <button class="tab" role="tab" id="tab-0" aria-controls="explainer" aria-selected="true" data-case="0"><span class="num">01</span>台阶边缘</button>

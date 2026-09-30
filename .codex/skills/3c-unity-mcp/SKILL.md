@@ -19,6 +19,8 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 
 ## 项目作业入口
 
+- 排查资产加载失败时，读取完整 Console 与 Editor 导入日志。本机版本的 `editor console --type error` 曾漏掉 Unity 原生资产导入错误，而 `--type all` 能返回这些条目；仅 error 查询为空不能作为资产已修复的证据，必须确认目标资源实际加载及业务引用。
+- 当前普通资产文件若仍包含旧 Git LFS 指针，先按指针的 SHA-256 与 size 确认本地原对象。被 `.gitignore` 排除、未进入 Git 索引的文件不会由 `git lfs checkout` 恢复；本地对象完整时使用 `git lfs smudge` 读取原内容，完整输出并核对身份后替换指针文件，保留 `.meta`，再在目标 Editor 批量导入和验证引用。这是旧文件恢复，不改变当前仓库的资产管理规则。
 - 技能运行数据契约变化后，使用正式技能发布器重建目标 Definition 的 Fixed / Float32 产物；不在 Runtime 猜测旧声明绑定或补默认值。技能重建菜单只负责指定 Definition 和输出目录，技能输入由 GameplayAbilityExecutionDataAssetPublisher 与编译器确认，不把独立的 Pose、动画资源或相机配置校验放到这条 Build 链之前。
 - `Tools/3C/Internal/Republish Corin Ability Data` 复用同一发布器。菜单返回 attempted 或客户端超时都不代表成功或失败；先检查原操作是否已写入产物，再用 Definition 的正式 Load 及技能安装入口确认契约，不能重复发起重建。
 - 回放、Foot 与 Presentation 诊断使用 [3C 同输入回放验证](../3c-replay-verified-change/SKILL.md)；CPU 与托管分配采集使用 [3C 性能诊断](../3c-performance-diagnostics/SKILL.md)。它们提供业务操作入口，连接机制仍由通用 skill 维护。

@@ -22,12 +22,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         FootPlacement
     }
 
-    static class CharacterRuntimeDiagnosticsInspector
+    sealed class CharacterRuntimeDiagnosticsInspector
     {
-        static RuntimeDiagnosticsCaptureDetail s_CaptureDetail =
+        RuntimeDiagnosticsCaptureDetail m_CaptureDetail =
             RuntimeDiagnosticsCaptureDetail.Evaluation;
 
-        internal static void DrawRuntimeDiagnostics(
+        sealed class ChannelEvents
+        {
+            internal RuntimeDebugViewModel View;
+            internal long Revision = -1;
+            internal readonly List<RuntimeDebugEventView> Values = new();
+        }
+
+        readonly Dictionary<RuntimeTraceChannel, ChannelEvents> m_Channels = new()
+        {
+            { RuntimeTraceChannel.Graph, new ChannelEvents() },
+            { RuntimeTraceChannel.StateMachine, new ChannelEvents() },
+            { RuntimeTraceChannel.Network, new ChannelEvents() },
+            { RuntimeTraceChannel.Blackboard, new ChannelEvents() },
+            { RuntimeTraceChannel.Equipment, new ChannelEvents() },
+            { RuntimeTraceChannel.Motion, new ChannelEvents() },
+            { RuntimeTraceChannel.Animation, new ChannelEvents() },
+            { RuntimeTraceChannel.FootPlacement, new ChannelEvents() }
+        };
+        readonly List<RuntimeDebugEventView> m_SectionEvents = new();
+        static readonly Comparison<RuntimeDebugEventView> s_NewestFirst =
+            (left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence);
+        static readonly RuntimeTraceEventKind[] s_SimulationTickKinds = { RuntimeTraceEventKind.SimulationTick, RuntimeTraceEventKind.SimulationRestore, RuntimeTraceEventKind.SimulationEvaluate, RuntimeTraceEventKind.SimulationFinalize, RuntimeTraceEventKind.SimulationStatePublished, RuntimeTraceEventKind.SimulationCommit, RuntimeTraceEventKind.SimulationFailure };
+        static readonly RuntimeTraceEventKind[] s_SimulationNetworkModelKinds = { RuntimeTraceEventKind.SimulationNetworkModel };
+        static readonly RuntimeTraceEventKind[] s_NodeEnteredKinds = { RuntimeTraceEventKind.NodeEntered, RuntimeTraceEventKind.NodeStatus, RuntimeTraceEventKind.NodeCompleted, RuntimeTraceEventKind.NodeStopRequested, RuntimeTraceEventKind.NodeStopping, RuntimeTraceEventKind.NodeStopped, RuntimeTraceEventKind.NodeForceStopped, RuntimeTraceEventKind.EdgeEvaluated, RuntimeTraceEventKind.EdgeSelected, RuntimeTraceEventKind.GraphCreated, RuntimeTraceEventKind.GraphDestroyed, RuntimeTraceEventKind.NodeRunning, RuntimeTraceEventKind.NodeWaiting, RuntimeTraceEventKind.TraceSamplingLimited };
+        static readonly RuntimeTraceEventKind[] s_StateTransitionEvaluatedKinds = { RuntimeTraceEventKind.StateTransitionEvaluated, RuntimeTraceEventKind.StateTransitionSelected, RuntimeTraceEventKind.StateScopeEntered, RuntimeTraceEventKind.StateScopeExited, RuntimeTraceEventKind.StateExitStarted, RuntimeTraceEventKind.StateExitWaiting };
+        static readonly RuntimeTraceEventKind[] s_ActionSnapshotKinds = { RuntimeTraceEventKind.ActionSnapshot, RuntimeTraceEventKind.ActionActivationRequested, RuntimeTraceEventKind.ActionLifecycleTransitioned, RuntimeTraceEventKind.ActionWindowSampled, RuntimeTraceEventKind.ActionResultSubmitted };
+        static readonly RuntimeTraceEventKind[] s_CameraSnapshotKinds = { RuntimeTraceEventKind.CameraSnapshot, RuntimeTraceEventKind.CameraRequest, RuntimeTraceEventKind.CameraShakeRequest };
+        static readonly RuntimeTraceEventKind[] s_FootPlacementSnapshotKinds = { RuntimeTraceEventKind.FootPlacementSnapshot };
+        static readonly RuntimeTraceEventKind[] s_SelectionKinds = { RuntimeTraceEventKind.AnimationSelectionSubmitted };
+        static readonly RuntimeTraceEventKind[] s_TimelineSamplesKinds = { RuntimeTraceEventKind.AnimationProducerSampled, RuntimeTraceEventKind.TimelineVisualTime };
+        static readonly RuntimeTraceEventKind[] s_MotionMatchingKinds = { RuntimeTraceEventKind.MotionMatchingQuery, RuntimeTraceEventKind.MotionMatchingTrajectory, RuntimeTraceEventKind.MotionMatchingPoseHistory, RuntimeTraceEventKind.MotionMatchingAdmission, RuntimeTraceEventKind.MotionMatchingCandidateRejected, RuntimeTraceEventKind.MotionMatchingSearchTraversal, RuntimeTraceEventKind.MotionMatchingTopK, RuntimeTraceEventKind.MotionMatchingPlan, RuntimeTraceEventKind.MotionMatchingSelection, RuntimeTraceEventKind.MotionMatchingPoseSource, RuntimeTraceEventKind.MotionMatchingReset, RuntimeTraceEventKind.MotionMatchingFrame };
+        static readonly RuntimeTraceEventKind[] s_PlaybackLifecycleKinds = { RuntimeTraceEventKind.AnimationPlaybackPending, RuntimeTraceEventKind.AnimationPlaybackSelected, RuntimeTraceEventKind.AnimationPlaybackRetained, RuntimeTraceEventKind.AnimationPlaybackRetired, RuntimeTraceEventKind.AnimationPlaybackCompleted, RuntimeTraceEventKind.AnimationPlaybackReleased };
+        static readonly RuntimeTraceEventKind[] s_PresentationKinds = { RuntimeTraceEventKind.PresentationInterpolated };
+
+        IReadOnlyList<RuntimeDebugEventView> Events(RuntimeDebugViewModel view, RuntimeTraceChannel channel)
+        {
+            ChannelEvents cached = m_Channels[channel];
+            if (!ReferenceEquals(cached.View, view) || cached.Revision != view.Revision)
+            {
+                view.CopyCurrentEvents(channel, cached.Values);
+                cached.Values.Sort(s_NewestFirst);
+                cached.View = view;
+                cached.Revision = view.Revision;
+            }
+            return cached.Values;
+        }
+
+        internal void Clear()
+        {
+            foreach (ChannelEvents cached in m_Channels.Values)
+            {
+                cached.View = null;
+                cached.Revision = -1;
+                cached.Values.Clear();
+            }
+            m_SectionEvents.Clear();
+        }
+
+        internal void DrawRuntimeDiagnostics(
             object interestOwner,
             int hostInstanceId,
             CharacterPipelineDefinition definition,
@@ -83,66 +141,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawPresentation(definition, view);
         }
 
-        static void DrawSimulation(RuntimeDebugViewModel view)
+        void DrawSimulation(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Simulation Session", Filter(view, RuntimeTraceChannel.Graph,
-                RuntimeTraceEventKind.SimulationTick,
-                RuntimeTraceEventKind.SimulationRestore,
-                RuntimeTraceEventKind.SimulationEvaluate,
-                RuntimeTraceEventKind.SimulationFinalize,
-                RuntimeTraceEventKind.SimulationStatePublished,
-                RuntimeTraceEventKind.SimulationCommit,
-                RuntimeTraceEventKind.SimulationFailure), eventView =>
+            DrawEventSection("Simulation Session", Filter(view, RuntimeTraceChannel.Graph, s_SimulationTickKinds), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{payload.Name} | {payload.Status} | actor {payload.OwnerId} | {payload.Detail}";
             });
         }
 
-        static void DrawNetwork(RuntimeDebugViewModel view)
+        void DrawNetwork(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Network Model", Filter(view, RuntimeTraceChannel.Network,
-                RuntimeTraceEventKind.SimulationNetworkModel), eventView =>
+            DrawEventSection("Network Model", Filter(view, RuntimeTraceChannel.Network, s_SimulationNetworkModelKinds), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{payload.Cause} | {payload.Name} | {payload.Status} | actor {payload.OwnerId} | {payload.RelatedElementId} | input {payload.Value.DisplayValue()} | queue {payload.Priority} | replay {payload.Cycle} | {payload.Detail}";
             });
         }
 
-        static void DrawGraphLifecycle(RuntimeDebugViewModel view)
+        void DrawGraphLifecycle(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Graph Lifecycle", Filter(view, RuntimeTraceChannel.Graph,
-                RuntimeTraceEventKind.NodeEntered,
-                RuntimeTraceEventKind.NodeStatus,
-                RuntimeTraceEventKind.NodeCompleted,
-                RuntimeTraceEventKind.NodeStopRequested,
-                RuntimeTraceEventKind.NodeStopping,
-                RuntimeTraceEventKind.NodeStopped,
-                RuntimeTraceEventKind.NodeForceStopped,
-                RuntimeTraceEventKind.EdgeEvaluated,
-                RuntimeTraceEventKind.EdgeSelected), eventView =>
+            DrawEventSection("Graph Lifecycle", Filter(view, RuntimeTraceChannel.Graph, s_NodeEnteredKinds), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.Event.Kind} | {payload.Status} | {payload.Cause} | parent/source {payload.OwnerId} | target/path {payload.RelatedElementId} | {payload.Detail}";
             });
         }
 
-        static void DrawStateMachine(RuntimeDebugViewModel view)
+        void DrawStateMachine(RuntimeDebugViewModel view)
         {
-            DrawEventSection("State Machine", Filter(view, RuntimeTraceChannel.StateMachine,
-                RuntimeTraceEventKind.StateTransitionEvaluated,
-                RuntimeTraceEventKind.StateTransitionSelected,
-                RuntimeTraceEventKind.StateScopeEntered,
-                RuntimeTraceEventKind.StateScopeExited,
-                RuntimeTraceEventKind.StateExitStarted,
-                RuntimeTraceEventKind.StateExitWaiting), eventView =>
+            DrawEventSection("State Machine", Filter(view, RuntimeTraceChannel.StateMachine, s_StateTransitionEvaluatedKinds), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.Event.Kind} | {payload.Status} | {payload.Cause} | state {payload.OwnerId} | target {payload.RelatedElementId} | {payload.Detail}";
             });
         }
 
-        static void DrawSessionControls(
+        void DrawSessionControls(
             RuntimeDebugSession session,
             RuntimeDebugViewModel view,
             bool showGeneralCaptureControls)
@@ -180,11 +215,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             else if (showGeneralCaptureControls)
             {
-                s_CaptureDetail = (RuntimeDiagnosticsCaptureDetail)EditorGUILayout.EnumPopup("Capture Detail", s_CaptureDetail);
+                m_CaptureDetail = (RuntimeDiagnosticsCaptureDetail)EditorGUILayout.EnumPopup("Capture Detail", m_CaptureDetail);
                 using (new EditorGUI.DisabledScope(!session.CanStartCapture))
                 {
                     if (GUILayout.Button("Start Capture"))
-                        session.BeginCapture(RuntimeTraceChannel.All, s_CaptureDetail);
+                        session.BeginCapture(RuntimeTraceChannel.All, m_CaptureDetail);
                 }
             }
 
@@ -197,37 +232,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void DrawAction(RuntimeDebugViewModel view)
+        void DrawAction(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Action", Filter(view, RuntimeTraceChannel.StateMachine,
-                RuntimeTraceEventKind.ActionSnapshot,
-                RuntimeTraceEventKind.ActionActivationRequested,
-                RuntimeTraceEventKind.ActionLifecycleTransitioned,
-                RuntimeTraceEventKind.ActionWindowSampled,
-                RuntimeTraceEventKind.ActionResultSubmitted), FormatAction);
+            DrawEventSection("Action", Filter(view, RuntimeTraceChannel.StateMachine, s_ActionSnapshotKinds), FormatAction);
         }
 
-        static void DrawBlackboard(RuntimeDebugViewModel view)
+        void DrawBlackboard(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Blackboard", view.GetCurrentEvents(RuntimeTraceChannel.Blackboard), eventView =>
+            DrawEventSection("Blackboard", Events(view, RuntimeTraceChannel.Blackboard), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.SourceName} | {eventView.Event.Kind} | {payload.Value.DisplayValue()} | {payload.Status} {payload.Cause}";
             });
         }
 
-        static void DrawEquipment(RuntimeDebugViewModel view)
+        void DrawEquipment(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Equipment", view.GetCurrentEvents(RuntimeTraceChannel.Equipment), eventView =>
+            DrawEventSection("Equipment", Events(view, RuntimeTraceChannel.Equipment), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.Event.Kind} | {payload.Status} | slot {payload.OwnerId} | {payload.Name} | {payload.RelatedElementId} | {payload.Cause} | {payload.Detail}";
             });
         }
 
-        static void DrawMotion(RuntimeDebugViewModel view)
+        void DrawMotion(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Motion", view.GetCurrentEvents(RuntimeTraceChannel.Motion), eventView =>
+            DrawEventSection("Motion", Events(view, RuntimeTraceChannel.Motion), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 if (eventView.Event.Kind == RuntimeTraceEventKind.SimulationWorldBatch)
@@ -240,67 +270,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        static void DrawCamera(RuntimeDebugViewModel view)
+        void DrawCamera(RuntimeDebugViewModel view)
         {
-            DrawEventSection("Camera", Filter(view, RuntimeTraceChannel.Animation,
-                RuntimeTraceEventKind.CameraSnapshot,
-                RuntimeTraceEventKind.CameraRequest,
-                RuntimeTraceEventKind.CameraShakeRequest), eventView =>
+            DrawEventSection("Camera", Filter(view, RuntimeTraceChannel.Animation, s_CameraSnapshotKinds), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.Event.Kind} | {payload.Name} | {payload.Status} | owner {payload.OwnerId} | P{payload.Priority} w{payload.Weight:0.###} | {payload.Value.DisplayValue()}";
             });
         }
 
-        static void DrawPresentation(CharacterPipelineDefinition definition, RuntimeDebugViewModel view)
+        void DrawPresentation(CharacterPipelineDefinition definition, RuntimeDebugViewModel view)
         {
-            IReadOnlyList<RuntimeDebugEventView> source = view.GetCurrentEvents(RuntimeTraceChannel.Animation);
-            var events = new List<RuntimeDebugEventView>();
-            for (int i = 0; i < source.Count; i++)
-            {
-                RuntimeTraceEventKind kind = source[i].Event.Kind;
-                if (kind is RuntimeTraceEventKind.CameraSnapshot or RuntimeTraceEventKind.CameraRequest or RuntimeTraceEventKind.CameraShakeRequest)
-                    continue;
-                events.Add(source[i]);
-            }
+            IReadOnlyList<RuntimeDebugEventView> events = Events(view, RuntimeTraceChannel.Animation);
 
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Animation Presentation", EditorStyles.boldLabel);
-            DrawAnimationGroup("Selection", events, RuntimeTraceEventKind.AnimationSelectionSubmitted);
-            DrawAnimationGroup("Timeline Samples", events, RuntimeTraceEventKind.AnimationProducerSampled, RuntimeTraceEventKind.TimelineVisualTime);
-            DrawAnimationGroup(
-                "Motion Matching",
-                events,
-                RuntimeTraceEventKind.MotionMatchingQuery,
-                RuntimeTraceEventKind.MotionMatchingTrajectory,
-                RuntimeTraceEventKind.MotionMatchingPoseHistory,
-                RuntimeTraceEventKind.MotionMatchingAdmission,
-                RuntimeTraceEventKind.MotionMatchingCandidateRejected,
-                RuntimeTraceEventKind.MotionMatchingSearchTraversal,
-                RuntimeTraceEventKind.MotionMatchingTopK,
-                RuntimeTraceEventKind.MotionMatchingPlan,
-                RuntimeTraceEventKind.MotionMatchingSelection,
-                RuntimeTraceEventKind.MotionMatchingPoseSource,
-                RuntimeTraceEventKind.MotionMatchingReset,
-                RuntimeTraceEventKind.MotionMatchingFrame);
-            DrawAnimationGroup(
-                "Playback Lifecycle",
-                events,
-                RuntimeTraceEventKind.AnimationPlaybackPending,
-                RuntimeTraceEventKind.AnimationPlaybackSelected,
-                RuntimeTraceEventKind.AnimationPlaybackRetained,
-                RuntimeTraceEventKind.AnimationPlaybackRetired,
-                RuntimeTraceEventKind.AnimationPlaybackCompleted,
-                RuntimeTraceEventKind.AnimationPlaybackReleased);
-            DrawAnimationGroup("Presentation", events, RuntimeTraceEventKind.PresentationInterpolated);
+            DrawAnimationGroup("Selection", events, s_SelectionKinds);
+            DrawAnimationGroup("Timeline Samples", events, s_TimelineSamplesKinds);
+            DrawAnimationGroup("Motion Matching", events, s_MotionMatchingKinds);
+            DrawAnimationGroup("Playback Lifecycle", events, s_PlaybackLifecycleKinds);
+            DrawAnimationGroup("Presentation", events, s_PresentationKinds);
         }
 
-        static void DrawFootPlacement(RuntimeDebugViewModel view)
+        void DrawFootPlacement(RuntimeDebugViewModel view)
         {
-            IReadOnlyList<RuntimeDebugEventView> events = Filter(
-                view,
-                RuntimeTraceChannel.FootPlacement,
-                RuntimeTraceEventKind.FootPlacementSnapshot);
+            IReadOnlyList<RuntimeDebugEventView> events = Filter(view, RuntimeTraceChannel.FootPlacement, s_FootPlacementSnapshotKinds);
             DrawEventSection(
                 "Foot Placement",
                 events,
@@ -330,9 +324,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                    $"sole {foot.CurrentAnimatedSole} raw {foot.RawLanding} {query} {landing}";
         }
 
-        static void DrawAnimationGroup(string title, IReadOnlyList<RuntimeDebugEventView> events, params RuntimeTraceEventKind[] kinds)
+        void DrawAnimationGroup(string title, IReadOnlyList<RuntimeDebugEventView> events, IReadOnlyList<RuntimeTraceEventKind> kinds)
         {
-            var matches = new List<RuntimeDebugEventView>();
+            List<RuntimeDebugEventView> matches = m_SectionEvents;
+            matches.Clear();
             for (int i = 0; i < events.Count; i++)
             {
                 if (ContainsKind(kinds, events[i].Event.Kind))
@@ -350,10 +345,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static IReadOnlyList<RuntimeDebugEventView> Filter(RuntimeDebugViewModel view, RuntimeTraceChannel channel, params RuntimeTraceEventKind[] kinds)
+        IReadOnlyList<RuntimeDebugEventView> Filter(RuntimeDebugViewModel view, RuntimeTraceChannel channel, IReadOnlyList<RuntimeTraceEventKind> kinds)
         {
-            IReadOnlyList<RuntimeDebugEventView> source = view.GetCurrentEvents(channel);
-            var result = new List<RuntimeDebugEventView>();
+            IReadOnlyList<RuntimeDebugEventView> source = Events(view, channel);
+            List<RuntimeDebugEventView> result = m_SectionEvents;
+            result.Clear();
             for (int i = 0; i < source.Count; i++)
             {
                 if (ContainsKind(kinds, source[i].Event.Kind))
@@ -414,6 +410,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [CustomEditor(typeof(FixedCharacterHost))]
     public sealed class FixedCharacterHostEditor : UnityEditor.Editor
     {
+        readonly CharacterRuntimeDiagnosticsInspector m_RuntimeDiagnostics = new();
+
         void OnEnable()
         {
             RuntimeDebugSession.Shared.Changed += OnRuntimeDebugChanged;
@@ -425,6 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeDebugSession.Shared.Changed -= OnRuntimeDebugChanged;
             TimelineWorkspaceModeBridge.RuntimeDebugEnabledChanged -= OnRuntimeDebugEnabledChanged;
             RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
+            m_RuntimeDiagnostics.Clear();
         }
 
         void OnRuntimeDebugChanged()
@@ -436,7 +435,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void OnRuntimeDebugEnabledChanged()
         {
             if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+            {
                 RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
+                m_RuntimeDiagnostics.Clear();
+            }
             Repaint();
         }
 
@@ -448,7 +450,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FixedCharacterHost host = target as FixedCharacterHost;
             if (host == null)
                 return;
-            CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
+            m_RuntimeDiagnostics.DrawRuntimeDiagnostics(
                 this,
                 host.GetInstanceID(),
                 null,

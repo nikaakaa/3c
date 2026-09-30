@@ -183,6 +183,25 @@ Authoring MUST 支持片段、曲线、动画、特效和镜头的编排以及�
 - **THEN** 作者固定区间 MUST 保持其正式边界
 - **AND** 只有声明 TreeDecision 的作者 TreeClip MUST 使用动态退出规则，普通节点投影片段 MUST NOT 变成 TreeClip 资产
 
+#### Scenario: 观察表现 Marker 与 TreeClip 的单次图执行
+
+- **WHEN** 正式表现执行器求值 Marker 或 TreeClip hook，并有节点或值观察 interest
+- **THEN** 系统 MUST 使用该次编译 SourceMap 记录实际节点生命周期、作者连线选择及输入输出值，并按技能释放、playback、cycle、hook 与图调用发生身份区分
+- **AND** 父调用 MUST 来自正式 Timeline provenance，嵌套调用 MUST 使用声明的父子关系及实际 owner 生命周期，不按当前作者图推算或提前显示未执行图
+- **AND** 帧内宏参数 MUST 只读展示；单次表现执行 MUST NOT 因观察而增加 Gameplay 黑板生命周期或外部调值入口
+
+#### Scenario: 表现候选在正式提交前失败
+
+- **WHEN** 表现图已经求值，但 Pose、Timeline、时钟、相机或表现桥的正式帧提交没有完成
+- **THEN** 表现图候选记录 MUST 随该帧丢弃，MUST NOT 提前进入 Live、Capture 或 History
+- **AND** 只有正式表现提交完成后的记录 MUST 使用对应表现帧位置发布，不把表现位置标为逻辑 Tick
+
+#### Scenario: 表现观察达到记录容量
+
+- **WHEN** 同一候选表现帧的观察记录达到正式诊断容量
+- **THEN** 采集 MUST 保持预分配容量并发布明确的记录缺口及丢失数量，MUST NOT 增长逐帧缓冲或中断 Gameplay 执行
+- **AND** 对应执行投影和历史 MUST NOT 宣称记录完整；节点结果与采样缺口 MUST NOT 被伪造为持续执行区间
+
 ### Requirement: Preview 执行游标必须显示对应历史状态
 
 用户 MUST 能拨回执行游标查看当时的节点位置、变量和角色情况。历史事实 MUST 使用记录时的来源与版本，MUST NOT 借用未来退出、后续迭代或当前作者图补推。角色结果 MUST 来自记录的正式表现状态或正式恢复/重放；缺少数据或恢复能力 MUST 明确显示，不把实时角色当成历史画面。只读 Capture 浏览 MUST NOT 修改运行目标；需要恢复当前预览 Session 时 MUST 暂停并明确采用正式恢复流程，不另造执行器或隐式影响实际游戏。

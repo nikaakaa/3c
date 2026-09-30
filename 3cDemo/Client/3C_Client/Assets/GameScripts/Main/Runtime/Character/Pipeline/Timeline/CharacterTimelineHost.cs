@@ -234,7 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 actionContext.ActionId,
                 actionContext.PredictionKey,
                 inputSequence,
-                tick.Value);
+                tick.Value,
+                actionContext.SkillId);
             bool requested = RequestTimelinePlayback(
                 timeline,
                 actionContext.ActionId,
@@ -327,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 results.Add(new AbilityTimelineLogicMotion(
                     source,
                     sourceIdentity,
-                    new CharacterSkillId(active.ActionContext.ActionId),
+                    active.ActionContext.SkillId,
                     active.Provenance.SourceActivationGeneration,
                     contribution.DisplacementX,
                     contribution.DisplacementY,
@@ -379,7 +380,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Vector2 targetOffset = request.TargetPlanarOffset;
                 results.Add(new AbilityTimelineLogicMotionWarp(
                     source,
-                    new CharacterSkillId(active.ActionContext.ActionId),
+                    active.ActionContext.SkillId,
                     active.ActionContextId,
                     active.ActionContext.ActionInstanceId,
                     active.ActionContext.PredictionKey,
@@ -785,7 +786,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     snapshot.ActionContext.ActionId,
                     snapshot.ActionContext.PredictionKey,
                     snapshot.InputSequence,
-                    snapshot.StartTick.Value),
+                    snapshot.StartTick.Value,
+                    snapshot.ActionContext.SkillId),
                 ActionContextId = snapshot.ActionContext.ContextId,
                 ActionInstanceId = snapshot.ActionContext.InstanceId,
                 RuntimeInstance = CreateRuntimeInstance(
@@ -1050,7 +1052,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     m_PresentationCandidates.Add(frame);
                     PresentationGraphFramePreparing?.Invoke(frame);
-                    PresentationGraphs.Execute(in active.Provenance, in frame, in facts, m_Host);
+                    PresentationGraphs.Execute(in active.Provenance, active.ActionContext.SkillId.Value, active.ActionInstanceId,
+                        in frame, in facts, m_Host);
                     PresentationFramePrepared?.Invoke(frame);
                 }
                 bool ended = hasSample && sample.EndsPlayback;
@@ -1139,15 +1142,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ReleaseConfirmedPlaybacks(clock.ConfirmedTimelineTick);
         }
 
+        internal void PublishCommittedPresentationGraphDiagnostics(ulong frame) => PresentationGraphs.CommitDiagnostics(frame);
+
         internal void DiscardPresentationFrame(ulong frame)
         {
             m_Host?.DiscardPresentationFrame(frame);
+            PresentationGraphs.DiscardDiagnostics();
             m_PresentationCandidates.Clear();
             m_PresentationEndCandidates.Clear();
         }
 
         public void Dispose()
         {
+            PresentationGraphs.DetachRuntimeDiagnostics();
             if (m_Host == null)
                 return;
             m_Host.CommittedEvaluation -= OnCommittedTimelineEvaluation;

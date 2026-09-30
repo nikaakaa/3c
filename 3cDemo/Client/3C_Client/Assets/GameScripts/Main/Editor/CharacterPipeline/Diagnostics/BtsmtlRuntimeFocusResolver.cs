@@ -174,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RuntimeTimelinePlaybackProvenance provenance = timeline.Event.Payload.TimelinePlayback;
             return graph.CharacterRuntimeId == timeline.Event.RuntimeInstance.CharacterRuntimeId &&
+                   (graph.TimelinePlaybackId == 0 || graph.TimelinePlaybackId == timeline.Event.RuntimeInstance.TimelinePlaybackId) &&
                    graph.ActionInstanceId == timeline.Event.RuntimeInstance.ActionInstanceId &&
                    (provenance.SourceGraphRuntimeId == Guid.Empty || graph.GraphRuntimeId == provenance.SourceGraphRuntimeId) &&
                    graph.ActivationGeneration == provenance.SkillExecutionGeneration &&

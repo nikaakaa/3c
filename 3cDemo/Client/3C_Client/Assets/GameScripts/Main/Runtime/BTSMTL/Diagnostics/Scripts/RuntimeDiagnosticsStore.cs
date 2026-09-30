@@ -383,7 +383,7 @@ namespace BTSMTL.Diagnostics
 
         static bool StateEquivalent(in RuntimeTraceEvent left, in RuntimeTraceEvent right)
         {
-            if ((left.Kind is RuntimeTraceEventKind.ValueSampled or RuntimeTraceEventKind.ValueSamplingLimited or
+            if ((left.Kind is RuntimeTraceEventKind.ValueSampled or RuntimeTraceEventKind.ValueSamplingLimited or RuntimeTraceEventKind.TraceSamplingLimited or
                 RuntimeTraceEventKind.NodeRunning or RuntimeTraceEventKind.NodeWaiting or
                 RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.EdgeEvaluated or
                 RuntimeTraceEventKind.StateTransitionSelected or RuntimeTraceEventKind.StateTransitionEvaluated) && left.Position != right.Position)

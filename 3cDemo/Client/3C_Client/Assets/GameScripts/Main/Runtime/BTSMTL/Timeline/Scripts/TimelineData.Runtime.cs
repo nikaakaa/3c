@@ -271,8 +271,10 @@ namespace BTSMTL.Timeline
             string actionId,
             ulong predictionKey,
             ulong inputSequence,
-            ulong startLocalLogicTick)
+            ulong startLocalLogicTick,
+            CharacterSkillId skillId)
         {
+            SkillId = skillId;
             ActionInstanceId = actionInstanceId;
             ActionId = actionId ?? string.Empty;
             PredictionKey = predictionKey;
@@ -285,6 +287,7 @@ namespace BTSMTL.Timeline
         public ulong PredictionKey { get; }
         public ulong InputSequence { get; }
         public ulong StartLocalLogicTick { get; }
+        public CharacterSkillId SkillId { get; }
         public bool IsValid => ActionInstanceId != 0;
     }
 

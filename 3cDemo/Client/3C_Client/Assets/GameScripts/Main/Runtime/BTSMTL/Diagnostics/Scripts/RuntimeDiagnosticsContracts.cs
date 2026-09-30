@@ -450,7 +450,8 @@ namespace BTSMTL.Diagnostics
         SimulationCheckpointCaptured,
         LoopIterationEntered,
         LoopIterationCompleted,
-        BlackboardSnapshot
+        BlackboardSnapshot,
+        TraceSamplingLimited
     }
 
     public enum DebugValueKind

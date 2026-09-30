@@ -506,6 +506,7 @@ namespace BTSMTL.Diagnostics.Editor
         {
             readonly Dictionary<SpanKey, int> m_Open;
             int m_MissingStartCount;
+            int m_SamplingLimitCount;
             internal readonly List<RuntimeExecutionSpan> Spans;
             internal readonly Dictionary<(RuntimeTraceDomain, Guid, ulong), ulong> ClockPositions;
             internal int UnmappedEventCount { get; private set; }
@@ -526,12 +527,13 @@ namespace BTSMTL.Diagnostics.Editor
                 ClockPositions.Clear();
                 UnmappedEventCount = 0;
                 m_MissingStartCount = 0;
+                m_SamplingLimitCount = 0;
                 LatestLogicPosition = 0;
                 LatestPresentationPosition = 0;
             }
 
             internal bool IsComplete(long evictedEvents) =>
-                evictedEvents == 0 && Spans.Count != 0 && UnmappedEventCount == 0 && m_MissingStartCount == 0 && m_Open.Count == 0;
+                evictedEvents == 0 && Spans.Count != 0 && UnmappedEventCount == 0 && m_MissingStartCount == 0 && m_SamplingLimitCount == 0 && m_Open.Count == 0;
 
             internal void Append(RuntimeTraceEvent value, RuntimeDebugSourceMapSnapshot sourceMap,
                 IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
@@ -544,6 +546,8 @@ namespace BTSMTL.Diagnostics.Editor
                     LatestLogicPosition = value.Position;
                 if (value.Kind == RuntimeTraceEventKind.BlackboardSnapshot)
                     return;
+                if (value.Kind is RuntimeTraceEventKind.TraceSamplingLimited or RuntimeTraceEventKind.ValueSamplingLimited)
+                    m_SamplingLimitCount++;
                 RuntimeSourceElementHandle handle = value.Source;
                 RuntimeSourceElementKey source = default;
                 RuntimeDebugSourceMapSnapshot eventSourceMap = null;
@@ -727,10 +731,12 @@ namespace BTSMTL.Diagnostics.Editor
             int tickGroupIndex = 0;
             int presentationGroupIndex = 0;
             int unmappedEventCount = 0;
+            bool samplingLimited = false;
             bool checkSourceCoverage = sourceMap != null || sourceMaps != null;
             for (int i = 0; i < selectedEvents.Count; i++)
             {
                 RuntimeTraceEvent value = selectedEvents[i];
+                samplingLimited |= value.Kind is RuntimeTraceEventKind.TraceSamplingLimited or RuntimeTraceEventKind.ValueSamplingLimited;
                 if (checkSourceCoverage && value.Source.IsValid)
                 {
                     RuntimeDebugSourceMapSnapshot resolvedMap = sourceMap;
@@ -765,7 +771,7 @@ namespace BTSMTL.Diagnostics.Editor
             presentationFrames.Clear();
             HashSet<CheckpointKey> checkpointKeys = CheckpointKeys;
             checkpointKeys.Clear();
-            bool complete = capture.EvictedEvents == 0 && grouped.Count != 0;
+            bool complete = capture.EvictedEvents == 0 && grouped.Count != 0 && !samplingLimited;
             foreach (EventGroup<TickKey> group in grouped)
             {
                 var record = new RuntimeExecutionTickRecord(
@@ -954,7 +960,7 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeInstanceKey candidate = value.RuntimeInstance;
                 bool actionMatch = MatchesAction(instance, value);
                 if (IsTimelineFamily(instance.Kind) &&
-                    IsTimelineFamily(candidate.Kind))
+                    candidate.TimelinePlaybackId != 0)
                 {
                     actionMatch = MatchesTimelineRuntime(instance, candidate);
                 }
@@ -1004,7 +1010,7 @@ namespace BTSMTL.Diagnostics.Editor
                     selectedPresentationFrames.Contains(new PresentationFrameKey(value.Position, value.ExecutionBranchId));
                 if (presentationMatch &&
                     IsTimelineFamily(instance.Kind) &&
-                    IsTimelineFamily(candidate.Kind) &&
+                    candidate.TimelinePlaybackId != 0 &&
                     !MatchesTimelineRuntime(instance, candidate))
                 {
                     presentationMatch = false;
@@ -1013,7 +1019,7 @@ namespace BTSMTL.Diagnostics.Editor
                     relatedGraphs.Contains(new GraphBranchKey(candidate.GraphRuntimeId, value.ExecutionBranchId));
                 if (graphMatch &&
                     IsTimelineFamily(instance.Kind) &&
-                    IsTimelineFamily(candidate.Kind) &&
+                    candidate.TimelinePlaybackId != 0 &&
                     !MatchesTimelineRuntime(instance, candidate))
                 {
                     graphMatch = false;
@@ -1101,7 +1107,7 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeInstanceKey candidate)
         {
             if (!IsTimelineFamily(selected.Kind) ||
-                !IsTimelineFamily(candidate.Kind) ||
+                candidate.TimelinePlaybackId == 0 ||
                 selected.CharacterRuntimeId != candidate.CharacterRuntimeId ||
                 selected.SourceOperationIndex != candidate.SourceOperationIndex ||
                 selected.TimelinePlaybackId == 0 ||
@@ -1112,12 +1118,11 @@ namespace BTSMTL.Diagnostics.Editor
             {
                 return false;
             }
-            if (selected.Kind == RuntimeInstanceKind.TreeClip &&
-                candidate.Kind == RuntimeInstanceKind.TreeClip)
-            {
-                return selected.TreeClipCycle == candidate.TreeClipCycle &&
-                       selected.TreeClipOperationIndex == candidate.TreeClipOperationIndex;
-            }
+            if (selected.Kind == RuntimeInstanceKind.TreeClip && candidate.TreeClipCycle >= 0 &&
+                selected.TreeClipCycle != candidate.TreeClipCycle)
+                return false;
+            if (selected.Kind == RuntimeInstanceKind.TreeClip && candidate.Kind == RuntimeInstanceKind.TreeClip)
+                return selected.TreeClipOperationIndex == candidate.TreeClipOperationIndex;
             return true;
         }
 
@@ -1242,6 +1247,8 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeSourceElementKey source,
             bool hasSource)
         {
+            if (eventKind is RuntimeTraceEventKind.ValueSampled or RuntimeTraceEventKind.ValueSamplingLimited or RuntimeTraceEventKind.TraceSamplingLimited)
+                return RuntimeExecutionSpanKind.Point;
             if (eventKind is RuntimeTraceEventKind.LoopIterationEntered or RuntimeTraceEventKind.LoopIterationCompleted)
                 return RuntimeExecutionSpanKind.Loop;
             if (eventKind is RuntimeTraceEventKind.TimelineRequested or

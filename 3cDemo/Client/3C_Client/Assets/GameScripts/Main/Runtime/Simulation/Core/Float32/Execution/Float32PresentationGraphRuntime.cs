@@ -94,6 +94,7 @@ namespace ThirdPersonSimulation
         readonly int[] m_ResetStateSlots;
         readonly ProgramSourceMapEntry[] m_CameraSources;
         readonly string[][] m_InputPortNames;
+        readonly string[] m_DefaultOutputPortNames;
         readonly bool[] m_Parameters;
         readonly Values m_Values;
         readonly OperationControlRuntime<Target> m_Control;
@@ -136,6 +137,7 @@ namespace ThirdPersonSimulation
             m_Producers = new string[data.Operations.Count];
             m_CameraSources = new ProgramSourceMapEntry[data.Operations.Count];
             m_InputPortNames = new string[data.Operations.Count][];
+            m_DefaultOutputPortNames = new string[data.Operations.Count];
             m_Activations = new PresentationCameraRequest[data.Operations.Count];
             m_Retirements = new PresentationCameraRequest[data.Operations.Count];
             m_Defaults = new AbilityStateValue[data.StateSlots.Count];
@@ -316,6 +318,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < inputNames.Length; i++)
                 inputNames[i] = ports.Inputs[i].Identity;
             m_InputPortNames[handle.Value] = inputNames;
+            m_DefaultOutputPortNames[handle.Value] = ports.Outputs.Count == 1 ? ports.Outputs[0].Identity : string.Empty;
             foreach (int slot in operation.StateSlots)
                 m_Defaults[slot] = InitialValue(m_Data.StateSlots[slot]);
             ReadOnlySpan<CompiledValueInputBinding> inputs = m_Layout.ValueInputs(handle);
@@ -431,7 +434,8 @@ namespace ThirdPersonSimulation
             protected override void TraceResult(SimulationOperation operation, string port, AbilityStateValue value, bool predictive)
             {
                 if (!predictive && m_Owner.m_CaptureValueTrace)
-                    m_Owner.m_Output.TraceValue(operation.Handle, port, value, false);
+                    m_Owner.m_Output.TraceValue(operation.Handle, string.IsNullOrEmpty(port)
+                        ? m_Owner.m_DefaultOutputPortNames[operation.Handle.Value] : port, value, false);
             }
             protected override void TraceInput(SimulationOperation operation, CompiledValueInputBinding input, AbilityStateValue value, bool predictive)
             {
@@ -446,7 +450,11 @@ namespace ThirdPersonSimulation
             internal Target(Float32PresentationGraphRuntime owner) => m_Owner = owner;
             public bool DiagnosticsEnabled => m_Owner.m_CaptureGraphTrace || m_Owner.m_CaptureValueTrace;
             public bool ControlTraceEnabled => m_Owner.m_CaptureGraphTrace;
-            public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) => m_Owner.m_Output.TraceEdge(edge, selected, passed);
+            public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed)
+            {
+                if (m_Owner.m_CaptureGraphTrace)
+                    m_Owner.m_Output.TraceEdge(edge, selected, passed);
+            }
             public int ReadInt32(int slot) => m_Owner.m_State[slot].Int32;
             public void WriteInt32(int slot, int value) => m_Owner.m_State[slot] = AbilityStateValue.FromInt32(value);
             public ulong ReadUInt64(int slot) => m_Owner.m_State[slot].UInt64;

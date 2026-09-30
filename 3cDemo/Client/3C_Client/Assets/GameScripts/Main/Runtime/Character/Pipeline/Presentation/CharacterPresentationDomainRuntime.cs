@@ -528,6 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TimelinePresentationBridge?.CommitFrame();
                 phase = AnimationPresentationFramePhase.CameraPresent;
                 m_Camera?.Present(bodyFrame, in m_EventFrame, context);
+                m_TimelineHost?.PublishCommittedPresentationGraphDiagnostics(context.RenderFrame);
                 PublishCommittedPoseObservations(in publication, in bodyFrame, in factFrame, context, m_DiagnosticCommands);
             }
             catch (Exception exception)

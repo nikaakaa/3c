@@ -193,7 +193,7 @@ FlowCanvas 的实际页面导航仍由 `RuntimeDebugSourceNavigator` 和 `Btsmtl
 - FixedCharacterRuntimeDiagnosticsAdapter 在装配时绑定值槽的声明来源，发布时沿用正式角色、技能、Action、Graph invocation 与代次。运行事实明确包含 BlackboardStateSlot、BlackboardScope、BlackboardOwnerIndex 和 BlackboardOwnerGeneration；Capture payload 比较与证据哈希同步覆盖这些字段，不把同值但不同作用域代次的写入合并。
 - Blackboard interest 通过既有 diagnostics aggregate、EvaluatePass、CharacterEvaluationRuntime、Invocation、OperationControl 和 TraceSink 传递；只看 Graph 或端口值而未订阅 Blackboard 时不生成黑板写入记录。事件使用值类型，不为每次写入新建对象或格式化字符串；既有 Trace List 首次扩容及整体 Trace 大小仍不能据静态检查宣称全链路零分配或性能已达标。
 - 执行时间线把该声明事件显示为瞬时记录；选中后显示记录值、采用 Tick 和作用域代次，双击可以进入声明所在图。正式 History 前缀自然包含此前已经提交的写入，不读取未来值或当前作者默认值。
-- 本批接通普通 BlackboardSet 的事实；当前快照、侧栏和 Fixed 调值核心分别见下文。Float32 表现图诊断发布仍未完成；Fixed Preview 调值交互见后续接入，2.7、4.18 的代码接入已完成。
+- 本批接通普通 BlackboardSet 的事实；当前快照、侧栏和 Fixed 调值核心分别见下文。Float32 表现图提交诊断代码已在后续批次接入，运行验证仍未完成；Fixed Preview 调值交互见后续接入，2.7、4.18 的代码接入已完成。
 - 扩展静态检查包含 ThirdPersonSimulation.Unity，覆盖 12 个程序集、728 个源码文件，Roslyn 语义错误为 0；未 Emit、刷新或运行 Unity，未新增测试，没有本批黑板交互或 FPS/GC 实测。
 
 ## Preview 黑板记录侧栏
@@ -211,7 +211,7 @@ FlowCanvas 的实际页面导航仍由 `RuntimeDebugSourceNavigator` 和 `Btsmtl
 - 新 BlackboardSnapshot 记录携带值槽、作用域、owner、lifetime 和有效性。RuntimeLiveStateKey 同时包含黑板技能标识与值槽，防止复用同一声明来源的不同编译槽相互覆盖；Live 与 History 使用同一个事件键构造入口，payload 比较与证据哈希同步覆盖新增字段。
 - Preview 侧栏合并快照与正式 BlackboardWritten，按技能、释放实例和值槽采用已记录的最后事件。历史游标位于一次写入之后、Tick 末快照之前时，立即显示该次写入；Character 作用域合并到角色实例，不按写入它的技能调用复制变量。侧栏显示未激活及 Config 只读状态，仍通过来源映射定位声明。
 - BlackboardSnapshot 属于观察采样，不生成执行 Timeline Clip；原写入事件继续显示为瞬时记录。列表保持虚拟化与按来源变化刷新，未新增逐帧作者扫描或编译。
-- 边界：快照从首个已提交 Tick 开始；尚未创建的技能实例不伪造运行值。Float32 表现图的帧内参数观察尚未接入；它不拥有 Gameplay 黑板可写生命周期。Fixed 写入核心及编辑控件见下文，没有宣称通过运行验收。
+- 边界：快照从首个已提交 Tick 开始；尚未创建的技能实例不伪造运行值。Float32 表现图的帧内参数通过下述只读端口采样观察，不属于 Gameplay 黑板快照，也不拥有 Gameplay 黑板可写生命周期。Fixed 写入核心及编辑控件见下文，没有宣称通过运行验收。
 - 12 个程序集、730 个源码文件通过 Roslyn 静态语义检查，错误数为 0。未 Emit、刷新或运行 Unity，未新增测试；静态检查不能证明实际 UI、生命周期回看、FPS 或 GC 已通过。
 
 ## 黑板声明绑定与统一写入元数据
@@ -230,7 +230,7 @@ FlowCanvas 的实际页面导航仍由 `RuntimeDebugSourceNavigator` 和 `Btsmtl
 - 普通节点写入与命令写入共用 StoreValue、写入戳和 ActionWindow 投射。命令使用正式 BlackboardCommand 来源与请求序号，不伪造 Setter 节点或 Graph invocation。Fixed 诊断发布按真实角色/ActionInstance 与变量声明显示采用事件；节点写入继续保留原 Graph invocation 来源。
 - 请求候选结果在外层事务开始时重置，只在 Character/World 原子状态发布后移出队列并成为可读取结果。角色求值结束、世界求解失败或丢弃候选都不能提前确认成功；同一外层事务的后续 Forward Step 不重复采用已处理请求。Replay Step 不重新消费调值请求，未新增调参重放或历史分叉协议。
 - BlackboardWriteStamp 增加 CommandSequence，Fixed/Float32 状态格式版本由 12 升为 13，槽 codec 标识改为 state.blackboard-write-stamp/v2；EventId 及来源编解码同步表达命令身份。旧编译图和旧格式 Snapshot 需要按正式 Build/新 Session 边界重新生成，不提供兼容读取。
-- Preview 编辑控件接入见下文。Float32 表现图只支持帧内宏参数，不作为 Gameplay 黑板外部调值目标；其只读执行诊断仍需接通。最终 Roslyn 静态检查覆盖 12 个程序集、731 个源码文件，错误数为 0；限定文件 diff 检查与 OpenSpec strict 校验通过。未操作 Unity，未新增测试，未验证实际调值、FPS 或 GC。
+- Preview 编辑控件接入见下文。Float32 表现图只支持帧内宏参数，不作为 Gameplay 黑板外部调值目标；其只读执行诊断已在下述表现候选提交链接入，未取得运行证据。最终 Roslyn 静态检查覆盖 12 个程序集、731 个源码文件，错误数为 0；限定文件 diff 检查与 OpenSpec strict 校验通过。未操作 Unity，未新增测试，未验证实际调值、FPS 或 GC。
 
 ## Preview 黑板调值编辑控件
 
@@ -239,12 +239,12 @@ FlowCanvas 的实际页面导航仍由 `RuntimeDebugSourceNavigator` 和 `Btsmtl
 - 只有当前隐藏 Preview、当前内容版本、实时观察及可写活动变量能提交；Config、历史、其他运行目标和失效作用域保持只读。编辑器把明确实例与原 owner 的强类型命令交给 FixedCharacterRuntime，不直接写诊断记录或状态槽，也不创建 Session/执行器。
 - 提交先显示“尚未采用”，随后读取正式事务发布结果，显示实际采用 Tick 或实例结束、作用域结束、作用域换代原因。暂停时命令等待播放或单步，不自行推进 Tick。返回的已采用值更新编辑字段；之后节点继续按原规则读写，侧栏显示其正式最新快照。
 - 仅有待处理请求时订阅 EditorApplication.update 读取结果；收到结果、目标结束及视图卸载时撤销轮询。预览结束释放注册目标引用；历史与目标切换禁用旧草稿提交。控件不在刷新中扫描资产、Build 图或求值。
-- 仍未完成：Float32 表现图的节点、分支和帧内参数观察，Workbench 其余未勾选能力及真实运行验收。2.7、4.18 按 Fixed 正式黑板的代码接入完成标记，不把这两个实施项完成当作完整 Workbench 可用。本批最终 Roslyn 静态检查覆盖 12 个程序集、732 个源码文件，错误数为 0；限定文件 diff 检查与 OpenSpec strict 校验通过。未启动 Unity、未新增测试，没有真实交互与 FPS/GC 验证。
+- 仍未完成：表现图观察的实际运行、Workbench 其余未勾选能力及真实运行验收。2.7、4.18 按 Fixed 正式黑板的代码接入完成标记，不把这两个实施项完成当作完整 Workbench 可用。本批最终 Roslyn 静态检查覆盖 12 个程序集、732 个源码文件，错误数为 0；限定文件 diff 检查与 OpenSpec strict 校验通过。未启动 Unity、未新增测试，没有真实交互与 FPS/GC 验证。
 
 ## Float32 表现图边界与求值开销
 
 - 实际入口为 CharacterTimelinePresentationGraphRuntime → Float32PresentationGraphRuntime。每次 Marker / TreeClip hook 求值从默认状态开始，仅允许已编译宏参数读写；ParameterSlot 明确拒绝访问 Gameplay 黑板，且一次调用必须完成。它不是 Float32CharacterRuntime 的角色黑板实例，不能套用 Fixed 调值命令或新增持续覆盖生命周期。
-- 因此修正此前“Float32 外部调值尚未接入”的笼统描述：当前 Workbench 应记录该表现调用的节点、分支和帧内参数供只读查看。该诊断接入仍未完成；表现参数不因此成为 Gameplay 可调变量。
+- 因此修正此前“Float32 外部调值尚未接入”的笼统描述：当前 Workbench 应记录该表现调用的节点、分支和帧内参数供只读查看。该诊断代码接入见下文；表现参数不因此成为 Gameplay 可调变量。
 - 相机输出节点的唯一来源在准备阶段解析并绑定，CreateOutputIdentity 不再每次扫描整个 SourceMap。来源缺失或重复仍在正式准备边界报错。每次求值只重置已准备宏参数及可达表现操作的状态槽，不再复制整份技能状态数组；不保留上一次表现调用的业务状态。
 - 删除 PrepareOperation / PrepareEdges 中始终为零、且结果没有消费者的 capacity 数组与累计值，保留原递归检测、可执行能力校验和初始化遍历。
 - 静态检查曾因引用旧 BTSMTL.Timeline.Runtime DLL，报告 InstallContent 与 Prepare 签名不匹配；当前源码已经具有所需接口。检查器现同时解析 Timeline、Timeline.Tree、Timeline.Runtime 的当前源码，15 个程序集、777 个源码文件通过 Roslyn 语义检查，错误数为 0。这不是 Unity 编译或运行证据，也不能证明 FPS/GC 已达标。
@@ -254,8 +254,19 @@ FlowCanvas 的实际页面导航仍由 `RuntimeDebugSourceNavigator` 和 `Btsmtl
 - AbilityDebugSourceMapFiller 从 Fixed Unity 实现层迁入共享客户端 Diagnostics，保留脚本 GUID。Fixed Character、Rollback Character 与 Fixed 诊断适配器同步使用共享实现；删除旧位置，不保留转发类、别名或第二套填充逻辑。
 - CharacterTimelinePresentationGraphRuntime 在安装每份实际包含 Presentation Marker / TreeClip 的编译程序时，用同一填充器生成只读 SourceMap。映射按 float32-presentation/AbilityId 与编译 ContentHash 标识，保留正式节点、端口、边、声明与图调用来源，不用当前作者资产补推。
 - CharacterTimelineHost 绑定 RuntimeDiagnosticsContext 时注册这些表现映射；它们进入既有 SourceMap catalog，可随记录版本交给 Live/Capture/History。执行程序与对应映射保存在同一安装项中，不合并到 Fixed 角色版本或 Timeline 作者版本。
-- 此批完成映射归属及注册；Float32 表现图节点/分支/值事实的采集、候选暂存、提交发布与丢弃清理仍未接通，不能据此声称表现图高亮或历史导航已可用。
+- 此批完成映射归属及注册；Float32 表现图节点/分支/值事实的采集与提交见下述接入记录，单凭映射注册不能证明表现图高亮或历史导航可用。
 - 静态检查同步迁移源文件位置并纳入 Rollback Unity 调用方，16 个程序集、784 个源码文件通过 Roslyn 语义检查，错误数为 0。未运行 Unity，未新增测试。
+
+## 表现图节点、连线和值的候选提交诊断
+
+- Float32PresentationGraphRuntime 的正式输出接口提供节点生命周期、作者连线和类型值回调。观察 interest 在每次求值入口确定；没有节点和值 interest 时不执行采集回调。输入端口名与默认单输出端口在准备阶段绑定，不在高频链路生成端口合同或格式化字符串。帧内参数继续按原单次求值合同重置，没有 Gameplay 黑板调值扩展。
+- CharacterTimelinePresentationGraphDiagnostics 在安装时按本次编译 SourceMap 建立各 hook 的来源与父子调用表。实际 owner 的进入回调为表现调用分配发生代次，节点激活代次沿用执行游标；重复帧、不同 playback、cycle、hook 和嵌套调用保持独立。根调用的父代次取正式 provenance.SourceActivationGeneration：它由 Fixed/Float32 CreateTimelineInvocationSource 从 ReadInvocationGeneration 提供，不是从作者资产猜测。
+- 表现执行先暂存值类型记录，缓冲在诊断装配时按现有 LiveStateCapacity 一次分配。回调没有列表扩容、业务对象副本或逐事件字符串生成；达到容量保留明确 TraceSamplingLimited、丢失数量和已有记录，不让观察改变 Gameplay 执行。FlowCanvas 对当前调用显示记录不完整，执行区间和历史完整性也包含该缺口。
+- 发布入口在 CharacterPresentationDomainRuntime 的 Pose、Timeline、Action bridge、表现时钟、相机及表现桥正式提交完成之后。仅此边界把表现图记录交给 RuntimeDiagnosticsContext 的 Presentation 域；早退或异常沿原 finally 调用 CharacterTimelineHost.DiscardPresentationFrame 清空候选。关闭宿主清空候选并释放诊断 Context 与预分配缓冲引用。不能在图 Evaluate 或 Timeline 局部提交时提前写入 Capture。
+- RuntimeDebug 继续按事件 ContentRevision 解析既有映射目录。端口值、节点无作者输出端口的结果和容量缺口明确作为瞬时采样，不再因来源是 Node/Graph 就生成错误的持续区间；真实编译宏入口的生命周期按 Graph 事件展示。
+- TimelinePlaybackActionContext 从正式 TimelineActionContextIdentity 保留真实 SkillId，正常创建与恢复同步迁移；ActionId 继续表达动作，不能从它反构技能身份。Motion/MotionWarp 输出与表现程序选择使用原 SkillId，不新增另一份来源、旧构造重载或从动作名称推断的路径。这项修改不改变 Snapshot 格式，原 Snapshot 已保存完整技能身份。程序选择同时使用正式技能标识，避免不同技能复用表现来源时误匹配。运行调用关联与 History 选择对已携带 playback 的表现图按 playback/cycle 限定，不因共用 RuntimeId 或表现帧就带入另一个 playback；FlowCanvas 的节点、连线和端口位置明确显示表现帧或 Tick。
+- FlowCanvas 值观察改用复用事件缓冲，并按真实 Sequence 取当前端口最新采样；删除旧 GetCurrentEvents 分配入口。角色 Inspector 的所有调用方同步迁移，缓存归该 Inspector 实例所有，按 ViewModel/Revision/Channel 刷新；筛选集合与临时列表复用，关闭或关闭观察后释放引用。没有保留新旧读取路径，仍未据此宣称 IMGUI 绘制或整个编辑器已零分配。
+- 本批最终静态检查覆盖 16 个程序集、785 个源码文件，Roslyn 语义错误为 0。第一次检查碰到并行 Float32 事务类型修改的两个中间错误，未改动该任务文件；当前源码修正后重新检查通过。未 Emit、刷新或运行 Unity，未新增测试；没有节点高亮、History 导航或 FPS/GC 的运行证明。4.13、4.14、5.2 及编辑器整体性能项继续保持未完成。
 
 ## 先前验证记录（不代表当前编译状态）
 

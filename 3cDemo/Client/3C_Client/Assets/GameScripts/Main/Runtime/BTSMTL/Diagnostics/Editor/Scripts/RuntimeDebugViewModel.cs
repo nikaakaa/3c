@@ -438,21 +438,6 @@ namespace BTSMTL.Diagnostics.Editor
                        StringComparison.Ordinal);
         }
 
-        public IReadOnlyList<RuntimeDebugEventView> GetCurrentEvents(RuntimeTraceChannel channel, RuntimeInstanceKey instance = default)
-        {
-            var result = new List<RuntimeDebugEventView>();
-            foreach (RuntimeDebugEventView eventView in m_CurrentEvents.Values)
-            {
-                if (eventView.Event.Channel != channel)
-                    continue;
-                if (instance.IsValid && !eventView.Event.RuntimeInstance.Equals(instance))
-                    continue;
-                result.Add(eventView);
-            }
-            result.Sort((left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence));
-            return result;
-        }
-
         public void CopyCurrentEvents(RuntimeTraceChannel channels, List<RuntimeDebugEventView> destination)
         {
             destination.Clear();

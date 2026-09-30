@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
         readonly List<RuntimeElementDebugState> m_States = new List<RuntimeElementDebugState>();
-        readonly List<RuntimeDebugEventView> m_ConnectionEvents = new List<RuntimeDebugEventView>();
+        readonly List<RuntimeDebugEventView> m_ObservationEvents = new List<RuntimeDebugEventView>();
         readonly List<RuntimeNodeExecutionObservation> m_ExecutionStates = new List<RuntimeNodeExecutionObservation>();
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeElementDebugState> m_Edges = new(StringComparer.Ordinal);
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Dictionary<(string Node, string Port), RuntimeDebugEventView> m_Values = new();
         bool m_CaptureValues;
         bool m_CanReadSnapshot;
-        bool m_ValueSamplingLimited;
+        bool m_SamplingLimited;
         bool m_CoverageGap;
         Func<bool> m_CanNavigateParent;
         Action m_NavigateParent;
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_NavigateParent = navigate;
             m_TimelineOpening = timelineOpening;
         }
-        public string StatusMessage => m_ValueSamplingLimited || m_CoverageGap
+        public string StatusMessage => m_SamplingLimited || m_CoverageGap
             ? $"{m_Binding.StatusMessage} · 该角色的诊断记录不完整"
             : m_Binding.StatusMessage;
         public bool CaptureValues
@@ -112,7 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (m_CaptureValues == value)
                     return;
                 m_CaptureValues = value;
-                m_ValueSamplingLimited = false;
+                m_SamplingLimited = false;
                 m_Values.Clear();
                 m_Dirty = true;
             }
@@ -146,7 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeNodeExecutionPhase.ForceStopped => "已强制停止",
                 _ => throw new ArgumentOutOfRangeException()
             };
-            return $"{label} · Tick {state.Event.Event.Position}";
+            string positionName = state.Event.Event.Domain == RuntimeTraceDomain.Presentation ? "表现帧" : "Tick";
+            return $"{label} · {positionName} {state.Event.Event.Position}";
         }
 
         static string WaitingLabel(string reason) => reason switch
@@ -174,8 +175,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!m_CaptureValues)
                 return "端口值采集已关闭";
             if (m_Values.TryGetValue((nodeId, portId), out RuntimeDebugEventView sample))
-                return $"{sample.Event.Payload.Value.DisplayValue()} · Tick {sample.Event.Position}";
-            return !m_CanReadSnapshot ? StatusMessage : m_ValueSamplingLimited || m_CoverageGap
+            {
+                string positionName = sample.Event.Domain == RuntimeTraceDomain.Presentation ? "表现帧" : "Tick";
+                return $"{sample.Event.Payload.Value.DisplayValue()} · {positionName} {sample.Event.Position}";
+            }
+            return !m_CanReadSnapshot ? StatusMessage : m_SamplingLimited || m_CoverageGap
                 ? "此端口没有保留的采样；该角色的诊断存在采样缺口"
                 : "此端口尚无值采集记录";
         }
@@ -187,7 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string label = state.Kind is RuntimeTraceEventKind.EdgeEvaluated or RuntimeTraceEventKind.StateTransitionEvaluated
                 ? state.Payload.Flag ? "条件通过" : "条件未通过"
                 : state.Payload.Name == "Value" ? "值已读取" : "已选中经过";
-            return $"{label} · Tick {state.Position}";
+            string positionName = state.Domain == RuntimeTraceDomain.Presentation ? "表现帧" : "Tick";
+            return $"{label} · {positionName} {state.Position}";
         }
 
         void OnChanged() => m_Dirty = true;
@@ -211,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Nodes.Clear();
             m_Edges.Clear();
             m_Values.Clear();
-            m_ValueSamplingLimited = false;
+            m_SamplingLimited = false;
             if (m_SelectInstance != null)
             {
                 RuntimeInstanceKey selected = m_SelectInstance(m_Session.ViewModel);
@@ -252,10 +257,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (state.Source.Kind == RuntimeSourceElementKind.Edge && m_EdgeIds.Contains(state.Source.ElementAuthoringId))
                     m_Edges[state.Source.ElementAuthoringId] = state;
             }
-            view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine, m_ConnectionEvents);
-            for (int i = 0; i < m_ConnectionEvents.Count; i++)
+            view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine, m_ObservationEvents);
+            for (int i = 0; i < m_ObservationEvents.Count; i++)
             {
-                RuntimeDebugEventView item = m_ConnectionEvents[i];
+                RuntimeDebugEventView item = m_ObservationEvents[i];
+                if (item.Event.Kind == RuntimeTraceEventKind.TraceSamplingLimited &&
+                    item.Event.RuntimeInstance.Equals(Instance))
+                    m_SamplingLimited = true;
                 ulong latestPosition = item.Event.Domain == RuntimeTraceDomain.Presentation
                     ? view.LatestPresentationFrame : view.LatestLogicTick;
                 if (!item.Event.RuntimeInstance.Equals(Instance) ||
@@ -274,18 +282,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_PulseUntil = Math.Max(m_PulseUntil, until);
             }
             if (m_CaptureValues)
-                foreach (RuntimeDebugEventView sample in view.GetCurrentEvents(RuntimeTraceChannel.Values))
+            {
+                view.CopyCurrentEvents(RuntimeTraceChannel.Values, m_ObservationEvents);
+                for (int i = 0; i < m_ObservationEvents.Count; i++)
                 {
-                    if (sample.Event.Kind == RuntimeTraceEventKind.ValueSamplingLimited)
+                    RuntimeDebugEventView sample = m_ObservationEvents[i];
+                    if (sample.Event.Kind is RuntimeTraceEventKind.ValueSamplingLimited or RuntimeTraceEventKind.TraceSamplingLimited &&
+                        sample.Event.RuntimeInstance.Equals(Instance))
                     {
-                        m_ValueSamplingLimited = true;
+                        m_SamplingLimited = true;
                         continue;
                     }
                     var key = (sample.Source.ElementAuthoringId, sample.Source.PortAuthoringId);
                     if (sample.Event.RuntimeInstance.Equals(Instance) && sample.Source.GraphAuthoringId == m_GraphId && sample.Source.Kind == RuntimeSourceElementKind.Port &&
-                        sample.Event.Kind == RuntimeTraceEventKind.ValueSampled && m_ValuePortIds.Contains(key))
-                        m_Values.TryAdd(key, sample);
+                        sample.Event.Kind == RuntimeTraceEventKind.ValueSampled && m_ValuePortIds.Contains(key) &&
+                        (!m_Values.TryGetValue(key, out RuntimeDebugEventView previous) || sample.Event.Sequence > previous.Event.Sequence))
+                        m_Values[key] = sample;
                 }
+            }
             m_RepaintPending = true;
             RepaintIfNeeded(now);
         }
@@ -323,7 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Graph.editorObservation = null;
             m_Nodes.Clear();
             m_Edges.Clear();
-            m_ConnectionEvents.Clear();
+            m_ObservationEvents.Clear();
             ClearConnectionPulses();
             m_Values.Clear();
         }

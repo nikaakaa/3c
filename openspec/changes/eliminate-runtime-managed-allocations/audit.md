@@ -2135,3 +2135,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `EvaluateOperation` 每个操作节点先按 ID 查 values 缓存和 visiting，再按 ID 从 operation dictionary 查 definition；Not、逻辑和比较子操作继续按 ID 递归，同一候选规则每次求值重复执行拓扑查找。
 - PrepareGraphs 现在构建直接链接的 BoundRuleOperation graph：每个节点持有 ID、definition、variable 和子节点引用；输出根节点绑定到候选 transition。求值直接遍历节点引用，values 缓存和 visiting 环检测仍按 ID 工作。
 - 该改动删除每个规则节点和子节点的 operation dictionary 查找，并把 values/visiting 参数改为具体 Dictionary/HashSet。Rule output ID 无效仍在 PrepareGraphs 报原错误；子操作引用缺失从求值期提前到规则图准备期。共享 RuleGraph、DAG 缓存、环检测、短路和异常时机（缺失子引用除外）保持。静态核对所有子节点调用点、支持的 operation kind、无效 output、null rule、共享图和循环引用生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP303 State Machine rule evaluation 槽位缓存（2026-09-30，已实施，本轮未编译）
+
+- 规则求值仍用按 ID 的 Dictionary 缓存结果、HashSet 检测递归环；每个节点访问缓存和环标记都要哈希，候选评估前还要清理两个容器。
+- 准备期为每条 RuleGraph 分配固定 Results、ResultVersions、VisitVersions 数组，并为每个 BoundRuleOperation 分配 Slot。EvaluateRule 递增 graph 版本；节点命中当前结果版本则复用，命中当前访问版本则判定环，完成后写入结果版本。
+- 该改动删除每次候选规则的容器清理和每个节点的 ID 哈希查找/删除，版本重置只在 int 翻转边界发生。DAG 共享缓存、当前递归栈环检测、错误消息和短路求值顺序保持；结果异常后下一候选使用新版本。静态核对根调用、全部子操作调用、Slot 唯一性、版本重置、空规则和共享 graph 生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

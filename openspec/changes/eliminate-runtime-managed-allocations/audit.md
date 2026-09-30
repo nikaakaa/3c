@@ -80,7 +80,7 @@
 | G08、7.24：SourceCatalog 重建及 Plans/Values 数组副本 | 已收口：工厂持有唯一目录，旧 Plans 数组入口已删除 | 当前 ACL 动作身份查找仍线性扫描，见 AP15；这不是旧数组分配复发 |
 | 4.2.7：三个 Player 的单元素请求数组 | 已收口：Clip/BlendSpace/Selected Player 持有请求槽 | 汇总列表容量与请求去重另算，见 AP16 |
 | 4.2.8：每帧请求汇总 List 和去重 HashSet 构造 | 已收口的是重复构造；Evaluator 持有汇总列表，SourceDemand 按前序请求比较 | 去重变成平方比较是原记录明确的取舍，保留 AP16，不撤销已有正确改动 |
-| EventGraph 正常更新与发布，提交 `032794d72` | 类型化读取器、双页输出、值类型帧和合同共享已经落地；现有 [实施说明](../extend-modify-bone-and-add-corin-lean/implementation.md) 记录了 Mono 独立实例预热后的零分配测量 | 本轮没有重测；不涵盖 Pose 图拓扑访问、首次建图、所有节点、Player/IL2CPP 或整角色 |
+| EventGraph 正常更新与发布，提交 `032794d72` | 类型化读取器、双页输出、值类型帧和合同共享已经落地；现有 [实施说明](../archive/2026-09-30-extend-modify-bone-and-add-corin-lean/implementation.md) 记录了 Mono 独立实例预热后的零分配测量 | 本轮没有重测；不涵盖 Pose 图拓扑访问、首次建图、所有节点、Player/IL2CPP 或整角色 |
 | Pose 顶层输出预绑定、运行端口定义缓存、输出包装复用 | 保留历史已完成结论，当前原生输出按节点/端口/阶段缓存 | 子图边界仍逐帧查找，见 AP04；FlowCanvas 纯函数不等同于原生 Pose 输出，见 AP12 |
 | 7.53：删除构造器内第二遍 Rig/RootHierarchy 校验 | 已收口的是装配重复检查 | 每帧发布和物理写回的重复遍历仍存在，见 AP10；不能混称旧改动未完成 |
 

@@ -19,8 +19,8 @@
 ## Impact
 
 - 完成记录与设计：[completion-record.md](completion-record.md)、[tasks.md](tasks.md)、[design.md](design.md)。
-- 剩余工作：[原change任务](../../refactor-character-pose-graph-architecture/tasks.md)。
-- 原始证据：[execution.md](../../refactor-character-pose-graph-architecture/execution.md)、[行为基线](../../refactor-character-pose-graph-architecture/behavior-baseline.md)。证据包含过去的失败和后续修正，须按时间与范围阅读。
+- 剩余工作：原change任务（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/tasks.md`；历史见 Git 提交 `f99572df9`）。
+- 原始证据：execution.md（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/execution.md`；历史见 Git 提交 `f99572df9`）、[行为基线（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/behavior-baseline.md`；历史见 Git 提交 `f99572df9`）。证据包含过去的失败和后续修正，须按时间与范围阅读。
 - 不涉及EventGraph规划窗口拥有的文档、其它change的实现、当前spec正文和任何运行产物。
 
 ## Completion Boundary

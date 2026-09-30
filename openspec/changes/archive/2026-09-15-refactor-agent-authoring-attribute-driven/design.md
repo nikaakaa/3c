@@ -1,6 +1,6 @@
 ## Context
 
-2026-09-12 交接：本设计与tasks中的v7证据按原范围保留。原业务节点与FlowCanvas共用参数/规则及必要消费适配见 [unify-skill-authoring-data-model/design.md](../unify-skill-authoring-data-model/design.md)，D8/D9记录职责和规范对账；Agent只是共同定义的消费者。新提案不自行升级版本，原生FSM及最终协议迁移归总FlowCanvas change，本文件继续拥有通用适配/事务与非Skill决策。
+2026-09-12 交接：本设计与tasks中的v7证据按原范围保留。原业务节点与FlowCanvas共用参数/规则及必要消费适配见 [unify-skill-authoring-data-model/design.md](../2026-09-13-unify-skill-authoring-data-model/design.md)，D8/D9记录职责和规范对账；Agent只是共同定义的消费者。新提案不自行升级版本，原生FSM及最终协议迁移归总FlowCanvas change，本文件继续拥有通用适配/事务与非Skill决策。
 
 当前 Character Agent Document 已是 v7，外部入口只有 checkout、rebase、dry-run、apply、validate 五个生命周期工具。它可以表达完整 Skill 闭包和 Presentation 目标，但 Agent 内部同时存在正式作者类型和 `AgentPackage...`、手写 Capability、字段/端口校验、owner 推断及 Presentation 模型，造成同一语义有多个来源。
 

@@ -4,8 +4,8 @@
 
 ## 新的执行入口
 
-- [原生FSM与Agent接入](../../integrate-native-fsm-skill-authoring/tasks.md)：唯一主要作者迁移任务。
-- [通用Skill运行观察](../../finish-skill-runtime-observation/tasks.md)：独立观察收尾。
+- [原生FSM与Agent接入](../2026-09-30-integrate-native-fsm-skill-authoring/tasks.md)：唯一主要作者迁移任务。
+- 通用Skill运行观察（历史路径已退役，原引用：`../../finish-skill-runtime-observation/tasks.md`；历史见 Git 提交 `f99572df9`）：独立观察收尾。
 - [Corin网络与正式运行](../../integrate-corin-dump-authoring-replay/tasks.md)：复用已有闭环，不新建网络执行链。
 
 ## 26项未完成任务逐项去向

@@ -4,7 +4,7 @@
 
 证据只来自 ZZZ 结构化 dump 与工程 Motion 对账：
 
-- `docs/zzz-corin-controller-map.md`：8 个状态、7 个独立 Clip、状态名与 Motion 非同名/共享关系。
+- `docs/replication/corin-controller-map.md`：8 个状态、7 个独立 Clip、状态名与 Motion 非同名/共享关系。
 - `D:\ZZZ_Dump\output\corin_replication\replication-guide\data\actions\sm0-*-Attack_Rush*.json`：总帧、转移 `m_ExitTime`、条件与 AnimatorEvent 帧。
 - `Corin技能状态事件索引.txt` 与 GameplayEffect Profile：Rush 命中事件已有正式 `Corin_Attack_Rush*` key。
 

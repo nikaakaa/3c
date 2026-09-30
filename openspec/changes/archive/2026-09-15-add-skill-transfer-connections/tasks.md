@@ -1,6 +1,6 @@
 ## 当前交接位置
 
-2026-09-12：本专项保留既有Step/Edge成果；最终FSM、协议迁移与旧状态存储清理由 [integrate-native-fsm-skill-authoring/tasks.md](../integrate-native-fsm-skill-authoring/tasks.md)负责。本表未完成项接收对应结果，不再转交共同定义提案或重复实施中间模型。原commit、migrated=20与v7 Clean记录仍为当时证据，转交不表示最终迁移完成。
+2026-09-12：本专项保留既有Step/Edge成果；最终FSM、协议迁移与旧状态存储清理由 [integrate-native-fsm-skill-authoring/tasks.md](../2026-09-30-integrate-native-fsm-skill-authoring/tasks.md)负责。本表未完成项接收对应结果，不再转交共同定义提案或重复实施中间模型。原commit、migrated=20与v7 Clean记录仍为当时证据，转交不表示最终迁移完成。
 
 ## 1. 连接类型与工厂钩子
 

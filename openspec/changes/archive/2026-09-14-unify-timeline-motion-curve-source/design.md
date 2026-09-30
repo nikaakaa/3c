@@ -2,7 +2,7 @@
 
 本变更承接已归档的 `minimize-csharp-authoring-reconstruction`。用户在完成讨论和文档更新后明确要求“让实现窗口做吧，设置goal”，现已授权绑定实现任务按本文完成正式曲线源迁移。
 
-本次 `camera-preview-timeline-domain-runtime-r1` 协调仅更新规划，统一基线为 [领域运行设计](../replace-character-program-with-domain-runtimes/design.md)。角色总 Program 与整包 Projection 退役，技能独立编译、控制直接 C#、Pose 使用原生 FlowCanvas Runtime；网络 Pipeline/Pass、Float32/Fixed 与独立资源处理保留。本次文档对齐不扩大既有实现授权，不下发实现消息，也不代表下述新接口已经落地。
+本次 `camera-preview-timeline-domain-runtime-r1` 协调仅更新规划，统一基线为 [领域运行设计](../2026-09-17-replace-character-program-with-domain-runtimes/design.md)。角色总 Program 与整包 Projection 退役，技能独立编译、控制直接 C#、Pose 使用原生 FlowCanvas Runtime；网络 Pipeline/Pass、Float32/Fixed 与独立资源处理保留。本次文档对齐不扩大既有实现授权，不下发实现消息，也不代表下述新接口已经落地。
 
 初次规划的源码基线：RootMotionCurveAsset 已保存累计 XYZ/Yaw、时长、采样率和求值模式，烘焙器按秒写关键帧；MotionCurveClip 内嵌 XYZ/Yaw 并按归一化时间读取。MotionWarp 与旧编译入口直接读取嵌入曲线。BTSMTL.Timeline 已引用独立 RootMotion 程序集。此段是问题来源，不声明当前代码仍处于该状态，目标接续以 D4/D8 为准。
 

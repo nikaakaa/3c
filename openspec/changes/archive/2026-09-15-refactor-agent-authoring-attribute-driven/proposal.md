@@ -1,6 +1,6 @@
 ## Why
 
-2026-09-12 后续范围：本change的共享metadata、Agent领域下沉、唯一事务和v7交付证据保留。[unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 只承接原业务节点与FlowCanvas共同定义及其必要Document消费适配；原生FSM与最终版本迁移归refactor-btsmtl-flowcanvas-authoring，不转入数据定义提案，也不重复已完成的Pose/Control/Clip工作。
+2026-09-12 后续范围：本change的共享metadata、Agent领域下沉、唯一事务和v7交付证据保留。[unify-skill-authoring-data-model](../2026-09-13-unify-skill-authoring-data-model/proposal.md) 只承接原业务节点与FlowCanvas共同定义及其必要Document消费适配；原生FSM与最终版本迁移归refactor-btsmtl-flowcanvas-authoring，不转入数据定义提案，也不重复已完成的Pose/Control/Clip工作。
 
 当前 Agent Document 已经能够通过 JSON 表达完整 Skill 闭包和 Presentation 目标，但 Agent 侧又维护了一份节点、字段、端口、owner 和能力定义。正式作者模型一变化，Agent mapper、codec、reconciler、validator 和 schema 会一起变化，导致原本应当简单的 JSON 编辑工具持续膨胀并频繁升级。
 

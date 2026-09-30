@@ -4,13 +4,13 @@
 
 2026-09-14 作者UI集中审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。以该文档的当前调用点和状态为准，旧快照仅作追溯：无组件打开、局部坐标、统一SelectedClip派生和正式失败回滚已有代码，原绘制合并/完整手势/局部提交/曲线/Inspector仍未齐。该审阅批次只记录审计，不把文档或窄编译当成实际窗口通过；后续实现状态以本文件、implementation.md 和 tasks.md 的当前对账为准。
 
-2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../../specs/character-root-motion-curves/spec.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
+2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../2026-09-17-replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../../../specs/character-root-motion-curves/spec.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
 
 2026-09-13 源码对账与具体接线决策见 [Slate原源码解耦决策](slate-source-decoupling.md)。该文档逐项说明原窗口、Track内Editor方法、Clip wrapper、曲线/参数工具、Inspector、Undo和选择的实际依赖；本设计第3节与其共同约束实现，不允许以原入口转发另一套绘制冒充复用。
 
 2026-09-13 方向纠正：用户否决将 Slate 改造成另一套纯内存编辑器，实现窗口已通过 0aa52f209 回退这轮改造。本 change 撤销纯内存 Surface、Editor Model、Clip交互和 Curve/DopeSheet 全面改造任务。以用户要求回退到的真实 Slate 功能为实施基础，复用原有绘制、交互、曲线工具，只做正式数据/命令和必要布局适配。回退完成情况由实现窗口记录，代码回退由该提交记录，本次规划更新不代表后续绑定替换已完成。
 
-2026-09-13 公共作者基线采用 [remove-agent-authoring-use-native-csharp/design.md r2](../remove-agent-authoring-use-native-csharp/design.md)。TimelineData 是正式业务对象，Slate 是现有编辑投影；显式 C# 导出/生成替代旧 Agent Document/五工具。旧日期的 UI 问题记录仅作历史，已完成交互、布局、选择、Undo、owner、时钟和 Camera 轨道按最新实现保留。该轮作者协议分工继续有效，本轮仅撤销扩大成重做编辑器的错误规划，既有 UI 行为与预览保持。
+2026-09-13 公共作者基线采用 [remove-agent-authoring-use-native-csharp/design.md r2](../2026-09-13-remove-agent-authoring-use-native-csharp/design.md)。TimelineData 是正式业务对象，Slate 是现有编辑投影；显式 C# 导出/生成替代旧 Agent Document/五工具。旧日期的 UI 问题记录仅作历史，已完成交互、布局、选择、Undo、owner、时钟和 Camera 轨道按最新实现保留。该轮作者协议分工继续有效，本轮仅撤销扩大成重做编辑器的错误规划，既有 UI 行为与预览保持。
 
 2026-09-12 后续授权：用户要求将“预览”任务一起规划、后续随 Timeline 实施。跨窗口布局、场景/目标选择、技能与纯 Timeline 预览、运行标记、编辑后采用和历史操作的统一计划见 [预览联动计划](preview-integration-plan.md)。本文件继续定义 Timeline 编辑表面，两边使用同一排期而保持已有数据/运行归属。
 

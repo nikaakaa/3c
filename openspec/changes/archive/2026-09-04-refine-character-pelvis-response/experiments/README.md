@@ -25,15 +25,15 @@
 | --- | --- | --- |
 | 正式Approach直接混完整3D，8月29日21:49 | 73ce54d，214939；消除了raw Contact累计max的hold，却放大Swing／Plant端点切换和穿透 | 7fd78db／dd38514在223633补逐帧Capture仍缩短轨迹；2143755撤销，225035回到202551。正式事件相位不是ZZZ状态身份权重f，补残差不能修正错误的权重语义 |
 | 相对动画Capture，8月30日04:52 | 8bf2f0c／27038ad，045255；接管参考变成新动画基准加旧Correction | d484553／4d7b554恢复。Capture夹带动画基准位移，Heel穿透和世界锁漂移加重；保留Anchor字段不等于保住世界输出 |
-| [扣除正式Foot Height](../../stabilize-character-foot-path-and-landing/experiments/20260830-contact-height-advance.md)，12:49 | 9bce6c2／da438fa，124922；只改首次Contact的Capture起点 | 4be1f51／811dacb撤销，130545逐列恢复。L745正式Height已被约−20毫米Swing残差抵消，再扣完整Height使L746 Heel到−25.831毫米；R476中心改善也同时让Heel穿面 |
-| [位置轴与朝向分责](../../stabilize-character-foot-path-and-landing/experiments/20260830-position-response-basis.md)，14:12 | 05889f6／335ac60，产品a6ba64f，141256；位置债从Support Normal轴改为PoseRoot-Y的axis／dual | 6组原来非零的稳定ABA额外XZ归零，但R404–407穿透7.299→24.733毫米。轴外摆动来源成立，不代表Contact的目标标量／基准交接已闭合 |
-| [接通Committed Goal参考](../../stabilize-character-foot-path-and-landing/experiments/20260830-committed-weighted-goal-sole.md)，15:05 | 93815d9／9979aa8，150516；78次正式Capture首次读取上一加权Goal Sole并重基scalar | 两轮组合拒绝；34c9974及1a81927／8812436恢复，155326对130545逐列一致。R959世界Y下降350.409→25毫米，但中心离面165.009→490.418毫米；数学连续与及时贴地不能混为一谈 |
-| [有效动画signed pole](../../stabilize-character-foot-path-and-landing/experiments/20260830-signed-animation-bend.md)，16:04后停止 | 61615d4只提交实验文档；327行历史请求倒置与6行大轴角投影／运输差异有只读证据 | 用户要求先解决踏空，未形成候选Replay，不记成已验证膝盖修复或真实失败。后续临时运输讨论也不能写成已运行效果 |
-| [Sliding世界误差](../../stabilize-character-foot-path-and-landing/experiments/20260830-sliding-world-response.md)，17:34 | 9a24148／9f5b539，173423；只把Locked内部Sliding的相对动画scalar换为世界误差响应 | R483／484中心回面，但Toe到−10.652／−23.201毫米，Release后继步加大；未通过，后续接触实验删除这份Sliding误差历史 |
-| [接触只用完整世界残差](../../stabilize-character-foot-path-and-landing/experiments/20260830-contact-world-residual.md)，19:39 | eb5fb05／5d858bc，193957；VerifiedAnchor／FullAnchor／Sliding不再串联动画相对scalar，保留完整Capture和同帧Decay | 用户指定为脚部效果参照；持续Gap12/60→3/60、Landing未闭合11/60→2/60。没有绑定193957的官方Proof，不能补造；剩余骨盆／膝盖／端点负距保留 |
-| [满锁后Source抬脚提前卸载](../../stabilize-character-foot-path-and-landing/experiments/20260830-source-lift-unloading.md)，21:20 | f8170e4及事实0d40ba0／e5b8fd3，Diagnostics d8da442，212054 | 322／466骨盆大步减小，但固定原Contact域出现更多离面；L339／L515／R611因Correction小于0.1毫米关闭Goal，脚被骨盆带走。3436cf6／27dbef4撤销，221050恢复193957 |
+| [扣除正式Foot Height](../../../stabilize-character-foot-path-and-landing/experiments/20260830-contact-height-advance.md)，12:49 | 9bce6c2／da438fa，124922；只改首次Contact的Capture起点 | 4be1f51／811dacb撤销，130545逐列恢复。L745正式Height已被约−20毫米Swing残差抵消，再扣完整Height使L746 Heel到−25.831毫米；R476中心改善也同时让Heel穿面 |
+| [位置轴与朝向分责](../../../stabilize-character-foot-path-and-landing/experiments/20260830-position-response-basis.md)，14:12 | 05889f6／335ac60，产品a6ba64f，141256；位置债从Support Normal轴改为PoseRoot-Y的axis／dual | 6组原来非零的稳定ABA额外XZ归零，但R404–407穿透7.299→24.733毫米。轴外摆动来源成立，不代表Contact的目标标量／基准交接已闭合 |
+| [接通Committed Goal参考](../../../stabilize-character-foot-path-and-landing/experiments/20260830-committed-weighted-goal-sole.md)，15:05 | 93815d9／9979aa8，150516；78次正式Capture首次读取上一加权Goal Sole并重基scalar | 两轮组合拒绝；34c9974及1a81927／8812436恢复，155326对130545逐列一致。R959世界Y下降350.409→25毫米，但中心离面165.009→490.418毫米；数学连续与及时贴地不能混为一谈 |
+| [有效动画signed pole](../../../stabilize-character-foot-path-and-landing/experiments/20260830-signed-animation-bend.md)，16:04后停止 | 61615d4只提交实验文档；327行历史请求倒置与6行大轴角投影／运输差异有只读证据 | 用户要求先解决踏空，未形成候选Replay，不记成已验证膝盖修复或真实失败。后续临时运输讨论也不能写成已运行效果 |
+| [Sliding世界误差](../../../stabilize-character-foot-path-and-landing/experiments/20260830-sliding-world-response.md)，17:34 | 9a24148／9f5b539，173423；只把Locked内部Sliding的相对动画scalar换为世界误差响应 | R483／484中心回面，但Toe到−10.652／−23.201毫米，Release后继步加大；未通过，后续接触实验删除这份Sliding误差历史 |
+| [接触只用完整世界残差](../../../stabilize-character-foot-path-and-landing/experiments/20260830-contact-world-residual.md)，19:39 | eb5fb05／5d858bc，193957；VerifiedAnchor／FullAnchor／Sliding不再串联动画相对scalar，保留完整Capture和同帧Decay | 用户指定为脚部效果参照；持续Gap12/60→3/60、Landing未闭合11/60→2/60。没有绑定193957的官方Proof，不能补造；剩余骨盆／膝盖／端点负距保留 |
+| [满锁后Source抬脚提前卸载](../../../stabilize-character-foot-path-and-landing/experiments/20260830-source-lift-unloading.md)，21:20 | f8170e4及事实0d40ba0／e5b8fd3，Diagnostics d8da442，212054 | 322／466骨盆大步减小，但固定原Contact域出现更多离面；L339／L515／R611因Correction小于0.1毫米关闭Goal，脚被骨盆带走。3436cf6／27dbef4撤销，221050恢复193957 |
 
-更早正式Contact／Lock迁移和双层高度限速的逐包沿革保留在[原Foot提案的历史记录](../../stabilize-character-foot-path-and-landing/proposal.md)；其中ccf0ad1的113844以及5305aa1之后的失败不能被描述成已闭合ZZZ。历史1c50f6b之后的202551仍有更早留下的接管问题，不因为它比某次失败好就成为无缺陷版本。旧记录中的待实施数学与后续已否决切片必须结合各实验最终处置读取，不能只截取中间设计段。
+更早正式Contact／Lock迁移和双层高度限速的逐包沿革保留在[原Foot提案的历史记录](../../../stabilize-character-foot-path-and-landing/proposal.md)；其中ccf0ad1的113844以及5305aa1之后的失败不能被描述成已闭合ZZZ。历史1c50f6b之后的202551仍有更早留下的接管问题，不因为它比某次失败好就成为无缺陷版本。旧记录中的待实施数学与后续已否决切片必须结合各实验最终处置读取，不能只截取中间设计段。
 
 ## 骨盆阶段：已实施的小步与恢复链
 
@@ -58,7 +58,7 @@
 
 | 只读方案 | 结果边界／记录 |
 | --- | --- |
-| 只把第二Reach移到弹簧前 | 冻结193957单步的28个Accepted大步几乎不变；已越界时最后仍必须到同一硬上限。[前置研究](../../stabilize-character-foot-path-and-landing/experiments/20260830-pelvis-planning-readonly-research.md) |
+| 只把第二Reach移到弹簧前 | 冻结193957单步的28个Accepted大步几乎不变；已越界时最后仍必须到同一硬上限。[前置研究](../../../stabilize-character-foot-path-and-landing/experiments/20260830-pelvis-planning-readonly-research.md) |
 | 删除原动画弯曲硬余量 | 675／819有独立价值，但322／466主要来自完整XYZ几何；这是第3步的依据，不是删真实腿长的授权 |
 | 加快至9Hz；后来4／5／6Hz | 冻结模型放大世界步；未加载资产。[9Hz](20260831-pelvis-world-observation.md)、[4／5／6Hz](20260831-pelvis-upward-velocity.md) |
 | Release继续共同高度、硬夹后反算速度、边界割线速度、目标速度反馈 | 结果与失败原因已分项保存；没有实现成另一响应。[目标／速度筛选](20260831-pelvis-velocity-direction.md) |
@@ -96,7 +96,7 @@
 
 ## 证据保存与记录纠错
 
-持久归档根为[骨盆实验归档](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement)。每步原始run保留，归档是副本，不是第二运行配置；旧schema不补新列，不覆盖原facts／diagnoses。
+持久归档根为[骨盆实验归档](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement)。每步原始run保留，归档是副本，不是第二运行配置；旧schema不补新列，不覆盖原facts／diagnoses。
 
 - 10毫米失败包与101451恢复包均另存原字节Proof ZIP。Git会规范化可读JSON换行，文件语义相同仍可能SHA不同；不能把规范化文本当原字节副本。
 - 101451曾在603帧附近观察到暂停和内存警告，但最终正式Proof是1044帧、样本1043帧／2086行且无Frame Gap。暂停快照不是最终缺帧结论。

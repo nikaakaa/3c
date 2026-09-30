@@ -57,7 +57,7 @@ MatCap 使用原 Legacy 规则生成一层、五 mip 的 `Texture2DArray`。可�
 9. `CharacterPostProcess`
 10. Eye：`CharacterOpaqueEye` 输出最终颜色，不再混入角色 GBuffer；该顺序在项目实际绘制中恢复了虹膜。原游戏的全部调度分支仍未逐项闭合。
 
-2026-09-06 原描边已经通过同参数开关对照。精确地址和尚未闭合的 stencil 144/128 优先级见 [原描边接入与验收](ZZZ-原描边接入与验收-20260906.md)。描边显示不等于全套深度/模板规则已恢复。
+2026-09-06 原描边已经通过同参数开关对照。精确地址和尚未闭合的 stencil 144/128 优先级见 [原描边接入与验收](Archive/Records/ZZZ-原描边接入与验收-20260906.md)。描边显示不等于全套深度/模板规则已恢复。
 
 `CorinRestoredRendererFeature` 已按这个顺序接入 HighFidelity、Balanced、Performant 和 RockyDesert 四套 URP RendererData。原角色 LUT 为 `CorinOriginalCharacterLut.asset`。
 
@@ -103,7 +103,7 @@ Unity 2022 的实际 GPU 读回已经完成。隔离可琳首条 128 字节结�
 
 HairShadow 已按原顺序接入。开关 `Corin_HairShadow` 的同相机 A/B 中，差异只出现在脸部 `568,318-615,372`，94 个像素发生变化，最大通道差 7，确认它只产生发丝投影遮罩，没有覆盖主体颜色。
 
-当前独立 `Corin_ZZZ_Original.prefab` 可以绘制。Eye、MatCap 重新加载、全局 Overlay 绑定均已取得项目实际画面；新版 9 参数 Initialize 与纹理引用也已核验，详见 [Overlay 漏绑诊断与修复状态](ZZZ-衣服发黑-Overlay漏绑诊断-20260905.md)。完整原版描边、全部光照生产条件和调度分支仍不能宣称闭合。把这套六 Renderer 与原模型接到正式 Gameplay 可琳骨架仍是独立迁移工作；旧 Face 子网格和 HairShadow 几何不完整，不能只替换旧模型的几张材质。
+当前独立 `Corin_ZZZ_Original.prefab` 可以绘制。Eye、MatCap 重新加载、全局 Overlay 绑定均已取得项目实际画面；新版 9 参数 Initialize 与纹理引用也已核验，详见 [Overlay 漏绑诊断与修复状态](Archive/Records/ZZZ-衣服发黑-Overlay漏绑诊断-20260905.md)。完整原版描边、全部光照生产条件和调度分支仍不能宣称闭合。把这套六 Renderer 与原模型接到正式 Gameplay 可琳骨架仍是独立迁移工作；旧 Face 子网格和 HairShadow 几何不完整，不能只替换旧模型的几张材质。
 
 ## 关键证据
 

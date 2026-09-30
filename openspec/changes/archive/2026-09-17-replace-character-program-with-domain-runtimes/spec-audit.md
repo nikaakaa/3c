@@ -4,7 +4,7 @@
 
 ## DOMAIN-BOUNDARIES-20260914-02：领域文档与执行划分提报
 
-状态：待工作协调窗口审阅。用户要求“先把领域做好”并让协调窗口查看规划；本轮只更新本change现有proposal／design D21／tasks／spec增量和此审查附件，随后发送一次文档定位。没有修改协调窗口维护的docs/coordination-progress.md，没有新建任务、重派实现或覆盖其它领域清单／实施日志。
+状态：待工作协调窗口审阅。用户要求“先把领域做好”并让协调窗口查看规划；本轮只更新本change现有proposal／design D21／tasks／spec增量和此审查附件，随后发送一次文档定位。没有修改协调窗口维护的docs/archive/records/coordination/coordination-progress-20260914.md，没有新建任务、重派实现或覆盖其它领域清单／实施日志。
 
 ### 提报内容
 
@@ -35,7 +35,7 @@
 
 ### 协调记录使用边界
 
-已读取工作协调窗口最近状态，其确认三个实现已在推进；docs/coordination-progress.md顶部仍保留PARALLEL-20260914-DOMAIN-01当时“待分派”的审阅快照。本次提报请协调按当前已授权事实审阅D21，不以旧快照要求用户重复授权。协调记录的更新仍由协调窗口自己维护，本窗口不代写或发送日常回执。
+已读取工作协调窗口最近状态，其确认三个实现已在推进；docs/archive/records/coordination/coordination-progress-20260914.md顶部仍保留PARALLEL-20260914-DOMAIN-01当时“待分派”的审阅快照。本次提报请协调按当前已授权事实审阅D21，不以旧快照要求用户重复授权。协调记录的更新仍由协调窗口自己维护，本窗口不代写或发送日常回执。
 
 ## 2026-09-14补正Skill执行独立性遗漏
 
@@ -178,7 +178,7 @@ ee2d02c2f当时新增`character-domain-runtime`的“领域迁移必须同时退
 
 ## 2026-09-14并行规划归属更新
 
-依据：`docs/coordination-progress.md` 的 `PARALLEL-20260914-DOMAIN-01` 审阅（2801861c1）和用户广播 `parallel-20260914-domain-01-planning-update`。本次只更新本任务已有规划、责任指针与公共合同，不改其它任务文档，不启动实现或发送执行消息。接收方续写Runtime章节不代表其旧的Slate／只读输入工作未完成。
+依据：`docs/archive/records/coordination/coordination-progress-20260914.md` 的 `PARALLEL-20260914-DOMAIN-01` 审阅（2801861c1）和用户广播 `parallel-20260914-domain-01-planning-update`。本次只更新本任务已有规划、责任指针与公共合同，不改其它任务文档，不启动实现或发送执行消息。接收方续写Runtime章节不代表其旧的Slate／只读输入工作未完成。
 
 ### 唯一清单与旧编号去向
 

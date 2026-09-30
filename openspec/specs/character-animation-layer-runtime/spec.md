@@ -184,16 +184,24 @@ Locomotion Phase的正式来源只能是AnimationClip注册曲线与Profile／So
 
 ### Requirement: Locomotion Phase relation必须服从Transition generation与Player continuation
 
-Phase 关联准备 MUST 固定当前 outgoing 为 leader，无论两侧使用什么 clock authority。当前动画 MUST 保持原来的播放时间与速度；incoming MUST 通过自身 Phase inverse 或正式双脚支撑区间选择匹配入口。具有唯一相位的区间 MUST 在混合期间跟随 outgoing 的相位；选中完整覆盖混合的双脚支撑区间时，incoming MUST 在该区间自然播放，不强行把停留解释成走跑周期。混合结束后 incoming MUST 从最后一次有效时间继续按自己的原有时钟推进。候选 MUST 覆盖完整可见混合窗口，两侧不足必须明确报告；一个 generation 内不得按权重或时间动态更换 leader。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、分支或图替换、Reset 与 Dispose MUST 清理旧关联，Commit／Discard MUST 保持帧事务一致。
+普通循环到循环的 Phase 关联 MUST 保持 outgoing 为 leader，incoming 按既有算法持续同步。有限 incoming 动作 MUST 保持原始入口和自然播放时间，MUST NOT 被循环相位重定时；outgoing 循环动作 MUST 连续淡出，不跳转自身相位或延迟 Control 状态切换。有限 outgoing 动作进入循环 incoming 时，incoming MUST 在新关联建立时匹配一次 outgoing 当前有效相位并建立 continuation，后续 MUST 按自己的时钟自然推进，MUST NOT 持续锁定到有限动作末帧。两侧 MUST 继续使用既有 Standard Blend；表现相位 MUST NOT 写回 Gameplay。转换替换、反向 edge、正常 release、AlwaysResetOnEntry、图替换、Reset 与 Dispose MUST 清理旧关联；Commit／Discard MUST 保持帧事务一致。
 
 #### Scenario: 同authority的Turn进入RunLoop
-
-- **WHEN** MovingTurn与RunLoop都使用CommittedMovement且MovingTurn coverage覆盖完整Blend窗口
-- **THEN** 关联准备 MUST把outgoing MovingTurn固定为该edge relation的leader
-- **AND** Runtime MUST不因RunLoop weight超过MovingTurn而换leader
+- **WHEN** 有限 TurnBack 与循环 RunLoop 建立过渡
+- **THEN** RunLoop 选择与 TurnBack 当前出口采样相位对应的入口
+- **AND** 后续混合帧按 RunLoop 原有时钟推进，即使 TurnBack 已停在末帧也不冻结
 
 #### Scenario: Transition在Blend中被替换
+- **WHEN** 有限动作到循环的混合结束或被替换
+- **THEN** 旧关联按现有生命周期释放
+- **AND** 循环继续保留有效采样锚点，新的关联不复用旧 leader 身份
 
-- **WHEN** 当前relation generation尚未完成时更高优先级Transition替换目标State
-- **THEN** Runtime MUST按旧edge release规则关闭旧generation，再为新TransitionGeneration建立新relation
-- **AND** MUST不复用旧follower cycle、effective anchor或relation cursor
+#### Scenario: RunLoop 进入 TurnBack
+- **WHEN** RunLoop 与有限 TurnBack 建立过渡
+- **THEN** TurnBack 从原入口播放，RunLoop 保持自然时间淡出
+- **AND** 不裁剪 TurnBack、不跳转 RunLoop，也不增加 Control 等待
+
+#### Scenario: 普通循环切换
+- **WHEN** WalkLoop 与 RunLoop 都具有合法循环相位计划
+- **THEN** incoming 继续按现有 Phase 反求与关联规则同步
+- **AND** Control 不读取 Presentation 的同步结果

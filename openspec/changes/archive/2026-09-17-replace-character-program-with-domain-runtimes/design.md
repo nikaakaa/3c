@@ -349,7 +349,7 @@ Source采样、动画混合、Constraint、Final Writer是Pose内部及原领域
 
 #### 文档组织与实施批次
 
-主proposal说明范围与收益，D21保存领域表／共享接口与协调事项，主tasks只保留核心工作，spec-audit保存代码证据和未完成边界。Timeline仍唯一使用restyle-timeline-editor-slate-style/tasks.md第12组及其direct-runtime规范；Pose仍唯一使用refine-pose-graph-readonly-blackboard/tasks.md第3组。各自implementation／execution记录实际改动，不在主方案复制领域checkbox；docs/coordination-progress.md仍仅由协调窗口维护。本轮不改其它领域文档或代码。
+主proposal说明范围与收益，D21保存领域表／共享接口与协调事项，主tasks只保留核心工作，spec-audit保存代码证据和未完成边界。Timeline仍唯一使用restyle-timeline-editor-slate-style/tasks.md第12组及其direct-runtime规范；Pose仍唯一使用refine-pose-graph-readonly-blackboard/tasks.md第3组。各自implementation／execution记录实际改动，不在主方案复制领域checkbox；docs/archive/records/coordination/coordination-progress-20260914.md仍仅由协调窗口维护。本轮不改其它领域文档或代码。
 
 建议按下面的业务切面推进，每一批都包含状态、真实实现和调用消费者，不设置“先写完所有接口”的独立阶段：
 

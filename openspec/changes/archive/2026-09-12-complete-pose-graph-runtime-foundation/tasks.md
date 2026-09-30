@@ -1,8 +1,8 @@
 # Tasks: 已完成PoseGraph运行基础
 
-本文件只保留原change第1、2、4、5、6、7、8组中的53项实现或文档任务，保持原编号。全部60条原完成记录（含移出的验证与边界记录）保存在[completion-record.md](completion-record.md)。用户于2026-09-12要求分离归档；其余未完成项继续留在[原任务清单](../../refactor-character-pose-graph-architecture/tasks.md)。
+本文件只保留原change第1、2、4、5、6、7、8组中的53项实现或文档任务，保持原编号。全部60条原完成记录（含移出的验证与边界记录）保存在[completion-record.md](completion-record.md)。用户于2026-09-12要求分离归档；其余未完成项继续留在原任务清单（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/tasks.md`；历史见 Git 提交 `f99572df9`）。
 
-文中behavior-baseline.md、migration-inventory.md、operation-family-map.md与execution.md均指[原change](../../refactor-character-pose-graph-architecture/proposal.md)下保留的原始证据，不复制、删除或改写其历史记录。
+文中behavior-baseline.md、migration-inventory.md、operation-family-map.md与execution.md均指原change（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/proposal.md`；历史见 Git 提交 `f99572df9`）下保留的原始证据，不复制、删除或改写其历史记录。
 
 ## 1. 冻结当前保留IK与完整迁移清单
 

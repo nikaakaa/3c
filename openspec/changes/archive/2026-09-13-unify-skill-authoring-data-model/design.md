@@ -1,6 +1,6 @@
 ## Context
 
-公共基线：[remove-agent-authoring-use-native-csharp/design.md](../remove-agent-authoring-use-native-csharp/design.md) r2，协调提案2026-09-13-eventgraph-authoring-r2。规划阶段只修订本目录规划；执行阶段按本change tasks修改共享业务定义与metadata，不修改资产、其它任务文档或其它Owner路径。
+公共基线：[remove-agent-authoring-use-native-csharp/design.md](../2026-09-13-remove-agent-authoring-use-native-csharp/design.md) r2，协调提案2026-09-13-eventgraph-authoring-r2。规划阶段只修订本目录规划；执行阶段按本change tasks修改共享业务定义与metadata，不修改资产、其它任务文档或其它Owner路径。
 
 本任务的目标仍是原业务节点与FlowCanvas共用参数、字段、端口、引用和业务规则。旧稿把FSM迁移、全局Document v8、Store/Reconciler和整包重建再次放进本任务，与用户已确认的收窄范围及r2冲突，本版撤出这些职责。
 

@@ -2,7 +2,7 @@
 
 用户要求将完成文档分离归档。这里保留分离前60条已勾选记录的编号和原文，其中7条验证或边界记录不再列入tasks.md；tasks.md只保留53项实现或文档任务。此处不重新认定当前代码版本，也不表示其它PoseGraph任务完成。
 
-原始证据见[原change执行记录](../../refactor-character-pose-graph-architecture/execution.md)。
+原始证据见原change执行记录（历史路径已退役，原引用：`../../refactor-character-pose-graph-architecture/execution.md`；历史见 Git 提交 `f99572df9`）。
 
 | 原编号 | 原状态 | 原记录 |
 |---|---|---|

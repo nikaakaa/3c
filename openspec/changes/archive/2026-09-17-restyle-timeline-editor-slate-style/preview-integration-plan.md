@@ -2,7 +2,7 @@
 
 ## 本次规划基线与授权
 
-2026-09-13 按用户协调方案 camera-preview-timeline-domain-runtime-r1 更新。运行装配以 [领域运行方案](../replace-character-program-with-domain-runtimes/design.md) D1–D8 为准；MotionCurve来源以 [曲线源迁移](../../specs/character-root-motion-curves/spec.md) D1–D7 为准。本文只更新本任务拥有的共同接入要求，不修改代码、资产或产物，不向实现任务下发消息，不增加原实现授权。
+2026-09-13 按用户协调方案 camera-preview-timeline-domain-runtime-r1 更新。运行装配以 [领域运行方案](../2026-09-17-replace-character-program-with-domain-runtimes/design.md) D1–D8 为准；MotionCurve来源以 [曲线源迁移](../../../specs/character-root-motion-curves/spec.md) D1–D7 为准。本文只更新本任务拥有的共同接入要求，不修改代码、资产或产物，不向实现任务下发消息，不增加原实现授权。
 
 [Slate源码解耦决策](slate-source-decoupling.md)继续约束原UI复用：原轨道、Clip、曲线和手势保持，TimelineData、typed接线、编辑Session/Undo保持。旧ce21aec8f/afcb90056仅是上次源码阅读的恢复基线，不是本轮重新检查的实现状态；UI解耦不等于运行装配迁移已完成。
 

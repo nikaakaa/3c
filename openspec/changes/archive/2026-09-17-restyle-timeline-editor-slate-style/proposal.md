@@ -12,8 +12,8 @@
 
 ## What Changes
 
-- 2026-09-13仅规划协调：运行接入对齐[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)，移除Character全量Build、整包Projection、统一ProgramEpoch和Document/v7前置。技能独立构建，Pose同一原生Factory显式重建/历史重置，Camera正式绑定/Reset，控制与网络依Session规则准备。预览原owner报告就绪、配置版本、实际版本和失败，UI不推断采用。
-- MotionCurve源、区间、映射由[曲线源迁移](../../specs/character-root-motion-curves/spec.md)拥有，UI只接typed字段与源导航。源XYZ/Yaw不再作为Timeline-local通道，Weight/Ease等局部曲线仍用原Slate编辑。本通知不授权新的实现或修改其它owner文件。
+- 2026-09-13仅规划协调：运行接入对齐[领域运行方案](../2026-09-17-replace-character-program-with-domain-runtimes/design.md)，移除Character全量Build、整包Projection、统一ProgramEpoch和Document/v7前置。技能独立构建，Pose同一原生Factory显式重建/历史重置，Camera正式绑定/Reset，控制与网络依Session规则准备。预览原owner报告就绪、配置版本、实际版本和失败，UI不推断采用。
+- MotionCurve源、区间、映射由[曲线源迁移](../../../specs/character-root-motion-curves/spec.md)拥有，UI只接typed字段与源导航。源XYZ/Yaw不再作为Timeline-local通道，Weight/Ease等局部曲线仍用原Slate编辑。本通知不授权新的实现或修改其它owner文件。
 
 - 硬边界覆盖打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路：不得创建或依赖 Slate 组件树，原生 Cutscene/Actor/Director 约束不得拒绝正式 TimelineData 合法操作。回退后 BuildProjection 隐藏对象仅是待清理残留，不是最终方案或 fallback。
 

@@ -118,7 +118,7 @@ Pose Bottom Dock 不再创建独立 Preview Scene、隐藏相机、局部 Animat
 
 ## EXEC-SCENEPLAY-20260906-01 执行记录
 
-本节对应 `D:/Unity_Project_1/3C/openspec/changes/design-btsmtl-authoring-runtime-workbench/design.md` 的“执行协作与当前批次”。本批次只在 `D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview` 的 `codex/btsmtl-scene-play-preview` 分支继续原授权，不修改 `D:/Unity_Project_1/3C/docs/coordination-progress.md`，不整支合并 ACL、Timeline 或 Camera provider 分支，也没有建立第二条执行路径。
+本节对应 `D:/Unity_Project_1/3C/openspec/changes/design-btsmtl-authoring-runtime-workbench/design.md` 的“执行协作与当前批次”。本批次只在 `D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview` 的 `codex/btsmtl-scene-play-preview` 分支继续原授权，不修改 `D:/Unity_Project_1/3C/docs/archive/records/coordination/coordination-progress-20260914.md`，不整支合并 ACL、Timeline 或 Camera provider 分支，也没有建立第二条执行路径。
 
 ### 源码身份与依赖核对
 
@@ -218,7 +218,7 @@ Pose Bottom Dock 不再创建独立 Preview Scene、隐藏相机、局部 Animat
 
 - `AnimationPreviewRuntime` 仍被 `MotionMatchingQueryFixture` 用于独立 Pose/MM 查询，属于设计明确保留的模块诊断/查询用途；其原有 Timeline 采样、独立 Action command 和 seek/reset 逻辑已删除，不是完整角色播放器残留。
 - 旧 RootMotion/FinalIK 缺失问题不作为本批次新的阻塞；当前直接 Unity 日志没有本批次新增 CS error，已有 warning 已按上文记录。
-- `D:/Unity_Project_1/3C/docs/coordination-progress.md` 是协调窗口独占文档，本批次没有读取后写入、没有复制到功能提交，也没有通过其它窗口传递消息。
+- `D:/Unity_Project_1/3C/docs/archive/records/coordination/coordination-progress-20260914.md` 是协调窗口独占文档，本批次没有读取后写入、没有复制到功能提交，也没有通过其它窗口传递消息。
 
 ## 2026-09-09 ProgramEpoch、后台构建与历史投影增量
 

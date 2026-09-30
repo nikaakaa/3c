@@ -13,7 +13,7 @@
 - 失败候选：20260831-092855-825-6211bdaf960f461a8d4e96a533d38f58。
 - 恢复包：20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f。
 - 正式Proof：20260831-102012-641-18c3eefada4e42efa78e85ca6b9e8e9e.json。
-- [持久归档及逐文件清单](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/README.md)。
+- [持久归档及逐文件清单](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/README.md)。
 
 原件仍在Client/Diagnostics/FootPlacementRuns及正式Temp/CharacterInputReplayProofs路径，没有覆写。恢复包14个文件完整归档，原字节Proof独立压缩保存，避免Git换行规范化改变字节身份。
 
@@ -29,7 +29,7 @@
 
 - samples.csv表头同为1221列，按FrameSequence／Side逐行对齐2086行。
 - 1197列逐字符串相同，包括Body、正式Foot输入、原动画、Foot目标、状态、Anchor几何、完整Interpolation、Pelvis目标／Reach／Spring、Goal、Solved Knee及最终Physical点。
-- 24个差异列逐项列于[raw-comparison.json](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/raw-comparison.json)：5个运行／采样元数据、19个Surface／Path身份；字符串双向映射均无冲突，没有泛化忽略所有Identity／Revision。
+- 24个差异列逐项列于[raw-comparison.json](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/raw-comparison.json)：5个运行／采样元数据、19个Surface／Path身份；字符串双向映射均无冲突，没有泛化忽略所有Identity／Revision。
 - geometry共50195行、20列；只有SampleIdentity、GroundPathInputIdentity、GroundContactSurfaceIdentity、GroundContactCandidateIdentity变化，其余16列逐值相同。
 - 因此20毫米恢复后的骨盆和Knee坏窗也恢复，不能称它们已解决。092855的1厘米改善和膝盖回归留在失败包，不继续运行。
 
@@ -41,7 +41,7 @@ CSV流式比较进程峰值常驻约98.3MiB；没有同时读多个大facts到�
 
 另与085406／085223核对：Runtime identity与1044条完整frames逐值相同。Proof中的samples SHA与原件、analysis.json一致；不是单靠“输入1044匹配”宣布表现恢复，上一节原始行为列提供了独立证明。
 
-37个Target逐项核对id、question、eventKinds、rules、eligible／matched／rate、scorePolicy及完整score，差异0。七维及总分61.9、Evidence86.9保持。quality-score除schema／facts产物引用外，只有3个Unavailable示例的CurrentSupport Surface实例值变化；不是接触覆盖变化。没有声称所有新旧报告文本或辅助measurement逐字相同。详见[diagnostic-comparison.json](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/diagnostic-comparison.json)。
+37个Target逐项核对id、question、eventKinds、rules、eligible／matched／rate、scorePolicy及完整score，差异0。七维及总分61.9、Evidence86.9保持。quality-score除schema／facts产物引用外，只有3个Unavailable示例的CurrentSupport Surface实例值变化；不是接触覆盖变化。没有声称所有新旧报告文本或辅助measurement逐字相同。详见[diagnostic-comparison.json](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/diagnostic-comparison.json)。
 
 新存储为diagnoses/analysis.json＋details.jsonl＋details-index.json＋8个小诊断报告＋quality-score.json。没有顶层facts.json是2cf6da6的正式布局，不是本次缺事实；也不以布局改变冒充行为变化。
 

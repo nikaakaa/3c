@@ -16,7 +16,7 @@
 - Finalizer完整发布14文件，failure为空；使用正式character.foot_diagnostics成功读取summary及420帧，不通过反射绕开查询工具。
 - Proof：20260831-112721-595-e621459f07d94d57aae4d8765464d721.json；官方是baseline-created，baseline_available=false、compared_frame_count=0，不称官方A/B通过。
 - 另直接读取已保存101451原字节Proof ZIP：1044条frames、Runtime identity、trace内容、input sequence、start Body、Body trajectory和表现时钟完全相同。不是只比较帧数。
-- samples SHA与Proof／analysis.json一致。完整[归档与清单](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/current-integration-112611/README.md)已保存，不覆盖原件。
+- samples SHA与Proof／analysis.json一致。完整[归档与清单](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/current-integration-112611/README.md)已保存，不覆盖原件。
 
 ## 当前路径有效，不是11:10空缓存重演
 
@@ -30,7 +30,7 @@
 
 共同列1196个逐字符串相同；24个不同的是运行／采样、Surface／Path身份，另一个实质变化是1786脚行的GroundPathEdgeCount。旧接触采样Edge数量与新有限表面断差的含义不能当作运动改善；本轮没有把它算成“零障碍”或减少错误。
 
-所有Foot状态、输入／动画、目标、Anchor几何、Interpolation、Reach、Goal、骨盆和Solved Knee原始输出均逐值保持。不是只因七维总分相同就认定行为一样。[逐列结果](../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/current-integration-112611/raw-audit.json)保留差异列与首个位置。
+所有Foot状态、输入／动画、目标、Anchor几何、Interpolation、Reach、Goal、骨盆和Solved Knee原始输出均逐值保持。不是只因七维总分相同就认定行为一样。[逐列结果](../../../../../3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/current-integration-112611/raw-audit.json)保留差异列与首个位置。
 
 ## 骨盆实际质量：没有改善
 

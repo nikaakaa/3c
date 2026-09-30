@@ -1,6 +1,6 @@
 # Change: PoseGraph只读输入与原生Runtime接入
 
-修订：r3，2026-09-14。按用户广播`parallel-20260914-domain-01-planning-update`接收[领域运行主方案D9—D13](../archive/2026-09-17-replace-character-program-with-domain-runtimes/design.md)与[协调审阅](../../../docs/coordination-progress.md)中的Pose原生Runtime范围。复用规划窗口01a09594-1751-7512-b8c0-08b04185055b和已有Pose实现窗口01a081f3-46f4-7c91-8930-73923ff7950b，不创建任务或派发实现。
+修订：r3，2026-09-14。按用户广播`parallel-20260914-domain-01-planning-update`接收[领域运行主方案D9—D13](../archive/2026-09-17-replace-character-program-with-domain-runtimes/design.md)与[协调审阅](../../../docs/archive/records/coordination/coordination-progress-20260914.md)中的Pose原生Runtime范围。复用规划窗口01a09594-1751-7512-b8c0-08b04185055b和已有Pose实现窗口01a081f3-46f4-7c91-8930-73923ff7950b，不创建任务或派发实现。
 
 第1、2组20项已完成记录保持原文和勾选；第3组是新增Runtime接收范围的唯一实施清单。本轮只改规划与必要delta，不改代码、资产、其它owner文档或历史执行证据。
 

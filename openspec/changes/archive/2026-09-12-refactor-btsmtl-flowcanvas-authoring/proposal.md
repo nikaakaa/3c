@@ -2,7 +2,7 @@
 
 > 2026-09-12 已拆分替代归档。本文件以下内容是历史方案，不再执行；原生FSM与Agent转至integrate-native-fsm-skill-authoring，观察转至finish-skill-runtime-observation，网络/运行证据转至integrate-corin-dump-authoring-replay。未完成任务和delta去向见[交接记录](split-handoff.md)。本次归档不代表全部实现完成，也不安装本目录delta。
 
-2026-09-12 FSM规划更新：本change负责原生NodeCanvas FSM作者接入、对应Document v8/编译适配和Corin残余清理；普通执行图继续使用FlowCanvas，状态机子图完整替换为原生FSM，不双存。共同业务参数与节点规则消费 [unify-skill-authoring-data-model](../../unify-skill-authoring-data-model/proposal.md) 的成果，不把FSM迁移塞入其范围；旧Step/Edge阶段成果由add-skill-transfer-connections提供。本次只更新本change文档，不覆盖其它窗口正在调整的规划。旧v7与任务勾选只代表历史阶段，原生FSM和v8尚未交付。
+2026-09-12 FSM规划更新：本change负责原生NodeCanvas FSM作者接入、对应Document v8/编译适配和Corin残余清理；普通执行图继续使用FlowCanvas，状态机子图完整替换为原生FSM，不双存。共同业务参数与节点规则消费 [unify-skill-authoring-data-model](../2026-09-13-unify-skill-authoring-data-model/proposal.md) 的成果，不把FSM迁移塞入其范围；旧Step/Edge阶段成果由add-skill-transfer-connections提供。本次只更新本change文档，不覆盖其它窗口正在调整的规划。旧v7与任务勾选只代表历史阶段，原生FSM和v8尚未交付。
 
 BTSMTL技能需要成熟的节点、端口、参数化子图、动作时间轴和运行观察能力，同时保留既有技能编译、ActionInstance、预测、回滚及状态恢复链。本变更把技能收敛为类似Gameplay Ability的独立业务单元，但继续使用项目自己的确定性Simulation与网络管线。
 

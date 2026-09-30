@@ -4,6 +4,8 @@
 
 当前 Goal 已按用户要求启动：继续动画混合、Landing/Releasing 弯直突变和台阶跳脚，使用已有采样还原正式函数，由已有配套窗口维护多个完整业务测试与各自 HTML；本轮不启动 Replay。
 
+原生混合的帧计算已从 Unity 时钟读取中分离：`AnimationSlotBlendJob.ProcessAnimation` 读取 `AnimationStream.deltaTime`，交给同一个 `EvaluateFrame(float)`；完整校验、混合、Stored 捕获、历史提交及输出发布均由该函数执行。固定采样实验可直接提供记录的帧时间，不需要伪造 AnimationStream 或另写混合算法。函数体除移出时钟读取外逐字一致，Animation 定向编译 0 警告、0 错误（6.97 秒）。这是正式计算入口的整理，Native Slot 业务与 2041 释放效果仍待配套窗口实际验证。
+
 首个动画混合修正将 FootMotion 从 `CharacterPoseSourceModule` 正式采样写入预分配 Source 页，经 `AnimationPrimitivePoseContribution` 传播，在 `AnimationSlotBlendJob` 的历史与 Stored 捕获中保存；`CharacterPoseWorldContextAdapter` 选择实际参与姿态的 Live/Stored 样本，交给原 FootPlacement 链路。它处理零权重 Live Idle 在 Stored 占据全部姿态时错误地提供锁脚请求的问题。Stored 保留当前接触与锁权重，静态姿态不继续预测未来落地；作者总权重和曲线未改。资源名称与曲线元数据在目录初始化，未增加每帧字符串转换。
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。

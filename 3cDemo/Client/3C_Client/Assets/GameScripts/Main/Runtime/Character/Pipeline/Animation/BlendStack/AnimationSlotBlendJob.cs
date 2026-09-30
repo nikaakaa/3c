@@ -191,7 +191,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_CompletionIdentity = header.CompletionIdentity;
         }
 
-        public void ProcessAnimation(AnimationStream stream)
+        public void ProcessAnimation(AnimationStream stream) =>
+            EvaluateFrame(stream.deltaTime);
+
+        internal void EvaluateFrame(float deltaSeconds)
         {
             ClearScratch();
             if (m_FinalCompletedAt[0] == m_CompletionIdentity)
@@ -200,7 +203,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return;
             }
 
-            float deltaSeconds = stream.deltaTime;
             if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
             {
                 PublishInvalid(AnimationPoseNativeInvalidReason.SlotVelocityInvalid);

@@ -248,7 +248,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong contributionContinuityIdentity,
             float weight,
             float leftFootWeight,
-            float rightFootWeight)
+            float rightFootWeight,
+            in AnimationFootMotionSourceSample footMotion)
         {
             int kindValue = (int)kind;
             if (physicalSlotIndex < 0 ||
@@ -275,6 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Weight = weight;
             LeftFootWeight = leftFootWeight;
             RightFootWeight = rightFootWeight;
+            FootMotion = footMotion;
         }
 
         internal int PhysicalPlayerIndex { get; }
@@ -286,6 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal float Weight { get; }
         internal float LeftFootWeight { get; }
         internal float RightFootWeight { get; }
+        internal readonly AnimationFootMotionSourceSample FootMotion;
     }
 
     internal readonly struct AnimationPlayerPoseNativeRange

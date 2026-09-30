@@ -637,6 +637,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeArray<byte> hasPrevious,
             NativeArray<ulong> completedAt,
             NativeArray<AnimationSourcePoseCaptureFailure> failure,
+            NativeSlice<AnimationFootMotionSourceSample> footMotion,
             float presentationDeltaSeconds,
             NativeSlice<float> poseParameters = default,
             NativeSlice<byte> poseParameterAvailability = default)
@@ -664,6 +665,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HasPrevious = hasPrevious;
             CompletedAt = completedAt;
             Failure = failure;
+            FootMotion = footMotion;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             PoseParameters = poseParameters;
             PoseParameterAvailability = poseParameterAvailability;
@@ -679,6 +681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<byte> HasPrevious { get; }
         internal NativeArray<ulong> CompletedAt { get; }
         internal NativeArray<AnimationSourcePoseCaptureFailure> Failure { get; }
+        internal NativeSlice<AnimationFootMotionSourceSample> FootMotion { get; }
         internal float PresentationDeltaSeconds { get; }
         internal NativeSlice<float> PoseParameters { get; }
         internal NativeSlice<byte> PoseParameterAvailability { get; }

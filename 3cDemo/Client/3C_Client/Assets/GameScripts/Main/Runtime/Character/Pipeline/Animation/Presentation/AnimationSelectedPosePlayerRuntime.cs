@@ -587,7 +587,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ContinuityIdentity,
                 1f,
                 hasFeet ? 1f : 0f,
-                hasFeet ? 1f : 0f);
+                hasFeet ? 1f : 0f,
+                m_Source.FootMotion[m_SourceIndex].BindContribution(m_ContinuityIdentity));
             m_ContributionCount[0] = 1;
             m_OutputWeight[0] = 1f;
             m_Availability[0] = AnimationPoseAvailability.Pose;

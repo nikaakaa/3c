@@ -8,6 +8,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
+using Unity.Collections;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
@@ -301,6 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceCatalog m_Catalog;
+        readonly CharacterPoseFootMotionResolver m_FootMotionResolver;
         readonly CharacterPoseSourceReadinessJournal m_Readiness;
         readonly CharacterPoseSourceBackendSet m_Backends;
         readonly AnimancerPoseSamplingBackend m_NativeClipBackend;
@@ -330,8 +332,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int clipBindingCapacity,
             int blendSpaceBindingCapacity,
             CharacterAnimationResourceScope resourceScope,
-            int parameterCapacity)
+            int parameterCapacity,
+            CharacterPoseFootMotionResolver footMotionResolver)
         {
+            m_FootMotionResolver = footMotionResolver;
             m_Animancer = animancer
                 ? animancer
                 : throw new ArgumentNullException(nameof(animancer));
@@ -877,6 +881,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in AnimationPoseSourceCaptureBinding capture,
             in PoseNodeId poseNodeId)
         {
+            CaptureFootMotion(request.SourceId, request.Clips, in capture);
             IAnimationPoseSamplingBackend backend =
                 ResolveBackend(request.Clips, request.SourceId, poseNodeId);
             bool committed = m_PhysicalSources.ContainsCommitted(
@@ -908,6 +913,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in AnimationPoseSourceCaptureBinding capture,
             in PoseNodeId poseNodeId)
         {
+            CaptureFootMotion(request.SourceId, request.Clips, in capture);
             bool committed = m_PhysicalSources.ContainsCommitted(
                 request.SourceId,
                 poseNodeId);
@@ -1006,6 +1012,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
+            CaptureFootMotion(in sourceId, in clips, in capture);
             if (m_BindingPage.CompletionIdentity == 0 ||
                 capture.CompletionIdentity !=
                     m_BindingPage.CompletionIdentity)
@@ -1048,6 +1055,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 physical,
                 capture.SourceIndex,
                 in scalarReadView);
+        }
+
+        void CaptureFootMotion(
+            in AnimationPoseSourceId sourceId,
+            in AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationPoseSourceCaptureBinding capture)
+        {
+            int dominant = 0;
+            for (int i = 1; i < clips.Count; i++)
+            {
+                if (clips.ElementAt(i).Weight > clips.ElementAt(dominant).Weight)
+                    dominant = i;
+            }
+            ref readonly ClipSamplePlan clip = ref clips.ElementAt(dominant);
+            CharacterPoseFootMotionSource source = m_FootMotionResolver(in sourceId, in clip);
+            int cycle = checked((int)Math.Floor(clip.ContinuousClipTime / clip.DurationSeconds));
+            NativeSlice<AnimationFootMotionSourceSample> output = capture.FootMotion;
+            output[0] = new AnimationFootMotionSourceSample(
+                source.SourceNameIndex, source.SourceSampleIdentity,
+                clip.ClipBindingIndex, cycle, clip.NormalizedTime,
+                source.Observation.Left.Sample(clip.NormalizedTime, cycle, clip.DurationSeconds, clip.IsLooping),
+                source.Observation.Right.Sample(clip.NormalizedTime, cycle, clip.DurationSeconds, clip.IsLooping));
         }
 
         [PerformanceProbe("presentation.animation.source-barrier")]

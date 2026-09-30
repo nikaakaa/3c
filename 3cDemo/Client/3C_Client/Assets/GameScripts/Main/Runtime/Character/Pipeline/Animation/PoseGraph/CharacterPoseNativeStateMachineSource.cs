@@ -1128,7 +1128,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     value.ContributionContinuityIdentity,
                     value.Weight * factor,
                     value.LeftFootWeight * factor,
-                    value.RightFootWeight * factor);
+                    value.RightFootWeight * factor,
+                    in value.FootMotion);
                 for (int bone = 0; bone < boneCount; bone++)
                     outputWeights[outputWeightOffset + bone] =
                         inputWeights[inputWeightOffset + bone] * factor;

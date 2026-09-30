@@ -513,7 +513,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         value.ContributionContinuityIdentity,
                         weight,
                         value.LeftFootWeight * globalFactor,
-                        value.RightFootWeight * globalFactor);
+                        value.RightFootWeight * globalFactor,
+                        in value.FootMotion);
                 for (int bone = 0; bone < boneCount; bone++)
                 {
                     float boneFactor = overlay

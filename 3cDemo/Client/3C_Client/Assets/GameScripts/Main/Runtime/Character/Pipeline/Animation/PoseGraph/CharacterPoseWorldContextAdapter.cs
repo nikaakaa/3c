@@ -9,28 +9,28 @@ using ThirdPersonSimulation;
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal delegate CharacterPoseFootMotionSource CharacterPoseFootMotionResolver(
-        in AnimationPoseSourceContribution contribution,
+        in AnimationPoseSourceId sourceId,
         in ClipSamplePlan clipSample);
 
     internal readonly struct CharacterPoseFootMotionSource
     {
         internal CharacterPoseFootMotionSource(
-            string sourceIdentity,
+            int sourceNameIndex,
             ulong sourceSampleIdentity,
             AnimationFootStepObservationCurvePair observation)
         {
-            if (string.IsNullOrWhiteSpace(sourceIdentity) ||
+            if (sourceNameIndex < 0 ||
                 sourceSampleIdentity == 0 || observation == null)
             {
                 throw new ArgumentException(
                     "Pose Foot Motion source metadata is invalid.");
             }
-            SourceIdentity = sourceIdentity.Trim();
+            SourceNameIndex = sourceNameIndex;
             SourceSampleIdentity = sourceSampleIdentity;
             Observation = observation;
         }
 
-        internal string SourceIdentity { get; }
+        internal int SourceNameIndex { get; }
         internal ulong SourceSampleIdentity { get; }
         internal AnimationFootStepObservationCurvePair Observation { get; }
     }
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly string m_PosePlanHash;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly PoseNodeId[] m_PlayerNodeIds;
-        readonly CharacterPoseFootMotionResolver m_FootMotionResolver;
+        readonly Func<int, string> m_ResolveFootMotionSourceName;
         readonly AnimationPoseSourceContribution[] m_Contributions;
         AnimationFootMotionRuntimeFrame m_LastSampledFootMotion;
         bool m_HasLastSampledFootMotion;
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string posePlanHash,
             CharacterPoseSourceModule sourceModule,
             IReadOnlyList<PoseNodeId> playerNodeIds,
-            CharacterPoseFootMotionResolver footMotionResolver,
+            Func<int, string> resolveFootMotionSourceName,
             int contributionCapacity)
         {
             if (string.IsNullOrWhiteSpace(posePlanHash))
@@ -71,11 +71,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         nameof(playerNodeIds));
                 m_PlayerNodeIds[i] = playerNodeIds[i];
             }
-            m_FootMotionResolver = footMotionResolver ??
-                throw new ArgumentNullException(nameof(footMotionResolver));
             if (contributionCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(contributionCapacity));
             m_PosePlanHash = posePlanHash.Trim();
+            m_ResolveFootMotionSourceName = resolveFootMotionSourceName;
             m_Contributions = new AnimationPoseSourceContribution[
                 contributionCapacity];
         }
@@ -106,9 +105,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 inputBinding.PoseParameterAvailability;
             ResolveContributions(in inputBinding, contributionCount);
             m_HasLastSampledFootMotion = false;
-            AnimationPoseSourceContribution contribution =
-                RequireFootMotionContribution(contributionCount);
-            AnimationFootMotionRuntimeFrame footMotion = SampleFootMotion(in contribution, completionIdentity);
+            int selectedContribution =
+                RequireFootMotionContribution(m_Contributions, contributionCount);
+            ref readonly AnimationPoseSourceContribution contribution = ref m_Contributions[selectedContribution];
+            AnimationPrimitivePoseContribution primitive = inputBinding.Contributions[selectedContribution];
+            AnimationFootMotionRuntimeFrame footMotion = SampleFootMotion(
+                in contribution, in primitive.FootMotion, completionIdentity);
             var pose = new CharacterFootPlacementPoseInput(
                 m_PosePlanHash,
                 in inputBinding,
@@ -141,40 +143,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationFootMotionRuntimeFrame SampleFootMotion(
             in AnimationPoseSourceContribution contribution,
+            in AnimationFootMotionSourceSample sample,
             ulong completionIdentity)
         {
             ref readonly AnimationPoseSourceId sourceId = ref contribution.SourceIdRef;
             ref readonly PoseNodeId nodeId = ref contribution.NodeIdRef;
-            ClipSamplePlan clipSample = m_SourceModule.RequireDominantClipSample(
-                in sourceId,
-                in nodeId,
-                completionIdentity);
-            CharacterPoseFootMotionSource source = m_FootMotionResolver(
-                in contribution,
-                in clipSample);
-            int cycle = checked((int)Math.Floor(
-                clipSample.ContinuousClipTime / clipSample.DurationSeconds));
             AnimationFootMotionRuntimeFrame result = new AnimationFootMotionRuntimeFrame(
                     completionIdentity,
                     nodeId,
                     sourceId,
+                    contribution.Kind,
                     contribution.ContributionContinuityIdentity,
-                    source.SourceIdentity,
-                    source.SourceSampleIdentity,
-                    clipSample.ClipBindingIndex,
-                    cycle,
                     contribution.Weight,
-                    clipSample.NormalizedTime,
-                    source.Observation.Left.Sample(
-                        clipSample.NormalizedTime,
-                        cycle,
-                        clipSample.DurationSeconds,
-                        clipSample.IsLooping),
-                    source.Observation.Right.Sample(
-                        clipSample.NormalizedTime,
-                        cycle,
-                        clipSample.DurationSeconds,
-                        clipSample.IsLooping));
+                    m_ResolveFootMotionSourceName(sample.SourceNameIndex),
+                    in sample);
             m_LastSampledFootMotion = result;
             m_HasLastSampledFootMotion = true;
             return result;
@@ -196,25 +178,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        AnimationPoseSourceContribution RequireFootMotionContribution(
+        internal static int RequireFootMotionContribution(
+            AnimationPoseSourceContribution[] contributions,
             int contributionCount)
         {
-            AnimationPoseSourceContribution selected = default;
-            float selectedWeight = -1f;
+            int selected = -1;
+            float selectedWeight = 0f;
             for (int i = 0; i < contributionCount; i++)
             {
-                ref readonly AnimationPoseSourceContribution candidate = ref m_Contributions[i];
-                if (candidate.Kind != AnimationPoseContributionKind.Live ||
-                    candidate.Weight <= selectedWeight)
+                ref readonly AnimationPoseSourceContribution candidate = ref contributions[i];
+                if (candidate.Weight <= selectedWeight)
                 {
                     continue;
                 }
-                selected = candidate;
+                selected = i;
                 selectedWeight = candidate.Weight;
             }
-            if (!selected.SourceIdRef.IsValid)
+            if (selected < 0)
                 throw new InvalidOperationException(
-                    "Foot Placement has no Live Foot Motion source.");
+                    "Foot Placement has no contributing Foot Motion sample.");
             return selected;
         }
     }

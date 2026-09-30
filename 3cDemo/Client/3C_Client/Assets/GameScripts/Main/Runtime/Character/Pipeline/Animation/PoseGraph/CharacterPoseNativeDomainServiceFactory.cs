@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 footResource.PosePlanHash,
                 source,
                 CollectPlayerNodeIds(),
-                ResolveFootMotion,
+                m_SourceCatalog.RequireFootMotionSourceName,
                 m_AnimationContributionCapacity);
             var constraintService = new CharacterPoseNativeConstraintServiceBinding(
                 constraints,
@@ -222,27 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new AnimationClipPlayerRuntime(descriptor, plan, m_InputContract.Parameters, footIndex, m_Rig);
         }
 
-        CharacterPoseFootMotionSource ResolveFootMotion(
-            in AnimationPoseSourceContribution contribution,
-            in ClipSamplePlan clipSample)
-        {
-            if (contribution.SourceIdRef.SourceKind == AnimationPoseSourceKind.Timeline)
-            {
-                CharacterActionAnimationSourcePlan action =
-                    m_SourceCatalog.RequireActionPlan(in clipSample);
-                return new CharacterPoseFootMotionSource(
-                    action.ClipIdentity,
-                    (ulong)action.FullDependencyHash.GetHashCode(),
-                    action.FootStepObservation);
-            }
-            CharacterPresentationPoseSourcePlan plan =
-                m_SourceCatalog.RequirePlan(
-                    contribution.SourceIdRef.PresentationPoseSourceIndex);
-            return new CharacterPoseFootMotionSource(
-                plan.DisplayName,
-                (ulong)plan.ContentRevision.GetHashCode(),
-                plan.FootStepObservation);
-        }
+        internal CharacterPoseFootMotionResolver FootMotionResolver => m_SourceCatalog.ResolveFootMotion;
 
         CharacterFinalIkFullBodySolver CreateSolver(List<IDisposable> owned)
         {

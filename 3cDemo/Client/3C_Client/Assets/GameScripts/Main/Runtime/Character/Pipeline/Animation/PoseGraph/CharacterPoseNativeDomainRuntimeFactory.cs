@@ -161,7 +161,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 nodeCount,
                 nodeCount,
                 serviceFactory.ResourceScope,
-                inputContract.Parameters.Count);
+                inputContract.Parameters.Count,
+                serviceFactory.FootMotionResolver);
         }
 
         static CharacterPoseNativeDomainCreateResult Validate(

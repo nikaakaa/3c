@@ -27,6 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         [ReadOnly]
         readonly NativeArray<AnimationFootFeatureSample> m_SourceRightFootFeatures;
         [ReadOnly]
+        readonly NativeArray<AnimationFootMotionSourceSample> m_SourceFootMotion;
+        [ReadOnly]
         readonly NativeArray<float> m_SourceVisualTimeScales;
         [ReadOnly]
         readonly NativeArray<byte> m_SourceHasFootFeatures;
@@ -127,6 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_SourcePoseParameterAvailability = sources.PoseParameterAvailability;
             m_SourceLeftFootFeatures = sources.LeftFootFeatures;
             m_SourceRightFootFeatures = sources.RightFootFeatures;
+            m_SourceFootMotion = sources.FootMotion;
             m_SourceVisualTimeScales = sources.VisualTimeScales;
             m_SourceHasFootFeatures = sources.HasFootFeatures;
             m_SourceCompletedAt = sources.CompletedAt;
@@ -426,7 +429,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     entry.ContributionContinuityIdentity,
                     entry.ScalarWeight,
                     entry.LeftFootWeight,
-                    entry.RightFootWeight);
+                    entry.RightFootWeight,
+                    ResolveFootMotion(in entry));
                 for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
                 {
                     float weight = m_FramePlan.GetDenseBoneWeight(contributionIndex, boneIndex);
@@ -436,6 +440,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 }
             }
             return AnimationPoseNativeInvalidReason.None;
+        }
+
+        AnimationFootMotionSourceSample ResolveFootMotion(in AnimationSlotBlendFramePlanEntry entry)
+        {
+            if (entry.Kind == AnimationPoseContributionKind.Live)
+                return m_SourceFootMotion[entry.SourceCaptureIndex].BindContribution(entry.ContributionContinuityIdentity);
+            return m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture
+                ? m_HistoryStates[m_FramePlan.Header.HistoryReadPageIndex].FootMotion.CaptureStoredPose()
+                : m_StoredState[0].FootMotion;
         }
 
         AnimationPoseNativeInvalidReason BlendCrossFade(float deltaSeconds)
@@ -930,6 +943,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 SourceHistoryCompletionIdentity = history.CompletionIdentity,
                 ContributionContinuityIdentity = storedEntry.ContributionContinuityIdentity,
                 OutputWeight = history.OutputWeight,
+                FootMotion = history.FootMotion.CaptureStoredPose(),
                 LeftFootFeatures = history.LeftFootFeatures,
                 RightFootFeatures = history.RightFootFeatures
             };
@@ -960,9 +974,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 CompletionIdentity = m_CompletionIdentity,
                 ContinuityIdentity = header.ContinuityIdentity,
                 OutputWeight = header.OutputWeight,
+                FootMotion = ResolveHistoryFootMotion(),
                 LeftFootFeatures = scratch.LeftFootFeatures,
                 RightFootFeatures = scratch.RightFootFeatures
             };
+        }
+
+        AnimationFootMotionSourceSample ResolveHistoryFootMotion()
+        {
+            int selected = 0;
+            for (int i = 1; i < m_FramePlan.Header.ContributionCount; i++)
+            {
+                if (m_ScratchContributions[i].Weight > m_ScratchContributions[selected].Weight)
+                    selected = i;
+            }
+            return m_ScratchContributions[selected].FootMotion;
         }
 
         void CommitNoPoseHistory()

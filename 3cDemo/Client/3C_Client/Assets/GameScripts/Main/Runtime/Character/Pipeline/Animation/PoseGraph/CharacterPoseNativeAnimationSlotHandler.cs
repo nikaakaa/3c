@@ -443,10 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         actionBoneWeight));
             }
             BlendParameters(in source, in action, sourceGlobalWeight, actionGlobalWeight);
-            int count = 0;
-            AppendContributions(in source, sourceGlobalWeight, ref count);
-            AppendContributions(in action, actionGlobalWeight, ref count);
-            CharacterPoseNativePoseBufferCopy.CompleteContributions(in m_WriteBinding, count);
+            BlendContributions(in source, in action, in m_WriteBinding);
             m_WriteBinding.OutputWeight[0] = Mathf.Clamp01(
                 source.OutputWeight[0] + action.OutputWeight[0]);
             BlendFeet(in source, in action, sourceGlobalWeight, actionGlobalWeight);
@@ -546,17 +543,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void AppendContributions(
+        internal static void BlendContributions(
+            in CharacterPoseNativePoseReadBinding source,
+            in CharacterPoseNativePoseReadBinding action,
+            in AnimationPlayerPoseNativeWriteBinding output)
+        {
+            float actionLeftWeight = 0f;
+            float actionRightWeight = 0f;
+            NativeSlice<AnimationPrimitivePoseContribution> actionContributions = action.Contributions;
+            for (int i = 0; i < action.ContributionCount[0]; i++)
+            {
+                AnimationPrimitivePoseContribution value = actionContributions[i];
+                actionLeftWeight += value.LeftFootWeight;
+                actionRightWeight += value.RightFootWeight;
+            }
+            int count = 0;
+            AppendContributions(in source, in action, in output, false,
+                1f - Mathf.Clamp01(action.OutputWeight[0]),
+                1f - Mathf.Clamp01(actionLeftWeight),
+                1f - Mathf.Clamp01(actionRightWeight), ref count);
+            AppendContributions(in action, in action, in output, true, 1f, 1f, 1f, ref count);
+            CharacterPoseNativePoseBufferCopy.CompleteContributions(in output, count);
+        }
+
+        static void AppendContributions(
             in CharacterPoseNativePoseReadBinding input,
+            in CharacterPoseNativePoseReadBinding action,
+            in AnimationPlayerPoseNativeWriteBinding outputBinding,
+            bool actionContribution,
             float factor,
+            float leftFootFactor,
+            float rightFootFactor,
             ref int outputCount)
         {
             int inputCount = input.ContributionCount[0];
-            int boneCount = m_WriteBinding.DenseLocalPoses.Length;
+            int boneCount = outputBinding.DenseLocalPoses.Length;
             NativeSlice<AnimationPrimitivePoseContribution> output =
-                m_WriteBinding.Contributions;
+                outputBinding.Contributions;
             NativeSlice<float> outputWeights =
-                m_WriteBinding.DenseContributionWeights;
+                outputBinding.DenseContributionWeights;
             NativeSlice<AnimationPrimitivePoseContribution> inputContributions =
                 input.Contributions;
             NativeSlice<float> inputWeights =
@@ -565,9 +590,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (outputCount >= output.Length)
                     throw new InvalidOperationException(
-                        $"Animation Slot '{NodeId}' contribution capacity was exceeded.");
+                        "Animation Slot contribution capacity was exceeded.");
                 AnimationPrimitivePoseContribution value = inputContributions[contribution];
-                CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
+                CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in outputBinding, outputCount + 1);
                 int outputWeightOffset = outputCount * boneCount;
                 int inputWeightOffset = contribution * boneCount;
                 output[outputCount] = new AnimationPrimitivePoseContribution(
@@ -578,11 +603,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     value.SourceOwnerIndex,
                     value.ContributionContinuityIdentity,
                     value.Weight * factor,
-                    value.LeftFootWeight * factor,
-                    value.RightFootWeight * factor);
+                    value.LeftFootWeight * leftFootFactor,
+                    value.RightFootWeight * rightFootFactor,
+                    in value.FootMotion);
                 for (int bone = 0; bone < boneCount; bone++)
+                {
+                    float boneFactor = actionContribution
+                        ? 1f
+                        : 1f - BoneOutputWeight(bone, action.ContributionCount[0],
+                            boneCount, action.DenseContributionWeights);
                     outputWeights[outputWeightOffset + bone] =
-                        inputWeights[inputWeightOffset + bone] * factor;
+                        inputWeights[inputWeightOffset + bone] * boneFactor;
+                }
                 outputCount++;
             }
         }
@@ -627,7 +659,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_WriteBinding.HasFootFeatures[0] = 0;
         }
 
-        float BoneOutputWeight(
+        static float BoneOutputWeight(
             int bone,
             int contributionCount,
             int boneCount,

@@ -932,7 +932,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!frame.IsValid)
                 throw new ArgumentException("Foot Step observation input diagnostics is invalid.");
             CompletionIdentity = frame.CompletionIdentity;
-            SourceId = frame.SourceId.ToString();
+            SourceId = frame.ContributionKind == AnimationPoseContributionKind.Stored
+                ? "stored-pose"
+                : frame.SourceId.ToString();
             SourceIdentity = frame.SourceIdentity;
             ContributionContinuityIdentity = frame.ContributionContinuityIdentity;
             ClipBindingIndex = frame.ClipBindingIndex;

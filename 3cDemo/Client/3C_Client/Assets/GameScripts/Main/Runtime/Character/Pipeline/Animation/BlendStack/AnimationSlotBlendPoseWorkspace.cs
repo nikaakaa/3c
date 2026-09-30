@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal ulong SourceHistoryCompletionIdentity;
         internal ulong ContributionContinuityIdentity;
         internal float OutputWeight;
+        internal AnimationFootMotionSourceSample FootMotion;
         internal AnimationFootFeatureSample LeftFootFeatures;
         internal AnimationFootFeatureSample RightFootFeatures;
     }
@@ -24,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal ulong CompletionIdentity;
         internal ulong ContinuityIdentity;
         internal float OutputWeight;
+        internal AnimationFootMotionSourceSample FootMotion;
         internal AnimationFootFeatureSample LeftFootFeatures;
         internal AnimationFootFeatureSample RightFootFeatures;
     }

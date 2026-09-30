@@ -165,19 +165,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong contributionContinuityIdentity,
             CharacterFootSide side) =>
             new AnimationFootMotionRuntimeSample(
-                FootHeight,
-                ToeHeight,
-                ToeSpeed,
-                PositionError,
-                RotationError,
-                Contact,
-                LockMode,
-                LockWeight,
-                Support,
+                in this,
                 Events.Bind(
                     sourceSampleIdentity,
                     contributionContinuityIdentity,
-                    side));
+                    side),
+                ToeSpeed);
+
+        AnimationFootMotionRuntimeSample(
+            in AnimationFootMotionRuntimeSample source,
+            in AnimationFootMotionEventFrame events,
+            float toeSpeed)
+        {
+            FootHeight = source.FootHeight;
+            ToeHeight = source.ToeHeight;
+            ToeSpeed = toeSpeed;
+            PositionError = source.PositionError;
+            RotationError = source.RotationError;
+            Contact = source.Contact;
+            LockMode = source.LockMode;
+            LockWeight = source.LockWeight;
+            Support = source.Support;
+            Events = events;
+            m_IsSpecified = source.m_IsSpecified;
+        }
+
+        internal AnimationFootMotionRuntimeSample CaptureStoredPose()
+        {
+            var events = new AnimationFootMotionEventFrame(
+                in Events.CurrentContact,
+                default,
+                Events.CurrentContact.IsValid
+                    ? AnimationFootMotionEventPhase.Contact
+                    : AnimationFootMotionEventPhase.Unavailable,
+                0f, 0f, 0f);
+            return new AnimationFootMotionRuntimeSample(in this, in events, 0f);
+        }
 
         static float RequireNonNegative(float value, string parameter)
         {
@@ -196,6 +219,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
+    internal readonly struct AnimationFootMotionSourceSample
+    {
+        internal AnimationFootMotionSourceSample(
+            int sourceNameIndex,
+            ulong sourceSampleIdentity,
+            int clipBindingIndex,
+            int cycle,
+            float normalizedTime,
+            in AnimationFootMotionRuntimeSample left,
+            in AnimationFootMotionRuntimeSample right)
+        {
+            SourceNameIndex = sourceNameIndex;
+            SourceSampleIdentity = sourceSampleIdentity;
+            ClipBindingIndex = clipBindingIndex;
+            Cycle = cycle;
+            NormalizedTime = normalizedTime;
+            Left = left;
+            Right = right;
+        }
+
+        internal readonly int SourceNameIndex;
+        internal readonly ulong SourceSampleIdentity;
+        internal readonly int ClipBindingIndex;
+        internal readonly int Cycle;
+        internal readonly float NormalizedTime;
+        internal readonly AnimationFootMotionRuntimeSample Left;
+        internal readonly AnimationFootMotionRuntimeSample Right;
+
+        internal AnimationFootMotionSourceSample BindContribution(ulong continuityIdentity) =>
+            new AnimationFootMotionSourceSample(
+                SourceNameIndex, SourceSampleIdentity, ClipBindingIndex, Cycle, NormalizedTime,
+                Left.BindEventLineage(SourceSampleIdentity, continuityIdentity, CharacterFootSide.Left),
+                Right.BindEventLineage(SourceSampleIdentity, continuityIdentity, CharacterFootSide.Right));
+
+        internal AnimationFootMotionSourceSample CaptureStoredPose() =>
+            new AnimationFootMotionSourceSample(
+                SourceNameIndex, SourceSampleIdentity, ClipBindingIndex, Cycle, NormalizedTime,
+                Left.CaptureStoredPose(), Right.CaptureStoredPose());
+    }
+
     internal readonly struct AnimationFootMotionRuntimeFrame
     {
 
@@ -203,44 +266,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity,
             PoseNodeId nodeId,
             AnimationPoseSourceId sourceId,
+            AnimationPoseContributionKind contributionKind,
             ulong contributionContinuityIdentity,
-            string sourceIdentity,
-            ulong sourceSampleIdentity,
-            int clipBindingIndex,
-            int cycle,
             float sourceWeight,
-            float normalizedTime,
-            in AnimationFootMotionRuntimeSample left,
-            in AnimationFootMotionRuntimeSample right)
+            string sourceIdentity,
+            in AnimationFootMotionSourceSample sample)
         {
-            if (completionIdentity == 0 || !nodeId.IsValid || !sourceId.IsValid ||
-                contributionContinuityIdentity == 0 || clipBindingIndex < 0 ||
-                sourceSampleIdentity == 0 ||
-                string.IsNullOrWhiteSpace(sourceIdentity) ||
+            if (completionIdentity == 0 || !nodeId.IsValid ||
+                (contributionKind == AnimationPoseContributionKind.Live) != sourceId.IsValid ||
+                contributionContinuityIdentity == 0 || sample.ClipBindingIndex < 0 ||
+                sample.SourceSampleIdentity == 0 || sample.SourceNameIndex < 0 ||
                 !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f ||
-                !float.IsFinite(normalizedTime) || normalizedTime < 0f || normalizedTime > 1f ||
-                !left.IsValid || !right.IsValid)
+                !float.IsFinite(sample.NormalizedTime) || sample.NormalizedTime < 0f || sample.NormalizedTime > 1f ||
+                !sample.Left.IsValid || !sample.Right.IsValid)
             {
                 throw new ArgumentException("Foot Step observation frame is invalid.");
             }
             CompletionIdentity = completionIdentity;
             NodeIdRef = nodeId;
             SourceIdRef = sourceId;
+            ContributionKind = contributionKind;
             ContributionContinuityIdentity = contributionContinuityIdentity;
-            SourceIdentity = sourceIdentity.Trim();
-            SourceSampleIdentity = sourceSampleIdentity;
-            ClipBindingIndex = clipBindingIndex;
-            Cycle = cycle;
+            SourceIdentity = sourceIdentity;
+            SourceSampleIdentity = sample.SourceSampleIdentity;
+            ClipBindingIndex = sample.ClipBindingIndex;
+            Cycle = sample.Cycle;
             SourceWeight = sourceWeight;
-            NormalizedTime = normalizedTime;
-            Left = left.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Left);
-            Right = right.BindEventLineage(
-                sourceSampleIdentity,
-                contributionContinuityIdentity,
-                CharacterFootSide.Right);
+            NormalizedTime = sample.NormalizedTime;
+            Left = sample.Left;
+            Right = sample.Right;
             m_IsSpecified = 1;
         }
 
@@ -250,6 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseSourceId SourceId => SourceIdRef;
         internal readonly PoseNodeId NodeIdRef;
         internal readonly AnimationPoseSourceId SourceIdRef;
+        internal AnimationPoseContributionKind ContributionKind { get; }
         internal ulong ContributionContinuityIdentity { get; }
         internal string SourceIdentity { get; }
         internal ulong SourceSampleIdentity { get; }

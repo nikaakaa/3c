@@ -257,18 +257,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (!m_Session.TryObserveFinalPose(out ComposedAnimationPoseFrame pose))
                     throw new InvalidOperationException("Pose diagnostic publication has no committed pose.");
-                AnimationPoseSourceContribution dominant = default;
-                float weight = -1f;
-                var contributions = pose.Contributions;
-                for (int i = 0; i < contributions.Count; i++)
-                {
-                    AnimationPoseSourceContribution candidate = contributions[i];
-                    if (candidate.Kind == AnimationPoseContributionKind.Live && candidate.Weight > weight)
-                    {
-                        dominant = candidate;
-                        weight = candidate.Weight;
-                    }
-                }
                 AnimationFootMotionRuntimeFrame motion = m_Services.WorldContext.LastSampledFootMotion;
                 Diagnostics.CharacterPoseDiagnosticFrame frame = CaptureDiagnosticFrame(in lineage);
                 Diagnostics.CharacterFootIkPhysicalCapture physical = m_Session.Role.CommittedPhysicalCapture;

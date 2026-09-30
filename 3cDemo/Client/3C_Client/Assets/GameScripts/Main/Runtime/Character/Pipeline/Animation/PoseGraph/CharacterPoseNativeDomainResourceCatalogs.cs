@@ -18,6 +18,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Dictionary<AnimationClip, CharacterActionAnimationSourcePlan> m_ActionPlans;
         readonly Dictionary<(int ResourceIndex, int ClipIndex), CharacterActionAnimationSourcePlan> m_AclActionPlans;
         readonly Dictionary<int, CharacterAnimationCompiledResourceDescriptor> m_Descriptors;
+        readonly Dictionary<int, CharacterPoseFootMotionSource> m_PlanFootMotion;
+        readonly Dictionary<CharacterActionAnimationSourcePlan, CharacterPoseFootMotionSource> m_ActionFootMotion;
+        readonly string[] m_FootMotionSourceNames;
 
         internal CharacterPoseNativeSourceResourceCatalog(
             CharacterAnimationRigPayload rig,
@@ -33,9 +36,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActionPlans = BuildActionIndex(actionSourcePlans);
             m_AclActionPlans = new Dictionary<(int, int), CharacterActionAnimationSourcePlan>(m_ActionPlans.Count);
             m_Descriptors = BuildIndex(resourceDescriptors, value => value.ResourceIndex);
+            m_PlanFootMotion = new Dictionary<int, CharacterPoseFootMotionSource>(m_Plans.Count);
+            m_ActionFootMotion = new Dictionary<CharacterActionAnimationSourcePlan, CharacterPoseFootMotionSource>(m_ActionPlans.Count);
+            m_FootMotionSourceNames = new string[m_Plans.Count + m_ActionPlans.Count];
+            int footMotionIndex = 0;
             foreach (CharacterPresentationPoseSourcePlan plan in m_Plans.Values)
             {
                 plan.RequireValid();
+                m_FootMotionSourceNames[footMotionIndex] = plan.DisplayName.Trim();
+                m_PlanFootMotion.Add(plan.SourceIndex.Value, new CharacterPoseFootMotionSource(
+                    footMotionIndex++, (ulong)plan.ContentRevision.GetHashCode(), plan.FootStepObservation));
                 if (!string.Equals(plan.RigId, m_Rig.RigId, StringComparison.Ordinal) ||
                     !string.Equals(plan.RigRevision, m_Rig.RigRevision, StringComparison.Ordinal))
                     throw new InvalidOperationException($"Pose source plan '{plan.SourceIndex}' Rig identity is stale.");
@@ -53,6 +63,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             foreach (CharacterActionAnimationSourcePlan plan in m_ActionPlans.Values)
             {
                 plan.RequireValid();
+                m_FootMotionSourceNames[footMotionIndex] = plan.ClipIdentity.Trim();
+                m_ActionFootMotion.Add(plan, new CharacterPoseFootMotionSource(
+                    footMotionIndex++, (ulong)plan.FullDependencyHash.GetHashCode(), plan.FootStepObservation));
                 if (plan.Backend != CharacterAnimationSamplingBackendKind.Acl)
                     continue;
                 CharacterAnimationCompiledResourceDescriptor descriptor =
@@ -76,6 +89,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_AclActionPlans.TryAdd((plan.ResourceCatalogIndex, plan.GroupClipIndex), plan);
             }
         }
+
+        internal string RequireFootMotionSourceName(int index) => m_FootMotionSourceNames[index];
+
+        internal CharacterPoseFootMotionSource ResolveFootMotion(
+            in AnimationPoseSourceId sourceId,
+            in ClipSamplePlan clipSample) =>
+            sourceId.SourceKind == AnimationPoseSourceKind.Timeline
+                ? m_ActionFootMotion[RequireActionPlan(in clipSample)]
+                : m_PlanFootMotion[sourceId.PresentationPoseSourceIndex.Value];
 
         internal CharacterPresentationPoseSourcePlan RequirePlan(PresentationPoseSourceIndex sourceIndex)
         {

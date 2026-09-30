@@ -628,7 +628,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     source.ContributionContinuityIdentity,
                     source.Weight,
                     source.LeftFootWeight * leftEnvelope,
-                    source.RightFootWeight * rightEnvelope);
+                    source.RightFootWeight * rightEnvelope,
+                    in source.FootMotion);
             }
         }
 

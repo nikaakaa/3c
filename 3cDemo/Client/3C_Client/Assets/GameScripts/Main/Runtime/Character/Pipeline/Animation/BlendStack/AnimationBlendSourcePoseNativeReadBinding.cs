@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<byte> poseParameterAvailability,
             NativeArray<AnimationFootFeatureSample> leftFootFeatures,
             NativeArray<AnimationFootFeatureSample> rightFootFeatures,
+            NativeArray<AnimationFootMotionSourceSample> footMotion,
             NativeArray<float> visualTimeScales,
             NativeArray<byte> hasFootFeatures,
             NativeArray<ulong> completedAt,
@@ -39,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(poseParameterAvailability, parameterCapacity);
             RequireLength(leftFootFeatures, sourceCapacity);
             RequireLength(rightFootFeatures, sourceCapacity);
+            RequireLength(footMotion, sourceCapacity);
             RequireLength(visualTimeScales, sourceCapacity);
             RequireLength(hasFootFeatures, sourceCapacity);
             RequireLength(completedAt, sourceCapacity);
@@ -55,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             PoseParameterAvailability = poseParameterAvailability;
             LeftFootFeatures = leftFootFeatures;
             RightFootFeatures = rightFootFeatures;
+            FootMotion = footMotion;
             VisualTimeScales = visualTimeScales;
             HasFootFeatures = hasFootFeatures;
             CompletedAt = completedAt;
@@ -72,6 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<byte> PoseParameterAvailability { get; }
         internal NativeArray<AnimationFootFeatureSample> LeftFootFeatures { get; }
         internal NativeArray<AnimationFootFeatureSample> RightFootFeatures { get; }
+        internal NativeArray<AnimationFootMotionSourceSample> FootMotion { get; }
         internal NativeArray<float> VisualTimeScales { get; }
         internal NativeArray<byte> HasFootFeatures { get; }
         internal NativeArray<ulong> CompletedAt { get; }

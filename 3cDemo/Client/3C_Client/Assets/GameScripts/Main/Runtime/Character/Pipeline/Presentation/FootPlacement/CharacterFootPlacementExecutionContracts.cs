@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = 0; i < contributionCount; i++)
             {
                 ref readonly AnimationPoseSourceContribution contribution = ref contributions[i];
-                if (contribution.Kind != AnimationPoseContributionKind.Live ||
+                if (contribution.Kind != footStepObservation.ContributionKind ||
                     !contribution.NodeIdRef.Equals(footStepObservation.NodeIdRef) ||
                     !contribution.SourceIdRef.Equals(footStepObservation.SourceIdRef) ||
                     contribution.ContributionContinuityIdentity !=

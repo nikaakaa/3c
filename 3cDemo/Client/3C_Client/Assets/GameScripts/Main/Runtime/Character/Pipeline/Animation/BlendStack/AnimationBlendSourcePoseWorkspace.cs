@@ -42,6 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<byte> m_PoseParameterAvailability;
         NativeArray<AnimationFootFeatureSample> m_LeftFootFeatures;
         NativeArray<AnimationFootFeatureSample> m_RightFootFeatures;
+        NativeArray<AnimationFootMotionSourceSample> m_FootMotion;
         NativeArray<float> m_VisualTimeScales;
         NativeArray<byte> m_HasFootFeatures;
         NativeArray<byte> m_PreviousAvailable;
@@ -92,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PoseParameterAvailability = Allocate<byte>(parameterCapacity);
                 m_LeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_PhysicalSourceCapacity);
                 m_RightFootFeatures = Allocate<AnimationFootFeatureSample>(m_PhysicalSourceCapacity);
+                m_FootMotion = Allocate<AnimationFootMotionSourceSample>(m_PhysicalSourceCapacity);
                 m_VisualTimeScales = Allocate<float>(m_PhysicalSourceCapacity);
                 m_HasFootFeatures = Allocate<byte>(m_PhysicalSourceCapacity);
                 m_PreviousAvailable = Allocate<byte>(m_PhysicalSourceCapacity);
@@ -291,6 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HasPrevious,
                 m_CompletedAt,
                 m_CaptureFailures,
+                new NativeSlice<AnimationFootMotionSourceSample>(m_FootMotion, pendingSlot, 1),
                 presentationDeltaSeconds,
                 new NativeSlice<float>(
                     m_PoseParameters,
@@ -320,6 +323,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PoseParameterAvailability,
                 m_LeftFootFeatures,
                 m_RightFootFeatures,
+                m_FootMotion,
                 m_VisualTimeScales,
                 m_HasFootFeatures,
                 m_CompletedAt,
@@ -471,6 +475,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             m_LeftFootFeatures[physicalIndex] = default;
             m_RightFootFeatures[physicalIndex] = default;
+            m_FootMotion[physicalIndex] = default;
             m_HasFootFeatures[physicalIndex] = 0;
             m_VisualTimeScales[physicalIndex] = 0f;
             int parameterOffset = physicalIndex * m_ParameterCount;
@@ -531,6 +536,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Dispose(ref m_PoseParameterAvailability);
             Dispose(ref m_LeftFootFeatures);
             Dispose(ref m_RightFootFeatures);
+            Dispose(ref m_FootMotion);
             Dispose(ref m_VisualTimeScales);
             Dispose(ref m_HasFootFeatures);
             Dispose(ref m_PreviousAvailable);

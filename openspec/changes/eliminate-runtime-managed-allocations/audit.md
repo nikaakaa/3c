@@ -2087,3 +2087,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground Envelope 构建先对 `NextSwingLanding - LastLanding` 做平面投影，再重复相减一次用于端点高度；每次 envelope 构建重复执行同一路径 delta。
 - 路径 delta 在归一化 up 后绑定局部，投影和 end height 复用同一向量。float 判定、失败分支、contact 投影、surface visibility、hull 和输出不变；绑定不改变减法输入或浮点运算顺序。
 - 静态核对 input 为内部 readonly struct、生命周期覆盖构建。另一项候选是删除 Envelope 对已由 Ground Path 归一化的 ComponentUp 的二次归一化，但二次归一化可能改变 IEEE 浮点位型，需要业务接受几何等价而非逐位等价后再决策。未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP295 Swing envelope sample 投影合并（2026-09-30，已实施，本轮未编译）
+
+- Swing Motion 得到 envelope sample 后，minimum correction 和 formal target height 分别对同一 sample 沿同一 up 做 Dot；每脚 swing 求解重复计算同一投影。
+- envelope 沿 up 高度先绑定局部，minimum correction、formal target height、finite 判定和 vertical correction 继续使用原加减顺序。sample 失败分支、endpoint 校验、progress 和输出字段不变。
+- 该改动只合并重复 Dot，不改变输入、公式或浮点结果。静态核对 up 和 sample 生命周期覆盖消费点；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

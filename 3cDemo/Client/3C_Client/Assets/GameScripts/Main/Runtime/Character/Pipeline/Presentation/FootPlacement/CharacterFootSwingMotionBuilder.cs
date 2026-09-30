@@ -184,12 +184,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineSample);
 
             float originalSoleHeight = Vector3.Dot(originalSole, up);
-            float envelopeMinimumCorrection = Vector3.Dot(
-                envelopeSample,
-                up) - originalSoleHeight;
-            float formalTargetHeightAlongUp = Vector3.Dot(
-                envelopeSample,
-                up) + formalFootHeight;
+            float envelopeHeightAlongUp = Vector3.Dot(envelopeSample, up);
+            float envelopeMinimumCorrection =
+                envelopeHeightAlongUp - originalSoleHeight;
+            float formalTargetHeightAlongUp =
+                envelopeHeightAlongUp + formalFootHeight;
             float formalTargetCorrection =
                 formalTargetHeightAlongUp - originalSoleHeight;
             if (!float.IsFinite(envelopeMinimumCorrection) ||

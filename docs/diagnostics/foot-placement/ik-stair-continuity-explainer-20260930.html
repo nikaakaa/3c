@@ -19,9 +19,11 @@
   <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.09.30 · 交互解释</span></div>
   <header class="hero">
     <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">本页包含采样事实、原因判断和候选行为。三者证据强度不同，不能把右侧示意当成已经证明正确的修复方案。先看本轮核对结论，再查看各项数据。</p></div>
-    <div class="status-note"><b>历史连续对照完成，一项候选已被否决。</b><span>仅在有净空时提前放开，虽减轻腿长冲突，却把恢复步长增到 26.43 cm；运行时试改已撤销。第四项仍只有局部目标交接证据，其余右侧行为仍为未验证候选。</span></div>
+    <div class="status-note"><b>先补复算输入，IK 修复候选暂停。</b><span>旧采样缺完整身体轨迹和本帧计算前脚态，不能据此证明上游预测方案正确。现已增加正式采样字段，需重新采样。提前放开的失败候选仍已撤销；其余右侧行为仍为未验证候选。</span></div>
   </header>
   <details id="audit-verdict" open><summary>严格核对结论：哪些已证实，哪些还不能照着改</summary><div class="detail-body">
+    <p><b>2026-10-01 · 采样缺口：</b>已有连续实验只重跑单脚目标至 Goal，预测结果与路径仍来自记录。旧 CSV 没有完整未来身体轨迹，也没有完整的计算前脚态，不能继续把扩大窗口或验证上游预测说成“已有输入足够”。新 full 采样补齐计算前状态、完整轨迹表、事件时间与来源身份；旧数据不补造。这次只增加采样字段，没有完成新的行为验证。</p>
+    <p><b>重新采样：</b>使用原入口的 <code>character-foot-ik/full</code>（capability 4 / full sampler 3），保留同一场景和配置，复现上下楼问题后停止保存。主表新增 <code>foot/pre-state</code>、<code>input/body-trajectory</code>、作者总权重和 PosePlanHash；另有 <code>future-body-trajectory</code> 逐点时间/位移/速度表，以及 <code>pre-state-response-lineage</code> 来源身份 UTF-8 字节表。core 不含这些复算输入；它们不能恢复旧采样缺失的内容，也不能独立恢复整个 Unity 世界。</p>
     <ul class="reference-list">
       <li><b>01 · 末端补高已证实，原来的移动示意过于简化。</b><p>左脚 14120→14121 的中心 Z 后退 1.107 mm，第 14 点却前进 1.186 mm，跨上高 18 cm 的踏面；末端追加 16.041 cm。不能仅归因为水平前移过快：旋转后的脚掌覆盖也在变化。需要核对完整脚姿态的跨边过程，当前图没有证明候选轨迹无碰撞。</p></li>
       <li><b>02 · 包络导致抬升已证实，“候选错误”尚未证实。</b><p>右脚 33624 的高候选在中心路径终点外 8.699 cm，沿程坐标被 Clamp，高度仍为 0.960001 m。当前位置输出脚掌查询余量约 8.825 cm，包络仍硬抬 8.142 cm。但追到 33634，同一右脚、同一预测落脚事件的第 15 点实际命中同一高踏面（Surface=-16060，Y=0.96 m），33635 接触目标也覆盖它。不能把这个候选当成无关障碍删除；尚待解释的是为什么必须在 33624 突然硬抬。撤回“错误候选已经确认”的表述。</p></li>

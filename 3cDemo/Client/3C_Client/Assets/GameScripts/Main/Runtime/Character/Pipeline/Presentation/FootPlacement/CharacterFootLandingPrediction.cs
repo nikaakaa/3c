@@ -633,8 +633,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootLandingPredictionFootDiagnostics
     {
+        public CharacterFootLifecycleInputDiagnostics PreState { get; }
+
         internal CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionResult result,
+            in CharacterFootLifecycleInputDiagnostics preState,
             CharacterFootPlacementAnimatedFootPose sourcePose,
             in CharacterFootStepSelectionDiagnostics stepSelection,
             CharacterFootLandingSnapshot landing,
@@ -646,6 +649,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportObservation outputSupport,
             in CharacterFootCurrentSupportObservation stateTargetSupport)
         {
+            PreState = preState;
             Side = result.Side;
             State = result.State;
             RejectReason = result.RejectReason;
@@ -957,11 +961,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("formal-observation-continuity")]
         [DiagnosticGroup("formal-source")]
         public ulong ContributionContinuityIdentity { get; }
+        [DiagnosticField, DiagnosticGroup("formal-source")]
         public int ClipBindingIndex { get; }
         [DiagnosticField]
         [DiagnosticKey("formal-observation-cycle")]
         [DiagnosticGroup("formal-source")]
         public int Cycle { get; }
+        [DiagnosticField, DiagnosticGroup("formal-source")]
         public float SourceWeight { get; }
         [DiagnosticField]
         [DiagnosticKey("formal-observation-normalized-time")]
@@ -974,8 +980,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootLandingPredictionInputDiagnostics
     {
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public float FootPlacementWeight { get; }
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public string PosePlanHash { get; }
+        public CharacterFootBodyTrajectoryInputDiagnostics BodyTrajectory { get; }
+
         internal CharacterFootLandingPredictionInputDiagnostics(
             float presentationDeltaSeconds,
+            float footPlacementWeight,
+            string posePlanHash,
+            in CharacterFootBodyTrajectoryInputDiagnostics bodyTrajectory,
             in CharacterBodyPresentationFrame body,
             bool grounded,
             float horizontalSpeed,
@@ -987,6 +1002,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationFootMotionRuntimeFrame footStepObservation)
         {
             PresentationDeltaSeconds = presentationDeltaSeconds;
+            FootPlacementWeight = footPlacementWeight;
+            PosePlanHash = posePlanHash;
+            BodyTrajectory = bodyTrajectory;
             Grounded = grounded;
             HorizontalSpeed = horizontalSpeed;
             LeftActionInstanceIdentity = leftAction.ActionInstanceIdentity;

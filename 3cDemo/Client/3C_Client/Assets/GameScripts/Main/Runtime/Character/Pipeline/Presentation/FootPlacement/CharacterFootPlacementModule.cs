@@ -283,6 +283,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
                 throw new InvalidOperationException("Foot Placement already evaluated the open bank.");
+            var leftPreState = bank.RecordDiagnostics
+                ? new CharacterFootLifecycleInputDiagnostics(in bank.LeftFoot)
+                : default;
+            var rightPreState = bank.RecordDiagnostics
+                ? new CharacterFootLifecycleInputDiagnostics(in bank.RightFoot)
+                : default;
             if (frame.ActorId != m_ActorId ||
                 !string.Equals(
                     poseInput.PosePlanHash,
@@ -669,6 +675,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 var inputDiagnostics = new CharacterFootLandingPredictionInputDiagnostics(
                     frame.PresentationDeltaSeconds,
+                    frame.FootPlacementWeight,
+                    poseInput.PosePlanHash,
+                    new CharacterFootBodyTrajectoryInputDiagnostics(bank, bodyTrajectory),
                     in body,
                     facts.Grounded,
                     frame.ParameterFrame.Require(
@@ -682,6 +691,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
+                        in leftPreState,
                         leftPose,
                         new CharacterFootStepSelectionDiagnostics(
                             leftLanding.LastLandingEventIdentity,
@@ -700,6 +710,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
+                        in rightPreState,
                         rightPose,
                         new CharacterFootStepSelectionDiagnostics(
                             rightLanding.LastLandingEventIdentity,

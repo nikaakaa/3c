@@ -21,4 +21,6 @@
 
 报告附带 JSON、查询图与[台阶连续性解释器](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html)已归入[脚部诊断](../diagnostics/foot-placement/README.md)。正式 CSV、Proof 与分析包仍在项目 `Diagnostics/`；原始数据内容、失败事实和采样身份未改。
 
+2026-10-01 补齐新的 full 采样输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前复制左右脚生命周期状态，诊断页保存完整身体预测曲线的值副本，原生成采样程序输出 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，并补充事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；这次没有修改冻结、权重、骨盆或腿 IK 算法，也没有完成新的行为验证。按用户本次范围不保留新增单元测试。
+
 原理阅读见 [GDC 学习文案](../reference/foot-placement/gdc2016-fitting-the-world.md)；历史否决与重复问题见[实现经验](../reference/foot-placement/implementation-lessons.md)。参数和当前运行路径仍由正式内容与现行规格拥有。

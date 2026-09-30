@@ -74,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [DiagnosticGroup("formal-event")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]
         public int LandingCycle { get; }
+        [DiagnosticField, DiagnosticGroup("formal-event")]
         public float NormalizedTime { get; }
         [DiagnosticField]
         [DiagnosticGroup("formal-event")]
@@ -83,7 +84,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [DiagnosticGroup("formal-event")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]
         public Vector3 RootLocalLanding { get; }
+        [DiagnosticField, DiagnosticGroup("formal-event")]
         public ulong SourceSampleIdentity { get; }
+        [DiagnosticField, DiagnosticGroup("formal-event")]
         public ulong ContributionContinuityIdentity { get; }
         [DiagnosticField]
         [DiagnosticGroup("formal-event")]
@@ -179,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [DiagnosticGroup("formal-event")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]
         public float TimeToLandingSeconds { get; }
+        [DiagnosticField, DiagnosticGroup("formal-event")]
         public float SwingProgress { get; }
         [DiagnosticField]
         [DiagnosticGroup("formal-event")]

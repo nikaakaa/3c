@@ -2129,3 +2129,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `EvaluateRule` 每条候选 transition 都按 RuleGraph 引用查询操作表；每次规则操作又读取同一表。State runtime 原来保存裸 transition 数组，循环内复制候选引用所在的小结构。
 - 新增内部 BoundStateTransition，在 PrepareGraphs 构建/绑定 operation table 后把候选 transition 和操作表直接绑定到 StateRuntime。SelectTransition 用 `ref readonly` 读取候选；EvaluateRule 接收已绑定表，不再查全局 RuleGraph 表。
 - 该改动删除每条候选规则每帧的规则表哈希查找和候选包装结构拷贝；operation binding、求值缓存、递归访问集合和输出 Bool 校验不变。静态核对 PrepareGraphs 前置时序、共享 RuleGraph、null rule 失败路径和数组生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP302 State Machine operation graph 直连（2026-09-30，已实施，本轮未编译）
+
+- `EvaluateOperation` 每个操作节点先按 ID 查 values 缓存和 visiting，再按 ID 从 operation dictionary 查 definition；Not、逻辑和比较子操作继续按 ID 递归，同一候选规则每次求值重复执行拓扑查找。
+- PrepareGraphs 现在构建直接链接的 BoundRuleOperation graph：每个节点持有 ID、definition、variable 和子节点引用；输出根节点绑定到候选 transition。求值直接遍历节点引用，values 缓存和 visiting 环检测仍按 ID 工作。
+- 该改动删除每个规则节点和子节点的 operation dictionary 查找，并把 values/visiting 参数改为具体 Dictionary/HashSet。Rule output ID 无效仍在 PrepareGraphs 报原错误；子操作引用缺失从求值期提前到规则图准备期。共享 RuleGraph、DAG 缓存、环检测、短路和异常时机（缺失子引用除外）保持。静态核对所有子节点调用点、支持的 operation kind、无效 output、null rule、共享图和循环引用生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

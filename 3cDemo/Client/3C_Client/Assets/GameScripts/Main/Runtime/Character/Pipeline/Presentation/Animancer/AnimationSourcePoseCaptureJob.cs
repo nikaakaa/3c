@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -8,6 +9,7 @@ using UnityEngine.Animations;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 {
+    [BurstCompile]
     internal struct AnimationSourcePoseCaptureJob : IAnimationJob
     {
         [NativeDisableParallelForRestriction]

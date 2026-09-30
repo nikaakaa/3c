@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Collections;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
@@ -5,6 +6,7 @@ using UnityEngine.Animations;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 {
+    [BurstCompile]
     internal struct CharacterAclClipPoseJob : IAnimationJob
     {
         [ReadOnly]

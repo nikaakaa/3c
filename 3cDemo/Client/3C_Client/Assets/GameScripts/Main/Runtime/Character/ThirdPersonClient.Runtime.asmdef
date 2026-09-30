@@ -22,6 +22,7 @@
         "FlowCanvas",
         "ParadoxNotion",
         "Kybernetik.Animancer",
+        "Unity.Burst",
         "Unity.InputSystem",
         "TEngine.Runtime",
         "YooAsset",

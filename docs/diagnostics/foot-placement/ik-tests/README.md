@@ -148,6 +148,18 @@ pwsh -File Tools/FootPlacement.FunctionVerify/run.ps1 -UnityEditorData "C:/Progr
 
 未执行Native Slot历史Job、完整FBBIK或Replay。膝角为真实骨段和Goal距离下的几何需求，不是已求解骨骼。DOM检查覆盖左右脚58帧、三版、null曲线断点与失败标签；浏览器视觉验收未完成。
 
+## Releasing 的 Native / 全身 Action 连续混合（12帧，脚端待接续）
+
+2035～2046 已执行真实发布ACL资源（Run组10、Action组1）解码201根物理骨，正式推导2根虚拟骨，连续执行 Native Slot `EvaluateFrame` 的Clear/Blend/History/Publish，再执行历史2c与当前正式Action Slot完整方法。全身alpha由录制base衰减边界恢复；上游BlendStack计划器没有重跑。两段clip的scalar track均为0，未使用的Native参数明确不可用；不据此声称参数系统已验证。
+
+历史版重现原踝：最大位置误差9.942548e-7m、旋转误差0；历史/当前203根骨的局部位置、旋转和缩放差均0。旧Action贡献和dense weight会再次乘alpha，当前贡献与实际骨骼alpha一致。2041旧Run占比0.468768，旧Action贡献0.282207429；当前Action贡献0.531232，提前选到真实Action曲线：脚高0.0232933685m、Contact0.8675726、Sliding、LockWeight0。该曲线由正式资源在原时间0.1s采样并正式绑定事件5517395441386351926，未复制旧Run样本。
+
+暖机连续完整计算0B。首次d5版本实际在Mono提交大值类型时失败，`Passing an argument of size 10200`证据保留；Burst函数指针请求仍走native-to-managed回调而失败，没有掩盖Mono。来源窗口正式修改Job/Workspace/Runtime为预分配Native元素直接引用读写，并提交d6d6ab9f9；本次执行绑定其工作区SHA，且核对Git规范化内容相符。实际Stored/History/Scratch大小分别10200/10192/9800字节，旧Editor加载类型为9816/9808/9800；旧Editor的MVID仍cd6cec60，因此新类型与消费者统一从正式源码编译，不能拿旧加载程序集冒充当前源码。
+
+见[该业务HTML](releasing-action-native.html)、[实际12帧结果](releasing-action-native.json)、[源/绑定SHA与提交关联](releasing-action-native-provenance.json)、[原Mono失败](releasing-action-native-attempt-mono-state.json)。复现使用 `pwsh -File Tools/FootPlacement.StoredPoseVerify/run_native_releasing.ps1 -UnityInstance e852139597e42532 -ResultDirectory <独立目录> -NativeCommit d6d6ab9f9`；入口执行完整正式函数，失败返回非零并保留结果。
+
+本段没有Stored捕获，没有验证FootFeatures混合、物理source注册、Foot、Physics、FBBIK或Unity/Burst调度。原录制2041膝角由前帧约66.77°到约0.509°、目标伸展比105.835%，仍只是原采样异常，不是当前新脚端输出。2035的骨盆已有历史，后续不能用default春状态补齐；新Action事件进入后预测与路径必须正式重查。正式Runner未执行。HTML的12帧、交接来源、场景坐标、播放与滑块已做DOM检查，浏览器视觉验收未完成。
+
 ## 后续场景范围
 
 按用户指出的 Landing / Releasing 伸直组织两个完整场景，不按私有函数或字段拆测试；完成一段后统一维护其 HTML 与提交。

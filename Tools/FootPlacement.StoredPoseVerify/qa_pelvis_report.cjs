@@ -13,6 +13,9 @@ for(const side of ['right','left']){
   for(const id of ['curves','metrics','moment','exit','checks'])assert(!/NaN|undefined/.test(elements[id].innerHTML));
   assert(elements.checks.innerHTML.includes('失败'));visited++;
  }
- elements.play.listeners.click();callback();elements.play.listeners.click();
+ elements.seek.listeners.input({target:{value:20}});
+ elements.next.listeners.click();assert.equal(Number(elements.seek.value),21);
+ elements.back.listeners.click();assert.equal(Number(elements.seek.value),20);
+ elements.play.listeners.click();callback();assert.equal(Number(elements.seek.value),21);elements.play.listeners.click();
 }
 assert.equal(visited,116);console.log('Checked both feet across 58 actual frames, three real versions, failure labels, null gaps and playback; no browser visual acceptance claimed');

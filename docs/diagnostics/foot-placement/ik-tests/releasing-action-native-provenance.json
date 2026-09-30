@@ -1,0 +1,88 @@
+{
+  "nativeJobCommit": "d5dc26509",
+  "baselineActionSlotCommit": "2c757a422",
+  "actionSlot": {
+    "Historical": {
+      "commit": "2c757a422",
+      "path": "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeAnimationSlotHandler.cs",
+      "sourceSha256": "b82a702912261762926f35c2cedbbd79831c2051bf2fbe7d983f65d6eeae659c",
+      "adaptation": "Production method bodies with fixture-owned instance fields and explicit native bindings. Historical primitive constructor additionally carries unchanged FootMotion because the modern primitive contract added that field; no historical weight/pose formula is changed.",
+      "methodSha256": {
+        "BlendPoses": "d138fe44f11e7e8b68362c97f7c89b1de1123b3f53602f4e04b0c275b571e996",
+        "CopyPose": "dfe257cc75f544b2420a5546d3892a89d7d6d8491cf1f1ed753c8af80fd6d2a4",
+        "BlendParameters": "ee13079d717d1fefeaa1695fe955a298f6c5ca7f6a3173b4271071a52b4c22ed",
+        "AppendContributions": "006f06cca673c30a97765bdab276e8941e2e0c3d13987e4749868379c94e075d",
+        "BlendFeet": "32cac1fb65877b605da0b31237316922663118a6a2a05eda2e84d5741efd1ee2",
+        "BoneOutputWeight": "109102ba4f8e2378991263b8fc7984e9c9391fbd6951ef5f9486d1f7324532bc"
+      }
+    },
+    "Current": {
+      "commit": "d5dc26509",
+      "path": "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeAnimationSlotHandler.cs",
+      "sourceSha256": "65bf57e7bfbe8e031d99c840f8c61a6dde7549d4afe6b3ccf795b2222501d279",
+      "adaptation": "Production method bodies with fixture-owned instance fields and explicit native bindings. Historical primitive constructor additionally carries unchanged FootMotion because the modern primitive contract added that field; no historical weight/pose formula is changed.",
+      "methodSha256": {
+        "BlendPoses": "a73e4e8c9e883a4aabf49e5f47511dbb57dea88c8feba4fbdf3f4bb5eb486966",
+        "CopyPose": "dfe257cc75f544b2420a5546d3892a89d7d6d8491cf1f1ed753c8af80fd6d2a4",
+        "BlendParameters": "ee13079d717d1fefeaa1695fe955a298f6c5ca7f6a3173b4271071a52b4c22ed",
+        "AppendContributions": "68e4c0fb1f310a6897e7fd7e88bb6c0f892a7fc1108a2608f12334fd28668253",
+        "BlendFeet": "32cac1fb65877b605da0b31237316922663118a6a2a05eda2e84d5741efd1ee2",
+        "BoneOutputWeight": "c43047af5041a79389797cac83c71236a42e7fefb1bb33bb7156c84a42a98cbd",
+        "BlendContributions": "e22a055212277580d1eb6f8578c72532aa4fec1a42e575a34bbb8d3332526082"
+      }
+    }
+  },
+  "sources": {
+    "Tools\\FootPlacement.StoredPoseVerify\\CapturedReleasingNativeTests.cs": "26f1be08ef3be51a2f12e1136631b454fc26b116cc20235c50724eaa7c7e6783",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\HistoricalActionSlot.cs": "3f1967441761a6c60ed1288ae8a71789d24bf775c7499d891ba1b518109cc69b",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\CurrentActionSlot.cs": "14254e873b60cd1a839550d5bff0f77dc6e923c4aaa98f35022a4953bc03298e",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\AnimationSlotBlendJob.cs": "383d870917ea609a30cbe0b831533dd545c58bb933a0112a3c785081598a174e",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\AnimationFootStepObservationCurves.cs": "f0f59f1c680256af82de985ae0d4563801cc4b218e1db6307191d3a884a2145a",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\AnimationPoseNativeWorkspaceContracts.cs": "d9432b749154561cbd7a02e0b541c67eed5329d67433b57b29f0a00e1fc424ff",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\CharacterPoseNativePortValues.cs": "443150c897cecc76acef192efe6985ce40b3b9bfe303075a558ecd3d25a49bdc",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\CharacterPoseNativeSpaceConversionHandler.cs": "ccc949db3699de3f0bc1d0c8a1aac06f6abf1f2b10d331549cbdd9e49e5d32a6",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\AnimationSlotBlendPoseWorkspace.cs": "ff44d675de9c5bc4e32aa7ca9573a87754eb0aea0dffaadcccab675a5748f094",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\AnimationBlendSourcePoseNativeReadBinding.cs": "107305344eee25d6e24e933ff17c27c3decb789ff3c8bdb21ad35241d4d18670",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\CharacterPoseNativeNodePoseBuffer.cs": "8d61ed4ac8f102d571cdda01dce8bb08d5658478671eac8365668b4db62cb3b3",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootReleasingNative\\CurrentFootSelector.cs": "eb98c88d8266896a23df93b31c60f3c074bcf6017bb6d3ea0e86fd8093d5d3d9"
+  },
+  "bindings": {
+    "mscorlib.dll": "98c9b62133db5dd33b22bc6aab6f28e4f04f5b5be6559b28ba5c2738241434d0",
+    "System.Core.dll": "f1b33eb1ae8522edcf9ba4c2b85f532d4bab68bfa2a51527264bb61619bed4ea",
+    "System.dll": "ace2dd6a7d534b581bf4a9d316e743d64508ca2135db73dbff0ddb9365fc454e",
+    "netstandard.dll": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5",
+    "UnityEngine.CoreModule.dll": "daa307d76ab533b27110ed3c646536457620bdcb82e81dfeacd3b790cacec4b7",
+    "UnityEngine.AnimationModule.dll": "9718f628ba47339dd7298aa17220b9febed008694e2bb984d474901802596fda",
+    "UnityEditor.CoreModule.dll": "c32e7b612c509e0069f9456f8d7508f67ccd134c8f8a49a0b466164608a912fa",
+    "ThirdPersonClient.Runtime.dll": "2afe305a4f751fa4b68657f3506120be29776e87f95035b0a9928e42da457f4e",
+    "ThirdPersonCharacter.Animation.dll": "36841a318ef54e96b74b449155a130f22e03db62a3b0ab35f149d424372e4112",
+    "ThirdPersonSimulation.Core.dll": "6550438bb2589fc645a611034b069d2f993a06239c11ffc2ba426eacbd335c33",
+    "Unity.Collections.dll": "9c8770662ec75eca70326461fb40ed222b5c1bbfec8cd1ec0ad2fee3d0641d51",
+    "Unity.Burst.dll": "9da975933b96491dac803dd7c54a8633fc03aa1847ec38e645f0566b08f65cac",
+    "Unity.Mathematics.dll": "59f5aaf695fbf299112ee705e30f83af96defe90cee2a3493ca460ab9a4106f3",
+    "Newtonsoft.Json.dll": "7292d3eb508652d14726749dd27094f2d481aeccf2db6427b62f68a71460897e",
+    "nunit.framework.dll": "d3fe5ce66fbad51644d8fa2add8015cc0c1af95774fb3778f725e05785257d3f",
+    "KK.GeneratedDiagnosticSampling.Annotations.dll": "37868d7daea1802c24a3b0a6991170ad34d10367dae4f720d814b60a3d9df80f",
+    "KK.GeneratedDiagnosticSampling.dll": "63d89d0533a873e8d8c1fa603407db28b579bab9b0d4b9a3199f1b010f4c48e5",
+    "BTSMTL.EventGraphs.dll": "ba1345ec7de9888efa85323908f035651e8c07dce95f5ac8e034c843674c7bd4"
+  },
+  "workingNative": true,
+  "workingNativeSources": {
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/BlendStack/AnimationSlotBlendJob.cs": "383d870917ea609a30cbe0b831533dd545c58bb933a0112a3c785081598a174e",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/BlendStack/AnimationSlotBlendPoseWorkspace.cs": "ecfedd1e15de609419cbe1ebdf1a05e2c0b382cd62c93632e1027d90c8a2420c",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/BlendStack/AnimationBlendStackRuntime.cs": "f04972a6d88d56509abc739ec5376c256cabe28feccabc7c99d67f7ac59af45a"
+  },
+  "workingNativeScope": "Job and Workspace are executed here; Runtime unique Stored continuity reader belongs to the compiled production caller and is not called by this fixture.",
+  "compiledEntrySha256": "31877cc8b2f2809667c1c4ca24a8b647c3ea0108d549f4c448ceaf0e88513974",
+  "fixtureSha256": "01d9a91ead30f0ce78849f45fd89567030b14c8c49cb38286a6f062911361055",
+  "failedNativeCommit": "d5dc26509",
+  "failedNativeJobSha256": "f1243d2ccfcaf34173797d5170ea8a488908c06a335b293936c614781b7ab4f0",
+  "knownAssemblyFailure": "Editor loaded MVID cd6cec60 lacks AnimationFootMotionSourceSample. Local formal types were compiled together; d5 full job then failed with Mono 10200-byte value transfer. Original failure artifacts are kept. Burst request fell back to managed native-to-managed callback and also failed; no Burst pass claimed.",
+  "uncovered": "No Stored capture in 2035-2046; no FootFeatures, Foot, Physics, FBBIK, BlendStack planner, physical source registry, or Unity/Burst scheduling. Both ACL clips have zero scalar tracks; one absent native parameter is not a parameter-system verification.",
+  "associatedProductionCommit": "d6d6ab9f9",
+  "normalizedCommitMatchesExecutedWorkingSources": {
+    "AnimationSlotBlendJob.cs": true,
+    "AnimationSlotBlendPoseWorkspace.cs": true,
+    "AnimationBlendStackRuntime.cs": true
+  }
+}

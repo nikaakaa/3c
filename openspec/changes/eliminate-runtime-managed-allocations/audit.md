@@ -2123,3 +2123,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - State Machine 每次准备 transition 时按 pending state id 查询 topology 字典，每条候选规则再按同一 state id 查询 duration 字典；CollectActiveStates 又按 pending 与 target id 查询 StateRuntime。
 - Transitions 和 Duration 改为 StateRuntime 的固定字段，构造期一次性绑定；pending/committed StateRuntime 与 transition target runtime 随状态机状态一起复制、提交、丢弃和重置。SelectTransition、remaining time 和 CollectActiveStates 直接读取 runtime。
 - 该改动删除 State Machine 每帧的 topology、duration 和当前/目标状态字典查找，不新增正式路径。状态 id 字段保留用于校验、诊断和进入判定；错误路径异常仍保持原语义。静态核对构造、Commit/Discard、Reset、自状态 transition 和双状态 transition 生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP301 State Machine rule operations 预绑定（2026-09-30，已实施，本轮未编译）
+
+- `EvaluateRule` 每条候选 transition 都按 RuleGraph 引用查询操作表；每次规则操作又读取同一表。State runtime 原来保存裸 transition 数组，循环内复制候选引用所在的小结构。
+- 新增内部 BoundStateTransition，在 PrepareGraphs 构建/绑定 operation table 后把候选 transition 和操作表直接绑定到 StateRuntime。SelectTransition 用 `ref readonly` 读取候选；EvaluateRule 接收已绑定表，不再查全局 RuleGraph 表。
+- 该改动删除每条候选规则每帧的规则表哈希查找和候选包装结构拷贝；operation binding、求值缓存、递归访问集合和输出 Bool 校验不变。静态核对 PrepareGraphs 前置时序、共享 RuleGraph、null rule 失败路径和数组生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

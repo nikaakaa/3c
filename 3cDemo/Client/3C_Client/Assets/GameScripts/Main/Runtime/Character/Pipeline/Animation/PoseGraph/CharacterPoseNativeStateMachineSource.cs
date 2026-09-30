@@ -81,13 +81,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             internal readonly CharacterPoseStateDefinition Definition;
-            internal CharacterPoseStateTransition[] Transitions;
+            internal BoundStateTransition[] Transitions;
             internal float Duration;
             internal CharacterPoseNativeGraphRuntime Graph;
             internal CharacterPoseNativeFrameLease Lease;
             internal CharacterPoseNativePreparationResult Preparation;
             internal CharacterPoseNativeEvaluationResult Evaluation;
             internal bool FrameOpen;
+        }
+
+        readonly struct BoundStateTransition
+        {
+            internal BoundStateTransition(
+                CharacterPoseStateTransition candidate,
+                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation> operations)
+            {
+                Candidate = candidate;
+                Operations = operations;
+            }
+
+            internal CharacterPoseStateTransition Candidate { get; }
+            internal Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation> Operations { get; }
         }
 
         readonly struct BoundRuleOperation
@@ -161,8 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
         int m_ActiveStateCount;
         FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest> m_SourceRequests;
-        readonly Dictionary<CharacterPoseTransitionRuleGraph,
-            Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> m_RuleOperationTables;
         readonly Dictionary<PoseTransitionRuleOperationId, RuleValue> m_RuleValues;
         readonly HashSet<PoseTransitionRuleOperationId> m_RuleVisiting;
         CharacterPoseNativeGraphRuntime m_ParentRuntime;
@@ -299,8 +311,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{node.NodeId}' has no definition.");
             int ruleOperationCapacity = ResolveRuleOperationCapacity();
-            m_RuleOperationTables = new Dictionary<CharacterPoseTransitionRuleGraph,
-                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>>();
             m_RuleValues = new Dictionary<PoseTransitionRuleOperationId, RuleValue>(
                 ruleOperationCapacity);
             m_RuleVisiting = new HashSet<PoseTransitionRuleOperationId>(
@@ -313,7 +323,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Dictionary<PoseStateId, CharacterPoseStateTransition[]> transitionsByState =
                 BuildTransitionsByState();
             foreach (StateRuntime state in m_States.Values)
-                state.Transitions = transitionsByState[state.Definition.StateId];
+            {
+                CharacterPoseStateTransition[] candidates =
+                    transitionsByState[state.Definition.StateId];
+                state.Transitions = new BoundStateTransition[candidates.Length];
+                for (int i = 0; i < candidates.Length; i++)
+                    state.Transitions[i] = new BoundStateTransition(candidates[i], null);
+            }
             m_PendingStateRuntime = m_States[m_Definition.Entry.TargetStateId];
             m_CommittedStateRuntime = m_PendingStateRuntime;
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
@@ -337,13 +353,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return capacity;
         }
 
-        void BuildRuleOperationTables(CharacterAnimationVariableContract variables)
+        Dictionary<CharacterPoseTransitionRuleGraph,
+            Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>>
+            BuildRuleOperationTables(CharacterAnimationVariableContract variables)
         {
+            var operationTables = new Dictionary<CharacterPoseTransitionRuleGraph,
+                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>>();
             for (int i = 0; i < m_Definition.Transitions.Count; i++)
             {
                 CharacterPoseTransitionRuleGraph rule =
                     m_Definition.Transitions[i]?.Rule;
-                if (rule == null || m_RuleOperationTables.ContainsKey(rule))
+                if (rule == null || operationTables.ContainsKey(rule))
                     continue;
                 var operations = new Dictionary<PoseTransitionRuleOperationId,
                     BoundRuleOperation>(rule.Operations.Count);
@@ -360,7 +380,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!operations.ContainsKey(rule.OutputOperationId))
                     throw new InvalidOperationException(
                         $"Pose StateMachine '{m_NodeId}' transition rule output operation is missing.");
-                m_RuleOperationTables.Add(rule, operations);
+                operationTables.Add(rule, operations);
+            }
+            return operationTables;
+        }
+
+        void BindTransitionOperations(
+            Dictionary<CharacterPoseTransitionRuleGraph,
+                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> operationTables)
+        {
+            foreach (StateRuntime state in m_States.Values)
+            {
+                for (int i = 0; i < state.Transitions.Length; i++)
+                {
+                    CharacterPoseTransitionRuleGraph rule =
+                        state.Transitions[i].Candidate.Rule;
+                    if (rule == null)
+                        continue;
+                    state.Transitions[i] = new BoundStateTransition(
+                        state.Transitions[i].Candidate,
+                        operationTables[rule]);
+                }
             }
         }
 
@@ -369,7 +409,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             m_SourceRequests = new FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest>(
                 runtime.InstanceContext.SourceRequestLayout.RequireStateMachine(m_NodeId));
-            BuildRuleOperationTables(runtime.InstanceContext.VariableContract);
+            Dictionary<CharacterPoseTransitionRuleGraph,
+                Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation>> operationTables =
+                    BuildRuleOperationTables(runtime.InstanceContext.VariableContract);
+            BindTransitionOperations(operationTables);
             switch (m_CreationMode)
             {
                 case CharacterPoseStateGraphCreationMode.DuringPreparation:
@@ -1089,17 +1132,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterAnimationPoseInputFrame inputs,
             float timeInState)
         {
-            CharacterPoseStateTransition[] candidates = state.Transitions;
+            BoundStateTransition[] candidates = state.Transitions;
             for (int i = 0; i < candidates.Length; i++)
             {
-                CharacterPoseStateTransition candidate = candidates[i];
+                ref readonly BoundStateTransition candidate = ref candidates[i];
                 if (EvaluateRule(
-                        candidate.Rule,
+                        candidate.Candidate,
+                        candidate.Operations,
                         in facts,
                         in inputs,
                         timeInState,
                         ResolveRemainingTime(state, timeInState)))
-                    return candidate;
+                    return candidate.Candidate;
             }
             return null;
         }
@@ -1181,23 +1225,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         bool EvaluateRule(
-            CharacterPoseTransitionRuleGraph rule,
+            CharacterPoseStateTransition transition,
+            Dictionary<PoseTransitionRuleOperationId, BoundRuleOperation> operations,
             in CharacterPresentationFactFrame facts,
             in CharacterAnimationPoseInputFrame inputs,
             float timeInState,
             float remainingTime)
         {
+            CharacterPoseTransitionRuleGraph rule = transition.Rule;
             if (rule == null || !rule.OutputOperationId.IsValid)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' transition rule is invalid.");
             m_RuleValues.Clear();
             m_RuleVisiting.Clear();
-            if (!m_RuleOperationTables.TryGetValue(
-                    rule,
-                    out Dictionary<PoseTransitionRuleOperationId,
-                        BoundRuleOperation> operations))
-                throw new InvalidOperationException(
-                    $"Pose StateMachine '{m_NodeId}' transition rule was not prepared.");
             RuleValue result = EvaluateOperation(
                 rule.OutputOperationId,
                 operations,

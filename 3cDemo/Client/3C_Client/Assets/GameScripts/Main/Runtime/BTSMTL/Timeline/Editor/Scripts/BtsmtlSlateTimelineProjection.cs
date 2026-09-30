@@ -408,11 +408,6 @@ namespace BTSMTL.Timeline.Editor
             }
         }
 
-        public void ClearRuntimeTimeline()
-        {
-            m_EmbeddedEditor.RequestEmbeddedRepaint();
-        }
-
         public void ClearRuntimeOverlay()
         {
             m_RuntimeVisualTime = null;

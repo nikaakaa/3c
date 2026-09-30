@@ -419,8 +419,8 @@ namespace BTSMTL.Diagnostics.Editor
                 !MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
                 return;
 
-            destination.AddRange(events.Values);
-            destination.Sort((left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence));
+            foreach (RuntimeDebugEventView item in events.Values)
+                destination.Add(item);
         }
 
         static bool MatchesTimeline(

@@ -78,14 +78,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal static void PublishTreeClipEvents(
             RuntimeDiagnosticsContext diagnostics, in CharacterTimelinePlaybackTrace active,
-            TimelineRuntimeCommittedEvaluation evaluation,
-            float time)
+            TimelineRuntimeCommittedEvaluation evaluation)
         {
-            PublishTreeClipEvents(diagnostics, in active, evaluation.Evaluation.TreeClips, RuntimeTraceDomain.Logic, time);
+            PublishTreeClipEvents(diagnostics, in active, evaluation.Evaluation.TreeClips, RuntimeTraceDomain.Logic);
         }
 
         internal static void PublishTreeClipEvents(RuntimeDiagnosticsContext diagnostics, in CharacterTimelinePlaybackTrace active, TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> requests,
-            RuntimeTraceDomain domain, float time)
+            RuntimeTraceDomain domain)
         {
             for (int index = 0; index < requests.Count; index++)
             {
@@ -124,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         _ => throw new ArgumentOutOfRangeException()
                     },
                     string.Empty,
-                    domain == RuntimeTraceDomain.Presentation ? request.Time.ToSingle() : time,
+                    request.Time.ToSingle(),
                     request.Cycle,
                     treeClip,
                     request.TreeGraphId,

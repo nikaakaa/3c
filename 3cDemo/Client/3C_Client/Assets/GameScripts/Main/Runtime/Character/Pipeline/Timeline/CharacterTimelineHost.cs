@@ -906,7 +906,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 time,
                 evaluation.Cycle);
             CharacterTimelinePlaybackDiagnostics.PublishActiveTimelineElements(m_Diagnostics, active.Trace, evaluation, time);
-            CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, evaluation, time);
+            CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, evaluation);
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(
                 new TimelinePlaybackHandle(evaluation.Handle.Value));
             if (status == TimelinePlaybackStatus.Succeeded)
@@ -1128,7 +1128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 try
                 {
                     CharacterTimelinePlaybackDiagnostics.PublishTimelineVisualTime(m_Diagnostics, active.Trace, candidate);
-                    CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation, candidate.Time.ToSingle());
+                    CharacterTimelinePlaybackDiagnostics.PublishTreeClipEvents(m_Diagnostics, active.Trace, candidate.Operations.TreeClips, RuntimeTraceDomain.Presentation);
                 }
                 catch (Exception exception)
                 {

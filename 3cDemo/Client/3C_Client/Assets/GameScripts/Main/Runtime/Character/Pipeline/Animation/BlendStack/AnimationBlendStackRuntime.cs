@@ -5,6 +5,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonSimulation;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
@@ -1831,18 +1832,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return ResolveAccumulatedWeight(residual, boneIndex);
         }
 
-        ulong RequireStoredContributionIdentity()
-        {
-            return RequireStoredState().ContributionContinuityIdentity;
-        }
-
-        AnimationSlotBlendStoredPoseNativeState RequireStoredState()
+        unsafe ulong RequireStoredContributionIdentity()
         {
             AnimationSlotBlendPoseWorkspaceBinding binding = m_SlotWorkspace.RequireActiveBinding();
-            AnimationSlotBlendStoredPoseNativeState state = binding.StoredPose.State[0];
+            ref readonly AnimationSlotBlendStoredPoseNativeState state = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                    binding.StoredPose.State.GetUnsafeReadOnlyPtr(), 0);
             if (state.Active != 1 || state.ContributionContinuityIdentity == 0)
                 throw new InvalidOperationException("Animation Stored Pose Native state is unavailable.");
-            return state;
+            return state.ContributionContinuityIdentity;
         }
 
         int CopyEntrySourceIds(AnimationPoseSourceId[] destination)

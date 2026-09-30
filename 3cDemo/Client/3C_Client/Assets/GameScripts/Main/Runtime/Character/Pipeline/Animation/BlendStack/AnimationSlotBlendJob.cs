@@ -9,7 +9,7 @@ using static ThirdPersonCharacter.Pipeline.Animation.BlendStack.AnimationSlotBle
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
     [BurstCompile]
-    internal struct AnimationSlotBlendJob : IAnimationJob
+    internal unsafe struct AnimationSlotBlendJob : IAnimationJob
     {
         [ReadOnly]
         readonly AnimationSlotBlendFramePlan m_FramePlan;
@@ -358,7 +358,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             if ((uint)pageIndex > 1u)
                 return false;
-            AnimationSlotBlendHistoryNativeState state = m_HistoryStates[pageIndex];
+            ref readonly AnimationSlotBlendHistoryNativeState state = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                    m_HistoryStates.GetUnsafeReadOnlyPtr(), pageIndex);
             if (state.Availability != AnimationPoseAvailability.Pose ||
                 state.CompletionIdentity != completionIdentity || state.ContinuityIdentity == 0 ||
                 !IsNormalized(state.OutputWeight) || state.HasFootFeatures > 1 ||
@@ -389,7 +391,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         bool IsValidStored(AnimationSlotBlendFramePlanEntry entry)
         {
-            AnimationSlotBlendStoredPoseNativeState state = m_StoredState[0];
+            ref readonly AnimationSlotBlendStoredPoseNativeState state = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                    m_StoredState.GetUnsafeReadOnlyPtr(), 0);
             if (state.Active != 1 || state.CapturedAtCompletionIdentity == 0 ||
                 state.SourceHistoryCompletionIdentity == 0 ||
                 state.ContributionContinuityIdentity != entry.ContributionContinuityIdentity ||
@@ -448,9 +452,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             if (entry.Kind == AnimationPoseContributionKind.Live)
                 return m_SourceFootMotion[entry.SourceCaptureIndex].BindContribution(entry.ContributionContinuityIdentity);
-            return m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture
-                ? m_HistoryStates[m_FramePlan.Header.HistoryReadPageIndex].FootMotion.CaptureStoredPose()
-                : m_StoredState[0].FootMotion;
+            if (m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture)
+            {
+                ref readonly AnimationSlotBlendHistoryNativeState history = ref
+                    UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                        m_HistoryStates.GetUnsafeReadOnlyPtr(), m_FramePlan.Header.HistoryReadPageIndex);
+                return history.FootMotion.CaptureStoredPose();
+            }
+            ref readonly AnimationSlotBlendStoredPoseNativeState stored = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                    m_StoredState.GetUnsafeReadOnlyPtr(), 0);
+            return stored.FootMotion;
         }
 
         AnimationPoseNativeInvalidReason BlendCrossFade(float deltaSeconds)
@@ -744,23 +756,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
             }
 
-            m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
-            {
-                Availability = AnimationPoseAvailability.Pose,
-                InvalidReason = AnimationPoseNativeInvalidReason.None,
-                HasFootFeatures = hasFootFeatures ? (byte)1 : (byte)0,
-                ContributionCount = header.ContributionCount,
-                ContinuityIdentity = header.ContinuityIdentity,
-                OutputWeight = header.OutputWeight,
-                LeftFootFeatures = leftResult,
-                RightFootFeatures = rightResult
-            };
+            ref AnimationSlotBlendScratchNativeState scratch = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafePtr(), 0);
+            scratch.Availability = AnimationPoseAvailability.Pose;
+            scratch.InvalidReason = AnimationPoseNativeInvalidReason.None;
+            scratch.HasFootFeatures = hasFootFeatures ? (byte)1 : (byte)0;
+            scratch.ContributionCount = header.ContributionCount;
+            scratch.ContinuityIdentity = header.ContinuityIdentity;
+            scratch.OutputWeight = header.OutputWeight;
+            scratch.LeftFootFeatures = leftResult;
+            scratch.RightFootFeatures = rightResult;
             return AnimationPoseNativeInvalidReason.None;
         }
 
         AnimationPoseNativeInvalidReason ValidateScratchOutput()
         {
-            AnimationSlotBlendScratchNativeState state = m_ScratchState[0];
+            ref readonly AnimationSlotBlendScratchNativeState state = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafeReadOnlyPtr(), 0);
             if (state.Availability != AnimationPoseAvailability.Pose ||
                 state.InvalidReason != AnimationPoseNativeInvalidReason.None ||
                 state.ContributionCount != m_FramePlan.ContributionCount ||
@@ -889,14 +903,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 if (m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture)
                 {
-                    AnimationSlotBlendHistoryNativeState history = m_HistoryStates[m_FramePlan.Header.HistoryReadPageIndex];
+                    ref readonly AnimationSlotBlendHistoryNativeState history = ref
+                        UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                            m_HistoryStates.GetUnsafeReadOnlyPtr(), m_FramePlan.Header.HistoryReadPageIndex);
                     left = history.LeftFootFeatures;
                     right = history.RightFootFeatures;
                     hasFeatures = history.HasFootFeatures != 0;
                 }
                 else
                 {
-                    AnimationSlotBlendStoredPoseNativeState stored = m_StoredState[0];
+                    ref readonly AnimationSlotBlendStoredPoseNativeState stored = ref
+                        UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                            m_StoredState.GetUnsafeReadOnlyPtr(), 0);
                     left = stored.LeftFootFeatures;
                     right = stored.RightFootFeatures;
                     hasFeatures = stored.HasFootFeatures != 0;
@@ -936,19 +954,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_StoredParameters[parameterIndex] = m_HistoryParameters[historyParameterOffset + parameterIndex];
                 m_StoredParameterAvailability[parameterIndex] = m_HistoryParameterAvailability[historyParameterOffset + parameterIndex];
             }
-            AnimationSlotBlendHistoryNativeState history = m_HistoryStates[historyPage];
-            m_StoredState[0] = new AnimationSlotBlendStoredPoseNativeState
-            {
-                Active = 1,
-                HasFootFeatures = history.HasFootFeatures,
-                CapturedAtCompletionIdentity = m_CompletionIdentity,
-                SourceHistoryCompletionIdentity = history.CompletionIdentity,
-                ContributionContinuityIdentity = storedEntry.ContributionContinuityIdentity,
-                OutputWeight = history.OutputWeight,
-                FootMotion = history.FootMotion.CaptureStoredPose(),
-                LeftFootFeatures = history.LeftFootFeatures,
-                RightFootFeatures = history.RightFootFeatures
-            };
+            ref readonly AnimationSlotBlendHistoryNativeState history = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                    m_HistoryStates.GetUnsafeReadOnlyPtr(), historyPage);
+            ref AnimationSlotBlendStoredPoseNativeState stored = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                    m_StoredState.GetUnsafePtr(), 0);
+            stored.Active = 1;
+            stored.HasFootFeatures = history.HasFootFeatures;
+            stored.CapturedAtCompletionIdentity = m_CompletionIdentity;
+            stored.SourceHistoryCompletionIdentity = history.CompletionIdentity;
+            stored.ContributionContinuityIdentity = storedEntry.ContributionContinuityIdentity;
+            stored.OutputWeight = history.OutputWeight;
+            stored.FootMotion = history.FootMotion.CaptureStoredPose();
+            stored.LeftFootFeatures = history.LeftFootFeatures;
+            stored.RightFootFeatures = history.RightFootFeatures;
         }
 
         void CommitPoseHistory()
@@ -968,18 +988,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryParameters[parameterOffset + parameterIndex] = m_ScratchParameters[parameterIndex];
                 m_HistoryParameterAvailability[parameterOffset + parameterIndex] = m_ScratchParameterAvailability[parameterIndex];
             }
-            AnimationSlotBlendScratchNativeState scratch = m_ScratchState[0];
-            m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
-            {
-                Availability = AnimationPoseAvailability.Pose,
-                HasFootFeatures = scratch.HasFootFeatures,
-                CompletionIdentity = m_CompletionIdentity,
-                ContinuityIdentity = header.ContinuityIdentity,
-                OutputWeight = header.OutputWeight,
-                FootMotion = ResolveHistoryFootMotion(),
-                LeftFootFeatures = scratch.LeftFootFeatures,
-                RightFootFeatures = scratch.RightFootFeatures
-            };
+            ref readonly AnimationSlotBlendScratchNativeState scratch = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafeReadOnlyPtr(), 0);
+            ref AnimationSlotBlendHistoryNativeState history = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                    m_HistoryStates.GetUnsafePtr(), page);
+            history.Availability = AnimationPoseAvailability.Pose;
+            history.HasFootFeatures = scratch.HasFootFeatures;
+            history.CompletionIdentity = m_CompletionIdentity;
+            history.ContinuityIdentity = header.ContinuityIdentity;
+            history.OutputWeight = header.OutputWeight;
+            history.FootMotion = ResolveHistoryFootMotion();
+            history.LeftFootFeatures = scratch.LeftFootFeatures;
+            history.RightFootFeatures = scratch.RightFootFeatures;
         }
 
         AnimationFootMotionSourceSample ResolveHistoryFootMotion()
@@ -1010,18 +1032,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryParameters[parameterOffset + parameterIndex] = 0f;
                 m_HistoryParameterAvailability[parameterOffset + parameterIndex] = 0;
             }
-            m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
-            {
-                Availability = AnimationPoseAvailability.NoPose,
-                CompletionIdentity = m_CompletionIdentity,
-                ContinuityIdentity = header.ContinuityIdentity
-            };
+            ref AnimationSlotBlendHistoryNativeState history = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                    m_HistoryStates.GetUnsafePtr(), page);
+            history = default;
+            history.Availability = AnimationPoseAvailability.NoPose;
+            history.CompletionIdentity = m_CompletionIdentity;
+            history.ContinuityIdentity = header.ContinuityIdentity;
         }
 
         void PublishPose()
         {
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
-            AnimationSlotBlendScratchNativeState scratch = m_ScratchState[0];
+            ref readonly AnimationSlotBlendScratchNativeState scratch = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafeReadOnlyPtr(), 0);
             for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
             {
                 m_FinalDenseLocalPoses[boneIndex] = m_ScratchPose[boneIndex];
@@ -1057,12 +1082,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             ClearFinalPayload();
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
-            m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
-            {
-                Availability = AnimationPoseAvailability.NoPose,
-                InvalidReason = AnimationPoseNativeInvalidReason.None,
-                ContinuityIdentity = header.ContinuityIdentity
-            };
+            ref AnimationSlotBlendScratchNativeState scratch = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafePtr(), 0);
+            scratch = default;
+            scratch.Availability = AnimationPoseAvailability.NoPose;
+            scratch.InvalidReason = AnimationPoseNativeInvalidReason.None;
+            scratch.ContinuityIdentity = header.ContinuityIdentity;
             m_FinalAvailability[0] = AnimationPoseAvailability.NoPose;
             m_FinalContinuityIdentity[0] = header.ContinuityIdentity;
             m_FinalInvalidReason[0] = AnimationPoseNativeInvalidReason.None;
@@ -1073,12 +1099,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             ClearFinalPayload();
             ulong continuityIdentity = m_FramePlan.Header.ContinuityIdentity;
-            m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
-            {
-                Availability = AnimationPoseAvailability.Invalid,
-                InvalidReason = reason,
-                ContinuityIdentity = continuityIdentity
-            };
+            ref AnimationSlotBlendScratchNativeState scratch = ref
+                UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                    m_ScratchState.GetUnsafePtr(), 0);
+            scratch = default;
+            scratch.Availability = AnimationPoseAvailability.Invalid;
+            scratch.InvalidReason = reason;
+            scratch.ContinuityIdentity = continuityIdentity;
             m_FinalAvailability[0] = AnimationPoseAvailability.Invalid;
             m_FinalContinuityIdentity[0] = continuityIdentity;
             m_FinalInvalidReason[0] = reason;
@@ -1112,7 +1139,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void ClearScratch()
         {
-            m_ScratchState[0] = default;
+            UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendScratchNativeState>(
+                m_ScratchState.GetUnsafePtr(), 0) = default;
             for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
             {
                 m_ScratchPose[boneIndex] = default;
@@ -1142,7 +1170,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void ClearStored()
         {
-            m_StoredState[0] = default;
+            UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendStoredPoseNativeState>(
+                m_StoredState.GetUnsafePtr(), 0) = default;
             for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
             {
                 m_StoredPose[boneIndex] = default;

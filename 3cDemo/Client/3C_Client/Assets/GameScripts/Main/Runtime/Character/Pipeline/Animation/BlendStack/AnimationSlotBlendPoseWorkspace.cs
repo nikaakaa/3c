@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
@@ -185,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationSlotBlendScratchWorkspaceBinding Scratch { get; }
     }
 
-    internal sealed class AnimationSlotBlendPoseWorkspace : IDisposable
+    internal sealed unsafe class AnimationSlotBlendPoseWorkspace : IDisposable
     {
         const float WeightTolerance = AnimationSlotBlendJobMath.WeightTolerance;
 
@@ -616,7 +617,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Slot Blend plan and final write completion identities differ.");
             if (header.HistoryReadPageIndex >= 0)
             {
-                AnimationSlotBlendHistoryNativeState history = m_HistoryStates[header.HistoryReadPageIndex];
+                ref readonly AnimationSlotBlendHistoryNativeState history = ref
+                    UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                        m_HistoryStates.GetUnsafeReadOnlyPtr(), header.HistoryReadPageIndex);
                 if (history.CompletionIdentity != header.HistoryCompletionIdentity ||
                     history.Availability != AnimationPoseAvailability.Pose ||
                     history.ContinuityIdentity == 0 ||
@@ -721,7 +724,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int pageIndex = -1;
             for (int i = 0; i < m_HistoryStates.Length; i++)
             {
-                AnimationSlotBlendHistoryNativeState state = m_HistoryStates[i];
+                ref readonly AnimationSlotBlendHistoryNativeState state = ref
+                    UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                        m_HistoryStates.GetUnsafeReadOnlyPtr(), i);
                 if (state.CompletionIdentity != completionIdentity)
                     continue;
                 if (pageIndex >= 0)
@@ -739,7 +744,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             ulong completionIdentity = 0;
             for (int i = 0; i < m_HistoryStates.Length; i++)
             {
-                ulong candidate = m_HistoryStates[i].CompletionIdentity;
+                ref readonly AnimationSlotBlendHistoryNativeState state = ref
+                    UnsafeUtility.ArrayElementAsRef<AnimationSlotBlendHistoryNativeState>(
+                        m_HistoryStates.GetUnsafeReadOnlyPtr(), i);
+                ulong candidate = state.CompletionIdentity;
                 if (candidate <= completionIdentity)
                     continue;
                 completionIdentity = candidate;
@@ -832,13 +840,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         static NativeArray<T> Allocate<T>(int length) where T : struct =>
             new NativeArray<T>(length, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
-        static void Clear<T>(NativeArray<T> values) where T : struct =>
-            ClearRange(values, 0, values.Length);
-
-        static void ClearRange<T>(NativeArray<T> values, int offset, int count) where T : struct
+        static void Clear<T>(NativeArray<T> values) where T : struct
         {
-            for (int i = 0; i < count; i++)
-                values[offset + i] = default;
+            UnsafeUtility.MemClear(values.GetUnsafePtr(),
+                (long)values.Length * UnsafeUtility.SizeOf<T>());
         }
 
         public void Dispose()

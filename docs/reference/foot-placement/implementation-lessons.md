@@ -90,6 +90,8 @@
 
 74. 不能把已保留的 FinalIK 部分权重补偿当作重试旧骨盆硬约束的新条件。`512f54a28` 同时加入了该补偿、可达区间对目标和平滑结果的夹取，以及骨盆世界位置/速度历史；之后仍出现骨盆异常。`02a277373` 撤回硬约束和脚掌包络实验时，补偿被保留。因此“现在补偿已经修好”不足以区别于那次失败，必须提供不同输入或不同约束机制的同输入业务证据。具体经过见[单端接触与可达性历史](../../archive/records/foot-placement/corin-foot-contact-reach-20260928.md)。当前 `CharacterFootSoleSupportQuery` 和末端保护只计算沿 ComponentUp 的补高；这些标量命中结果也不能证明水平跨边过程安全，不能借骨盆补偿掩盖脚端缺少的运动约束。
 
+75. 预分配 Native 存储不能消除索引器的按值调用。`d5dc26509` 的完整 Native Slot 函数在 Mono 进入 `CommitPersistentState` 时报告 `Passing an argument of size '10200'`；Stored/History 已包含双脚 Feature 与新增 FootMotion，整份状态经 `NativeArray<T>` 索引器读写。仅给外层参数添加 `in`、只跑局部混合或改用 Burst 都不能证明 Mono 链路可执行。修正范围应覆盖 Job 的读取/清零/提交、Workspace 重置与 Runtime 消费，直接访问原有 Native 元素并保留完整状态；仍须由同一业务输入实际执行，和原踝校准、Stored 语义及 IK 质量分别判定。
+
 ## 当前证据与下一owner
 
 - 首轮换代修复后的run `ea0e2e2...`共2021行、1221列且逐行等宽；左右Swing无Executable Path从`547/549`降到`85/8`，同一Executing Plan的单帧`rewritten=false`降为0。

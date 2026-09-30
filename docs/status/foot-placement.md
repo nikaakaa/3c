@@ -6,6 +6,10 @@
 
 原生混合的帧计算已从 Unity 时钟读取中分离：`AnimationSlotBlendJob.ProcessAnimation` 读取 `AnimationStream.deltaTime`，交给同一个 `EvaluateFrame(float)`；完整校验、混合、Stored 捕获、历史提交及输出发布均由该函数执行。固定采样实验可直接提供记录的帧时间，不需要伪造 AnimationStream 或另写混合算法。函数体除移出时钟读取外逐字一致，Animation 定向编译 0 警告、0 错误（6.97 秒）。这是正式计算入口的整理，Native Slot 业务与 2041 释放效果仍待配套窗口实际验证。
 
+该完整入口的首次 Mono 执行在 `CommitPersistentState` 抛出 `InvalidProgramException: Passing an argument of size '10200'`，未生成有效结果帧。实际 Stored 状态从 9816 增至 10200 字节，History 从 9808 增至 10192 字节；新增 FootMotion 后继续用 `NativeArray<T>` 索引器提交整份状态触及大参数边界。修正改为直接引用已有 Native 元素，逐字段提交 Stored/History/Scratch，原地清零并读取；Workspace 重置同样改为原内存清零，Runtime 的 Stored 身份消费者只返回所需的 `ulong`，不再返回完整状态。未增加每帧容器，也未修改混合公式；Animation 定向编译 0 警告、0 错误（6.64 秒）。
+
+配套窗口已用对应工作区源码 SHA 在 Mono 实际重跑 2035～2046 共 12 帧：正式 ACL 解码、虚拟骨、Native Slot 历史提交和完整 Action Slot 通过。原踝位置最大还原误差 0.000994 mm、旋转误差 0，两版 203 根骨的局部位置全相等，预热后的帧计算为 0 B。2041 动作实际权重 0.531232，旧贡献为 0.282207429；当前选中 Action，正式曲线的脚高为 0.0232933685 m、接触为 0.8675726、锁权重为 0，事件为 `5517395441386351926`，不再用 Run 的 0.457684726 m 脚高。初步结果与绑定保存于 `Temp/FootReleasingNative/working-20261001/releasing-action-native*.json`，正式业务结果及 HTML 由配套窗口维护。本段未执行 Stored 捕获、FootFeatures 混合、脚端预测、Physics、完整 FBBIK 或 Burst 调度，也未执行 Runtime 的 Stored 身份读取；该消费者仅经定向编译。新动作事件对释放目标的影响仍待完整脚端还原，不能据此宣布拉直已修复。
+
 首个动画混合修正将 FootMotion 从 `CharacterPoseSourceModule` 正式采样写入预分配 Source 页，经 `AnimationPrimitivePoseContribution` 传播，在 `AnimationSlotBlendJob` 的历史与 Stored 捕获中保存；`CharacterPoseWorldContextAdapter` 选择实际参与姿态的 Live/Stored 样本，交给原 FootPlacement 链路。它处理零权重 Live Idle 在 Stored 占据全部姿态时错误地提供锁脚请求的问题。Stored 保留当前接触与锁权重，静态姿态不继续预测未来落地；作者总权重和曲线未改。资源名称与曲线元数据在目录初始化，未增加每帧字符串转换。
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。

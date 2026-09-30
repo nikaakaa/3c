@@ -75,6 +75,16 @@ pwsh -File Tools/FootPlacement.FunctionVerify/run.ps1 -UnityEditorData "C:/Progr
 
 后续验收必须按实际事件对齐，并检查完整窗口的极值；不能把问题提前一帧当作消除，也不能仅按腿长指标判定整体改善。
 
+## Stored 混合输入对照（2026-10-01）
+
+同一动画混合业务包含两种连续条件：左脚 1174～1186 在无接触姿态被捕获后交给新的 Live；右脚 889～958 在真实接触姿态被捕获后继续接触并交还 Live。13 / 70 帧已调用历史正式选择函数、当前正式选择函数和 `CaptureStoredPose`，预热后的计算均为 0 B。历史源固定为 `2c757a422`，候选生产身份为 `18e1f2a4f`，实际程序集哈希见 [来源身份](stored-foot-motion-provenance.json)。
+
+左脚 1178 的历史选择为零权重 Idle，Contact=1；候选选择有实际权重的 Stored，保留捕获时 Contact=0。真实接触段保持捕获的 Contact / LockWeight，停止未来落地预测和脚趾速度，新的 Live 占主权后接回其曲线。作者 FootPlacementWeight 未被改写。连续播放、贡献权重与接管过程见 [Stored 场景页](stored-foot-motion.html)。
+
+这批通过只属于来源选择与 Stored 时间语义，没有执行 Native Slot 历史捕获 Job、Goal、Physics 或 FBBIK。当前 Editor 被其它任务的程序集引用错误阻塞，正式 runner 未执行。完整 Stored 骨骼姿势仍缺失，不用默认姿势替代；Goal 接续结果将保存在同一场景页。没有 SourceId 记录且为零权重的 Action 条目不参与本段选择，零权重 Idle 和所有正权重贡献保留；不能把测试准备位置当作物理 source 注册验证。
+
+复现入口：`powershell -File Tools/FootPlacement.StoredPoseVerify/run.ps1`。入口使用当前项目实际编译的 Animation 程序集；历史方法从 Git 正式源码提取，只把实例贡献数组变为显式参数，分支算法不改写。固定输入保存双脚原字符串、原采样哈希和查询记录，结果见 [左脚函数结果](stored-no-contact-left-functions.json) 与 [右脚函数结果](stored-contact-right-functions.json)。
+
 ## 后续场景范围
 
 按用户指出的 Landing / Releasing 伸直组织两个完整场景，不按私有函数或字段拆测试；完成一段后统一维护其 HTML 与提交。

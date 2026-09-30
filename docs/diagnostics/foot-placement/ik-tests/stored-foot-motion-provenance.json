@@ -1,0 +1,24 @@
+{
+  "baselineCommit": "2c757a422aed0171aa63d0c68bb9407cd7b9d473",
+  "historicalSourcePath": "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseWorldContextAdapter.cs",
+  "historicalSourceSha256": "bf3b373bbc36daae605e9239c124e078bcc42636e6f31bad32bb4bb79ecf5b42",
+  "historicalMethodSha256": "69c4b21a9763e072b051e11489178f5d8d876b84b5757a65586a06e4b37e5071",
+  "historicalAdaptation": "Only instance array field is changed to the explicit array parameter; the branch body comes from git show",
+  "candidateAnimationAssembly": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\bin\\Debug\\ThirdPersonCharacter.Animation.dll",
+  "candidateAnimationAssemblySha256": "7724f5346efedb989af66de0c5e8477ee5a77a70c2b54f143c48f2075eef62f8",
+  "runtimeCommit": "75d352c054459310971e278db6e2998c8fb95961",
+  "candidateCommit": "18e1f2a4f23a5edd4921414e36e84b1fe2dddfec",
+  "candidateSourceSha256": {
+    "Animation/Contracts/Rig/AnimationFootStepObservationCurves.cs": "e3ec313280f22affc01ab7914fcfe7c516ad9f0c43fee84bca8bc0c538e884f2",
+    "Animation/PoseGraph/CharacterPoseWorldContextAdapter.cs": "4975b8a2bb7ffefc42e5612b32621d71ee57fb2240e3307b4401ff65259cea2d",
+    "Animation/Contracts/Rig/AnimationFootStepLandingEvents.cs": "dcd2bd1de38a5e8edc94ba5a28947040fff6ae0cf2f557f98108214a8ae3b2bf"
+  },
+  "executionBoundary": "Historical method comes from git show; only its array field is passed explicitly. Current selection and Stored methods come from the actual compiled production assembly. No native Slot Job, Goal, Physics or FBBIK is implied by source-functions Passed.",
+  "zeroWeightMissingIdentity": "Omit only zero-weight Action entries whose SourceId was not recorded; preserve zero-weight Idle and all positive contributors. Test source-owner indices are preparation positions, not a physical source registry reconstruction.",
+  "sourceHashes": {
+    "Program.cs": "26b0068292eba140f4c3e561f2694b641f30f26a530f60bb426fb12afa68b034",
+    "prepare.py": "0f879c98c37786685217a3f864ca464be721b76d6e88f65c1ddce91828545c5a",
+    "prepare_inputs.py": "f2e4deebcb42d1b6db364765cb8ced94d931e84fd4882aa89f60455bb37b9dfd",
+    "run.ps1": "15f19522e51ddc2c5e1c0de869ac7b36e30f7e5dfe972c78e3eec6c6505f863f"
+  }
+}

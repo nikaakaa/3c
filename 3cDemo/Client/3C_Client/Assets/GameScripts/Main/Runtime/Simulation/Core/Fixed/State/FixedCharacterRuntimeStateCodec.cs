@@ -12,6 +12,8 @@ namespace ThirdPersonSimulation.Fixed
         const int Version = 13;
         const string HashIdentity = "fixed-character-runtime-state-hash/9";
         public const string CodecIdentity = "fixed-character-runtime-state/9";
+        [ThreadStatic] static List<int> s_StateKeys;
+        [ThreadStatic] static List<GameplayAbilityExecutionFrame<AbilityStateValue>> s_ExecutionFrames;
 
         public static byte[] Write(FixedCharacterRuntimeState state)
         {
@@ -382,9 +384,12 @@ namespace ThirdPersonSimulation.Fixed
                 new OperationSetVersion(reader.ReadString()),
                 SimulationNumericProfileCodec.Read(reader));
 
-        static void WriteValues(CanonicalWriter writer, IReadOnlyDictionary<int, AbilityStateValue> values)
+        static void WriteValues(CanonicalWriter writer, Dictionary<int, AbilityStateValue> values)
         {
-            var keys = new List<int>(values.Keys);
+            List<int> keys = s_StateKeys ??= new List<int>();
+            keys.Clear();
+            foreach (KeyValuePair<int, AbilityStateValue> value in values)
+                keys.Add(value.Key);
             keys.Sort();
             writer.WriteInt32(keys.Count);
             for (int i = 0; i < keys.Count; i++)
@@ -417,8 +422,14 @@ namespace ThirdPersonSimulation.Fixed
             CanonicalWriter writer,
             GameplayAbilityExecutionAggregate<AbilityStateValue> aggregate)
         {
-            var frames = new List<GameplayAbilityExecutionFrame<AbilityStateValue>>(aggregate?.Frames ?? Array.Empty<GameplayAbilityExecutionFrame<AbilityStateValue>>());
-            frames.Sort((left, right) => left.ActionInstanceId.CompareTo(right.ActionInstanceId));
+            List<GameplayAbilityExecutionFrame<AbilityStateValue>> frames = s_ExecutionFrames ??=
+                new List<GameplayAbilityExecutionFrame<AbilityStateValue>>();
+            frames.Clear();
+            IReadOnlyList<GameplayAbilityExecutionFrame<AbilityStateValue>> source = aggregate?.Frames ??
+                Array.Empty<GameplayAbilityExecutionFrame<AbilityStateValue>>();
+            for (int i = 0; i < source.Count; i++)
+                frames.Add(source[i]);
+            frames.Sort(ExecutionFrameComparer.Instance);
             writer.WriteInt32(frames.Count);
             for (int i = 0; i < frames.Count; i++)
             {
@@ -430,6 +441,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteUInt64(frame.Generation);
                 WriteValues(writer, frame.Values);
             }
+            frames.Clear();
         }
 
         static GameplayAbilityExecutionAggregate<AbilityStateValue> ReadAbilityExecutionState(
@@ -659,9 +671,12 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteMotionWarpStates(
             CanonicalWriter writer,
-            IReadOnlyDictionary<int, FixedMotionWarpState> states)
+            Dictionary<int, FixedMotionWarpState> states)
         {
-            var keys = new List<int>(states.Keys);
+            List<int> keys = s_StateKeys ??= new List<int>();
+            keys.Clear();
+            foreach (KeyValuePair<int, FixedMotionWarpState> state in states)
+                keys.Add(state.Key);
             keys.Sort();
             writer.WriteInt32(keys.Count);
             for (int i = 0; i < keys.Count; i++)
@@ -669,6 +684,16 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteInt32(keys[i]);
                 WriteMotionWarpState(writer, states[keys[i]]);
             }
+        }
+
+        sealed class ExecutionFrameComparer : IComparer<GameplayAbilityExecutionFrame<AbilityStateValue>>
+        {
+            internal static readonly ExecutionFrameComparer Instance = new ExecutionFrameComparer();
+
+            public int Compare(
+                GameplayAbilityExecutionFrame<AbilityStateValue> left,
+                GameplayAbilityExecutionFrame<AbilityStateValue> right) =>
+                left.ActionInstanceId.CompareTo(right.ActionInstanceId);
         }
 
         static Dictionary<int, FixedMotionWarpState> ReadMotionWarpStates(

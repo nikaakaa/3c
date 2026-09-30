@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterEvaluationOutput m_Output;
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances;
         readonly List<AbilityTimelineStopPending> m_TimelineStops;
+        readonly List<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         FixedCharacterRuntimeState m_CandidateState;
         bool m_Consumed;
@@ -27,6 +28,7 @@ namespace ThirdPersonSimulation.Fixed
             m_TimelineRuntime = timelineRuntime;
             m_TimelineAdvances = new List<AbilityTimelineAdvancePending>(timelineRequestCapacity);
             m_TimelineStops = new List<AbilityTimelineStopPending>(timelineRequestCapacity);
+            m_TimelineSnapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineRequestCapacity);
         }
 
         internal FixedCharacterEvaluationResult Reset(
@@ -60,19 +62,18 @@ namespace ThirdPersonSimulation.Fixed
             if (m_Consumed)
                 throw new InvalidOperationException("Fixed Character evaluation result has already been consumed.");
             CompleteTimelineOutputs(true);
-            for (int i = 0; i < m_TimelineAdvances.Count; i++)
-            {
-                if (m_TimelineRuntime == null)
-                    throw new InvalidOperationException("Fixed Character evaluation has Timeline advances without a Timeline runtime.");
-                m_CandidateState = m_CandidateState.WithTimelineSnapshot(m_TimelineRuntime.Capture(m_TimelineAdvances[i].RuntimeHandle));
-            }
-            for (int i = 0; i < m_TimelineStops.Count; i++)
-                m_CandidateState = m_CandidateState.WithoutTimelineSnapshot(m_TimelineStops[i].RuntimeHandle);
-            m_CandidateState = m_CandidateState.WithoutUnownedTerminalTimelines();
+            if (m_TimelineAdvances.Count != 0 && m_TimelineRuntime == null)
+                throw new InvalidOperationException("Fixed Character evaluation has Timeline advances without a Timeline runtime.");
+            m_CandidateState = m_CandidateState.WithTimelineOutputs(
+                m_TimelineRuntime,
+                m_TimelineAdvances,
+                m_TimelineStops,
+                m_TimelineSnapshots);
             m_OutputsCommitted = true;
             m_Consumed = true;
             m_TimelineAdvances.Clear();
             m_TimelineStops.Clear();
+            m_TimelineSnapshots.Clear();
         }
 
         internal void TakeOutputs(
@@ -97,6 +98,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Consumed = true;
             m_TimelineAdvances.Clear();
             m_TimelineStops.Clear();
+            m_TimelineSnapshots.Clear();
         }
 
         void CompleteTimelineOutputs(bool commit)

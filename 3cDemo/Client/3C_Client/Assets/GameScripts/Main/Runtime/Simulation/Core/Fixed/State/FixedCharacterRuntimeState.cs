@@ -96,120 +96,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityRuntimeState[] m_Abilities;
         readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
 
-        static readonly Comparison<AbilityTimelineRuntimeSnapshot> s_CompareTimelineSnapshots =
-            (left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle);
-
-        internal FixedCharacterRuntimeState(
-            SimulationNumericProfile numericProfile,
-            GameplayContentHash gameplayContentHash,
-            StableHash stateSchemaHash,
-            ulong lastCompletedTick,
-            IEnumerable<FixedAbilityRuntimeState> abilities,
-            IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
-            IEnumerable<FixedActionInstanceState> actionInstances,
-            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
-            ulong eventSequence,
-            ulong actionEventSequence,
-            ulong handleAllocator,
-            CharacterControlRuntimeState controlState,
-            GameplayEffectStateAggregate gameplayEffectState,
-            EquipmentStateAggregate equipmentState,
-            IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
-            : this(
-                numericProfile,
-                gameplayContentHash,
-                stateSchemaHash,
-                lastCompletedTick,
-                abilities,
-                actionActivationRequests,
-                actionInstances,
-                inputRequests,
-                eventSequence,
-                actionEventSequence,
-                handleAllocator,
-                controlState,
-                gameplayEffectState,
-                equipmentState,
-                timelineSnapshots,
-                ownsCollections: false)
-        {
-        }
-
-        internal FixedCharacterRuntimeState(
-            SimulationNumericProfile numericProfile,
-            GameplayContentHash gameplayContentHash,
-            StableHash stateSchemaHash,
-            ulong lastCompletedTick,
-            IEnumerable<FixedAbilityRuntimeState> abilities,
-            IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
-            IEnumerable<FixedActionInstanceState> actionInstances,
-            KeyValuePair<string, SimulationInputRequestState>[] inputRequests,
-            ulong eventSequence,
-            ulong actionEventSequence,
-            ulong handleAllocator,
-            CharacterControlRuntimeState controlState,
-            GameplayEffectStateAggregate gameplayEffectState,
-            EquipmentStateAggregate equipmentState,
-            IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots,
-            bool ownsCollections)
-        {
-            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
-                throw new ArgumentException("Character runtime state identity is incomplete.");
-            NumericProfile = numericProfile;
-            GameplayContentHash = gameplayContentHash;
-            StateSchemaHash = stateSchemaHash;
-            LastCompletedTick = lastCompletedTick;
-            FixedAbilityRuntimeState[] copied = ownsCollections
-                ? (FixedAbilityRuntimeState[])abilities
-                : CopyArray(abilities);
-            Array.Sort(copied, CompareAbilities);
-            for (int i = 0; i < copied.Length; i++)
-            {
-                if (copied[i] == null || i > 0 && copied[i - 1].AbilityIdentity.AbilityId == copied[i].AbilityIdentity.AbilityId)
-                    throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
-            }
-            m_Abilities = copied;
-            ActionActivationRequests = ownsCollections
-                ? (SimulationActionActivationRequestState[])actionActivationRequests
-                : CopyArray(actionActivationRequests);
-            ActionInstances = ownsCollections
-                ? (FixedActionInstanceState[])actionInstances
-                : CopyArray(actionInstances);
-            InputRequests = inputRequests == null
-                ? Array.Empty<KeyValuePair<string, SimulationInputRequestState>>()
-                : ownsCollections
-                    ? inputRequests
-                    : CopyArray(inputRequests);
-            Array.Sort(InputRequests, InputRequestKeyComparer.Instance);
-            for (int i = 1; i < InputRequests.Length; i++)
-            {
-                if (InputRequests[i].Key == null ||
-                    string.CompareOrdinal(InputRequests[i - 1].Key, InputRequests[i].Key) >= 0)
-                    throw new ArgumentException("Character runtime state Input request identities are null, duplicated, or not canonically ordered.", nameof(inputRequests));
-            }
-            EventSequence = eventSequence;
-            ActionEventSequence = actionEventSequence;
-            HandleAllocator = handleAllocator;
-            ControlState = controlState;
-            GameplayEffectState = gameplayEffectState;
-            EquipmentState = equipmentState;
-            ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> snapshots = ownsCollections &&
-                timelineSnapshots is ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> ownedSnapshots
-                ? ownedSnapshots
-                : new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>()).AsReadOnly();
-            if (!ownsCollections)
-            {
-                var sorted = new List<AbilityTimelineRuntimeSnapshot>(snapshots);
-                sorted.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
-                snapshots = sorted.AsReadOnly();
-            }
-            for (int i = 0; i < snapshots.Count; i++)
-            {
-                if (!snapshots[i].IsValid || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
-                    throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.", nameof(timelineSnapshots));
-            }
-            m_TimelineSnapshots = snapshots;
-        }
+        static readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> s_EmptyTimelineSnapshots =
+            new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(Array.Empty<AbilityTimelineRuntimeSnapshot>());
 
         public SimulationNumericProfile NumericProfile { get; }
         public GameplayContentHash GameplayContentHash { get; }
@@ -241,57 +129,76 @@ namespace ThirdPersonSimulation.Fixed
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
         public IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
+        internal ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> TimelineSnapshotCollection => m_TimelineSnapshots;
 
-        internal FixedCharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
+        internal FixedCharacterRuntimeState WithTimelineOutputs(
+            IAbilityTimelineRuntime timelineRuntime,
+            List<AbilityTimelineAdvancePending> advances,
+            List<AbilityTimelineStopPending> stops,
+            List<AbilityTimelineRuntimeSnapshot> snapshots)
         {
-            if (!snapshot.IsValid)
-                throw new ArgumentException("Fixed Character Timeline snapshot is invalid.", nameof(snapshot));
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count + 1);
+            snapshots.Clear();
             for (int i = 0; i < m_TimelineSnapshots.Count; i++)
-                if (m_TimelineSnapshots[i].RuntimeHandle != snapshot.RuntimeHandle)
-                    snapshots.Add(m_TimelineSnapshots[i]);
-            snapshots.Add(snapshot);
-            return CloneWithTimelineSnapshots(snapshots);
-        }
-
-        internal FixedCharacterRuntimeState WithoutTimelineSnapshot(int runtimeHandle)
-        {
-            if (runtimeHandle == 0)
-                throw new ArgumentOutOfRangeException(nameof(runtimeHandle));
-            int removedIndex = -1;
-            for (int i = 0; i < m_TimelineSnapshots.Count; i++)
+                snapshots.Add(m_TimelineSnapshots[i]);
+            bool changed = advances.Count != 0;
+            for (int i = 0; i < advances.Count; i++)
             {
-                if (m_TimelineSnapshots[i].RuntimeHandle == runtimeHandle)
+                AbilityTimelineRuntimeSnapshot snapshot = timelineRuntime.Capture(advances[i].RuntimeHandle);
+                int replacedIndex = -1;
+                for (int index = 0; index < snapshots.Count; index++)
                 {
-                    removedIndex = i;
-                    break;
+                    if (snapshots[index].RuntimeHandle == snapshot.RuntimeHandle)
+                    {
+                        replacedIndex = index;
+                        break;
+                    }
                 }
+                if (replacedIndex >= 0)
+                    snapshots.RemoveAt(replacedIndex);
+                snapshots.Add(snapshot);
             }
-            if (removedIndex < 0)
-                return this;
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count - 1);
-            for (int i = 0; i < m_TimelineSnapshots.Count; i++)
-                if (i != removedIndex)
-                    snapshots.Add(m_TimelineSnapshots[i]);
-            return CloneWithTimelineSnapshots(snapshots);
-        }
-
-        internal FixedCharacterRuntimeState WithoutUnownedTerminalTimelines()
-        {
-            int firstRemoved = -1;
-            for (int index = 0; index < m_TimelineSnapshots.Count; index++)
-                if (!RetainTimelineSnapshot(m_TimelineSnapshots[index]))
+            for (int i = 0; i < stops.Count; i++)
+                for (int index = 0; index < snapshots.Count; index++)
                 {
-                    firstRemoved = index;
+                    if (snapshots[index].RuntimeHandle != stops[i].RuntimeHandle)
+                        continue;
+                    snapshots.RemoveAt(index);
+                    changed = true;
                     break;
                 }
-            if (firstRemoved < 0)
+            int retainedCount = 0;
+            for (int index = 0; index < snapshots.Count; index++)
+            {
+                AbilityTimelineRuntimeSnapshot snapshot = snapshots[index];
+                if (RetainTimelineSnapshot(snapshot))
+                    snapshots[retainedCount++] = snapshot;
+            }
+            if (retainedCount != snapshots.Count)
+            {
+                snapshots.RemoveRange(retainedCount, snapshots.Count - retainedCount);
+                changed = true;
+            }
+            if (!changed)
                 return this;
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count - 1);
-            for (int index = 0; index < m_TimelineSnapshots.Count; index++)
-                if (index < firstRemoved || index > firstRemoved && RetainTimelineSnapshot(m_TimelineSnapshots[index]))
-                    snapshots.Add(m_TimelineSnapshots[index]);
-            return CloneWithTimelineSnapshots(snapshots);
+            ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> committedSnapshots = snapshots.Count == 0
+                ? s_EmptyTimelineSnapshots
+                : new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(snapshots.ToArray());
+            return new FixedCharacterRuntimeState(
+                NumericProfile,
+                GameplayContentHash,
+                StateSchemaHash,
+                LastCompletedTick,
+                m_Abilities,
+                ActionActivationRequests,
+                ActionInstances,
+                InputRequests,
+                EventSequence,
+                ActionEventSequence,
+                HandleAllocator,
+                ControlState,
+                GameplayEffectState,
+                EquipmentState,
+                committedSnapshots);
         }
 
         bool RetainTimelineSnapshot(in AbilityTimelineRuntimeSnapshot snapshot)
@@ -308,23 +215,6 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        FixedCharacterRuntimeState CloneWithTimelineSnapshots(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots) =>
-            new FixedCharacterRuntimeState(
-                NumericProfile,
-                GameplayContentHash,
-                StateSchemaHash,
-                LastCompletedTick,
-                m_Abilities,
-                ActionActivationRequests,
-                ActionInstances,
-                InputRequests,
-                EventSequence,
-                ActionEventSequence,
-                HandleAllocator,
-                ControlState,
-                GameplayEffectState,
-                EquipmentState,
-                snapshots);
         internal static FixedCharacterRuntimeState AdoptSnapshot(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
@@ -340,7 +230,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState,
-            IReadOnlyList<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
+            ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
         {
             if (abilities == null)
                 throw new ArgumentNullException(nameof(abilities));
@@ -350,7 +240,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(actionInstances));
             if (inputRequests == null)
                 throw new ArgumentNullException(nameof(inputRequests));
-            Array.Sort(abilities, CompareAbilities);
+            Array.Sort(abilities, AbilityStateComparer.Instance);
             for (int i = 0; i < abilities.Length; i++)
             {
                 if (abilities[i] == null || i > 0 && abilities[i - 1].AbilityIdentity.AbilityId == abilities[i].AbilityIdentity.AbilityId)
@@ -378,8 +268,7 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>(),
-                ownsCollections: true);
+                timelineSnapshots);
         }
 
         internal static FixedCharacterRuntimeState AdoptPrepared(
@@ -399,9 +288,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentStateAggregate equipmentState,
             AbilityTimelineRuntimeSnapshot[] timelineSnapshots)
         {
-            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
-                throw new ArgumentException("Character runtime state identity is incomplete.");
-            Array.Sort(abilities, CompareAbilities);
+            Array.Sort(abilities, AbilityStateComparer.Instance);
             for (int i = 0; i < abilities.Length; i++)
             {
                 if (abilities[i] == null || i > 0 && abilities[i - 1].AbilityIdentity.AbilityId == abilities[i].AbilityIdentity.AbilityId)
@@ -414,7 +301,7 @@ namespace ThirdPersonSimulation.Fixed
                     string.CompareOrdinal(inputRequests[i - 1].Key, inputRequests[i].Key) >= 0)
                     throw new ArgumentException("Character runtime state Input request identities are null, duplicated, or not canonically ordered.");
             }
-            Array.Sort(timelineSnapshots, s_CompareTimelineSnapshots);
+            Array.Sort(timelineSnapshots, TimelineSnapshotComparer.Instance);
             for (int i = 0; i < timelineSnapshots.Length; i++)
             {
                 if (!timelineSnapshots[i].IsValid || i > 0 && timelineSnapshots[i - 1].RuntimeHandle == timelineSnapshots[i].RuntimeHandle)
@@ -435,8 +322,9 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(timelineSnapshots),
-                ownsCollections: true);
+                timelineSnapshots.Length == 0
+                    ? s_EmptyTimelineSnapshots
+                    : new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(timelineSnapshots));
         }
 
         private FixedCharacterRuntimeState(
@@ -454,7 +342,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState,
-            IReadOnlyList<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
+            ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
         {
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
@@ -472,8 +360,7 @@ namespace ThirdPersonSimulation.Fixed
             ControlState = controlState;
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
-            m_TimelineSnapshots = timelineSnapshots as ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> ??
-                new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots).AsReadOnly();
+            m_TimelineSnapshots = timelineSnapshots;
         }
 
         internal static FixedCharacterRuntimeState CreateInitial(
@@ -512,31 +399,23 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                Array.Empty<AbilityTimelineRuntimeSnapshot>());
+                s_EmptyTimelineSnapshots);
         }
 
-        static T[] CopyArray<T>(IEnumerable<T> values)
+        sealed class AbilityStateComparer : IComparer<FixedAbilityRuntimeState>
         {
-            if (values == null || values is ICollection<T> collection && collection.Count == 0)
-                return Array.Empty<T>();
-            int count = values is ICollection<T> known ? known.Count : 0;
-            var result = new T[count];
-            int index = 0;
-            if (values != null)
-            {
-                foreach (T value in values)
-                {
-                    if (index == result.Length)
-                        Array.Resize(ref result, Math.Max(4, result.Length * 2));
-                    result[index++] = value;
-                }
-            }
-            if (index != result.Length)
-                Array.Resize(ref result, index);
-            return result;
+            internal static readonly AbilityStateComparer Instance = new AbilityStateComparer();
+
+            public int Compare(FixedAbilityRuntimeState left, FixedAbilityRuntimeState right) =>
+                left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId);
         }
 
-        static int CompareAbilities(FixedAbilityRuntimeState left, FixedAbilityRuntimeState right) =>
-            left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId);
+        sealed class TimelineSnapshotComparer : IComparer<AbilityTimelineRuntimeSnapshot>
+        {
+            internal static readonly TimelineSnapshotComparer Instance = new TimelineSnapshotComparer();
+
+            public int Compare(AbilityTimelineRuntimeSnapshot left, AbilityTimelineRuntimeSnapshot right) =>
+                left.RuntimeHandle.CompareTo(right.RuntimeHandle);
+        }
     }
 }

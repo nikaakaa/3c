@@ -110,7 +110,7 @@ namespace ThirdPersonSimulation
     internal sealed class GameplayAbilityExecutionFrame<TValue>
         where TValue : struct, IEquatable<TValue>
     {
-        readonly SortedDictionary<int, TValue> m_Values;
+        readonly Dictionary<int, TValue> m_Values;
 
         public GameplayAbilityExecutionFrame(
             CharacterSkillId skillId,
@@ -127,13 +127,13 @@ namespace ThirdPersonSimulation
             ActionInstanceId = actionInstanceId;
             PredictionKey = predictionKey;
             Generation = generation;
-            m_Values = new SortedDictionary<int, TValue>();
-            if (values == null)
-                return;
-            foreach (KeyValuePair<int, TValue> value in values)
+            m_Values = values == null
+                ? new Dictionary<int, TValue>()
+                : new Dictionary<int, TValue>(values);
+            foreach (KeyValuePair<int, TValue> value in m_Values)
             {
-                if (value.Key < 0 || !m_Values.TryAdd(value.Key, value.Value))
-                    throw new ArgumentException("Skill execution frame state values are invalid or duplicated.", nameof(values));
+                if (value.Key < 0)
+                    throw new ArgumentException("Skill execution frame state values are invalid.", nameof(values));
             }
         }
 
@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
         public ulong ActionInstanceId { get; }
         public ulong PredictionKey { get; }
         public ulong Generation { get; private set; }
-        public IReadOnlyDictionary<int, TValue> Values => m_Values;
+        public Dictionary<int, TValue> Values => m_Values;
 
         public bool TryGetValue(int slotIndex, out TValue value) => m_Values.TryGetValue(slotIndex, out value);
 
@@ -167,9 +167,7 @@ namespace ThirdPersonSimulation
             ActionInstanceId = source.ActionInstanceId;
             PredictionKey = source.PredictionKey;
             Generation = source.Generation;
-            m_Values = new SortedDictionary<int, TValue>();
-            foreach (KeyValuePair<int, TValue> value in source.m_Values)
-                m_Values.Add(value.Key, value.Value);
+            m_Values = new Dictionary<int, TValue>(source.m_Values);
         }
 
         public bool Equals(GameplayAbilityExecutionFrame<TValue> other)

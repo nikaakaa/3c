@@ -283,7 +283,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Commit(),
                 m_EquipmentState.Capture(),
-                m_BaseState.TimelineSnapshots);
+                m_BaseState.TimelineSnapshotCollection);
         }
 
         static T[] ToArray<T>(IReadOnlyList<T> values)

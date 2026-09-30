@@ -1494,6 +1494,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasOutput;
         internal bool HasRotationCorrection;
         internal Quaternion RotationCorrection;
+        internal Quaternion RotationTargetLocalResidual;
         internal bool HasSwingPath;
         internal ulong SwingLandingEventIdentity;
         internal ulong SwingGroundPathInputIdentity;
@@ -1539,12 +1540,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootRotationResponse(
             Quaternion correction,
+            Quaternion targetLocalResidual,
             Quaternion targetRotation,
             Quaternion effectiveRotation,
             float weight)
         {
             Available = true;
             Correction = correction;
+            TargetLocalResidual = targetLocalResidual;
             TargetRotation = targetRotation;
             EffectiveRotation = effectiveRotation;
             Weight = weight;
@@ -1552,6 +1555,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool Available { get; }
         internal Quaternion Correction { get; }
+        internal Quaternion TargetLocalResidual { get; }
         internal Quaternion TargetRotation { get; }
         internal Quaternion EffectiveRotation { get; }
         internal float Weight { get; }

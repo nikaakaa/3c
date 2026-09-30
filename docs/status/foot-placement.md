@@ -14,9 +14,13 @@
 
 上述生产修正已独立提交 `18e1f2a4f`，配套窗口维护 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。未经权重的目标旋转只变 0.575°，支撑法线均向上，锁权重却从 0 切到约 1；因此只平滑原始目标四元数不能处理这一触发条件。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
 
-旋转响应候选已接入正式 `CharacterFootLifecycle`：`PrepareFrame` 处理输入来源与作者增权重的连续性，`ResolveRotationResponse` 先按锁权重得到相对本帧原动画的修正，再用既有 `EffectiveCorrectionHalfLifeSeconds` 推进；最终查询、Goal 和 Landing 完成阶段共用已求出的旋转。作者总权重仍最后生效，锁权重不在 Goal 再乘一次。旋转历史留在同一脚的 Interpolation 状态，跨 Landing/Release 完成保留，在正式输出失效时清空；没有冻结绝对世界脚踝。两个前态字段继续引用原预分配页，采样协议更新为 capability 5 / full sampler 4，core 不增加字段。
+第一版旋转候选 `15894ee7b` 已完成三个窗口的真实源码函数实验：Live 23 帧、无接触 Stored 13 帧、从关闭帧开始的真实接触 Stored 85 帧。Live 的整窗最大转角从 37.0679° 降到 25.1218°，相对原动画的修正变化从 31.1801° 降到 9.0765°；最终脚掌查询无新增正穿透，三窗均为 0 B。跨版本比较仍判为失败：Live 固定髋的最大伸展比从 0.983891 升至 0.998176，真实接触 Stored 也存在同帧余量下降。2211 原动画膝角为 25.8279°，按同一髋和实际骨段长度计算的目标所需膝角从 20.8593° 降至 6.9297°。后者是几何需求，不是新 FBBIK 的输出。保留[跨版本对照](../diagnostics/foot-placement/ik-tests/rotation-business-comparison.json)，不能把单版执行成功当作业务通过。
 
-这一步仅完成代码与定向编译：Animation 和 FootIkDiagnosticSampling 两个程序集均 0 错误、0 警告，日志在 `tmp/ik-release-sampling-20260930/rotation-capture-*-build-20261001.log`。一次正式 Editor 导入后，其它工作中的 `Float32CharacterHost.cs` 仍因缺失类型编译失败；加载中的 Animation MVID 为 `cd6cec60-06dd-47f0-9dd6-6ad8029c56d7`，旋转新字段不存在。候选尚未完成连续函数实验、Editor 运行及新 Capture 的实际 Mono JIT 栈检查，不能沿用前述 Stored 的通过结果。配套窗口从真实总权重为 0 的 2192 帧开始，准备连续验证预算恢复、锁脚接入、释放和 2207 再次接入；避免从 2200 的旧状态补造旋转历史。
+正在同一步内修正旋转响应：`CharacterFootLifecycle` 从正式接触获得/失去、锁请求边缘的权重变化及接触法线换面识别交接；`ResolveRotationResponse` 在目标局部坐标捕获旋转残差，随后按原半衰期衰减，并直接跟随连续目标。第一版持续低通整个相对修正，连稳定接触对原动画运动的补偿也滞后；新候选只处理交接差值，Landing→Releasing 若旋转请求未变则不再次捕获。作者增权重仍保留连续性，锁权重只使用一次；输出查询、Goal 与 Complete 共用同一旋转。尚未证明这项修正消除了余量回归，测试窗口继续同输入比较及真实双脚、骨盆反馈，未改变冻结、骨盆算法或参数。
+
+当前旋转历史继续由原预分配采样页持有，新增目标局部残差后协议为 capability 6 / full sampler 5，core 不增加字段。修订版 Animation 与 FootIkDiagnosticSampling 定向编译均 0 错误、0 警告，日志在 `tmp/ik-release-sampling-20260930/rotation-residual-*-build-20261001.log`；这不代表行为通过。正式 Editor 导入后，其它工作中的 `Float32CharacterHost.cs` 仍因缺失类型编译失败；最后核实的主 Animation MVID 为 `cd6cec60-06dd-47f0-9dd6-6ad8029c56d7`，没有旋转新字段。函数实验独立编译真实生产源码、相关状态类型及引擎引用，不代表主程序集已加载；新 Capture 的实际 Mono JIT 栈检查仍未完成。本轮不启动 Replay。
+
+双脚骨盆还原的输入已核对：`rootPos + rootRotation * (leg/leg-pose/original-hip − pelvis-goal/component-position * pelvis-goal/position-weight)` 与直接记录的 `foot/resolved/reach/landing-hip` 在 3305 条可用记录中最大误差为 0.0056 mm。2192 的真实总权重 0 会正式清空脚端、PelvisSpring 和无候选的 PrimarySupport，支持连续复算的明确起点；不能拿骨盆之后的髋直接作为 FootLifecycle 计算前输入。该核对不补齐完整 FBBIK 骨架及弯曲历史。
 
 ## 正式 owner
 

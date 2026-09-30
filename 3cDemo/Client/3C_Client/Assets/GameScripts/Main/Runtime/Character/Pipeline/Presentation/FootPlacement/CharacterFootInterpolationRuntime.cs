@@ -44,7 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootInterpolationState state,
             in CharacterFootStateFrame frame,
             in CharacterFootSupportTarget support,
-            bool hasContact)
+            bool hasContact,
+            bool targetDiscontinuity)
         {
             if (!support.IsValid)
                 return default;
@@ -59,23 +60,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion groundRotation = (Quaternion.LookRotation(
                 forward.normalized, support.SupportNormal) *
                 Quaternion.Inverse(foot.SoleFrameLocalRotation)).normalized;
-            Quaternion desiredCorrection = Quaternion.Slerp(
-                Quaternion.identity,
-                (groundRotation * Quaternion.Inverse(foot.AnkleRotation)).normalized,
+            Quaternion desiredRotation = Quaternion.Slerp(
+                foot.AnkleRotation, groundRotation,
                 hasContact ? frame.LockRequest.Weight : 0f).normalized;
             Quaternion previousCorrection = state.HasRotationCorrection
                 ? state.RotationCorrection : Quaternion.identity;
+            Quaternion residual = !state.HasRotationCorrection ||
+                                  state.OutputWeightRebased || targetDiscontinuity
+                ? (Quaternion.Inverse(desiredRotation) * previousCorrection *
+                   foot.AnkleRotation).normalized
+                : state.RotationTargetLocalResidual;
             float alpha = 1f - Mathf.Pow(
                 0.5f, frame.DeltaSeconds / frame.Settings.EffectiveCorrectionHalfLifeSeconds);
-            Quaternion correction = Quaternion.Slerp(
-                previousCorrection, desiredCorrection, alpha).normalized;
-            Quaternion targetRotation = (correction * foot.AnkleRotation).normalized;
+            residual = Quaternion.Slerp(residual, Quaternion.identity, alpha).normalized;
+            Quaternion targetRotation = (desiredRotation * residual).normalized;
+            Quaternion correction = (targetRotation *
+                Quaternion.Inverse(foot.AnkleRotation)).normalized;
             float weight = Quaternion.Angle(Quaternion.identity, correction) > 0f
                 ? frame.FootPlacementWeight : 0f;
             Quaternion effectiveRotation = Quaternion.Slerp(
                 foot.AnkleRotation, targetRotation, weight).normalized;
             return new CharacterFootRotationResponse(
-                correction, targetRotation, effectiveRotation, weight);
+                correction, residual, targetRotation, effectiveRotation, weight);
         }
 
         internal static CharacterFootInterpolationResult Evaluate(
@@ -180,6 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 correction = state.EffectiveCorrection;
             bool hasRotationCorrection = state.HasRotationCorrection;
             Quaternion rotationCorrection = state.RotationCorrection;
+            Quaternion rotationTargetLocalResidual = state.RotationTargetLocalResidual;
             CharacterFootCorrectionResponseHistory responseHistory = state.ResponseHistory;
             bool hasPreviousResponseOutputPoint =
                 state.HasPreviousResponseOutputPoint;
@@ -200,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.EffectiveCorrection = correction;
             state.HasRotationCorrection = hasRotationCorrection;
             state.RotationCorrection = rotationCorrection;
+            state.RotationTargetLocalResidual = rotationTargetLocalResidual;
             state.ResponseHistory = responseHistory;
             state.HasPreviousResponseOutputPoint =
                 hasPreviousResponseOutputPoint;
@@ -1294,6 +1302,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.ResponseHistory = default;
             state.HasRotationCorrection = false;
             state.RotationCorrection = default;
+            state.RotationTargetLocalResidual = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;
             state.PendingCorrectionResponseInitializationReason = reason;

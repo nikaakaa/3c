@@ -187,10 +187,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in formalFootMotion,
                 in landingPrediction,
                 in preTransition);
+            bool hadRotationContact = context.Contact.HasContact;
+            float previousLockWeight = context.ContactTransition.PreviousWeight;
+            Vector3 previousContactNormal = context.Contact.Normal;
             CharacterFootTransitionRuntime.Apply(
                 ref context,
                 in preTransition,
                 in frame);
+            bool rotationTargetDiscontinuity =
+                hadRotationContact != context.Contact.HasContact ||
+                preTransition.ContactEdge != CharacterFootContactEdge.None &&
+                previousLockWeight != frame.LockRequest.Weight ||
+                hadRotationContact && context.Contact.HasContact &&
+                previousContactNormal != context.Contact.Normal;
             CharacterFootStateTarget target =
                 CharacterFootStateTargetResolver.Resolve(
                     in context,
@@ -205,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootRotationResponse stateTargetRotation =
                     CharacterFootInterpolationRuntime.ResolveRotationResponse(
                         in context.Interpolation, in frame, in target.SupportTarget,
-                        context.Contact.HasContact);
+                        context.Contact.HasContact, rotationTargetDiscontinuity);
                 stateTargetSupport = QueryFootSupport(
                     in evaluation, target.Correction, in stateTargetRotation,
                     evaluation.StateTargetProbes);
@@ -287,9 +296,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootRotationResponse rotation =
                 CharacterFootInterpolationRuntime.ResolveRotationResponse(
                     in context.Interpolation, in frame, in interpolation.SupportTarget,
-                    context.Contact.HasContact);
+                    context.Contact.HasContact, rotationTargetDiscontinuity);
             context.Interpolation.HasRotationCorrection = rotation.Available;
             context.Interpolation.RotationCorrection = rotation.Correction;
+            context.Interpolation.RotationTargetLocalResidual = rotation.TargetLocalResidual;
             ref readonly CharacterFootSwingMotionResult frameSwing = ref frame.SwingMotion;
             CharacterFootSwingMotionResult outputSwing = preTransition.SuppressOutput
                 ? CharacterFootSwingMotionBuilder.SuppressUnselected(

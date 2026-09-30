@@ -20,8 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootLifecycleTransitionFact lifecycleTransition,
                 bool landingCompletionPending,
                 in CharacterFootCurrentSupportObservation outputSupport,
-                in CharacterFootCurrentSupportObservation stateTargetSupport,
-                in CharacterFootRotationResponse rotation)
+                in CharacterFootCurrentSupportObservation stateTargetSupport)
             {
                 Evaluation = evaluation;
                 PreTransition = preTransition;
@@ -34,7 +33,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LandingCompletionPending = landingCompletionPending;
                 OutputSupport = outputSupport;
                 StateTargetSupport = stateTargetSupport;
-                Rotation = rotation;
             }
 
             readonly CharacterFootStateEvaluation Evaluation;
@@ -48,7 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool LandingCompletionPending { get; }
             internal readonly CharacterFootCurrentSupportObservation OutputSupport;
             internal readonly CharacterFootCurrentSupportObservation StateTargetSupport;
-            readonly CharacterFootRotationResponse Rotation;
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
@@ -119,7 +116,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     desiredCorrection,
                     hardConstraint.OutputCorrection,
                     in selectedSupportTarget,
-                    in Rotation,
                     in supportIntent,
                     in continuityFact,
                     in lifecycleTransition,
@@ -168,9 +164,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 previousEffectiveSole = context.PreviousAnimatedSole +
                 (context.Interpolation.PreviousResponseOutputPoint -
                  context.PreviousAnimatedSole) * context.PreviousOutputWeight;
-            CharacterFootInterpolationRuntime.PrepareFrame(
-                ref context.Interpolation, in frame, context.PreviousOutputWeight,
-                context.PreviousAnimatedSole);
+            CharacterFootInterpolationRuntime.RebaseOutputWeight(
+                ref context.Interpolation, context.PreviousOutputWeight,
+                frame.FootPlacementWeight, context.PreviousAnimatedSole);
             context.PreviousOutputWeight = frame.FootPlacementWeight;
             context.PreviousAnimatedSole = CharacterFootConstraintMath.ResolveOriginalSole(
                 frame.AnimatedFoot);
@@ -187,19 +183,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in formalFootMotion,
                 in landingPrediction,
                 in preTransition);
-            bool hadRotationContact = context.Contact.HasContact;
-            float previousLockWeight = context.ContactTransition.PreviousWeight;
-            Vector3 previousContactNormal = context.Contact.Normal;
             CharacterFootTransitionRuntime.Apply(
                 ref context,
                 in preTransition,
                 in frame);
-            bool rotationTargetDiscontinuity =
-                hadRotationContact != context.Contact.HasContact ||
-                preTransition.ContactEdge != CharacterFootContactEdge.None &&
-                previousLockWeight != frame.LockRequest.Weight ||
-                hadRotationContact && context.Contact.HasContact &&
-                previousContactNormal != context.Contact.Normal;
             CharacterFootStateTarget target =
                 CharacterFootStateTargetResolver.Resolve(
                     in context,
@@ -211,12 +198,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (target.InterpolationPolicy == CharacterFootInterpolationPolicy.ReleaseResidual ||
                  target.InterpolationPolicy == CharacterFootInterpolationPolicy.VerifiedSupport))
             {
-                CharacterFootRotationResponse stateTargetRotation =
-                    CharacterFootInterpolationRuntime.ResolveRotationResponse(
-                        in context.Interpolation, in frame, in target.SupportTarget,
-                        context.Contact.HasContact, rotationTargetDiscontinuity);
                 stateTargetSupport = QueryFootSupport(
-                    in evaluation, target.Correction, in stateTargetRotation,
+                    in context, in evaluation, target.Correction, target.SupportTarget,
                     evaluation.StateTargetProbes);
                 target = CharacterFootStateTargetResolver.ConstrainStateTarget(
                     in target, in stateTargetSupport, in frame);
@@ -267,7 +250,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in lifecycleTransition,
                     false,
                     default,
-                    default,
                     default);
                 return unavailable;
             }
@@ -293,13 +275,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref context.Interpolation,
                 in postTransition);
 
-            CharacterFootRotationResponse rotation =
-                CharacterFootInterpolationRuntime.ResolveRotationResponse(
-                    in context.Interpolation, in frame, in interpolation.SupportTarget,
-                    context.Contact.HasContact, rotationTargetDiscontinuity);
-            context.Interpolation.HasRotationCorrection = rotation.Available;
-            context.Interpolation.RotationCorrection = rotation.Correction;
-            context.Interpolation.RotationTargetLocalResidual = rotation.TargetLocalResidual;
             ref readonly CharacterFootSwingMotionResult frameSwing = ref frame.SwingMotion;
             CharacterFootSwingMotionResult outputSwing = preTransition.SuppressOutput
                 ? CharacterFootSwingMotionBuilder.SuppressUnselected(
@@ -307,8 +282,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : frameSwing;
             CharacterFootCurrentSupportObservation outputSupport = preTransition.SuppressOutput
                 ? default
-                : QueryFootSupport(in evaluation,
-                    supportLimitedCorrection, in rotation, evaluation.OutputProbes);
+                : QueryFootSupport(in context, in evaluation,
+                    supportLimitedCorrection, interpolation.SupportTarget, evaluation.OutputProbes);
             CharacterFootHardConstraintResult hardConstraint =
                 preTransition.SuppressOutput
                     ? new CharacterFootHardConstraintResult(
@@ -365,7 +340,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 desiredCorrection,
                 hardConstraint.OutputCorrection,
                 in selectedSupportTarget,
-                in rotation,
                 in supportIntent,
                 in continuityFact,
                 in lifecycleTransition,
@@ -384,8 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in lifecycleTransition,
                 landingCompletionPending,
                 in outputSupport,
-                in stateTargetSupport,
-                in rotation);
+                in stateTargetSupport);
             return request;
         }
 
@@ -410,21 +383,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static CharacterFootCurrentSupportObservation QueryFootSupport(
+            in CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
             Vector3 correction,
-            in CharacterFootRotationResponse rotation,
+            in CharacterFootSupportTarget support,
             CharacterFootSoleProbeBuffer probes)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
+            float rotationWeight = context.Contact.HasContact
+                ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
             if (!evaluation.Grounded || frame.FootPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon ||
                 !TryResolveFootGoalPose(in foot,
                     CharacterFootConstraintMath.ResolveOriginalSole(foot) + correction,
-                    in rotation, frame.FootPlacementWeight,
-                    out _, out _, out Vector3 ankle))
+                    in support, frame.FootPlacementWeight, rotationWeight,
+                    out _, out _, out _, out Vector3 ankle, out Quaternion rotation))
                 return default;
-            CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(
-                ankle, rotation.EffectiveRotation);
+            CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(ankle, rotation);
             return evaluation.SoleSupportQuery.Query(
                 frame.FrameSequence, frame.CompletionIdentity, frame.WorldRevision,
                 frame.Side, frame.ComponentUp, true, in contacts, probes);
@@ -547,7 +522,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 desiredCorrection,
             Vector3 outputCorrection,
             in CharacterFootSupportTarget supportTarget,
-            in CharacterFootRotationResponse rotation,
             in CharacterFootSupportIntent supportIntent,
             in CharacterFootPathContinuityFact continuityFact,
             in CharacterFootLifecycleTransitionFact lifecycleTransition,
@@ -562,16 +536,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveOriginalSole(in animatedFoot);
             Vector3 originalAnkle = animatedFoot.AnklePosition;
             Vector3 finalSole = originalSole + outputCorrection;
-            float rotationWeight = rotation.Weight;
+            float rotationWeight = hasContact
+                ? frame.FootPlacementWeight * frame.LockRequest.Weight
+                : 0f;
             float positionWeight = frame.FootPlacementWeight;
             if (!TryResolveFootGoalPose(
                     in animatedFoot,
                     finalSole,
-                    in rotation,
+                    in supportTarget,
                     positionWeight,
+                    rotationWeight,
                     out Vector3 effectiveSole,
                     out Vector3 finalAnkle,
-                    out Vector3 effectiveAnkle))
+                    out Quaternion finalRotation,
+                    out Vector3 effectiveAnkle,
+                    out Quaternion effectiveRotation))
             {
                 result = CharacterFootSwingMotionBuilder.SuppressUnselected(
                     in swing);
@@ -697,8 +676,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.FrameSequence, frame.CompletionIdentity,
                 frame.RigId, frame.RigRevision, evaluation.Side);
             var pose = new CharacterFootPlacementPose(
-                finalSole, effectiveSole, finalAnkle, rotation.TargetRotation,
-                effectiveAnkle, rotation.EffectiveRotation, outputCorrection,
+                finalSole, effectiveSole, finalAnkle, finalRotation,
+                effectiveAnkle, effectiveRotation, outputCorrection,
                 positionWeight, rotationWeight);
             var support = new CharacterFootSupportFacts(
                 supportTarget, contactReference, contactOwnership,
@@ -807,21 +786,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static bool TryResolveFootGoalPose(
             in CharacterFootPlacementAnimatedFootPose foot,
             Vector3 finalSole,
-            in CharacterFootRotationResponse rotation,
+            in CharacterFootSupportTarget supportTarget,
             float positionWeight,
+            float rotationWeight,
             out Vector3 effectiveSole,
             out Vector3 finalAnkle,
-            out Vector3 effectiveAnkle)
+            out Quaternion finalRotation,
+            out Vector3 effectiveAnkle,
+            out Quaternion effectiveRotation)
         {
             effectiveSole = default;
             finalAnkle = default;
+            finalRotation = default;
             effectiveAnkle = default;
-            if (!rotation.Available || !CharacterFootConstraintMath.Finite(finalSole))
+            effectiveRotation = default;
+            if (!supportTarget.IsValid ||
+                !CharacterFootConstraintMath.Finite(finalSole) ||
+                !float.IsFinite(positionWeight) || positionWeight < 0f ||
+                positionWeight > 1f || !float.IsFinite(rotationWeight) ||
+                rotationWeight < 0f || rotationWeight > 1f)
             {
                 return false;
             }
+            Vector3 normal = supportTarget.SupportNormal;
+            Vector3 forward = Vector3.ProjectOnPlane(foot.SoleForward, normal);
+            if (!CharacterFootConstraintMath.Finite(forward) ||
+                forward.sqrMagnitude <=
+                CharacterFootConstraintMath.GeometryEpsilon *
+                CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                return false;
+            }
+            Quaternion soleRotation = Quaternion.LookRotation(
+                forward.normalized,
+                normal);
+            finalRotation = (soleRotation *
+                             Quaternion.Inverse(
+                                 foot.SoleFrameLocalRotation)).normalized;
+            effectiveRotation = Quaternion.Slerp(
+                foot.AnkleRotation,
+                finalRotation,
+                rotationWeight).normalized;
             Quaternion rotationDelta =
-                (rotation.EffectiveRotation * Quaternion.Inverse(foot.AnkleRotation))
+                (effectiveRotation * Quaternion.Inverse(foot.AnkleRotation))
                 .normalized;
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(foot);
@@ -838,7 +845,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                   (effectiveAnkle - foot.AnklePosition) / positionWeight
                 : foot.AnklePosition;
             return CharacterFootConstraintMath.Finite(finalAnkle) &&
-                   CharacterFootConstraintMath.Finite(effectiveAnkle);
+                   CharacterFootConstraintMath.Finite(effectiveAnkle) &&
+                   float.IsFinite(finalRotation.x) &&
+                   float.IsFinite(finalRotation.y) &&
+                   float.IsFinite(finalRotation.z) &&
+                   float.IsFinite(finalRotation.w) &&
+                   float.IsFinite(effectiveRotation.x) &&
+                   float.IsFinite(effectiveRotation.y) &&
+                   float.IsFinite(effectiveRotation.z) &&
+                   float.IsFinite(effectiveRotation.w);
         }
 
         static bool TryResolveSupportReachReference(

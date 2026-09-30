@@ -248,15 +248,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool HasOutput => m_Value.HasOutput;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
-        public bool HasRotationCorrection => m_Value.HasRotationCorrection;
-
-        [DiagnosticField, DiagnosticGroup("replay-input")]
-        public Quaternion RotationCorrection => m_Value.RotationCorrection;
-
-        [DiagnosticField, DiagnosticGroup("replay-input")]
-        public Quaternion RotationTargetLocalResidual => m_Value.RotationTargetLocalResidual;
-
-        [DiagnosticField, DiagnosticGroup("replay-input")]
         public bool HasSwingPath => m_Value.HasSwingPath;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]

@@ -862,12 +862,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pool.AcquireWritable(committed);
             ref readonly CharacterFootCurrentSupportQuerySettings settings =
                 ref m_Settings.CurrentSupportQuery;
+            Vector3 unitUp = componentUp.normalized;
             CharacterFootCurrentSupportProbeRequest heelRequest =
                 CharacterFootCurrentSupportProbeRequest.Create(
                     side,
                     CharacterFootCurrentSupportProbeKind.Heel,
                     foot.HeelPosition,
                     componentUp,
+                    unitUp,
                     in settings,
                     in m_Settings.LandingPrediction);
             CharacterFootCurrentSupportProbeRequest toeRequest =
@@ -876,6 +878,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootCurrentSupportProbeKind.Toe,
                     foot.ToePosition,
                     componentUp,
+                    unitUp,
                     in settings,
                     in m_Settings.LandingPrediction);
             CharacterFootCurrentSupportObservation observation;

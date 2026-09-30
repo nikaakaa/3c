@@ -2111,3 +2111,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground Surface Visibility 在事件循环前为 LastLanding 相对 surface origin 计算高度；首个 start event 又重复执行同一 `LastLanding - Origin` 和 `Dot(..., Up)`。
 - 循环前绑定 landing offset 和 start height，start 分支复用该高度。后续 event 会正常更新 previousHeight；重复或非首个零距离事件按原跳过规则不会进入 start 分支。
 - 该改动删除每次 Ground Path surface visibility 构建中的重复减法和 Dot。静态核对事件排序、跳过条件、surface identity 和 edge 输出不变；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP299 Current support heel/toe unit up 共享（2026-09-30，已实施，本轮未编译）
+
+- Current Support 的 heel/toe probe request 由同一 frame component up 构造；每个 request 构造时分别归一化，一次 sole support 查询重复执行相同归一化。
+- Sole Support Query 和 PrepareCurrentSupport 在调用边界归一化一次并传给两个 Create；request 构造直接使用共享 unit up 生成 origin/direction。原始 ComponentUp 仍逐 request 保存，IsValid、diagnostics、SphereCast 输入和候选筛选不变。
+- 该改动删除每脚 Current Support heel/toe 构造中的第二次归一化。静态核对两个正式构造路径、参数顺序和只读生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

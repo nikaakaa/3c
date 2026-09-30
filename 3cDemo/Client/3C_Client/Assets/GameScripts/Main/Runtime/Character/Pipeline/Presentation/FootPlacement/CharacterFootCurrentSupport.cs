@@ -58,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportProbeKind kind,
             Vector3 probePosition,
             Vector3 componentUp,
+            Vector3 unitComponentUp,
             float castAbove,
             float castBelow,
             float radius,
@@ -65,7 +66,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float minimumGroundNormalDot,
             int hitCapacity)
         {
-            Vector3 up = componentUp.normalized;
             Side = side;
             Kind = kind;
             ProbePosition = probePosition;
@@ -76,8 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LayerMask = layerMask;
             MinimumGroundNormalDot = minimumGroundNormalDot;
             HitCapacity = hitCapacity;
-            m_Origin = probePosition + up * castAbove;
-            m_Direction = -up;
+            m_Origin = probePosition + unitComponentUp * castAbove;
+            m_Direction = -unitComponentUp;
         }
 
         internal static CharacterFootCurrentSupportProbeRequest Create(
@@ -85,10 +85,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportProbeKind kind,
             Vector3 probePosition,
             Vector3 componentUp,
+            Vector3 unitComponentUp,
             in CharacterFootCurrentSupportQuerySettings support,
             in CharacterFootLandingPredictionSettings landing) =>
             new CharacterFootCurrentSupportProbeRequest(
-                side, kind, probePosition, componentUp,
+                side, kind, probePosition, componentUp, unitComponentUp,
                 support.CastAbove, support.CastBelow, landing.SphereRadius,
                 support.GroundLayerMask, support.MinimumGroundNormalDot,
                 support.HitCapacity);
@@ -1071,12 +1072,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame,
             in CharacterFootPlacementSoleContactPose contacts)
         {
+            Vector3 unitUp = frame.ComponentUp.normalized;
             var heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
                 frame.Side, CharacterFootCurrentSupportProbeKind.Heel,
-                contacts.HeelPosition, frame.ComponentUp, m_Settings, m_LandingSettings);
+                contacts.HeelPosition, frame.ComponentUp, unitUp,
+                m_Settings, m_LandingSettings);
             var toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
                 frame.Side, CharacterFootCurrentSupportProbeKind.Toe,
-                contacts.ToePosition, frame.ComponentUp, m_Settings, m_LandingSettings);
+                contacts.ToePosition, frame.ComponentUp, unitUp,
+                m_Settings, m_LandingSettings);
             CharacterFootCurrentSupportProbeResult heel = m_World.Query(in heelRequest);
             CharacterFootCurrentSupportProbeResult toe = m_World.Query(in toeRequest);
             return CharacterFootCurrentSupportObservation.Resolve(

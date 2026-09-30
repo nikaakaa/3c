@@ -19,6 +19,6 @@
 
 ## 数据与参考
 
-原始证据仍保存在 `docs/diagnostics/`、项目 `Diagnostics/` 与对应记录声明的目录，没有移动 CSV、JSON、二进制、失败运行或采样身份。[台阶连续性解释器](../diagnostics/ik-stair-continuity-explainer-20260930.html)保留原路径。
+报告附带 JSON、查询图与[台阶连续性解释器](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html)已归入[脚部诊断](../diagnostics/foot-placement/README.md)。正式 CSV、Proof 与分析包仍在项目 `Diagnostics/`；原始数据内容、失败事实和采样身份未改。
 
 原理阅读见 [GDC 学习文案](../reference/foot-placement/gdc2016-fitting-the-world.md)；历史否决与重复问题见[实现经验](../reference/foot-placement/implementation-lessons.md)。参数和当前运行路径仍由正式内容与现行规格拥有。

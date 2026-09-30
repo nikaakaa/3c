@@ -26,7 +26,7 @@
 | PlayStackingType | 原始 0，映射项目 Replace=1 | 同左 |
 | ShakeOnNotHit | false，属于攻击反馈事件 | 同左 |
 
-`CorinCameraResourcesAuthoring.Publish` 经正式 Configure API 保存资产并登记 Profile。新资源分别比较 24 项标量／字符串字段，数值按 float32 比较，另核对时间曲线引用及两个空淡入／淡出曲线引用，全部一致。ShakeCenterAttachPoint 原始为 null；本次没有将项目 CameraSpace 枚举视为同名原始字段来计入一致项。证据：[hit-shake-assets.json](../../../diagnostics/camera-basis-runtime-20260929/hit-shake-assets.json)。
+`CorinCameraResourcesAuthoring.Publish` 经正式 Configure API 保存资产并登记 Profile。新资源分别比较 24 项标量／字符串字段，数值按 float32 比较，另核对时间曲线引用及两个空淡入／淡出曲线引用，全部一致。ShakeCenterAttachPoint 原始为 null；本次没有将项目 CameraSpace 枚举视为同名原始字段来计入一致项。证据：[hit-shake-assets.json](../../../diagnostics/camera/camera-basis-runtime-20260929/hit-shake-assets.json)。
 
 ## 2. 当前命中链的实际缺口
 
@@ -51,7 +51,7 @@
 
 ## 3. 基础轨道消费者新证据
 
-二进制 SHA256 与前轮一致：`4cba5d52c5fbfd478d2a9ec217075f82216780d56ad1bd1e85e4f724dcce30b4`。元数据与字节状态来自 829。证据文件及哈希见 [manifest.json](../../../diagnostics/camera-basis-runtime-20260929/manifest.json)。
+二进制 SHA256 与前轮一致：`4cba5d52c5fbfd478d2a9ec217075f82216780d56ad1bd1e85e4f724dcce30b4`。元数据与字节状态来自 829。证据文件及哈希见 [manifest.json](../../../diagnostics/camera/camera-basis-runtime-20260929/manifest.json)。
 
 ### 轨道建模与求值
 
@@ -60,7 +60,7 @@
 - 轨道曲线构造 `0x10A1AC60` 调用控制点生成 `0x10A1B620`，后者将插值模式置为 raw 3，并调用平滑控制点求解；因此原消费者不是当前项目 SampleTrack 的相邻点线性插值。控制点具体公式还须继续核对，不能仅凭其形态等同于本地 Cinemachine SplineHelpers。
 - `KGBMAKEKHAP.GMLFFJIBDBK`，RVA `0x109EBA20`：第一参数先 Clamp01，然后采 Vector2 轨道曲线；结果转换为 `(0, height, -radius)`。第二参数大于 0 时进入 TopOrbit 的额外混合分支；不能把 TopOrbit 当成普通三点数组第四项。
 - `KGBMAKEKHAP.GACMGHADADI`，RVA `0x109EC430`：以 Clamp01 后的同类比例采 ScreenY 标量曲线，结果为屏幕偏移向量的 Y 分量。
-- 上述轨道采样／屏幕采样／轨道构造的 IFix 分支开关在 829 中为 0。记录同时包含类型初始化字节，不能把所有非零字节都称为 IFix 开关；详见 [branch-flags.json](../../../diagnostics/camera-basis-runtime-20260929/branch-flags.json)。
+- 上述轨道采样／屏幕采样／轨道构造的 IFix 分支开关在 829 中为 0。记录同时包含类型初始化字节，不能把所有非零字节都称为 IFix 开关；详见 [branch-flags.json](../../../diagnostics/camera/camera-basis-runtime-20260929/branch-flags.json)。
 
 ### 与当前项目的差异
 

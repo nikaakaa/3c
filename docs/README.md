@@ -14,8 +14,9 @@
 | CPU、托管分配、Player 构建与报告口径 | [性能采集工具](../Tools/ThirdPersonPerformanceCapture/README.md) |
 | 网络测试会话、进程与产物 | [网络测试工具](../Tools/ThirdPersonNetworkTest/README.md) |
 | 渲染恢复、参数与原始来源 | [Rendering](../Tools/Rendering/README.md)、[可琳渲染数据](../Tools/Rendering/CorinRenderData/README.md) |
-| 粒子与特效 Transfer 的当前取证 | [原生 Transfer 证据](diagnostics/effect-particle-native-transfer-20260930.md) |
+| 粒子与特效 Transfer 的当前取证 | [原生 Transfer 证据](diagnostics/effects/effect-particle-native-transfer-20260930.md) |
 | 学习资料、源程序研究与失败经验 | [参考资料](reference/README.md) |
+| 按业务查找诊断报告、JSON、截图和原生取证 | [诊断分类索引](diagnostics/README.md) |
 | 阶段交付、旧工作区、失败运行与已完成设计 | [历史记录](archive/README.md)、[OpenSpec archive](../openspec/changes/archive/) |
 
 ## 文档归属
@@ -25,7 +26,7 @@
 - `docs/status/`：各业务的证据入口和未闭环范围，不复制任务清单、参数表或运行状态。
 - `docs/replication/`：源数据和正式作者对照；源帧号保留为来源单位，不能当作第二份 Timeline 作者时间。
 - `docs/reference/`：可长期复用的研究、学习和经验，不能作为默认配置或已经实现的证明。
-- `docs/diagnostics/`：仍在维护的实施/审计文档及原始证据目录；采样、JSON、取证指令和交互解释器保留原路径。
+- `docs/diagnostics/`：按脚部、相机、战斗、动画、性能、特效分类的实施/审计报告与原始证据。日期证据包内部内容、样本身份和失败记录保留，现存路径从分类索引读取。
 - `docs/archive/records/`：按主题保存阶段记录。归档记录不表示相应整个业务已经验收。
 - `Tools/<tool>/README.md`：工具的正式操作入口；原始参数合同和工具数据跟随所属工具。
 

@@ -10,6 +10,6 @@
 
 ## 历史与验证边界
 
-本目录的 implementation、execution、design、审查和旧阻塞描述保存当时事实；其中早期“尚未完成”、旧工作区或旧行号不再表示活跃待办。后续未完成工作由 `../../../../openspec/maintenance-audit.md` 所列未归档 change 拥有，不能由本 change 的完成替代。
+本目录的 implementation、execution、design、审查和旧阻塞描述保存当时事实；其中早期“尚未完成”、旧工作区或旧行号不再表示活跃待办。后续未完成工作由 `../../../maintenance-audit.md` 所列未归档 change 拥有，不能由本 change 的完成替代。
 
 本次只整理文档和已完成实施的规格，没有修改运行代码、Unity 资产或原始采样数据，没有新增测试，也未重新执行编译、Player 构建、replay 或性能采集。原记录中的各项验证范围继续有效，不扩大为新的行为验收结论。

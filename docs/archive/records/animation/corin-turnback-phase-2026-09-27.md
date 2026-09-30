@@ -102,8 +102,8 @@ MainCity 版本提供另一侧起步的实际素材，但它不是战斗版本�
 
 - 表现采样：`3cDemo/Client/3C_Client/Diagnostics/GeneratedPresentationSampling/20260927-034009-acfa5ce2cf864a33b1eefef071405783/`。
 - 脚部采样：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260927-034009-b33a806852324f46beb9e7f83bf12354/`。
-- 汇总数据：[corin-turnback-runtime-20260927.json](../../../diagnostics/corin-turnback-runtime-20260927.json)。按原生 lineage 对齐脚部与表现记录，不能用脚部表的左右脚行号直接匹配表现帧。
-- 曲线图：[corin-turnback-runtime-20260927.png](../../../diagnostics/corin-turnback-runtime-20260927.png)。展示普通入口、双脚支撑入口、双脚支撑出口三个完整窗口；脚踝曲线来自实际角色最终物理采样。
+- 汇总数据：[corin-turnback-runtime-20260927.json](../../../diagnostics/animation/corin-turnback-runtime-20260927.json)。按原生 lineage 对齐脚部与表现记录，不能用脚部表的左右脚行号直接匹配表现帧。
+- 曲线图：[corin-turnback-runtime-20260927.png](../../../diagnostics/animation/corin-turnback-runtime-20260927.png)。展示普通入口、双脚支撑入口、双脚支撑出口三个完整窗口；脚踝曲线来自实际角色最终物理采样。
 
 30 个窗口中，切出播放器相邻采样时间增量均为 `0.01666666753590107` 秒。同步没有改写切出时间。切入播放器在同一来源身份内没有时间倒退。普通入口实际发生在不同动画时间；双脚支撑入口首个非零权重采样时间为约 `0.18333335` 秒，这是从合法入口 `0.166666687` 秒推进一帧后的结果，不能把非零权重第一帧误当成初始入口。
 

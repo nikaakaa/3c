@@ -8,11 +8,11 @@
 
 尚未完成：Delay 的原生模式资格与完整构图求值、默认轨道 Follow/Aim 偏移的运行消费、震动聚合器内部业务项、区域渐静默与 Base 保持触发。静态 `MUTE_CAMERA_SHAKE` 已在请求接纳边界消费；震动实例倍率已接 `OwnerTimeScale` 通道，但共享 Tick 当前传 1，不宣称独立业务倍率已还原。Goal 工具仍保留旧 blocked 状态，本轮没有把整体目标标成 complete。
 
-最新分工：用户已将命中链交给其他窗口，本窗口只负责相机配置。此前已进行的命中数据修改与真实执行缺口见 [命中链交接](../archive/records/combat/corin-hit-chain-handoff-20260929.md)；下文早先的整链授权保留为过程记录，不再代表当前工作分配。
+最新分工：用户已将命中链交给其他窗口，本窗口只负责相机配置。此前已进行的命中数据修改与真实执行缺口见 [命中链交接](../../archive/records/combat/corin-hit-chain-handoff-20260929.md)；下文早先的整链授权保留为过程记录，不再代表当前工作分配。
 
 2026-09-29，用户已创建实现 goal，并明确不运行 replay。本文记录第一项可独立交付的震动核心修正；整个相机 goal 尚未完成。
 
-依据：[震动消费者调研](../reference/camera/corin-camera-shake-source-parity-20260928.md)。本次保留既有技能触发和 OnExit 选择性取消入口，没有重建角色动画、IK 或技能资产。
+依据：[震动消费者调研](../../reference/camera/corin-camera-shake-source-parity-20260928.md)。本次保留既有技能触发和 OnExit 选择性取消入口，没有重建角色动画、IK 或技能资产。
 
 ## 本批调用链
 
@@ -77,7 +77,7 @@
 
 已通过正式资源作者入口补齐 Branch_02、Rush 的 A_01 命中震动，Profile 现有 15 项 Shake，投影构建通过。两项资源各 24 个标量／字符串字段及曲线引用已与 dump 对齐。真实命中结果与触发链尚未完成；用户已授权本轮一并补正式命中链。
 
-新增基础轨道消费者证据、当前命中链缺口及授权范围见 [基础镜头与命中链补缺](../archive/records/camera/corin-camera-basis-and-hit-20260929.md)。该文档明确区分已发布资源、已取得证据和未实施的链路，不把资料齐全等同于运行效果已经一致。
+新增基础轨道消费者证据、当前命中链缺口及授权范围见 [基础镜头与命中链补缺](../../archive/records/camera/corin-camera-basis-and-hit-20260929.md)。该文档明确区分已发布资源、已取得证据和未实施的链路，不把资料齐全等同于运行效果已经一致。
 
 ## 分工调整后的相机资源补齐
 

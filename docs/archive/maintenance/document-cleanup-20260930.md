@@ -118,3 +118,73 @@
 完整整理前内容和 Git 状态已保存到本机忽略目录 `.codex-tmp/document-cleanup-20260930/original/`，操作映射保存在同目录 operations.json。恢复时只按本轮操作映射反向移动并还原所需文件；不能整体 checkout 工作区或回退其它在途修改。原有在途文档和未跟踪的本机证据继续保留其未提交状态。
 
 暂存按文档原有 Git 状态分离：修改过的原文只暂存本轮路径/链接迁移，已有内容差异继续留在工作区。当前仓库曾有零字节 index.lock 残留约 79 分钟，排他打开核对后移到本机备份，未修改原 index 内容；本轮暂存通过一次 Git index-info 事务完成。
+
+## 补充整理：诊断数据分类
+
+上轮只分类和归档了阶段报告，原始证据与仍在维护的诊断文档仍混放。本次按用户反馈补齐整个 `docs/diagnostics/` 的分类，覆盖原有 574 个文件、24 个根目录条目；根目录只留下[诊断索引](../../diagnostics/README.md)。新增各分类入口，跨业务问题链接到唯一证据原件。
+
+| 分类 | 原有文件数 | 内容 |
+| --- | ---: | --- |
+| [脚部](../../diagnostics/foot-placement/README.md) | 7 | 下坡、E 行走接触、抖动、查询图与台阶解释器 |
+| [相机](../../diagnostics/camera/README.md) | 493 | 三份实施/审计报告、两个日期证据包与绑定/字段初查 |
+| [战斗](../../diagnostics/combat/README.md) | 4 | 普攻/E、Rush、输入覆盖与起手数值边界 |
+| [动画](../../diagnostics/animation/README.md) | 2 | TurnBack JSON 与对应图；混合旋转引用脚部原件 |
+| [性能](../../diagnostics/performance/README.md) | 2 | 当前采集记录与旧 Player 探针覆盖指标 |
+| [特效](../../diagnostics/effects/README.md) | 66 | Transfer 报告与 65 个解析/扫描/失败证据文件 |
+
+### 移动映射
+
+下表原条目均位于旧 `docs/diagnostics/` 根目录；目录连同全部子文件一起移动，不复制、不删除证据。日期、录制身份和内部文件名保留。
+
+| 原条目 | 新分类 |
+| --- | --- |
+| `camera-basis-runtime-20260929/` | [相机基础证据包](../../diagnostics/camera/camera-basis-runtime-20260929/) |
+| `camera-shake-runtime-20260928/` | [相机震动证据包](../../diagnostics/camera/camera-shake-runtime-20260928/) |
+| `corin-camera-binding-20260927.json` | [相机绑定](../../diagnostics/camera/corin-camera-binding-20260927.json) |
+| `corin-camera-source-audit-20260927.json` | [相机字段初查](../../diagnostics/camera/corin-camera-source-audit-20260927.json) |
+| `corin-camera-clock-and-vertical-20260929.md` | [相机时钟](../../diagnostics/camera/corin-camera-clock-and-vertical-20260929.md) |
+| `corin-camera-completion-audit-20260929.md` | [相机审计](../../diagnostics/camera/corin-camera-completion-audit-20260929.md) |
+| `corin-camera-implementation-20260929.md` | [相机实施](../../diagnostics/camera/corin-camera-implementation-20260929.md) |
+| `effect-particle-native-transfer-20260930/` | [特效证据包](../../diagnostics/effects/effect-particle-native-transfer-20260930/) |
+| `effect-particle-native-transfer-20260930.md` | [特效报告](../../diagnostics/effects/effect-particle-native-transfer-20260930.md) |
+| `corin-downhill-response-20260927.json` | [脚部下坡](../../diagnostics/foot-placement/corin-downhill-response-20260927.json) |
+| `corin-e-walk-contact-fix-20260927.json` | [脚部 E 接触](../../diagnostics/foot-placement/corin-e-walk-contact-fix-20260927.json) |
+| `corin-e-walk-manual-sampling-20260927.json` | [脚部 E 采样](../../diagnostics/foot-placement/corin-e-walk-manual-sampling-20260927.json) |
+| `corin-foot-query-edge-20260927.svg` | [脚部查询图](../../diagnostics/foot-placement/corin-foot-query-edge-20260927.svg) |
+| `corin-jitter-existing-data-20260927.json` | [脚部旧抖动](../../diagnostics/foot-placement/corin-jitter-existing-data-20260927.json) |
+| `corin-jitter-fix-20260927.json` | [脚部抖动修正](../../diagnostics/foot-placement/corin-jitter-fix-20260927.json) |
+| `ik-stair-continuity-explainer-20260930.html` | [脚部解释器](../../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html) |
+| `corin-action-runtime-20260927-180403.json` | [战斗运行](../../diagnostics/combat/corin-action-runtime-20260927-180403.json) |
+| `corin-e-start-boundary-20260927.json` | [战斗起手边界](../../diagnostics/combat/corin-e-start-boundary-20260927.json) |
+| `corin-existing-input-coverage-20260927.json` | [战斗输入覆盖](../../diagnostics/combat/corin-existing-input-coverage-20260927.json) |
+| `corin-rush-runtime-20260927-171133.json` | [Rush 运行](../../diagnostics/combat/corin-rush-runtime-20260927-171133.json) |
+| `corin-turnback-runtime-20260927.json` | [动画 TurnBack](../../diagnostics/animation/corin-turnback-runtime-20260927.json) |
+| `corin-turnback-runtime-20260927.png` | [动画 TurnBack 图](../../diagnostics/animation/corin-turnback-runtime-20260927.png) |
+| `performance-coverage-20260929.md` | [性能覆盖](../../diagnostics/performance/performance-coverage-20260929.md) |
+| `performance-run-20260929.md` | [性能采集](../../diagnostics/performance/performance-run-20260929.md) |
+
+### 引用与实际消费者
+
+文档总入口、三份业务进展、抄录对照、相机参考、历史记录和性能工具入口同步修正链接。HTML 解释器只调整跳转地址，嵌入采样及全部脚本保持一致。
+
+相机作者链还有实际文件输入：`CorinCameraResourcesAuthoring.PublishInput` 从玩家输入快照读取轴增益、设备归一化常量和处理器比例，再发布到 `CharacterCameraProfile.Input`。读取路径已从旧根目录改为 `docs/diagnostics/camera/camera-basis-runtime-20260929/pointer-input-snapshot.json`，没有增加备用目录或双读取入口。其它已有 C# 内容改动继续留在工作区。
+
+原始 JSON 的历史来源字段保留。例如特效依赖追踪的 `scan` 仍记录生成时的旧绝对路径，分类入口直接链接它现在对应的正式扫描文件。原始 evidence manifest 中的包内相对路径与哈希没有重写，历史来源信息不冒充当前文件入口。
+
+### Spec 同步范围
+
+重新核对本轮归档的 7 个 change 和各自 `archive-summary.md`：新增现行 `btsmtl-flowcanvas-authoring`、`btsmtl-timeline-clock-domain`、`character-control-motion-entry`、`character-pose-bone-transform`、`corin-locomotion-lean`，合并 `character-animation-event-graph` 与 `character-animation-layer-runtime`。其余有效条款已由现行相应规格承接；被后续秒制 Timeline、原生 Pose、Slate 和两域 TreeDecision 取代的旧设计保留为历史，不覆盖新版合同。历史 delta 的正文没有改写为今天的状态。本次没有对全部旧归档做重新设计，也没有把在途 Camera、Foot、战斗或性能任务的实施记录直接写成已完成规格。
+
+### 检查与提交边界
+
+原有 574 个文件全部存在于对应分类；567 个原始数据/图像/反汇编文件逐项 SHA-256 一致，另 7 份 Markdown/HTML 只修正路径。516 份 JSON 可解析，相机作者实际路径能解析到原输入快照。703 个本地链接完成静态检查，迁移前有效链接和新入口无失效。再次运行 `openspec validate --specs --strict`，106 项通过、0 项失败；本次分类没有修改 spec 合同正文。`git diff --cached --check` 通过。
+
+未执行 Unity 编译、Play、Player 构建、replay 或性能采集；这里验证的是文件整理与路径可达性。已有修改只暂存本次路径变化，原有未跟踪报告及证据包保持未跟踪，未把这些大体积证据加入 Git。本次完整移动映射、原始哈希、文本备份、暂存回执和检查结果位于本机 `.codex-tmp/diagnostics-classification-20260930/`，不进入仓库提交。
+
+## 分支重建后的分类恢复
+
+2026-09-30 当前分支重建时带回了前两次文档整理提交，遗漏了 `286955518` 的诊断分类提交；已分类的未跟踪文件仍在新目录，已跟踪文件回到旧位置，造成新旧混放。本次以当前文件和索引重新建立快照，逐文件归位，补回分类索引和实际读取路径；没有回退其它任务的内容或美术本地化规则。
+
+新出现的 `ik-tests/` 是 `CharacterFootCapturedContactTests` 固定读取输入、生成结果的工具目录，作为[脚部局部复算证据](../../diagnostics/ik-tests/README.md)单独收录并从脚部分类引用，没有修改其测试代码。此前查询边缘 SVG 从已保存提交恢复为本机诊断文件，遵循当前美术文件的 Git 忽略规则。
+
+当前检查和恢复信息保存在 `.codex-tmp/diagnostics-reconcile-20260930/`；保留当前工作内容、原始证据哈希和其它任务的暂存项。本次重新检查根目录，普通文件只有 README，各业务报告与取证包均从对应分类进入。

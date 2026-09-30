@@ -259,7 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public static void PublishInput(CharacterCameraProfile profile)
         {
             string snapshotPath = Path.GetFullPath(Path.Combine(Application.dataPath,
-                "../../../../docs/diagnostics/camera-basis-runtime-20260929/pointer-input-snapshot.json"));
+                "../../../../docs/diagnostics/camera/camera-basis-runtime-20260929/pointer-input-snapshot.json"));
             JToken source = ReadAvatarConfiguration();
             JToken snapshot = JObject.Parse(File.ReadAllText(snapshotPath, Encoding.UTF8));
             JToken settings = snapshot["player_fields"];

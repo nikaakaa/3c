@@ -26,7 +26,7 @@ Span 是同步方法进入和退出时的单调计时差值，包含被系统抢
 
 ## Pose 覆盖
 
-业务覆盖与旧采集完整指标见 [性能探针覆盖记录](../../docs/diagnostics/performance-coverage-20260929.md)。2026-09-29 新增 EventGraph、Timeline 采样/提交、Camera、装备表现、两域角色评估/GE 周期推进/世界快照，以及 KCC 批求解探针声明；KCC 同步进入织入程序集名单。这些新增入口尚未经过构建或采样验证，旧报告没有对应数据。Span 当前仅记录耗时，GC 仍是整帧计数，不能按业务阶段归因。
+业务覆盖与旧采集完整指标见 [性能探针覆盖记录](../../docs/diagnostics/performance/performance-coverage-20260929.md)。2026-09-29 新增 EventGraph、Timeline 采样/提交、Camera、装备表现、两域角色评估/GE 周期推进/世界快照，以及 KCC 批求解探针声明；KCC 同步进入织入程序集名单。这些新增入口尚未经过构建或采样验证，旧报告没有对应数据。Span 当前仅记录耗时，GC 仍是整帧计数，不能按业务阶段归因。
 
 报告应列出 Summary 的全部指标及调用点无样本范围，同时列明尚未插桩的模块。新增目录将改变探针身份，必须由新 Player 的 instrumentation manifest 确认实际覆盖；不同探针身份不绕过正式比较门禁。
 

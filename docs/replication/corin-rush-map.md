@@ -41,9 +41,9 @@
 `PublishSelected` 同时生成 RushAttack Fixed/Float32 产物。动画源已在正式 Profile、Blend Policy 和动画 Domain Resource Set 注册。
 
 2026-09-27，录制 `757f243033414fc7b123c97e2fcb0d70` 在本轮强化退出修正之前已完成 2716 帧，消除了原第 776 帧的运行阻断。它包含 60 次 Attack、3 次 Branch、3 次 Dodge，AttackHeld 为真 251 帧、BranchHeld 为真 164 帧。输入存在只证明有覆盖候选，不能证明每个状态分支和视觉退出都正确。
-2026-09-27 17:11，强化退出修正后的同输入回放完成 2716 帧，运行证据 `docs/diagnostics/corin-rush-runtime-20260927-171133.json`。实际观察到强化起手→循环→松手End→普通RushEnd，以及普通1→2→3→4→5→5End→1。动画时间倒退和同帧选择冲突均为0。新旧输入一致，角色轨迹有1644帧变化，最早为录制相对帧1072；这是行为版本变化，不据此声称所有普攻表现无回归。Rush窗口接招、强化爆发事件分支、E循环行走仍缺运行完成证据。
+2026-09-27 17:11，强化退出修正后的同输入回放完成 2716 帧，运行证据 `docs/diagnostics/combat/corin-rush-runtime-20260927-171133.json`。实际观察到强化起手→循环→松手End→普通RushEnd，以及普通1→2→3→4→5→5End→1。动画时间倒退和同帧选择冲突均为0。新旧输入一致，角色轨迹有1644帧变化，最早为录制相对帧1072；这是行为版本变化，不据此声称所有普攻表现无回归。Rush窗口接招、强化爆发事件分支、E循环行走仍缺运行完成证据。
 
-2026-09-27 18:04，补齐强化Rush/E位移、悬空权重、E循环播放配置及Attack5退出窗口后的同输入回放完成2716帧。证据为 `docs/diagnostics/corin-action-runtime-20260927-180403.json`；实际观察到普通1→2→3→4→5→1以及两次E起手→爆发→收招，无运行失败。此次观察器在回放开始后接入，只保留播放顺序，不能用其创建事件的0位置推导转移时刻。
+2026-09-27 18:04，补齐强化Rush/E位移、悬空权重、E循环播放配置及Attack5退出窗口后的同输入回放完成2716帧。证据为 `docs/diagnostics/combat/corin-action-runtime-20260927-180403.json`；实际观察到普通1→2→3→4→5→1以及两次E起手→爆发→收招，无运行失败。此次观察器在回放开始后接入，只保留播放顺序，不能用其创建事件的0位置推导转移时刻。
 
 #### 接招链路与现有录制覆盖核对
 
@@ -51,7 +51,7 @@
 - `CorinAttackAdmissionProfile` 的取消标签包含Rush，最大实例数为1；普通攻击作者图的 `Attack4 Activation Entry` 消费 `activationEntryId=Attack4`。这证明静态链路配置齐全，不代表已观察到窗口接招成功。
 - 现有最新录制的Attack请求发生于793、1090、连续普通连招输入、1622、1868、2047等原始输入tick；不能把用于触发Rush的那次普攻当成窗口内的第二次普攻。当前运行观察仍未出现Rush直接进入Attack4。
 - 最新录制的三次Branch按住区间为 `[2234,2266)`（32帧、无移动）、`[2374,2462)`（88帧、其中36帧移动）、`[2558,2602)`（44帧、全程移动）。当前E起手进入循环需66帧。中间88帧按住虽具备输入候选，但Control在Branch活动期间忽略新的Branch请求；结合仅观察到两次起手、均进入爆发的证据，可推断这次请求落在上一技能收招期间。它不能证明Loop/Walk已执行，也不能仅凭此断言Loop/Walk损坏。
-- 已按当前 `RollbackInputCodec` v3 的二进制字段布局离线检查现存录制。早于最新2716帧的录制均未提供AttackHeld和BranchHeld，不能不加说明地作为当前按住技能的完整回归输入。汇总见 `../diagnostics/corin-existing-input-coverage-20260927.json`。
+- 已按当前 `RollbackInputCodec` v3 的二进制字段布局离线检查现存录制。早于最新2716帧的录制均未提供AttackHeld和BranchHeld，不能不加说明地作为当前按住技能的完整回归输入。汇总见 `../diagnostics/combat/corin-existing-input-coverage-20260927.json`。
 
 ## Timeline 与源帧对照
 
@@ -87,4 +87,4 @@
 - 无窗口的状态不生成空逻辑轨道；重复生成清理旧空 Boundary 图。
 - Timeline / Section / AnimationClip 播放身份沿用原 stable seed，窗口使用各自状态与窗口名生成身份。
 
-2026-09-27 后续根位移修正：强化五段已增加正式 MotionCurveTrack，引用 `CorinActionMotion` 中从对应 MotionReference 的 Bip001 X/Z 提取的平面位移。Y 与旋转保留在原地动画表现中。强化循环动画登记 `FootPlacementWeight=0`，保留悬空腿姿；这次实际动画标量曲线变更已发布 ACL 并编译 Domain Resource Set，足部分析结果复用。运行证据见 `../diagnostics/corin-action-runtime-20260927-180403.json`；不能以该回放成功代替悬空姿态和位移视觉验收。
+2026-09-27 后续根位移修正：强化五段已增加正式 MotionCurveTrack，引用 `CorinActionMotion` 中从对应 MotionReference 的 Bip001 X/Z 提取的平面位移。Y 与旋转保留在原地动画表现中。强化循环动画登记 `FootPlacementWeight=0`，保留悬空腿姿；这次实际动画标量曲线变更已发布 ACL 并编译 Domain Resource Set，足部分析结果复用。运行证据见 `../diagnostics/combat/corin-action-runtime-20260927-180403.json`；不能以该回放成功代替悬空姿态和位移视觉验收。

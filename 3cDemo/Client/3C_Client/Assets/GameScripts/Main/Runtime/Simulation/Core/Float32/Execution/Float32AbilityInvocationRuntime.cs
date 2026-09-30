@@ -271,12 +271,11 @@ namespace ThirdPersonSimulation
             m_Completed = true;
         }
 
-        public void Accept(Action<IFloat32SkillExecutionState> acceptAbility)
+        public void Accept(Float32CharacterRuntimeStateTransaction runtimeState)
         {
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Float32 Ability invocation cannot accept its current candidate.");
-            acceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
-            acceptAbility(m_SkillState);
+            runtimeState.AcceptAbility(m_SkillState);
             m_SkillState.Dispose();
             m_Accepted = true;
         }

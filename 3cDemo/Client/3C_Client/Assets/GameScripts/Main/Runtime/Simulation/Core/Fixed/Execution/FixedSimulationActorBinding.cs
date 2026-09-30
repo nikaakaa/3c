@@ -69,6 +69,7 @@ namespace ThirdPersonSimulation.Fixed
             new List<AbilityTimelineLogicMotionWarp>();
         readonly FixedAbilityExecutionWorkspace[] m_Workspaces;
         readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
+        readonly FixedCharacterEvaluationResult m_EvaluationResult;
         readonly FixedCharacterTraceSink m_CharacterTraceSink;
         readonly FixedAbilityExecutionInput m_AbilityExecutionInput = new FixedAbilityExecutionInput();
         readonly FixedCharacterInputRequestState m_InputRequestState = new FixedCharacterInputRequestState();
@@ -133,6 +134,12 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             TimelineRuntime = timelineRuntime;
+            int timelineRequestCapacity = 0;
+            for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
+                timelineRequestCapacity = checked(timelineRequestCapacity + AbilityInstallations.Installations[i].Data.Operations.Count);
+            m_TimelineAdvances.Capacity = timelineRequestCapacity;
+            m_TimelineStops.Capacity = timelineRequestCapacity;
+            m_EvaluationResult = new FixedCharacterEvaluationResult(actorId, timelineRuntime, timelineRequestCapacity);
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
             IFixedAbilityExecutionServiceFactory serviceFactory = new FixedAbilityExecutionServiceFactory(timelineRuntime);
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
@@ -188,6 +195,7 @@ namespace ThirdPersonSimulation.Fixed
         internal List<AbilityTimelineLogicMotion> TimelineLogicMotion => m_TimelineLogicMotion;
         internal List<AbilityTimelineLogicMotionWarp> TimelineLogicMotionWarps => m_TimelineLogicMotionWarps;
         internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
+        internal FixedCharacterEvaluationResult EvaluationResult => m_EvaluationResult;
         internal FixedCharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
         internal FixedAbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
         internal FixedCharacterInputRequestState InputRequestState => m_InputRequestState;

@@ -329,12 +329,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Completed = true;
         }
 
-        public void Accept(Action<IFixedSkillExecutionState> acceptAbility)
+        public void Accept(FixedCharacterRuntimeStateTransaction runtimeState)
         {
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Fixed Ability invocation cannot accept its current candidate.");
-            acceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
-            acceptAbility(m_SkillState);
+            runtimeState.AcceptAbility(m_SkillState);
             m_SkillState.Dispose();
             m_Accepted = true;
         }

@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
                     invocation.Complete(facts, presentation, trace);
-                    invocation.Accept(roleState.AcceptAbility);
+                    invocation.Accept(roleState);
                 }
                 trace.AddRange(characterTrace);
                 FixedScalar tickDelta = FixedScalar.One / FixedScalar.FromInt64(characterRuntime.TickRate);
@@ -206,16 +206,14 @@ namespace ThirdPersonSimulation.Fixed
                     requiredCapabilities);
                 FixedCharacterRuntimeState candidateState = roleState.Commit();
                 roleState.Dispose();
-                var result = new FixedCharacterEvaluationResult(
-                    actor.ActorId,
+                FixedCharacterEvaluationResult result = actor.EvaluationResult.Reset(
                     tick,
                     candidateState,
-                    actor.TimelineRuntime,
                     facts.ToArray(),
                     presentation.ToArray(),
                     trace.ToArray(),
-                    timelineAdvances.ToArray(),
-                    timelineStops.ToArray());
+                    timelineAdvances,
+                    timelineStops);
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();

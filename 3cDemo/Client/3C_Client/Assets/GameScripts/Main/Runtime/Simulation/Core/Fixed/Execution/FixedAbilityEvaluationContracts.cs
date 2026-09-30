@@ -9,8 +9,8 @@ namespace ThirdPersonSimulation.Fixed
         GameplayFact[] m_GameplayFacts;
         PresentationCommand[] m_PresentationCommands;
         SimulationTraceRecord[] m_TraceRecords;
-        readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
-        readonly IReadOnlyList<AbilityTimelineStopPending> m_TimelineStops;
+        readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances;
+        readonly List<AbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         FixedCharacterRuntimeState m_CandidateState;
         bool m_Consumed;
@@ -19,32 +19,43 @@ namespace ThirdPersonSimulation.Fixed
 
         internal FixedCharacterEvaluationResult(
             ActorId actorId,
+            IAbilityTimelineRuntime timelineRuntime,
+            int timelineRequestCapacity)
+        {
+            ActorId = actorId;
+            m_TimelineRuntime = timelineRuntime;
+            m_TimelineAdvances = new List<AbilityTimelineAdvancePending>(timelineRequestCapacity);
+            m_TimelineStops = new List<AbilityTimelineStopPending>(timelineRequestCapacity);
+        }
+
+        internal FixedCharacterEvaluationResult Reset(
             SimulationTick tick,
             FixedCharacterRuntimeState candidateState,
-            IAbilityTimelineRuntime timelineRuntime,
             GameplayFact[] gameplayFacts,
             PresentationCommand[] presentationCommands,
             SimulationTraceRecord[] traceRecords,
-            AbilityTimelineAdvancePending[] timelineAdvances,
-            AbilityTimelineStopPending[] timelineStops)
+            List<AbilityTimelineAdvancePending> timelineAdvances,
+            List<AbilityTimelineStopPending> timelineStops)
         {
-            if (!actorId.IsValid || !tick.IsValid)
+            if (!tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
             m_CandidateState = candidateState ?? throw new ArgumentNullException(nameof(candidateState));
             if (candidateState.LastCompletedTick != tick.Value)
                 throw new InvalidOperationException("Fixed Character evaluation result binding is invalid.");
-            ActorId = actorId;
             Tick = tick;
-            m_TimelineRuntime = timelineRuntime;
             m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
             m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
             m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
-            m_TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
-            m_TimelineStops = timelineStops ?? throw new ArgumentNullException(nameof(timelineStops));
+            m_TimelineAdvances.AddRange(timelineAdvances);
+            m_TimelineStops.AddRange(timelineStops);
+            m_Consumed = false;
+            m_OutputsCommitted = false;
+            m_OutputsTaken = false;
+            return this;
         }
 
         public ActorId ActorId { get; }
-        public SimulationTick Tick { get; }
+        public SimulationTick Tick { get; private set; }
         internal FixedCharacterRuntimeState CandidateState => m_CandidateState;
 
         internal void Consume()
@@ -63,6 +74,8 @@ namespace ThirdPersonSimulation.Fixed
             m_CandidateState = m_CandidateState.WithoutUnownedTerminalTimelines();
             m_OutputsCommitted = true;
             m_Consumed = true;
+            m_TimelineAdvances.Clear();
+            m_TimelineStops.Clear();
         }
 
         internal void TakeOutputs(
@@ -87,11 +100,13 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             CompleteTimelineOutputs(false);
             m_Consumed = true;
+            m_TimelineAdvances.Clear();
+            m_TimelineStops.Clear();
         }
 
         void CompleteTimelineOutputs(bool commit)
         {
-            if (m_TimelineRuntime == null || m_TimelineAdvances == null)
+            if (m_TimelineRuntime == null)
                 return;
             for (int i = 0; i < m_TimelineAdvances.Count; i++)
             {

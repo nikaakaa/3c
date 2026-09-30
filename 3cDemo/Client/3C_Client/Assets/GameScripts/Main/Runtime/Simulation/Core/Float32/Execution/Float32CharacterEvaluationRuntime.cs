@@ -180,7 +180,7 @@ namespace ThirdPersonSimulation
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
                     invocation.Complete(facts, presentation, trace);
-                    invocation.Accept(roleState.AcceptAbility);
+                    invocation.Accept(roleState);
                 }
                 trace.AddRange(characterTrace);
                 Float32Scalar tickDelta = Float32Scalar.One / Float32Scalar.FromInt64(characterRuntime.TickRate);

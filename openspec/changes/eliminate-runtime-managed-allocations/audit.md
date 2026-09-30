@@ -2117,3 +2117,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Current Support 的 heel/toe probe request 由同一 frame component up 构造；每个 request 构造时分别归一化，一次 sole support 查询重复执行相同归一化。
 - Sole Support Query 和 PrepareCurrentSupport 在调用边界归一化一次并传给两个 Create；request 构造直接使用共享 unit up 生成 origin/direction。原始 ComponentUp 仍逐 request 保存，IsValid、diagnostics、SphereCast 输入和候选筛选不变。
 - 该改动删除每脚 Current Support heel/toe 构造中的第二次归一化。静态核对两个正式构造路径、参数顺序和只读生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP300 State Machine runtime topology 绑定（2026-09-30，已实施，本轮未编译）
+
+- State Machine 每次准备 transition 时按 pending state id 查询 topology 字典，每条候选规则再按同一 state id 查询 duration 字典；CollectActiveStates 又按 pending 与 target id 查询 StateRuntime。
+- Transitions 和 Duration 改为 StateRuntime 的固定字段，构造期一次性绑定；pending/committed StateRuntime 与 transition target runtime 随状态机状态一起复制、提交、丢弃和重置。SelectTransition、remaining time 和 CollectActiveStates 直接读取 runtime。
+- 该改动删除 State Machine 每帧的 topology、duration 和当前/目标状态字典查找，不新增正式路径。状态 id 字段保留用于校验、诊断和进入判定；错误路径异常仍保持原语义。静态核对构造、Commit/Discard、Reset、自状态 transition 和双状态 transition 生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

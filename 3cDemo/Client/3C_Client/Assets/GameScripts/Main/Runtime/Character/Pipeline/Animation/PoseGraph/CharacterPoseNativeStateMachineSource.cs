@@ -81,6 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             internal readonly CharacterPoseStateDefinition Definition;
+            internal CharacterPoseStateTransition[] Transitions;
+            internal float Duration;
             internal CharacterPoseNativeGraphRuntime Graph;
             internal CharacterPoseNativeFrameLease Lease;
             internal CharacterPoseNativePreparationResult Preparation;
@@ -156,8 +158,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Dictionary<PoseStateId, StateRuntime> m_States;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
-        readonly Dictionary<PoseStateId, float> m_StateDurations;
-        readonly Dictionary<PoseStateId, CharacterPoseStateTransition[]> m_TransitionsByState;
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
         int m_ActiveStateCount;
         FixedCapacityFrameBuffer<CharacterPoseNativeSourceRequest> m_SourceRequests;
@@ -170,6 +170,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeFrameLineage m_Lineage;
         CharacterPoseStateTransition m_CommittedTransition;
         CharacterPoseStateTransition m_PendingTransition;
+        StateRuntime m_CommittedStateRuntime;
+        StateRuntime m_PendingStateRuntime;
+        StateRuntime m_CommittedTransitionTargetRuntime;
+        StateRuntime m_PendingTransitionTargetRuntime;
         PoseStateId m_CommittedState;
         PoseStateId m_PendingState;
         float m_CommittedTime;
@@ -305,9 +309,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CreationMode = profile.StateGraphCreationMode;
             m_Factory = factory;
             m_States = new Dictionary<PoseStateId, StateRuntime>();
-            m_StateDurations = new Dictionary<PoseStateId, float>();
             RequireDefinition();
-            m_TransitionsByState = BuildTransitionsByState();
+            Dictionary<PoseStateId, CharacterPoseStateTransition[]> transitionsByState =
+                BuildTransitionsByState();
+            foreach (StateRuntime state in m_States.Values)
+                state.Transitions = transitionsByState[state.Definition.StateId];
+            m_PendingStateRuntime = m_States[m_Definition.Entry.TargetStateId];
+            m_CommittedStateRuntime = m_PendingStateRuntime;
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
                 0,
                 preparedBinding.Rig.PoseBoneCount,
@@ -398,7 +406,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CopyCommittedState();
             if (!m_PendingInitialized)
             {
-                m_PendingState = m_Definition.Entry.TargetStateId;
+                SetPendingState(m_PendingStateRuntime);
                 m_PendingInitialized = true;
                 m_PendingTime = 0f;
             }
@@ -410,7 +418,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ref readonly CharacterAnimationPoseInputFrame parameterFrame =
                     ref input.ParameterFrame;
                 CharacterPoseStateTransition transition = SelectTransition(
-                    m_PendingState,
+                    m_PendingStateRuntime,
                     in factFrame,
                     in parameterFrame,
                     m_PendingTime);
@@ -418,7 +426,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     if (transition.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
                     {
-                        m_PendingState = transition.TargetStateId;
+                        SetPendingState(RequireState(transition.TargetStateId));
                         m_PendingTime = 0f;
                         m_PendingTransition = null;
                         m_PendingTransitionElapsed = 0f;
@@ -427,6 +435,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     else
                     {
                         m_PendingTransition = transition;
+                        m_PendingTransitionTargetRuntime =
+                            RequireState(transition.TargetStateId);
                         m_PendingTransitionElapsed = 0f;
                         m_ContinuityIdentity = AllocateContinuityIdentity();
                     }
@@ -443,7 +453,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 (m_PendingTransition.DurationSeconds <= 0f ||
                  m_PendingTransitionElapsed >= m_PendingTransition.DurationSeconds))
             {
-                m_PendingState = m_PendingTransition.TargetStateId;
+                SetPendingState(m_PendingTransitionTargetRuntime);
+                m_PendingTransitionTargetRuntime = null;
                 m_PendingTime = m_PendingTransitionElapsed;
                 m_PendingTransition = null;
                 m_PendingTransitionElapsed = 0f;
@@ -607,8 +618,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 state.Graph.Commit(state.Lease, in state.Evaluation);
             }
             m_CommittedState = m_PendingState;
+            m_CommittedStateRuntime = m_PendingStateRuntime;
             m_CommittedTime = m_PendingTime;
             m_CommittedTransition = m_PendingTransition;
+            m_CommittedTransitionTargetRuntime = m_PendingTransitionTargetRuntime;
             m_CommittedTransitionElapsed = m_PendingTransitionElapsed;
             m_CommittedInitialized = m_PendingInitialized;
             m_CommittedContinuityIdentity = m_ContinuityIdentity;
@@ -638,10 +651,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DiscardChildFrames(CharacterPoseNativeFailureCode.Stale);
             m_CommittedState = default;
             m_PendingState = default;
+            m_PendingStateRuntime = m_States[m_Definition.Entry.TargetStateId];
+            m_CommittedStateRuntime = m_PendingStateRuntime;
             m_CommittedTime = 0f;
             m_PendingTime = 0f;
             m_CommittedTransition = null;
             m_PendingTransition = null;
+            m_CommittedTransitionTargetRuntime = null;
+            m_PendingTransitionTargetRuntime = null;
             m_CommittedTransitionElapsed = 0f;
             m_PendingTransitionElapsed = 0f;
             m_CommittedContinuityIdentity = 0;
@@ -691,15 +708,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void CollectActiveStates()
         {
-            StateRuntime current = RequireState(m_PendingState);
-            m_ActiveStates[0] = current;
+            m_ActiveStates[0] = m_PendingStateRuntime;
             m_ActiveStates[1] = null;
             if (m_PendingTransition != null)
             {
-                StateRuntime target = RequireState(m_PendingTransition.TargetStateId);
-                if (!ReferenceEquals(current, target))
+                if (!ReferenceEquals(m_PendingStateRuntime, m_PendingTransitionTargetRuntime))
                 {
-                    m_ActiveStates[1] = target;
+                    m_ActiveStates[1] = m_PendingTransitionTargetRuntime;
                     m_ActiveStateCount = 2;
                     return;
                 }
@@ -788,11 +803,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActiveStateCount = 0;
         }
 
+        void SetPendingState(StateRuntime state)
+        {
+            m_PendingStateRuntime = state;
+            m_PendingState = state.Definition.StateId;
+        }
+
         void CopyCommittedState()
         {
             m_PendingState = m_CommittedState;
+            m_PendingStateRuntime = m_CommittedStateRuntime;
             m_PendingTime = m_CommittedTime;
             m_PendingTransition = m_CommittedTransition;
+            m_PendingTransitionTargetRuntime = m_CommittedTransitionTargetRuntime;
             m_PendingTransitionElapsed = m_CommittedTransitionElapsed;
             m_PendingInitialized = m_CommittedInitialized;
             m_ContinuityIdentity = m_CommittedContinuityIdentity;
@@ -1061,12 +1084,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         CharacterPoseStateTransition SelectTransition(
-            PoseStateId stateId,
+            StateRuntime state,
             in CharacterPresentationFactFrame facts,
             in CharacterAnimationPoseInputFrame inputs,
             float timeInState)
         {
-            CharacterPoseStateTransition[] candidates = m_TransitionsByState[stateId];
+            CharacterPoseStateTransition[] candidates = state.Transitions;
             for (int i = 0; i < candidates.Length; i++)
             {
                 CharacterPoseStateTransition candidate = candidates[i];
@@ -1075,7 +1098,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         in facts,
                         in inputs,
                         timeInState,
-                        ResolveRemainingTime(stateId, timeInState)))
+                        ResolveRemainingTime(state, timeInState)))
                     return candidate;
             }
             return null;
@@ -1152,12 +1175,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return false;
         }
 
-        float ResolveRemainingTime(PoseStateId stateId, float timeInState)
+        float ResolveRemainingTime(StateRuntime state, float timeInState)
         {
-            if (!m_StateDurations.TryGetValue(stateId, out float duration))
-                throw new InvalidOperationException(
-                    $"Pose StateMachine '{m_NodeId}' has no duration for state '{stateId}'.");
-            return Math.Max(0f, duration - timeInState);
+            return Math.Max(0f, state.Duration - timeInState);
         }
 
         bool EvaluateRule(
@@ -1368,9 +1388,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 m_GraphAsset.RequireGraph(definition.PoseGraphId)
                     .RequireNode(definition.OutputPoseNodeId);
-                m_StateDurations.Add(
-                    definition.StateId,
-                    ResolveStateDuration(definition.PoseGraphId));
+                m_States[definition.StateId].Duration =
+                    ResolveStateDuration(definition.PoseGraphId);
             }
             if (!m_States.ContainsKey(m_Definition.Entry.TargetStateId))
                 throw new InvalidOperationException(

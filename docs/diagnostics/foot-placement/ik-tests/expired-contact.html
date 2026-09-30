@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IK 场景测试 01 · 接触结束后的目标交接</title>
+<style>
+:root{color-scheme:light;--ink:#18313d;--muted:#5c707a;--line:#d3dedf;--new:#007e71;--old:#d55c30;--bg:#f1f5f3}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,"Microsoft YaHei",sans-serif}main{max-width:1120px;margin:auto;padding:34px 24px 70px}h1{font-size:32px;line-height:1.3;letter-spacing:-.02em}h2{font-size:21px;margin:0 0 12px}p{margin:8px 0 14px}a{color:#006f69}.eyebrow{font-size:13px;letter-spacing:.09em;color:var(--muted)}.box{background:white;border:1px solid var(--line);border-radius:16px;padding:22px;margin:18px 0}.status{display:inline-block;padding:4px 12px;border-radius:30px;background:#dcebe7;font-weight:700}.failed{background:#fee3da;color:#a43717}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.metric{background:#eef4f2;border-radius:10px;padding:16px}.metric strong{display:block;font-size:30px;line-height:1.3}.muted,small{color:var(--muted)}.legend{display:flex;gap:22px;flex-wrap:wrap;font-size:14px}.old{color:var(--old)}.new{color:var(--new)}svg{width:100%;height:auto;overflow:visible}.controls{display:flex;gap:14px;align-items:center;margin:18px 0}.controls input{flex:1;min-width:80px}button{padding:8px 16px;border:1px solid var(--line);border-radius:8px;background:#f8fbfa;color:var(--ink);cursor:pointer}.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}.flow{border-left:4px solid var(--old);background:#fff5ef;padding:16px;border-radius:6px}.flow.new{border-color:var(--new);background:#eaf7f2;color:var(--ink)}.flow strong{display:block}.flow code{font-size:12px;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}.table-wrap{max-height:380px;overflow:auto}th{position:sticky;top:0;background:#f1f6f4}details{margin-top:16px}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}code{overflow-wrap:anywhere}.verdict{font-size:19px;font-weight:650}li{margin:7px 0}.divider{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}@media(max-width:700px){main{padding:24px 14px}.grid,.pair{grid-template-columns:1fr}h1{font-size:26px}.box{padding:17px}}
+</style>
+<main>
+<a href="../ik-stair-continuity-explainer-20260930.html#audit-verdict">← IK 总说明</a>
+<p class="eyebrow">固定采样场景 · 01 / 一个测试贯穿一次目标交接</p>
+<h1>脚已离开接触区，旧落脚目标还在占位吗？</h1>
+<p>采样 B · 右脚 · 第 <b>34668～34767</b> 帧，连续 100 帧。作者提供的 FootPlacementWeight 始终为 1。</p>
+<span id="status" class="status">尚未运行</span>
+<section class="box">
+<h2>这个测试要证明什么</h2>
+<p>接触还在继续时，旧目标必须保留；进入下一次摆腿后，<code>CurrentContact</code> 里记住的旧事件不能继续占用脚的目标。否则，即使下一步地面路径已接受，系统仍会依赖“当前脚底有命中”；脚在空中、探针暂时没有命中时，最终 IK 位置权重就会掉到 0。</p>
+<p>本次修正让目标的有效期同时依赖实际 <code>Contact &gt; 0</code>。它没有增加一条手绘权重曲线，也没有改变作者提供的 IK 权重。</p>
+<p id="verdict" class="verdict">结果由 NUnit 每次执行后自动写入。</p>
+<div class="grid"><div class="metric">历史函数重算：权重为 0<strong id="old-count">—</strong></div><div class="metric">当前函数重算：权重为 0<strong id="new-count">—</strong></div><div class="metric">与采样匹配的地形探针<strong id="probe-count">—</strong></div></div>
+</section>
+<section class="box">
+<h2>看交接过程</h2>
+<p class="muted">原采样和两版重算使用同一段正式输入。拖动滑块查看具体帧，纵轴是最终 IK 位置权重。</p>
+<div class="legend"><span style="color:#637786">● 原采样</span><span class="old">● 历史函数重算</span><span class="new">● 当前函数重算</span></div>
+<svg id="weight-chart" viewBox="0 0 1000 205" role="img" aria-label="原采样与修改前后的位置权重"></svg>
+<div class="controls"><button id="play">播放</button><input id="frame" type="range" min="0" max="99" value="0" aria-label="采样帧"><b id="frame-label">—</b></div>
+<p id="input-label"></p>
+<div class="pair"><div class="flow"><strong>历史函数</strong><p id="old-story"></p><code id="old-event"></code></div><div class="flow new"><strong>当前函数</strong><p id="new-story"></p><code id="new-event"></code></div></div>
+</section>
+<section class="box">
+<h2>输出脚底位置有什么变化</h2>
+<p class="muted">显示函数输出的脚底中心高度（米）。它包含插值和地形查询后的修正，但不是角色骨骼求解后的膝角。</p>
+<svg id="height-chart" viewBox="0 0 1000 245" role="img" aria-label="原动画脚底与修改前后输出脚底的高度"></svg>
+<p id="position-label"></p>
+<p>权重从 0 恢复为 1 表示有效摆腿目标继续生效；<b>不能只凭这一项断言膝盖更顺、脚不穿台阶或整个 IK 已修好。</b></p>
+</section>
+<section class="box">
+<h2>实际跑了哪些函数</h2>
+<p>固定输入 → <code>LandingRuntime.ProjectAfterPrediction</code> → <code>SwingMotionBuilder.Build</code> → <code>Lifecycle</code>（目标选择、插值、实际脚底查询、输出约束）→ <code>GoalTarget.PositionWeight / EffectiveSole</code>。</p>
+<p>历史生产者从修复前 Git 提交读取原文件、在 Editor 的 Temp 目录独立编译；其下游调用与当前版本相同的 <code>Lifecycle.Resolve</code>。当前版本走正式 <code>Lifecycle.Evaluate</code>。测试不切换工作区的运行代码。</p>
+<p>连续维护两份上下文。前 45 帧校验正常阶段的目标状态与脚底输出一致；随后检查接触结束时释放旧目标、接受的摆腿路径仍然输出，且历史重算必须复现原采样的全部 27 个掉权重帧。</p>
+<details><summary>输入来源、未采样字段与边界</summary>
+<ul>
+<li>保留原始帧间隔、正式接触/锁定参数、事件序号与周期、已完成的落点预测、地面路径顶点/接触/覆盖面，以及每帧 23 个脚底采样点。输入文件保留源 CSV 的 SHA-256。</li>
+<li>先在 GameplayLabFixed 当前地形上重新查询原始脚底点，逐点核对命中、位置和法线；不匹配即失败。候选输出姿态另做真实地形查询，不复用旧姿态的命中。最终输出再次检查脚底点，命中地面时允许的浮点误差为 0.2 mm；没有查询命中不表示已经证明空间无碰撞。</li>
+<li>起点用首帧已记录的最后落点、下一落点、已释放事件初始化；窗口前的插值历史没有完整记录，两版统一重新建立。历史重算要求权重与原采样完全相符，不要求全部空间输出逐位复现。</li>
+<li>原 clip 的绝对 normalizedTime 未采样，以 0 构造事件；实际事件身份由已记录的序号、周期、来源与左右脚绑定后逐帧校验。此调用链只消费事件身份与已记录的剩余时间。事件 SwingProgress 用路径 progress 填充，仅用于有限值合法性检查，不驱动本实验的运动计算。</li>
+<li>采样里的 hip/knee 是骨盆修正后、腿部求解前的位置，实验转换回世界坐标；本窗口不创建接触锚点，不评估 Landing 可达性、骨盆或膝盖。ToeRotation 未采样，本链不消费，构造为单位四元数。来源连续性用这段采样共同的动画来源标识。</li>
+<li>这是单脚函数场景回归，不执行 KCC、动画状态机、完整预测器、双脚骨盆或最终腿部 IK。Landing / Releasing 伸直和水平冻结问题不在这次修正范围。</li>
+</ul>
+<pre id="provenance"></pre></details>
+</section>
+<section class="box">
+<h2>逐帧记录</h2>
+<div class="table-wrap"><table><thead><tr><th>帧</th><th>相位</th><th>Contact</th><th>脚底命中</th><th>旧/新预备目标</th><th>采样权重</th><th>旧 → 新权重</th></tr></thead><tbody id="rows"></tbody></table></div>
+<details><summary>运行结果 / 失败原因</summary><pre id="error"></pre></details>
+<p class="divider">重新运行：Unity EditMode 测试 <code>ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.CapturedContactToSwingReleasesExpiredTargetWithoutLosingValidSupport</code>。每次执行自动更新本页中的真实结果；失败也会写入失败原因。</p>
+</section>
+</main>
+<script id="experiment-data" type="application/json">{"test":"CapturedContactToSwingReleasesExpiredTargetWithoutLosingValidSupport","status":"not-run","rows":[],"capture":"20260930-071630-0398ffce96dc4fcdb3f8696d1c0e51eb","baselineCommit":"f1f9df55973f0d49f66d7db2a2e6073c37ed5df2","runtimeCommit":"ddfa78ff6baa170f1cef0c187a834f52dd3e6fc7","setupChecks":{"testSourceCompilation":"passed","historicalSourceCompilation":"passed","compiler":"Unity 2022.3.62f2c1 Roslyn"},"error":"NUnit 尚未开始：目标 Editor 正在执行本轮工作区资源重导，get_editor_state 持续超时。编译通过不能算作场景通过。","sourceSha256":{"character-foot-ik%2Ffull.current-support-probes.csv":"62e59845da21182823b71e67b9826dad3f20743f5ff846d51ef0746a54803523","character-foot-ik%2Ffull.ground-envelope.csv":"44dfe1efbd1ffa61175ffe0c7319c5ba4fb8411861a3cd10ddc379b0f96a9cbf","character-foot-ik%2Ffull.ground-contacts.csv":"3c696590ef9487a06ede9b9ea88fd3ca1a5602190fd3608b8e0d91ac345a351e","character-foot-ik%2Ffull.ground-surfaces.csv":"f15e87cdf71b24c233449525189bbe4fd63d1ae9dbd8da14ffc40c8962065452","character-foot-ik%2Ffull.csv":"8255d7820dff77e570f6a3219e39e21d2fcfadf1e8be175e454c959679506021"}}</script>
+<script>
+const data=JSON.parse(document.getElementById('experiment-data').textContent),rows=data.rows;
+const el=id=>document.getElementById(id),svgNS='http://www.w3.org/2000/svg';
+const text=(id,value)=>el(id).textContent=value;
+text('status',data.status==='passed'?'测试通过':data.status==='failed'?'测试失败':'尚未完成');
+if(data.status==='failed')el('status').classList.add('failed');
+text('old-count',rows.length?rows.filter(r=>r.oldWeight===0).length+' 帧':'—');text('new-count',rows.length?rows.filter(r=>r.newWeight===0).length+' 帧':'—');
+text('probe-count',data.metrics?data.metrics.matchedProbes+' / 2300':'尚未全部验证');
+text('verdict',data.status==='passed'?'这段固定输入中，27 个掉权重帧已消除，接触仍有效的阶段保持原行为。':'测试尚未通过，不能据此声称这次修改已验证。');
+text('error',data.error||data.status);text('provenance',JSON.stringify({capture:data.capture,baselineCommit:data.baselineCommit,runtimeCommit:data.runtimeCommit,runtimeSourceBlob:data.runtimeSourceBlob,profileRevision:data.profileRevision,metrics:data.metrics,sourceSha256:data.sourceSha256},null,2));
+function node(type,attrs,label){const n=document.createElementNS(svgNS,type);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(label!==undefined)n.textContent=label;return n;}
+function chart(id,series,min,max,height){const svg=el(id);svg.replaceChildren();const w=1000,left=48,right=22,top=25,bottom=36;const X=i=>left+i/99*(w-left-right),Y=v=>top+(max-v)/(max-min)*(height-top-bottom);
+for(let t=0;t<5;t++){const v=min+(max-min)*t/4,y=Y(v);svg.append(node('line',{x1:left,y1:y,x2:w-right,y2:y,stroke:'#e0e7e5'}));svg.append(node('text',{x:38,y:y+4,'text-anchor':'end',fill:'#657780','font-size':12},v.toFixed(2)));}
+for(const i of [0,21,44,60,83,99])svg.append(node('text',{x:X(i),y:height-10,'text-anchor':'middle',fill:'#657780','font-size':12},34668+i));
+for(const s of series){const points=rows.map((r,i)=>[X(i),Y(s.value(r))].join(',')).join(' ');svg.append(node('polyline',{points,fill:'none',stroke:s.color,'stroke-width':s.width||2.5,'stroke-dasharray':s.dash||'none'}));}
+svg.append(node('line',{id:id+'-cursor',x1:X(0),x2:X(0),y1:top,y2:height-bottom,stroke:'#263f4c','stroke-width':1.5}));return X;}
+const weightX=chart('weight-chart',[{value:r=>r.recordedWeight,color:'#637786',width:7,dash:'3 5'},{value:r=>r.oldWeight,color:'#d55c30'},{value:r=>r.newWeight,color:'#007e71'}],-.1,1.1,205);
+const heights=rows.flatMap(r=>[r.sourceSole[1],r.oldSole[1],r.newSole[1]]),lo=heights.length?Math.min(...heights)-.1:0,hi=heights.length?Math.max(...heights)+.1:2;
+chart('height-chart',[{value:r=>r.sourceSole[1],color:'#637786',dash:'4 5'},{value:r=>r.oldSole[1],color:'#d55c30'},{value:r=>r.newSole[1],color:'#007e71'}],lo,hi,245);
+for(const r of rows){const tr=document.createElement('tr');for(const v of [r.frame,r.phase,r.contact.toFixed(3),r.support?'有':'无',(r.oldPrepared?'有':'无')+' / '+(r.newPrepared?'有':'无'),r.recordedWeight,r.oldWeight+' → '+r.newWeight]){const td=document.createElement('td');td.textContent=v;tr.append(td);}el('rows').append(tr);}
+el('frame').max=Math.max(0,rows.length-1);
+function select(i){if(!rows.length)return;const r=rows[i];text('frame-label','第 '+r.frame+' 帧');text('input-label',r.phase+' · Contact '+r.contact.toFixed(3)+' · 作者权重 '+r.inputWeight+' · 当前脚底'+(r.support?'有命中':'无命中')+' · 摆腿路径'+(r.swingAccepted?'可用':'未接受'));
+for(const side of ['old','new']){const prepared=r[side+'Prepared'],weight=r[side+'Weight'];text(side+'-story',(prepared?'预备目标仍激活。':'预备目标未激活。')+' 最终位置权重 '+weight+'；状态 '+r[side+'State']+'。');text(side+'-event','当前接触事件 '+r.currentEvent+' → 下一落地事件 '+r.nextEvent);}
+text('position-label','脚底高度：动画 '+r.sourceSole[1].toFixed(4)+' m；历史函数 '+r.oldSole[1].toFixed(4)+' m；当前函数 '+r.newSole[1].toFixed(4)+' m。');
+for(const id of ['weight-chart','height-chart']){el(id+'-cursor').setAttribute('x1',weightX(i));el(id+'-cursor').setAttribute('x2',weightX(i));}}
+el('frame').oninput=e=>select(+e.target.value);let timer=null;el('play').onclick=()=>{if(timer){clearInterval(timer);timer=null;text('play','播放');return;}text('play','暂停');timer=setInterval(()=>{el('frame').value=(+el('frame').value+1)%Math.max(1,rows.length);select(+el('frame').value);},90);};select(0);
+</script>
+</html>

@@ -47,6 +47,7 @@
         "TEngine.Runtime",
         "TEngine.Editor",
         "Unity.InputSystem",
+        "Unity.Collections",
         "YooAsset",
         "YooAsset.Editor",
         "ThirdPersonCharacter.Animation",

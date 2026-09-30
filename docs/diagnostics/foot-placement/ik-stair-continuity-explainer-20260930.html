@@ -33,6 +33,7 @@
     <p><b>历史经验对本轮的限制：</b>提前释放曾减轻局部腿长冲突，同时造成离地和输出权重回归；求解后膝角补偿曾产生约 12.3 cm 锁脚离地和 12.8 cm 接触平面穿透；仅把可达限制挪到弹簧前不能消掉已经发生的越界；旋转插值曾随整套重构撤回，缺少单项成败裁决。下一方案必须说明如何避开这些已知失败条件。</p>
     <p><b>新基线的实际边界：</b>录制 757f243033414fc7b123c97e2fcb0d70 完成 2716/2716 帧，生成 5432 条左右脚记录，属于 logic-locked 基线。此包有 526 条正位置权重目标超出腿长，17 条末端补高超过 5 cm；50 条“着地、路径有效但权重为 0”全部来自作者总权重为 0，不能冒充第四项复现。正式分析有 6 项 MissingEvidence，总分不可用；这份修改前的基线不包含候选或 A/B 结果。</p>
     <p class="source">新基线：<a href="../../../3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-102323-93327479f6dc4c8fac53734da8169bd4/replay-proof.json">保存的原始 Proof</a> · <a href="../../../3cDemo/Client/3C_Client/Diagnostics/FootAnalysis/e24174bde6ca4e57812bc3681f6ab832/report.md">正式分析报告</a>。上述数据来自修改前的调查基线。随后已修改第四项的两个运行代码文件；候选通过 Unity 编译，并确认 Editor 已加载新版本。候选回放因 Attack 黑板缺少编译声明绑定，角色未注册而停在启动阶段，消费 0/2716 帧；已结束本次等待。更早的表现节奏补采仅留下 51 个姿态帧，未形成完整 Schedule。这些都不算验证通过；目前尚无覆盖原异常的完整 A/B 结果。</p>
+    <p><b>第四项的连续采样场景测试：</b><a href="ik-tests/expired-contact.html">查看 100 帧输入、历史函数与当前函数对照，以及每次测试自动更新的结果</a>。测试覆盖目标交接、作者权重、原始探针复现和输出脚底约束；页面明确显示通过、失败或尚未运行。它与完整角色回放的结论分别记录。</p>
   </div></details>
   <noscript><p class="noscript">启用 JavaScript 后可操作六个交互演示。核对结论、现有链路和历史记录仍可直接阅读。</p></noscript>
   <nav class="tabs" role="tablist" aria-label="选择要理解的问题">

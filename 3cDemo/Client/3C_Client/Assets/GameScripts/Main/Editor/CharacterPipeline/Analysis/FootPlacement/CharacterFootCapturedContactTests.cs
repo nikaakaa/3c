@@ -1,5 +1,4 @@
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -7,15 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Microsoft.CSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 using Unity.Collections;
 using UnityEditor;
-using UnityEditor.Compilation;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -28,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string RuntimeSource = "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootLandingRuntime.cs";
         const BindingFlags StaticMethods = BindingFlags.Static | BindingFlags.NonPublic;
         static readonly string Repository = Path.GetFullPath(Path.Combine(Application.dataPath, "../../../.."));
-        static readonly string EvidenceDirectory = Path.Combine(Repository, "docs/diagnostics/ik-tests");
+        static readonly string EvidenceDirectory = Path.Combine(Repository, "docs/diagnostics/foot-placement/ik-tests");
 
         delegate CharacterFootLandingSnapshot ProjectLanding(
             in CharacterFootLifecycleContext context, in AnimationFootMotionRuntimeSample sample,
@@ -59,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 report["capture"] = fixture["capture"];
                 report["baselineCommit"] = fixture["baselineCommit"];
                 report["runtimeCommit"] = Git("rev-parse HEAD");
+                report["runtimeSourceBlob"] = Git("hash-object " + RuntimeSource);
                 report["sourceSha256"] = fixture["sourceSha256"];
                 var frames = (JArray)fixture["frames"];
                 var columns = (JObject)fixture["columns"];
@@ -79,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new CharacterAnimationRigPayload(definition), binding,
                     binding.GetComponentInParent<CharacterWorldAwarePresentationBinding>());
                 var settings = profile.FootMotion.Build();
+                report["profileRevision"] = profile.Revision;
                 var supportSettings = profile.CurrentSupportQuery.Build();
                 var world = new CharacterFootPlacementWorldQueryBackend(
                     binding.gameObject.scene.GetPhysicsScene(), rig, 16, 16, 16);
@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int originalMisses = 0, repairedMisses = 0, matchedProbes = 0;
                 int contactFrames = 0, approachFrames = 0, acceptedSwingFrames = 0;
                 float maxUnchangedDifference = 0f;
+                float maxOutputPenetration = 0f;
                 var inputProbes = new CharacterFootSoleProbeBuffer();
                 var targetProbes = new CharacterFootSoleProbeBuffer();
                 var outputProbes = new CharacterFootSoleProbeBuffer();
@@ -158,6 +159,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     float oldWeight = oldOutput.GoalTarget.PositionWeight;
                     float newWeight = newOutput.GoalTarget.PositionWeight;
                     float recordedWeight = r.F("foot/resolved/core/position-weight");
+                    var finalContacts = animated.ResolveSoleContacts(
+                        Vector3.LerpUnclamped(animated.AnklePosition,
+                            goalRoot.transform.TransformPoint(newOutput.GoalTarget.ComponentPosition), newWeight),
+                        Quaternion.Slerp(animated.AnkleRotation,
+                            goalRoot.transform.rotation * newOutput.GoalTarget.ComponentRotation,
+                            newOutput.GoalTarget.RotationWeight));
+                    var finalSupport = soleQuery.Query(sequence, completionId, 1UL, CharacterFootSide.Right,
+                        Vector3.up, r.B("input/grounded"), in finalContacts, outputProbes);
+                    float penetration = finalSupport.TryResolveHeightConstraint(out float displacement, out _)
+                        ? Mathf.Max(0f, displacement) : 0f;
+                    maxOutputPenetration = Mathf.Max(maxOutputPenetration, penetration);
                     float unchangedDifference = Vector3.Distance(
                         oldOutput.GoalTarget.EffectiveSole, newOutput.GoalTarget.EffectiveSole);
                     ((JArray)report["rows"]).Add(new JObject
@@ -175,15 +187,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["sourceSole"] = Vec((animated.HeelPosition + animated.ToePosition) * 0.5f),
                         ["oldSole"] = Vec(oldOutput.GoalTarget.EffectiveSole),
                         ["newSole"] = Vec(newOutput.GoalTarget.EffectiveSole),
+                        ["newPenetration"] = penetration,
+                        ["finalSupportAvailable"] = finalSupport.Available,
                         ["oldState"] = original.Discrete.State.ToString(),
                         ["newState"] = current.Discrete.State.ToString()
                     });
 
                     Assert.That(oldWeight, Is.EqualTo(recordedWeight), frameLabel + " 历史函数应重现原采样权重");
                     Assert.That(newWeight, Is.EqualTo(1f), frameLabel + " 有效目标应保持作者权重");
+                    Assert.That(penetration, Is.LessThan(0.0002f), frameLabel + " 输出脚底采样点不得穿入已查询地面");
                     Assert.That(current.Contact.HasContact, Is.False, frameLabel + " 窗口不应进入未录制锚点的求解");
                     Assert.That(oldSnapshot.PlantTargetState,
                         Is.EqualTo((CharacterFootPlantTargetState)r.I("foot/plant-target-state")), frameLabel);
+                    Assert.That(oldFrame.PreparedPlantActive,
+                        Is.EqualTo(r.B("foot/approach-plant-target-prepared")), frameLabel);
                     if (sequence < 34713UL)
                     {
                         Assert.That(newSnapshot.PlantTargetState, Is.EqualTo(oldSnapshot.PlantTargetState), frameLabel);
@@ -222,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 report["metrics"] = JObject.FromObject(new
                 {
                     matchedProbes, originalMisses, repairedMisses, contactFrames,
-                    approachFrames, acceptedSwingFrames, maxUnchangedDifference
+                    approachFrames, acceptedSwingFrames, maxUnchangedDifference, maxOutputPenetration
                 });
                 report["status"] = "passed";
             }
@@ -242,7 +259,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int end = html.IndexOf("</script>", start, StringComparison.Ordinal);
                 string data = JsonConvert.SerializeObject(report, Formatting.None,
                     new JsonSerializerSettings { StringEscapeHandling = StringEscapeHandling.EscapeHtml });
-                File.WriteAllText(htmlPath, html.Substring(0, start) + data + html.Substring(end), new UTF8Encoding(false));
+                string pendingPath = htmlPath + ".pending";
+                File.WriteAllText(pendingPath, html.Substring(0, start) + data + html.Substring(end), new UTF8Encoding(false));
+                File.Replace(pendingPath, htmlPath, null);
                 TestContext.WriteLine("语义与逐帧结果：" + htmlPath);
             }
         }
@@ -297,18 +316,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0f, r.F(p + "distance"), r.V(p + "root-local-landing"));
         }
 
-        static CharacterFootLandingPredictionResult Prediction(Row r) =>
-            new CharacterFootLandingPredictionResult(CharacterFootSide.Right,
+        static CharacterFootLandingPredictionResult Prediction(Row r)
+        {
+            bool accepted = r.B("foot/accepted");
+            CharacterFootLandingSupport support = accepted
+                ? new CharacterFootLandingSupport(r.I("foot/surface-identity"), r.V("foot/landing-point"),
+                    r.V("foot/landing-normal"), r.F("foot/query-distance"))
+                : default;
+            Vector3 translation = r.V("foot/future-body-relative-translation");
+            Vector3 velocity = r.V("foot/future-body-translation-velocity");
+            var future = new CharacterFutureBodyTranslationSample(r.F("foot/time-to-landing-seconds"),
+                translation.x, translation.y, translation.z, velocity.x, velocity.y, velocity.z);
+            return new CharacterFootLandingPredictionResult(CharacterFootSide.Right,
                 (CharacterFootLandingPredictionState)r.I("foot/state"),
                 (CharacterFootLandingPredictionRejectReason)r.I("foot/reject-reason"),
                 (CharacterFootLandingStepSource)r.I("foot/step-source"),
                 r.U("foot/landing-event-identity"), r.U("foot/trajectory-generation"),
                 r.F("foot/landing-confidence"), r.F("foot/time-to-landing-seconds"),
                 r.V("foot/root-local-landing"), r.B("foot/future-body-translation-available"),
-                r.S("input/prediction-motion-source-identity"), default,
+                r.S("input/prediction-motion-source-identity"), in future,
                 r.V("foot/current-animated-sole"), r.V("foot/raw-landing-candidate"), default, default,
-                new CharacterFootLandingSupport(r.I("foot/surface-identity"), r.V("foot/landing-point"),
-                    r.V("foot/landing-normal"), r.F("foot/query-distance")), default);
+                in support, default);
+        }
 
         static CharacterFootPlacementAnimatedFootPose Animated(Row r, Row[] probes, Transform root)
         {
@@ -323,7 +352,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 r.V("foot/source-ankle-position"), ankle, r.V("foot/source-toe-position"),
                 Quaternion.identity, r.V("foot/source-heel-position"),
                 sole * Vector3.forward, sole * Vector3.up, sole, local);
-            foreach (Row probe in probes) pose.SoleSamples.Add(probe.V("probe-position"));
+            var soleSamples = new FixedList512Bytes<Vector3>();
+            foreach (Row probe in probes) soleSamples.Add(probe.V("probe-position"));
+            pose.SoleSamples = soleSamples;
             return pose;
         }
 
@@ -336,6 +367,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFootGroundPathResult PathInput(Row r, JToken captured, JObject columns,
             CharacterFootPlacementProfile profile)
         {
+            var page = new CharacterFootGroundPathPage(64);
+            if (r.I("foot/ground-path/state") == (int)CharacterFootGroundPathState.Rejected)
+            {
+                page.SetRejected((CharacterFootGroundPathRejectReason)r.I("foot/ground-path/reject-reason"),
+                    r.B("foot/ground-path/query-executed-this-frame"),
+                    r.I("foot/ground-path/segment-count"), default, default);
+                return new CharacterFootGroundPathResult(page, true);
+            }
             var last = PathLanding(r, "last-landing", "last-future-body-translation-source-identity");
             var next = PathLanding(r, "next-swing-landing", "next-swing-future-body-translation-source-identity");
             var key = CharacterFootGroundPathInputBuilder.BuildKey(CharacterFootSide.Right,
@@ -344,7 +383,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Assert.That(CharacterFootGroundPathInputBuilder.TryBuild(in key, last.Point, next.Point,
                 last.Normal, next.Normal, last.SurfaceIdentity, next.SurfaceIdentity, Vector3.up,
                 in settings, out var input), Is.True);
-            var page = new CharacterFootGroundPathPage(64);
             Assert.That(page.Contacts.SurfaceCoverage.Begin(input.Query, 1UL), Is.True);
             foreach (Row surface in Row.Table(captured, columns, "surfaces"))
                 Assert.That(page.Contacts.SurfaceCoverage.TryAdd(surface.I("surface-identity"),
@@ -389,26 +427,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string source = Git("show " + commit + ":" + RuntimeSource);
             string directory = Path.GetFullPath(Path.Combine(Application.dataPath, "../Temp/FootContactBaseline"));
             Directory.CreateDirectory(directory);
-            var parameters = new CompilerParameters
+            string sourcePath = Path.Combine(directory, "CharacterFootLandingRuntime.cs");
+            string assemblyPath = Path.Combine(directory, "ThirdPersonClient.Editor.dll");
+            string responsePath = Path.Combine(directory, "compile.rsp");
+            File.WriteAllText(sourcePath, source, new UTF8Encoding(false));
+            var references = new[]
             {
-                GenerateInMemory = true, GenerateExecutable = false,
-                OutputAssembly = Path.Combine(directory, "ThirdPersonClient.Editor.dll"),
-                CompilerOptions = "/langversion:latest"
+                typeof(object).Assembly.Location,
+                typeof(Vector3).Assembly.Location,
+                typeof(CharacterFootLifecycleContext).Assembly.Location,
+                typeof(AnimationFootMotionRuntimeSample).Assembly.Location,
+                typeof(CharacterFutureBodyTranslationSample).Assembly.Location,
+                typeof(FixedString128Bytes).Assembly.Location,
+                Assembly.Load("netstandard").Location
             };
-            var editor = CompilationPipeline.GetAssemblies(AssembliesType.Editor)
-                .Single(x => x.name == "ThirdPersonClient.Editor");
-            parameters.ReferencedAssemblies.AddRange(editor.allReferences);
-            using var compiler = new CSharpCodeProvider();
-            CompilerResults result = compiler.CompileAssemblyFromSource(parameters, source);
-            Assert.That(result.Errors.HasErrors, Is.False,
-                string.Join("\n", result.Errors.Cast<CompilerError>().Select(x => x.ToString())));
-            return result.CompiledAssembly.GetType(
+            var arguments = new List<string>
+            {
+                "-nostdlib+", "-langversion:latest", "-target:library",
+                "-out:\"" + assemblyPath + "\"", "\"" + sourcePath + "\""
+            };
+            arguments.AddRange(references.Distinct().Select(x => "-r:\"" + x + "\""));
+            File.WriteAllLines(responsePath, arguments, new UTF8Encoding(false));
+            string contents = EditorApplication.applicationContentsPath;
+            Run(Path.Combine(contents, "NetCoreRuntime/dotnet.exe"),
+                "\"" + Path.Combine(contents, "DotNetSdkRoslyn/csc.dll") + "\" /noconfig \"@" + responsePath + "\"");
+            return Assembly.Load(File.ReadAllBytes(assemblyPath)).GetType(
                 "ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLandingRuntime", true);
         }
 
-        static string Git(string arguments)
+        static string Git(string arguments) => Run("git", arguments);
+
+        static string Run(string executable, string arguments)
         {
-            using var process = Process.Start(new ProcessStartInfo("git", arguments)
+            using var process = Process.Start(new ProcessStartInfo(executable, arguments)
             {
                 WorkingDirectory = Repository, UseShellExecute = false,
                 RedirectStandardOutput = true, RedirectStandardError = true,
@@ -418,7 +469,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            Assert.That(process.ExitCode, Is.Zero, error);
+            Assert.That(process.ExitCode, Is.Zero, output + error);
             return output.TrimEnd();
         }
 

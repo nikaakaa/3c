@@ -22,6 +22,8 @@
 
 需要 .NET 编译时确认实际 csproj，使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false`；结束或失败后立即 `dotnet build-server shutdown`，保留原构建退出码。编译成功不代替回放结果。
 
+用户授权从采样做历史函数对照时，历史源码可在项目 `Temp/` 中用当前 Unity 自带的 Roslyn 独立编译，保留其原逻辑和现有程序集的内部访问合同，不切换共享工作区的运行代码。此处已复现 CodeDom/Mono 编译器将 Roslyn 产物中的 `in` / `ref readonly` 视为可写引用而报错；不能为迁就该编译器改写历史逻辑。改用 Unity 自带 Roslyn 已通过同源编译检查，函数的实际执行与 A/B 结果仍需单独记录。
+
 ## 输入与模式
 
 正式工具为 `character.fixed_input_trace`，每次调用在外层绑定目标 `unity_instance`。名称可能由宿主规范化；按实际发现的工具调用。

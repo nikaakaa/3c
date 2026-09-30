@@ -1,0 +1,66 @@
+{
+  "capture_id": "capture.20260930-102749.66f045902a4147c18269dbc5526f38e1",
+  "observed_at": "2026-09-30T10:41:00.688Z",
+  "unity_instance": "e852139597e42532",
+  "query": "var totals = new System.Collections.Generic.Dictionary<string, long>(); long bytes = 0; int allocations = 0; for (int f = UnityEditorInternal.ProfilerDriver.firstFrameIndex; f <= UnityEditorInternal.ProfilerDriver.lastFrameIndex; f++) { using (var v = UnityEditorInternal.ProfilerDriver.GetRawFrameDataView(f, 0)) { var ends = new System.Collections.Generic.List<int>(); var names = new System.Collections.Generic.List<string>(); for (int i = 0; i < v.sampleCount; i++) { while (ends.Count > 0 && i > ends[ends.Count - 1]) { ends.RemoveAt(ends.Count - 1); names.RemoveAt(names.Count - 1); } string n = v.GetSampleName(i); if (n == \"GC.Alloc\" && v.GetSampleMetadataCount(i) > 0) { long size = v.GetSampleMetadataAsLong(i, 0); string parent = names.Count == 0 ? \"\" : names[names.Count - 1]; long total; totals.TryGetValue(parent, out total); totals[parent] = total + size; bytes += size; allocations++; } int children = v.GetSampleChildrenCountRecursive(i); if (children > 0) { ends.Add(i + children); names.Add(n); } } } } return new { first = UnityEditorInternal.ProfilerDriver.firstFrameIndex, last = UnityEditorInternal.ProfilerDriver.lastFrameIndex, bytes = bytes, allocations = allocations, parents = totals.OrderByDescending(p => p.Value).Take(12).Select(p => new { marker = p.Key, bytes = p.Value }).ToArray() };",
+  "result": {
+    "first": 4110,
+    "last": 4409,
+    "bytes": 43365749,
+    "allocations": 53929,
+    "parents": [
+      {
+        "marker": "ThirdPersonPerformance.Runtime.dll!ThirdPersonPerformance.Runtime::ThirdPersonPerformanceCaptureAgent.Update() [Invoke]",
+        "bytes": 28797508
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Character.Evaluate",
+        "bytes": 9678147
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Pipeline.Finalize",
+        "bytes": 1332638
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Operation.AbilityTick",
+        "bytes": 902352
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Snapshot.WorldCapture",
+        "bytes": 456016
+      },
+      {
+        "marker": "ThirdPerson.Simulation.World.Kcc",
+        "bytes": 447712
+      },
+      {
+        "marker": "ThirdPerson.Presentation.Timeline",
+        "bytes": 428240
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Pipeline.Ingress",
+        "bytes": 366772
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Pipeline.CheckpointCapture",
+        "bytes": 259561
+      },
+      {
+        "marker": "ThirdPerson.Session.LogicTick",
+        "bytes": 214004
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Pipeline.Schedule",
+        "bytes": 105768
+      },
+      {
+        "marker": "ThirdPerson.Simulation.Pipeline.Transaction",
+        "bytes": 104909
+      }
+    ]
+  },
+  "scope": "Partial previously loaded Unity Profiler frames; no new capture or profile reload was started.",
+  "span_record_count": 326189,
+  "span_record_data_bytes_at_88_bytes_per_record": 28704632,
+  "profiler_raw_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Library/Performance/Captures/capture.20260930-102749.66f045902a4147c18269dbc5526f38e1/unity-profiler.raw"
+}

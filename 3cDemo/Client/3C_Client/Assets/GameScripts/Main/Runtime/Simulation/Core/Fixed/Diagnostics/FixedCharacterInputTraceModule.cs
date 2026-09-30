@@ -102,13 +102,15 @@ namespace ThirdPersonSimulation.Fixed
 
     public readonly struct FixedCharacterInputTraceStatus
     {
+        readonly StableHash m_StartBodyHash;
+
         public FixedCharacterInputTraceStatus(
             FixedCharacterInputTraceMode mode,
             string traceId,
             string actorId,
             int frameCount,
             int replayedFrameCount,
-            string startBodyHash,
+            StableHash startBodyHash,
             string message)
         {
             Mode = mode;
@@ -116,7 +118,7 @@ namespace ThirdPersonSimulation.Fixed
             ActorId = actorId ?? string.Empty;
             FrameCount = frameCount;
             ReplayedFrameCount = replayedFrameCount;
-            StartBodyHash = startBodyHash ?? string.Empty;
+            m_StartBodyHash = startBodyHash;
             Message = message ?? string.Empty;
         }
 
@@ -125,7 +127,7 @@ namespace ThirdPersonSimulation.Fixed
         public string ActorId { get; }
         public int FrameCount { get; }
         public int ReplayedFrameCount { get; }
-        public string StartBodyHash { get; }
+        public string StartBodyHash => m_StartBodyHash.ToString();
         public string Message { get; }
     }
 
@@ -258,8 +260,8 @@ namespace ThirdPersonSimulation.Fixed
                     : s_Replay?.Frames.Count ?? 0,
                 s_ReplayIndex,
                 s_HasStartBody
-                    ? s_StartBodyHash.ToString()
-                    : string.Empty,
+                    ? s_StartBodyHash
+                    : default,
                 s_Message);
 
         public static FixedCharacterInputTrace LastCompletedTrace => s_LastCompletedTrace;

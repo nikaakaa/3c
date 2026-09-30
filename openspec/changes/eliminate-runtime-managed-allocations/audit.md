@@ -2099,3 +2099,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Parameter Resolve 循环先读取并校验 base/source availability；Weighted 与 Extremum helper 又从同一 NativeSlice 读取同一索引。每个加权或极值参数每次求值重复访问 availability。
 - 外层 availability 直接传入两个 helper，循环的 BoundParameterPolicy 改为只读引用绑定。校验、Weighted 权重、极值分支和输出参数/availability 写入顺序不变。
 - 该改动删除正式参数求值中的重复 NativeSlice 读取和 policy 结构拷贝。静态核对 helper 全部调用点、binding 生命周期和索引一致；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP297 Layered Bone Blend 总权重复用（2026-09-30，已实施，本轮未编译）
+
+- Layered Bone Blend 的参数混合循环每轮重新计算 `baseGlobalWeight + overlayGlobalWeight`；同一 BlendPose 后续 contribution 计算又需要同一个 totalGlobalWeight。
+- 把已有的 totalGlobalWeight 定义上移到参数循环前，weighted 参数和 contribution factor 复用同一次加法。base/overlay 全局权重、分支、输出 availability 和 contribution 权重公式不变。
+- 该改动删除每参数的重复权重求和，加法输入和顺序不变。静态核对同一方法内的全部消费点和生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

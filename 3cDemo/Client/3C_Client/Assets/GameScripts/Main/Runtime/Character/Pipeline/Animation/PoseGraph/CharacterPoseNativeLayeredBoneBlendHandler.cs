@@ -428,6 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 basePose.PoseParameterAvailability;
             NativeSlice<byte> overlayParameterAvailability =
                 overlayPose.PoseParameterAvailability;
+            float totalGlobalWeight = baseGlobalWeight + overlayGlobalWeight;
             for (int parameter = 0; parameter < outputParameters.Length; parameter++)
             {
                 byte baseAvailable = baseParameterAvailability[parameter];
@@ -437,7 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     outputParameters[parameter] =
                         (baseParameters[parameter] * baseGlobalWeight +
                          overlayParameters[parameter] * overlayGlobalWeight) /
-                        (baseGlobalWeight + overlayGlobalWeight);
+                        totalGlobalWeight;
                     outputParameterAvailability[parameter] = 1;
                 }
                 else if (overlayAvailable != 0)
@@ -452,7 +453,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             int contributionCount = 0;
-            float totalGlobalWeight = baseGlobalWeight + overlayGlobalWeight;
             AppendContributions(
                 in basePose,
                 totalGlobalWeight <= 0f ? 0f : baseGlobalWeight / totalGlobalWeight,

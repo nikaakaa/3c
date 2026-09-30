@@ -21,7 +21,7 @@
 
 报告附带 JSON、查询图与[台阶连续性解释器](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html)已归入[脚部诊断](../diagnostics/foot-placement/README.md)。正式 CSV、Proof 与分析包仍在项目 `Diagnostics/`；原始数据内容、失败事实和采样身份未改。
 
-2026-10-01 补齐新的 full 采样输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前将左右脚生命周期状态保存到帧 Bank 的预分配页；诊断视图引用该页与 Bank 中的完整身体预测曲线，原生成采样程序在提交后同步写入 packet。输出包括 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，以及事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；冻结、权重、骨盆和腿 IK 算法均未修改。
+2026-10-01 补充 full 的脚端复算输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前将左右脚生命周期状态保存到帧 Bank 的预分配页；诊断视图引用该页与 Bank 中的完整身体预测曲线，原生成采样程序在提交后同步写入 packet。输出包括 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，以及事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；冻结、权重、骨盆和腿 IK 算法均未修改。这里不是完整骨骼 IK 的输入快照：求解前的整份骨骼姿势及完整 `CharacterFullBodyIkBendHistory` 尚未采集。
 
 补字段的 `abfaf3895` 再次引入了大结构嵌套值拷贝。`23b52330c` 改为上述预分配存储引用后，实际 Unity Mono full Capture 栈帧从 953,392 降至 664,080 字节，减少 289,312 字节；历史修复 `413e931de` 后为 646,528 字节，core 本次保持 205,904 字节。编译与 JIT 检查通过，结果保留在 `tmp/ik-release-sampling-20260930/capture-stack-replay-input-before.json` 与 `capture-stack-replay-input-after.json`。执行规则已写入根目录 `AGENTS.md`；既有业务单元测试仍由配套测试窗口维护。
 
@@ -30,3 +30,5 @@
 本次“编译十分钟”的实际记录是进入 Play 的刷新耗时 604.728 秒，其中 `CompileScripts` 仅 1.760 毫秒，`ProcessInitializeOnLoadAttributes` 占 314.061 秒，资源分类占 140.160 秒；片段保留在 `tmp/ik-release-sampling-20260930/editor-play-reload-20261001.log`。之后连接自行恢复，未重启或重复发起刷新。导出期间观察到整机可用内存约 1.2 GB、提交内存占用 93% 并有大量换页；这是当时的资源压力证据，不能据此断言某个初始化器就是根因。初始化器级别的耗时来源尚未定位，未修改其逻辑。
 
 原理阅读见 [GDC 学习文案](../reference/foot-placement/gdc2016-fitting-the-world.md)；历史否决与重复问题见[实现经验](../reference/foot-placement/implementation-lessons.md)。参数和当前运行路径仍由正式内容与现行规格拥有。
+
+2026-10-01 按用户要求核对原动画伸直和弯曲速率，并逐项审计 HTML 实施状态。当前采样与 9 月 30 日同输入基线的 5432 条脚记录在膝角、脚位、权重和末端补高上均一致；局部接触目标修正不等于六项均已完成。包内原动画对照仍显示 IK 额外拉直和输出脚掌命中高面后的硬补高，详见[原动画、角速度与六项状态报告](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#knee-audit)。本次是已有数据的只读统计，未新增或运行单元测试；输入回放、脚端函数复算和完整 FBBIK 还原的边界在同一报告中明确区分。

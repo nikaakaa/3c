@@ -12,6 +12,7 @@
 @media(max-width:650px){main{padding:0 16px 38px}.mast{font-size:10px;letter-spacing:.5px}.hero{padding-top:26px}h1{font-size:29px}.intro{font-size:14px}.tabs{gap:5px;padding-bottom:15px}.tab{font-size:12px;padding:10px 8px;gap:5px}.comparisons,.live,.evidence,.charts,.tradeoff{grid-template-columns:1fr;gap:13px}.chapter{padding-top:19px}.chapter-top{align-items:flex-start}.chapter .sub{font-size:13px}.chapter-top .chip{display:none}.scene-head{padding:15px 17px 0}.scene-caption{padding:0 17px 15px;min-height:0}.controls{gap:10px}.slider-group{order:3;flex-basis:100%}.height-switch{margin-left:auto}.live{margin-bottom:18px}.fact-panel,.reason-panel,.probe-section{padding:18px}.probe-grid{gap:2px}.probe-grid svg{height:195px}.probe-header{gap:9px}.probe-header h3{font-size:14px}.takeaway{padding:15px;display:block}.takeaway b{display:block;margin-bottom:6px}.next-row span{max-width:230px}.flow{gap:8px}.flow-item{padding:14px}.flow-item h3{font-size:14px}.flow-item p{font-size:12px}.lower{margin-top:32px}.lower h2{font-size:21px}.metrics{gap:22px}.metric strong{font-size:24px}}
 @media(max-width:650px){.probe-grid{grid-template-columns:1fr}.probe-grid svg{height:225px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.audit-scroll{overflow-x:auto;margin:14px 0 20px}.audit-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}.audit-table th,.audit-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}.audit-table th{background:#e7ece4;font-weight:700}.audit-table td:first-child{min-width:100px}.audit-plot{width:100%;height:auto;background:white;border:1px solid var(--line);border-radius:12px;margin:12px 0}.audit-heading{font-size:18px;margin:4px 0 14px}.audit-note{padding:14px 17px;border-left:3px solid var(--blue);background:#eef4fa;margin:15px 0}
 </style>
 </head>
 <body>
@@ -19,10 +20,33 @@
   <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.09.30 · 交互解释</span></div>
   <header class="hero">
     <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">本页包含采样事实、原因判断和候选行为。三者证据强度不同，不能把右侧示意当成已经证明正确的修复方案。先看本轮核对结论，再查看各项数据。</p></div>
-    <div class="status-note"><b>采样已恢复，伸直和跳脚仍待修。</b><span>采样栈修正已完成原 2716 帧回放和保存，左右脚共 5432 行，新增前态和轨迹表已落盘。提前放开的失败候选仍已撤销；其余右侧行为仍为未验证候选，采样通过不代表 IK 质量通过。</span></div>
+    <div class="status-note"><b>已有局部修正，六项尚未全部实现。</b><span>第四项接触目标交接已改；释放冻结的新候选失败后已撤回。当前已对齐原动画膝角与变化速率，确认仍有 IK 额外放大的弯直和边缘补高。最近的采样修正没有改变同输入下的腿部输出。</span></div>
   </header>
   <details id="audit-verdict" open><summary>严格核对结论：哪些已证实，哪些还不能照着改</summary><div class="detail-body">
-    <p><b>2026-10-01 · 采样缺口：</b>已有连续实验只重跑单脚目标至 Goal，预测结果与路径仍来自记录。旧 CSV 没有完整未来身体轨迹，也没有完整的计算前脚态，不能继续把扩大窗口或验证上游预测说成“已有输入足够”。新 full 采样补齐计算前状态、完整轨迹表、事件时间与来源身份；旧数据不补造。这次只增加采样字段，没有完成新的行为验证。</p>
+    <h3 class="audit-heading" id="knee-audit">2026-10-01 · 原动画、弯曲速率与六项实施状态</h3>
+    <p><b>结论：</b>不能把所有伸直都算作 IK 缺陷，也不能只凭动作看起来缓和就认定修改有效。本次用原动画基准和同输入历史数据核对；以下是已保存采样的只读审计，没有新跑 C# 函数实验。</p>
+    <p><b>最近是否改善：</b>9 月 30 日的 <code>93327479…</code> 与 10 月 1 日的 <code>3cb49fba…</code> 使用同一条 2716 帧录制，起始 Body、输入序列、Body 轨迹及 logic-locked 表现时钟一致，程序内容身份不同。按 Body Tick 与左右脚对齐后，5432 条记录的原动画膝角、求解膝角、脚位、权重、目标伸展比及末端补高均无差异。因此这组输入没有显示最近采样相关修改带来了新的 IK 改善；也不能据此否认其它动作中已经保留的局部修正。</p>
+    <p><b>原动画基准：</b>使用本帧混合动画在腿求解前的髋、膝、踝位置计算膝角，0° 为伸直。取点发生在骨盆平移之后，但平移同时作用于整条腿，不改变夹角；脚踝预旋转也不改变这三个关节点的位置。角速度为相邻连续帧的角度差除以本帧 <code>presentation-delta-seconds</code>；另看 <code>Δ(求解膝角 − 原动画膝角) / Δt</code>，区分动画自身运动和 IK 追加的变化。用求解后三点重算膝角，与已记录角度的最大误差小于 0.001°。</p>
+    <div class="audit-scroll"><table class="audit-table"><thead><tr><th>当前同一份采样</th><th>原动画</th><th>IK 后</th><th>含义</th></tr></thead><tbody>
+      <tr><td>近伸直记录（膝角 &lt; 1°）</td><td>58 条</td><td>504 条</td><td>仅统计位置权重 &gt; 0 的 5171 条脚记录。两侧同时近伸直为 54 条，IK 另使 450 条进入该阈值；这不是 450 次独立抖动，也不自动判为 450 个错误。</td></tr>
+      <tr><td>Landing / Releasing 角速度中位数</td><td>236.6°/s</td><td>196.0°/s</td><td>使用相邻两帧位置权重都 &gt; 0 的 1984 个间隔；中位数更低也可能包含冻结或近直平台，不能单独判为改善。</td></tr>
+      <tr><td>相同间隔角速度 P95</td><td>1243.8°/s</td><td>1622.6°/s</td><td>这里比较速率绝对值。较快的变化仍被放大，需逐事件检查额外弯直，不能只看平均或中位数。</td></tr>
+    </tbody></table></div>
+    <img class="audit-plot" src="ik-knee-animation-audit-20261001.svg" alt="当前采样中原动画与 IK 后的膝角曲线：右脚 2041 帧额外拉直；左脚 2545 帧因末端补高突然弯膝。曲线来自录制数据，不是新的函数复算。">
+    <p><b>额外拉直：</b>当前右脚 Releasing 的 2040→2041 帧，原动画为 48.29°→46.25°，只伸直 2.03°；IK 为 66.77°→0.51°，16.67 ms 内伸直 66.26°。原动画速率约 −122°/s，IK 约 −3976°/s；位置权重为 1、来源未变，目标距离达到腿长的 105.835%。这处突变不能归给原动画。</p>
+    <p><b>原来那段 Landing 也应修正解释：</b>旧手动采样右脚 33765→33766，原动画本身从 57.44°→26.87°，已经快速伸直 30.57°；IK 从 53.59°→0.52°，伸直 53.07°。27.325 ms 内的变化速率约为 −1119°/s 与 −1942°/s，IK 在该间隔额外增加约 22.51° 的伸直。不能把这 53° 全算成 IK 新制造的变化。旧两包原先统计的 1473 条近伸直记录中，同帧原动画均未低于 1°，但仍需按上述速率与事件判断影响。</p>
+    <p><b>偶发边缘跳变仍有明确记录：</b>当前左脚 2544→2545，第 2 个输出脚掌探针从 Y=0 的地面命中改为 Y=0.56 m 的高支撑面；探针当时在 Y=0.07124 m，要求补高 0.48876 m。末端 <code>OutputFootprint</code> 约束追加 48.876 cm，满权重脚底一帧升高约 50.697 cm；原动画膝角在减少 21.01°，IK 却增加 78.38°。此处路径身份未变、修订原因是 0，不能归给本帧路径重算。整包有 17 条正权重记录的未加权末端补高超过 5 cm，其中 6 条为满权重；它们不是 17 次独立跳脚，也不全等于实际脚位抬高 5 cm。</p>
+    <div class="audit-scroll"><table class="audit-table"><thead><tr><th>HTML 项目</th><th>实际实现和验证状态</th></tr></thead><tbody>
+      <tr><td>01 · 台阶边缘</td><td>末端脚掌查询和防穿补高已经运行；平移、旋转、净空共同连续跨边的替代方案尚未实现。2545 的新证据仍能重现硬补高。</td></tr>
+      <tr><td>02 · 路径重算</td><td>已有路径残差和高度响应；页面提出的提前量与高候选时序协调尚未形成新修复，不能删除后续确实会碰到的高踏面。</td></tr>
+      <tr><td>03 · 释放脚锁</td><td>当前水平冻结仍在运行。连续历史对照已完成；提前解除冻结候选把恢复步长从 20.162 cm 放大到 26.435 cm，已撤回。</td></tr>
+      <tr><td>04 · 支撑断续</td><td><code>bf9724736</code> 已修改接触预备目标有效期；100 帧目标交接函数实验中缺失目标从 27 帧降到 0。它验证到目标交接层，原异常的完整骨骼结果尚未验收；本次 2716 帧输入没有覆盖那种旧缺陷。</td></tr>
+      <tr><td>05 · 动画切换</td><td>尚无本轮独立旋转修复；需要区分作者参数、FootMotion 来源切换与旋转响应，不能直接恢复已撤回的整套历史实现。</td></tr>
+      <tr><td>06 · 膝盖弯曲</td><td>本次已补原动画膝角及角速度对照。脚目标、身体运动、可达性共同协调的新修复尚未实施；不能重复在固定脚点之后直接平滑膝角的失败做法。</td></tr>
+    </tbody></table></div>
+    <div class="audit-note"><b>Replay 和 IK 还原是不同层次。</b><br>Fixed Input Replay 负责输入和逻辑 Tick；本次把它用于取得可重复的采样，不把回放成功当作 IK 质量通过，也不把 logic-locked 时钟当作原手动操作的表现节奏。新增字段补的是脚端生命周期前态与身体预测曲线，新包尚未接入新的正式 C# 脚端复算。完整 FBBIK 还缺求解前的整份骨骼姿势及完整 <code>CharacterFullBodyIkBendHistory</code>：当前 Presentation 包只有参数、状态机和来源等表，没有骨骼姿势表。脚目标改变后的地面命中也必须重新查询，不能拿旧探针结果冒充。现在可以核对上述真实角度与跳变；不能宣称整套 IK 已经精确还原。</div>
+    <p class="source">当前数据：<code>20260930-172333-3cb49fba52604669bfae7fe6eda3aabc</code>；同输入历史：<code>20260930-102323-93327479f6dc4c8fac53734da8169bd4</code>；旧 Landing 片段：<code>20260930-071630-0398ffce96dc4fcdb3f8696d1c0e51eb</code>。前两包按 Body Tick 与左右脚对齐；手动包只做包内原动画对照，不混用其表现时钟计算修复收益。</p>
+    <p><b>2026-10-01 · 采样缺口：</b>已有连续实验只重跑单脚目标至 Goal，预测结果与路径仍来自记录。旧 CSV 没有完整未来身体轨迹，也没有完整的计算前脚态，不能继续把扩大窗口或验证上游预测说成“已有输入足够”。新 full 采样补充脚端计算前状态、完整轨迹表、事件时间与来源身份；旧数据不补造。整份求解前骨骼姿势和完整 FBBIK 弯曲历史仍未采集；采样字段本身不代表行为已经改善。</p>
     <p><b>2026-10-01 · 采样栈回归已完成运行验证：</b><code>abfaf3895</code> 重犯了 <code>cd0d0a73e</code> / <code>413e931de</code> 已处理的大结构复制问题。<code>23b52330c</code> 改由帧 Bank 的预分配页保存前态，视图引用该页及正式曲线，原采样器在提交后同步复制到 packet。完整栈帧从 953,392 降至 664,080 字节；原 2716 帧回放现已全部完成、停止并保存，新增输入表存在，正式错误列表为空。<a href="../../../3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-172333-3cb49fba52604669bfae7fe6eda3aabc/character-foot-ik%252Ffull.csv">本次采样包主表</a>只是新的复算基线，自动结果为 <code>baseline-created:2716</code>，不证明伸直或跳脚改善。执行约束见 <a href="../../../AGENTS.md">AGENTS.md</a>，运行及十分钟重载的耗时记录见<a href="../../status/foot-placement.md">当前状态</a>。</p>
     <p><b>重新采样：</b>使用原入口的 <code>character-foot-ik/full</code>（capability 4 / full sampler 3），保留同一场景和配置，复现上下楼问题后停止保存。主表新增 <code>foot/pre-state</code>、<code>input/body-trajectory</code>、作者总权重和 PosePlanHash；另有 <code>future-body-trajectory</code> 逐点时间/位移/速度表，以及 <code>pre-state-response-lineage</code> 来源身份 UTF-8 字节表。core 不含这些复算输入；它们不能恢复旧采样缺失的内容，也不能独立恢复整个 Unity 世界。</p>
     <ul class="reference-list">
@@ -35,7 +59,7 @@
     </ul>
     <p><b>历史经验对本轮的限制：</b>提前释放曾减轻局部腿长冲突，同时造成离地和输出权重回归；求解后膝角补偿曾产生约 12.3 cm 锁脚离地和 12.8 cm 接触平面穿透；仅把可达限制挪到弹簧前不能消掉已经发生的越界；旋转插值曾随整套重构撤回，缺少单项成败裁决。下一方案必须说明如何避开这些已知失败条件。</p>
     <p><b>新基线的实际边界：</b>录制 757f243033414fc7b123c97e2fcb0d70 完成 2716/2716 帧，生成 5432 条左右脚记录，属于 logic-locked 基线。此包有 526 条正位置权重目标超出腿长，17 条末端补高超过 5 cm；50 条“着地、路径有效但权重为 0”全部来自作者总权重为 0，不能冒充第四项复现。正式分析有 6 项 MissingEvidence，总分不可用；这份修改前的基线不包含候选或 A/B 结果。</p>
-    <p class="source">新基线：<a href="../../../3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-102323-93327479f6dc4c8fac53734da8169bd4/replay-proof.json">保存的原始 Proof</a> · <a href="../../../3cDemo/Client/3C_Client/Diagnostics/FootAnalysis/e24174bde6ca4e57812bc3681f6ab832/report.md">正式分析报告</a>。上述数据来自修改前的调查基线。随后已修改第四项的两个运行代码文件；候选通过 Unity 编译，并确认 Editor 已加载新版本。候选回放因 Attack 黑板缺少编译声明绑定，角色未注册而停在启动阶段，消费 0/2716 帧；已结束本次等待。更早的表现节奏补采仅留下 51 个姿态帧，未形成完整 Schedule。这些都不算验证通过；目前尚无覆盖原异常的完整 A/B 结果。</p>
+    <p class="source">历史调查基线：<a href="../../../3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-102323-93327479f6dc4c8fac53734da8169bd4/replay-proof.json">保存的原始 Proof</a> · <a href="../../../3cDemo/Client/3C_Client/Diagnostics/FootAnalysis/e24174bde6ca4e57812bc3681f6ab832/report.md">正式分析报告</a>。第四项修改曾通过 Unity 编译，但当时的候选回放因 Attack 黑板缺少编译声明绑定而停在启动阶段，消费 0/2716 帧；更早的表现节奏补采只留下 51 个姿态帧，均不算验证通过。后续完整 2716 帧采样已经成功保存，结果见本节上方的 2026-10-01 审计；这段记录保留历史阻塞原因，不表示当前仍卡在启动阶段。覆盖第四项原始异常的完整骨骼 A/B 仍未完成。</p>
     <p><b>第四项的连续采样函数实验已通过：</b><a href="ik-tests/expired-contact.html">查看同样 100 帧输入的真实旧、新函数对照</a>。历史版重现 27 帧目标缺失，当前版为 0；前 45 帧目标类型与位置一致，53 帧无接触摆腿均正常接管。这是插值前目标交接的证据。最终权重、重新查询的脚掌碰撞和骨骼输出尚未验证，不能据此宣布 Landing / Releasing 伸直消失。后续按两个完整场景规划，见<a href="ik-tests/README.md">场景范围</a>。</p>
   </div></details>
   <section class="detail-body"><p><b>本轮 Releasing 验证边界：</b>正式 EditMode 为 1 个用例、1 个通过；每版核对 368 个原探针，当前输出与原采样逐帧重合，两版预热后的计算分配均为 0 B。冻结前历史版取自 413e931de，当前版保留现有代码。腿长对照固定使用采样髋姿态；未重跑骨盆与腿 IK，23 点向下查询不等于鞋网格连续扫掠。更早的 4107 / 4127 / 4131 硬抬样例仅保留历史记录，本轮未连续重跑。运行时代码本轮未修改。</p></section>

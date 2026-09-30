@@ -1,0 +1,15 @@
+{
+  "baselineCommit": "2c757a422aed0171aa63d0c68bb9407cd7b9d473",
+  "historicalSourcePath": "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseWorldContextAdapter.cs",
+  "historicalSourceSha256": "bf3b373bbc36daae605e9239c124e078bcc42636e6f31bad32bb4bb79ecf5b42",
+  "historicalMethodSha256": "69c4b21a9763e072b051e11489178f5d8d876b84b5757a65586a06e4b37e5071",
+  "historicalAdaptation": "Only instance array field is changed to the explicit array parameter; the branch body comes from git show",
+  "candidateAnimationAssembly": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\bin\\Debug\\ThirdPersonCharacter.Animation.dll",
+  "candidateAnimationAssemblySha256": "3793060104e54e6a0d9ad96daee5fe9782447dfe7fed9152c0fd44a6f470ce1e",
+  "programSha256": "e361fc97466a3dedb906178c73e5c0b84faee739e90dd70058fb8f565588b93d",
+  "actualCopiedAnimationSha256": "3793060104e54e6a0d9ad96daee5fe9782447dfe7fed9152c0fd44a6f470ce1e",
+  "cases": [
+    "live-switch-right",
+    "stored-contact-rotation-right"
+  ]
+}

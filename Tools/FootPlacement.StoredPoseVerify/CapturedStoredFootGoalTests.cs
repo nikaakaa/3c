@@ -26,9 +26,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     public sealed partial class CharacterFootCapturedContactTests
     {
-        public static JObject RunStoredGoalComparison(string inputPath, string sourceResultPath, string resultPath)
+        public static JObject RunStoredGoalComparison(string inputPath, string sourceResultPath, string resultPath, string footVariant)
         {
             Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
+            bool sourceComparison = footVariant == "sources";
             const string scenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
             Scene previous = SceneManager.GetActiveScene();
             Scene scene = SceneManager.GetSceneByPath(scenePath);
@@ -44,6 +45,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ["fixtureSha256"] = Sha256(inputPath), ["sourceResultSha256"] = Sha256(sourceResultPath),
                 ["runtimeCommit"] = Git("rev-parse HEAD")
             };
+            report["footVariant"] = footVariant;
+            report["fixedHipScope"] = "使用录制骨盆之后的原Hip作固定条件指标；录制landingReach反馈保持不变，未重新计算骨盆或腿IK";
             GameObject root = null;
             try
             {
@@ -81,27 +84,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                 }
                 CharacterFootLifecycleContext seed = CapturedPreState(fixture["frames"][0], columns);
+                bool liveSwitch = (ulong)fixture["firstFrame"] == 2192;
+                if (liveSwitch) Assert.That(inputs[0].Weight, Is.Zero, "真实作者关闭帧必须正式清空新旧历史，不能伪造候选旋转前态");
                 var targetProbes = new CharacterFootSoleProbeBuffer();
                 var outputProbes = new CharacterFootSoleProbeBuffer();
                 root = new GameObject("Stored foot Goal comparison") { hideFlags = HideFlags.HideAndDontSave };
-                foreach (bool candidate in new[] { false, true })
+                foreach (bool candidate in sourceComparison ? new[] { false, true } : new[] { footVariant == "rotation-current" })
                 {
+                    bool correctedSource = !sourceComparison || candidate;
                     report["stage"] = candidate ? "current" : "historical";
                     var results = new StoredGoalOutput[inputs.Length];
-                    RunStoredGoals(inputs, in seed, results, candidate, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
+                    RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long start = GC.GetAllocatedBytesForCurrentThread();
-                    RunStoredGoals(inputs, in seed, results, candidate, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
+                    RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long allocated = GC.GetAllocatedBytesForCurrentThread() - start;
                     var rows = new JArray();
                     report[candidate ? "current" : "historical"] = new JObject { ["frames"] = inputs.Length, ["allocatedBytes"] = allocated, ["rows"] = rows };
                     float maxError = 0f, maxRotationError = 0f, maxRotationStep = 0f, maxPenetration = 0f, maxExtraRotationStep = 0f;
+                    float maxPositionStep = 0f, maxHorizontalStep = 0f, maxExtraPositionStep = 0f, maxReach = 0f, overreachDuration = 0f;
+                    float maxRelativeCorrectionStep = 0f;
+                    int overreachFrames = 0;
                     int observedFinalFrames = 0;
                     Quaternion previousRotation = inputs[0].Animated.AnkleRotation;
+                    Quaternion previousRelativeCorrection = Quaternion.identity;
                     for (int i = 0; i < results.Length; i++)
                     {
                         StoredGoalInput input = inputs[i];
                         StoredGoalOutput value = results[i];
-                        Vector3 recordedSole = input.Recorded.V("foot/foot-motion/core/original-sole") + input.Recorded.V("foot/foot-motion/output-stages/final-effective-correction");
+                        Vector3 recordedSole = input.Recorded.V("foot/resolved/core/effective-sole");
                         float error = Vector3.Distance(recordedSole, value.Output.Pose.EffectiveSole);
                         float rotationError = Quaternion.Angle(input.Recorded.Q("foot/resolved/core/effective-rotation"), value.Output.Pose.EffectiveRotation);
                         float rotationStep = i > 0 ? Quaternion.Angle(previousRotation, value.Output.Pose.EffectiveRotation) : 0f;
@@ -109,7 +119,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         maxRotationError = Mathf.Max(maxRotationError, rotationError);
                         maxRotationStep = Mathf.Max(maxRotationStep, rotationStep);
                         float originalRotationStep = i > 0 ? Quaternion.Angle(inputs[i - 1].Animated.AnkleRotation, input.Animated.AnkleRotation) : 0f;
+                        Quaternion relativeCorrection = (value.Output.Pose.EffectiveRotation * Quaternion.Inverse(input.Animated.AnkleRotation)).normalized;
+                        float relativeCorrectionStep = i > 0 ? Quaternion.Angle(previousRelativeCorrection, relativeCorrection) : 0f;
+                        maxRelativeCorrectionStep = Mathf.Max(maxRelativeCorrectionStep, relativeCorrectionStep);
                         maxExtraRotationStep = Mathf.Max(maxExtraRotationStep, rotationStep - originalRotationStep);
+                        float positionStep = i > 0 ? Vector3.Distance(results[i - 1].Output.Pose.EffectiveSole, value.Output.Pose.EffectiveSole) : 0f;
+                        float horizontalStep = i > 0 ? Vector3.ProjectOnPlane(value.Output.Pose.EffectiveSole - results[i - 1].Output.Pose.EffectiveSole, Vector3.up).magnitude : 0f;
+                        float originalPositionStep = i > 0 ? Vector3.Distance(
+                            CharacterFootConstraintMath.ResolveOriginalSole(inputs[i - 1].Animated),
+                            CharacterFootConstraintMath.ResolveOriginalSole(input.Animated)) : 0f;
+                        float reach = Vector3.Distance(input.Animated.HipPosition, value.Output.Pose.EffectiveAnkle) / input.LegLength;
+                        maxPositionStep = Mathf.Max(maxPositionStep, positionStep);
+                        maxHorizontalStep = Mathf.Max(maxHorizontalStep, horizontalStep);
+                        maxExtraPositionStep = Mathf.Max(maxExtraPositionStep, positionStep - originalPositionStep);
+                        maxReach = Mathf.Max(maxReach, reach);
+                        if (reach > 1f) { overreachFrames++; overreachDuration += input.Delta; }
                         if (value.FinalSupport.Available)
                         {
                             observedFinalFrames++;
@@ -118,31 +142,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         rows.Add(new JObject
                         {
                             ["frame"] = input.Sequence, ["dt"] = input.Delta, ["state"] = value.Motion.ConstraintState.ToString(),
-                            ["contact"] = candidate ? input.CurrentStep.Contact : input.HistoricalStep.Contact,
-                            ["responseSourceLineage"] = candidate ? input.CurrentLineage.ToString() : input.HistoricalLineage.ToString(),
+                            ["contact"] = correctedSource ? input.CurrentStep.Contact : input.HistoricalStep.Contact,
+                            ["lockWeight"] = correctedSource ? input.CurrentStep.LockWeight : input.HistoricalStep.LockWeight,
+                            ["responseSourceLineage"] = correctedSource ? input.CurrentLineage.ToString() : input.HistoricalLineage.ToString(),
                             ["authorWeight"] = input.Weight, ["positionWeight"] = value.Output.GoalTarget.PositionWeight,
                             ["rotationWeight"] = value.Output.GoalTarget.RotationWeight,
                             ["sole"] = Vec(value.Output.Pose.EffectiveSole), ["rotationStepDegrees"] = i > 0 ? new JValue(rotationStep) : JValue.CreateNull(),
+                            ["ankle"] = Vec(value.Output.Pose.EffectiveAnkle), ["fixedHip"] = Vec(input.Animated.HipPosition),
+                            ["originalKnee"] = Vec(input.Animated.KneePosition),
+                            ["originalAnkle"] = Vec(input.RootPosition + input.RootRotation * input.Recorded.V("leg/leg-pose/original-ankle")),
+                            ["sourceAnkle"] = Vec(input.Animated.AnklePosition),
                             ["rotationSpeedDegreesPerSecond"] = i > 0 ? new JValue(rotationStep / input.Delta) : JValue.CreateNull(),
                             ["originalRotationStepDegrees"] = i > 0 ? new JValue(originalRotationStep) : JValue.CreateNull(),
                             ["extraRotationStepDegrees"] = i > 0 ? new JValue(rotationStep - originalRotationStep) : JValue.CreateNull(),
+                            ["animationRelativeCorrectionStepDegrees"] = i > 0 ? new JValue(relativeCorrectionStep) : JValue.CreateNull(),
+                            ["animationRelativeCorrectionSpeedDegreesPerSecond"] = i > 0 ? new JValue(relativeCorrectionStep / input.Delta) : JValue.CreateNull(),
+                            ["soleStepMeters"] = i > 0 ? new JValue(positionStep) : JValue.CreateNull(),
+                            ["horizontalSoleStepMeters"] = i > 0 ? new JValue(horizontalStep) : JValue.CreateNull(),
+                            ["soleSpeedMetersPerSecond"] = i > 0 ? new JValue(positionStep / input.Delta) : JValue.CreateNull(),
+                            ["originalSoleStepMeters"] = i > 0 ? new JValue(originalPositionStep) : JValue.CreateNull(),
+                            ["extraSoleStepMeters"] = i > 0 ? new JValue(positionStep - originalPositionStep) : JValue.CreateNull(),
                             ["rotation"] = new JArray(value.Output.Pose.EffectiveRotation.x, value.Output.Pose.EffectiveRotation.y, value.Output.Pose.EffectiveRotation.z, value.Output.Pose.EffectiveRotation.w),
                             ["recordedSoleError"] = error, ["recordedRotationErrorDegrees"] = rotationError,
                             ["finalSupportAvailable"] = value.FinalSupport.Available,
                             ["finalPenetration"] = value.FinalSupport.Available ? new JValue(value.FinalSupport.RequiredDisplacement) : JValue.CreateNull(),
                             ["finalAcceptedProbes"] = value.FinalSupport.AcceptedSampleCount,
                             ["hasContactAnchor"] = value.HasAnchor, ["contactAnchor"] = Vec(value.Anchor),
-                            ["fixedHipReachRatio"] = Vector3.Distance(input.Animated.HipPosition, value.Output.Pose.EffectiveAnkle) / input.LegLength,
+                            ["fixedHipReachRatio"] = reach,
                             ["recordedLandingReachFeedback"] = input.RecordedLandingReach
                         });
+#if ROTATION_CANDIDATE
+                        rows[rows.Count - 1]["hasRotationCorrection"] = value.HasRotationCorrection;
+                        rows[rows.Count - 1]["rotationCorrection"] = new JArray(value.RotationCorrection.x, value.RotationCorrection.y, value.RotationCorrection.z, value.RotationCorrection.w);
+                        if (input.Recorded.F("foot/resolved/core/position-weight") == 0f)
+                        {
+                            Assert.That(value.HasRotationCorrection, Is.False, "真实无输出帧必须清空旋转修正历史");
+                            Assert.That(value.Output.GoalTarget.RotationWeight, Is.Zero);
+                        }
+#endif
                         Assert.That(value.Output.GoalTarget.PositionWeight, Is.EqualTo(input.Recorded.F("foot/resolved/core/position-weight")),
                             "原本无有效 Goal 的帧需保留零权重；有有效 Goal 的帧保留作者权重：" + input.Sequence);
                         Assert.That(value.GoalError, Is.LessThan(.0001f));
+                        Assert.That(value.GoalRotationError, Is.LessThan(.1f), "最终查询必须重现正式作者加权旋转");
                         if (candidate && value.FinalSupport.Available)
                             Assert.That(value.FinalSupport.RequiredDisplacement, Is.LessThanOrEqualTo(.0002f), "有查询命中的候选最终脚掌不得新增正穿透");
                         if (candidate && value.Output.GoalTarget.PositionWeight > 0f)
                             Assert.That(value.FinalSupport.Available, Is.True, "实际输出 Goal 的候选帧必须取得最终脚掌净空证据");
                         previousRotation = value.Output.Pose.EffectiveRotation;
+                        previousRelativeCorrection = relativeCorrection;
                     }
                     report[candidate ? "current" : "historical"] = new JObject
                     {
@@ -152,8 +199,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["maximumFinalPenetration"] = observedFinalFrames > 0 ? new JValue(maxPenetration) : JValue.CreateNull(),
                         ["maximumExtraRotationStepDegrees"] = maxExtraRotationStep, ["rows"] = rows
                     };
+                    var summary = (JObject)report[candidate ? "current" : "historical"];
+                    summary["maximumSoleStepMeters"] = maxPositionStep;
+                    summary["maximumHorizontalSoleStepMeters"] = maxHorizontalStep;
+                    summary["maximumExtraSoleStepMeters"] = maxExtraPositionStep;
+                    summary["maximumFixedHipReachRatio"] = maxReach;
+                    summary["fixedHipOverreachFrames"] = overreachFrames;
+                    summary["fixedHipOverreachDurationSeconds"] = overreachDuration;
+                    summary["maximumAnimationRelativeCorrectionStepDegrees"] = maxRelativeCorrectionStep;
                     Assert.That(allocated, Is.Zero);
-                    if (!candidate)
+                    if (!candidate && (sourceComparison || liveSwitch))
                     {
                         Assert.That(maxError, Is.LessThan(.0005f), "基线必须先重现原脚位");
                         Assert.That(maxRotationError, Is.LessThan(.1f), "基线必须先重现原有效旋转");
@@ -161,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 var historical = (JObject)report["historical"];
                 var current = (JObject)report["current"];
-                if (side == CharacterFootSide.Left)
+                if (sourceComparison && side == CharacterFootSide.Left)
                 {
                     foreach (JObject row in current["rows"])
                         if ((ulong)row["frame"] >= 1178 && (ulong)row["frame"] <= 1180)
@@ -173,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Assert.That((float)current["maximumRotationStepDegrees"], Is.LessThan((float)historical["maximumRotationStepDegrees"]), "候选完整窗口必须减少错误旋转，不能只移动异常帧");
                     Assert.That((float)current["maximumExtraRotationStepDegrees"], Is.LessThan((float)historical["maximumExtraRotationStepDegrees"]), "候选必须减少超出原动画的额外有效旋转");
                 }
-                else
+                else if (sourceComparison)
                 {
                     JObject beforeStored = (JObject)((JArray)current["rows"]).Single(x => (ulong)x["frame"] == 893);
                     var anchor = beforeStored["contactAnchor"];
@@ -187,6 +242,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         }
                     JObject released = (JObject)((JArray)current["rows"]).Single(x => (ulong)x["frame"] == 954);
                     Assert.That((string)released["state"], Is.Not.EqualTo("Locked"), "Live 接管后按实际输入释放");
+                }
+                if (!sourceComparison && side == CharacterFootSide.Left)
+                    foreach (JObject row in report[footVariant == "rotation-current" ? "current" : "historical"]["rows"])
+                        if ((ulong)row["frame"] >= 1178 && (ulong)row["frame"] <= 1180)
+                        {
+                            Assert.That((string)row["state"], Is.EqualTo("Swing"));
+                            Assert.That((bool)row["hasContactAnchor"], Is.False);
+                        }
+                if (!sourceComparison && (ulong)fixture["firstFrame"] == 874)
+                {
+                    var rows = (JArray)report[footVariant == "rotation-current" ? "current" : "historical"]["rows"];
+                    JObject anchorFrame = (JObject)rows.Single(x => (ulong)x["frame"] == 893);
+                    var anchor = anchorFrame["contactAnchor"];
+                    foreach (JObject row in rows)
+                        if ((ulong)row["frame"] >= 894 && (ulong)row["frame"] <= 898)
+                        {
+                            Assert.That((bool)row["hasContactAnchor"], Is.True);
+                            var point = row["contactAnchor"];
+                            Assert.That(Vector3.Distance(new Vector3((float)anchor[0], (float)anchor[1], (float)anchor[2]),
+                                new Vector3((float)point[0], (float)point[1], (float)point[2])), Is.LessThanOrEqualTo(.0002f));
+                        }
+                    Assert.That((bool)rows.Single(x => (ulong)x["frame"] == 954)["hasContactAnchor"], Is.False);
                 }
                 report["status"] = "passed";
                 report["stage"] = "complete";
@@ -213,6 +290,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootSwingMotionResult Motion;
             internal CharacterFootCurrentSupportObservation FinalSupport;
             internal float GoalError;
+            internal float GoalRotationError;
+#if ROTATION_CANDIDATE
+            internal bool HasRotationCorrection;
+            internal Quaternion RotationCorrection;
+#endif
             internal bool HasAnchor;
             internal Vector3 Anchor;
         }
@@ -245,14 +327,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     default, input.Grounded, root, in query, targetProbes, outputProbes);
                 CharacterFootLifecycle.Evaluate(ref context, in evaluation, out var receipt);
                 CharacterResolvedFootResult output = receipt.Complete(ref context, input.RecordedLandingReach, out var motion);
-                Vector3 goal = root.TransformPoint(output.GoalTarget.ComponentPosition);
+                Vector3 goal = Vector3.Lerp(input.Animated.AnklePosition,
+                    root.TransformPoint(output.GoalTarget.ComponentPosition), output.GoalTarget.PositionWeight);
                 Quaternion rotation = root.rotation * output.GoalTarget.ComponentRotation;
-                var finalContacts = input.Animated.ResolveSoleContacts(goal,
-                    Quaternion.Slerp(input.Animated.AnkleRotation, rotation, output.GoalTarget.RotationWeight));
+                Quaternion effectiveRotation = Quaternion.Slerp(input.Animated.AnkleRotation, rotation, output.GoalTarget.RotationWeight);
+                var finalContacts = input.Animated.ResolveSoleContacts(goal, effectiveRotation);
                 var final = query.Query(input.Sequence, input.Completion, revision, input.Side, Vector3.up,
                     input.Grounded, in finalContacts, input.FinalProbes);
                 results[i] = new StoredGoalOutput { Output = output, Motion = motion, FinalSupport = final,
-                    GoalError = Vector3.Distance(goal, output.Pose.EffectiveAnkle), HasAnchor = context.Contact.HasContact, Anchor = context.Contact.Anchor };
+                    GoalError = Vector3.Distance(goal, output.Pose.EffectiveAnkle),
+                    GoalRotationError = Quaternion.Angle(effectiveRotation, output.Pose.EffectiveRotation),
+#if ROTATION_CANDIDATE
+                    HasRotationCorrection = context.Interpolation.HasRotationCorrection,
+                    RotationCorrection = context.Interpolation.RotationCorrection,
+#endif
+                    HasAnchor = context.Contact.HasContact, Anchor = context.Contact.Anchor };
             }
         }
 

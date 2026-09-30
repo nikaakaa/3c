@@ -3,6 +3,7 @@ import csv
 import hashlib
 import json
 import subprocess
+import argparse
 
 ROOT = Path(__file__).resolve().parents[2]
 FOOT = ROOT / '3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-172333-3cb49fba52604669bfae7fe6eda3aabc'
@@ -40,7 +41,16 @@ for row in main:
             contact_captures.append({'frame': frame, 'side': side, 'previousContact': prev[PREFIX + 'formal-input/contact'], 'previousLockWeight': prev[PREFIX + 'formal-input/lock-weight'], 'previousSource': prev[PREFIX + 'input/foot-step-observation/source-identity'], 'sourceRows': [dict(zip(source_names, s)) for s in sources[(row['sample.lineage.high'], row['sample.lineage.low'])]]})
     previous[side] = row
 
-scenarios = {'stored-no-contact-left': ('left', 1174, 1186), 'stored-contact-right': ('right', 889, 958)}
+parser = argparse.ArgumentParser()
+parser.add_argument('--scene', choices=['stored', 'stored-rotation', 'live-switch', 'releasing', 'step-edge'], default='stored')
+scene = parser.parse_args().scene
+scenarios = {
+    'stored': {'stored-no-contact-left': ('left', 1174, 1186), 'stored-contact-right': ('right', 889, 958)},
+    'stored-rotation': {'stored-contact-rotation-right': ('right', 874, 958)},
+    'live-switch': {'live-switch-right': ('right', 2192, 2214)},
+    'releasing': {'releasing-right': ('right', 2035, 2046)},
+    'step-edge': {'step-edge-left': ('left', 2537, 2550)}
+}[scene]
 columns = {'main': [k.removeprefix(PREFIX) for k in main[0] if k.startswith(PREFIX)], 'sources': source_names}
 main_keys = [PREFIX + key for key in columns['main']]
 by_frame_side = {(int(row[frame_key]), row['sample.dimension'].rsplit('/', 1)[1]): row for row in main}

@@ -50,7 +50,7 @@ static class Program
                     "历史输入样本不一致：" + input.Frame);
                 if (value.Kind == AnimationPoseContributionKind.Stored)
                 {
-                    Check(value.Sample.Contact == frames[0].RecordedStep.Contact,
+                    Check(value.Sample.Contact == current[i - 1].Sample.Contact,
                         "Stored 未保持所捕获姿态的接触：" + input.Frame);
                     Check(value.Sample.ToeSpeed == 0f && !value.Sample.HasPredictiveLanding,
                         "Stored 不应推进脚趾速度与未来落地：" + input.Frame);

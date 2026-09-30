@@ -102,6 +102,29 @@ pwsh -File Tools/FootPlacement.FunctionVerify/run.ps1 -UnityEditorData "C:/Progr
 
 函数实验结果：[左脚 Goal](stored-no-contact-left-goal.json)、[右脚 Goal](stored-contact-right-goal.json)。复现用 `pwsh -File Tools/FootPlacement.StoredPoseVerify/run_native_goal.ps1 -UnityInstance e852139597e42532 -ResultDirectory <独立结果目录>`；入口先确认项目与非Play/非编译，再用 Unity 自带 Roslyn 编译真实源码并在实际 PhysicsScene 执行，恢复活动场景、删除自身临时对象并仅关闭自身加载的场景。2026-10-01 完整导入后仍有其它任务的 Float32Host 编译错误，旋转新状态尚未加载，正式 Runner 未执行。HTML 已检查83帧切换、播放与数值曲线；浏览器视觉验收未完成。23点查询不是鞋网格连续扫掠；固定髋超伸仍增加，不能称为腿 IK 或膝盖伸直已修复。
 
+## Live 连续旋转候选（2026-10-01，固定条件有业务回归）
+
+本轮已保存 2192～2214 共23帧的完整函数对照，历史 `552f13083`，候选 `15894ee7b`。2192 是录制的作者零权重，真实执行后清空新旋转历史；2193～2201恢复0～1预算，2197第一次接触，2204～2206锁权重回0，2207再次接触。部分预算下的最终 ankle 与 rotation 均按正式 Goal 权重加权后重新查询，并与正式 EffectiveAnkle/EffectiveRotation核对。没有置零后直接从2200假装拥有真实候选历史。
+
+初次基线使用诊断的 `final-effective-correction` 作为最终位移，暴露作者部分权重时该字段尚未加权。入口已统一消费正式 `resolved/effective-sole`；历史版23帧位置和有效旋转误差均0。类型绑定则同时编译11份实际生产源码，包括新状态契约和相关消费者，引用真实Unity程序集；没有只复制Lifecycle继续接旧state，也没有改写算法绕过绑定。
+
+| 23帧完整窗口指标 | 历史 | 旋转候选 |
+| --- | --- | --- |
+| 最大有效旋转步长 | 37.06785° | 25.12180° |
+| 最大动画相对修正步长 | 31.18009° | 9.07650° |
+| 2207有效旋转步长 | 34.32866° | 12.23456° |
+| 最大脚掌步长 | 0.163714m | 0.163714m |
+| 23点实际查询覆盖 | 23/23帧 | 23/23帧 |
+| 最大正穿透 / 暖机分配 | 0m / 0B | 0m / 0B |
+| 固定录制骨盆后髋的最大伸展比 | 98.38907%（2210） | 99.81759%（2211） |
+| 固定髋超伸时间 | 0s | 0s |
+
+单版函数实验均完成，但跨版本业务断言为**失败**：候选没有保住逐帧固定髋弯曲余量，不能用未超1判通过。原动画2211膝弯曲约25.828°，同骨段长度下固定髋的候选Goal所需弯曲角更小；该几何量没有求解FBBIK。23帧尾部仍Releasing并有锚点，稳定/退出阶段与真实双脚骨盆反馈尚待继续，不能截掉后段宣称修复完成。
+
+旋转候选的Stored回归另保存：左1174～1186无接触捕获仍为Swing且无锚点；右侧从真实无Goal的874延长到958，正式清空旋转历史后跨过真实接触、Stored捕获与954交还Live。两段各13/85帧、两版暖机均0B，候选查询无新增正穿透。右侧同帧固定髋弯曲余量也有回归；已有100.331926%的最大伸展比与5帧超伸均保留，未称为伸直修复。原83帧18e来源修正证据保持独立。
+
+见[本场景HTML](live-rotation-response.html)、[完整跨版本断言](rotation-business-comparison.json)、[装配失败](rotation-attempts.json)、[来源函数身份](rotation-source-provenance.json)。原生复现：`run_native_goal.ps1 -Mode rotation -UnityInstance e852139597e42532 -ResultDirectory <独立目录>`，然后对同一目录调用 `compare_rotation_reports.py --results <目录>`。源代码、类型与程序集SHA均保存在比较JSON，正式Runner仍未执行。HTML只完成DOM数值与交互检查，浏览器视觉验收未完成。
+
 ## 后续场景范围
 
 按用户指出的 Landing / Releasing 伸直组织两个完整场景，不按私有函数或字段拆测试；完成一段后统一维护其 HTML 与提交。

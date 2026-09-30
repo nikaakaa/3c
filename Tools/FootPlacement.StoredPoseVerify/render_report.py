@@ -22,6 +22,8 @@ for name in ['Program.cs','prepare.py','prepare_inputs.py','run.ps1']:
     path = Path(__file__).with_name(name)
     manifest['sourceHashes'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
 data = {'provenance': manifest, 'cases': []}
+native_manifest = EVIDENCE / 'stored-native-goal-provenance.json'
+data['nativeProvenance'] = json.loads(native_manifest.read_text(encoding='utf-8')) if native_manifest.exists() else None
 for name in ['stored-no-contact-left','stored-contact-right']:
     functions = json.loads(EVIDENCE.joinpath(name+'-functions.json').read_text(encoding='utf-8'))
     goal_path = EVIDENCE / (name+'-goal.json')

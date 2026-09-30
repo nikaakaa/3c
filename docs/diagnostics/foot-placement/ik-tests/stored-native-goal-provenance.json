@@ -1,0 +1,175 @@
+{
+  "sources": {
+    "3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Editor\\CharacterPipeline\\Analysis\\FootPlacement\\CharacterFootCapturedContactTests.cs": "e2fc209299bf66d83c7afc912899a85aea014defea9905328a3e4ced9414d4b3",
+    "3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Editor\\CharacterPipeline\\Analysis\\FootPlacement\\CharacterFootCapturedReleaseTests.cs": "453668e01428a727446b614009da7daf77c7b0d8a513de7e4af0d0726121469e",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\CapturedStoredFootGoalTests.cs": "480955f6c44e411582fe987ba4b0fb4da216965928e910b0ae81ed0106d80883",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootLifecycle.cs": "d5ba83fbac44a33c0c30e83b586dcead6e7b6b138ed75541a8ec9a046bc7063c",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootInterpolationRuntime.cs": "e5aa67e33319a961f51bd8d3df513de2d6e2f7aa5a5857fee194d6026720dc59",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootHardConstraintResolver.cs": "2601cbadb54e86d69008f176bf3e31191c56b94838dcd43d119d4031010bfcdf",
+    "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootLandingRuntime.cs": "00f176004cbd8675f64d5c1c7b98ccdce9ebfd060d04d4bd3a11ebb39f502676"
+  },
+  "bindings": {
+    "mscorlib.dll": "98c9b62133db5dd33b22bc6aab6f28e4f04f5b5be6559b28ba5c2738241434d0",
+    "System.Core.dll": "f1b33eb1ae8522edcf9ba4c2b85f532d4bab68bfa2a51527264bb61619bed4ea",
+    "System.dll": "ace2dd6a7d534b581bf4a9d316e743d64508ca2135db73dbff0ddb9365fc454e",
+    "netstandard.dll": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5",
+    "UnityEngine.CoreModule.dll": "daa307d76ab533b27110ed3c646536457620bdcb82e81dfeacd3b790cacec4b7",
+    "UnityEngine.PhysicsModule.dll": "09fed865ec906d8f20e078846b10b57bb569fb4f67efe90833ba99f0971b90da",
+    "UnityEngine.AnimationModule.dll": "9718f628ba47339dd7298aa17220b9febed008694e2bb984d474901802596fda",
+    "UnityEditor.CoreModule.dll": "c32e7b612c509e0069f9456f8d7508f67ccd134c8f8a49a0b466164608a912fa",
+    "ThirdPersonClient.Runtime.dll": "60ef07189089bc3b098e18389d55a59a7681cc857a432e7ffb6da1993769ce1c",
+    "ThirdPersonCharacter.Animation.dll": "f74078d8602b64c44e18ac0d54da65fc0eb7505caadad9e090b29af217d78d4f",
+    "ThirdPersonSimulation.Core.dll": "a5723200b0e1f5d8a57289d6c37d7241cd7d37a19936b2b96d6866904fbe0fdf",
+    "Unity.Collections.dll": "9c8770662ec75eca70326461fb40ed222b5c1bbfec8cd1ec0ad2fee3d0641d51",
+    "Newtonsoft.Json.dll": "7292d3eb508652d14726749dd27094f2d481aeccf2db6427b62f68a71460897e",
+    "nunit.framework.dll": "d3fe5ce66fbad51644d8fa2add8015cc0c1af95774fb3778f725e05785257d3f"
+  },
+  "runtimeSourceCommit": "18e1f2a4f",
+  "executedEntrySha256": "480955f6c44e411582fe987ba4b0fb4da216965928e910b0ae81ed0106d80883",
+  "executionLayer": "Unity independent true source functions; not formal Test Runner",
+  "authorWeightRange": [
+    0,
+    1
+  ],
+  "executedOutputWeights": [
+    0,
+    1
+  ],
+  "frozenGoalRuntimeScope": "Same four production Foot sources at18e1f2a4f for both source-input variants",
+  "attempts": [
+    {
+      "name": "native-goal-no-contact-prepare-failure.json",
+      "sha256": "2259e07aced9505b2597dfbab89d6b6d587b1bbb020809b2ff7db70a359e879b",
+      "result": {
+        "status": "failed",
+        "stage": "prepare",
+        "utc": "2026-09-30T19:55:28.9733755Z",
+        "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+        "scope": "固定原混合动画脚姿势，预测/路径/骨盆可达性为录制边界输入；新 FootMotion 接入 Lifecycle 至实际 Goal 查询；未执行完整 FBBIK",
+        "editorCompilationFailed": true,
+        "fixtureSha256": "120e0bb934d42897706040cfbed6344a5e3e0c393c784043a9e8a181aaae9b0c",
+        "sourceResultSha256": "b4ed2c61df246d51e69e4c25492f00a30ada08cb79b053a5566517116151df95",
+        "runtimeCommit": "409b40b8a4543496fdfa196d29e739e4d8690600",
+        "capture": "20260930-172333-3cb49fba52604669bfae7fe6eda3aabc",
+        "failure": "System.FormatException: Input string was not in a correct format.\r\n  at System.Number.ThrowOverflowOrFormatException (System.Boolean overflow, System.String overflowResourceKey) [0x0001a] in <1071a2cb0cb3433aae80a793c277a048>:0 \r\n  at System.Number.ParseSingle (System.ReadOnlySpan`1[T] value, System.Globalization.NumberStyles styles, System.Globalization.NumberFormatInfo info) [0x00071] in <1071a2cb0cb3433aae80a793c277a048>:0 \r\n  at System.Single.Parse (System.String s, System.IFormatProvider provider) [0x0001b] in <1071a2cb0cb3433aae80a793c277a048>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+Row.F (System.String key) [0x0000c] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+Row.V (System.String key) [0x0000c] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.Prediction (ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+Row r, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide side) [0x0004e] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.StoredRecordedPrediction (ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+Row r, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide side) [0x000c0] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalInput..ctor (Newtonsoft.Json.Linq.JToken captured, Newtonsoft.Json.Linq.JObject columns, Newtonsoft.Json.Linq.JToken sourceResult, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootPlacementProfile profile, System.Single legLength, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide side) [0x000df] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+<>c__DisplayClass39_1.<RunStoredGoalComparison>b__2 (Newtonsoft.Json.Linq.JToken f, System.Int32 i) [0x00049] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 \r\n  at System.Linq.Enumerable+<SelectIterator>d__154`2[TSource,TResult].MoveNext () [0x0005a] in <ea489521390f48908a7ce45cb17a6848>:0 \r\n  at System.Collections.Generic.LargeArrayBuilder`1[T].AddRange (System.Collections.Generic.IEnumerable`1[T] items) [0x0003d] in <ea489521390f48908a7ce45cb17a6848>:0 \r\n  at System.Collections.Generic.EnumerableHelpers.ToArray[T] (System.Collections.Generic.IEnumerable`1[T] source) [0x00033] in <ea489521390f48908a7ce45cb17a6848>:0 \r\n  at System.Linq.Enumerable.ToArray[TSource] (System.Collections.Generic.IEnumerable`1[T] source) [0x00018] in <ea489521390f48908a7ce45cb17a6848>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.RunStoredGoalComparison (System.String inputPath, System.String sourceResultPath, System.String resultPath) [0x002f8] in <aa186d9e3e3046c69e3dfe73850d4adc>:0 "
+      }
+    },
+    {
+      "name": "native-goal-no-contact-author-weight-failure.json",
+      "sha256": "f8ad1dea785a1520ed3596824962e9b782b94cd6f1d2f87f54cbc2ccfba1110b",
+      "result": {
+        "status": "failed",
+        "stage": "historical",
+        "utc": "2026-09-30T19:58:14.7518431Z",
+        "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+        "scope": "固定原混合动画脚姿势，预测/路径/骨盆可达性为录制边界输入；新 FootMotion 接入 Lifecycle 至实际 Goal 查询；未执行完整 FBBIK",
+        "editorCompilationFailed": true,
+        "fixtureSha256": "120e0bb934d42897706040cfbed6344a5e3e0c393c784043a9e8a181aaae9b0c",
+        "sourceResultSha256": "b4ed2c61df246d51e69e4c25492f00a30ada08cb79b053a5566517116151df95",
+        "runtimeCommit": "409b40b8a4543496fdfa196d29e739e4d8690600",
+        "capture": "20260930-172333-3cb49fba52604669bfae7fe6eda3aabc",
+        "failure": "NUnit.Framework.AssertionException:   Expected: 1.0f\r\n  But was:  0.0f\r\n\r\n  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <956b82cfdef641c6bc6a0e5b19798f05>:0 \r\n  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression) [0x00000] in <956b82cfdef641c6bc6a0e5b19798f05>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.RunStoredGoalComparison (System.String inputPath, System.String sourceResultPath, System.String resultPath) [0x00673] in <d8d897e6cfe14216984c164611f99340>:0 "
+      }
+    },
+    {
+      "name": "native-goal-no-contact-unavailable-query-failure.json",
+      "sha256": "04062b5e3a3a8f3607f5268ed54034160eaf2e8e2b2492c462dab2fb91c2cf69",
+      "result": {
+        "status": "failed",
+        "stage": "historical",
+        "utc": "2026-09-30T20:03:14.9517381Z",
+        "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+        "scope": "固定原混合动画脚姿势，预测/路径/骨盆可达性为录制边界输入；新 FootMotion 接入 Lifecycle 至实际 Goal 查询；未执行完整 FBBIK",
+        "editorCompilationFailed": true,
+        "fixtureSha256": "120e0bb934d42897706040cfbed6344a5e3e0c393c784043a9e8a181aaae9b0c",
+        "sourceResultSha256": "b4ed2c61df246d51e69e4c25492f00a30ada08cb79b053a5566517116151df95",
+        "runtimeCommit": "409b40b8a4543496fdfa196d29e739e4d8690600",
+        "capture": "20260930-172333-3cb49fba52604669bfae7fe6eda3aabc",
+        "historical": {
+          "frames": 13,
+          "allocatedBytes": 0,
+          "rows": [
+            {
+              "frame": 1174,
+              "dt": 0.0166666675,
+              "state": "Swing",
+              "contact": 0.0,
+              "sourceIdentity": "cb605087e4d240338a34440d3417e35c",
+              "authorWeight": 1.0,
+              "positionWeight": 0.0,
+              "rotationWeight": 0.0,
+              "sole": [
+                26.211338,
+                0.5931395,
+                -5.23917675
+              ],
+              "rotationStepDegrees": null,
+              "rotationSpeedDegreesPerSecond": null,
+              "rotation": [
+                -0.83719784,
+                0.210284516,
+                0.3595203,
+                -0.354436755
+              ],
+              "recordedSoleError": 0.0,
+              "recordedRotationErrorDegrees": 0.0,
+              "finalPenetration": 0.0,
+              "finalAcceptedProbes": 0,
+              "hasContactAnchor": false,
+              "contactAnchor": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "fixedHipReachRatio": 0.473645478
+            }
+          ]
+        },
+        "failure": "NUnit.Framework.AssertionException:   最终 Goal 无查询命中不能算安全\r\n  Expected: True\r\n  But was:  False\r\n\r\n  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <956b82cfdef641c6bc6a0e5b19798f05>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.RunStoredGoalComparison (System.String inputPath, System.String sourceResultPath, System.String resultPath) [0x00a37] in <f5981d6e9d9b4640886f8af7ad60d8dc>:0 "
+      }
+    }
+  ],
+  "reproductionEntryBindings": {
+    "runtimeSourceCommit": "18e1f2a4f",
+    "helperCommit": "409b40b8a",
+    "sources": {
+      "Tools\\FootPlacement.StoredPoseVerify\\CapturedStoredFootGoalTests.cs": "31693e75dbbf4714c185e2adb9cb0261fcab138fd6fb584ef6774e5d13bc9d4a",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\native-helpers\\CharacterFootCapturedContactTests.cs": "e2fc209299bf66d83c7afc912899a85aea014defea9905328a3e4ced9414d4b3",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\native-helpers\\CharacterFootCapturedReleaseTests.cs": "8ad7b484192bef979a46866b2c2b258af5595da3f06c4f7ccf9f7f41f66f2287",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootLifecycle.cs": "d5ba83fbac44a33c0c30e83b586dcead6e7b6b138ed75541a8ec9a046bc7063c",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootInterpolationRuntime.cs": "e5aa67e33319a961f51bd8d3df513de2d6e2f7aa5a5857fee194d6026720dc59",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootHardConstraintResolver.cs": "2601cbadb54e86d69008f176bf3e31191c56b94838dcd43d119d4031010bfcdf",
+      "3cDemo\\Client\\3C_Client\\Temp\\FootStoredPoseFunctions\\goal-runtime-18e1f2a4f\\CharacterFootLandingRuntime.cs": "00f176004cbd8675f64d5c1c7b98ccdce9ebfd060d04d4bd3a11ebb39f502676"
+    },
+    "bindings": {
+      "mscorlib.dll": "98c9b62133db5dd33b22bc6aab6f28e4f04f5b5be6559b28ba5c2738241434d0",
+      "System.Core.dll": "f1b33eb1ae8522edcf9ba4c2b85f532d4bab68bfa2a51527264bb61619bed4ea",
+      "System.dll": "ace2dd6a7d534b581bf4a9d316e743d64508ca2135db73dbff0ddb9365fc454e",
+      "netstandard.dll": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5",
+      "UnityEngine.CoreModule.dll": "daa307d76ab533b27110ed3c646536457620bdcb82e81dfeacd3b790cacec4b7",
+      "UnityEngine.PhysicsModule.dll": "09fed865ec906d8f20e078846b10b57bb569fb4f67efe90833ba99f0971b90da",
+      "UnityEngine.AnimationModule.dll": "9718f628ba47339dd7298aa17220b9febed008694e2bb984d474901802596fda",
+      "UnityEditor.CoreModule.dll": "c32e7b612c509e0069f9456f8d7508f67ccd134c8f8a49a0b466164608a912fa",
+      "ThirdPersonClient.Runtime.dll": "2afe305a4f751fa4b68657f3506120be29776e87f95035b0a9928e42da457f4e",
+      "ThirdPersonCharacter.Animation.dll": "36841a318ef54e96b74b449155a130f22e03db62a3b0ab35f149d424372e4112",
+      "ThirdPersonSimulation.Core.dll": "6550438bb2589fc645a611034b069d2f993a06239c11ffc2ba426eacbd335c33",
+      "Unity.Collections.dll": "9c8770662ec75eca70326461fb40ed222b5c1bbfec8cd1ec0ad2fee3d0641d51",
+      "Newtonsoft.Json.dll": "7292d3eb508652d14726749dd27094f2d481aeccf2db6427b62f68a71460897e",
+      "nunit.framework.dll": "d3fe5ce66fbad51644d8fa2add8015cc0c1af95774fb3778f725e05785257d3f"
+    }
+  },
+  "commands": {
+    "stored-no-contact-left": {
+      "sha256": "cd4f13d35e4dafa7afeafefb0da7d4ae98ac7e96b2ac9f47b21deff0e2f65a1b",
+      "success": true,
+      "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+      "utc": "2026-09-30T20:49:39.7860780Z"
+    },
+    "stored-contact-right": {
+      "sha256": "a6c72dbb87e78dbcb2eeef213dc8ffff73bb2dd4417cd1812a7363a7423f6ea3",
+      "success": true,
+      "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+      "utc": "2026-09-30T20:49:43.3982689Z"
+    }
+  }
+}

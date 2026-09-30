@@ -6,7 +6,7 @@
   "historicalAdaptation": "Only instance array field is changed to the explicit array parameter; the branch body comes from git show",
   "candidateAnimationAssembly": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\bin\\Debug\\ThirdPersonCharacter.Animation.dll",
   "candidateAnimationAssemblySha256": "7724f5346efedb989af66de0c5e8477ee5a77a70c2b54f143c48f2075eef62f8",
-  "runtimeCommit": "75d352c054459310971e278db6e2998c8fb95961",
+  "runtimeCommit": "552f130833db59146383bb37aac6b867a1b98080",
   "candidateCommit": "18e1f2a4f23a5edd4921414e36e84b1fe2dddfec",
   "candidateSourceSha256": {
     "Animation/Contracts/Rig/AnimationFootStepObservationCurves.cs": "e3ec313280f22affc01ab7914fcfe7c516ad9f0c43fee84bca8bc0c538e884f2",

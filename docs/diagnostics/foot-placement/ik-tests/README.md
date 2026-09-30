@@ -81,9 +81,26 @@ pwsh -File Tools/FootPlacement.FunctionVerify/run.ps1 -UnityEditorData "C:/Progr
 
 左脚 1178 的历史选择为零权重 Idle，Contact=1；候选选择有实际权重的 Stored，保留捕获时 Contact=0。真实接触段保持捕获的 Contact / LockWeight，停止未来落地预测和脚趾速度，新的 Live 占主权后接回其曲线。作者 FootPlacementWeight 未被改写。连续播放、贡献权重与接管过程见 [Stored 场景页](stored-foot-motion.html)。
 
-这批通过只属于来源选择与 Stored 时间语义，没有执行 Native Slot 历史捕获 Job、Goal、Physics 或 FBBIK。当前 Editor 被其它任务的程序集引用错误阻塞，正式 runner 未执行。完整 Stored 骨骼姿势仍缺失，不用默认姿势替代；Goal 接续结果将保存在同一场景页。没有 SourceId 记录且为零权重的 Action 条目不参与本段选择，零权重 Idle 和所有正权重贡献保留；不能把测试准备位置当作物理 source 注册验证。
+来源函数通过与 Goal 通过分别保存，不能混作同一执行层级。完整 Stored 骨骼姿势仍缺失，不用默认姿势替代；没有执行 Native Slot 历史捕获 Job 或 FBBIK。没有 SourceId 记录且为零权重的 Action 条目不参与本段选择，零权重 Idle 和所有正权重贡献保留；不能把测试准备位置当作物理 source 注册验证。
 
 复现入口：`powershell -File Tools/FootPlacement.StoredPoseVerify/run.ps1`。入口使用当前项目实际编译的 Animation 程序集；历史方法从 Git 正式源码提取，只把实例贡献数组变为显式参数，分支算法不改写。固定输入保存双脚原字符串、原采样哈希和查询记录，结果见 [左脚函数结果](stored-no-contact-left-functions.json) 与 [右脚函数结果](stored-contact-right-functions.json)。
+
+同一 83 帧已在目标 Editor 执行 `LandingRuntime → Lifecycle → 23点实际支撑查询 → Complete → Goal` 的连续函数实验。上下文只在首帧按完整采样前态恢复一次，后续由正式函数推进。脚端四份源码均冻结在 `18e1f2a4f`，分别接历史与候选 FootMotion。原动画脚姿势、预测、地面路径和骨盆可达性反馈为固定边界输入；`input/pose-plan-hash` 是正式 response lineage，不能拿 clip SourceId 代替。源码和真实 Unity 程序集身份、三次失败装配及正式入口复现身份见 [原生身份](stored-native-goal-provenance.json)。
+
+| 连续 Goal 窗口指标 | 历史来源 | 候选来源 |
+| --- | --- | --- |
+| 左脚最大旋转步长 | 137.9343° | 27.5375° |
+| 左脚最大额外旋转步长 | 137.5741° | 0.000143° |
+| 左脚最终净空已观测帧 | 12 / 13 | 12 / 13 |
+| 右脚最大额外旋转步长 | 1.33253° | 0.051918° |
+| 右脚最终净空已观测帧 | 70 / 70 | 70 / 70 |
+| 右脚固定髋最大伸展比 | 100.331926% | 100.331926% |
+| 右脚固定髋超伸帧 / 时间 | 4 / 0.066667 s | 5 / 0.083333 s |
+| 暖机 Goal 计算分配 | 两种条件均 0 B | 两种条件均 0 B |
+
+历史 Goal 逐帧重现原脚位和旋转，误差均为0。候选 1178～1180 为 Swing 且无接触锚点；右脚 894～898 保留 893 的真实锚点，位置误差不超过0.2mm，954 按 Live 实际输入退出锁定。候选已观测帧最大正穿透约7.45e-9m。1174 原本没有有效 Goal，位置权重0、最终查询无命中，净空写 null；其余帧实际位置权重1。本轮输出权重仅覆盖0/1，部分作者权重须在后续连续场景验证正式加权位置。
+
+函数实验结果：[左脚 Goal](stored-no-contact-left-goal.json)、[右脚 Goal](stored-contact-right-goal.json)。复现用 `pwsh -File Tools/FootPlacement.StoredPoseVerify/run_native_goal.ps1 -UnityInstance e852139597e42532 -ResultDirectory <独立结果目录>`；入口先确认项目与非Play/非编译，再用 Unity 自带 Roslyn 编译真实源码并在实际 PhysicsScene 执行，恢复活动场景、删除自身临时对象并仅关闭自身加载的场景。2026-10-01 完整导入后仍有其它任务的 Float32Host 编译错误，旋转新状态尚未加载，正式 Runner 未执行。HTML 已检查83帧切换、播放与数值曲线；浏览器视觉验收未完成。23点查询不是鞋网格连续扫掠；固定髋超伸仍增加，不能称为腿 IK 或膝盖伸直已修复。
 
 ## 后续场景范围
 

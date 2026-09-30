@@ -4,6 +4,7 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonSimulation;
+using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -67,6 +68,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class CharacterPoseNativeRoleRuntime : IDisposable
     {
+        static readonly ProfilerMarker s_BeginFrame = new("CharacterPose.BeginFrame");
+        static readonly ProfilerMarker s_PrepareFrame = new("CharacterPose.PrepareFrame");
+        static readonly ProfilerMarker s_PrepareSources = new("CharacterPose.PrepareSources");
+        static readonly ProfilerMarker s_EvaluateAnimation = new("CharacterPose.EvaluateAnimation");
+        static readonly ProfilerMarker s_EvaluateNodes = new("CharacterPose.EvaluateNodes");
+        static readonly ProfilerMarker s_ValidatePending = new("CharacterPose.ValidatePending");
+        static readonly ProfilerMarker s_Commit = new("CharacterPose.Commit");
+
         readonly CharacterPoseNativeGraphRuntime m_Graph;
         readonly CharacterFinalPoseNativePublication m_Publication;
         readonly CharacterPoseConstraintRuntime m_Constraints;
@@ -266,6 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFrameLease BeginFrame(
             in CharacterPoseNativeFrameInput input)
         {
+            using var profilerScope = s_BeginFrame.Auto();
             CharacterPoseNativeFrameLease lease = m_Graph.BeginFrame(in input);
             if (m_Source == null)
                 return lease;
@@ -287,12 +297,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativePreparationResult PrepareFrame(
-            in CharacterPoseNativeFrameLease lease) =>
-            m_Graph.PrepareFrame(lease);
+            in CharacterPoseNativeFrameLease lease)
+        {
+            using var profilerScope = s_PrepareFrame.Auto();
+            return m_Graph.PrepareFrame(lease);
+        }
 
-        internal void EvaluateAnimationGraph() =>
+        internal void EvaluateAnimationGraph()
+        {
+            using var profilerScope = s_EvaluateAnimation.Auto();
             m_Graph.InstanceContext.Animancer.Evaluate(
                 m_Graph.CurrentInput.DeltaSeconds);
+        }
 
         internal void BindGraphInput(
             PosePortId portId,
@@ -304,6 +320,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity)
         {
+            using var profilerScope = s_PrepareSources.Auto();
             m_Graph.PrepareEvaluation(
                 lease,
                 in demand,
@@ -314,16 +331,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeEvaluationResult Evaluate(
             in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
-            ulong barrierIdentity) =>
-            m_Graph.Evaluate(
+            ulong barrierIdentity)
+        {
+            using var profilerScope = s_EvaluateNodes.Auto();
+            return m_Graph.Evaluate(
                 lease,
                 in demand,
                 barrierIdentity);
+        }
 
         internal CharacterPoseNativeValidationResult ValidatePending(
             in CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
+            using var profilerScope = s_ValidatePending.Auto();
             CharacterPoseNativeValidationResult validation =
                 m_Graph.ValidatePending(lease, in evaluation);
             if (!validation.IsValidated || m_Constraints == null)
@@ -357,6 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeEvaluationResult evaluation,
             bool captureFootIkDiagnostics)
         {
+            using var profilerScope = s_Commit.Auto();
             CharacterPoseNativePublicationResult result = m_Graph.Commit(
                 lease,
                 in evaluation,

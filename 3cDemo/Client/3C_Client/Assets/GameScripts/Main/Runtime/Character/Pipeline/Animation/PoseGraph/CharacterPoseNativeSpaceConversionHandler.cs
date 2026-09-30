@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -110,6 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseNativeSpaceConversionHandler :
         ICharacterPoseNativeNodeHandler
     {
+        static readonly ProfilerMarker s_LocalToComponent = new("CharacterPose.LocalToComponent");
+        static readonly ProfilerMarker s_ComponentToLocal = new("CharacterPose.ComponentToLocal");
+
         readonly PoseNodeId m_NodeId;
         readonly CharacterPoseNodeKind m_Kind;
         readonly CharacterPoseSpace m_InputSpace;
@@ -366,6 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ConvertLocalToComponent(
             in CharacterPoseNativePoseReadBinding input)
         {
+            using var profilerScope = s_LocalToComponent.Auto();
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
             NativeSlice<AnimationLocalBonePose> inputPoses =
@@ -391,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void ConvertComponentToLocal(
             in CharacterPoseNativePoseReadBinding input)
         {
+            using var profilerScope = s_ComponentToLocal.Auto();
             NativeSlice<AnimationLocalBonePose> outputPoses =
                 m_WriteBinding.DenseLocalPoses;
             NativeSlice<AnimationLocalBonePose> inputPoses =

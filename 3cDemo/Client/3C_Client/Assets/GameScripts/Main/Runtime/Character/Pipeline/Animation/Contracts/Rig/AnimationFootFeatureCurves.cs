@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -455,6 +456,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class AnimationFootFeatureCurveSet
     {
+        static readonly ProfilerMarker s_Sample = new("CharacterPose.SampleFootFeatures");
+
         [SerializeField] AnimationCurve m_SoleLocalVelocityX;
         [SerializeField] AnimationCurve m_SoleLocalVelocityY;
         [SerializeField] AnimationCurve m_SoleLocalVelocityZ;
@@ -504,6 +507,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationFootFeatureSample SamplePreparedAt(float time)
         {
+            using var profilerScope = s_Sample.Auto();
             return new AnimationFootFeatureSample(
                 new Vector3(
                     m_SoleLocalVelocityX.Evaluate(time),

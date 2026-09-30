@@ -2,6 +2,7 @@ using ThirdPersonPerformance.Instrumentation;
 using System;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
+using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -43,6 +44,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
     internal sealed class CharacterPoseConstraintRuntime : IDisposable
     {
+        static readonly ProfilerMarker s_FootPlacement = new("CharacterPose.FootPlacement");
+        static readonly ProfilerMarker s_FullBodyIk = new("CharacterPose.FullBodyIK");
+
         sealed class Bank
         {
             internal Bank(
@@ -305,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in CharacterFootPlacementConstraintHandle handle,
                 in CharacterFootPlacementFrameInput frame)
         {
+            using var profilerScope = s_FootPlacement.Auto();
             RequireRenderFrame(frame.RenderFrame, frame.Pose.CompletionIdentity);
             if (m_FootPlacement == null)
                 throw new InvalidOperationException("Pose Constraint Foot Placement module is unavailable.");
@@ -458,6 +463,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong frameSequence,
             ulong completionIdentity)
         {
+            using var profilerScope = s_FullBodyIk.Auto();
             RequireRenderFrame(frameSequence, completionIdentity);
             if (!handle.IsValid || handle.FullBodyIkIndex != 0)
                 throw new ArgumentOutOfRangeException(nameof(handle));

@@ -184,6 +184,9 @@ namespace ThirdPersonSimulation.Fixed
 
         void Reset()
         {
+            for (int i = 0; i < m_Entries.Count; i++)
+                if (m_Entries[i].Value is IFixedPipelineProductValueRelease releasable)
+                    releasable.ReleaseOwnedValue();
             m_Entries.Clear();
             m_Sealed = false;
         }

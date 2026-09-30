@@ -6,9 +6,8 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedCharacterEvaluationResult
     {
-        GameplayFact[] m_GameplayFacts;
-        PresentationCommand[] m_PresentationCommands;
-        SimulationTraceRecord[] m_TraceRecords;
+        readonly SimulationActorBinding m_Owner;
+        FixedCharacterEvaluationOutput m_Output;
         readonly List<AbilityTimelineAdvancePending> m_TimelineAdvances;
         readonly List<AbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
@@ -18,10 +17,12 @@ namespace ThirdPersonSimulation.Fixed
         bool m_OutputsTaken;
 
         internal FixedCharacterEvaluationResult(
+            SimulationActorBinding owner,
             ActorId actorId,
             IAbilityTimelineRuntime timelineRuntime,
             int timelineRequestCapacity)
         {
+            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
             ActorId = actorId;
             m_TimelineRuntime = timelineRuntime;
             m_TimelineAdvances = new List<AbilityTimelineAdvancePending>(timelineRequestCapacity);
@@ -31,9 +32,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterEvaluationResult Reset(
             SimulationTick tick,
             FixedCharacterRuntimeState candidateState,
-            GameplayFact[] gameplayFacts,
-            PresentationCommand[] presentationCommands,
-            SimulationTraceRecord[] traceRecords,
+            FixedCharacterEvaluationOutput output,
             List<AbilityTimelineAdvancePending> timelineAdvances,
             List<AbilityTimelineStopPending> timelineStops)
         {
@@ -43,9 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             if (candidateState.LastCompletedTick != tick.Value)
                 throw new InvalidOperationException("Fixed Character evaluation result binding is invalid.");
             Tick = tick;
-            m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
-            m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
-            m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
+            m_Output = output ?? throw new ArgumentNullException(nameof(output));
             m_TimelineAdvances.AddRange(timelineAdvances);
             m_TimelineStops.AddRange(timelineStops);
             m_Consumed = false;
@@ -79,26 +76,24 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         internal void TakeOutputs(
-            out GameplayFact[] gameplayFacts,
-            out PresentationCommand[] presentationCommands,
-            out SimulationTraceRecord[] traceRecords)
+            out FixedCharacterEvaluationOutput output)
         {
             if (!m_OutputsCommitted || m_OutputsTaken)
                 throw new InvalidOperationException("Fixed Character evaluation outputs are not available for transfer.");
-            gameplayFacts = m_GameplayFacts;
-            presentationCommands = m_PresentationCommands;
-            traceRecords = m_TraceRecords;
-            m_GameplayFacts = Array.Empty<GameplayFact>();
-            m_PresentationCommands = Array.Empty<PresentationCommand>();
-            m_TraceRecords = Array.Empty<SimulationTraceRecord>();
+            output = m_Output ?? throw new InvalidOperationException("Fixed Character evaluation output has already been transferred.");
+            m_Output = null;
             m_OutputsTaken = true;
         }
 
         internal void DiscardUnconsumed()
         {
-            if (m_Consumed)
-                return;
-            CompleteTimelineOutputs(false);
+            if (!m_Consumed)
+                CompleteTimelineOutputs(false);
+            if (m_Output != null)
+            {
+                m_Owner.ReturnEvaluationOutput(m_Output);
+                m_Output = null;
+            }
             m_Consumed = true;
             m_TimelineAdvances.Clear();
             m_TimelineStops.Clear();

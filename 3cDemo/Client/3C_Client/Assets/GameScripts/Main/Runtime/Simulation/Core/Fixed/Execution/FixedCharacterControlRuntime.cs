@@ -173,7 +173,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedCharacterTraceSink
     {
-        readonly List<SimulationTraceRecord> m_Records;
+        List<SimulationTraceRecord> m_Records;
         SimulationNumericProfile m_NumericProfile;
         GameplayContentHash m_ContentHash;
         ActorId m_ActorId;
@@ -185,6 +185,11 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedCharacterTraceSink(
             List<SimulationTraceRecord> records)
+        {
+            m_Records = records ?? throw new ArgumentNullException(nameof(records));
+        }
+
+        internal void Bind(List<SimulationTraceRecord> records)
         {
             m_Records = records ?? throw new ArgumentNullException(nameof(records));
         }

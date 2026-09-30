@@ -131,7 +131,7 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectState,
                 equipmentState,
                 timelineSnapshots,
-                ownsInputRequests: false)
+                ownsCollections: false)
         {
         }
 
@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState,
             IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots,
-            bool ownsInputRequests)
+            bool ownsCollections)
         {
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
@@ -159,7 +159,9 @@ namespace ThirdPersonSimulation.Fixed
             GameplayContentHash = gameplayContentHash;
             StateSchemaHash = stateSchemaHash;
             LastCompletedTick = lastCompletedTick;
-            FixedAbilityRuntimeState[] copied = CopyArray(abilities);
+            FixedAbilityRuntimeState[] copied = ownsCollections
+                ? (FixedAbilityRuntimeState[])abilities
+                : CopyArray(abilities);
             Array.Sort(copied, CompareAbilities);
             for (int i = 0; i < copied.Length; i++)
             {
@@ -167,11 +169,15 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
             }
             m_Abilities = copied;
-            ActionActivationRequests = CopyArray(actionActivationRequests);
-            ActionInstances = CopyArray(actionInstances);
+            ActionActivationRequests = ownsCollections
+                ? (SimulationActionActivationRequestState[])actionActivationRequests
+                : CopyArray(actionActivationRequests);
+            ActionInstances = ownsCollections
+                ? (FixedActionInstanceState[])actionInstances
+                : CopyArray(actionInstances);
             InputRequests = inputRequests == null
                 ? Array.Empty<KeyValuePair<string, SimulationInputRequestState>>()
-                : ownsInputRequests
+                : ownsCollections
                     ? inputRequests
                     : CopyArray(inputRequests);
             Array.Sort(InputRequests, InputRequestKeyComparer.Instance);
@@ -187,14 +193,22 @@ namespace ThirdPersonSimulation.Fixed
             ControlState = controlState;
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
-            snapshots.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
+            ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> snapshots = ownsCollections &&
+                timelineSnapshots is ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> ownedSnapshots
+                ? ownedSnapshots
+                : new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>()).AsReadOnly();
+            if (!ownsCollections)
+            {
+                var sorted = new List<AbilityTimelineRuntimeSnapshot>(snapshots);
+                sorted.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
+                snapshots = sorted.AsReadOnly();
+            }
             for (int i = 0; i < snapshots.Count; i++)
             {
                 if (!snapshots[i].IsValid || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
                     throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.", nameof(timelineSnapshots));
             }
-            m_TimelineSnapshots = snapshots.AsReadOnly();
+            m_TimelineSnapshots = snapshots;
         }
 
         public SimulationNumericProfile NumericProfile { get; }
@@ -364,7 +378,8 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
+                timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>(),
+                ownsCollections: true);
         }
 
         internal static FixedCharacterRuntimeState AdoptPrepared(
@@ -420,7 +435,8 @@ namespace ThirdPersonSimulation.Fixed
                 controlState,
                 gameplayEffectState,
                 equipmentState,
-                new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(timelineSnapshots));
+                new ReadOnlyCollection<AbilityTimelineRuntimeSnapshot>(timelineSnapshots),
+                ownsCollections: true);
         }
 
         private FixedCharacterRuntimeState(

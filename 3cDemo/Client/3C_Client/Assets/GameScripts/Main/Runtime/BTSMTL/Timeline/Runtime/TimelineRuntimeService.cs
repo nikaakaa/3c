@@ -447,12 +447,10 @@ namespace BTSMTL.Timeline.Runtime
 
         internal TimelineRuntimePlayback CreatePlayback()
         {
-            TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
+            TimelineRuntimePlayback playback = m_Service.CreatePlayback(
                 m_Preparation,
                 m_Snapshot.Handle,
-                m_Snapshot.Generation,
-                m_Service.TickRate,
-                m_Service.EvaluationStoragePool);
+                m_Snapshot.Generation);
             ApplyTo(playback);
             return playback;
         }
@@ -509,6 +507,8 @@ namespace BTSMTL.Timeline.Runtime
         readonly int m_TickRate;
         readonly Dictionary<ulong, TimelineRuntimePlayback> m_Playbacks =
             new Dictionary<ulong, TimelineRuntimePlayback>();
+        readonly Dictionary<(string ContentRevision, TimelinePlaybackMode Mode), Stack<TimelineRuntimePlayback>> m_RecycledPlaybacks =
+            new Dictionary<(string ContentRevision, TimelinePlaybackMode Mode), Stack<TimelineRuntimePlayback>>();
         readonly TimelineRuntimeEvaluationStoragePool m_EvaluationStoragePool = new();
         ulong m_NextPlaybackHandle = 1;
         ulong m_NextGeneration = 1;
@@ -599,12 +599,7 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             }
             var preparation = new TimelineRuntimePreparationResult(request);
-            TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
-                preparation,
-                runtimeHandle,
-                generation,
-                m_TickRate,
-                m_EvaluationStoragePool);
+            TimelineRuntimePlayback playback = CreatePlayback(preparation, runtimeHandle, generation);
             bool registered = false;
             bool accepted = false;
             try
@@ -624,7 +619,7 @@ namespace BTSMTL.Timeline.Runtime
                 {
                     if (registered)
                         m_Playbacks.Remove(runtimeHandle.Value);
-                    playback.Dispose();
+                    RecyclePlayback(playback);
                 }
             }
         }
@@ -737,12 +732,7 @@ namespace BTSMTL.Timeline.Runtime
             EnsureAvailable();
             TimelineRuntimePlaybackHandle handle = NextHandle();
             ulong generation = NextGeneration();
-            TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
-                preparation,
-                handle,
-                generation,
-                m_TickRate,
-                m_EvaluationStoragePool);
+            TimelineRuntimePlayback playback = CreatePlayback(preparation, handle, generation);
             bool registered = false;
             bool accepted = false;
             try
@@ -759,7 +749,7 @@ namespace BTSMTL.Timeline.Runtime
                 {
                     if (registered)
                         m_Playbacks.Remove(handle.Value);
-                    playback.Dispose();
+                    RecyclePlayback(playback);
                 }
             }
         }
@@ -907,8 +897,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = Require(handle);
             if (playback.HasPendingAdvance || playback.HasPendingStop)
                 throw new InvalidOperationException("Timeline playback release requires no pending candidates.");
-            playback.Dispose();
             m_Playbacks.Remove(handle.Value);
+            RecyclePlayback(playback);
         }
 
         public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
@@ -1020,6 +1010,7 @@ namespace BTSMTL.Timeline.Runtime
             {
                 m_Disposed = true;
                 m_Playbacks.Clear();
+                m_RecycledPlaybacks.Clear();
                 m_EvaluationStoragePool.Clear();
                 m_RequestFactory.Clear();
                 s_ActiveServices.Remove(this);
@@ -1039,6 +1030,39 @@ namespace BTSMTL.Timeline.Runtime
             if (m_NextGeneration == 0)
                 throw new InvalidOperationException("Timeline playback generation space is exhausted.");
             return m_NextGeneration++;
+        }
+
+        internal TimelineRuntimePlayback CreatePlayback(
+            TimelineRuntimePreparationResult preparation,
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation)
+        {
+            var key = (preparation.ContentRevision, preparation.PlaybackMode);
+            if (m_RecycledPlaybacks.TryGetValue(key, out Stack<TimelineRuntimePlayback> recycled) &&
+                recycled.Count > 0)
+            {
+                TimelineRuntimePlayback playback = recycled.Pop();
+                playback.ResetForReuse(handle, generation, preparation);
+                return playback;
+            }
+            return TimelineRuntimePreparation.CreatePlayback(
+                preparation,
+                handle,
+                generation,
+                m_TickRate,
+                m_EvaluationStoragePool);
+        }
+
+        void RecyclePlayback(TimelineRuntimePlayback playback)
+        {
+            playback.ReleaseForReuse();
+            var key = (playback.ContentRevision, playback.PlaybackMode);
+            if (!m_RecycledPlaybacks.TryGetValue(key, out Stack<TimelineRuntimePlayback> recycled))
+            {
+                recycled = new Stack<TimelineRuntimePlayback>();
+                m_RecycledPlaybacks.Add(key, recycled);
+            }
+            recycled.Push(playback);
         }
 
         bool TryGet(TimelinePlaybackHandle handle, out TimelineRuntimePlayback playback)

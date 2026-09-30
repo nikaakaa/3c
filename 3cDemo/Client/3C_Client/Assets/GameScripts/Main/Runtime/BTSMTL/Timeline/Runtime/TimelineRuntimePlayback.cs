@@ -16,7 +16,8 @@ namespace BTSMTL.Timeline.Runtime
         readonly List<string> m_AdvanceInjectedTreeClipExits;
         readonly List<string> m_AdvanceProducedTreeClipExits;
         readonly List<string> m_AdvanceExitedTreeDecisionClips;
-        readonly IComparer<TimelineRuntimeClipBoundary> m_CompareBoundaries;
+        static readonly IComparer<TimelineRuntimeClipBoundary> s_CompareBoundaries =
+            TimelineRuntimeClipBoundaryComparer.Instance;
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeEvaluationStorage m_CandidateEvaluation;
         TimelineRuntimeEvaluationStorage m_CommittedEvaluation;
@@ -39,48 +40,41 @@ namespace BTSMTL.Timeline.Runtime
             int tickRate,
             TimelineRuntimeEvaluationStoragePool evaluationStoragePool)
         {
-            Handle = handle;
-            Generation = generation;
-            Preparation = preparation;
-            RequestId = preparation.RequestId;
-            ExecutionIdentity = preparation.ExecutionIdentity;
-            PlaybackMode = preparation.PlaybackMode;
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
             m_TickRate = tickRate;
-            NumericTarget = preparation.NumericTarget;
+            Handle = handle;
+            Generation = generation;
+            Preparation = preparation;
+            PlaybackMode = preparation.PlaybackMode;
             Content = preparation.Content;
-            SourceTimeline = preparation.SourceTimeline;
-            MotionSampling = preparation.MotionSampling;
-            PreparedDependencies = preparation.PreparedDependencies;
-            PreparedBindings = preparation.PreparedBindings;
-            int clipCapacity = Content.Clips.Count;
+            int clipCapacity = preparation.Content.Clips.Count;
             m_ActiveClipIds = new List<string>(clipCapacity);
             m_PendingTreeClipExits = new List<string>(clipCapacity);
             m_ExitedTreeDecisionClips = new List<string>(clipCapacity);
             m_AdvanceInjectedTreeClipExits = new List<string>(clipCapacity);
             m_AdvanceProducedTreeClipExits = new List<string>(clipCapacity);
             m_AdvanceExitedTreeDecisionClips = new List<string>(clipCapacity);
-            m_CompareBoundaries = Comparer<TimelineRuntimeClipBoundary>.Create(CompareBoundaries);
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
             m_CandidateEvaluation = evaluationStoragePool.Rent(this);
             m_CommittedEvaluation = evaluationStoragePool.Rent(this);
-            State = TimelineRuntimePlaybackState.Prepared;
+            State = TimelineRuntimePlaybackState.Disposed;
+            ResetForReuse(handle, generation, preparation);
         }
 
-        public TimelineRuntimePlaybackHandle Handle { get; }
-        public ulong Generation { get; }
-        public string RequestId { get; }
-        public TimelineExecutionIdentity ExecutionIdentity { get; }
-        public TimelinePlaybackMode PlaybackMode { get; }
-        public TimelineRuntimeNumericTarget NumericTarget { get; }
-        public TimelineContentUnit Content { get; }
-        public TimelineData SourceTimeline { get; }
-        internal TimelineRuntimeMotionSampling MotionSampling { get; }
-        internal TimelineRuntimePreparationResult Preparation { get; }
+        public TimelineRuntimePlaybackHandle Handle { get; private set; }
+        public ulong Generation { get; private set; }
+        public string RequestId { get; private set; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; private set; }
+        public TimelinePlaybackMode PlaybackMode { get; private set; }
+        public TimelineRuntimeNumericTarget NumericTarget { get; private set; }
+        public TimelineContentUnit Content { get; private set; }
+        public TimelineData SourceTimeline { get; private set; }
+        internal TimelineRuntimeMotionSampling MotionSampling { get; private set; }
+        internal TimelineRuntimePreparationResult Preparation { get; private set; }
         public string ContentRevision => Content.ContentHash;
-        public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
-        public TimelinePreparedBindings PreparedBindings { get; }
+        public TimelineRuntimePreparedDependencies PreparedDependencies { get; private set; }
+        public TimelinePreparedBindings PreparedBindings { get; private set; }
         public TimelineRuntimePlaybackState State { get; private set; }
         public FixedScalar CursorTime => m_CursorTime;
         public int TickRate => m_TickRate;
@@ -92,6 +86,49 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIdsView;
         public bool HasStopContext { get; private set; }
         public TimelinePlaybackStopContext StopContext { get; private set; }
+
+        internal void ResetForReuse(
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation,
+            TimelineRuntimePreparationResult preparation)
+        {
+            if (State != TimelineRuntimePlaybackState.Disposed)
+                throw new InvalidOperationException("Timeline playback reuse requires a disposed playback.");
+            Handle = handle;
+            Generation = generation;
+            Preparation = preparation;
+            RequestId = preparation.RequestId;
+            ExecutionIdentity = preparation.ExecutionIdentity;
+            PlaybackMode = preparation.PlaybackMode;
+            NumericTarget = preparation.NumericTarget;
+            Content = preparation.Content;
+            SourceTimeline = preparation.SourceTimeline;
+            MotionSampling = preparation.MotionSampling;
+            PreparedDependencies = preparation.PreparedDependencies;
+            PreparedBindings = preparation.PreparedBindings;
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
+            m_PendingAdvance = default;
+            m_AdvanceSequence = 0;
+            m_StopSequence = 0;
+            m_PendingStopContext = default;
+            m_StopPending = false;
+            m_CursorTime = FixedScalar.Zero;
+            m_Cycle = 0;
+            m_SectionId = string.Empty;
+            m_InitialBoundaryPending = false;
+            m_TimeCarry = 0;
+            Control = AbilityTimelinePlaybackControl.Normal;
+            HasStopContext = false;
+            StopContext = default;
+            m_ActiveClipIds.Clear();
+            m_PendingTreeClipExits.Clear();
+            m_ExitedTreeDecisionClips.Clear();
+            m_AdvanceInjectedTreeClipExits.Clear();
+            m_AdvanceProducedTreeClipExits.Clear();
+            m_AdvanceExitedTreeDecisionClips.Clear();
+            State = TimelineRuntimePlaybackState.Prepared;
+        }
 
         public bool TryResolveTargetIdentity(string bindingId, out string targetIdentity)
         {
@@ -635,19 +672,42 @@ namespace BTSMTL.Timeline.Runtime
                         false);
                 }
             }
-            result.Sort(m_CompareBoundaries);
+            result.Sort(s_CompareBoundaries);
             return result;
         }
 
-        int CompareBoundaries(TimelineRuntimeClipBoundary left, TimelineRuntimeClipBoundary right)
+        sealed class TimelineRuntimeClipBoundaryComparer : IComparer<TimelineRuntimeClipBoundary>
         {
-            FixedScalar duration = Content.Duration;
-            int position = (duration * FixedScalar.FromInt64(left.Cycle) + left.Time).CompareTo(
-                duration * FixedScalar.FromInt64(right.Cycle) + right.Time);
-            if (position != 0)
-                return position;
-            int kind = left.Kind.CompareTo(right.Kind);
-            return kind != 0 ? kind : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
+            public static readonly TimelineRuntimeClipBoundaryComparer Instance =
+                new TimelineRuntimeClipBoundaryComparer();
+
+            public int Compare(TimelineRuntimeClipBoundary left, TimelineRuntimeClipBoundary right)
+            {
+                int position = left.Cycle.CompareTo(right.Cycle);
+                if (position == 0)
+                    position = left.Time.CompareTo(right.Time);
+                if (position != 0)
+                    return position;
+                int kind = left.Kind.CompareTo(right.Kind);
+                return kind != 0 ? kind : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
+            }
+        }
+
+        internal void ReleaseForReuse()
+        {
+            if (State == TimelineRuntimePlaybackState.Disposed)
+                return;
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
+            m_PendingAdvance = default;
+            m_StopPending = false;
+            m_ActiveClipIds.Clear();
+            m_PendingTreeClipExits.Clear();
+            m_ExitedTreeDecisionClips.Clear();
+            m_AdvanceInjectedTreeClipExits.Clear();
+            m_AdvanceProducedTreeClipExits.Clear();
+            m_AdvanceExitedTreeDecisionClips.Clear();
+            State = TimelineRuntimePlaybackState.Disposed;
         }
 
         static void AddBoundary(

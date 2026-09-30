@@ -32,11 +32,15 @@ namespace ThirdPersonSimulation.Fixed
         public FixedScalar AppliedYawDegrees { get; }
     }
 
-    public sealed class SimulationActorTickResult
+    internal interface IFixedPipelineProductValueRelease
     {
-        readonly GameplayFact[] m_GameplayFacts;
-        readonly PresentationCommand[] m_PresentationCommands;
-        readonly SimulationTraceRecord[] m_TraceRecords;
+        void ReleaseOwnedValue();
+    }
+
+    public sealed class SimulationActorTickResult : IFixedPipelineProductValueRelease
+    {
+        FixedCharacterEvaluationOutput m_Output;
+        SimulationActorBinding m_OutputOwner;
         CharacterStateHash m_StateHash;
 
         SimulationActorTickResult(
@@ -46,9 +50,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterStateHash stateHash,
             CharacterBodySample bodySample,
             CharacterMotionRequest motion,
-            GameplayFact[] gameplayFacts,
-            PresentationCommand[] presentationCommands,
-            SimulationTraceRecord[] traceRecords)
+            FixedCharacterEvaluationOutput output,
+            SimulationActorBinding outputOwner)
         {
             if (!actorId.IsValid || !tick.IsValid || bodySample.ActorId != actorId || bodySample.Tick != tick)
                 throw new ArgumentException("Actor Tick result identity is incomplete.");
@@ -62,12 +65,11 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             BodySample = bodySample;
             Motion = motion;
-            m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
-            m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
-            m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
-            ValidateHeaders(m_GameplayFacts, state.NumericProfile, actorId, tick, "Gameplay fact");
-            ValidateHeaders(m_PresentationCommands, state.NumericProfile, actorId, tick, "Presentation command");
-            ValidateHeaders(m_TraceRecords, state.NumericProfile, actorId, tick, "Trace record");
+            m_Output = output ?? throw new ArgumentNullException(nameof(output));
+            m_OutputOwner = outputOwner ?? throw new ArgumentNullException(nameof(outputOwner));
+            ValidateHeaders(m_Output.Facts, state.NumericProfile, actorId, tick, "Gameplay fact");
+            ValidateHeaders(m_Output.Presentation, state.NumericProfile, actorId, tick, "Presentation command");
+            ValidateHeaders(m_Output.Trace, state.NumericProfile, actorId, tick, "Trace record");
         }
 
         internal static SimulationActorTickResult FromOwnedOutputs(
@@ -77,9 +79,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterStateHash stateHash,
             CharacterBodySample bodySample,
             CharacterMotionRequest motion,
-            GameplayFact[] gameplayFacts,
-            PresentationCommand[] presentationCommands,
-            SimulationTraceRecord[] traceRecords)
+            FixedCharacterEvaluationOutput output,
+            SimulationActorBinding outputOwner)
         {
             return new SimulationActorTickResult(
                 actorId,
@@ -88,9 +89,8 @@ namespace ThirdPersonSimulation.Fixed
                 stateHash,
                 bodySample,
                 motion,
-                gameplayFacts,
-                presentationCommands,
-                traceRecords);
+                output,
+                outputOwner);
         }
 
         public ActorId ActorId { get; }
@@ -99,18 +99,27 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterStateHash StateHash => m_StateHash;
         public CharacterBodySample BodySample { get; }
         public CharacterMotionRequest Motion { get; }
-        public IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
-        public IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
-        public IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
+        public IReadOnlyList<GameplayFact> GameplayFacts => m_Output.Facts;
+        public IReadOnlyList<PresentationCommand> PresentationCommands => m_Output.Presentation;
+        public IReadOnlyList<SimulationTraceRecord> TraceRecords => m_Output.Trace;
+
+        void IFixedPipelineProductValueRelease.ReleaseOwnedValue()
+        {
+            if (m_Output == null)
+                return;
+            m_OutputOwner.ReturnEvaluationOutput(m_Output);
+            m_Output = null;
+            m_OutputOwner = null;
+        }
 
         static void ValidateHeaders(
-            GameplayFact[] values,
+            IReadOnlyList<GameplayFact> values,
             SimulationNumericProfile numericProfile,
             ActorId actorId,
             SimulationTick tick,
             string label)
         {
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < values.Count; i++)
             {
                 SimulationEventHeader header = values[i].Header;
                 if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)
@@ -119,13 +128,13 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void ValidateHeaders(
-            PresentationCommand[] values,
+            IReadOnlyList<PresentationCommand> values,
             SimulationNumericProfile numericProfile,
             ActorId actorId,
             SimulationTick tick,
             string label)
         {
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < values.Count; i++)
             {
                 SimulationEventHeader header = values[i].Header;
                 if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)
@@ -134,13 +143,13 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void ValidateHeaders(
-            SimulationTraceRecord[] values,
+            IReadOnlyList<SimulationTraceRecord> values,
             SimulationNumericProfile numericProfile,
             ActorId actorId,
             SimulationTick tick,
             string label)
         {
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < values.Count; i++)
             {
                 SimulationEventHeader header = values[i].Header;
                 if (header.NumericProfile != numericProfile || header.ActorId != actorId || header.Tick != tick)

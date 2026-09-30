@@ -85,31 +85,37 @@ namespace ThirdPersonSimulation.Fixed
                 evaluation.Consume();
                 FixedCharacterRuntimeState finalState = evaluation.CandidateState;
                 CharacterStateHash stateHash = FixedCharacterRuntimeStateCodec.ComputeHash(finalState, m_StateHashWriter);
-                evaluation.TakeOutputs(
-                    out GameplayFact[] gameplayFacts,
-                    out PresentationCommand[] presentationCommands,
-                    out SimulationTraceRecord[] traceRecords);
-                SimulationActorTickResult result = SimulationActorTickResult.FromOwnedOutputs(
-                    evaluation.ActorId,
-                    evaluation.Tick,
-                    finalState,
-                    stateHash,
-                    bodySample,
-                    expected.Motion,
-                    gameplayFacts,
-                    presentationCommands,
-                    traceRecords);
-                FixedPipelineDiagnostics.PublishOperations(
-                    readPorts.Diagnostics.Sink,
-                    result.TraceRecords,
-                    0);
-                writePorts.Results.Append(
-                    new SimulationPipelineAppendEntryIdentity(
-                        actor.ActorId,
-                        context.Tick,
-                        1,
-                        step.Source),
-                    result);
+                FixedCharacterEvaluationOutput output = null;
+                try
+                {
+                    evaluation.TakeOutputs(out output);
+                    SimulationActorTickResult result = SimulationActorTickResult.FromOwnedOutputs(
+                        evaluation.ActorId,
+                        evaluation.Tick,
+                        finalState,
+                        stateHash,
+                        bodySample,
+                        expected.Motion,
+                        output,
+                        actor);
+                    FixedPipelineDiagnostics.PublishOperations(
+                        readPorts.Diagnostics.Sink,
+                        result.TraceRecords,
+                        0);
+                    writePorts.Results.Append(
+                        new SimulationPipelineAppendEntryIdentity(
+                            actor.ActorId,
+                            context.Tick,
+                            1,
+                            step.Source),
+                        result);
+                    output = null;
+                }
+                finally
+                {
+                    if (output != null)
+                        actor.ReturnEvaluationOutput(output);
+                }
 
             }
         }

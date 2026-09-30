@@ -68,7 +68,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<AbilityTimelineLogicMotionWarp> m_TimelineLogicMotionWarps =
             new List<AbilityTimelineLogicMotionWarp>();
         readonly FixedAbilityExecutionWorkspace[] m_Workspaces;
-        readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
+        FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
+        readonly Stack<FixedCharacterEvaluationOutput> m_RecycledEvaluationOutputs =
+            new Stack<FixedCharacterEvaluationOutput>();
         readonly FixedCharacterEvaluationResult m_EvaluationResult;
         readonly FixedCharacterTraceSink m_CharacterTraceSink;
         readonly FixedAbilityExecutionInput m_AbilityExecutionInput = new FixedAbilityExecutionInput();
@@ -139,7 +141,11 @@ namespace ThirdPersonSimulation.Fixed
                 timelineRequestCapacity = checked(timelineRequestCapacity + AbilityInstallations.Installations[i].Data.Operations.Count);
             m_TimelineAdvances.Capacity = timelineRequestCapacity;
             m_TimelineStops.Capacity = timelineRequestCapacity;
-            m_EvaluationResult = new FixedCharacterEvaluationResult(actorId, timelineRuntime, timelineRequestCapacity);
+            m_EvaluationResult = new FixedCharacterEvaluationResult(
+                this,
+                actorId,
+                timelineRuntime,
+                timelineRequestCapacity);
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
             IFixedAbilityExecutionServiceFactory serviceFactory = new FixedAbilityExecutionServiceFactory(timelineRuntime);
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
@@ -198,6 +204,22 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterEvaluationResult EvaluationResult => m_EvaluationResult;
         internal FixedCharacterTraceSink CharacterTraceSink => m_CharacterTraceSink;
         internal FixedAbilityExecutionInput AbilityExecutionInput => m_AbilityExecutionInput;
+
+        internal void RotateEvaluationOutput()
+        {
+            m_EvaluationOutput = m_RecycledEvaluationOutputs.Count == 0
+                ? new FixedCharacterEvaluationOutput()
+                : m_RecycledEvaluationOutputs.Pop();
+            m_EvaluationOutput.Clear();
+        }
+
+        internal void ReturnEvaluationOutput(FixedCharacterEvaluationOutput output)
+        {
+            if (output == null || ReferenceEquals(output, m_EvaluationOutput))
+                throw new InvalidOperationException("Fixed Character evaluation output ownership is invalid.");
+            output.Clear();
+            m_RecycledEvaluationOutputs.Push(output);
+        }
         internal FixedCharacterInputRequestState InputRequestState => m_InputRequestState;
         internal FixedCharacterActionRuntimeState ActionState => m_ActionState;
         internal CharacterControlRuntimeStateTransaction ControlState => m_ControlState;

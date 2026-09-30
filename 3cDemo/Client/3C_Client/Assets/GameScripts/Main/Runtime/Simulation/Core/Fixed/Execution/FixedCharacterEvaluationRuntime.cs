@@ -84,6 +84,7 @@ namespace ThirdPersonSimulation.Fixed
                     tick,
                     characterRuntime.TickRate);
                 FixedCharacterTraceSink characterTraceSink = actor.CharacterTraceSink;
+                characterTraceSink.Bind(evaluationOutput.CharacterTrace);
                 characterTraceSink.Begin(
                     characterRuntime.NumericProfile,
                     actor.GameplayContentHash,
@@ -209,17 +210,15 @@ namespace ThirdPersonSimulation.Fixed
                 FixedCharacterEvaluationResult result = actor.EvaluationResult.Reset(
                     tick,
                     candidateState,
-                    facts.ToArray(),
-                    presentation.ToArray(),
-                    trace.ToArray(),
+                    evaluationOutput,
                     timelineAdvances,
                     timelineStops);
+                actor.RotateEvaluationOutput();
                 actor.ClearActionRuntimes();
                 actor.ClearWorkspaces();
                 actor.ClearTimelineTransfers();
                 actor.ClearTimelineMotionScratches();
                 sharedEffectScratch.Reset();
-                evaluationOutput.Clear();
                 abilityInput.Clear();
                 return result;
             }

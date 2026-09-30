@@ -2141,3 +2141,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - 规则求值仍用按 ID 的 Dictionary 缓存结果、HashSet 检测递归环；每个节点访问缓存和环标记都要哈希，候选评估前还要清理两个容器。
 - 准备期为每条 RuleGraph 分配固定 Results、ResultVersions、VisitVersions 数组，并为每个 BoundRuleOperation 分配 Slot。EvaluateRule 递增 graph 版本；节点命中当前结果版本则复用，命中当前访问版本则判定环，完成后写入结果版本。
 - 该改动删除每次候选规则的容器清理和每个节点的 ID 哈希查找/删除，版本重置只在 int 翻转边界发生。DAG 共享缓存、当前递归栈环检测、错误消息和短路求值顺序保持；结果异常后下一候选使用新版本。静态核对根调用、全部子操作调用、Slot 唯一性、版本重置、空规则和共享 graph 生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP304 Current support resolve unit up 复用（2026-09-30，已实施，本轮未编译）
+
+- Current Support 的 heel/toe request 已在调用边界共享 unit component up，但 request 只用它生成 origin/direction；Observation Resolve 后续又读取原始 ComponentUp 并重新归一化。
+- Request 增加只读 unit component up backing field；Resolve 直接读取 heel request 的同一向量。原始 ComponentUp、IsValid、query 几何、selection 和 target 公式不变。
+- 该改动删除每脚 Current Support accepted resolve 路径中的重复归一化。静态核对两个构造入口共享同一调用边界值、request 生命周期覆盖 Resolve；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

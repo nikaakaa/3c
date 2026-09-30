@@ -52,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         readonly Vector3 m_Origin;
         readonly Vector3 m_Direction;
+        readonly Vector3 m_UnitComponentUp;
 
         internal CharacterFootCurrentSupportProbeRequest(
             CharacterFootSide side,
@@ -70,6 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Kind = kind;
             ProbePosition = probePosition;
             ComponentUp = componentUp;
+            m_UnitComponentUp = unitComponentUp;
             CastAbove = castAbove;
             CastBelow = castBelow;
             Radius = radius;
@@ -98,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCurrentSupportProbeKind Kind { get; }
         internal Vector3 ProbePosition { get; }
         internal Vector3 ComponentUp { get; }
+        internal Vector3 UnitComponentUp => m_UnitComponentUp;
         internal float CastAbove { get; }
         internal float CastBelow { get; }
         internal float Radius { get; }
@@ -596,7 +599,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             Vector3 animatedHeel = heelRequest.ProbePosition;
             Vector3 animatedToe = toeRequest.ProbePosition;
-            Vector3 up = heelRequest.ComponentUp.normalized;
+            Vector3 up = heelRequest.UnitComponentUp;
             float heelDisplacement = heel.Accepted ? Vector3.Dot(heel.Point - animatedHeel, up) : 0f;
             float toeDisplacement = toe.Accepted ? Vector3.Dot(toe.Point - animatedToe, up) : 0f;
             CharacterFootCurrentSupportSelectionReason selectionReason;

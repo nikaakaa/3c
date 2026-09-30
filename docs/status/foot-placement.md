@@ -14,6 +14,8 @@
 
 为使预测函数直接消费真实采样边界，`CharacterFootPlacementModule.PredictFootPair` 与 `PredictEvent` 的时间线参数收窄为 `hasMotionTimeline` 和 `trajectoryGeneration`；此前它们只读这两项，`currentSegmentRemainingSeconds` 只转传且未被消费，现已删除。唯一正式调用方从同一已提交 timeline 提供原值，完整 timeline 仍交给需要它的身体轨迹生成。固定输入可使用已有 `input/motion-timeline-available` 与 `input/timeline-generation`，不必编造未采样的 owner 字符串。两函数体在精确参数替换后保持逐字一致，Animation 定向编译 0 警告、0 错误（6.39 秒）；完整预测和释放效果仍由配套窗口继续执行验证。
 
+缺少 FBBIK 方向历史不等于每个窗口都无法继续还原。源码 `ApplyLegBendStabilization` 在原动画膝盖到髋踝轴的高度大于腿长 1% 时，会用当帧原姿势覆盖稳定方向，并由当前原轴与目标轴计算应用方向；旧应用方向此时只参与 previous-dot 诊断，不控制方向符号。对已有 full 的 2023～2056 双脚 68 条原骨记录进行几何核对，最低高度比仍为 0.02054072（2033 右脚），全部高于正式阈值。这支持用真实 2023 原姿势与 Goal 预滚后尝试本段完整求解，不需要编造四个方向向量；但尚未实际验证 FBBIK，原历史计数和首帧 previous-dot 也没有因此被还原。仍须核对 Rig、Profile、全部 Goal，并让历史版实际求解的髋、膝、踝重现录制。该结论仅限已检查窗口，不能推广到原动画近乎完全伸直的其它样本。
+
 首个动画混合修正将 FootMotion 从 `CharacterPoseSourceModule` 正式采样写入预分配 Source 页，经 `AnimationPrimitivePoseContribution` 传播，在 `AnimationSlotBlendJob` 的历史与 Stored 捕获中保存；`CharacterPoseWorldContextAdapter` 选择实际参与姿态的 Live/Stored 样本，交给原 FootPlacement 链路。它处理零权重 Live Idle 在 Stored 占据全部姿态时错误地提供锁脚请求的问题。Stored 保留当前接触与锁权重，静态姿态不继续预测未来落地；作者总权重和曲线未改。资源名称与曲线元数据在目录初始化，未增加每帧字符串转换。
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。

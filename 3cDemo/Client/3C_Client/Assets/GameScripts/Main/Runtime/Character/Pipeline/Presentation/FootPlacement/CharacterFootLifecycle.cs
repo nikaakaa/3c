@@ -79,12 +79,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in postTransition);
                 CharacterFootHardConstraintResult hardConstraint =
                     ResolveOutputSupportConstraint(
-                        in context, in frame, in interpolation,
+                        in context, in frame, in interpolation.SupportTarget,
                         OutputSupport,
-                        context.Interpolation.EffectiveCorrection);
-                CharacterFootInterpolationRuntime.ApplyHardConstraint(
+                        context.Interpolation.EffectiveCorrection,
+                        interpolation.Correction);
+                CharacterFootInterpolationRuntime.ApplyOutputCorrection(
                     ref context.Interpolation,
-                    in hardConstraint);
+                    hardConstraint.OutputCorrection);
                 CharacterFootPathContinuityFact continuityFact =
                     CompleteContinuity(
                         in interpolationContinuity,
@@ -160,6 +161,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float timeToLandingSeconds = formalFootMotion.HasPredictiveLanding
                 ? formalFootMotion.TimeToLandingSeconds : 0f;
             RequireValid(in frame);
+            Vector3 previousEffectiveSole = context.PreviousAnimatedSole +
+                (context.Interpolation.PreviousResponseOutputPoint -
+                 context.PreviousAnimatedSole) * context.PreviousOutputWeight;
             CharacterFootInterpolationRuntime.RebaseOutputWeight(
                 ref context.Interpolation, context.PreviousOutputWeight,
                 frame.FootPlacementWeight, context.PreviousAnimatedSole);
@@ -254,11 +258,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref context.Interpolation,
                     in target,
                     in frame);
+            Vector3 supportLimitedCorrection = ResolveContactClearance(
+                in context, in frame, in target, in stateTargetSupport,
+                in interpolation, previousEffectiveSole, out bool contactClearancePending);
             CharacterFootTransitionDecision postTransition =
                 CharacterFootTransitionResolver.ResolvePostInterpolation(
                     in context,
                     in frame,
-                    interpolation.Completed,
+                    interpolation.Completed && !contactClearancePending,
                     false);
             CharacterFootTransitionRuntime.Apply(
                 ref context,
@@ -276,7 +283,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportObservation outputSupport = preTransition.SuppressOutput
                 ? default
                 : QueryFootSupport(in context, in evaluation,
-                    interpolation.Correction, interpolation.SupportTarget, evaluation.OutputProbes);
+                    supportLimitedCorrection, interpolation.SupportTarget, evaluation.OutputProbes);
             CharacterFootHardConstraintResult hardConstraint =
                 preTransition.SuppressOutput
                     ? new CharacterFootHardConstraintResult(
@@ -289,11 +296,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         default,
                         default)
                     : ResolveOutputSupportConstraint(
-                        in context, in frame, in interpolation, in outputSupport,
-                        context.Interpolation.EffectiveCorrection);
-            CharacterFootInterpolationRuntime.ApplyHardConstraint(
+                        in context, in frame, in interpolation.SupportTarget, in outputSupport,
+                        supportLimitedCorrection, supportLimitedCorrection);
+            if (contactClearancePending)
+            {
+                hardConstraint = new CharacterFootHardConstraintResult(
+                    hardConstraint.Resolved, hardConstraint.Available, hardConstraint.Owner,
+                    hardConstraint.SurfaceIdentity, hardConstraint.PathIdentity,
+                    interpolation.Correction, hardConstraint.MinimumCorrection,
+                    hardConstraint.OutputCorrection);
+            }
+            CharacterFootInterpolationRuntime.ApplyOutputCorrection(
                 ref context.Interpolation,
-                in hardConstraint);
+                hardConstraint.OutputCorrection);
             CharacterFootPathContinuityFact continuityFact =
                 interpolation.ContinuityFact;
             lifecycleTransition = lifecycleTransition.Complete(
@@ -331,7 +346,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out result);
             bool landingCompletionPending =
                 context.Discrete.State == CharacterFootConstraintState.Landing &&
-                interpolation.Completed;
+                interpolation.Completed && !contactClearancePending;
             receipt = new Completion(
                 in evaluation,
                 in preTransition,
@@ -390,15 +405,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Side, frame.ComponentUp, true, in contacts, probes);
         }
 
+        static Vector3 ResolveContactClearance(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame,
+            in CharacterFootStateTarget target,
+            in CharacterFootCurrentSupportObservation stateTargetSupport,
+            in CharacterFootInterpolationResult interpolation,
+            Vector3 previousEffectiveSole,
+            out bool clearancePending)
+        {
+            clearancePending = false;
+            if ((context.Discrete.State != CharacterFootConstraintState.Releasing &&
+                 context.Discrete.State != CharacterFootConstraintState.Landing) ||
+                !stateTargetSupport.Available ||
+                !interpolation.CorrectionResponseFact.PreviousOutputAvailable)
+                return interpolation.Correction;
+            Vector3 up = frame.ComponentUp.normalized;
+            float minimumCorrection = Vector3.Dot(target.Correction, up) +
+                Mathf.Min(0f, stateTargetSupport.RequiredDisplacement) / frame.FootPlacementWeight;
+            clearancePending = Vector3.Dot(interpolation.Correction, up) +
+                CharacterFootConstraintMath.GeometryEpsilon < minimumCorrection;
+            if (!clearancePending)
+                return interpolation.Correction;
+            Vector3 previousCorrection = (previousEffectiveSole -
+                CharacterFootConstraintMath.ResolveOriginalSole(frame.AnimatedFoot)) /
+                frame.FootPlacementWeight;
+            return Vector3.ProjectOnPlane(previousCorrection, up) +
+                up * Vector3.Dot(interpolation.Correction, up);
+        }
+
         static CharacterFootHardConstraintResult ResolveOutputSupportConstraint(
             in CharacterFootLifecycleContext context,
             in CharacterFootStateFrame frame,
-            in CharacterFootInterpolationResult interpolation,
+            in CharacterFootSupportTarget selectedTarget,
             in CharacterFootCurrentSupportObservation outputSupport,
-            Vector3 correction)
+            Vector3 correction,
+            Vector3 queryCorrection)
         {
-            ref readonly CharacterFootSupportTarget selectedTarget =
-                ref interpolation.SupportTarget;
             CharacterFootHardConstraintResult constraint = CharacterFootHardConstraintResolver.Resolve(
                 in context, in frame, in selectedTarget, correction);
             if (!outputSupport.TryResolveHeightConstraint(
@@ -407,7 +450,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = frame.ComponentUp.normalized;
             ref readonly Vector3 constraintMinimum = ref constraint.MinimumCorrection;
             float clearanceCorrection = displacement / frame.FootPlacementWeight;
-            Vector3 minimum = interpolation.Correction + up * clearanceCorrection;
+            Vector3 minimum = queryCorrection + up * clearanceCorrection;
             if (constraint.Available && constraint.Owner != CharacterFootSafetyFloorOwner.PlantTarget &&
                 Vector3.Dot(constraintMinimum - minimum, up) >= 0f)
                 return constraint;

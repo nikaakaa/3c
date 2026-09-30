@@ -89,7 +89,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         frame.ComponentUp,
                         false);
                 }
-                case CharacterFootConstraintState.Landing:
                 case CharacterFootConstraintState.Locked:
                 {
                     Vector3 minimum =

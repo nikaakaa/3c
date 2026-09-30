@@ -165,14 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 
-        internal static void ApplyHardConstraint(
+        internal static void ApplyOutputCorrection(
             ref CharacterFootInterpolationState state,
-            in CharacterFootHardConstraintResult constraint)
+            Vector3 outputCorrection)
         {
-            ref readonly Vector3 inputCorrection = ref constraint.InputCorrection;
-            ref readonly Vector3 outputCorrection = ref constraint.OutputCorrection;
-            Vector3 adjustment = outputCorrection - inputCorrection;
-            if (!constraint.Available || adjustment.sqrMagnitude == 0f)
+            Vector3 adjustment = outputCorrection - state.EffectiveCorrection;
+            if (adjustment.sqrMagnitude == 0f)
                 return;
             state.EffectiveCorrection = outputCorrection;
             if (state.Policy == CharacterFootInterpolationPolicy.ReleaseResidual)
@@ -454,11 +452,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 state.PlantWorldResidual =
                     continuityOutputBefore - selectedWorldTarget;
-                state.PlantWorldResidualTransitionActive =
-                    state.PlantWorldResidual.sqrMagnitude >
-                    CharacterFootConstraintMath.GeometryEpsilon *
-                    CharacterFootConstraintMath.GeometryEpsilon;
             }
+            else if (target.DirectPlantFollow)
+            {
+                state.PlantWorldResidual += up * Vector3.Dot(
+                    previousSelectedWorldTarget - selectedWorldTarget, up);
+            }
+            state.PlantWorldResidualTransitionActive =
+                state.PlantWorldResidual.sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon *
+                CharacterFootConstraintMath.GeometryEpsilon;
             Vector3 residualCapturedBeforeDecay = state.PlantWorldResidual;
             bool residualDecayApplied = false;
             float residualBaseHalfLifeSeconds =

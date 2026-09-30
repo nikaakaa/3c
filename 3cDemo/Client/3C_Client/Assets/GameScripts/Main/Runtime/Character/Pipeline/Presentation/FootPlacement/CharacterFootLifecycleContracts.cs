@@ -1648,7 +1648,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStrideRequest stride,
             bool grounded,
             Transform goalRoot,
-            in CharacterFootSoleSupportQuery soleSupportQuery)
+            in CharacterFootSoleSupportQuery soleSupportQuery,
+            CharacterFootSoleProbeBuffer stateTargetProbes,
+            CharacterFootSoleProbeBuffer outputProbes)
         {
             Side = side;
             FormalFootMotion = formalFootMotion;
@@ -1658,6 +1660,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Grounded = grounded;
             GoalRoot = goalRoot;
             SoleSupportQuery = soleSupportQuery;
+            StateTargetProbes = stateTargetProbes;
+            OutputProbes = outputProbes;
         }
 
         internal CharacterFootSide Side { get; }
@@ -1668,6 +1672,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }
         internal readonly CharacterFootSoleSupportQuery SoleSupportQuery;
+        internal CharacterFootSoleProbeBuffer StateTargetProbes { get; }
+        internal CharacterFootSoleProbeBuffer OutputProbes { get; }
     }
 
     internal readonly struct CharacterFootTransitionDecision

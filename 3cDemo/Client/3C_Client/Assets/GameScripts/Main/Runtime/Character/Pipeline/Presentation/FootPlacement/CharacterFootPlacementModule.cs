@@ -37,6 +37,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingObservationPage RightLandingObservation;
         internal CharacterFootCurrentSupportObservationPage LeftCurrentSupport;
         internal CharacterFootCurrentSupportObservationPage RightCurrentSupport;
+        internal readonly CharacterFootSoleProbeBuffer LeftStateTargetProbes = new();
+        internal readonly CharacterFootSoleProbeBuffer RightStateTargetProbes = new();
+        internal readonly CharacterFootSoleProbeBuffer LeftOutputProbes = new();
+        internal readonly CharacterFootSoleProbeBuffer RightOutputProbes = new();
         internal CharacterFootPredictionMotionState PredictionMotion;
         internal CharacterFootPredictionMotionResult PredictionMotionResult;
         internal readonly CharacterFutureBodyTranslation BodyTrajectory =
@@ -575,7 +579,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    in m_Settings.CurrentSupportQuery));
+                    in m_Settings.CurrentSupportQuery),
+                bank.LeftStateTargetProbes, bank.LeftOutputProbes);
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
                 in rightCurrentStep,
@@ -585,7 +590,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    in m_Settings.CurrentSupportQuery));
+                    in m_Settings.CurrentSupportQuery),
+                bank.RightStateTargetProbes, bank.RightOutputProbes);
             CharacterFootPlacementRequest leftRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
@@ -843,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(foot.AnklePosition, foot.AnkleRotation);
             CharacterFootCurrentSupportObservation observation = query.Query(
                 frameSequence, completionIdentity, m_WorldQuery.WorldRevision,
-                side, componentUp, grounded, in contacts);
+                side, componentUp, grounded, in contacts, pending.Probes);
             pending.Set(in observation);
             return pending;
         }

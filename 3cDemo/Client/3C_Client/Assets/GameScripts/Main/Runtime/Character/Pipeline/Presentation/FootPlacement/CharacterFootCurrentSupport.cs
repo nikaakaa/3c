@@ -366,10 +366,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong NormalEventIdentity { get; }
     }
 
+    internal sealed class CharacterFootSoleProbeBuffer
+    {
+        FixedList4096Bytes<CharacterFootSoleProbeObservation> m_Values;
+
+        internal int Count => m_Values.Length;
+        internal CharacterFootSoleProbeObservation this[int index] => m_Values[index];
+        internal void Clear() => m_Values.Clear();
+        internal void Add(in CharacterFootSoleProbeObservation value) => m_Values.Add(value);
+    }
+
     internal readonly struct CharacterFootCurrentSupportObservation
     {
         internal const float SelectionEpsilon = 0.0001f;
-        readonly FixedList4096Bytes<CharacterFootSoleProbeObservation> m_Probes;
+        readonly CharacterFootSoleProbeBuffer m_Probes;
         readonly CharacterFootCurrentSupportQuerySettings m_Settings;
         readonly Vector3 m_UnitUp;
 
@@ -377,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong frameSequence, ulong completionIdentity, CharacterFootSide side,
             ulong worldRevision, Vector3 unitUp,
             in CharacterFootCurrentSupportQuerySettings settings,
-            in FixedList4096Bytes<CharacterFootSoleProbeObservation> probes,
+            CharacterFootSoleProbeBuffer probes,
             CharacterFootCurrentSupportRejectReason rejectReason,
             int acceptedSampleCount, float requiredDisplacement, int selectedSampleIndex,
             CharacterFootCurrentSupportSelectionReason selectionReason,
@@ -402,7 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal CharacterFootSide Side { get; }
         internal ulong WorldRevision { get; }
-        internal int SampleCount => m_Probes.Length;
+        internal int SampleCount => IsSpecified ? m_Probes.Count : 0;
         internal int AcceptedSampleCount { get; }
         internal CharacterFootCurrentSupportRejectReason RejectReason { get; }
         internal float RequiredDisplacement { get; }
@@ -554,6 +564,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal sealed class CharacterFootCurrentSupportObservationPage
     {
         CharacterFootCurrentSupportObservation m_Observation;
+        internal readonly CharacterFootSoleProbeBuffer Probes = new();
 
         internal bool HasValue { get; private set; }
         internal ref readonly CharacterFootCurrentSupportObservation Observation =>
@@ -618,10 +629,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCurrentSupportObservation Query(
             ulong frameSequence, ulong completionIdentity, ulong worldRevision,
             CharacterFootSide side, Vector3 componentUp, bool grounded,
-            in CharacterFootPlacementSoleContactPose contacts)
+            in CharacterFootPlacementSoleContactPose contacts,
+            CharacterFootSoleProbeBuffer probes)
         {
             Vector3 up = componentUp.normalized;
-            var probes = new FixedList4096Bytes<CharacterFootSoleProbeObservation>();
+            probes.Clear();
             int acceptedCount = 0;
             float displacement = float.NegativeInfinity;
             CharacterFootCurrentSupportRejectReason rejection = grounded
@@ -654,7 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 reason = acceptedCount == 1
                     ? CharacterFootCurrentSupportSelectionReason.SingleSampleSupport
                     : CharacterFootCurrentSupportSelectionReason.HighestRequiredDisplacement;
-                for (int i = 0; i < probes.Length; i++)
+                for (int i = 0; i < probes.Count; i++)
                 {
                     CharacterFootSoleProbeObservation probe = probes[i];
                     if (!probe.Result.Accepted ||
@@ -684,7 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterFootSupportNormalSource.CurrentSupport, frameSequence, completionIdentity, 0);
             }
             return new CharacterFootCurrentSupportObservation(
-                frameSequence, completionIdentity, side, worldRevision, up, in m_Settings, in probes,
+                frameSequence, completionIdentity, side, worldRevision, up, in m_Settings, probes,
                 rejection, acceptedCount, acceptedCount > 0 ? displacement : 0f, selected, reason, in target);
         }
     }

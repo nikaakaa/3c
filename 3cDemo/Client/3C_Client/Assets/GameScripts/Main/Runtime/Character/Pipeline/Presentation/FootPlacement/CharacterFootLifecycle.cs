@@ -195,7 +195,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                  target.InterpolationPolicy == CharacterFootInterpolationPolicy.VerifiedSupport))
             {
                 stateTargetSupport = QueryFootSupport(
-                    in context, in evaluation, target.Correction, target.SupportTarget);
+                    in context, in evaluation, target.Correction, target.SupportTarget,
+                    evaluation.StateTargetProbes);
                 target = CharacterFootStateTargetResolver.ConstrainStateTarget(
                     in target, in stateTargetSupport, in frame);
             }
@@ -275,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportObservation outputSupport = preTransition.SuppressOutput
                 ? default
                 : QueryFootSupport(in context, in evaluation,
-                    interpolation.Correction, interpolation.SupportTarget);
+                    interpolation.Correction, interpolation.SupportTarget, evaluation.OutputProbes);
             CharacterFootHardConstraintResult hardConstraint =
                 preTransition.SuppressOutput
                     ? new CharacterFootHardConstraintResult(
@@ -370,7 +371,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
             Vector3 correction,
-            in CharacterFootSupportTarget support)
+            in CharacterFootSupportTarget support,
+            CharacterFootSoleProbeBuffer probes)
         {
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
@@ -385,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(ankle, rotation);
             return evaluation.SoleSupportQuery.Query(
                 frame.FrameSequence, frame.CompletionIdentity, frame.WorldRevision,
-                frame.Side, frame.ComponentUp, true, in contacts);
+                frame.Side, frame.ComponentUp, true, in contacts, probes);
         }
 
         static CharacterFootHardConstraintResult ResolveOutputSupportConstraint(

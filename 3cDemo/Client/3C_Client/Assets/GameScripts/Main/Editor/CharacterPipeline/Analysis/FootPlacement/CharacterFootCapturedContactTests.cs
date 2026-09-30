@@ -61,6 +61,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 report["sourceSha256"] = fixture["sourceSha256"];
                 var frames = (JArray)fixture["frames"];
                 var columns = (JObject)fixture["columns"];
+                report["input"] = new JObject
+                {
+                    ["columns"] = new JObject
+                    {
+                        ["main"] = columns["main"],
+                        ["probes"] = columns["probes"],
+                        ["envelope"] = columns["envelope"]
+                    },
+                    ["frames"] = new JArray(frames.Select(frame => new JObject
+                    {
+                        ["main"] = frame["main"],
+                        ["probes"] = frame["probes"],
+                        ["envelope"] = frame["envelope"]
+                    }))
+                };
                 Assert.That(frames.Count, Is.EqualTo(100));
                 Assert.That(SceneManager.GetActiveScene().path,
                     Is.EqualTo("Assets/Scenes/GameplayLab/GameplayLabFixed.unity"));

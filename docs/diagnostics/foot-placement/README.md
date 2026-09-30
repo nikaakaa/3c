@@ -11,6 +11,6 @@
 | [查询边缘图](corin-foot-query-edge-20260927.svg) | 脚部地形查询几何解释 |
 | [旧数据抖动定位](corin-jitter-existing-data-20260927.json) | 原姿势、求解输出与身体位移差异 |
 | [抖动修正记录](corin-jitter-fix-20260927.json) | 抬脚修复有录制核对；混合旋转修复只有当时编译记录 |
-| [接触局部复算测试](ik-tests/README.md) | 连续固定输入、来源哈希与自动更新的逐帧 HTML |
+| [脚部连续场景测试](ik-tests/README.md) | 接触交接与 Releasing 历史对照、来源哈希、正式运行结果和逐帧 HTML |
 
 正式采样 CSV、Proof 和分析报告仍位于项目 `Diagnostics/`，通过报告内链接读取；没有改变采样包内部结构或身份。涉及混合旋转的证据由本目录保存唯一原件，并由[动画分类](../animation/README.md)引用。

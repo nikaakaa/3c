@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "result": {
+    "success": true,
+    "message": "Test job status retrieved.",
+    "data": {
+      "job_id": "761e4ee9d8874a1aa41ca8541c4ff438",
+      "status": "failed",
+      "mode": "EditMode",
+      "started_unix_ms": 1790779197899,
+      "finished_unix_ms": 1790779207222,
+      "last_update_unix_ms": 1790779207222,
+      "progress": {
+        "completed": 1,
+        "total": 1,
+        "current_test_full_name": null,
+        "current_test_started_unix_ms": 1790779205176,
+        "last_finished_test_full_name": "ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.CapturedReleaseComparesHistoricalClearanceAndContinuousOutput",
+        "last_finished_unix_ms": 1790779207085,
+        "stuck_suspected": false,
+        "editor_is_focused": false,
+        "blocked_reason": null,
+        "failures_so_far": [
+          {
+            "full_name": "ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.CapturedReleaseComparesHistoricalClearanceAndContinuousOutput",
+            "message": "System.Reflection.TargetInvocationException : Exception has been thrown by the target of an invocation.\r\n  ----> NUnit.Framework.AssertionException :   Expected string length 48 but was 0. Strings differ at index 0.\r\n  Expected: \"Assets/Scenes/GameplayLab/GameplayLabFixed.unity\"\r\n  But was:  <string.Empty>\r\n  -----------^\r\n"
+          }
+        ],
+        "failures_capped": false
+      },
+      "error": null,
+      "result": null
+    }
+  }
+}

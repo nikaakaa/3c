@@ -30,7 +30,7 @@ using Object = UnityEngine.Object;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed class CharacterFootCapturedContactTests
+    public sealed partial class CharacterFootCapturedContactTests
     {
         const string AssetRoot = "Assets/Configs/Character/Corin/Pipeline/Presentation/";
         const string RuntimeSource = "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootLandingRuntime.cs";
@@ -381,8 +381,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         sealed class CapturedFrame
         {
-            internal CapturedFrame(JToken captured, JObject columns, CharacterFootPlacementProfile profile, float legLength)
+            internal CapturedFrame(JToken captured, JObject columns, CharacterFootPlacementProfile profile, float legLength,
+                CharacterFootSide side = CharacterFootSide.Right)
             {
+                Side = side;
                 Recorded = Row.Main(captured, columns);
                 Row r = Recorded;
                 ExpectedProbes = Row.Table(captured, columns, "probes").OrderBy(x => x.I("sample-index")).ToArray();
@@ -393,11 +395,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RootPosition = r.V("physical-body/pose-root-world-position");
                 RootRotation = r.Q("physical-body/pose-root-world-rotation");
                 Animated = AnimatedPose(r, ExpectedProbes);
-                Step = CharacterFootCapturedContactTests.Step(r);
+                Step = CharacterFootCapturedContactTests.Step(r, side);
                 Assert.That(Step.Events.CurrentContact.Identity, Is.EqualTo(r.U("formal-input/events/current-contact/identity")));
                 Assert.That(Step.Events.NextLanding.Identity, Is.EqualTo(r.U("formal-input/events/next-landing/identity")));
-                Path = PathInput(r, captured, columns);
-                Prediction = CharacterFootCapturedContactTests.Prediction(r);
+                Path = PathInput(r, captured, columns, side);
+                Prediction = CharacterFootCapturedContactTests.Prediction(r, side);
                 Settings = profile.FootMotion.Build();
                 Grounded = r.B("input/grounded");
                 Weight = r.F("foot/foot-motion/lifecycle/formal-foot-placement-weight");
@@ -412,6 +414,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
 
             internal readonly Row Recorded;
+            internal readonly CharacterFootSide Side;
             internal readonly Row[] ExpectedProbes;
             internal readonly ulong Sequence, CompletionId;
             internal readonly Vector3 RootPosition;
@@ -476,7 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return CharacterFootLandingFact.Create(landing.LandingEventIdentity, in prediction);
         }
 
-        static AnimationFootMotionRuntimeSample Step(Row r)
+        static AnimationFootMotionRuntimeSample Step(Row r, CharacterFootSide side = CharacterFootSide.Right)
         {
             var events = new AnimationFootMotionEventFrame(
                 Occurrence(r, "current-contact"), Occurrence(r, "next-landing"),
@@ -484,7 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 r.F("formal-input/time-to-landing-seconds"), r.F("foot/foot-motion/core/progress"),
                 r.F("formal-input/approach-contact-to-landing-progress")).Bind(
                     r.U("formal-input/source-sample-identity"),
-                    r.U("formal-input/contribution-continuity-identity"), CharacterFootSide.Right);
+                    r.U("formal-input/contribution-continuity-identity"), side);
             return new AnimationFootMotionRuntimeSample(r.F("formal-input/foot-height"),
                 r.F("formal-input/toe-height"), r.F("formal-input/toe-speed"),
                 r.F("formal-input/position-error"), r.F("formal-input/rotation-error"),
@@ -500,7 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0f, r.F(p + "distance"), r.V(p + "root-local-landing"));
         }
 
-        static CharacterFootLandingPredictionResult Prediction(Row r)
+        static CharacterFootLandingPredictionResult Prediction(Row r, CharacterFootSide side = CharacterFootSide.Right)
         {
             bool accepted = r.B("foot/accepted");
             CharacterFootLandingSupport support = accepted
@@ -511,7 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 velocity = r.V("foot/future-body-translation-velocity");
             var future = new CharacterFutureBodyTranslationSample(r.F("foot/time-to-landing-seconds"),
                 translation.x, translation.y, translation.z, velocity.x, velocity.y, velocity.z);
-            return new CharacterFootLandingPredictionResult(CharacterFootSide.Right,
+            return new CharacterFootLandingPredictionResult(side,
                 (CharacterFootLandingPredictionState)r.I("foot/state"),
                 (CharacterFootLandingPredictionRejectReason)r.I("foot/reject-reason"),
                 (CharacterFootLandingStepSource)r.I("foot/step-source"),
@@ -548,7 +551,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 r.I("foot/ground-path/" + name + "-surface-identity"),
                 r.V("foot/ground-path/" + name), r.V("foot/ground-path/" + name + "-normal"));
 
-        static CharacterFootGroundPathResult PathInput(Row r, JToken captured, JObject columns)
+        static CharacterFootGroundPathResult PathInput(Row r, JToken captured, JObject columns,
+            CharacterFootSide side = CharacterFootSide.Right)
         {
             var page = new CharacterFootGroundPathPage(64);
             if (r.I("foot/ground-path/state") == (int)CharacterFootGroundPathState.Rejected)
@@ -560,10 +564,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             var last = PathLanding(r, "last-landing", "last-future-body-translation-source-identity");
             var next = PathLanding(r, "next-swing-landing", "next-swing-future-body-translation-source-identity");
-            var key = CharacterFootGroundPathInputBuilder.BuildKey(CharacterFootSide.Right,
+            var key = CharacterFootGroundPathInputBuilder.BuildKey(side,
                 in last, in next, r.U("foot/ground-path/authority-tick"), Vector3.up, string.Empty);
             const string q = "foot/ground-path/query/";
-            var query = new CharacterFootGroundPathQueryRequest(CharacterFootSide.Right,
+            var query = new CharacterFootGroundPathQueryRequest(side,
                 r.V(q + "axis-start"), r.V(q + "axis-end"), r.F(q + "radius"),
                 r.F(q + "maximum-axis-segment-length"), r.V(q + "direction"),
                 r.F(q + "maximum-distance"), r.I(q + "layer-mask"),
@@ -602,7 +606,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (landing.TryResolveVerifiedLanding(request.EventIdentity, out contactLanding) ||
                  CharacterFootLandingRuntime.TryResolveCurrentContactCandidate(in input.Step, in input.Prediction, out contactLanding));
             return new CharacterFootStateFrame(input.Sequence, input.CompletionId,
-                input.RigId, input.RigRevision, CharacterFootSide.Right,
+                input.RigId, input.RigRevision, input.Side,
                 in input.Animated, input.Animated.HipPosition, input.LegLength, in swing, in input.Path,
                 hasContactLanding, in contactLanding, prepared, prepared ? landing.PlantTarget : default,
                 in support, in request, input.Step.Support, request.EventIdentity,

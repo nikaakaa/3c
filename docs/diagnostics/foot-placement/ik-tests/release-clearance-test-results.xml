@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.6199513">
+  <test-suite type="TestSuite" id="1000" name="3C_Client" fullname="3C_Client" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.619951" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1017" name="ThirdPersonCharacter.Content.Editor.dll" fullname="D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Library/ScriptAssemblies/ThirdPersonCharacter.Content.Editor.dll" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.525780" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33660" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1018" name="ThirdPersonCharacter" fullname="ThirdPersonCharacter" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.429070" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1019" name="Pipeline" fullname="ThirdPersonCharacter.Pipeline" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.329895" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1020" name="Editor" fullname="ThirdPersonCharacter.Pipeline.Editor" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.230588" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1004" name="CharacterFootCapturedContactTests" fullname="ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests" classname="ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.129323" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1006" name="CapturedReleaseComparesHistoricalClearanceAndContinuousOutput" fullname="ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.CapturedReleaseComparesHistoricalClearanceAndContinuousOutput" methodname="CapturedReleaseComparesHistoricalClearanceAndContinuousOutput" classname="ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests" runstate="Runnable" seed="844544131" result="Passed" start-time="2026-09-30 14:51:33Z" end-time="2026-09-30 14:51:37Z" duration="4.017282" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/Lenovo/AppData/LocalLow/DefaultCompany/3C_Client\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

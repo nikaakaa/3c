@@ -19,6 +19,8 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 
 ## 项目作业入口
 
+- 技能运行数据契约变化后，使用正式技能发布器重建目标 Definition 的 Fixed / Float32 产物；不在 Runtime 猜测旧声明绑定或补默认值。技能重建菜单只负责指定 Definition 和输出目录，技能输入由 GameplayAbilityExecutionDataAssetPublisher 与编译器确认，不把独立的 Pose、动画资源或相机配置校验放到这条 Build 链之前。
+- `Tools/3C/Internal/Republish Corin Ability Data` 复用同一发布器。菜单返回 attempted 或客户端超时都不代表成功或失败；先检查原操作是否已写入产物，再用 Definition 的正式 Load 及技能安装入口确认契约，不能重复发起重建。
 - 回放、Foot 与 Presentation 诊断使用 [3C 同输入回放验证](../3c-replay-verified-change/SKILL.md)；CPU 与托管分配采集使用 [3C 性能诊断](../3c-performance-diagnostics/SKILL.md)。它们提供业务操作入口，连接机制仍由通用 skill 维护。
 - 构建、回放或采集请求结果不确定时，先查询原 `job_id`/RunId，不重复提交。若当前操作由 3C Development Center 的独立 RunHost 管理，使用它的正式 `status` 命令查询，不依赖 Editor 重连，不改写状态文件。
 - [3C 并行开发验证](../3c-fast-development-validation/SKILL.md) 仅用于已明确的并行开发；普通 Unity 操作不自动引入 Center 改动记录、新 worktree 或其他 Agent。

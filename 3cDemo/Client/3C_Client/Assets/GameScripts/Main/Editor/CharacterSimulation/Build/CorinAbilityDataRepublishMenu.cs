@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -17,15 +16,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Debug.Log("Republish Corin Ability Data: start");
             CharacterPipelineDefinition definition =
                 AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(DefinitionPath);
-            if (definition == null)
-                throw new InvalidOperationException($"Corin Character Pipeline Definition '{DefinitionPath}' is missing.");
-            var configurationErrors = new System.Collections.Generic.List<string>();
-            if (!definition.CollectConfigurationErrors(configurationErrors))
-            {
-                throw new InvalidOperationException(
-                    $"Corin Character Pipeline Definition '{DefinitionPath}' is invalid.{Environment.NewLine}" +
-                    string.Join(Environment.NewLine, configurationErrors));
-            }
             GameplayAbilityExecutionDataAssetPublisher.PublishDefinition(definition, OutputFolder);
         }
     }

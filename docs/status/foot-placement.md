@@ -8,7 +8,9 @@
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。
 
-动画程序集定向编译通过（0 警告、0 错误）。配套窗口已执行 13 帧无接触 Stored 和 70 帧真实接触 Stored 的正式选择／静态样本比较，均通过且预热计算 0 B；结果位于项目 `Temp/FootStoredPoseFunctions/`。它们尚未覆盖 Native Slot 历史页捕获、新贡献合成、Goal、Physics 或 FBBIK，不能称为完整动画或 IK 验证。共享 Editor 因网络脚本程序集引用错误仍未成功重编译；本轮没有启动 Replay。具体证据与限制见[动画来源审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#stored-motion-audit)。
+动画程序集定向编译通过（0 警告、0 错误）。配套窗口已执行 13 帧无接触 Stored 和 70 帧真实接触 Stored 的正式选择／静态样本比较，均通过且预热计算 0 B；结果已发布至 `docs/diagnostics/foot-placement/ik-tests/stored-*-functions.json`，独立构建产物留在项目 `Temp/FootStoredPoseFunctions/`。它们尚未覆盖 Native Slot 历史页捕获、新贡献合成、Goal、Physics 或 FBBIK，不能称为完整动画或 IK 验证。共享 Editor 因网络脚本程序集引用错误仍未成功重编译；本轮没有启动 Replay。具体证据与限制见[动画来源审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#stored-motion-audit)。
+
+上述生产修正已独立提交 `18e1f2a4f`，配套窗口已发布 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果，正在接续真实 Goal 与 Physics。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权。后续仍须保留作者权重和原子事件语义，以真实脚掌净空约束验证最终旋转交接；旋转响应尚未修改，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
 
 ## 正式 owner
 

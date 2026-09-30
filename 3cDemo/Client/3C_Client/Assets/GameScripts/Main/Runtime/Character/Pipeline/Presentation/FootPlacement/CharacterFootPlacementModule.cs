@@ -24,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootLifecycleContext LeftFoot;
         internal CharacterFootLifecycleContext RightFoot;
+        internal readonly CharacterFootLifecycleInputPage LeftInputState = new();
+        internal readonly CharacterFootLifecycleInputPage RightInputState = new();
         internal CharacterFootPelvisSpringState PelvisSpring;
         internal CharacterFootPrimarySupportState PrimarySupport;
         internal CharacterResolvedFootPair ResolvedFeet;
@@ -161,6 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             LeftFoot = default;
             RightFoot = default;
+            LeftInputState.Clear();
+            RightInputState.Clear();
             LeftFoot.Interpolation
                 .PendingCorrectionResponseInitializationReason = reason;
             RightFoot.Interpolation
@@ -283,12 +287,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
                 throw new InvalidOperationException("Foot Placement already evaluated the open bank.");
-            var leftPreState = bank.RecordDiagnostics
-                ? new CharacterFootLifecycleInputDiagnostics(in bank.LeftFoot)
-                : default;
-            var rightPreState = bank.RecordDiagnostics
-                ? new CharacterFootLifecycleInputDiagnostics(in bank.RightFoot)
-                : default;
+            if (bank.RecordDiagnostics)
+            {
+                bank.LeftInputState.Capture(in bank.LeftFoot);
+                bank.RightInputState.Capture(in bank.RightFoot);
+            }
             if (frame.ActorId != m_ActorId ||
                 !string.Equals(
                     poseInput.PosePlanHash,
@@ -691,7 +694,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
-                        in leftPreState,
+                        new CharacterFootLifecycleInputDiagnostics(bank.LeftInputState),
                         leftPose,
                         new CharacterFootStepSelectionDiagnostics(
                             leftLanding.LastLandingEventIdentity,
@@ -710,7 +713,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
-                        in rightPreState,
+                        new CharacterFootLifecycleInputDiagnostics(bank.RightInputState),
                         rightPose,
                         new CharacterFootStepSelectionDiagnostics(
                             rightLanding.LastLandingEventIdentity,

@@ -21,6 +21,8 @@
 
 报告附带 JSON、查询图与[台阶连续性解释器](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html)已归入[脚部诊断](../diagnostics/foot-placement/README.md)。正式 CSV、Proof 与分析包仍在项目 `Diagnostics/`；原始数据内容、失败事实和采样身份未改。
 
-2026-10-01 补齐新的 full 采样输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前复制左右脚生命周期状态，诊断页保存完整身体预测曲线的值副本，原生成采样程序输出 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，并补充事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；这次没有修改冻结、权重、骨盆或腿 IK 算法，也没有完成新的行为验证。按用户本次范围不保留新增单元测试。
+2026-10-01 补齐新的 full 采样输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前将左右脚生命周期状态保存到帧 Bank 的预分配页；诊断视图引用该页与 Bank 中的完整身体预测曲线，原生成采样程序在提交后同步写入 packet。输出包括 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，以及事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；冻结、权重、骨盆和腿 IK 算法均未修改。
+
+补字段的 `abfaf3895` 再次引入了大结构嵌套值拷贝。复用历史检查入口，在当前 Unity Mono 中测得 full Capture 实际栈帧为 953,392 字节；改为上述预分配存储引用后为 664,080 字节，减少 289,312 字节。历史修复 `413e931de` 后为 646,528 字节，core Capture 本次保持 205,904 字节。当前改动已通过 Unity 编译与实际 JIT 检查；原入口的 2716 帧诊断回放已请求，但 Editor 卡在进入 Play 的域重载，尚未完成本次采集和保存，不能声明闪退已修复或 IK 行为已改善。检查输出保留在 `tmp/ik-release-sampling-20260930/capture-stack-replay-input-before.json` 与 `capture-stack-replay-input-after.json`。相关执行规则已写入根目录 `AGENTS.md`；本轮未新增单元测试，既有业务测试仍由配套测试窗口维护。
 
 原理阅读见 [GDC 学习文案](../reference/foot-placement/gdc2016-fitting-the-world.md)；历史否决与重复问题见[实现经验](../reference/foot-placement/implementation-lessons.md)。参数和当前运行路径仍由正式内容与现行规格拥有。

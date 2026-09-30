@@ -7,35 +7,46 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    internal sealed class CharacterFootLifecycleInputPage
+    {
+        CharacterFootLifecycleContext m_Value;
+
+        internal ref readonly CharacterFootLifecycleContext Value => ref m_Value;
+        internal void Capture(in CharacterFootLifecycleContext value) => m_Value = value;
+        internal void Clear() => m_Value = default;
+    }
+
     public readonly struct CharacterFootLifecycleInputDiagnostics
     {
-        readonly CharacterFootLifecycleContext m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootLifecycleContext Value => ref m_Page.Value;
 
-        internal CharacterFootLifecycleInputDiagnostics(in CharacterFootLifecycleContext value) => m_Value = value;
-
-        [DiagnosticField, DiagnosticGroup("replay-input")]
-        public float PreviousOutputWeight => m_Value.PreviousOutputWeight;
+        internal CharacterFootLifecycleInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
-        public Vector3 PreviousAnimatedSole => m_Value.PreviousAnimatedSole;
+        public float PreviousOutputWeight => Value.PreviousOutputWeight;
 
-        public CharacterFootLandingInputDiagnostics Landing => new(in m_Value.Landing);
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public Vector3 PreviousAnimatedSole => Value.PreviousAnimatedSole;
 
-        public CharacterFootDiscreteInputDiagnostics Discrete => new(in m_Value.Discrete);
+        public CharacterFootLandingInputDiagnostics Landing => new(m_Page);
 
-        public CharacterFootContactInputDiagnostics Contact => new(in m_Value.Contact);
+        public CharacterFootDiscreteInputDiagnostics Discrete => new(m_Page);
 
-        public CharacterFootContactTransitionInputDiagnostics ContactTransition => new(in m_Value.ContactTransition);
+        public CharacterFootContactInputDiagnostics Contact => new(m_Page);
 
-        public CharacterFootInterpolationInputDiagnostics Interpolation => new(in m_Value.Interpolation);
+        public CharacterFootContactTransitionInputDiagnostics ContactTransition => new(m_Page);
+
+        public CharacterFootInterpolationInputDiagnostics Interpolation => new(m_Page);
 
     }
 
     public readonly struct CharacterFootLandingInputDiagnostics
     {
-        readonly CharacterFootLandingContext m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootLandingContext m_Value => ref m_Page.Value.Landing;
 
-        internal CharacterFootLandingInputDiagnostics(in CharacterFootLandingContext value) => m_Value = value;
+        internal CharacterFootLandingInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         public CharacterFootLandingFactInputDiagnostics LastLanding => new(in m_Value.LastLanding);
 
@@ -102,9 +113,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootDiscreteInputDiagnostics
     {
-        readonly CharacterFootDiscreteStateContext m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootDiscreteStateContext m_Value => ref m_Page.Value.Discrete;
 
-        internal CharacterFootDiscreteInputDiagnostics(in CharacterFootDiscreteStateContext value) => m_Value = value;
+        internal CharacterFootDiscreteInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public CharacterFootConstraintState State => m_Value.State;
@@ -116,9 +128,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootContactInputDiagnostics
     {
-        readonly CharacterFootContactContext m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootContactContext m_Value => ref m_Page.Value.Contact;
 
-        internal CharacterFootContactInputDiagnostics(in CharacterFootContactContext value) => m_Value = value;
+        internal CharacterFootContactInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public bool HasContact => m_Value.HasContact;
@@ -148,9 +161,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootContactTransitionInputDiagnostics
     {
-        readonly CharacterFootContactTransitionContext m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootContactTransitionContext m_Value => ref m_Page.Value.ContactTransition;
 
-        internal CharacterFootContactTransitionInputDiagnostics(in CharacterFootContactTransitionContext value) => m_Value = value;
+        internal CharacterFootContactTransitionInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public bool HasPreviousRequest => m_Value.HasPreviousRequest;
@@ -222,9 +236,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootInterpolationInputDiagnostics
     {
-        readonly CharacterFootInterpolationState m_Value;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly CharacterFootInterpolationState m_Value => ref m_Page.Value.Interpolation;
 
-        internal CharacterFootInterpolationInputDiagnostics(in CharacterFootInterpolationState value) => m_Value = value;
+        internal CharacterFootInterpolationInputDiagnostics(CharacterFootLifecycleInputPage page) => m_Page = page;
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public bool OutputWeightRebased => m_Value.OutputWeightRebased;
@@ -339,9 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootCorrectionResponseInitializationReason PendingCorrectionResponseInitializationReason => m_Value.PendingCorrectionResponseInitializationReason;
 
         [DiagnosticTable("pre-state-response-lineage", 1, 128)]
-        public CharacterFootResponseLineageInputPage ResponseLineage => new(
-            in m_Value.CorrectionResponseSourceLineage,
-            in m_Value.CorrectionResponseProfileRevision);
+        public CharacterFootResponseLineageInputPage ResponseLineage => new(m_Page);
 
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public int SourceLineageByteCount => m_Value.CorrectionResponseSourceLineage.Length;
@@ -373,21 +386,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootResponseLineageInputPage
     {
-        readonly FixedString128Bytes m_Source;
-        readonly FixedString128Bytes m_Profile;
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly FixedString128Bytes Source => ref m_Page.Value.Interpolation.CorrectionResponseSourceLineage;
+        ref readonly FixedString128Bytes Profile => ref m_Page.Value.Interpolation.CorrectionResponseProfileRevision;
 
-        internal CharacterFootResponseLineageInputPage(
-            in FixedString128Bytes source, in FixedString128Bytes profile)
-        {
-            m_Source = source;
-            m_Profile = profile;
-        }
+        internal CharacterFootResponseLineageInputPage(CharacterFootLifecycleInputPage page) => m_Page = page;
 
-        public int Count => Math.Max(m_Source.Length, m_Profile.Length);
+        public int Count => Math.Max(Source.Length, Profile.Length);
         public CharacterFootResponseLineageInputRow this[int index] => new(
             index,
-            index < m_Source.Length ? m_Source[index] : (byte)0,
-            index < m_Profile.Length ? m_Profile[index] : (byte)0);
+            index < Source.Length ? Source[index] : (byte)0,
+            index < Profile.Length ? Profile[index] : (byte)0);
     }
 
     public readonly struct CharacterFootResponseLineageInputRow
@@ -453,32 +462,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootBodyTrajectoryInputPage
     {
-        readonly CharacterFutureBodyTranslationSample m_Sample0;
-        readonly CharacterFutureBodyTranslationSample m_Sample1;
-        readonly CharacterFutureBodyTranslationSample m_Sample2;
-        readonly CharacterFutureBodyTranslationSample m_Sample3;
-        readonly CharacterFutureBodyTranslationSample m_Sample4;
+        readonly CharacterFutureBodyTranslation m_Source;
 
-        internal CharacterFootBodyTrajectoryInputPage(CharacterFutureBodyTranslation source)
-        {
-            Count = source != null ? source.SampleCount : 0;
-            m_Sample0 = Count > 0 ? source.SampleAt(0) : default;
-            m_Sample1 = Count > 1 ? source.SampleAt(1) : default;
-            m_Sample2 = Count > 2 ? source.SampleAt(2) : default;
-            m_Sample3 = Count > 3 ? source.SampleAt(3) : default;
-            m_Sample4 = Count > 4 ? source.SampleAt(4) : default;
-        }
+        internal CharacterFootBodyTrajectoryInputPage(CharacterFutureBodyTranslation source) => m_Source = source;
 
-        public int Count { get; }
-        public CharacterFootBodyTrajectoryInputRow this[int index] => new(index, index switch
-        {
-            0 => m_Sample0,
-            1 => m_Sample1,
-            2 => m_Sample2,
-            3 => m_Sample3,
-            4 => m_Sample4,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        });
+        public int Count => m_Source != null ? m_Source.SampleCount : 0;
+        public CharacterFootBodyTrajectoryInputRow this[int index] => new(index, m_Source.SampleAt(index));
     }
 
     public readonly struct CharacterFootBodyTrajectoryInputRow

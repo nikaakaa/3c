@@ -84,6 +84,7 @@
 69. Landing公式正确后仍可能由Stance事务跳变。run `0bf203fb...`证明Origin、Target、Blend到Final的代数误差低于`0.01mm`，但同identity Handoff会一帧消失再捕获，左右分别30/92次；frame `794 -> 795`旧Anchor遇到Current Event换代时Blend从`0.354`增至`0.919`，产生约`1.205m`三维Goal跳变。Committed Anchor必须持续到Release归零；事件换代不能让旧Anchor重新增权，逐帧`HasAnchor`布尔值不能代替显式事务状态。
 70. Landing Handoff开始后不能每帧用Completed Output重新验资格。run `20a2e819...`中Anchor与Committed Goal持续有效，但首帧Handoff输出把Completed Output记成底层Active Plan，下一帧便因Plan不匹配自行退出。Handoff必须由冻结的Plan/Event identity持续拥有，期间Completed Output也记录Anchor Plan；底层Plan只能提供候选，不能取消已提交事务。
 71. 运行时有效转向不能刚体旋转旧Foot Route、命中、Surface和Ground Envelope。方向改变必须产生新committed trajectory Revision，重新Landing查询、Capsule采样、Edge、Reachability与Hull；旧Plan只保持不可变交接旧侧。实际脚未沿平地Animation Foot Route时禁止进入地形算法。
+72. 扩充诊断数据不能把大状态重新内嵌进逐层返回的值类型。`cd0d0a73e` 已处理大结构按值传参，`413e931de` 已将完整采样栈帧从 1,476,384 降至 646,528 字节；`abfaf3895` 新增计算前脚态和轨迹值副本后，又涨到 953,392 字节。前态改存帧 Bank 的预分配页、视图引用该页和正式身体曲线后，实际 Unity Mono JIT 栈帧降到 664,080 字节。`in` 参数、结构大小和 IL locals 都不能单独证明实际栈安全；本帧事件同步复制到 packet 前，引用的页不得复用。必须完成原入口的连续采集与保存才可宣布闪退修复；本次运行尚卡在进入 Play 的域重载，不能用 JIT 结果代替运行验收。
 
 ## 当前证据与下一owner
 

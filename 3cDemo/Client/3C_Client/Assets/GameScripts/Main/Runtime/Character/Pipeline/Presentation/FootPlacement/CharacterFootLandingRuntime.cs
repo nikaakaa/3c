@@ -65,7 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (hasCurrentEvent &&
                 context.PlantTargetState == CharacterFootPlantTargetState.Tracking &&
-                context.PlantTarget.HasValue &&
                 context.PlantTarget.LandingEventIdentity != currentEventIdentity)
             {
                 context.ClearTrackingPlantTarget();
@@ -230,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool retainsCurrentPlant =
                     context.PlantTargetState ==
                         CharacterFootPlantTargetState.Tracking &&
-                    context.PlantTarget.HasValue &&
+                    formalFootMotion.Contact > 0f &&
                     current.IsBound &&
                     context.PlantTarget.LandingEventIdentity ==
                         current.Identity;

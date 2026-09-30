@@ -436,12 +436,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      in rightCurrentStep,
                      in rightPrediction,
                      out rightContactLanding));
-            bool leftPreparedPlantActive = IsPreparedPlantTargetActive(
-                in leftCurrentStep,
-                in leftLanding);
-            bool rightPreparedPlantActive = IsPreparedPlantTargetActive(
-                in rightCurrentStep,
-                in rightLanding);
+            bool leftPreparedPlantActive = leftLanding.PlantTargetState ==
+                CharacterFootPlantTargetState.Tracking;
+            bool rightPreparedPlantActive = rightLanding.PlantTargetState ==
+                CharacterFootPlantTargetState.Tracking;
             CharacterFootGroundPathLanding leftPreparedPlantTarget =
                 leftPreparedPlantActive ? leftLanding.PlantTarget : default;
             CharacterFootGroundPathLanding rightPreparedPlantTarget =
@@ -952,27 +950,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     result.RejectReason, true, result.SegmentCount,
                     in input, default);
             return new CharacterFootGroundPathResult(pendingPage, true);
-        }
-
-        static bool IsPreparedPlantTargetActive(
-            in AnimationFootMotionRuntimeSample footMotion,
-            in CharacterFootLandingSnapshot landing)
-        {
-            if (landing.PlantTargetState !=
-                    CharacterFootPlantTargetState.Tracking ||
-                !landing.HasPlantTarget)
-            {
-                return false;
-            }
-            ulong eventIdentity = landing.PlantTarget.LandingEventIdentity;
-            ref readonly AnimationFootMotionEventFrame events =
-                ref footMotion.Events;
-            bool approachMatches = events.InApproachContactToLanding &&
-                                   events.NextLanding.IsBound &&
-                                   events.NextLanding.Identity == eventIdentity;
-            bool currentMatches = events.CurrentContact.IsBound &&
-                                  events.CurrentContact.Identity == eventIdentity;
-            return approachMatches || currentMatches;
         }
 
         CharacterFootLandingPredictionPair PredictFootPair(

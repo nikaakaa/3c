@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal int MutationCapacity => m_Mutations.Length;
 
-        public void ApplyCommands(
+        internal void ApplyCommands(
             ActionSampleHistoryMutationLease lease,
             FixedCapacityFrameBuffer<ActionPlaybackInboxEntry> entries)
         {

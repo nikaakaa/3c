@@ -323,7 +323,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return m_ActiveLease;
         }
 
-        public void ApplyCommands(
+        internal void ApplyCommands(
             ActionLifecycleMutationLease lease,
             FixedCapacityFrameBuffer<ActionPlaybackInboxEntry> entries)
         {
@@ -345,7 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        public void ReplaceSlotUsageBatch(
+        internal void ReplaceSlotUsageBatch(
             ActionLifecycleMutationLease lease,
             FixedCapacityFrameBuffer<ActionSlotSourceUsage> usages)
         {
@@ -456,7 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             writable.HasSlotOwner = true;
         }
 
-        public void ApplyRetirementPermissions(
+        internal void ApplyRetirementPermissions(
             ActionLifecycleMutationLease lease,
             FixedCapacityFrameBuffer<ActionRetirementPermission> permissions)
         {

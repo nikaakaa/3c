@@ -2153,3 +2153,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Ground Surface Visibility 的 end 分支在事件循环内重复执行 `NextSwingLanding - Origin` 和沿 surface up 的 Dot；path length 处的 segment end 和显式 length event 都可能触发该分支。
 - 循环前绑定 NextSwing landing offset 和高度，end 分支复用同一结果。LastLanding start 高度、事件排序、跳过规则、surface identity 和 edge 输出不变。
 - 该改动删除每次 Ground Path surface visibility 构建中的重复 end 减法和 Dot。静态核对 offset 只在循环前计算一次且生命周期覆盖事件循环；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP306 控制台编译反馈修正（2026-09-30，已实施，静态检查）
+
+- Unity 控制台显示 6 条编译错误：Clip Player 缺少 `ThirdPersonSimulation` 引用；Blend Stack source binding 实现签名落后于接口；Lifecycle Registry 和 Committed Sample History 的公开方法暴露 internal `FixedCapacityFrameBuffer`。
+- Clip Player 补齐正式 channel 类型命名空间。Blend Stack 实现改用接口约定的已缓存 `CharacterPresentationPoseSourceSlot`，request 输出仍使用同一 slot。四个使用定容 buffer 的生命周期方法只被 `ThirdPersonCharacter.Animation` 程序集调用，改为 internal，避免把内部 workspace 合同扩成公开 API。
+- 该改动只修正编译反馈暴露的调用边界和访问级别，不改变 request 内容、状态推进、Commit/Discard 时序或 IK 逻辑。静态核对全部 `ApplyCommands`、`ReplaceSlotUsageBatch` 和 `ApplyRetirementPermissions` 调用点都在同一程序集；未刷新、未编译、未采样，不能声称控制台已清空或行为已运行验证。

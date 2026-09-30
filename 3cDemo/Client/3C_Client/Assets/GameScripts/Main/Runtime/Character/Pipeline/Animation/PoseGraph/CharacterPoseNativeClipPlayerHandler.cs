@@ -4,6 +4,7 @@ using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonSimulation;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 

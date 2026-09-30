@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
             CharacterPoseNativeGraphRuntime runtime,
             AnimationBlendStackRuntime stack,
-            CharacterPoseCanvasNode node,
+            CharacterPresentationPoseSourceSlot sourceSlot,
             in CharacterPoseNativeFrameInput input,
             in CharacterPoseNativeFrameLineage lineage)
         {

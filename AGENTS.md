@@ -27,6 +27,11 @@
 - BTSMTL 是 authoring 基座和参考，不是必须照搬的 runtime。
 - 旧 Workbench、旧 locomotion/action/footphase/bodyclaim 等分裂数据源应迁移进节点、模块、Timeline 或删除。
 
+## 文档随实施维护
+
+- 实施改变已记录的业务行为、生成诊断产物、沉淀已确认经验或整理记录时，自动使用 `update-path-docs`，在当前任务内同步内容、业务分类和读取入口。
+- 分类沿用 `docs/README.md` 的职责约定并核对实际文件；没有新增事实时不制造记录，普通咨询和只读审查不写文档。
+
 ## OpenSpec
 
 - 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，只有在你明确要求我执行 OpenSpec workflow（例如你明确指定使用 openspec skill）时，才读取 `openspec/project.md` 并使用对应 OpenSpec skill。

@@ -12,7 +12,11 @@
 
 上述是 Unity 内独立编译的真实函数实验，不是正式 Test Runner 或完整 FBBIK 验证。它保持录制的混合动画姿态，预测、路径和骨盆可达性裁决仍为固定输入；未执行 Native Slot 历史页捕获及新贡献合成函数。真实接触段固定髋位置的超腿长记录从 4 帧变成 5 帧，两版最大伸展比均为 1.003319；新增的 954 帧约超长 0.54 mm。这项回归已保留，不能宣称伸直改善。结果在 `ik-tests/stored-*-goal.json`，完整边界见[动画来源审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#stored-motion-audit)。实验时共享 Editor 仍报告其它模块编译失败，因此未把磁盘候选当成主程序集已加载；本轮没有启动 Replay。
 
-上述生产修正已独立提交 `18e1f2a4f`，配套窗口维护 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。未经权重的目标旋转只变 0.575°，支撑法线均向上，锁权重却从 0 切到约 1；因此只平滑原始目标四元数不能处理这一触发条件。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权。后续仍须保留作者权重和原子事件语义，以真实脚掌净空约束验证实际施加的旋转修正；旋转响应尚未修改，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
+上述生产修正已独立提交 `18e1f2a4f`，配套窗口维护 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。未经权重的目标旋转只变 0.575°，支撑法线均向上，锁权重却从 0 切到约 1；因此只平滑原始目标四元数不能处理这一触发条件。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
+
+旋转响应候选已接入正式 `CharacterFootLifecycle`：`PrepareFrame` 处理输入来源与作者增权重的连续性，`ResolveRotationResponse` 先按锁权重得到相对本帧原动画的修正，再用既有 `EffectiveCorrectionHalfLifeSeconds` 推进；最终查询、Goal 和 Landing 完成阶段共用已求出的旋转。作者总权重仍最后生效，锁权重不在 Goal 再乘一次。旋转历史留在同一脚的 Interpolation 状态，跨 Landing/Release 完成保留，在正式输出失效时清空；没有冻结绝对世界脚踝。两个前态字段继续引用原预分配页，采样协议更新为 capability 5 / full sampler 4，core 不增加字段。
+
+这一步仅完成代码与定向编译：Animation 和 FootIkDiagnosticSampling 两个程序集均 0 错误、0 警告，日志在 `tmp/ik-release-sampling-20260930/rotation-capture-*-build-20261001.log`。一次正式 Editor 导入后，其它工作中的 `Float32CharacterHost.cs` 仍因缺失类型编译失败；加载中的 Animation MVID 为 `cd6cec60-06dd-47f0-9dd6-6ad8029c56d7`，旋转新字段不存在。候选尚未完成连续函数实验、Editor 运行及新 Capture 的实际 Mono JIT 栈检查，不能沿用前述 Stored 的通过结果。配套窗口从真实总权重为 0 的 2192 帧开始，准备连续验证预算恢复、锁脚接入、释放和 2207 再次接入；避免从 2200 的旧状态补造旋转历史。
 
 ## 正式 owner
 

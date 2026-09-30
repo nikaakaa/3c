@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     public static class CharacterFootIkDiagnosticIdentity
     {
         public const string CapabilityId = "character-foot-ik";
-        public const int CapabilityRevision = 4;
+        public const int CapabilityRevision = 5;
         public const string LeftDimensionId = "character-foot-ik/left";
         public const string RightDimensionId = "character-foot-ik/right";
         public const string CoreSamplerId = "character-foot-ik/core";

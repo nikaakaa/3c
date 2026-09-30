@@ -5,12 +5,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootInterpolationRuntime
     {
-        internal static void RebaseOutputWeight(
+        internal static void PrepareFrame(
             ref CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame,
             float previousWeight,
-            float currentWeight,
             Vector3 previousAnimatedSole)
         {
+            UpdateCorrectionResponseLineage(ref state, in frame);
+            float currentWeight = frame.FootPlacementWeight;
             state.OutputWeightRebased = state.HasOutput &&
                 previousWeight > CharacterFootConstraintMath.GeometryEpsilon &&
                 currentWeight > previousWeight;
@@ -18,6 +20,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             float ratio = previousWeight / currentWeight;
             state.EffectiveCorrection *= ratio;
+            if (state.HasRotationCorrection)
+            {
+                state.RotationCorrection = Quaternion.Slerp(
+                    Quaternion.identity, state.RotationCorrection, ratio).normalized;
+            }
             if (state.HasPreviousResponseOutputPoint)
                 state.PreviousResponseOutputPoint = previousAnimatedSole +
                     (state.PreviousResponseOutputPoint - previousAnimatedSole) * ratio;
@@ -33,12 +40,49 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        internal static CharacterFootRotationResponse ResolveRotationResponse(
+            in CharacterFootInterpolationState state,
+            in CharacterFootStateFrame frame,
+            in CharacterFootSupportTarget support,
+            bool hasContact)
+        {
+            if (!support.IsValid)
+                return default;
+            ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
+            Vector3 forward = Vector3.ProjectOnPlane(foot.SoleForward, support.SupportNormal);
+            if (!CharacterFootConstraintMath.Finite(forward) ||
+                forward.sqrMagnitude <= CharacterFootConstraintMath.GeometryEpsilon *
+                                        CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                return default;
+            }
+            Quaternion groundRotation = (Quaternion.LookRotation(
+                forward.normalized, support.SupportNormal) *
+                Quaternion.Inverse(foot.SoleFrameLocalRotation)).normalized;
+            Quaternion desiredCorrection = Quaternion.Slerp(
+                Quaternion.identity,
+                (groundRotation * Quaternion.Inverse(foot.AnkleRotation)).normalized,
+                hasContact ? frame.LockRequest.Weight : 0f).normalized;
+            Quaternion previousCorrection = state.HasRotationCorrection
+                ? state.RotationCorrection : Quaternion.identity;
+            float alpha = 1f - Mathf.Pow(
+                0.5f, frame.DeltaSeconds / frame.Settings.EffectiveCorrectionHalfLifeSeconds);
+            Quaternion correction = Quaternion.Slerp(
+                previousCorrection, desiredCorrection, alpha).normalized;
+            Quaternion targetRotation = (correction * foot.AnkleRotation).normalized;
+            float weight = Quaternion.Angle(Quaternion.identity, correction) > 0f
+                ? frame.FootPlacementWeight : 0f;
+            Quaternion effectiveRotation = Quaternion.Slerp(
+                foot.AnkleRotation, targetRotation, weight).normalized;
+            return new CharacterFootRotationResponse(
+                correction, targetRotation, effectiveRotation, weight);
+        }
+
         internal static CharacterFootInterpolationResult Evaluate(
             ref CharacterFootInterpolationState state,
             in CharacterFootStateTarget target,
             in CharacterFootStateFrame frame)
         {
-            UpdateCorrectionResponseLineage(ref state, in frame);
             if (target.SuppressOutput ||
                 target.InterpolationPolicy ==
                 CharacterFootInterpolationPolicy.Suppressed)
@@ -103,7 +147,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new System.InvalidOperationException(
                     "Unavailable Foot interpolation input is invalid.");
             }
-            UpdateCorrectionResponseLineage(ref state, in frame);
             if (!state.HasOutput)
             {
                 state.HasOutput = true;
@@ -135,6 +178,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
             Vector3 correction = state.EffectiveCorrection;
+            bool hasRotationCorrection = state.HasRotationCorrection;
+            Quaternion rotationCorrection = state.RotationCorrection;
             CharacterFootCorrectionResponseHistory responseHistory = state.ResponseHistory;
             bool hasPreviousResponseOutputPoint =
                 state.HasPreviousResponseOutputPoint;
@@ -153,6 +198,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
+            state.HasRotationCorrection = hasRotationCorrection;
+            state.RotationCorrection = rotationCorrection;
             state.ResponseHistory = responseHistory;
             state.HasPreviousResponseOutputPoint =
                 hasPreviousResponseOutputPoint;
@@ -1245,6 +1292,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCorrectionResponseInitializationReason reason)
         {
             state.ResponseHistory = default;
+            state.HasRotationCorrection = false;
+            state.RotationCorrection = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;
             state.PendingCorrectionResponseInitializationReason = reason;

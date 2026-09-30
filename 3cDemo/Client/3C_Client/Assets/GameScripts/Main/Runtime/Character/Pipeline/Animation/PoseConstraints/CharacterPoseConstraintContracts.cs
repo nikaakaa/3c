@@ -614,15 +614,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Scale = scale;
         }
 
-        internal static CharacterComponentBonePose CreateNormalized(
-            Vector3 position,
-            Quaternion normalizedRotation,
-            Vector3 scale)
+        CharacterComponentBonePose(
+            in Vector3 position,
+            in Quaternion normalizedRotation,
+            in Vector3 scale)
         {
             Position = position;
             Rotation = normalizedRotation;
             Scale = scale;
         }
+
+        internal static CharacterComponentBonePose CreateNormalized(
+            Vector3 position,
+            Quaternion normalizedRotation,
+            Vector3 scale) =>
+            new CharacterComponentBonePose(in position, in normalizedRotation, in scale);
 
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }

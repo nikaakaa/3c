@@ -138,8 +138,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseSourceReadinessKey : IEquatable<CharacterPoseSourceReadinessKey>
     {
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly PoseNodeId m_PoseNodeId;
         internal CharacterPoseSourceReadinessKey(
             CharacterPoseSourcePreparationKind kind,
             in AnimationPoseSourceId sourceId,
@@ -153,14 +151,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Character Pose source readiness key is invalid.");
             }
             Kind = kind;
-            m_SourceId = sourceId;
-            m_PoseNodeId = poseNodeId;
+            SourceId = sourceId;
+            PoseNodeId = poseNodeId;
             BindingIndex = bindingIndex;
         }
 
         internal CharacterPoseSourcePreparationKind Kind { get; }
-        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
-        internal ref readonly PoseNodeId PoseNodeId => ref m_PoseNodeId;
+        internal readonly AnimationPoseSourceId SourceId;
+        internal readonly PoseNodeId PoseNodeId;
         internal int BindingIndex { get; }
         internal bool IsValid =>
             CharacterPoseSourceReadinessEnumValues.IsValid(Kind) &&
@@ -186,8 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseSourceReadinessEntry
     {
-        readonly CharacterPoseSourceReadinessKey m_Key;
-        readonly CharacterPoseSourceReadinessView m_Readiness;
         internal CharacterPoseSourceReadinessEntry(
             CharacterPoseSourceReadinessCategory category,
             in CharacterPoseSourceReadinessKey key,
@@ -199,14 +195,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Character Pose source readiness entry is invalid.");
             }
             Category = category;
-            m_Key = key;
-            m_Readiness = readiness;
+            Key = key;
+            Readiness = readiness;
         }
 
         internal CharacterPoseSourceReadinessCategory Category { get; }
-        internal ref readonly CharacterPoseSourceReadinessKey Key => ref m_Key;
-        internal ref readonly CharacterPoseSourceReadinessView Readiness =>
-            ref m_Readiness;
+        internal readonly CharacterPoseSourceReadinessKey Key;
+        internal readonly CharacterPoseSourceReadinessView Readiness;
     }
 
 }

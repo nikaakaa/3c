@@ -440,7 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 ref readonly AnimationLocalBonePose previous =
                     ref m_CommittedHistory[bone];
-                ref readonly AnimationLocalBonePose target = ref inputPoses[bone];
+                AnimationLocalBonePose target = inputPoses[bone];
                 if (!previous.IsValid || !target.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history Bone #{bone} is invalid.");
@@ -451,8 +451,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PendingResiduals.Scale[bone] = previous.Scale - target.Scale;
                 ref readonly AnimationBlendBoneVelocity previousVelocity =
                     ref m_CommittedHistoryVelocities[bone];
-                ref readonly AnimationBlendBoneVelocity targetVelocity =
-                    ref inputVelocities[bone];
+                AnimationBlendBoneVelocity targetVelocity = inputVelocities[bone];
                 if (!previousVelocity.IsValid || !targetVelocity.IsValid)
                     throw new InvalidOperationException(
                         $"Inertialization '{NodeId}' history velocity Bone #{bone} is invalid.");
@@ -465,11 +464,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             NativeSlice<byte> inputAvailability =
                 input.PoseParameterAvailability;
-            NativeSlice<byte> historyAvailability =
+            byte[] historyAvailability =
                 m_CommittedHistoryParameterAvailability;
             NativeSlice<float> inputParameters =
                 input.PoseParameters;
-            NativeSlice<float> historyParameters =
+            float[] historyParameters =
                 m_CommittedHistoryParameters;
             for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
             {
@@ -520,9 +519,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 float residualWeight = sample.ResidualWeight;
                 float residualDerivative = sample.ResidualDerivative;
                 anyActive |= m_PendingState.ElapsedSeconds < sample.Duration;
-                ref readonly AnimationLocalBonePose target = ref inputPoses[bone];
-                ref readonly AnimationBlendBoneVelocity targetVelocity =
-                    ref inputVelocities[bone];
+                AnimationLocalBonePose target = inputPoses[bone];
+                AnimationBlendBoneVelocity targetVelocity = inputVelocities[bone];
                 Vector3 positionBase = residuals.Position[bone] +
                     m_PendingState.ElapsedSeconds * residuals.LinearVelocity[bone];
                 Vector3 rotationBase = residuals.Rotation[bone] +
@@ -620,8 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int count = output.ContributionCount[0];
             for (int contribution = 0; contribution < count; contribution++)
             {
-                ref readonly AnimationPrimitivePoseContribution source =
-                    ref contributions[contribution];
+                AnimationPrimitivePoseContribution source = contributions[contribution];
                 contributions[contribution] = new AnimationPrimitivePoseContribution(
                     source.PhysicalPlayerIndex,
                     source.PhysicalSourceIndex,

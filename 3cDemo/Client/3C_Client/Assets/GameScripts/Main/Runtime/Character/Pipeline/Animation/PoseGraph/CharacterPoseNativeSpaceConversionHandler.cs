@@ -372,7 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 input.DenseLocalPoses;
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
-                ref readonly AnimationLocalBonePose local = ref inputPoses[i];
+                AnimationLocalBonePose local = inputPoses[i];
                 if (!CharacterPoseConstraintMath.TryCreateComponent(
                         local,
                         m_ParentIndices[i],
@@ -397,7 +397,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 input.DenseLocalPoses;
             for (int i = 0; i < m_Rig.PoseBoneCount; i++)
             {
-                ref readonly AnimationLocalBonePose value = ref inputPoses[i];
+                AnimationLocalBonePose value = inputPoses[i];
                 if (!value.IsValid)
                     throw new InvalidOperationException(
                         $"Pose space conversion '{NodeId}' received invalid component bone #{i}.");
@@ -414,8 +414,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     local = new AnimationLocalBonePose(in component);
                 }
                 else if (!CharacterPoseConstraintMath.TryCreateLocal(
-                             ref m_ComponentScratch[i],
-                             ref m_ComponentScratch[parent],
+                             in m_ComponentScratch[i],
+                             in m_ComponentScratch[parent],
                              out local))
                 {
                     throw new InvalidOperationException(

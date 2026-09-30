@@ -7,22 +7,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal readonly struct CharacterPoseNativePoseReadBinding
     {
-        readonly NativeSlice<AnimationLocalBonePose> m_DenseLocalPoses;
-        readonly NativeSlice<AnimationBlendBoneVelocity> m_DenseVelocities;
-        readonly NativeSlice<float> m_PoseParameters;
-        readonly NativeSlice<byte> m_PoseParameterAvailability;
-        readonly NativeSlice<AnimationPrimitivePoseContribution> m_Contributions;
-        readonly NativeSlice<float> m_DenseContributionWeights;
-        readonly NativeSlice<int> m_ContributionCount;
-        readonly NativeSlice<float> m_OutputWeight;
-        readonly NativeSlice<AnimationFootFeatureSample> m_LeftFootFeatures;
-        readonly NativeSlice<AnimationFootFeatureSample> m_RightFootFeatures;
-        readonly NativeSlice<byte> m_HasFootFeatures;
-        readonly NativeSlice<AnimationPoseAvailability> m_Availability;
-        readonly NativeSlice<ulong> m_ContinuityIdentity;
-        readonly NativeSlice<PoseDiscontinuityNative> m_Discontinuity;
-        readonly NativeSlice<AnimationPoseNativeInvalidReason> m_InvalidReason;
-        readonly NativeSlice<ulong> m_CompletedAt;
 
         internal CharacterPoseNativePoseReadBinding(
             in AnimationPlayerPoseNativeWriteBinding output)
@@ -62,42 +46,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             CompletionIdentity = output.CompletionIdentity;
             Space = space;
-            m_DenseLocalPoses = output.DenseLocalPoses;
-            m_DenseVelocities = output.DenseVelocities;
-            m_PoseParameters = output.PoseParameters;
-            m_PoseParameterAvailability = output.PoseParameterAvailability;
-            m_Contributions = output.Contributions;
-            m_DenseContributionWeights = output.DenseContributionWeights;
-            m_ContributionCount = output.ContributionCount;
-            m_OutputWeight = output.OutputWeight;
-            m_LeftFootFeatures = output.LeftFootFeatures;
-            m_RightFootFeatures = output.RightFootFeatures;
-            m_HasFootFeatures = output.HasFootFeatures;
-            m_Availability = output.Availability;
-            m_ContinuityIdentity = output.ContinuityIdentity;
-            m_Discontinuity = output.Discontinuity;
-            m_InvalidReason = output.InvalidReason;
-            m_CompletedAt = output.CompletedAt;
+            DenseLocalPoses = output.DenseLocalPoses;
+            DenseVelocities = output.DenseVelocities;
+            PoseParameters = output.PoseParameters;
+            PoseParameterAvailability = output.PoseParameterAvailability;
+            Contributions = output.Contributions;
+            DenseContributionWeights = output.DenseContributionWeights;
+            ContributionCount = output.ContributionCount;
+            OutputWeight = output.OutputWeight;
+            LeftFootFeatures = output.LeftFootFeatures;
+            RightFootFeatures = output.RightFootFeatures;
+            HasFootFeatures = output.HasFootFeatures;
+            Availability = output.Availability;
+            ContinuityIdentity = output.ContinuityIdentity;
+            Discontinuity = output.Discontinuity;
+            InvalidReason = output.InvalidReason;
+            CompletedAt = output.CompletedAt;
         }
 
         internal ulong CompletionIdentity { get; }
         internal CharacterPoseSpace Space { get; }
-        internal ref readonly NativeSlice<AnimationLocalBonePose> DenseLocalPoses => ref m_DenseLocalPoses;
-        internal ref readonly NativeSlice<AnimationBlendBoneVelocity> DenseVelocities => ref m_DenseVelocities;
-        internal ref readonly NativeSlice<float> PoseParameters => ref m_PoseParameters;
-        internal ref readonly NativeSlice<byte> PoseParameterAvailability => ref m_PoseParameterAvailability;
-        internal ref readonly NativeSlice<AnimationPrimitivePoseContribution> Contributions => ref m_Contributions;
-        internal ref readonly NativeSlice<float> DenseContributionWeights => ref m_DenseContributionWeights;
-        internal ref readonly NativeSlice<int> ContributionCount => ref m_ContributionCount;
-        internal ref readonly NativeSlice<float> OutputWeight => ref m_OutputWeight;
-        internal ref readonly NativeSlice<AnimationFootFeatureSample> LeftFootFeatures => ref m_LeftFootFeatures;
-        internal ref readonly NativeSlice<AnimationFootFeatureSample> RightFootFeatures => ref m_RightFootFeatures;
-        internal ref readonly NativeSlice<byte> HasFootFeatures => ref m_HasFootFeatures;
-        internal ref readonly NativeSlice<AnimationPoseAvailability> Availability => ref m_Availability;
-        internal ref readonly NativeSlice<ulong> ContinuityIdentity => ref m_ContinuityIdentity;
-        internal ref readonly NativeSlice<PoseDiscontinuityNative> Discontinuity => ref m_Discontinuity;
-        internal ref readonly NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason => ref m_InvalidReason;
-        internal ref readonly NativeSlice<ulong> CompletedAt => ref m_CompletedAt;
+        internal readonly NativeSlice<AnimationLocalBonePose> DenseLocalPoses;
+        internal readonly NativeSlice<AnimationBlendBoneVelocity> DenseVelocities;
+        internal readonly NativeSlice<float> PoseParameters;
+        internal readonly NativeSlice<byte> PoseParameterAvailability;
+        internal readonly NativeSlice<AnimationPrimitivePoseContribution> Contributions;
+        internal readonly NativeSlice<float> DenseContributionWeights;
+        internal readonly NativeSlice<int> ContributionCount;
+        internal readonly NativeSlice<float> OutputWeight;
+        internal readonly NativeSlice<AnimationFootFeatureSample> LeftFootFeatures;
+        internal readonly NativeSlice<AnimationFootFeatureSample> RightFootFeatures;
+        internal readonly NativeSlice<byte> HasFootFeatures;
+        internal readonly NativeSlice<AnimationPoseAvailability> Availability;
+        internal readonly NativeSlice<ulong> ContinuityIdentity;
+        internal readonly NativeSlice<PoseDiscontinuityNative> Discontinuity;
+        internal readonly NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason;
+        internal readonly NativeSlice<ulong> CompletedAt;
         internal bool IsValid => CompletionIdentity != 0;
     }
 

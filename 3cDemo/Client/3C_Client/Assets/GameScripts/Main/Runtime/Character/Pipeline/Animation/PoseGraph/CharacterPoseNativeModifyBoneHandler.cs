@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     input.DenseLocalPoses;
                 for (int i = 0; i < m_Rig.PoseBoneCount; i++)
                 {
-                    ref readonly AnimationLocalBonePose value = ref inputPoses[i];
+                    AnimationLocalBonePose value = inputPoses[i];
                     if (!value.IsValid)
                         throw new InvalidOperationException(
                             $"Modify Bone '{NodeId}' received invalid Component bone #{i}.");

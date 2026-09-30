@@ -8,16 +8,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal readonly struct Completion
         {
-            readonly CharacterFootStateEvaluation m_Evaluation;
-            readonly CharacterFootTransitionDecision m_PreTransition;
-            readonly CharacterFootStateTarget m_Target;
-            readonly CharacterFootInterpolationResult m_Interpolation;
-            readonly CharacterFootSwingMotionResult m_OutputSwing;
-            readonly CharacterFootPlacementRequest m_Request;
-            readonly CharacterFootSwingMotionResult m_PreliminaryMotion;
-            readonly CharacterFootLifecycleTransitionFact m_LifecycleTransition;
-            readonly CharacterFootCurrentSupportObservation m_OutputSupport;
-            readonly CharacterFootCurrentSupportObservation m_StateTargetSupport;
 
             internal Completion(
                 in CharacterFootStateEvaluation evaluation,
@@ -32,34 +22,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootCurrentSupportObservation outputSupport,
                 in CharacterFootCurrentSupportObservation stateTargetSupport)
             {
-                m_Evaluation = evaluation;
-                m_PreTransition = preTransition;
-                m_Target = target;
-                m_Interpolation = interpolation;
-                m_OutputSwing = outputSwing;
-                m_Request = request;
-                m_PreliminaryMotion = preliminaryMotion;
-                m_LifecycleTransition = lifecycleTransition;
+                Evaluation = evaluation;
+                PreTransition = preTransition;
+                Target = target;
+                Interpolation = interpolation;
+                OutputSwing = outputSwing;
+                Request = request;
+                PreliminaryMotion = preliminaryMotion;
+                LifecycleTransition = lifecycleTransition;
                 LandingCompletionPending = landingCompletionPending;
-                m_OutputSupport = outputSupport;
-                m_StateTargetSupport = stateTargetSupport;
+                OutputSupport = outputSupport;
+                StateTargetSupport = stateTargetSupport;
             }
 
-            ref readonly CharacterFootStateEvaluation Evaluation => ref m_Evaluation;
-            ref readonly CharacterFootTransitionDecision PreTransition => ref m_PreTransition;
-            ref readonly CharacterFootStateTarget Target => ref m_Target;
-            ref readonly CharacterFootInterpolationResult Interpolation => ref m_Interpolation;
-            ref readonly CharacterFootSwingMotionResult OutputSwing => ref m_OutputSwing;
-            ref readonly CharacterFootPlacementRequest Request => ref m_Request;
-            ref readonly CharacterFootSwingMotionResult PreliminaryMotion =>
-                ref m_PreliminaryMotion;
-            ref readonly CharacterFootLifecycleTransitionFact LifecycleTransition =>
-                ref m_LifecycleTransition;
+            readonly CharacterFootStateEvaluation Evaluation;
+            readonly CharacterFootTransitionDecision PreTransition;
+            readonly CharacterFootStateTarget Target;
+            readonly CharacterFootInterpolationResult Interpolation;
+            readonly CharacterFootSwingMotionResult OutputSwing;
+            readonly CharacterFootPlacementRequest Request;
+            readonly CharacterFootSwingMotionResult PreliminaryMotion;
+            readonly CharacterFootLifecycleTransitionFact LifecycleTransition;
             bool LandingCompletionPending { get; }
-            internal ref readonly CharacterFootCurrentSupportObservation OutputSupport =>
-                ref m_OutputSupport;
-            internal ref readonly CharacterFootCurrentSupportObservation StateTargetSupport =>
-                ref m_StateTargetSupport;
+            internal readonly CharacterFootCurrentSupportObservation OutputSupport;
+            internal readonly CharacterFootCurrentSupportObservation StateTargetSupport;
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
@@ -689,7 +675,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGoalTarget goal = ResolveGoalTarget(
                 in foot, evaluation.GoalRoot, in pose, outcome);
             return new CharacterFootPlacementRequest(
-                in identity, in pose, in default, in default, in goal,
+                in identity, in pose, default, default, in goal,
                 outcome, false, in evaluation.Stride);
         }
 

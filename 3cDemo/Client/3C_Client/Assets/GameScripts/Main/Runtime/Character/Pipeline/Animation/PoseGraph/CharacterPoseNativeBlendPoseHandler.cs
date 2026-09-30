@@ -363,8 +363,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     overlayPose.DenseVelocities;
                 for (int bone = 0; bone < boneCount; bone++)
                 {
-                    ref readonly AnimationLocalBonePose baseBone = ref basePoses[bone];
-                    ref readonly AnimationLocalBonePose overlayBone = ref overlayPoses[bone];
+                    AnimationLocalBonePose baseBone = basePoses[bone];
+                    AnimationLocalBonePose overlayBone = overlayPoses[bone];
                     Vector3 position =
                         (baseBone.Position * baseWeight +
                          overlayBone.Position * overlayWeight) /
@@ -390,10 +390,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             scale * totalWeight,
                             totalWeight,
                             baseBone);
-                    ref readonly AnimationBlendBoneVelocity baseVelocity =
-                        ref baseVelocities[bone];
-                    ref readonly AnimationBlendBoneVelocity overlayVelocity =
-                        ref overlayVelocities[bone];
+                    AnimationBlendBoneVelocity baseVelocity = baseVelocities[bone];
+                    AnimationBlendBoneVelocity overlayVelocity = overlayVelocities[bone];
                     outputVelocities[bone] =
                         new AnimationBlendBoneVelocity(
                             (baseVelocity.Linear * baseWeight +
@@ -484,8 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 input.DenseContributionWeights;
             for (int contribution = 0; contribution < inputCount; contribution++)
             {
-                ref readonly AnimationPrimitivePoseContribution value =
-                    ref inputContributions[contribution];
+                AnimationPrimitivePoseContribution value = inputContributions[contribution];
                 float weight = value.Weight * factor;
                 if (weight <= 0f)
                     continue;

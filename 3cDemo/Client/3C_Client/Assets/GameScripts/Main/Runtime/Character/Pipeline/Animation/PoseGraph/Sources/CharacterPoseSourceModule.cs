@@ -61,16 +61,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_HasDemand = true;
             }
 
-            internal ref readonly CharacterPoseSourceDemand RequireDemand(
+            internal static ref readonly CharacterPoseSourceDemand RequireDemand(
+                in SourceFramePage page,
                 in CharacterPoseSourceFrameLease lease)
             {
-                RequireLease(lease);
-                if (!m_HasDemand)
+                page.RequireLease(lease);
+                if (!page.m_HasDemand)
                 {
                     throw new InvalidOperationException(
                         "Pose Source Demand is not prepared.");
                 }
-                return ref m_Demand;
+                return ref page.m_Demand;
             }
 
             internal ref readonly CharacterPoseSourcePreparation
@@ -105,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     m_ConsumedPreparationCount !=
                         m_Demand.Preparations.Count ||
                     !result.IsValid ||
-                    !m_Demand.Lineage.Matches(in result.Lineage))
+                    !m_Demand.Lineage.Matches(in result.Demand.Lineage))
                 {
                     throw new ArgumentException(
                         "Pose Source Result does not match the Pending demand.",
@@ -126,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 if (!m_HasDemand ||
                     !m_HasResult ||
                     !m_Result.IsReady ||
-                    !m_Demand.Lineage.Matches(in m_Result.Lineage))
+                    !m_Demand.Lineage.Matches(in m_Result.Demand.Lineage))
                 {
                     throw new InvalidOperationException(
                         "Pose Source Pending page is incomplete.");
@@ -482,7 +483,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal ref readonly CharacterPoseSourceDemand RequireDemand(
             in CharacterPoseSourceFrameLease lease) =>
-            ref m_FramePage.RequireDemand(lease);
+            ref SourceFramePage.RequireDemand(in m_FramePage, in lease);
 
         internal CharacterPoseSourceFrameResult PrepareFrameResult(
             in CharacterPoseSourceFrameLease lease,
@@ -494,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in CharacterPoseSourceReadinessPageView readinessPage)
         {
             ref readonly CharacterPoseSourceDemand demand =
-                ref m_FramePage.RequireDemand(lease);
+                ref SourceFramePage.RequireDemand(in m_FramePage, in lease);
             var result = new CharacterPoseSourceFrameResult(
                 in demand,
                 in preparedResources,
@@ -534,7 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in CharacterPoseSourceFrameLease lease)
         {
             ref readonly CharacterPoseSourceDemand demand =
-                ref m_FramePage.RequireDemand(lease);
+                ref SourceFramePage.RequireDemand(in m_FramePage, in lease);
             ref readonly CharacterPoseNativeFrameLineage lineage = ref demand.Lineage;
             return new CharacterPoseSourcePreparedResources(
                 in lineage,

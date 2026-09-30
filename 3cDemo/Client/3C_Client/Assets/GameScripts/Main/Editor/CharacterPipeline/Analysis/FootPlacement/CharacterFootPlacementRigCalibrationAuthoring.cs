@@ -834,13 +834,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPlacementFootCalibration foot = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
             CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
             CharacterFootLandingPredictionSettings landing = s_QueryProfile.LandingPrediction.Build();
+            Vector3 componentUp = s_Rig.PoseRoot.up;
             CharacterFootCurrentSupportProbeRequest heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
                 s_Side, CharacterFootCurrentSupportProbeKind.Heel,
-                ankle.TransformPoint(foot.HeelContactLocalOffset), s_Rig.PoseRoot.up,
+                ankle.TransformPoint(foot.HeelContactLocalOffset), componentUp, componentUp,
                 in support, in landing);
             CharacterFootCurrentSupportProbeRequest toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
                 s_Side, CharacterFootCurrentSupportProbeKind.Toe,
-                toe.TransformPoint(foot.ToeContactLocalOffset), s_Rig.PoseRoot.up,
+                toe.TransformPoint(foot.ToeContactLocalOffset), componentUp, componentUp,
                 in support, in landing);
             DrawSupportProbe(in heelRequest, "Heel");
             DrawSupportProbe(in toeRequest, "Toe");

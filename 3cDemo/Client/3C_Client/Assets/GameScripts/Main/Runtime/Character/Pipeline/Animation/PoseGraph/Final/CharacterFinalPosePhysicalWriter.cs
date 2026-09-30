@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 #if KK_DIAGNOSTIC_SAMPLING && KK_DIAGNOSTIC_FOOT
             FootIkCapture = default;
 #endif
-            ref readonly AnimationReadOnlyBuffer<AnimationLocalBonePose> poses = ref frame.DenseLocalPose;
+            AnimationReadOnlyBuffer<AnimationLocalBonePose> poses = frame.DenseLocalPose;
             for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
                 if (!m_Bones[boneIndex])
@@ -95,12 +95,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int boneIndex = 0; boneIndex < m_Bones.Length; boneIndex++)
             {
                 Transform bone = m_Bones[boneIndex];
-                ref readonly AnimationLocalBonePose pose;
-                if (m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
-                    boneIndex == m_RootBoneIndex)
-                    pose = ref m_RootReferencePose;
-                else
-                    pose = ref poses.ElementAt(boneIndex);
+                ref readonly AnimationLocalBonePose pose = ref
+                    (m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
+                     boneIndex == m_RootBoneIndex
+                        ? ref m_RootReferencePose
+                        : ref poses.ElementAt(boneIndex));
                 bone.SetLocalPositionAndRotation(pose.Position, pose.Rotation);
                 bone.localScale = pose.Scale;
             }

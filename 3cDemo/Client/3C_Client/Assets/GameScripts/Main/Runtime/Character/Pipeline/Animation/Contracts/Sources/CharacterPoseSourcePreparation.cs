@@ -13,11 +13,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct CharacterPoseSourcePreparation
     {
-        readonly AnimationPoseSampleRequest m_Request;
-        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_Clips;
-        readonly AnimationPoseSourceCaptureBinding m_Capture;
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly PoseNodeId m_PoseNodeId;
         CharacterPoseSourcePreparation(
             CharacterPoseSourcePreparationKind kind,
             in AnimationPoseSampleRequest request,
@@ -30,16 +25,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseNodeId poseNodeId)
         {
             Kind = kind;
-            m_Request = request;
+            Request = request;
             ProviderSample = providerSample;
-            m_SourceId = sourceId;
+            SourceId = sourceId;
             SourceOwnerIndex = sourceOwnerIndex;
             m_EncodedBindingIndex = bindingIndex < 0
                 ? 0
                 : checked(bindingIndex + 1);
-            m_Clips = clips;
-            m_Capture = capture;
-            m_PoseNodeId = poseNodeId;
+            Clips = clips;
+            Capture = capture;
+            PoseNodeId = poseNodeId;
             if (!IsValid)
             {
                 throw new ArgumentException(
@@ -49,16 +44,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly int m_EncodedBindingIndex;
         internal CharacterPoseSourcePreparationKind Kind { get; }
-        internal ref readonly AnimationPoseSampleRequest Request => ref m_Request;
+        internal readonly AnimationPoseSampleRequest Request;
         internal PresentationPoseSourceSample ProviderSample { get; }
-        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+        internal readonly AnimationPoseSourceId SourceId;
         internal int SourceOwnerIndex { get; }
         internal int BindingIndex => m_EncodedBindingIndex - 1;
-        internal ref readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips =>
-            ref m_Clips;
-        internal ref readonly AnimationPoseSourceCaptureBinding Capture =>
-            ref m_Capture;
-        internal ref readonly PoseNodeId PoseNodeId => ref m_PoseNodeId;
+        internal readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips;
+        internal readonly AnimationPoseSourceCaptureBinding Capture;
+        internal readonly PoseNodeId PoseNodeId;
 
         internal bool IsValid
         {

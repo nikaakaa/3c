@@ -710,8 +710,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct AnimationPoseSourceContribution
     {
-        readonly PoseNodeId m_NodeId;
-        readonly AnimationPoseSourceId m_SourceId;
 
         public AnimationPoseSourceContribution(
             PoseNodeId nodeId,
@@ -733,9 +731,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Animation pose source contribution is invalid.");
             }
-            m_NodeId = nodeId;
+            NodeIdRef = nodeId;
             Kind = kind;
-            m_SourceId = sourceId;
+            SourceIdRef = sourceId;
             SourceOwnerIndex = sourceOwnerIndex;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             Weight = weight;
@@ -743,11 +741,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RightFootWeight = rightFootWeight;
         }
 
-        public PoseNodeId NodeId => m_NodeId;
+        public PoseNodeId NodeId => NodeIdRef;
         public AnimationPoseContributionKind Kind { get; }
-        public AnimationPoseSourceId SourceId => m_SourceId;
-        internal ref readonly PoseNodeId NodeIdRef => ref m_NodeId;
-        internal ref readonly AnimationPoseSourceId SourceIdRef => ref m_SourceId;
+        public AnimationPoseSourceId SourceId => SourceIdRef;
+        internal readonly PoseNodeId NodeIdRef;
+        internal readonly AnimationPoseSourceId SourceIdRef;
         public int SourceOwnerIndex { get; }
         public ulong ContributionContinuityIdentity { get; }
         public float Weight { get; }

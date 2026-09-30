@@ -121,9 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct ClipSamplePlan
     {
-        readonly AnimationClip m_Clip;
-        readonly int m_ResourceCatalogIndex;
-        readonly int m_GroupClipIndex;
 
         public ClipSamplePlan(
             int clipBindingIndex,
@@ -194,9 +191,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             ClipBindingIndex = clipBindingIndex;
             BlendSpaceSampleId = blendSpaceSampleId;
-            m_Clip = clip;
-            m_ResourceCatalogIndex = resourceCatalogIndex;
-            m_GroupClipIndex = groupClipIndex;
+            ClipRef = clip;
+            ResourceCatalogIndexRef = resourceCatalogIndex;
+            GroupClipIndexRef = groupClipIndex;
             DurationSecondsValue = durationSeconds;
             ClipTime = clipTime;
             ContinuousClipTime = continuousClipTime;
@@ -209,12 +206,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public int ClipBindingIndex { get; }
         public CharacterAnimationBlendSpaceSampleId BlendSpaceSampleId { get; }
-        public AnimationClip Clip => m_Clip;
-        public int ResourceCatalogIndex => m_ResourceCatalogIndex;
-        public int GroupClipIndex => m_GroupClipIndex;
-        internal ref readonly AnimationClip ClipRef => ref m_Clip;
-        internal ref readonly int ResourceCatalogIndexRef => ref m_ResourceCatalogIndex;
-        internal ref readonly int GroupClipIndexRef => ref m_GroupClipIndex;
+        public AnimationClip Clip => ClipRef;
+        public int ResourceCatalogIndex => ResourceCatalogIndexRef;
+        public int GroupClipIndex => GroupClipIndexRef;
+        internal readonly AnimationClip ClipRef;
+        internal readonly int ResourceCatalogIndexRef;
+        internal readonly int GroupClipIndexRef;
         float DurationSecondsValue { get; }
         public CharacterAnimationSamplingBackendKind Backend => IsAcl
             ? CharacterAnimationSamplingBackendKind.Acl
@@ -402,8 +399,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct AnimationPoseSampleRequest
     {
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_Clips;
         internal AnimationPoseSampleRequest(
             AnimationPoseSourceId sourceId,
             ulong sourcePoseContinuityIdentity,
@@ -419,7 +414,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationReadOnlyBuffer<float> poseParameters,
             AnimationReadOnlyBuffer<byte> poseParameterAvailability)
         {
-            m_SourceId = sourceId;
+            SourceId = sourceId;
             SourcePoseContinuityIdentity = sourcePoseContinuityIdentity;
             PresentationRequestSequence = presentationRequestSequence;
             SourceOwnerIndex = sourceOwnerIndex;
@@ -428,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Cycle = cycle;
             Loop = loop;
             VisualTimeScale = visualTimeScale;
-            m_Clips = clips;
+            Clips = clips;
             ParameterPageId = parameterPageId;
             PoseParameters = poseParameters;
             PoseParameterAvailability = poseParameterAvailability;
@@ -436,7 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Animation pose sample request is invalid.");
         }
 
-        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
+        internal readonly AnimationPoseSourceId SourceId;
         internal ulong SourcePoseContinuityIdentity { get; }
         internal ulong PresentationRequestSequence { get; }
         internal int SourceOwnerIndex { get; }
@@ -445,8 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Cycle { get; }
         internal bool Loop { get; }
         internal float VisualTimeScale { get; }
-        internal ref readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips =>
-            ref m_Clips;
+        internal readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips;
         internal PresentationParameterPageId ParameterPageId { get; }
         internal AnimationReadOnlyBuffer<float> PoseParameters { get; }
         internal AnimationReadOnlyBuffer<byte> PoseParameterAvailability { get; }

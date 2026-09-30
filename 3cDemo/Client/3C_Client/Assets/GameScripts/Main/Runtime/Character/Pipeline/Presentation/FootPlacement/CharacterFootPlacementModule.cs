@@ -194,18 +194,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     readonly struct CharacterFootLandingPredictionPair
     {
-        readonly CharacterFootLandingPredictionResult m_Selected;
 
         internal CharacterFootLandingPredictionPair(
             in CharacterFootLandingPredictionResult selected,
             CharacterFootLandingStepSource selectedSource)
         {
-            m_Selected = selected;
+            Selected = selected;
             SelectedSource = selectedSource;
         }
 
-        internal ref readonly CharacterFootLandingPredictionResult Selected =>
-            ref m_Selected;
+        internal readonly CharacterFootLandingPredictionResult Selected;
         internal CharacterFootLandingStepSource SelectedSource { get; }
     }
 
@@ -682,7 +680,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var leftDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
-                        in leftPose,
+                        leftPose,
                         new CharacterFootStepSelectionDiagnostics(
                             leftLanding.LastLandingEventIdentity,
                             leftPair.SelectedSource,
@@ -700,7 +698,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 var rightDiagnostics =
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
-                        in rightPose,
+                        rightPose,
                         new CharacterFootStepSelectionDiagnostics(
                             rightLanding.LastLandingEventIdentity,
                             rightPair.SelectedSource,

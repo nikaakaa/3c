@@ -9,20 +9,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 {
     internal readonly struct CharacterAclSourceKey : IEquatable<CharacterAclSourceKey>
     {
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly PoseNodeId m_PlayerNodeId;
         internal CharacterAclSourceKey(
             in AnimationPoseSourceId sourceId,
             in PoseNodeId playerNodeId)
         {
             if (!sourceId.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("ACL source key is invalid.");
-            m_SourceId = sourceId;
-            m_PlayerNodeId = playerNodeId;
+            SourceId = sourceId;
+            PlayerNodeId = playerNodeId;
         }
 
-        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
-        internal ref readonly PoseNodeId PlayerNodeId => ref m_PlayerNodeId;
+        internal readonly AnimationPoseSourceId SourceId;
+        internal readonly PoseNodeId PlayerNodeId;
         internal bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid;
         public bool Equals(CharacterAclSourceKey other) =>
             Equals(in other);

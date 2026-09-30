@@ -14,7 +14,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct AnimationFootMotionRuntimeSample
     {
-        readonly AnimationFootMotionEventFrame m_Events;
 
         internal AnimationFootMotionRuntimeSample(
             float footHeight,
@@ -43,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Support = NormalizeCurveWeight(support, nameof(support));
             if (!events.IsValid)
                 throw new ArgumentException("Foot observation event frame is invalid.", nameof(events));
-            m_Events = events;
+            Events = events;
             m_IsSpecified = 1;
         }
 
@@ -84,8 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [DiagnosticGroup("formal-motion")]
         [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsValid))]
         public float Support { get; }
-        public ref readonly AnimationFootMotionEventFrame Events =>
-            ref m_Events;
+        public readonly AnimationFootMotionEventFrame Events;
         [DiagnosticField]
         [DiagnosticGroup("formal-motion")]
         public bool IsValid => m_IsSpecified != 0;
@@ -200,10 +198,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct AnimationFootMotionRuntimeFrame
     {
-        readonly PoseNodeId m_NodeId;
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly AnimationFootMotionRuntimeSample m_Left;
-        readonly AnimationFootMotionRuntimeSample m_Right;
 
         internal AnimationFootMotionRuntimeFrame(
             ulong completionIdentity,
@@ -230,8 +224,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Foot Step observation frame is invalid.");
             }
             CompletionIdentity = completionIdentity;
-            m_NodeId = nodeId;
-            m_SourceId = sourceId;
+            NodeIdRef = nodeId;
+            SourceIdRef = sourceId;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             SourceIdentity = sourceIdentity.Trim();
             SourceSampleIdentity = sourceSampleIdentity;
@@ -239,11 +233,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Cycle = cycle;
             SourceWeight = sourceWeight;
             NormalizedTime = normalizedTime;
-            m_Left = left.BindEventLineage(
+            Left = left.BindEventLineage(
                 sourceSampleIdentity,
                 contributionContinuityIdentity,
                 CharacterFootSide.Left);
-            m_Right = right.BindEventLineage(
+            Right = right.BindEventLineage(
                 sourceSampleIdentity,
                 contributionContinuityIdentity,
                 CharacterFootSide.Right);
@@ -252,10 +246,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly byte m_IsSpecified;
         internal ulong CompletionIdentity { get; }
-        internal PoseNodeId NodeId => m_NodeId;
-        internal AnimationPoseSourceId SourceId => m_SourceId;
-        internal ref readonly PoseNodeId NodeIdRef => ref m_NodeId;
-        internal ref readonly AnimationPoseSourceId SourceIdRef => ref m_SourceId;
+        internal PoseNodeId NodeId => NodeIdRef;
+        internal AnimationPoseSourceId SourceId => SourceIdRef;
+        internal readonly PoseNodeId NodeIdRef;
+        internal readonly AnimationPoseSourceId SourceIdRef;
         internal ulong ContributionContinuityIdentity { get; }
         internal string SourceIdentity { get; }
         internal ulong SourceSampleIdentity { get; }
@@ -263,10 +257,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Cycle { get; }
         internal float SourceWeight { get; }
         internal float NormalizedTime { get; }
-        internal ref readonly AnimationFootMotionRuntimeSample Left =>
-            ref m_Left;
-        internal ref readonly AnimationFootMotionRuntimeSample Right =>
-            ref m_Right;
+        internal readonly AnimationFootMotionRuntimeSample Left;
+        internal readonly AnimationFootMotionRuntimeSample Right;
         internal bool IsValid => m_IsSpecified != 0;
     }
 

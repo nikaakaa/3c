@@ -12,9 +12,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     internal readonly struct CharacterPoseSourceReadinessTarget
     {
-        readonly AnimationPoseSourceId m_SourceId;
-        readonly PoseNodeId m_PoseNodeId;
-        readonly AnimationReadOnlyBuffer<ClipSamplePlan> m_Clips;
         CharacterPoseSourceReadinessTarget(
             CharacterPoseSourcePreparationKind kind,
             in AnimationPoseSourceId sourceId,
@@ -37,11 +34,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Character Pose source readiness target is invalid.");
             }
             Kind = kind;
-            m_SourceId = sourceId;
-            m_PoseNodeId = poseNodeId;
+            SourceId = sourceId;
+            PoseNodeId = poseNodeId;
             BindingIndex = bindingIndex;
             Input = input;
-            m_Clips = clips;
+            Clips = clips;
             Backend = backend;
             ResourceIndex = resourceIndex;
             GroupClipIndex = groupClipIndex;
@@ -52,12 +49,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal CharacterPoseSourcePreparationKind Kind { get; }
-        internal ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
-        internal ref readonly PoseNodeId PoseNodeId => ref m_PoseNodeId;
+        internal readonly AnimationPoseSourceId SourceId;
+        internal readonly PoseNodeId PoseNodeId;
         internal int BindingIndex { get; }
         internal CharacterPoseSourceReadinessTargetInput Input { get; }
-        internal ref readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips =>
-            ref m_Clips;
+        internal readonly AnimationReadOnlyBuffer<ClipSamplePlan> Clips;
         internal CharacterAnimationSamplingBackendKind Backend { get; }
         internal int ResourceIndex { get; }
         internal int GroupClipIndex { get; }
@@ -161,14 +157,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     internal readonly struct CharacterPoseSourceResourceResolution
     {
-        readonly CharacterAclResourceReadinessResult m_Resource;
         internal CharacterPoseSourceResourceResolution(
             CharacterAclResourceReadinessResult resource,
             int resourceCatalogIndex,
             int groupClipIndex,
             ulong resourceGeneration)
         {
-            m_Resource = resource;
+            Resource = resource;
             ResourceCatalogIndex = resourceCatalogIndex;
             GroupClipIndex = groupClipIndex;
             ResourceGeneration = resourceGeneration;
@@ -177,8 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Character Pose source resource resolution is invalid.");
         }
 
-        internal ref readonly CharacterAclResourceReadinessResult Resource =>
-            ref m_Resource;
+        internal readonly CharacterAclResourceReadinessResult Resource;
         internal int ResourceCatalogIndex { get; }
         internal int GroupClipIndex { get; }
         internal ulong ResourceGeneration { get; }
@@ -203,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new InvalidOperationException(
                     "Character Pose source resource resolution is invalid.");
             ref readonly CharacterAclResourceReadinessResult resource =
-                ref m_Resource;
+                ref Resource;
             return IsInvalid
                 ? CharacterPoseSourceReadinessView.Invalid(
                     completionIdentity,

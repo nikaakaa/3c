@@ -176,7 +176,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPathContinuityFact
     {
-        readonly CharacterFootSupportTarget m_SelectedSupportTarget;
 
         internal CharacterFootPathContinuityFact(
             bool evaluated,
@@ -284,7 +283,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockWeightCompleted = false;
             PlantDesiredPoint = default;
             PlantFilteredPoint = default;
-            m_SelectedSupportTarget = default;
+            SelectedSupportTarget = default;
             PlantTargetHeightAdoptionMode = swingTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed = 0f;
             PlantTargetHeightBefore = 0f;
@@ -445,7 +444,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = plant.FilteredPoint;
             ref readonly CharacterFootSupportTarget selectedSupport =
                 ref interpolation.SupportTarget;
-            m_SelectedSupportTarget = selectedSupport;
+            SelectedSupportTarget = selectedSupport;
             PlantTargetHeightAdoptionMode = plant.Evaluated
                 ? plant.TargetHeightAdoptionMode
                 : source.PlantTargetHeightAdoptionMode;
@@ -606,8 +605,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PlantLockWeightCompleted { get; }
         internal Vector3 PlantDesiredPoint { get; }
         internal Vector3 PlantFilteredPoint { get; }
-        internal ref readonly CharacterFootSupportTarget SelectedSupportTarget =>
-            ref m_SelectedSupportTarget;
+        internal readonly CharacterFootSupportTarget SelectedSupportTarget;
         internal CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
         internal float PlantTargetMaximumVerticalSpeed { get; }
         internal float PlantTargetHeightBefore { get; }
@@ -795,10 +793,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingSnapshot
     {
-        readonly CharacterFootGroundPathLanding m_LastLanding;
-        readonly CharacterFootGroundPathLanding m_NextSwingLanding;
-        readonly CharacterFootGroundPathLanding m_PromotedLanding;
-        readonly CharacterFootGroundPathLanding m_PlantTarget;
 
         internal CharacterFootLandingSnapshot(
             CharacterFootNextLandingTrackingState nextTrackingState,
@@ -820,15 +814,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NextTrackingState = nextTrackingState;
             NextTrackingEventIdentity = nextTrackingEventIdentity;
             HasLastLanding = hasLastLanding;
-            m_LastLanding = lastLanding;
+            LastLanding = lastLanding;
             HasNextSwingLanding = hasNextSwingLanding;
-            m_NextSwingLanding = nextSwingLanding;
+            NextSwingLanding = nextSwingLanding;
             NextSwingPredictionError = nextSwingPredictionError;
             HasPromotedLanding = hasPromotedLanding;
-            m_PromotedLanding = promotedLanding;
+            PromotedLanding = promotedLanding;
             PlantTargetState = plantTargetState;
             HasPlantTarget = hasPlantTarget;
-            m_PlantTarget = plantTarget;
+            PlantTarget = plantTarget;
             PlantTargetUpdated = plantTargetUpdated;
             PlantVerificationAttempted = plantVerificationAttempted;
             PlantVerificationUnavailable = plantVerificationUnavailable;
@@ -837,21 +831,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootNextLandingTrackingState NextTrackingState { get; }
         internal ulong NextTrackingEventIdentity { get; }
         internal bool HasLastLanding { get; }
-        internal ref readonly CharacterFootGroundPathLanding LastLanding =>
-            ref m_LastLanding;
+        internal readonly CharacterFootGroundPathLanding LastLanding;
         internal ulong LastLandingEventIdentity =>
             HasLastLanding ? LastLanding.LandingEventIdentity : 0;
         internal bool HasNextSwingLanding { get; }
-        internal ref readonly CharacterFootGroundPathLanding NextSwingLanding =>
-            ref m_NextSwingLanding;
+        internal readonly CharacterFootGroundPathLanding NextSwingLanding;
         internal float NextSwingPredictionError { get; }
         internal bool HasPromotedLanding { get; }
-        internal ref readonly CharacterFootGroundPathLanding PromotedLanding =>
-            ref m_PromotedLanding;
+        internal readonly CharacterFootGroundPathLanding PromotedLanding;
         internal CharacterFootPlantTargetState PlantTargetState { get; }
         internal bool HasPlantTarget { get; }
-        internal ref readonly CharacterFootGroundPathLanding PlantTarget =>
-            ref m_PlantTarget;
+        internal readonly CharacterFootGroundPathLanding PlantTarget;
         internal bool PlantTargetUpdated { get; }
         internal bool PlantVerificationAttempted { get; }
         internal bool PlantVerificationUnavailable { get; }
@@ -1120,13 +1110,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLifecycleTransitionFact
     {
-        readonly CharacterFootContactHistoryFact m_PreviousContext;
-        readonly CharacterFootContactHistoryFact m_CurrentContext;
-        readonly CharacterFootContactAnchorFact m_PreviousAnchor;
-        readonly CharacterFootContactAnchorFact m_CurrentAnchor;
-        readonly CharacterFootLockRequest m_Request;
-        readonly CharacterFootTransitionDecision m_PreTransition;
-        readonly CharacterFootTransitionDecision m_PostTransition;
 
         CharacterFootLifecycleTransitionFact(
             bool evaluated,
@@ -1142,35 +1125,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootTransitionDecision postTransition)
         {
             Evaluated = evaluated;
-            m_PreviousContext = previousContext;
-            m_CurrentContext = currentContext;
-            m_PreviousAnchor = previousAnchor;
-            m_CurrentAnchor = currentAnchor;
-            m_Request = request;
+            PreviousContext = previousContext;
+            CurrentContext = currentContext;
+            PreviousAnchor = previousAnchor;
+            CurrentAnchor = currentAnchor;
+            Request = request;
             LockResponseBefore = lockResponseBefore;
             OwnershipLossReason = ownershipLossReason;
             FormalFootPlacementWeight = formalFootPlacementWeight;
-            m_PreTransition = preTransition;
-            m_PostTransition = postTransition;
+            PreTransition = preTransition;
+            PostTransition = postTransition;
         }
 
         internal bool Evaluated { get; }
-        internal ref readonly CharacterFootContactHistoryFact PreviousContext =>
-            ref m_PreviousContext;
-        internal ref readonly CharacterFootContactHistoryFact CurrentContext =>
-            ref m_CurrentContext;
-        internal ref readonly CharacterFootContactAnchorFact PreviousAnchor =>
-            ref m_PreviousAnchor;
-        internal ref readonly CharacterFootContactAnchorFact CurrentAnchor =>
-            ref m_CurrentAnchor;
-        internal ref readonly CharacterFootLockRequest Request => ref m_Request;
+        internal readonly CharacterFootContactHistoryFact PreviousContext;
+        internal readonly CharacterFootContactHistoryFact CurrentContext;
+        internal readonly CharacterFootContactAnchorFact PreviousAnchor;
+        internal readonly CharacterFootContactAnchorFact CurrentAnchor;
+        internal readonly CharacterFootLockRequest Request;
         internal CharacterFootLockResponse LockResponseBefore { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
         internal float FormalFootPlacementWeight { get; }
-        internal ref readonly CharacterFootTransitionDecision PreTransition =>
-            ref m_PreTransition;
-        internal ref readonly CharacterFootTransitionDecision PostTransition =>
-            ref m_PostTransition;
+        internal readonly CharacterFootTransitionDecision PreTransition;
+        internal readonly CharacterFootTransitionDecision PostTransition;
         internal bool PostTransitionEvaluated =>
             PostTransition.Phase == CharacterFootTransitionPhase.PostInterpolation;
         internal bool SameEventContactReentryRefreshed =>
@@ -1495,7 +1472,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootCorrectionResponseResult
     {
-        readonly CharacterFootCorrectionResponseFact m_Fact;
 
         internal CharacterFootCorrectionResponseResult(
             Vector3 outputPoint,
@@ -1504,13 +1480,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             OutputPoint = outputPoint;
             AppliedDirection = appliedDirection;
-            m_Fact = fact;
+            Fact = fact;
         }
 
         internal Vector3 OutputPoint { get; }
         internal Vector3 AppliedDirection { get; }
-        internal ref readonly CharacterFootCorrectionResponseFact Fact =>
-            ref m_Fact;
+        internal readonly CharacterFootCorrectionResponseFact Fact;
     }
 
     internal struct CharacterFootInterpolationState
@@ -1573,14 +1548,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootStateFrame
     {
-        readonly CharacterFootPlacementAnimatedFootPose m_AnimatedFoot;
-        readonly CharacterFootSwingMotionResult m_SwingMotion;
-        readonly CharacterFootGroundPathResult m_GroundPath;
-        readonly CharacterFootCurrentSupportObservation m_CurrentSupport;
-        readonly CharacterFootLockRequest m_LockRequest;
-        readonly CharacterFootMotionSettings m_Settings;
-        readonly CharacterFootGroundPathLanding m_ContactLanding;
-        readonly CharacterFootGroundPathLanding m_PreparedPlantTarget;
 
         internal CharacterFootStateFrame(
             ulong frameSequence,
@@ -1615,17 +1582,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RigId = rigId;
             RigRevision = rigRevision;
             Side = side;
-            m_AnimatedFoot = animatedFoot;
+            AnimatedFoot = animatedFoot;
             AnimatedHip = animatedHip;
             LegLength = legLength;
-            m_SwingMotion = swingMotion;
-            m_GroundPath = groundPath;
+            SwingMotion = swingMotion;
+            GroundPath = groundPath;
             HasContactLanding = hasContactLanding;
-            m_ContactLanding = contactLanding;
+            ContactLanding = contactLanding;
             PreparedPlantActive = preparedPlantActive;
-            m_PreparedPlantTarget = preparedPlantTarget;
-            m_CurrentSupport = currentSupport;
-            m_LockRequest = lockRequest;
+            PreparedPlantTarget = preparedPlantTarget;
+            CurrentSupport = currentSupport;
+            LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
             OwnershipLossReason = footPlacementWeight <= CharacterFootConstraintMath.GeometryEpsilon
@@ -1637,7 +1604,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceLineage = sourceLineage;
             ProfileRevision = profileRevision;
             WorldRevision = worldRevision;
-            m_Settings = settings;
+            Settings = settings;
         }
 
         internal ulong FrameSequence { get; }
@@ -1645,23 +1612,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
         internal CharacterFootSide Side { get; }
-        internal ref readonly CharacterFootPlacementAnimatedFootPose AnimatedFoot =>
-            ref m_AnimatedFoot;
+        internal readonly CharacterFootPlacementAnimatedFootPose AnimatedFoot;
         internal Vector3 AnimatedHip { get; }
         internal float LegLength { get; }
-        internal ref readonly CharacterFootSwingMotionResult SwingMotion =>
-            ref m_SwingMotion;
-        internal ref readonly CharacterFootGroundPathResult GroundPath =>
-            ref m_GroundPath;
+        internal readonly CharacterFootSwingMotionResult SwingMotion;
+        internal readonly CharacterFootGroundPathResult GroundPath;
         internal bool HasContactLanding { get; }
-        internal ref readonly CharacterFootGroundPathLanding ContactLanding =>
-            ref m_ContactLanding;
+        internal readonly CharacterFootGroundPathLanding ContactLanding;
         internal bool PreparedPlantActive { get; }
-        internal ref readonly CharacterFootGroundPathLanding PreparedPlantTarget =>
-            ref m_PreparedPlantTarget;
-        internal ref readonly CharacterFootCurrentSupportObservation CurrentSupport =>
-            ref m_CurrentSupport;
-        internal ref readonly CharacterFootLockRequest LockRequest => ref m_LockRequest;
+        internal readonly CharacterFootGroundPathLanding PreparedPlantTarget;
+        internal readonly CharacterFootCurrentSupportObservation CurrentSupport;
+        internal readonly CharacterFootLockRequest LockRequest;
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
         internal CharacterFootGoalOwnershipLossReason OwnershipLossReason { get; }
@@ -1673,16 +1634,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FixedString128Bytes SourceLineage { get; }
         internal FixedString128Bytes ProfileRevision { get; }
         internal ulong WorldRevision { get; }
-        internal ref readonly CharacterFootMotionSettings Settings => ref m_Settings;
+        internal readonly CharacterFootMotionSettings Settings;
     }
 
     internal readonly struct CharacterFootStateEvaluation
     {
-        readonly CharacterFootStateFrame m_Frame;
-        readonly AnimationFootMotionRuntimeSample m_FormalFootMotion;
-        readonly CharacterFootLandingPredictionResult m_LandingPrediction;
-        readonly CharacterFootStrideRequest m_Stride;
-        readonly CharacterFootSoleSupportQuery m_SoleSupportQuery;
 
         internal CharacterFootStateEvaluation(
             CharacterFootSide side,
@@ -1695,27 +1651,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSoleSupportQuery soleSupportQuery)
         {
             Side = side;
-            m_FormalFootMotion = formalFootMotion;
-            m_LandingPrediction = landingPrediction;
-            m_Frame = frame;
-            m_Stride = stride;
+            FormalFootMotion = formalFootMotion;
+            LandingPrediction = landingPrediction;
+            Frame = frame;
+            Stride = stride;
             Grounded = grounded;
             GoalRoot = goalRoot;
-            m_SoleSupportQuery = soleSupportQuery;
+            SoleSupportQuery = soleSupportQuery;
         }
 
         internal CharacterFootSide Side { get; }
-        internal ref readonly AnimationFootMotionRuntimeSample FormalFootMotion =>
-            ref m_FormalFootMotion;
-        internal ref readonly CharacterFootLandingPredictionResult LandingPrediction =>
-            ref m_LandingPrediction;
-        internal ref readonly CharacterFootStateFrame Frame => ref m_Frame;
-        internal ref readonly CharacterFootStrideRequest Stride =>
-            ref m_Stride;
+        internal readonly AnimationFootMotionRuntimeSample FormalFootMotion;
+        internal readonly CharacterFootLandingPredictionResult LandingPrediction;
+        internal readonly CharacterFootStateFrame Frame;
+        internal readonly CharacterFootStrideRequest Stride;
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }
-        internal ref readonly CharacterFootSoleSupportQuery SoleSupportQuery =>
-            ref m_SoleSupportQuery;
+        internal readonly CharacterFootSoleSupportQuery SoleSupportQuery;
     }
 
     internal readonly struct CharacterFootTransitionDecision
@@ -1756,8 +1708,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootStateTarget
     {
-        readonly CharacterFootSupportTarget m_SupportTarget;
-        readonly CharacterFootSupportIntent m_SupportIntent;
 
         internal CharacterFootStateTarget(
             Vector3 correction,
@@ -1790,13 +1740,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockResponse = plantLockResponse;
             LockWeightCompleted = lockWeightCompleted;
             SupportTargetAvailable = supportTargetAvailable;
-            m_SupportTarget = supportTarget;
+            SupportTarget = supportTarget;
             StateEntered = stateEntered;
             ResponseEntered = responseEntered;
             DirectPlantFollow = directPlantFollow;
             SuppressOutput = suppressOutput;
             TimeToLandingSeconds = timeToLandingSeconds;
-            m_SupportIntent = supportIntent;
+            SupportIntent = supportIntent;
         }
 
         internal Vector3 Correction { get; }
@@ -1810,23 +1760,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLockResponse PlantLockResponse { get; }
         internal bool LockWeightCompleted { get; }
         internal bool SupportTargetAvailable { get; }
-        internal ref readonly CharacterFootSupportTarget SupportTarget =>
-            ref m_SupportTarget;
+        internal readonly CharacterFootSupportTarget SupportTarget;
         internal bool StateEntered { get; }
         internal bool ResponseEntered { get; }
         internal bool DirectPlantFollow { get; }
         internal bool SuppressOutput { get; }
         internal float TimeToLandingSeconds { get; }
-        internal ref readonly CharacterFootSupportIntent SupportIntent =>
-            ref m_SupportIntent;
+        internal readonly CharacterFootSupportIntent SupportIntent;
     }
 
     internal readonly struct CharacterFootInterpolationResult
     {
-        readonly CharacterFootSupportTarget m_SupportTarget;
-        readonly CharacterFootPathContinuityFact m_ContinuityFact;
-        readonly CharacterFootPlantInterpolationFact m_PlantFact;
-        readonly CharacterFootCorrectionResponseFact m_CorrectionResponseFact;
 
         internal CharacterFootInterpolationResult(
             Vector3 correction,
@@ -1838,21 +1782,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Correction = correction;
             Completed = completed;
-            m_SupportTarget = supportTarget;
-            m_ContinuityFact = continuityFact;
-            m_PlantFact = plantFact;
-            m_CorrectionResponseFact = correctionResponseFact;
+            SupportTarget = supportTarget;
+            ContinuityFact = continuityFact;
+            PlantFact = plantFact;
+            CorrectionResponseFact = correctionResponseFact;
         }
 
         internal Vector3 Correction { get; }
         internal bool Completed { get; }
-        internal ref readonly CharacterFootSupportTarget SupportTarget =>
-            ref m_SupportTarget;
-        internal ref readonly CharacterFootPathContinuityFact ContinuityFact =>
-            ref m_ContinuityFact;
-        internal ref readonly CharacterFootPlantInterpolationFact PlantFact =>
-            ref m_PlantFact;
-        internal ref readonly CharacterFootCorrectionResponseFact CorrectionResponseFact =>
-            ref m_CorrectionResponseFact;
+        internal readonly CharacterFootSupportTarget SupportTarget;
+        internal readonly CharacterFootPathContinuityFact ContinuityFact;
+        internal readonly CharacterFootPlantInterpolationFact PlantFact;
+        internal readonly CharacterFootCorrectionResponseFact CorrectionResponseFact;
     }
 }

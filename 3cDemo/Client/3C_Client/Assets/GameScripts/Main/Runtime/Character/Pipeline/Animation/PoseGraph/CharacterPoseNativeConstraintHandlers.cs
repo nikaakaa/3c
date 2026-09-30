@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     frame.RenderFrame,
                     frame.PresentationDeltaSeconds,
                     weightOverride,
-                    in frameBody,
+                    frameBody,
                     in frameFacts,
                     in frameParameters,
                     in framePose);
@@ -420,6 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeConstraintNodeHandler
     {
         readonly CharacterPoseBoneContributionConstraintHandle m_Handle;
+        FlowCanvas.ValueInput<CharacterPoseNativeComponentPoseValue> m_PoseInput;
         CharacterPoseNativeGoalContributionValue m_Output;
 
         internal CharacterPoseNativePoseBoneIkGoalsHandler(

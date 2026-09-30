@@ -379,8 +379,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     additivePose.DenseVelocities;
                 for (int bone = 0; bone < outputPoses.Length; bone++)
                 {
-                    ref readonly AnimationLocalBonePose baseBone = ref basePoses[bone];
-                    ref readonly AnimationLocalBonePose additiveBone = ref additivePoses[bone];
+                    AnimationLocalBonePose baseBone = basePoses[bone];
+                    AnimationLocalBonePose additiveBone = additivePoses[bone];
                     ref readonly (Vector3 Position, Quaternion InverseRotation, Vector3 Scale)
                         reference = ref m_ReferenceBones[bone];
                     Vector3 position = baseBone.Position +
@@ -406,10 +406,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             (additiveBone.Scale - reference.Scale) * weight;
                     }
                     outputPoses[bone] = new AnimationLocalBonePose(position, rotation, scale);
-                    ref readonly AnimationBlendBoneVelocity additiveVelocity =
-                        ref additiveVelocities[bone];
-                    ref readonly AnimationBlendBoneVelocity baseVelocity =
-                        ref baseVelocities[bone];
+                    AnimationBlendBoneVelocity additiveVelocity = additiveVelocities[bone];
+                    AnimationBlendBoneVelocity baseVelocity = baseVelocities[bone];
                     outputVelocities[bone] = new AnimationBlendBoneVelocity(
                         baseVelocity.Linear + additiveVelocity.Linear * weight,
                         baseVelocity.Angular + additiveVelocity.Angular * weight,

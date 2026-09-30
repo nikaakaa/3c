@@ -97,9 +97,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootPlacementAnimatedPose
     {
-        readonly Vector3 m_PelvisLocalPosition;
-        readonly CharacterFootPlacementAnimatedFootPose m_Left;
-        readonly CharacterFootPlacementAnimatedFootPose m_Right;
 
         public CharacterFootPlacementAnimatedPose(
             ulong renderFrame,
@@ -108,15 +105,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose right)
         {
             RenderFrame = renderFrame;
-            m_PelvisLocalPosition = pelvisLocalPosition;
-            m_Left = left;
-            m_Right = right;
+            PelvisLocalPosition = pelvisLocalPosition;
+            Left = left;
+            Right = right;
         }
 
         public ulong RenderFrame { get; }
-        public ref readonly Vector3 PelvisLocalPosition => ref m_PelvisLocalPosition;
-        public ref readonly CharacterFootPlacementAnimatedFootPose Left => ref m_Left;
-        public ref readonly CharacterFootPlacementAnimatedFootPose Right => ref m_Right;
+        public readonly Vector3 PelvisLocalPosition;
+        public readonly CharacterFootPlacementAnimatedFootPose Left;
+        public readonly CharacterFootPlacementAnimatedFootPose Right;
     }
 
     public enum CharacterFootConstraintState : byte
@@ -278,9 +275,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootSupportFacts
     {
-        readonly CharacterFootSupportTarget m_Target;
-        readonly CharacterFootContactReference m_Contact;
-        readonly CharacterFootPelvisReachReference m_ReachReference;
 
         internal CharacterFootSupportFacts(
             CharacterFootSupportTarget target,
@@ -292,25 +286,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong eventIdentity,
             CharacterFootPelvisReachReference reachReference)
         {
-            m_Target = target;
-            m_Contact = contact;
+            Target = target;
+            Contact = contact;
             ContactOwnership = contactOwnership;
             Eligibility = eligibility;
             Weight = weight;
             HorizontalError = horizontalError;
             EventIdentity = eventIdentity;
-            m_ReachReference = reachReference;
+            ReachReference = reachReference;
         }
 
-        internal ref readonly CharacterFootSupportTarget Target => ref m_Target;
-        internal ref readonly CharacterFootContactReference Contact => ref m_Contact;
+        internal readonly CharacterFootSupportTarget Target;
+        internal readonly CharacterFootContactReference Contact;
         internal float ContactOwnership { get; }
         internal CharacterFootSupportEligibility Eligibility { get; }
         internal float Weight { get; }
         internal float HorizontalError { get; }
         internal ulong EventIdentity { get; }
-        internal ref readonly CharacterFootPelvisReachReference ReachReference =>
-            ref m_ReachReference;
+        internal readonly CharacterFootPelvisReachReference ReachReference;
     }
 
     internal readonly struct CharacterFootGoalTarget
@@ -366,12 +359,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementRequest
     {
-        readonly CharacterFootPlacementIdentity m_Identity;
-        readonly CharacterFootPlacementPose m_Pose;
-        readonly CharacterFootSupportFacts m_Support;
-        readonly CharacterFootLandingReachRequest m_LandingReachRequest;
-        readonly CharacterFootGoalTarget m_GoalTarget;
-        readonly CharacterFootStrideRequest m_Stride;
 
         internal CharacterFootPlacementRequest(
             in CharacterFootPlacementIdentity identity,
@@ -383,34 +370,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool landingReachAdmitted,
             in CharacterFootStrideRequest stride)
         {
-            m_Identity = identity;
-            m_Pose = pose;
-            m_Support = support;
-            m_LandingReachRequest = landingReachRequest;
-            m_GoalTarget = goalTarget;
+            Identity = identity;
+            Pose = pose;
+            Support = support;
+            LandingReachRequest = landingReachRequest;
+            GoalTarget = goalTarget;
             Outcome = outcome;
             LandingReachAdmitted = landingReachAdmitted;
-            m_Stride = stride;
+            Stride = stride;
         }
 
-        internal ref readonly CharacterFootPlacementIdentity Identity => ref m_Identity;
-        internal ref readonly CharacterFootPlacementPose Pose => ref m_Pose;
-        internal ref readonly CharacterFootSupportFacts Support => ref m_Support;
-        internal ref readonly CharacterFootLandingReachRequest LandingReachRequest =>
-            ref m_LandingReachRequest;
-        internal ref readonly CharacterFootGoalTarget GoalTarget => ref m_GoalTarget;
+        internal readonly CharacterFootPlacementIdentity Identity;
+        internal readonly CharacterFootPlacementPose Pose;
+        internal readonly CharacterFootSupportFacts Support;
+        internal readonly CharacterFootLandingReachRequest LandingReachRequest;
+        internal readonly CharacterFootGoalTarget GoalTarget;
         internal CharacterFootResolvedOutcome Outcome { get; }
         internal bool LandingReachAdmitted { get; }
-        internal ref readonly CharacterFootStrideRequest Stride => ref m_Stride;
+        internal readonly CharacterFootStrideRequest Stride;
     }
 
     internal readonly struct CharacterResolvedFootResult
     {
-        readonly CharacterFootPlacementIdentity m_Identity;
-        readonly CharacterFootPlacementPose m_Pose;
-        readonly CharacterFootSupportFacts m_Support;
-        readonly CharacterFootLandingReachRequest m_LandingReachRequest;
-        readonly CharacterFootGoalTarget m_GoalTarget;
 
         internal CharacterResolvedFootResult(
             in CharacterFootPlacementIdentity identity,
@@ -420,27 +401,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGoalTarget goalTarget,
             CharacterFootResolvedOutcome outcome)
         {
-            m_Identity = identity;
-            m_Pose = pose;
-            m_Support = support;
-            m_LandingReachRequest = landingReachRequest;
-            m_GoalTarget = goalTarget;
+            Identity = identity;
+            Pose = pose;
+            Support = support;
+            LandingReachRequest = landingReachRequest;
+            GoalTarget = goalTarget;
             Outcome = outcome;
         }
 
-        internal ref readonly CharacterFootPlacementIdentity Identity => ref m_Identity;
-        internal ref readonly CharacterFootPlacementPose Pose => ref m_Pose;
-        internal ref readonly CharacterFootSupportFacts Support => ref m_Support;
-        internal ref readonly CharacterFootLandingReachRequest LandingReachRequest =>
-            ref m_LandingReachRequest;
-        internal ref readonly CharacterFootGoalTarget GoalTarget => ref m_GoalTarget;
+        internal readonly CharacterFootPlacementIdentity Identity;
+        internal readonly CharacterFootPlacementPose Pose;
+        internal readonly CharacterFootSupportFacts Support;
+        internal readonly CharacterFootLandingReachRequest LandingReachRequest;
+        internal readonly CharacterFootGoalTarget GoalTarget;
         internal CharacterFootResolvedOutcome Outcome { get; }
     }
 
     internal readonly struct CharacterFootPlacementRequestPair
     {
-        readonly CharacterFootPlacementRequest m_Left;
-        readonly CharacterFootPlacementRequest m_Right;
 
         internal CharacterFootPlacementRequestPair(
             in CharacterFootPlacementRequest left,
@@ -454,22 +432,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = leftIdentity.CompletionIdentity;
             RigId = leftIdentity.RigId;
             RigRevision = leftIdentity.RigRevision;
-            m_Left = left;
-            m_Right = right;
+            Left = left;
+            Right = right;
         }
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
-        internal ref readonly CharacterFootPlacementRequest Left => ref m_Left;
-        internal ref readonly CharacterFootPlacementRequest Right => ref m_Right;
+        internal readonly CharacterFootPlacementRequest Left;
+        internal readonly CharacterFootPlacementRequest Right;
     }
 
     internal readonly struct CharacterResolvedFootPair
     {
-        readonly CharacterResolvedFootResult m_Left;
-        readonly CharacterResolvedFootResult m_Right;
 
         internal CharacterResolvedFootPair(
             in CharacterResolvedFootResult left,
@@ -483,16 +459,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = leftIdentity.CompletionIdentity;
             RigId = leftIdentity.RigId;
             RigRevision = leftIdentity.RigRevision;
-            m_Left = left;
-            m_Right = right;
+            Left = left;
+            Right = right;
         }
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
-        internal ref readonly CharacterResolvedFootResult Left => ref m_Left;
-        internal ref readonly CharacterResolvedFootResult Right => ref m_Right;
+        internal readonly CharacterResolvedFootResult Left;
+        internal readonly CharacterResolvedFootResult Right;
     }
 
     internal static class CharacterFootPlacementContract

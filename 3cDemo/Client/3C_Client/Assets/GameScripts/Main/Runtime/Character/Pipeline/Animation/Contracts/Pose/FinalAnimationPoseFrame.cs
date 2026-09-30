@@ -132,39 +132,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public ref readonly AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose
+        public AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose
         {
             get
             {
                 RequireLease();
-                return ref m_DenseLocalPose;
+                return m_DenseLocalPose;
             }
         }
 
-        public ref readonly AnimationReadOnlyBuffer<float> PoseParameters
+        public AnimationReadOnlyBuffer<float> PoseParameters
         {
             get
             {
                 RequireLease();
-                return ref m_PoseParameters;
+                return m_PoseParameters;
             }
         }
 
-        public ref readonly AnimationReadOnlyBuffer<byte> PoseParameterAvailability
+        public AnimationReadOnlyBuffer<byte> PoseParameterAvailability
         {
             get
             {
                 RequireLease();
-                return ref m_PoseParameterAvailability;
+                return m_PoseParameterAvailability;
             }
         }
 
-        public ref readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions
+        public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions
         {
             get
             {
                 RequireLease();
-                return ref m_Contributions;
+                return m_Contributions;
             }
         }
 
@@ -231,12 +231,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Lease.RequireValid(m_LeaseIdentity);
         }
 
-        public ref readonly AnimationReadOnlyBuffer<CharacterPoseBoneKind> BoneKinds
+        public AnimationReadOnlyBuffer<CharacterPoseBoneKind> BoneKinds
         {
             get
             {
                 RequireLease();
-                return ref m_BoneKinds;
+                return m_BoneKinds;
             }
         }
 
@@ -290,10 +290,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string PosePlanHash => m_Composed.PosePlanHash;
         public ulong CompletionIdentity => m_Composed.CompletionIdentity;
         public AnimationPoseAvailability Availability => m_Composed.Availability;
-        public ref readonly AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose => ref m_Composed.DenseLocalPose;
-        public ref readonly AnimationReadOnlyBuffer<float> PoseParameters => ref m_Composed.PoseParameters;
-        public ref readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions => ref m_Composed.Contributions;
-        public ref readonly AnimationReadOnlyBuffer<CharacterPoseBoneKind> BoneKinds => ref m_Composed.BoneKinds;
+        public AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose => m_Composed.DenseLocalPose;
+        public AnimationReadOnlyBuffer<float> PoseParameters => m_Composed.PoseParameters;
+        public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions => m_Composed.Contributions;
+        public AnimationReadOnlyBuffer<CharacterPoseBoneKind> BoneKinds => m_Composed.BoneKinds;
         public int PhysicalBoneCount => m_Composed.PhysicalBoneCount;
         public int VirtualBoneCount => m_Composed.VirtualBoneCount;
         public int PoseBoneCount => m_Composed.PoseBoneCount;

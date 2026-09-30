@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Blend produced a degenerate rotation.");
             Vector3 position = positionSum / weight;
             Vector3 scale = scaleSum / weight;
-            if (!AnimationPoseMath.IsFinite(position) || !AnimationPoseMath.IsFinite(rotation) || !AnimationPoseMath.IsFinite(scale))
+            if (!AnimationPoseMath.IsFinite(position) || !BlendStack.AnimationSlotBlendJobMath.IsFinite(rotation) || !AnimationPoseMath.IsFinite(scale))
                 throw new ArgumentException("Animation local Bone pose is invalid.");
             return new AnimationLocalBonePose(rotation.normalized, position, scale);
         }

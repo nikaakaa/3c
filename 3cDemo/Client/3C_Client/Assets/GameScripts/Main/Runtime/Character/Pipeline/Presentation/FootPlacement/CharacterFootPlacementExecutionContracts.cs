@@ -40,7 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPlacementPoseInput
     {
-        readonly AnimationFootMotionRuntimeFrame m_FootMotion;
 
         internal CharacterFootPlacementPoseInput(
             string posePlanHash,
@@ -70,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = binding.CompletionIdentity;
             DenseComponentPoses = binding.DensePoses;
             ContinuityIdentity = binding.ContinuityIdentity[0];
-            m_FootMotion = footStepObservation;
+            FootMotion = footStepObservation;
             Contributions = contributions;
             ContributionCount = contributionCount;
             bool hasObservationContribution = false;
@@ -99,19 +98,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseComponentPoses { get; }
         internal ulong ContinuityIdentity { get; }
-        internal ref readonly AnimationFootMotionRuntimeFrame FootMotion => ref m_FootMotion;
+        internal readonly AnimationFootMotionRuntimeFrame FootMotion;
         internal AnimationPoseSourceContribution[] Contributions { get; }
         internal int ContributionCount { get; }
     }
 
     internal readonly struct CharacterFootPlacementResult
     {
-        readonly CharacterResolvedFootPair m_Feet;
-        readonly CharacterFootPrimarySupportResult m_PrimarySupport;
-        readonly CharacterFootStrideHipsResult m_Pelvis;
-        readonly CharacterFullBodyIkGoal m_PelvisGoal;
-        readonly CharacterFullBodyIkGoal m_LeftGoal;
-        readonly CharacterFullBodyIkGoal m_RightGoal;
 
         internal CharacterFootPlacementResult(
             ulong frameSequence,
@@ -139,25 +132,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = completionIdentity;
             RigId = rigId;
             RigRevision = rigRevision;
-            m_Feet = feet;
-            m_PrimarySupport = primarySupport;
-            m_Pelvis = pelvis;
-            m_PelvisGoal = pelvisGoal;
-            m_LeftGoal = leftGoal;
-            m_RightGoal = rightGoal;
+            Feet = feet;
+            PrimarySupport = primarySupport;
+            Pelvis = pelvis;
+            PelvisGoal = pelvisGoal;
+            LeftGoal = leftGoal;
+            RightGoal = rightGoal;
         }
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
         internal FixedString64Bytes RigId { get; }
         internal FixedString64Bytes RigRevision { get; }
-        internal ref readonly CharacterResolvedFootPair Feet => ref m_Feet;
-        internal ref readonly CharacterFootPrimarySupportResult PrimarySupport =>
-            ref m_PrimarySupport;
-        internal ref readonly CharacterFootStrideHipsResult Pelvis => ref m_Pelvis;
-        internal ref readonly CharacterFullBodyIkGoal PelvisGoal => ref m_PelvisGoal;
-        internal ref readonly CharacterFullBodyIkGoal LeftGoal => ref m_LeftGoal;
-        internal ref readonly CharacterFullBodyIkGoal RightGoal => ref m_RightGoal;
+        internal readonly CharacterResolvedFootPair Feet;
+        internal readonly CharacterFootPrimarySupportResult PrimarySupport;
+        internal readonly CharacterFootStrideHipsResult Pelvis;
+        internal readonly CharacterFullBodyIkGoal PelvisGoal;
+        internal readonly CharacterFullBodyIkGoal LeftGoal;
+        internal readonly CharacterFullBodyIkGoal RightGoal;
     }
 
 }

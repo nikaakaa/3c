@@ -60,9 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootSwingMotionResult
     {
-        readonly CharacterFootSwingPathReference m_SwingPathReference;
-        readonly CharacterFootPathContinuityFact m_PathContinuity;
-        readonly CharacterFootLifecycleTransitionFact m_LifecycleTransition;
 
         internal CharacterFootSwingMotionResult(
             CharacterFootSwingMotionState state,
@@ -102,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = rejectReason;
             LandingEventIdentity = landingEventIdentity;
             GroundPathInputIdentity = groundPathInputIdentity;
-            m_SwingPathReference = swingPathReference;
+            SwingPathReference = swingPathReference;
             OriginalSole = originalSole;
             OriginalAnkle = originalAnkle;
             Distance = distance;
@@ -126,18 +123,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneAvailable = contactPlaneAvailable;
             ContactSurfaceIdentity = contactSurfaceIdentity;
             ContactPlaneNormal = contactPlaneNormal;
-            m_PathContinuity = pathContinuity;
+            PathContinuity = pathContinuity;
             LandingReachEvaluated = landingReachEvaluated;
             LandingReachAvailable = landingReachAvailable;
-            m_LifecycleTransition = lifecycleTransition;
+            LifecycleTransition = lifecycleTransition;
         }
 
         public CharacterFootSwingMotionState State { get; }
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
         public ulong LandingEventIdentity { get; }
         public ulong GroundPathInputIdentity { get; }
-        internal ref readonly CharacterFootSwingPathReference SwingPathReference =>
-            ref m_SwingPathReference;
+        internal readonly CharacterFootSwingPathReference SwingPathReference;
         public Vector3 OriginalSole { get; }
         public Vector3 OriginalAnkle { get; }
         public float Distance { get; }
@@ -163,10 +159,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         public bool LandingReachEvaluated { get; }
         public bool LandingReachAvailable { get; }
-        internal ref readonly CharacterFootPathContinuityFact PathContinuity =>
-            ref m_PathContinuity;
-        internal ref readonly CharacterFootLifecycleTransitionFact LifecycleTransition =>
-            ref m_LifecycleTransition;
+        internal readonly CharacterFootPathContinuityFact PathContinuity;
+        internal readonly CharacterFootLifecycleTransitionFact LifecycleTransition;
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 }

@@ -981,8 +981,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.DenseVelocities;
             for (int bone = 0; bone < outputPoses.Length; bone++)
             {
-                ref readonly AnimationLocalBonePose sourceBone = ref sourceBones[bone];
-                ref readonly AnimationLocalBonePose targetBone = ref targetBones[bone];
+                AnimationLocalBonePose sourceBone = sourceBones[bone];
+                AnimationLocalBonePose targetBone = targetBones[bone];
                 Vector3 position =
                     (sourceBone.Position * sourceWeight * sourceOutputWeight +
                      targetBone.Position * targetWeight * targetOutputWeight) /
@@ -1008,10 +1008,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         scale * totalWeight,
                         totalWeight,
                         sourceBone);
-                ref readonly AnimationBlendBoneVelocity sourceVelocity =
-                    ref sourceVelocities[bone];
-                ref readonly AnimationBlendBoneVelocity targetVelocity =
-                    ref targetVelocities[bone];
+                AnimationBlendBoneVelocity sourceVelocity = sourceVelocities[bone];
+                AnimationBlendBoneVelocity targetVelocity = targetVelocities[bone];
                 outputVelocities[bone] =
                     new AnimationBlendBoneVelocity(
                         (sourceVelocity.Linear * sourceWeight * sourceOutputWeight +
@@ -1115,8 +1113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (count >= outputContributions.Length)
                     throw new InvalidOperationException(
                         "Pose StateMachine transition contribution capacity was exceeded.");
-                ref readonly AnimationPrimitivePoseContribution value =
-                    ref inputContributions[i];
+                AnimationPrimitivePoseContribution value = inputContributions[i];
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in output, count + 1);
                 int outputWeightOffset = count * boneCount;
                 int inputWeightOffset = i * boneCount;
@@ -1292,8 +1289,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 graph.EvaluationVersion = 1;
             }
             RuleValue result = EvaluateOperation(
-                graph,
                 graph.Root,
+                graph,
                 in facts,
                 in inputs,
                 timeInState,
@@ -1349,7 +1346,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     break;
                 case PoseTransitionRuleOperationKind.Not:
                     result = new RuleValue(!RequireBool(EvaluateOperation(
-                        operation.InputA,
+                        bound.InputA,
                         graph,
                         in facts,
                         in inputs,
@@ -1358,24 +1355,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     break;
                 case PoseTransitionRuleOperationKind.And:
                     result = new RuleValue(
-                        RequireBool(EvaluateOperation(operation.InputA, graph, in facts, in inputs, timeInState, remainingTime)) &&
-                        RequireBool(EvaluateOperation(operation.InputB, graph, in facts, in inputs, timeInState, remainingTime)));
+                        RequireBool(EvaluateOperation(bound.InputA, graph, in facts, in inputs, timeInState, remainingTime)) &&
+                        RequireBool(EvaluateOperation(bound.InputB, graph, in facts, in inputs, timeInState, remainingTime)));
                     break;
                 case PoseTransitionRuleOperationKind.Or:
                     result = new RuleValue(
-                        RequireBool(EvaluateOperation(operation.InputA, graph, in facts, in inputs, timeInState, remainingTime)) ||
-                        RequireBool(EvaluateOperation(operation.InputB, graph, in facts, in inputs, timeInState, remainingTime)));
+                        RequireBool(EvaluateOperation(bound.InputA, graph, in facts, in inputs, timeInState, remainingTime)) ||
+                        RequireBool(EvaluateOperation(bound.InputB, graph, in facts, in inputs, timeInState, remainingTime)));
                     break;
                 case PoseTransitionRuleOperationKind.Equal:
                     result = new RuleValue(Compare(
-                        EvaluateOperation(operation.InputA, graph, in facts, in inputs, timeInState, remainingTime),
-                        EvaluateOperation(operation.InputB, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputA, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputB, graph, in facts, in inputs, timeInState, remainingTime),
                         false));
                     break;
                 case PoseTransitionRuleOperationKind.NotEqual:
                     result = new RuleValue(!Compare(
-                        EvaluateOperation(operation.InputA, graph, in facts, in inputs, timeInState, remainingTime),
-                        EvaluateOperation(operation.InputB, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputA, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputB, graph, in facts, in inputs, timeInState, remainingTime),
                         false));
                     break;
                 case PoseTransitionRuleOperationKind.Greater:
@@ -1383,8 +1380,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 case PoseTransitionRuleOperationKind.Less:
                 case PoseTransitionRuleOperationKind.LessOrEqual:
                     result = new RuleValue(CompareNumbers(
-                        EvaluateOperation(operation.InputA, graph, in facts, in inputs, timeInState, remainingTime),
-                        EvaluateOperation(operation.InputB, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputA, graph, in facts, in inputs, timeInState, remainingTime),
+                        EvaluateOperation(bound.InputB, graph, in facts, in inputs, timeInState, remainingTime),
                         operation.Kind));
                     break;
                 default:

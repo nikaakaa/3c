@@ -1256,8 +1256,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         readonly struct AnimationPlayerSourceKey : IEquatable<AnimationPlayerSourceKey>
         {
-            readonly AnimationPoseSourceId m_SourceId;
-            readonly PoseNodeId m_PlayerNodeId;
 
             public AnimationPlayerSourceKey(
                 in AnimationPoseSourceId sourceId,
@@ -1265,12 +1263,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 if (!sourceId.IsValid || !playerNodeId.IsValid)
                     throw new ArgumentException("Animation Player source key is invalid.");
-                m_SourceId = sourceId;
-                m_PlayerNodeId = playerNodeId;
+                SourceId = sourceId;
+                PlayerNodeId = playerNodeId;
             }
 
-            public ref readonly AnimationPoseSourceId SourceId => ref m_SourceId;
-            public ref readonly PoseNodeId PlayerNodeId => ref m_PlayerNodeId;
+            public readonly AnimationPoseSourceId SourceId;
+            public readonly PoseNodeId PlayerNodeId;
             public bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid;
 
             public bool Equals(AnimationPlayerSourceKey other) =>

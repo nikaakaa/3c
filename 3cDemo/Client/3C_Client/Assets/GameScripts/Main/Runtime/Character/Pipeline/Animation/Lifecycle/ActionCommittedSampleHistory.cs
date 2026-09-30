@@ -25,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         readonly struct Mutation
         {
-            readonly ActionCommittedRawSample m_Sample;
 
             internal Mutation(
                 MutationKind kind,
@@ -44,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Header = header;
                 Kind = kind;
                 PlaybackId = playbackId;
-                m_Sample = sample;
+                SampleRef = sample;
             }
 
             internal AnimationPresentationMutationJournalHeader Header
@@ -53,8 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             internal MutationKind Kind { get; }
             internal AnimationPlaybackId PlaybackId { get; }
-            internal ref readonly ActionCommittedRawSample SampleRef =>
-                ref m_Sample;
+            internal readonly ActionCommittedRawSample SampleRef;
 
             internal Mutation WithHeader(
                 AnimationPresentationMutationJournalHeader header) =>

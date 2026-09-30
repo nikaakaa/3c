@@ -210,7 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisFrame
     {
-        readonly CharacterFootPlacementAnimatedPose m_Pose;
 
         internal CharacterFootPelvisFrame(
             Vector3 componentUp,
@@ -229,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
-            m_Pose = pose;
+            Pose = pose;
             LeftCorrectedSole = leftCorrectedSole;
             RightCorrectedSole = rightCorrectedSole;
             LeftLegLength = leftLegLength;
@@ -242,7 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PoseRootPosition { get; }
         internal Vector3 AnimatedPelvis { get; }
         internal Vector3 AnimatedPelvisComponentPosition { get; }
-        internal ref readonly CharacterFootPlacementAnimatedPose Pose => ref m_Pose;
+        internal readonly CharacterFootPlacementAnimatedPose Pose;
         internal Vector3 LeftCorrectedSole { get; }
         internal Vector3 RightCorrectedSole { get; }
         internal float LeftLegLength { get; }
@@ -276,8 +275,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisReachInput
     {
-        readonly CharacterFootLandingReachRequest m_Left;
-        readonly CharacterFootLandingReachRequest m_Right;
 
         internal CharacterFootPelvisReachInput(
             bool leftRequested,
@@ -289,15 +286,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rightRequested && !right.IsAvailable)
                 throw new ArgumentException("Pelvis Reach requires a formal foot request.");
             LeftRequested = leftRequested;
-            m_Left = leftRequested ? left : default;
+            Left = leftRequested ? left : default;
             RightRequested = rightRequested;
-            m_Right = rightRequested ? right : default;
+            Right = rightRequested ? right : default;
         }
 
         internal bool LeftRequested { get; }
-        internal ref readonly CharacterFootLandingReachRequest Left => ref m_Left;
+        internal readonly CharacterFootLandingReachRequest Left;
         internal bool RightRequested { get; }
-        internal ref readonly CharacterFootLandingReachRequest Right => ref m_Right;
+        internal readonly CharacterFootLandingReachRequest Right;
     }
 
     internal readonly struct CharacterFootPelvisLegReach
@@ -361,8 +358,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisReachObservation
     {
-        readonly CharacterFootPelvisLegReach m_Left;
-        readonly CharacterFootPelvisLegReach m_Right;
 
         internal CharacterFootPelvisReachObservation(
             Vector3 componentUp,
@@ -370,8 +365,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPelvisLegReach right)
         {
             ComponentUp = componentUp;
-            m_Left = left;
-            m_Right = right;
+            Left = left;
+            Right = right;
             Status = CharacterFootPelvisReachStatus.NotRequested;
             IntersectionEvaluated = false;
             IntersectionMinimumAlongUp = 0f;
@@ -400,8 +395,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal Vector3 ComponentUp { get; }
-        internal ref readonly CharacterFootPelvisLegReach Left => ref m_Left;
-        internal ref readonly CharacterFootPelvisLegReach Right => ref m_Right;
+        internal readonly CharacterFootPelvisLegReach Left;
+        internal readonly CharacterFootPelvisLegReach Right;
         internal CharacterFootPelvisReachStatus Status { get; }
         internal bool IntersectionEvaluated { get; }
         internal float IntersectionMinimumAlongUp { get; }
@@ -655,10 +650,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootStrideHipsResult
     {
-        readonly CharacterFootPelvisHeightTarget m_HeightTarget;
-        readonly CharacterFootPelvisPosturePreference m_PosturePreference;
-        readonly CharacterFootPelvisReachObservation m_Reach;
-        readonly CharacterFootPelvisSpringStep m_Response;
 
         internal CharacterFootStrideHipsResult(
             CharacterFootStrideState state,
@@ -692,10 +683,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseRootPosition = poseRootPosition;
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
-            m_HeightTarget = heightTarget;
-            m_PosturePreference = posturePreference;
-            m_Reach = reach;
-            m_Response = response;
+            HeightTarget = heightTarget;
+            PosturePreference = posturePreference;
+            Reach = reach;
+            Response = response;
         }
 
         [DiagnosticField]
@@ -740,11 +731,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 AnimatedPelvisComponentPosition { get; }
-        public ref readonly CharacterFootPelvisHeightTarget HeightTarget => ref m_HeightTarget;
-        internal ref readonly CharacterFootPelvisPosturePreference PosturePreference =>
-            ref m_PosturePreference;
-        internal ref readonly CharacterFootPelvisReachObservation Reach => ref m_Reach;
-        public ref readonly CharacterFootPelvisSpringStep Response => ref m_Response;
+        public readonly CharacterFootPelvisHeightTarget HeightTarget;
+        internal readonly CharacterFootPelvisPosturePreference PosturePreference;
+        internal readonly CharacterFootPelvisReachObservation Reach;
+        public readonly CharacterFootPelvisSpringStep Response;
 
         internal bool Accepted => State == CharacterFootStrideState.Accepted;
         internal bool ProducesPelvisGoal =>
@@ -908,10 +898,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootPelvisInput
     {
-        readonly CharacterFootStrideIntentResult m_Intent;
-        readonly CharacterFootPrimarySupportResult m_PrimarySupport;
-        readonly CharacterFootPelvisFrame m_Frame;
-        readonly CharacterFootPelvisReachInput m_Reach;
 
         internal CharacterFootPelvisInput(
             in CharacterFootStrideIntentResult intent,
@@ -925,10 +911,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 supportAnkle,
             float supportGoalWeight)
         {
-            m_Intent = intent;
-            m_PrimarySupport = primarySupport;
-            m_Frame = frame;
-            m_Reach = reach;
+            Intent = intent;
+            PrimarySupport = primarySupport;
+            Frame = frame;
+            Reach = reach;
             PairTargetsAvailable = pairTargetsAvailable;
             PairTargetHeightSpread = pairTargetHeightSpread;
             BilateralSupportAvailable = bilateralSupportAvailable;
@@ -937,11 +923,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SupportGoalWeight = supportGoalWeight;
         }
 
-        internal ref readonly CharacterFootStrideIntentResult Intent => ref m_Intent;
-        internal ref readonly CharacterFootPrimarySupportResult PrimarySupport =>
-            ref m_PrimarySupport;
-        internal ref readonly CharacterFootPelvisFrame Frame => ref m_Frame;
-        internal ref readonly CharacterFootPelvisReachInput Reach => ref m_Reach;
+        internal readonly CharacterFootStrideIntentResult Intent;
+        internal readonly CharacterFootPrimarySupportResult PrimarySupport;
+        internal readonly CharacterFootPelvisFrame Frame;
+        internal readonly CharacterFootPelvisReachInput Reach;
         internal bool PairTargetsAvailable { get; }
         internal float PairTargetHeightSpread { get; }
         internal bool BilateralSupportAvailable { get; }

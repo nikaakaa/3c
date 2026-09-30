@@ -398,10 +398,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     actionBoneCount,
                     actionContributionWeights);
                 float sourceBoneWeight = 1f - actionBoneWeight;
-                ref readonly AnimationLocalBonePose sourcePose =
-                    ref sourcePoses[bone];
-                ref readonly AnimationLocalBonePose actionPose =
-                    ref actionPoses[bone];
+                AnimationLocalBonePose sourcePose = sourcePoses[bone];
+                AnimationLocalBonePose actionPose = actionPoses[bone];
                 float total = sourceBoneWeight + actionBoneWeight;
                 if (!sourcePose.IsValid || !actionPose.IsValid || total <= 0f)
                     throw new InvalidOperationException(
@@ -428,10 +426,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     scale * total,
                     total,
                     sourcePose);
-                ref readonly AnimationBlendBoneVelocity sourceVelocity =
-                    ref sourceVelocities[bone];
-                ref readonly AnimationBlendBoneVelocity actionVelocity =
-                    ref actionVelocities[bone];
+                AnimationBlendBoneVelocity sourceVelocity = sourceVelocities[bone];
+                AnimationBlendBoneVelocity actionVelocity = actionVelocities[bone];
                 outputVelocities[bone] = new AnimationBlendBoneVelocity(
                     Vector3.LerpUnclamped(
                         sourceVelocity.Linear,
@@ -570,8 +566,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (outputCount >= output.Length)
                     throw new InvalidOperationException(
                         $"Animation Slot '{NodeId}' contribution capacity was exceeded.");
-                ref readonly AnimationPrimitivePoseContribution value =
-                    ref inputContributions[contribution];
+                AnimationPrimitivePoseContribution value = inputContributions[contribution];
                 CharacterPoseNativePoseBufferCopy.ExtendContributionPrefix(in m_WriteBinding, outputCount + 1);
                 int outputWeightOffset = outputCount * boneCount;
                 int inputWeightOffset = contribution * boneCount;

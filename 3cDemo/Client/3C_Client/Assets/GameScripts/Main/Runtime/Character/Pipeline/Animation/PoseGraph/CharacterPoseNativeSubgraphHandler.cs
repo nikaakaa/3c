@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ValueInput input,
                 CharacterPosePortKind kind)
             {
-                NodeId = nodeId;
+                SourceNodeId = nodeId;
                 Parent = parent;
                 Child = child;
                 Input = input;

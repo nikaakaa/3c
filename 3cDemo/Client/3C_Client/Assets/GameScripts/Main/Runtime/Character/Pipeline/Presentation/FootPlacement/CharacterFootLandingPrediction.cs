@@ -133,8 +133,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingQueryResult
     {
-        readonly CharacterFootLandingSupport m_Support;
-        readonly CharacterFootLandingQuerySelectionDiagnostics m_SelectionDiagnostics;
 
         internal CharacterFootLandingQueryResult(
             CharacterFootLandingQueryRejectReason rejectReason,
@@ -142,15 +140,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingQuerySelectionDiagnostics selectionDiagnostics)
         {
             RejectReason = rejectReason;
-            m_Support = support;
-            m_SelectionDiagnostics = selectionDiagnostics;
+            Support = support;
+            SelectionDiagnostics = selectionDiagnostics;
         }
 
         internal CharacterFootLandingQueryRejectReason RejectReason { get; }
-        internal ref readonly CharacterFootLandingSupport Support =>
-            ref m_Support;
-        internal ref readonly CharacterFootLandingQuerySelectionDiagnostics
-            SelectionDiagnostics => ref m_SelectionDiagnostics;
+        internal readonly CharacterFootLandingSupport Support;
+        internal readonly CharacterFootLandingQuerySelectionDiagnostics SelectionDiagnostics;
         internal bool Accepted => RejectReason == CharacterFootLandingQueryRejectReason.None;
     }
 
@@ -541,10 +537,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootLandingPredictionResult
     {
-        readonly CharacterFootLandingObservationDiagnostics m_Observation;
-        readonly CharacterFootPlacementQueryRequest m_Query;
-        readonly CharacterFootLandingQuerySelectionDiagnostics m_QuerySelection;
-        readonly CharacterFootGroundPathResult m_GroundPath;
 
         internal CharacterFootLandingPredictionResult(
             CharacterFootSide side,
@@ -591,14 +583,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : default;
             CurrentAnimatedSole = currentAnimatedSole;
             RawLandingCandidate = rawLandingCandidate;
-            m_Observation = observation;
-            m_Query = query;
+            Observation = observation;
+            Query = query;
             SurfaceIdentity = support.SurfaceIdentity;
             LandingPoint = support.Point;
             LandingNormal = support.Normal;
             QueryDistance = support.Distance;
-            m_QuerySelection = querySelection;
-            m_GroundPath = default;
+            QuerySelection = querySelection;
+            GroundPath = default;
         }
 
         CharacterFootLandingPredictionResult(
@@ -606,7 +598,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathResult groundPath)
         {
             this = source;
-            m_GroundPath = groundPath;
+            GroundPath = groundPath;
         }
         public CharacterFootSide Side { get; }
         public CharacterFootLandingPredictionState State { get; }
@@ -623,18 +615,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 FutureBodyTranslationVelocity { get; }
         public Vector3 CurrentAnimatedSole { get; }
         public Vector3 RawLandingCandidate { get; }
-        public ref readonly CharacterFootLandingObservationDiagnostics Observation =>
-            ref m_Observation;
-        public ref readonly CharacterFootPlacementQueryRequest Query =>
-            ref m_Query;
+        public readonly CharacterFootLandingObservationDiagnostics Observation;
+        public readonly CharacterFootPlacementQueryRequest Query;
         public int SurfaceIdentity { get; }
         public Vector3 LandingPoint { get; }
         public Vector3 LandingNormal { get; }
         public float QueryDistance { get; }
-        public ref readonly CharacterFootLandingQuerySelectionDiagnostics QuerySelection =>
-            ref m_QuerySelection;
-        internal ref readonly CharacterFootGroundPathResult GroundPath =>
-            ref m_GroundPath;
+        public readonly CharacterFootLandingQuerySelectionDiagnostics QuerySelection;
+        internal readonly CharacterFootGroundPathResult GroundPath;
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
 
         internal CharacterFootLandingPredictionResult WithGroundPath(

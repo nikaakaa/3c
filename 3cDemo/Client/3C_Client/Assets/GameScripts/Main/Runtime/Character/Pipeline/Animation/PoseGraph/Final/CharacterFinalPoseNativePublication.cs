@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
@@ -8,7 +9,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal readonly struct CharacterPoseNativePublicationFrameLease
     {
-        readonly CharacterPoseNativeFrameLineage m_Lineage;
         internal CharacterPoseNativePublicationFrameLease(
             in CharacterPoseNativeFrameLineage lineage)
         {
@@ -16,12 +16,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Native Final Pose publication lineage is invalid.",
                     nameof(lineage));
-            m_Lineage = lineage;
+            Lineage = lineage;
             m_IsValid = true;
         }
 
         readonly bool m_IsValid;
-        internal ref readonly CharacterPoseNativeFrameLineage Lineage => ref m_Lineage;
+        internal readonly CharacterPoseNativeFrameLineage Lineage;
         internal bool IsValid => m_IsValid && Lineage.IsValid;
         internal bool Matches(in CharacterPoseNativeFrameLineage lineage) =>
             IsValid && Lineage.Matches(in lineage);
@@ -279,7 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int poseOffset = m_Pending.BufferPage * m_BoneCount;
             for (int bone = 0; bone < m_BoneCount; bone++)
             {
-                ref readonly AnimationLocalBonePose pose = ref outputPoses[bone];
+                AnimationLocalBonePose pose = outputPoses[bone];
                 if (!pose.IsValid)
                     throw new InvalidOperationException(
                         $"Native Final Pose publication Bone #{bone} is invalid.");
@@ -306,8 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = 0; contribution < contributionCount; contribution++)
             {
                 int contributionIndex = contributionOffset + contribution;
-                ref readonly AnimationPrimitivePoseContribution primitive =
-                    ref primitives[contribution];
+                AnimationPrimitivePoseContribution primitive = primitives[contribution];
                 m_Contributions[contributionIndex] =
                     CharacterFinalPoseContributionResolver.Resolve(
                         in primitive,

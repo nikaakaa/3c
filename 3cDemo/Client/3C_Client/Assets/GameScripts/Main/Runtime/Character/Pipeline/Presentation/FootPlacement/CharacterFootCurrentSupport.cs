@@ -461,11 +461,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootCurrentSupportObservation
     {
-        readonly CharacterFootCurrentSupportProbeRequest m_HeelRequest;
-        readonly CharacterFootCurrentSupportProbeRequest m_ToeRequest;
-        readonly CharacterFootCurrentSupportProbeResult m_Heel;
-        readonly CharacterFootCurrentSupportProbeResult m_Toe;
-        readonly CharacterFootSupportTarget m_Target;
 
         internal CharacterFootCurrentSupportObservation(
             ulong frameSequence,
@@ -488,10 +483,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CompletionIdentity = completionIdentity;
             Side = side;
             WorldRevision = worldRevision;
-            m_HeelRequest = heelRequest;
-            m_ToeRequest = toeRequest;
-            m_Heel = heel;
-            m_Toe = toe;
+            HeelRequest = heelRequest;
+            ToeRequest = toeRequest;
+            Heel = heel;
+            Toe = toe;
             RejectReason = rejectReason;
             HeelRequiredDisplacement = heelRequiredDisplacement;
             ToeRequiredDisplacement = toeRequiredDisplacement;
@@ -499,7 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SelectionReason = selectionReason;
             SelectedSupportNormalBeforeNormalization =
                 selectedSupportNormalBeforeNormalization;
-            m_Target = target;
+            Target = target;
             m_IsSpecified = 1;
         }
 
@@ -508,14 +503,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong CompletionIdentity { get; }
         internal CharacterFootSide Side { get; }
         internal ulong WorldRevision { get; }
-        internal ref readonly CharacterFootCurrentSupportProbeRequest HeelRequest =>
-            ref m_HeelRequest;
-        internal ref readonly CharacterFootCurrentSupportProbeRequest ToeRequest =>
-            ref m_ToeRequest;
-        internal ref readonly CharacterFootCurrentSupportProbeResult Heel =>
-            ref m_Heel;
-        internal ref readonly CharacterFootCurrentSupportProbeResult Toe =>
-            ref m_Toe;
+        internal readonly CharacterFootCurrentSupportProbeRequest HeelRequest;
+        internal readonly CharacterFootCurrentSupportProbeRequest ToeRequest;
+        internal readonly CharacterFootCurrentSupportProbeResult Heel;
+        internal readonly CharacterFootCurrentSupportProbeResult Toe;
         internal CharacterFootCurrentSupportRejectReason RejectReason { get; }
         internal float HeelRequiredDisplacement { get; }
         internal float ToeRequiredDisplacement { get; }
@@ -526,8 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
         internal float SelectionEpsilon => 0.0001f;
         internal Vector3 SelectedSupportNormalBeforeNormalization { get; }
-        internal ref readonly CharacterFootSupportTarget Target =>
-            ref m_Target;
+        internal readonly CharacterFootSupportTarget Target;
         internal bool IsSpecified => m_IsSpecified != 0;
         internal bool Available =>
             IsSpecified && RejectReason == CharacterFootCurrentSupportRejectReason.None &&

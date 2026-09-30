@@ -2105,3 +2105,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Layered Bone Blend 的参数混合循环每轮重新计算 `baseGlobalWeight + overlayGlobalWeight`；同一 BlendPose 后续 contribution 计算又需要同一个 totalGlobalWeight。
 - 把已有的 totalGlobalWeight 定义上移到参数循环前，weighted 参数和 contribution factor 复用同一次加法。base/overlay 全局权重、分支、输出 availability 和 contribution 权重公式不变。
 - 该改动删除每参数的重复权重求和，加法输入和顺序不变。静态核对同一方法内的全部消费点和生命周期；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP298 Surface visibility start height 复用（2026-09-30，已实施，本轮未编译）
+
+- Ground Surface Visibility 在事件循环前为 LastLanding 相对 surface origin 计算高度；首个 start event 又重复执行同一 `LastLanding - Origin` 和 `Dot(..., Up)`。
+- 循环前绑定 landing offset 和 start height，start 分支复用该高度。后续 event 会正常更新 previousHeight；重复或非首个零距离事件按原跳过规则不会进入 start 分支。
+- 该改动删除每次 Ground Path surface visibility 构建中的重复减法和 Dot。静态核对事件排序、跳过条件、surface identity 和 edge 输出不变；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

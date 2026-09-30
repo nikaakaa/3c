@@ -48,7 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SortEvents();
 
             float previousEvent = float.NegativeInfinity;
-            float previousHeight = Vector3.Dot(input.LastLanding - surfaces.Origin, surfaces.Up);
+            Vector3 lastLandingOffset = input.LastLanding - surfaces.Origin;
+            float previousHeight = Vector3.Dot(lastLandingOffset, surfaces.Up);
             int previousSurface = input.LastLandingSurfaceIdentity;
             int previousFace = -1;
             for (int i = 0; i < m_EventCount; i++)
@@ -72,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (atStart)
                 {
                     hasBefore = true;
-                    beforeHeight = Vector3.Dot(input.LastLanding - surfaces.Origin, surfaces.Up);
+                    beforeHeight = previousHeight;
                     beforeSurface = input.LastLandingSurfaceIdentity;
                     beforeFace = -1;
                 }

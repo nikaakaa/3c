@@ -1,6 +1,6 @@
 # Foot Placement 进展与证据入口
 
-整理日期：2026-09-30。脚部质量尚未闭环；阶段报告归档不改变其中记录的失败事实，也不把编译、缓存 Apply 或单段修复当作整体行为验收。
+整理日期：2026-10-01。脚部质量尚未闭环；阶段报告归档不改变其中记录的失败事实，也不把编译、缓存 Apply 或单段修复当作整体行为验收。
 
 ## 正式 owner
 
@@ -23,6 +23,10 @@
 
 2026-10-01 补齐新的 full 采样输入（capability 4 / sampler 3）：`CharacterFootPlacementModule` 在本帧求值前将左右脚生命周期状态保存到帧 Bank 的预分配页；诊断视图引用该页与 Bank 中的完整身体预测曲线，原生成采样程序在提交后同步写入 packet。输出包括 `foot/pre-state`、`future-body-trajectory` 和响应来源 UTF-8 表，以及事件时间、来源身份、作者总权重与 PosePlanHash。旧包缺失的轨迹及前态不能反推补造，必须重新采样；冻结、权重、骨盆和腿 IK 算法均未修改。
 
-补字段的 `abfaf3895` 再次引入了大结构嵌套值拷贝。复用历史检查入口，在当前 Unity Mono 中测得 full Capture 实际栈帧为 953,392 字节；改为上述预分配存储引用后为 664,080 字节，减少 289,312 字节。历史修复 `413e931de` 后为 646,528 字节，core Capture 本次保持 205,904 字节。当前改动已通过 Unity 编译与实际 JIT 检查；原入口的 2716 帧诊断回放已请求，但 Editor 卡在进入 Play 的域重载，尚未完成本次采集和保存，不能声明闪退已修复或 IK 行为已改善。检查输出保留在 `tmp/ik-release-sampling-20260930/capture-stack-replay-input-before.json` 与 `capture-stack-replay-input-after.json`。相关执行规则已写入根目录 `AGENTS.md`；本轮未新增单元测试，既有业务测试仍由配套测试窗口维护。
+补字段的 `abfaf3895` 再次引入了大结构嵌套值拷贝。`23b52330c` 改为上述预分配存储引用后，实际 Unity Mono full Capture 栈帧从 953,392 降至 664,080 字节，减少 289,312 字节；历史修复 `413e931de` 后为 646,528 字节，core 本次保持 205,904 字节。编译与 JIT 检查通过，结果保留在 `tmp/ik-release-sampling-20260930/capture-stack-replay-input-before.json` 与 `capture-stack-replay-input-after.json`。执行规则已写入根目录 `AGENTS.md`；既有业务单元测试仍由配套测试窗口维护。
+
+01:30 已完成原入口的完整运行验证：精确输入 `757f243033414fc7b123c97e2fcb0d70` 的 2716 帧全部回放、停止并保存；新 Foot 包为 `20260930-172333-3cb49fba52604669bfae7fe6eda3aabc`，主表 5432 行、1279 列，左右脚各 2716 行。完整身体轨迹表 6348 行，与每行声明的点数全部一致；响应来源字节表 347520 行，计算前脚态包含实际状态变化。正式 Proof 的 `replay_completed` / `capture_completed` 均为 true，错误列表为空，Foot 与 Presentation 清单均已发布；随后已退出本次 Play。该结果证明这条完整采样流程没有再发生启动闪退，不代表 Landing / Releasing 运动质量已修复。自动比较结果为 `baseline-created:2716`，不是候选 A/B 通过。
+
+本次“编译十分钟”的实际记录是进入 Play 的刷新耗时 604.728 秒，其中 `CompileScripts` 仅 1.760 毫秒，`ProcessInitializeOnLoadAttributes` 占 314.061 秒，资源分类占 140.160 秒；片段保留在 `tmp/ik-release-sampling-20260930/editor-play-reload-20261001.log`。之后连接自行恢复，未重启或重复发起刷新。导出期间观察到整机可用内存约 1.2 GB、提交内存占用 93% 并有大量换页；这是当时的资源压力证据，不能据此断言某个初始化器就是根因。初始化器级别的耗时来源尚未定位，未修改其逻辑。
 
 原理阅读见 [GDC 学习文案](../reference/foot-placement/gdc2016-fitting-the-world.md)；历史否决与重复问题见[实现经验](../reference/foot-placement/implementation-lessons.md)。参数和当前运行路径仍由正式内容与现行规格拥有。

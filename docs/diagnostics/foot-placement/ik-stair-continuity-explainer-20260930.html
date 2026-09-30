@@ -19,11 +19,11 @@
   <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.09.30 · 交互解释</span></div>
   <header class="hero">
     <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">本页包含采样事实、原因判断和候选行为。三者证据强度不同，不能把右侧示意当成已经证明正确的修复方案。先看本轮核对结论，再查看各项数据。</p></div>
-    <div class="status-note"><b>先修采样闪退，IK 修复候选暂停。</b><span>补齐复算输入时再次引入了大结构值拷贝。已改成帧内预分配存储引用，完整采样栈帧从 953,392 降到 664,080 字节；连续采集和保存尚未验证。提前放开的失败候选仍已撤销；其余右侧行为仍为未验证候选。</span></div>
+    <div class="status-note"><b>采样已恢复，伸直和跳脚仍待修。</b><span>采样栈修正已完成原 2716 帧回放和保存，左右脚共 5432 行，新增前态和轨迹表已落盘。提前放开的失败候选仍已撤销；其余右侧行为仍为未验证候选，采样通过不代表 IK 质量通过。</span></div>
   </header>
   <details id="audit-verdict" open><summary>严格核对结论：哪些已证实，哪些还不能照着改</summary><div class="detail-body">
     <p><b>2026-10-01 · 采样缺口：</b>已有连续实验只重跑单脚目标至 Goal，预测结果与路径仍来自记录。旧 CSV 没有完整未来身体轨迹，也没有完整的计算前脚态，不能继续把扩大窗口或验证上游预测说成“已有输入足够”。新 full 采样补齐计算前状态、完整轨迹表、事件时间与来源身份；旧数据不补造。这次只增加采样字段，没有完成新的行为验证。</p>
-    <p><b>2026-10-01 · 采样栈回归：</b><code>abfaf3895</code> 把完整前态和曲线内嵌进诊断值类型，重犯了 <code>cd0d0a73e</code> / <code>413e931de</code> 已处理的大结构复制问题。现在由帧 Bank 的预分配页保存前态，视图引用该页及正式曲线，提交后由原采样器同步复制到 packet。实际 Unity Mono JIT 栈帧减少 289,312 字节，已通过编译；原 2716 帧诊断回放请求卡在进入 Play 的域重载，尚无本次完整采样包。不能据此宣布闪退已修复，也没有证明伸直或跳脚改善。执行约束已写入根目录 <a href="../../../AGENTS.md">AGENTS.md</a>。</p>
+    <p><b>2026-10-01 · 采样栈回归已完成运行验证：</b><code>abfaf3895</code> 重犯了 <code>cd0d0a73e</code> / <code>413e931de</code> 已处理的大结构复制问题。<code>23b52330c</code> 改由帧 Bank 的预分配页保存前态，视图引用该页及正式曲线，原采样器在提交后同步复制到 packet。完整栈帧从 953,392 降至 664,080 字节；原 2716 帧回放现已全部完成、停止并保存，新增输入表存在，正式错误列表为空。<a href="../../../3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260930-172333-3cb49fba52604669bfae7fe6eda3aabc/character-foot-ik%252Ffull.csv">本次采样包主表</a>只是新的复算基线，自动结果为 <code>baseline-created:2716</code>，不证明伸直或跳脚改善。执行约束见 <a href="../../../AGENTS.md">AGENTS.md</a>，运行及十分钟重载的耗时记录见<a href="../../status/foot-placement.md">当前状态</a>。</p>
     <p><b>重新采样：</b>使用原入口的 <code>character-foot-ik/full</code>（capability 4 / full sampler 3），保留同一场景和配置，复现上下楼问题后停止保存。主表新增 <code>foot/pre-state</code>、<code>input/body-trajectory</code>、作者总权重和 PosePlanHash；另有 <code>future-body-trajectory</code> 逐点时间/位移/速度表，以及 <code>pre-state-response-lineage</code> 来源身份 UTF-8 字节表。core 不含这些复算输入；它们不能恢复旧采样缺失的内容，也不能独立恢复整个 Unity 世界。</p>
     <ul class="reference-list">
       <li><b>01 · 末端补高已证实，原来的移动示意过于简化。</b><p>左脚 14120→14121 的中心 Z 后退 1.107 mm，第 14 点却前进 1.186 mm，跨上高 18 cm 的踏面；末端追加 16.041 cm。不能仅归因为水平前移过快：旋转后的脚掌覆盖也在变化。需要核对完整脚姿态的跨边过程，当前图没有证明候选轨迹无碰撞。</p></li>

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ThirdPersonClient.Editor</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Client>$(MSBuildThisFileDirectory)../../3cDemo/Client/3C_Client</Client>
+    <FootSource>$(Client)/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement</FootSource>
+    <LandingSource Condition="'$(LandingSource)' == ''">$(FootSource)/CharacterFootLandingRuntime.cs</LandingSource>
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Capture.cs" />
+    <Compile Include="$(LandingSource)" Link="Production/CharacterFootLandingRuntime.cs" />
+    <Compile Include="$(FootSource)/CharacterFootStateTargetResolver.cs" Link="Production/CharacterFootStateTargetResolver.cs" />
+    <Compile Include="$(FootSource)/CharacterFootSwingMotionBuilder.cs" Link="Production/CharacterFootSwingMotionBuilder.cs" />
+    <Compile Include="$(FootSource)/CharacterFootTransitionResolver.cs" Link="Production/CharacterFootTransitionResolver.cs" />
+    <Compile Include="$(FootSource)/CharacterFootTransitionRuntime.cs" Link="Production/CharacterFootTransitionRuntime.cs" />
+    <Compile Include="$(FootSource)/CharacterFootConstraintMath.cs" Link="Production/CharacterFootConstraintMath.cs" />
+    <Reference Include="$(Client)/Library/ScriptAssemblies/ThirdPersonCharacter.Animation.dll" />
+    <Reference Include="$(Client)/Library/ScriptAssemblies/ThirdPersonSimulation.Core.dll" />
+    <Reference Include="$(Client)/Library/ScriptAssemblies/Unity.Collections.dll" />
+    <Reference Include="$(Client)/Library/ScriptAssemblies/KK.GeneratedDiagnosticSampling.Annotations.dll" />
+    <Reference Include="$(UnityEditorData)/Managed/UnityEngine/UnityEngine.CoreModule.dll" />
+    <Reference Include="$(Client)/Library/PackageCache/com.unity.nuget.newtonsoft-json@3.2.1/Runtime/Newtonsoft.Json.dll" />
+  </ItemGroup>
+</Project>

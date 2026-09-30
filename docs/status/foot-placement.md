@@ -12,6 +12,8 @@
 
 释放段的骨盆初态有明确重建来源：2034 的正式结果为 Releasing，响应已计算且未完成，目标为 0、输出 −0.00117490336、速度 0.008545625、位置权重 1；PrimarySupport 明确为空。按 `ResolvePelvisRelease` 与 `AdvancePelvisResponse` 的提交赋值，支持侧为 default、事件为 0、坡度 Flat，世界 Goal 为该帧 AnimatedPelvis 加沿 up 的加权输出，HasValue 与 HasGoalWorldPosition 均为 true。2035 的 previous-output、previous-velocity、previous-target 和 previous-slope 与此一致。因此可以用 2034 正式输出种下 2035 连续双脚／骨盆实验的状态，不能用默认 Spring，也不必为这个状态一律回溯到 1768 的零权重帧；仍需历史函数重现后才能比较候选。这不补齐 FBBIK 弯曲历史。
 
+为使预测函数直接消费真实采样边界，`CharacterFootPlacementModule.PredictFootPair` 与 `PredictEvent` 的时间线参数收窄为 `hasMotionTimeline` 和 `trajectoryGeneration`；此前它们只读这两项，`currentSegmentRemainingSeconds` 只转传且未被消费，现已删除。唯一正式调用方从同一已提交 timeline 提供原值，完整 timeline 仍交给需要它的身体轨迹生成。固定输入可使用已有 `input/motion-timeline-available` 与 `input/timeline-generation`，不必编造未采样的 owner 字符串。两函数体在精确参数替换后保持逐字一致，Animation 定向编译 0 警告、0 错误（6.39 秒）；完整预测和释放效果仍由配套窗口继续执行验证。
+
 首个动画混合修正将 FootMotion 从 `CharacterPoseSourceModule` 正式采样写入预分配 Source 页，经 `AnimationPrimitivePoseContribution` 传播，在 `AnimationSlotBlendJob` 的历史与 Stored 捕获中保存；`CharacterPoseWorldContextAdapter` 选择实际参与姿态的 Live/Stored 样本，交给原 FootPlacement 链路。它处理零权重 Live Idle 在 Stored 占据全部姿态时错误地提供锁脚请求的问题。Stored 保留当前接触与锁权重，静态姿态不继续预测未来落地；作者总权重和曲线未改。资源名称与曲线元数据在目录初始化，未增加每帧字符串转换。
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。

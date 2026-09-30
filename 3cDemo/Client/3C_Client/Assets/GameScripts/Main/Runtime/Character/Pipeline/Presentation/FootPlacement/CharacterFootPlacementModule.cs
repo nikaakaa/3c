@@ -310,13 +310,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref readonly Vector3 pelvisLocalPosition = ref pose.PelvisLocalPosition;
             ref readonly CommittedLocomotionPlanarMotionTimeline timeline =
                 ref facts.LocomotionMotionTimeline;
+            bool hasMotionTimeline = timeline.IsValid;
+            ulong trajectoryGeneration = hasMotionTimeline ? timeline.Generation : 0;
             CharacterFootActionOccupancy leftAction = ResolveActionOccupancy(
                 in poseInput,
                 CharacterFootSide.Left);
             CharacterFootActionOccupancy rightAction = ResolveActionOccupancy(
                 in poseInput,
                 CharacterFootSide.Right);
-            float currentSegmentRemainingSeconds = timeline.IsValid
+            float currentSegmentRemainingSeconds = hasMotionTimeline
                 ? ResolveCurrentSegmentRemainingSeconds(timeline, in body)
                 : 0f;
             ref readonly AnimationFootMotionRuntimeFrame formalFootFrame =
@@ -379,8 +381,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSide.Left,
                 leftCurrentStep,
                 in leftPose,
-                in timeline,
-                currentSegmentRemainingSeconds,
+                hasMotionTimeline,
+                trajectoryGeneration,
                 bodyTrajectory,
                 in frame,
                 in leftLanding,
@@ -392,8 +394,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSide.Right,
                 rightCurrentStep,
                 in rightPose,
-                in timeline,
-                currentSegmentRemainingSeconds,
+                hasMotionTimeline,
+                trajectoryGeneration,
                 bodyTrajectory,
                 in frame,
                 in rightLanding,
@@ -460,7 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasLeftNextSwingLanding,
                 in leftNextSwingLanding,
                 componentUp,
-                timeline.IsValid ? timeline.AuthorityTick.Value : 0,
+                hasMotionTimeline ? timeline.AuthorityTick.Value : 0,
                 m_LeftGroundPath,
                 committedBank?.LeftGroundPath,
                 out bank.LeftGroundPath);
@@ -471,7 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasRightNextSwingLanding,
                 in rightNextSwingLanding,
                 componentUp,
-                timeline.IsValid ? timeline.AuthorityTick.Value : 0,
+                hasMotionTimeline ? timeline.AuthorityTick.Value : 0,
                 m_RightGroundPath,
                 committedBank?.RightGroundPath,
                 out bank.RightGroundPath);
@@ -970,8 +972,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             in AnimationFootMotionRuntimeSample footMotion,
             in CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in CommittedLocomotionPlanarMotionTimeline timeline,
-            float currentSegmentRemainingSeconds,
+            bool hasMotionTimeline,
+            ulong trajectoryGeneration,
             CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame,
             in CharacterFootLandingSnapshot landingSnapshot,
@@ -1007,8 +1009,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0f,
                     true,
                     animatedFoot,
-                    in timeline,
-                    currentSegmentRemainingSeconds,
+                    hasMotionTimeline,
+                    trajectoryGeneration,
                     bodyTrajectory,
                     in frame,
                     observationPool,
@@ -1026,8 +1028,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     events.TimeToLandingSeconds,
                     false,
                     animatedFoot,
-                    in timeline,
-                    currentSegmentRemainingSeconds,
+                    hasMotionTimeline,
+                    trajectoryGeneration,
                     bodyTrajectory,
                     in frame,
                     observationPool,
@@ -1043,7 +1045,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSource,
                     in next,
                     events.TimeToLandingSeconds,
-                    timeline.IsValid ? timeline.Generation : 0,
+                    trajectoryGeneration,
                     currentSole,
                     default,
                     default);
@@ -1073,8 +1075,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float timeToLandingSeconds,
             bool currentContact,
             in CharacterFootPlacementAnimatedFootPose animatedFoot,
-            in CommittedLocomotionPlanarMotionTimeline timeline,
-            float currentSegmentRemainingSeconds,
+            bool hasMotionTimeline,
+            ulong trajectoryGeneration,
             CharacterFutureBodyTranslation bodyTrajectory,
             in CharacterFootPlacementFrameInput frame,
             CharacterFootLandingObservationPagePool observationPool,
@@ -1084,7 +1086,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentSole = CharacterFootConstraintMath.ResolveOriginalSole(animatedFoot);
             ref readonly CharacterBodyPresentationFrame body = ref frame.Body;
             pendingObservation = committedObservation;
-            ulong trajectoryGeneration = timeline.IsValid ? timeline.Generation : 0;
             if (!footMotion.IsValid)
             {
                 return RejectedEvent(
@@ -1128,7 +1129,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default);
             }
-            if (!currentContact && !timeline.IsValid && bodyTrajectory == null)
+            if (!currentContact && !hasMotionTimeline && bodyTrajectory == null)
             {
                 return RejectedEvent(
                     side,

@@ -42,12 +42,13 @@ for row in main:
     previous[side] = row
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--scene', choices=['stored', 'stored-rotation', 'live-switch', 'releasing', 'step-edge'], default='stored')
+parser.add_argument('--scene', choices=['stored', 'stored-rotation', 'live-switch', 'live-continued', 'releasing', 'step-edge'], default='stored')
 scene = parser.parse_args().scene
 scenarios = {
     'stored': {'stored-no-contact-left': ('left', 1174, 1186), 'stored-contact-right': ('right', 889, 958)},
     'stored-rotation': {'stored-contact-rotation-right': ('right', 874, 958)},
     'live-switch': {'live-switch-right': ('right', 2192, 2214)},
+    'live-continued': {'live-switch-continued-right': ('right', 2192, 2249)},
     'releasing': {'releasing-right': ('right', 2035, 2046)},
     'step-edge': {'step-edge-left': ('left', 2537, 2550)}
 }[scene]
@@ -71,6 +72,8 @@ for name, (side, first, last) in scenarios.items():
         if row['sample.dimension'].endswith('/' + side) and first <= int(row[frame_key]) <= last:
             other = by_frame_side[(int(row[frame_key]), 'right' if side == 'left' else 'left')]
             values.append({'frame': int(row[frame_key]), 'sampleSequence': row['sample.sequence'], 'sampleDimension': row['sample.dimension'], 'lineageHigh': row['sample.lineage.high'], 'lineageLow': row['sample.lineage.low'], 'main': [row[k] for k in main_keys], 'pairedMain': [other[k] for k in main_keys], 'sources': sources[(row['sample.lineage.high'], row['sample.lineage.low'])]})
+            if scene == 'live-continued':
+                values[-1]['paired'] = {'frame': int(other[frame_key]), 'sampleSequence': other['sample.sequence'], 'sampleDimension': other['sample.dimension'], 'lineageHigh': other['sample.lineage.high'], 'lineageLow': other['sample.lineage.low'], 'main': [other[k] for k in main_keys], 'sources': sources[(other['sample.lineage.high'], other['sample.lineage.low'])]}
     assert len(values) == last - first + 1, name
     selected[name] = values
 
@@ -78,6 +81,9 @@ lookup = {}
 for values in selected.values():
     for frame in values:
         lookup.setdefault((frame['sampleSequence'], frame['sampleDimension']), []).append(frame)
+        if scene == 'live-continued':
+            paired = frame['paired']
+            lookup.setdefault((paired['sampleSequence'], paired['sampleDimension']), []).append(paired)
 
 tables = {'probes': ('current-support-probes', 'foot'), 'outputProbes': ('output-support-probes', 'foot'), 'targetProbes': ('state-target-support-probes', 'foot'), 'contacts': ('ground-contacts', 'foot'), 'envelope': ('ground-envelope', 'foot'), 'surfaces': ('ground-surfaces', 'foot'), 'responseLineage': ('pre-state-response-lineage', 'foot'), 'bodyTrajectory': ('future-body-trajectory', 'input')}
 hashes = {'main': hashlib.sha256((FOOT / 'character-foot-ik%2Ffull.csv').read_bytes()).hexdigest(), 'sources': hashlib.sha256(source_path.read_bytes()).hexdigest()}

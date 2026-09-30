@@ -66,6 +66,7 @@ static class Program
                     ["currentContact"] = value.Sample.Contact, ["currentLockWeight"] = value.Sample.LockWeight,
                     ["currentToeSpeed"] = value.Sample.ToeSpeed, ["currentPredictiveLanding"] = value.Sample.HasPredictiveLanding,
                     ["currentSourceIdentity"] = names[value.SourceNameIndex], ["currentSample"] = SampleJson(value.Sample),
+                    ["currentLeftSample"] = SampleJson(value.Left), ["currentRightSample"] = SampleJson(value.Right),
                     ["currentContactIdentity"] = value.Sample.Events.CurrentContact.Identity.ToString(),
                     ["capturedSourceSampleIdentity"] = value.SourceSampleIdentity.ToString()
                 });
@@ -126,6 +127,7 @@ static class Program
             {
                 Kind = selected.Kind, Weight = selected.Weight,
                 Sample = input.Side == CharacterFootSide.Left ? sample.Left : sample.Right,
+                Left = sample.Left, Right = sample.Right,
                 SourceSampleIdentity = sample.SourceSampleIdentity, SourceNameIndex = sample.SourceNameIndex
             };
         }
@@ -136,6 +138,7 @@ static class Program
         internal AnimationPoseContributionKind Kind;
         internal float Weight;
         internal AnimationFootMotionRuntimeSample Sample;
+        internal AnimationFootMotionRuntimeSample Left, Right;
         internal ulong SourceSampleIdentity;
         internal int SourceNameIndex;
     }

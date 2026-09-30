@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
             bool sourceComparison = footVariant == "sources";
+            bool bilateral = footVariant.StartsWith("pelvis-", StringComparison.Ordinal);
             const string scenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
             Scene previous = SceneManager.GetActiveScene();
             Scene scene = SceneManager.GetSceneByPath(scenePath);
@@ -47,6 +48,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
             report["footVariant"] = footVariant;
             report["fixedHipScope"] = "使用录制骨盆之后的原Hip作固定条件指标；录制landingReach反馈保持不变，未重新计算骨盆或腿IK";
+            if (bilateral)
+            {
+                report["scope"] = "固定原混合动画脚姿势、预测和地面路径；双脚正式Evaluate→PrimarySupport→Intent→PreparePelvis→ResolvePelvis→Complete→实际加权Goal查询；未执行完整FBBIK";
+                report["fixedHipScope"] = "从录制骨盆后Hip减原骨盆加权偏移恢复计算前Hip，再加实际重新计算的骨盆偏移；未求解FBBIK";
+            }
             GameObject root = null;
             try
             {
@@ -69,11 +75,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Physics.SyncTransforms();
                 var columns = (JObject)fixture["columns"];
                 var inputs = ((JArray)fixture["frames"]).Select((f, i) => new StoredGoalInput(f, columns,
-                    sourceReport["rows"][i], profile, side == CharacterFootSide.Left ? rig.LeftLegLength : rig.RightLegLength, side)).ToArray();
-                foreach (StoredGoalInput input in inputs)
+                    sourceReport["rows"][i], profile, side == CharacterFootSide.Left ? rig.LeftLegLength : rig.RightLegLength, side,
+                    bilateral ? "currentRightSample" : "currentSample", bilateral)).ToArray();
+                StoredGoalInput[] pairedInputs = bilateral ? ((JArray)fixture["frames"]).Select((f, i) => new StoredGoalInput(f["paired"], columns,
+                    sourceReport["rows"][i], profile, rig.LeftLegLength, CharacterFootSide.Left, "currentLeftSample", true)).ToArray() : Array.Empty<StoredGoalInput>();
+                foreach (StoredGoalInput input in inputs.Concat(pairedInputs))
                 {
                     var contacts = input.Animated.ResolveSoleContacts(input.Animated.AnklePosition, input.Animated.AnkleRotation);
-                    input.Support = query.Query(input.Sequence, input.Completion, world.WorldRevision, side,
+                    input.Support = query.Query(input.Sequence, input.Completion, world.WorldRevision, input.Side,
                         Vector3.up, input.Grounded, in contacts, input.InputProbes);
                     Assert.That(input.InputProbes.Count, Is.EqualTo(23));
                     for (int i = 0; i < input.ExpectedProbes.Length; i++)
@@ -84,19 +93,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                 }
                 CharacterFootLifecycleContext seed = CapturedPreState(fixture["frames"][0], columns);
+                CharacterFootLifecycleContext pairedSeed = bilateral ? CapturedPreState(fixture["frames"][0]["paired"], columns) : default;
                 bool liveSwitch = (ulong)fixture["firstFrame"] == 2192;
                 if (liveSwitch) Assert.That(inputs[0].Weight, Is.Zero, "真实作者关闭帧必须正式清空新旧历史，不能伪造候选旋转前态");
                 var targetProbes = new CharacterFootSoleProbeBuffer();
                 var outputProbes = new CharacterFootSoleProbeBuffer();
                 root = new GameObject("Stored foot Goal comparison") { hideFlags = HideFlags.HideAndDontSave };
-                foreach (bool candidate in sourceComparison ? new[] { false, true } : new[] { footVariant == "rotation-current" })
+                foreach (bool candidate in sourceComparison ? new[] { false, true } : new[] { footVariant.EndsWith("current", StringComparison.Ordinal) })
                 {
                     bool correctedSource = !sourceComparison || candidate;
                     report["stage"] = candidate ? "current" : "historical";
                     var results = new StoredGoalOutput[inputs.Length];
-                    RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
+                    var pairedResults = new StoredGoalOutput[pairedInputs.Length];
+                    var pelvisResults = new CharacterFootStrideHipsResult[bilateral ? inputs.Length : 0];
+                    var pelvisGoals = new CharacterFullBodyIkGoal[bilateral ? inputs.Length : 0];
+                    var pairedTargetProbes = new CharacterFootSoleProbeBuffer();
+                    var pairedOutputProbes = new CharacterFootSoleProbeBuffer();
+                    if (bilateral) RunBilateralGoals(inputs, pairedInputs, in seed, in pairedSeed, results, pairedResults, pelvisResults, pelvisGoals,
+                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes);
+                    else RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long start = GC.GetAllocatedBytesForCurrentThread();
-                    RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
+                    if (bilateral) RunBilateralGoals(inputs, pairedInputs, in seed, in pairedSeed, results, pairedResults, pelvisResults, pelvisGoals,
+                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes);
+                    else RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long allocated = GC.GetAllocatedBytesForCurrentThread() - start;
                     var rows = new JArray();
                     report[candidate ? "current" : "historical"] = new JObject { ["frames"] = inputs.Length, ["allocatedBytes"] = allocated, ["rows"] = rows };
@@ -128,7 +147,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         float originalPositionStep = i > 0 ? Vector3.Distance(
                             CharacterFootConstraintMath.ResolveOriginalSole(inputs[i - 1].Animated),
                             CharacterFootConstraintMath.ResolveOriginalSole(input.Animated)) : 0f;
-                        float reach = Vector3.Distance(input.Animated.HipPosition, value.Output.Pose.EffectiveAnkle) / input.LegLength;
+                        Vector3 hip = input.Animated.HipPosition;
+                        if (bilateral) hip += pelvisResults[i].PelvisDelta * pelvisResults[i].PositionWeight;
+                        float reach = Vector3.Distance(hip, value.Output.Pose.EffectiveAnkle) / input.LegLength;
                         maxPositionStep = Mathf.Max(maxPositionStep, positionStep);
                         maxHorizontalStep = Mathf.Max(maxHorizontalStep, horizontalStep);
                         maxExtraPositionStep = Mathf.Max(maxExtraPositionStep, positionStep - originalPositionStep);
@@ -148,8 +169,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ["authorWeight"] = input.Weight, ["positionWeight"] = value.Output.GoalTarget.PositionWeight,
                             ["rotationWeight"] = value.Output.GoalTarget.RotationWeight,
                             ["sole"] = Vec(value.Output.Pose.EffectiveSole), ["rotationStepDegrees"] = i > 0 ? new JValue(rotationStep) : JValue.CreateNull(),
-                            ["ankle"] = Vec(value.Output.Pose.EffectiveAnkle), ["fixedHip"] = Vec(input.Animated.HipPosition),
-                            ["originalKnee"] = Vec(input.Animated.KneePosition),
+                            ["ankle"] = Vec(value.Output.Pose.EffectiveAnkle), ["fixedHip"] = Vec(hip),
+                            ["originalHip"] = Vec(input.RootPosition + input.RootRotation * input.Recorded.V("leg/leg-pose/original-hip")),
+                            ["originalKnee"] = Vec(input.RootPosition + input.RootRotation * input.Recorded.V("leg/leg-pose/original-knee")),
                             ["originalAnkle"] = Vec(input.RootPosition + input.RootRotation * input.Recorded.V("leg/leg-pose/original-ankle")),
                             ["sourceAnkle"] = Vec(input.Animated.AnklePosition),
                             ["rotationSpeedDegreesPerSecond"] = i > 0 ? new JValue(rotationStep / input.Delta) : JValue.CreateNull(),
@@ -171,6 +193,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ["fixedHipReachRatio"] = reach,
                             ["recordedLandingReachFeedback"] = input.RecordedLandingReach
                         });
+                        if (bilateral)
+                        {
+                            var pelvis = pelvisResults[i];
+                            Vector3 local = pelvisGoals[i].ComponentPosition;
+                            float weight = pelvisGoals[i].PositionWeight;
+                            float pelvisError = Vector3.Distance(local, input.Recorded.V("pelvis-goal/component-position"));
+                            rows[rows.Count - 1]["pelvisState"] = pelvis.State.ToString();
+                            rows[rows.Count - 1]["pelvisDelta"] = Vec(local);
+                            rows[rows.Count - 1]["pelvisWeight"] = weight;
+                            rows[rows.Count - 1]["recordedPelvisError"] = pelvisError;
+                            rows[rows.Count - 1]["recomputedLandingReachFeedback"] = pelvis.RightLandingReachAvailable;
+                            rows[rows.Count - 1]["pairedSole"] = Vec(pairedResults[i].Output.Pose.EffectiveSole);
+                            rows[rows.Count - 1]["pairedAnkle"] = Vec(pairedResults[i].Output.Pose.EffectiveAnkle);
+                            rows[rows.Count - 1]["pairedHip"] = Vec(pairedInputs[i].Animated.HipPosition + pelvis.PelvisDelta * pelvis.PositionWeight);
+                            rows[rows.Count - 1]["pairedOriginalHip"] = Vec(pairedInputs[i].RootPosition + pairedInputs[i].RootRotation * pairedInputs[i].Recorded.V("leg/leg-pose/original-hip"));
+                            rows[rows.Count - 1]["pairedOriginalKnee"] = Vec(pairedInputs[i].RootPosition + pairedInputs[i].RootRotation * pairedInputs[i].Recorded.V("leg/leg-pose/original-knee"));
+                            rows[rows.Count - 1]["pairedOriginalAnkle"] = Vec(pairedInputs[i].RootPosition + pairedInputs[i].RootRotation * pairedInputs[i].Recorded.V("leg/leg-pose/original-ankle"));
+                            rows[rows.Count - 1]["pairedFinalPenetration"] = pairedResults[i].FinalSupport.Available ? new JValue(pairedResults[i].FinalSupport.RequiredDisplacement) : JValue.CreateNull();
+                            rows[rows.Count - 1]["pairedFinalSupportAvailable"] = pairedResults[i].FinalSupport.Available;
+                            rows[rows.Count - 1]["pairedState"] = pairedResults[i].Motion.ConstraintState.ToString();
+                            rows[rows.Count - 1]["pairedHasContactAnchor"] = pairedResults[i].HasAnchor;
+                            rows[rows.Count - 1]["pairedPositionWeight"] = pairedResults[i].Output.GoalTarget.PositionWeight;
+                            rows[rows.Count - 1]["pairedRotation"] = new JArray(pairedResults[i].Output.Pose.EffectiveRotation.x, pairedResults[i].Output.Pose.EffectiveRotation.y,
+                                pairedResults[i].Output.Pose.EffectiveRotation.z, pairedResults[i].Output.Pose.EffectiveRotation.w);
+                            float leftRotationStep = i > 0 ? Quaternion.Angle(pairedResults[i - 1].Output.Pose.EffectiveRotation, pairedResults[i].Output.Pose.EffectiveRotation) : 0f;
+                            float leftOriginalRotationStep = i > 0 ? Quaternion.Angle(pairedInputs[i - 1].Animated.AnkleRotation, pairedInputs[i].Animated.AnkleRotation) : 0f;
+                            float leftRelativeStep = i > 0 ? Quaternion.Angle(
+                                pairedResults[i - 1].Output.Pose.EffectiveRotation * Quaternion.Inverse(pairedInputs[i - 1].Animated.AnkleRotation),
+                                pairedResults[i].Output.Pose.EffectiveRotation * Quaternion.Inverse(pairedInputs[i].Animated.AnkleRotation)) : 0f;
+                            rows[rows.Count - 1]["pairedRotationStepDegrees"] = i > 0 ? new JValue(leftRotationStep) : JValue.CreateNull();
+                            rows[rows.Count - 1]["pairedOriginalRotationStepDegrees"] = i > 0 ? new JValue(leftOriginalRotationStep) : JValue.CreateNull();
+                            rows[rows.Count - 1]["pairedRelativeRotationStepDegrees"] = i > 0 ? new JValue(leftRelativeStep) : JValue.CreateNull();
+                            rows[rows.Count - 1]["pairedSoleStepMeters"] = i > 0 ? new JValue(Vector3.Distance(pairedResults[i - 1].Output.Pose.EffectiveSole, pairedResults[i].Output.Pose.EffectiveSole)) : JValue.CreateNull();
+                            rows[rows.Count - 1]["pairedReachRatio"] = Vector3.Distance(pairedInputs[i].Animated.HipPosition + pelvis.PelvisDelta * pelvis.PositionWeight,
+                                pairedResults[i].Output.Pose.EffectiveAnkle) / pairedInputs[i].LegLength;
+                            Assert.That(pairedResults[i].GoalError, Is.LessThan(.0001f));
+                            Assert.That(pairedResults[i].GoalRotationError, Is.LessThan(.1f));
+                            if (candidate && pairedResults[i].Output.GoalTarget.PositionWeight > 0f)
+                            {
+                                Assert.That(pairedResults[i].FinalSupport.Available, Is.True);
+                                Assert.That(pairedResults[i].FinalSupport.RequiredDisplacement, Is.LessThanOrEqualTo(.0002f));
+                            }
+                            if (!candidate)
+                            {
+                                Assert.That(pelvisError, Is.LessThan(.00002f), "历史骨盆Goal必须先重现原录制");
+                                Assert.That(weight, Is.EqualTo(input.Recorded.F("pelvis-goal/position-weight")));
+                                Assert.That(Vector3.Distance(pairedResults[i].Output.Pose.EffectiveSole, pairedInputs[i].Recorded.V("foot/resolved/core/effective-sole")), Is.LessThan(.0005f));
+                                Assert.That(pelvis.RightLandingReachAvailable, Is.EqualTo(input.RecordedLandingReach));
+                                Assert.That(pelvis.LeftLandingReachAvailable, Is.EqualTo(pairedInputs[i].RecordedLandingReach));
+                            }
+                        }
 #if ROTATION_CANDIDATE
                         rows[rows.Count - 1]["hasRotationCorrection"] = value.HasRotationCorrection;
                         rows[rows.Count - 1]["rotationCorrection"] = new JArray(value.RotationCorrection.x, value.RotationCorrection.y, value.RotationCorrection.z, value.RotationCorrection.w);
@@ -308,9 +381,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 StoredGoalInput input = inputs[i];
                 root.SetPositionAndRotation(input.RootPosition, input.RootRotation);
-                AnimationFootMotionRuntimeSample step = candidate ? input.CurrentStep : input.HistoricalStep;
+                EvaluateCapturedFoot(ref context, input, candidate, root, in query, revision,
+                    targetProbes, outputProbes, out var receipt, out _, out _);
+                CharacterResolvedFootResult output = receipt.Complete(ref context, input.RecordedLandingReach, out var motion);
+                results[i] = QueryCapturedGoal(input, in output, in motion, in context, root, in query, revision);
+            }
+        }
+
+        static CharacterFootPlacementRequest EvaluateCapturedFoot(ref CharacterFootLifecycleContext context,
+            StoredGoalInput input, bool candidate, Transform root, in CharacterFootSoleSupportQuery query,
+            ulong revision, CharacterFootSoleProbeBuffer targetProbes, CharacterFootSoleProbeBuffer outputProbes,
+            out CharacterFootLifecycle.Completion receipt, out AnimationFootMotionRuntimeSample step, out CharacterFootSwingMotionResult swing)
+        {
+                step = candidate ? input.CurrentStep : input.HistoricalStep;
                 var snapshot = CharacterFootLandingRuntime.ProjectAfterPrediction(in context, in step, in input.Prediction, in input.Settings);
-                var swing = CharacterFootSwingMotionBuilder.Build(in input.Animated, in step, input.Weight,
+                swing = CharacterFootSwingMotionBuilder.Build(in input.Animated, in step, input.Weight,
                     Vector3.up, in input.Path, true, step.FootHeight, snapshot.NextSwingPredictionError);
                 var request = new CharacterFootLockRequest(in step);
                 bool prepared = snapshot.PlantTargetState == CharacterFootPlantTargetState.Tracking;
@@ -320,13 +405,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var frame = new CharacterFootStateFrame(input.Sequence, input.Completion, input.RigId, input.RigRevision, input.Side,
                     in input.Animated, input.Animated.HipPosition, input.LegLength, in swing, in input.Path,
                     hasContact, in contactLanding, prepared, prepared ? snapshot.PlantTarget : default,
-                    in input.Support, in request, step.Support, request.EventIdentity, CharacterFootGoalOwnershipLossReason.None,
+                    in input.Support, in request, step.Support, request.EventIdentity,
+                    CapturedFootModuleFunctions.ResolveFootGoalOwnershipLoss(input.Grounded, step.IsAuthoritative),
                     input.Weight, Vector3.up, input.Delta, candidate ? input.CurrentLineage : input.HistoricalLineage,
                     input.ProfileRevision, revision, in input.Settings);
+                var nextLanding = snapshot.NextSwingLanding;
+                var stride = new CharacterFootStrideRequest(in step, snapshot.HasNextSwingLanding, in nextLanding, input.Path.Accepted);
                 var evaluation = new CharacterFootStateEvaluation(input.Side, in step, in input.Prediction, in frame,
-                    default, input.Grounded, root, in query, targetProbes, outputProbes);
-                CharacterFootLifecycle.Evaluate(ref context, in evaluation, out var receipt);
-                CharacterResolvedFootResult output = receipt.Complete(ref context, input.RecordedLandingReach, out var motion);
+                    in stride, input.Grounded, root, in query, targetProbes, outputProbes);
+                return CharacterFootLifecycle.Evaluate(ref context, in evaluation, out receipt);
+        }
+
+        static StoredGoalOutput QueryCapturedGoal(StoredGoalInput input, in CharacterResolvedFootResult output,
+            in CharacterFootSwingMotionResult motion, in CharacterFootLifecycleContext context, Transform root,
+            in CharacterFootSoleSupportQuery query, ulong revision)
+        {
                 Vector3 goal = Vector3.Lerp(input.Animated.AnklePosition,
                     root.TransformPoint(output.GoalTarget.ComponentPosition), output.GoalTarget.PositionWeight);
                 Quaternion rotation = root.rotation * output.GoalTarget.ComponentRotation;
@@ -334,7 +427,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var finalContacts = input.Animated.ResolveSoleContacts(goal, effectiveRotation);
                 var final = query.Query(input.Sequence, input.Completion, revision, input.Side, Vector3.up,
                     input.Grounded, in finalContacts, input.FinalProbes);
-                results[i] = new StoredGoalOutput { Output = output, Motion = motion, FinalSupport = final,
+                return new StoredGoalOutput { Output = output, Motion = motion, FinalSupport = final,
                     GoalError = Vector3.Distance(goal, output.Pose.EffectiveAnkle),
                     GoalRotationError = Quaternion.Angle(effectiveRotation, output.Pose.EffectiveRotation),
 #if ROTATION_CANDIDATE
@@ -342,22 +435,74 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RotationCorrection = context.Interpolation.RotationCorrection,
 #endif
                     HasAnchor = context.Contact.HasContact, Anchor = context.Contact.Anchor };
+        }
+
+        static void RunBilateralGoals(StoredGoalInput[] rightInputs, StoredGoalInput[] leftInputs,
+            in CharacterFootLifecycleContext rightSeed, in CharacterFootLifecycleContext leftSeed,
+            StoredGoalOutput[] rightResults, StoredGoalOutput[] leftResults, CharacterFootStrideHipsResult[] pelvisResults,
+            CharacterFullBodyIkGoal[] pelvisGoals, Transform root, in CharacterFootSoleSupportQuery query, ulong revision,
+            CharacterFootSoleProbeBuffer rightTargetProbes, CharacterFootSoleProbeBuffer rightOutputProbes,
+            CharacterFootSoleProbeBuffer leftTargetProbes, CharacterFootSoleProbeBuffer leftOutputProbes)
+        {
+            CharacterFootLifecycleContext left = leftSeed, right = rightSeed;
+            CharacterFootPrimarySupportState primary = default;
+            CharacterFootPelvisSpringState spring = default;
+            for (int i = 0; i < rightInputs.Length; i++)
+            {
+                StoredGoalInput l = leftInputs[i], r = rightInputs[i];
+                root.SetPositionAndRotation(r.RootPosition, r.RootRotation);
+                var leftRequest = EvaluateCapturedFoot(ref left, l, true, root, in query, revision, leftTargetProbes, leftOutputProbes,
+                    out var leftCompletion, out var leftStep, out var leftSwing);
+                var rightRequest = EvaluateCapturedFoot(ref right, r, true, root, in query, revision, rightTargetProbes, rightOutputProbes,
+                    out var rightCompletion, out var rightStep, out var rightSwing);
+                bool selected = CharacterFootStrideHipsBuilder.TrySelectSwing(in leftStep, in rightStep, in leftSwing, in rightSwing, out var selectedSide);
+                var requests = new CharacterFootPlacementRequestPair(in leftRequest, in rightRequest);
+                var support = CharacterFootStrideHipsBuilder.ResolvePrimarySupport(in leftRequest, in rightRequest, ref primary);
+                var intent = CharacterFootStrideHipsBuilder.ResolveIntent(in requests, in support, r.Grounded, selected, selectedSide, Vector3.up);
+                var pose = new CharacterFootPlacementAnimatedPose(r.Sequence, r.AnimatedPelvisComponentPosition, l.Animated, r.Animated);
+                var frame = new CharacterFootPelvisFrame(Vector3.up, r.RootPosition, r.AnimatedPelvis,
+                    r.AnimatedPelvisComponentPosition, in pose,
+                    leftRequest.GoalTarget.EffectiveSole, rightRequest.GoalTarget.EffectiveSole, l.LegLength, r.LegLength, r.Weight, r.Delta);
+                var input = CharacterFootStrideHipsBuilder.PreparePelvis(in intent, in requests, in support, in frame);
+                var pelvis = CharacterFootStrideHipsBuilder.ResolvePelvis(in input, in r.Settings, ref spring);
+                var leftOutput = leftCompletion.Complete(ref left, pelvis.LeftLandingReachAvailable, out var leftMotion);
+                var rightOutput = rightCompletion.Complete(ref right, pelvis.RightLandingReachAvailable, out var rightMotion);
+                pelvisGoals[i] = CapturedFootModuleFunctions.CreatePelvisGoal(in pelvis, root);
+                if (!pelvis.ProducesPelvisGoal) spring.Clear();
+                leftResults[i] = QueryCapturedGoal(l, in leftOutput, in leftMotion, in left, root, in query, revision);
+                rightResults[i] = QueryCapturedGoal(r, in rightOutput, in rightMotion, in right, root, in query, revision);
+                pelvisResults[i] = pelvis;
             }
         }
 
         sealed class StoredGoalInput
         {
-            internal StoredGoalInput(JToken captured, JObject columns, JToken sourceResult, CharacterFootPlacementProfile profile, float legLength, CharacterFootSide side)
+            internal StoredGoalInput(JToken captured, JObject columns, JToken sourceResult, CharacterFootPlacementProfile profile, float legLength, CharacterFootSide side,
+                string sampleName = "currentSample", bool beforePelvis = false)
             {
                 Recorded = Row.Main(captured, columns);
                 Row r = Recorded;
                 Side = side;
                 ExpectedProbes = Row.Table(captured, columns, "probes").OrderBy(x => x.I("sample-index")).ToArray();
                 Animated = AnimatedPose(r, ExpectedProbes);
+                if (beforePelvis)
+                {
+                    Vector3 pelvisShift = r.Q("physical-body/pose-root-world-rotation") * r.V("pelvis-goal/component-position") * r.F("pelvis-goal/position-weight");
+                    var pose = new CharacterFootPlacementAnimatedFootPose(Animated.HipPosition - pelvisShift,
+                        Animated.KneePosition - pelvisShift, Animated.AnklePosition, Animated.AnkleRotation,
+                        Animated.ToePosition, Animated.ToeRotation, Animated.HeelPosition, Animated.SoleForward,
+                        Animated.SoleUp, Animated.SemanticRotation, Animated.SoleFrameLocalRotation);
+                    pose.SoleSamples = Animated.SoleSamples;
+                    Animated = pose;
+                    if (r.B("foot/resolved/reach/landing-available"))
+                        Assert.That(Vector3.Distance(Animated.HipPosition, r.V("foot/resolved/reach/landing-hip")), Is.LessThan(.00002f), "正式计算前Hip必须重现直接采样，不能用录制骨盆后的Hip");
+                }
                 HistoricalStep = StoredRecordedStep(r, side);
-                CurrentStep = StoredProducedStep(sourceResult["currentSample"], side);
+                CurrentStep = StoredProducedStep(sourceResult[sampleName], side);
                 RootPosition = r.V("physical-body/pose-root-world-position");
                 RootRotation = r.Q("physical-body/pose-root-world-rotation");
+                AnimatedPelvis = r.V("stride/result/animated-pelvis");
+                AnimatedPelvisComponentPosition = r.V("stride/result/animated-pelvis-component-position");
                 Path = PathInput(r, captured, columns, side);
                 Prediction = StoredRecordedPrediction(r, side);
                 Settings = profile.FootMotion.Build();
@@ -383,6 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal readonly CharacterFootLandingPredictionResult Prediction;
             internal readonly CharacterFootMotionSettings Settings;
             internal readonly Vector3 RootPosition;
+            internal readonly Vector3 AnimatedPelvis, AnimatedPelvisComponentPosition;
             internal readonly Quaternion RootRotation;
             internal readonly ulong Sequence, Completion;
             internal readonly bool Grounded, RecordedLandingReach;

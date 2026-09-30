@@ -1,0 +1,31 @@
+{
+  "scope": "Actual source functions and bilateral pelvis reproduction; both rotation candidates failed the complete business comparison",
+  "inputSha256": "f50304a30a5a84f36aae1a8ef8c5c2bff9a5d3aaf3879af11f45fa6e8d4a63ba",
+  "sourceFunctionsSha256": "893301b36b8307a6180d89645a3e471f962ceb233193a529de565030e228a37f",
+  "sourceAnimationAssemblySha256": "45c0dc766a0010ed40cd4f8114f6e0f37fde508510e50d03c968f343aedfa783",
+  "programSha256": "0ff436e23d7a3c379af8dca96db21d0c99a123e27f2d3227e4c450a19c3ad798",
+  "preHipBoundary": "Restore pre-pelvis Hip by subtracting recorded weighted pelvis translation; compare recorded direct landing Hip within20um at input boundary",
+  "geometryBoundary": "Original hip/knee/ankle from one recorded post pose; new Hip uses recomputed pelvis offset; required bend geometry is not full FBBIK",
+  "attempts": [
+    {
+      "stage": "paired support query preparation",
+      "reason": "Left paired input queried with outer fixture Right side; corrected to input.Side without changing production RequireValid",
+      "sha256": "ae48d6790da5ca7e4021f388792c68fa5750de20544ab67e7410f52371083610",
+      "result": {
+        "status": "failed",
+        "stage": "historical",
+        "utc": "2026-09-30T21:47:53.6936872Z",
+        "executionLayer": "Unity 内独立编译真实函数实验；不是正式 Test Runner",
+        "scope": "固定原混合动画脚姿势、预测和地面路径；双脚正式Evaluate→PrimarySupport→Intent→PreparePelvis→ResolvePelvis→Complete→实际加权Goal查询；未执行完整FBBIK",
+        "editorCompilationFailed": true,
+        "fixtureSha256": "f50304a30a5a84f36aae1a8ef8c5c2bff9a5d3aaf3879af11f45fa6e8d4a63ba",
+        "sourceResultSha256": "893301b36b8307a6180d89645a3e471f962ceb233193a529de565030e228a37f",
+        "runtimeCommit": "8c0e878f839c7ed6a0664a93ef01d20ae8114b9b",
+        "footVariant": "pelvis-historical",
+        "fixedHipScope": "从录制骨盆后Hip减原骨盆加权偏移恢复计算前Hip，再加实际重新计算的骨盆偏移；未求解FBBIK",
+        "capture": "20260930-172333-3cb49fba52604669bfae7fe6eda3aabc",
+        "failure": "System.InvalidOperationException: Foot lifecycle frame is invalid.\r\n  at ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle.RequireValid (ThirdPersonCharacter.Pipeline.Presentation.CharacterFootStateFrame& frame) [0x00312] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 \r\n  at ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle.Resolve (ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycleContext& context, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootStateEvaluation& evaluation, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionResult& result, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle+Completion& receipt) [0x0002c] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 \r\n  at ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle.Evaluate (ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycleContext& context, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootStateEvaluation& evaluation, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle+Completion& receipt) [0x0002c] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.EvaluateCapturedFoot (ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycleContext& context, ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalInput input, System.Boolean candidate, UnityEngine.Transform root, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleSupportQuery& query, System.UInt64 revision, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer targetProbes, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer outputProbes, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycle+Completion& receipt, ThirdPersonCharacter.Pipeline.Animation.AnimationFootMotionRuntimeSample& step, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionResult& swing) [0x001b4] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.RunBilateralGoals (ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalInput[] rightInputs, ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalInput[] leftInputs, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycleContext& rightSeed, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootLifecycleContext& leftSeed, ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalOutput[] rightResults, ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests+StoredGoalOutput[] leftResults, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootStrideHipsResult[] pelvisResults, ThirdPersonCharacter.Pipeline.Animation.CharacterFullBodyIkGoal[] pelvisGoals, UnityEngine.Transform root, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleSupportQuery& query, System.UInt64 revision, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer rightTargetProbes, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer rightOutputProbes, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer leftTargetProbes, ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSoleProbeBuffer leftOutputProbes) [0x0004a] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CharacterFootCapturedContactTests.RunStoredGoalComparison (System.String inputPath, System.String sourceResultPath, System.String resultPath, System.String footVariant) [0x006f1] in <3f917c6234dc4ab3baec9460b5dfeaee>:0 "
+      }
+    }
+  ]
+}

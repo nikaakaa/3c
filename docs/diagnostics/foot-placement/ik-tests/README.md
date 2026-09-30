@@ -123,7 +123,30 @@ pwsh -File Tools/FootPlacement.FunctionVerify/run.ps1 -UnityEditorData "C:/Progr
 
 旋转候选的Stored回归另保存：左1174～1186无接触捕获仍为Swing且无锚点；右侧从真实无Goal的874延长到958，正式清空旋转历史后跨过真实接触、Stored捕获与954交还Live。两段各13/85帧、两版暖机均0B，候选查询无新增正穿透。右侧同帧固定髋弯曲余量也有回归；已有100.331926%的最大伸展比与5帧超伸均保留，未称为伸直修复。原83帧18e来源修正证据保持独立。
 
-见[本场景HTML](live-rotation-response.html)、[完整跨版本断言](rotation-business-comparison.json)、[装配失败](rotation-attempts.json)、[来源函数身份](rotation-source-provenance.json)。原生复现：`run_native_goal.ps1 -Mode rotation -UnityInstance e852139597e42532 -ResultDirectory <独立目录>`，然后对同一目录调用 `compare_rotation_reports.py --results <目录>`。源代码、类型与程序集SHA均保存在比较JSON，正式Runner仍未执行。HTML只完成DOM数值与交互检查，浏览器视觉验收未完成。
+23帧及三窗固定条件证据冻结在[完整跨版本断言](rotation-business-comparison.json)、[装配失败](rotation-attempts.json)、[来源函数身份](rotation-source-provenance.json)。原生复现：`run_native_goal.ps1 -Mode rotation -UnityInstance e852139597e42532 -ResultDirectory <独立目录>`，然后对同一目录调用 `compare_rotation_reports.py --results <目录>`。同一HTML现已接续下述58帧真实双脚结果，原冻结JSON不覆盖。正式Runner仍未执行，浏览器视觉验收未完成。
+
+## 双脚及真实骨盆连续对照（58帧，两个旋转候选均否决）
+
+窗口扩为2192～2249，补齐另一脚原始查询、路径和完整前态。正式输入Hip用 `root + rotation * (recordedOriginalHip - recordedPelvisComponentDelta * recordedPelvisWeight)` 恢复，录制landingHip可用时在输入边界核对20um。两脚连续Evaluate后按正式PrimarySupport、Intent、PreparePelvis、ResolvePelvis计算骨盆，再把实际双边可达性反馈交给Complete；原生私有所有权与骨盆Goal发布方法从固定提交提取原文，只改变访问级别，没有改写算法。
+
+历史 `552f13083` 重现58帧骨盆Goal、两脚脚位和左右可达性反馈；暖机0B。冻结候选 `15894ee7b`、修订候选 `8c0e878f8` 同样在真实PhysicsScene运行，各58帧、0B，两脚无新增正穿透，但完整业务比较均失败。
+
+| 完整双脚窗口 | 历史552 | 失败158 | 失败8c0 |
+| --- | --- | --- | --- |
+| 右脚2207有效旋转步长 | 34.32866° | 12.23456° | 13.09939° |
+| 右脚最大相对旋转修正步长 | 31.18009° | 9.07650° | 9.93661° |
+| 右脚2211所需几何膝角（原25.82786°） | 20.85927° | 6.92972° | 24.52240° |
+| 右脚膝角修正变化率峰值 | 892.35195°/s（2197） | 920.26624°/s（2198） | 920.26624°/s（2198） |
+| 左脚最大伸展比 | 100.306225%（2228） | 100.6635%（2229） | 100.776231%（2229） |
+| 左脚超伸帧 / 时间 | 1 / 0.016667s | 3 / 0.050000s | 3 / 0.050000s |
+
+修订8c0虽改善右脚2211，却仍损失2200、2230的同帧余量；左脚2229由历史98.107916%增至100.776231%，不能只用右脚峰值或未超1的帧判通过。几何膝角修正速率用 `abs(delta(requiredBend-originalBend))/dt`，另存所需角速度减原角速度的正差，避免两个定义混用。原骨段/原膝角用同一录制post三点，实际新Hip独立由新骨盆得到；不可达角为null，不将preKnee、旧骨盆后的ankle与新Hip混算。
+
+完整退出也纳入对照：历史和8c0在2245清空右脚锚点，2246～2249为UnlockedSupport；158还有状态退出回归。2224的178.67°有效旋转来自原源踝约178.6725°和pose root约176.03°大转向，不标为IK新增。候选是固定提交及实际SHA，当前生产已由 `48827a93e` 精确恢复552的六份旋转/采样文件，18e来源修正保留。
+
+见[同一业务HTML](live-rotation-response.html)、[双脚跨版本断言](pelvis-rotation-business-comparison.json)、[输入与装配失败身份](pelvis-rotation-provenance.json)。统一复现用 `run_native_goal.ps1 -Mode pelvis -CandidateCommits @('15894ee7b','8c0e878f8') -UnityInstance e852139597e42532 -ResultDirectory <独立目录>`，再运行 `compare_pelvis_reports.py --results <目录> --output <结果JSON>`；业务失败返回非零。首次双脚装配曾错误地把左侧查询标为Right，已改为input.Side并保留失败，没有放宽生产RequireValid。
+
+未执行Native Slot历史Job、完整FBBIK或Replay。膝角为真实骨段和Goal距离下的几何需求，不是已求解骨骼。DOM检查覆盖左右脚58帧、三版、null曲线断点与失败标签；浏览器视觉验收未完成。
 
 ## 后续场景范围
 

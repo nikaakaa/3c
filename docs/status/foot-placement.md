@@ -8,9 +8,11 @@
 
 同一输入链还确认 `CharacterPoseNativeAnimationSlotHandler` 重复乘动作权重：2041 帧骨骼实际使用 0.531232，贡献记录却为其平方 0.282207429，导致下游仍选 Run。修正让动作贡献只计权一次，基础姿态逐骨骼贡献按实际剩余权重计算，左右脚贡献同理；骨骼混合结果不变。问题追溯到 `ce6cdb09c7`。
 
-动画程序集定向编译通过（0 警告、0 错误）。配套窗口已执行 13 帧无接触 Stored 和 70 帧真实接触 Stored 的正式选择／静态样本比较，均通过且预热计算 0 B；结果已发布至 `docs/diagnostics/foot-placement/ik-tests/stored-*-functions.json`，独立构建产物留在项目 `Temp/FootStoredPoseFunctions/`。它们尚未覆盖 Native Slot 历史页捕获、新贡献合成、Goal、Physics 或 FBBIK，不能称为完整动画或 IK 验证。共享 Editor 因网络脚本程序集引用错误仍未成功重编译；本轮没有启动 Replay。具体证据与限制见[动画来源审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#stored-motion-audit)。
+动画程序集定向编译通过（0 警告、0 错误）。配套窗口先完成 13 帧无接触 Stored 和 70 帧真实接触 Stored 的正式选择／静态样本比较，随后在 Unity 中实际执行同样 83 帧的 `CharacterFootLifecycle`、Goal 与场景脚掌查询。两段旧版脚位和旋转均精确复现录制；两版预热计算均为 0 B。无接触段相对原动画的最大额外转角从 137.5741° 降至 0.000143°；真实接触段保留原锚点、随后正常释放，额外转角从 1.33253° 降至 0.05192°。有最终查询结果的帧未增加超过浮点误差的正穿透；1174 原本没有可用 Goal 或最终命中，净空仍标记为未知。
 
-上述生产修正已独立提交 `18e1f2a4f`，配套窗口已发布 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果，正在接续真实 Goal 与 Physics。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权。后续仍须保留作者权重和原子事件语义，以真实脚掌净空约束验证最终旋转交接；旋转响应尚未修改，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
+上述是 Unity 内独立编译的真实函数实验，不是正式 Test Runner 或完整 FBBIK 验证。它保持录制的混合动画姿态，预测、路径和骨盆可达性裁决仍为固定输入；未执行 Native Slot 历史页捕获及新贡献合成函数。真实接触段固定髋位置的超腿长记录从 4 帧变成 5 帧，两版最大伸展比均为 1.003319；新增的 954 帧约超长 0.54 mm。这项回归已保留，不能宣称伸直改善。结果在 `ik-tests/stored-*-goal.json`，完整边界见[动画来源审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#stored-motion-audit)。实验时共享 Editor 仍报告其它模块编译失败，因此未把磁盘候选当成主程序集已加载；本轮没有启动 Replay。
+
+上述生产修正已独立提交 `18e1f2a4f`，配套窗口维护 [Stored 业务函数比较 HTML](../diagnostics/foot-placement/ik-tests/stored-foot-motion.html)及对应固定输入与结果。另确认未被该提交覆盖的 Live→Live 旋转跳变：新 full 右脚 2206→2207，WalkStart 与 Idle 的贡献由 55.556% / 44.444% 交接为 44.444% / 55.556%，原踝只转 3.228°，有效目标转 34.329°。未经权重的目标旋转只变 0.575°，支撑法线均向上，锁权重却从 0 切到约 1；因此只平滑原始目标四元数不能处理这一触发条件。历史 32946→32947 也确为两条 Live 正常跨过主来源交接点，不是 Stored 或动作重复乘权。后续仍须保留作者权重和原子事件语义，以真实脚掌净空约束验证实际施加的旋转修正；旋转响应尚未修改，见[Live 混合审计](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#live-switch-motion-audit)。
 
 ## 正式 owner
 

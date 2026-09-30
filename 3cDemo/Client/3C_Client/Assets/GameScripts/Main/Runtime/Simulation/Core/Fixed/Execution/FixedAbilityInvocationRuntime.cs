@@ -85,6 +85,10 @@ namespace ThirdPersonSimulation.Fixed
         bool m_Completed;
         bool m_Accepted;
         bool m_AssemblyBuilt;
+        ulong m_BlackboardSequence;
+        readonly List<(ulong Sequence, FixedBlackboardWriteCommand Command)> m_BlackboardCommands = new();
+        readonly List<FixedBlackboardWriteResult> m_BlackboardCandidates = new();
+        readonly List<FixedBlackboardWriteResult> m_BlackboardResults = new();
 
         public FixedAbilityInvocationRuntime(
             FixedAbilityExecutionContext execution,
@@ -110,6 +114,52 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public CharacterSkillId AbilityId { get; }
+
+        internal ulong QueueBlackboardWrite(FixedBlackboardWriteCommand command)
+        {
+            if (!m_Execution.Services.Identity.Equals(command.Ability))
+                throw new InvalidOperationException("黑板写入目标编译版本已变化。");
+            if (command.StateSlot < 0 || command.StateSlot >= m_Execution.Data.StateSlots.Count ||
+                m_Execution.Data.StateSlots[command.StateSlot].Semantic != ProgramStateSemantic.BlackboardValue)
+                throw new ArgumentException("黑板写入目标不是声明的变量槽。", nameof(command));
+            ProgramStateSlot slot = m_Execution.Data.StateSlots[command.StateSlot];
+            SimulationBlackboardSlotGroup group = m_Execution.Services.RequireBlackboardGroup(slot.OwnerIdentity);
+            if (group.LifetimeKind == ProgramBlackboardLifetime.Config)
+                throw new InvalidOperationException("Config 黑板变量只读，请修改作者配置并重新 Build。");
+            if (slot.ValueKind != command.Value.Kind)
+                throw new ArgumentException("黑板写入值类型与声明不匹配。", nameof(command));
+            if (!command.Owner.IsValid || group.Scope.Kind != command.Owner.ScopeKind ||
+                group.CompiledOwnerIndex != command.Owner.CompiledOwnerIndex ||
+                (group.Scope.Kind == ProgramScopeKind.Character
+                    ? command.ActionInstanceId != 0 || command.SkillGeneration != 0
+                    : command.ActionInstanceId == 0 || command.SkillGeneration == 0))
+                throw new ArgumentException("黑板写入目标作用域或技能实例不完整。", nameof(command));
+            ulong sequence = checked(++m_BlackboardSequence);
+            m_BlackboardCommands.Add((sequence, command));
+            return sequence;
+        }
+
+        internal void BeginBlackboardTransaction() => m_BlackboardCandidates.Clear();
+
+        internal void PublishBlackboardResults()
+        {
+            m_BlackboardResults.AddRange(m_BlackboardCandidates);
+            m_BlackboardCommands.RemoveRange(0, m_BlackboardCandidates.Count);
+            m_BlackboardCandidates.Clear();
+        }
+
+        internal bool TryTakeBlackboardResult(ulong sequence, out FixedBlackboardWriteResult result)
+        {
+            for (int i = 0; i < m_BlackboardResults.Count; i++)
+                if (m_BlackboardResults[i].Sequence == sequence)
+                {
+                    result = m_BlackboardResults[i];
+                    m_BlackboardResults.RemoveAt(i);
+                    return true;
+                }
+            result = default;
+            return false;
+        }
 
         public void Begin(in FixedAbilityInvocationContext context)
         {
@@ -207,13 +257,14 @@ namespace ThirdPersonSimulation.Fixed
         public void BeginEvaluation(
             bool diagnosticsEnabled,
             bool captureValues,
-            bool captureControlFlow)
+            bool captureControlFlow,
+            bool captureBlackboard)
         {
             if (m_Begun)
                 throw new InvalidOperationException(
                     $"Fixed Ability invocation evaluation is already active for '{m_Frame.ActorId}/'{AbilityId}' " +
                     $"at tick '{m_Frame.Tick.Value}'.");
-            m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+            m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
             m_Begun = true;
         }
 
@@ -243,9 +294,16 @@ namespace ThirdPersonSimulation.Fixed
             m_Input.ApplyBlackboardInputBindings(m_Blackboard);
         }
 
-        public void Tick()
+        public void Tick(bool applyBlackboardCommands)
         {
             RequireEvaluation();
+            if (applyBlackboardCommands)
+                for (int i = m_BlackboardCandidates.Count; i < m_BlackboardCommands.Count; i++)
+                {
+                    var request = m_BlackboardCommands[i];
+                    FixedBlackboardWriteStatus status = m_Domain.ApplyBlackboardCommand(request.Command, request.Sequence);
+                    m_BlackboardCandidates.Add(new FixedBlackboardWriteResult(request.Sequence, request.Command, m_Frame.Tick.Value, status));
+                }
             m_Domain.Tick();
         }
 

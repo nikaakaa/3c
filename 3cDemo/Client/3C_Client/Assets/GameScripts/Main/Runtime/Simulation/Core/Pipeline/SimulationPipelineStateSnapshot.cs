@@ -23,14 +23,7 @@ namespace ThirdPersonSimulation
             Span<byte> hash = stackalloc byte[32];
             if (!sha.TryComputeHash(payload, hash, out int written) || written != hash.Length)
                 throw new CryptographicException("SHA-256 did not produce a complete digest.");
-            Span<char> characters = stackalloc char[64];
-            const string hex = "0123456789abcdef";
-            for (int i = 0; i < hash.Length; i++)
-            {
-                characters[i * 2] = hex[hash[i] >> 4];
-                characters[i * 2 + 1] = hex[hash[i] & 15];
-            }
-            return new StableHash(new string(characters));
+            return new StableHash(hash);
         }
     }
 
@@ -130,7 +123,7 @@ namespace ThirdPersonSimulation
             Pipeline.SchemaVersion.Value.TryFormat(number, out int characterCount);
             writer.WriteRawUtf8(number.Slice(0, characterCount));
             writer.WriteRawUtf8("/");
-            writer.WriteRawUtf8(Pipeline.Hash.Value.Value);
+            writer.WriteRawHash(Pipeline.Hash.Value);
             writer.WriteByte(0x1f);
             writer.WriteRawUtf8(Backend.ComponentId);
             writer.WriteByte(0x1f);
@@ -153,7 +146,7 @@ namespace ThirdPersonSimulation
                 participant.StateSchemaVersion.TryFormat(number, out characterCount);
                 writer.WriteRawUtf8(number.Slice(0, characterCount));
                 writer.WriteRawUtf8(":");
-                writer.WriteRawUtf8(participant.StateHash.Value);
+                writer.WriteRawHash(participant.StateHash);
             }
             return writer.ComputeHash();
         }

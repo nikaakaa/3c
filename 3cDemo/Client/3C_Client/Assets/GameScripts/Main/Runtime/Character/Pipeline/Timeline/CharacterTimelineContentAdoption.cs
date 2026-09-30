@@ -45,13 +45,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         readonly TimelineData m_Data;
 
-        internal CharacterTimelineContentSnapshot(TimelineData data)
+        internal CharacterTimelineContentSnapshot(TimelineData data, TimelineContentUnit content)
         {
-            m_Data = data?.Clone() ?? throw new ArgumentNullException(nameof(data));
+            m_Data = data;
+            Content = content;
         }
 
         public string TimelineAuthoringId => m_Data.AuthoringId;
         public string TimelineName => m_Data.Name;
+        internal TimelineContentUnit Content { get; }
 
         internal TimelineData CloneData() => m_Data.Clone();
     }

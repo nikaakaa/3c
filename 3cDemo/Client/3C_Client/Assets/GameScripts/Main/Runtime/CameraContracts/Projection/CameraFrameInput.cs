@@ -11,6 +11,15 @@ namespace ThirdPersonCamera
         Stick
     }
 
+    [Flags]
+    public enum CameraCharacterState : byte
+    {
+        None = 0,
+        Idle = 1,
+        Move = 2,
+        Evade = 4
+    }
+
     public readonly struct CameraFrameInput
     {
         public CameraFrameInput(
@@ -29,9 +38,15 @@ namespace ThirdPersonCamera
             bool resetHistory,
             CameraResetReason resetReason,
             IReadOnlyList<CameraTargetSnapshot> targets,
-            int pixelHeight)
+            int pixelWidth,
+            int pixelHeight,
+            CameraCharacterState characterState,
+            bool hasMoveInput)
         {
+            PixelWidth = pixelWidth;
             PixelHeight = pixelHeight;
+            CharacterState = characterState;
+            HasMoveInput = hasMoveInput;
             BodyPosition = bodyPosition;
             BodyRotation = bodyRotation;
             LookInput = lookInput;
@@ -55,7 +70,10 @@ namespace ThirdPersonCamera
             Targets = targets ?? Array.Empty<CameraTargetSnapshot>();
         }
 
+        public bool HasMoveInput { get; }
+        public CameraCharacterState CharacterState { get; }
         public int PixelHeight { get; }
+        public int PixelWidth { get; }
         public Vector3 BodyPosition { get; }
         public Quaternion BodyRotation { get; }
         public Vector2 LookInput { get; }

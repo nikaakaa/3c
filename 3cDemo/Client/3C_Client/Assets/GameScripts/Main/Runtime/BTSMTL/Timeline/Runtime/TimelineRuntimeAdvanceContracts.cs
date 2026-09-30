@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using ThirdPersonSimulation.Fixed;
 using System.Linq;
 using System.Collections.Generic;
@@ -19,11 +20,15 @@ namespace BTSMTL.Timeline.Runtime
 
         public ulong Value { get; }
         public bool IsValid => Value != 0;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(TimelineRuntimePlaybackHandle other) => Value == other.Value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override bool Equals(object obj) => obj is TimelineRuntimePlaybackHandle other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public static TimelineRuntimePlaybackHandle Invalid => default;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(TimelineRuntimePlaybackHandle left, TimelineRuntimePlaybackHandle right) => left.Equals(right);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(TimelineRuntimePlaybackHandle left, TimelineRuntimePlaybackHandle right) => !left.Equals(right);
     }
 

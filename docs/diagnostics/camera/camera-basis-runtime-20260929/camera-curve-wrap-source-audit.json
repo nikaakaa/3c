@@ -1,0 +1,15 @@
+{
+  "resource": "Camera_Default_Curve_01",
+  "original_library": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/camera-resource-search/native-curves/AnimationCurveLibrary__1021078955_88A7A89AEA6B9BE4.json",
+  "serialized_preInfinity": 2,
+  "serialized_postInfinity": 2,
+  "unity_animation_curve_api_preWrapMode": 8,
+  "unity_animation_curve_api_postWrapMode": 8,
+  "duplicate_asset_preWrapMode": 2,
+  "duplicate_asset_postWrapMode": 2,
+  "sample_time": 1.000001,
+  "unity_curve_result_before_fix": 1.0,
+  "projection_result_before_fix": 2.72061425e-06,
+  "meaning": "Unity序列化的Infinity编号与公共WrapMode枚举编号不是同一套值；资产原AnimationCurve正确，重复字段错误地写成Loop。",
+  "resolution": "删除CameraCurveAsset重复Wrap字段，投影和修订号都读取m_Curve公开API。保留CameraCurvePayload作为编译产物的值，不在帧循环访问作者资产。"
+}

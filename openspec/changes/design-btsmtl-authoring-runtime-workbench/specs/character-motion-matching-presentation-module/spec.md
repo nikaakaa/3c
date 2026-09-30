@@ -3,7 +3,7 @@
 ### Requirement: Query Fixture Preview必须复用正式MM Module与唯一Pose链
 
 **Reason**：独立 Query Fixture 不再承担完整角色预览，编辑器不应绕过正式角色事实选择完整表现结果。
-**Migration**：在独立场景 Play 中通过正式输入运行角色，观察其真实 MM 查询、选择和 Pose 输出；保留正式 Database、Admission、Search、Plan、State 和完成合同。
+**Migration**：在 Edit Mode 隔离隐藏场景中通过正式输入运行角色，观察其真实 MM 查询、选择和 Pose 输出；保留正式 Database、Admission、Search、Plan、State 和完成合同。
 
 ## ADDED Requirements
 

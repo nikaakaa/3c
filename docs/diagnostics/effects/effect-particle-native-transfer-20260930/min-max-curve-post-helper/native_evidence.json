@@ -1,0 +1,181 @@
+{
+  "pe": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\UnityPlayer.dll",
+  "sha256": "66493677ce2739e188c41634230c3a35e5f584c4575650949d0a53b5785c6c44",
+  "image_base": "0x180000000",
+  "methods_path": "D:\\ZZZ_Dump\\PIK分析包\\元数据\\控制器与战斗\\methods.csv",
+  "methods_sha256": "9a89b38e910c45a3f2544d9cd1ceef1633f1d8ec05943e537c3bcee02f008ec6",
+  "tool_sha256": "c5a692b49891f83f493ddcd3afb710e3dc2ee7303d3dacce6e6ab3deedd0f79d",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": 4096,
+      "virtual_size": 28008352,
+      "raw_size": 28008448,
+      "raw_offset": 1536
+    },
+    {
+      "name": ".rdata",
+      "rva": 28012544,
+      "virtual_size": 3778832,
+      "raw_size": 3779072,
+      "raw_offset": 28009984
+    },
+    {
+      "name": ".data",
+      "rva": 31793152,
+      "virtual_size": 1620196,
+      "raw_size": 309248,
+      "raw_offset": 31789056
+    },
+    {
+      "name": ".pdata",
+      "rva": 33415168,
+      "virtual_size": 1339680,
+      "raw_size": 1339904,
+      "raw_offset": 32098304
+    },
+    {
+      "name": ".rodata",
+      "rva": 34758656,
+      "virtual_size": 2944,
+      "raw_size": 3072,
+      "raw_offset": 33438208
+    },
+    {
+      "name": "_RDATA",
+      "rva": 34762752,
+      "virtual_size": 44336,
+      "raw_size": 44544,
+      "raw_offset": 33441280
+    },
+    {
+      "name": ".gxfg",
+      "rva": 34807808,
+      "virtual_size": 14768,
+      "raw_size": 14848,
+      "raw_offset": 33485824
+    },
+    {
+      "name": ".gehcont",
+      "rva": 34824192,
+      "virtual_size": 36,
+      "raw_size": 512,
+      "raw_offset": 33500672
+    },
+    {
+      "name": ".upx0",
+      "rva": 34828288,
+      "virtual_size": 4296308,
+      "raw_size": 4296704,
+      "raw_offset": 33501184
+    },
+    {
+      "name": ".reloc",
+      "rva": 39124992,
+      "virtual_size": 130484,
+      "raw_size": 130560,
+      "raw_offset": 37797888
+    },
+    {
+      "name": ".rsrc",
+      "rva": 39256064,
+      "virtual_size": 2196,
+      "raw_size": 2560,
+      "raw_offset": 37928448
+    }
+  ],
+  "live_process_access": false,
+  "functions": [
+    {
+      "rva": "0x2105a0",
+      "end_rva": "0x2106de",
+      "unwind_rva": "0x1cf9330",
+      "bytes": 318,
+      "code_sha256": "3243fb3eec81bdbf6618090e041102cfc81798cfca7b7e0b9905292a2b1a2678",
+      "unwind_segments": [
+        {
+          "begin_rva": "0x2105a0",
+          "end_rva": "0x2105c0",
+          "unwind_rva": "0x1cf9330",
+          "binary_offset": 0,
+          "bytes": 32,
+          "sha256": "acaf269e3a089fcde8ba9d4829b0c16e85d9a79e8a47b7fc96c37b62e47f5992"
+        },
+        {
+          "begin_rva": "0x2105c0",
+          "end_rva": "0x210656",
+          "unwind_rva": "0x1d0dfc8",
+          "binary_offset": 32,
+          "bytes": 150,
+          "sha256": "4c8892037ca352cc7ca5a7819444858d32a643279e5d0c3b01c00ca494e91121"
+        },
+        {
+          "begin_rva": "0x210656",
+          "end_rva": "0x2106c6",
+          "unwind_rva": "0x1d0dfdc",
+          "binary_offset": 182,
+          "bytes": 112,
+          "sha256": "79260ea3b17cd1cc0e0b3f4bab5ed7794b485bfb94eb48ec9bd789c696e9cb43"
+        },
+        {
+          "begin_rva": "0x2106c6",
+          "end_rva": "0x2106de",
+          "unwind_rva": "0x1d0dff0",
+          "binary_offset": 294,
+          "bytes": 24,
+          "sha256": "d1e0c8405bb7d5b2695a4fa7e221a73c4f9f8692679d43e292dcea2acfc30849"
+        }
+      ],
+      "metadata": [],
+      "calls": [
+        {
+          "at": "0x2105c5",
+          "target": "0x219850",
+          "names": []
+        },
+        {
+          "at": "0x2105da",
+          "target": "0x8e6300",
+          "names": []
+        },
+        {
+          "at": "0x2105ec",
+          "target": "0x219d80",
+          "names": []
+        },
+        {
+          "at": "0x210606",
+          "target": "0x8e6300",
+          "names": []
+        },
+        {
+          "at": "0x210613",
+          "target": "0x8e7760",
+          "names": []
+        },
+        {
+          "at": "0x210629",
+          "target": "0x8e60b0",
+          "names": []
+        },
+        {
+          "at": "0x210663",
+          "target": "0x219d80",
+          "names": []
+        },
+        {
+          "at": "0x210671",
+          "target": "0x8e7760",
+          "names": []
+        },
+        {
+          "at": "0x210687",
+          "target": "0x8e60b0",
+          "names": []
+        }
+      ],
+      "rip_references": []
+    }
+  ],
+  "resolved_thunks": []
+}

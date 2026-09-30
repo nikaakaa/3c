@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(DotRecastAuthoritySceneManifest.Magic);
             writer.WriteInt32(DotRecastAuthoritySceneManifest.SchemaVersion);
             writer.WriteBytes(payload);
-            writer.WriteString(hash.Value);
+            writer.WriteHash(hash);
             return writer.ToArray();
         }
 
@@ -142,15 +142,15 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(ability.RelativePath);
             writer.WriteString(ability.AbilityGuid);
             writer.WriteString(ability.AbilityId.Value);
-            writer.WriteString(ability.ContentHash.Value);
-            writer.WriteString(ability.StateSchemaHash.Value);
-            writer.WriteString(ability.ArtifactBytesHash.Value);
+            writer.WriteHash(ability.ContentHash);
+            writer.WriteHash(ability.StateSchemaHash);
+            writer.WriteHash(ability.ArtifactBytesHash);
             writer.WriteInt32(ability.ArtifactByteLength);
             writer.WriteString(ability.CompilerVersion);
             writer.WriteString(ability.OperationSetVersion.Value);
             writer.WriteInt32(ability.TickRate);
             writer.WriteString(ability.SourceRevision.Value);
-            writer.WriteString(ability.SemanticHash.ToString());
+            writer.WriteHash(ability.SemanticHash);
             writer.WriteString(ability.NumericProfileId.Value);
             writer.WriteInt32(ability.TargetAbiVersion.Value);
             writer.WriteString(ability.ExecutionIdentity);
@@ -255,12 +255,12 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 writer.WriteByte((byte)value.ValueKind);
                 writer.WriteDouble(value.NumericValue);
             }
-            writer.WriteString(binding.Parameters.ContentHash.Value);
+            writer.WriteHash(binding.Parameters.ContentHash);
             writer.WriteBytes(CharacterControlMotionBindingCodec.Write(binding.MotionBindings));
             writer.WriteInt32(binding.InputRequestIds.Count);
             for (int i = 0; i < binding.InputRequestIds.Count; i++)
                 writer.WriteString(binding.InputRequestIds[i]);
-            writer.WriteString(binding.BindingHash.Value);
+            writer.WriteHash(binding.BindingHash);
         }
 
         static CharacterControlRuntimeBinding ReadControlRuntimeBinding(CanonicalReader reader)
@@ -303,7 +303,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteInt32(binding.SemanticVersion);
             writer.WriteDouble(binding.GravityAcceleration);
             writer.WriteDouble(binding.MaximumFallSpeed);
-            writer.WriteString(binding.BindingHash.Value);
+            writer.WriteHash(binding.BindingHash);
         }
 
         static CharacterBodyMotionBinding ReadBodyMotionBinding(CanonicalReader reader)
@@ -325,7 +325,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             CharacterGameplayEffectRuntimeBinding binding)
         {
             writer.WriteBytes(CharacterGameplayEffectRuntimeBindingCodec.Write(binding));
-            writer.WriteString(binding.BindingHash.Value);
+            writer.WriteHash(binding.BindingHash);
         }
 
         static CharacterGameplayEffectRuntimeBinding ReadGameplayEffectRuntimeBinding(CanonicalReader reader)
@@ -345,7 +345,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             if (binding == null)
                 return;
             writer.WriteBytes(CharacterEquipmentRuntimeBindingCodec.Write(binding));
-            writer.WriteString(binding.BindingHash.Value);
+            writer.WriteHash(binding.BindingHash);
         }
 
         static CharacterEquipmentRuntimeBinding ReadEquipmentRuntimeBinding(CanonicalReader reader)
@@ -363,19 +363,19 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         {
             WritePipelineIdentity(writer, pipeline.PredictionIdentity);
             WritePipelineIdentity(writer, pipeline.Identity);
-            writer.WriteString(pipeline.DescriptorHash.Value);
+            writer.WriteHash(pipeline.DescriptorHash);
             WriteComponent(writer, pipeline.BackendIdentity);
             WriteSource(writer, pipeline.Source);
             WriteSourcePorts(writer, pipeline.SourcePorts);
             byte[] sourcePolicyBytes = ServerAuthoritativeAuthoritySourcePolicyCodec.Write(pipeline.SourcePolicy);
             writer.WriteBytes(sourcePolicyBytes);
-            writer.WriteString(pipeline.SourcePolicy.ConfigurationHash.Value);
+            writer.WriteHash(pipeline.SourcePolicy.ConfigurationHash);
             ServerAuthoritativeReplicationPolicy replication = pipeline.ReplicationPolicy;
             writer.WriteUInt16((ushort)replication.ReliableGameplayFactKinds);
             writer.WriteInt32(replication.ReliableProducerIds.Count);
             for (int i = 0; i < replication.ReliableProducerIds.Count; i++)
                 writer.WriteString(replication.ReliableProducerIds[i]);
-            writer.WriteString(replication.ConfigurationHash.Value);
+            writer.WriteHash(replication.ConfigurationHash);
         }
 
         static DotRecastAuthorityPipelineBinding ReadPipeline(CanonicalReader reader)
@@ -429,7 +429,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 SimulationProtocolIdentity protocol = source.Protocol.Value;
                 writer.WriteString(protocol.ProtocolId);
                 writer.WriteString(protocol.SemanticVersion);
-                writer.WriteString(protocol.SchemaHash.Value);
+                writer.WriteHash(protocol.SchemaHash);
             }
             writer.WriteUInt64((ulong)source.RequiredSolverCapabilities);
             writer.WriteInt32(source.RequiredPipelinePasses.Count);
@@ -521,7 +521,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 writer.WriteInt32(port.SchemaVersion);
                 writer.WriteByte((byte)port.Direction);
                 writer.WriteString(port.OwnerComponentId);
-                writer.WriteString(port.ConfigurationHash.Value);
+                writer.WriteHash(port.ConfigurationHash);
             }
         }
 
@@ -547,14 +547,14 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(world.WorldId.Value);
             writer.WriteString(world.MapId);
             writer.WriteString(world.WorldRevision.Value);
-            writer.WriteString(world.WorldConfigurationHash.Value);
-            writer.WriteString(world.NavigationSurfaceConfigurationHash.Value);
+            writer.WriteHash(world.WorldConfigurationHash);
+            writer.WriteHash(world.NavigationSurfaceConfigurationHash);
             WriteWorldSolverDefinition(writer, world.SolverDefinition);
             writer.WriteString(world.NavigationSurfaceRelativePath);
-            writer.WriteString(world.NavigationSurfaceContentHash.Value);
-            writer.WriteString(world.NavigationSurfaceBytesHash.Value);
+            writer.WriteHash(world.NavigationSurfaceContentHash);
+            writer.WriteHash(world.NavigationSurfaceBytesHash);
             writer.WriteInt32(world.NavigationSurfaceByteLength);
-            writer.WriteString(world.QueryProfileHash.Value);
+            writer.WriteHash(world.QueryProfileHash);
             WriteContactConfiguration(writer, world.ContactConfiguration);
         }
 
@@ -630,7 +630,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteByte((byte)actor.Roster.ClientRole);
             writer.WriteString(actor.WorldBodyBindingId);
             writer.WriteBytes(actor.CopyInitialCharacterStateBytes());
-            writer.WriteString(actor.InitialCharacterStateHash.ToString());
+            writer.WriteHash(actor.InitialCharacterStateHash);
             WriteBody(writer, actor.InitialBody);
             WriteContactShape(writer, actor.ContactShape);
             WriteOutputRoute(writer, actor.OutputRoute);
@@ -706,7 +706,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(route.SchemaId);
             writer.WriteInt32(route.SchemaVersion);
             writer.WriteString(route.ActorId.Value);
-            writer.WriteString(route.ConfigurationHash.Value);
+            writer.WriteHash(route.ConfigurationHash);
         }
 
         static SimulationOutputRouteDescriptor ReadOutputRoute(CanonicalReader reader) =>
@@ -722,7 +722,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(identity.Id.Value);
             writer.WriteString(identity.Revision.Value);
             writer.WriteInt32(identity.SchemaVersion.Value);
-            writer.WriteString(identity.Hash.ToString());
+            writer.WriteHash(identity.Hash);
         }
 
         static SimulationPipelineIdentity ReadPipelineIdentity(CanonicalReader reader) =>
@@ -737,7 +737,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteByte((byte)identity.Role);
             writer.WriteString(identity.ComponentId);
             writer.WriteString(identity.SemanticVersion);
-            writer.WriteString(identity.ConfigurationHash.Value);
+            writer.WriteHash(identity.ConfigurationHash);
         }
 
         static SimulationComponentIdentity ReadComponent(CanonicalReader reader) =>

@@ -41,9 +41,9 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
         public IReadOnlyList<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
 
-        public void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
+        public void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow, bool captureBlackboard)
         {
-            m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow);
+            m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
             m_ActionStore.BeginEvaluation();
             m_Values.BeginEvaluation();
             m_GameplayEffects?.BeginEvaluation();

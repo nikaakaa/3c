@@ -1,0 +1,18 @@
+{
+  "schema": "zzz-corin-renderer-external-cabs/v1",
+  "targets": [
+    "CAB-3682dc239037d64ba8a123aca40ed4d7",
+    "CAB-3f6ccf3d7c85f89d41a4afea8d592819",
+    "CAB-418d5fe40c63c1dc7018c4c0701de77f",
+    "CAB-48cbf2dc1fa8061236619d5fd4ce356f",
+    "CAB-63aed8f7ecf8685772466784f0cbe443",
+    "CAB-78f916735298f7c962ebd8d9e1c1bd19",
+    "CAB-811eb930e08b8475d7057e297be43248",
+    "CAB-99aeac0f3362a7ecb20c0c8f88f65688",
+    "CAB-9ac081d27dbac00d6a59079a60eaf83d",
+    "CAB-bd56832f5ed18de8c67e28c19af26895",
+    "CAB-c56a700f7043a5ba98a65ace97f32d34",
+    "CAB-d7760a99abfbd945d20bd5d14638cefd",
+    "CAB-e032d77fb465253de9d5815779d94c15"
+  ]
+}

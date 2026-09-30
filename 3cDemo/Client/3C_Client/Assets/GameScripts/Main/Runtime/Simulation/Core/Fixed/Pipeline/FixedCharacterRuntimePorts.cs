@@ -174,6 +174,13 @@ namespace ThirdPersonSimulation.Fixed
                 ? index
                 : throw new InvalidOperationException($"Actor '{actorId}' is not part of the locked Character Runtime roster.");
 
+        public ulong QueueBlackboardWrite(ActorId actor, FixedBlackboardWriteCommand command) =>
+            m_Roster[GetActorIndex(actor)].GetInvocation(command.Ability.AbilityId).QueueBlackboardWrite(command);
+
+        public bool TryTakeBlackboardWriteResult(ActorId actor, CharacterSkillId ability, ulong sequence,
+            out FixedBlackboardWriteResult result) =>
+            m_Roster[GetActorIndex(actor)].GetInvocation(ability).TryTakeBlackboardResult(sequence, out result);
+
         public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
         {
             if (actorIndex < 0 || actorIndex >= Roster.Count)

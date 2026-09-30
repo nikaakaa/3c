@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Contracts;
@@ -302,6 +302,22 @@ namespace ThirdPersonGameplay.Effects
 
         public IReadOnlyList<GameplayAdditionalEffectDefinition> Effects => m_Effects ?? Array.Empty<GameplayAdditionalEffectDefinition>();
 
+    }
+
+    [Serializable]
+    public sealed class GameplayAttackCameraShakeComponentDefinition : GameplayEffectComponentDefinition
+    {
+        [SerializeField] string m_ResourceId;
+        [SerializeField] bool m_ShakeOnNotHit;
+
+        public GameplayAttackCameraShakeComponentDefinition(string resourceId, bool shakeOnNotHit)
+        {
+            m_ResourceId = resourceId;
+            m_ShakeOnNotHit = shakeOnNotHit;
+        }
+
+        public string ResourceId => m_ResourceId;
+        public bool ShakeOnNotHit => m_ShakeOnNotHit;
     }
 
     public enum GameplayAttackCollisionKind : byte

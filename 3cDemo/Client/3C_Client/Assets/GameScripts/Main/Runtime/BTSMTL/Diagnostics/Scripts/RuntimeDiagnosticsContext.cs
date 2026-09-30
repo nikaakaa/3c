@@ -7,6 +7,7 @@ namespace BTSMTL.Diagnostics
     {
         readonly Stack<RuntimeInstanceKey> m_InstanceStack = new Stack<RuntimeInstanceKey>();
         readonly Dictionary<RuntimeInstanceKey, RuntimeSourceElementHandle> m_InstanceSources = new Dictionary<RuntimeInstanceKey, RuntimeSourceElementHandle>();
+        readonly Dictionary<RuntimeContentRevision, IDebugSourceMap> m_SourceMaps = new();
         ulong m_Sequence;
         ulong m_LogicTick;
         ulong m_PresentationFrame;
@@ -31,6 +32,7 @@ namespace BTSMTL.Diagnostics
             Revision = revision;
             SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
             Store = store ?? throw new ArgumentNullException(nameof(store));
+            RegisterSourceMap(SourceMap);
         }
 
         public Guid CharacterRuntimeId { get; }
@@ -39,6 +41,13 @@ namespace BTSMTL.Diagnostics
         public ulong RuntimeEpoch => m_RuntimeEpoch;
         public Guid ExecutionBranchId => m_ExecutionBranchId;
         public IDebugSourceMap SourceMap { get; private set; }
+        public Dictionary<RuntimeContentRevision, IDebugSourceMap>.ValueCollection SourceMaps => m_SourceMaps.Values;
+
+        public bool TryGetSourceMap(RuntimeContentRevision revision, out IDebugSourceMap sourceMap) =>
+            m_SourceMaps.TryGetValue(revision, out sourceMap);
+
+        public void RegisterSourceMap(IDebugSourceMap sourceMap) =>
+            m_SourceMaps.TryAdd(sourceMap.Revision, sourceMap);
         public RuntimeDiagnosticsStore Store { get; }
         public ulong LogicTick => m_LogicTick;
         public ulong PresentationFrame => m_PresentationFrame;
@@ -50,6 +59,7 @@ namespace BTSMTL.Diagnostics
         {
             Revision = revision;
             SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
+            RegisterSourceMap(SourceMap);
             m_InstanceStack.Clear();
             m_InstanceSources.Clear();
             m_SourceClockId = string.Empty;
@@ -99,9 +109,12 @@ namespace BTSMTL.Diagnostics
 
         public bool ShouldCapture(RuntimeTraceChannel channel, RuntimeTraceEventKind kind) => Store.ShouldCapture(channel, kind);
 
-        public RuntimeSourceElementHandle ResolveSourceHandle(RuntimeSourceElementKey source)
+        public RuntimeSourceElementHandle ResolveSourceHandle(RuntimeSourceElementKey source) =>
+            ResolveSourceHandle(SourceMap, source);
+
+        static RuntimeSourceElementHandle ResolveSourceHandle(IDebugSourceMap sourceMap, RuntimeSourceElementKey source)
         {
-            if (!SourceMap.TryGetHandle(source, out RuntimeSourceElementHandle handle))
+            if (!sourceMap.TryGetHandle(source, out RuntimeSourceElementHandle handle))
                 throw new InvalidOperationException($"Runtime diagnostics source is absent from the exact Source Map: {source.Kind}/{source.GraphAuthoringId}/{source.ElementAuthoringId}/{source.TimelineAuthoringId}/{source.TrackAuthoringId}/{source.ClipAuthoringId}.");
             return handle;
         }
@@ -133,7 +146,22 @@ namespace BTSMTL.Diagnostics
             RuntimeSourceElementHandle handle = ResolveSourceHandle(source);
             if (runtimeInstance.IsValid)
                 m_InstanceSources[runtimeInstance] = handle;
-            return Publish(channel, domain, kind, handle, runtimeInstance, payload);
+            return PublishCore(Revision, channel, domain, kind, handle, runtimeInstance, payload);
+        }
+
+        public bool Publish(
+            IDebugSourceMap sourceMap,
+            RuntimeTraceChannel channel,
+            RuntimeTraceDomain domain,
+            RuntimeTraceEventKind kind,
+            RuntimeSourceElementKey source,
+            RuntimeInstanceKey runtimeInstance,
+            RuntimeTracePayload payload)
+        {
+            if (!Store.ShouldPublish(channel, kind))
+                return false;
+            return PublishCore(sourceMap.Revision, channel, domain, kind,
+                ResolveSourceHandle(sourceMap, source), runtimeInstance, payload);
         }
 
         public bool Publish(
@@ -148,6 +176,18 @@ namespace BTSMTL.Diagnostics
                 return false;
             if (!source.IsValid && runtimeInstance.IsValid)
                 m_InstanceSources.TryGetValue(runtimeInstance, out source);
+            return PublishCore(Revision, channel, domain, kind, source, runtimeInstance, payload);
+        }
+
+        bool PublishCore(
+            RuntimeContentRevision revision,
+            RuntimeTraceChannel channel,
+            RuntimeTraceDomain domain,
+            RuntimeTraceEventKind kind,
+            RuntimeSourceElementHandle source,
+            RuntimeInstanceKey runtimeInstance,
+            RuntimeTracePayload payload)
+        {
             m_Sequence++;
             if (m_Sequence == 0)
                 m_Sequence++;
@@ -156,7 +196,7 @@ namespace BTSMTL.Diagnostics
             ulong position = domain == RuntimeTraceDomain.Presentation ? m_PresentationFrame : m_LogicTick;
             Store.Publish(new RuntimeTraceEvent(
                 SessionId,
-                Revision,
+                revision,
                 m_RuntimeEpoch,
                 m_ExecutionBranchId,
                 domain,

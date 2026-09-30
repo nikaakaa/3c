@@ -375,11 +375,8 @@ namespace ThirdPersonSimulation.Fixed
         public AbilityStateValue Get(TypedStateAddress address)
         {
             RequireActive();
-            ProgramStateSlot slot = m_Layout.StateSlots[address.SlotIndex];
             if (!m_StateValues.TryGetValue(address.SlotIndex, out AbilityStateValue value))
-                value = slot.DefaultConstantIndex >= 0
-                    ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                    : AbilityStateValue.Default(slot.ValueKind);
+                value = m_Ability.DefaultStateValue(address.SlotIndex);
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
             return value;
@@ -392,12 +389,9 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
-            ProgramStateSlot slot = m_Layout.StateSlots[address.SlotIndex];
             AbilityStateValue current = m_StateValues.TryGetValue(address.SlotIndex, out AbilityStateValue existing)
                 ? existing
-                : slot.DefaultConstantIndex >= 0
-                    ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                    : AbilityStateValue.Default(slot.ValueKind);
+                : m_Ability.DefaultStateValue(address.SlotIndex);
             if (current.Equals(value))
                 return;
             m_StateValuesChanged = true;
@@ -407,10 +401,7 @@ namespace ThirdPersonSimulation.Fixed
         public void Reset(int slotIndex)
         {
             RequireActive();
-            ProgramStateSlot slot = m_Layout.StateSlots[slotIndex];
-            Set(slotIndex, slot.DefaultConstantIndex >= 0
-                ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                : AbilityStateValue.Default(slot.ValueKind));
+            Set(slotIndex, m_Ability.DefaultStateValue(slotIndex));
         }
 
         public GameplayAbilityExecutionAggregate<AbilityStateValue> GetAbilityExecutionState()

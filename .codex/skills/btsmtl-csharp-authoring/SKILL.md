@@ -75,6 +75,8 @@ dotnet build-server shutdown
 
 修改 EventGraph 常量、变量绑定或初始化链时，区分源码编译、资产保存后恢复、实例绑定、实际运行输出四种证据。`saved=true` 只证明生成服务保存成功；变量存在、类型正确、图校验通过均不证明更新执行成功。用户禁止 replay 或未要求新增测试时，保持该约束，不将检查变成回放、新测试代码或额外运行入口。
 
+- 正式 HostEventGraph 要求恰好一个 UpdateEvent。追加独立业务分支时连接既有更新链；需要 Split 输出时使用正式 ConfigureInstantSplit 和已声明端口，不创建第二个 UpdateEvent。源码编译和 saved=true 不覆盖这一运行绑定约束，保存后仍需独立恢复并执行正式图绑定。
+
 - 作者填写的端口值是实例覆盖值，节点定义负责默认值。当前 `ConfigureValueInput` 应写 `ValueInput.serializedValue`；`SetDefaultAndSerializedValue` 用于节点声明默认值，不能用来配置作者覆盖，否则 `FlowNode.OnBeforeSerialize` 会将它当默认值省略。修复应落在正式 mutation，不在生成器补业务常量。
 - 保存后用正式反序列化与 `Validate/GatherPorts` 恢复独立副本，再通过正式端口读取本次修改的有效值。直接读取刚生成的内存对象不足以证明落盘成功。比较作者语义，不把序列化顺序、格式或 revision 的变化算作业务变化；不通过 JSON/YAML 改资产。
 - 变量 ID、显示名和运行绑定分别核对。当前 `BBParameter` 会把名称中的 `/` 解释成全局黑板路径；本地变量显示名不用该分隔符。仅发现同 ID 声明不足以证明节点已经绑定，需在实例初始化后确认参数引用指向该实例的声明。首次初始化和重新载入的绑定由图生命周期负责，不能在 Corin 图、逐帧更新或采样器中补绑。

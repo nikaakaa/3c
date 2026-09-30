@@ -885,7 +885,7 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.Yaw => "state.float32-yaw/v1",
                 ProgramStateValueKind.Identity => "state.identity/v1",
                 ProgramStateValueKind.BlackboardOwnerToken => "state.blackboard-owner-token/v1",
-                ProgramStateValueKind.BlackboardWriteStamp => "state.blackboard-write-stamp/v1",
+                ProgramStateValueKind.BlackboardWriteStamp => "state.blackboard-write-stamp/v2",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
@@ -982,10 +982,12 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId,
             OperationHandle timelineOperation,
             OperationHandle clipOperation,
-            int cycle)
+            int cycle,
+            ulong commandSequence = 0)
         {
-            if (!sourceOperation.IsValid || logicTick == 0 ||
-                timelineOperation.IsValid != clipOperation.IsValid || cycle < 0)
+            if (sourceOperation.IsValid == (commandSequence != 0) || logicTick == 0 ||
+                timelineOperation.IsValid != clipOperation.IsValid || cycle < 0 ||
+                commandSequence != 0 && (timelineOperation.IsValid || cycle != 0))
             {
                 throw new ArgumentException("Blackboard write stamp is incomplete.");
             }
@@ -995,6 +997,7 @@ namespace ThirdPersonSimulation
             TimelineOperation = timelineOperation;
             ClipOperation = clipOperation;
             Cycle = cycle;
+            CommandSequence = commandSequence;
         }
 
         public OperationHandle SourceOperation { get; }
@@ -1003,16 +1006,18 @@ namespace ThirdPersonSimulation
         public OperationHandle TimelineOperation { get; }
         public OperationHandle ClipOperation { get; }
         public int Cycle { get; }
-        public bool IsValid => SourceOperation.IsValid && LogicTick != 0;
+        public ulong CommandSequence { get; }
+        public bool IsValid => (SourceOperation.IsValid || CommandSequence != 0) && LogicTick != 0;
         public bool Equals(BlackboardWriteStamp other) =>
             SourceOperation.Equals(other.SourceOperation) &&
             LogicTick == other.LogicTick &&
             ActionInstanceId == other.ActionInstanceId &&
             TimelineOperation.Equals(other.TimelineOperation) &&
             ClipOperation.Equals(other.ClipOperation) &&
-            Cycle == other.Cycle;
+            Cycle == other.Cycle &&
+            CommandSequence == other.CommandSequence;
         public override bool Equals(object obj) => obj is BlackboardWriteStamp other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(SourceOperation, LogicTick, ActionInstanceId, TimelineOperation, ClipOperation, Cycle);
+        public override int GetHashCode() => HashCode.Combine(SourceOperation, LogicTick, ActionInstanceId, TimelineOperation, ClipOperation, Cycle, CommandSequence);
     }
 
     public enum ProgramBlackboardLifetime : byte

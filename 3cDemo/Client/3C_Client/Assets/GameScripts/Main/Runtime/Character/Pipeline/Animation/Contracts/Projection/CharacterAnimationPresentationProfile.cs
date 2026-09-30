@@ -315,7 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             m_EventGraph.BuildVariableContract());
                     EventGraphAssetValidator.Require(
                         m_EventGraph,
-                        CharacterAnimationEventGraphHost.CreateHostContract(variableContract));
+                        CharacterAnimationEventGraphHost.CreateHostContract(variableContract, m_EventGraph));
                 }
                 catch (Exception exception)
                 {

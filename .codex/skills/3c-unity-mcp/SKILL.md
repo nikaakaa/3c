@@ -11,7 +11,9 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 
 - 从当前工作区确定 Unity 项目 `3cDemo/Client/3C_Client`。发现实例后核对 `project_path`；不能用显示名替代路径。每次编辑器请求显式传 `unity_instance`，CLI 传纯实例 hash，不使用 `set_active_instance` 或全局 `instance set`。
 - 代码通过系统文件工具写入。Unity MCP 用于已授权的编辑器操作与状态检查，不用于写代码文件。
+- 新增源码文件尚未导入时，脚本范围刷新可能只请求编译（refresh_triggered=false），导致已有源码找不到新类型。先核对该路径的 MonoScript 是否存在；确认缺失且 Editor 非编译/非 Play 后，使用正式 refresh_unity 的 scope=all 导入，再检查编译。不要凭类型找不到就更改程序集依赖或移动文件。
 - 刷新、编译或构建前确认目标 Editor 已退出 Play；若其他任务占用，说明具体占用。Unity 正在编译时不改代码、不重复刷新或启动另一轮构建。
+- `isCompiling=false` 只表示编译已停止。构建前同时确认 `EditorUtility.scriptCompilationFailed=false`，并读取 Console 中的编译错误；不能把带错误结束的编译当成通过。
 - 项目允许通过正式 CLI/executeMethod 按明确项目路径运行本机 Unity batchmode，任务结束后退出该进程并保留主验收 Editor；CI 的 Unity 禁令不变。当前会话的进程启动限制仍然有效，不能把此条当作绕过限制的授权。
 - MCP 断开先按通用连接流程判断服务器、域重载和首次连接状态，不注入临时脚本、不改用界面自动化、不无故重启 Editor。batchmode 仅服务本次已授权的正式工作，不作为掩盖 MCP 故障的替代执行路径。
 

@@ -1,0 +1,14 @@
+{
+  "schema": "zzz-particle-batch-success/v1",
+  "recordedAt": "2026-09-30T06:40:00+08:00",
+  "input": "D:/ZZZ_Dump/output/corin_replication/20260929_effect_candidate_extract_v1/988944888/0425_CAB-d6652fef59830a19de7f25294d180258",
+  "output": "systems-batch.json",
+  "count": 20,
+  "closedCount": 20,
+  "moduleCount": 23,
+  "validation": {
+    "decodedEndEqualsByteSize": true,
+    "moduleBoundaryOverlaps": 0,
+    "jsonParse": true
+  }
+}

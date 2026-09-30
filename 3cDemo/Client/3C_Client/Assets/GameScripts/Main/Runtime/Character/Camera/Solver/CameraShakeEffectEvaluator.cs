@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -88,12 +89,21 @@ namespace ThirdPersonCamera
                 .WithLocation(plan.Location + basePosition + addedPosition));
         }
 
-        public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input) =>
-            input.PresentationDeltaSeconds > 0f
+        public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
+        {
+            m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload payload);
+            float delta = input.PresentationDeltaSeconds > 0f
                 ? m_Projection.MuteCameraShakeAdvancedProcess
                     ? input.PresentationDeltaSeconds
                     : input.ScaledDeltaSeconds
                 : 0f;
+            if (payload.IgnoreTimeScale)
+                return delta;
+            if (!input.HasOwnerTimeScale)
+                throw new InvalidOperationException("Camera shake requires an OwnerTimeScale input.");
+            float scale = input.OwnerTimeScale == 0f ? 0.0001f : input.OwnerTimeScale;
+            return delta * scale;
+        }
 
         public bool IsExpired(CameraEffectRuntimeState active)
         {

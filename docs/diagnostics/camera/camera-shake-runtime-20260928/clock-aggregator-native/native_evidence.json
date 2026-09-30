@@ -1,0 +1,524 @@
+{
+  "pe": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\GameAssembly.dll",
+  "sha256": "4cba5d52c5fbfd478d2a9ec217075f82216780d56ad1bd1e85e4f724dcce30b4",
+  "image_base": "0x180000000",
+  "methods_path": "D:\\ZZZ_Dump\\PIK分析包\\元数据\\控制器与战斗\\methods.csv",
+  "methods_sha256": "9a89b38e910c45a3f2544d9cd1ceef1633f1d8ec05943e537c3bcee02f008ec6",
+  "tool_sha256": "c5a692b49891f83f493ddcd3afb710e3dc2ee7303d3dacce6e6ab3deedd0f79d",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": 4096,
+      "virtual_size": 15128854,
+      "raw_size": 15129088,
+      "raw_offset": 1024
+    },
+    {
+      "name": ".rdata",
+      "rva": 15134720,
+      "virtual_size": 60004156,
+      "raw_size": 60004352,
+      "raw_offset": 15130112
+    },
+    {
+      "name": ".data",
+      "rva": 75141120,
+      "virtual_size": 19291328,
+      "raw_size": 9494016,
+      "raw_offset": 75134464
+    },
+    {
+      "name": ".pdata",
+      "rva": 94433280,
+      "virtual_size": 16263636,
+      "raw_size": 16263680,
+      "raw_offset": 84628480
+    },
+    {
+      "name": ".00cfg",
+      "rva": 110698496,
+      "virtual_size": 56,
+      "raw_size": 512,
+      "raw_offset": 100892160
+    },
+    {
+      "name": ".gxfg",
+      "rva": 110702592,
+      "virtual_size": 14560,
+      "raw_size": 14848,
+      "raw_offset": 100892672
+    },
+    {
+      "name": ".tls",
+      "rva": 110718976,
+      "virtual_size": 133,
+      "raw_size": 512,
+      "raw_offset": 100907520
+    },
+    {
+      "name": "_RDATA",
+      "rva": 110723072,
+      "virtual_size": 348,
+      "raw_size": 512,
+      "raw_offset": 100908032
+    },
+    {
+      "name": "il2cpp",
+      "rva": 110727168,
+      "virtual_size": 422410081,
+      "raw_size": 422410240,
+      "raw_offset": 100908544
+    },
+    {
+      "name": ".upx0",
+      "rva": 533139456,
+      "virtual_size": 18934200,
+      "raw_size": 18934272,
+      "raw_offset": 523318784
+    },
+    {
+      "name": ".reloc",
+      "rva": 552075264,
+      "virtual_size": 4626492,
+      "raw_size": 4626944,
+      "raw_offset": 542253056
+    }
+  ],
+  "live_process_access": false,
+  "functions": [
+    {
+      "rva": "0x13900c70",
+      "end_rva": "0x13900e29",
+      "unwind_rva": "0x3b164a8",
+      "bytes": 441,
+      "code_sha256": "60248245170160b7d50bc209ca0a6e898d26a5caee596809537918181d7ea282",
+      "unwind_segments": [
+        {
+          "begin_rva": "0x13900c70",
+          "end_rva": "0x13900e29",
+          "unwind_rva": "0x3b164a8",
+          "binary_offset": 0,
+          "bytes": 441,
+          "sha256": "60248245170160b7d50bc209ca0a6e898d26a5caee596809537918181d7ea282"
+        }
+      ],
+      "metadata": [],
+      "calls": [
+        {
+          "at": "0x13900cb8",
+          "target": "0x138fd150",
+          "names": []
+        },
+        {
+          "at": "0x13900cc8",
+          "target": "0x138fdfa0",
+          "names": []
+        },
+        {
+          "at": "0x13900d40",
+          "target": "0x90faf80",
+          "names": []
+        },
+        {
+          "at": "0x13900d5a",
+          "target": "0x138fcac0",
+          "names": []
+        },
+        {
+          "at": "0x13900d77",
+          "target": "0x138ffc90",
+          "names": []
+        },
+        {
+          "at": "0x13900d8d",
+          "target": "0x2793e0",
+          "names": []
+        },
+        {
+          "at": "0x13900dab",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x13900dd3",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x13900de6",
+          "target": "0xb18a540",
+          "names": []
+        },
+        {
+          "at": "0x13900df0",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900dfa",
+          "target": "0x26ff50",
+          "names": []
+        },
+        {
+          "at": "0x13900e04",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900e09",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900e1b",
+          "target": "0xac90b0",
+          "names": []
+        }
+      ],
+      "rip_references": [
+        {
+          "at": "0x13900c8e",
+          "rva": "0x5896116",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900c9b",
+          "rva": "0x53ce461",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900ca8",
+          "rva": "0x53ce44b",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900d00",
+          "rva": "0x5654ca0",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900d35",
+          "rva": "0x5654ca8",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900d92",
+          "rva": "0x5896116",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900d99",
+          "rva": "0x53ce461",
+          "file_bytes_unavailable": true
+        }
+      ]
+    },
+    {
+      "rva": "0x138fe170",
+      "end_rva": "0x138fe2d3",
+      "unwind_rva": "0x3b16008",
+      "bytes": 355,
+      "code_sha256": "8a8cadd6c93329b3845dd049c3ba59824e0ad21ae85247a2bd803ae0e9c22ca2",
+      "unwind_segments": [
+        {
+          "begin_rva": "0x138fe170",
+          "end_rva": "0x138fe2d3",
+          "unwind_rva": "0x3b16008",
+          "binary_offset": 0,
+          "bytes": 355,
+          "sha256": "8a8cadd6c93329b3845dd049c3ba59824e0ad21ae85247a2bd803ae0e9c22ca2"
+        }
+      ],
+      "metadata": [],
+      "calls": [
+        {
+          "at": "0x138fe1bc",
+          "target": "0x138fe540",
+          "names": []
+        },
+        {
+          "at": "0x138fe23a",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x138fe265",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x138fe26f",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x138fe27f",
+          "target": "0xb189870",
+          "names": []
+        },
+        {
+          "at": "0x138fe291",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x138fe29b",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x138fe2c3",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x138fe2c8",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x138fe2cd",
+          "target": "0xac9120",
+          "names": []
+        }
+      ],
+      "rip_references": [
+        {
+          "at": "0x138fe186",
+          "rva": "0x53ce426",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fe1ac",
+          "rva": "0x53ce42a",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fe201",
+          "rva": "0x53df3d5",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fe20e",
+          "rva": "0x540ac98",
+          "file_bytes_unavailable": true
+        }
+      ]
+    },
+    {
+      "rva": "0x138ffe50",
+      "end_rva": "0x1390013d",
+      "unwind_rva": "0x3b16420",
+      "bytes": 749,
+      "code_sha256": "4a54effc8b5aa06460938f499cf87168b3c152e049e9969209af0b70dc8b5f95",
+      "unwind_segments": [
+        {
+          "begin_rva": "0x138ffe50",
+          "end_rva": "0x1390013d",
+          "unwind_rva": "0x3b16420",
+          "binary_offset": 0,
+          "bytes": 749,
+          "sha256": "4a54effc8b5aa06460938f499cf87168b3c152e049e9969209af0b70dc8b5f95"
+        }
+      ],
+      "metadata": [],
+      "calls": [
+        {
+          "at": "0x138ffee5",
+          "target": "0x16f55930",
+          "names": [
+            "IAONCPCJKBL.JBFGDCBJIJD(float CHDMAALKNGC)"
+          ]
+        },
+        {
+          "at": "0x138fff0f",
+          "target": "0xefd9f30",
+          "names": []
+        },
+        {
+          "at": "0x138fff5e",
+          "target": "0xefd9f30",
+          "names": []
+        },
+        {
+          "at": "0x138fffb9",
+          "target": "0xefd9e90",
+          "names": []
+        },
+        {
+          "at": "0x138fffc3",
+          "target": "0xefdab10",
+          "names": []
+        },
+        {
+          "at": "0x138fffea",
+          "target": "0xdeba370",
+          "names": []
+        },
+        {
+          "at": "0x13900039",
+          "target": "0x2793e0",
+          "names": []
+        },
+        {
+          "at": "0x13900057",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x1390007e",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900083",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900088",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x1390008d",
+          "target": "0x271720",
+          "names": []
+        },
+        {
+          "at": "0x13900097",
+          "target": "0xac90b0",
+          "names": []
+        },
+        {
+          "at": "0x139000a1",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x139000b5",
+          "target": "0xb1e87b0",
+          "names": []
+        },
+        {
+          "at": "0x139000c7",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x139000cc",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x139000d6",
+          "target": "0x1017d760",
+          "names": []
+        },
+        {
+          "at": "0x139000e6",
+          "target": "0xb18d840",
+          "names": []
+        },
+        {
+          "at": "0x13900100",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900105",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x1390010a",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x1390010f",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900114",
+          "target": "0x271720",
+          "names": []
+        },
+        {
+          "at": "0x1390011e",
+          "target": "0xac90b0",
+          "names": []
+        },
+        {
+          "at": "0x13900123",
+          "target": "0x271e50",
+          "names": []
+        },
+        {
+          "at": "0x1390012d",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900132",
+          "target": "0xac9120",
+          "names": []
+        },
+        {
+          "at": "0x13900137",
+          "target": "0xac9120",
+          "names": []
+        }
+      ],
+      "rip_references": [
+        {
+          "at": "0x138ffe61",
+          "rva": "0x5896110",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138ffe6e",
+          "rva": "0x53ce43d",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138ffed0",
+          "rva": "0x53ac937",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fff21",
+          "rva": "0x53ac933",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fff4e",
+          "rva": "0x2703f7c",
+          "bytes16_hex": "0000803f0000003f0000000000000000"
+        },
+        {
+          "at": "0x138fffcc",
+          "rva": "0x5452c48",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x138fffe0",
+          "rva": "0x5654cd0",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x1390003e",
+          "rva": "0x5896110",
+          "file_bytes_unavailable": true
+        },
+        {
+          "at": "0x13900045",
+          "rva": "0x53ce43d",
+          "file_bytes_unavailable": true
+        }
+      ]
+    }
+  ],
+  "resolved_thunks": []
+}

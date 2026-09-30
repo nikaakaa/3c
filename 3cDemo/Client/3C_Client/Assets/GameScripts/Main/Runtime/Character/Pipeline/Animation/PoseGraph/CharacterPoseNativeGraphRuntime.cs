@@ -1440,7 +1440,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (!m_Graph.isRunning)
                     m_Graph.DetachNativeRuntime(this);
-                UnityEngine.Object.Destroy(m_Graph);
+                if (UnityEngine.Application.isPlaying)
+                    UnityEngine.Object.Destroy(m_Graph);
+                else
+                    UnityEngine.Object.DestroyImmediate(m_Graph);
                 m_Graph = null;
             }
             ClearOutputCache();

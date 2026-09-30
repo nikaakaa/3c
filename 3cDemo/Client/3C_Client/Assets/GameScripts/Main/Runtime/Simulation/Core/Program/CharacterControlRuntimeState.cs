@@ -21,7 +21,7 @@ namespace ThirdPersonSimulation
             m_Kinds = new Dictionary<CharacterControlStateFieldId, CharacterControlStateValueKind>();
             var hashParts = new List<string>
             {
-                "character-control-state-schema/2",
+                "character-control-state-schema/3",
                 contract.ModuleId.Value,
                 contract.SemanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation
             m_Kinds = new Dictionary<CharacterControlStateFieldId, CharacterControlStateValueKind>();
             var hashParts = new List<string>
             {
-                "character-control-state-schema/2",
+                "character-control-state-schema/3",
                 moduleId.Value,
                 semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
@@ -511,8 +511,8 @@ namespace ThirdPersonSimulation
     public static class CharacterControlRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 2;
-        public const string CodecIdentity = "character-control-runtime-state/v2";
+        const int Version = 3;
+        public const string CodecIdentity = "character-control-runtime-state/v3";
 
         public static void WriteLengthPrefixed(CanonicalWriter writer, CharacterControlRuntimeState state)
         {
@@ -607,7 +607,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(CodecIdentity);
             writer.WriteString(state.ModuleId.Value);
             writer.WriteInt32(state.SemanticVersion);
-            writer.WriteString(state.Schema.SchemaHash.Value);
+            writer.WriteHash(state.Schema.SchemaHash);
             writer.WriteUInt64(state.LastCompletedTick);
             writer.WriteInt32(state.Values.Count);
             for (int i = 0; i < state.Values.Count; i++)
@@ -618,7 +618,7 @@ namespace ThirdPersonSimulation
                 writer.WriteUInt16((ushort)state.Schema.Fields[i].Semantic);
                 WriteValue(writer, value);
             }
-            writer.WriteString(state.StateHash.Value);
+            writer.WriteHash(state.StateHash);
         }
 
         static void WriteValue(CanonicalWriter writer, CharacterControlStateValue value)

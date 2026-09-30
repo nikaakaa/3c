@@ -431,6 +431,7 @@ namespace ThirdPersonSimulation
             out IReadOnlyDictionary<string, SimulationBlackboardSlotGroup> groups,
             out IReadOnlyDictionary<ProgramScopeLayout, IReadOnlyList<SimulationBlackboardSlotGroup>> scopeGroups)
         {
+            ProgramCatalogEntry[] declarations = data.CatalogIndex.BindBlackboardDeclarations(data.StateSlots, data.References);
             var byOwner = new Dictionary<string, SimulationBlackboardSlotGroup>(StringComparer.Ordinal);
             var byScope = new Dictionary<ProgramScopeLayout, IReadOnlyList<SimulationBlackboardSlotGroup>>();
             for (int scopeIndex = 0; scopeIndex < data.Scopes.Count; scopeIndex++)
@@ -449,7 +450,8 @@ namespace ThirdPersonSimulation
                         data,
                         scope,
                         scope.CompiledOwnerIndex,
-                        slot.OwnerIdentity);
+                        slot.OwnerIdentity,
+                        declarations[slot.Index]);
                     if (byOwner.ContainsKey(slot.OwnerIdentity))
                         throw new InvalidOperationException($"Blackboard state group '{slot.OwnerIdentity}' belongs to multiple scopes.");
                     byOwner.Add(slot.OwnerIdentity, group);
@@ -475,7 +477,8 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionData data,
             ProgramScopeLayout scope,
             int compiledOwnerIndex,
-            string ownerIdentity)
+            string ownerIdentity,
+            ProgramCatalogEntry declaration)
         {
             int value = -1;
             int ownerToken = -1;
@@ -514,7 +517,8 @@ namespace ThirdPersonSimulation
                 writeStamp,
                 scope,
                 compiledOwnerIndex,
-                (ProgramBlackboardLifetime)(byte)lifetimeConstant.Int32);
+                (ProgramBlackboardLifetime)(byte)lifetimeConstant.Int32,
+                declaration);
         }
 
         static int UniqueSlot(int current, int incoming, string ownerIdentity)

@@ -7,11 +7,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     internal readonly struct CharacterTimelinePlaybackTrace
     {
-        internal CharacterTimelinePlaybackTrace(TimelinePlaybackHandle handle, TimelineData timeline,
+        internal CharacterTimelinePlaybackTrace(TimelinePlaybackHandle handle, TimelineData timeline, IDebugSourceMap sourceMap,
             RuntimeInstanceKey runtimeInstance, RuntimeTimelinePlaybackProvenance provenance, ulong actionInstanceId)
         {
             Handle = handle;
             Timeline = timeline;
+            SourceMap = sourceMap;
             RuntimeInstance = runtimeInstance;
             Provenance = provenance;
             ActionInstanceId = actionInstanceId;
@@ -19,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal TimelinePlaybackHandle Handle { get; }
         internal TimelineData Timeline { get; }
+        internal IDebugSourceMap SourceMap { get; }
         internal RuntimeInstanceKey RuntimeInstance { get; }
         internal RuntimeTimelinePlaybackProvenance Provenance { get; }
         internal ulong ActionInstanceId { get; }
@@ -125,7 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     domain == RuntimeTraceDomain.Presentation ? request.Time.ToSingle() : time,
                     request.Cycle,
                     treeClip,
-                    request.TreeGraphId);
+                    request.TreeGraphId,
+                    request.ExitSource.ToString());
             }
         }
 
@@ -171,12 +174,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             float time,
             int cycle,
             RuntimeInstanceKey runtimeInstance = default,
-            string relatedElementId = "")
+            string relatedElementId = "",
+            string detail = "")
         {
             if (diagnostics == null || !active.RuntimeInstance.IsValid ||
                 !diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
                 return;
             diagnostics.Publish(
+                active.SourceMap,
                 RuntimeTraceChannel.Timeline,
                 domain,
                 kind,
@@ -186,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     Name = active.Timeline.Name,
                     Status = status,
+                    Detail = detail,
                     Cause = cause,
                     RelatedElementId = relatedElementId,
                     ActionInstanceId = active.ActionInstanceId,

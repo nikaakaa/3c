@@ -212,6 +212,9 @@ namespace ThirdPersonSimulation.Fixed
         public void BeginOuterTransaction()
         {
             m_Products.BeginOuterTransaction();
+            for (int actor = 0; actor < m_Roster.Count; actor++)
+                for (int ability = 0; ability < m_Roster[actor].Invocations.Length; ability++)
+                    m_Roster[actor].Invocations[ability].BeginBlackboardTransaction();
         }
 
         public void BeginSimulationStep(FixedPipelineWorkingState workingState, FixedSimulationStep step)
@@ -433,6 +436,9 @@ namespace ThirdPersonSimulation.Fixed
 
         public void CompleteStatePublish(FixedPipelineWorkingState workingState)
         {
+            for (int actor = 0; actor < m_Roster.Count; actor++)
+                for (int ability = 0; ability < m_Roster[actor].Invocations.Length; ability++)
+                    m_Roster[actor].Invocations[ability].PublishBlackboardResults();
             for (int index = 0; index < m_Roster.Count; index++)
                 m_Roster[index].TimelineRuntime?.ReleaseUnreferencedPlaybacks(workingState.Actors[index].State.TimelineSnapshots, workingState.LastCompletedTick);
         }

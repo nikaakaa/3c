@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public string AuthoringContentRevision { get; private set; } = string.Empty;
         public string ContentRevision { get; private set; } = string.Empty;
         public ulong ContentGeneration => m_ContentGeneration;
+        internal event Action<TimelineData, TimelineContentUnit> TimelineInstalled;
 
         internal CharacterTimelineContentStore(CharacterTimelineDependencyResolver dependencyResolver)
         {
@@ -45,9 +46,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline content requires an initialized Timeline content store.");
             if (timelines == null)
                 throw new ArgumentNullException(nameof(timelines));
-            if (!TryComputeContentRevisions(timelines, out string authoringRevision, out string contentRevision, out List<string> errors))
-                throw new InvalidOperationException(string.Join(" | ", errors));
-            if (!TryFreezeContent(timelines, out List<CharacterTimelineContentSnapshot> snapshots, out errors))
+            if (!TryFreezeContent(timelines, out List<CharacterTimelineContentSnapshot> snapshots,
+                    out string authoringRevision, out string contentRevision, out List<string> errors))
                 throw new InvalidOperationException(string.Join(" | ", errors));
             m_AuthoringTimelineContent = timelines.ToArray();
             InstallTimelineContent(snapshots, authoringRevision, contentRevision);
@@ -70,10 +70,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException("Timeline content snapshot is invalid.");
                 if (!m_TimelineContent.TryAdd(timeline.AuthoringId, timeline))
                     throw new InvalidOperationException($"Timeline content identity '{timeline.AuthoringId}' is duplicated.");
+                timeline.Init();
                 PrepareAnimationProducerIdentities(timeline);
             }
             AuthoringContentRevision = authoringRevision ?? string.Empty;
             m_DependencyResolver.InstallContent(m_TimelineContent.Values, m_NumericTarget);
+            for (int index = 0; index < snapshots.Count; index++)
+            {
+                CharacterTimelineContentSnapshot snapshot = snapshots[index];
+                TimelineInstalled(m_TimelineContent[snapshot.TimelineAuthoringId], snapshot.Content);
+            }
             ContentRevision = contentRevision ?? string.Empty;
             m_ContentGeneration = checked(m_ContentGeneration + 1);
         }
@@ -104,15 +110,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 error = "Timeline content export requires an initialized Timeline content store.";
                 return false;
             }
-            if (!TryGetCurrentContentRevisions(
+            if (!TryFreezeContent(
+                    m_AuthoringTimelineContent,
+                    out List<CharacterTimelineContentSnapshot> snapshots,
                     out string authoringRevision,
                     out string contentRevision,
                     out List<string> errors))
-            {
-                error = string.Join(" | ", errors);
-                return false;
-            }
-            if (!TryFreezeContent(m_AuthoringTimelineContent, out List<CharacterTimelineContentSnapshot> snapshots, out errors))
             {
                 error = string.Join(" | ", errors);
                 return false;
@@ -348,52 +351,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             out string contentRevision,
             out List<string> errors)
         {
-            return TryComputeContentRevisions(
+            return TryFreezeContent(
                 m_AuthoringTimelineContent,
+                out _,
                 out authoringRevision,
                 out contentRevision,
                 out errors);
         }
 
-        static bool TryFreezeContent(
+        bool TryFreezeContent(
             IReadOnlyList<TimelineAsset> timelines,
             out List<CharacterTimelineContentSnapshot> snapshots,
-            out List<string> errors)
-        {
-            snapshots = new List<CharacterTimelineContentSnapshot>();
-            errors = new List<string>();
-            if (timelines == null || timelines.Count == 0)
-            {
-                errors.Add("Timeline content list is empty.");
-                return false;
-            }
-            var identities = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < timelines.Count; i++)
-            {
-                TimelineAsset asset = timelines[i];
-                if (!asset || asset.Data == null)
-                {
-                    errors.Add($"Timeline content #{i} is missing.");
-                    continue;
-                }
-                if (!identities.Add(asset.Data.AuthoringId))
-                {
-                    errors.Add($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
-                    continue;
-                }
-                snapshots.Add(new CharacterTimelineContentSnapshot(asset.Data));
-            }
-            return errors.Count == 0;
-        }
-
-        bool TryComputeContentRevisions(
-            IReadOnlyList<TimelineAsset> timelines,
             out string authoringRevision,
             out string contentRevision,
             out List<string> errors)
         {
             authoringRevision = string.Empty;
             contentRevision = string.Empty;
+            snapshots = new List<CharacterTimelineContentSnapshot>();
             errors = new List<string>();
             if (timelines == null || timelines.Count == 0)
             {
@@ -417,7 +392,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     errors.Add($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
                     continue;
                 }
-                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(asset.Data, catalog, m_DependencyResolver);
+                TimelineData frozen = asset.Data.Clone();
+                frozen.Init();
+                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(frozen, catalog, m_DependencyResolver);
                 if (!discovery.IsValid)
                 {
                     for (int errorIndex = 0; errorIndex < discovery.Errors.Count; errorIndex++)
@@ -426,6 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 }
                 authoringParts.Add($"{asset.Data.AuthoringId}:{TimelineAuthoringFingerprint.Compute(asset.Data)}");
                 contentParts.Add($"{asset.Data.AuthoringId}:{discovery.Content.ContentHash}");
+                snapshots.Add(new CharacterTimelineContentSnapshot(frozen, discovery.Content));
             }
             if (errors.Count != 0)
                 return false;

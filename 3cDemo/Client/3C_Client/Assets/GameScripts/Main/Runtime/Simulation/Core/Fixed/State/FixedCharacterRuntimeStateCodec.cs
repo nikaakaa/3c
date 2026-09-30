@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation.Fixed
     internal static class FixedCharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 12;
+        const int Version = 13;
         const string HashIdentity = "fixed-character-runtime-state-hash/9";
         public const string CodecIdentity = "fixed-character-runtime-state/9";
 
@@ -155,8 +155,8 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(Version);
             writer.WriteString(CodecIdentity);
             SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
-            writer.WriteString(state.GameplayContentHash.ToString());
-            writer.WriteString(state.StateSchemaHash.ToString());
+            writer.WriteHash(state.GameplayContentHash.Value);
+            writer.WriteHash(state.StateSchemaHash);
             writer.WriteUInt64(state.LastCompletedTick);
             writer.WriteInt32(state.Abilities.Count);
             for (int i = 0; i < state.Abilities.Count; i++)
@@ -368,8 +368,8 @@ namespace ThirdPersonSimulation.Fixed
         static void WriteIdentity(CanonicalWriter writer, GameplayAbilityExecutionIdentity identity)
         {
             writer.WriteString(identity.AbilityId.Value);
-            writer.WriteString(identity.ContentHash.ToString());
-            writer.WriteString(identity.StateSchemaHash.ToString());
+            writer.WriteHash(identity.ContentHash);
+            writer.WriteHash(identity.StateSchemaHash);
             writer.WriteString(identity.OperationSetVersion.Value);
             SimulationNumericProfileCodec.Write(writer, identity.NumericProfile);
         }
@@ -801,12 +801,13 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteBlackboardWriteStamp(CanonicalWriter writer, BlackboardWriteStamp value)
         {
-            writer.WriteInt32(value.IsValid ? value.SourceOperation.Value : -1);
+            writer.WriteInt32(value.IsValid && value.SourceOperation.IsValid ? value.SourceOperation.Value : -1);
             writer.WriteUInt64(value.IsValid ? value.LogicTick : 0);
             writer.WriteUInt64(value.IsValid ? value.ActionInstanceId : 0);
             writer.WriteInt32(value.IsValid && value.TimelineOperation.IsValid ? value.TimelineOperation.Value : -1);
             writer.WriteInt32(value.IsValid && value.ClipOperation.IsValid ? value.ClipOperation.Value : -1);
             writer.WriteInt32(value.IsValid ? value.Cycle : 0);
+            writer.WriteUInt64(value.IsValid ? value.CommandSequence : 0);
         }
 
         static BlackboardWriteStamp ReadBlackboardWriteStamp(CanonicalReader reader)
@@ -817,15 +818,17 @@ namespace ThirdPersonSimulation.Fixed
             int timeline = reader.ReadInt32();
             int clip = reader.ReadInt32();
             int cycle = reader.ReadInt32();
-            if (source == -1 && tick == 0 && action == 0 && timeline == -1 && clip == -1 && cycle == 0)
+            ulong commandSequence = reader.ReadUInt64();
+            if (source == -1 && tick == 0 && action == 0 && timeline == -1 && clip == -1 && cycle == 0 && commandSequence == 0)
                 return default;
             return new BlackboardWriteStamp(
-                new OperationHandle(source),
+                source < 0 ? OperationHandle.Invalid : new OperationHandle(source),
                 tick,
                 action,
                 timeline < 0 ? OperationHandle.Invalid : new OperationHandle(timeline),
                 clip < 0 ? OperationHandle.Invalid : new OperationHandle(clip),
-                cycle);
+                cycle,
+                commandSequence);
         }
 
         static void WriteTarget(CanonicalWriter writer, SimulationActionTargetSnapshot target)

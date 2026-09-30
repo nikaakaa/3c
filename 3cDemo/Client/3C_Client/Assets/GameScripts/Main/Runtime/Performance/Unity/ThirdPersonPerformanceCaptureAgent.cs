@@ -510,6 +510,8 @@ namespace ThirdPersonPerformance.Runtime
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
             Profiler.logFile = profilerPath;
             Profiler.enableBinaryLog = true;
+            if (Environment.GetEnvironmentVariable("THIRDPERSON_PERFORMANCE_ALLOCATION_CALLSTACKS") == "1")
+                Profiler.enableAllocationCallstacks = true;
             Profiler.enabled = true;
             m_StartedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             m_CaptureStartFrame = Time.frameCount;
@@ -640,14 +642,15 @@ namespace ThirdPersonPerformance.Runtime
             m_CurrentStage = "finalizing";
             if (PerformanceInstrumentationSpanRuntime.Faulted)
                 throw new InvalidOperationException("Performance instrumentation Span capture faulted before finalization.");
-            PerformanceSpanRecord[] instrumentationSpans = m_InstrumentationMode == PerformanceInstrumentationMode.Disabled
-                ? Array.Empty<PerformanceSpanRecord>()
-                : PerformanceInstrumentationSpanRuntime.EndCapture();
             Profiler.enabled = false;
             Profiler.enableBinaryLog = false;
+            Profiler.enableAllocationCallstacks = false;
             Profiler.logFile = string.Empty;
             for (int i = 0; i < m_Recorders.Count; i++)
                 m_Recorders[i].Recorder.Stop();
+            PerformanceSpanRecord[] instrumentationSpans = m_InstrumentationMode == PerformanceInstrumentationMode.Disabled
+                ? Array.Empty<PerformanceSpanRecord>()
+                : PerformanceInstrumentationSpanRuntime.EndCapture();
             string instrumentationSpanFile = string.Empty;
             string instrumentationSpanHash = string.Empty;
             if (m_InstrumentationMode == PerformanceInstrumentationMode.Span)
@@ -935,6 +938,7 @@ namespace ThirdPersonPerformance.Runtime
         {
             Profiler.enabled = false;
             Profiler.enableBinaryLog = false;
+            Profiler.enableAllocationCallstacks = false;
             Profiler.logFile = string.Empty;
             PerformanceInstrumentationSpanRuntime.CancelCapture();
             DisposeRecorders();

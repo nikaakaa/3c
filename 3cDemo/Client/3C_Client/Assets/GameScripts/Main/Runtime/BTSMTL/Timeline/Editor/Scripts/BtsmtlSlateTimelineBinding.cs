@@ -720,21 +720,6 @@ namespace BTSMTL.Timeline.Editor
                 Select(null);
         }
 
-        public void ReplaceTimeline(TimelineData timeline)
-        {
-            m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-            m_Timeline.Init();
-            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
-            m_CurrentTime = Mathf.Clamp(m_CurrentTime, 0f, m_Timeline.Duration);
-            Rebuild();
-            RequestRepaint();
-        }
-
-        public void RefreshRuntimeTimeline()
-        {
-            RequestRepaint();
-        }
-
         bool ApplyImmediate(Action mutation, string undoName)
         {
             if (!IsSourceCurrent())

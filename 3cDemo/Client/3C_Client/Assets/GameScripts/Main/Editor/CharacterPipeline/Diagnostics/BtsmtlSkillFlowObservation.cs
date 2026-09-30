@@ -43,7 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         Action<BtsmtlSkillTimelineFlowNode> m_TimelineOpening;
         bool m_Dirty = true;
         bool m_Disposed;
-        ulong m_LatestLogicTick;
         RuntimeInstanceKey m_PulseInstance;
         double m_PulseUntil;
         double m_NextRepaintTime;
@@ -63,8 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (graph is not IBtsmtlSkillFlowGraph authoring || !request.IsValid ||
                 !request.Source.Equals(RuntimeSourceElementKey.Graph(authoring.AuthoringId)))
                 throw new ArgumentException("技能观察必须使用当前正式图及其作者版本。");
-            if (!Application.isPlaying || !instance.IsValid && (select == null || characterRuntimeId == Guid.Empty))
-                throw new InvalidOperationException("技能观察必须绑定Play中的明确执行实例。");
+            if (!instance.IsValid && (select == null || characterRuntimeId == Guid.Empty))
+                throw new InvalidOperationException("技能观察必须绑定正式诊断中的明确执行实例。");
             if (graph.editorObservation != null)
                 throw new InvalidOperationException("当前图已有观察绑定，请先释放原绑定。");
             m_Graph = graph;
@@ -85,7 +84,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             graph.editorObservation = this;
             m_Session.Changed += OnChanged;
             EditorApplication.update += Update;
-            EditorApplication.playModeStateChanged += OnPlayModeChanged;
         }
 
         public RuntimeInstanceKey Instance => m_Binding.SelectedInstance;
@@ -198,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (m_Disposed)
                 return;
-            if (m_Graph == null || !Application.isPlaying || GraphEditor.current == null || GraphEditor.currentGraph != m_Graph)
+            if (m_Graph == null || !m_Session.ViewModel.Attached || GraphEditor.current == null || GraphEditor.currentGraph != m_Graph)
             {
                 Dispose();
                 return;
@@ -240,7 +238,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ClearConnectionPulses();
                 m_PulseInstance = Instance;
             }
-            m_LatestLogicTick = view.LatestLogicTick;
             view.CopyGraphExecutionStates(m_GraphId, Instance, m_ExecutionStates);
             for (int i = 0; i < m_ExecutionStates.Count; i++)
             {
@@ -259,12 +256,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < m_ConnectionEvents.Count; i++)
             {
                 RuntimeDebugEventView item = m_ConnectionEvents[i];
+                ulong latestPosition = item.Event.Domain == RuntimeTraceDomain.Presentation
+                    ? view.LatestPresentationFrame : view.LatestLogicTick;
                 if (!item.Event.RuntimeInstance.Equals(Instance) ||
                     !string.Equals(item.Source.GraphAuthoringId, m_GraphId, StringComparison.Ordinal) ||
                     item.Source.Kind != RuntimeSourceElementKind.Edge ||
                     item.Event.Kind is not (RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.StateTransitionSelected) ||
-                    item.Event.Position > m_LatestLogicTick ||
-                    m_LatestLogicTick - item.Event.Position > 1 ||
+                    item.Event.Position > latestPosition ||
+                    latestPosition - item.Event.Position > 1 ||
                     !m_EdgeIds.Contains(item.Source.ElementAuthoringId))
                     continue;
                 string edgeId = item.Source.ElementAuthoringId;
@@ -312,12 +311,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_PulseUntil = 0d;
         }
 
-        void OnPlayModeChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.ExitingPlayMode)
-                Dispose();
-        }
-
         public void Dispose()
         {
             if (m_Disposed)
@@ -325,7 +318,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Disposed = true;
             m_Session.Changed -= OnChanged;
             EditorApplication.update -= Update;
-            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             m_Binding.Dispose(m_Session);
             if (m_Graph != null && ReferenceEquals(m_Graph.editorObservation, this))
                 m_Graph.editorObservation = null;

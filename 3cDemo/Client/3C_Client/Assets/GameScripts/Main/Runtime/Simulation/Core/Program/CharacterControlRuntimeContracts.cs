@@ -18,6 +18,13 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
     }
 
+    public interface ICommittedCharacterControlState
+    {
+        CharacterControlRuntimeState ControlState { get; }
+        bool IsAbilityActive(CharacterSkillId abilityId);
+        System.Collections.Generic.IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots { get; }
+    }
+
     public interface ICharacterControlModule
     {
         CharacterControlModuleContract Contract { get; }
@@ -151,10 +158,9 @@ namespace ThirdPersonSimulation
             string binding,
             SimulationInputValueId input,
             int continuousTicks,
-            int phase,
             ulong playbackGeneration)
         {
-            if (!source.IsCharacterControl || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0 || phase < 0)
+            if (!source.IsCharacterControl || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0)
                 throw new ArgumentException("Character control motion request is incomplete.");
             if (playbackGeneration == 0)
                 throw new ArgumentException("Character control motion request playback generation is invalid.", nameof(playbackGeneration));
@@ -165,7 +171,6 @@ namespace ThirdPersonSimulation
             Binding = SimulationIdentity.Require(binding, nameof(binding));
             Input = input;
             ContinuousTicks = continuousTicks;
-            Phase = phase;
             PlaybackGeneration = playbackGeneration;
         }
 
@@ -174,7 +179,6 @@ namespace ThirdPersonSimulation
         public string Binding { get; }
         public SimulationInputValueId Input { get; }
         public int ContinuousTicks { get; }
-        public int Phase { get; }
         public ulong PlaybackGeneration { get; }
     }
 

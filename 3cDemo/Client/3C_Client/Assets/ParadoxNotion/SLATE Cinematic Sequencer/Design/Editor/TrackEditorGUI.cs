@@ -21,7 +21,8 @@ namespace Slate
             bool showCurves,
             Action<bool> setActive,
             Action<bool> setLocked,
-            Action<bool> setShowCurves)
+            Action<bool> setShowCurves,
+            bool canEdit = true)
         {
             const float boxWidth = 30f;
             var iconBGRect = new Rect(0, 0, boxWidth, 32f).ExpandBy(-1);
@@ -63,6 +64,7 @@ namespace Slate
             GUI.DrawTexture(curveIconRect, Styles.curveIcon);
             GUI.color = Color.grey;
 
+            GUI.enabled = canEdit;
             if (!active)
             {
                 var hiddenRect = new Rect(0, 0, 16, 16);
@@ -417,7 +419,8 @@ namespace Slate
                 track.ShowCurves,
                  value => CutsceneEditorSurface.current?.EmbeddedTimeline?.SetTrackActive(track, value),
                 value => track.IsLocked = value,
-                value => track.ShowCurves = value);
+                value => track.ShowCurves = value,
+                !CutsceneEditorSurface.current.EmbeddedTimeline.IsReadOnly);
 
             if (!track.ShowCurves)
                 return;

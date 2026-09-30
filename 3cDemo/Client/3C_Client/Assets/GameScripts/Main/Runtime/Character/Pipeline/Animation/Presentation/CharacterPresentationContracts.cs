@@ -10,9 +10,10 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public interface ICharacterPresentationLookInput
+    public interface ICharacterPresentationInput
     {
         bool TryGetLatchedLook(string inputId, out Vector2 value, out CameraLookInputKind kind);
+        Vector2 ReadLatchedVector2(string inputId);
     }
 
     public enum CharacterPresentationBodyStreamUpdateKind : byte
@@ -837,6 +838,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CommittedMovementPlaybackClock movementClock);
         LocomotionPresentationFailureCode CaptureTrajectoryIntent(
             CharacterPresentationTrajectoryIntent intent);
+        void CaptureControlState(ICommittedCharacterControlState state);
         void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections);
         void Publish(CharacterPresentationCommand command);
         void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);

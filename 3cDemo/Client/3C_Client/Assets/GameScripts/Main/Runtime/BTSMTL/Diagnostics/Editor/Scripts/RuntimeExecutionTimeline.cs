@@ -14,7 +14,15 @@ namespace BTSMTL.Diagnostics.Editor
         Wait,
         Branch,
         Track,
-        Clip
+        Clip,
+        Loop
+    }
+
+    public enum RuntimeExecutionSpanState
+    {
+        Open,
+        Completed,
+        MissingStart
     }
 
     public readonly struct RuntimeExecutionSpan
@@ -26,7 +34,7 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeSourceElementHandle sourceHandle,
             RuntimeSourceElementKey source,
             bool hasSource,
-            bool completed)
+            RuntimeExecutionSpanState state)
         {
             Kind = kind;
             Start = start;
@@ -34,7 +42,7 @@ namespace BTSMTL.Diagnostics.Editor
             SourceHandle = sourceHandle;
             Source = source;
             HasSource = hasSource;
-            Completed = completed;
+            State = state;
         }
 
         public RuntimeExecutionSpanKind Kind { get; }
@@ -43,7 +51,9 @@ namespace BTSMTL.Diagnostics.Editor
         public RuntimeSourceElementHandle SourceHandle { get; }
         public RuntimeSourceElementKey Source { get; }
         public bool HasSource { get; }
-        public bool Completed { get; }
+        public RuntimeExecutionSpanState State { get; }
+        public bool Completed => State == RuntimeExecutionSpanState.Completed;
+        public bool IsOpen => State == RuntimeExecutionSpanState.Open;
         public RuntimeInstanceKey Instance => Start.RuntimeInstance;
         public Guid ExecutionBranchId => Start.ExecutionBranchId;
         public RuntimeTraceDomain Domain => Start.Domain;
@@ -61,11 +71,13 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong GraphInvocationGeneration => Start.Payload.GraphInvocationGeneration;
         public ulong ParentInvocationGeneration => Start.Payload.ParentInvocationGeneration;
         public int Cycle => Math.Max(Start.Payload.Cycle, End.Payload.Cycle);
+        public int LoopIteration => Start.Payload.LoopIteration;
     }
 
     public sealed class RuntimeExecutionTimeline
     {
-        readonly RuntimeExecutionSpan[] m_Spans;
+        readonly IReadOnlyList<RuntimeExecutionSpan> m_Spans;
+        readonly IReadOnlyDictionary<(RuntimeTraceDomain, Guid, ulong), ulong> m_ClockPositions;
 
         internal RuntimeExecutionTimeline(
             Guid captureId,
@@ -75,7 +87,10 @@ namespace BTSMTL.Diagnostics.Editor
             long evictedEvents,
             bool complete,
             int unmappedEventCount,
-            RuntimeExecutionSpan[] spans)
+            ulong latestLogicPosition,
+            ulong latestPresentationPosition,
+            IReadOnlyDictionary<(RuntimeTraceDomain, Guid, ulong), ulong> clockPositions,
+            IReadOnlyList<RuntimeExecutionSpan> spans)
         {
             CaptureId = captureId;
             Channels = channels;
@@ -84,17 +99,43 @@ namespace BTSMTL.Diagnostics.Editor
             EvictedEvents = evictedEvents;
             IsComplete = complete;
             UnmappedEventCount = unmappedEventCount;
+            LatestLogicPosition = latestLogicPosition;
+            LatestPresentationPosition = latestPresentationPosition;
+            m_ClockPositions = clockPositions;
             m_Spans = spans;
         }
 
         public Guid CaptureId { get; }
-        public RuntimeTraceChannel Channels { get; }
-        public RuntimeDiagnosticsCaptureDetail Detail { get; }
-        public long Version { get; }
-        public long EvictedEvents { get; }
-        public bool IsComplete { get; }
-        public int UnmappedEventCount { get; }
+        public RuntimeTraceChannel Channels { get; private set; }
+        public RuntimeDiagnosticsCaptureDetail Detail { get; private set; }
+        public long Version { get; private set; }
+        public long EvictedEvents { get; private set; }
+        public bool IsComplete { get; private set; }
+        public int UnmappedEventCount { get; private set; }
+        public ulong LatestLogicPosition { get; private set; }
+        public ulong LatestPresentationPosition { get; private set; }
         public IReadOnlyList<RuntimeExecutionSpan> Spans => m_Spans;
+
+        public ulong GetObservedEndPosition(RuntimeExecutionSpan span)
+        {
+            if (!span.IsOpen)
+                return span.EndPosition;
+            RuntimeTraceDomain domain = span.Domain == RuntimeTraceDomain.Lifecycle ? RuntimeTraceDomain.Logic : span.Domain;
+            return Math.Max(span.EndPosition, m_ClockPositions[(domain, span.ExecutionBranchId, span.RuntimeEpoch)]);
+        }
+
+        internal void Update(RuntimeCaptureRead capture, bool complete, int unmappedEventCount,
+            ulong latestLogicPosition, ulong latestPresentationPosition)
+        {
+            Channels = capture.Channels;
+            Detail = capture.Detail;
+            Version = capture.Version;
+            EvictedEvents = capture.EvictedEvents;
+            IsComplete = complete;
+            UnmappedEventCount = unmappedEventCount;
+            LatestLogicPosition = latestLogicPosition;
+            LatestPresentationPosition = latestPresentationPosition;
+        }
     }
 
     public readonly struct RuntimeExecutionSourceClock : IEquatable<RuntimeExecutionSourceClock>
@@ -400,15 +441,13 @@ namespace BTSMTL.Diagnostics.Editor
     {
         static readonly Comparison<RuntimeTraceEvent> CompareEventsComparer = CompareEvents;
         static readonly Comparison<RuntimeTraceEvent> CompareGroupedEventsComparer = CompareGroupedEvents;
-        static readonly Comparison<RuntimeExecutionSpan> CompareSpansComparer = CompareSpans;
         static readonly SelectionScratch Selection = new();
-        static readonly Dictionary<SpanKey, PendingSpan> Open = new();
+        static readonly SpanAccumulator FrozenSpans = new();
         static readonly HashSet<CheckpointKey> CheckpointKeys = new();
         static readonly HashSet<ulong> BoundarySequences = new();
         static readonly HashSet<Guid> BoundaryBranches = new();
         static readonly List<EventGroup<TickKey>> HistoryGroups = new();
         static readonly List<EventGroup<PresentationFrameKey>> PresentationGroups = new();
-        static readonly List<RuntimeExecutionSpan> SpanResults = new();
         static readonly List<RuntimeExecutionTickRecord> TickResults = new();
         static readonly List<RuntimeExecutionCheckpoint> CheckpointResults = new();
         static readonly List<RuntimeExecutionPresentationFrame> PresentationFrameResults = new();
@@ -417,9 +456,10 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeCaptureSnapshot capture,
             RuntimeDebugSourceMapSnapshot sourceMap,
             int historyOffset = 0,
-            RuntimeInstanceKey instance = default)
+            RuntimeInstanceKey instance = default,
+            ulong throughSequence = ulong.MaxValue)
         {
-            return BuildCore(capture, sourceMap, null, historyOffset, instance);
+            return BuildCore(capture, sourceMap, null, historyOffset, instance, throughSequence);
         }
 
         internal static RuntimeExecutionTimeline Build(
@@ -427,9 +467,10 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugSourceMapSnapshot sourceMap,
             IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset = 0,
-            RuntimeInstanceKey instance = default)
+            RuntimeInstanceKey instance = default,
+            ulong throughSequence = ulong.MaxValue)
         {
-            return BuildCore(capture, sourceMap, sourceMaps, historyOffset, instance);
+            return BuildCore(capture, sourceMap, sourceMaps, historyOffset, instance, throughSequence);
         }
 
         static RuntimeExecutionTimeline BuildCore(
@@ -437,7 +478,8 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugSourceMapSnapshot sourceMap,
             IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset,
-            RuntimeInstanceKey instance)
+            RuntimeInstanceKey instance,
+            ulong throughSequence)
         {
             if (capture == null)
                 throw new ArgumentNullException(nameof(capture));
@@ -446,18 +488,62 @@ namespace BTSMTL.Diagnostics.Editor
             if (historyOffset < 0)
                 throw new ArgumentOutOfRangeException(nameof(historyOffset));
 
-            ReadOnlySpan<RuntimeTraceEvent> events = capture.GetEvents(historyOffset);
+            ReadOnlySpan<RuntimeTraceEvent> events = capture.GetEvents(historyOffset, throughSequence);
             List<RuntimeTraceEvent> selected = SelectEvents(events, instance);
             selected.Sort(CompareEventsComparer);
 
-            Dictionary<SpanKey, PendingSpan> open = Open;
-            open.Clear();
-            List<RuntimeExecutionSpan> spans = SpanResults;
-            spans.Clear();
-            int unmappedEventCount = 0;
+            FrozenSpans.Reset();
             for (int i = 0; i < selected.Count; i++)
+                FrozenSpans.Append(selected[i], sourceMap, sourceMaps);
+            return new RuntimeExecutionTimeline(
+                capture.CaptureId, capture.Channels, capture.Detail, capture.Version, capture.EvictedEvents,
+                FrozenSpans.IsComplete(capture.EvictedEvents), FrozenSpans.UnmappedEventCount,
+                FrozenSpans.LatestLogicPosition, FrozenSpans.LatestPresentationPosition,
+                new Dictionary<(RuntimeTraceDomain, Guid, ulong), ulong>(FrozenSpans.ClockPositions), FrozenSpans.Spans.ToArray());
+        }
+
+        internal sealed class SpanAccumulator
+        {
+            readonly Dictionary<SpanKey, int> m_Open;
+            int m_MissingStartCount;
+            internal readonly List<RuntimeExecutionSpan> Spans;
+            internal readonly Dictionary<(RuntimeTraceDomain, Guid, ulong), ulong> ClockPositions;
+            internal int UnmappedEventCount { get; private set; }
+            internal ulong LatestLogicPosition { get; private set; }
+            internal ulong LatestPresentationPosition { get; private set; }
+
+            internal SpanAccumulator(int capacity = 0)
             {
-                RuntimeTraceEvent value = selected[i];
+                m_Open = new Dictionary<SpanKey, int>(capacity);
+                Spans = new List<RuntimeExecutionSpan>(capacity);
+                ClockPositions = new Dictionary<(RuntimeTraceDomain, Guid, ulong), ulong>(capacity);
+            }
+
+            internal void Reset()
+            {
+                m_Open.Clear();
+                Spans.Clear();
+                ClockPositions.Clear();
+                UnmappedEventCount = 0;
+                m_MissingStartCount = 0;
+                LatestLogicPosition = 0;
+                LatestPresentationPosition = 0;
+            }
+
+            internal bool IsComplete(long evictedEvents) =>
+                evictedEvents == 0 && Spans.Count != 0 && UnmappedEventCount == 0 && m_MissingStartCount == 0 && m_Open.Count == 0;
+
+            internal void Append(RuntimeTraceEvent value, RuntimeDebugSourceMapSnapshot sourceMap,
+                IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
+            {
+                RuntimeTraceDomain clockDomain = value.Domain == RuntimeTraceDomain.Lifecycle ? RuntimeTraceDomain.Logic : value.Domain;
+                ClockPositions[(clockDomain, value.ExecutionBranchId, value.RuntimeEpoch)] = value.Position;
+                if (value.Domain == RuntimeTraceDomain.Presentation)
+                    LatestPresentationPosition = value.Position;
+                else
+                    LatestLogicPosition = value.Position;
+                if (value.Kind == RuntimeTraceEventKind.BlackboardSnapshot)
+                    return;
                 RuntimeSourceElementHandle handle = value.Source;
                 RuntimeSourceElementKey source = default;
                 RuntimeDebugSourceMapSnapshot eventSourceMap = null;
@@ -468,123 +554,104 @@ namespace BTSMTL.Diagnostics.Editor
                     eventSourceMap = sourceMap;
                 bool hasSource = hasRevision && handle.IsValid && eventSourceMap.TryResolve(handle, out source, out _);
                 if (handle.IsValid && !hasSource)
-                    unmappedEventCount++;
+                    UnmappedEventCount++;
                 RuntimeExecutionSpanKind kind = ResolveKind(value.Kind, source, hasSource);
-                SpanKey key = new SpanKey(
-                    kind,
-                    handle,
-                    value.RuntimeInstance,
-                    value.ExecutionBranchId,
-                    value.RuntimeEpoch,
-                    value.ContentRevision);
+                SpanKey key = Key(kind, value);
                 if (value.Kind == RuntimeTraceEventKind.NodeWaiting)
                 {
-                    if (open.TryGetValue(key, out PendingSpan waiting))
-                    {
-                        waiting.Last = value;
-                        open[key] = waiting;
-                    }
+                    if (m_Open.TryGetValue(key, out int waiting))
+                        UpdateSpan(waiting, value, false);
                     else
-                    {
-                        open.Add(key, new PendingSpan(kind, value, handle, source, hasSource));
-                    }
-
-                    SpanKey nodeKey = new SpanKey(
-                        RuntimeExecutionSpanKind.Node,
-                        handle,
-                        value.RuntimeInstance,
-                        value.ExecutionBranchId,
-                        value.RuntimeEpoch,
-                        value.ContentRevision);
-                    if (open.TryGetValue(nodeKey, out PendingSpan node))
-                    {
-                        node.Last = value;
-                        open[nodeKey] = node;
-                    }
-                    continue;
+                        OpenSpan(key, kind, value, source, hasSource);
+                    if (m_Open.TryGetValue(Key(RuntimeExecutionSpanKind.Node, value), out int node))
+                        UpdateSpan(node, value, false);
+                    return;
                 }
-                SpanKey waitKey = new SpanKey(
-                    RuntimeExecutionSpanKind.Wait,
-                    handle,
-                    value.RuntimeInstance,
-                    value.ExecutionBranchId,
-                    value.RuntimeEpoch,
-                    value.ContentRevision);
-                if (IsWaitEnd(value.Kind) && open.TryGetValue(waitKey, out PendingSpan activeWait))
+                if (value.Payload.LoopIteration > 0 && value.Kind is RuntimeTraceEventKind.NodeCompleted or
+                    RuntimeTraceEventKind.NodeStopped or RuntimeTraceEventKind.NodeForceStopped)
                 {
-                    spans.Add(activeWait.Close(value));
-                    open.Remove(waitKey);
+                    SpanKey loopKey = Key(RuntimeExecutionSpanKind.Loop, value);
+                    if (m_Open.TryGetValue(loopKey, out int activeLoop))
+                    {
+                        UpdateSpan(activeLoop, value, true);
+                        m_Open.Remove(loopKey);
+                    }
+                }
+                SpanKey waitKey = Key(RuntimeExecutionSpanKind.Wait, value);
+                if (IsWaitEnd(value.Kind) && m_Open.TryGetValue(waitKey, out int activeWait))
+                {
+                    UpdateSpan(activeWait, value, true);
+                    m_Open.Remove(waitKey);
                 }
                 if (IsPoint(value.Kind, kind))
                 {
-                    if (open.TryGetValue(key, out PendingSpan activePoint))
-                    {
-                        activePoint.Last = value;
-                        open[key] = activePoint;
-                    }
-                    spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, true));
-                    continue;
+                    if (m_Open.TryGetValue(key, out int activePoint))
+                        UpdateSpan(activePoint, value, false);
+                    Spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, RuntimeExecutionSpanState.Completed));
+                    return;
                 }
-
                 if (IsStart(value.Kind, kind))
                 {
-                    if (open.TryGetValue(key, out PendingSpan previous))
+                    if (m_Open.TryGetValue(key, out int previous))
                     {
+                        RuntimeExecutionSpan previousSpan = Spans[previous];
                         if (kind == RuntimeExecutionSpanKind.Timeline &&
-                            previous.Start.Kind == RuntimeTraceEventKind.TimelineRequested &&
+                            previousSpan.Start.Kind == RuntimeTraceEventKind.TimelineRequested &&
                             value.Kind == RuntimeTraceEventKind.TimelineStarted)
                         {
-                            previous.Last = value;
-                            open[key] = previous;
-                            continue;
+                            UpdateSpan(previous, value, false);
+                            return;
                         }
-                        spans.Add(previous.Close(previous.Last));
-                        open.Remove(key);
+                        UpdateSpan(previous, previousSpan.End, true);
+                        m_Open.Remove(key);
                     }
-                    open.Add(key, new PendingSpan(kind, value, handle, source, hasSource));
-                    continue;
+                    OpenSpan(key, kind, value, source, hasSource);
+                    return;
                 }
-
-                if (IsEnd(value.Kind, kind) && open.TryGetValue(key, out PendingSpan pending))
+                if (m_Open.TryGetValue(key, out int active))
                 {
-                    spans.Add(pending.Close(value));
-                    open.Remove(key);
-                    continue;
+                    bool completed = IsEnd(value.Kind, kind);
+                    UpdateSpan(active, value, completed);
+                    if (completed)
+                        m_Open.Remove(key);
                 }
-
-                if (open.TryGetValue(key, out PendingSpan active))
-                    active.Last = value;
                 else
-                    spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, false));
+                {
+                    m_MissingStartCount++;
+                    Spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, RuntimeExecutionSpanState.MissingStart));
+                }
             }
 
-            foreach (PendingSpan pending in open.Values)
-                spans.Add(pending.Close(pending.Last, false));
+            static SpanKey Key(RuntimeExecutionSpanKind kind, RuntimeTraceEvent value) =>
+                new SpanKey(kind, value.Source, value.RuntimeInstance, value.ExecutionBranchId,
+                    value.RuntimeEpoch, value.ContentRevision, value.Domain,
+                    kind is RuntimeExecutionSpanKind.Node or RuntimeExecutionSpanKind.Wait or RuntimeExecutionSpanKind.Loop
+                        ? value.Payload.ActivationGeneration : 0,
+                    kind == RuntimeExecutionSpanKind.Loop ? value.Payload.LoopIteration : 0);
 
-            spans.Sort(CompareSpansComparer);
-            bool complete = capture.EvictedEvents == 0 &&
-                            selected.Count != 0 &&
-                            unmappedEventCount == 0 &&
-                            open.Count == 0;
-            RuntimeExecutionTimeline timeline = new(
-                capture.CaptureId,
-                capture.Channels,
-                capture.Detail,
-                capture.Version,
-                capture.EvictedEvents,
-                complete,
-                unmappedEventCount,
-                spans.ToArray());
-            spans.Clear();
-            return timeline;
+            void OpenSpan(SpanKey key, RuntimeExecutionSpanKind kind, RuntimeTraceEvent value,
+                RuntimeSourceElementKey source, bool hasSource)
+            {
+                m_Open.Add(key, Spans.Count);
+                Spans.Add(new RuntimeExecutionSpan(kind, value, value, value.Source, source, hasSource, RuntimeExecutionSpanState.Open));
+            }
+
+            void UpdateSpan(int index, RuntimeTraceEvent end, bool completed)
+            {
+                RuntimeExecutionSpan span = Spans[index];
+                Spans[index] = new RuntimeExecutionSpan(span.Kind, span.Start, end,
+                    span.SourceHandle, span.Source, span.HasSource,
+                    completed ? RuntimeExecutionSpanState.Completed : RuntimeExecutionSpanState.Open);
+            }
         }
 
         internal static RuntimeExecutionHistory BuildHistory(
             RuntimeCaptureSnapshot capture,
             int historyOffset = 0,
-            RuntimeInstanceKey instance = default)
+            RuntimeInstanceKey instance = default,
+            ulong throughSequence = ulong.MaxValue)
         {
-            return BuildHistory(capture, null, null, historyOffset, instance);
+            return BuildHistory(capture, null, null, historyOffset, instance, throughSequence);
         }
 
         internal static RuntimeExecutionHistory BuildHistory(
@@ -592,14 +659,15 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugSourceMapSnapshot sourceMap,
             IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset = 0,
-            RuntimeInstanceKey instance = default)
+            RuntimeInstanceKey instance = default,
+            ulong throughSequence = ulong.MaxValue)
         {
             if (capture == null)
                 throw new ArgumentNullException(nameof(capture));
             if (historyOffset < 0)
                 throw new ArgumentOutOfRangeException(nameof(historyOffset));
 
-            ReadOnlySpan<RuntimeTraceEvent> allEvents = capture.GetEvents(historyOffset);
+            ReadOnlySpan<RuntimeTraceEvent> allEvents = capture.GetEvents(historyOffset, throughSequence);
             List<RuntimeTraceEvent> selectedEvents = SelectEvents(allEvents, instance);
             if (instance.IsValid && selectedEvents.Count > 0)
                 AddSessionBoundaryEvents(
@@ -1055,8 +1123,7 @@ namespace BTSMTL.Diagnostics.Editor
 
         static int CompareEvents(RuntimeTraceEvent left, RuntimeTraceEvent right)
         {
-            int position = left.Position.CompareTo(right.Position);
-            return position != 0 ? position : left.Sequence.CompareTo(right.Sequence);
+            return left.Sequence.CompareTo(right.Sequence);
         }
 
         static int CompareGroupedEvents(RuntimeTraceEvent left, RuntimeTraceEvent right)
@@ -1066,15 +1133,6 @@ namespace BTSMTL.Diagnostics.Editor
                 return position;
             int branch = left.ExecutionBranchId.CompareTo(right.ExecutionBranchId);
             return branch != 0 ? branch : left.Sequence.CompareTo(right.Sequence);
-        }
-
-        static int CompareSpans(RuntimeExecutionSpan left, RuntimeExecutionSpan right)
-        {
-            int position = left.StartPosition.CompareTo(right.StartPosition);
-            if (position != 0)
-                return position;
-            int end = left.EndPosition.CompareTo(right.EndPosition);
-            return end != 0 ? end : left.StartSequence.CompareTo(right.StartSequence);
         }
 
         readonly struct TickKey : IEquatable<TickKey>, IComparable<TickKey>
@@ -1184,6 +1242,8 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeSourceElementKey source,
             bool hasSource)
         {
+            if (eventKind is RuntimeTraceEventKind.LoopIterationEntered or RuntimeTraceEventKind.LoopIterationCompleted)
+                return RuntimeExecutionSpanKind.Loop;
             if (eventKind is RuntimeTraceEventKind.TimelineRequested or
                 RuntimeTraceEventKind.TimelineStarted or
                 RuntimeTraceEventKind.TimelineLogicTime or
@@ -1233,6 +1293,7 @@ namespace BTSMTL.Diagnostics.Editor
         {
             return kind switch
             {
+                RuntimeExecutionSpanKind.Loop => eventKind == RuntimeTraceEventKind.LoopIterationEntered,
                 RuntimeExecutionSpanKind.Graph => eventKind == RuntimeTraceEventKind.GraphCreated,
                 RuntimeExecutionSpanKind.Node => eventKind == RuntimeTraceEventKind.NodeEntered,
                 RuntimeExecutionSpanKind.Wait => eventKind == RuntimeTraceEventKind.NodeWaiting,
@@ -1259,6 +1320,7 @@ namespace BTSMTL.Diagnostics.Editor
         {
             return kind switch
             {
+                RuntimeExecutionSpanKind.Loop => eventKind == RuntimeTraceEventKind.LoopIterationCompleted,
                 RuntimeExecutionSpanKind.Graph => eventKind == RuntimeTraceEventKind.GraphDestroyed,
                 RuntimeExecutionSpanKind.Node => eventKind is RuntimeTraceEventKind.NodeCompleted or RuntimeTraceEventKind.NodeStopped or RuntimeTraceEventKind.NodeForceStopped,
                 RuntimeExecutionSpanKind.State => eventKind == RuntimeTraceEventKind.StateScopeExited,
@@ -1276,9 +1338,15 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeInstanceKey instance,
                 Guid executionBranchId,
                 ulong runtimeEpoch,
-                RuntimeContentRevision contentRevision)
+                RuntimeContentRevision contentRevision,
+                RuntimeTraceDomain domain,
+                ulong activationGeneration,
+                int loopIteration)
             {
                 Kind = kind;
+                ActivationGeneration = activationGeneration;
+                LoopIteration = loopIteration;
+                Domain = domain == RuntimeTraceDomain.Lifecycle ? RuntimeTraceDomain.Logic : domain;
                 Source = source;
                 Instance = instance;
                 ExecutionBranchId = executionBranchId;
@@ -1287,6 +1355,9 @@ namespace BTSMTL.Diagnostics.Editor
             }
 
             readonly RuntimeExecutionSpanKind Kind;
+            readonly ulong ActivationGeneration;
+            readonly int LoopIteration;
+            readonly RuntimeTraceDomain Domain;
             readonly RuntimeSourceElementHandle Source;
             readonly RuntimeInstanceKey Instance;
             readonly Guid ExecutionBranchId;
@@ -1294,41 +1365,22 @@ namespace BTSMTL.Diagnostics.Editor
             readonly RuntimeContentRevision ContentRevision;
 
             public bool Equals(SpanKey other) =>
-                Kind == other.Kind && Source.Equals(other.Source) && Instance.Equals(other.Instance) &&
+                Kind == other.Kind && ActivationGeneration == other.ActivationGeneration && LoopIteration == other.LoopIteration &&
+                Domain == other.Domain && Source.Equals(other.Source) && Instance.Equals(other.Instance) &&
                 ExecutionBranchId == other.ExecutionBranchId &&
                 RuntimeEpoch == other.RuntimeEpoch &&
                 ContentRevision.Equals(other.ContentRevision);
             public override bool Equals(object obj) => obj is SpanKey other && Equals(other);
             public override int GetHashCode()
             {
-                int hash = HashCode.Combine((int)Kind, Source, Instance, ExecutionBranchId);
+                int hash = HashCode.Combine((int)Kind, (int)Domain, Source, Instance, ExecutionBranchId);
                 hash = hash * 397 + RuntimeEpoch.GetHashCode();
                 hash = hash * 397 + ContentRevision.GetHashCode();
+                hash = hash * 397 + ActivationGeneration.GetHashCode();
+                hash = hash * 397 + LoopIteration;
                 return hash;
             }
         }
 
-        struct PendingSpan
-        {
-            public PendingSpan(RuntimeExecutionSpanKind kind, RuntimeTraceEvent start, RuntimeSourceElementHandle handle, RuntimeSourceElementKey source, bool hasSource)
-            {
-                Kind = kind;
-                Start = start;
-                Last = start;
-                Handle = handle;
-                Source = source;
-                HasSource = hasSource;
-            }
-
-            readonly RuntimeExecutionSpanKind Kind;
-            public readonly RuntimeTraceEvent Start;
-            readonly RuntimeSourceElementHandle Handle;
-            readonly RuntimeSourceElementKey Source;
-            readonly bool HasSource;
-            public RuntimeTraceEvent Last;
-
-            public RuntimeExecutionSpan Close(RuntimeTraceEvent end, bool completed = true) =>
-                new RuntimeExecutionSpan(Kind, Start, end, Handle, Source, HasSource, completed);
-        }
     }
 }

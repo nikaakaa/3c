@@ -20,6 +20,7 @@ namespace ThirdPersonSimulation
         OperationStopContext ReadStopContext(OperationExecutionDescriptor operation);
         void WriteStopContext(OperationExecutionDescriptor operation, OperationStopContext context);
         void ClearStopContext(OperationExecutionDescriptor operation);
+        void EmitLoopTrace(OperationExecutionDescriptor operation, string code, string detail);
     }
 
     internal sealed class OperationCompositeRuntime<TTarget>
@@ -37,7 +38,16 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
             if (children.Count != 1 || !EvaluateCondition(children[0]))
                 return OperationExecutionResult.Failure;
+            int iterationSlot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
+            int iteration = m_Host.ReadInt32(iterationSlot);
+            if (iteration == 0 || !m_Host.IsActive(children[0].Target))
+            {
+                m_Host.WriteInt32(iterationSlot, checked(iteration + 1));
+                m_Host.EmitLoopTrace(operation, "loop_iteration_enter", string.Empty);
+            }
             OperationExecutionResult child = m_Host.TickEdge(children[0]);
+            if (child != OperationExecutionResult.Running)
+                m_Host.EmitLoopTrace(operation, "loop_iteration_complete", OperationTraceText.Result(child));
             if (operation.Integer0 == 1 && child == OperationExecutionResult.Success)
                 return OperationExecutionResult.Success;
             if (operation.Integer0 == 2 && child == OperationExecutionResult.Failure)

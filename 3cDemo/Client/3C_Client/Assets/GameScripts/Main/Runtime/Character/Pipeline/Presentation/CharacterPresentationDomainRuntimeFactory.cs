@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform followAnchor,
             Transform aimAnchor,
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
-            ICharacterPresentationLookInput lookInput,
+            ICharacterPresentationInput lookInput,
             string lookInputId,
             CharacterCameraProfile cameraProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,

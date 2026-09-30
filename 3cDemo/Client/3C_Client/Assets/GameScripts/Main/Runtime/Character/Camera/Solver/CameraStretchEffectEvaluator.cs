@@ -33,16 +33,9 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState elevationOwner = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (elevationOwner == null)
-            {
-                Reset();
-                return plan;
-            }
             StretchContribution baseContribution = default;
             StretchContribution additiveContribution = default;
             Vector3 euler = plan.Rotation.eulerAngles;
-            float pitch = NormalizeAngle(euler.x);
             for (int i = 0; i < active.Count; i++)
             {
                 CameraEffectRuntimeState state = active[i];
@@ -76,15 +69,13 @@ namespace ThirdPersonCamera
                     additiveContribution.Select(radiusOffset, sample.RadiusEnvelope, rawOffset, offset, rollOffset);
                 else
                     baseContribution.Select(radiusOffset, sample.RadiusEnvelope, rawOffset, offset, rollOffset);
-                if (state == elevationOwner || payload.PlayStackingType == CameraEffectStackingType.Add)
-                    pitch = ResolvePitch(pitch, payload, envelope);
             }
             m_BaseContribution = baseContribution;
             m_AdditiveContribution = additiveContribution;
             float crossOffset = (1f - 1f / plan.CameraLocateRatio)
                 * baseContribution.RadiusEnvelope * additiveContribution.RadiusEnvelope;
             Quaternion rotation = Quaternion.Euler(
-                pitch, euler.y, euler.z + baseContribution.RollOffset + additiveContribution.RollOffset);
+                euler.x, euler.y, euler.z + baseContribution.RollOffset + additiveContribution.RollOffset);
             return plan.WithWorldBasicData(
                 plan.WorldBasicData
                     .WithPivotLocation(plan.PivotLocation + baseContribution.Offset + additiveContribution.Offset)
@@ -146,24 +137,6 @@ namespace ThirdPersonCamera
             return target;
         }
 
-        static float ResolvePitch(float pitch, CameraStretchPayload payload, float envelope)
-        {
-            bool useEndAngle = payload.IsAppliedEndElevationAngle && envelope > 0.5f;
-            float angleMin = useEndAngle ? payload.EndElevationAngleMin : payload.ElevationAngleMin;
-            float angleMax = useEndAngle ? payload.EndElevationAngleMax : payload.ElevationAngleMax;
-            bool useAbsoluteAngle = useEndAngle
-                ? payload.IsEndElevationAngleAbsolute
-                : payload.IsElevationAngleAbsolute;
-            if (payload.IsAppliedElevationRatio)
-            {
-                float targetPitch = Mathf.LerpUnclamped(angleMin, angleMax, 0.5f);
-                pitch = useAbsoluteAngle
-                    ? Mathf.LerpUnclamped(pitch, targetPitch, envelope)
-                    : pitch + targetPitch * envelope;
-            }
-            return pitch;
-        }
-
         struct StretchContribution
         {
             public float Envelope;
@@ -218,8 +191,6 @@ namespace ThirdPersonCamera
                         $"Camera Stretch '{payload.StretchId}' has no supported offset space '{payload.CamOffsetSpace}'.");
             }
         }
-
-        static float NormalizeAngle(float angle) => Mathf.Repeat(angle + 180f, 360f) - 180f;
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
         {

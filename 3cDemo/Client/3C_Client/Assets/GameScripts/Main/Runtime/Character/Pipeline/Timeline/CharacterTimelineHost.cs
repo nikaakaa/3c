@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal TimelinePlaybackHandle Handle;
             internal ulong Generation;
             internal TimelineData Timeline;
+            internal IDebugSourceMap SourceMap;
             internal string SourceName;
             internal CharacterTimelinePlaybackSourceKind SourceKind;
             internal TimelinePlaybackActionContext ActionContext;
@@ -36,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal bool PresentationReleased;
             internal bool CreatedDiagnosticSnapshot;
             internal CharacterTimelinePlaybackTrace Trace => new CharacterTimelinePlaybackTrace(
-                Handle, Timeline, RuntimeInstance, Provenance, ActionInstanceId);
+                Handle, Timeline, SourceMap, RuntimeInstance, Provenance, ActionInstanceId);
         }
 
         TimelineRuntimeCompositionHost m_Host;
@@ -60,11 +61,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public CharacterTimelineHost(string sourceName)
         {
             Content = new CharacterTimelineContentStore(m_DependencyResolver);
+            Content.TimelineInstalled += InstallTimelineContent;
             PresentationGraphs = new CharacterTimelinePresentationGraphRuntime(m_DependencyResolver);
             m_SourceName = string.IsNullOrWhiteSpace(sourceName)
                 ? "character-timeline"
                 : sourceName.Trim();
         }
+
+        void InstallTimelineContent(TimelineData timeline, TimelineContentUnit content) =>
+            m_Host.InstallContent(timeline, content);
 
         public void PushTreeClipInvoker(ThirdPersonSimulation.IAbilityTreeClipInvoker invoker)
         {
@@ -104,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_Diagnostics != null && !ReferenceEquals(m_Diagnostics, diagnostics))
                 throw new InvalidOperationException("CharacterTimelineHost already belongs to another RuntimeDiagnosticsContext.");
             m_Diagnostics = diagnostics;
+            PresentationGraphs.AttachRuntimeDiagnostics(diagnostics);
         }
 
         internal void Initialize(TimelineRuntimeNumericTarget numericTarget, int tickRate)
@@ -115,7 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_NumericTarget = numericTarget;
             m_TickRate = tickRate;
 
-            TimelineContractCatalog contractCatalog = TimelineTreeContractComposition.Create();
             var callBindingSource = new TimelineRuntimeCallBindingSource(
                 m_SourceName, "character-timeline", default);
             var domainResolver = new CharacterTimelineDomainBindingResolver(
@@ -124,7 +129,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var markerService = new CharacterTimelineMarkerService(this);
 
             m_Host = new TimelineRuntimeCompositionHost(
-                contractCatalog,
                 m_NumericTarget,
                 callBindingSource,
                 domainResolver,
@@ -156,22 +160,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle = TimelinePlaybackHandle.Invalid;
                 return false;
             }
-            TimelineData playbackTimeline = timeline?.Clone();
             if (!m_Host.RequestTimelinePlayback(
-                playbackTimeline, sourceId, sourceName, actionContext, playbackMode,
+                timeline, sourceId, sourceName, actionContext, playbackMode,
                 out handle))
                 return false;
             var runtimeHandle = new TimelineRuntimePlaybackHandle(handle.Value);
             bool accepted = false;
             try
             {
-                if (!m_Host.Service.TryGetDescriptor(handle, out TimelineRuntimePlaybackDescriptor descriptor))
-                    throw new InvalidOperationException("Started Timeline playback has no descriptor.");
+                if (!m_Host.Service.TryGetPlayback(runtimeHandle, out TimelineRuntimePlayback playback))
+                    throw new InvalidOperationException("Started Timeline playback is not registered.");
                 var active = new ActivePlayback
                 {
                     Handle = handle,
-                    Generation = descriptor.Generation,
-                    Timeline = playbackTimeline,
+                    Generation = playback.Generation,
+                    Timeline = playback.SourceTimeline,
+                    SourceMap = GetPlaybackSourceMap(playback.SourceTimeline, playback.Content),
                     SourceName = sourceName ?? string.Empty,
                     SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
                     ActionContextId = actionContextId,
@@ -745,10 +749,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 preparation = m_Host.Prepare(
                     snapshot.RequestId,
-                    timeline.Clone(),
+                    timeline,
                     executionIdentity,
-                    CharacterTimelineSnapshotCodec.MapPlaybackMode(snapshot.PlaybackMode),
-                    Array.Empty<TimelineCallBinding>());
+                    CharacterTimelineSnapshotCodec.MapPlaybackMode(snapshot.PlaybackMode));
                 if (!preparation.IsReady)
                     throw new InvalidOperationException($"Ability Timeline restore '{snapshot.RuntimeHandle}' failed preparation: {string.Join(" | ", preparation.Errors)}");
             }
@@ -774,6 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Handle = handle,
                 Generation = snapshot.Generation,
                 Timeline = playbackTimeline,
+                SourceMap = GetPlaybackSourceMap(playbackTimeline, preparation.Content),
                 SourceName = playbackTimeline.Name,
                 SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
                 ActionContext = new TimelinePlaybackActionContext(
@@ -811,6 +815,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_PendingAdvances.TryGetValue(handle.Value, out CharacterTimelinePendingAdvance pending))
                 DiscardTimelinePlayback(pending.Pending);
             m_Host.Service.CancelTimelinePlayback(handle, stopContext);
+        }
+
+        IDebugSourceMap GetPlaybackSourceMap(TimelineData timeline, TimelineContentUnit content)
+        {
+            if (m_Diagnostics == null)
+                return null;
+            var revision = new RuntimeContentRevision(
+                content.Identity, content.RootFingerprint, content.ContentHash);
+            if (m_Diagnostics.TryGetSourceMap(revision, out IDebugSourceMap installed))
+                return installed;
+            var sourceMap = new DebugSourceMap(revision);
+            CharacterTimelineDebugSourceMapFiller.Fill(sourceMap, timeline, content.RootFingerprint);
+            IReadOnlyList<RuntimeGraphInvocation> invocations = m_Diagnostics.SourceMap.GraphInvocations;
+            for (int i = 0; i < invocations.Count; i++)
+                sourceMap.AddGraphInvocation(invocations[i]);
+            sourceMap.Seal();
+            m_Diagnostics.RegisterSourceMap(sourceMap);
+            return sourceMap;
         }
 
         RuntimeInstanceKey CreateRuntimeInstance(

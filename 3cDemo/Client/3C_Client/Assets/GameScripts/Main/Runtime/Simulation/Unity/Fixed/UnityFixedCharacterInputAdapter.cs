@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public sealed class UnityFixedCharacterInputAdapter :
         IUnityFixedCharacterControlSourceRuntime,
-        ICharacterPresentationLookInput,
+        ICharacterPresentationInput,
         IDisposable
     {
         readonly CharacterInputProfile m_Profile;
@@ -367,6 +367,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             return new FixedCharacterControlSourceDiagnosticsSnapshot(count, oldestCaptureTick, oldestEligibleTick);
         }
+
+        public Vector2 ReadLatchedVector2(string inputId) => m_LatchedValues[inputId].Vector2;
 
         public bool TryGetLatchedLook(string inputId, out Vector2 value, out CameraLookInputKind kind)
         {

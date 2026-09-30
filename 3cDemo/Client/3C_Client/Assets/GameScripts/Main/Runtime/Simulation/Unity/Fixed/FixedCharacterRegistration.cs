@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         ICharacterPresentationDomainRuntime m_PresentationRuntime;
         readonly CharacterDomainRuntimeAssemblyFacts m_DomainFacts;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
-        readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsAdapter;
+        readonly FixedCharacterRuntimeDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly int m_MaximumActivePresentationRecords;
         readonly SortedTickResultBuffer<FixedCharacterBodySample> m_PendingBodySamples;
@@ -139,6 +139,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public CharacterDomainRuntimeAssemblyFacts DomainFacts => m_DomainFacts;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public bool TryGetBlackboardValue(CharacterSkillId ability, ulong actionInstanceId, int stateSlot,
+            out FixedBlackboardValueSnapshot value) =>
+            m_DiagnosticsAdapter.TryGetBlackboardValue(ability, actionInstanceId, stateSlot, out value);
+
         public bool SupportsPresentationCheckpointCapture =>
             m_PresentationRuntime.SupportsCheckpointCapture;
         public bool SupportsPresentationCheckpointRestore =>
@@ -302,6 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 for (int i = 0; i < m_PendingTrajectoryResults.Count; i++)
                 {
                     FixedSimulationActorTickResult result = m_PendingTrajectoryResults.GetValue(i);
+                    m_PresentationRuntime.CaptureControlState(result.State);
                     LocomotionPresentationFailureCode failureCode =
                         m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(

@@ -151,6 +151,16 @@ namespace BTSMTL.Diagnostics.Editor
         public IReadOnlyCollection<RuntimeSourceElementKey> Sources => m_Sources;
         public IReadOnlyCollection<RuntimeInstanceKey> Instances => m_Instances;
 
+        public bool AffectsSourceKind(RuntimeSourceElementKind kind)
+        {
+            if (FullSync)
+                return true;
+            for (int i = 0; i < m_Sources.Length; i++)
+                if (m_Sources[i].Kind == kind)
+                    return true;
+            return false;
+        }
+
         public bool AffectsSource(RuntimeSourceElementKey source)
         {
             if (FullSync)
@@ -265,8 +275,9 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeCaptureSnapshot capture,
             int historyOffset,
             RuntimeInstanceKey instance,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps) =>
-            RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, sourceMaps, historyOffset, instance);
+            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
+            ulong throughSequence) =>
+            RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, sourceMaps, historyOffset, instance, throughSequence);
 
         internal void SetCoverage(long evictedStates, bool incompleteHistory)
         {
@@ -358,15 +369,24 @@ namespace BTSMTL.Diagnostics.Editor
             string graphAuthoringId = "")
         {
             var result = new List<RuntimeTimelinePlaybackDebugSummary>();
+            CopyTimelinePlaybackSummaries(timelineAuthoringId, graphAuthoringId, result);
+            return result;
+        }
+
+        public void CopyTimelinePlaybackSummaries(
+            string timelineAuthoringId,
+            string graphAuthoringId,
+            List<RuntimeTimelinePlaybackDebugSummary> destination)
+        {
+            destination.Clear();
             foreach (TimelinePlaybackSummaryBuilder builder in m_TimelinePlayback.Values)
             {
                 if (MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
-                    result.Add(builder.Build());
+                    destination.Add(builder.Build());
             }
-            result.Sort((left, right) => right.LatestLogicTick != left.LatestLogicTick
+            destination.Sort((left, right) => right.LatestLogicTick != left.LatestLogicTick
                 ? right.LatestLogicTick.CompareTo(left.LatestLogicTick)
                 : right.LatestPresentationFrame.CompareTo(left.LatestPresentationFrame));
-            return result;
         }
 
         public bool TryGetTimelinePlaybackSummary(
@@ -476,8 +496,7 @@ namespace BTSMTL.Diagnostics.Editor
                     !RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation))
                     continue;
                 if (!m_LatestGraphExecution.TryGetValue(item.Source, out RuntimeNodeExecutionObservation previous) ||
-                    item.Event.Position > previous.Event.Event.Position ||
-                    item.Event.Position == previous.Event.Event.Position && item.Event.Sequence > previous.Event.Event.Sequence)
+                    item.Event.Sequence > previous.Event.Event.Sequence)
                     m_LatestGraphExecution[item.Source] = observation;
             }
             foreach (RuntimeNodeExecutionObservation observation in m_LatestGraphExecution.Values)
@@ -519,24 +538,12 @@ namespace BTSMTL.Diagnostics.Editor
             m_LatestPresentationFrame = 0;
         }
 
-        internal void Apply(RuntimeLiveStateKey key, RuntimeTraceEvent traceEvent)
-        {
-            Apply(key, traceEvent, null);
-        }
-
         internal void Apply(
             RuntimeLiveStateKey key,
             RuntimeTraceEvent traceEvent,
-            RuntimeDebugSourceMapSnapshot sourceMapOverride)
+            RuntimeDebugSourceMapSnapshot sourceMap,
+            bool historical)
         {
-            bool historical = sourceMapOverride != null;
-            if (!historical && !traceEvent.ContentRevision.Equals(Target.Revision))
-            {
-                m_Error = $"Trace revision mismatch: {traceEvent.ContentRevision} != {Target.Revision}";
-                return;
-            }
-
-            RuntimeDebugSourceMapSnapshot sourceMap = sourceMapOverride ?? m_SourceMap;
             RuntimeSourceElementKey source = default;
             string sourceName = string.Empty;
             if (traceEvent.Source.IsValid)

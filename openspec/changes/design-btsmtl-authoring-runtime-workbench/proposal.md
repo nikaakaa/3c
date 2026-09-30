@@ -2,89 +2,40 @@
 
 ## Why
 
-当前文档把“ScenePlay 场景运行”“Timeline 作者编辑”“RuntimeDebug 观察”混在了一个 Preview 名称下，导致产品形态不清楚：作者编辑时不知道自己是在改资产、看真实运行，还是看只读诊断；实现也容易重新做出窗口播放器、独立时钟和第二套 Runtime。
-
-本 change 改为定义一个统一的 **Authoring Runtime Workbench**。它不是一个新的运行时，也不是一个单独的 Timeline 播放器，而是围绕同一个正式 ScenePlay Session 提供三种用户工作形态。Preview 只是其中一种形态：
-
-1. **Authoring**：编辑正式 FlowCanvas、RootTree、子图、Timeline、Track、Clip、曲线和参数。
-2. **Preview**：由 ScenePlay 驱动真实 Scene、Actor、Ability、RootTree、Timeline、Pose、Motion 和 Camera；作者可以继续修改内容，并依次 Export、Prepare、Publish、Adopt 后观察后续正式调用。
-3. **RuntimeDebug**：只读观察同一 Session 的真实调用路径和提交事实，按当前调用栈在 FlowCanvas 子图与 Slate Timeline 之间切换。
-
-ScenePlay 是 Preview 的唯一正式运行底座，不是第四种产品形态。RuntimeDebug 也不创建第二个 Session、第二个 Actor 或第二个执行器。
+纯 Timeline 编排、Ability 的实际执行过程和游戏运行诊断需要不同的工作面。旧方案把 Preview 限定为作者 Timeline 播放加 overlay，无法表达决策、Loop、子图调用和历史变量，也让简单内容编辑承担完整调试流程。
 
 ## What Changes
 
-- **重新命名产品 change**：从“rebuild Preview with ScenePlay”改为“BTSMTL Authoring Runtime Workbench”，主语从实现迁移改为三形态产品工作台。
-- **明确三种产品形态**：Authoring、Preview、RuntimeDebug 的用户目的、可写边界、数据来源和显示行为分开定义。
-- **统一运行归属**：一个 Workbench 使用一个正式 ScenePlay Session；窗口、页签、FlowCanvas、Slate 和 RuntimeDebug 都只绑定这个 Session，不按 Timeline 或页面创建运行实例。
-- **重新定义 Preview**：Preview 是真实 ScenePlay 运行中的作者工作面，不是作者窗口本地播放。作者修改通过正式 Mutation、Export、Prepare、Publish 和 Adopt 进入当前 Session；Export、Plan 和 Publication 都绑定当前 Host 会话与内容代次，作者再次修改后旧结果必须作废。
-- **明确轻量更新边界**：参数、曲线、Clip 时间和可兼容内容修改可以在同一 Session 内后台准备并在安全边界采用；代码、状态布局、Composition 或不兼容运行结构不能承诺无感，必须明确显示需要重建或新 Session。
-- **建立 RuntimeDebug 观察形态**：RuntimeDebug 只消费正式 RuntimeDebugSession、SourceMap、Trace、Playback 和提交快照；RootTree 进入子图时显示对应 FlowCanvas，进入 Timeline 时显示对应 Slate Timeline，离开后回到父调用路径。
-- **统一工具表面**：复用现有 Graph Shell、FlowCanvas 和 Slate CutsceneEditor 的绘制与交互基础；不新建 Dashboard、第二曲线编辑器、第二 Timeline Renderer、事件中心或独立播放器。
-- **固定唯一 UI 归属**：三种形态直接位于现有 `TimelineEditorWindow`，不得新增独立 Workbench、Session Dashboard 或预览设置面板；工具栏只保留 Profile、形态菜单、Session 菜单和一行状态。
-- **固定唯一预览配置**：使用一个 `BtsmtlScenePlayProfile` ScriptableObject 保存 Scene、ContextId 和默认 ActorId。`ContextId` 精确匹配正式 Composition 的 `SessionId`，Actor 只在该 Session 内解析。Timeline 只选择 Profile；详细配置只在 SO Inspector，不保存 Session、运行 identity、revision、播放时间或调试状态。
-- **收紧 Session 操作入口**：Start、Pause、Resume、Stop，以及内容 Export、Prepare、Publish、Adopt 和 RuntimeDebug 的 Capture、History、Resume Live 都归入同一个 Session 菜单；不把流程按钮铺在 Timeline 顶栏上。
-- **保留 CMC 的正确经验**：可以参考 CMC 的预热、手动刷新和局部缓存重建体验，但不得使用 CMC MontagePlayer 或其独立 PlayableGraph 作为 BTSMTL Preview 真相。
-- **清理旧口径**：文档不再把 Preview 等同于用户必须显式点击 Unity Play，也不再把 RuntimeDebug overlay 当成完整 Runtime Preview；Unity Play Mode 是承载实现细节，产品入口由 Workbench 管理。
+- **基础编排**：Authoring / Assembling 负责 Timeline、Clip、曲线、动画、特效和镜头调整，并能直接播放、拖动查看正式效果；不要求先构造 Ability 图。Assembling 是编排职责用语，不新增第四模式或重命名代码 API。
+- **Ability Preview**：打开 Ability 查看节点图，将实际节点执行、决策、每次 Loop、子图与 Timeline 调用投影成不断增长的执行时间线。投影片段不是作者资产，不能拖拽改写已发生事实。
+- **历史与调参**：执行游标可回看当时节点、变量及角色；正式运行变量命令支持观察后续变化。作者资产修改继续使用 Mutation/Undo 和内容采用合同；从历史修改后分叉保留策略尚未确认。
+- **RuntimeDebug**：只读连接实际游戏或明确绑定的预览 Session，复用来源映射和执行事实，不启动第二运行实例。
+- **BREAKING**：编辑器效果预览改为 CMC 式隐藏 Scene，在 Edit Mode 自动装配，不启动 Unity Play、不要求用户操作准备流程；执行仍复用正式领域 owner 和现有 Tick。删除 Preview 旧 PlayMode 启动调用，不保留双入口。
+- **窗口分工**：原 FlowCanvas 编辑节点图，原 Timeline/Slate 编排作者内容；新增独立可停靠 Preview 窗口，上方为角色视口与运行黑板，下方为执行时间线，分区可拖动。执行时间线复用 Slate，所有窗口共享唯一隐藏 Session 与 Renderer，不按调用创建窗口或恢复旧总控。
+- **修改路径**：运行黑板调值复用原作用域和写入规则；Timeline 内容修改走内容刷新，只有编译图配置或结构变化才 Build 图。常用交互自动组织正式采用步骤，不要求用户逐个执行 Export、Prepare、Publish、Adopt。
+- **生命周期**：明确宿主、正式 Session、页面绑定和输入归属。暂停保留现场；Stop 与关闭预览如何区分仍待确认，不提前固定销毁行为。
+- **动态长度边界**：Ability 执行记录持续增长不改变作者 Clip 合同；仅 TreeDecision TreeClip 的实际退出长度动态，FrameBoundary 仍固定。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `btsmtl-authoring-runtime-workbench`：统一工作台、三种产品形态、唯一 ScenePlay Session、Preview 内容采用和 RuntimeDebug 调用栈观察。
+- `btsmtl-authoring-runtime-workbench`：三层工作职责、隐藏场景宿主、Ability 执行投影、历史查看与变量命令边界。
 
 ### Modified Capabilities
 
-- `btsmtl-timeline-editor-preview`：Timeline 作者面、Preview 运行面和 RuntimeDebug 只读面分离；Slate 作为作者和运行观察的共同视觉表面，但不拥有 Runtime。
-- `graph-authoring-editor-shell`：Graph Shell 承载三种工作形态和共享 Session 状态，不为每个领域复制场景控制器。
-- `btsmtl-runtime-diagnostics`：RuntimeDebug 通过统一 Session 提供当前调用栈、SourceMap、Capture/History 和只读视图。
-- `gameplay-simulation-session-composition`：Preview 只能连接正式 Session composition，不能创建 Preview 专用 Kernel、Actor 或 Pipeline。
-- 角色 Animation、Timeline、领域作者合同和程序集所有权 delta：继续保留各领域边界，但统一消费 Workbench 的 Authoring/Preview/RuntimeDebug 语义。Pose 的 ScenePlay 与原生图合同已经进入现行 spec，不重复覆盖；已退役的 Document 同步协议不属于本 change。
+- `btsmtl-timeline-editor-preview`：基础编排效果预览、正式时间定位、执行投影与作者内容分离、TreeDecision 观察。
+- `graph-authoring-editor-shell`：Ability 图入口联动执行时间线、隐藏场景生命周期与页面绑定。
+- `graph-authoring-domain-framework`：作者字段与预览运行变量的资格、命令及采用状态区分。
+- `gameplay-simulation-session-composition`：隐藏场景沿正式 Composition 装配；非 Skill 内容不强制角色 Session。
+- `character-animation-pipeline`：正式动画链在隐藏场景执行，保留逻辑与表现域退出规则。
+- `character-animation-layer-runtime`：统一正式事实来源和合法参数采用边界。
+- `character-motion-matching-presentation-module`：正式角色查询替代独立 Query Fixture 预览。
+- `character-pose-inertialization`：正式恢复与只读历史查看保持各自状态边界。
+- `unity-simulation-assembly-ownership`：编辑器接入公开运行端口，业务执行留在正式程序集。
 
 ## Impact
 
-- 文档与规范：主 change 目录、能力名、相关 delta 引用统一改名；历史实施审计保留，但明确不等于当前产品形态已实现。
-- 编辑器：现有 TimelineEditorWindow、GraphEditor、Slate projection 和 RuntimeDebugSession 成为工作台的接入表面；不新增平行作者模型或运行模型。
-- 运行时：ScenePlay Session、正式 Simulation/Presentation/Timeline owner 继续是真相；Workbench 只管理入口、绑定、作者发布状态和只读视图。
-- 作者修改：作者资产仍由唯一 Mutation、Validator、Undo、Export/Prepare/Publish/Adopt 链拥有。Preview 不能把运行时状态写回作者数据，也不能把未采用版本画成已生效；活动 playback 保持开始时冻结的内容，新内容只影响后续正式调用。
-- 进入成本：产品不要求用户手动操作 Unity Play 按钮；首次准备的等待、失败和采用阶段必须可见。是否由 Play Mode 或其它 Editor host 承载属于实现决策，不改变三种产品形态和唯一 Session 约束。
-- CMC：仅作为交互体验参考，不进入 BTSMTL 正式运行链，不形成兼容播放器或 fallback 路径。
-- 本 change 不新增测试任务，不把手动验收写入 tasks；实现接通与用户端到端验收分开记录。
+现有 Timeline 控制器、Slate 投影、FlowCanvas 来源导航、RuntimeDebug 事实、Session 历史与输入端口需要接通新工作方式。运行事实必须能区分调用实例、Loop 迭代、内容版本和逻辑/表现时间，不能在 UI 重算分支或复制 TimelineData 为第二状态源。
 
-## Product Boundary
-
-```text
-TimelineEditorWindow
-├─ Authoring：原 Slate 作者面
-├─ Preview：原 Slate 作者面 + ScenePlay
-└─ RuntimeDebug：同一位置的只读运行观察
-
-BtsmtlScenePlayProfile
-└─ Scene / ContextId / DefaultActorId
-
-唯一运行底座：ScenePlay Session
-```
-
-产品必须能让作者回答三件事：
-
-- 我正在修改哪份正式作者数据？
-- 当前 Preview Session 实际采用的是哪个版本？
-- RuntimeDebug 当前真实执行到了哪个 Graph、Timeline、Track 或 Clip？
-
-任何不能直接服务这三个问题的独立面板、播放器、状态副本或专用时间轴都不属于本 change。
-
-## 2026-09-20 现行规范对账
-
-- `character-presentation-pose-graph`、`character-pose-graph-runtime-architecture`、`character-animation-layer-runtime` 已明确原生图、Source／Slot生命周期与ScenePlay。删除本 change 中以旧 Pose Image、Projection 和已移除 requirement 为目标的重复 delta，保留现行合同。
-- `btsmtl-agent-authoring-document-sync` 已退出当前能力目录；删除其 Document v5 delta。字段资格只引用现行 C# authoring、Capability 和 typed Mutation，不恢复同步包。
-- 当前 `btsmtl-timeline-editor-preview` 前部已规定原 Timeline Session 菜单，后部仍有“默认不包含未确认的 Timeline 内 Scene Play 快捷控制”。本 change 只明确已确认的 Profile、三态和正式 Session 菜单；普通编辑游标仍不执行角色。delta 改为当前 requirement 名称，避免归档时覆盖不存在的旧条款。
-- 动画层和 MM 的现行 spec 仍含独立 Fact/Query Fixture 预览措辞，与当前 `openspec/project.md` 及原生 Pose spec 的唯一 ScenePlay 合同冲突。本 change 的对应 delta 统一为正式 Actor 的只读观察，不恢复 Fixture 或旧 Projection。
-- 三种形态始终从原 Timeline 窗口进入；FlowCanvas 仅复用已有图面板进行来源导航，不替换 Timeline 内的 Slate，也不新增 Workbench。
-
-## 2026-09-22 动态长度补充
-
-- 明确逻辑域与表现域的 `TreeDecision` 都由本次实例的图退出请求决定实际长度；表现域固定区间使用显式 `FrameBoundary`。
-- 表现域退出加入原表现帧候选提交与丢弃链路，运行观察按各域已提交时间和该次调用的退出事实显示。
-- 秒制作者游标、帧格式显示、吸附网格分别定义。普通编辑游标依然不执行角色。
-- 现行 `character-animation-pipeline` 中“PresentationFrame 不重复产生 TreeClip”应明确为不得重发逻辑域 TreeClip 事实；表现域 TreeClip 的自身生命周期由表现帧执行。
-- 本补充不改变 Track 重叠合同，不新增播放器，不把文档更新视为运行验收完成。
+本 proposal 定义目标和变更范围，不作为实现完成证据。当前实现与检查结果见 implementation-current.md，未完成事项见 tasks.md；已有 Tick、History 接口或旧 overlay 不代表完整功能。详细生命周期、未决项、现行规范差异与用户查看场景见 design.md；本 change 尚未归档。

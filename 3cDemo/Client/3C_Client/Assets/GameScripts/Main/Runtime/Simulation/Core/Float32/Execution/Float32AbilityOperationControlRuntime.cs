@@ -50,9 +50,9 @@ namespace ThirdPersonSimulation
             }
         }
 
-        internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
+        internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow, bool captureBlackboard)
         {
-            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
             m_Runtime.BeginEvaluation();
         }
 

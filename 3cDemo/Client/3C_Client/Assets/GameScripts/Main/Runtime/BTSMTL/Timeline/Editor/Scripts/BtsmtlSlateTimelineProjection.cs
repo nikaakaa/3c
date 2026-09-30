@@ -133,6 +133,7 @@ namespace BTSMTL.Timeline.Editor
         readonly CutsceneEditorSurface m_EmbeddedEditor;
         readonly HashSet<string> m_RuntimeActiveTracks = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_RuntimeClipStatuses = new Dictionary<string, string>(StringComparer.Ordinal);
+        IReadOnlyDictionary<string, float> m_RuntimeClipEnds;
         bool m_RuntimeOverlayVisible;
         bool m_Disposed;
         bool m_RebuildQueued;
@@ -156,7 +157,7 @@ namespace BTSMTL.Timeline.Editor
             m_EmbeddedEditor.InitializeEmbedded(m_Binding, EmbeddedRepaint);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);
-            m_EmbeddedEditor.ConfigureEmbeddedRuntimeState(IsRuntimeTrackActive, RuntimeClipStatus);
+            m_EmbeddedEditor.ConfigureEmbeddedRuntimeState(IsRuntimeTrackActive, RuntimeClipStatus, RuntimeClipEnd);
             m_Session.SelectionChanged += OnSelectionChanged;
             m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
             Undo.undoRedoEvent += OnUndoRedoEvent;
@@ -380,12 +381,13 @@ namespace BTSMTL.Timeline.Editor
         public void ApplyRuntimeOverlay(
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
+            IReadOnlyDictionary<string, string> activeClips,
+            IReadOnlyDictionary<string, float> dynamicClipEnds)
         {
             m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
             m_HistoryVisualTime = null;
             FollowRuntimeTime(m_RuntimeVisualTime.Value);
-            SetRuntimeState(activeTracks, activeClips);
+            SetRuntimeState(activeTracks, activeClips, dynamicClipEnds);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
@@ -406,43 +408,8 @@ namespace BTSMTL.Timeline.Editor
             }
         }
 
-        public void ApplyRuntimeTimeline(
-            TimelineData runtimeTimeline,
-            bool structureChanged,
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            if (runtimeTimeline == null)
-                return;
-            if (structureChanged || !ReferenceEquals(m_Binding.Timeline, runtimeTimeline))
-                m_Binding.ReplaceTimeline(runtimeTimeline);
-            else
-                m_Binding.RefreshRuntimeTimeline();
-            ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
-        }
-
-        public void ApplyHistoryTimeline(
-            TimelineData runtimeTimeline,
-            bool structureChanged,
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            if (runtimeTimeline == null)
-                return;
-            if (structureChanged || !ReferenceEquals(m_Binding.Timeline, runtimeTimeline))
-                m_Binding.ReplaceTimeline(runtimeTimeline);
-            else
-                m_Binding.RefreshRuntimeTimeline();
-            ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
-        }
-
         public void ClearRuntimeTimeline()
         {
-            if (ReferenceEquals(m_Binding.Timeline, m_Request.Timeline))
-                return;
-            m_Binding.ReplaceTimeline(m_Request.Timeline);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
@@ -453,18 +420,20 @@ namespace BTSMTL.Timeline.Editor
             m_RuntimeOverlayVisible = false;
             m_RuntimeActiveTracks.Clear();
             m_RuntimeClipStatuses.Clear();
+            m_RuntimeClipEnds = null;
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
         public void ApplyHistoryOverlay(
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
+            IReadOnlyDictionary<string, string> activeClips,
+            IReadOnlyDictionary<string, float> dynamicClipEnds)
         {
             m_HistoryVisualTime = Mathf.Max(0f, visualTime);
             m_RuntimeVisualTime = null;
             FollowRuntimeTime(m_HistoryVisualTime.Value);
-            SetRuntimeState(activeTracks, activeClips);
+            SetRuntimeState(activeTracks, activeClips, dynamicClipEnds);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 
@@ -476,11 +445,13 @@ namespace BTSMTL.Timeline.Editor
 
         void SetRuntimeState(
             IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
+            IReadOnlyDictionary<string, string> activeClips,
+            IReadOnlyDictionary<string, float> dynamicClipEnds)
         {
             m_RuntimeOverlayVisible = true;
             m_RuntimeActiveTracks.Clear();
             m_RuntimeClipStatuses.Clear();
+            m_RuntimeClipEnds = dynamicClipEnds;
             if (activeTracks != null)
                 foreach (string identity in activeTracks.Keys)
                     m_RuntimeActiveTracks.Add(identity);
@@ -499,6 +470,11 @@ namespace BTSMTL.Timeline.Editor
             return m_RuntimeClipStatuses.TryGetValue(authoringId ?? string.Empty, out string status)
                 ? status
                 : string.Empty;
+        }
+
+        float? RuntimeClipEnd(string authoringId)
+        {
+            return m_RuntimeOverlayVisible && m_RuntimeClipEnds.TryGetValue(authoringId, out float end) ? end : null;
         }
 
         void OnSelectionChanged(TimelineEditorSelection selection)
@@ -542,6 +518,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             BtsmtlSlateTimelineViewState state = CaptureViewState();
             m_Binding.Rebuild();
+            m_EmbeddedEditor.InvalidateEmbeddedClipBindings();
             RestoreViewState(state);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }

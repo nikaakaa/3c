@@ -251,7 +251,10 @@ def resolve_metadata(shader):
             names = {p["Value"]: p["Key"] for p in shader_pass["m_NameIndices"]}
             for stage in ["progVertex", "progFragment"]:
                 for subprogram in shader_pass[stage]["m_SubPrograms"]:
-                    if subprogram["m_GpuProgramType"] not in ("DX11VertexSM40", "DX11VertexSM50", "DX11PixelSM40", "DX11PixelSM50"):
+                    program_type = subprogram["m_GpuProgramType"]
+                    if isinstance(program_type, dict):
+                        program_type = program_type.get("value__")
+                    if program_type not in (15, 16, 17, 18):
                         continue
                     entries.setdefault(subprogram["m_BlobIndex"], []).append({
                         "subshader": subshader_index, "pass": pass_index,
@@ -261,13 +264,29 @@ def resolve_metadata(shader):
     return entries
 
 
-def restore_names(source, metadata):
+def restore_names(source, metadata, restore_constants=True):
     names, program = metadata["names"], metadata["subprogram"]
     bindings = {p["m_NameIndex"]: p["m_Index"] for p in program["m_ConstantBufferBindings"]}
+    if not restore_constants:
+        resources = []
+        for category in ["m_TextureParams", "m_BufferParams"]:
+            for p in program[category]:
+                old, name = f"t{p['m_Index']}", names[p["m_NameIndex"]]
+                source = re.sub(rf"(?<!register\()\b{old}\b", name, source)
+                source = re.sub(rf"\b{old}_t\b", name + "_Element", source)
+                source = re.sub(rf"\b{old}_Element\b", name + "_Element", source)
+                resources.append({"name": name, "category": category, **p})
+        for p in program["m_Samplers"]:
+            source = re.sub(rf"\bs{p['bindPoint']}_s\b", f"ZZZSampler_{p['sampler']}", source)
+            source = re.sub(rf"(?<!register\()\bs{p['bindPoint']}\b", f"ZZZSampler_{p['sampler']}", source)
+        return source, {"parameters": [], "resources": resources, "samplers": program["m_Samplers"],
+            "constant_access_count": 0, "dynamic_accesses": [], "unresolved_dynamic_constants": []}
     words, declarations, dynamic_arrays, parameters = {}, [], {}, []
+    cb_vector_sizes = {}
     for cb in program["m_ConstantBuffers"]:
         slot = bindings[cb["m_NameIndex"]]
         cb_name = names[cb["m_NameIndex"]]
+        cb_vector_sizes[slot] = cb["m_Size"] // 16
         declarations.append(f"cbuffer {cb_name.replace('$', 'ZZZ')} : register(b{slot})\n{{")
         if cb["m_StructParams"]:
             raise ValueError("Struct constant layout needs explicit recovery")
@@ -310,7 +329,7 @@ def restore_names(source, metadata):
         declarations.append("}\n")
 
     source = re.sub(r"cbuffer cb\d+\s*:\s*register\(b\d+\)\s*\{[^}]+\}", "", source)
-    helpers, accesses = {}, []
+    helpers, accesses, unresolved_constants = {}, [], []
 
     def replace_cb(match):
         slot, index, swizzle = int(match[1]), match[2], match[3] or "xyzw"
@@ -325,7 +344,8 @@ def restore_names(source, metadata):
         arrays = [(base, kind, name) for base, kind, name in dynamic_arrays.get(slot, [])
                   if base <= constant < base + (4 if kind == "matrix" else 1)]
         if len(arrays) != 1:
-            raise ValueError(f"Unresolved dynamic constant access {match[0]}")
+            unresolved_constants.append({"slot": slot, "access": match[0], "constant": constant})
+            return match[0]
         base, kind, name = arrays[0]
         if kind == "vector":
             return f"{name}[({index}) - {base}].{swizzle}"
@@ -354,9 +374,19 @@ def restore_names(source, metadata):
     if attribute:
         main_position = attribute[-1].start()
     source = source[:main_position] + "\n".join(helpers.values()) + source[main_position:]
+    for slot in sorted({item["slot"] for item in unresolved_constants}):
+        fallback = f"    float4 cb{slot}[{cb_vector_sizes[slot]}];"
+        declaration_index = next((index for index, item in enumerate(declarations)
+                                  if f": register(b{slot})" in item), None)
+        if declaration_index is None:
+            declarations.insert(0, f"cbuffer cb{slot} : register(b{slot})\n{{\n{fallback}\n}}\n")
+        else:
+            declarations.insert(declaration_index + 1, fallback)
     return "\n".join(declarations) + source, {
         "parameters": parameters, "resources": resources, "samplers": program["m_Samplers"],
-        "constant_access_count": len(accesses), "dynamic_accesses": [s for s in accesses if not re.match(r"cb\d+\[\d+\]", s)]}
+        "constant_access_count": len(accesses),
+        "dynamic_accesses": [s for s in accesses if not re.match(r"cb\d+\[\d+\]", s)],
+        "unresolved_dynamic_constants": unresolved_constants}
 
 
 def main():
@@ -369,8 +399,6 @@ def main():
     parser.add_argument("--entries", type=int, nargs="*", default=[])
     parser.add_argument("--material", type=Path, nargs=2, action="append", default=[], metavar=("RAW", "JSON"))
     args = parser.parse_args()
-    if args.entries and not args.decompiler:
-        parser.error("--entries requires --decompiler")
     args.output.mkdir(parents=True, exist_ok=False)
     raw = args.shader_json.read_bytes()
     shader = json.loads(raw.decode("utf-8-sig"))
@@ -400,7 +428,8 @@ def main():
               "runtime_bound": False, "recovered": [], "materials": []}
     if args.entries:
         compiler_path = Path("C:/Windows/System32/d3dcompiler_47.dll")
-        result["decompiler"] = {"path": str(args.decompiler.resolve()), "sha256": sha256(args.decompiler.read_bytes())}
+        result["decompiler"] = None if args.decompiler is None else {
+            "path": str(args.decompiler.resolve()), "sha256": sha256(args.decompiler.read_bytes())}
         result["compiler"] = {"path": str(compiler_path), "sha256": sha256(compiler_path.read_bytes())}
     for raw_path, json_path in args.material:
         material = recover_material(raw_path, json_path)
@@ -414,38 +443,44 @@ def main():
             raise ValueError(f"Entry {index} has different parameter layouts")
         meta = uses[0]
         dxbc = get_dxbc(programs[index])
-        source = decompile(dxbc, args.decompiler)
+        source = decompile(dxbc, args.decompiler) if args.decompiler else None
         prefix = args.output / f"entry{index}"
         prefix.with_suffix(".original.dxbc").write_bytes(dxbc)
-        prefix.with_suffix(".decompiled.hlsl").write_text(source, encoding="utf-8")
+        if source is not None:
+            prefix.with_suffix(".decompiled.hlsl").write_text(source, encoding="utf-8")
         compiler_source, instruction_map, translated_profile = translate(disassemble(dxbc, 128))
         prefix.with_suffix(".registers.hlsl").write_text(compiler_source, encoding="utf-8")
         write_json(prefix.with_suffix(".instruction-map.json"), instruction_map)
         restored, binding = restore_names(compiler_source, meta)
+        if binding["unresolved_dynamic_constants"]:
+            restored, binding = restore_names(compiler_source, meta, restore_constants=False)
         prefix.with_suffix(".named.hlsl").write_text(restored, encoding="utf-8")
         write_json(prefix.with_suffix(".bindings.json"), binding)
         write_json(prefix.with_suffix(".render_state.json"), meta["state"])
         profile = {15: "vs_4_0", 16: "vs_5_0", 17: "ps_4_0", 18: "ps_5_0"}[manifest[index]["type"]]
         if profile != translated_profile:
             raise ValueError("Program container and DXBC profile differ")
-        generic, generic_messages = compile_hlsl(source, profile)
+        generic, generic_messages = compile_hlsl(source, profile) if source is not None else (b"", [])
         register_code, register_messages = compile_hlsl(compiler_source, profile)
         named, named_messages = compile_hlsl(restored, profile)
         prefix.with_suffix(".generic-recompiled.dxbc").write_bytes(generic)
         prefix.with_suffix(".registers-recompiled.dxbc").write_bytes(register_code)
         prefix.with_suffix(".named-recompiled.dxbc").write_bytes(named)
-        generic_chunks, named_chunks = chunks(generic), chunks(named)
-        assemblies = {"original": disassemble(dxbc), "generic-recompiled": disassemble(generic),
+        generic_chunks = chunks(generic) if generic else {}
+        named_chunks = chunks(named)
+        assemblies = {"original": disassemble(dxbc), "generic-recompiled": disassemble(generic) if generic else "",
                       "registers-recompiled": disassemble(register_code),
                       "named-recompiled": disassemble(named)}
         for name, assembly in assemblies.items():
+            if not assembly:
+                continue
             prefix.with_suffix(f".{name}.asm").write_text(assembly, encoding="utf-8")
         executable_tag = "SHEX" if "SHEX" in generic_chunks else "SHDR"
         result["recovered"].append({"entry": index, "profile": profile, "keywords": manifest[index]["keywords"],
             "local_keywords": manifest[index]["local_keywords"], "original_dxbc_sha256": sha256(dxbc),
             "original_chunks": chunks(dxbc), "generic_chunks": generic_chunks, "named_chunks": named_chunks,
-            "named_vs_generic_instruction_tokens_equal": generic_chunks[executable_tag] == named_chunks[executable_tag],
-            "named_vs_generic_instructions_excluding_declarations_equal": instructions(assemblies["generic-recompiled"]) == instructions(assemblies["named-recompiled"]),
+            "named_vs_generic_instruction_tokens_equal": bool(generic and generic_chunks[executable_tag] == named_chunks[executable_tag]),
+            "named_vs_generic_instructions_excluding_declarations_equal": bool(generic and instructions(assemblies["generic-recompiled"]) == instructions(assemblies["named-recompiled"])),
             "canonical_recovery": "DXBC hexadecimal instructions with uint register storage",
             "register_compiler_messages": register_messages,
             "original_opcodes": opcode_counts(assemblies["original"]),

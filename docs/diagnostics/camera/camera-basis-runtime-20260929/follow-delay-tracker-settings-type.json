@@ -1,0 +1,447 @@
+{
+  "type_index": 90873,
+  "name": "PNIANGFEIFN",
+  "namespace": "",
+  "full_name": "PNIANGFEIFN",
+  "klass": 5497605168440,
+  "klass_raw_hex": "80955c010005000000000000000000000000000000000000f8fc7508000500000000000000000000e0fc75080005000050fc750800050000000000000000000000000000000000000000000000000000289ecd0200050000b0852b5a940100000000000000000000000000000000000000000000000000000000000000000000f9620100000000000000110000000000f9620100000000000000114000000000eac50002389dcd02389ecd020b01100028725d01389dcd0200006000ffff500000000400020000000003000121190d00",
+  "definition_va": 1736679589296,
+  "definition_raw_hex": "98e50b004cf50d000800000059de16004bf00600eac500020b01100044f98b0b43820b00d4130000ffffffff43820b004af50d000800ffff00000400000000000000ffffffffffff02000000110cffff",
+  "token": 33605098,
+  "attributes": 1048843,
+  "field_start": 454731,
+  "field_count": 8,
+  "method_start": 779672,
+  "method_count": 2,
+  "parent_descriptor_index": 5076,
+  "declaring_descriptor_index": 914762,
+  "field_array": 5497700089080,
+  "method_array": 5497700088912,
+  "value_type": true,
+  "instance_size": 96,
+  "parent_klass": 5497581040168,
+  "parent_type_index": 435,
+  "parent_name": "ValueType",
+  "parent_type": "ValueType",
+  "declaring_type_index": 90872,
+  "declaring_type": "IGOIAKCMOCO",
+  "selection_reasons": [
+    "Follow tracker damping settings"
+  ],
+  "fields": [
+    {
+      "ordinal": 0,
+      "definition_index": 454731,
+      "definition_va": 1736669566056,
+      "raw_hex": "ce2a2d0400adc32d34d76337",
+      "token": 67381065,
+      "name_identity": 193722703,
+      "name": "LFBOFNLGEBD",
+      "type": {
+        "display": "Rect",
+        "type_ref": "0x7ff975e95c50",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 16,
+      "metadata_offset": 16,
+      "storage_flags": 0,
+      "value_payload_offset": 0,
+      "runtime_offset_flags": 16,
+      "runtime_metadata_offset": 16,
+      "runtime_record_va": 5497700089080,
+      "runtime_raw_hex": "736d3d3dc3b8c17ae5c19b75437e622125a0c5157b408165a8ff2c106adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 454732,
+      "definition_va": 1736669566068,
+      "raw_hex": "dcfdf3250f808a4f4daa2a59",
+      "token": 67381066,
+      "name_identity": 193722714,
+      "name": "HCGDIEFLGDJ",
+      "type": {
+        "display": "Rect",
+        "type_ref": "0x7ff975e95c50",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 32,
+      "metadata_offset": 32,
+      "storage_flags": 0,
+      "value_payload_offset": 16,
+      "runtime_offset_flags": 32,
+      "runtime_metadata_offset": 32,
+      "runtime_record_va": 5497700089112,
+      "runtime_raw_hex": "736d3d3dc3b8c17ae5c19b75437e6221d5a3c5157b408165abff2c107adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 2,
+      "definition_index": 454733,
+      "definition_va": 1736669566080,
+      "raw_hex": "52ef15aa31abacd379d54cdd",
+      "token": 67381067,
+      "name_identity": 193722725,
+      "name": "KLGPOOFCEGC",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e5c1a0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 48,
+      "metadata_offset": 48,
+      "storage_flags": 0,
+      "value_payload_offset": 32,
+      "runtime_offset_flags": 48,
+      "runtime_metadata_offset": 48,
+      "runtime_record_va": 5497700089144,
+      "runtime_raw_hex": "736d3d3dc3b8c17a155c9775437e6221c5a3c5157b408165aaff2c108adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 3,
+      "definition_index": 454734,
+      "definition_va": 1736669566092,
+      "raw_hex": "98af4b38786be261ca95826b",
+      "token": 67381068,
+      "name_identity": 193722736,
+      "name": "FIGMGOGBAEH",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e5c1a0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 52,
+      "metadata_offset": 52,
+      "storage_flags": 0,
+      "value_payload_offset": 36,
+      "runtime_offset_flags": 52,
+      "runtime_metadata_offset": 52,
+      "runtime_record_va": 5497700089176,
+      "runtime_raw_hex": "736d3d3dc3b8c17a155c9775437e6221f5a3c5157b408165adff2c108edf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 4,
+      "definition_index": 454735,
+      "definition_va": 1736669566104,
+      "raw_hex": "b64c2b54d3fcc17d2f276287",
+      "token": 67381069,
+      "name_identity": 193722747,
+      "name": "EMDDIOAFGLD",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e67de0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 56,
+      "metadata_offset": 56,
+      "storage_flags": 0,
+      "value_payload_offset": 40,
+      "runtime_offset_flags": 56,
+      "runtime_metadata_offset": 56,
+      "runtime_record_va": 5497700089208,
+      "runtime_raw_hex": "736d3d3dc3b8c17a55e09475437e6221e5a3c5157b408165acff2c1092df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 5,
+      "definition_index": 454736,
+      "definition_va": 1736669566116,
+      "raw_hex": "e4ccb62f027d4d5968a7ed62",
+      "token": 67381070,
+      "name_identity": 193722758,
+      "name": "LEADPNOFIIM",
+      "type": {
+        "display": "float",
+        "type_ref": "0x7ff975e67de0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 60,
+      "metadata_offset": 60,
+      "storage_flags": 0,
+      "value_payload_offset": 44,
+      "runtime_offset_flags": 60,
+      "runtime_metadata_offset": 60,
+      "runtime_record_va": 5497700089240,
+      "runtime_raw_hex": "736d3d3dc3b8c17a55e09475437e622195a3c5157b408165afff2c1096df2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 6,
+      "definition_index": 454737,
+      "definition_va": 1736669566128,
+      "raw_hex": "53d4cf64d64a668e46750698",
+      "token": 67381071,
+      "name_identity": 193722769,
+      "name": "FNPPACJILHA",
+      "type": {
+        "display": "Rect",
+        "type_ref": "0x7ff975ea17a0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 64,
+      "metadata_offset": 64,
+      "storage_flags": 0,
+      "value_payload_offset": 48,
+      "runtime_offset_flags": 64,
+      "runtime_metadata_offset": 64,
+      "runtime_record_va": 5497700089272,
+      "runtime_raw_hex": "736d3d3dc3b8c17a158a9875437e622185a3c5157b408165aeff2c109adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    },
+    {
+      "ordinal": 7,
+      "definition_index": 454738,
+      "definition_va": 1736669566140,
+      "raw_hex": "2de1a49cb1573bc62b82dbcf",
+      "token": 67381072,
+      "name_identity": 193722780,
+      "name": "LGJANHBEFMP",
+      "type": {
+        "display": "Rect",
+        "type_ref": "0x7ff975ea17a0",
+        "complete": true
+      },
+      "attributes": 1,
+      "static": false,
+      "literal": false,
+      "offset_flags": 80,
+      "metadata_offset": 80,
+      "storage_flags": 0,
+      "value_payload_offset": 64,
+      "runtime_offset_flags": 80,
+      "runtime_metadata_offset": 80,
+      "runtime_record_va": 5497700089304,
+      "runtime_raw_hex": "736d3d3dc3b8c17a158a9875437e6221b5a3c5157b408165b1ff2c10aadf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    }
+  ],
+  "methods": [
+    {
+      "ordinal": 0,
+      "definition_index": 779672,
+      "definition_va": 1736661962056,
+      "rva": 9170960,
+      "raw_hex": "11510b00efcd2a0b80d30900f9620100eb1306060000ffffffff86000400",
+      "token": 101061611,
+      "name_identity": 187354607,
+      "name": "FJDJDOKJNBL",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 643968,
+          "definition_va": 1736637962536,
+          "raw_hex": "a9e38a0c26bd0b1d896221e8",
+          "name_identity": 193378306,
+          "name": "OIONJJGOFNK",
+          "token": 134574714,
+          "type": {
+            "display": "LensSettings",
+            "type_ref": "0x7ff9760026b0",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 643969,
+          "definition_va": 1736637962548,
+          "raw_hex": "c5a7f78e56a776b3fd98897a",
+          "name_identity": 193722791,
+          "name": "BNMENJEFOII",
+          "token": 134574715,
+          "type": {
+            "display": "Rect",
+            "type_ref": "0x7ff9752f3940",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 643970,
+          "definition_va": 1736637962560,
+          "raw_hex": "8a445f1104c6ce3001baf0fc",
+          "name_identity": 193722802,
+          "name": "AJIHBNADPKA",
+          "token": 134574716,
+          "type": {
+            "display": "Rect",
+            "type_ref": "0x7ff9752f3940",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 643971,
+          "definition_va": 1736637962572,
+          "raw_hex": "0a41c7935f099eb572d0587f",
+          "name_identity": 190881317,
+          "name": "HLJGDKMPBBD",
+          "token": 134574717,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497700088928,
+      "runtime_raw_hex": "389dcd020005000010f04874f97f00008063c673f97f0000ffffffff0000000098e50b0000000000eb130606ffff860000000400000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709374521360,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 779673,
+      "definition_va": 1736661962086,
+      "rva": 9171072,
+      "raw_hex": "99240000fdf68b0b84d30900f9620100ec1306060000ffffffff81000400",
+      "token": 101061612,
+      "name_identity": 193722109,
+      "name": "DIODLPOGLPJ",
+      "attributes": 129,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Rect",
+        "type_ref": "0x7ff9752f3940",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 643972,
+          "definition_va": 1736637962584,
+          "raw_hex": "e1012f16029aaa2bdceec0f1",
+          "name_identity": 193423599,
+          "name": "KFBOKMOHKHF",
+          "token": 134574718,
+          "type": {
+            "display": "Rect",
+            "type_ref": "0x7ff9752f3940",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 643973,
+          "definition_va": 1736637962596,
+          "raw_hex": "98f9969802e1cea8e6272974",
+          "name_identity": 188985044,
+          "name": "CIOHKAAICPH",
+          "token": 134574719,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 643974,
+          "definition_va": 1736637962608,
+          "raw_hex": "edd6fe1a935e6f2f2c4692f6",
+          "name_identity": 193722098,
+          "name": "JOJIOCGJANG",
+          "token": 134574720,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 3,
+          "definition_index": 643975,
+          "definition_va": 1736637962620,
+          "raw_hex": "7aac669ddb1338adbe5dfa78",
+          "name_identity": 190517273,
+          "name": "FPAPMPLHDKM",
+          "token": 134574721,
+          "type": {
+            "display": "float",
+            "type_ref": "0x7ff9752d2e60",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_record_va": 5497700088992,
+      "runtime_raw_hex": "389dcd020005000080f04874f97f0000f063c673f97f0000ffffffff0000000099e50b0000000000ec130606ffff810000000400000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709374521472,
+      "signature_complete": true
+    }
+  ],
+  "issues": [],
+  "enum_type": false,
+  "layout": {
+    "index_va": 1736625957540,
+    "record_number": 26347,
+    "record_va": 1736696966660,
+    "record_hex": "0000000060000400d7810100",
+    "instance_size": 96,
+    "offset_array_va": 1736718372900,
+    "offsets_hex": "10000000200000003000000034000000380000003c0000004000000050000000",
+    "offset_flags": [
+      16,
+      32,
+      48,
+      52,
+      56,
+      60,
+      64,
+      80
+    ]
+  },
+  "layout_instance_size": 96,
+  "dependencies": [
+    5164,
+    34775
+  ]
+}

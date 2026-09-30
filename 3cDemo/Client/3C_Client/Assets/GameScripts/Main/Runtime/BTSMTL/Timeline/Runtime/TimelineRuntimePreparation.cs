@@ -8,47 +8,31 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline.Runtime
 {
-    public sealed class TimelineRuntimePrepareRequest
+    public readonly struct TimelineRuntimePrepareRequest
     {
         public TimelineRuntimePrepareRequest(
             string requestId,
-            TimelineData timeline,
-            TimelineContractCatalog contractCatalog,
+            TimelineRuntimePreparedContent content,
             TimelineExecutionIdentity executionIdentity,
-            TimelinePlaybackMode playbackMode,
-            TimelineRuntimeNumericTarget numericTarget,
-            IEnumerable<TimelineCallBinding> callBindings,
-            ITimelineDomainBindingResolver domainResolver,
-            ITimelineRuntimeDependencyResolver dependencyResolver)
+            TimelinePlaybackMode playbackMode)
         {
             RequestId = string.IsNullOrWhiteSpace(requestId)
                 ? throw new ArgumentException("Timeline prepare request identity is required.", nameof(requestId))
                 : requestId.Trim();
-            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-            ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
+            Content = content;
             if (!executionIdentity.IsValid)
                 throw new ArgumentException("Timeline execution identity is invalid.", nameof(executionIdentity));
             ExecutionIdentity = executionIdentity;
-            if (!Enum.IsDefined(typeof(TimelinePlaybackMode), playbackMode))
+            if (playbackMode != TimelinePlaybackMode.Once && playbackMode != TimelinePlaybackMode.Loop &&
+                playbackMode != TimelinePlaybackMode.HoldLastFrame)
                 throw new ArgumentOutOfRangeException(nameof(playbackMode));
             PlaybackMode = playbackMode;
-            if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
-                throw new ArgumentOutOfRangeException(nameof(numericTarget));
-            NumericTarget = numericTarget;
-            CallBindings = new List<TimelineCallBinding>(callBindings ?? Array.Empty<TimelineCallBinding>()).AsReadOnly();
-            DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
-            DependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
         }
 
         public string RequestId { get; }
-        public TimelineData Timeline { get; }
-        public TimelineContractCatalog ContractCatalog { get; }
+        public TimelineRuntimePreparedContent Content { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelinePlaybackMode PlaybackMode { get; }
-        public TimelineRuntimeNumericTarget NumericTarget { get; }
-        public IReadOnlyList<TimelineCallBinding> CallBindings { get; }
-        public ITimelineDomainBindingResolver DomainResolver { get; }
-        public ITimelineRuntimeDependencyResolver DependencyResolver { get; }
     }
 
     public enum TimelineRuntimePreparationStatus : byte
@@ -57,13 +41,10 @@ namespace BTSMTL.Timeline.Runtime
         Ready = 1
     }
 
-    public sealed class TimelineRuntimePreparationResult
+    public sealed class TimelineRuntimePreparedContent
     {
-        TimelineRuntimePreparationResult(
+        internal TimelineRuntimePreparedContent(
             TimelineRuntimePreparationStatus status,
-            string requestId,
-            TimelineExecutionIdentity executionIdentity,
-            TimelinePlaybackMode playbackMode,
             TimelineRuntimeNumericTarget numericTarget,
             TimelineData sourceTimeline,
             TimelineContentUnit content,
@@ -74,9 +55,6 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<string> errors)
         {
             Status = status;
-            RequestId = requestId ?? string.Empty;
-            ExecutionIdentity = executionIdentity;
-            PlaybackMode = playbackMode;
             NumericTarget = numericTarget;
             SourceTimeline = sourceTimeline;
             MotionSampling = status == TimelineRuntimePreparationStatus.Ready
@@ -91,9 +69,6 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         public TimelineRuntimePreparationStatus Status { get; }
-        public string RequestId { get; }
-        public TimelineExecutionIdentity ExecutionIdentity { get; }
-        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineData SourceTimeline { get; }
         internal TimelineRuntimeMotionSampling MotionSampling { get; }
@@ -104,25 +79,14 @@ namespace BTSMTL.Timeline.Runtime
         public TimelinePreparedBindings PreparedBindings { get; }
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public IReadOnlyList<string> Errors { get; }
-        public bool IsReady => Status == TimelineRuntimePreparationStatus.Ready &&
-                               Content != null &&
-                               BindingPlan != null &&
-                               CallInput != null &&
-                               PreparedBindings != null &&
-                               PreparedDependencies != null &&
-                               Errors.Count == 0;
+        public bool IsReady => Status == TimelineRuntimePreparationStatus.Ready;
 
-        internal static TimelineRuntimePreparationResult Failed(
-            string requestId,
-            TimelineExecutionIdentity executionIdentity,
+        internal static TimelineRuntimePreparedContent Failed(
             TimelineRuntimeNumericTarget numericTarget,
             IEnumerable<string> errors)
         {
-            return new TimelineRuntimePreparationResult(
+            return new TimelineRuntimePreparedContent(
                 TimelineRuntimePreparationStatus.Failed,
-                requestId,
-                executionIdentity,
-                TimelinePlaybackMode.Once,
                 numericTarget,
                 null,
                 null,
@@ -133,8 +97,8 @@ namespace BTSMTL.Timeline.Runtime
                 new List<string>(errors ?? Array.Empty<string>()).AsReadOnly());
         }
 
-        internal static TimelineRuntimePreparationResult Ready(
-            TimelineRuntimePrepareRequest request,
+        internal static TimelineRuntimePreparedContent Ready(
+            TimelineRuntimeNumericTarget numericTarget,
             TimelineData sourceTimeline,
             TimelineContentUnit content,
             TimelineBindingPlan bindingPlan,
@@ -142,12 +106,9 @@ namespace BTSMTL.Timeline.Runtime
             TimelinePreparedBindings preparedBindings,
             TimelineRuntimePreparedDependencies preparedDependencies)
         {
-            return new TimelineRuntimePreparationResult(
+            return new TimelineRuntimePreparedContent(
                 TimelineRuntimePreparationStatus.Ready,
-                request.RequestId,
-                request.ExecutionIdentity,
-                request.PlaybackMode,
-                request.NumericTarget,
+                numericTarget,
                 sourceTimeline,
                 content,
                 bindingPlan,
@@ -158,42 +119,61 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public readonly struct TimelineRuntimePreparationResult
+    {
+        readonly TimelineRuntimePreparedContent m_Content;
+
+        internal TimelineRuntimePreparationResult(TimelineRuntimePrepareRequest request)
+        {
+            m_Content = request.Content;
+            Status = request.Content.Status;
+            RequestId = request.RequestId;
+            ExecutionIdentity = request.ExecutionIdentity;
+            PlaybackMode = request.PlaybackMode;
+        }
+
+        public TimelineRuntimePreparationStatus Status { get; }
+        public string RequestId { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
+        public TimelineRuntimeNumericTarget NumericTarget => m_Content.NumericTarget;
+        public TimelineData SourceTimeline => m_Content.SourceTimeline;
+        internal TimelineRuntimeMotionSampling MotionSampling => m_Content.MotionSampling;
+        public TimelineContentUnit Content => m_Content.Content;
+        public string ContentRevision => m_Content.ContentRevision;
+        public TimelineBindingPlan BindingPlan => m_Content.BindingPlan;
+        public TimelineCallInput CallInput => m_Content.CallInput;
+        public TimelinePreparedBindings PreparedBindings => m_Content.PreparedBindings;
+        public TimelineRuntimePreparedDependencies PreparedDependencies => m_Content.PreparedDependencies;
+        public IReadOnlyList<string> Errors => m_Content.Errors;
+        public bool IsReady => Status == TimelineRuntimePreparationStatus.Ready;
+    }
+
     public static class TimelineRuntimePreparation
     {
-        public static TimelineRuntimePreparationResult Prepare(TimelineRuntimePrepareRequest request)
+        public static TimelineRuntimePreparedContent PrepareContent(
+            TimelineData sourceTimeline,
+            TimelineContentUnit content,
+            TimelineRuntimeNumericTarget numericTarget,
+            IReadOnlyList<TimelineCallBinding> callBindings,
+            ITimelineDomainBindingResolver domainResolver,
+            ITimelineRuntimeDependencyResolver dependencyResolver)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
-
             try
             {
-                TimelineData sourceTimeline = request.Timeline.Clone();
-                sourceTimeline.Init();
-                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(
-                    sourceTimeline,
-                    request.ContractCatalog,
-                    request.DependencyResolver);
-                if (!discovery.IsValid)
-                    return TimelineRuntimePreparationResult.Failed(
-                        request.RequestId,
-                        request.ExecutionIdentity,
-                        request.NumericTarget,
-                        discovery.Errors);
                 var errors = new List<string>();
-                TimelineRuntimeEvaluator.ValidateTreeContracts(sourceTimeline, discovery.Content, errors);
+                TimelineRuntimeEvaluator.ValidateTreeContracts(sourceTimeline, content, errors);
                 if (errors.Count != 0)
-                    return TimelineRuntimePreparationResult.Failed(
-                        request.RequestId,
-                        request.ExecutionIdentity,
-                        request.NumericTarget,
+                    return TimelineRuntimePreparedContent.Failed(
+                        numericTarget,
                         errors);
-                var dependencyHandles = new List<TimelineRuntimeDependencyHandle>(discovery.Content.Dependencies.Count);
-                for (int index = 0; index < discovery.Content.Dependencies.Count; index++)
+                var dependencyHandles = new List<TimelineRuntimeDependencyHandle>(content.Dependencies.Count);
+                for (int index = 0; index < content.Dependencies.Count; index++)
                 {
-                    TimelineContentDependency dependency = discovery.Content.Dependencies[index];
-                    if (!request.DependencyResolver.TryResolve(
+                    TimelineContentDependency dependency = content.Dependencies[index];
+                    if (!dependencyResolver.TryResolve(
                             dependency,
-                            request.NumericTarget,
+                            numericTarget,
                             out TimelineRuntimeDependencyHandle handle,
                             out string error) || !handle.IsValid)
                     {
@@ -202,69 +182,46 @@ namespace BTSMTL.Timeline.Runtime
                     }
                     dependencyHandles.Add(handle);
                 }
-                if (errors.Count != 0 || dependencyHandles.Count != discovery.Content.Dependencies.Count)
-                    return TimelineRuntimePreparationResult.Failed(
-                        request.RequestId,
-                        request.ExecutionIdentity,
-                        request.NumericTarget,
+                if (errors.Count != 0)
+                    return TimelineRuntimePreparedContent.Failed(
+                        numericTarget,
                         errors);
 
-                TimelineBindingPlan bindingPlan = new TimelineBindingPlan(discovery.Content);
-                TimelineCallInput callInput = new TimelineCallInput(bindingPlan, request.CallBindings);
+                TimelineBindingPlan bindingPlan = new TimelineBindingPlan(content);
+                TimelineCallInput callInput = new TimelineCallInput(bindingPlan, callBindings);
                 TimelinePreparedBindings preparedBindings = TimelineBindingPreparation.Prepare(
                     bindingPlan,
                     callInput,
-                    request.DomainResolver,
+                    domainResolver,
                     errors);
                 if (preparedBindings == null || errors.Count != 0)
-                    return TimelineRuntimePreparationResult.Failed(
-                        request.RequestId,
-                        request.ExecutionIdentity,
-                        request.NumericTarget,
+                    return TimelineRuntimePreparedContent.Failed(
+                        numericTarget,
                         errors);
-                return TimelineRuntimePreparationResult.Ready(
-                    request,
+                return TimelineRuntimePreparedContent.Ready(
+                    numericTarget,
                     sourceTimeline,
-                    discovery.Content,
+                    content,
                     bindingPlan,
                     callInput,
                     preparedBindings,
-                    new TimelineRuntimePreparedDependencies(discovery.Content.Dependencies, dependencyHandles));
+                    new TimelineRuntimePreparedDependencies(content.Dependencies, dependencyHandles));
             }
             catch (Exception exception)
             {
-                return TimelineRuntimePreparationResult.Failed(
-                    request.RequestId,
-                    request.ExecutionIdentity,
-                    request.NumericTarget,
+                return TimelineRuntimePreparedContent.Failed(
+                    numericTarget,
                     new[] { exception.Message });
             }
         }
 
-        public static TimelineRuntimePlayback CreatePlayback(
-            TimelineRuntimePreparationResult preparation,
-            ulong generation,
-            int tickRate)
-        {
-            if (preparation == null)
-                throw new ArgumentNullException(nameof(preparation));
-            if (!preparation.IsReady)
-                throw new InvalidOperationException("Timeline playback cannot be created from a failed preparation.");
-            return CreatePlayback(
-                preparation,
-                new TimelineRuntimePlaybackHandle(preparation.ExecutionIdentity.InstanceId),
-                generation,
-                tickRate);
-        }
-
-        public static TimelineRuntimePlayback CreatePlayback(
+        internal static TimelineRuntimePlayback CreatePlayback(
             TimelineRuntimePreparationResult preparation,
             TimelineRuntimePlaybackHandle handle,
             ulong generation,
-            int tickRate)
+            int tickRate,
+            TimelineRuntimeEvaluationStoragePool evaluationStoragePool)
         {
-            if (preparation == null)
-                throw new ArgumentNullException(nameof(preparation));
             if (!preparation.IsReady)
                 throw new InvalidOperationException("Timeline playback cannot be created from a failed preparation.");
             if (!handle.IsValid)
@@ -275,7 +232,8 @@ namespace BTSMTL.Timeline.Runtime
                 handle,
                 generation,
                 preparation,
-                tickRate);
+                tickRate,
+                evaluationStoragePool);
         }
     }
 }

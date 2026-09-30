@@ -6,6 +6,7 @@ namespace ThirdPersonCamera
     [Serializable]
     public sealed class CameraInputSettings
     {
+        [SerializeField] string m_MoveInputId;
         [SerializeField] Vector2 m_MaxSpeed;
         [SerializeField] Vector2 m_AccelerationTime;
         [SerializeField] Vector2 m_DecelerationTime;
@@ -23,6 +24,7 @@ namespace ThirdPersonCamera
         [SerializeField] float m_PitchResponseWeight = 1f;
         [SerializeField] float m_YawResponseWeight = 1f;
 
+        public string MoveInputId => m_MoveInputId;
         public Vector2 MaxSpeed => m_MaxSpeed;
         public Vector2 AccelerationTime => m_AccelerationTime;
         public Vector2 DecelerationTime => m_DecelerationTime;
@@ -48,11 +50,14 @@ namespace ThirdPersonCamera
                 source.PointerInputScale, source.StickInputScale, source.PointerAxisGain,
                 source.StickAxisGain, source.AxisDirection, source.ElevationRange);
             ConfigureDrag(source.PointerActivationThreshold, source.StickActivationThreshold, source.DragExitDuration);
+            m_MoveInputId = source.MoveInputId;
             m_PitchLimit = source.PitchLimit;
             m_DefaultResponseWeight = source.DefaultResponseWeight;
             m_PitchResponseWeight = source.PitchResponseWeight;
             m_YawResponseWeight = source.YawResponseWeight;
         }
+
+        public void ConfigureMovementInput(string inputId) => m_MoveInputId = inputId;
 
         public void ConfigureAxes(Vector2 maxSpeed, Vector2 accelerationTime, Vector2 decelerationTime,
             Vector2 pointerInputScale, Vector2 stickInputScale, Vector2 pointerAxisGain,
@@ -78,7 +83,7 @@ namespace ThirdPersonCamera
 
         public void RequireValid(string source)
         {
-            if (!Positive(MaxSpeed) || !NonNegative(AccelerationTime) || !NonNegative(DecelerationTime) ||
+            if (string.IsNullOrWhiteSpace(MoveInputId) || !Positive(MaxSpeed) || !NonNegative(AccelerationTime) || !NonNegative(DecelerationTime) ||
                 !NonNegative(PointerInputScale) || !NonNegative(StickInputScale) ||
                 !NonNegative(PointerActivationThreshold) || !NonNegative(StickActivationThreshold) ||
                 !float.IsFinite(DragExitDuration) || DragExitDuration < 0f ||

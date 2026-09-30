@@ -81,12 +81,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             ICharacterPoseCanvasNativeRuntime runtime = m_NativeRuntime ??
                 throw new InvalidOperationException("Pose graph requires an attached native runtime instance.");
-            runtime.Initialize(this);
             CharacterPoseCanvasNode[] nodes = Nodes.ToArray();
             for (int i = 0; i < nodes.Length; i++)
                 nodes[i].GatherPorts();
             for (int i = 0; i < nodes.Length; i++)
                 nodes[i].BindPorts();
+            runtime.Initialize(this);
         }
 
         protected override void OnGraphStarted() =>

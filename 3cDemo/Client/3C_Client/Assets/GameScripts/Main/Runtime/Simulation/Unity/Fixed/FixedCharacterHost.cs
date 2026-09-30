@@ -163,22 +163,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void OnEnable()
         {
-            EnsureRegistration();
+            Initialize();
         }
 
         void OnDisable()
         {
-            DisposeRegistration();
+            Release();
         }
 
         void OnDestroy()
         {
-            DisposeRegistration();
+            Release();
         }
 
         public CharacterTimelineHost TimelineHost => m_TimelineHost;
 
-        void EnsureRegistration()
+        public void Initialize()
         {
             if (m_Registration != null)
                 return;
@@ -407,7 +407,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Transform followAnchor = null;
             Transform aimAnchor = null;
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings = null;
-            ICharacterPresentationLookInput lookInput = null;
+            ICharacterPresentationInput lookInput = null;
             string lookInputId = string.Empty;
             switch (m_PresentationRole)
             {
@@ -424,7 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     {
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' camera anchors must belong to VisualRoot.");
                     }
-                    if (controlSource is not ICharacterPresentationLookInput lookInputContract)
+                    if (controlSource is not ICharacterPresentationInput lookInputContract)
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
                     followAnchor = m_CameraFollowAnchor;
                     aimAnchor = m_CameraAimAnchor;
@@ -477,7 +477,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 characterTimelineHost);
         }
 
-        void DisposeRegistration()
+        public void Release()
         {
             if (m_Registration != null)
             {

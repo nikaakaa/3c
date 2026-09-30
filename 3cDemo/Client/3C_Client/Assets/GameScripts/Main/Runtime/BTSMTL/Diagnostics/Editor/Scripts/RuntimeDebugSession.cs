@@ -8,6 +8,7 @@ namespace BTSMTL.Diagnostics.Editor
     public sealed class RuntimeDebugSession : IDisposable
     {
         const double CaptureRefreshIntervalSeconds = 0.1d;
+        const double LiveRefreshIntervalSeconds = 1d / 30d;
 
         static readonly RuntimeDebugSession s_Shared;
 
@@ -19,10 +20,11 @@ namespace BTSMTL.Diagnostics.Editor
         RuntimeDebugViewModel m_ViewModel = RuntimeDebugViewModel.Detached;
         RuntimeCaptureSnapshot m_CaptureSnapshot;
         RuntimeDebugAttachmentState m_AttachmentState;
-        int m_HistoryOffset;
+        ulong m_HistorySequence = ulong.MaxValue;
         int m_CaptureSegmentLimit;
         long m_TargetRevision;
         double m_NextCaptureRefreshTime;
+        double m_NextLiveRefreshTime;
         bool m_Disposed;
 
         static RuntimeDebugSession()
@@ -49,13 +51,25 @@ namespace BTSMTL.Diagnostics.Editor
         public bool IsCaptureRecording => m_Target != null && m_Target.Store.IsCaptureRecording;
         public RuntimeCaptureSnapshot CaptureSnapshot => m_CaptureSnapshot;
         public bool HasCaptureHistory => m_CaptureSnapshot != null;
-        public int HistoryOffset => m_HistoryOffset;
+        public int HistoryOffset => m_CaptureSnapshot?.GetHistoryOffset(m_HistorySequence) ?? 0;
+        public ulong HistorySequence => m_HistorySequence;
+        public int ExecutionSpanCapacity => m_Target != null
+            ? m_Target.Store.CaptureEventCapacity
+            : m_CaptureSnapshot != null ? m_CaptureSnapshot.GetEvents(0).Length : 0;
+        public Guid CaptureId => m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended
+            ? m_CaptureSnapshot?.CaptureId ?? Guid.Empty
+            : m_Provider?.CaptureId ?? Guid.Empty;
         public long CaptureVersion => m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended
             ? m_CaptureSnapshot?.Version ?? 0
             : m_Provider?.CaptureVersion ?? 0;
 
         public RuntimeExecutionTimeline BuildExecutionTimeline(RuntimeInstanceKey instance = default)
         {
+            if (!instance.IsValid && m_AttachmentState == RuntimeDebugAttachmentState.Live)
+            {
+                CaptureSourceMaps();
+                return m_Provider.ReadExecutionTimeline(m_SourceMaps);
+            }
             RuntimeCaptureSnapshot capture = GetExecutionCapture();
             if (capture == null)
                 return null;
@@ -67,8 +81,38 @@ namespace BTSMTL.Diagnostics.Editor
                 capture,
                 currentMap,
                 m_SourceMaps,
-                GetExecutionHistoryOffset(),
-                instance);
+                0,
+                instance,
+                m_HistorySequence);
+        }
+
+        public bool TrySeekExecutionPosition(RuntimeTraceDomain domain, ulong position, Guid branch, ulong epoch)
+        {
+            RuntimeCaptureSnapshot snapshot = GetExecutionCapture();
+            if (snapshot == null)
+                return false;
+            ulong selectedSequence = 0;
+            ReadOnlySpan<RuntimeCaptureSegmentSnapshot> segments = snapshot.Segments;
+            for (int index = 0; index < segments.Length; index++)
+            {
+                RuntimeCaptureSegmentSnapshot segment = segments[index];
+                RuntimeTraceDomain segmentDomain = segment.Domain == RuntimeTraceDomain.Lifecycle
+                    ? RuntimeTraceDomain.Logic : segment.Domain;
+                if (segmentDomain != domain || segment.Position > position)
+                    continue;
+                ReadOnlySpan<RuntimeTraceEvent> events = segment.Events;
+                for (int eventIndex = 0; eventIndex < events.Length; eventIndex++)
+                {
+                    RuntimeTraceEvent trace = events[eventIndex];
+                    if (trace.ExecutionBranchId == branch && trace.RuntimeEpoch == epoch)
+                        selectedSequence = trace.Sequence;
+                }
+            }
+            if (selectedSequence == 0)
+                return false;
+            m_CaptureSnapshot = snapshot;
+            SetHistorySequence(selectedSequence);
+            return true;
         }
 
         public RuntimeExecutionHistory BuildExecutionHistory(RuntimeInstanceKey instance = default)
@@ -78,9 +122,10 @@ namespace BTSMTL.Diagnostics.Editor
                 return null;
             return m_ViewModel.BuildExecutionHistory(
                 capture,
-                GetExecutionHistoryOffset(),
+                0,
                 instance,
-                m_SourceMaps);
+                m_SourceMaps,
+                m_HistorySequence);
         }
 
         public void BuildExecutionProjections(
@@ -99,19 +144,20 @@ namespace BTSMTL.Diagnostics.Editor
                 m_SourceMaps.TryGetValue(m_Target.Revision, out RuntimeDebugSourceMapSnapshot mapped)
                 ? mapped
                 : RuntimeDebugSourceMapSnapshot.Empty;
-            int historyOffset = GetExecutionHistoryOffset();
             timeline = RuntimeExecutionTimelineBuilder.Build(
                 capture,
                 currentMap,
                 m_SourceMaps,
-                historyOffset,
-                instance);
+                0,
+                instance,
+                m_HistorySequence);
             history = RuntimeExecutionTimelineBuilder.BuildHistory(
                 capture,
                 currentMap,
                 m_SourceMaps,
-                historyOffset,
-                instance);
+                0,
+                instance,
+                m_HistorySequence);
         }
 
         public bool TryResolveHistoricalSource(
@@ -190,9 +236,10 @@ namespace BTSMTL.Diagnostics.Editor
             m_Frozen = null;
             m_ViewModel = RuntimeDebugViewModel.Detached;
             m_CaptureSnapshot = null;
-            m_HistoryOffset = 0;
+            m_HistorySequence = ulong.MaxValue;
             m_CaptureSegmentLimit = 0;
             m_NextCaptureRefreshTime = 0d;
+            m_NextLiveRefreshTime = 0d;
             m_AttachmentState = RuntimeDebugAttachmentState.Detached;
             m_TargetRevision++;
             NotifyChanged();
@@ -265,9 +312,10 @@ namespace BTSMTL.Diagnostics.Editor
                 return;
 
             m_AttachmentState = RuntimeDebugAttachmentState.Live;
-            m_HistoryOffset = 0;
+            m_HistorySequence = ulong.MaxValue;
             m_CaptureSegmentLimit = 0;
             m_NextCaptureRefreshTime = 0d;
+            m_NextLiveRefreshTime = 0d;
             m_ViewModel = m_Provider.LiveModel;
             RebindLiveInterests();
             RefreshProvider();
@@ -278,14 +326,8 @@ namespace BTSMTL.Diagnostics.Editor
         {
             if (m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
                 return m_CaptureSnapshot;
+            CaptureSourceMaps();
             return m_Target?.Store.FreezeActiveCapture();
-        }
-
-        int GetExecutionHistoryOffset()
-        {
-            return m_AttachmentState == RuntimeDebugAttachmentState.CaptureHistory
-                ? m_HistoryOffset
-                : 0;
         }
 
         public bool BeginCapture(RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail)
@@ -315,7 +357,7 @@ namespace BTSMTL.Diagnostics.Editor
                 return false;
 
             m_CaptureSnapshot = null;
-            m_HistoryOffset = 0;
+            m_HistorySequence = ulong.MaxValue;
             m_CaptureSegmentLimit = maximumSegments;
             m_NextCaptureRefreshTime = 0d;
             if (!RefreshProvider())
@@ -328,18 +370,32 @@ namespace BTSMTL.Diagnostics.Editor
             if (!CanStopCapture)
                 return false;
 
+            CaptureSourceMaps();
             RuntimeCaptureSnapshot snapshot = m_Provider.EndCapture();
             if (snapshot == null)
                 return false;
 
             m_CaptureSnapshot = snapshot;
-            m_HistoryOffset = 0;
+            m_HistorySequence = ulong.MaxValue;
             m_CaptureSegmentLimit = 0;
             m_NextCaptureRefreshTime = 0d;
             ReleaseLiveHandles();
-            m_ViewModel = m_Provider.BuildCaptureView(snapshot, m_HistoryOffset, m_SourceMaps);
+            m_ViewModel = m_Provider.BuildCaptureView(snapshot, 0, m_SourceMaps);
             m_AttachmentState = RuntimeDebugAttachmentState.CaptureHistory;
             NotifyChanged();
+            return true;
+        }
+
+        public bool TrySeekExecutionEvent(Guid captureId, ulong sequence)
+        {
+            RuntimeCaptureSnapshot snapshot = GetExecutionCapture();
+            if (snapshot == null || snapshot.CaptureId != captureId)
+                return false;
+            ReadOnlySpan<RuntimeTraceEvent> events = snapshot.GetEvents(0, sequence);
+            if (events.Length == 0 || events[events.Length - 1].Sequence != sequence)
+                return false;
+            m_CaptureSnapshot = snapshot;
+            SetHistorySequence(sequence);
             return true;
         }
 
@@ -347,17 +403,23 @@ namespace BTSMTL.Diagnostics.Editor
         {
             if (m_CaptureSnapshot == null)
                 return;
-
             int maxOffset = Math.Max(0, m_CaptureSnapshot.SegmentCount - 1);
             int clampedOffset = Math.Max(0, Math.Min(offset, maxOffset));
-            if (m_AttachmentState == RuntimeDebugAttachmentState.CaptureHistory && m_HistoryOffset == clampedOffset)
+            ReadOnlySpan<RuntimeTraceEvent> events = m_CaptureSnapshot.GetEvents(clampedOffset);
+            SetHistorySequence(events.Length == 0 ? ulong.MaxValue : events[events.Length - 1].Sequence);
+        }
+
+        void SetHistorySequence(ulong sequence)
+        {
+            if (m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended &&
+                m_HistorySequence == sequence)
                 return;
 
             ReleaseLiveHandles();
-            m_HistoryOffset = clampedOffset;
+            m_HistorySequence = sequence;
             m_ViewModel = m_Provider != null
-                ? m_Provider.BuildCaptureView(m_CaptureSnapshot, m_HistoryOffset, m_SourceMaps)
-                : m_Frozen?.BuildCaptureView(m_CaptureSnapshot, m_HistoryOffset) ?? RuntimeDebugViewModel.Detached;
+                ? m_Provider.BuildCaptureView(m_CaptureSnapshot, 0, m_SourceMaps, sequence)
+                : m_Frozen?.BuildCaptureView(m_CaptureSnapshot, 0, sequence) ?? RuntimeDebugViewModel.Detached;
             m_AttachmentState = m_Target == null ? RuntimeDebugAttachmentState.Ended : RuntimeDebugAttachmentState.CaptureHistory;
             NotifyChanged();
         }
@@ -410,9 +472,6 @@ namespace BTSMTL.Diagnostics.Editor
 
             if (m_Target != null && MatchTarget(m_Target, request) == RuntimeDebugTargetMatch.Exact)
                 return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached);
-
-            if (!EditorApplication.isPlaying)
-                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.NotPlaying, GetTargetCandidates(request));
 
             IReadOnlyList<RuntimeDebugTargetCandidate> candidates = GetTargetCandidates(request);
             RuntimeDiagnosticsTarget exactTarget = null;
@@ -480,8 +539,9 @@ namespace BTSMTL.Diagnostics.Editor
             m_Frozen = null;
             m_ViewModel = m_Provider.LiveModel;
             m_CaptureSnapshot = null;
-            m_HistoryOffset = 0;
+            m_HistorySequence = ulong.MaxValue;
             m_AttachmentState = RuntimeDebugAttachmentState.Live;
+            m_NextLiveRefreshTime = 0d;
             RebindLiveInterests();
             RefreshProvider();
             m_TargetRevision++;
@@ -493,6 +553,7 @@ namespace BTSMTL.Diagnostics.Editor
             if (m_Disposed || !CanControlLiveTarget)
                 return;
 
+            double now = EditorApplication.timeSinceStartup;
             if (IsCaptureRecording)
             {
                 if (m_CaptureSegmentLimit > 0 && CaptureSegmentCount >= m_CaptureSegmentLimit)
@@ -501,12 +562,16 @@ namespace BTSMTL.Diagnostics.Editor
                     return;
                 }
 
-                double now = EditorApplication.timeSinceStartup;
                 if (now < m_NextCaptureRefreshTime)
                     return;
                 m_NextCaptureRefreshTime = now + CaptureRefreshIntervalSeconds;
             }
-
+            else
+            {
+                if (now < m_NextLiveRefreshTime)
+                    return;
+                m_NextLiveRefreshTime = now + LiveRefreshIntervalSeconds;
+            }
             if (RefreshProvider())
                 NotifyChanged();
         }
@@ -527,10 +592,20 @@ namespace BTSMTL.Diagnostics.Editor
                 NotifyChanged();
             }
 
-            bool changed = m_Provider.Refresh();
+            CaptureSourceMaps();
+            bool changed = m_Provider.Refresh(m_SourceMaps);
             if (m_AttachmentState == RuntimeDebugAttachmentState.Live)
                 m_ViewModel = m_Provider.LiveModel;
             return changed;
+        }
+
+        void CaptureSourceMaps()
+        {
+            if (m_Target == null || m_SourceMaps.Count == m_Target.Context.SourceMaps.Count)
+                return;
+            foreach (IDebugSourceMap sourceMap in m_Target.Context.SourceMaps)
+                if (!m_SourceMaps.ContainsKey(sourceMap.Revision))
+                    m_SourceMaps.Add(sourceMap.Revision, RuntimeDebugSourceMapSnapshot.Capture(sourceMap));
         }
 
         void RebindLiveInterests()
@@ -567,16 +642,16 @@ namespace BTSMTL.Diagnostics.Editor
                 return;
 
             ReleaseLiveHandles();
+            CaptureSourceMaps();
             m_Frozen = m_Provider?.Freeze(m_SourceMaps);
             RuntimeCaptureSnapshot activeCapture = m_Frozen?.ActiveCapture;
-            if (activeCapture != null)
+            if (m_AttachmentState != RuntimeDebugAttachmentState.CaptureHistory && activeCapture != null)
                 m_CaptureSnapshot = activeCapture;
             m_ViewModel = m_CaptureSnapshot != null
-                ? m_Frozen?.BuildCaptureView(m_CaptureSnapshot, 0) ?? RuntimeDebugViewModel.Detached
+                ? m_Frozen?.BuildCaptureView(m_CaptureSnapshot, 0, m_HistorySequence) ?? RuntimeDebugViewModel.Detached
                 : m_Frozen?.LiveModel ?? RuntimeDebugViewModel.Detached;
             m_Target = null;
             m_Provider = null;
-            m_HistoryOffset = 0;
             m_AttachmentState = RuntimeDebugAttachmentState.Ended;
             m_TargetRevision++;
             NotifyChanged();
@@ -609,17 +684,18 @@ namespace BTSMTL.Diagnostics.Editor
             if (target == null || !request.IsValid)
                 return RuntimeDebugTargetMatch.SourceMissing;
 
-            IReadOnlyList<RuntimeSourceElementHandle> handles = target.SourceMap.FindHandles(request.Source);
-            if (handles.Count == 0)
-                return RuntimeDebugTargetMatch.SourceMissing;
-
-            for (int i = 0; i < handles.Count; i++)
+            RuntimeDebugTargetMatch match = RuntimeDebugTargetMatch.SourceMissing;
+            foreach (IDebugSourceMap sourceMap in target.Context.SourceMaps)
             {
-                if (target.SourceMap.TryGet(handles[i], out DebugSourceMapEntry entry) &&
-                    string.Equals(entry.ContentHash, request.ContentHash, StringComparison.Ordinal))
-                    return RuntimeDebugTargetMatch.Exact;
+                IReadOnlyList<RuntimeSourceElementHandle> handles = sourceMap.FindHandles(request.Source);
+                if (handles.Count != 0)
+                    match = RuntimeDebugTargetMatch.RevisionMismatch;
+                for (int i = 0; i < handles.Count; i++)
+                    if (sourceMap.TryGet(handles[i], out DebugSourceMapEntry entry) &&
+                        string.Equals(entry.ContentHash, request.ContentHash, StringComparison.Ordinal))
+                        return RuntimeDebugTargetMatch.Exact;
             }
-            return RuntimeDebugTargetMatch.RevisionMismatch;
+            return match;
         }
 
         static bool TryFindTargetByHost(int hostInstanceId, out RuntimeDiagnosticsTarget target)

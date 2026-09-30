@@ -23,7 +23,6 @@ namespace BTSMTL.Diagnostics.Editor
     {
         Attached,
         Ended,
-        NotPlaying,
         ExplicitHostUnregistered,
         ExplicitHostSourceMissing,
         ExplicitHostRevisionMismatch,
@@ -116,7 +115,6 @@ namespace BTSMTL.Diagnostics.Editor
         {
             RuntimeDebugTargetResolutionStatus.Attached => string.Empty,
             RuntimeDebugTargetResolutionStatus.Ended => "Target ended. Showing frozen history.",
-            RuntimeDebugTargetResolutionStatus.NotPlaying => "Enter Play Mode to inspect a runtime target.",
             RuntimeDebugTargetResolutionStatus.ExplicitHostUnregistered => "The selected character host is not registered.",
             RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing => "The selected character host does not contain this authoring source.",
             RuntimeDebugTargetResolutionStatus.ExplicitHostRevisionMismatch => "The selected character host was built from a different source revision.",

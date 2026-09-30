@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline.Runtime;
@@ -110,6 +109,8 @@ namespace BTSMTL.Timeline.Editor
         bool m_RuntimeObservationPinned;
         long m_RuntimePlaybackSelectionRevision = -1;
         RuntimeDebugViewModel m_RuntimePlaybackSelectionView;
+        readonly List<RuntimeTimelinePlaybackDebugSummary> m_RuntimeObservationSummaries =
+            new List<RuntimeTimelinePlaybackDebugSummary>();
 
         public TimelineData Timeline => m_Timeline;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
@@ -126,18 +127,19 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_Timeline == null)
                 return Array.Empty<RuntimeTimelinePlaybackDebugSummary>();
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
-                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(
-                    m_Timeline.AuthoringId,
-                    SourceGraphAuthoringId);
-            if (string.IsNullOrEmpty(SourceNodeAuthoringId))
-                return FilterRuntimeScope(summaries);
-            return FilterRuntimeScope(summaries
-                .Where(value => string.Equals(
-                    value.Provenance.SourceNodeAuthoringId,
-                    SourceNodeAuthoringId,
-                    StringComparison.Ordinal))
-                .ToArray());
+            RuntimeDebugSession.Shared.ViewModel.CopyTimelinePlaybackSummaries(
+                m_Timeline.AuthoringId,
+                SourceGraphAuthoringId,
+                m_RuntimeObservationSummaries);
+            if (!string.IsNullOrEmpty(SourceNodeAuthoringId))
+                for (int index = m_RuntimeObservationSummaries.Count - 1; index >= 0; index--)
+                    if (!string.Equals(
+                            m_RuntimeObservationSummaries[index].Provenance.SourceNodeAuthoringId,
+                            SourceNodeAuthoringId,
+                            StringComparison.Ordinal))
+                        m_RuntimeObservationSummaries.RemoveAt(index);
+            FilterRuntimeScope(m_RuntimeObservationSummaries);
+            return m_RuntimeObservationSummaries;
         }
 
         internal bool TryResolveRuntimeObservation(
@@ -257,19 +259,13 @@ namespace BTSMTL.Timeline.Editor
             m_RuntimeObservationPinned = false;
         }
 
-        IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> FilterRuntimeScope(
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries)
+        void FilterRuntimeScope(List<RuntimeTimelinePlaybackDebugSummary> summaries)
         {
-            if (!m_RuntimeObservationScope.IsValid || summaries.Count == 0)
-                return summaries;
-            var filtered = new List<RuntimeTimelinePlaybackDebugSummary>(summaries.Count);
-            for (int index = 0; index < summaries.Count; index++)
-            {
-                RuntimeTimelinePlaybackDebugSummary summary = summaries[index];
-                if (MatchesRuntimeScope(summary))
-                    filtered.Add(summary);
-            }
-            return filtered;
+            if (!m_RuntimeObservationScope.IsValid)
+                return;
+            for (int index = summaries.Count - 1; index >= 0; index--)
+                if (!MatchesRuntimeScope(summaries[index]))
+                    summaries.RemoveAt(index);
         }
 
         bool MatchesRuntimeScope(RuntimeTimelinePlaybackDebugSummary summary)
@@ -337,28 +333,26 @@ namespace BTSMTL.Timeline.Editor
             return null;
         }
 
-        public void ApplyRuntimeTimelineObservation(
-            TimelineData runtimeTimeline,
-            bool structureChanged,
+        internal void ApplyRuntimeObservationOverlay(
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
+            IReadOnlyDictionary<string, string> activeClips,
+            IReadOnlyDictionary<string, float> dynamicClipEnds)
         {
             if (!m_RuntimeObservationReadOnly)
                 return;
-            m_SlateProjection?.ApplyRuntimeTimeline(runtimeTimeline, structureChanged, visualTime, activeTracks, activeClips);
+            m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips, dynamicClipEnds);
         }
 
-        public void ApplyHistoryTimelineObservation(
-            TimelineData runtimeTimeline,
-            bool structureChanged,
+        internal void ApplyHistoryObservationOverlay(
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
+            IReadOnlyDictionary<string, string> activeClips,
+            IReadOnlyDictionary<string, float> dynamicClipEnds)
         {
             if (!m_RuntimeObservationReadOnly)
                 return;
-            m_SlateProjection?.ApplyHistoryTimeline(runtimeTimeline, structureChanged, visualTime, activeTracks, activeClips);
+            m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips, dynamicClipEnds);
         }
 
         public void ClearRuntimeTimelineObservation()
@@ -468,7 +462,7 @@ namespace BTSMTL.Timeline.Editor
                     out string unavailableReason))
             {
                 rootVisualElement.Clear();
-                rootVisualElement.Add(CreateAuthoringToolbar());
+                rootVisualElement.Add(CreateWorkspaceHeader());
                 rootVisualElement.Add(new HelpBox(
                     $"Slate Timeline unavailable: {unavailableReason}",
                     HelpBoxMessageType.Error));
@@ -484,7 +478,7 @@ namespace BTSMTL.Timeline.Editor
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             WindowOpened?.Invoke(this);
             rootVisualElement.Clear();
-            rootVisualElement.Add(CreateAuthoringToolbar());
+            rootVisualElement.Add(CreateWorkspaceHeader());
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
             ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
             ownership.style.paddingLeft = 8f;
@@ -505,7 +499,7 @@ namespace BTSMTL.Timeline.Editor
         {
             titleContent = new GUIContent("Timeline Editor");
             rootVisualElement.Clear();
-            rootVisualElement.Add(CreateAuthoringToolbar());
+            rootVisualElement.Add(CreateWorkspaceHeader());
             SetStatus("选择一个 Timeline 资产或从 Skill Graph 打开 Timeline。");
         }
 
@@ -650,7 +644,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid,
             m_SourceGraphAuthoringId);
 
-        VisualElement CreateAuthoringToolbar()
+        VisualElement CreateWorkspaceHeader()
         {
             m_WorkspaceModeControls = TimelineWorkspaceModeBridge.CreateControls(this);
             m_Toolbar = TimelineEditorToolbarView.Create(
@@ -659,7 +653,9 @@ namespace BTSMTL.Timeline.Editor
                 ReturnToTimeline,
                 OnSharedTimelineChanged,
                 m_WorkspaceModeControls);
-            return m_Toolbar.Toolbar;
+            var header = new VisualElement();
+            header.Add(m_Toolbar.Toolbar);
+            return header;
         }
 
         bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
@@ -735,8 +731,8 @@ namespace BTSMTL.Timeline.Editor
     [InitializeOnLoad]
     public static class TimelineRuntimeObservationBridge
     {
-        static readonly Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection> s_Projections =
-            new Dictionary<TimelineEditorWindow, RuntimeTimelinePlaybackProjection>();
+        static readonly Dictionary<TimelineEditorWindow, RuntimeTimelineObservationBuffer> s_ObservationBuffers =
+            new Dictionary<TimelineEditorWindow, RuntimeTimelineObservationBuffer>();
         static RuntimeDebugViewModel s_ObservedView;
         static RuntimeDebugAttachmentState s_ObservedAttachmentState;
 
@@ -770,19 +766,6 @@ namespace BTSMTL.Timeline.Editor
                               s_ObservedAttachmentState != session.AttachmentState;
             s_ObservedView = view;
             s_ObservedAttachmentState = session.AttachmentState;
-            if (!refreshAll)
-            {
-                bool timelineChanged = false;
-                foreach (RuntimeSourceElementKey source in view.Changes.Sources)
-                {
-                    if (string.IsNullOrEmpty(source.TimelineAuthoringId))
-                        continue;
-                    timelineChanged = true;
-                    break;
-                }
-                if (!timelineChanged)
-                    return;
-            }
             TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
             for (int index = 0; index < windows.Length; index++)
             {
@@ -801,7 +784,7 @@ namespace BTSMTL.Timeline.Editor
         static void ReleaseWindow(TimelineEditorWindow window)
         {
             if (window != null)
-                s_Projections.Remove(window);
+                s_ObservationBuffers.Remove(window);
         }
 
         static void Refresh(TimelineEditorWindow window)
@@ -818,7 +801,7 @@ namespace BTSMTL.Timeline.Editor
                     out RuntimeTimelinePlaybackDebugSummary summary,
                     out string observationMessage))
             {
-                ApplyRuntimeTimelineObservation(window, summary);
+                ApplyRuntimeObservation(window, summary);
                 return;
             }
             ReleaseWindow(window);
@@ -827,27 +810,23 @@ namespace BTSMTL.Timeline.Editor
                 window.SetRuntimeObservationStatus(observationMessage);
         }
 
-        static void ApplyRuntimeTimelineObservation(
+        static void ApplyRuntimeObservation(
             TimelineEditorWindow window,
             RuntimeTimelinePlaybackDebugSummary summary)
         {
-            if (!TimelineRuntimePlaybackSnapshotRegistry.TryGet(summary.Playback, out TimelineData sourceTimeline))
-            {
-                window.ClearRuntimeTimelineObservation();
-                window.SetRuntimeObservationStatus("当前 Timeline 实例没有冻结运行内容。");
-                return;
-            }
-            RuntimeTimelinePlaybackProjection projection = GetProjection(window);
-            Dictionary<string, string> activeTracks = projection.ActiveTracks;
-            Dictionary<string, string> activeClips = projection.ActiveClips;
+            RuntimeTimelineObservationBuffer observation = GetObservationBuffer(window);
+            Dictionary<string, string> activeTracks = observation.ActiveTracks;
+            Dictionary<string, string> activeClips = observation.ActiveClips;
             activeTracks.Clear();
             activeClips.Clear();
+            Dictionary<string, float> dynamicClipEnds = observation.DynamicClipEnds;
+            dynamicClipEnds.Clear();
             RuntimeDebugSession.Shared.ViewModel.CopyTimelineCurrentEvents(
-                sourceTimeline.AuthoringId,
+                window.Timeline.AuthoringId,
                 summary.Playback,
-                projection.EventBuffer,
+                observation.EventBuffer,
                 summary.Provenance.SourceGraphAuthoringId);
-            IReadOnlyList<RuntimeDebugEventView> events = projection.EventBuffer;
+            IReadOnlyList<RuntimeDebugEventView> events = observation.EventBuffer;
             for (int index = 0; index < events.Count; index++)
             {
                 RuntimeDebugEventView item = events[index];
@@ -868,50 +847,56 @@ namespace BTSMTL.Timeline.Editor
                 else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
                 {
-                    if ((terminal || item.Event.Position < latestPosition ||
-                         item.Event.Payload.Cycle != cycle) &&
-                        item.Event.Kind is RuntimeTraceEventKind.ClipActive or RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated)
-                        status = "已执行";
-                    activeClips.TryAdd(source.ClipAuthoringId, status);
+                    int eventCycle = item.Event.Payload.Cycle;
+                    if (eventCycle > cycle || item.Event.Position > latestPosition)
+                        continue;
+                    bool dynamicTreeClip = source.Kind == RuntimeSourceElementKind.TreeClip &&
+                                           string.Equals(item.Event.Payload.Detail, "TreeDecision", StringComparison.Ordinal);
+                    bool exited = item.Event.Kind is RuntimeTraceEventKind.TreeClipExited or
+                        RuntimeTraceEventKind.TreeClipDestroyed;
+                    if (dynamicTreeClip && eventCycle == cycle)
+                    {
+                        float end = exited || terminal
+                            ? item.Event.Payload.Time
+                            : presentation ? summary.VisualTime : summary.LogicTime;
+                        if (item.Event.Kind == RuntimeTraceEventKind.TreeClipExited)
+                            dynamicClipEnds[source.ClipAuthoringId] = end;
+                        else
+                            dynamicClipEnds.TryAdd(source.ClipAuthoringId, end);
+                    }
+                    if (item.Event.Kind is RuntimeTraceEventKind.ClipActive or
+                        RuntimeTraceEventKind.TreeClipEntered or
+                        RuntimeTraceEventKind.TreeClipUpdated)
+                    {
+                        if (terminal || eventCycle != cycle || item.Event.Position != latestPosition)
+                            status = "已执行";
+                        else if (dynamicTreeClip)
+                            status = "open";
+                        activeClips.TryAdd(source.ClipAuthoringId, status);
+                    }
+                    else if (item.Event.Kind is RuntimeTraceEventKind.TreeClipExited or RuntimeTraceEventKind.TreeClipDestroyed)
+                    {
+                        activeClips.TryAdd(
+                            source.ClipAuthoringId,
+                            eventCycle == cycle && item.Event.Position == latestPosition ? "已退出" : "已执行");
+                    }
                 }
             }
-            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel, summary);
-            MarkOpenTreeClips(runtimeTimeline, activeClips);
             if (RuntimeDebugSession.Shared.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
-                window.ApplyHistoryTimelineObservation(runtimeTimeline, projection.StructureChanged, summary.VisualTime, activeTracks, activeClips);
+                window.ApplyHistoryObservationOverlay(summary.VisualTime, activeTracks, activeClips, dynamicClipEnds);
             else
-                window.ApplyRuntimeTimelineObservation(runtimeTimeline, projection.StructureChanged, summary.VisualTime, activeTracks, activeClips);
+                window.ApplyRuntimeObservationOverlay(summary.VisualTime, activeTracks, activeClips, dynamicClipEnds);
         }
 
-        static RuntimeTimelinePlaybackProjection GetProjection(TimelineEditorWindow window)
+        static RuntimeTimelineObservationBuffer GetObservationBuffer(TimelineEditorWindow window)
         {
-            if (!s_Projections.TryGetValue(window, out RuntimeTimelinePlaybackProjection projection))
+            if (!s_ObservationBuffers.TryGetValue(window, out RuntimeTimelineObservationBuffer observation))
             {
-                projection = new RuntimeTimelinePlaybackProjection();
-                s_Projections.Add(window, projection);
+                observation = new RuntimeTimelineObservationBuffer();
+                s_ObservationBuffers.Add(window, observation);
             }
-            return projection;
-        }
-
-        static void MarkOpenTreeClips(
-            TimelineData timeline,
-            IDictionary<string, string> activeClips)
-        {
-            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
-            {
-                if (timeline.Tracks[trackIndex] is not TreeTrack track)
-                    continue;
-                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                {
-                    if (track.Clips[clipIndex] is TreeClip treeClip &&
-                        treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision &&
-                        activeClips.TryGetValue(treeClip.AuthoringId, out string status) &&
-                        status is "Active" or "Enter" or "Update")
-                        activeClips[treeClip.AuthoringId] = "open";
-                }
-            }
+            return observation;
         }
 
     }
 }
-

@@ -300,6 +300,7 @@ namespace Slate
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Func<string, bool> embeddedRuntimeTrackActive;
         [System.NonSerialized] private System.Func<string, string> embeddedRuntimeClipStatus;
+        [System.NonSerialized] private System.Func<string, float?> embeddedRuntimeClipEnd;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
         [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
@@ -336,7 +337,10 @@ namespace Slate
         private Rect centerRect;    //for timeline
 
 
-        [System.NonSerialized] private Dictionary<int, ActionClipWrapper> clipWrappers;
+        [System.NonSerialized] private Dictionary<(int group, int track, int clip), ActionClipWrapper> clipWrappers;
+        readonly List<ActionClipWrapper> clipWindows = new List<ActionClipWrapper>();
+        GUI.WindowFunction clipWindowCallback;
+        readonly Dictionary<object, List<IClipEditorBinding>> trackClipBindings = new Dictionary<object, List<IClipEditorBinding>>();
         [System.NonSerialized] private Dictionary<ActionClip, ActionClipWrapper> clipWrappersMap;
         [System.NonSerialized] private EditorPlaybackState editorPlaybackState = EditorPlaybackState.Stoped;
         [System.NonSerialized] private Cutscene.WrapMode editorPlaybackWrapMode = Cutscene.WrapMode.Loop;
@@ -821,7 +825,9 @@ namespace Slate
             showDragDropInfo = false;
             willRepaint = true;
             pendingGuides = new List<GuideLine>();
-            clipWrappers = new Dictionary<int, ActionClipWrapper>();
+            trackClipBindings.Clear();
+            clipWindows.Clear();
+            clipWrappers = new Dictionary<(int group, int track, int clip), ActionClipWrapper>();
             clipWrappersMap = null;
             interactingClip = null;
             multiSelection = null;
@@ -849,6 +855,50 @@ namespace Slate
             }
         }
 
+        public void InvalidateEmbeddedClipBindings()
+        {
+            trackClipBindings.Clear();
+        }
+
+        List<IClipEditorBinding> GetTrackClipBindings(object track, int count)
+        {
+            if (!trackClipBindings.TryGetValue(track, out List<IClipEditorBinding> bindings))
+            {
+                bindings = new List<IClipEditorBinding>(count);
+                trackClipBindings.Add(track, bindings);
+            }
+            if (bindings.Count > count)
+                bindings.RemoveRange(count, bindings.Count - count);
+            return bindings;
+        }
+
+        IReadOnlyList<IClipEditorBinding> GetFormalTrackClipBindings(IEmbeddedTimelineTrackBinding track)
+        {
+            IReadOnlyList<IEmbeddedTimelineClipBinding> clips = track.Clips;
+            List<IClipEditorBinding> bindings = GetTrackClipBindings(track, clips.Count);
+            for (int index = 0; index < clips.Count; index++)
+            {
+                if (index == bindings.Count)
+                    bindings.Add(new FormalClipEditorBinding(clips[index]));
+                else if (!ReferenceEquals(bindings[index].FormalClip, clips[index]))
+                    bindings[index] = new FormalClipEditorBinding(clips[index]);
+            }
+            return bindings;
+        }
+
+        IReadOnlyList<IClipEditorBinding> GetNativeTrackClipBindings(CutsceneTrack track)
+        {
+            List<IClipEditorBinding> bindings = GetTrackClipBindings(track, track.clips.Count);
+            for (int index = 0; index < track.clips.Count; index++)
+            {
+                if (index == bindings.Count)
+                    bindings.Add(new NativeClipEditorBinding(track.clips[index]));
+                else if (!ReferenceEquals(bindings[index].NativeAction, track.clips[index]))
+                    bindings[index] = new NativeClipEditorBinding(track.clips[index]);
+            }
+            return bindings;
+        }
+
         public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
         {
             embeddedRuntimeTime = runtimeTime;
@@ -861,10 +911,12 @@ namespace Slate
 
         public void ConfigureEmbeddedRuntimeState(
             System.Func<string, bool> trackActive,
-            System.Func<string, string> clipStatus)
+            System.Func<string, string> clipStatus,
+            System.Func<string, float?> clipEnd)
         {
             embeddedRuntimeTrackActive = trackActive;
             embeddedRuntimeClipStatus = clipStatus;
+            embeddedRuntimeClipEnd = clipEnd;
         }
 
         public void InitializeStandalone(
@@ -958,6 +1010,8 @@ namespace Slate
             }
             CutsceneUtility.selectedObject = null;
             cutscene = null;
+            trackClipBindings.Clear();
+            clipWindows.Clear();
             clipWrappers = null;
             clipWrappersMap = null;
             embeddedRepaint = null;
@@ -979,6 +1033,7 @@ namespace Slate
             embeddedHistoryTime = null;
             embeddedRuntimeTrackActive = null;
             embeddedRuntimeClipStatus = null;
+            embeddedRuntimeClipEnd = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             CurveEditor.ClearEmbeddedCache(this);
@@ -1063,6 +1118,7 @@ namespace Slate
 
         //...
         void OnEnable() {
+            clipWindowCallback = ActionClipWindow;
             Styles.Load();
 
             UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( !embeddedSurface && cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
@@ -1169,20 +1225,19 @@ namespace Slate
             }
 
             cutscene.Validate();
-            clipWrappers = new Dictionary<int, ActionClipWrapper>();
+            trackClipBindings.Clear();
+            clipWindows.Clear();
+            clipWrappers = new Dictionary<(int group, int track, int clip), ActionClipWrapper>();
             clipWrappersMap = new Dictionary<ActionClip, ActionClipWrapper>();
             for ( int g = 0; g < cutscene.groups.Count; g++ ) {
                 for ( int t = 0; t < cutscene.groups[g].tracks.Count; t++ ) {
-                    for ( int a = 0; a < cutscene.groups[g].tracks[t].clips.Count; a++ ) {
-                        var id = UID(g, t, a);
-                        if ( clipWrappers.ContainsKey(id) ) {
-                            Debug.LogError("Collided UIDs. This should really not happen but it did!");
-                            continue;
-                        }
-                        var clip = cutscene.groups[g].tracks[t].clips[a];
-                        var wrapper = new ActionClipWrapper(clip);
-                        clipWrappers[id] = wrapper;
-                        clipWrappersMap[clip] = wrapper;
+                    CutsceneTrack track = cutscene.groups[g].tracks[t];
+                    IReadOnlyList<IClipEditorBinding> bindings = GetNativeTrackClipBindings(track);
+                    for ( int a = 0; a < track.clips.Count; a++ ) {
+                        var wrapper = new ActionClipWrapper(bindings[a], clipWindows.Count);
+                        clipWindows.Add(wrapper);
+                        clipWrappers.Add((g, t, a), wrapper);
+                        clipWrappersMap[track.clips[a]] = wrapper;
                     }
                 }
             }
@@ -1190,14 +1245,6 @@ namespace Slate
             if ( lastTime > 0 ) {
                 cutscene.currentTime = lastTime;
             }
-        }
-
-        //An integer UID out of list indeces (group, track, action clip)
-        int UID(int g, int t, int a) {
-            var A = g.ToString("D3");
-            var B = t.ToString("D3");
-            var C = a.ToString("D4");
-            return int.Parse(A + B + C);
         }
 
         //Play button pressed or otherwise started
@@ -2845,7 +2892,10 @@ namespace Slate
                 group =>
                 {
                     GenericMenu menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
+                    if (!embeddedTimeline.IsReadOnly)
+                        menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
+                    else
+                        menu.AddDisabledItem(new GUIContent("Add Track"));
                     menu.ShowAsContext();
                 },
                 group => embeddedTimeline.Select(group),
@@ -2882,18 +2932,13 @@ namespace Slate
                         },
                         (track, _, _) =>
                         {
-                            float time = EmbeddedCurrentTime();
-                            GenericMenu menu = new GenericMenu();
-                            menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, time));
-                            if (embeddedTimeline.CanPasteClip)
-                                menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, time));
-                            menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
-                            menu.ShowAsContext();
+                            ShowEmbeddedTrackContextMenu(track, EmbeddedCurrentTime(), false);
                         },
                         track =>
                         {
                             embeddedTimeline.Select(track);
-                            formalPickedTrack = track;
+                            if (!embeddedTimeline.IsReadOnly && !track.IsLocked)
+                                formalPickedTrack = track;
                         },
                         track => formalPickedTrack != null &&
                                 !ReferenceEquals(formalPickedTrack, track) &&
@@ -2926,6 +2971,33 @@ namespace Slate
                 formalPickedTrack = null;
             GUI.color = Color.white;
             GUI.enabled = true;
+        }
+
+        void ShowEmbeddedTrackContextMenu(IEmbeddedTimelineTrackBinding track, float time, bool includeMarker)
+        {
+            GenericMenu menu = new GenericMenu();
+            bool canEdit = !embeddedTimeline.IsReadOnly && !track.IsLocked;
+            if (includeMarker)
+            {
+                if (canEdit)
+                    menu.AddItem(new GUIContent("Add Marker"), false, () => embeddedTimeline.AddMarker(track, time));
+                else
+                    menu.AddDisabledItem(new GUIContent("Add Marker"));
+            }
+            if (canEdit)
+            {
+                menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, time));
+                if (embeddedTimeline.CanPasteClip)
+                    menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, time));
+                menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
+            }
+            else
+            {
+                menu.AddDisabledItem(new GUIContent("Add Clip"));
+                menu.AddDisabledItem(new GUIContent("Paste Clip"));
+                menu.AddDisabledItem(new GUIContent("Delete Track"));
+            }
+            menu.ShowAsContext();
         }
 
         void ShowNativeGroupContextMenu(CutsceneGroup group)
@@ -3441,7 +3513,7 @@ namespace Slate
                         value => value.isActive,
                         value => value.isLocked,
                         value => ReferenceEquals(CutsceneUtility.selectedObject, value),
-                        value => value.clips.Select(clip => (IClipEditorBinding)new NativeClipEditorBinding(clip)).ToArray(),
+                        GetNativeTrackClipBindings,
                         (value, trackPosRect, trackTimeRect) => DrawNativeTimelineTrackPreContent(value, trackPosRect, trackTimeRect),
                         (value, trackPosRect, trackTimeRect) =>
                         {
@@ -3523,14 +3595,13 @@ namespace Slate
             bool trackActive,
             float trackDefaultHeight)
         {
-            int id = UID(groupIndex, trackIndex, clipIndex);
+            var key = (groupIndex, trackIndex, clipIndex);
             ActionClipWrapper wrapper;
-            if (!clipWrappers.TryGetValue(id, out wrapper))
+            if (!clipWrappers.TryGetValue(key, out wrapper))
             {
-                wrapper = currentBinding.FormalClip != null
-                    ? new ActionClipWrapper(currentBinding.FormalClip)
-                    : new ActionClipWrapper(currentBinding.NativeAction);
-                clipWrappers[id] = wrapper;
+                wrapper = new ActionClipWrapper(currentBinding, clipWindows.Count);
+                clipWindows.Add(wrapper);
+                clipWrappers.Add(key, wrapper);
                 if (currentBinding.NativeAction != null)
                 {
                     if (clipWrappersMap != null)
@@ -3545,7 +3616,13 @@ namespace Slate
             wrapper.SetNeighbors(previousBinding, nextBinding);
             Rect clipRect = wrapper.rect;
             clipRect.y = y;
-            clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
+            float? runtimeEnd = embeddedTimeline != null && embeddedTimeline.IsReadOnly && currentBinding.FormalClip != null
+                ? embeddedRuntimeClipEnd?.Invoke(currentBinding.FormalClip.AuthoringId)
+                : null;
+            float displayedLength = runtimeEnd.HasValue
+                ? Mathf.Max(0f, runtimeEnd.Value - currentBinding.StartTime)
+                : currentBinding.Length;
+            clipRect.width = Mathf.Max(displayedLength / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
             clipRect.height = trackDefaultHeight;
 
             float xTime = wrapper.editorBinding.StartTime;
@@ -3665,7 +3742,7 @@ namespace Slate
             GUI.color = wrapper.editorBinding.IsValid ? Color.white : new Color(1, 0.3f, 0.3f);
             GUI.color = trackActive ? GUI.color : Color.grey;
             GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
-            wrapper.rect = GUI.Window(id, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
+            wrapper.rect = GUI.Window(wrapper.WindowId, clipRect, clipWindowCallback, string.Empty, GUIStyle.none);
             if (!isProSkin)
             {
                 GUI.color = Color.white.WithAlpha(0.5f);
@@ -3685,20 +3762,6 @@ namespace Slate
             if (!string.IsNullOrEmpty(runtimeStatus))
             {
                 DrawClippedClipLabel(new Rect(clipRect.x, clipRect.yMax - 14f, clipRect.width, 14f), runtimeStatus, Styles.centerLabel);
-                if (runtimeStatus == "open" && embeddedRuntimeTime != null)
-                {
-                    float? growTime = embeddedRuntimeTime();
-                    if (growTime.HasValue)
-                    {
-                        float growEndX = TimeToPos(growTime.Value);
-                        if (growEndX > clipRect.xMax)
-                        {
-                            GUI.color = new Color(0.25f, 0.85f, 1f, 0.35f);
-                            GUI.Box(new Rect(clipRect.xMax, clipRect.yMin + 1f, growEndX - clipRect.xMax, clipRect.height - 2f), string.Empty, Styles.clipBoxHorizontalStyle);
-                            GUI.color = Color.white;
-                        }
-                    }
-                }
             }
             float nextPosX = TimeToPos(nextBinding != null ? nextBinding.StartTime : viewTimeMax);
             float previousPosX = TimeToPos(previousBinding != null ? previousBinding.EndTime : viewTimeMin);
@@ -3779,7 +3842,7 @@ namespace Slate
                             value => value.IsActive,
                             value => value.IsLocked,
                             value => ReferenceEquals(embeddedTimeline.Selected, value),
-                            value => value.Clips.Select(clip => (IClipEditorBinding)new FormalClipEditorBinding(clip)).ToArray(),
+                            GetFormalTrackClipBindings,
                             (value, trackPosRect, trackTimeRect) => DrawEmbeddedTimelineMarkers(e, value, trackPosRect),
                             (value, trackPosRect, trackTimeRect) =>
                             {
@@ -3794,16 +3857,7 @@ namespace Slate
                                     trackPosRect.Contains(e.mousePosition))
                                 {
                                     float markerTime = Mathf.Max(0f, SnapTime(PosToTime(mousePosition.x)));
-                                    GenericMenu menu = new GenericMenu();
-                                    if (!embeddedTimeline.IsReadOnly && !value.IsLocked)
-                                        menu.AddItem(new GUIContent("Add Marker"), false, () => embeddedTimeline.AddMarker(value, markerTime));
-                                    else
-                                        menu.AddDisabledItem(new GUIContent("Add Marker"));
-                                    menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, markerTime));
-                                    if (embeddedTimeline.CanPasteClip)
-                                        menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, markerTime));
-                                    menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(value));
-                                    menu.ShowAsContext();
+                                    ShowEmbeddedTrackContextMenu(value, markerTime, true);
                                     e.Use();
                                 }
                             },
@@ -4106,7 +4160,11 @@ namespace Slate
 
         //This is done in a GUILayout.Group, thus must use e.mousePosition instead of this.mousePosition
         void DoMultiSelection() {
-
+            if (embeddedTimeline != null && embeddedTimeline.IsReadOnly) {
+                multiSelection = null;
+                multiSelectStartPos = null;
+                return;
+            }
             var e = Event.current;
 
             var r = new Rect();
@@ -4319,15 +4377,9 @@ namespace Slate
         ///----------------------------------------------------------------------------------------------
 
 
-        //ActionClip window callback. Its ID is based on the UID function that is based on the index path to the action.
-        //The ID of the window is also the same as the ID to use for for clipWrappers dictionary as key to get the clipWrapper for the action that represents this window
         void ActionClipWindow(int id) {
-            ActionClipWrapper wrapper = null;
-            if ( clipWrappers.TryGetValue(id, out wrapper) ) {
-                wrapper.OnClipGUI(id);
-            }
+            clipWindows[id].OnClipGUI(id);
         }
-
 
         ///----------------------------------------------------------------------------------------------
 
@@ -4398,12 +4450,11 @@ namespace Slate
                 set { _rect = value; }
             }
 
-            public ActionClipWrapper(ActionClip action) {
-                editorBinding = new NativeClipEditorBinding(action);
-            }
+            public readonly int WindowId;
 
-            public ActionClipWrapper(IEmbeddedTimelineClipBinding clip) {
-                editorBinding = new FormalClipEditorBinding(clip);
+            public ActionClipWrapper(IClipEditorBinding binding, int windowId) {
+                editorBinding = binding;
+                WindowId = windowId;
             }
 
             public void SetNeighbors(IClipEditorBinding previous, IClipEditorBinding next)
@@ -4444,7 +4495,8 @@ namespace Slate
                 pointerTime = editor.PosToTime(editor.mousePosition.x);
                 snapedPointerTime = editorBinding.IsTimeQuantized ? editor.SnapTime(pointerTime) : pointerTime;
 
-                allowScale = editorBinding.CanScale && editorBinding.Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
+                bool canEdit = editor.embeddedTimeline == null || !editor.embeddedTimeline.IsReadOnly;
+                allowScale = canEdit && editorBinding.CanScale && editorBinding.Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
                 dragRect = new Rect(0, 0, rect.width, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 )).ExpandBy(allowScale ? -SCALE_RECT_WIDTH : 0, 0);
                 controlRectIn = new Rect(0, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
                 controlRectOut = new Rect(rect.width - SCALE_RECT_WIDTH, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
@@ -4485,7 +4537,7 @@ namespace Slate
 
                 if ( e.type == EventType.MouseDown ) {
 
-                    if ( e.button == 0 ) {
+                    if ( e.button == 0 && canEdit ) {
                         if ( dragRect.Contains(e.mousePosition) ) {
                             isWaitingMouseDrag = true;
                         }
@@ -4493,7 +4545,7 @@ namespace Slate
                         editor.CacheMagnetSnapTimes(editorBinding);
                     }
 
-                    if ( e.control && dragRect.Contains(e.mousePosition) ) {
+                    if ( canEdit && e.control && dragRect.Contains(e.mousePosition) ) {
                         if ( multiSelection == null ) {
                             multiSelection = new List<ActionClipWrapper>() { this };
                         }
@@ -4540,7 +4592,8 @@ namespace Slate
 
 
                 DrawBlendGraphics();
-                DoEdgeControls();
+                if (canEdit)
+                    DoEdgeControls();
 
 
                 if ( e.rawType == EventType.MouseUp ) {
@@ -4551,7 +4604,7 @@ namespace Slate
                     }
                 }
 
-                if ( e.button == 0 ) {
+                if ( e.button == 0 && canEdit ) {
                     GUI.DragWindow(dragRect);
                 }
 
@@ -4850,6 +4903,11 @@ namespace Slate
             void DoClipContextMenu() {
                 var menu = new GenericMenu();
                 IEmbeddedTimelineClipBinding formalClip = editorBinding.FormalClip;
+                if (editor.embeddedTimeline != null && editor.embeddedTimeline.IsReadOnly) {
+                    menu.AddItem(new GUIContent("Open Source"), false, () => editor.embeddedTimeline.OpenSource(formalClip));
+                    menu.ShowAsContext();
+                    return;
+                }
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
                     var selectedFormalClips = multiSelection
                         .Select(value => value.editorBinding.FormalClip)

@@ -48,8 +48,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
             if (!profile)
                 throw new InvalidOperationException("Corin Gameplay Effect profile is missing.");
             RegisterProfileEffects(profile, effects);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            foreach (GameplayEffectDefinition effect in effects)
+                AssetDatabase.SaveAssetIfDirty(effect);
+            AssetDatabase.SaveAssetIfDirty(profile);
             Debug.Log($"Imported {effects.Count} Corin attack AttackProperty effects.");
         }
 
@@ -85,11 +86,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
         {
             JObject pattern = source.Value<JObject>("AttackPattern") ?? throw new InvalidOperationException($"AttackProperty '{key}' has no AttackPattern.");
             JObject property = source.Value<JObject>("AttackProperty") ?? throw new InvalidOperationException($"AttackProperty '{key}' has no AttackProperty payload.");
+            GameplayAttackCollisionKind collisionKind = ParseCollisionKind(pattern.Value<string>("$type"));
             var collision = new GameplayAttackCollisionComponentDefinition(
-                ParseCollisionKind(pattern.Value<string>("$type")),
+                collisionKind,
                 Vector(pattern.Value<float>("CenterXOffset"), pattern.Value<float>("CenterYOffset"), pattern.Value<float>("CenterZOffset")),
                 pattern.Value<float>("width"),
-                pattern.Value<float>("height"),
+                pattern.Value<float>(collisionKind == GameplayAttackCollisionKind.FanWithHeight ? "Height" : "height"),
                 pattern.Value<float>("distance"),
                 pattern.Value<float>("FanAngle"),
                 pattern.Value<float>("Radius"),
@@ -141,9 +143,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
                 property.Value<bool>("IsUseAbilityTargetKey"),
                 property.Value<bool>("BanDamage"));
             SerializedProperty components = serialized.FindProperty("m_Components");
-            components.arraySize = 2;
+            JObject cameraShake = source["CameraShake"] as JObject;
+            string shakeResource = cameraShake?.Value<string>("shakeConfigKey");
+            bool hasShake = !string.IsNullOrEmpty(shakeResource);
+            components.arraySize = hasShake ? 3 : 2;
             components.GetArrayElementAtIndex(0).managedReferenceValue = collision;
             components.GetArrayElementAtIndex(1).managedReferenceValue = attack;
+            if (hasShake)
+                components.GetArrayElementAtIndex(2).managedReferenceValue = new GameplayAttackCameraShakeComponentDefinition(
+                    shakeResource, cameraShake.Value<bool>("ShakeOnNotHit"));
         }
 
         static void RegisterProfileEffects(CharacterGameplayEffectProfile profile, List<GameplayEffectDefinition> effects)

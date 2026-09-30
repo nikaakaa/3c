@@ -8,12 +8,14 @@
 
 ### Requirement: ScenePlay 必须拥有预览生命周期
 
+Preview MUST 采用 CMC 式隔离隐藏 Scene，在 Edit Mode 内装配正式 ScenePlay Session，MUST NOT 启动 Unity Play。打开预览区 MUST 自动创建并准备，正常使用 MUST NOT 要求作者执行 Start Session 或 Prepare；仅在实际耗时等待或失败时显示原因。编辑器宿主 MUST 接入已有 GameplayTickSystem 驱动正式逻辑和表现，MUST NOT 建立 CMC 动作块回调或第二套节点、Timeline 求值链。ScenePlay 在此表示正式 Session，不表示 Unity Play Mode。
+
 ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Start、Pause、Resume、Stop、Ability 输入、Live Debug、Capture、History、Restore 和 Replay。TimelineEditorWindow 的 Session 菜单 MUST 先用 Profile 的 ContextId 精确定位 Composition SessionId，再在该 Session 内定位 Actor；窗口只提交请求，并消费正式 binding、状态和只读事实。
 
 #### Scenario: 从编辑器开始一次 Ability 预览
 
 - **WHEN** 作者在 TimelineEditorWindow 选择 Profile 并点击 Start Preview
-- **THEN** ScenePlay MUST 加载声明的正式场景并启动唯一 Session/Actor
+- **THEN** ScenePlay MUST 在隔离隐藏 Scene 中使用声明的正式场景装配唯一 Session/Actor
 - **AND** Ability MUST 通过正式输入和请求入口启动
 - **AND** Timeline UI MUST 绑定实际 playback identity 后开始观察
 
@@ -26,13 +28,30 @@ ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Sta
 ### Requirement: Timeline UI 不得拥有运行时执行状态
 
 TimelineEditorWindow MUST 不拥有 evaluator、独立时钟、playback command source、TimelinePreviewSession、AnimationPreviewRuntime、Preview Player、隐藏 Action runtime 或独立 PlayableGraph。窗口本地只保存 authoring selection、view state、观察绑定和显示过滤。
+RuntimeDebug 的窗口刷新、来源导航和 Slate/FlowCanvas 重绘 MUST 不修改 GameView 或 Unity 输入焦点，不得阻塞、暂停、代替或抢占正式角色输入；编辑器观察失败 MUST 只发布观察错误。
 
 #### Scenario: 打开同一 Timeline
 
 - **WHEN** 作者在不同页面打开同一 TimelineData
 - **THEN** 每个页面 MAY 保存自己的 selection 和观察绑定
 - **AND** TimelineData MUST 不保存窗口时间、目标、generation、播放状态或 GUI 游标
-- **AND** 页面关闭只撤销 interest，不得结束正式 Session，除非作者明确调用 ScenePlay Stop
+- **AND** 普通页面关闭只撤销 interest；最后一个承载预览的窗口关闭或作者明确关闭预览时，隐藏宿主 MUST 结束并释放 Preview Session；实际游戏 Session MUST NOT 因观察窗口关闭而终止
+
+### Requirement: RuntimeDebug 必须复用正式 FlowCanvas 与 Slate 表面
+
+RuntimeDebug MUST 通过正式 SourceMap、playback identity、generation 和调用路径定位真实 Graph、节点、边、Timeline、Track 与 Clip。Graph 观察 MUST 使用原生 FlowCanvas `GraphEditor` 和 `editorObservation`；Timeline 观察 MUST 使用现有 Slate 表面。系统 MUST 不创建自定义 Graph 画布、第二 Timeline Renderer 或运行时编辑副本。
+
+#### Scenario: 同一技能实例切换节点
+
+- **WHEN** 同一 SkillExecution 内从一个节点或边进入另一个节点或边
+- **THEN** RuntimeDebug MUST 按具体来源 identity 更新 FlowCanvas 观察和导航
+- **AND** 不得只比较技能实例或 Graph identity 后停留在旧节点
+
+#### Scenario: Timeline playback 观察
+
+- **WHEN** 当前 Timeline 存在唯一匹配的正式 playback
+- **THEN** Slate MUST 在正式作者 Timeline 表面叠加运行游标、活动 Track、Clip 状态和退出事实
+- **AND** RuntimeDebug MUST 不通过 `TimelineData.Init`、运行副本替换或编辑器播放逻辑推进正式 Timeline
 
 ### Requirement: Timeline 预览必须消费正式 Runtime 事实
 
@@ -68,7 +87,7 @@ Timeline UI MUST 只读取正式 Timeline Runtime、Ability lifecycle、Action p
 
 ### Requirement: 动态 TreeClip 长度必须来自对应执行域的实例事实
 
-Logic 与 Presentation 的 TreeClip MUST 支持显式 `TreeDecision` 结束来源，图内“结束片段”只结束当前 playback、generation 与 cycle 的调用实例。Presentation 的 `FrameBoundary` MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；Presentation 的作者 End 只作为可编辑布局上界，Logic 的作者 End 跟随 Timeline 终点；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
+Logic 与 Presentation 的 TreeClip MUST 支持显式 `TreeDecision` 结束来源，图内“结束片段”只结束当前 playback、generation 与 cycle 的调用实例。Presentation 的 `FrameBoundary` MUST 保留为显式固定区间模式。正式 TreeClip 运行事件 MUST 携带本次实例的 `ExitSource`，RuntimeDebug MUST 使用记录中的 `ExitSource` 区分动态和固定片段，不能从当前作者资产补推。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；Presentation 的作者 End 只作为可编辑布局上界，Logic 的作者 End 跟随 Timeline 终点；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
 
 #### Scenario: 动态片段仍在执行
 

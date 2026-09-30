@@ -18,6 +18,7 @@ namespace ThirdPersonCamera
         readonly CameraFrameOnePointByTrackPayload m_InputTrack;
         CameraAxisRuntime m_YawAxis;
         CameraAxisRuntime m_ElevationAxis;
+        float m_ElevationOverrun;
         CameraLookInputKind m_LookKind;
         CameraDragPhase m_DragPhase;
         Vector2 m_DragInput;
@@ -33,10 +34,15 @@ namespace ThirdPersonCamera
                     m_InputTrack = track;
         }
 
+        internal bool HasRotationControl => m_DragPhase == CameraDragPhase.Controlling;
+        internal float ElevationRatio => m_ElevationAxis.Value;
+        internal float ElevationWithOverrun => m_ElevationAxis.Value + m_ElevationOverrun;
+
         public void Reset()
         {
             m_YawAxis = new CameraAxisRuntime(m_InitialYawOffset);
             m_ElevationAxis = new CameraAxisRuntime(m_InputTrack.ElevationRatio);
+            m_ElevationOverrun = 0f;
             m_LookKind = CameraLookInputKind.None;
             m_DragPhase = CameraDragPhase.Inactive;
             m_DragInput = Vector2.zero;
@@ -109,11 +115,18 @@ namespace ThirdPersonCamera
                     m_DragPhase = CameraDragPhase.Inactive;
             }
             m_YawOffset = m_YawAxis.Value;
-            Vector4 orbit = SampleTrack(m_InputTrack, m_ElevationAxis.Value);
-            Vector4 initialOrbit = SampleTrack(m_InputTrack, m_InputTrack.ElevationRatio);
+            return look;
+        }
+
+        internal void ApplyElevation(float elevation)
+        {
+            Vector2 range = m_Projection.Input.ElevationRange;
+            m_ElevationAxis.Value = Mathf.Clamp(elevation, range.x, range.y);
+            m_ElevationOverrun = Mathf.Max(0f, elevation - m_ElevationAxis.Value);
+            Vector4 orbit = SampleTrack(m_InputTrack, m_ElevationAxis.Value, m_ElevationOverrun);
+            Vector4 initialOrbit = SampleTrack(m_InputTrack, m_InputTrack.ElevationRatio, 0f);
             m_PitchOffset = m_InitialPitchOffset +
                 (Mathf.Atan2(orbit.x, orbit.y) - Mathf.Atan2(initialOrbit.x, initialOrbit.y)) * Mathf.Rad2Deg;
-            return look;
         }
 
         public CameraFramePlan BuildTargetPlan(
@@ -173,7 +186,9 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        Vector4 track = SampleTrack(byTrack, byTrack.ElevationRatio + m_ElevationAxis.Value - m_InputTrack.ElevationRatio);
+                        Vector4 track = SampleTrack(byTrack,
+                            byTrack.ElevationRatio + m_ElevationAxis.Value - m_InputTrack.ElevationRatio,
+                            m_ElevationOverrun);
                         cameraLocateRatio = byTrack.CameraLocateRatio;
                         radius = Mathf.Sqrt(track.x * track.x + track.y * track.y) * cameraLocateRatio;
                         float screenHeight = 2f * radius * Mathf.Tan(byTrack.FieldOfView * 0.5f * Mathf.Deg2Rad);
@@ -492,7 +507,8 @@ namespace ThirdPersonCamera
 
         static Vector4 SampleTrack(
             CameraFrameOnePointByTrackPayload track,
-            float elevationRatio)
+            float elevationRatio,
+            float topExtension)
         {
             float position = Mathf.Clamp01(elevationRatio) * (track.CameraOrbits.Count - 1);
             int index = Mathf.Min(Mathf.FloorToInt(position), track.CameraOrbits.Count - 2);
@@ -504,8 +520,19 @@ namespace ThirdPersonCamera
             Vector2 rightOffset = track.ScreenOffsets[index + 1];
             Vector4 p0 = new Vector4(left.Height, left.Radius, leftOffset.x, leftOffset.y);
             Vector4 p3 = new Vector4(right.Height, right.Radius, rightOffset.x, rightOffset.y);
-            return d * d * d * p0 + 3f * d * d * t * track.TrackControl1[index]
+            Vector4 sample = d * d * d * p0 + 3f * d * d * t * track.TrackControl1[index]
                 + 3f * d * t * t * track.TrackControl2[index] + t * t * t * p3;
+            if (topExtension > 0f)
+            {
+                Vector3 baseOrbit = new Vector3(0f, sample.x, -sample.y);
+                Vector3 topOrbit = new Vector3(0f, track.TopOrbit.Height, -track.TopOrbit.Radius);
+                float extension = Mathf.Clamp01(2f * topExtension);
+                Vector3 extended = Vector3.Lerp(Vector3.Lerp(baseOrbit, topOrbit, extension),
+                    Vector3.Slerp(baseOrbit, topOrbit, extension), track.TopCurvature);
+                sample.x = extended.y;
+                sample.y = -extended.z;
+            }
+            return sample;
         }
     }
 

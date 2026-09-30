@@ -126,7 +126,7 @@ public static class BuildDLLCommand
             string dstFile = Application.dataPath +"/"+ TEngine.Settings.UpdateSetting.AssemblyTextAssetPath  + $"/{assName}.dll.bytes";
             if (File.Exists(srcFile))
             {
-                File.Copy(srcFile, dstFile, true);
+                CopyAssembly(srcFile, dstFile);
                 Debug.Log($"[CompileAndObfuscate] Copy {srcFile} to {dstFile}");
             }
         }
@@ -150,10 +150,18 @@ public static class BuildDLLCommand
                 throw new FileNotFoundException($"缺少目标平台 {target} 的 AOT 补充元数据程序集。请先构建一次该平台 Player。", srcDllPath);
             }
             string dllBytesPath = $"{aotAssembliesDstDir}/{dll}.bytes";
-            System.IO.File.Copy(srcDllPath, dllBytesPath, true);
+            CopyAssembly(srcDllPath, dllBytesPath);
             Debug.Log($"[CopyAOTAssembliesToStreamingAssets] copy AOT dll {srcDllPath} -> {dllBytesPath}");
         }
 #endif
+    }
+
+    static void CopyAssembly(string sourcePath, string destinationPath)
+    {
+        if (File.Exists(destinationPath) && System.Linq.Enumerable.SequenceEqual(
+                File.ReadAllBytes(sourcePath), File.ReadAllBytes(destinationPath)))
+            return;
+        File.Copy(sourcePath, destinationPath, true);
     }
 
     public static void CopyHotUpdateAssembliesToAssetPath(BuildTarget target)
@@ -166,7 +174,7 @@ public static class BuildDLLCommand
         {
             string dllPath = $"{hotfixDllSrcDir}/{dll}";
             string dllBytesPath = $"{hotfixAssembliesDstDir}/{dll}.bytes";
-            System.IO.File.Copy(dllPath, dllBytesPath, true);
+            CopyAssembly(dllPath, dllBytesPath);
             Debug.Log($"[CopyHotUpdateAssembliesToStreamingAssets] copy hotfix dll {dllPath} -> {dllBytesPath}");
         }
 #endif

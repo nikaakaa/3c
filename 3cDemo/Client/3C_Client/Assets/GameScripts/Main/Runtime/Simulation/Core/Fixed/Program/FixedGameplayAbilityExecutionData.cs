@@ -105,6 +105,14 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramStateSlot> StateSlots { get; }
         public IReadOnlyList<ProgramScopeLayout> Scopes { get; }
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels { get; }
+        public AbilityStateValue DefaultStateValue(int slotIndex)
+        {
+            ProgramStateSlot slot = StateSlots[slotIndex];
+            return slot.DefaultConstantIndex >= 0
+                ? AbilityStateValue.FromConstant(Constants[slot.DefaultConstantIndex], slot.ValueKind)
+                : AbilityStateValue.Default(slot.ValueKind);
+        }
+
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries { get; }
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap { get; }
         public IReadOnlyList<ProgramProducer> Producers { get; }

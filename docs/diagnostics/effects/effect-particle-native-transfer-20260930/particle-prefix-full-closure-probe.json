@@ -1,0 +1,710 @@
+{
+  "schema": "corin-particle-prefix-full-closure-probe/v1",
+  "manifest": "D:\\ZZZ_Dump\\output\\corin_replication\\20260929_corin_effect_assets_decoded_v1\\manifest.json",
+  "total": 1472,
+  "closedCount": 0,
+  "errorCount": 1472,
+  "records": [],
+  "errors": [
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": -2448053914573643455,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": -1217124381984044227,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": 2408956476724514723,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": 2770891656969498557,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": 6555001361805938891,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0166b409613d7c97b39040c3abecd2f5",
+      "pathId": 7443439036730069862,
+      "byteSize": 7556,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -8223957267292321182,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -6826897934682678248,
+      "byteSize": 7808,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -4893407548563468005,
+      "byteSize": 7920,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -4799190779945095523,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -2612249995083208129,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -1407989222996045157,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": -564666114506415081,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": 1517219958921371421,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": 3912797034564017293,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": 4431171256697801468,
+      "byteSize": 7808,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": 5408448856885617085,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-01c7dbef1db6e59011a04af4ce9d7bac",
+      "pathId": 6354382425449308960,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": -5198987890861536488,
+      "byteSize": 7888,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": -4635523685745033520,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": -4040478581787056118,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": -297937423693430756,
+      "byteSize": 7780,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": 5550088024544136526,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": 6216494088412816304,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-035e3f4a6ae34c7d85e100f12e7bb9c6",
+      "pathId": 7881345847885218110,
+      "byteSize": 7948,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-05a53d5ce2fecd976733afcb0975655c",
+      "pathId": -2367113397277156026,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-05a53d5ce2fecd976733afcb0975655c",
+      "pathId": 1318521141005970074,
+      "byteSize": 7832,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-05a53d5ce2fecd976733afcb0975655c",
+      "pathId": 2896225404211441760,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -7631673447089431363,
+      "byteSize": 7640,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -4870378259864820507,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -4107275648431028830,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -4038707479788543515,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -1631773153398418840,
+      "byteSize": 7920,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": -687492687328700306,
+      "byteSize": 7808,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 777624691149114770,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 1684657022535161262,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 4039920277705806624,
+      "byteSize": 7892,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 4258825483595156405,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 4681400900344028342,
+      "byteSize": 7696,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 5679132143847265535,
+      "byteSize": 7808,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 6225932907400887315,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-07e2b84b1eff55c9dcaddf847dae02bc",
+      "pathId": 7700725595040528328,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": -8535845066821525231,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": -8005395924758357822,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": -6488915953739523564,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 743528805495650958,
+      "byteSize": 7948,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 1717392303334863487,
+      "byteSize": 7972,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 4086356130704156283,
+      "byteSize": 8592,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 6259005798015608990,
+      "byteSize": 7972,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 6633032617245124429,
+      "byteSize": 7948,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 6891592337901787267,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 8341524734390200654,
+      "byteSize": 7696,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0806f0ef6dcdfda4a82a5a6f9c981699",
+      "pathId": 8886778253374960949,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": -8864754299467750293,
+      "byteSize": 7556,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": -7423297737655553512,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": -7228838666428467852,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 431999878215906256,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 1211547677156115369,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 1360464802322884688,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 1608045181401928134,
+      "byteSize": 7524,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 5347326371348054236,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0acd6599f524e25e27fb6863a9afb5d5",
+      "pathId": 7238036781859533263,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -8006228977186358775,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -7996567522711142435,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -6126079720821102582,
+      "byteSize": 8424,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -5091474151749593989,
+      "byteSize": 8056,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -5006211928435277472,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -4773662544920364321,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -4317202942479719640,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -4004777089686685252,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -2419147956929487300,
+      "byteSize": 8032,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -1782801452765905890,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": -211991585425280792,
+      "byteSize": 7612,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 299768308398845360,
+      "byteSize": 7948,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 401294501476001220,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 3090813724078786109,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 4104318966046001851,
+      "byteSize": 8588,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 4983759659381453916,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 5957915252319449490,
+      "byteSize": 7640,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 8325561813806644448,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 8507234166839845026,
+      "byteSize": 8060,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0c77ee22dffdf38904c6d9fc62210041",
+      "pathId": 9009170495594421915,
+      "byteSize": 7780,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -8602475362963863669,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -8311609344635382060,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -7065862225720138926,
+      "byteSize": 7584,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -6805480862312785354,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -3930628439661777377,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -2686490240962020162,
+      "byteSize": 7612,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": -1112378238650939774,
+      "byteSize": 7640,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": 1699947927369493320,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": 2332526868432369130,
+      "byteSize": 7528,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0e5e7f7765424ed66e3574122225922f",
+      "pathId": 4111181396625636329,
+      "byteSize": 8172,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -8415876882772493771,
+      "byteSize": 8028,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -7385426892717625792,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -6145560760819235877,
+      "byteSize": 7468,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -5665941448564666191,
+      "byteSize": 8088,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -5152550499376766032,
+      "byteSize": 7920,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -3769112781646010859,
+      "byteSize": 8060,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": -761617486400588808,
+      "byteSize": 7972,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    },
+    {
+      "cab": "CAB-0f3b4e6a006d5c2c9796bc1d477be7db",
+      "pathId": 484078347835497895,
+      "byteSize": 7976,
+      "error": "error('unpack requires a buffer of 4 bytes')",
+      "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 19, in <module>\nstruct.error: unpack requires a buffer of 4 bytes\n"
+    }
+  ]
+}

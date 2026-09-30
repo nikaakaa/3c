@@ -27,24 +27,58 @@
       "result": "passed",
       "response": "Temp/CameraDelayCompile/corin-authoring.rsp",
       "basis": "Unity同版本编译器、框架/编辑器/Newtonsoft真实引用及本次相机合同输出；只编译此生产作者文件"
+    },
+    {
+      "name": "相机运行程序集",
+      "result": "passed",
+      "response": "Temp/CameraDelayCompile/runtime.rsp",
+      "basis": "Unity生成rsp重定向输出至Temp，并引用本批Camera.Contracts.ref.dll；未加载Editor"
     }
   ],
   "sources": [
     {
       "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CameraDelaySettings.cs",
-      "sha256": "de6dfe49e3b6b87062889efc76a86efeec3bbe7cf7f37d1b622b156edc1694b9"
+      "sha256": "0e5f58813e260291599f8d840af3c4fdb6093500e8a5fd4ad43e85fbbe969dff"
     },
     {
       "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CharacterCameraProfile.cs",
-      "sha256": "dd5201118ceab675d4178c2cb81bf0f88b8c5cc61d060b1b55c45e041925df25"
+      "sha256": "455a18214f788663891646ddfc50514ea6323169c251a0a0bffd8f1f39648a96"
     },
     {
       "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CharacterCameraProjectionPayload.cs",
-      "sha256": "e480dbe36eef486df835988a3188c37f9d7bfb8247153cb3825f4bbdc2e7d67a"
+      "sha256": "c27977ef6175b732e934f7dca4b5d2a94bcfc194254df5f9f0c7b902f94fc3bd"
     },
     {
       "path": "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/CorinCameraResourcesAuthoring.cs",
-      "sha256": "2445b9a997caf4fdf4258be42dd7eb3705e245a0c97d6d1641cf215212ddd51c"
+      "sha256": "1a2afdf6a83417d56f8f34d462aba309abfad82b5fb24c6f39a7298a1a4d53ca"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CameraFrameOnePointByTrackStage.cs",
+      "sha256": "9c450d11a81c204a402ef41db8bdfc75e42cd4940cf96d19706251181e77656a"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CameraFrameOnePointByTrackPayload.cs",
+      "sha256": "c53ce75b861d77d084b2671e2a8e56075ce8e2b258c2ff7dd4c8669a002772b5"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CameraSequenceProjectionCompiler.cs",
+      "sha256": "fae0b3929a5527458cd73202a5341910b4e8a3815b7871c3d4d88cba2dc9dd51"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Authoring/CameraStretchAsset.cs",
+      "sha256": "93c39cb9a8523c2eb7135f130e9421dfdefeaf2c2bff19336b4bdcbd94acf974"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CameraStretchPayload.cs",
+      "sha256": "3cd218f668e6f54c464a902687ae87f01a176aa76991021682eb3f5cdd7d192c"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CameraStretchProjectionCompiler.cs",
+      "sha256": "331a3e3236edab675c77f1b2cf22f2838bd6d9f5a4375862365979b825551c2e"
+    },
+    {
+      "path": "Assets/GameScripts/Main/Runtime/Character/Camera/Solver/CameraStretchEffectEvaluator.cs",
+      "sha256": "7ccbf6b9c281e0ab538afd92fa7bf8e09ce07855281d79ef087e4761113b5597"
     }
   ],
   "responses": [
@@ -55,7 +89,11 @@
     {
       "path": "Temp\\CameraDelayCompile\\corin-authoring.rsp",
       "sha256": "e16f2c15ac7ba0725a9707ad07645b5f155c82f24ac348cd13b071d61f583567"
+    },
+    {
+      "path": "Temp/CameraDelayCompile/runtime.rsp",
+      "sha256": "d7d943634b7efb1784fc25b0640d65dcb8c85f95b1a649c7ca95cc4ed93fa330"
     }
   ],
-  "latest_change": "补入camOverAxisProtectRadius；使用相同Unity响应文件和同版本Roslyn重新编译合同与Corin作者文件，均exit 0。整体Unity编译／正式资产生成未完成。"
+  "latest_change": "基础轨道四项参数进入作者/投影；Stretch点位float修正为名称数组，删除错误米制解释，正式资产待迁移v2。合同/作者/相机运行程序集独立编译exit 0。"
 }

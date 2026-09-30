@@ -72,6 +72,11 @@ namespace ThirdPersonSimulation
 
     public interface IFloat32PresentationGraphOutput
     {
+        bool CaptureGraphTrace { get; }
+        bool CaptureValueTrace { get; }
+        void TraceOperation(OperationHandle operation, string code, string detail, ulong generation);
+        void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
+        void TraceValue(OperationHandle operation, string port, AbilityStateValue value, bool input);
         void SubmitCamera(in Float32PresentationGraphOutputIdentity identity, string producer,
             in PresentationCameraRequest activation,
             in PresentationCameraRequest retirement, bool retiring);
@@ -86,11 +91,16 @@ namespace ThirdPersonSimulation
         readonly string[] m_GraphIds;
         readonly AbilityStateValue[] m_Defaults;
         readonly AbilityStateValue[] m_State;
+        readonly int[] m_ResetStateSlots;
+        readonly ProgramSourceMapEntry[] m_CameraSources;
+        readonly string[][] m_InputPortNames;
         readonly bool[] m_Parameters;
         readonly Values m_Values;
         readonly OperationControlRuntime<Target> m_Control;
         Float32PresentationGraphFacts m_Facts;
         bool m_Executing;
+        bool m_CaptureGraphTrace;
+        bool m_CaptureValueTrace;
         IFloat32PresentationGraphOutput m_Output;
         bool m_Retiring;
         bool m_ExitRequested;
@@ -124,6 +134,8 @@ namespace ThirdPersonSimulation
             m_Callers = new string[m_Entries.Length];
             m_Hooks = new AbilityTreeClipHook[m_Entries.Length];
             m_Producers = new string[data.Operations.Count];
+            m_CameraSources = new ProgramSourceMapEntry[data.Operations.Count];
+            m_InputPortNames = new string[data.Operations.Count][];
             m_Activations = new PresentationCameraRequest[data.Operations.Count];
             m_Retirements = new PresentationCameraRequest[data.Operations.Count];
             m_Defaults = new AbilityStateValue[data.StateSlots.Count];
@@ -137,8 +149,6 @@ namespace ThirdPersonSimulation
                     PrepareParameter(parameter.StateSlot);
             }
             var visited = new byte[data.Operations.Count];
-            var capacities = new int[data.Operations.Count];
-            int capacity = 0;
             for (int index = 0; index < m_Entries.Length; index++)
             {
                 ProgramSourceMapEntry entry = m_Entries[index];
@@ -153,14 +163,27 @@ namespace ThirdPersonSimulation
                 m_Callers[index] = marker ? entry.InvocationCallerId
                     : entry.InvocationCallerId.Substring(0, entry.InvocationCallerId.LastIndexOf('/'));
                 m_GraphIds[index] = "tree:" + entry.GraphId;
-                capacity = Math.Max(capacity, PrepareOperation(new OperationHandle(entry.TargetIndex), visited, capacities));
+                PrepareOperation(new OperationHandle(entry.TargetIndex), visited);
             }
+            var resetSlots = new HashSet<int>();
+            for (int slot = 0; slot < m_Parameters.Length; slot++)
+                if (m_Parameters[slot])
+                    resetSlots.Add(slot);
+            for (int operation = 0; operation < visited.Length; operation++)
+                if (visited[operation] == 2)
+                    foreach (int slot in data.Operations[operation].StateSlots)
+                        resetSlots.Add(slot);
+            m_ResetStateSlots = new int[resetSlots.Count];
+            resetSlots.CopyTo(m_ResetStateSlots);
+            Array.Sort(m_ResetStateSlots);
             m_Values = new Values(this, new Float32GraphValueWorkspace(data, m_Layout));
             m_Control = new OperationControlRuntime<Target>(data.Topology, new Target(this),
                 checked(Math.Max(1024, data.Operations.Count * 128)));
         }
 
         public CharacterSkillId AbilityId => m_Data.AbilityId;
+        public int EntryCount => m_Entries.Length;
+        public ProgramSourceMapEntry Entry(int binding) => m_Entries[binding];
         public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision,
             ProgramInvocationCallerKind callerKind, AbilityTreeClipHook hook, out int binding)
         {
@@ -192,14 +215,20 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Presentation Marker requires its current read-only fact frame.");
             ProgramSourceMapEntry entry = m_Entries[binding];
             m_Facts = facts;
-            m_Output = output;
+            m_Output = output ?? throw new ArgumentNullException(nameof(output));
+            m_CaptureGraphTrace = output.CaptureGraphTrace;
+            m_CaptureValueTrace = output.CaptureValueTrace;
             m_Retiring = m_Hooks[binding] == AbilityTreeClipHook.OnDisable || m_Hooks[binding] == AbilityTreeClipHook.OnDestroy;
             m_ExitRequested = false;
             m_CanRequestExit = entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationTreeClip && !m_Retiring;
             m_PlaybackGeneration = playbackGeneration;
             m_BranchRevision = facts.BranchRevision;
             m_Executing = true;
-            Array.Copy(m_Defaults, m_State, m_State.Length);
+            for (int i = 0; i < m_ResetStateSlots.Length; i++)
+            {
+                int slot = m_ResetStateSlots[i];
+                m_State[slot] = m_Defaults[slot];
+            }
             try
             {
                 m_Values.BeginEvaluation();
@@ -212,6 +241,8 @@ namespace ThirdPersonSimulation
             finally
             {
                 m_Output = null;
+                m_CaptureGraphTrace = false;
+                m_CaptureValueTrace = false;
                 m_Facts = default;
                 m_PlaybackGeneration = 0;
                 m_BranchRevision = 0;
@@ -229,15 +260,14 @@ namespace ThirdPersonSimulation
             ? Values.FromConstant(m_Data.Constants[slot.DefaultConstantIndex])
             : AbilityStateValue.Default(slot.ValueKind);
 
-        int PrepareOperation(OperationHandle handle, byte[] visited, int[] capacities)
+        void PrepareOperation(OperationHandle handle, byte[] visited)
         {
             if (visited[handle.Value] == 1)
                 throw new InvalidOperationException("Presentation graph contains recursive operations.");
             if (visited[handle.Value] == 2)
-                return capacities[handle.Value];
+                return;
             visited[handle.Value] = 1;
             SimulationOperation operation = m_Layout.Operation(handle);
-            int capacity = 0;
             switch (operation.Code)
             {
                 case SimulationOperationCode.TimelineClipExitRequest:
@@ -263,6 +293,7 @@ namespace ThirdPersonSimulation
                     ProgramReference producer = m_Layout.Topology.FirstReference(handle, ProgramReferenceKind.Producer);
                     if (producer == null || string.IsNullOrWhiteSpace(producer.ExternalIdentity))
                         throw new InvalidOperationException("Presentation Camera operation requires its compiled producer identity.");
+                    m_CameraSources[handle.Value] = RequireOperationSource(handle);
                     m_Producers[handle.Value] = producer.ExternalIdentity;
                     m_Activations[handle.Value] = CameraProgramRequestFactory.Build(operation.Code, operation.Integer1,
                         operation.Flags, PresentationCameraRequestLifecycle.Activate, new Float32CameraProgramConstantReader(m_Layout, handle));
@@ -280,29 +311,30 @@ namespace ThirdPersonSimulation
                 default:
                     throw new InvalidOperationException($"Operation '{m_Layout.SourcePath(handle)}' ({operation.Code}) cannot execute in a Presentation graph.");
             }
+            OperationValuePortContract ports = GameplayAbilityValuePortContracts.Require(operation.Code, handle, m_Data.GraphCallFrames);
+            var inputNames = ports.Inputs.Count == 0 ? Array.Empty<string>() : new string[ports.Inputs.Count];
+            for (int i = 0; i < inputNames.Length; i++)
+                inputNames[i] = ports.Inputs[i].Identity;
+            m_InputPortNames[handle.Value] = inputNames;
             foreach (int slot in operation.StateSlots)
                 m_Defaults[slot] = InitialValue(m_Data.StateSlots[slot]);
             ReadOnlySpan<CompiledValueInputBinding> inputs = m_Layout.ValueInputs(handle);
             for (int index = 0; index < inputs.Length; index++)
                 if (inputs[index].SourceKind == CompiledValueInputSourceKind.Operation)
-                    PrepareOperation(inputs[index].SourceOperation, visited, capacities);
-            capacity = checked(capacity + PrepareEdges(handle, ProgramControlFlowKind.Child, visited, capacities));
-            capacity = checked(capacity + PrepareEdges(handle, ProgramControlFlowKind.Enter, visited, capacities));
+                    PrepareOperation(inputs[index].SourceOperation, visited);
+            PrepareEdges(handle, ProgramControlFlowKind.Child, visited);
+            PrepareEdges(handle, ProgramControlFlowKind.Enter, visited);
             visited[handle.Value] = 2;
-            capacities[handle.Value] = capacity;
-            return capacity;
         }
 
-        int PrepareEdges(OperationHandle operation, ProgramControlFlowKind kind, byte[] visited, int[] capacities)
+        void PrepareEdges(OperationHandle operation, ProgramControlFlowKind kind, byte[] visited)
         {
-            int capacity = 0;
             foreach (ProgramControlFlowEdge edge in m_Layout.Outgoing(operation, kind))
             {
                 if (edge.HasCondition)
-                    PrepareOperation(edge.Condition, visited, capacities);
-                capacity = checked(capacity + PrepareOperation(edge.Target, visited, capacities));
+                    PrepareOperation(edge.Condition, visited);
+                PrepareOperation(edge.Target, visited);
             }
-            return capacity;
         }
 
         int ParameterSlot(SimulationOperation operation)
@@ -313,23 +345,29 @@ namespace ThirdPersonSimulation
             return reference.TargetIndex;
         }
 
-        Float32PresentationGraphOutputIdentity CreateOutputIdentity(SimulationOperation operation)
+        ProgramSourceMapEntry RequireOperationSource(OperationHandle operation)
         {
             ProgramSourceMapEntry source = null;
             for (int index = 0; index < m_Data.SourceMap.Count; index++)
             {
                 ProgramSourceMapEntry candidate = m_Data.SourceMap[index];
                 if (candidate.TargetKind == ProgramSourceTargetKind.Operation &&
-                    candidate.TargetIndex == operation.Handle.Value)
+                    candidate.TargetIndex == operation.Value)
                 {
                     if (source != null)
-                        throw new InvalidOperationException($"Presentation operation '{operation.Handle.Value}' has multiple source entries.");
+                        throw new InvalidOperationException($"Presentation operation '{operation.Value}' has multiple source entries.");
                     source = candidate;
                 }
             }
             if (source == null)
-                throw new InvalidOperationException($"Presentation operation '{operation.Handle.Value}' has no source entry.");
+                throw new InvalidOperationException($"Presentation operation '{operation.Value}' has no source entry.");
 
+            return source;
+        }
+
+        Float32PresentationGraphOutputIdentity CreateOutputIdentity(SimulationOperation operation)
+        {
+            ProgramSourceMapEntry source = m_CameraSources[operation.Handle.Value];
             Span<byte> block = stackalloc byte[64];
             var builder = new EventIdBuilder(block);
             builder.Append("presentation-treeclip-output");
@@ -390,15 +428,25 @@ namespace ThirdPersonSimulation
             protected override void ResetGraphCallParameter(int slot) => m_Owner.m_State[slot] = m_Owner.m_Defaults[slot];
             protected override void WriteGraphCallParameter(int slot, AbilityStateValue value) => m_Owner.m_State[slot] = value;
             protected override AbilityStateValue ReadGraphCallParameter(int slot) => m_Owner.m_State[slot];
-            protected override void TraceResult(SimulationOperation operation, string port, AbilityStateValue value, bool predictive) { }
-            protected override void TraceInput(SimulationOperation operation, CompiledValueInputBinding input, AbilityStateValue value, bool predictive) { }
+            protected override void TraceResult(SimulationOperation operation, string port, AbilityStateValue value, bool predictive)
+            {
+                if (!predictive && m_Owner.m_CaptureValueTrace)
+                    m_Owner.m_Output.TraceValue(operation.Handle, port, value, false);
+            }
+            protected override void TraceInput(SimulationOperation operation, CompiledValueInputBinding input, AbilityStateValue value, bool predictive)
+            {
+                if (!predictive && m_Owner.m_CaptureValueTrace)
+                    m_Owner.m_Output.TraceValue(operation.Handle, m_Owner.m_InputPortNames[operation.Handle.Value][input.TargetPortIndex], value, true);
+            }
         }
 
-        readonly struct Target : IOperationControlTarget<Target>
+        readonly struct Target : IOperationControlTarget<Target>, IOperationControlEdgeTraceTarget
         {
             readonly Float32PresentationGraphRuntime m_Owner;
             internal Target(Float32PresentationGraphRuntime owner) => m_Owner = owner;
-            public bool DiagnosticsEnabled => false;
+            public bool DiagnosticsEnabled => m_Owner.m_CaptureGraphTrace || m_Owner.m_CaptureValueTrace;
+            public bool ControlTraceEnabled => m_Owner.m_CaptureGraphTrace;
+            public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) => m_Owner.m_Output.TraceEdge(edge, selected, passed);
             public int ReadInt32(int slot) => m_Owner.m_State[slot].Int32;
             public void WriteInt32(int slot, int value) => m_Owner.m_State[slot] = AbilityStateValue.FromInt32(value);
             public ulong ReadUInt64(int slot) => m_Owner.m_State[slot].UInt64;
@@ -419,8 +467,6 @@ namespace ThirdPersonSimulation
                     case SimulationOperationCode.CameraEffectRequest:
                     case SimulationOperationCode.CameraResponse:
                     case SimulationOperationCode.CameraTarget:
-                        if (m_Owner.m_Output == null)
-                            throw new InvalidOperationException("Presentation graph has no Camera output consumer.");
                         m_Owner.m_Output.SubmitCamera(m_Owner.CreateOutputIdentity(operation),
                             m_Owner.m_Producers[operation.Handle.Value],
                             m_Owner.m_Activations[operation.Handle.Value], m_Owner.m_Retirements[operation.Handle.Value], m_Owner.m_Retiring);
@@ -445,7 +491,8 @@ namespace ThirdPersonSimulation
             public void ClearStateScope(OperationExecutionDescriptor state) => throw UnsupportedState();
             public OperationStopStatus ContinueLeafStop(OperationControlCursor<Target> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => throw UnsupportedState();
             public void ForceStopLeaf(OperationControlCursor<Target> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => throw UnsupportedState();
-            public void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) { }
+            public void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) =>
+                m_Owner.m_Output.TraceOperation(operation.Handle, code, detail, m_Owner.m_Control.Cursor.ReadGeneration(operation.Handle));
             public void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) => throw UnsupportedState();
             public void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) => throw UnsupportedState();
             static InvalidOperationException UnsupportedState() => new("Presentation Marker graphs cannot retain a Simulation state lifecycle.");

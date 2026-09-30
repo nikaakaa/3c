@@ -1,0 +1,69 @@
+{
+  "scope": "Stretch产生的归一化Pitch配置、计时与轨道延伸；不是完整玩法资格或相机画面验收。",
+  "configuration": {
+    "start_enabled": "ConfigCameraStretch+0x2D；PlayStackingType raw 1(additive)直接拒绝Pitch创建",
+    "start_delay": "DelayTime(+0x58)，调用者正delayOverride可覆盖",
+    "start_duration": "StretchTime(+0x6C)",
+    "start_curve": "StartCurveKey(+0x18)",
+    "end_enabled": "ConfigCameraStretch+0x2E，独立于start_enabled",
+    "end_delay": "HoldTime<0时-1；否则DelayTime+StretchTime+HoldTime",
+    "end_duration": "RecoilTime(+0x40)",
+    "end_curve": "EndCurveKey(+0x10)",
+    "end_without_explicit_range": "起始目标超过仰角上限且没有显式End时，创建返回上限的End实例"
+  },
+  "runtime": {
+    "instance": "NANIMLFMOJL",
+    "delayed_phase": "0x10B05020按先比较累计时间再进入阶段的次序处理Delay；负Delay等待外部解除",
+    "sampling": "0x10B04810以elapsed/duration求曲线；duration=0取t=1；Clamp01曲线值后Lerp起点和目标；采样后才完成与推进时钟",
+    "start_value": "被选中开始时读实际anchorElevation+overrun，而非创建时的视觉角度",
+    "start_target": "absolute目标或currentBase+relativeOffset，夹至[minElevation,1.5]",
+    "end_target": "再夹至[minElevation,maxElevation]",
+    "selection": "0x1C3E3650从待选表取首个就绪实例，清理更早组并替换活动表；不能用Stretch振幅或envelope>0.5选择收尾",
+    "manual_input": "创建时拒绝；等待时Start结束、End开始；活动时使用当前受控仰角重设采样起点/目标"
+  },
+  "track": {
+    "base": "clamp(selectedPitch,minElevation,maxElevation)",
+    "overrun": "max(0,selectedPitch-base)",
+    "blend": "普通轨道与TopOrbit之间，用clamp01(2*overrun)分别Lerp/Slerp，再按TopCurvature混合",
+    "screen_offset": "仍按基础仰角采样，不将TopOrbit混入三点ScreenY曲线"
+  },
+  "remaining": "全局DataPriority资格、外部角色资格与完整相机控制标志尚未闭合；当前可琳Pitch资源DataPriority均为0。",
+  "evidence_files": [
+    {
+      "path": "stretch-pitch-config-0x14054360.json",
+      "sha256": "a16fe795258f4f4817703d6567b958b80fabd1443c2cddcfa045b30c65847b90"
+    },
+    {
+      "path": "stretch-pitch-instance-type.json",
+      "sha256": "20044d592454ae7b80b5fbb8a145a9e5d4d21714645fe0c4c645a5d060561d44"
+    },
+    {
+      "path": "stretch-pitch-sample-10b04810.json",
+      "sha256": "6ed3de0a4e6af346499c1e1da04d17fb8aed0b4beccd9184cbd2e6b458bfbdb9"
+    },
+    {
+      "path": "stretch-pitch-instance-10b052f0.json",
+      "sha256": "68a1cfdc7df9081849c4e32fd408d6025a879177b36b4c6c20842b82e12daf9e"
+    },
+    {
+      "path": "stretch-pitch-instance-10b05020.json",
+      "sha256": "f5a841fe76ccbf657fab5b47d3702e968486e966426e34b37913d255ad8bb37f"
+    },
+    {
+      "path": "stretch-pitch-caller-1c3e3650.json",
+      "sha256": "50d4093f5fd83d6f72f7d0f13be8889f0608c043d7927fa8ac5b9ef47586cdd3"
+    },
+    {
+      "path": "stretch-pitch-caller-1c3e3c80.json",
+      "sha256": "79a176a3377d1a47676d46b634d0643cab592915b17968bd5c2cad0ec834dc27"
+    },
+    {
+      "path": "top-orbit-overrun-producer-0x1c3e3df0.json",
+      "sha256": "e73fd43c6e497eb3ffe7224e2795bf3193cfe81b7a10f822e0af362f2cffd947"
+    },
+    {
+      "path": "top-orbit-input-summary.json",
+      "sha256": "fe0746932c8f75ef446d177855744b90d6d3c940676652129274a59ff9ae64b8"
+    }
+  ]
+}

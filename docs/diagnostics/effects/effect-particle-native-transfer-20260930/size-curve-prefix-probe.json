@@ -1,0 +1,1042 @@
+{
+  "schema": "corin-size-curve-prefix-probe/v4",
+  "manifest": "D:\\ZZZ_Dump\\output\\corin_replication\\20260929_corin_effect_assets_decoded_v1\\manifest.json",
+  "total": 1472,
+  "curveCount": 1472,
+  "counts": {
+    "state": [
+      {
+        "key": 0,
+        "count": 750
+      },
+      {
+        "key": 1,
+        "count": 722
+      }
+    ],
+    "usedSkip": [
+      {
+        "key": true,
+        "count": 1472
+      }
+    ],
+    "standardNext": [
+      {
+        "key": 1065353216,
+        "count": 1472
+      }
+    ],
+    "skippedNext": [
+      {
+        "key": 1,
+        "count": 70
+      },
+      {
+        "key": 17,
+        "count": 10
+      },
+      {
+        "key": 2,
+        "count": 964
+      },
+      {
+        "key": 3,
+        "count": 350
+      },
+      {
+        "key": 31,
+        "count": 4
+      },
+      {
+        "key": 4,
+        "count": 55
+      },
+      {
+        "key": 5,
+        "count": 11
+      },
+      {
+        "key": 7,
+        "count": 8
+      }
+    ],
+    "maxCurveSize": [
+      {
+        "key": 1,
+        "count": 70
+      },
+      {
+        "key": 17,
+        "count": 10
+      },
+      {
+        "key": 2,
+        "count": 964
+      },
+      {
+        "key": 3,
+        "count": 350
+      },
+      {
+        "key": 31,
+        "count": 4
+      },
+      {
+        "key": 4,
+        "count": 55
+      },
+      {
+        "key": 5,
+        "count": 11
+      },
+      {
+        "key": 7,
+        "count": 8
+      }
+    ],
+    "minCurveSize": [
+      {
+        "key": 0,
+        "count": 1433
+      },
+      {
+        "key": 2,
+        "count": 31
+      },
+      {
+        "key": 3,
+        "count": 8
+      }
+    ],
+    "fieldLength": [
+      {
+        "key": 104,
+        "count": 942
+      },
+      {
+        "key": 132,
+        "count": 333
+      },
+      {
+        "key": 160,
+        "count": 77
+      },
+      {
+        "key": 188,
+        "count": 20
+      },
+      {
+        "key": 216,
+        "count": 8
+      },
+      {
+        "key": 244,
+        "count": 8
+      },
+      {
+        "key": 524,
+        "count": 10
+      },
+      {
+        "key": 76,
+        "count": 70
+      },
+      {
+        "key": 916,
+        "count": 4
+      }
+    ],
+    "shape": [
+      {
+        "key": [
+          true,
+          0,
+          2,
+          2,
+          0,
+          104
+        ],
+        "count": 689
+      },
+      {
+        "key": [
+          true,
+          0,
+          2,
+          2,
+          2,
+          160
+        ],
+        "count": 5
+      },
+      {
+        "key": [
+          true,
+          0,
+          3,
+          3,
+          0,
+          132
+        ],
+        "count": 47
+      },
+      {
+        "key": [
+          true,
+          0,
+          4,
+          4,
+          0,
+          160
+        ],
+        "count": 6
+      },
+      {
+        "key": [
+          true,
+          0,
+          5,
+          5,
+          0,
+          188
+        ],
+        "count": 2
+      },
+      {
+        "key": [
+          true,
+          0,
+          7,
+          7,
+          0,
+          244
+        ],
+        "count": 1
+      },
+      {
+        "key": [
+          true,
+          1,
+          1,
+          1,
+          0,
+          76
+        ],
+        "count": 70
+      },
+      {
+        "key": [
+          true,
+          1,
+          17,
+          17,
+          0,
+          524
+        ],
+        "count": 10
+      },
+      {
+        "key": [
+          true,
+          1,
+          2,
+          2,
+          0,
+          104
+        ],
+        "count": 253
+      },
+      {
+        "key": [
+          true,
+          1,
+          2,
+          2,
+          2,
+          160
+        ],
+        "count": 17
+      },
+      {
+        "key": [
+          true,
+          1,
+          3,
+          3,
+          0,
+          132
+        ],
+        "count": 286
+      },
+      {
+        "key": [
+          true,
+          1,
+          3,
+          3,
+          2,
+          188
+        ],
+        "count": 9
+      },
+      {
+        "key": [
+          true,
+          1,
+          3,
+          3,
+          3,
+          216
+        ],
+        "count": 8
+      },
+      {
+        "key": [
+          true,
+          1,
+          31,
+          31,
+          0,
+          916
+        ],
+        "count": 4
+      },
+      {
+        "key": [
+          true,
+          1,
+          4,
+          4,
+          0,
+          160
+        ],
+        "count": 49
+      },
+      {
+        "key": [
+          true,
+          1,
+          5,
+          5,
+          0,
+          188
+        ],
+        "count": 9
+      },
+      {
+        "key": [
+          true,
+          1,
+          7,
+          7,
+          0,
+          244
+        ],
+        "count": 7
+      }
+    ]
+  },
+  "firstFailures": [
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.5,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.5,
+      "skippedMin": 1.0,
+      "skippedNext": 1,
+      "maxCurveSize": 1,
+      "minCurveSize": 0,
+      "fieldLength": 76
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.5,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.5,
+      "skippedMin": 1.0,
+      "skippedNext": 1,
+      "maxCurveSize": 1,
+      "minCurveSize": 0,
+      "fieldLength": 76
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 4,
+      "maxCurveSize": 4,
+      "minCurveSize": 0,
+      "fieldLength": 160
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.20000000298023224,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.20000000298023224,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.5,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.5,
+      "skippedMin": 1.0,
+      "skippedNext": 1,
+      "maxCurveSize": 1,
+      "minCurveSize": 0,
+      "fieldLength": 76
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.7615441679954529,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.7615441679954529,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.5,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.5,
+      "skippedMin": 1.0,
+      "skippedNext": 1,
+      "maxCurveSize": 1,
+      "minCurveSize": 0,
+      "fieldLength": 76
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.9931259751319885,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.9931259751319885,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.2592334747314453,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.2592334747314453,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.0,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.0,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 0,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 1.2592334747314453,
+      "standardNext": 1065353216,
+      "skippedScalar": 1.2592334747314453,
+      "skippedMin": 1.0,
+      "skippedNext": 2,
+      "maxCurveSize": 2,
+      "minCurveSize": 0,
+      "fieldLength": 104
+    },
+    {
+      "field": "curve",
+      "usedSkip": true,
+      "state": 1,
+      "standardScalar": 1.401298464324817e-45,
+      "standardMin": 0.9931259751319885,
+      "standardNext": 1065353216,
+      "skippedScalar": 0.9931259751319885,
+      "skippedMin": 1.0,
+      "skippedNext": 3,
+      "maxCurveSize": 3,
+      "minCurveSize": 0,
+      "fieldLength": 132
+    }
+  ],
+  "errors": []
+}

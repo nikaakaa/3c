@@ -258,6 +258,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int targetIndex = 0; targetIndex < incomingCount; targetIndex++)
             {
                 Presentation.AnimationClipPlayerRuntime target = incoming.ReadPhasePlayer(targetIndex);
+                if (!target.PhasePlan.Loop)
+                    continue;
                 for (int sourceIndex = 0; sourceIndex < outgoingCount; sourceIndex++)
                 {
                     Presentation.AnimationClipPlayerRuntime source = outgoing.ReadPhasePlayer(sourceIndex);

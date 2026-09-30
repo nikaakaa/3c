@@ -73,6 +73,8 @@
 - 不做 fallback 配置、兼容镜像、临时桥接或双主线。
 - Build、资源重建、编译和发布都是显式重操作；不得由选中资产、运行时或窗口打开自动触发。
 - 运行时不读取 AssetDatabase 或作者编译实现；Preview 不创建第二个 Session、播放器、时钟、世界查询或状态真相。
+- Authoring Runtime Workbench 只组织 Authoring、Preview 和 RuntimeDebug 三种工作形态；Preview 使用 CMC 式隔离隐藏 Scene，在 Edit Mode 中运行正式 ScenePlay Session，不启动 Unity Play。独立可停靠 Preview 承载视口、当前实例黑板与执行时间线，原 FlowCanvas 和 Timeline 保留作者编辑面；所有窗口共享唯一宿主与 Renderer。打开预览自动装配，正常操作不要求作者感知准备步骤。编辑器宿主接入已有 GameplayTickSystem，RuntimeDebug 只观察同一 Session 的提交事实。
+- RuntimeDebug 的 FlowCanvas、Slate 和导航只改变编辑器观察表面，不得推进 Timeline、修改正式运行状态、抢占 GameView 输入或把编辑器焦点操作传入角色输入链。
 - 文档读取使用 UTF-8；默认不新增测试。用户负责 Unity 端到端验收，不把手动验证写入 OpenSpec task。
 
 ## Cleanup Rules

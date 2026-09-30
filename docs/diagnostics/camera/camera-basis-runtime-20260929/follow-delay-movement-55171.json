@@ -1,0 +1,176 @@
+{
+  "type_index": 55171,
+  "name": "AAMONFACJHK",
+  "namespace": "",
+  "full_name": "AAMONFACJHK",
+  "klass": 5497653093384,
+  "klass_raw_hex": "80955c010005000001000000000000200000000000000000384fd506000500000000000000000000204fd50600050000004ed50600050000000000000000000000000000000000000000000000000000282e5f0200050000d0f0ff5994010000000000000000000000000000000000000000000000000000000000000000000083d7000000000000000012000000000083d70000000000000000124000000000743a000208e4a805000000000100100010e5a80508e4a80500001800ffffffff00000700040000000003000131580c00",
+  "definition_va": 1736676733136,
+  "definition_raw_hex": "09ca07009e210e0008000000d2180c00280d0400743a0002010010000f8b590b9d210e009f210e003f7e01009d210e00ffffffff0100ffff00000700000000000000ffffffffffff04000300000cffff",
+  "token": 33569396,
+  "attributes": 1048577,
+  "field_start": 265512,
+  "field_count": 1,
+  "method_start": 510473,
+  "method_count": 4,
+  "parent_descriptor_index": 926111,
+  "declaring_descriptor_index": 4294967295,
+  "field_array": 5497672781624,
+  "method_array": 5497672781312,
+  "value_type": false,
+  "instance_size": 24,
+  "parent_klass": 5497653093648,
+  "parent_type_index": 80530,
+  "parent_name": "CLJINMONOIB",
+  "parent_type": "CLJINMONOIB",
+  "selection_reasons": [
+    "Delay movement vector producer"
+  ],
+  "fields": [
+    {
+      "ordinal": 0,
+      "definition_index": 265512,
+      "definition_va": 1736667295428,
+      "raw_hex": "bf35a4a3f77935cd1a19a6d6",
+      "token": 67191845,
+      "name_identity": 190417690,
+      "name": "IOPBMNFIEKG",
+      "type": {
+        "display": "MorphBallPhysicsMiddleware",
+        "type_ref": "0x7ff9760f09b0",
+        "complete": true
+      },
+      "attributes": 6,
+      "static": false,
+      "literal": false,
+      "offset_flags": 16,
+      "metadata_offset": 16,
+      "storage_flags": 0,
+      "value_payload_offset": null,
+      "runtime_offset_flags": 16,
+      "runtime_metadata_offset": 16,
+      "runtime_record_va": 5497672781624,
+      "runtime_raw_hex": "4314583ac3b8c17a05947d76437e62218512651b7b408165c49c29106adf2e36",
+      "runtime_matches_definition": true,
+      "runtime_name_matches": true,
+      "complete": true
+    }
+  ],
+  "methods": [
+    {
+      "ordinal": 0,
+      "definition_index": 510473,
+      "definition_va": 1736653886086,
+      "rva": 367918816,
+      "raw_hex": "11510b0022000005ffffffff83d700005ff801060000ffffffff86180001",
+      "token": 100792415,
+      "name_identity": 83886114,
+      "name": ".ctor",
+      "attributes": 6278,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497672781344,
+      "runtime_raw_hex": "08e4a80500050000e0feaa89f97f00000010bd73f97f0000ffffffff0000000009ca0700000000005ff80106ffff861800000010000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709733269216,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 510474,
+      "definition_va": 1736653886116,
+      "rva": 367918272,
+      "raw_hex": "58240000b76c120bffffffff83d700005cf8010600000400ffffc6080000",
+      "token": 100792412,
+      "name_identity": 185756855,
+      "name": "AECAEKLEODK",
+      "attributes": 2246,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Vector3",
+        "type_ref": "0x7ff9752f3530",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497672781408,
+      "runtime_raw_hex": "08e4a80500050000c0fcaa89f97f0000400cbf73f97f0000ffffffff000000000aca0700000000005cf801060400c60800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709733268672,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 2,
+      "definition_index": 510475,
+      "definition_va": 1736653886146,
+      "rva": 367918560,
+      "raw_hex": "58240000258b590bffffffff83d700005df8010600000500ffffc6080000",
+      "token": 100792413,
+      "name_identity": 190417701,
+      "name": "EFPCLHLMFLN",
+      "attributes": 2246,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Vector3",
+        "type_ref": "0x7ff9752f3530",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497672781472,
+      "runtime_raw_hex": "08e4a80500050000e0fdaa89f97f0000400cbf73f97f0000ffffffff000000000bca0700000000005df801060500c60800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709733268960,
+      "signature_complete": true
+    },
+    {
+      "ordinal": 3,
+      "definition_index": 510476,
+      "definition_va": 1736653886176,
+      "rva": 367918688,
+      "raw_hex": "58240000ad92450bffffffff83d700005ef8010600000600ffffc6080000",
+      "token": 100792414,
+      "name_identity": 189108909,
+      "name": "EONJLJBFBOF",
+      "attributes": 2246,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Vector3",
+        "type_ref": "0x7ff9752f3530",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_record_va": 5497672781536,
+      "runtime_raw_hex": "08e4a8050005000060feaa89f97f0000400cbf73f97f0000ffffffff000000000cca0700000000005ef801060600c60800000000000000000000000000000000",
+      "runtime_matches_definition": true,
+      "code_va": 140709733269088,
+      "signature_complete": true
+    }
+  ],
+  "issues": [],
+  "enum_type": false,
+  "layout": {
+    "index_va": 1736625814732,
+    "record_number": 45,
+    "record_va": 1736696651036,
+    "record_hex": "00000000180008010a000000",
+    "instance_size": 24,
+    "offset_array_va": 1736717977840,
+    "offsets_hex": "10000000",
+    "offset_flags": [
+      16
+    ]
+  },
+  "layout_instance_size": 24,
+  "dependencies": [
+    5300,
+    67581
+  ]
+}

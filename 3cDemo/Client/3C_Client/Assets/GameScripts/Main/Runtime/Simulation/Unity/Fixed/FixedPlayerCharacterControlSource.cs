@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] string m_ActionTargetInputValueId;
         [SerializeField] CharacterActionTargetInputProvider m_ActionTargetProvider;
 
+        public CharacterInputProfile InputProfile => m_InputProfile;
         public string ActionTargetInputValueId => string.IsNullOrWhiteSpace(m_ActionTargetInputValueId)
             ? string.Empty
             : m_ActionTargetInputValueId.Trim();

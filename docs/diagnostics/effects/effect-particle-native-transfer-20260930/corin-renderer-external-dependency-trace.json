@@ -1,0 +1,269 @@
+{
+  "schema": "zzz-corin-renderer-external-dependency-trace/v1",
+  "scan": "D:\\Unity_Project_1\\3C\\docs\\diagnostics\\effect-particle-native-transfer-20260930\\corin-renderer-formal-scan.json",
+  "mapFiles": [
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\1027881052\\1027881052.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\127844421\\127844421.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\1417621313\\1417621313.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\1478113610\\1478113610.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\1937102457\\1937102457.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\3110689810\\3110689810.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\3364762419\\3364762419.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\350316997\\350316997.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\4126140058\\4126140058.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\4152060195\\4152060195.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\810766513\\810766513.json",
+    "D:\\ZZZ_Dump\\work\\corin_cab_map_v1\\asset_maps\\988944888\\988944888.json"
+  ],
+  "targetCount": 13,
+  "resolvedTargetCount": 13,
+  "targets": [
+    {
+      "cab": "CAB-3682dc239037d64ba8a123aca40ed4d7",
+      "pathId": 4131408210770596923,
+      "referenceCount": 4,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Sphere001",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "16251368656464963414",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\3110689810.blk",
+              "sha256": "c1df1be36c45283024e89161c063be57439cedd76d8dc7c7ecb88c823f83a164"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-3f6ccf3d7c85f89d41a4afea8d592819",
+      "pathId": -2360960286575928294,
+      "referenceCount": 9,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Cone_01_Sp",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "4110693358107559502",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\3364762419.blk",
+              "sha256": "962decc54a22a4d599b87bd24dc317716c8fd4c180985994de2e3019274bebfc"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-418d5fe40c63c1dc7018c4c0701de77f",
+      "pathId": 4178256589770137980,
+      "referenceCount": 6,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Corin_Saw_03",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "13538232071405833604",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1478113610.blk",
+              "sha256": "45e3aaa0e0f8cc3b1c3f30551b26f314440ff3e48df3612b3748d61d2250fbad"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-48cbf2dc1fa8061236619d5fd4ce356f",
+      "pathId": 6894553019590629585,
+      "referenceCount": 2,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Smoke_Foot_alpha_L_zy_001",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "13779315112911790069",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1417621313.blk",
+              "sha256": "666a569faa2bd9bd89f3aac6f3a534cf9310441ff94245c1e6c1fb21b5286e38"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-63aed8f7ecf8685772466784f0cbe443",
+      "pathId": -5164910972904511860,
+      "referenceCount": 1,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Circle_LYX_003",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "6028487326196573296",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\4126140058.blk",
+              "sha256": "e0222f79f4f59635013b20e86ab781bf9b4e600dbaaeee0a04c1ef20d27d1242"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-78f916735298f7c962ebd8d9e1c1bd19",
+      "pathId": 3407946305744130161,
+      "referenceCount": 2,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Trail_Cone_tt_066",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "14347070990689854071",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\988944888.blk",
+              "sha256": "f55ab0dbec7fa8a448469148953f33488027a8cbed2f60ed9197b0bae50d1abf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-811eb930e08b8475d7057e297be43248",
+      "pathId": 2330303186414696473,
+      "referenceCount": 6,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Sweep_zy_001",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "15439629792349046076",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\810766513.blk",
+              "sha256": "2dc8d66591484ffb6a139709c9173a62a2a62bab1a865e09bc8059de5dcc6b7e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-99aeac0f3362a7ecb20c0c8f88f65688",
+      "pathId": 8307546923270464409,
+      "referenceCount": 4,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_EjectCylinder_02",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "14449177645642194277",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1027881052.blk",
+              "sha256": "50b47e943e8d9e6c0777ece9976be8af6f4cbe175409e57af871741292bec6c6"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-9ac081d27dbac00d6a59079a60eaf83d",
+      "pathId": -7874577908011309094,
+      "referenceCount": 1,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_EjectCylinder_01",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "11837746344145031129",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1027881052.blk",
+              "sha256": "1f4bb3bcec3e37f0e38178426712351417602219913d097c54853edbc540eb22"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-bd56832f5ed18de8c67e28c19af26895",
+      "pathId": 8444158508741295380,
+      "referenceCount": 3,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Sphere002",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "11599615157018582544",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\127844421.blk",
+              "sha256": "82ff8c62dd45426e8125699d32e8335e493b400067fdbcb73ceb34a2741fb90e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-c56a700f7043a5ba98a65ace97f32d34",
+      "pathId": -3474292500809090391,
+      "referenceCount": 2,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Smoke_Foot_alpha_R_zy_001",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "10242891159723326617",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\4152060195.blk",
+              "sha256": "a96d204fe05eb6e9bc8646371afd45ddcab3039357176e51fd28dc578b350215"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-d7760a99abfbd945d20bd5d14638cefd",
+      "pathId": -5944959474406900564,
+      "referenceCount": 2,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Trail_Cone_04",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "16690894198893061200",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\350316997.blk",
+              "sha256": "0cb49bf7a3993196717c37f7aaca91dd731648e488380daa546f9648a2090e8f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "cab": "CAB-e032d77fb465253de9d5815779d94c15",
+      "pathId": -971929938167436597,
+      "referenceCount": 27,
+      "resolved": true,
+      "candidates": [
+        {
+          "name": "Eff_Trail_Cone_04",
+          "type": "Mesh",
+          "locations": [
+            {
+              "container": "15413141647902591198",
+              "source": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\ZenlessZoneZero_Data\\StreamingAssets\\Blocks\\1937102457.blk",
+              "sha256": "b74272cc9494a074bb8e587a24ef627269eb01dc36a05c281780218b1e146fc5"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

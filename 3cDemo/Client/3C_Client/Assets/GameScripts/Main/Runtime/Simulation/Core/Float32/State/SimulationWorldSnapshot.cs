@@ -537,15 +537,15 @@ namespace ThirdPersonSimulation
         {
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
-            writer.WriteString(snapshot.WorldHash.ToString());
+            writer.WriteHash(snapshot.WorldHash.Value);
             WriteHashPayload(writer, snapshot);
         }
 
         static void WriteHashPayload(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
         {
             SimulationNumericProfileCodec.Write(writer, snapshot.NumericProfile);
-            writer.WriteString(snapshot.GameplayContentHash.ToString());
-            writer.WriteString(snapshot.StateSchemaHash.ToString());
+            writer.WriteHash(snapshot.GameplayContentHash.Value);
+            writer.WriteHash(snapshot.StateSchemaHash);
             writer.WriteString(snapshot.SolverId.Value);
             writer.WriteString(snapshot.SolverVersion);
             writer.WriteString(snapshot.WorldRevision.Value);
@@ -556,9 +556,9 @@ namespace ThirdPersonSimulation
             {
                 SimulationActorSnapshot actor = snapshot.Actors[i];
                 writer.WriteString(actor.ActorId.Value);
-                writer.WriteString(actor.GameplayContentHash.ToString());
-                writer.WriteString(actor.StateSchemaHash.ToString());
-                writer.WriteString(actor.StateHash.ToString());
+                writer.WriteHash(actor.GameplayContentHash.Value);
+                writer.WriteHash(actor.StateSchemaHash);
+                writer.WriteHash(actor.StateHash.Value);
                 writer.WriteString(actor.StateCodecIdentity);
                 writer.WriteBytes(actor.StateBytesBuffer);
             }

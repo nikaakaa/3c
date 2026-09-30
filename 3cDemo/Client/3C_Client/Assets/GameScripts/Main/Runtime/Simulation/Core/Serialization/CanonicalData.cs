@@ -149,6 +149,30 @@ namespace ThirdPersonSimulation
             WriteRaw(bytes);
         }
 
+        public void WriteHash(SemanticHash value) => WriteHash(value.Value);
+        public void WriteHash(GameplayContentHash value) => WriteHash(value.Value);
+        public void WriteHash(CharacterStateHash value) => WriteHash(value.Value);
+        public void WriteHash(SimulationWorldHash value) => WriteHash(value.Value);
+        public void WriteHash(SimulationPipelineHash value) => WriteHash(value.Value);
+
+        public void WriteHash(StableHash value)
+        {
+            WriteInt32(value.IsValid ? 64 : 0);
+            WriteRawHash(value);
+        }
+
+        public void WriteRawHash(StableHash value)
+        {
+            if (!value.IsValid)
+                return;
+            Span<char> characters = stackalloc char[64];
+            Span<byte> bytes = stackalloc byte[64];
+            value.Format(characters);
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = (byte)characters[i];
+            WriteRaw(bytes);
+        }
+
         public void WriteBytes(ReadOnlySpan<byte> value)
         {
             WriteInt32(value.Length);

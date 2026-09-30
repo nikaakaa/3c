@@ -16,6 +16,7 @@ namespace BTSMTL.Timeline.Runtime
             string treeGraphId,
             string treeGraphRevision,
             TimelineTreeExecutionPhase phase,
+            TimelineClipExitSource exitSource,
             TimelineRuntimeTreeClipEventKind eventKind,
             FixedScalar time,
             int cycle,
@@ -36,6 +37,7 @@ namespace BTSMTL.Timeline.Runtime
                 ? throw new ArgumentException("Tree graph revision is required.", nameof(treeGraphRevision))
                 : treeGraphRevision.Trim();
             Phase = phase;
+            ExitSource = exitSource;
             EventKind = eventKind;
             Time = time;
             Cycle = cycle;
@@ -53,6 +55,7 @@ namespace BTSMTL.Timeline.Runtime
         public string TreeGraphId { get; }
         public string TreeGraphRevision { get; }
         public TimelineTreeExecutionPhase Phase { get; }
+        public TimelineClipExitSource ExitSource { get; }
         public TimelineRuntimeTreeClipEventKind EventKind { get; }
         public FixedScalar Time { get; }
         public int Cycle { get; }

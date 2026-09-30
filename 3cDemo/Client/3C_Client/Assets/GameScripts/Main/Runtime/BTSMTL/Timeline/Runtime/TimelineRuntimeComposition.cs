@@ -65,25 +65,7 @@ namespace BTSMTL.Timeline.Runtime
             return true;
         }
 
-        public bool TryGetCallBindings(
-            TimelineData timeline,
-            string sourceId,
-            string sourceName,
-            TimelinePlaybackActionContext actionContext,
-            out IReadOnlyList<TimelineCallBinding> bindings,
-            out string error)
-        {
-            bindings = m_CallBindings;
-            error = string.Empty;
-            if (m_ActionContext.IsValid && actionContext.IsValid &&
-                m_ActionContext.ActionInstanceId != actionContext.ActionInstanceId)
-            {
-                bindings = Array.Empty<TimelineCallBinding>();
-                error = "timeline_action_context_mismatch";
-                return false;
-            }
-            return true;
-        }
+        public IReadOnlyList<TimelineCallBinding> CallBindings => m_CallBindings;
 
         public bool TryGetTimelinePlaybackActionContext(
             ActionContextSlot actionContext,
@@ -257,6 +239,17 @@ namespace BTSMTL.Timeline.Runtime
     {
         readonly Dictionary<ulong, PresentationPlaybackState> m_Playbacks =
             new Dictionary<ulong, PresentationPlaybackState>();
+        readonly Dictionary<(string ContentRevision, TimelinePlaybackMode Mode), Stack<PresentationPlaybackState>> m_RecycledPlaybacks = new();
+
+        public void Prepare(TimelineRuntimePreparedContent content, TimelinePlaybackMode mode)
+        {
+            var key = (content.ContentRevision, mode);
+            if (m_RecycledPlaybacks.ContainsKey(key))
+                return;
+            var recycled = new Stack<PresentationPlaybackState>(1);
+            recycled.Push(new PresentationPlaybackState(content.SourceTimeline, content.Content, mode, recycled));
+            m_RecycledPlaybacks.Add(key, recycled);
+        }
 
         public bool TryPresent(
             TimelineRuntimeService service,
@@ -287,13 +280,19 @@ namespace BTSMTL.Timeline.Runtime
             bool hasState = m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state);
             if (hasState && state.Generation != playback.Generation)
             {
-                state.Clear();
+                state.Recycle();
                 m_Playbacks.Remove(handle.Value);
                 hasState = false;
             }
             if (!hasState)
             {
-                state = new PresentationPlaybackState(playback);
+                var key = (playback.ContentRevision, playback.PlaybackMode);
+                Stack<PresentationPlaybackState> recycled = m_RecycledPlaybacks[key];
+                if (recycled.Count == 0)
+                    state = new PresentationPlaybackState(playback.SourceTimeline, playback.Content, playback.PlaybackMode, recycled);
+                else
+                    state = recycled.Pop();
+                state.Restart(playback.Generation);
                 m_Playbacks.Add(handle.Value, state);
             }
 
@@ -462,7 +461,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state) && state.Generation == generation)
             {
-                state.Clear();
+                state.Recycle();
                 m_Playbacks.Remove(handle.Value);
             }
         }
@@ -492,6 +491,7 @@ namespace BTSMTL.Timeline.Runtime
             foreach (PresentationPlaybackState state in m_Playbacks.Values)
                 state.Clear();
             m_Playbacks.Clear();
+            m_RecycledPlaybacks.Clear();
         }
 
         static void AppendMarkerEvents(
@@ -556,7 +556,8 @@ namespace BTSMTL.Timeline.Runtime
             public readonly string Revision;
             public TimelineRuntimeTreeClipRequest Request(TimelineRuntimeTreeClipEventKind kind, FixedScalar time, int cycle, ulong generation) =>
                 new(Clip.AuthoringId, Clip.Track.AuthoringId, GraphId, Revision, TimelineTreeExecutionPhase.Commit,
-                    kind, time, cycle, ((time - Clip.StartTime) / (Clip.EndTime - Clip.StartTime)).ToSingle(), generation,
+                    Clip.ClipExitSource, kind, time, cycle,
+                    ((time - Clip.StartTime) / (Clip.EndTime - Clip.StartTime)).ToSingle(), generation,
                     TimelineRuntimeTreeClipRequest.ComposeBranchRevision(generation, cycle));
         }
 
@@ -620,22 +621,28 @@ namespace BTSMTL.Timeline.Runtime
 
         sealed class PresentationPlaybackState
         {
-            public PresentationPlaybackState(TimelineRuntimePlayback playback)
+            readonly Stack<PresentationPlaybackState> m_Recycled;
+
+            public PresentationPlaybackState(
+                TimelineData timeline,
+                TimelineContentUnit content,
+                TimelinePlaybackMode mode,
+                Stack<PresentationPlaybackState> recycled)
             {
-                Generation = playback.Generation;
-                int markerCount = playback.Content.Markers.Count;
-                Candidate = new TimelineRuntimePresentationBuffer(playback);
-                Accepted = new TimelineRuntimePresentationBuffer(playback);
+                m_Recycled = recycled;
+                int markerCount = content.Markers.Count;
+                Candidate = new TimelineRuntimePresentationBuffer(timeline, content, mode);
+                Accepted = new TimelineRuntimePresentationBuffer(timeline, content, mode);
                 MarkerLastTraversal = new ulong[markerCount];
                 PendingMarkerLastTraversal = new ulong[markerCount];
                 var trees = new List<PresentationTree>();
-                for (int index = 0; index < playback.Content.Clips.Count; index++)
+                for (int index = 0; index < content.Clips.Count; index++)
                 {
-                    TimelineContentClip clip = playback.Content.Clips[index];
+                    TimelineContentClip clip = content.Clips[index];
                     if (!clip.ExecutionPolicy.IsPresentation || clip.TrackMuted ||
-                        !TimelineRuntimeEvaluator.TryResolveTreeClip(playback.SourceTimeline, clip.AuthoringId, out TreeClip tree))
+                        !TimelineRuntimeEvaluator.TryResolveTreeClip(timeline, clip.AuthoringId, out TreeClip tree))
                         continue;
-                    if (!TimelineRuntimeEvaluator.TryGetTreeContract(playback.Content, tree, out string graphId, out string revision))
+                    if (!TimelineRuntimeEvaluator.TryGetTreeContract(content, tree, out string graphId, out string revision))
                         throw new InvalidOperationException("Presentation TreeClip has no prepared graph dependency.");
                     trees.Add(new PresentationTree(tree, graphId, revision));
                 }
@@ -665,7 +672,7 @@ namespace BTSMTL.Timeline.Runtime
             public bool PendingInitialBoundaryConsumed;
             public TimelineRuntimePresentationFrame PendingFrame;
             public bool HasPendingFrame;
-            public ulong Generation { get; }
+            public ulong Generation { get; private set; }
             public FixedScalar CursorTime;
             public int Cycle;
             public bool InitialBoundaryConsumed;
@@ -673,6 +680,32 @@ namespace BTSMTL.Timeline.Runtime
             public TimelineRuntimePresentationFrame CachedFrame;
             public ulong LastPresentationFrame;
             public bool HasCachedFrame;
+
+            public void Restart(ulong generation)
+            {
+                Generation = generation;
+                Array.Clear(MarkerLastTraversal, 0, MarkerLastTraversal.Length);
+                Array.Clear(PendingMarkerLastTraversal, 0, PendingMarkerLastTraversal.Length);
+                PendingTime = default;
+                PendingCycle = 0;
+                PendingFinished = false;
+                PendingInitialBoundaryConsumed = false;
+                PendingFrame = default;
+                HasPendingFrame = false;
+                CursorTime = default;
+                Cycle = 0;
+                InitialBoundaryConsumed = false;
+                Finished = false;
+                CachedFrame = default;
+                LastPresentationFrame = 0;
+                HasCachedFrame = false;
+            }
+
+            public void Recycle()
+            {
+                Clear();
+                m_Recycled.Push(this);
+            }
 
             public void Cache(TimelineRuntimePresentationFrame frame)
             {
@@ -758,14 +791,9 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimeComposition : IDisposable
     {
-        readonly TimelineContractCatalog m_ContractCatalog;
-        readonly TimelineRuntimeNumericTarget m_NumericTarget;
-        readonly ITimelineDomainBindingResolver m_DomainResolver;
-        readonly ITimelineRuntimeDependencyResolver m_DependencyResolver;
         readonly TimelineRuntimeService m_Service;
 
         public TimelineRuntimeComposition(
-            TimelineContractCatalog contractCatalog,
             TimelineRuntimeNumericTarget numericTarget,
             ITimelineRuntimeCallBindingSource callBindingSource,
             ITimelineDomainBindingResolver domainResolver,
@@ -775,8 +803,6 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineRuntimeMarkerService markerService,
             int tickRate)
         {
-            if (contractCatalog == null)
-                throw new ArgumentNullException(nameof(contractCatalog));
             if (callBindingSource == null)
                 throw new ArgumentNullException(nameof(callBindingSource));
             if (domainResolver == null)
@@ -789,12 +815,7 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(treeClipService));
             if (markerService == null)
                 throw new ArgumentNullException(nameof(markerService));
-            m_ContractCatalog = contractCatalog;
-            m_NumericTarget = numericTarget;
-            m_DomainResolver = domainResolver;
-            m_DependencyResolver = dependencyResolver;
             var requestFactory = new TimelineRuntimePlaybackRequestFactory(
-                contractCatalog,
                 numericTarget,
                 domainResolver,
                 dependencyResolver,
@@ -812,19 +833,13 @@ namespace BTSMTL.Timeline.Runtime
             string requestId,
             TimelineData timeline,
             TimelineExecutionIdentity executionIdentity,
-            TimelinePlaybackMode playbackMode,
-            IEnumerable<TimelineCallBinding> callBindings)
+            TimelinePlaybackMode playbackMode)
         {
             var request = new TimelineRuntimePrepareRequest(
                 requestId,
-                timeline,
-                m_ContractCatalog,
+                m_Service.GetContent(timeline),
                 executionIdentity,
-                playbackMode,
-                m_NumericTarget,
-                callBindings,
-                m_DomainResolver,
-                m_DependencyResolver);
+                playbackMode);
             return m_Service.Prepare(request);
         }
 

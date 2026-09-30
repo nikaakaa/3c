@@ -14,50 +14,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
-        public static bool Open(RuntimeDebugEventView eventView, bool pin = false)
+        public static bool Open(RuntimeDebugEventView eventView, bool pin = false, bool preserveFocus = false)
         {
-            RuntimeTraceEvent trace = eventView.Event;
-            RuntimeInstanceKey instance = trace.RuntimeInstance;
-            RuntimeDebugSession session = RuntimeDebugSession.Shared;
-            bool historical = session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
-            if (!instance.IsValid || !eventView.Source.IsValid)
-                return false;
-            RuntimeDiagnosticsTarget target = null;
-            RuntimeDebugTargetInfo targetInfo = session.ViewModel.Target;
-            if (historical)
+            EditorWindow previousFocus = preserveFocus ? EditorWindow.focusedWindow : null;
+            try
             {
-                if (!session.TryResolveHistoricalSource(
-                        trace.ContentRevision,
-                        trace.Source,
-                        out RuntimeSourceElementKey historicalSource,
-                        out DebugSourceMapEntry historicalEntry) ||
-                    !historicalSource.Equals(eventView.Source) ||
-                    !historicalEntry.Source.Equals(eventView.Source))
+                RuntimeTraceEvent trace = eventView.Event;
+                RuntimeInstanceKey instance = trace.RuntimeInstance;
+                RuntimeDebugSession session = RuntimeDebugSession.Shared;
+                bool historical = session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
+                if (!instance.IsValid || !eventView.Source.IsValid)
                     return false;
-            }
-            else
-            {
-                if (!RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out target) ||
-                    target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
-                    !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
-                    !entry.Source.Equals(eventView.Source))
+                RuntimeDiagnosticsTarget target = null;
+                RuntimeDebugTargetInfo targetInfo = session.ViewModel.Target;
+                if (historical)
+                {
+                    if (!session.TryResolveHistoricalSource(
+                            trace.ContentRevision,
+                            trace.Source,
+                            out RuntimeSourceElementKey historicalSource,
+                            out DebugSourceMapEntry historicalEntry) ||
+                        !historicalSource.Equals(eventView.Source) ||
+                        !historicalEntry.Source.Equals(eventView.Source))
+                        return false;
+                }
+                else
+                {
+                    if (!RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out target) ||
+                        target.SessionId != trace.SessionId ||
+                        !target.Context.TryGetSourceMap(trace.ContentRevision, out IDebugSourceMap sourceMap) ||
+                        !sourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
+                        !entry.Source.Equals(eventView.Source))
+                        return false;
+                    targetInfo = new RuntimeDebugTargetInfo(target);
+                }
+                if (targetInfo.CharacterRuntimeId != instance.CharacterRuntimeId)
                     return false;
-                targetInfo = new RuntimeDebugTargetInfo(target);
+                CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(targetInfo.HostInstanceId));
+                if (!definition)
+                    return false;
+                if (!historical &&
+                    !session.AttachToTarget(instance.CharacterRuntimeId))
+                    return false;
+                if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or
+                    RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
+                {
+                    return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback, pin);
+                }
+                return Open(definition, eventView.Source, instance, default, string.Empty, pin);
             }
-            if (targetInfo.CharacterRuntimeId != instance.CharacterRuntimeId)
-                return false;
-            CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(targetInfo.HostInstanceId));
-            if (!definition)
-                return false;
-            if (!historical &&
-                !session.AttachToTarget(instance.CharacterRuntimeId))
-                return false;
-            if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or
-                RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
+            finally
             {
-                return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback, pin);
+                previousFocus?.Focus();
             }
-            return Open(definition, eventView.Source, instance, default, string.Empty, pin);
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
@@ -164,9 +173,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return false;
                 element = timelines[0];
             }
-            else if (source.Kind != RuntimeSourceElementKind.Graph)
+            else if (source.Kind is not RuntimeSourceElementKind.Graph and not RuntimeSourceElementKind.BlackboardDeclaration)
                 return false;
-            if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
+            if (source.Kind is not RuntimeSourceElementKind.Graph and not RuntimeSourceElementKind.BlackboardDeclaration && element == null)
                 return false;
             if (playback.IsValid &&
                 (element is not BtsmtlSkillTimelineFlowNode playbackNode ||
@@ -195,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (element != null)
                 GraphEditor.FocusElement(element, true);
-            if (!observationAlreadyOpen && UnityEngine.Application.isPlaying &&
+            if (!observationAlreadyOpen &&
                 instance.Kind == RuntimeInstanceKind.SkillExecution)
                 BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             if (element is BtsmtlSkillTimelineFlowNode timelineNode)
@@ -214,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 else
                     BtsmtlSkillObservationSession.BindOpenTimeline(timelineNode);
-                if (timelineWindow != null && UnityEngine.Application.isPlaying)
+                if (timelineWindow != null && (instance.IsValid || playback.IsValid))
                 {
                     timelineWindow.SetRuntimeObservationReadOnly(true);
                     RuntimeInstanceKey selected = playback.IsValid ? playback : ResolveTimelinePlayback(instance);

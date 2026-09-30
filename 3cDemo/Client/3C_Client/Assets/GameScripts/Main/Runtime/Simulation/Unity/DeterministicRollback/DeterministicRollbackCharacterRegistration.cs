@@ -332,6 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 for (int i = 0; i < m_PendingTrajectoryResults.Count; i++)
                 {
                     FixedSimulationActorTickResult result = m_PendingTrajectoryResults.GetValue(i);
+                    m_PresentationRuntime.CaptureControlState(result.State);
                     LocomotionPresentationFailureCode failureCode =
                         m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(

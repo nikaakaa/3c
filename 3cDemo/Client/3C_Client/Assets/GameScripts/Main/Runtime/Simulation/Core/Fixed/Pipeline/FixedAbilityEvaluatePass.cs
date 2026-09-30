@@ -98,6 +98,9 @@ namespace ThirdPersonSimulation.Fixed
                         valueInterest.IsValueCaptureRequested(actor.ActorId),
                         readPorts.Diagnostics.Sink is ISimulationControlTraceInterest controlInterest &&
                         controlInterest.IsControlCaptureRequested(actor.ActorId),
+                        readPorts.Diagnostics.Sink is ISimulationBlackboardTraceInterest blackboardInterest &&
+                        blackboardInterest.IsBlackboardCaptureRequested(actor.ActorId),
+                        step.ExecutionKind == SimulationPipelineStepExecutionKind.Forward,
                         out worldRequest);
                     m_Requests[i] = worldRequest;
                 }

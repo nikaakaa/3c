@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation
             bool diagnosticsEnabled,
             bool captureValues,
             bool captureControlFlow,
+            bool captureBlackboard,
             out CharacterWorldSolveRequest worldRequest)
         {
             if (characterRuntime == null)
@@ -104,7 +105,7 @@ namespace ThirdPersonSimulation
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState));
-                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 

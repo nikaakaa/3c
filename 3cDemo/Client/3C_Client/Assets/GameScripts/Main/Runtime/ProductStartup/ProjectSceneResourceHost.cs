@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using TEngine;
 using UnityEngine;
 
@@ -16,14 +17,7 @@ namespace ThirdPerson.ProductStartup
         {
             try
             {
-                if (!m_Profile || !m_GameplayRoot || m_GameplayRoot.activeSelf ||
-                    transform.IsChildOf(m_GameplayRoot.transform))
-                    throw new InvalidOperationException("Scene resource startup requires a profile and an inactive gameplay root outside its own hierarchy.");
-                CancellationToken token = m_Cancellation.Token;
-                await ProjectSceneResourcePreparation.PrepareAsync(
-                    ModuleSystem.GetModule<IResourceModule>(), m_Profile, token);
-                token.ThrowIfCancellationRequested();
-                m_GameplayRoot.SetActive(true);
+                await PrepareAsync(m_Cancellation.Token);
             }
             catch (OperationCanceledException) when (m_Cancellation.IsCancellationRequested)
             {
@@ -32,6 +26,17 @@ namespace ThirdPerson.ProductStartup
             {
                 Debug.LogException(exception, this);
             }
+        }
+
+        public async Task PrepareAsync(CancellationToken cancellationToken)
+        {
+            if (!m_Profile || !m_GameplayRoot || m_GameplayRoot.activeSelf ||
+                transform.IsChildOf(m_GameplayRoot.transform))
+                throw new InvalidOperationException("Scene resource startup requires a profile and an inactive gameplay root outside its own hierarchy.");
+            await ProjectSceneResourcePreparation.PrepareAsync(
+                ModuleSystem.GetModule<IResourceModule>(), m_Profile, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            m_GameplayRoot.SetActive(true);
         }
 
         void OnDestroy()

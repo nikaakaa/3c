@@ -167,13 +167,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     writer.WriteString(request.RequesterPeerId);
                     writer.WriteString(request.AuthorityPeerId);
                     writer.WriteUInt64(request.Tick.Value);
-                    writer.WriteString(request.ExpectedWorldHash.Value);
+                    writer.WriteHash(request.ExpectedWorldHash);
                     break;
                 case RollbackSnapshotResponse response:
                     writer.WriteString(response.AuthorityPeerId);
                     writer.WriteString(response.RequesterPeerId);
                     writer.WriteUInt64(response.Tick.Value);
-                    writer.WriteString(response.SnapshotHash.Value);
+                    writer.WriteHash(response.SnapshotHash);
                     writer.WriteBytes(response.SnapshotBytes);
                     break;
                 case RollbackLeave leave:
@@ -271,14 +271,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             writer.WriteString(value.PeerId);
             WriteComponentIdentity(writer, value.Model);
-            writer.WriteString(value.GameplayContentHash.ToString());
-            writer.WriteString(value.StateSchemaHash.Value);
+            writer.WriteHash(value.GameplayContentHash);
+            writer.WriteHash(value.StateSchemaHash);
             writer.WriteInt32(value.TickRate);
-            writer.WriteString(value.CollisionWorldHash.Value);
-            writer.WriteString(value.KccIdentityHash.Value);
+            writer.WriteHash(value.CollisionWorldHash);
+            writer.WriteHash(value.KccIdentityHash);
             writer.WriteString(value.Protocol.ProtocolId);
             writer.WriteString(value.Protocol.SemanticVersion);
-            writer.WriteString(value.Protocol.SchemaHash.Value);
+            writer.WriteHash(value.Protocol.SchemaHash);
         }
 
         static RollbackHandshake ReadHandshake(CanonicalReader reader)
@@ -334,15 +334,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             writer.WriteString(peerId);
             writer.WriteUInt64(tick.Value);
-            writer.WriteString(worldHash.Value);
-            writer.WriteString(rosterHash.Value);
-            writer.WriteString(kccHash.Value);
+            writer.WriteHash(worldHash);
+            writer.WriteHash(rosterHash);
+            writer.WriteHash(kccHash);
             writer.WriteInt32(actors.Count);
             for (int i = 0; i < actors.Count; i++)
             {
                 writer.WriteString(actors.ActorId(i).Value);
-                writer.WriteString(actors.GameplayContentHash(i).ToString());
-                writer.WriteString(actors.CharacterStateHash(i).ToString());
+                writer.WriteHash(actors.GameplayContentHash(i));
+                writer.WriteHash(actors.CharacterStateHash(i));
             }
         }
 
@@ -370,7 +370,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             writer.WriteByte((byte)value.Role);
             writer.WriteString(value.ComponentId);
             writer.WriteString(value.SemanticVersion);
-            writer.WriteString(value.ConfigurationHash.Value);
+            writer.WriteHash(value.ConfigurationHash);
         }
 
         static SimulationComponentIdentity ReadComponentIdentity(CanonicalReader reader)

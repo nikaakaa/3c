@@ -36,7 +36,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlaybackHandle handle,
             ulong generation,
             TimelineRuntimePreparationResult preparation,
-            int tickRate)
+            int tickRate,
+            TimelineRuntimeEvaluationStoragePool evaluationStoragePool)
         {
             Handle = handle;
             Generation = generation;
@@ -62,8 +63,8 @@ namespace BTSMTL.Timeline.Runtime
             m_AdvanceExitedTreeDecisionClips = new List<string>(clipCapacity);
             m_CompareBoundaries = Comparer<TimelineRuntimeClipBoundary>.Create(CompareBoundaries);
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
-            m_CandidateEvaluation = new TimelineRuntimeEvaluationStorage(this);
-            m_CommittedEvaluation = new TimelineRuntimeEvaluationStorage(this);
+            m_CandidateEvaluation = evaluationStoragePool.Rent(this);
+            m_CommittedEvaluation = evaluationStoragePool.Rent(this);
             State = TimelineRuntimePlaybackState.Prepared;
         }
 
@@ -74,7 +75,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
-        internal TimelineData SourceTimeline { get; }
+        public TimelineData SourceTimeline { get; }
         internal TimelineRuntimeMotionSampling MotionSampling { get; }
         internal TimelineRuntimePreparationResult Preparation { get; }
         public string ContentRevision => Content.ContentHash;
@@ -391,13 +392,17 @@ namespace BTSMTL.Timeline.Runtime
 
         public void Dispose()
         {
-            m_CandidateEvaluation.Clear();
-            m_CommittedEvaluation.Clear();
-            m_PendingAdvance = default;
-            m_StopPending = false;
-            m_ActiveClipIds.Clear();
             if (State != TimelineRuntimePlaybackState.Disposed)
+            {
+                m_CandidateEvaluation.Clear();
+                m_CommittedEvaluation.Clear();
+                m_PendingAdvance = default;
+                m_StopPending = false;
+                m_ActiveClipIds.Clear();
+                m_CandidateEvaluation.Recycle();
+                m_CommittedEvaluation.Recycle();
                 State = TimelineRuntimePlaybackState.Disposed;
+            }
         }
 
         internal void DiscardEvaluation()

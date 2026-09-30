@@ -168,7 +168,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < bundle.Actors.Count; i++)
             {
                 writer.WriteString(bundle.Actors[i].ActorId.Value);
-                writer.WriteString(bundle.Actors[i].GameplayHash.Value);
+                writer.WriteHash(bundle.Actors[i].GameplayHash);
             }
             return writer.ComputeHash();
         }

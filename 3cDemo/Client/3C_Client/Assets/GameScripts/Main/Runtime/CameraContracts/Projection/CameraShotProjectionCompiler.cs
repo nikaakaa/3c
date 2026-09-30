@@ -1,6 +1,8 @@
 using System;
 using Cinemachine;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -12,6 +14,7 @@ namespace ThirdPersonCamera
             CameraProjectionCompilationContext context)
         {
             asset.RequireValid();
+#if UNITY_EDITOR
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(asset.CinePrefabPath);
             if (!prefab)
                 throw new InvalidOperationException(
@@ -19,6 +22,7 @@ namespace ThirdPersonCamera
             if (!prefab.GetComponentInChildren<CinemachineVirtualCamera>(true))
                 throw new InvalidOperationException(
                     $"Camera Shot '{asset.ShotId}' CinePrefab '{asset.CinePrefabPath}' has no CinemachineVirtualCamera.");
+#endif
             if (asset.TimeDomain == CameraTimeDomain.OwnerScaled ||
                 asset.TimeDomain == CameraTimeDomain.LocalAvatarScaled)
                 throw new InvalidOperationException(

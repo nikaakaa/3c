@@ -103,6 +103,8 @@ publish/
 [Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 [Aa]ssets/[Ss]treaming[Aa]ssets/aa.meta
 [Aa]ssets/[Ss]treaming[Aa]ssets/aa/*
+/3cDemo/Client/3C_Client/Assets/StreamingAssets/yoo.meta
+/3cDemo/Client/3C_Client/Assets/StreamingAssets/yoo/
 
 # Rider / JetBrains
 .idea/
@@ -261,6 +263,7 @@ Tools/dead_sizes.py
 
 # 诊断输入回放
 3cDemo/Client/3C_Client/Diagnostics/CharacterInputTraces/
+docs/diagnostics/effects/effect-particle-native-transfer-20260930/corin-particle-system-legacy-clamp-scan.json
 
 # 临时工作文件
 .tmp_*

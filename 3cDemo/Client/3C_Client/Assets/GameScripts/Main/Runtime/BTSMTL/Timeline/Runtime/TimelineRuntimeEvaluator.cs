@@ -153,6 +153,7 @@ namespace BTSMTL.Timeline.Runtime
                     treeGraphId,
                     treeGraphRevision,
                     treeClip.ExecutionPhase,
+                    treeClip.ClipExitSource,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
                         ? TimelineRuntimeTreeClipEventKind.Enter
                         : TimelineRuntimeTreeClipEventKind.Exit,
@@ -244,6 +245,7 @@ namespace BTSMTL.Timeline.Runtime
                         treeGraphId,
                         treeGraphRevision,
                         treeClip.ExecutionPhase,
+                        treeClip.ClipExitSource,
                         TimelineRuntimeTreeClipEventKind.Update,
                         currentPosition,
                         currentCycle,

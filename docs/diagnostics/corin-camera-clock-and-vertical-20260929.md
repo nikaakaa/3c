@@ -33,3 +33,37 @@
 同时补做此前缺少的 `CameraWorldBasicData.WithFraming` 生产函数检查：四种半径比例乘五种 FOV，共二十组；屏幕偏移除以投影尺度的最大误差 `7.67988251e-9`，Pivot 与旋转保持。该检查仅证明这个函数在变更半径/FOV时保持既有屏幕构图，不证明完整动态构图顺序或实机画面。
 
 证据：[生产函数检查](camera-basis-runtime-20260929/shake-clock-and-framing-editor-check.json)。检查使用 Profile 副本并销毁副本，没有保存原 Profile；原 Profile 当时为 dirty，保留其未保存状态。没有运行 Play/replay，没有新增测试源码，没有修改 IK、命中链或其他窗口源码。
+
+## 震动实例倍率接入 owner 时钟
+
+2026-09-29，继续补齐原作 `DHDAMGEBBHN` 时钟链的证据并接入当前正式输入。方法表确认 `OCKAOBKPAFD(0x138FB990)` 依次调用 `PFNMGOJBLBD(0x13900C70)`、`JIEIOFHFFKM(0x138FE170)`、`JOEKDCBNEAM(0x138FFE50)`，最终把聚合器输出乘 `+0x94` 写入 `+0x7C`。三个新函数正文与调用关系保存在 [clock-aggregator-native](camera-shake-runtime-20260928/clock-aggregator-native/native_evidence.json)。
+
+当前实现仍不假设聚合器内部每一项都对应本项目某个具体系统。本批只把共享时钟已有的 `CameraFrameInput.OwnerTimeScale` 作为独立倍率正式输入：宿主先按 `MuteCameraShakeAdvancedProcess` 选择调用者或 scaled delta；实例 `IngoreTimeScale=true` 绕过倍率；为 false 时乘 owner 倍率，倍率恰好为 0 时替换为 `0.0001`，不实现 `Max(scale, 0.0001)`。
+
+`GameplayTickSystem.PresentFrame` 当前把 `OwnerTimeScale` 固定传 1，因此本次接线不改变普通共享时钟下的震动节奏；它闭合的是输入通道和实例分支。聚合器内部各项业务来源、全局静默权重、区域渐静默、Base 保持计数触发和非正时间切离 `Action3DCamera` 仍未完成。
+
+检查：目标实例 `e852139597e42532` Edit 模式刷新并完成域重载，Console 0 错误。`git diff --check` 通过。未运行 Play/replay，未新增测试；没有采集 GC 或实机手感。
+
+## 静态震动资格消费
+
+继续核对 `NHEFILHBNND.IDLJBLBBIOH(0x174DE6A0)`：先取得当前模块配置；配置缺失或 `CameraDataAccessor+0x188` 非零时允许执行；`MUTE_CAMERA_SHAKE(+0xBD)` 为 true 时返回 false。该结果是执行资格，不是区域渐静默权重。宿主权重函数 `LJMHOGFLLIC(0x174DDC50)` 另行调用主相机静默读取 `0x134E1E60`，两条输入不能合并。本轮新增宿主 `LJMHOGFLLIC`、`CIFJEEEEMGD`、`NOPJIAOCHID` 的完整反汇编和调用表，保存在 [host-manager-native](camera-shake-runtime-20260928/host-manager-native/native_evidence.json)。
+
+当前项目在 `CameraEffectEvaluator.AddRequests` 的请求接纳边界消费 Projection 的 `MuteCameraShake`：配置为 true 时 Shake 请求不进入效果状态池。没有在最终输出上清零，也没有把静态配置与运行期区域静默混用。当前可琳 Profile 的原值为 false，因此本批不改变现有画面节奏。
+
+检查：目标实例 `e852139597e42532` Edit 模式编译并完成域重载，Console 0 错误；`git diff --check` 通过。未运行 Play/replay，未新增测试。区域静默权重、Base 保持计数、聚合器内部业务项仍待后续补齐。
+
+## Action3DCamera 取消条件溯源
+
+2026-09-29，继续追 `host-MEIBNMFIBPN` 的非正时间分支。`JCCGIBAKPEE.PHMMFHJKDBP(+0x120)` 是字符串状态；取消判断先读取单例 `0x55B3CE8` 指向的模块对象，再比较该字段与缓存 `0x57EEA30` 的 `Action3DCamera`。不相等时调用 `0x174DDAB0(-1)` 取消全部实例；相等或对象缺失时不进入取消。因此这不是“暂停或 delta 非正就清理”，而是离开特定相机状态的正式条件。
+
+状态生产者已核对三处：构造函数 `0x101D0330` 和重置函数 `0x101DB760` 都把 `+0x120` 初始化为同一 `Action3DCamera` 字面量；相机序列接纳函数 `MPMCEDBCNOJ(0x122A0AC0)` 在通过目标、优先级和接纳模式检查后，经 `LNGEJKLBKCD(0x122A0CE0)` 也写回 `Action3DCamera`。完整字段表与函数正文保存在 `camera-module-state-type.json`、`camera-state-.ctor-101d0330.json`、`camera-state-HBMLDILJCKM-101db760.json`、`camera-state-LNGEJKLBKCD-122a0ce0.json` 和 `camera-state-reset-caller-0x122a0ac0.json`。
+
+当前 `3C_Client` 相机运行时没有独立的相机状态生产者，也没有可证明等价于 `PHMMFHJKDBP` 的“离开 Action3DCamera”输入；`CameraMode.ActionFocus` 只是名字相近，不能映射。同时当前 Profile 的 `MuteCameraShakeAdvancedProcess=false`，即使接入状态通道也不会进入该分支。本轮不伪造状态字段或把默认相机临时当作 false。
+
+## 时钟聚合器与 Base 保持来源
+
+2026-09-29，继续补齐 `DHDAMGEBBHN` 的上游业务边界。`OCKAOBKPAFD` 的三项前置不是同一类输入：`PFNMGOJBLBD` 更新 `+0x18` 的 `BMKABHIKIFC(OGHJFLEGIGM<float>)` 共享时间并维护 `+0x70`；`JIEIOFHFFKM` 消费 `+0x50` 的 `BCFKAGODFJI`，`+0x39` 为 true 时直接返回，`+0x31` 为 true 时把 delta 乘 `+0xE8` 交给保持计时；`JOEKDCBNEAM` 消费 `+0x48` 的 `ConfigEntityTimeSlowBase` 并在 BattlePhoto 慢速生命周期内推进实体时间。最终输出仍取共享时间对象并乘 `+0x94` 写入 `+0x7C`。完整布局保存在 [聚合器类型](camera-shake-runtime-20260928/clock-aggregator-owner-type.json)、[共享时间类型](camera-shake-runtime-20260928/clock-shared-time-value-type.json) 和 [依赖类型](camera-shake-runtime-20260928/clock-aggregator-dependency-types.json)。
+
+`JIEIOFHFFKM` 的生产者进一步确认为关卡结算演出。`COJGPJAPOBA.LNBPCKHKNKK` 在进入和退出两个分支分别调用保持入口 true／false；该类型方法消费 `ConfigLevelEndCameraEffect` 和 `LevelEndPerformType`，完整签名保存在 [所有者类型](camera-shake-runtime-20260928/base-keeper-owner-type.json)。当前 `3C_Client` 没有关卡结算演出或等价的 `BCFKAGODFJI +0x31/+0x39` 状态生产者，因此 Base 保持计数不能接到普通攻击、E Hold 或相机事件。
+
+BattlePhoto 分支同样不属于当前可琳战斗链：`BattlePhotoSubsystem.StartHoldTimeSlow` 和 `EndHoldTimeSlow` 调用聚合器，前者的原生调用关系保存于 [photo 证据](camera-shake-runtime-20260928/clock-photo-hold-native/native_evidence.json)；当前工程搜索未发现 TimeSlow 或 HoldTimeSlow 正式系统。因此本轮只闭合证据边界，不为缺失系统增加共享时钟的第二条配置路径。当前 `OwnerTimeScale` 仍是唯一已接入的正式倍率输入，`GameplayTickSystem.PresentFrame` 固定传 1。

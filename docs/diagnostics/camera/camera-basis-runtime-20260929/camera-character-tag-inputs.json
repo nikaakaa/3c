@@ -1,0 +1,547 @@
+{
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260904_config_decoded_v6\\2040150200.blk_export\\CAB-747b46ca75fd1cf803f29ba087ecdb75\\AnimatorZone_Avatar_Female_Size01_Corin.json",
+  "source_sha256": "4d44e15a821e03f1980c3fee7f1537adc13352fd5eadaced5136269e3dfec509",
+  "tags": {
+    "TagZone_Animator_Idle": {
+      "0": {
+        "Born": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Run_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Counter_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Rush_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Walk_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Idle": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Idle_AFK_01": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_01_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_02_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_03_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_04_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_05_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Normal_05_End_2": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Branch_01_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Branch_02_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchIn_Attack_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchIn_Attack_Ex_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "PlaceHolder": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "LevelSwitch": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchOut_Attack": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchIn_Normal": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchOut_Normal": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Revive_01": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Revive_02": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Revive_03": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Revive_04": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "SwitchIn_Attack_Explode_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Taunt": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Revive_Multiplayer": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_BeHitAid_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Branch_03_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Rush_Enhance_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Attack_Rush_Enhance_Explode_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ]
+      }
+    },
+    "TagZone_Animator_Move": {
+      "0": {
+        "Run_Loop": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Run_Start": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "TurnBack": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Walk_Start": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Walk_Loop": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Evade_Front": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Run_Start_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Walk_Start_End": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ]
+      }
+    },
+    "TagZone_Animator_Evade": {
+      "0": {
+        "Evade_Back": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Evade_Front": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ],
+        "Taunt": [
+          {
+            "__type": "MoleMole.Config.AnimatorStateTimeSegment, Logic",
+            "StartNormalizedTime": 0.0,
+            "EndNormalizedTime": 1.0,
+            "MaxStartFrame": false,
+            "StartFrame": 0,
+            "MaxEndFrame": true,
+            "EndFrame": 0,
+            "FrameCount": 0
+          }
+        ]
+      }
+    }
+  },
+  "scope": "原始可琳 AnimatorZone 的 Idle/Move/Evade 区域；不把技能名带 End 当作标签证据。"
+}

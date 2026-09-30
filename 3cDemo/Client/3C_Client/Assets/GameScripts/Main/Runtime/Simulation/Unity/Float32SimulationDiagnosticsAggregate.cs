@@ -4,7 +4,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public sealed class Float32SimulationDiagnosticsAggregate : ISimulationDiagnosticsSink, ISimulationValueTraceInterest, ISimulationControlTraceInterest
+    public sealed class Float32SimulationDiagnosticsAggregate : ISimulationDiagnosticsSink, ISimulationValueTraceInterest, ISimulationControlTraceInterest, ISimulationBlackboardTraceInterest
     {
         readonly Dictionary<ActorId, ISimulationDiagnosticsSink> m_ByActor;
         readonly IReadOnlyList<ISimulationDiagnosticsSink> m_Ordered;
@@ -50,6 +50,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 m_Ordered[i].PublishBoundary(record);
         }
 
+        public bool IsBlackboardCaptureRequested(ActorId actorId) =>
+            GetRequired(actorId) is ISimulationBlackboardTraceInterest interest && interest.IsBlackboardCaptureRequested(actorId);
         public bool IsValueCaptureRequested(ActorId actorId) =>
             GetRequired(actorId) is ISimulationValueTraceInterest interest && interest.IsValueCaptureRequested(actorId);
         public bool IsControlCaptureRequested(ActorId actorId) =>

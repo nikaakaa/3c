@@ -24,6 +24,7 @@ namespace ThirdPersonCamera
 
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
+        Camera outputCamera;
         int defaultVirtualCameraPriority;
         bool missingVirtualCameraReported;
         bool invalidBrainReported;
@@ -38,9 +39,13 @@ namespace ThirdPersonCamera
         public Vector3 AimPoint => basisSnapshot.AimPoint;
         public CameraBasisSnapshot BasisSnapshot => basisSnapshot;
         public CameraRigResult Result => result;
-        public int PixelHeight => brain.OutputCamera.pixelHeight;
+        public Camera OutputCamera => outputCamera;
+        public int PixelHeight => outputCamera.pixelHeight;
+        public int PixelWidth => outputCamera.pixelWidth;
 
-        void Awake()
+        void Awake() => Initialize();
+
+        public void Initialize()
         {
             ReportMissingVirtualCamera();
             ReportInvalidBrain();
@@ -51,6 +56,7 @@ namespace ThirdPersonCamera
                 return;
             }
 
+            outputCamera = brain.ControlledObject.GetComponent<Camera>();
             virtualCamera.PreviousStateIsValid = false;
             defaultVirtualCameraPriority = virtualCamera.Priority;
             shotRigs ??= Array.Empty<CameraShotRigBinding>();

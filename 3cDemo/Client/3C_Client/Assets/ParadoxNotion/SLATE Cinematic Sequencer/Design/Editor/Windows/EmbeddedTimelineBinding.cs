@@ -191,11 +191,12 @@ namespace Slate
         public NativeClipEditorBinding(ActionClip source)
         {
             NativeAction = source;
+            AuthoringId = source.GetInstanceID().ToString();
         }
 
         public ActionClip NativeAction { get; }
         public IEmbeddedTimelineClipBinding FormalClip => null;
-        public string AuthoringId => NativeAction.GetInstanceID().ToString();
+        public string AuthoringId { get; }
         public string Info => NativeAction.info;
         public IEmbeddedTimelineTrackBinding Track => null;
         public bool IsTimeQuantized => true;

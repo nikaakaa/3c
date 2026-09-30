@@ -1,0 +1,258 @@
+{
+  "pe": "D:\\Normal_Software\\HoYoPlay\\games\\ZenlessZoneZero Game\\UnityPlayer.dll",
+  "sha256": "66493677ce2739e188c41634230c3a35e5f584c4575650949d0a53b5785c6c44",
+  "image_base": "0x180000000",
+  "methods_path": "D:\\ZZZ_Dump\\PIK分析包\\元数据\\控制器与战斗\\methods.csv",
+  "methods_sha256": "9a89b38e910c45a3f2544d9cd1ceef1633f1d8ec05943e537c3bcee02f008ec6",
+  "tool_sha256": "c5a692b49891f83f493ddcd3afb710e3dc2ee7303d3dacce6e6ab3deedd0f79d",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": 4096,
+      "virtual_size": 28008352,
+      "raw_size": 28008448,
+      "raw_offset": 1536
+    },
+    {
+      "name": ".rdata",
+      "rva": 28012544,
+      "virtual_size": 3778832,
+      "raw_size": 3779072,
+      "raw_offset": 28009984
+    },
+    {
+      "name": ".data",
+      "rva": 31793152,
+      "virtual_size": 1620196,
+      "raw_size": 309248,
+      "raw_offset": 31789056
+    },
+    {
+      "name": ".pdata",
+      "rva": 33415168,
+      "virtual_size": 1339680,
+      "raw_size": 1339904,
+      "raw_offset": 32098304
+    },
+    {
+      "name": ".rodata",
+      "rva": 34758656,
+      "virtual_size": 2944,
+      "raw_size": 3072,
+      "raw_offset": 33438208
+    },
+    {
+      "name": "_RDATA",
+      "rva": 34762752,
+      "virtual_size": 44336,
+      "raw_size": 44544,
+      "raw_offset": 33441280
+    },
+    {
+      "name": ".gxfg",
+      "rva": 34807808,
+      "virtual_size": 14768,
+      "raw_size": 14848,
+      "raw_offset": 33485824
+    },
+    {
+      "name": ".gehcont",
+      "rva": 34824192,
+      "virtual_size": 36,
+      "raw_size": 512,
+      "raw_offset": 33500672
+    },
+    {
+      "name": ".upx0",
+      "rva": 34828288,
+      "virtual_size": 4296308,
+      "raw_size": 4296704,
+      "raw_offset": 33501184
+    },
+    {
+      "name": ".reloc",
+      "rva": 39124992,
+      "virtual_size": 130484,
+      "raw_size": 130560,
+      "raw_offset": 37797888
+    },
+    {
+      "name": ".rsrc",
+      "rva": 39256064,
+      "virtual_size": 2196,
+      "raw_size": 2560,
+      "raw_offset": 37928448
+    }
+  ],
+  "live_process_access": false,
+  "functions": [
+    {
+      "rva": "0x2077d0",
+      "end_rva": "0x207a86",
+      "unwind_rva": "0x1cf987c",
+      "bytes": 694,
+      "code_sha256": "436caedf24289221ad6591f0365320f06ea53004467f5d4aa55e01dd2f5ace04",
+      "unwind_segments": [
+        {
+          "begin_rva": "0x2077d0",
+          "end_rva": "0x207a86",
+          "unwind_rva": "0x1cf987c",
+          "binary_offset": 0,
+          "bytes": 694,
+          "sha256": "436caedf24289221ad6591f0365320f06ea53004467f5d4aa55e01dd2f5ace04"
+        }
+      ],
+      "metadata": [],
+      "calls": [
+        {
+          "at": "0x2077ff",
+          "target": "0xbd34e0",
+          "names": []
+        },
+        {
+          "at": "0x207824",
+          "target": "0xbd22a0",
+          "names": []
+        },
+        {
+          "at": "0x207843",
+          "target": "0xbd30d0",
+          "names": []
+        },
+        {
+          "at": "0x20784b",
+          "target": "0xbd1fe0",
+          "names": []
+        },
+        {
+          "at": "0x20786a",
+          "target": "0xbd22a0",
+          "names": []
+        },
+        {
+          "at": "0x207889",
+          "target": "0xbd30d0",
+          "names": []
+        },
+        {
+          "at": "0x2078a8",
+          "target": "0xbd22a0",
+          "names": []
+        },
+        {
+          "at": "0x2078c7",
+          "target": "0xbd30d0",
+          "names": []
+        },
+        {
+          "at": "0x2078ea",
+          "target": "0x219850",
+          "names": []
+        },
+        {
+          "at": "0x2078ff",
+          "target": "0x180670",
+          "names": []
+        },
+        {
+          "at": "0x20796e",
+          "target": "0x180670",
+          "names": []
+        },
+        {
+          "at": "0x207977",
+          "target": "0xf3820",
+          "names": []
+        },
+        {
+          "at": "0x207985",
+          "target": "0x219d80",
+          "names": []
+        },
+        {
+          "at": "0x20799a",
+          "target": "0x180670",
+          "names": []
+        },
+        {
+          "at": "0x207a0c",
+          "target": "0x180670",
+          "names": []
+        },
+        {
+          "at": "0x207a15",
+          "target": "0xf3820",
+          "names": []
+        },
+        {
+          "at": "0x207a64",
+          "target": "0x1291670",
+          "names": []
+        }
+      ],
+      "rip_references": [
+        {
+          "at": "0x207804",
+          "rva": "0x1b3a7f8",
+          "bytes16_hex": "ebabb38101000000f2abb38101000000"
+        },
+        {
+          "at": "0x207812",
+          "rva": "0x1ae5360",
+          "bytes16_hex": "6d696e4d617853746174650000000000"
+        },
+        {
+          "at": "0x207850",
+          "rva": "0x1b3a768",
+          "bytes16_hex": "01a9b381010000003ea9b38101000000"
+        },
+        {
+          "at": "0x20785b",
+          "rva": "0x1ae624c",
+          "bytes16_hex": "7363616c61720000000000006d696e53"
+        },
+        {
+          "at": "0x20788e",
+          "rva": "0x1b3a768",
+          "bytes16_hex": "01a9b381010000003ea9b38101000000"
+        },
+        {
+          "at": "0x207899",
+          "rva": "0x1ae6258",
+          "bytes16_hex": "6d696e5363616c617200000000000000"
+        },
+        {
+          "at": "0x2078f2",
+          "rva": "0x1ae6278",
+          "bytes16_hex": "6d617843757276650000000000000000"
+        },
+        {
+          "at": "0x207916",
+          "rva": "0x1ae6278",
+          "bytes16_hex": "6d617843757276650000000000000000"
+        },
+        {
+          "at": "0x20798d",
+          "rva": "0x1ae6268",
+          "bytes16_hex": "6d696e43757276650000000000000000"
+        },
+        {
+          "at": "0x2079b4",
+          "rva": "0x1ae6268",
+          "bytes16_hex": "6d696e43757276650000000000000000"
+        },
+        {
+          "at": "0x207a1c",
+          "rva": "0x1ac3004",
+          "bytes16_hex": "0000000044657461696c50726f746f74"
+        },
+        {
+          "at": "0x207a2b",
+          "rva": "0x1ae62c0",
+          "bytes16_hex": "225b4d696e4d617843757276653a3a54"
+        }
+      ]
+    }
+  ],
+  "resolved_thunks": []
+}

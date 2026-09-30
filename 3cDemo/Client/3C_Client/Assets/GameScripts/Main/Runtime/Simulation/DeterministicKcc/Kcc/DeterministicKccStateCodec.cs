@@ -85,8 +85,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 throw new ArgumentException("Deterministic KCC state identity is incomplete.");
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
-            writer.WriteString(collisionWorldHash.Value);
-            writer.WriteString(configurationHash.Value);
+            writer.WriteHash(collisionWorldHash);
+            writer.WriteHash(configurationHash);
             writer.WriteInt32(states.Count);
             for (int i = 0; i < states.Count; i++)
             {

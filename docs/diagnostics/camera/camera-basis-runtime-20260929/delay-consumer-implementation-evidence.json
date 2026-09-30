@@ -1,0 +1,58 @@
+{
+  "scope": "方向样条控制点与模式过渡参数的进一步核对；不证明完整相机或原游戏画面对齐。",
+  "constants": [
+    {
+      "instruction": "0x1f39a51d",
+      "constant_rva": "0x2816730",
+      "value": [
+        0.0,
+        2.0
+      ]
+    },
+    {
+      "instruction": "0x1f39a525",
+      "constant_rva": "0x28183f0",
+      "value": [
+        2.0,
+        7.0
+      ]
+    },
+    {
+      "instruction": "0x1f39a52d",
+      "constant_rva": "0x28164d4",
+      "value": [
+        8.0
+      ]
+    },
+    {
+      "instruction": "0x1f39a536",
+      "constant_rva": "0x2703f80",
+      "value": [
+        0.5
+      ]
+    },
+    {
+      "instruction": "0x1f39a53f",
+      "constant_rva": "0x2818400",
+      "value": [
+        1.0,
+        4.0
+      ]
+    },
+    {
+      "instruction": "0x1f39a548",
+      "constant_rva": "0x28183e4",
+      "value": [
+        4.0
+      ]
+    }
+  ],
+  "algorithm": "首行(0,2,1)，内部(1,4,1)，末行(2,7,0)；右端项 k0+2*k1、4*ki+2*k(i+1)、8*k(n-1)+kn；Thomas 消元与回代；第二控制点2*k(i+1)-c1(i+1)，末段0.5*(kn+c1(n-1))。与 Cinemachine 2.10.7 开放样条公式一致。当前运行代码复用固定缓冲，只求当前采样需要的XZ分量，避免现有 Cinemachine helper 每次分配工作数组。",
+  "evidence": {
+    "follow-delay-transition-0x12a1a470.json": "0cabc3c80abfefad84300981590bf888480286c91cc6b593a0c1dbd429f5b44b",
+    "follow-delay-transition-0x1393bf00.json": "010d8785bee2aa56d721fd24a7a55c86ba647dd75d9be298ede2c150734b623f",
+    "follow-delay-transition-0x14a3ad10.json": "77fbdb078ad254a4e3651eaaecc21f619025c23af40da965800e2037746ac42d",
+    "follow-delay-transition-0x14a3af30.json": "072d48a45569de678397313dceb16cccf949b7aa437f66978ba60473b9daf316",
+    "follow-delay-transition-0x14a3b300.json": "c344c5edd5c0f54324524f87e8b52cb5dcef0ed935de13d4bfa4023f9f6344a8"
+  }
+}

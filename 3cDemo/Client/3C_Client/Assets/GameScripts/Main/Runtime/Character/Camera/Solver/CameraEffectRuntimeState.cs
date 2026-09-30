@@ -28,6 +28,10 @@ namespace ThirdPersonCamera
             StretchStartRadiusEnvelope = 0f;
             StretchStartPositionOffset = default;
             StretchStartRollOffset = 0f;
+            StretchPitchInitialized = false;
+            StretchPitchRetired = false;
+            StartPitch = default;
+            EndPitch = default;
         }
 
         public CameraEffectRequest Request { get; set; }
@@ -49,5 +53,9 @@ namespace ThirdPersonCamera
         public float StretchStartRadiusEnvelope;
         public UnityEngine.Vector3 StretchStartPositionOffset;
         public float StretchStartRollOffset;
+        public bool StretchPitchInitialized;
+        public bool StretchPitchRetired;
+        public CameraStretchPitchInstance StartPitch;
+        public CameraStretchPitchInstance EndPitch;
     }
 }

@@ -143,16 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 stateSlot,
                 declarationIdentity,
                 source);
-            if (m_Builder.TryGetCatalogEntry(ProgramCatalogEntryKind.BlackboardDeclaration, declarationIdentity, out int catalog))
-            {
-                m_Builder.DeclareReference(
-                    $"{route}/node:{source.NodeId}/blackboard-catalog",
-                    operation,
-                    ProgramReferenceKind.CatalogEntry,
-                    catalog,
-                    declarationIdentity,
-                    source);
-            }
         }
 
         static ProgramBlackboardFactProjectionKind CompileBlackboardFactProjection(
@@ -203,6 +193,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ProgramStateSemantic.BlackboardWriteStamp,
                 stateKey);
             m_ValueSlots.Add(stateKey, value);
+            m_Builder.DeclareReference(
+                $"{stateKey}/blackboard-declaration",
+                OperationHandle.Invalid,
+                ProgramReferenceKind.StateSlot,
+                value,
+                DeclarationIdentity(item.GraphId, item.Declaration.DeclarationId),
+                source);
 
             string scopeIdentity = ScopeIdentity(item.Declaration.BlackboardScope, route);
             if (!m_Scopes.TryGetValue(scopeIdentity, out ScopeRecord scope))

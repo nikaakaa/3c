@@ -9,6 +9,11 @@ namespace ThirdPersonSimulation
         bool IsValueCaptureRequested(ActorId actorId);
     }
 
+    public interface ISimulationBlackboardTraceInterest
+    {
+        bool IsBlackboardCaptureRequested(ActorId actorId);
+    }
+
     public static class SimulationValueTraceLimits
     {
         public const int MaxSamplesPerEvaluation = 4096;

@@ -111,6 +111,7 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
         const string ContextIdKey = "ThirdPerson.Launcher.Request.ContextId";
         const string StartPausedKey = "ThirdPerson.Launcher.Request.StartPaused";
         const string OwnerIdKey = "ThirdPerson.Launcher.Request.OwnerId";
+        const string PlayModeEnteredKey = "ThirdPerson.Launcher.Request.PlayModeEntered";
         const string SceneSetupKey = "ThirdPerson.Launcher.Restore.SceneSetup";
         const string PlayModeStartSceneKey = "ThirdPerson.Launcher.Restore.PlayModeStartScene";
 
@@ -272,6 +273,11 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
         {
             if (!IsPending)
                 return;
+            if (state == PlayModeStateChange.EnteredPlayMode)
+            {
+                SessionState.SetBool(PlayModeEnteredKey, true);
+                return;
+            }
             if (state == PlayModeStateChange.EnteredEditMode)
                 CompleteLaunch();
         }
@@ -284,10 +290,13 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             {
                 request = ReadRequest();
                 RestoreEnvironment();
+                bool enteredPlayMode = SessionState.GetBool(PlayModeEnteredKey, false);
                 result = Result(
-                    EditorPlayModeSceneLaunchResultCode.Completed,
+                    enteredPlayMode
+                        ? EditorPlayModeSceneLaunchResultCode.Completed
+                        : EditorPlayModeSceneLaunchResultCode.Failed,
                     request,
-                    string.Empty);
+                    enteredPlayMode ? string.Empty : "Unity 未进入 Play Mode，ScenePlay 启动失败。");
             }
             catch (Exception exception)
             {
@@ -310,6 +319,7 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             string previousPlayModeStartScene)
         {
             SessionState.SetBool(PendingKey, true);
+            SessionState.SetBool(PlayModeEnteredKey, false);
             SessionState.SetString(RequestIdKey, request.RequestId.ToString("N"));
             SessionState.SetString(ScenePathKey, request.ScenePath);
             SessionState.SetString(ContextIdKey, request.ContextId);
@@ -395,6 +405,7 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             SessionState.EraseString(ContextIdKey);
             SessionState.EraseBool(StartPausedKey);
             SessionState.EraseString(OwnerIdKey);
+            SessionState.EraseBool(PlayModeEnteredKey);
             SessionState.EraseString(SceneSetupKey);
             SessionState.EraseString(PlayModeStartSceneKey);
         }

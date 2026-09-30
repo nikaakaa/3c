@@ -32,6 +32,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         internal FixedTreeClipInvokerLink TreeClipLink => m_TreeClipLink;
+        internal OperationControlCursor<FixedAbilityExecutionTarget> Cursor => m_Runtime.Cursor;
 
         internal void Bind(in FixedAbilityExecutionServiceSet services)
         {
@@ -50,9 +51,9 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
+        internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow, bool captureBlackboard)
         {
-            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
             m_Runtime.BeginEvaluation();
         }
         internal void EndEvaluation()

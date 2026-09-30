@@ -447,7 +447,10 @@ namespace BTSMTL.Diagnostics
         ValueSamplingLimited,
         NodeRunning,
         NodeWaiting,
-        SimulationCheckpointCaptured
+        SimulationCheckpointCaptured,
+        LoopIterationEntered,
+        LoopIterationCompleted,
+        BlackboardSnapshot
     }
 
     public enum DebugValueKind
@@ -661,6 +664,13 @@ namespace BTSMTL.Diagnostics
         public float FinalWeight;
         public int Priority;
         public int Cycle;
+        public int LoopIteration;
+        public int BlackboardStateSlot;
+        public int BlackboardScope;
+        public int BlackboardOwnerIndex;
+        public ulong BlackboardOwnerGeneration;
+        public int BlackboardLifetime;
+        public bool BlackboardIsActive;
         public int TrackIndex;
         public int ClipIndex;
         public bool Flag;

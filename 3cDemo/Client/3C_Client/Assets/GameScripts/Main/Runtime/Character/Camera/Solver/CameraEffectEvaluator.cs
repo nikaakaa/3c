@@ -13,6 +13,7 @@ namespace ThirdPersonCamera
         readonly ICameraEffectOwner[] m_Owners;
         readonly CameraZoomEffectEvaluator m_Zoom;
         readonly CameraStretchEffectEvaluator m_Stretch;
+        readonly CameraStretchPitchRuntime m_Pitch;
         readonly List<CameraEffectContribution> m_Contributions;
         readonly ReadOnlyCollection<CameraEffectContribution> m_ContributionView;
         readonly List<PendingRetirement> m_PendingRetirements;
@@ -38,6 +39,7 @@ namespace ThirdPersonCamera
             m_CompletedToRemove = new List<CameraEffectEventKey>(capacity);
             m_Zoom = new CameraZoomEffectEvaluator(projection);
             m_Stretch = new CameraStretchEffectEvaluator(projection);
+            m_Pitch = new CameraStretchPitchRuntime(projection);
             m_Owners = new ICameraEffectOwner[]
             {
                 new CameraOverrideEffectEvaluator(projection),
@@ -117,10 +119,7 @@ namespace ThirdPersonCamera
                 reason));
         }
 
-        public CameraFramePlan Resolve(
-            CameraFramePlan basePlan,
-            IReadOnlyList<CameraEffectRequest> newRequests,
-            in CameraFrameInput input)
+        public void PrepareFrame(IReadOnlyList<CameraEffectRequest> newRequests)
         {
             if (newRequests != null && newRequests.Count > m_Capacity)
                 throw new InvalidOperationException("Camera effect requests exceed RequestCapacity.");
@@ -133,6 +132,16 @@ namespace ThirdPersonCamera
             m_CompletedToRemove.Clear();
             AddRequests(newRequests);
             ApplyPendingRetirements();
+        }
+
+        internal float ResolveElevation(float elevation, bool rotationControl, in CameraFrameInput input) =>
+            m_Pitch.Evaluate(m_States.Active, elevation, rotationControl, in input);
+
+        public CameraFramePlan Resolve(
+            CameraFramePlan basePlan,
+            IReadOnlyList<CameraEffectRequest> newRequests,
+            in CameraFrameInput input)
+        {
             m_VisibleStates.Clear();
             for (int i = 0; i < m_States.Active.Count; i++)
                 m_VisibleStates.Add(m_States.Active[i]);
@@ -174,6 +183,8 @@ namespace ThirdPersonCamera
             {
                 CameraEffectRequest request = requests[i];
                 ICameraEffectOwner owner = RequireOwner(request.Kind);
+                if (request.Kind == CameraEffectKind.Shake && m_Projection.MuteCameraShake)
+                    continue;
                 if (m_CompletedEvents.Contains(CameraEffectEventKey.From(request)))
                     continue;
                 if (owner.UpdatesBySource)

@@ -44,12 +44,13 @@ MonoBehaviour:
   m_OverflowPolicy: 0
   m_SetByCallerParameters: []
   m_Components:
-  - rid: 207050555325415824
-  - rid: 207050555325415825
+  - rid: 207050784535478316
+  - rid: 207050784535478317
+  - rid: 207050784535478318
   references:
     version: 2
     RefIds:
-    - rid: 207050555325415824
+    - rid: 207050784535478316
       type: {class: GameplayAttackCollisionComponentDefinition, ns: ThirdPersonGameplay.Effects,
         asm: ThirdPersonGameplay}
       data:
@@ -69,7 +70,7 @@ MonoBehaviour:
         m_AliveMaxHitCount: 0
         m_UnitMaxHitCount: 0
         m_FollowAttacker: 0
-    - rid: 207050555325415825
+    - rid: 207050784535478317
       type: {class: GameplayAttackPropertyComponentDefinition, ns: ThirdPersonGameplay.Effects,
         asm: ThirdPersonGameplay}
       data:
@@ -161,3 +162,9 @@ MonoBehaviour:
         m_HitsNeutral: 1
         m_UseAbilityTargetKey: 0
         m_BanDamage: 0
+    - rid: 207050784535478318
+      type: {class: GameplayAttackCameraShakeComponentDefinition, ns: ThirdPersonGameplay.Effects,
+        asm: ThirdPersonGameplay}
+      data:
+        m_ResourceId: Corin_Attack_AssaultAid_CamShake_A_05
+        m_ShakeOnNotHit: 0

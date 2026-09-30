@@ -19,6 +19,9 @@ namespace ThirdPersonSimulation
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
         };
 
+        [ThreadStatic] static byte[] s_TextBytes;
+        [ThreadStatic] static uint[] s_TransformWords;
+
         readonly Span<byte> m_Block;
         int m_Count;
         ulong m_Length;
@@ -62,6 +65,17 @@ namespace ThirdPersonSimulation
                 WriteByte((byte)characters[i]);
         }
 
+        public void Append(StableHash value)
+        {
+            BeginField();
+            if (!value.IsValid)
+                return;
+            Span<char> characters = stackalloc char[64];
+            value.Format(characters);
+            for (int i = 0; i < characters.Length; i++)
+                WriteByte((byte)characters[i]);
+        }
+
         public void Append(ActivationId value)
         {
             BeginField();
@@ -70,6 +84,11 @@ namespace ThirdPersonSimulation
             {
                 WriteText("skill-operation:".AsSpan());
                 WriteText(source.ExecutionPath.AsSpan());
+            }
+            else if (source.IsBlackboardCommand)
+            {
+                WriteText("blackboard-command:".AsSpan());
+                WriteText(source.BlackboardDeclaration.AsSpan());
             }
             else
             {
@@ -105,7 +124,7 @@ namespace ThirdPersonSimulation
 
         void WriteText(ReadOnlySpan<char> value)
         {
-            Span<byte> bytes = stackalloc byte[768];
+            Span<byte> bytes = s_TextBytes ??= new byte[768];
             while (!value.IsEmpty)
             {
                 int count = Math.Min(256, value.Length);
@@ -148,7 +167,7 @@ namespace ThirdPersonSimulation
 
         void Transform()
         {
-            Span<uint> words = stackalloc uint[64];
+            Span<uint> words = s_TransformWords ??= new uint[64];
             for (int i = 0; i < 16; i++)
                 words[i] = BinaryPrimitives.ReadUInt32BigEndian(m_Block.Slice(i * 4, 4));
             unchecked

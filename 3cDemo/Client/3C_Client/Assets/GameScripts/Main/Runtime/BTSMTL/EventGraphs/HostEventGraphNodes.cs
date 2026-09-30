@@ -101,7 +101,7 @@ namespace BTSMTL.EventGraphs
     [Name("Read Delta Seconds")]
     [Category("Host/Input")]
     [Description("Reads the delta seconds supplied by the host.")]
-    public sealed class EventGraphDeltaNode : FlowScriptNode
+    public sealed class EventGraphDeltaNode : FlowScriptNode, EventGraphHostInputNodeMarker
     {
         [NonSerialized] EventGraphInputDescriptor m_Descriptor;
 

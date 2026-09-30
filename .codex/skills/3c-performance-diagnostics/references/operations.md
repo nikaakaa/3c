@@ -41,6 +41,10 @@ schema 不受本 skill 固定。准备请求前读取当前 `PerformanceCaptureS
 
 构建状态包含 `phase`、`elapsed_ms` 和当前消息；磁盘记录为 `Client/Library/Performance/McpJobs/<job>.json`。阶段包括资源来源指纹、`content-build` 内置资源构建、Player 输入指纹、Unity 构建、输入核对、产物整理、产物哈希和发布。`content-build` 使用项目现有 `TEngine.ReleaseTools.BuildContent`，构建 DefaultPackage 并全量复制内置资源；仅构建 exe 不会更新旧 StreamingAssets 包，已实际发生当前 ACL 地址不在旧 manifest 中的启动失败。资源包来源指纹不纳入生成的 StreamingAssets，最终 Player 输入快照仍纳入内置资源。`elapsed_ms` 仅代表上次进度更新时的累计耗时，Unity 原生构建期间看 Unity 进度和日志，不把未更新的时间当作进程停止。Editor 退出后残留的 `running` 需通过原作业状态核对，不直接启动另一轮。
 
+2026-09-30，Windows 下构建在资源指纹阶段因 MCP 作业状态发布的 `File.Replace` 报“无法删除要被替换的文件”；独立临时文件连续替换也在第 7 次复现。现有状态发布入口已统一使用同目录临时文件与 `MoveFileExW(REPLACE_EXISTING | WRITE_THROUGH)`，Unity 内连续 2000 次发布通过，正式构建已越过该阶段。此证据不确认具体系统过滤器或文件占用者。读取运行中的作业 JSON 使用 UTF-8，并以 `FileShare.ReadWrite | FileShare.Delete` 打开，允许发布器替换正在读取的旧版本。
+
+同日资源构建无条件覆盖已被映射的 `mscorlib.dll.bytes` 而失败，已核对源、目标 SHA-256 完全相同。正式 `BuildDLLCommand` 现在仅在 DLL 内容变化时复制，AOT 与热更新 DLL 共用此入口；内容变化仍按正常复制失败处理。不要通过跳过整个 DLL 或资源构建阶段放行旧产物。
+
 `clean_build_cache` 默认 false。2026-09-28 调整 Timeline 编辑器专属序列化字段后，增量 Player 在反序列化阶段发生原生崩溃；同一修改使用 `clean_build_cache=true` 重建后通过该阶段。遇到这种有日志依据的场景数据/脚本缓存问题可以显式清理重建，不将所有构建改成全量，也不据此认定已证明某个 Unity 引擎缺陷。
 
 资源构建缓存位于仓库 `.performance-build/content`，发布资源使用 YooAsset 的 `HashName` 文件名选项，业务资源地址不变。曾在较深的 `Client/Library/Performance/Content` 输出目录遇到 SBP `ArchiveAndCompressBundles` 的 `PathTooLongException`；不要把此异常当成 C# 编译错误或改写业务资源路径。

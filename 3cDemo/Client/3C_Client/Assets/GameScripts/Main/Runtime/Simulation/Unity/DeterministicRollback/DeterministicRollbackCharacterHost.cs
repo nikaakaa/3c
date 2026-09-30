@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 Transform followAnchor = null;
                 Transform aimAnchor = null;
                 IReadOnlyList<CameraTargetBinding> cameraTargetBindings = null;
-                ICharacterPresentationLookInput lookInput = null;
+                ICharacterPresentationInput lookInput = null;
                 string lookInputId = string.Empty;
                 if (local)
                 {

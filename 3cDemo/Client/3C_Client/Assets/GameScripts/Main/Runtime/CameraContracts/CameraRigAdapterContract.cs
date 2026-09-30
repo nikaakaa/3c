@@ -9,6 +9,7 @@ namespace ThirdPersonCamera
     {
         CameraRigResult Result { get; }
         int PixelHeight { get; }
+        int PixelWidth { get; }
         void ValidateBinding(string shotId);
         void Apply(in CameraFramePlan plan);
         void Reset();

@@ -71,7 +71,7 @@ namespace ThirdPersonSimulation.Fixed
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
-            writer.WriteString(snapshot.SnapshotHash.ToString());
+            writer.WriteHash(snapshot.SnapshotHash);
             writer.WriteString(snapshot.CompositionIdentity.ToString());
             SimulationWorldSnapshotCodec.WriteLengthPrefixed(writer, snapshot.World);
             WritePipeline(writer, snapshot.Pipeline);
@@ -121,11 +121,11 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WritePipeline(CanonicalWriter writer, SimulationPipelineStateSnapshot snapshot)
         {
-            writer.WriteString(snapshot.SnapshotHash.ToString());
+            writer.WriteHash(snapshot.SnapshotHash);
             writer.WriteString(snapshot.Pipeline.Id.Value);
             writer.WriteString(snapshot.Pipeline.Revision.Value);
             writer.WriteInt32(snapshot.Pipeline.SchemaVersion.Value);
-            writer.WriteString(snapshot.Pipeline.Hash.ToString());
+            writer.WriteHash(snapshot.Pipeline.Hash);
             WriteComponent(writer, snapshot.Backend);
             writer.WriteUInt64(snapshot.LastCompletedTick);
             writer.WriteInt32(snapshot.Participants.Count);
@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteString(participant.StateOwner);
                 writer.WriteString(participant.StateSchemaId);
                 writer.WriteInt32(participant.StateSchemaVersion);
-                writer.WriteString(participant.StateHash.ToString());
+                writer.WriteHash(participant.StateHash);
                 writer.WriteBytes(participant.Payload.Span);
             }
         }
@@ -185,7 +185,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteByte((byte)identity.Role);
             writer.WriteString(identity.ComponentId);
             writer.WriteString(identity.SemanticVersion);
-            writer.WriteString(identity.ConfigurationHash.ToString());
+            writer.WriteHash(identity.ConfigurationHash);
         }
 
         static SimulationComponentIdentity ReadComponent(CanonicalReader reader)

@@ -11,7 +11,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IGameplayAbilityExecutionServices m_Services;
         readonly FixedActionRuntime m_Actions;
         readonly FixedActionStateStore m_ActionStore;
-        readonly IFixedAbilityOperationControlRuntime m_Control;
+        readonly FixedAbilityOperationControlRuntime m_Control;
+        readonly FixedBlackboardRuntime m_Blackboard;
         readonly List<FixedActionInstanceState> m_CurrentActions = new();
         readonly HashSet<ulong> m_StoppingInstances = new();
 
@@ -20,13 +21,35 @@ namespace ThirdPersonSimulation.Fixed
             IGameplayAbilityExecutionServices services,
             FixedActionRuntime actions,
             FixedActionStateStore actionStore,
-            IFixedAbilityOperationControlRuntime control)
+            FixedAbilityOperationControlRuntime control,
+            FixedBlackboardRuntime blackboard)
         {
             m_Skill = skill ?? throw new ArgumentNullException(nameof(skill));
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
+            m_Blackboard = blackboard;
+        }
+
+        internal FixedBlackboardWriteStatus ApplyBlackboardCommand(FixedBlackboardWriteCommand command, ulong sequence)
+        {
+            if (command.Owner.ScopeKind == ProgramScopeKind.Character)
+                return m_Blackboard.ApplyCommand(m_Control.Cursor, command, sequence, default);
+            IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.ActionInstances;
+            for (int i = 0; i < actions.Count; i++)
+            {
+                FixedActionInstanceState action = actions[i];
+                if (action.InstanceId != command.ActionInstanceId)
+                    continue;
+                if (!action.IsActive || action.SkillId != command.Ability.AbilityId ||
+                    action.SkillExecutionGeneration != command.SkillGeneration)
+                    return FixedBlackboardWriteStatus.InstanceEnded;
+                using (m_ActionStore.EnterSkillExecution(action))
+                using (m_ActionStore.PushSkillExecution(action))
+                    return m_Blackboard.ApplyCommand(m_Control.Cursor, command, sequence, action);
+            }
+            return FixedBlackboardWriteStatus.InstanceEnded;
         }
 
         [PerformanceProbe("simulation.operation.ability-tick")]

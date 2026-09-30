@@ -717,8 +717,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_ProjectionWriter.Reset();
             m_ProjectionWriter.WriteUInt32(0x50524244);
             m_ProjectionWriter.WriteInt32(1);
-            m_ProjectionWriter.WriteString(m_Policy.ConfigurationHash.Value);
-            m_ProjectionWriter.WriteString(m_RosterHash.Value);
+            m_ProjectionWriter.WriteHash(m_Policy.ConfigurationHash);
+            m_ProjectionWriter.WriteHash(m_RosterHash);
             m_ProjectionWriter.WriteUInt64(m_LastCompletedTick);
             m_ProjectionWriter.WriteInt32(m_AppliedGameplayHashes.Count);
             foreach (KeyValuePair<ulong, StableHash> pair in m_AppliedGameplayHashes)

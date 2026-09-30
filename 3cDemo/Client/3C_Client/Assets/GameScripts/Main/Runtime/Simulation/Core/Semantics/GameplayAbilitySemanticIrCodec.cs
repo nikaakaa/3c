@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(semanticIr.Manifest.OperationSetVersion.Value);
             writer.WriteInt32(semanticIr.Manifest.TickRate);
             writer.WriteString(semanticIr.Manifest.SourceRevision.Value);
-            writer.WriteString(semanticIr.SemanticHash.ToString());
+            writer.WriteHash(semanticIr.SemanticHash);
             writer.WriteInt32(semanticIr.Manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < semanticIr.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(semanticIr.Manifest.Capabilities.GameplayCapabilities[i]);

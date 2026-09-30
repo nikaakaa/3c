@@ -18,16 +18,26 @@
 
 ### Requirement: 窗口生命周期必须只管理本地预览视图
 
-窗口 MUST只拥有本地技能、独立 Timeline、Pose 及其它仍保留的领域文档、选择、运行观察绑定和 interest；C#控制只提供正式配置与代码来源观察，不提供可编辑角色总控RootTree。关闭窗口、切换文档和折叠区域 MUST不终止受控场景运行；明确结束操作 MUST交给唯一场景预览 owner。重载后 MUST按稳定 identity 重新绑定，不能恢复旧运行对象或因旧外壳描述恢复已退役领域。
+窗口 MUST只拥有本地技能、独立 Timeline、Pose 及其它仍保留的领域文档、选择、运行观察绑定和 interest；C#控制只提供正式配置与代码来源观察，不提供可编辑角色总控RootTree。切换文档及关闭普通作者页面 MUST 保持现有预览；关闭最后一个承载预览的窗口或明确关闭预览区域 MUST 由唯一隐藏宿主结束并释放预览。实际游戏观察窗口关闭 MUST NOT 终止游戏 Session。重载后 MUST按稳定 identity 重新绑定，不能恢复旧运行对象或因旧外壳描述恢复已退役领域。
 
-#### Scenario: 关闭最后一个作者窗口
+#### Scenario: 关闭最后一个预览承载窗口
 
-- **WHEN** 受控预览运行期间最后一个作者窗口关闭
-- **THEN** 运行 MUST继续由 Unity Play 和对应正式业务 owner 管理，角色 Session 与非 Skill 播放各守原归属
-- **AND** 窗口 interest MUST全部释放，用户 MUST仍能通过 Unity Stop 结束运行
+- **WHEN** 受控预览运行期间最后一个承载预览的窗口关闭
+- **THEN** 隐藏场景宿主 MUST 通过对应正式业务 owner 停止驱动、结束 Session 并释放预览资源
+- **AND** 窗口 interest MUST 全部释放，编辑器后台 MUST NOT 继续推进已经关闭的预览，不要求 Unity Stop
 
 #### Scenario: 从技能页返回控制配置
 
 - **WHEN** 作者从技能 Root/Timeline 返回 Character 控制配置
 - **THEN** 窗口 MUST显示已登记 C# 模块、可配置字段及代码来源，不创建角色图
 - **AND** 场景运行和其它窗口的准确实例绑定 MUST保持原归属
+
+### Requirement: Ability 图必须联动实际执行时间线
+
+打开 Ability MUST 能查看原 FlowCanvas 节点图，并联动独立可停靠 Preview 中的执行投影与角色视口，不要求先打开一个被调用的作者 Timeline。选择执行片段 MUST 能定位记录时的来源节点、Loop 迭代或 Timeline 调用；来源导航 MUST 不改变实际运行。纯 Timeline 基础编排 MUST 保持直接入口，不强制依赖 Ability 图。
+
+#### Scenario: 打开 Ability 并选择循环记录
+
+- **WHEN** 用户打开 Ability 并选择其第二次 Loop 中的节点执行片段
+- **THEN** 图面 MUST 定位该片段对应的正式来源，并显示第二次迭代的运行身份
+- **AND** MUST NOT 因来源节点相同而改选第一次记录或重建 Session

@@ -1,0 +1,88 @@
+{
+  "date": "2026-09-29",
+  "unity_instance": "e852139597e42532",
+  "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client",
+  "mode": "Edit",
+  "playing": false,
+  "compiling": false,
+  "updating": false,
+  "console_errors": 0,
+  "profile": {
+    "asset_path": "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/CorinCharacterCameraProfile.asset",
+    "id": "corin.camera.profile",
+    "revision": "43a1d7ba0e14b37f764dafa029b32df135220efe6f977140191008d20e2ba597",
+    "dirty_after_checks": false
+  },
+  "projection": {
+    "schema": "character-camera-projection/v10",
+    "shake_count": 21,
+    "zoom_count": 18,
+    "stretch_count": 18,
+    "mute_camera_shake": false,
+    "mute_camera_shake_advanced_process": false,
+    "build_and_require_valid": true
+  },
+  "resource_mapping": {
+    "raw_play_stacking_type_zero_count": 21,
+    "project_play_stacking_type": "Replace=1",
+    "ignore_time_scale_true_count": 12,
+    "ignore_time_scale_false_count": 9
+  },
+  "resolve_delta_cases": [
+    {
+      "advanced": false,
+      "presentation": 0.016,
+      "scaled": 0.012,
+      "owner": 0.5,
+      "ignore_time_scale": true,
+      "expected": 0.012,
+      "actual": 0.012
+    },
+    {
+      "advanced": false,
+      "presentation": 0.016,
+      "scaled": 0.012,
+      "owner": 0.5,
+      "ignore_time_scale": false,
+      "expected": 0.006,
+      "actual": 0.006
+    },
+    {
+      "advanced": false,
+      "presentation": 0.0,
+      "scaled": 0.012,
+      "owner": 0.5,
+      "ignore_time_scale": false,
+      "expected": 0.0,
+      "actual": 0.0
+    },
+    {
+      "advanced": false,
+      "presentation": 0.016,
+      "scaled": 0.012,
+      "owner": 0.0,
+      "ignore_time_scale": false,
+      "expected": 1.19999993e-06,
+      "actual": 1.19999993e-06
+    },
+    {
+      "advanced": true,
+      "presentation": 0.016,
+      "scaled": 0.012,
+      "owner": 0.5,
+      "ignore_time_scale": false,
+      "expected": 0.008,
+      "actual": 0.008
+    },
+    {
+      "advanced": true,
+      "presentation": 0.0,
+      "scaled": 0.012,
+      "owner": 0.5,
+      "ignore_time_scale": false,
+      "expected": 0.0,
+      "actual": 0.0
+    }
+  ],
+  "scope": "当前正式 Profile 构建、资源映射和 ResolveDelta 分支检查；不运行 Play/replay，不证明实机画面或完整原作静默/保持业务。"
+}

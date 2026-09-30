@@ -4,6 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace YooAsset
 {
@@ -47,19 +50,27 @@ namespace YooAsset
             {
                 YooLogger.Logger = logger;
 
-                // 创建驱动器
                 _isInitialize = true;
-                _driver = new UnityEngine.GameObject($"[{nameof(YooAssets)}]");
-                _driver.AddComponent<YooAssetsDriver>();
-                UnityEngine.Object.DontDestroyOnLoad(_driver);
-                YooLogger.Log($"{nameof(YooAssets)} initialize !");
-
-#if DEBUG
-                // 添加远程调试脚本
-                _driver.AddComponent<RemoteDebuggerInRuntime>();
-#endif
-
                 OperationSystem.Initialize();
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    EditorApplication.update += Update;
+                    EditorApplication.playModeStateChanged += OnEditorPlayModeChanged;
+                    AssemblyReloadEvents.beforeAssemblyReload += Destroy;
+                    EditorApplication.quitting += Destroy;
+                }
+                else
+#endif
+                {
+                    _driver = new UnityEngine.GameObject($"[{nameof(YooAssets)}]");
+                    _driver.AddComponent<YooAssetsDriver>();
+                    UnityEngine.Object.DontDestroyOnLoad(_driver);
+#if DEBUG
+                    _driver.AddComponent<RemoteDebuggerInRuntime>();
+#endif
+                }
+                YooLogger.Log($"{nameof(YooAssets)} initialize !");
             }
         }
 
@@ -68,6 +79,12 @@ namespace YooAsset
         /// </summary>
         public static void Destroy()
         {
+#if UNITY_EDITOR
+            EditorApplication.update -= Update;
+            EditorApplication.playModeStateChanged -= OnEditorPlayModeChanged;
+            AssemblyReloadEvents.beforeAssemblyReload -= Destroy;
+            EditorApplication.quitting -= Destroy;
+#endif
             if (_isInitialize)
             {
                 _isInitialize = false;
@@ -85,6 +102,14 @@ namespace YooAsset
                 _packages.Clear();
             }
         }
+
+#if UNITY_EDITOR
+        private static void OnEditorPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode)
+                Destroy();
+        }
+#endif
 
         /// <summary>
         /// 更新资源系统

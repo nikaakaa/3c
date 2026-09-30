@@ -10,10 +10,9 @@ namespace BTSMTL.Timeline.Runtime
 {
     sealed class TimelineRuntimePresentationBuffer
     {
-        public TimelineRuntimePresentationBuffer(TimelineRuntimePlayback playback)
+        public TimelineRuntimePresentationBuffer(TimelineData timeline, TimelineContentUnit content, TimelinePlaybackMode mode)
         {
             int animations = 0, states = 0, responses = 0, resources = 0, scene = 0, markers = 0, trees = 0;
-            TimelineData timeline = playback.SourceTimeline;
             for (int index = 0; index < timeline.Tracks.Count; index++)
             {
                 Track track = timeline.Tracks[index];
@@ -30,13 +29,13 @@ namespace BTSMTL.Timeline.Runtime
                     case ScenePresentationParameterTrack: scene = checked(scene + count); break;
                 }
             }
-            for (int index = 0; index < playback.Content.Markers.Count; index++)
+            for (int index = 0; index < content.Markers.Count; index++)
             {
-                TimelineContentMarker marker = playback.Content.Markers[index];
+                TimelineContentMarker marker = content.Markers[index];
                 if (marker.ExecutionPolicy.IsPresentation && !marker.TrackMuted)
                     markers++;
             }
-            int traversals = playback.PlaybackMode == TimelinePlaybackMode.Loop
+            int traversals = mode == TimelinePlaybackMode.Loop
                 ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
             Animations = new(animations);
             CameraStates = new(states);

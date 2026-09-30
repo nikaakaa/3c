@@ -93,7 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Session = session;
             m_RootScope = scope;
             EditorApplication.update += Update;
-            EditorApplication.playModeStateChanged += OnPlayModeChanged;
             GraphEditor.onEditorClosed += OnEditorClosed;
             GraphEditor.onEditorNavigationChanged += OnNavigationChanged;
             m_Session.Changed += OnRuntimeChanged;
@@ -144,7 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (m_Disposed)
                 return;
-            if (!Application.isPlaying || !GraphEditor.current || GraphEditor.rootGraph != m_RootGraph)
+            if (!m_Session.ViewModel.Attached || !GraphEditor.current || GraphEditor.rootGraph != m_RootGraph)
             {
                 Dispose();
                 return;
@@ -377,12 +376,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             left.GraphRuntimeId == right.GraphRuntimeId && left.StateId == right.StateId &&
             left.ActionInstanceId == right.ActionInstanceId && left.ActivationGeneration == right.ActivationGeneration;
 
-        void OnPlayModeChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.ExitingPlayMode)
-                Dispose();
-        }
-
         void OnEditorClosed() => Dispose();
 
         public void Dispose()
@@ -392,7 +385,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Disposed = true;
             m_Observation?.Dispose();
             EditorApplication.update -= Update;
-            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             GraphEditor.onEditorClosed -= OnEditorClosed;
             GraphEditor.onEditorNavigationChanged -= OnNavigationChanged;
             m_Session.Changed -= OnRuntimeChanged;

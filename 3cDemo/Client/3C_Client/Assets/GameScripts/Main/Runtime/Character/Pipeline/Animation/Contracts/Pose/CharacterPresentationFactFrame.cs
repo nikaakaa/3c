@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public static class CharacterPresentationFactSchema
     {
-        public const string Version = "character-presentation-fact/v4";
+        public const string Version = "character-presentation-fact/v6";
 
         public static readonly PresentationFactId Grounded = new PresentationFactId("presentation.grounded");
         public static readonly PresentationFactId Velocity = new PresentationFactId("presentation.velocity");

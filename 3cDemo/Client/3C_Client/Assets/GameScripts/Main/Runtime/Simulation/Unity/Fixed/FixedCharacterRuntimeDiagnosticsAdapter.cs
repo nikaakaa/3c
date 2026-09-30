@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
@@ -21,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         FixedSimulationDiagnosticsSink,
         ISimulationControlTraceInterest,
         ISimulationValueTraceInterest,
+        ISimulationBlackboardTraceInterest,
         IFixedCommittedDiagnosticsPublisher
     {
         readonly struct OperationSource
@@ -62,11 +64,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         sealed class AbilitySources
         {
             readonly OperationSource[] m_Operations;
+            readonly RuntimeSourceElementHandle[] m_BlackboardDeclarations;
             readonly Dictionary<string, RuntimeSourceElementHandle> m_Edges = new(StringComparer.Ordinal);
 
             public AbilitySources(RuntimeDiagnosticsContext context, FixedGameplayAbilityExecutionData ability)
             {
                 m_Operations = new OperationSource[ability.Operations.Count];
+                m_BlackboardDeclarations = new RuntimeSourceElementHandle[ability.StateSlots.Count];
                 var invocations = new Dictionary<string, List<ProgramSourceMapEntry>>(StringComparer.Ordinal);
                 IReadOnlyList<ProgramSourceMapEntry> sources = ability.SourceMap;
                 for (int i = 0; i < sources.Count; i++)
@@ -84,6 +88,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 for (int i = 0; i < sources.Count; i++)
                 {
                     ProgramSourceMapEntry source = sources[i];
+                    if (source.TargetKind == ProgramSourceTargetKind.StateSlot && !string.IsNullOrEmpty(source.DeclarationId))
+                    {
+                        m_BlackboardDeclarations[source.TargetIndex] = context.ResolveSourceHandle(AbilityDebugSourceMapFiller.SourceKey(source));
+                        continue;
+                    }
                     if (source.TargetKind != ProgramSourceTargetKind.Operation &&
                         (source.TargetKind != ProgramSourceTargetKind.Reference || string.IsNullOrEmpty(source.EdgeId)))
                         continue;
@@ -101,7 +110,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         m_Edges.Add(ability.ControlFlow[source.TargetIndex].Identity, handle);
                     }
                 }
+                for (int i = 0; i < ability.StateSlots.Count; i++)
+                    if (ability.StateSlots[i].Semantic == ProgramStateSemantic.BlackboardValue && !m_BlackboardDeclarations[i].IsValid)
+                        throw new InvalidOperationException("黑板值槽缺少编译声明来源。");
             }
+
+            public RuntimeSourceElementHandle BlackboardDeclaration(int stateSlot) => m_BlackboardDeclarations[stateSlot];
 
             public bool TryGetOperation(int index, out OperationSource source)
             {
@@ -116,6 +130,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly RuntimeDiagnosticsContext m_Context;
         readonly Guid m_ExecutionId;
         readonly Dictionary<string, AbilitySources> m_Abilities = new(StringComparer.Ordinal);
+        readonly IReadOnlyList<FixedGameplayAbilityExecutionInstallation> m_Installations;
+        readonly List<FixedBlackboardValueSnapshot> m_BlackboardValues = new();
+        readonly Dictionary<(string Ability, ulong Action, int Slot), FixedBlackboardValueSnapshot> m_LastBlackboardValues = new();
+        readonly HashSet<(string Ability, ulong Action, int Slot)> m_SeenBlackboardValues = new();
+        readonly List<(string Ability, ulong Action, int Slot)> m_RemovedBlackboardValues = new();
+        long m_BlackboardLiveGeneration = -1;
+        Guid m_BlackboardCaptureId;
+
+        internal bool TryGetBlackboardValue(CharacterSkillId ability, ulong actionInstanceId, int stateSlot,
+            out FixedBlackboardValueSnapshot value) =>
+            m_LastBlackboardValues.TryGetValue((ability.Value, actionInstanceId, stateSlot), out value);
 
         public FixedCharacterRuntimeDiagnosticsAdapter(RuntimeDiagnosticsContext context, FixedSimulationActorBinding binding)
         {
@@ -124,6 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentNullException(nameof(binding));
             m_ExecutionId = Guid.NewGuid();
             IReadOnlyList<FixedGameplayAbilityExecutionInstallation> installations = binding.AbilityInstallations.Installations;
+            m_Installations = installations;
             for (int i = 0; i < installations.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = installations[i].Data;
@@ -137,6 +163,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public bool IsControlCaptureRequested(ActorId actorId) =>
             (m_Context.Store.EffectiveChannels & (RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine)) != 0;
+
+        public bool IsBlackboardCaptureRequested(ActorId actorId) =>
+            (m_Context.Store.EffectiveChannels & RuntimeTraceChannel.Blackboard) != 0;
 
         public bool IsValueCaptureRequested(ActorId actorId) =>
             (m_Context.Store.EffectiveChannels & RuntimeTraceChannel.Values) != 0;
@@ -157,6 +186,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int i = 0; i < records.Count; i++)
             {
                 FixedSimulationTraceRecord record = records[i];
+                if (record.BlackboardTrace.HasValue)
+                {
+                    PublishBlackboard(in record);
+                    continue;
+                }
                 if (PublishObservation(in record))
                     continue;
                 if (record.ActionInstanceId == 0 || !record.Header.Activation.Source.IsSkillOperation)
@@ -192,7 +226,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     ActivationGeneration = record.Header.Activation.Generation,
                     SkillExecutionGeneration = record.SkillExecutionGeneration,
                     GraphInvocationGeneration = record.GraphInvocationGeneration,
-                    ParentInvocationGeneration = record.ParentInvocationGeneration
+                    ParentInvocationGeneration = record.ParentInvocationGeneration,
+                    LoopIteration = record.LoopIteration
                 };
                 if (isNode)
                 {
@@ -213,6 +248,121 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         : record.ControlFlowSelected ? RuntimeTraceEventKind.EdgeSelected : RuntimeTraceEventKind.EdgeEvaluated,
                     edge, instance, payload);
             }
+            PublishBlackboardSnapshots(result.State);
+        }
+
+        void PublishBlackboardSnapshots(FixedCharacterRuntimeState state)
+        {
+            if (!m_Context.ShouldPublish(RuntimeTraceChannel.Blackboard, RuntimeTraceEventKind.BlackboardSnapshot))
+            {
+                m_LastBlackboardValues.Clear();
+                return;
+            }
+            long liveGeneration = m_Context.Store.LiveStateGeneration;
+            Guid captureId = m_Context.Store.CaptureStatus.CaptureId;
+            if (m_BlackboardLiveGeneration != liveGeneration || m_BlackboardCaptureId != captureId)
+            {
+                m_LastBlackboardValues.Clear();
+                m_BlackboardLiveGeneration = liveGeneration;
+                m_BlackboardCaptureId = captureId;
+            }
+            m_BlackboardValues.Clear();
+            m_SeenBlackboardValues.Clear();
+            for (int i = 0; i < m_Installations.Count; i++)
+                m_Installations[i].AppendBlackboardSnapshot(state, m_BlackboardValues);
+            for (int i = 0; i < m_BlackboardValues.Count; i++)
+            {
+                FixedBlackboardValueSnapshot value = m_BlackboardValues[i];
+                var key = (value.Ability.Value, value.ActionInstanceId, value.StateSlot);
+                m_SeenBlackboardValues.Add(key);
+                if (m_LastBlackboardValues.TryGetValue(key, out FixedBlackboardValueSnapshot previous) &&
+                    previous.SkillGeneration == value.SkillGeneration && previous.Owner == value.Owner &&
+                    previous.IsActive == value.IsActive && previous.Value.Equals(value.Value))
+                    continue;
+                PublishBlackboardSnapshot(value, value.IsActive);
+                m_LastBlackboardValues[key] = value;
+            }
+            m_RemovedBlackboardValues.Clear();
+            foreach (var previous in m_LastBlackboardValues)
+            {
+                if (m_SeenBlackboardValues.Contains(previous.Key))
+                    continue;
+                PublishBlackboardSnapshot(previous.Value, false);
+                m_RemovedBlackboardValues.Add(previous.Key);
+            }
+            for (int i = 0; i < m_RemovedBlackboardValues.Count; i++)
+                m_LastBlackboardValues.Remove(m_RemovedBlackboardValues[i]);
+        }
+
+        void PublishBlackboardSnapshot(FixedBlackboardValueSnapshot value, bool active)
+        {
+            RuntimeInstanceKey instance = value.ActionInstanceId == 0
+                ? RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId)
+                : RuntimeInstanceKey.ActionInstance(m_Context.CharacterRuntimeId, m_ExecutionId,
+                    value.Ability.Value, value.ActionInstanceId, value.SkillGeneration);
+            var payload = new RuntimeTracePayload
+            {
+                Name = value.ScopeIdentity,
+                Status = active ? "Active" : "Inactive",
+                SkillId = value.Ability.Value,
+                ActionInstanceId = value.ActionInstanceId,
+                SkillExecutionGeneration = value.SkillGeneration,
+                BlackboardStateSlot = value.StateSlot,
+                BlackboardScope = (int)value.ScopeKind,
+                BlackboardOwnerIndex = value.CompiledOwnerIndex,
+                BlackboardOwnerGeneration = value.Owner.Generation,
+                BlackboardLifetime = (int)value.Lifetime,
+                BlackboardIsActive = active,
+                Value = CaptureValue(value.Value)
+            };
+            m_Context.Publish(RuntimeTraceChannel.Blackboard, RuntimeTraceDomain.Logic,
+                RuntimeTraceEventKind.BlackboardSnapshot,
+                m_Abilities[value.Ability.Value].BlackboardDeclaration(value.StateSlot), instance, payload);
+        }
+
+        void PublishBlackboard(in FixedSimulationTraceRecord record)
+        {
+            if (!m_Context.ShouldPublish(RuntimeTraceChannel.Blackboard, RuntimeTraceEventKind.BlackboardWritten))
+                return;
+            var value = record.BlackboardTrace.Value;
+            AbilitySources ability = m_Abilities[record.SkillId];
+            RuntimeSourceElementHandle source = ability.BlackboardDeclaration(value.StateSlot);
+            string path = string.Empty;
+            bool command = record.Header.Activation.Source.IsBlackboardCommand;
+            if (!command)
+            {
+                if (!ability.TryGetOperation(record.Header.Activation.Source.Operation.Value, out OperationSource operation))
+                    throw new InvalidOperationException("黑板写入缺少正式操作来源。");
+                path = operation.ResolvePath(record.Header.TreeClipInvocation);
+            }
+            RuntimeInstanceKey instance = record.ActionInstanceId == 0
+                ? RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId)
+                : command
+                    ? RuntimeInstanceKey.ActionInstance(m_Context.CharacterRuntimeId, m_ExecutionId,
+                        record.SkillId, record.ActionInstanceId, record.SkillExecutionGeneration)
+                    : RuntimeInstanceKey.SkillExecution(
+                        m_Context.CharacterRuntimeId, m_ExecutionId, record.SkillId, record.ActionInstanceId,
+                        path, record.SkillExecutionGeneration, record.GraphInvocationGeneration);
+            var payload = new RuntimeTracePayload
+            {
+                Status = record.Code,
+                SkillId = record.SkillId,
+                ActionInstanceId = record.ActionInstanceId,
+                CallSiteId = path,
+                ActivationGeneration = record.Header.Activation.Generation,
+                SkillExecutionGeneration = record.SkillExecutionGeneration,
+                GraphInvocationGeneration = record.GraphInvocationGeneration,
+                ParentInvocationGeneration = record.ParentInvocationGeneration,
+                BlackboardStateSlot = value.StateSlot,
+                BlackboardScope = (int)value.Owner.ScopeKind,
+                BlackboardOwnerIndex = value.Owner.CompiledOwnerIndex,
+                BlackboardOwnerGeneration = value.Owner.Generation,
+                BlackboardLifetime = (int)value.Lifetime,
+                BlackboardIsActive = true,
+                Value = CaptureValue(value.Value)
+            };
+            m_Context.Publish(RuntimeTraceChannel.Blackboard, RuntimeTraceDomain.Logic,
+                RuntimeTraceEventKind.BlackboardWritten, source, instance, payload);
         }
 
         bool PublishObservation(in FixedSimulationTraceRecord record)
@@ -353,6 +503,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             kind = code switch
             {
+                "loop_iteration_enter" => RuntimeTraceEventKind.LoopIterationEntered,
+                "loop_iteration_complete" => RuntimeTraceEventKind.LoopIterationCompleted,
                 "operation_enter" => RuntimeTraceEventKind.NodeEntered,
                 "operation_running" => RuntimeTraceEventKind.NodeRunning,
                 "operation_waiting" => RuntimeTraceEventKind.NodeWaiting,

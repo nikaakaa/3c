@@ -162,7 +162,7 @@ namespace ThirdPersonSimulation.DotRecast
             writer.WriteString(Magic);
             writer.WriteInt32(Schema);
             writer.WriteBytes(payload);
-            writer.WriteString(hash.Value);
+            writer.WriteHash(hash);
             return writer.ToArray();
         }
 
@@ -492,7 +492,7 @@ namespace ThirdPersonSimulation.DotRecast
             writer.WriteString(Magic);
             writer.WriteInt32(Schema);
             writer.WriteBytes(payload);
-            writer.WriteString(hash.Value);
+            writer.WriteHash(hash);
             return writer.ToArray();
         }
 
@@ -535,7 +535,7 @@ namespace ThirdPersonSimulation.DotRecast
             writer.WriteString(DotRecastSourceIdentity.AdapterVersion);
             writer.WriteString(artifact.MapId);
             writer.WriteString(artifact.WorldRevision);
-            writer.WriteString(artifact.GeometryHash.Value);
+            writer.WriteHash(artifact.GeometryHash);
             writer.WriteString(artifact.CoordinateProfile);
             WriteBuildProfile(writer, artifact.BuildProfile);
             WriteQueryProfile(writer, artifact.QueryProfile);

@@ -7,6 +7,7 @@ using FlowCanvas;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.Pipeline.Editor.ScenePlay;
 using UnityEditor;
 using UnityEngine;
 
@@ -70,8 +71,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_Dirty || s_Opening)
                 return;
             s_Dirty = false;
+            if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled &&
+                RuntimeDiagnosticsTargetRegistry.Targets.Count != 0 &&
+                GraphEditor.current != null &&
+                GraphEditor.rootGraph is BtsmtlSkillFlowGraph currentSkillGraph &&
+                GraphEditor.currentGraph == currentSkillGraph &&
+                currentSkillGraph.Role == BtsmtlSkillFlowGraphRole.Skill)
+            {
+                BtsmtlScenePlayTimelineController.EnableRuntimeDebug();
+                s_Dirty = true;
+                return;
+            }
             if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled ||
-                !Application.isPlaying || GraphEditor.current == null ||
+                GraphEditor.current == null ||
                 GraphEditor.rootGraph is not BtsmtlSkillFlowGraph graph ||
                 GraphEditor.currentGraph != graph ||
                 graph.Role != BtsmtlSkillFlowGraphRole.Skill)

@@ -19,6 +19,8 @@ namespace ThirdPersonSimulation.Fixed
             bool diagnosticsEnabled,
             bool captureValues,
             bool captureControlFlow,
+            bool captureBlackboard,
+            bool applyBlackboardCommands,
             out CharacterWorldSolveRequest worldRequest)
         {
             if (characterRuntime == null)
@@ -105,7 +107,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState));
-                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 
@@ -142,7 +144,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < invocationCount; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
-                    invocation.Tick();
+                    invocation.Tick(applyBlackboardCommands);
                     invocation.CopyMotionContributionsTo(motionContributions);
                 }
 

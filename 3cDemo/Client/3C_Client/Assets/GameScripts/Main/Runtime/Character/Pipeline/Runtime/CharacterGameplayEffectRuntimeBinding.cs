@@ -106,6 +106,10 @@ namespace ThirdPersonCharacter.Pipeline
                         }
                     }
                     break;
+                case GameplayAttackCameraShakeComponentDefinition shake:
+                    writer.WriteString(shake.ResourceId);
+                    writer.WriteBoolean(shake.ShakeOnNotHit);
+                    break;
                 case GameplayAttackCollisionComponentDefinition collision:
                     writer.WriteInt32((int)collision.Kind);
                     writer.WriteNumber(collision.CenterOffset.x, $"{source}/Component[{index}].CenterOffset.x");

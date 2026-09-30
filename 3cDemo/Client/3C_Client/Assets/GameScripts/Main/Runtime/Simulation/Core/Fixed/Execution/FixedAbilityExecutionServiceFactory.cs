@@ -187,7 +187,8 @@ namespace ThirdPersonSimulation.Fixed
                 executionServices,
                 actions,
                 actionStore,
-                control);
+                control,
+                blackboard);
             return new FixedAbilityExecutionAssembly(
                 input,
                 actions,

@@ -406,12 +406,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool entering = !ReferenceEquals(m_PendingState.PhaseLeader, leader) ||
                 !m_PendingState.PhaseLeaderSourceId.Equals(leader.SourceId) ||
                 m_PendingState.PhaseLeaderContinuityIdentity != leader.m_ContinuityIdentity;
-            double time = AnimationPhaseSynchronization.Map(
-                leader.PhasePlan, leader.PhasePlan.Loop ? leader.ContinuousTime : leader.SampleTime,
-                PhasePlan, ContinuousTime,
-                m_PhaseEntryCoverage, remainingBlendSeconds, PlayRate,
-                entering, ref m_PendingState.PhaseSynchronization);
-            SetSynchronizedTime(time);
+            if (entering || leader.PhasePlan.Loop)
+            {
+                double time = AnimationPhaseSynchronization.Map(
+                    leader.PhasePlan, leader.PhasePlan.Loop ? leader.ContinuousTime : leader.SampleTime,
+                    PhasePlan, ContinuousTime,
+                    m_PhaseEntryCoverage, remainingBlendSeconds, PlayRate,
+                    entering, ref m_PendingState.PhaseSynchronization);
+                SetSynchronizedTime(time);
+            }
             m_PendingState.PhaseLeader = leader;
             m_PendingState.PhaseLeaderSourceId = leader.SourceId;
             m_PendingState.PhaseLeaderContinuityIdentity = leader.m_ContinuityIdentity;
@@ -617,7 +620,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void SynchronizeMovementClock(
             double elapsedSeconds,
             CommittedMovementPlaybackClock clock,
-            in CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             float presentationDeltaSeconds,
             float playRate)
         {

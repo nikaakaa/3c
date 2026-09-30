@@ -361,8 +361,8 @@ internal static class PerformanceCapturePublisher
             .GroupBy(value => new { value.thread, value.module, value.function })
             .Select(value => new
             {
-            value.Key.thread,
-            value.Key.module,
+                Thread = value.Key.thread,
+                Module = value.Key.module,
             Function = value.Key.function,
                 InclusiveSamples = value.Sum(item => item.inclusive_samples),
                 ExclusiveSamples = value.Sum(item => item.exclusive_samples)

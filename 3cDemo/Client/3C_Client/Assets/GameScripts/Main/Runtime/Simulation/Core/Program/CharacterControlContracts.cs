@@ -514,7 +514,7 @@ namespace ThirdPersonSimulation
             InputRequestIds = requests.AsReadOnly();
             var hashParts = new List<string>(requests.Count + 5)
             {
-                "character-control-runtime-binding/3",
+                "character-control-runtime-binding/5",
                 moduleId.Value,
                 semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 parameters.ContentHash.ToString(),

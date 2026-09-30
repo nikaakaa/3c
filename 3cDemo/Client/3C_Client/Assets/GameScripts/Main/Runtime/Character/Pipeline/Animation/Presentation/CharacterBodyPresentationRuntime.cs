@@ -118,13 +118,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Quaternion m_VisualBindRotation;
         readonly CharacterPresentationBodyState m_InitialBody;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
-        readonly SortedDictionary<ulong, CharacterPresentationBodyState> m_CommittedBodies =
-            new SortedDictionary<ulong, CharacterPresentationBodyState>();
-        readonly SortedDictionary<ulong, float> m_CommittedYawVelocities =
-            new SortedDictionary<ulong, float>();
+        readonly SortedList<ulong, CharacterPresentationBodyState> m_CommittedBodies =
+            new SortedList<ulong, CharacterPresentationBodyState>();
+        readonly SortedList<ulong, float> m_CommittedYawVelocities =
+            new SortedList<ulong, float>();
         readonly Queue<CharacterPresentationBodyInterval> m_SelectedIntervals =
             new Queue<CharacterPresentationBodyInterval>();
-        readonly List<ulong> m_BranchReplacementTicks = new List<ulong>();
 
         CharacterPresentationBodyInterval m_SelectedInterval;
         CharacterPresentationBodyState m_SelectedTailBody;
@@ -412,18 +411,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void RemoveCommittedBranchFrom(ulong firstTick)
         {
-            m_BranchReplacementTicks.Clear();
-            if (m_BranchReplacementTicks.Capacity < m_CommittedBodies.Count)
-                m_BranchReplacementTicks.Capacity = m_CommittedBodies.Count;
-            foreach (ulong tick in m_CommittedBodies.Keys)
+            for (int index = m_CommittedBodies.Count - 1; index >= 0; index--)
             {
-                if (tick >= firstTick)
-                    m_BranchReplacementTicks.Add(tick);
-            }
-            for (int i = 0; i < m_BranchReplacementTicks.Count; i++)
-            {
-                m_CommittedBodies.Remove(m_BranchReplacementTicks[i]);
-                m_CommittedYawVelocities.Remove(m_BranchReplacementTicks[i]);
+                ulong tick = m_CommittedBodies.Keys[index];
+                if (tick < firstTick)
+                    break;
+                m_CommittedBodies.RemoveAt(index);
+                m_CommittedYawVelocities.Remove(tick);
             }
         }
 
@@ -550,21 +544,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             ulong previousTick = firstTick;
             CharacterPresentationBodyState previousBody = m_CommittedBodies[firstTick];
-            foreach (KeyValuePair<ulong, CharacterPresentationBodyState> pair in m_CommittedBodies)
+            for (int index = 0; index < m_CommittedBodies.Count; index++)
             {
-                if (pair.Key <= sampleTick)
+                ulong tick = m_CommittedBodies.Keys[index];
+                CharacterPresentationBodyState body = m_CommittedBodies.Values[index];
+                if (tick <= sampleTick)
                 {
-                    previousTick = pair.Key;
-                    previousBody = pair.Value;
+                    previousTick = tick;
+                    previousBody = body;
                     continue;
                 }
-                float alpha = Mathf.Clamp01((float)((sampleTick - previousTick) / (pair.Key - previousTick)));
+                float alpha = Mathf.Clamp01((float)((sampleTick - previousTick) / (tick - previousTick)));
                 target = BuildTarget(
                     previousTick,
                     previousBody,
-                    pair.Key,
-                    pair.Value,
-                    CommittedYawVelocity(pair.Key),
+                    tick,
+                    body,
+                    CommittedYawVelocity(tick),
                     alpha);
                 return true;
             }
@@ -727,27 +723,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_ResetReason = reason;
         }
 
-        ulong FirstCommittedTick()
-        {
-            foreach (ulong tick in m_CommittedBodies.Keys)
-                return tick;
-            throw new InvalidOperationException("Committed Presentation Body history is empty.");
-        }
+        ulong FirstCommittedTick() => m_CommittedBodies.Keys[0];
 
-        ulong LastCommittedTick()
-        {
-            ulong tick = 0;
-            foreach (ulong candidate in m_CommittedBodies.Keys)
-                tick = candidate;
-            return tick;
-        }
+        ulong LastCommittedTick() => m_CommittedBodies.Keys[m_CommittedBodies.Count - 1];
 
         void TrimCommittedBodies(ulong retainTick)
         {
             while (m_CommittedBodies.Count > 2 && FirstCommittedTick() < retainTick)
             {
                 ulong firstTick = FirstCommittedTick();
-                m_CommittedBodies.Remove(firstTick);
+                m_CommittedBodies.RemoveAt(0);
                 m_CommittedYawVelocities.Remove(firstTick);
             }
         }

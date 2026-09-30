@@ -7,20 +7,6 @@ using BTSMTL.Diagnostics;
 
 namespace BTSMTL.Timeline.Runtime
 {
-    public interface ITimelineRuntimePlaybackRequestFactory : ITimelinePlaybackActionContextSource
-    {
-        bool TryCreate(
-            TimelineData timeline,
-            string sourceId,
-            string sourceName,
-            TimelinePlaybackActionContext actionContext,
-            TimelinePlaybackMode playbackMode,
-            TimelineRuntimePlaybackHandle playbackHandle,
-            ulong generation,
-            out TimelineRuntimePrepareRequest request,
-            out string error);
-    }
-
     public interface ITimelineRuntimeCallBindingSource : ITimelinePlaybackActionContextSource
     {
         bool TryCreateExecutionIdentity(
@@ -31,36 +17,43 @@ namespace BTSMTL.Timeline.Runtime
             out TimelineExecutionIdentity identity,
             out string error);
 
-        bool TryGetCallBindings(
-            TimelineData timeline,
-            string sourceId,
-            string sourceName,
-            TimelinePlaybackActionContext actionContext,
-            out IReadOnlyList<TimelineCallBinding> bindings,
-            out string error);
+        IReadOnlyList<TimelineCallBinding> CallBindings { get; }
     }
 
-    public sealed class TimelineRuntimePlaybackRequestFactory : ITimelineRuntimePlaybackRequestFactory
+    public sealed class TimelineRuntimePlaybackRequestFactory : ITimelinePlaybackActionContextSource
     {
-        readonly TimelineContractCatalog m_ContractCatalog;
         readonly TimelineRuntimeNumericTarget m_NumericTarget;
         readonly ITimelineDomainBindingResolver m_DomainResolver;
         readonly ITimelineRuntimeDependencyResolver m_DependencyResolver;
         readonly ITimelineRuntimeCallBindingSource m_CallBindingSource;
+        readonly Dictionary<TimelineData, TimelineRuntimePreparedContent> m_Contents = new();
 
         public TimelineRuntimePlaybackRequestFactory(
-            TimelineContractCatalog contractCatalog,
             TimelineRuntimeNumericTarget numericTarget,
             ITimelineDomainBindingResolver domainResolver,
             ITimelineRuntimeDependencyResolver dependencyResolver,
             ITimelineRuntimeCallBindingSource callBindingSource)
         {
-            m_ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
             m_NumericTarget = numericTarget;
             m_DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
             m_DependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
             m_CallBindingSource = callBindingSource ?? throw new ArgumentNullException(nameof(callBindingSource));
         }
+
+        internal TimelineRuntimePreparedContent InstallContent(TimelineData timeline, TimelineContentUnit content)
+        {
+            TimelineRuntimePreparedContent prepared = TimelineRuntimePreparation.PrepareContent(
+                timeline, content, m_NumericTarget, m_CallBindingSource.CallBindings,
+                m_DomainResolver, m_DependencyResolver);
+            if (!prepared.IsReady)
+                throw new InvalidOperationException(string.Join(" | ", prepared.Errors));
+            m_Contents.Add(timeline, prepared);
+            return prepared;
+        }
+
+        internal TimelineRuntimePreparedContent GetContent(TimelineData timeline) => m_Contents[timeline];
+
+        internal void Clear() => m_Contents.Clear();
 
         public bool TryCreate(
             TimelineData timeline,
@@ -73,7 +66,7 @@ namespace BTSMTL.Timeline.Runtime
             out TimelineRuntimePrepareRequest request,
             out string error)
         {
-            request = null;
+            request = default;
             error = string.Empty;
             if (timeline == null || !playbackHandle.IsValid || generation == 0)
             {
@@ -88,24 +81,11 @@ namespace BTSMTL.Timeline.Runtime
                     out TimelineExecutionIdentity identity,
                     out error))
                 return false;
-            if (!m_CallBindingSource.TryGetCallBindings(
-                    timeline,
-                    sourceId,
-                    sourceName,
-                    actionContext,
-                    out IReadOnlyList<TimelineCallBinding> bindings,
-                    out error))
-                return false;
             request = new TimelineRuntimePrepareRequest(
                 $"timeline:{playbackHandle.Value}",
-                timeline,
-                m_ContractCatalog,
+                GetContent(timeline),
                 identity,
-                playbackMode,
-                m_NumericTarget,
-                bindings,
-                m_DomainResolver,
-                m_DependencyResolver);
+                playbackMode);
             return true;
         }
 
@@ -444,7 +424,7 @@ namespace BTSMTL.Timeline.Runtime
             if (!snapshot.IsValid)
                 throw new ArgumentException("Timeline restore snapshot is invalid.", nameof(snapshot));
             m_Snapshot = snapshot;
-            m_Preparation = preparation ?? throw new ArgumentNullException(nameof(preparation));
+            m_Preparation = preparation;
             Validate();
         }
 
@@ -471,7 +451,8 @@ namespace BTSMTL.Timeline.Runtime
                 m_Preparation,
                 m_Snapshot.Handle,
                 m_Snapshot.Generation,
-                m_Service.TickRate);
+                m_Service.TickRate,
+                m_Service.EvaluationStoragePool);
             ApplyTo(playback);
             return playback;
         }
@@ -522,12 +503,13 @@ namespace BTSMTL.Timeline.Runtime
         static readonly List<TimelineRuntimeService> s_ActiveServices =
             new List<TimelineRuntimeService>();
 
-        readonly ITimelineRuntimePlaybackRequestFactory m_RequestFactory;
+        readonly TimelineRuntimePlaybackRequestFactory m_RequestFactory;
         readonly ITimelineRuntimeStepConsumer m_StepConsumer;
         readonly ITimelineRuntimeStopConsumer m_StopConsumer;
         readonly int m_TickRate;
         readonly Dictionary<ulong, TimelineRuntimePlayback> m_Playbacks =
             new Dictionary<ulong, TimelineRuntimePlayback>();
+        readonly TimelineRuntimeEvaluationStoragePool m_EvaluationStoragePool = new();
         ulong m_NextPlaybackHandle = 1;
         ulong m_NextGeneration = 1;
         bool m_Disposed;
@@ -536,9 +518,10 @@ namespace BTSMTL.Timeline.Runtime
         public static event Action ObservationChanged;
         public string LastFailure { get; private set; } = string.Empty;
         internal int TickRate => m_TickRate;
+        internal TimelineRuntimeEvaluationStoragePool EvaluationStoragePool => m_EvaluationStoragePool;
 
         public TimelineRuntimeService(
-            ITimelineRuntimePlaybackRequestFactory requestFactory,
+            TimelineRuntimePlaybackRequestFactory requestFactory,
             ITimelineRuntimeStepConsumer stepConsumer,
             ITimelineRuntimeStopConsumer stopConsumer,
             int tickRate)
@@ -551,6 +534,17 @@ namespace BTSMTL.Timeline.Runtime
             m_TickRate = tickRate;
             s_ActiveServices.Add(this);
         }
+
+        public TimelineRuntimePreparedContent InstallContent(TimelineData timeline, TimelineContentUnit content)
+        {
+            TimelineRuntimePreparedContent prepared = m_RequestFactory.InstallContent(timeline, content);
+            m_EvaluationStoragePool.Prepare(prepared, TimelinePlaybackMode.Once);
+            m_EvaluationStoragePool.Prepare(prepared, TimelinePlaybackMode.Loop);
+            m_EvaluationStoragePool.Prepare(prepared, TimelinePlaybackMode.HoldLastFrame);
+            return prepared;
+        }
+
+        internal TimelineRuntimePreparedContent GetContent(TimelineData timeline) => m_RequestFactory.GetContent(timeline);
 
         public IReadOnlyList<TimelineRuntimePlaybackDescriptor> GetPlaybackDescriptors()
         {
@@ -604,17 +598,13 @@ namespace BTSMTL.Timeline.Runtime
                 LastFailure = requestError ?? "timeline_runtime_request_failed";
                 return false;
             }
-            TimelineRuntimePreparationResult preparation = TimelineRuntimePreparation.Prepare(request);
-            if (!preparation.IsReady)
-            {
-                LastFailure = string.Join(" | ", preparation.Errors);
-                return false;
-            }
+            var preparation = new TimelineRuntimePreparationResult(request);
             TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
                 preparation,
                 runtimeHandle,
                 generation,
-                m_TickRate);
+                m_TickRate,
+                m_EvaluationStoragePool);
             bool registered = false;
             bool accepted = false;
             try
@@ -737,8 +727,8 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparationResult Prepare(TimelineRuntimePrepareRequest request)
         {
             EnsureAvailable();
-            TimelineRuntimePreparationResult result = TimelineRuntimePreparation.Prepare(request);
-            LastFailure = result.IsReady ? string.Empty : string.Join(" | ", result.Errors);
+            var result = new TimelineRuntimePreparationResult(request);
+            LastFailure = string.Empty;
             return result;
         }
 
@@ -751,7 +741,8 @@ namespace BTSMTL.Timeline.Runtime
                 preparation,
                 handle,
                 generation,
-                m_TickRate);
+                m_TickRate,
+                m_EvaluationStoragePool);
             bool registered = false;
             bool accepted = false;
             try
@@ -937,7 +928,7 @@ namespace BTSMTL.Timeline.Runtime
                 preparation = playback.Preparation;
                 return true;
             }
-            preparation = null;
+            preparation = default;
             return false;
         }
 
@@ -1029,6 +1020,8 @@ namespace BTSMTL.Timeline.Runtime
             {
                 m_Disposed = true;
                 m_Playbacks.Clear();
+                m_EvaluationStoragePool.Clear();
+                m_RequestFactory.Clear();
                 s_ActiveServices.Remove(this);
                 ObservationChanged?.Invoke();
             }
@@ -1056,7 +1049,7 @@ namespace BTSMTL.Timeline.Runtime
             return false;
         }
 
-        internal bool TryGetPlayback(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePlayback playback)
+        public bool TryGetPlayback(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePlayback playback)
         {
             if (handle.IsValid && m_Playbacks.TryGetValue(handle.Value, out playback))
                 return true;

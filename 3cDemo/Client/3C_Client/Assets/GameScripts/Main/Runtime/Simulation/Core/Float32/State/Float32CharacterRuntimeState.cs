@@ -91,7 +91,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class Float32CharacterRuntimeState
+    public sealed class Float32CharacterRuntimeState : ICommittedCharacterControlState
     {
         readonly Float32AbilityRuntimeState[] m_Abilities;
         readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
@@ -215,10 +215,18 @@ namespace ThirdPersonSimulation
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
         internal ulong HandleAllocator { get; }
-        internal CharacterControlRuntimeState ControlState { get; }
+        public CharacterControlRuntimeState ControlState { get; }
+
+        public bool IsAbilityActive(CharacterSkillId abilityId)
+        {
+            for (int i = 0; i < ActionInstances.Length; i++)
+                if (ActionInstances[i].IsActive && ActionInstances[i].SkillId == abilityId)
+                    return true;
+            return false;
+        }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
-        internal IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
+        public IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
 
         internal Float32CharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
         {

@@ -1,0 +1,89 @@
+{
+  "schema": "character-camera-projection/v10",
+  "transitions": [
+    {
+      "frame": 1,
+      "mode": 3,
+      "damping": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "frame": 31,
+      "mode": 2,
+      "damping": [
+        0.494274616,
+        0.5,
+        0.5057254
+      ]
+    },
+    {
+      "frame": 212,
+      "mode": 0,
+      "damping": [
+        0.152777791,
+        0.5,
+        0.8472222
+      ]
+    }
+  ],
+  "directionComparisons": 1971,
+  "directionMaximumError": 2.38418579e-7,
+  "finitePlans": true,
+  "plans": [
+    {
+      "frame": 0,
+      "pivot": [
+        0,
+        0,
+        0
+      ],
+      "fov": 50,
+      "radius": 3.7426796
+    },
+    {
+      "frame": 30,
+      "pivot": [
+        1.65205252,
+        0,
+        0
+      ],
+      "fov": 50,
+      "radius": 3.7426796
+    },
+    {
+      "frame": 60,
+      "pivot": [
+        3.6501956,
+        0,
+        0
+      ],
+      "fov": 50,
+      "radius": 3.7426796
+    },
+    {
+      "frame": 90,
+      "pivot": [
+        3.99813318,
+        0,
+        0
+      ],
+      "fov": 50,
+      "radius": 3.7426796
+    },
+    {
+      "frame": 119,
+      "pivot": [
+        4,
+        0,
+        0
+      ],
+      "fov": 50,
+      "radius": 3.7426796
+    }
+  ],
+  "validationScope": "Edit 模式调用正式相机求值器；使用构造帧，不运行 Play/replay。方向曲线对照本项目 Cinemachine 2.10.7 的 ComputeSmoothControlPoints；未与原游戏运行画面对照，未采集 GC。",
+  "remaining": "升降附加倍率、构图死区/软区/旋转阻尼、额外状态倍率与跨轴保护仍未完成；模式输入对接当前本地手动转镜链，原作其余控制资格仍需核对。"
+}

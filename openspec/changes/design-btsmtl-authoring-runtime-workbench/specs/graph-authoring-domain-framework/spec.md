@@ -2,7 +2,7 @@
 
 ### Requirement: 运行期间字段编辑资格必须由领域正式合同提供
 
-领域 MUST消费现行正式 C# authoring API、共享 Capability、typed Mutation、作者 owner 和参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。技能/控制配置、Pose 与独立 Timeline MUST保持各自资格和采用规则；窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。运行可调参数 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；其输入范围和生效时机 MUST与领域原有合同一致。
+领域 MUST消费现行正式 C# authoring API、共享 Capability、typed Mutation、作者 owner 和参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。技能/控制配置、Pose 与独立 Timeline MUST保持各自资格和采用规则；窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。作者参数修改 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；仅作用于预览实例的运行变量输入 MUST使用领域声明的正式命令并记录采用时刻，不自动改写作者资产；其输入范围和生效时机 MUST与领域原有合同一致。
 
 #### Scenario: 同一字段从两个页面修改
 
@@ -18,7 +18,7 @@
 
 ### Requirement: 作者参数编辑必须与运行观察保持独立
 
-运行观察字段 MUST只读。场景预览期间合法作者参数 MUST能够在明确的作者区域修改并保留，但不能通过编辑观察值反写运行状态。需要 Build 的结构编辑 MUST在 Edit Mode 完成；只读 Graph/StateMachine 表面 MUST继续拒绝拖动、连线等 Mutation，不得为调参换成第二套 View。
+运行观察字段 MUST只读。预览黑板变量 MUST沿用领域既有作用域、生命周期、Config 只读与输入绑定规则，通过正式写入入口提交；MUST NOT 新增逐变量可调勾选或另一套状态生命周期，不能直接编辑观察 snapshot；其字段资格与作者资产编辑资格 MUST分别提供。场景预览期间合法作者参数 MUST能够在明确的作者区域修改并保留，但不能通过编辑观察值反写运行状态。需要 Build 的结构编辑 MUST在 Edit Mode 完成；只读 Graph/StateMachine 表面 MUST继续拒绝拖动、连线等 Mutation，不得为调参换成第二套 View。
 
 #### Scenario: 调整参数并查看实际值
 

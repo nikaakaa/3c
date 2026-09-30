@@ -103,6 +103,34 @@ namespace ThirdPersonSimulation
             }
         }
 
+        public ProgramCatalogEntry[] BindBlackboardDeclarations(
+            IReadOnlyList<ProgramStateSlot> stateSlots,
+            IReadOnlyList<ProgramReference> references)
+        {
+            var declarations = new ProgramCatalogEntry[stateSlots.Count];
+            for (int i = 0; i < references.Count; i++)
+            {
+                ProgramReference reference = references[i];
+                if (reference.HasSourceOperation || reference.Kind != ProgramReferenceKind.StateSlot)
+                    continue;
+                if (reference.TargetIndex >= stateSlots.Count)
+                    throw new ArgumentException($"Blackboard reference '{reference.Identity}' has an invalid state slot.", nameof(references));
+                ProgramStateSlot slot = stateSlots[reference.TargetIndex];
+                if (slot.Semantic != ProgramStateSemantic.BlackboardValue)
+                    continue;
+                if (declarations[slot.Index] != null)
+                    throw new ArgumentException($"Blackboard state '{slot.Identity}' has multiple declaration bindings.", nameof(references));
+                declarations[slot.Index] = FindEntry(ProgramCatalogEntryKind.BlackboardDeclaration, reference.ExternalIdentity)
+                    ?? throw new ArgumentException($"Blackboard state '{slot.Identity}' references missing declaration '{reference.ExternalIdentity}'.", nameof(references));
+            }
+            for (int i = 0; i < stateSlots.Count; i++)
+            {
+                if (stateSlots[i].Semantic == ProgramStateSemantic.BlackboardValue && declarations[i] == null)
+                    throw new ArgumentException($"Blackboard state '{stateSlots[i].Identity}' has no compiled declaration binding. Rebuild the ability graph.", nameof(references));
+            }
+            return declarations;
+        }
+
         public ProgramCatalogEntry RequireEntry(OperationHandle operation, ProgramCatalogEntryKind kind)
         {
             ProgramCatalogEntry entry = FindEntry(operation, kind);

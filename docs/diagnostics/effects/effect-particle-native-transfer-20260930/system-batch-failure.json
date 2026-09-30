@@ -1,0 +1,60 @@
+{
+  "schema": "zzz-particle-batch-failure/v2",
+  "recordedAt": "2026-09-30T04:44:04+08:00",
+  "input": "D:/ZZZ_Dump/output/corin_replication/20260929_effect_candidate_extract_v1/988944888/0425_CAB-d6652fef59830a19de7f25294d180258",
+  "pathId": -9184719907490745092,
+  "byteSize": 7576,
+  "validatedBoundaries": {
+    "InitialModule": {
+      "start": 136,
+      "end": 920
+    },
+    "ShapeModule": {
+      "start": 920,
+      "end": 1272
+    },
+    "EmissionModule": {
+      "start": 1272,
+      "end": 1460
+    },
+    "SizeModule": {
+      "start": 1460,
+      "end": 1712
+    }
+  },
+  "failure": {
+    "contextModule": "RotationModule",
+    "readerOffset": 1712,
+    "error": "unpack requires a buffer of 4 bytes",
+    "lastMinMaxCurves": [
+      {
+        "module": "SizeModule",
+        "field": "curve",
+        "start": 1464,
+        "end": 1508,
+        "minMaxState": 0,
+        "maxCurveSize": 0,
+        "minCurveSize": 0
+      },
+      {
+        "module": "SizeModule",
+        "field": "y",
+        "start": 1508,
+        "end": 1608,
+        "minMaxState": 0,
+        "maxCurveSize": 0,
+        "minCurveSize": 2
+      },
+      {
+        "module": "SizeModule",
+        "field": "z",
+        "start": 1608,
+        "end": 1708,
+        "minMaxState": 0,
+        "maxCurveSize": 0,
+        "minCurveSize": 2
+      }
+    ]
+  },
+  "conclusion": "MinMaxGradient 颜色和 Gradient 载荷规则已按原生函数修正；剩余阻塞是 SizeModule state 0 时 minCurve 线缆形态与 MinMaxCurve 静态分支的解释矛盾，不能用模块特例或试字节继续。"
+}

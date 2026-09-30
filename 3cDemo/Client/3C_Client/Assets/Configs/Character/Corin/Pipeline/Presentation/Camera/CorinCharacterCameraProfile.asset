@@ -92,6 +92,7 @@ MonoBehaviour:
   m_DefaultSmoothTime: 0.15
   m_RotationTransitionSeconds: 3
   m_Input:
+    m_MoveInputId: MoveAxis
     m_MaxSpeed: {x: 1550, y: 25}
     m_AccelerationTime: {x: 0.1, y: 0.2}
     m_DecelerationTime: {x: 0.1, y: 0.1}

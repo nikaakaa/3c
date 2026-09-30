@@ -1,0 +1,158 @@
+{
+  "graph": "character.corin.animation-event-graph",
+  "nodes": 157,
+  "revision": "f1659aae2d604ed5af2469d14a14a66f",
+  "independentDiskLoad": true,
+  "rows": [
+    {
+      "state": "Idle",
+      "ability": "",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "state": "WalkStart",
+      "ability": "",
+      "idle": false,
+      "move": true,
+      "evade": false
+    },
+    {
+      "state": "WalkLoop",
+      "ability": "",
+      "idle": false,
+      "move": true,
+      "evade": false
+    },
+    {
+      "state": "RunLoop",
+      "ability": "",
+      "idle": false,
+      "move": true,
+      "evade": false
+    },
+    {
+      "state": "MovingTurn",
+      "ability": "",
+      "idle": false,
+      "move": true,
+      "evade": false
+    },
+    {
+      "state": "WalkStopping",
+      "ability": "",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "state": "RunStopping",
+      "ability": "",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "state": "Idle",
+      "ability": "DodgeForward",
+      "idle": false,
+      "move": true,
+      "evade": true
+    },
+    {
+      "state": "Idle",
+      "ability": "DodgeBack",
+      "idle": false,
+      "move": false,
+      "evade": true
+    },
+    {
+      "state": "Idle",
+      "ability": "Attack",
+      "idle": false,
+      "move": false,
+      "evade": false
+    },
+    {
+      "state": "RunLoop",
+      "ability": "RushAttack",
+      "idle": false,
+      "move": false,
+      "evade": false
+    },
+    {
+      "state": "Idle",
+      "ability": "BranchAttack",
+      "idle": false,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/65c2a50d-80a7-57f0-b531-b2dabda051dd",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/6b6bda6e-be52-5ca5-c54a-dccbedf7338e",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/8c852140-8ed0-ae2b-b3b3-654743e1e6ee",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/a8e1b908-009a-6920-2a28-13cb003dafe2",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/dd7314a9-4fcc-26c0-ca7c-1abc4fc6e7ce",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-active/fafc1039-2302-5930-8a14-4039f95bc786",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-clip-active/10f4cb90-8b9a-4944-b77c-14efc9a3124d/7df37ded-43d4-4c6c-83a4-0227e64ccb8a",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-clip-active/21349b9d-8c58-4616-b8f3-6df7d560bb74/7a5caece-fc2f-4860-837c-755f36421dda",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-clip-active/3a57e427-7c35-4910-99ac-68fca87b055e/2173d615-dd8c-4d5b-a550-58a798c0d69e",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "recovery": "presentation.timeline-clip-active/c5761f3c-7517-4803-9e3b-019b66f52d41/2c0107ca-fde7-4043-8dd4-1939f2663551",
+      "idle": true,
+      "move": false,
+      "evade": false
+    },
+    {
+      "remoteSucceeded": true,
+      "stateReads": 0,
+      "failure": ""
+    }
+  ],
+  "validationScope": "Edit 模式从磁盘独立载入正式资产，经 NativeEventGraphRuntime 执行；输入为检查构造的 HostInput，不是游戏运行或 replay，不证明快照提交时序或相机阻尼行为。"
+}

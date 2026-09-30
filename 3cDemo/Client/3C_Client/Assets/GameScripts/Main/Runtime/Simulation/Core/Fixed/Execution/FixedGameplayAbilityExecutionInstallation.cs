@@ -64,6 +64,10 @@ namespace ThirdPersonSimulation.Fixed
             m_Control = new FixedAbilityOperationControlRuntime(data);
         }
 
+        public void AppendBlackboardSnapshot(FixedCharacterRuntimeState state,
+            System.Collections.Generic.List<FixedBlackboardValueSnapshot> destination) =>
+            FixedBlackboardSnapshotReader.Append(this, state, destination);
+
         public FixedGameplayAbilityExecutionData Data => m_Execution.Data;
         public GameplayAbilityExecutionLayout Layout => m_Execution.Layout;
         public GameplayAbilityExecutionIdentity Identity => m_Execution.Services.Identity;

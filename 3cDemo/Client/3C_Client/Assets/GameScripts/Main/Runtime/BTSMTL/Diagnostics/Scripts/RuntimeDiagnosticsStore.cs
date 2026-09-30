@@ -54,26 +54,32 @@ namespace BTSMTL.Diagnostics
 
     public readonly struct RuntimeLiveStateKey : IEquatable<RuntimeLiveStateKey>
     {
-        public RuntimeLiveStateKey(RuntimeTraceChannel channel, RuntimeSourceElementHandle source, RuntimeInstanceKey instance, RuntimeTraceEventKind kind)
+        public RuntimeLiveStateKey(RuntimeTraceEvent traceEvent)
         {
-            Channel = channel;
-            Source = source;
-            Instance = instance;
-            Kind = kind;
+            Channel = traceEvent.Channel;
+            Source = traceEvent.Source;
+            Instance = traceEvent.RuntimeInstance;
+            Kind = traceEvent.Kind;
+            bool blackboard = Kind is RuntimeTraceEventKind.BlackboardWritten or RuntimeTraceEventKind.BlackboardSnapshot;
+            BlackboardStateSlot = blackboard ? traceEvent.Payload.BlackboardStateSlot : -1;
+            BlackboardAbilityId = blackboard ? traceEvent.Payload.SkillId : string.Empty;
         }
 
         public RuntimeTraceChannel Channel { get; }
         public RuntimeSourceElementHandle Source { get; }
         public RuntimeInstanceKey Instance { get; }
         public RuntimeTraceEventKind Kind { get; }
+        public int BlackboardStateSlot { get; }
+        public string BlackboardAbilityId { get; }
 
         public bool Equals(RuntimeLiveStateKey other)
         {
-            return Channel == other.Channel && Source.Equals(other.Source) && Instance.Equals(other.Instance) && Kind == other.Kind;
+            return Channel == other.Channel && Source.Equals(other.Source) && Instance.Equals(other.Instance) && Kind == other.Kind &&
+                BlackboardStateSlot == other.BlackboardStateSlot && string.Equals(BlackboardAbilityId, other.BlackboardAbilityId, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj) => obj is RuntimeLiveStateKey other && Equals(other);
-        public override int GetHashCode() => (((int)Channel * 397) ^ Source.GetHashCode()) * 397 ^ Instance.GetHashCode() ^ (int)Kind;
+        public override int GetHashCode() => HashCode.Combine(Channel, Source, Instance, Kind, BlackboardStateSlot, BlackboardAbilityId);
     }
 
     public readonly struct RuntimeLiveStateChange
@@ -120,14 +126,23 @@ namespace BTSMTL.Diagnostics
 
     public readonly struct RuntimeCaptureRead
     {
-        public RuntimeCaptureRead(long version, bool requiresFullSync, IReadOnlyList<RuntimeCaptureChange> changes)
+        public RuntimeCaptureRead(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail,
+            long version, long evictedEvents, bool requiresFullSync, IReadOnlyList<RuntimeCaptureChange> changes)
         {
+            CaptureId = captureId;
+            Channels = channels;
+            Detail = detail;
             Version = version;
+            EvictedEvents = evictedEvents;
             RequiresFullSync = requiresFullSync;
-            Changes = changes ?? Array.Empty<RuntimeCaptureChange>();
+            Changes = changes;
         }
 
+        public Guid CaptureId { get; }
+        public RuntimeTraceChannel Channels { get; }
+        public RuntimeDiagnosticsCaptureDetail Detail { get; }
         public long Version { get; }
+        public long EvictedEvents { get; }
         public bool RequiresFullSync { get; }
         public IReadOnlyList<RuntimeCaptureChange> Changes { get; }
     }
@@ -152,6 +167,7 @@ namespace BTSMTL.Diagnostics
     {
         readonly RuntimeCaptureSegmentSnapshot[] m_Segments;
         readonly RuntimeTraceEvent[] m_Events;
+        readonly int[] m_SegmentEnds;
 
         public RuntimeCaptureSnapshot(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, RuntimeCaptureSegmentSnapshot[] segments, long version, long evictedEvents = 0)
         {
@@ -163,12 +179,14 @@ namespace BTSMTL.Diagnostics
             for (int i = 0; i < m_Segments.Length; i++)
                 eventCount += m_Segments[i].Events.Length;
             m_Events = new RuntimeTraceEvent[eventCount];
+            m_SegmentEnds = new int[m_Segments.Length];
             int eventIndex = 0;
             for (int i = 0; i < m_Segments.Length; i++)
             {
                 ReadOnlySpan<RuntimeTraceEvent> segmentEvents = m_Segments[i].Events;
                 segmentEvents.CopyTo(m_Events.AsSpan(eventIndex));
                 eventIndex += segmentEvents.Length;
+                m_SegmentEnds[i] = eventIndex;
             }
             Version = version;
             EvictedEvents = evictedEvents;
@@ -182,14 +200,38 @@ namespace BTSMTL.Diagnostics
         public long EvictedEvents { get; }
         public int SegmentCount => m_Segments.Length;
 
-        public ReadOnlySpan<RuntimeTraceEvent> GetEvents(int historyOffset)
+        public ReadOnlySpan<RuntimeTraceEvent> GetEvents(int historyOffset, ulong throughSequence = ulong.MaxValue)
         {
             int visibleSegments = Math.Max(0, m_Segments.Length - Math.Max(0, historyOffset));
-            int omittedEvents = 0;
-            for (int i = 0; i < m_Segments.Length - visibleSegments; i++)
-                omittedEvents += m_Segments[i].Events.Length;
-            return m_Events.AsSpan(omittedEvents);
+            int end = visibleSegments == 0 ? 0 : m_SegmentEnds[visibleSegments - 1];
+            int begin = 0;
+            while (begin < end)
+            {
+                int middle = begin + (end - begin) / 2;
+                if (m_Events[middle].Sequence <= throughSequence)
+                    begin = middle + 1;
+                else
+                    end = middle;
+            }
+            return m_Events.AsSpan(0, begin);
         }
+
+        public int GetHistoryOffset(ulong throughSequence)
+        {
+            int eventCount = GetEvents(0, throughSequence).Length;
+            int begin = 0;
+            int end = m_SegmentEnds.Length;
+            while (begin < end)
+            {
+                int middle = begin + (end - begin) / 2;
+                if (m_SegmentEnds[middle] < eventCount)
+                    begin = middle + 1;
+                else
+                    end = middle;
+            }
+            return Math.Max(0, m_Segments.Length - begin - 1);
+        }
+
     }
 
     sealed class RuntimeLiveStateStore
@@ -220,10 +262,11 @@ namespace BTSMTL.Diagnostics
         }
 
         public long Version => m_Version;
+        public int Capacity => m_MaxChanges;
 
         public bool Upsert(RuntimeTraceEvent traceEvent)
         {
-            var key = new RuntimeLiveStateKey(traceEvent.Channel, traceEvent.Source, traceEvent.RuntimeInstance, traceEvent.Kind);
+            var key = new RuntimeLiveStateKey(traceEvent);
             if (m_Current.TryGetValue(key, out RuntimeTraceEvent current))
             {
                 LinkedListNode<RuntimeLiveStateKey> recent = m_RecencyNodes[key];
@@ -263,29 +306,48 @@ namespace BTSMTL.Diagnostics
             return true;
         }
 
-        public RuntimeLiveStateRead ReadSince(long cursor)
+        public RuntimeLiveStateRead CopySince(long cursor, List<RuntimeLiveStateChange> destination)
         {
+            destination.Clear();
             if (cursor >= m_Version)
-                return new RuntimeLiveStateRead(m_Version, false, Array.Empty<RuntimeLiveStateChange>(), m_EvictedStates);
-
+                return new RuntimeLiveStateRead(m_Version, false, destination, m_EvictedStates);
             long earliestAvailable = m_Changes.Count > 0 ? m_Changes.Peek().Revision : m_Version + 1;
             if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
             {
-                var current = new RuntimeLiveStateChange[m_Current.Count];
-                int index = 0;
                 foreach (KeyValuePair<RuntimeLiveStateKey, RuntimeTraceEvent> pair in m_Current)
-                    current[index++] = new RuntimeLiveStateChange(m_Version, pair.Key, pair.Value);
-                return new RuntimeLiveStateRead(m_Version, true, current, m_EvictedStates);
+                    destination.Add(new RuntimeLiveStateChange(m_Version, pair.Key, pair.Value));
+                return new RuntimeLiveStateRead(m_Version, true, destination, m_EvictedStates);
             }
-
-            var changes = new RuntimeLiveStateChange[checked((int)(m_Version - cursor))];
-            int changeIndex = 0;
             foreach (RuntimeLiveStateChange change in m_Changes)
-            {
                 if (change.Revision > cursor)
-                    changes[changeIndex++] = change;
+                    destination.Add(change);
+            return new RuntimeLiveStateRead(m_Version, false, destination, m_EvictedStates);
+        }
+
+        public void RemoveChannels(RuntimeTraceChannel channels)
+        {
+            bool changed = false;
+            LinkedListNode<RuntimeLiveStateKey> node = m_Recency.First;
+            while (node != null)
+            {
+                LinkedListNode<RuntimeLiveStateKey> next = node.Next;
+                RuntimeLiveStateKey key = node.Value;
+                if ((key.Channel & channels) != 0)
+                {
+                    m_Current.Remove(key);
+                    m_RecencyNodes.Remove(key);
+                    m_Recency.Remove(node);
+                    ReturnRecencyNode(node);
+                    changed = true;
+                }
+                node = next;
             }
-            return new RuntimeLiveStateRead(m_Version, false, changes, m_EvictedStates);
+            if (changed)
+            {
+                m_Changes.Clear();
+                m_Version++;
+                m_LastEvictionVersion = m_Version;
+            }
         }
 
         public void Clear()
@@ -373,6 +435,13 @@ namespace BTSMTL.Diagnostics
                    left.FinalWeight.Equals(right.FinalWeight) &&
                    left.Priority == right.Priority &&
                    left.Cycle == right.Cycle &&
+                   left.LoopIteration == right.LoopIteration &&
+                   left.BlackboardStateSlot == right.BlackboardStateSlot &&
+                   left.BlackboardScope == right.BlackboardScope &&
+                   left.BlackboardOwnerIndex == right.BlackboardOwnerIndex &&
+                   left.BlackboardOwnerGeneration == right.BlackboardOwnerGeneration &&
+                   left.BlackboardLifetime == right.BlackboardLifetime &&
+                   left.BlackboardIsActive == right.BlackboardIsActive &&
                    left.TrackIndex == right.TrackIndex &&
                    left.ClipIndex == right.ClipIndex &&
                    left.Flag == right.Flag &&
@@ -454,6 +523,7 @@ namespace BTSMTL.Diagnostics
 
     sealed class RuntimeCaptureStore : IDisposable
     {
+        internal const int DefaultMaxEvents = 32768;
         readonly Segment[] m_SegmentBuffer;
         readonly Segment[] m_SegmentPool;
         readonly RuntimeCaptureChange[] m_ChangeBuffer;
@@ -471,7 +541,7 @@ namespace BTSMTL.Diagnostics
         int m_ChangeHead;
         int m_ChangeCount;
 
-        public RuntimeCaptureStore(Guid captureId, RuntimeDiagnosticsCaptureDetail detail, int maxSegments = 512, int maxEvents = 32768)
+        public RuntimeCaptureStore(Guid captureId, RuntimeDiagnosticsCaptureDetail detail, int maxSegments = 512, int maxEvents = DefaultMaxEvents)
         {
             if (maxSegments < 8)
                 throw new ArgumentOutOfRangeException(nameof(maxSegments));
@@ -520,29 +590,30 @@ namespace BTSMTL.Diagnostics
             TrimToCapacity();
         }
 
-        public RuntimeCaptureRead ReadSince(long cursor)
+        public RuntimeCaptureRead CopySince(Guid captureId, long cursor, RuntimeTraceChannel channels, List<RuntimeCaptureChange> destination)
         {
-            if (cursor >= m_Version)
-                return new RuntimeCaptureRead(m_Version, false, Array.Empty<RuntimeCaptureChange>());
-
+            destination.Clear();
+            bool captureChanged = captureId != m_CaptureId;
+            if (!captureChanged && cursor >= m_Version)
+                return new RuntimeCaptureRead(m_CaptureId, channels, m_Detail, m_Version, m_EvictedEvents, false, destination);
             long earliestAvailable = m_ChangeCount > 0 ? GetChange(0).Revision : m_Version + 1;
-            if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
-                return new RuntimeCaptureRead(m_Version, true, CopyAllChanges());
-
+            bool fullSync = captureChanged || cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion;
             int first = 0;
-            int end = m_ChangeCount;
-            while (first < end)
+            if (!fullSync)
             {
-                int middle = first + (end - first) / 2;
-                if (GetChange(middle).Revision <= cursor)
-                    first = middle + 1;
-                else
-                    end = middle;
+                int end = m_ChangeCount;
+                while (first < end)
+                {
+                    int middle = first + (end - first) / 2;
+                    if (GetChange(middle).Revision <= cursor)
+                        first = middle + 1;
+                    else
+                        end = middle;
+                }
             }
-            var changes = new RuntimeCaptureChange[m_ChangeCount - first];
             for (int i = first; i < m_ChangeCount; i++)
-                changes[i - first] = GetChange(i);
-            return new RuntimeCaptureRead(m_Version, false, changes);
+                destination.Add(GetChange(i));
+            return new RuntimeCaptureRead(m_CaptureId, channels, m_Detail, m_Version, m_EvictedEvents, fullSync, destination);
         }
 
         public RuntimeCaptureSnapshot Freeze(RuntimeTraceChannel channels)
@@ -588,14 +659,6 @@ namespace BTSMTL.Diagnostics
                 }
                 ReturnSegment(removed);
             }
-        }
-
-        RuntimeCaptureChange[] CopyAllChanges()
-        {
-            var changes = new RuntimeCaptureChange[m_ChangeCount];
-            for (int i = 0; i < m_ChangeCount; i++)
-                changes[i] = GetChange(i);
-            return changes;
         }
 
         void AppendSegment(Segment segment)
@@ -676,10 +739,20 @@ namespace BTSMTL.Diagnostics
         readonly RuntimeLiveStateStore m_LiveState = new RuntimeLiveStateStore();
         RuntimeCaptureStore m_Capture;
         RuntimeTraceChannel m_LiveChannels;
+        long m_LiveStateGeneration;
         RuntimeTraceChannel m_CaptureChannels;
         RuntimeDiagnosticsCaptureDetail m_CaptureDetail;
         bool m_Terminated;
         bool m_Disposed;
+
+        public long LiveStateGeneration
+        {
+            get
+            {
+                lock (m_Gate)
+                    return m_LiveStateGeneration;
+            }
+        }
 
         public RuntimeTraceChannel EffectiveChannels
         {
@@ -813,19 +886,32 @@ namespace BTSMTL.Diagnostics
                 return m_Capture?.Freeze(m_CaptureChannels);
         }
 
-        public RuntimeLiveStateRead ReadLiveStateSince(long cursor)
+        public (Guid CaptureId, long Version) CaptureStatus
         {
-            lock (m_Gate)
-                return m_LiveState.ReadSince(cursor);
+            get
+            {
+                lock (m_Gate)
+                    return m_Capture == null ? (Guid.Empty, 0L) : (m_Capture.CaptureId, m_Capture.Version);
+            }
         }
 
-        public RuntimeCaptureRead ReadCaptureSince(long cursor)
+        public int LiveStateCapacity => m_LiveState.Capacity;
+        public int CaptureEventCapacity => RuntimeCaptureStore.DefaultMaxEvents;
+
+        public RuntimeLiveStateRead CopyLiveStateSince(long cursor, List<RuntimeLiveStateChange> destination)
+        {
+            lock (m_Gate)
+                return m_LiveState.CopySince(cursor, destination);
+        }
+
+        public RuntimeCaptureRead CopyCaptureSince(Guid captureId, long cursor, List<RuntimeCaptureChange> destination)
         {
             lock (m_Gate)
             {
-                return m_Capture != null
-                    ? m_Capture.ReadSince(cursor)
-                    : new RuntimeCaptureRead(0, false, Array.Empty<RuntimeCaptureChange>());
+                if (m_Capture != null)
+                    return m_Capture.CopySince(captureId, cursor, m_CaptureChannels, destination);
+                destination.Clear();
+                return new RuntimeCaptureRead(Guid.Empty, RuntimeTraceChannel.None, RuntimeDiagnosticsCaptureDetail.None, 0, 0, captureId != Guid.Empty, destination);
             }
         }
 
@@ -895,6 +981,7 @@ namespace BTSMTL.Diagnostics
                 if (m_Disposed)
                     return;
                 m_LiveState.Clear();
+                m_LiveStateGeneration++;
             }
         }
 
@@ -969,6 +1056,15 @@ namespace BTSMTL.Diagnostics
             {
                 if (interest.Kind == RuntimeDiagnosticsInterestKind.LiveState)
                     channels |= interest.Channels;
+            }
+            RuntimeTraceChannel added = channels & ~m_LiveChannels;
+            if (added != RuntimeTraceChannel.None)
+            {
+                m_LiveStateGeneration++;
+                if (m_LiveChannels == RuntimeTraceChannel.None)
+                    m_LiveState.Clear();
+                else
+                    m_LiveState.RemoveChannels(RuntimeTraceChannel.All & ~m_LiveChannels);
             }
             m_LiveChannels = channels;
         }

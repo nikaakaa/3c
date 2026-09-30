@@ -241,7 +241,7 @@ namespace ThirdPersonSimulation
                 writer.WriteUInt64(value.SourcePreviousTick.Value);
                 writer.WriteUInt64(value.SourceCurrentTick.Value);
                 writer.WriteByte((byte)value.SamplingKind);
-                writer.WriteString(value.ContactShapeConfigurationHash.Value);
+                writer.WriteHash(value.ContactShapeConfigurationHash);
             }
         }
 

@@ -1,0 +1,127 @@
+{
+  "schema": "zzz-particle-transfer/v2",
+  "input": "D:\\ZZZ_Dump\\output\\corin_replication\\20260929_effect_candidate_extract_v1\\2702541078\\0377_CAB-0166b409613d7c97b39040c3abecd2f5",
+  "count": 1,
+  "objects": [
+    {
+      "objectType": "ParticleSystemRenderer",
+      "pathId": -3327388051381270519,
+      "byteSize": 336,
+      "standardEnd": 240,
+      "values": {
+        "m_GameObject": {
+          "m_FileID": 0,
+          "m_PathID": -6326164979644852214
+        },
+        "m_Enabled": true,
+        "m_CastShadows": 0,
+        "m_ReceiveShadows": 0,
+        "m_DynamicOccludee": 1,
+        "m_MotionVectors": 1,
+        "m_LightProbeUsage": 0,
+        "m_ReflectionProbeUsage": 0,
+        "m_RayTracingMode": 0,
+        "m_RenderingLayerMask": 0,
+        "m_RendererPriority": 1,
+        "m_LightmapIndex": 0,
+        "m_LightmapIndexDynamic": 0,
+        "m_LightmapTilingOffset": {
+          "x": NaN,
+          "y": 1.0,
+          "z": 1.0,
+          "w": 0.0
+        },
+        "m_LightmapTilingOffsetDynamic": {
+          "x": 0.0,
+          "y": 1.0,
+          "z": 1.0,
+          "w": 0.0
+        },
+        "m_Materials": [],
+        "m_StaticBatchInfo": {
+          "firstSubMesh": 1,
+          "subMeshCount": 0
+        },
+        "m_StaticBatchRoot": {
+          "m_FileID": 1,
+          "m_PathID": -8326354052152962387
+        },
+        "m_ProbeAnchor": {
+          "m_FileID": 0,
+          "m_PathID": 0
+        },
+        "m_LightProbeVolumeOverride": {
+          "m_FileID": 0,
+          "m_PathID": 0
+        },
+        "m_SortingLayerID": 0,
+        "m_SortingLayer": 0,
+        "m_SortingOrder": 0,
+        "m_RenderMode": 0,
+        "m_SortMode": 0,
+        "m_MinParticleSize": 0.0,
+        "m_MaxParticleSize": 0.0,
+        "m_CameraVelocityScale": 4.5917748078995606e-40,
+        "m_VelocityScale": 2.3418052921586223e-38,
+        "m_LengthScale": 0.0,
+        "m_SortingFudge": 0.0,
+        "m_NormalDirection": 0.0,
+        "m_ShadowBias": 0.0,
+        "m_RenderAlignment": 1056964608,
+        "m_Pivot": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 2.0
+        },
+        "m_Flip": {
+          "x": 2.549999952316284,
+          "y": 1.0,
+          "z": 0.0
+        },
+        "m_UseCustomVertexStreams": false,
+        "m_EnableGPUInstancing": false,
+        "m_ApplyActiveColorSpace": false,
+        "m_AllowRoll": false,
+        "m_VertexStreams": [],
+        "m_Mesh": {
+          "m_FileID": 0,
+          "m_PathID": 0
+        },
+        "m_Mesh1": {
+          "m_FileID": 0,
+          "m_PathID": 72340168526266368
+        },
+        "m_Mesh2": {
+          "m_FileID": 1,
+          "m_PathID": 0
+        },
+        "m_Mesh3": {
+          "m_FileID": 4,
+          "m_PathID": 67305728
+        },
+        "m_MaskInteraction": 0
+      },
+      "zzzExtension": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f",
+      "dependencies": [
+        {
+          "field": "m_Mesh1",
+          "fileId": 0,
+          "pathId": 72340168526266368,
+          "scope": "local",
+          "external": null,
+          "targetInScope": false,
+          "resolution": null
+        },
+        {
+          "field": "m_Mesh3",
+          "fileId": 4,
+          "pathId": 67305728,
+          "scope": "external",
+          "external": "archive:/CAB-9e3af6e0d7c67e488bd9f6e8e4e5c606/CAB-9e3af6e0d7c67e488bd9f6e8e4e5c606",
+          "targetInScope": null,
+          "resolution": "archive"
+        }
+      ]
+    }
+  ]
+}

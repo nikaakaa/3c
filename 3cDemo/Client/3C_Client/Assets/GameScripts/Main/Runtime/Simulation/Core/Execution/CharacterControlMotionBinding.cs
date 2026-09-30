@@ -220,7 +220,7 @@ namespace ThirdPersonSimulation
             ForwardDistance = forwardDistance ?? throw new ArgumentNullException(nameof(forwardDistance));
             Yaw = yaw ?? throw new ArgumentNullException(nameof(yaw));
             ContentHash = StableHash.Compute(
-                "character-control-motion-binding/1",
+                "character-control-motion-binding/3",
                 SourceIdentity,
                 SourceCurveIdentity,
                 SourceRevision.Value,
@@ -276,7 +276,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control motion source revision inputs are invalid.");
             }
             return StableHash.Compute(
-                "character-control-motion-source/1",
+                "character-control-motion-source/3",
                 Format(sourceDuration),
                 Format(sampleRate),
                 ((int)evaluationMode).ToString(CultureInfo.InvariantCulture),
@@ -308,7 +308,7 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException($"Character control motion source '{binding.SourceIdentity}' is duplicated.", nameof(bindings));
             }
             m_Bindings = sorted.AsReadOnly();
-            var hashParts = new List<string> { "character-control-motion-binding-catalog/1" };
+            var hashParts = new List<string> { "character-control-motion-binding-catalog/3" };
             for (int i = 0; i < m_Bindings.Count; i++)
             {
                 hashParts.Add(m_Bindings[i].SourceIdentity);
@@ -341,8 +341,8 @@ namespace ThirdPersonSimulation
     public static class CharacterControlMotionBindingCodec
     {
         const uint Magic = 0x4d424343;
-        const int Version = 2;
-        public const string CodecIdentity = "character-control-motion-bindings/v2";
+        const int Version = 4;
+        public const string CodecIdentity = "character-control-motion-bindings/v4";
 
         public static byte[] Write(CharacterControlMotionBindingCatalog catalog)
         {
@@ -355,7 +355,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(catalog.Bindings.Count);
             for (int i = 0; i < catalog.Bindings.Count; i++)
                 WriteBinding(writer, catalog.Bindings[i]);
-            writer.WriteString(catalog.ContentHash.Value);
+            writer.WriteHash(catalog.ContentHash);
             return writer.ToArray();
         }
 
@@ -406,7 +406,7 @@ namespace ThirdPersonSimulation
             WriteCurve(writer, binding.PositionZ);
             WriteCurve(writer, binding.ForwardDistance);
             WriteCurve(writer, binding.Yaw);
-            writer.WriteString(binding.ContentHash.Value);
+            writer.WriteHash(binding.ContentHash);
         }
 
         static CharacterControlMotionBinding ReadBinding(CanonicalReader reader)

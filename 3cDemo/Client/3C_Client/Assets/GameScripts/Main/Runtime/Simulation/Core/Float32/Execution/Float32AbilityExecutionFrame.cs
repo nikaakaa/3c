@@ -725,18 +725,21 @@ namespace ThirdPersonSimulation
             m_Enabled = false;
             CaptureValues = false;
             CaptureControlFlow = false;
+            CaptureBlackboard = false;
             m_ValueSampleCount = 0;
         }
 
-        public void Begin(bool enabled, bool captureValues = false, bool captureControlFlow = false)
+        public void Begin(bool enabled, bool captureValues, bool captureControlFlow, bool captureBlackboard)
         {
             m_Enabled = enabled;
             CaptureValues = enabled && captureValues;
             CaptureControlFlow = enabled && captureControlFlow;
+            CaptureBlackboard = enabled && captureBlackboard;
         }
 
         public bool Enabled => m_Enabled;
         public bool CaptureValues { get; private set; }
+        public bool CaptureBlackboard { get; private set; }
         public bool CaptureControlFlow { get; private set; }
 
         public void AddValueEdge(SimulationOperation target, string port)
@@ -763,6 +766,7 @@ namespace ThirdPersonSimulation
             m_Enabled = false;
             CaptureValues = false;
             CaptureControlFlow = false;
+            CaptureBlackboard = false;
             m_Frame = null;
             m_Sequence = default;
         }
@@ -790,6 +794,16 @@ namespace ThirdPersonSimulation
                 parentInvocationGeneration: ParentGeneration(operation.Handle)));
         }
 
+        public void AddBlackboard(SimulationOperation operation, int stateSlot, AbilityStateValue value, BlackboardOwnerToken owner, ProgramBlackboardLifetime lifetime)
+        {
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                m_Sequence.Next(operation), SimulationTraceSeverity.Information, "Ability.Blackboard", "blackboard_written", string.Empty,
+                m_Frame.CurrentActionTraceInstanceId, m_Frame.Data.AbilityId.Value, m_Frame.CurrentSkillTraceGeneration,
+                graphInvocationGeneration: InvocationGeneration(operation.Handle),
+                parentInvocationGeneration: ParentGeneration(operation.Handle),
+                blackboardTrace: new SimulationBlackboardTrace(stateSlot, value, owner, lifetime)));
+        }
+
         public void Add(SimulationOperation operation, string code, SimulationTraceSeverity severity, string detail)
         {
             if (!m_Enabled)
@@ -805,7 +819,10 @@ namespace ThirdPersonSimulation
                 m_Frame.CurrentActionTraceSkillId,
                 m_Frame.CurrentSkillTraceGeneration,
                 graphInvocationGeneration: InvocationGeneration(operation.Handle),
-                parentInvocationGeneration: ParentGeneration(operation.Handle)));
+                parentInvocationGeneration: ParentGeneration(operation.Handle),
+                loopIteration: operation.Code == SimulationOperationCode.Loop
+                    ? m_Frame.ReadState(m_Frame.Layout.FindOperationStateSlot(operation.Handle, ProgramStateSemantic.RunnableChildCursor)).Int32
+                    : 0));
         }
 
         public void Add(

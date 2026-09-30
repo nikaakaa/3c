@@ -1042,7 +1042,7 @@ namespace ThirdPersonSimulation
         {
             if (writer == null || state == null)
                 throw new ArgumentNullException();
-            writer.WriteString(state.CatalogHash.ToString());
+            writer.WriteHash(state.CatalogHash);
             writer.WriteInt32(state.Slots.Count);
             for (int i = 0; i < state.Slots.Count; i++)
             {

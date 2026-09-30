@@ -2,11 +2,11 @@
 
 ## 范围与状态
 
-当前交付状态：**鼠标上下方向修正及轨道额外滞后修正已完成 Unity 编译，可进入用户手测；完整相机复刻仍未完成**。目标实例 e852139597e42532 的项目路径正确，Edit 模式、compiling=false、building=false，Console 当前 0 条错误。先前外部状态机编译阻塞已解除，下文各批次的阻塞描述只代表当时状态。
+当前交付状态：**鼠标方向修正、Delay 基础模式消费、Pitch/Stretch 顶端轨道接线和震动 owner 倍率通道已完成 Unity 编译；完整相机复刻仍未完成**。目标实例 e852139597e42532 的项目路径正确，Edit 模式、compiling=false、building=false，Console 当前 0 条错误。先前外部状态机编译阻塞已解除，下文各批次的阻塞描述只代表当时状态。
 
 此前在途配置已通过 CorinCameraResourcesAuthoring.Publish 正式生成：投影 v9，Delay 9 模式和 9 过渡，21 项 Shake，18 项 Stretch 全部为 v2。正式 Build/RequireValid 与资产回读成功；TopOrbit=(2.225,0.2)、TopCurvature=0.25、Follow/Aim 偏移已进入投影。回读时 Profile 标记 dirty，随后仅保存该 Profile，确认 dirty=false；18 项 Stretch 回读时均为非 dirty。
 
-尚未完成：完整 Delay 模式与正式状态输入、Pitch/Stretch 到顶端轨道及 Follow/Aim 偏移的运行消费、震动静默/保持与独立时间倍率。数据发布不能代替这些消费者；默认跟随 Pivot 仍用现有 SmoothDamp。Goal 工具仍保留旧 blocked 状态，本轮没有把整体目标标成 complete。
+尚未完成：Delay 的原生模式资格与完整构图求值、默认轨道 Follow/Aim 偏移的运行消费、震动聚合器内部业务项、区域渐静默与 Base 保持触发。静态 `MUTE_CAMERA_SHAKE` 已在请求接纳边界消费；震动实例倍率已接 `OwnerTimeScale` 通道，但共享 Tick 当前传 1，不宣称独立业务倍率已还原。Goal 工具仍保留旧 blocked 状态，本轮没有把整体目标标成 complete。
 
 最新分工：用户已将命中链交给其他窗口，本窗口只负责相机配置。此前已进行的命中数据修改与真实执行缺口见 [命中链交接](../archive/records/combat/corin-hit-chain-handoff-20260929.md)；下文早先的整链授权保留为过程记录，不再代表当前工作分配。
 
@@ -479,3 +479,64 @@ CharacterCameraSequenceEvaluator 的 CameraWorldBasicHistory 原来同时平滑 
 在目标 Editor 的 Edit 模式调用正式 ResolveLook、BuildTargetPlan、Evaluate：60 FPS，前 30 帧鼠标 Y=10。旧版半径最大落后 0.12127161 米、Offset 最大落后 0.0550226532 米；新版两项误差均为 0。第 30 帧 cameraY 从 -0.114775874 变为 1.44758391，确认方向反转。水平同输入检查第 30 帧 yaw=32.3188858°，第 45/46/60 帧均为 37.91093°；释放后仍有约 5.6° 的输入尾段，尚未凭原作证据判定该尾段是否正确，不能据此声称所有粘滞已经解决。
 
 证据：camera-basis-runtime-20260929/freelook-direction-and-orbit-check.json。Unity 编译完成、Console 0 错误、正式投影构建成功。未运行 Play/replay，未新增测试，未验证实机手感或 GC；未改 IK/命中业务，也未提交其他窗口的 CameraRig 修改。
+
+
+## 已提交角色状态经 EventGraph 接入相机
+
+2026-09-29，本轮完成状态接入源码、正式 EventGraph 生成和独立图执行检查。完整相机复刻仍未完成；Delay 的模式/方向/局部阻尼消费者尚未替换现有 Pivot SmoothDamp，不能将输入接通表述为手感已经对齐。此前“缺角色状态”的说法不准确：C# 控制层已有状态，缺的是相机接入。
+
+调用链：FixedCharacterRegistration 与 DeterministicRollbackCharacterRegistration 在 CompleteResultCommit 中把已有 result.State 交给表现域。Fixed/Float32CharacterRuntimeState 实现 ICommittedCharacterControlState，直接公开既有 ControlState 和 TimelineSnapshots，并从既有 ActionInstances 查询技能激活；没有新增角色状态机或复制一套快照。CharacterAnimationEventGraphHost 按图声明的 HostInput，在初始化时解析控制字段、技能及 Timeline/Clip ID。图输出 camera.control.idle/move/evade；CharacterCameraDomainRuntime 在初始化时绑定三个变量，Present 从同帧变量帧读取后交给 CameraFrameInput.CharacterState。
+
+相机映射使用现有唯一 UpdateEvent 的 Split 末端，不新增第二个更新入口。持有相机的角色才执行这段映射，presentation.has-camera 由表现域的真实相机装配提供；远端角色继续运行原动画计算，不读取不存在的本地控制快照。
+
+原作标签来源已保存为 camera-character-tag-inputs.json，来自完整原始 AnimatorZone 而非仅动作文档。Idle 包括 Idle、Walk_End、Run_End、普攻收尾、普通与强化 Rush 收尾、Branch 收尾。Move 包括 Walk_Start/Loop、Run_Start/Loop、TurnBack、Evade_Front；Evade 包括前后闪。当前作者将已有控制状态映射至相应动作，技能主体激活时屏蔽底层 locomotion 的 Idle/Move。普攻前四段使用正式收尾 MotionCurve Clip 的逻辑激活区间，第五段及 Rush/Branch 使用对应收尾 Timeline；所有 ID 位于角色作者配置，运行求值器不识别可琳动作名。四段逻辑收尾边界与提前混入收尾动画的视觉起点不同，尚未做原作同画面对照。
+
+验证：目标实例 e852139597e42532 为正确项目、Edit 模式，最终 Unity 编译完成，Console 0 错误。btsmtl.generate_assets saved=true，157 节点。InternalEditorUtility.LoadSerializedFileAndForget 从磁盘载入独立副本，随后执行 NativeEventGraphRuntime；12 组控制/技能输入和10组收尾输入均得到预期 Idle/Move/Evade 输出，远端检查成功且控制状态读取次数为0。记录在 camera-state-eventgraph-check.json。该检查使用构造的 HostInput，证明资产恢复、变量绑定与图输出，不证明实际提交快照、回滚/历史表现时序或镜头画面。
+
+新增帧路径复用快照引用、初始化字典和变量绑定，源码未发现新增逐帧托管分配；未进行GC采集。未运行 Play/replay，未新增测试文件，未修改IK或命中链。生成保留了当前 Root.cs/Lean.cs 的在途作者内容；这两个文件不是本窗口修改，生成资产与其共享变更尚未拆分，因此本批未提交混合资产。Goal继续active。
+
+后续仍须完成：提交快照与表现采样时序核对、完整 Delay 模式/过渡/仰角/方向/局部空间阻尼、Pitch/Stretch 到顶端轨道及 Follow/Aim 偏移、震动额外开关/静默/保持/独立倍率与 Zoom 剩余规则。Delay 表内 mFOV 不直接覆盖当前镜头 FOV，已有消费者证据要求保持该区别。
+
+
+## Delay 模式、朝向与位置阻尼进入现有求值器
+
+本批新增 CameraDelayModeRuntime，并从 CharacterCameraSequenceEvaluator 调用；旧 CameraWorldBasicHistory 的统一 Pivot SmoothDamp 已移除。当前实现开始消费 Profile.Delay 的默认/手动转镜相关模式、过渡曲线/时间/稳定时间、上下仰角分段跟随阻尼、方向参数和最小距离比例。完整 Delay 仍未完成，以下验证不得扩大为完整手感一致。
+
+输入链补齐：ICharacterPresentationLookInput 更名为 ICharacterPresentationInput，保留现有 Look 读取并增加 ReadLatchedVector2。CameraInputSettings.MoveInputId 由正式 PublishInput 写为 MoveAxis，投影升级 v10。相机读取同一输入适配器已锁存的移动向量，生成 HasMoveInput；它与 EventGraph 的 Idle/Move/Evade 动作状态分开。CorinCharacterInputProfile 的 MoveAxis 已确认为 Vector2。Profile 磁盘 diff 只有新增的 m_MoveInputId 一行，其他参数未被本次发布改写。
+
+模式：当前本地手动转镜进入 raw 3，结束时结合 Idle 或“仍有移动输入且带 Move/Evade”进入 raw 2；显式变更可打断过渡，回默认需等过渡和稳定时间。99→目标的通配条目展开后由精确来源条目覆盖，3→2实际选中2秒过渡/1秒稳定。每次切换从当时混合结果开始，先推进时间再评估归一化曲线；三组仰角数据先随模式混合，再按仰角与 OrbitLerpTime 分段采样。FollowAnimation/LookAtAnimation 对象按原消费者使用目标端，不逐项插值。Default_Normal 的9项过渡均为自定义曲线 style=7，本批尚未完成其它 style 和原生其它控制资格/模式请求的接入，不应据此承诺其它配置组完全支持。
+
+新证据：0x14A3B300、0x14A3AD10、0x14A3AF30、0x1393BF00、0x12A1A470 的函数正文保存为 follow-delay-transition-*.json。0x1393BF00 使用 elapsed/duration 评估曲线；0x12A1A470 对 mFOV 与最小距离比例做夹紧插值，并分别混合三组轨道数据。mFOV 保留在混合数据中，没有直接覆盖当前镜头 FOV。
+
+方向：输入是 BodyFrame 的 VisibleRotation 对应的模型朝向，保留最近3次方向求和后归一化；与前次相机水平反向前向求角，以1-angle/180采样开放贝塞尔的中间两段。原控制点求解器0x1F39A430首行/内部/末行系数及右端项已逐项与 Cinemachine 2.10.7 ComputeSmoothControlPoints 核对，见 delay-consumer-implementation-evidence.json。运行时复用固定缓冲执行相同消元公式，仅计算输出需要的XZ分量，不调用会逐帧分配工作数组的 helper。Edit 场景读取的 Player/Target VisualRoot 与 PoseRoot yaw 分别为0/0和180/180，没有额外朝向偏差；未证明所有外部角色装配都相同。
+
+位置：基于相机偏移决定局部阻尼空间，跟随X/Z先乘方向倍率；世界Y独立调用Damper，使用纵向阻尼与方向倍率。最小水平距离采用 offsetLength*max(0.2,modeRatio)，修正后的Pivot成为下一帧历史。相机轨道参数本身继续用当帧目标，不恢复旧Radius/Offset额外平滑。原作升降附加系数尚未接入；跨轴保护、旋转/构图阻尼、死区/软区、状态倍率仍待完成，当前代码不能称为完整0x1596CFC0及后续求解器复刻。
+
+验证：Unity编译完成，Console 0错误；正式PublishInput与Build/RequireValid成功。磁盘独立加载Profile后，投影仍为v10且MoveInputId=MoveAxis。Edit调用正式模式/相机求值器：60FPS，转镜30帧，模式在第1帧为3、第31帧为2、第212帧回0；方向曲线27组配置×73个角度共1971次与Cinemachine helper比较，最大差2.38418579e-7；120帧直线移动/停止产生有限结果，FOV保持基础镜头50，没有被Delay表的40覆盖。记录为 delay-runtime-editor-check.json。使用构造帧，不是Play/replay；未新增测试文件，未采集GC。源码检查新增帧路径没有托管分配。
+
+本批首次脚本范围刷新没有导入新CameraDelayModeRuntime.cs，已只读确认MonoScript不存在，再执行scope=all完成导入和编译；没有修改其他窗口代码来规避错误。所有更改仍在共享工作区，未把混合的EventGraph资产与其它窗口在途作者改动提交。Goal继续active；下批先处理升降附加倍率、构图求值和仍未闭合的原生模式资格，再处理剩余Pitch/Stretch/震动/Zoom。
+
+
+## 升降资格纠正与震动时间开关消费
+
+后续核对发现：上文待办中的“升降附加倍率”不能直接用于普通可琳。0x159717D0 的资格来自 BangbooGameSubsystem.isInHenshinBuddyStatus；未进入该邦布玩法时原作返回倍率 1。本轮保留普通路径，未增加错误的升降拖拽。元数据、泛型方法上下文、速度来源及计时证据见 [专项记录](corin-camera-clock-and-vertical-20260929.md)。
+
+震动运行求值现已消费 MuteCameraShakeAdvancedProcess 并尊重调用方零时间，六组生产函数检查通过；另补二十组 WithFraming 生产检查，最大投影归一化偏移误差 7.67988251e-9。Unity Edit 模式编译完成，未运行 Play/replay。专项记录明确保留完整构图、模式资格、Pitch/Stretch、独立震动倍率、静默/保持及 Zoom 的剩余范围；Goal 仍未完成。
+
+## Delay 构图屏幕框进入位置历史
+
+本轮在已有 Pivot 阻尼后消费 `CameraDelayOrbitSettings` 的构图数据。输入链新增真实输出宽度：`ICameraRigAdapter.PixelWidth` 由 `CinemachineCameraRigAdapter` 提供，`CameraFrameInput` 同时携带宽高；相机域在每帧从现有 rig 读取，不假设 16:9。
+
+`CameraWorldBasicHistory` 先按上一帧相机位置计算目标 Pivot 的相机局部坐标，用当前 FOV 与深度得到屏幕正交尺度。求值顺序与原作/Cinemachine 结构一致：以 `ScreenPosition + DeadZone` 构造内框，得到越界修正；再用 `ScreenPosition + Bias * (SoftZone - DeadZone)` 和 `SoftZone` 构造硬框修正实际目标；合成位移按 `CompositionDamping` 阻尼。输出直接写回同一 `CameraWorldBasicData.Offset`，表现节点继续消费同一条链。
+
+这里使用当前证据支持的死区/软区结构和 Unity 屏幕到正交公式。`FollowRotationDamping`、`RotateDamping`、动画状态/Tag 倍率、LookAt 通道以及效果修改半径后的动态构图连续性仍未消费。因此本批不能称为完整构图或 Delay 手感一致。
+
+检查：目标实例 `e852139597e42532` 项目路径正确，Edit 模式，非 Play、非编译、非更新；脚本刷新后 Unity 编译完成，Console 错误 0。另用已加载的生产 `ResolveCompositionOffset` 检查死区 0、软区 1、Bias 0.345 的矩形结果：目标 `(0.5,0.25)` 输出 `(0.50,0.25)`，目标 `(1.5,0.25)` 输出 `(1.50,0.25)`。该检查只证明屏幕框换算，不证明动态相机阻尼和实机画面。未运行 Play/replay，未新增测试或提交。
+
+## 当前震动交付复核
+
+2026-09-29，对可琳相机震动的当前正式链做交付前复核。目标实例 `e852139597e42532` 项目路径正确，Edit 模式脚本刷新编译完成并完成域重载，Console 错误为 0。正式 Profile 构建 `RequireValid` 通过，投影为 v10，包含 21 Shake、18 Zoom、18 Stretch；Profile 复核后 dirty=false。
+
+资源映射复核确认 21 个 Shake 的原作 `PlayStackingType` raw 值均为 0，映射到当前 `Replace=1`；其中 `IngoreTimeScale=true` 12 项、false 9 项。生产 `ResolveDelta` 六组检查覆盖高级处理 false／true、零时间、两种 `IngoreTimeScale`、owner 倍率 0.5 和 0，期望值与实际值全部一致；0 倍率分支确认替换为 0.0001。检查使用 Profile 内存副本切换高级开关，未保存或弄脏原 Profile。
+
+记录见 [当前震动编辑器复核](camera-shake-runtime-20260928/camera-shake-current-editor-check.json)。本检查不运行 Play/replay，不采集 GC，不证明实机画面；区域渐静默和 Base 保持仍因当前工程缺少正式生产者而不接伪造输入。

@@ -2,7 +2,7 @@
 
 ### Requirement: 不得恢复Timeline或Preview分裂路径
 
-系统 MUST只有一条直接消费 TimelineData 的正式 Timeline Runtime 路径和一条原生 FlowCanvas Pose 运行路径，两者只通过 committed Body/Intent、EventId 与有限 Action command 连接。完整角色预览 MUST在独立场景 Play 中沿 C# 控制、唯一 Action 服务、ActionInstance 内 Skill Root/Tree/Timeline/TreeClip 和同一正式 Session/Pipeline 产生结果；控制与技能遵守同 Tick 的 Decision候选、Evaluate/WorldResolve/Finalize 和 Commit 边界。动画 MUST继续消费该正式链，编辑器只提供明确输入、作者参数修改和只读观察。系统 MUST删除被替代的独立 Action/Fact/Query 预览 Runtime，不得保留旧 TimelinePlaybackScheduler、Timeline Bind/Evaluate/Unbind、自主 TreeClip runtime、动画反推 root motion、Animancer direct Play 或另一 PlayableGraph。
+系统 MUST只有一条直接消费 TimelineData 的正式 Timeline Runtime 路径和一条原生 FlowCanvas Pose 运行路径，两者只通过 committed Body/Intent、EventId 与有限 Action command 连接。完整角色预览 MUST在 Edit Mode 隔离隐藏场景中沿 C# 控制、唯一 Action 服务、ActionInstance 内 Skill Root/Tree/Timeline/TreeClip 和同一正式 Session/Pipeline 产生结果；控制与技能遵守同 Tick 的 Decision候选、Evaluate/WorldResolve/Finalize 和 Commit 边界。动画 MUST继续消费该正式链，编辑器只提供明确输入、作者参数修改和只读观察。系统 MUST删除被替代的独立 Action/Fact/Query 预览 Runtime，不得保留旧 TimelinePlaybackScheduler、Timeline Bind/Evaluate/Unbind、自主 TreeClip runtime、动画反推 root motion、Animancer direct Play 或另一 PlayableGraph。
 
 #### Scenario: Runtime与Preview并存
 
@@ -36,3 +36,17 @@ Timeline Track MUST 唯一声明 Logic 或 Presentation；Clip 与同级 Marker 
 - **WHEN** 表现游标跨过 Presentation Marker
 - **THEN** 当前表现候选帧 MUST 执行一次触发图
 - **AND** Marker MUST NOT 持有动态区间或结束另一个 TreeClip
+
+#### Scenario: 表现域 TreeClip 由节点图结束
+
+- **WHEN** Presentation TreeClip 的 TimelineBody 图在当前表现候选帧发出结束片段请求
+- **THEN** PresentationFrame MUST 在同一候选帧执行该片段的 OnDisable 并撤下其持续表现输出
+- **AND** Commit 与 Discard MUST 同时决定片段结束状态和表现输出是否生效
+- **AND** MUST 不修改 Gameplay Timeline 时钟、Logic TreeClip 或 Simulation state
+
+#### Scenario: TreeClip 触发表现事件
+
+- **WHEN** TreeClip 的 Presentation Marker 被视觉游标跨过
+- **THEN** PresentationFrame MUST直接产生 Presentation Event
+- **AND** 该事件 MUST不等待 SimulationTick
+- **AND** Logic TreeClip 的逻辑输出仍 MUST按 Logic Tick 与 Commit / Discard 执行

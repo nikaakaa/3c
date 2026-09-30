@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
@@ -585,6 +587,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             catch (Exception exception)
             {
+                UnityEngine.Debug.LogException(exception);
                 response = new ErrorResponse(
                     "performance_job_failed",
                     new { job_id = job.Document.job_id, operation = job.Document.operation, message = exception.Message });
@@ -789,11 +792,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string path = Path.Combine(JobRoot, document.job_id + ".json");
             string temporary = path + ".tmp";
             File.WriteAllText(temporary, JsonUtility.ToJson(document, true), new UTF8Encoding(false));
-            if (File.Exists(path))
-                File.Replace(temporary, path, null);
-            else
-                File.Move(temporary, path);
+            const int replaceExisting = 1;
+            const int writeThrough = 8;
+            if (!MoveFileEx(temporary, path, replaceExisting | writeThrough))
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"无法发布性能作业状态：{path}");
         }
+
+        [DllImport("kernel32.dll", EntryPoint = "MoveFileExW", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool MoveFileEx(string sourcePath, string destinationPath, int flags);
     }
 
     static class PerformanceMcpBridge

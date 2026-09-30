@@ -1,0 +1,470 @@
+{
+  "type_index": 401,
+  "name": "Object",
+  "namespace": "System",
+  "full_name": "System.Object",
+  "klass": null,
+  "definition_va": 1736672351536,
+  "definition_raw_hex": "47110000c28c0b00eb2e00065e130000ffffffff920100020120100056c0000601000000ffffffffffffffff01000000ffffffff0000ffff00000400000000000000ffffffffffff0c000000000cffff",
+  "token": 33554834,
+  "attributes": 1056769,
+  "field_start": 4294967295,
+  "field_count": 0,
+  "method_start": 4423,
+  "method_count": 12,
+  "parent_descriptor_index": 4294967295,
+  "declaring_descriptor_index": 4294967295,
+  "field_array": null,
+  "method_array": null,
+  "runtime_unavailable": "No validated class in saved runtime heap",
+  "parent_type": "<no-type>",
+  "selection_reasons": [
+    "Controller inherited data"
+  ],
+  "fields": [],
+  "methods": [
+    {
+      "ordinal": 0,
+      "definition_index": 4423,
+      "definition_va": 1736638704586,
+      "rva": null,
+      "raw_hex": "11510b0022000005ffffffff910100004a1100060000ffffffff86180001",
+      "token": 100667722,
+      "name_identity": 83886114,
+      "name": ".ctor",
+      "attributes": 6278,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 1,
+      "definition_index": 4424,
+      "definition_va": 1736638704616,
+      "rva": null,
+      "raw_hex": "e101000081020006d4190000910100004811000600000000ffffc6010100",
+      "token": 100667720,
+      "name_identity": 100663937,
+      "name": "Equals",
+      "attributes": 454,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "bool",
+        "type_ref": "0x7ff9752d0dc0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6612,
+          "definition_va": 1736630314264,
+          "raw_hex": "620cf3aa7862e9c668e58186",
+          "name_identity": 50332286,
+          "name": "obj",
+          "token": 134224341,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 2,
+      "definition_index": 4425,
+      "definition_va": 1736638704646,
+      "rva": null,
+      "raw_hex": "e101000081020006d519000091010000491100060000ffffffff96000200",
+      "token": 100667721,
+      "name_identity": 100663937,
+      "name": "Equals",
+      "attributes": 150,
+      "static": true,
+      "abstract": false,
+      "return_type": {
+        "display": "bool",
+        "type_ref": "0x7ff9752d0dc0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6613,
+          "definition_va": 1736630314276,
+          "raw_hex": "f4e65a2dc87b5044998ee908",
+          "name_identity": 67158108,
+          "name": "objA",
+          "token": 134224342,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 6614,
+          "definition_va": 1736630314288,
+          "raw_hex": "edc3c2afdb58b8ce916d519b",
+          "name_identity": 67158112,
+          "name": "objB",
+          "token": 134224343,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 3,
+      "definition_index": 4426,
+      "definition_va": 1736638704676,
+      "rva": null,
+      "raw_hex": "11510b00dd140008ffffffff910100004b11000600000100ffffc4010000",
+      "token": 100667723,
+      "name_identity": 134223069,
+      "name": "Finalize",
+      "attributes": 452,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 4,
+      "definition_index": 4427,
+      "definition_va": 1736638704706,
+      "rva": null,
+      "raw_hex": "a90000008702000bffffffff910100004c11000600000200ffffc6010000",
+      "token": 100667724,
+      "name_identity": 184550023,
+      "name": "GetHashCode",
+      "attributes": 454,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "int",
+        "type_ref": "0x7ff9752cfa40",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 5,
+      "definition_index": 4428,
+      "definition_va": 1736638704736,
+      "rva": null,
+      "raw_hex": "1c0000007c670007ffffffff910100004d1100060010ffffffff86000000",
+      "token": 100667725,
+      "name_identity": 117467004,
+      "name": "GetType",
+      "attributes": 134,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "Type",
+        "type_ref": "0x7ff9752cf170",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 6,
+      "definition_index": 4429,
+      "definition_va": 1736638704766,
+      "rva": null,
+      "raw_hex": "0100000064c0000fffffffff910100004e1100060010ffffffff84000000",
+      "token": 100667726,
+      "name_identity": 251707492,
+      "name": "MemberwiseClone",
+      "attributes": 132,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "object",
+        "type_ref": "0x7ff9752cefc0",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 7,
+      "definition_index": 4430,
+      "definition_va": 1736638704796,
+      "rva": null,
+      "raw_hex": "5a000000d9120008ffffffff910100004f11000600000300ffffc6010000",
+      "token": 100667727,
+      "name_identity": 134222553,
+      "name": "ToString",
+      "attributes": 454,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "string",
+        "type_ref": "0x7ff9752cf550",
+        "complete": true
+      },
+      "parameters": [],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 8,
+      "definition_index": 4431,
+      "definition_va": 1736638704826,
+      "rva": null,
+      "raw_hex": "e101000073c0000fd719000091010000501100060000ffffffff96000200",
+      "token": 100667728,
+      "name_identity": 251707507,
+      "name": "ReferenceEquals",
+      "attributes": 150,
+      "static": true,
+      "abstract": false,
+      "return_type": {
+        "display": "bool",
+        "type_ref": "0x7ff9752d0dc0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6615,
+          "definition_va": 1736630314300,
+          "raw_hex": "7e9e2a323ab320490157b91d",
+          "name_identity": 67158108,
+          "name": "objA",
+          "token": 134224344,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 6616,
+          "definition_va": 1736630314312,
+          "raw_hex": "137992b4c18d88cbb54021a0",
+          "name_identity": 67158112,
+          "name": "objB",
+          "token": 134224345,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 9,
+      "definition_index": 4432,
+      "definition_va": 1736638704856,
+      "rva": null,
+      "raw_hex": "a900000082c00013d919000091010000511100060010ffffffff93000100",
+      "token": 100667729,
+      "name_identity": 318816386,
+      "name": "InternalGetHashCode",
+      "attributes": 147,
+      "static": true,
+      "abstract": false,
+      "return_type": {
+        "display": "int",
+        "type_ref": "0x7ff9752cfa40",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6617,
+          "definition_va": 1736630314324,
+          "raw_hex": "0856fa362490f050b91f8912",
+          "name_identity": 16786828,
+          "name": "o",
+          "token": 134224346,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 10,
+      "definition_index": 4433,
+      "definition_va": 1736638704886,
+      "rva": null,
+      "raw_hex": "11510b0095c0000bda19000091010000521100060000ffffffff81000300",
+      "token": 100667730,
+      "name_identity": 184598677,
+      "name": "FieldGetter",
+      "attributes": 129,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6618,
+          "definition_va": 1736630314336,
+          "raw_hex": "d23062b9b51959cc2d09f194",
+          "name_identity": 134258166,
+          "name": "typeName",
+          "token": 134224347,
+          "type": {
+            "display": "string",
+            "type_ref": "0x7ff9752cf550",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 6619,
+          "definition_va": 1736630314348,
+          "raw_hex": "f80aca3b6da4c04f54b25817",
+          "name_identity": 151026864,
+          "name": "fieldName",
+          "token": 134224348,
+          "type": {
+            "display": "string",
+            "type_ref": "0x7ff9752cf550",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 6620,
+          "definition_va": 1736630314360,
+          "raw_hex": "e35c26be6bb727dca291c0a9",
+          "name_identity": 50367177,
+          "name": "val",
+          "token": 134224349,
+          "type": {
+            "display": "object&",
+            "type_ref": "0x7ff975e5bbd0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    },
+    {
+      "ordinal": 11,
+      "definition_index": 4434,
+      "definition_va": 1736638704916,
+      "rva": null,
+      "raw_hex": "11510b00a0c0000bdd19000091010000531100060000ffffffff81000300",
+      "token": 100667731,
+      "name_identity": 184598688,
+      "name": "FieldSetter",
+      "attributes": 129,
+      "static": false,
+      "abstract": false,
+      "return_type": {
+        "display": "void",
+        "type_ref": "0x7ff975e200c0",
+        "complete": true
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "definition_index": 6621,
+          "definition_va": 1736630314372,
+          "raw_hex": "6ec29940998b8f63cc7a282c",
+          "name_identity": 134258166,
+          "name": "typeName",
+          "token": 134224350,
+          "type": {
+            "display": "string",
+            "type_ref": "0x7ff9752cf550",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 1,
+          "definition_index": 6622,
+          "definition_va": 1736630314384,
+          "raw_hex": "259d01c34a0ef8e47a5490ae",
+          "name_identity": 151026864,
+          "name": "fieldName",
+          "token": 134224351,
+          "type": {
+            "display": "string",
+            "type_ref": "0x7ff9752cf550",
+            "complete": true
+          }
+        },
+        {
+          "ordinal": 2,
+          "definition_index": 6623,
+          "definition_va": 1736630314396,
+          "raw_hex": "437a69450a455f5d7c43f830",
+          "name_identity": 50367177,
+          "name": "val",
+          "token": 134224352,
+          "type": {
+            "display": "object",
+            "type_ref": "0x7ff9752cefc0",
+            "complete": true
+          }
+        }
+      ],
+      "runtime_unavailable": "类型方法缓存未取得",
+      "signature_complete": true
+    }
+  ],
+  "issues": [],
+  "value_type": false,
+  "enum_type": false,
+  "layout": {
+    "index_va": 1736625595652,
+    "record_number": 0,
+    "record_va": 1736696650496,
+    "record_hex": "000000001000080000000000",
+    "instance_size": 16,
+    "offset_array_va": 1736717977800,
+    "offsets_hex": "",
+    "offset_flags": []
+  },
+  "layout_instance_size": 16,
+  "dependencies": [
+    339
+  ]
+}

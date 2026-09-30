@@ -123,26 +123,26 @@ namespace ThirdPersonCharacter.Control.Rules
             ControlSource source = Source(stateId);
             if (stateId == WalkStart)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkStartMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkStartMotion, s_MoveAxis, elapsed, playbackGeneration));
             }
             else if (stateId == WalkLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_WalkLoopMotion, s_MoveAxis, elapsed, playbackGeneration));
             }
             else if (stateId == RunLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunLoopMotion, s_MoveAxis, elapsed, playbackGeneration));
             }
             else if (stateId == RunStopping)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunStoppingMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, s_RunStoppingMotion, s_MoveAxis, elapsed, playbackGeneration));
             }
             else if (stateId == MovingTurn)
             {
                 string motion = elapsed < Ticks(m_Context, MovingTurnMotionSeconds)
                     ? s_MovingTurnMotion
                     : s_RunLoopMotion;
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, motion, s_MoveAxis, elapsed, 0, playbackGeneration));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(source.Source, source.Identity, motion, s_MoveAxis, elapsed, playbackGeneration));
             }
 
             if (stateId != Idle)
@@ -380,7 +380,7 @@ namespace ThirdPersonCharacter.Control.Rules
         {
             return new CharacterControlModuleContract(
                 ModuleId,
-                1,
+                5,
                 Idle,
                 new[]
                 {

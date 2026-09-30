@@ -98,7 +98,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Event identity is incomplete.");
             Span<byte> block = stackalloc byte[64];
             var builder = new EventIdBuilder(block);
-            builder.Append(sourceContent.Value.Value);
+            builder.Append(sourceContent.Value);
             builder.Append(actor.Value);
             builder.Append(activation);
             builder.Append(tick.Value);
@@ -121,7 +121,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("TreeClip event identity is incomplete.");
             Span<byte> block = stackalloc byte[64];
             var builder = new EventIdBuilder(block);
-            builder.Append(sourceContent.Value.Value);
+            builder.Append(sourceContent.Value);
             builder.Append(actor.Value);
             builder.Append(activation);
             builder.Append(tick.Value);

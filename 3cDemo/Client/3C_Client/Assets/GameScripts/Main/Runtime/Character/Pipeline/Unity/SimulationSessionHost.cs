@@ -321,7 +321,9 @@ namespace ThirdPersonCharacter.Pipeline
                 Debug.LogError("SimulationSessionHost requires an explicit Session Composition Definition.", this);
         }
 
-        void OnEnable()
+        void OnEnable() => Activate();
+
+        public void Activate()
         {
             if (m_Disposed)
                 BeginFreshLifecycle();

@@ -2,12 +2,14 @@
 
 ### Requirement: ScenePlay 必须拥有预览生命周期
 
-ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Start、Pause、Resume、Stop、Ability 输入、Live Debug、Capture 和 History。Authoring、Preview、RuntimeDebug 的入口 MUST 位于原 TimelineEditorWindow；Session 菜单只提交正式请求。Profile MUST 先精确匹配 Scene，再以 ContextId 匹配 Composition SessionId，最后在该 Session 内匹配 DefaultActorId；缺少或重复目标 MUST 明确拒绝。窗口 MUST NOT 因其它场景恰好具有相同 ContextId 而接管它。
+Preview MUST 采用 CMC 式隔离隐藏 Scene，在 Edit Mode 内装配正式 ScenePlay Session，MUST NOT 启动 Unity Play。打开预览区 MUST 自动创建并准备，正常使用 MUST NOT 要求作者执行 Start Session 或 Prepare；仅在实际耗时等待或失败时显示原因。编辑器宿主 MUST 接入已有 GameplayTickSystem 驱动正式逻辑和表现，MUST NOT 建立 CMC 动作块回调或第二套节点、Timeline 求值链。ScenePlay 在此表示正式 Session，不表示 Unity Play Mode。
+
+ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Start、Pause、Resume、Stop、Ability 输入、Live Debug、Capture 和 History。作者编排和 RuntimeDebug MUST 复用原 Timeline 工作面；独立可停靠 Preview MUST 承载共享视口、黑板与执行投影，并允许从 Ability 节点图联动进入；基础交互与 Session 菜单只提交正式请求。Profile MUST 以 AssemblyPrefab 创建隐藏 Preview Scene，再以 ContextId 匹配实例内 Composition SessionId，最后在该 Session 内匹配 DefaultActorId；缺少或重复目标 MUST 明确拒绝。实际游戏观察 MUST 精确匹配该装配 Prefab 的实例与 Context，不得接管其它场景的同名目标。
 
 #### Scenario: 从编辑器开始一次 Ability 预览
 
-- **WHEN** 作者在原 Timeline 窗口选择有效 Profile 并进入 Preview
-- **THEN** ScenePlay MUST 加载声明的正式场景并创建或连接唯一 Session/Actor
+- **WHEN** 作者选择有效 Profile 并打开独立 Preview 窗口
+- **THEN** ScenePlay MUST 在隔离隐藏 Scene 中实例化声明的正式装配 Prefab，装配唯一 Session/Actor
 - **AND** Ability MUST 通过正式输入和请求入口启动；窗口不得直接创建 Timeline playback
 - **AND** 未运行、准备中、准备失败、目标缺失和已连接 MUST 根据正式状态区分，不以点击成功冒充准备完成
 
@@ -15,7 +17,7 @@ ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Sta
 
 - **WHEN** 作者点击 Pause、Resume 或 Stop
 - **THEN** 请求 MUST 作用于精确解析的正式 Session
-- **AND** 只有由本入口启动且请求身份匹配的 Play 才能随 Stop 退出，不得因目标缺失而停止无关 Play
+- **AND** 请求 MUST 只影响本入口绑定的目标；隐藏预览不启动或停止 Unity Play，也不得操作无关 Session
 - **AND** Capture、History 和 Resume Live MUST 只调用 RuntimeDebugSession，不创建恢复或回放实现
 
 ### Requirement: Timeline UI 不得拥有运行时执行状态
@@ -27,7 +29,7 @@ TimelineEditorWindow MUST 不拥有 evaluator、独立时钟、playback command 
 - **WHEN** 作者切换页面或重复打开同一 TimelineData
 - **THEN** 页面 MUST 复用原 Timeline 面板，不按调用创建窗口
 - **AND** TimelineData MUST 不保存窗口时间、目标、generation、播放状态或 GUI 游标
-- **AND** 关闭最后一个 Timeline 窗口 MUST 释放该工具面的运行观察 interest，正式 Session MUST 继续运行
+- **AND** 关闭窗口 MUST 释放该工具面的运行观察 interest；仍有预览承载窗口时 Session MUST 保持，最后一个承载预览的窗口关闭时隐藏宿主 MUST 结束并释放 Preview Session；实际游戏 Session MUST NOT 被观察窗口关闭所终止
 
 ### Requirement: Timeline 预览必须消费正式 Runtime 事实
 
@@ -59,7 +61,7 @@ Timeline UI MUST 只读取正式 Timeline Runtime、Ability lifecycle、Action p
 
 ### Requirement: Timeline必须与共享预览区完成跨窗口联动
 
-三种形态的入口 MUST 统一位于原 TimelineEditorWindow，Timeline 面板 MUST 始终使用原 Slate。RuntimeDebug MUST 根据正式调用关系导航已有 FlowCanvas 与原 Timeline 面板；窗口只改变观察绑定，不能按调用创建新面板、替换 ScenePlay Session 或把 FlowCanvas 嵌入 Slate。
+作者编排 MUST 复用原 TimelineEditorWindow；独立 Preview MUST 复用 Slate 显示执行投影，打开 Ability MUST 能联动其节点图；作者 Timeline 与执行记录 MUST 使用各自正式数据源。RuntimeDebug MUST 根据正式调用关系导航已有 FlowCanvas 与原 Timeline 面板；窗口只改变观察绑定，不能按调用创建新面板、替换 ScenePlay Session 或把 FlowCanvas 嵌入 Slate。
 
 #### Scenario: 技能产生多个Timeline调用
 
@@ -82,7 +84,7 @@ Timeline UI MUST 只读取正式 Timeline Runtime、Ability lifecycle、Action p
 
 ### Requirement: 编辑控件不能冒充真实角色预览
 
-Timeline MUST 使用秒制编辑游标和时间输入，保留独立的秒／帧显示切换与显式吸附网格；编辑游标、真实运行标记和 Capture 历史位置 MUST 分别保存。已明确的 Profile、三态切换和 Session 菜单 MUST 通过正式 ScenePlay owner 操作运行。普通来源导航 MUST NOT 启动或重建 Session。嵌入按钮、快捷键、EditorUpdate、初始化/释放、保存和 delayCall MUST NOT 调用 Slate Play/Sample/ReSample/Stop 执行预览，MUST 清理 AutoKey 与临时作者播放器。
+Timeline MUST 使用秒制编辑游标和时间输入，保留独立的秒／帧显示切换与显式吸附网格；编辑游标、真实运行标记和 Capture 历史位置 MUST 分别保存。已明确的 Profile、三态切换和 Session 菜单 MUST 通过正式 ScenePlay owner 操作运行。普通来源导航 MUST NOT 重建 Session；打开效果预览区 MUST 自动装配唯一正式宿主。基础编排的拖动查看效果 MUST 通过正式 owner 提交定位请求，角色表现只显示实际到达结果；Ability 执行游标 MUST 使用所选位置的正式记录。嵌入按钮、快捷键、EditorUpdate、初始化/释放、保存和 delayCall MUST NOT 调用 Slate Play/Sample/ReSample/Stop 执行预览，MUST 清理 AutoKey 与临时作者播放器。
 
 #### Scenario: 没有运行绑定
 
@@ -98,7 +100,7 @@ Timeline MUST 使用秒制编辑游标和时间输入，保留独立的秒／帧
 
 ### Requirement: 动态 TreeClip 长度必须来自对应执行域的实例事实
 
-Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源，图内“结束片段”只结束当前调用实例。Presentation 的 FrameBoundary MUST 保留为显式固定区间模式。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；Presentation 的作者 End 只作为可编辑布局上界，Logic 的作者 End 跟随 Timeline 终点；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
+Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源，图内“结束片段”只结束当前调用实例。Presentation 的 FrameBoundary MUST 保留为显式固定区间模式。正式 TreeClip 运行事件 MUST 携带本次实例的 `ExitSource`，RuntimeDebug MUST 使用记录中的 `ExitSource` 区分动态和固定片段，不能从当前作者资产补推。动态长度 MUST NOT 取作者 End，也 MUST NOT 反写作者资产；Presentation 的作者 End 只作为可编辑布局上界，Logic 的作者 End 跟随 Timeline 终点；表现域退出 MUST NOT 修改 Gameplay 时钟或逻辑生命周期。
 
 #### Scenario: 动态片段仍在执行
 
@@ -123,3 +125,32 @@ Logic 与 Presentation 的 TreeClip MUST 支持显式 TreeDecision 结束来源�
 - **WHEN** 正式父 Timeline 结束、离开 cycle、停止、撤销或修正
 - **THEN** 动态子片段 MUST 由原生命周期链路退出或销毁，不留下孤立输出
 - **AND** MUST NOT 为延长子片段创建独立时间源或继续执行已结束父播放
+
+## ADDED Requirements
+
+### Requirement: 作者 Timeline 与 Ability 执行投影必须分开
+
+作者 Timeline MUST 表达可编辑的内容安排；Ability 执行时间线 MUST 表达实际节点、决策、循环和调用记录，两者 MUST 复用原绘制交互基础而不共享可写数据。基础编排 MUST 支持正式内容效果查看，执行投影片段 MUST 可定位来源但不可编辑成作者 Clip。运行变量命令与作者 Mutation MUST 分别显示实际采用状态。
+
+#### Scenario: 从调用记录进入内容编排
+
+- **WHEN** 用户点击执行时间线中的一次 Timeline 调用并修改其作者内容
+- **THEN** 系统 MUST 定位对应来源并使用原作者编辑入口，修改按正式内容采用规则进入后续运行
+- **AND** 该次已发生的执行记录 MUST 保持原版本及调用身份，不随作者修改被重写
+
+### Requirement: Timeline 内容刷新必须与图编译区分
+
+Timeline 的时间、长度、曲线、资源与普通 Track/Clip 编排 MUST 走正式内容刷新，MUST NOT 无条件 Build Ability 图。Track/Clip 结构变化 MUST 由正式 owner 重建对应绑定与播放生命周期；TreeClip 内部图或编译依赖变化 MUST Build 受影响的图。常用编辑提交 MUST 自动组织正式内容采用步骤；活动 Ability playback MUST 保持其原版本，新调用采用新内容。纯 Timeline 编排 MUST 通过正式定位显示更新后的当前游标结果。
+
+#### Scenario: 调整 Clip 时间
+
+- **WHEN** 作者提交 Clip 时间变化，图结构和编译依赖未改变
+- **THEN** 系统 MUST 更新 Timeline 内容并显示采用状态，不触发 Ability 图 Build
+- **AND** UI MUST 区分当前活动 playback 与新采用内容的版本，不改写已记录历史
+
+#### Scenario: 新旧内容的播放同时存在
+
+- **WHEN** 活动 playback 继续使用旧内容，而新调用已采用更新后的 Timeline
+- **THEN** 两者的运行事件 MUST 分别携带对应正式内容的 SourceMap 版本，Live 观察、执行时间线和来源跳转 MUST 按事件版本解析
+- **AND** Capture 与 History MUST 保留这些映射，MUST NOT 使用当前作者资产或角色初始来源表替代记录版本
+- **AND** 重复调用 MUST 复用正式准备的内容指纹和映射，不为观察重新遍历作者 Timeline 计算版本

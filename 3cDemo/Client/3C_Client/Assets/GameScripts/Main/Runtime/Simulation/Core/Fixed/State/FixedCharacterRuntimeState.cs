@@ -91,7 +91,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    public sealed class FixedCharacterRuntimeState
+    public sealed class FixedCharacterRuntimeState : ICommittedCharacterControlState
     {
         readonly FixedAbilityRuntimeState[] m_Abilities;
         readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
@@ -215,10 +215,18 @@ namespace ThirdPersonSimulation.Fixed
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
         internal ulong HandleAllocator { get; }
-        internal CharacterControlRuntimeState ControlState { get; }
+        public CharacterControlRuntimeState ControlState { get; }
+
+        public bool IsAbilityActive(CharacterSkillId abilityId)
+        {
+            for (int i = 0; i < ActionInstances.Length; i++)
+                if (ActionInstances[i].IsActive && ActionInstances[i].SkillId == abilityId)
+                    return true;
+            return false;
+        }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
-        internal IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
+        public IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
 
         internal FixedCharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
         {

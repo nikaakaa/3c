@@ -9,6 +9,7 @@ namespace ThirdPersonCamera
         readonly CharacterCameraFramePlanner m_FramePlanner;
         readonly CharacterCameraSequenceTransition m_Transition;
         readonly CameraWorldBasicHistory m_WorldBasicHistory;
+        readonly CameraDelayModeRuntime m_Delay;
         bool m_Initialized;
 
         public CharacterCameraSequenceEvaluator(CharacterCameraProjectionPayload projection)
@@ -19,7 +20,8 @@ namespace ThirdPersonCamera
             m_Projection = projection;
             m_FramePlanner = new CharacterCameraFramePlanner(projection);
             m_Transition = new CharacterCameraSequenceTransition(projection, m_FramePlanner);
-            m_WorldBasicHistory = new CameraWorldBasicHistory(projection.DefaultSmoothTime);
+            m_Delay = new CameraDelayModeRuntime(projection.Delay);
+            m_WorldBasicHistory = new CameraWorldBasicHistory();
         }
 
         public void Reset()
@@ -27,6 +29,7 @@ namespace ThirdPersonCamera
             m_FramePlanner.Reset();
             m_Transition.Reset();
             m_WorldBasicHistory.Reset();
+            m_Delay.Reset();
             m_Initialized = false;
         }
 
@@ -35,6 +38,7 @@ namespace ThirdPersonCamera
             m_FramePlanner.SetInitialState(in state);
             m_Transition.Reset();
             m_WorldBasicHistory.Reset();
+            m_Delay.Reset();
             m_Initialized = false;
         }
 
@@ -73,76 +77,164 @@ namespace ThirdPersonCamera
         public CameraFramePlan Evaluate(
             in CameraFrameInput input,
             in CameraSequenceRequest request,
-            in CameraResponseRequest response)
+            in CameraResponseRequest response,
+            CameraEffectEvaluator effects)
         {
             if (input.ResetHistory || !m_Initialized)
             {
                 m_FramePlanner.Reset();
                 m_Transition.Reset();
+                m_Delay.Reset();
                 m_Initialized = true;
             }
             Vector2 look = m_FramePlanner.ResolveLook(
                 in input,
                 in response);
+            m_FramePlanner.ApplyElevation(effects.ResolveElevation(
+                m_FramePlanner.ElevationWithOverrun, m_FramePlanner.HasRotationControl, in input));
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
-            return m_WorldBasicHistory.Apply(target, in input);
+            CameraDelayOrbitSettings delay = m_Delay.Evaluate(in input, m_FramePlanner.HasRotationControl, m_FramePlanner.ElevationRatio);
+            return m_WorldBasicHistory.Apply(target, in input, delay,
+                m_Delay.MinimumDistanceRatio, m_Projection.Delay.Muted);
         }
 
     }
 
     sealed class CameraWorldBasicHistory
     {
-        readonly float m_SmoothTime;
         CameraWorldBasicData m_Current;
-        Vector3 m_PivotVelocity;
+        Vector3 m_PreviousOffset;
+        readonly CameraDelayDirectionRuntime m_Direction = new CameraDelayDirectionRuntime();
         bool m_Initialized;
-
-        public CameraWorldBasicHistory(float smoothTime)
-        {
-            m_SmoothTime = smoothTime;
-        }
 
         public void Reset()
         {
             m_Current = default;
-            m_PivotVelocity = Vector3.zero;
+            m_PreviousOffset = Vector3.zero;
+            m_Direction.Reset();
             m_Initialized = false;
         }
 
-        public CameraFramePlan Apply(CameraFramePlan target, in CameraFrameInput input)
+        public CameraFramePlan Apply(CameraFramePlan target, in CameraFrameInput input,
+            CameraDelayOrbitSettings delaySettings, float minimumDistanceRatio, bool muted)
         {
+            CameraWorldBasicData targetData = target.WorldBasicData;
             if (!target.Valid)
                 return target;
-            if (!m_Initialized || input.ResetHistory || m_SmoothTime <= 0f)
+            Vector3 offset = -targetData.CameraToPivot;
+            if (input.ResetHistory)
+                m_Direction.Reset();
+            m_Direction.AddModelForward(input.BodyRotation * Vector3.forward);
+            if (!m_Initialized || input.ResetHistory || muted)
             {
-                SetCurrent(target.WorldBasicData, true);
+                m_Current = target.WorldBasicData;
+                m_PreviousOffset = offset;
+                m_Initialized = true;
                 return target;
             }
-
-            float deltaTime = input.PresentationDeltaSeconds;
-            if (deltaTime <= 0f)
+            float delta = input.PresentationDeltaSeconds;
+            if (delta <= 0f || input.Paused)
                 return target.WithWorldBasicData(m_Current);
-
-            Vector3 pivot = Vector3.SmoothDamp(
-                m_Current.PivotLocation,
-                target.PivotLocation,
-                ref m_PivotVelocity,
-                m_SmoothTime,
-                Mathf.Infinity,
-                deltaTime);
-            SetCurrent(target.WorldBasicData.WithPivotLocation(pivot), false);
+            Vector3 pivot = m_Current.PivotLocation;
+            if ((offset - m_PreviousOffset).sqrMagnitude > 0.01f)
+            {
+                Quaternion orbitDelta = Quaternion.FromToRotation(
+                    Vector3.ProjectOnPlane(m_PreviousOffset, Vector3.up),
+                    Vector3.ProjectOnPlane(offset, Vector3.up));
+                pivot = target.PivotLocation + orbitDelta * (pivot - target.PivotLocation);
+            }
+            m_PreviousOffset = offset;
+            float directionRatio = m_Direction.Evaluate(delaySettings.FollowDirection, m_Current.Rotation);
+            Vector3 damping = delaySettings.FollowPositionDamping;
+            damping.x *= directionRatio;
+            damping.z *= directionRatio;
+            float verticalDelta = target.PivotLocation.y - pivot.y;
+            float previousY = pivot.y;
+            Quaternion dampingSpace = Quaternion.LookRotation(offset, Vector3.up);
+            Vector3 localDelta = Quaternion.Inverse(dampingSpace) * (target.PivotLocation - pivot);
+            pivot += dampingSpace * Cinemachine.Utility.Damper.Damp(localDelta, damping, delta);
+            pivot.y = previousY + Cinemachine.Utility.Damper.Damp(verticalDelta, damping.y * directionRatio, delta);
+            Vector3 cameraLocation = m_Current.Location;
+            Vector3 localTarget = Quaternion.Inverse(targetData.Rotation) * (targetData.PivotLocation - cameraLocation);
+            float screenSize = Mathf.Tan(targetData.FieldOfView * 0.5f * Mathf.Deg2Rad) * localTarget.z;
+            Vector2 compositionOffset = ResolveCompositionOffset(
+                new Vector2(localTarget.x, localTarget.y),
+                delaySettings,
+                input.PixelWidth / (float)input.PixelHeight,
+                screenSize);
+            compositionOffset = Cinemachine.Utility.Damper.Damp(
+                compositionOffset,
+                new Vector3(delaySettings.CompositionDamping.x, delaySettings.CompositionDamping.y, 0f),
+                delta);
+            Vector3 localCameraToPivot = Quaternion.Inverse(targetData.Rotation) * targetData.CameraToPivot -
+                new Vector3(compositionOffset.x, compositionOffset.y, 0f);
+            Vector3 horizontalOffset = Vector3.ProjectOnPlane(offset, Vector3.up);
+            float minimumDistance = horizontalOffset.magnitude * Mathf.Max(0.2f, minimumDistanceRatio);
+            Vector3 actualTarget = Vector3.ProjectOnPlane(target.PivotLocation, Vector3.up);
+            Vector3 dampedTarget = Vector3.ProjectOnPlane(pivot, Vector3.up);
+            Vector3 cameraPosition = dampedTarget + horizontalOffset;
+            float distance = Vector3.Dot(actualTarget - cameraPosition, -horizontalOffset.normalized);
+            if (distance < minimumDistance)
+            {
+                Vector3 direction = actualTarget - dampedTarget;
+                float length = direction.magnitude;
+                direction = length < 0.01f
+                    ? -Vector3.ProjectOnPlane(target.Rotation * Vector3.forward, Vector3.up)
+                    : direction / length;
+                pivot += direction * (minimumDistance - distance);
+            }
+            CameraWorldBasicData framed = targetData.WithPivotLocation(pivot).WithOffset(
+                new Vector2(localCameraToPivot.x, localCameraToPivot.y));
+            m_Current = framed;
             return target.WithWorldBasicData(m_Current);
         }
 
-        void SetCurrent(CameraWorldBasicData data, bool resetVelocity)
+        internal static Vector2 ResolveCompositionOffset(
+            Vector2 targetPosition,
+            CameraDelayOrbitSettings settings,
+            float aspectRatio,
+            float screenSize)
         {
-            m_Current = data;
-            if (resetVelocity)
-            {
-                m_PivotVelocity = Vector3.zero;
-            }
-            m_Initialized = true;
+            Rect deadRect = ScreenRectToOrtho(new Rect(
+                settings.ScreenPosition.x - settings.DeadZone.x * 0.5f,
+                settings.ScreenPosition.y - settings.DeadZone.y * 0.5f,
+                settings.DeadZone.x,
+                settings.DeadZone.y), aspectRatio, screenSize);
+            Vector2 offset = OrthoOffsetToScreenRect(targetPosition, deadRect);
+
+            Vector2 softCenter = settings.ScreenPosition + Vector2.Scale(
+                settings.Bias, settings.SoftZone - settings.DeadZone);
+            Rect softRect = ScreenRectToOrtho(new Rect(
+                softCenter.x - settings.SoftZone.x * 0.5f,
+                softCenter.y - settings.SoftZone.y * 0.5f,
+                settings.SoftZone.x,
+                settings.SoftZone.y), aspectRatio, screenSize);
+            offset += OrthoOffsetToScreenRect(targetPosition - offset, softRect);
+            return offset;
         }
 
+        static Rect ScreenRectToOrtho(Rect screenRect, float aspectRatio, float screenSize)
+        {
+            Rect result = default;
+            result.yMax = 2f * screenSize * ((1f - screenRect.yMin) - 0.5f);
+            result.yMin = 2f * screenSize * ((1f - screenRect.yMax) - 0.5f);
+            result.xMin = 2f * screenSize * aspectRatio * (screenRect.xMin - 0.5f);
+            result.xMax = 2f * screenSize * aspectRatio * (screenRect.xMax - 0.5f);
+            return result;
+        }
+
+        static Vector2 OrthoOffsetToScreenRect(Vector2 position, Rect rect)
+        {
+            Vector2 offset = Vector2.zero;
+            if (position.x < rect.xMin)
+                offset.x += position.x - rect.xMin;
+            if (position.x > rect.xMax)
+                offset.x += position.x - rect.xMax;
+            if (position.y < rect.yMin)
+                offset.y += position.y - rect.yMin;
+            if (position.y > rect.yMax)
+                offset.y += position.y - rect.yMax;
+            return offset;
+        }
     }
 }

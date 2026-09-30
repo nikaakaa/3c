@@ -393,7 +393,7 @@
     },
     {
       "path": "follow-delay-authoring-compile-check.json",
-      "sha256": "f3e9abd1cd1a96a91b5f11b87e06910691ecdfba0d69b02816472eedd2bf3f32"
+      "sha256": "4de7947237f1eae14a5893a100115b5eef0740f4422f67c4c5f13f2a7c0c97a1"
     },
     {
       "path": "follow-delay-avatar-info-type.json",
@@ -902,6 +902,10 @@
     {
       "path": "zoom-update.json",
       "sha256": "9fd1cd2e224e12bdeb56dcc9dd076c2a5daa9696b3630520ee123745b7f93728"
+    },
+    {
+      "path": "stretch-follow-points-authoring-audit.json",
+      "sha256": "13c19d2ee9dcaa132fb279caadaedffcbcfdee65a7c2441ea3b9cb887ff534f4"
     }
   ]
 }

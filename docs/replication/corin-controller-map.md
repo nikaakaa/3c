@@ -9,9 +9,9 @@
 | NormalAttack | 12 | Control + Attack Ability + Timeline | 已收口：12状态进入正式 Attack FSM/Timeline；End/Explode/End_2 状态边界、Attack5EndBoundary 分支和状态本地 cue 已重建，`Attack_Normal_05_End_2` 绑 `Attack_Normal_05_B`。 |
 | BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
 | RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账并定链（2026-09-19）：采用与NormalAttack相同的Timeline Action playback链，不扩locomotion状态机；Pose侧Slot链已具备零新增，等待Timeline producer建链。 |
-| AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链；AssaultAid 只有 raw Motion。 |
+| AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 2026-09-29 复核：ParryAid、Counter、AssaultAid、BeHitAid 的 AttackProperty 已导入，但没有对应输入请求、Ability、FSM、Timeline 或命中执行链；AssaultAid 两个 Motion 仍是 raw-only。 |
 | EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 状态复用 Front/Back Motion，还没有完整 3C 链。 |
-| Switch | 11 | Control + Switch Ability | SwitchIn/SwitchOut 还没有正式 Control 请求与 Switch Ability。 |
+| Switch | 11 | Control + Switch Ability | 2026-09-29 复核：SwitchIn 普通/强化攻击的 AttackProperty 已导入，Motion 均有导出，但还没有 Switch 请求、Switch Ability、FSM、Timeline 和切人宿主路由。 |
 
 ## Motion 证据统计
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using BTSMTL.EventGraphs;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonGameplay.Tick;
@@ -23,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
         readonly CameraEffectEvaluator m_EffectEvaluator;
         readonly CameraEnvironmentConstraintSolver m_EnvironmentSolver;
-        readonly ICharacterPresentationLookInput m_Input;
+        readonly ICharacterPresentationInput m_Input;
         readonly string m_LookInputId;
         readonly Vector3 m_FollowBindPosition;
         readonly Vector3 m_AimBindPosition;
@@ -36,6 +37,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly List<ActiveCameraRequest> m_CandidateRequests;
         readonly CameraPresentationStopReason[] m_CandidateRetirements;
         readonly int m_RequestCapacity;
+        EventGraphVariableBinding m_IdleBinding;
+        EventGraphVariableBinding m_MoveBinding;
+        EventGraphVariableBinding m_EvadeBinding;
         bool m_FrameOpen;
         CameraSequenceRequest m_DefaultSequenceRequest;
         readonly CameraResponseRequest m_DefaultResponseRequest;
@@ -51,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationBodyState initialBody,
             Transform followAnchor,
             Transform aimAnchor,
-            ICharacterPresentationLookInput input,
+            ICharacterPresentationInput input,
             string lookInputId,
             PhysicsScene physicsScene,
             CharacterRootHierarchyBinding rootHierarchy,
@@ -152,7 +156,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     false,
                     true,
-                    CameraResetReason.Initialization);
+                    CameraResetReason.Initialization,
+                    CameraCharacterState.None,
+                    false);
+        }
+
+        internal void BindVariables(CharacterAnimationVariableContract contract)
+        {
+            m_IdleBinding = contract.Bind("camera.control.idle");
+            m_MoveBinding = contract.Bind("camera.control.move");
+            m_EvadeBinding = contract.Bind("camera.control.evade");
         }
 
         internal CameraBasisSnapshot BasisSnapshot => m_Rig.BasisSnapshot;
@@ -356,6 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [ThirdPersonPerformance.Instrumentation.PerformanceProbe("presentation.camera")]
         internal void Present(
             CharacterBodyPresentationFrame bodyFrame,
+            in CharacterAnimationVariableFrame variables,
             in GameplayPresentationFrameContext context)
         {
             RequireAlive();
@@ -375,6 +389,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CameraResetReason.None;
             m_PendingResetReason = CameraResetReason.None;
             m_LastBodyResetSequence = bodyFrame.ResetSequence;
+            CameraCharacterState characterState = CameraCharacterState.None;
+            if (variables.Require(m_IdleBinding).As<bool>()) characterState |= CameraCharacterState.Idle;
+            if (variables.Require(m_MoveBinding).As<bool>()) characterState |= CameraCharacterState.Move;
+            if (variables.Require(m_EvadeBinding).As<bool>()) characterState |= CameraCharacterState.Evade;
             Apply(
                 bodyFrame.VisiblePosition,
                 bodyFrame.VisibleRotation,
@@ -391,7 +409,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.HasLocalAvatarTimeScale,
                 context.Paused,
                 resetHistory,
-                resetReason);
+                resetReason,
+                characterState,
+                UnityEngine.Application.isFocused && m_Input.ReadLatchedVector2(m_Projection.Input.MoveInputId).sqrMagnitude > 0f);
         }
 
         public void Reset()
@@ -437,7 +457,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool localAvatarTimeScaleAvailable,
             bool paused,
             bool resetHistory,
-            CameraResetReason resetReason)
+            CameraResetReason resetReason,
+            CameraCharacterState characterState,
+            bool hasMoveInput)
         {
             Vector3 follow = position + rotation * m_FollowBindPosition;
             Vector3 aim = position + rotation * m_AimBindPosition;
@@ -510,12 +532,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resetHistory,
                 resetReason,
                 m_Targets,
-                m_Rig.PixelHeight);
+                m_Rig.PixelWidth,
+                m_Rig.PixelHeight,
+                characterState,
+                hasMoveInput);
             CameraResponseRequest response = m_ResponseResolver.Resolve(m_ResponseRequests);
+            m_EffectEvaluator.PrepareFrame(m_EffectRequests);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(
                 in frameInput,
                 in sequence,
-                in response);
+                in response,
+                m_EffectEvaluator);
             plan = m_EffectEvaluator.Resolve(plan, m_EffectRequests, in frameInput);
             for (int index = m_ActiveRequests.Count - 1; index >= 0; index--)
             {

@@ -326,6 +326,7 @@ namespace BTSMTL.EventGraphs
             return m_OutputBuffer.Publish(m_OutputContract, invocation, resetGeneration);
         }
 
+#if UNITY_EDITOR
         internal Node AddNodeNative(Type nodeType, Vector2 position) =>
             base.AddNode(nodeType, position);
 
@@ -356,6 +357,7 @@ namespace BTSMTL.EventGraphs
             foreach (Node node in allNodes.ToArray())
                 base.RemoveNode(node, false, false);
         }
+#endif
 
         void IGraphExecutionFailureSink.ReportExecutionFailure(
             Node node,

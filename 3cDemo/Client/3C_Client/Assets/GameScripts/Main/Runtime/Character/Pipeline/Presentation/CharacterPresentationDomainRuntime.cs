@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterPoseNativeDomainInstance m_PoseDomain;
         CharacterAnimationResourceScope m_PoseResourceScope;
         CharacterAnimationVariableFrame m_EventFrame;
+        ICommittedCharacterControlState m_ControlState;
         CharacterPresentationTrajectoryIntent m_Trajectory;
         CharacterLocomotionPresentationFactLineage m_LastLocomotionFactLineage;
         LocomotionPresentationFailureCode m_LocomotionFailureCode;
@@ -79,7 +80,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PresentationClockCoordinator = presentationClockCoordinator;
             m_EventGraph = new CharacterAnimationEventGraphHost(
                 presentationProfile.EventGraph,
-                actorId);
+                actorId,
+                m_Camera != null);
+            m_Camera?.BindVariables(m_EventGraph.VariableContract);
         }
 
         CharacterAnimationVariableContract m_PoseVariableContract;
@@ -161,6 +164,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseVariableContract = CharacterAnimationPoseInputFrame.BindContract(
                 m_EventGraph.VariableContract, poseParameterIds);
         }
+
+        public void CaptureControlState(ICommittedCharacterControlState state) => m_ControlState = state;
 
         public bool AcceptsTrajectoryIntent => true;
         public ulong BodyResetSequence => m_Body.ResetSequence;
@@ -377,6 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PresentationClockCoordinator?.Reset();
             m_EventFrame = default;
             m_Trajectory = default;
+            m_ControlState = null;
             m_LastLocomotionFactLineage = default;
             m_LocomotionFailureCode = LocomotionPresentationFailureCode.None;
             m_HasTrajectory = false;
@@ -439,14 +445,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
             m_PoseDomain?.Session.RequireAvailable();
+            PerformanceInstrumentationContextRuntime.BeginActor(
+                PerformanceInstrumentationIdentity.Hash64(m_ActorId.Value), 0, 0);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             m_PoseWriteMonitor.Invalidate();
 #endif
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
-            PerformanceInstrumentationContextRuntime.BeginActor(
-                PerformanceInstrumentationIdentity.Hash64(m_ActorId.Value), 0, 0);
             if (!bodyFrame.IsValid)
                 return;
             m_PresentationClockCoordinator?.BeginSamplingFrame();
@@ -467,6 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
                 CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                     in factFrame,
+                    m_ControlState,
                     Mathf.Max(0f, context.PresentationDeltaSeconds),
                     context.RenderFrame);
                 if (!update.Succeeded)
@@ -520,7 +527,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 phase = AnimationPresentationFramePhase.PresentationBridgeCommit;
                 m_TimelinePresentationBridge?.CommitFrame();
                 phase = AnimationPresentationFramePhase.CameraPresent;
-                m_Camera?.Present(bodyFrame, context);
+                m_Camera?.Present(bodyFrame, in m_EventFrame, context);
                 PublishCommittedPoseObservations(in publication, in bodyFrame, in factFrame, context, m_DiagnosticCommands);
             }
             catch (Exception exception)
@@ -545,6 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
                 try { m_PresentationClockCoordinator?.DiscardSamplingFrame(); }
                 catch (Exception cleanup) { CharacterPresentationCleanup.Record(ref failure, cleanup); }
+                PerformanceInstrumentationContextRuntime.EndActor();
                 if (failure != null)
                 {
                     if (publication.Status == CharacterPoseNativeFrameStatus.Committed)
@@ -552,7 +560,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         var fault = new AnimationPresentationFault(m_ActorId, context.RenderFrame,
                             bodyFrame.CurrentTick, phase, publication.Lineage.CompletionIdentity);
                         failure = m_PoseDomain.Session.RecordPresentationFault(in fault, failure);
-                PerformanceInstrumentationContextRuntime.EndActor();
                     }
 #if KK_DIAGNOSTIC_SAMPLING
                     Animation.Diagnostics.CharacterPoseCaptureFailure.Report(m_Diagnostics.CharacterRuntimeId,

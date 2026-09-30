@@ -206,13 +206,14 @@ namespace ThirdPersonSimulation
         public void BeginEvaluation(
             bool diagnosticsEnabled,
             bool captureValues,
-            bool captureControlFlow)
+            bool captureControlFlow,
+            bool captureBlackboard)
         {
             if (m_Begun)
                 throw new InvalidOperationException(
                     $"Float32 Ability invocation evaluation is already active for '{AbilityId}' " +
                     $"at tick '{m_Frame.Tick.Value}'.");
-            m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
+            m_Control.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow, captureBlackboard);
             m_Begun = true;
         }
 

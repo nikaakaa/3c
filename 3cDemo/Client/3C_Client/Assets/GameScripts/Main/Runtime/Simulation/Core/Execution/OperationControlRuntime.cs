@@ -369,6 +369,12 @@ namespace ThirdPersonSimulation
             return value.IsValid ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
         }
 
+        void IOperationCompositeRuntimeHost<TTarget>.EmitLoopTrace(OperationExecutionDescriptor operation, string code, string detail)
+        {
+            if (m_Target.DiagnosticsEnabled && !IsPredictiveEvaluation)
+                m_Target.EmitTrace(operation, code, OperationControlTraceSeverity.Detail, detail);
+        }
+
         OperationExecutionTopology IOperationCompositeRuntimeHost<TTarget>.Topology => m_Topology;
         int IOperationCompositeRuntimeHost<TTarget>.ReadInt32(int slotIndex) => m_Target.ReadInt32(slotIndex);
         void IOperationCompositeRuntimeHost<TTarget>.WriteInt32(int slotIndex, int value) => m_Target.WriteInt32(slotIndex, value);

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d33954432c14c1c8700431075b9438d, type: 3}
   m_Name: CorinGameplayPreviewProfile
   m_EditorClassIdentifier: 
-  m_Scene: {fileID: 102900000, guid: 7c268906406444dcbe943f04986321ba, type: 3}
+  m_AssemblyPrefab: {fileID: 5028718296176293229, guid: f4eddcb2acce52b4ba147128919dc1cc,
+    type: 3}
   m_ContextId: corin-gameplay-lab-fixed-local
   m_DefaultActorId: fixed-player

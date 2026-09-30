@@ -355,6 +355,18 @@ namespace ThirdPersonSimulation.Fixed
         public PortableCueTrigger Trigger { get; }
     }
 
+    internal sealed class PortableAttackCameraShakeComponent : PortableEffectComponent
+    {
+        public PortableAttackCameraShakeComponent(string resourceId, bool shakeOnNotHit)
+        {
+            ResourceId = resourceId;
+            ShakeOnNotHit = shakeOnNotHit;
+        }
+
+        public string ResourceId { get; }
+        public bool ShakeOnNotHit { get; }
+    }
+
     internal sealed class PortableAttackCollisionComponent : PortableEffectComponent
     {
         public PortableAttackCollisionComponent(
@@ -885,6 +897,10 @@ namespace ThirdPersonSimulation.Fixed
                     }
                     result[i] = new PortableAdditionalEffectsComponent(effects);
                 }
+                else if (type.EndsWith(".GameplayAttackCameraShakeComponentDefinition", StringComparison.Ordinal))
+                {
+                    result[i] = new PortableAttackCameraShakeComponent(reader.ReadString(), reader.ReadBoolean());
+                }
                 else if (type.EndsWith(".GameplayAttackCollisionComponentDefinition", StringComparison.Ordinal))
                 {
                     result[i] = new PortableAttackCollisionComponent(
@@ -1042,6 +1058,7 @@ namespace ThirdPersonSimulation.Fixed
                     }
                     break;
                 case PortableAttackCollisionComponent:
+                case PortableAttackCameraShakeComponent:
                     break;
                 case PortableAttackPropertyComponent attackComponent:
                     for (int i = 0; i < attackComponent.CombatTags.Length; i++)

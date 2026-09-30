@@ -2,6 +2,7 @@ import argparse
 import collections
 import json
 import re
+import struct
 from pathlib import Path
 
 from recover_zzz_shader import compile_hlsl, disassemble, sha256, write_json
@@ -27,6 +28,15 @@ def vector(values, scalar="uint"):
 
 
 def destination(operand):
+    if operand.startswith("[precise]"):
+        operand = operand.replace("[precise]", "", 1).strip()
+    if operand.startswith("[precise("):
+        match = re.match(r"\[precise\(([xyzw]+)\)\]\s+(.+)", operand)
+        if match:
+            operand = match[2]
+    match = re.fullmatch(r"(x\d+)\[(\d+|r\d+(?:\.\w+)? \+ \d+)\]\.([xyzw]+)", operand)
+    if match:
+        return f"{match[1]}[{match[2]}]", match[3]
     match = re.fullmatch(r"(r\d+|o\d+|u\d+)\.([xyzw]+)", operand)
     if not match:
         raise ValueError(f"Unsupported destination: {operand}")
@@ -65,20 +75,32 @@ def raw_source(operand, lanes, integer_modifiers=False):
         operand = operand[1:-1]
     if operand.startswith("l("):
         values = operands(operand[2:-1])
-        if any(not re.fullmatch(r"0x[0-9a-f]{8}", value) for value in values):
-            raise ValueError("Exact hexadecimal literals are required")
-        selected = [values[0 if len(values) == 1 else LANES.index(lane)] + "u" for lane in lanes]
+        def to_uint(value):
+            if re.fullmatch(r"0x[0-9a-f]{8}", value):
+                return value + "u"
+            try:
+                return str(struct.unpack("<I", struct.pack("<f", float(value)))[0]) + "u"
+            except (ValueError, OverflowError):
+                return "0u"
+        selected = [to_uint(values[0 if len(values) == 1 else LANES.index(lane)]) for lane in lanes]
         result = vector(selected)
     else:
-        match = re.fullmatch(r"(r\d+|v\d+|vThreadID|(?:cb\d+|icb)\[[^\]]+\])(?:\.([xyzw]+))?", operand)
-        if not match:
-            raise ValueError(f"Unsupported source: {operand}")
-        register, swizzle = match[1], match[2] or LANES
-        swizzle = swizzle * 4 if len(swizzle) == 1 else swizzle
-        register = register.replace(" ", "")
-        result = register + "." + "".join(swizzle[LANES.index(lane)] for lane in lanes)
-        if register.startswith("cb"):
-            result = f"asuint({result})"
+        match = re.fullmatch(r"(x\d+)\[(\d+|r\d+(?:\.\w+)? \+ \d+)\](?:\.([xyzw]+))?", operand)
+        if match:
+            reg_expr = f"{match[1]}[{match[2]}]"
+            swizzle = match[3] or LANES
+            swizzle = swizzle * 4 if len(swizzle) == 1 else swizzle
+            result = reg_expr + "." + "".join(swizzle[LANES.index(lane)] for lane in lanes)
+        else:
+            match = re.fullmatch(r"(r\d+|v\d+|vThreadID|(?:cb\d+|icb)\[[^\]]+\])(?:\.([xyzw]+))?", operand)
+            if not match:
+                raise ValueError(f"Unsupported source: {operand}")
+            register, swizzle = match[1], match[2] or LANES
+            swizzle = swizzle * 4 if len(swizzle) == 1 else swizzle
+            register = register.replace(" ", "")
+            result = register + "." + "".join(swizzle[LANES.index(lane)] for lane in lanes)
+            if register.startswith("cb"):
+                result = f"asuint({result})"
     if absolute:
         result = f"asuint(abs(asint({result})))" if integer_modifiers else f"({result} & 0x7fffffffu)"
     if negative:
@@ -124,6 +146,7 @@ def translate(assembly):
         declarations.append(f"static const uint4 icb[{len(vectors)}] = {{ {', '.join(vectors)} }};")
         assembly = assembly[:immediate.start()] + assembly[immediate.end():]
     threads, temps, indent = None, 0, 1
+    indexable_temps = {}
 
     def emit(text):
         emitted.append("    " * indent + text)
@@ -164,7 +187,13 @@ def translate(assembly):
                 threads = tuple(map(int, match.groups()))
             elif match := re.fullmatch(r"dcl_temps (\d+)", line):
                 temps = int(match[1])
-            elif not compute and re.fullmatch(r"dcl_(?:input(?:_ps)?(?:_s[ig]v)?|output(?:_siv)?) (?:(?:linear(?: noperspective)?|constant) )?[vo]\d+\.[xyzw]+(?:, \w+)?", line):
+            elif match := re.fullmatch(r"dcl_indexableTemp x(\d+)\[(\d+)\], (\d+)", line):
+                name, size, stride = f"x{match[1]}", int(match[2]), int(match[3])
+                if stride not in (1, 2, 3, 4):
+                    raise ValueError(f"Unsupported indexable temp stride: {stride}")
+                indexable_temps[name] = size
+                declarations.append(f"static uint{stride} {name}[{size}];")
+            elif not compute and re.fullmatch(r"dcl_(?:input(?:_ps)?(?:_s[ig]v)?|output(?:_siv)?) (?:linear(?: noperspective)?(?: centroid)?|linear centroid|constant|centroid)?\s?[vo]\d+\.[xyzw]+(?:, \w+)?", line):
                 pass
             elif line not in ("dcl_globalFlags refactoringAllowed", "dcl_input vThreadID.x"):
                 raise ValueError(f"Unsupported declaration: {line}")
@@ -251,6 +280,10 @@ def translate(assembly):
                     _, lanes = destination(target)
                     assign(target, f"{function}(asfloat({temporary}.{lanes}))", "float")
         else:
+            if not args:
+                records.append({"assembly_line": number, "instruction": line,
+                                "body_first_line": len(emitted) + 1, "body_line_count": 0})
+                continue
             if op == "imul":
                 if args[0] != "null":
                     raise ValueError("High-product destination is not supported")
@@ -271,8 +304,8 @@ def translate(assembly):
                 expression, kind = f"({floats[0]} {symbol} {floats[1]})", "float"
             elif op == "mad":
                 expression, kind = f"mad({', '.join(floats)})", "float"
-            elif op in ("min", "max", "sqrt", "rsq", "rcp", "frc", "exp", "log", "round_ni", "round_z"):
-                function = {"rsq": "rsqrt", "frc": "frac", "exp": "exp2", "log": "log2",
+            elif op in ("min", "max", "sqrt", "sqr", "rsq", "rcp", "frc", "exp", "log", "round_ni", "round_z"):
+                function = {"rsq": "rsqrt", "sqr": "sqrt", "frc": "frac", "exp": "exp2", "log": "log2",
                             "round_ni": "floor", "round_z": "trunc"}.get(op, op)
                 expression, kind = f"{function}({', '.join(floats)})", "float"
             elif op in ("dp2", "dp3", "dp4"):
@@ -290,9 +323,13 @@ def translate(assembly):
                 expression = f"({unsigned[0]} >> ({unsigned[1]} & 31u))"
             elif op in ("imin", "imax"):
                 expression, kind = f"{op[1:]}({', '.join(signed)})", "int"
-            elif op in ("lt", "ge", "eq", "ne", "ilt", "ige", "ieq", "ult"):
+            elif op in ("umin", "umax"):
+                expression = f"{op[1:]}({', '.join(unsigned)})"
+            elif op in ("lt", "ge", "eq", "ne", "ilt", "ige", "ieq", "ult", "uge"):
                 values = signed if op.startswith("i") else unsigned if op.startswith("u") else floats
-                symbol = {"lt": "<", "ge": ">=", "eq": "==", "ne": "!="}[op[-2:]]
+                symbol = {"lt": "<", "ge": ">=", "eq": "==", "ne": "!=",
+                          "lt": "<", "ge": ">=", "eq": "==", "ne": "!=",
+                          "ult": "<", "uge": ">="}[op]
                 expression = f"(({values[0]} {symbol} {values[1]}) ? 0xffffffffu : 0u)"
             elif op in ("ftou", "ftoi", "itof", "utof"):
                 vector_type = {"ftou": "uint", "ftoi": "int", "itof": "float", "utof": "float"}[op]

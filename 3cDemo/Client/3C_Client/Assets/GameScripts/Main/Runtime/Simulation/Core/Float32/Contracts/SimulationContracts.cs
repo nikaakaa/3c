@@ -798,6 +798,22 @@ namespace ThirdPersonSimulation
         public AbilityStateValue Value { get; }
     }
 
+    public readonly struct SimulationBlackboardTrace
+    {
+        public SimulationBlackboardTrace(int stateSlot, AbilityStateValue value, BlackboardOwnerToken owner, ProgramBlackboardLifetime lifetime)
+        {
+            StateSlot = stateSlot;
+            Value = value;
+            Owner = owner;
+            Lifetime = lifetime;
+        }
+
+        public int StateSlot { get; }
+        public AbilityStateValue Value { get; }
+        public BlackboardOwnerToken Owner { get; }
+        public ProgramBlackboardLifetime Lifetime { get; }
+    }
+
     public readonly struct SimulationTraceRecord
     {
         public SimulationTraceRecord(
@@ -821,7 +837,9 @@ namespace ThirdPersonSimulation
             int timelineCycle = 0,
             string actionId = "",
             ulong inputSequence = 0,
-            SimulationActionResultKind actionResult = SimulationActionResultKind.None)
+            SimulationActionResultKind actionResult = SimulationActionResultKind.None,
+            int loopIteration = 0,
+            SimulationBlackboardTrace? blackboardTrace = null)
         {
             Header = header;
             Severity = severity;
@@ -844,6 +862,8 @@ namespace ThirdPersonSimulation
             ActionId = actionId ?? string.Empty;
             InputSequence = inputSequence;
             ActionResult = actionResult;
+            LoopIteration = loopIteration;
+            BlackboardTrace = blackboardTrace;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -866,5 +886,7 @@ namespace ThirdPersonSimulation
         public string ActionId { get; }
         public ulong InputSequence { get; }
         public SimulationActionResultKind ActionResult { get; }
+        public int LoopIteration { get; }
+        public SimulationBlackboardTrace? BlackboardTrace { get; }
     }
 }

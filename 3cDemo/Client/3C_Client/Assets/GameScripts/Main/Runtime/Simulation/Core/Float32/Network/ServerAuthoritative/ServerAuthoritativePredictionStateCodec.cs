@@ -226,7 +226,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static void WriteObservedFrame(CanonicalWriter writer, ObservedWorldConstraintFrame frame)
         {
             writer.WriteUInt64(frame.Tick.Value);
-            writer.WriteString(frame.FrameHash.Value);
+            writer.WriteHash(frame.FrameHash);
             writer.WriteInt32(frame.Constraints.Count);
             for (int i = 0; i < frame.Constraints.Count; i++)
             {
@@ -238,7 +238,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteUInt64(value.SourcePreviousTick.Value);
                 writer.WriteUInt64(value.SourceCurrentTick.Value);
                 writer.WriteByte((byte)value.SamplingKind);
-                writer.WriteString(value.ContactShapeConfigurationHash.Value);
+                writer.WriteHash(value.ContactShapeConfigurationHash);
             }
         }
 
@@ -314,11 +314,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(snapshot.Pipeline.Id.Value);
             writer.WriteString(snapshot.Pipeline.Revision.Value);
             writer.WriteInt32(snapshot.Pipeline.SchemaVersion.Value);
-            writer.WriteString(snapshot.Pipeline.Hash.ToString());
+            writer.WriteHash(snapshot.Pipeline.Hash);
             writer.WriteByte((byte)snapshot.Backend.Role);
             writer.WriteString(snapshot.Backend.ComponentId);
             writer.WriteString(snapshot.Backend.SemanticVersion);
-            writer.WriteString(snapshot.Backend.ConfigurationHash.ToString());
+            writer.WriteHash(snapshot.Backend.ConfigurationHash);
             writer.WriteUInt64(snapshot.LastCompletedTick);
             writer.WriteInt32(snapshot.Participants.Count);
             for (int i = 0; i < snapshot.Participants.Count; i++)
@@ -329,7 +329,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteString(participant.StateOwner);
                 writer.WriteString(participant.StateSchemaId);
                 writer.WriteInt32(participant.StateSchemaVersion);
-                writer.WriteString(participant.StateHash.ToString());
+                writer.WriteHash(participant.StateHash);
                 writer.WriteBytes(participant.Payload.Span);
             }
             return writer.ToArray();

@@ -14,7 +14,6 @@ namespace BTSMTL.Timeline.Runtime
         bool m_Disposed;
 
         public TimelineRuntimeCompositionHost(
-            TimelineContractCatalog contractCatalog,
             TimelineRuntimeNumericTarget numericTarget,
             ITimelineRuntimeCallBindingSource callBindingSource,
             ITimelineDomainBindingResolver domainResolver,
@@ -42,7 +41,6 @@ namespace BTSMTL.Timeline.Runtime
             var fanout = new TimelineRuntimeEvaluationFanout(
                 new ReadOnlyCollection<ITimelineRuntimeEvaluationSink>(sinks));
             m_Composition = new TimelineRuntimeComposition(
-                contractCatalog,
                 numericTarget,
                 callBindingSource,
                 domainResolver,
@@ -59,6 +57,14 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeComposition Composition => m_Composition;
         public TimelineRuntimeService Service => m_Composition.Service;
         public string LastFailure => Service.LastFailure;
+
+        public void InstallContent(TimelineData timeline, TimelineContentUnit content)
+        {
+            TimelineRuntimePreparedContent prepared = Service.InstallContent(timeline, content);
+            m_PresentationDriver.Prepare(prepared, TimelinePlaybackMode.Once);
+            m_PresentationDriver.Prepare(prepared, TimelinePlaybackMode.Loop);
+            m_PresentationDriver.Prepare(prepared, TimelinePlaybackMode.HoldLastFrame);
+        }
 
         public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged
         {
@@ -138,16 +144,14 @@ namespace BTSMTL.Timeline.Runtime
             string requestId,
             TimelineData timeline,
             TimelineExecutionIdentity executionIdentity,
-            TimelinePlaybackMode playbackMode,
-            IEnumerable<TimelineCallBinding> callBindings)
+            TimelinePlaybackMode playbackMode)
         {
             EnsureAvailable();
             return m_Composition.Prepare(
                 requestId,
                 timeline,
                 executionIdentity,
-                playbackMode,
-                callBindings);
+                playbackMode);
         }
 
         public TimelineRuntimePlaybackHandle CreatePlayback(

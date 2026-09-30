@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString("server-authoritative-network-checkpoint-layout");
             writer.WriteInt32(SchemaVersion);
             writer.WriteString(Float32CharacterRuntimeStateCodec.CodecIdentity);
-            writer.WriteString(characterRuntime.GameplayContentHash.ToString());
+            writer.WriteHash(characterRuntime.GameplayContentHash);
             writer.WriteString(characterRuntime.NumericProfile.Id.Value);
             writer.WriteInt32(characterRuntime.NumericProfile.AbiVersion.Value);
             writer.WriteString(characterRuntime.OperationSetVersion.Value);
@@ -25,13 +25,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 SimulationActorBinding actor = characterRuntime.Roster[i];
                 writer.WriteString(actor.ActorId.Value);
-                writer.WriteString(actor.GameplayContentHash.ToString());
+                writer.WriteHash(actor.GameplayContentHash);
                 for (int abilityIndex = 0; abilityIndex < actor.AbilityInstallations.Installations.Count; abilityIndex++)
                 {
                     Float32GameplayAbilityExecutionData ability = actor.AbilityInstallations.Installations[abilityIndex].Data;
                     writer.WriteString(ability.AbilityId.Value);
-                    writer.WriteString(ability.ContentHash.ToString());
-                    writer.WriteString(ability.StateSchemaHash.ToString());
+                    writer.WriteHash(ability.ContentHash);
+                    writer.WriteHash(ability.StateSchemaHash);
                 }
             }
             LayoutIdentity = writer.ComputeHash();
@@ -155,10 +155,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString("server-authoritative-network-checkpoint/14");
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
-            writer.WriteString(baseline.GameplayContentHash.ToString());
+            writer.WriteHash(baseline.GameplayContentHash);
             writer.WriteString(baseline.StateCodecIdentity);
-            writer.WriteString(baseline.StateHash.ToString());
-            writer.WriteString(baseline.BodyHash.ToString());
+            writer.WriteHash(baseline.StateHash);
+            writer.WriteHash(baseline.BodyHash);
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
             writer.WriteUInt64(baseline.ConfirmedEventHorizon.Sequence);
             writer.WriteBytes(stateBytes);
@@ -193,11 +193,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteUInt32(FullMagic);
             writer.WriteInt32(FullVersion);
             writer.WriteString(layout.LayoutIdentity.ToString());
-            writer.WriteString(baseline.GameplayContentHash.ToString());
+            writer.WriteHash(baseline.GameplayContentHash);
             writer.WriteString(baseline.StateCodecIdentity);
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
-            writer.WriteString(baseline.StateHash.ToString());
+            writer.WriteHash(baseline.StateHash);
             writer.WriteString(baseline.WorldRevision.Value);
             writer.WriteString(baseline.SolverId.Value);
             writer.WriteString(baseline.SolverVersion);
@@ -206,7 +206,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
             WriteHorizon(writer, baseline.ConfirmedEventHorizon);
             writer.WriteBytes(checkpoint.StateSpan);
-            writer.WriteString(checkpoint.CheckpointHash.ToString());
+            writer.WriteHash(checkpoint.CheckpointHash);
             return writer.ToArray();
         }
 
@@ -272,12 +272,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteUInt32(DeltaMagic);
             writer.WriteInt32(DeltaVersion);
             writer.WriteString(layout.LayoutIdentity.ToString());
-            writer.WriteString(baseline.CheckpointHash.ToString());
-            writer.WriteString(value.GameplayContentHash.ToString());
+            writer.WriteHash(baseline.CheckpointHash);
+            writer.WriteHash(value.GameplayContentHash);
             writer.WriteString(value.StateCodecIdentity);
             writer.WriteString(value.ActorId.Value);
             writer.WriteUInt64(value.AuthorityTick.Value);
-            writer.WriteString(value.StateHash.ToString());
+            writer.WriteHash(value.StateHash);
             writer.WriteString(value.WorldRevision.Value);
             writer.WriteString(value.SolverId.Value);
             writer.WriteString(value.SolverVersion);
@@ -291,7 +291,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (stateChanged)
                 writer.WriteBytes(targetState);
             WriteCompactRemote(writer, layout, value.AuthorityTick, remote);
-            writer.WriteString(target.CheckpointHash.ToString());
+            writer.WriteHash(target.CheckpointHash);
             return writer.ToArray();
         }
 

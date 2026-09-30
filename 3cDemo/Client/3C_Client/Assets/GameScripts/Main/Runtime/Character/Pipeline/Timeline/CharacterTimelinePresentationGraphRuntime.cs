@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     internal sealed class CharacterTimelinePresentationGraphRuntime : IFloat32PresentationGraphOutput
     {
-        readonly List<Float32PresentationGraphRuntime> m_PresentationGraphs = new();
+        readonly List<(Float32PresentationGraphRuntime Runtime, IDebugSourceMap SourceMap)> m_PresentationGraphs = new();
         Float32PresentationGraphFacts m_PresentationFacts;
         TimelineRuntimePresentationFrame m_GraphFrame;
         string m_GraphCaller;
@@ -37,8 +38,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     continue;
                 var runtime = new Float32PresentationGraphRuntime(data);
                 m_DependencyResolver.InstallGraphSources(data.SourceMap, true);
-                m_PresentationGraphs.Add(runtime);
+                string contentHash = data.ContentHash.ToString();
+                var sourceMap = new DebugSourceMap(new RuntimeContentRevision(
+                    $"float32-presentation/{data.AbilityId.Value}", contentHash, contentHash));
+                AbilityDebugSourceMapFiller.Fill(sourceMap, 0, data.SourceMap);
+                m_PresentationGraphs.Add((runtime, sourceMap));
             }
+        }
+
+        internal void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
+        {
+            for (int i = 0; i < m_PresentationGraphs.Count; i++)
+                diagnostics.RegisterSourceMap(m_PresentationGraphs[i].SourceMap);
         }
 
         internal void Execute(in RuntimeTimelinePlaybackProvenance provenance,
@@ -94,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int binding = -1;
             for (int index = 0; index < m_PresentationGraphs.Count; index++)
             {
-                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index];
+                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index].Runtime;
                 if (!runtime.TryBind(provenance.SourceInvocationPath, provenance.SourceNodeAuthoringId,
                     m_GraphCaller, graphId, revision, kind, hook, out int candidate))
                     continue;

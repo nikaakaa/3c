@@ -31,16 +31,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             else
             {
                 RuntimeDebugSession session = RuntimeDebugSession.Shared;
-                if (Application.isPlaying && (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != hostInstanceId))
+                if (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != hostInstanceId)
                     session.AttachToHost(hostInstanceId);
                 IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
                 foreach (BtsmtlSkillFlowGraph graph in roots.Where(value => value))
                 {
                     string prefix = Label(graph.name) + " [" + graph.AuthoringId + "]/";
-                    if (!Application.isPlaying)
-                        menu.AddItem(new GUIContent(prefix + "编辑技能图"), false, () =>
-                            RuntimeDebugSourceNavigator.Open(definition, RuntimeSourceElementKey.Graph(graph.AuthoringId)));
-                    else if (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != hostInstanceId)
+                    menu.AddItem(new GUIContent(prefix + "编辑技能图"), false, () =>
+                        RuntimeDebugSourceNavigator.Open(definition, RuntimeSourceElementKey.Graph(graph.AuthoringId)));
+                    if (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != hostInstanceId)
                         menu.AddDisabledItem(new GUIContent(prefix + "当前角色尚未注册运行诊断"));
                     else
                         AddInstances(menu, prefix, definition, graph, session, session.ViewModel.Target.CharacterRuntimeId, default);

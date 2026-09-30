@@ -69,14 +69,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal sealed class CharacterFixedInputRuntimeTraceCapture : IDisposable
     {
-        internal const string Schema = "character-fixed-input-runtime-trace-evidence/2";
+        internal const string Schema = "character-fixed-input-runtime-trace-evidence/3";
         const float TimeTolerance = 0.0001f;
         static readonly byte[] s_FieldSeparator = { 0 };
 
         readonly RuntimeDiagnosticsStore m_Store;
+        readonly List<RuntimeCaptureChange> m_Changes;
         readonly Guid m_CaptureId;
         readonly string m_TraceId;
-        readonly IDebugSourceMap m_SourceMap;
+        readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly string m_CaptureKind;
         string m_InputTracePath;
         readonly string m_StartupPath;
@@ -92,12 +93,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         CharacterFixedInputRuntimeTraceCapture(
             RuntimeDiagnosticsStore store,
-            Guid captureId, string traceId, IDebugSourceMap sourceMap, string captureKind, string inputTracePath)
+            Guid captureId, string traceId, RuntimeDiagnosticsContext diagnostics, string captureKind, string inputTracePath)
         {
             m_Store = store;
+            m_Changes = new List<RuntimeCaptureChange>(store.CaptureEventCapacity);
             m_CaptureId = captureId;
             m_TraceId = traceId;
-            m_SourceMap = sourceMap;
+            m_Diagnostics = diagnostics;
             m_CaptureKind = captureKind;
             m_InputTracePath = inputTracePath;
             m_StartupPath = CharacterInputStartupCapture.Path;
@@ -133,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Fixed input replay Runtime Diagnostics capture did not start.");
             }
-            return new CharacterFixedInputRuntimeTraceCapture(store, captureId, traceId, target.SourceMap, captureKind, inputTracePath);
+            return new CharacterFixedInputRuntimeTraceCapture(store, captureId, traceId, target.Context, captureKind, inputTracePath);
         }
 
         internal void BindSampling()
@@ -161,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (m_Finished)
                 return;
-            RuntimeCaptureRead read = m_Store.ReadCaptureSince(m_Cursor);
+            RuntimeCaptureRead read = m_Store.CopyCaptureSince(m_CaptureId, m_Cursor, m_Changes);
             if (read.RequiresFullSync)
                 m_StreamComplete = false;
             for (int i = 0; i < read.Changes.Count; i++)
@@ -228,9 +230,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using (var writer = new StreamWriter(evidence.events_path, false, new UTF8Encoding(false)))
                 for (int index = 0; index < m_Events.Count; index++)
                     writer.WriteLine(JsonConvert.SerializeObject(m_Events[index], settings));
+            var sourceMaps = new List<object>(m_Diagnostics.SourceMaps.Count);
+            foreach (IDebugSourceMap sourceMap in m_Diagnostics.SourceMaps)
+                sourceMaps.Add(new { sourceMap.Revision, sourceMap.Entries, sourceMap.GraphInvocations });
             File.WriteAllText(evidence.source_map_path, JsonConvert.SerializeObject(new
             {
-                m_SourceMap.Revision, m_SourceMap.Entries, m_SourceMap.GraphInvocations
+                schema = "runtime-debug-source-map-catalog/1",
+                maps = sourceMaps
             }, Formatting.Indented, settings), new UTF8Encoding(false));
             File.WriteAllText(evidence.summary_path, JsonConvert.SerializeObject(evidence, Formatting.Indented), new UTF8Encoding(false));
             return evidence;
@@ -485,6 +491,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, payload.Weight.ToString("R", CultureInfo.InvariantCulture));
             AppendHash(hash, payload.Priority.ToString(CultureInfo.InvariantCulture));
             AppendHash(hash, payload.Cycle.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.LoopIteration.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardStateSlot.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardScope.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardOwnerIndex.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardOwnerGeneration.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardLifetime.ToString(CultureInfo.InvariantCulture));
+            AppendHash(hash, payload.BlackboardIsActive ? "1" : "0");
             AppendHash(hash, payload.Flag.ToString());
             AppendHash(hash, payload.Detail);
             AppendHash(hash, payload.StartTick.ToString(CultureInfo.InvariantCulture));

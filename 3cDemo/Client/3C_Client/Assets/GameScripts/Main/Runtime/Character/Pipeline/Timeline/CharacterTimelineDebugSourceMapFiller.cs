@@ -29,7 +29,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
             timeline.Init();
-            string contentHash = TimelineAuthoringFingerprint.Compute(timeline);
+            Fill(sourceMap, timeline, TimelineAuthoringFingerprint.Compute(timeline));
+        }
+
+        internal static void Fill(DebugSourceMap sourceMap, TimelineData timeline, string contentHash)
+        {
             RuntimeSourceElementHandle timelineHandle = sourceMap.Add(
                 RuntimeSourceElementKey.Timeline(timeline.AuthoringId),
                 RuntimeSourceElementHandle.Invalid,

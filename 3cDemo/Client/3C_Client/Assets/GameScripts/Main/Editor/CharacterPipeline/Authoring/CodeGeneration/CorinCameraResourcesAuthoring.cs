@@ -271,6 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Vector2 processorScale = new Vector2((float)snapshot["action"]["processor_scale"]["x"],
                 (float)snapshot["action"]["processor_scale"]["y"]);
             Undo.RecordObject(profile, "从解包和829玩家配置导入相机输入轴");
+            profile.Input.ConfigureMovementInput("MoveAxis");
             profile.Input.ConfigureAxes(
                 new Vector2((float)x["m_MaxSpeed"], (float)y["m_MaxSpeed"]),
                 new Vector2((float)x["m_AccelTime"], (float)y["m_AccelTime"]),

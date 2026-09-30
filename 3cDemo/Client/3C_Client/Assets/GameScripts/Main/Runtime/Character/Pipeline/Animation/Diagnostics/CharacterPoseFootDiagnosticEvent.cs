@@ -28,8 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in AnimationFootMotionRuntimeSample leftFormalOutput,
             in AnimationFootMotionRuntimeSample rightFormalOutput)
         {
-            CharacterFootLandingPredictionDiagnostics landing =
-                constraints.CommittedFootLandingPrediction;
+            ref readonly CharacterFootLandingPredictionDiagnostics landing =
+                ref constraints.CommittedFootLandingPrediction;
             if (!landing.IsCompleted ||
                 landing.FrameSequence != frame.PresentationFrame ||
                 landing.CompletionIdentity != frame.CompletionIdentity)

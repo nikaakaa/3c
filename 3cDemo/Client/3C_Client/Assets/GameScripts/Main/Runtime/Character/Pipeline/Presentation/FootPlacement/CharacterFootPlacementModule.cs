@@ -721,12 +721,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Rig.VisualRoot.GetInstanceID(),
                     m_Settings.ProfileId,
                     m_Settings.ProfileRevision,
-                    inputDiagnostics,
+                    in inputDiagnostics,
                     in primarySupportDiagnostics,
                     pelvisGoal,
                     in strideDiagnostics,
-                    leftDiagnostics,
-                    rightDiagnostics);
+                    in leftDiagnostics,
+                    in rightDiagnostics);
                 bank.Diagnostics.Set(in diagnostics);
             }
             return new CharacterFootPlacementResult(
@@ -754,21 +754,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new InvalidOperationException(
                     "Foot Placement pending completion identity is inconsistent.");
-            }
-        }
-
-        internal void PublishCommittedDiagnostics(CharacterFootPlacementBank bank)
-        {
-            if (bank == null || !bank.Diagnostics.HasValue)
-                return;
-            try
-            {
-                CharacterFootLandingPredictionDebugRegistry.Publish(
-                    in bank.Diagnostics.Value);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
             }
         }
 
@@ -808,8 +793,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightLandingObservation.Reset();
             m_LeftCurrentSupport.Reset();
             m_RightCurrentSupport.Reset();
-            CharacterFootLandingPredictionDebugRegistry.Remove(
-                m_Rig.VisualRoot.GetInstanceID());
         }
 
         internal void RetargetShared(ulong resetSequence)
@@ -823,8 +806,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RightLandingObservation.Reset();
             m_LeftCurrentSupport.Reset();
             m_RightCurrentSupport.Reset();
-            CharacterFootLandingPredictionDebugRegistry.Remove(
-                m_Rig.VisualRoot.GetInstanceID());
         }
 
         internal string ValidateTuningCandidate(
@@ -1528,8 +1509,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            CharacterFootLandingPredictionDebugRegistry.Remove(
-                m_Rig.VisualRoot.GetInstanceID());
             m_LeftGroundPath.Reset();
             m_RightGroundPath.Reset();
             m_LeftLandingObservation.Reset();

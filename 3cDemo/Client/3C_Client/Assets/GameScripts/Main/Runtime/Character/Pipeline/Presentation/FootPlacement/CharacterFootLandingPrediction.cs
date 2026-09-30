@@ -1303,12 +1303,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int rootInstanceId,
             string profileId,
             string profileRevision,
-            CharacterFootLandingPredictionInputDiagnostics input,
+            in CharacterFootLandingPredictionInputDiagnostics input,
             in CharacterFootPrimarySupportDiagnostics primarySupport,
             CharacterFullBodyIkGoal pelvisGoal,
             in CharacterFootStrideHipsDiagnostics strideHips,
-            CharacterFootLandingPredictionFootDiagnostics left,
-            CharacterFootLandingPredictionFootDiagnostics right)
+            in CharacterFootLandingPredictionFootDiagnostics left,
+            in CharacterFootLandingPredictionFootDiagnostics right)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
@@ -1336,40 +1336,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootLandingPredictionFootDiagnostics Right { get; }
         public bool IsCompleted => FrameSequence != 0 && CompletionIdentity != 0 &&
             RootInstanceId != 0 && PelvisGoal.IsValid && Left.Goal.IsValid && Right.Goal.IsValid;
-    }
-
-    internal delegate void CharacterFootLandingPredictionPublishedHandler(
-        in CharacterFootLandingPredictionDiagnostics diagnostics);
-
-    internal static class CharacterFootLandingPredictionDebugRegistry
-    {
-        static readonly Dictionary<int, CharacterFootLandingPredictionDiagnostics> s_ByRoot =
-            new Dictionary<int, CharacterFootLandingPredictionDiagnostics>();
-
-        internal static event CharacterFootLandingPredictionPublishedHandler Published;
-
-        internal static void Publish(in CharacterFootLandingPredictionDiagnostics diagnostics)
-        {
-            if (!diagnostics.IsCompleted)
-                return;
-            s_ByRoot[diagnostics.RootInstanceId] = diagnostics;
-            CharacterFootLandingPredictionPublishedHandler published = Published;
-            try
-            {
-                published?.Invoke(in diagnostics);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
-            }
-        }
-
-        internal static bool TryGet(
-            int rootInstanceId,
-            out CharacterFootLandingPredictionDiagnostics diagnostics) =>
-            s_ByRoot.TryGetValue(rootInstanceId, out diagnostics);
-
-        internal static void Remove(int rootInstanceId) => s_ByRoot.Remove(rootInstanceId);
     }
 
     internal static class CharacterFootLandingPredictor

@@ -150,8 +150,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_HasTuningCandidate;
         bool m_HasCommitted;
         internal bool CaptureDiagnostics { get; set; }
-        internal CharacterFootLandingPredictionDiagnostics CommittedFootLandingPrediction =>
-            m_Committed.FootPlacement.Diagnostics.Value;
+        internal ref readonly CharacterFootLandingPredictionDiagnostics CommittedFootLandingPrediction =>
+            ref m_Committed.FootPlacement.Diagnostics.Value;
         internal CharacterFullBodyIkSolverDiagnostics CommittedFullBodyIkSolver => m_Solver.Diagnostics;
         internal int CommittedSolverEffectorCount => m_Solver.DiagnosticEffectorCount;
         internal int CommittedSolverLimbCount => m_Solver.DiagnosticLimbCount;
@@ -658,8 +658,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Pending = null;
             m_PendingResult = default;
             m_HasPending = false;
-            m_FootPlacement?.PublishCommittedDiagnostics(
-                m_Committed.FootPlacement);
         }
 
         internal void DiscardFrame(

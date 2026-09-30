@@ -268,10 +268,10 @@ namespace BTSMTL.Diagnostics.Editor
             IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps) =>
             RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, sourceMaps, historyOffset, instance);
 
-        internal void SetCoverage(long evictedStates, bool missedChanges)
+        internal void SetCoverage(long evictedStates, bool incompleteHistory)
         {
             m_EvictedStates = evictedStates;
-            m_HasCoverageGap |= missedChanges || evictedStates != 0;
+            m_HasCoverageGap = incompleteHistory;
         }
         public RuntimeDebugChangeSet Changes => m_Changes;
         public IReadOnlyList<RuntimeGraphInvocation> GetGraphInvocations(RuntimeInstanceKey instance) =>
@@ -575,13 +575,17 @@ namespace BTSMTL.Diagnostics.Editor
             if (source.IsValid && traceEvent.RuntimeInstance.IsValid)
             {
                 var elementKey = new ElementInstanceKey(source, traceEvent.RuntimeInstance);
-                m_ElementStates[elementKey] = new RuntimeElementDebugState(eventView);
+                if (!m_ElementStates.TryGetValue(elementKey, out RuntimeElementDebugState previousState) ||
+                    traceEvent.Sequence > previousState.Sequence)
+                    m_ElementStates[elementKey] = new RuntimeElementDebugState(eventView);
                 if (!m_Instances.TryGetValue(source, out Dictionary<RuntimeInstanceKey, ulong> instances))
                 {
                     instances = new Dictionary<RuntimeInstanceKey, ulong>();
                     m_Instances.Add(source, instances);
                 }
-                instances[traceEvent.RuntimeInstance] = traceEvent.Sequence;
+                if (!instances.TryGetValue(traceEvent.RuntimeInstance, out ulong previousSequence) ||
+                    traceEvent.Sequence > previousSequence)
+                    instances[traceEvent.RuntimeInstance] = traceEvent.Sequence;
                 RegisterGraphInstance(source.GraphAuthoringId, traceEvent.RuntimeInstance);
             }
 
@@ -731,6 +735,11 @@ namespace BTSMTL.Diagnostics.Editor
 
         sealed class TimelinePlaybackSummaryBuilder
         {
+            ulong m_LogicTimeSequence;
+            ulong m_VisualTimeSequence;
+            ulong m_LifecycleSequence;
+            ulong m_TerminalSequence;
+
             public TimelinePlaybackSummaryBuilder(RuntimeInstanceKey playback)
             {
                 Playback = playback;
@@ -759,35 +768,44 @@ namespace BTSMTL.Diagnostics.Editor
                 if (payload.TimelinePlayback.IsValid)
                     Provenance = payload.TimelinePlayback;
 
-                if (traceEvent.Domain == RuntimeTraceDomain.Logic && traceEvent.Position >= LatestLogicTick)
-                {
-                    LatestLogicTick = traceEvent.Position;
-                    if (traceEvent.Kind == RuntimeTraceEventKind.TimelineLogicTime)
-                    {
-                        LogicTime = payload.Time;
-                        LogicCycle = payload.Cycle;
-                    }
-                }
-                else if (traceEvent.Domain == RuntimeTraceDomain.Presentation && traceEvent.Position >= LatestPresentationFrame)
-                {
-                    LatestPresentationFrame = traceEvent.Position;
-                    if (traceEvent.Kind == RuntimeTraceEventKind.TimelineVisualTime)
-                    {
-                        VisualTime = payload.Time;
-                        VisualCycle = payload.Cycle;
-                    }
-                }
+                if (traceEvent.Domain == RuntimeTraceDomain.Logic)
+                    LatestLogicTick = Math.Max(LatestLogicTick, traceEvent.Position);
+                else if (traceEvent.Domain == RuntimeTraceDomain.Presentation)
+                    LatestPresentationFrame = Math.Max(LatestPresentationFrame, traceEvent.Position);
 
-                if (traceEvent.Kind is RuntimeTraceEventKind.TimelineRequested or RuntimeTraceEventKind.TimelineStarted or RuntimeTraceEventKind.TimelineLogicTime or RuntimeTraceEventKind.TimelineVisualTime or RuntimeTraceEventKind.TimelineCompleted or RuntimeTraceEventKind.TimelineCancelled or RuntimeTraceEventKind.TimelineStopped)
+                if (traceEvent.Kind == RuntimeTraceEventKind.TimelineLogicTime &&
+                    traceEvent.Sequence > m_LogicTimeSequence)
                 {
-                    Lifecycle = traceEvent.Kind;
-                    LifecycleStatus = payload.Status;
+                    m_LogicTimeSequence = traceEvent.Sequence;
+                    LogicTime = payload.Time;
+                    LogicCycle = payload.Cycle;
+                }
+                else if (traceEvent.Kind == RuntimeTraceEventKind.TimelineVisualTime &&
+                         traceEvent.Sequence > m_VisualTimeSequence)
+                {
+                    m_VisualTimeSequence = traceEvent.Sequence;
+                    VisualTime = payload.Time;
+                    VisualCycle = payload.Cycle;
                 }
 
                 if (traceEvent.Kind is RuntimeTraceEventKind.TimelineCompleted or RuntimeTraceEventKind.TimelineCancelled or RuntimeTraceEventKind.TimelineStopped)
                 {
-                    Terminal = traceEvent.Kind;
-                    TerminalCause = payload.Cause;
+                    if (traceEvent.Sequence > m_TerminalSequence)
+                    {
+                        m_TerminalSequence = traceEvent.Sequence;
+                        Terminal = traceEvent.Kind;
+                        TerminalCause = payload.Cause;
+                        Lifecycle = traceEvent.Kind;
+                        LifecycleStatus = payload.Status;
+                    }
+                }
+                else if (m_TerminalSequence == 0 && traceEvent.Sequence > m_LifecycleSequence &&
+                         traceEvent.Kind is (RuntimeTraceEventKind.TimelineRequested or RuntimeTraceEventKind.TimelineStarted or
+                             RuntimeTraceEventKind.TimelineLogicTime or RuntimeTraceEventKind.TimelineVisualTime))
+                {
+                    m_LifecycleSequence = traceEvent.Sequence;
+                    Lifecycle = traceEvent.Kind;
+                    LifecycleStatus = payload.Status;
                 }
             }
 

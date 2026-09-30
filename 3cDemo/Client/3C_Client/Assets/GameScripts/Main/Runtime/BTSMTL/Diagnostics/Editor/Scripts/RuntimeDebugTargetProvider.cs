@@ -49,7 +49,7 @@ namespace BTSMTL.Diagnostics.Editor
                     }
                 }
                 m_LiveModel.SetChannels(channels);
-                m_LiveModel.SetCoverage(read.EvictedStates, read.RequiresFullSync && m_LiveCursor > 0);
+                m_LiveModel.SetCoverage(read.EvictedStates, false);
                 m_LiveModel.CommitUpdate(captureChanged ? capture.Version : CaptureVersion);
                 m_LiveCursor = read.Version;
             }

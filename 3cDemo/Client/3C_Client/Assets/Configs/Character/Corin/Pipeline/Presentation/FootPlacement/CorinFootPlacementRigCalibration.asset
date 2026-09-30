@@ -13,29 +13,164 @@ MonoBehaviour:
   m_Name: CorinFootPlacementRigCalibration
   m_EditorClassIdentifier: 
   m_CalibrationId: Corin.FootPlacementRig
-  m_SchemaVersion: 5
-  m_ContentRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
+  m_SchemaVersion: 6
+  m_ContentRevision: de1a059cc5ecfa12cada360b274e0f49029307186184c57ae5f2ea7582ae9e77
   m_RigId: corin.animation-rig
   m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
-  m_CurrentSupportBaseFootLocalOffset: {x: 0, y: -0.08, z: 0}
-  m_CurrentSupportHeelFootLocalOffset: {x: -0.01, y: -0.08, z: 0}
-  m_CurrentSupportPositiveLateralFootLocalOffset: {x: 0, y: -0.08, z: 0.005}
-  m_CurrentSupportNegativeLateralFootLocalOffset: {x: 0, y: -0.08, z: -0.005}
-  m_CurrentSupportToeTipOffsetInFootAxes: {x: 0, y: 0.01, z: 0}
   m_LeftHeelContactLocalOffset: {x: -0.08124063, y: -0.00005460252, z: -0.000029267168}
   m_LeftToeContactLocalOffset: {x: 0.00004123005, y: -0.0051994864, z: -0.000010182891}
   m_LeftSoleFrameLocalRotation: {x: 0.5018886, y: 0.4979625, z: 0.5029893, w: -0.49713477}
   m_RightHeelContactLocalOffset: {x: -0.08114601, y: 0.0014590034, z: -0.00019665039}
   m_RightToeContactLocalOffset: {x: -0.008352402, y: -0.0044627907, z: 0.0012893939}
-  m_RightSoleFrameLocalRotation: {x: 0.4978254, y: 0.49281213, z: 0.5072455, w: -0.502004}
+  m_RightSoleFrameLocalRotation: {x: 0.49782547, y: 0.4928122, z: 0.50724554, w: -0.5020041}
+  m_LeftSoleSamples:
+  - m_AnkleLocalOffset: {x: -0.08137876, y: -0.04240109, z: -0.00720875}
+    m_ToeLocalOffset: {x: 0, y: 0, z: 0}
+    m_ToeWeight: 0
+  - m_AnkleLocalOffset: {x: -0.08133829, y: -0.042022403, z: 0.011930639}
+    m_ToeLocalOffset: {x: 0, y: 0, z: 0}
+    m_ToeWeight: 0
+  - m_AnkleLocalOffset: {x: -0.08112942, y: -0.021546122, z: 0.018639298}
+    m_ToeLocalOffset: {x: 0.0698466, y: -0.003723337, z: -0.023703016}
+    m_ToeWeight: 0.00014444195
+  - m_AnkleLocalOffset: {x: -0.081195906, y: -0.021267029, z: -0.017283835}
+    m_ToeLocalOffset: {x: 0.0698466, y: -0.003723337, z: -0.023703016}
+    m_ToeWeight: 0.00014444195
+  - m_AnkleLocalOffset: {x: -0.080898665, y: 0.0023929905, z: 0.019498533}
+    m_ToeLocalOffset: {x: 0.0698466, y: -0.003723337, z: -0.023703016}
+    m_ToeWeight: 0.00014444195
+  - m_AnkleLocalOffset: {x: -0.0809758, y: 0.0029059493, z: -0.02311644}
+    m_ToeLocalOffset: {x: 0.0698466, y: -0.003723337, z: -0.023703016}
+    m_ToeWeight: 0.021377409
+  - m_AnkleLocalOffset: {x: -0.08016335, y: 0.046406694, z: 0.022358637}
+    m_ToeLocalOffset: {x: 0.025442202, y: -0.0036950046, z: 0.021361383}
+    m_ToeWeight: 0.14056875
+  - m_AnkleLocalOffset: {x: -0.08025065, y: 0.048763573, z: -0.030223241}
+    m_ToeLocalOffset: {x: 0.023643728, y: -0.003815077, z: -0.03029955}
+    m_ToeWeight: 0.1315687
+  - m_AnkleLocalOffset: {x: -0.08013726, y: 0.070913464, z: -0.033302926}
+    m_ToeLocalOffset: {x: 0.0017516451, y: -0.0040920847, z: -0.03386571}
+    m_ToeWeight: 0.5201051
+  - m_AnkleLocalOffset: {x: -0.08003041, y: 0.07099592, z: 0.03137126}
+    m_ToeLocalOffset: {x: 0.0016591372, y: -0.003985708, z: 0.031483863}
+    m_ToeWeight: 0.5301001
+  - m_AnkleLocalOffset: {x: -0.08001698, y: 0.08389599, z: -0.033281628}
+    m_ToeLocalOffset: {x: -0.011037338, y: -0.004198474, z: -0.03343225}
+    m_ToeWeight: 0.61504096
+  - m_AnkleLocalOffset: {x: -0.07978239, y: 0.09517802, z: 0.032528784}
+    m_ToeLocalOffset: {x: -0.022412386, y: -0.0041641765, z: 0.03257897}
+    m_ToeWeight: 0.72431535
+  - m_AnkleLocalOffset: {x: -0.07989529, y: 0.09596056, z: -0.030012248}
+    m_ToeLocalOffset: {x: -0.023173867, y: -0.0042914585, z: -0.030308224}
+    m_ToeWeight: 0.7030334
+  - m_AnkleLocalOffset: {x: -0.079709694, y: 0.11289049, z: -0.017855223}
+    m_ToeLocalOffset: {x: -0.04043219, y: -0.0044090594, z: -0.01831522}
+    m_ToeWeight: 0.89668626
+  - m_AnkleLocalOffset: {x: -0.07960766, y: 0.11540363, z: 0.022653226}
+    m_ToeLocalOffset: {x: -0.04283994, y: -0.004350029, z: 0.022548977}
+    m_ToeWeight: 0.91866314
+  - m_AnkleLocalOffset: {x: -0.07959342, y: 0.12092531, z: 0.002599447}
+    m_ToeLocalOffset: {x: -0.04819792, y: -0.004431908, z: 0.0027187464}
+    m_ToeWeight: 0.9708337
+  - m_AnkleLocalOffset: {x: -0.08110401, y: -0.015163156, z: 0.00010603812}
+    m_ToeLocalOffset: {x: 0.0698466, y: -0.003723337, z: -0.023703016}
+    m_ToeWeight: 0.0058381166
+  - m_AnkleLocalOffset: {x: -0.08014313, y: 0.05622899, z: 0.00598189}
+    m_ToeLocalOffset: {x: 0.006066507, y: -0.003998993, z: -0.011189418}
+    m_ToeWeight: 0.34902543
+  - m_AnkleLocalOffset: {x: -0.079966724, y: 0.08208093, z: 0.0065506897}
+    m_ToeLocalOffset: {x: -0.013710795, y: -0.0041695423, z: -0.0038937551}
+    m_ToeWeight: 0.62757176
+  - m_AnkleLocalOffset: {x: -0.079775676, y: 0.10066679, z: 0.008633292}
+    m_ToeLocalOffset: {x: -0.03299171, y: -0.004316905, z: -0.001971551}
+    m_ToeWeight: 0.8138642
+  - m_AnkleLocalOffset: {x: -0.07344084, y: 0.02480718, z: -0.016568962}
+    m_ToeLocalOffset: {x: 0.045715343, y: 0.0027479841, z: 0.0023395747}
+    m_ToeWeight: 0.029679831
+  - m_AnkleLocalOffset: {x: -0.073421724, y: 0.024754185, z: -0.00085017394}
+    m_ToeLocalOffset: {x: 0.04579024, y: 0.0027740325, z: 0.01555202}
+    m_ToeWeight: 0.051359758
+  - m_AnkleLocalOffset: {x: -0.07340171, y: 0.024698714, z: 0.015603882}
+    m_ToeLocalOffset: {x: 0.045820676, y: 0.0027846175, z: 0.020920925}
+    m_ToeWeight: 0.07303969
+  m_RightSoleSamples:
+  - m_AnkleLocalOffset: {x: -0.08133854, y: -0.04202242, z: -0.011933054}
+    m_ToeLocalOffset: {x: 0, y: 0, z: 0}
+    m_ToeWeight: 0
+  - m_AnkleLocalOffset: {x: -0.08137906, y: -0.042401154, z: 0.0072063315}
+    m_ToeLocalOffset: {x: 0, y: 0, z: 0}
+    m_ToeWeight: 0
+  - m_AnkleLocalOffset: {x: -0.08112968, y: -0.021549981, z: -0.018640885}
+    m_ToeLocalOffset: {x: 0.07014665, y: -0.0036733553, z: -0.0011244944}
+    m_ToeWeight: 0.0003051187
+  - m_AnkleLocalOffset: {x: -0.08119623, y: -0.02126679, z: 0.017281558}
+    m_ToeLocalOffset: {x: 0.06984668, y: -0.0037236665, z: 0.02370074}
+    m_ToeWeight: 0.00013095334
+  - m_AnkleLocalOffset: {x: -0.08089893, y: 0.0023887916, z: -0.019492567}
+    m_ToeLocalOffset: {x: 0.07036954, y: -0.0036359725, z: -0.019570528}
+    m_ToeWeight: 0.025907427
+  - m_AnkleLocalOffset: {x: -0.08097615, y: 0.0029062615, z: 0.023122959}
+    m_ToeLocalOffset: {x: 0.06985136, y: -0.0037228817, z: 0.023313396}
+    m_ToeWeight: 0.01955526
+  - m_AnkleLocalOffset: {x: -0.080163546, y: 0.046406712, z: -0.022360811}
+    m_ToeLocalOffset: {x: 0.025442155, y: -0.0036952018, z: -0.021363543}
+    m_ToeWeight: 0.14056875
+  - m_AnkleLocalOffset: {x: -0.08025099, y: 0.048763454, z: 0.030221067}
+    m_ToeLocalOffset: {x: 0.023643823, y: -0.0038154176, z: 0.0302974}
+    m_ToeWeight: 0.1315687
+  - m_AnkleLocalOffset: {x: -0.080030575, y: 0.070995964, z: -0.031373363}
+    m_ToeLocalOffset: {x: 0.0016590618, y: -0.0039858734, z: -0.03148596}
+    m_ToeWeight: 0.5301001
+  - m_AnkleLocalOffset: {x: -0.0801376, y: 0.07091334, z: 0.033300813}
+    m_ToeLocalOffset: {x: 0.0017517477, y: -0.0040924316, z: 0.03386362}
+    m_ToeWeight: 0.5201051
+  - m_AnkleLocalOffset: {x: -0.08001732, y: 0.08389586, z: 0.033279546}
+    m_ToeLocalOffset: {x: -0.011037238, y: -0.0041988175, z: 0.033430196}
+    m_ToeWeight: 0.61504096
+  - m_AnkleLocalOffset: {x: -0.07978289, y: 0.09515076, z: -0.0324947}
+    m_ToeLocalOffset: {x: -0.022416363, y: -0.004164344, z: -0.032591358}
+    m_ToeWeight: 0.7497626
+  - m_AnkleLocalOffset: {x: -0.079895705, y: 0.09595452, z: 0.030022822}
+    m_ToeLocalOffset: {x: -0.023174873, y: -0.004291784, z: 0.030298147}
+    m_ToeWeight: 0.7099854
+  - m_AnkleLocalOffset: {x: -0.07970979, y: 0.11292685, z: 0.017932015}
+    m_ToeLocalOffset: {x: -0.04042783, y: -0.0044093034, z: 0.018304074}
+    m_ToeWeight: 0.8969037
+  - m_AnkleLocalOffset: {x: -0.07960747, y: 0.11544586, z: -0.022633335}
+    m_ToeLocalOffset: {x: -0.0428362, y: -0.0043501775, z: -0.022552906}
+    m_ToeWeight: 0.9188349
+  - m_AnkleLocalOffset: {x: -0.07959408, y: 0.12088386, z: -0.0025826693}
+    m_ToeLocalOffset: {x: -0.04819824, y: -0.004432148, z: -0.002720724}
+    m_ToeWeight: 0.9746681
+  - m_AnkleLocalOffset: {x: -0.08108878, y: -0.013648768, z: -0.0006343999}
+    m_ToeLocalOffset: {x: 0.06984668, y: -0.0037236665, z: 0.02370074}
+    m_ToeWeight: 0.006517807
+  - m_AnkleLocalOffset: {x: -0.08013832, y: 0.0577349, z: -0.0046613524}
+    m_ToeLocalOffset: {x: 0.0052403216, y: -0.0040085185, z: 0.010315933}
+    m_ToeWeight: 0.37266296
+  - m_AnkleLocalOffset: {x: -0.07995685, y: 0.0833948, z: -0.004820727}
+    m_ToeLocalOffset: {x: -0.0151923, y: -0.0041826675, z: 0.004807166}
+    m_ToeWeight: 0.644611
+  - m_AnkleLocalOffset: {x: -0.07976268, y: 0.102357395, z: -0.0070979106}
+    m_ToeLocalOffset: {x: -0.03429619, y: -0.004330679, z: 0.0034636476}
+    m_ToeWeight: 0.83849514
+  - m_AnkleLocalOffset: {x: -0.07395071, y: 0.026653439, z: -0.015496324}
+    m_ToeLocalOffset: {x: 0.045806926, y: 0.0027796396, z: -0.018503306}
+    m_ToeWeight: 0.07694139
+  - m_AnkleLocalOffset: {x: -0.07386599, y: 0.026335789, z: 0.0008039697}
+    m_ToeLocalOffset: {x: 0.04574564, y: 0.0027582853, z: -0.0076870206}
+    m_ToeWeight: 0.062939204
+  - m_AnkleLocalOffset: {x: -0.07378377, y: 0.026027493, z: 0.016624296}
+    m_ToeLocalOffset: {x: 0.045649286, y: 0.0027247106, z: 0.009318921}
+    m_ToeWeight: 0.04893702
   m_GeometryValidation:
     m_SchemaVersion: 2
-    m_IdentityHash: 4e9e7c3a85097765820a5acac7d85706c9e366161e33a6883e0b3f601ad3cc93
-    m_GeometryContentHash: 1845b57dbdd7de1d2b1d0311761ab58cbdc76f11e62303ffced74c2e2d23fca5
+    m_IdentityHash: fec903381952fb11f6b573151c8f03a26958b4294aa6f69b35f79bf845570183
+    m_GeometryContentHash: c650fbebd503729d3cf1f4e2c1aeab55a981ae08373847820e07de1d0a4ecbf2
     m_RigId: corin.animation-rig
     m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
     m_CalibrationId: Corin.FootPlacementRig
-    m_CalibrationRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
+    m_CalibrationRevision: de1a059cc5ecfa12cada360b274e0f49029307186184c57ae5f2ea7582ae9e77
     m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
     m_SamplingRigDependencyHash: 8ca960b88653561c46562e1c54f1d4f60559944071962315ff81fcefc0632f10
     m_PreviewClipAssetGuid: 6149a312e589f154f972a457f3976c42

@@ -1,15 +1,10 @@
 using System;
 using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
+using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public enum CharacterFootCurrentSupportProbeKind : byte
-    {
-        Heel = 1,
-        Toe = 2
-    }
-
     public enum CharacterFootCurrentSupportProbeState : byte
     {
         Accepted = 1,
@@ -20,7 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootCurrentSupportProbeRejectReason : byte
     {
         None = 0,
-        InvalidRequest = 1,
         CapacityExceeded = 2,
         NoHit = 3,
         NotGrounded = 4
@@ -29,188 +23,101 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootCurrentSupportRejectReason : byte
     {
         None = 0,
-        HeelUnavailable = 1,
-        ToeUnavailable = 2,
-        HeelAndToeUnavailable = 3,
-        InvalidSupportNormal = 4,
-        NotGrounded = 5,
-        WorldRevisionMismatch = 6
+        NoSupport = 1,
+        IncompleteQuery = 2,
+        NotGrounded = 3,
+        WorldRevisionMismatch = 4
     }
 
     public enum CharacterFootCurrentSupportSelectionReason : byte
     {
         None = 0,
-        HeelHigherRequiredDisplacement = 1,
-        ToeHigherRequiredDisplacement = 2,
-        EquivalentDisplacementSurfaceIdentity = 3,
-        EquivalentDisplacementHeelOrder = 4,
-        HeelOnlySupport = 5,
-        ToeOnlySupport = 6
+        HighestRequiredDisplacement = 1,
+        EquivalentDisplacementSurfaceIdentity = 2,
+        EquivalentDisplacementSampleOrder = 3,
+        SingleSampleSupport = 4
     }
 
     internal readonly struct CharacterFootCurrentSupportProbeRequest
     {
-        readonly Vector3 m_Origin;
-        readonly Vector3 m_Direction;
-        readonly Vector3 m_UnitComponentUp;
-
         internal CharacterFootCurrentSupportProbeRequest(
-            CharacterFootSide side,
-            CharacterFootCurrentSupportProbeKind kind,
-            Vector3 probePosition,
-            Vector3 componentUp,
-            Vector3 unitComponentUp,
-            float castAbove,
-            float castBelow,
-            float radius,
-            int layerMask,
-            float minimumGroundNormalDot,
-            int hitCapacity)
+            CharacterFootSide side, int sampleIndex, Vector3 probePosition,
+            Vector3 unitComponentUp, in CharacterFootCurrentSupportQuerySettings settings)
         {
             Side = side;
-            Kind = kind;
+            SampleIndex = sampleIndex;
             ProbePosition = probePosition;
-            ComponentUp = componentUp;
-            m_UnitComponentUp = unitComponentUp;
-            CastAbove = castAbove;
-            CastBelow = castBelow;
-            Radius = radius;
-            LayerMask = layerMask;
-            MinimumGroundNormalDot = minimumGroundNormalDot;
-            HitCapacity = hitCapacity;
-            m_Origin = probePosition + unitComponentUp * castAbove;
-            m_Direction = -unitComponentUp;
+            UnitComponentUp = unitComponentUp;
+            Settings = settings;
         }
 
-        internal static CharacterFootCurrentSupportProbeRequest Create(
-            CharacterFootSide side,
-            CharacterFootCurrentSupportProbeKind kind,
-            Vector3 probePosition,
-            Vector3 componentUp,
-            Vector3 unitComponentUp,
-            in CharacterFootCurrentSupportQuerySettings support,
-            in CharacterFootLandingPredictionSettings landing) =>
-            new CharacterFootCurrentSupportProbeRequest(
-                side, kind, probePosition, componentUp, unitComponentUp,
-                support.CastAbove, support.CastBelow, landing.SphereRadius,
-                support.GroundLayerMask, support.MinimumGroundNormalDot,
-                support.HitCapacity);
-
         internal CharacterFootSide Side { get; }
-        internal CharacterFootCurrentSupportProbeKind Kind { get; }
+        internal int SampleIndex { get; }
         internal Vector3 ProbePosition { get; }
-        internal Vector3 ComponentUp { get; }
-        internal Vector3 UnitComponentUp => m_UnitComponentUp;
-        internal float CastAbove { get; }
-        internal float CastBelow { get; }
-        internal float Radius { get; }
-        internal int LayerMask { get; }
-        internal float MinimumGroundNormalDot { get; }
-        internal int HitCapacity { get; }
-        internal CharacterFootPlacementQueryPurpose Purpose =>
-            CharacterFootPlacementQueryPurpose.CurrentSupport;
-        internal Vector3 Origin => m_Origin;
-        internal Vector3 Direction => m_Direction;
-        internal float MaximumDistance => CastAbove + CastBelow;
-        internal float SupportMaximumDistance => MaximumDistance + Radius;
-        internal bool IsValid =>
-            (Side == CharacterFootSide.Left || Side == CharacterFootSide.Right) &&
-            (Kind == CharacterFootCurrentSupportProbeKind.Heel ||
-             Kind == CharacterFootCurrentSupportProbeKind.Toe) &&
-            Finite(ProbePosition) && Finite(ComponentUp) &&
-            ComponentUp.sqrMagnitude > 0.000001f &&
-            float.IsFinite(CastAbove) && CastAbove > Radius &&
-            float.IsFinite(CastBelow) && CastBelow > 0f &&
-            float.IsFinite(Radius) && Radius > 0f &&
-            LayerMask != 0 &&
-            HitCapacity >= 4 && HitCapacity <= 32 &&
-            float.IsFinite(MinimumGroundNormalDot) &&
-            MinimumGroundNormalDot >= -1f && MinimumGroundNormalDot <= 1f;
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
+        internal Vector3 UnitComponentUp { get; }
+        internal readonly CharacterFootCurrentSupportQuerySettings Settings;
+        internal int LayerMask => Settings.GroundLayerMask;
+        internal float MinimumGroundNormalDot => Settings.MinimumGroundNormalDot;
+        internal int HitCapacity => Settings.HitCapacity;
+        internal CharacterFootPlacementQueryPurpose Purpose => CharacterFootPlacementQueryPurpose.CurrentSupport;
+        internal Vector3 Origin => ProbePosition + UnitComponentUp * Settings.CastAbove;
+        internal Vector3 Direction => -UnitComponentUp;
+        internal float MaximumDistance => Settings.CastAbove + Settings.CastBelow;
     }
 
     internal readonly struct CharacterFootCurrentSupportProbeResult
     {
         internal CharacterFootCurrentSupportProbeResult(
-            CharacterFootCurrentSupportProbeKind kind,
             CharacterFootCurrentSupportProbeState state,
             CharacterFootCurrentSupportProbeRejectReason rejectReason,
-            int candidateCount,
             CharacterFootSupportQueryDiagnostics coverage,
-            int surfaceIdentity,
-            Vector3 point,
-            Vector3 normal,
-            float distance,
-            ulong worldRevision,
-            bool sphereCastExecuted)
+            int surfaceIdentity, Vector3 point, Vector3 normal,
+            float distance, ulong worldRevision)
         {
-            Kind = kind;
             State = state;
             RejectReason = rejectReason;
-            CandidateCount = candidateCount;
             Coverage = coverage;
             SurfaceIdentity = surfaceIdentity;
             Point = point;
             Normal = normal;
             Distance = distance;
             WorldRevision = worldRevision;
-            SphereCastExecuted = sphereCastExecuted;
         }
 
-        internal CharacterFootCurrentSupportProbeKind Kind { get; }
         internal CharacterFootCurrentSupportProbeState State { get; }
         internal CharacterFootCurrentSupportProbeRejectReason RejectReason { get; }
-        internal int CandidateCount { get; }
         internal CharacterFootSupportQueryDiagnostics Coverage { get; }
         internal int SurfaceIdentity { get; }
         internal Vector3 Point { get; }
         internal Vector3 Normal { get; }
         internal float Distance { get; }
         internal ulong WorldRevision { get; }
-        internal bool SphereCastExecuted { get; }
-        internal bool Accepted =>
-            State == CharacterFootCurrentSupportProbeState.Accepted &&
-            RejectReason == CharacterFootCurrentSupportProbeRejectReason.None &&
-            SurfaceIdentity != 0 && WorldRevision != 0;
+        internal bool Accepted => State == CharacterFootCurrentSupportProbeState.Accepted;
 
         internal static CharacterFootCurrentSupportProbeResult Rejected(
-            CharacterFootCurrentSupportProbeKind kind,
-            CharacterFootCurrentSupportProbeRejectReason reason,
-            ulong worldRevision,
-            bool sphereCastExecuted,
+            CharacterFootCurrentSupportProbeRejectReason reason, ulong worldRevision,
             CharacterFootSupportQueryDiagnostics coverage) =>
             new CharacterFootCurrentSupportProbeResult(
-                kind,
-                CharacterFootCurrentSupportProbeState.Rejected,
-                reason,
-                0,
-                coverage,
-                0,
-                default,
-                default,
-                0f,
-                worldRevision,
-                sphereCastExecuted);
+                CharacterFootCurrentSupportProbeState.Rejected, reason, coverage,
+                0, default, default, 0f, worldRevision);
 
-        internal static CharacterFootCurrentSupportProbeResult NotExecuted(
-            CharacterFootCurrentSupportProbeKind kind,
-            CharacterFootCurrentSupportProbeRejectReason reason,
-            ulong worldRevision) =>
+        internal static CharacterFootCurrentSupportProbeResult NotGrounded(ulong worldRevision) =>
             new CharacterFootCurrentSupportProbeResult(
-                kind,
                 CharacterFootCurrentSupportProbeState.NotExecuted,
-                reason,
-                0,
-                default,
-                0,
-                default,
-                default,
-                0f,
-                worldRevision,
-                false);
+                CharacterFootCurrentSupportProbeRejectReason.NotGrounded, default,
+                0, default, default, 0f, worldRevision);
+    }
+
+    internal readonly struct CharacterFootSoleProbeObservation
+    {
+        internal CharacterFootSoleProbeObservation(Vector3 position, in CharacterFootCurrentSupportProbeResult result)
+        {
+            Position = position;
+            Result = result;
+        }
+
+        internal readonly Vector3 Position;
+        internal readonly CharacterFootCurrentSupportProbeResult Result;
     }
 
     public enum CharacterFootSupportTargetKind : byte
@@ -461,310 +368,63 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal readonly struct CharacterFootCurrentSupportObservation
     {
+        internal const float SelectionEpsilon = 0.0001f;
+        readonly FixedList4096Bytes<CharacterFootSoleProbeObservation> m_Probes;
+        readonly CharacterFootCurrentSupportQuerySettings m_Settings;
+        readonly Vector3 m_UnitUp;
 
         internal CharacterFootCurrentSupportObservation(
-            ulong frameSequence,
-            ulong completionIdentity,
-            CharacterFootSide side,
-            ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
-            in CharacterFootCurrentSupportProbeRequest toeRequest,
-            in CharacterFootCurrentSupportProbeResult heel,
-            in CharacterFootCurrentSupportProbeResult toe,
+            ulong frameSequence, ulong completionIdentity, CharacterFootSide side,
+            ulong worldRevision, Vector3 unitUp,
+            in CharacterFootCurrentSupportQuerySettings settings,
+            in FixedList4096Bytes<CharacterFootSoleProbeObservation> probes,
             CharacterFootCurrentSupportRejectReason rejectReason,
-            float heelRequiredDisplacement,
-            float toeRequiredDisplacement,
-            CharacterFootCurrentSupportProbeKind selectedProbe,
+            int acceptedSampleCount, float requiredDisplacement, int selectedSampleIndex,
             CharacterFootCurrentSupportSelectionReason selectionReason,
-            Vector3 selectedSupportNormalBeforeNormalization,
             in CharacterFootSupportTarget target)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
             Side = side;
             WorldRevision = worldRevision;
-            HeelRequest = heelRequest;
-            ToeRequest = toeRequest;
-            Heel = heel;
-            Toe = toe;
+            m_UnitUp = unitUp;
+            m_Settings = settings;
+            m_Probes = probes;
             RejectReason = rejectReason;
-            HeelRequiredDisplacement = heelRequiredDisplacement;
-            ToeRequiredDisplacement = toeRequiredDisplacement;
-            SelectedProbe = selectedProbe;
+            AcceptedSampleCount = acceptedSampleCount;
+            RequiredDisplacement = requiredDisplacement;
+            SelectedSampleIndex = selectedSampleIndex;
             SelectionReason = selectionReason;
-            SelectedSupportNormalBeforeNormalization =
-                selectedSupportNormalBeforeNormalization;
             Target = target;
-            m_IsSpecified = 1;
         }
 
-        readonly byte m_IsSpecified;
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
         internal CharacterFootSide Side { get; }
         internal ulong WorldRevision { get; }
-        internal readonly CharacterFootCurrentSupportProbeRequest HeelRequest;
-        internal readonly CharacterFootCurrentSupportProbeRequest ToeRequest;
-        internal readonly CharacterFootCurrentSupportProbeResult Heel;
-        internal readonly CharacterFootCurrentSupportProbeResult Toe;
+        internal int SampleCount => m_Probes.Length;
+        internal int AcceptedSampleCount { get; }
         internal CharacterFootCurrentSupportRejectReason RejectReason { get; }
-        internal float HeelRequiredDisplacement { get; }
-        internal float ToeRequiredDisplacement { get; }
-        internal CharacterFootCurrentSupportProbeKind SelectedProbe { get; }
-        internal CharacterFootCurrentSupportSelectionReason SelectionReason
-        {
-            get;
-        }
-        internal float SelectionEpsilon => 0.0001f;
-        internal Vector3 SelectedSupportNormalBeforeNormalization { get; }
+        internal float RequiredDisplacement { get; }
+        internal int SelectedSampleIndex { get; }
+        internal CharacterFootCurrentSupportSelectionReason SelectionReason { get; }
         internal readonly CharacterFootSupportTarget Target;
-        internal bool IsSpecified => m_IsSpecified != 0;
-        internal bool Available =>
-            IsSpecified && RejectReason == CharacterFootCurrentSupportRejectReason.None &&
-            Target.IsValid;
+        internal bool IsSpecified => FrameSequence != 0;
+        internal bool Available => IsSpecified && RejectReason == CharacterFootCurrentSupportRejectReason.None;
+
+        internal CharacterFootCurrentSupportProbeDiagnostics GetProbe(int index)
+        {
+            CharacterFootSoleProbeObservation probe = m_Probes[index];
+            var request = new CharacterFootCurrentSupportProbeRequest(Side, index, probe.Position, m_UnitUp, in m_Settings);
+            return new CharacterFootCurrentSupportProbeDiagnostics(in request, in probe.Result);
+        }
 
         internal bool TryResolveHeightConstraint(out float displacement, out int surfaceIdentity)
         {
-            displacement = 0f;
-            surfaceIdentity = 0;
-            if (!Available)
-                return false;
-            displacement = SelectedProbe == CharacterFootCurrentSupportProbeKind.Heel
-                ? HeelRequiredDisplacement : ToeRequiredDisplacement;
+            displacement = RequiredDisplacement;
             surfaceIdentity = Target.SurfaceIdentity;
-            return true;
+            return Available;
         }
-
-        internal static CharacterFootCurrentSupportObservation Resolve(
-            ulong frameSequence,
-            ulong completionIdentity,
-            ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
-            in CharacterFootCurrentSupportProbeRequest toeRequest,
-            in CharacterFootCurrentSupportProbeResult heel,
-            in CharacterFootCurrentSupportProbeResult toe)
-        {
-            CharacterFootSide side = heelRequest.Side;
-            if (worldRevision == 0 || heel.WorldRevision != worldRevision ||
-                toe.WorldRevision != worldRevision)
-            {
-                return new CharacterFootCurrentSupportObservation(
-                    frameSequence,
-                    completionIdentity,
-                    side,
-                    worldRevision,
-                    in heelRequest,
-                    in toeRequest,
-                    in heel,
-                    in toe,
-                    CharacterFootCurrentSupportRejectReason
-                        .WorldRevisionMismatch,
-                    0f,
-                    0f,
-                    default,
-                    CharacterFootCurrentSupportSelectionReason.None,
-                    default,
-                    default);
-            }
-            CharacterFootCurrentSupportRejectReason rejectReason =
-                ResolveRejectReason(in heel, in toe);
-            if (rejectReason != CharacterFootCurrentSupportRejectReason.None)
-            {
-                return new CharacterFootCurrentSupportObservation(
-                    frameSequence,
-                    completionIdentity,
-                    side,
-                    worldRevision,
-                    in heelRequest,
-                    in toeRequest,
-                    in heel,
-                    in toe,
-                    rejectReason,
-                    0f,
-                    0f,
-                    default,
-                    CharacterFootCurrentSupportSelectionReason.None,
-                    default,
-                    default);
-            }
-            Vector3 animatedHeel = heelRequest.ProbePosition;
-            Vector3 animatedToe = toeRequest.ProbePosition;
-            Vector3 up = heelRequest.UnitComponentUp;
-            float heelDisplacement = heel.Accepted ? Vector3.Dot(heel.Point - animatedHeel, up) : 0f;
-            float toeDisplacement = toe.Accepted ? Vector3.Dot(toe.Point - animatedToe, up) : 0f;
-            CharacterFootCurrentSupportSelectionReason selectionReason;
-            CharacterFootCurrentSupportProbeKind selected;
-            if (!toe.Accepted)
-            {
-                selected = CharacterFootCurrentSupportProbeKind.Heel;
-                selectionReason = CharacterFootCurrentSupportSelectionReason.HeelOnlySupport;
-            }
-            else if (!heel.Accepted)
-            {
-                selected = CharacterFootCurrentSupportProbeKind.Toe;
-                selectionReason = CharacterFootCurrentSupportSelectionReason.ToeOnlySupport;
-            }
-            else
-            {
-                selected = SelectProbe(heelDisplacement, toeDisplacement,
-                    heel.SurfaceIdentity, toe.SurfaceIdentity, out selectionReason);
-            }
-            Vector3 selectedNormal = selected ==
-                                     CharacterFootCurrentSupportProbeKind.Heel
-                ? heel.Normal
-                : toe.Normal;
-            if (!Finite(selectedNormal) ||
-                selectedNormal.sqrMagnitude <= 0.000001f)
-            {
-                return new CharacterFootCurrentSupportObservation(
-                    frameSequence,
-                    completionIdentity,
-                    side,
-                    worldRevision,
-                    in heelRequest,
-                    in toeRequest,
-                    in heel,
-                    in toe,
-                    CharacterFootCurrentSupportRejectReason.InvalidSupportNormal,
-                    heelDisplacement,
-                    toeDisplacement,
-                    selected,
-                    selectionReason,
-                    selectedNormal,
-                    default);
-            }
-            float displacement = selected == CharacterFootCurrentSupportProbeKind.Heel
-                ? heelDisplacement : toeDisplacement;
-            Vector3 originalSole = (animatedHeel + animatedToe) * 0.5f;
-            int surfaceIdentity = selected ==
-                                  CharacterFootCurrentSupportProbeKind.Heel
-                ? heel.SurfaceIdentity
-                : toe.SurfaceIdentity;
-            var target = new CharacterFootSupportTarget(
-                frameSequence,
-                completionIdentity,
-                side,
-                originalSole + up * displacement,
-                selectedNormal,
-                surfaceIdentity,
-                worldRevision,
-                CharacterFootSupportTargetKind.CurrentSupport,
-                CharacterFootSupportPositionSource.CurrentSupport,
-                frameSequence,
-                completionIdentity,
-                0,
-                0,
-                CharacterFootSupportNormalSource.CurrentSupport,
-                frameSequence,
-                completionIdentity,
-                0);
-            return new CharacterFootCurrentSupportObservation(
-                frameSequence,
-                completionIdentity,
-                side,
-                worldRevision,
-                in heelRequest,
-                in toeRequest,
-                in heel,
-                in toe,
-                CharacterFootCurrentSupportRejectReason.None,
-                heelDisplacement,
-                toeDisplacement,
-                selected,
-                selectionReason,
-                selectedNormal,
-                in target);
-        }
-
-        internal static CharacterFootCurrentSupportObservation Unavailable(
-            ulong frameSequence,
-            ulong completionIdentity,
-            ulong worldRevision,
-            in CharacterFootCurrentSupportProbeRequest heelRequest,
-            in CharacterFootCurrentSupportProbeRequest toeRequest,
-            CharacterFootCurrentSupportRejectReason reason)
-        {
-            if (reason == CharacterFootCurrentSupportRejectReason.None)
-                throw new ArgumentOutOfRangeException(nameof(reason));
-            CharacterFootCurrentSupportProbeResult heel =
-                CharacterFootCurrentSupportProbeResult.NotExecuted(
-                    CharacterFootCurrentSupportProbeKind.Heel,
-                    CharacterFootCurrentSupportProbeRejectReason.NotGrounded,
-                    worldRevision);
-            CharacterFootCurrentSupportProbeResult toe =
-                CharacterFootCurrentSupportProbeResult.NotExecuted(
-                    CharacterFootCurrentSupportProbeKind.Toe,
-                    CharacterFootCurrentSupportProbeRejectReason.NotGrounded,
-                    worldRevision);
-            return new CharacterFootCurrentSupportObservation(
-                frameSequence,
-                completionIdentity,
-                heelRequest.Side,
-                worldRevision,
-                in heelRequest,
-                in toeRequest,
-                in heel,
-                in toe,
-                reason,
-                0f,
-                0f,
-                default,
-                CharacterFootCurrentSupportSelectionReason.None,
-                default,
-                default);
-        }
-
-        static CharacterFootCurrentSupportRejectReason ResolveRejectReason(
-            in CharacterFootCurrentSupportProbeResult heel,
-            in CharacterFootCurrentSupportProbeResult toe)
-        {
-            bool heelAccepted = heel.Accepted;
-            bool toeAccepted = toe.Accepted;
-            if (heelAccepted && toeAccepted ||
-                heelAccepted && toe.RejectReason == CharacterFootCurrentSupportProbeRejectReason.NoHit ||
-                toeAccepted && heel.RejectReason == CharacterFootCurrentSupportProbeRejectReason.NoHit)
-                return CharacterFootCurrentSupportRejectReason.None;
-            if (!heelAccepted && !toeAccepted)
-                return CharacterFootCurrentSupportRejectReason.HeelAndToeUnavailable;
-            return heelAccepted
-                ? CharacterFootCurrentSupportRejectReason.ToeUnavailable
-                : CharacterFootCurrentSupportRejectReason.HeelUnavailable;
-        }
-
-        static CharacterFootCurrentSupportProbeKind SelectProbe(
-            float heelDisplacement,
-            float toeDisplacement,
-            int heelSurfaceIdentity,
-            int toeSurfaceIdentity,
-            out CharacterFootCurrentSupportSelectionReason reason)
-        {
-            float displacement = heelDisplacement - toeDisplacement;
-            if (displacement > 0.0001f)
-            {
-                reason = CharacterFootCurrentSupportSelectionReason
-                    .HeelHigherRequiredDisplacement;
-                return CharacterFootCurrentSupportProbeKind.Heel;
-            }
-            if (displacement < -0.0001f)
-            {
-                reason = CharacterFootCurrentSupportSelectionReason
-                    .ToeHigherRequiredDisplacement;
-                return CharacterFootCurrentSupportProbeKind.Toe;
-            }
-            int identity = heelSurfaceIdentity.CompareTo(toeSurfaceIdentity);
-            reason = identity == 0
-                ? CharacterFootCurrentSupportSelectionReason
-                    .EquivalentDisplacementHeelOrder
-                : CharacterFootCurrentSupportSelectionReason
-                    .EquivalentDisplacementSurfaceIdentity;
-            return identity <= 0
-                ? CharacterFootCurrentSupportProbeKind.Heel
-                : CharacterFootCurrentSupportProbeKind.Toe;
-        }
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) &&
-            float.IsFinite(value.z);
     }
 
     public readonly struct CharacterFootCurrentSupportProbeDiagnostics
@@ -773,219 +433,116 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportProbeRequest request,
             in CharacterFootCurrentSupportProbeResult result)
         {
-            Purpose = request.Purpose;
-            Kind = request.Kind;
+            SampleIndex = request.SampleIndex;
             State = result.State;
             RejectReason = result.RejectReason;
             ProbePosition = request.ProbePosition;
-            ComponentUp = request.ComponentUp;
             Origin = request.Origin;
             Direction = request.Direction;
             MaximumDistance = request.MaximumDistance;
-            SupportMaximumDistance = request.SupportMaximumDistance;
-            Radius = request.Radius;
             LayerMask = request.LayerMask;
             MinimumGroundNormalDot = request.MinimumGroundNormalDot;
             HitCapacity = request.HitCapacity;
-            CandidateCount = result.CandidateCount;
             Coverage = result.Coverage;
             SurfaceIdentity = result.SurfaceIdentity;
             Point = result.Point;
             Normal = result.Normal;
             Distance = result.Distance;
             WorldRevision = result.WorldRevision;
-            SphereCastExecuted = result.SphereCastExecuted;
-            Accepted = result.Accepted;
+            RequiredDisplacement = result.Accepted
+                ? Vector3.Dot(result.Point - request.ProbePosition, request.UnitComponentUp) : 0f;
         }
 
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public CharacterFootPlacementQueryPurpose Purpose { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public CharacterFootCurrentSupportProbeKind Kind { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
+        public int SampleIndex { get; }
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public CharacterFootCurrentSupportProbeState State { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public CharacterFootCurrentSupportProbeRejectReason RejectReason { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public Vector3 ProbePosition { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public Vector3 ComponentUp { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public Vector3 Origin { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public Vector3 Direction { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public float MaximumDistance { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public float SupportMaximumDistance { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public float Radius { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public int LayerMask { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public float MinimumGroundNormalDot { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public int HitCapacity { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public int CandidateCount { get; }
-
         public CharacterFootSupportQueryDiagnostics Coverage { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public int SurfaceIdentity { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public Vector3 Point { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public Vector3 Normal { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public float Distance { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
         public ulong WorldRevision { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public bool SphereCastExecuted { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support-probe")]
-        public bool Accepted { get; }
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
+        public bool RaycastExecuted => State != CharacterFootCurrentSupportProbeState.NotExecuted;
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
+        public bool Accepted => State == CharacterFootCurrentSupportProbeState.Accepted;
+        [DiagnosticField] [DiagnosticGroup("current-support-probe")]
+        public float RequiredDisplacement { get; }
     }
 
     public readonly struct CharacterFootCurrentSupportDiagnostics
     {
-        internal CharacterFootCurrentSupportDiagnostics(
-            in CharacterFootCurrentSupportObservation observation)
+        readonly CharacterFootCurrentSupportObservation m_Observation;
+
+        internal CharacterFootCurrentSupportDiagnostics(in CharacterFootCurrentSupportObservation observation)
         {
-            FrameSequence = observation.FrameSequence;
-            CompletionIdentity = observation.CompletionIdentity;
-            Side = observation.Side;
-            WorldRevision = observation.WorldRevision;
-            IsSpecified = observation.IsSpecified;
-            Available = observation.Available;
-            RejectReason = observation.RejectReason;
-            ref readonly CharacterFootCurrentSupportProbeRequest heelRequest =
-                ref observation.HeelRequest;
-            ref readonly CharacterFootCurrentSupportProbeResult heel =
-                ref observation.Heel;
-            Heel = new CharacterFootCurrentSupportProbeDiagnostics(
-                in heelRequest,
-                in heel);
-            ref readonly CharacterFootCurrentSupportProbeRequest toeRequest =
-                ref observation.ToeRequest;
-            ref readonly CharacterFootCurrentSupportProbeResult toe =
-                ref observation.Toe;
-            Toe = new CharacterFootCurrentSupportProbeDiagnostics(
-                in toeRequest,
-                in toe);
-            HeelRequiredDisplacement = observation.HeelRequiredDisplacement;
-            ToeRequiredDisplacement = observation.ToeRequiredDisplacement;
-            SelectedProbe = observation.SelectedProbe;
-            SelectionReason = observation.SelectionReason;
-            SelectionEpsilon = observation.SelectionEpsilon;
-            SelectedSupportNormalBeforeNormalization =
-                observation.SelectedSupportNormalBeforeNormalization;
-            ref readonly CharacterFootSupportTarget target =
-                ref observation.Target;
-            Target = new CharacterFootSupportTargetDiagnostics(
-                in target);
+            m_Observation = observation;
+            Target = new CharacterFootSupportTargetDiagnostics(in observation.Target);
         }
 
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public ulong FrameSequence { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public ulong CompletionIdentity { get; }
-
-        public CharacterFootSide Side { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public ulong WorldRevision { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public bool IsSpecified { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public bool Available { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public CharacterFootCurrentSupportRejectReason RejectReason { get; }
-        public CharacterFootCurrentSupportProbeDiagnostics Heel { get; }
-        public CharacterFootCurrentSupportProbeDiagnostics Toe { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public float HeelRequiredDisplacement { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public float ToeRequiredDisplacement { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public CharacterFootCurrentSupportProbeKind SelectedProbe { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public CharacterFootCurrentSupportSelectionReason SelectionReason
-        {
-            get;
-        }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public float SelectionEpsilon { get; }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-support")]
-        public Vector3 SelectedSupportNormalBeforeNormalization { get; }
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public ulong FrameSequence => m_Observation.FrameSequence;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public ulong CompletionIdentity => m_Observation.CompletionIdentity;
+        public CharacterFootSide Side => m_Observation.Side;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public ulong WorldRevision => m_Observation.WorldRevision;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public bool IsSpecified => m_Observation.IsSpecified;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public bool Available => m_Observation.Available;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public CharacterFootCurrentSupportRejectReason RejectReason => m_Observation.RejectReason;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public int SampleCount => m_Observation.SampleCount;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public int AcceptedSampleCount => m_Observation.AcceptedSampleCount;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public float RequiredDisplacement => m_Observation.RequiredDisplacement;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public int SelectedSampleIndex => m_Observation.SelectedSampleIndex;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public CharacterFootCurrentSupportSelectionReason SelectionReason => m_Observation.SelectionReason;
+        [DiagnosticField] [DiagnosticGroup("current-support")]
+        public float SelectionEpsilon => CharacterFootCurrentSupportObservation.SelectionEpsilon;
         public CharacterFootSupportTargetDiagnostics Target { get; }
+        public CharacterFootCurrentSupportProbeDiagnostics GetProbe(int index) => m_Observation.GetProbe(index);
+        public CharacterFootCurrentSupportProbePage Probes => new CharacterFootCurrentSupportProbePage(in m_Observation);
+    }
+
+    public readonly struct CharacterFootCurrentSupportProbePage
+    {
+        readonly CharacterFootCurrentSupportObservation m_Observation;
+
+        internal CharacterFootCurrentSupportProbePage(in CharacterFootCurrentSupportObservation observation)
+        {
+            m_Observation = observation;
+        }
+
+        public int Count => m_Observation.SampleCount;
+        public CharacterFootCurrentSupportProbeDiagnostics this[int index] => m_Observation.GetProbe(index);
     }
 
     internal interface ICharacterFootCurrentSupportWorldQuery
@@ -1049,37 +606,86 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         readonly ICharacterFootCurrentSupportWorldQuery m_World;
         readonly CharacterFootCurrentSupportQuerySettings m_Settings;
-        readonly CharacterFootLandingPredictionSettings m_LandingSettings;
 
         internal CharacterFootSoleSupportQuery(
             ICharacterFootCurrentSupportWorldQuery world,
-            in CharacterFootCurrentSupportQuerySettings settings,
-            in CharacterFootLandingPredictionSettings landingSettings)
+            in CharacterFootCurrentSupportQuerySettings settings)
         {
             m_World = world;
             m_Settings = settings;
-            m_LandingSettings = landingSettings;
         }
 
         internal CharacterFootCurrentSupportObservation Query(
-            in CharacterFootStateFrame frame,
+            ulong frameSequence, ulong completionIdentity, ulong worldRevision,
+            CharacterFootSide side, Vector3 componentUp, bool grounded,
             in CharacterFootPlacementSoleContactPose contacts)
         {
-            Vector3 unitUp = frame.ComponentUp.normalized;
-            var heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
-                frame.Side, CharacterFootCurrentSupportProbeKind.Heel,
-                contacts.HeelPosition, frame.ComponentUp, unitUp,
-                m_Settings, m_LandingSettings);
-            var toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
-                frame.Side, CharacterFootCurrentSupportProbeKind.Toe,
-                contacts.ToePosition, frame.ComponentUp, unitUp,
-                m_Settings, m_LandingSettings);
-            CharacterFootCurrentSupportProbeResult heel = m_World.Query(in heelRequest);
-            CharacterFootCurrentSupportProbeResult toe = m_World.Query(in toeRequest);
-            return CharacterFootCurrentSupportObservation.Resolve(
-                frame.FrameSequence, frame.CompletionIdentity, frame.WorldRevision,
-                in heelRequest, in toeRequest, in heel, in toe);
+            Vector3 up = componentUp.normalized;
+            var probes = new FixedList4096Bytes<CharacterFootSoleProbeObservation>();
+            int acceptedCount = 0;
+            float displacement = float.NegativeInfinity;
+            CharacterFootCurrentSupportRejectReason rejection = grounded
+                ? CharacterFootCurrentSupportRejectReason.None : CharacterFootCurrentSupportRejectReason.NotGrounded;
+            for (int i = 0; i < contacts.SoleSamples.Length; i++)
+            {
+                Vector3 position = contacts.SoleSamples[i];
+                var request = new CharacterFootCurrentSupportProbeRequest(side, i, position, up, in m_Settings);
+                CharacterFootCurrentSupportProbeResult result = grounded
+                    ? m_World.Query(in request) : CharacterFootCurrentSupportProbeResult.NotGrounded(worldRevision);
+                probes.Add(new CharacterFootSoleProbeObservation(position, in result));
+                if (result.WorldRevision != worldRevision)
+                    rejection = CharacterFootCurrentSupportRejectReason.WorldRevisionMismatch;
+                else if (result.RejectReason == CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded)
+                    rejection = CharacterFootCurrentSupportRejectReason.IncompleteQuery;
+                if (result.Accepted)
+                {
+                    acceptedCount++;
+                    displacement = Mathf.Max(displacement, Vector3.Dot(result.Point - position, up));
+                }
+            }
+            if (acceptedCount == 0 && rejection == CharacterFootCurrentSupportRejectReason.None)
+                rejection = CharacterFootCurrentSupportRejectReason.NoSupport;
+
+            int selected = -1;
+            var reason = CharacterFootCurrentSupportSelectionReason.None;
+            CharacterFootSupportTarget target = default;
+            if (rejection == CharacterFootCurrentSupportRejectReason.None)
+            {
+                reason = acceptedCount == 1
+                    ? CharacterFootCurrentSupportSelectionReason.SingleSampleSupport
+                    : CharacterFootCurrentSupportSelectionReason.HighestRequiredDisplacement;
+                for (int i = 0; i < probes.Length; i++)
+                {
+                    CharacterFootSoleProbeObservation probe = probes[i];
+                    if (!probe.Result.Accepted ||
+                        displacement - Vector3.Dot(probe.Result.Point - probe.Position, up) >
+                        CharacterFootCurrentSupportObservation.SelectionEpsilon)
+                        continue;
+                    if (selected < 0)
+                        selected = i;
+                    else
+                    {
+                        int previousIdentity = probes[selected].Result.SurfaceIdentity;
+                        if (probe.Result.SurfaceIdentity != previousIdentity)
+                            reason = CharacterFootCurrentSupportSelectionReason.EquivalentDisplacementSurfaceIdentity;
+                        else if (reason != CharacterFootCurrentSupportSelectionReason.EquivalentDisplacementSurfaceIdentity)
+                            reason = CharacterFootCurrentSupportSelectionReason.EquivalentDisplacementSampleOrder;
+                        if (probe.Result.SurfaceIdentity < previousIdentity)
+                            selected = i;
+                    }
+                }
+                CharacterFootCurrentSupportProbeResult support = probes[selected].Result;
+                Vector3 originalSole = (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
+                target = new CharacterFootSupportTarget(
+                    frameSequence, completionIdentity, side, originalSole + up * displacement,
+                    support.Normal, support.SurfaceIdentity, worldRevision,
+                    CharacterFootSupportTargetKind.CurrentSupport,
+                    CharacterFootSupportPositionSource.CurrentSupport, frameSequence, completionIdentity, 0, 0,
+                    CharacterFootSupportNormalSource.CurrentSupport, frameSequence, completionIdentity, 0);
+            }
+            return new CharacterFootCurrentSupportObservation(
+                frameSequence, completionIdentity, side, worldRevision, up, in m_Settings, in probes,
+                rejection, acceptedCount, acceptedCount > 0 ? displacement : 0f, selected, reason, in target);
         }
     }
-
 }

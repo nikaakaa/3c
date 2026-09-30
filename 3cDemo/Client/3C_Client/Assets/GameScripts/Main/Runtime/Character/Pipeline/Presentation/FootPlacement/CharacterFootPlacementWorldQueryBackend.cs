@@ -428,67 +428,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootCurrentSupportProbeRequest request)
         {
             ulong queryRevision = WorldRevision;
-            if (!request.IsValid ||
-                request.HitCapacity != m_CurrentSupportHits.Length)
-            {
+            int count = m_PhysicsScene.Raycast(
+                request.Origin, request.Direction, m_CurrentSupportHits,
+                request.MaximumDistance, request.LayerMask, QueryTriggerInteraction.Ignore);
+            if (count == m_CurrentSupportHits.Length)
                 return CharacterFootCurrentSupportProbeResult.Rejected(
-                    request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.InvalidRequest,
-                    queryRevision,
-                    false,
-                    default);
-            }
-            Vector3 origin = request.Origin;
-            Vector3 direction = request.Direction;
-            float maximumDistance = request.MaximumDistance;
-            float supportMaximumDistance = request.SupportMaximumDistance;
-            int count = m_PhysicsScene.SphereCast(
-                origin,
-                request.Radius,
-                direction,
-                m_CurrentSupportHits,
-                maximumDistance,
-                request.LayerMask,
-                QueryTriggerInteraction.Ignore);
-            if (count >= m_CurrentSupportHits.Length)
+                    CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded, queryRevision,
+                    new CharacterFootSupportQueryDiagnostics(count, 0, 0, 0));
+
+            int accepted = 0;
+            int steep = 0;
+            RaycastHit selected = default;
+            for (int i = 0; i < count; i++)
             {
-                return CharacterFootCurrentSupportProbeResult.Rejected(
-                    request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.CapacityExceeded,
-                    queryRevision,
-                    true,
-                    default);
+                RaycastHit hit = m_CurrentSupportHits[i];
+                if (m_Rig.IsSelfCollider(hit.collider))
+                    continue;
+                if (Vector3.Dot(hit.normal, request.UnitComponentUp) < request.MinimumGroundNormalDot)
+                {
+                    steep++;
+                    continue;
+                }
+                if (accepted == 0 || CompareCurrentSupport(hit, selected) < 0)
+                    selected = hit;
+                accepted++;
             }
-            int validCount = ResolveSupportCandidates(
-                m_CurrentSupportHits,
-                count,
-                origin,
-                direction,
-                supportMaximumDistance,
-                request.MinimumGroundNormalDot,
-                out CharacterFootSupportQueryDiagnostics coverage);
-            if (validCount == 0)
-            {
+            var coverage = new CharacterFootSupportQueryDiagnostics(count, accepted, 0, steep);
+            if (accepted == 0)
                 return CharacterFootCurrentSupportProbeResult.Rejected(
-                    request.Kind,
-                    CharacterFootCurrentSupportProbeRejectReason.NoHit,
-                    queryRevision,
-                    true,
-                    coverage);
-            }
-            RaycastHit selected = m_CurrentSupportHits[0];
+                    CharacterFootCurrentSupportProbeRejectReason.NoHit, queryRevision, coverage);
             return new CharacterFootCurrentSupportProbeResult(
-                request.Kind,
-                CharacterFootCurrentSupportProbeState.Accepted,
-                CharacterFootCurrentSupportProbeRejectReason.None,
-                validCount,
-                coverage,
-                selected.collider.GetInstanceID(),
-                selected.point,
-                selected.normal.normalized,
-                selected.distance,
-                queryRevision,
-                true);
+                CharacterFootCurrentSupportProbeState.Accepted, CharacterFootCurrentSupportProbeRejectReason.None,
+                coverage, selected.collider.GetInstanceID(), selected.point, selected.normal,
+                selected.distance, queryRevision);
         }
 
         int ResolveSupportCandidates(

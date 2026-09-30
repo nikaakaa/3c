@@ -383,7 +383,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out _, out _, out _, out Vector3 ankle, out Quaternion rotation))
                 return default;
             CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(ankle, rotation);
-            return evaluation.SoleSupportQuery.Query(in frame, in contacts);
+            return evaluation.SoleSupportQuery.Query(
+                frame.FrameSequence, frame.CompletionIdentity, frame.WorldRevision,
+                frame.Side, frame.ComponentUp, true, in contacts);
         }
 
         static CharacterFootHardConstraintResult ResolveOutputSupportConstraint(

@@ -49,8 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static PrefabStage s_Stage;
         static CharacterFootPlacementFootCalibration s_Left;
         static CharacterFootPlacementFootCalibration s_Right;
-        static CharacterFootPlacementCurrentSupportFootprintCalibration
-            s_CurrentSupportFootprint;
+        static int s_SoleSampleIndex;
         static CharacterFootSide s_Side = CharacterFootSide.Left;
         static CalibrationEditMode s_EditMode;
         static CharacterFootPlacementProfile s_QueryProfile;
@@ -176,21 +175,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 typeof(CharacterFootPlacementProfile), false);
             if (EditorGUI.EndChangeCheck())
                 SceneView.RepaintAll();
+            CharacterFootPlacementFootCalibration foot = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
+            s_SoleSampleIndex = EditorGUILayout.IntSlider("Sole Sample", s_SoleSampleIndex, 0, foot.SoleSamples.Count - 1);
             EditorGUILayout.HelpBox(
-                "The Heel and Toe points from Sole Calibration define the support probes. " +
-                "Spheres collect nearby colliders; the green line confirms a supporting face " +
-                "directly below each calibrated point. Select the profile used by your Pose Graph.",
+                "Each numbered point follows the shoe's ankle/toe skinning and casts a downward ray. " +
+                "Drag the selected sample in Scene view, then Apply Sole Samples. Heel and Toe remain the semantic sole reference.",
                 MessageType.Info);
-            if (!s_QueryProfile)
-                return;
-            CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
-            CharacterFootLandingPredictionSettings landing = s_QueryProfile.LandingPrediction.Build();
             using (new EditorGUI.DisabledScope(true))
             {
-                EditorGUILayout.FloatField("Candidate Search Radius", landing.SphereRadius);
-                EditorGUILayout.FloatField("Cast Above", support.CastAbove);
-                EditorGUILayout.FloatField("Cast Below", support.CastBelow);
-                EditorGUILayout.FloatField("Maximum Surface Slope", support.MaximumSurfaceSlopeDegrees);
+                EditorGUILayout.IntField("Sample Count", foot.SoleSamples.Count);
+                EditorGUILayout.FloatField("Selected Toe Weight", foot.SoleSamples[s_SoleSampleIndex].ToeWeight);
+                if (s_QueryProfile)
+                {
+                    CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
+                    EditorGUILayout.FloatField("Cast Above", support.CastAbove);
+                    EditorGUILayout.FloatField("Cast Below", support.CastBelow);
+                    EditorGUILayout.FloatField("Maximum Surface Slope", support.MaximumSurfaceSlopeDegrees);
+                }
+            }
+            using (new EditorGUI.DisabledScope(s_Report == null || !s_Report.IsValid))
+            {
+                if (GUILayout.Button("Apply Sole Samples"))
+                    Apply();
             }
             if (GUILayout.Button("Frame Support Probes"))
             {
@@ -246,7 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             EditorGUILayout.HelpBox(
-                "Apply writes Calibration v5 Sole and Current Support footprint geometry. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
+                "Apply writes Calibration v6 Sole samples and semantic contact geometry. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
                 MessageType.None);
         }
 
@@ -528,7 +534,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 calibration.Configure(
                     calibration.CalibrationId,
                     definition,
-                    s_CurrentSupportFootprint,
                     s_Left,
                     s_Right);
                 var physicalTransforms = new Transform[s_RigBinding.PhysicalBones.Count];
@@ -547,7 +552,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 calibration.Configure(
                     calibration.CalibrationId,
                     definition,
-                    s_CurrentSupportFootprint,
                     s_Left,
                     s_Right);
                 CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
@@ -682,8 +686,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             s_Left = s_Source.RigCalibration.Left;
             s_Right = s_Source.RigCalibration.Right;
-            s_CurrentSupportFootprint =
-                s_Source.RigCalibration.CurrentSupportFootprint;
             DeriveSoleFrames();
             EvaluateDraft();
             SceneView.RepaintAll();
@@ -700,7 +702,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             calibration.Configure(
                 calibration.CalibrationId,
                 s_Source.RigDefinition,
-                s_CurrentSupportFootprint,
                 s_Left,
                 s_Right);
             CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
@@ -764,7 +765,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 draft = new CharacterFootPlacementFootCalibration(
                     ankle.InverseTransformPoint(nextHeel),
                     toe.InverseTransformPoint(nextToe),
-                    draft.SoleFrameLocalRotation);
+                    draft.SoleFrameLocalRotation,
+                    draft.SoleSamples);
                 draft = DeriveSoleFrame(draft, ankle, toe);
                 if (s_Side == CharacterFootSide.Left)
                     s_Left = draft;
@@ -827,51 +829,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawSupportQueryScene()
         {
-            if (!s_QueryProfile)
-                return;
             Transform ankle = s_Side == CharacterFootSide.Left ? s_Rig.LeftAnkle : s_Rig.RightAnkle;
             Transform toe = s_Side == CharacterFootSide.Left ? s_Rig.LeftToe : s_Rig.RightToe;
             CharacterFootPlacementFootCalibration foot = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
-            CharacterFootCurrentSupportQuerySettings support = s_QueryProfile.CurrentSupportQuery.Build();
-            CharacterFootLandingPredictionSettings landing = s_QueryProfile.LandingPrediction.Build();
-            Vector3 componentUp = s_Rig.PoseRoot.up;
-            CharacterFootCurrentSupportProbeRequest heelRequest = CharacterFootCurrentSupportProbeRequest.Create(
-                s_Side, CharacterFootCurrentSupportProbeKind.Heel,
-                ankle.TransformPoint(foot.HeelContactLocalOffset), componentUp, componentUp,
-                in support, in landing);
-            CharacterFootCurrentSupportProbeRequest toeRequest = CharacterFootCurrentSupportProbeRequest.Create(
-                s_Side, CharacterFootCurrentSupportProbeKind.Toe,
-                toe.TransformPoint(foot.ToeContactLocalOffset), componentUp, componentUp,
-                in support, in landing);
-            DrawSupportProbe(in heelRequest, "Heel");
-            DrawSupportProbe(in toeRequest, "Toe");
+            Matrix4x4 ankleMatrix = ankle.localToWorldMatrix;
+            Matrix4x4 toeMatrix = toe.localToWorldMatrix;
+            CharacterFootCurrentSupportQuerySettings support = s_QueryProfile
+                ? s_QueryProfile.CurrentSupportQuery.Build() : default;
+            for (int i = 0; i < foot.SoleSamples.Count; i++)
+            {
+                Vector3 point = foot.SoleSamples[i].Resolve(ankleMatrix, toeMatrix);
+                DrawContact(point, i == s_SoleSampleIndex, Color.green);
+                Handles.Label(point, $"Sole {i}");
+                if (s_QueryProfile)
+                {
+                    var request = new CharacterFootCurrentSupportProbeRequest(s_Side, i, point, s_Rig.PoseRoot.up, in support);
+                    Handles.color = new Color(0.25f, 0.8f, 0.4f, 0.6f);
+                    Handles.DrawLine(request.Origin, request.Origin + request.Direction * request.MaximumDistance);
+                }
+            }
+            CharacterFootPlacementSoleSampleCalibration sample = foot.SoleSamples[s_SoleSampleIndex];
+            Vector3 previous = sample.Resolve(ankleMatrix, toeMatrix);
+            EditorGUI.BeginChangeCheck();
+            Vector3 next = Handles.PositionHandle(previous, Quaternion.identity);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Vector3 delta = next - previous;
+                var samples = new CharacterFootPlacementSoleSampleCalibration[foot.SoleSamples.Count];
+                for (int i = 0; i < samples.Length; i++)
+                    samples[i] = foot.SoleSamples[i];
+                samples[s_SoleSampleIndex] = new CharacterFootPlacementSoleSampleCalibration(
+                    sample.AnkleLocalOffset + ankle.InverseTransformVector(delta),
+                    sample.ToeLocalOffset + toe.InverseTransformVector(delta), sample.ToeWeight);
+                var updated = new CharacterFootPlacementFootCalibration(
+                    foot.HeelContactLocalOffset, foot.ToeContactLocalOffset, foot.SoleFrameLocalRotation, samples);
+                if (s_Side == CharacterFootSide.Left)
+                    s_Left = updated;
+                else
+                    s_Right = updated;
+                EvaluateDraft();
+            }
         }
-
-        static void DrawSupportProbe(in CharacterFootCurrentSupportProbeRequest request, string label)
-        {
-            Vector3 up = request.ComponentUp.normalized;
-            Vector3 side = Vector3.Cross(up, Vector3.forward);
-            if (side.sqrMagnitude < 0.0001f)
-                side = Vector3.Cross(up, Vector3.right);
-            side = side.normalized * request.Radius;
-            Vector3 origin = request.Origin;
-            Vector3 end = origin + request.Direction * request.MaximumDistance;
-            Handles.color = new Color(1f, 0.65f, 0.15f, 0.7f);
-            Handles.DrawWireDisc(origin, up, request.Radius);
-            Handles.DrawWireDisc(end, up, request.Radius);
-            Handles.DrawWireDisc(origin, side.normalized, request.Radius);
-            Handles.DrawWireDisc(end, side.normalized, request.Radius);
-            Handles.DrawLine(origin + side, end + side);
-            Handles.DrawLine(origin - side, end - side);
-            Handles.color = Color.green;
-            Handles.DrawLine(origin, origin + request.Direction * request.SupportMaximumDistance);
-            DrawContact(request.ProbePosition, false, Color.green);
-            Handles.Label(request.ProbePosition, label + " Support Point");
-        }
-
-
-
-
 
         static CharacterFootPlacementFootCalibration DeriveSoleFrame(
             CharacterFootPlacementFootCalibration source,
@@ -888,7 +886,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return new CharacterFootPlacementFootCalibration(
                 source.HeelContactLocalOffset,
                 source.ToeContactLocalOffset,
-                Quaternion.Inverse(ankle.rotation) * worldRotation);
+                Quaternion.Inverse(ankle.rotation) * worldRotation,
+                source.SoleSamples);
         }
 
         static void DeriveSoleFrames()
@@ -994,7 +993,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             try
             {
                 CharacterFootPlacementRigCalibration.RequireValidDraft(
-                    s_CurrentSupportFootprint,
                     s_Left,
                     s_Right);
                 s_Report = CharacterFootPlacementRigGeometryValidator.Evaluate(s_Rig, s_Left, s_Right);

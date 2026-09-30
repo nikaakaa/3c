@@ -61,7 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterFootPlacementFootCalibration left = Calibration.Left;
             CharacterFootPlacementFootCalibration right = Calibration.Right;
-            CurrentSupportFootprint = Calibration.CurrentSupportFootprint;
+            m_LeftCalibration = left;
+            m_RightCalibration = right;
             LeftHeelContactOffset = left.HeelContactLocalOffset;
             LeftToeContactOffset = left.ToeContactLocalOffset;
             RightHeelContactOffset = right.HeelContactLocalOffset;
@@ -96,7 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementRigCalibrationId CalibrationId => Calibration.CalibrationId;
         public int CalibrationSchemaVersion => Calibration.SchemaVersion;
         public string CalibrationRevision => Calibration.ContentRevision;
-        public CharacterFootPlacementCurrentSupportFootprintCalibration CurrentSupportFootprint { get; }
+        readonly CharacterFootPlacementFootCalibration m_LeftCalibration;
+        readonly CharacterFootPlacementFootCalibration m_RightCalibration;
         public Transform VisualRoot => World.PresentationRoot;
         public Transform PoseRoot => Binding.Animator.transform;
         public Transform SelfColliderRoot => World.SelfColliderRoot;
@@ -137,7 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentPoses[Rig.LeftLeg.ToePhysicalBoneIndex],
                     LeftHeelContactOffset,
                     LeftToeContactOffset,
-                    LeftSoleFrameLocalRotation),
+                    LeftSoleFrameLocalRotation,
+                    m_LeftCalibration),
                 CaptureFoot(
                     PoseRoot,
                     componentPoses[Rig.RightLeg.HipPhysicalBoneIndex],
@@ -146,7 +149,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     componentPoses[Rig.RightLeg.ToePhysicalBoneIndex],
                     RightHeelContactOffset,
                     RightToeContactOffset,
-                    RightSoleFrameLocalRotation));
+                    RightSoleFrameLocalRotation,
+                    m_RightCalibration));
             RequireFinite(pose.Left.HipPosition);
             RequireFinite(pose.Left.KneePosition);
             RequireFinite(pose.Left.AnklePosition);
@@ -161,14 +165,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public bool IsSelfCollider(Collider collider) => World.IsSelfCollider(collider);
-
-        internal CharacterFootPlacementCurrentSupportFootprintPose
-            ResolveCurrentSupportFootprint(
-                in CharacterFootPlacementAnimatedFootPose foot) =>
-            CurrentSupportFootprint.Resolve(
-                foot.AnklePosition,
-                foot.AnkleRotation,
-                foot.ToePosition);
 
         public void RequireValid()
         {
@@ -196,7 +192,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationLocalBonePose toe,
             Vector3 heelContactOffset,
             Vector3 toeContactOffset,
-            Quaternion soleFrameLocalRotation)
+            Quaternion soleFrameLocalRotation,
+            in CharacterFootPlacementFootCalibration calibration)
         {
             if (!hip.IsValid || !knee.IsValid ||
                 !ankle.IsValid || !toe.IsValid)
@@ -209,6 +206,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion toeRotation = rootRotation * toe.Rotation;
             Quaternion semanticRotation =
                 ankleRotation * soleFrameLocalRotation;
+            var samples = new FixedList512Bytes<Vector3>();
+            Matrix4x4 rootMatrix = poseRoot.localToWorldMatrix;
+            Matrix4x4 ankleMatrix = rootMatrix * Matrix4x4.TRS(ankle.Position, ankle.Rotation, ankle.Scale);
+            Matrix4x4 toeMatrix = rootMatrix * Matrix4x4.TRS(toe.Position, toe.Rotation, toe.Scale);
+            for (int i = 0; i < calibration.SoleSamples.Count; i++)
+                samples.Add(calibration.SoleSamples[i].Resolve(ankleMatrix, toeMatrix));
             return new CharacterFootPlacementAnimatedFootPose(
                 poseRoot.TransformPoint(hip.Position),
                 poseRoot.TransformPoint(knee.Position),
@@ -226,7 +229,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 semanticRotation * Vector3.forward,
                 semanticRotation * Vector3.up,
                 semanticRotation,
-                soleFrameLocalRotation);
+                soleFrameLocalRotation)
+            {
+                SoleSamples = samples
+            };
         }
 
         static Vector3 TransformPoint(

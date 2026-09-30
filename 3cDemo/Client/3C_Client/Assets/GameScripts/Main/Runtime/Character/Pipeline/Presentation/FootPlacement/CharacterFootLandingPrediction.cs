@@ -868,6 +868,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootCurrentSupportDiagnostics CurrentSupport { get; }
         public CharacterFootCurrentSupportDiagnostics OutputSupport { get; }
         public CharacterFootCurrentSupportDiagnostics StateTargetSupport { get; }
+        [DiagnosticTable("current-support-probes", 1, CharacterFootPlacementRigCalibration.MaximumSoleSamples)]
+        public CharacterFootCurrentSupportProbePage CurrentSupportProbes => CurrentSupport.Probes;
+        [DiagnosticTable("output-support-probes", 1, CharacterFootPlacementRigCalibration.MaximumSoleSamples)]
+        public CharacterFootCurrentSupportProbePage OutputSupportProbes => OutputSupport.Probes;
+        [DiagnosticTable("state-target-support-probes", 1, CharacterFootPlacementRigCalibration.MaximumSoleSamples)]
+        public CharacterFootCurrentSupportProbePage StateTargetSupportProbes => StateTargetSupport.Probes;
         public CharacterResolvedFootDiagnostics Resolved { get; }
         [DiagnosticField]
         [DiagnosticGroup("landing-observation")]

@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Right = 2
     }
 
-    public readonly struct CharacterFootPlacementAnimatedFootPose
+    public struct CharacterFootPlacementAnimatedFootPose
     {
         public CharacterFootPlacementAnimatedFootPose(
             Vector3 hipPosition,
@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SoleUp = soleUp;
             SemanticRotation = semanticRotation;
             SoleFrameLocalRotation = soleFrameLocalRotation;
+            SoleSamples = default;
         }
 
         public Vector3 HipPosition { get; }
@@ -51,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SoleUp { get; }
         public Quaternion SemanticRotation { get; }
         public Quaternion SoleFrameLocalRotation { get; }
+        public FixedList512Bytes<Vector3> SoleSamples { get; internal set; }
 
         internal CharacterFootPlacementSoleContactPose ResolveSoleContacts(
             Vector3 anklePosition,
@@ -60,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnkleRotation,
                 HeelPosition,
                 ToePosition,
+                SoleSamples,
                 anklePosition,
                 ankleRotation);
     }
@@ -68,30 +71,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootPlacementSoleContactPose(
             Vector3 heelPosition,
-            Vector3 toePosition)
+            Vector3 toePosition,
+            in FixedList512Bytes<Vector3> soleSamples)
         {
+            SoleSamples = soleSamples;
             HeelPosition = heelPosition;
             ToePosition = toePosition;
         }
 
         public Vector3 HeelPosition { get; }
         public Vector3 ToePosition { get; }
+        public readonly FixedList512Bytes<Vector3> SoleSamples;
 
         public static CharacterFootPlacementSoleContactPose Resolve(
             Vector3 sourceAnklePosition,
             Quaternion sourceAnkleRotation,
             Vector3 sourceHeelPosition,
             Vector3 sourceToePosition,
+            in FixedList512Bytes<Vector3> sourceSoleSamples,
             Vector3 finalAnklePosition,
             Quaternion finalAnkleRotation)
         {
             Quaternion rotationDelta =
                 (finalAnkleRotation * Quaternion.Inverse(sourceAnkleRotation)).normalized;
+            var samples = new FixedList512Bytes<Vector3>();
+            for (int i = 0; i < sourceSoleSamples.Length; i++)
+                samples.Add(finalAnklePosition + rotationDelta * (sourceSoleSamples[i] - sourceAnklePosition));
             return new CharacterFootPlacementSoleContactPose(
                 finalAnklePosition +
                 rotationDelta * (sourceHeelPosition - sourceAnklePosition),
                 finalAnklePosition +
-                rotationDelta * (sourceToePosition - sourceAnklePosition));
+                rotationDelta * (sourceToePosition - sourceAnklePosition),
+                in samples);
         }
     }
 

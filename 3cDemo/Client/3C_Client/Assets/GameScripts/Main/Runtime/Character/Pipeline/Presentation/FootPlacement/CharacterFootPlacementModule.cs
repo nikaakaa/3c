@@ -575,8 +575,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    in m_Settings.CurrentSupportQuery,
-                    in m_Settings.LandingPrediction));
+                    in m_Settings.CurrentSupportQuery));
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
                 in rightCurrentStep,
@@ -586,8 +585,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 facts.Grounded,
                 goalRoot,
                 new CharacterFootSoleSupportQuery(m_WorldQuery,
-                    in m_Settings.CurrentSupportQuery,
-                    in m_Settings.LandingPrediction));
+                    in m_Settings.CurrentSupportQuery));
             CharacterFootPlacementRequest leftRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
@@ -860,50 +858,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pool.AcquireWritable(committed);
             ref readonly CharacterFootCurrentSupportQuerySettings settings =
                 ref m_Settings.CurrentSupportQuery;
-            Vector3 unitUp = componentUp.normalized;
-            CharacterFootCurrentSupportProbeRequest heelRequest =
-                CharacterFootCurrentSupportProbeRequest.Create(
-                    side,
-                    CharacterFootCurrentSupportProbeKind.Heel,
-                    foot.HeelPosition,
-                    componentUp,
-                    unitUp,
-                    in settings,
-                    in m_Settings.LandingPrediction);
-            CharacterFootCurrentSupportProbeRequest toeRequest =
-                CharacterFootCurrentSupportProbeRequest.Create(
-                    side,
-                    CharacterFootCurrentSupportProbeKind.Toe,
-                    foot.ToePosition,
-                    componentUp,
-                    unitUp,
-                    in settings,
-                    in m_Settings.LandingPrediction);
-            CharacterFootCurrentSupportObservation observation;
-            if (!grounded)
-            {
-                observation = CharacterFootCurrentSupportObservation.Unavailable(
-                    frameSequence,
-                    completionIdentity,
-                    m_WorldQuery.WorldRevision,
-                    in heelRequest,
-                    in toeRequest,
-                    CharacterFootCurrentSupportRejectReason.NotGrounded);
-                pending.Set(in observation);
-                return pending;
-            }
-            CharacterFootCurrentSupportProbeResult heel =
-                m_WorldQuery.Query(in heelRequest);
-            CharacterFootCurrentSupportProbeResult toe =
-                m_WorldQuery.Query(in toeRequest);
-            observation = CharacterFootCurrentSupportObservation.Resolve(
-                frameSequence,
-                completionIdentity,
-                m_WorldQuery.WorldRevision,
-                in heelRequest,
-                in toeRequest,
-                in heel,
-                in toe);
+            var query = new CharacterFootSoleSupportQuery(m_WorldQuery, in settings);
+            CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(foot.AnklePosition, foot.AnkleRotation);
+            CharacterFootCurrentSupportObservation observation = query.Query(
+                frameSequence, completionIdentity, m_WorldQuery.WorldRevision,
+                side, componentUp, grounded, in contacts);
             pending.Set(in observation);
             return pending;
         }

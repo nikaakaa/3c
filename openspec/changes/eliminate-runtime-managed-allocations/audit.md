@@ -2081,3 +2081,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - `CharacterFootCurrentSupportProbeRequest.Origin` 和 `Direction` 每次读取都归一化同一 ComponentUp；Current Support world query 读取两者，diagnostics 展开再读取一次，同一 probe 重复执行相同归一化。
 - Request 构造时归一化一次并绑定 origin 与 direction backing field；两个属性改为字段读取。ProbePosition、ComponentUp、IsValid 对原始 ComponentUp 的校验、SphereCast 输入、候选筛选和 diagnostics 字段不变。
 - 该改动删除同一 probe 内的重复归一化；heel/toe 仍各自构造 request。静态核对构造边界、字段生命周期和消费只读；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP294 Ground envelope path delta 合并（2026-09-30，已实施，本轮未编译）
+
+- Ground Envelope 构建先对 `NextSwingLanding - LastLanding` 做平面投影，再重复相减一次用于端点高度；每次 envelope 构建重复执行同一路径 delta。
+- 路径 delta 在归一化 up 后绑定局部，投影和 end height 复用同一向量。float 判定、失败分支、contact 投影、surface visibility、hull 和输出不变；绑定不改变减法输入或浮点运算顺序。
+- 静态核对 input 为内部 readonly struct、生命周期覆盖构建。另一项候选是删除 Envelope 对已由 Ground Path 归一化的 ComponentUp 的二次归一化，但二次归一化可能改变 IEEE 浮点位型，需要业务接受几何等价而非逐位等价后再决策。未编译、未采样，不能声称实测耗时收益或行为已运行验证。

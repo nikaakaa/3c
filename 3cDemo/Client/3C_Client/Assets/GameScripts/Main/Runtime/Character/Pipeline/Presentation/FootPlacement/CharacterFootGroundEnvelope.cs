@@ -267,13 +267,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             output.Clear();
             invalidSegment = default;
             Vector3 up = input.ComponentUp.normalized;
-            Vector3 horizontal = Vector3.ProjectOnPlane(
-                input.NextSwingLanding - input.LastLanding,
-                up);
+            Vector3 pathDelta = input.NextSwingLanding - input.LastLanding;
+            Vector3 horizontal = Vector3.ProjectOnPlane(pathDelta, up);
             float pathLength = horizontal.magnitude;
-            float endHeight = Vector3.Dot(
-                input.NextSwingLanding - input.LastLanding,
-                up);
+            float endHeight = Vector3.Dot(pathDelta, up);
             if (!float.IsFinite(pathLength) || pathLength <= GeometryEpsilon)
             {
                 rejectReason = CharacterFootGroundPathRejectReason.DegenerateEnvelope;

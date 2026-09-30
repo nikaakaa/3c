@@ -2,83 +2,56 @@
 
 ## Purpose
 
-本项目是求职向 Gameplay 客户端程序 demo。重点是第三人称动作客户端的输入响应、角色控制、动画表现、镜头、战斗窗口、受击反馈和调试可视化，以及在网络模型压力下仍能审查的玩法模拟边界。
-
-业务压力场景固定为 2v2vE 动作战斗技术演示：两名真人玩家、两名使用同一角色管线的 Bot，以及不属于双方队伍的中立怪。它不是完整 PvPvE、MMO、匹配、账号、背包、大地图、多职业或反作弊产品。正式产品范围见 [2v2ve-gameplay-client-demo.md](2v2ve-gameplay-client-demo.md)。
+求职向第三人称 Gameplay 客户端 demo，重点为输入、控制、动画、相机、战斗窗口、受击反馈与调试。2v2vE 压力场景包含两名真人、两名同管线 Bot、中立怪；网络不是主展示方向。不做完整 PvPvE/MMO、匹配、账号、背包、大地图、多职业或反作弊产品，也不做纯网络框架或完整断线重连，除非用户明确改目标。见[产品范围](2v2ve-gameplay-client-demo.md)。
 
 ## Current Architecture
 
-### Authoring And Content
-
-- `CharacterPipelineDefinition` 是角色配置装配根，只引用各领域的正式内容与 binding；它不是整角色编译根。
-- Skill/Ability 提供入口、授权、引用和运行实例。每个 Ability 的执行数据由正式发布链按数值目标独立产出并回写 Definition 引用，不再拼成角色总包。
-- Graph 编译只发布明确 graph owner 的 artifact。Character Definition、Ability、Control、Timeline、Pose、Camera、Motion、Effect 与 Equipment 不会被合并为整角色 `CharacterSimulationProgram`、`ProgramCatalog` 或 `Projection`。
-- Locomotion 由 C# 控制模块执行；Timeline 直接准备和调度正式 `TimelineData`；Pose 直接运行原生 FlowCanvas Graph 与领域资源 binding；Camera、Motion、Effect、Equipment 各自准备、运行并报告采用结果。
-- Animation Profile、Rig、Pose 资源、Foot Placement 配置、Camera Profile 和 Equipment Profile 各自拥有资源语义。作者窗口和 C# authoring API 必须走同一业务定义，不暴露 Unity 序列化字段或运行时对象作为另一条作者链。
-- 配置、枚举和值域由 authoring/content preparation 统一校验并写入正式 binding、payload 或 compiled resource；运行实例消费已经准备好的内容，不在 FBBIK、Pose、Blend 等正式运行构造链重复检查同一份配置。
-
-### Simulation
+| Owner | 职责与输出 |
+| --- | --- |
+| CharacterPipelineDefinition | 只装配领域内容与 binding，不是整角色编译根 |
+| Graph / Skill / Ability | Graph 编译只发布其 owner 的 artifact；技能管入口、授权、引用、实例，各 Ability 按数值目标独立发布执行数据并回写 Definition 引用 |
+| Control | C# 模块执行 Locomotion |
+| Timeline | 直接准备、调度 TimelineData，拥有内容身份、时间、求值边界 |
+| Pose | 提交事实→原生 FlowCanvas 图与领域资源 binding→最终姿态 |
+| Camera / Motion / Effect / Equipment | 各自准备、运行、报告采用结果；Profile、Rig 与正式内容各有资源语义 |
+| SimulationSessionHost | 唯一装配根，组合各领域、Pipeline、Source、WorldSolver，拥有准备、roster 锁定、tick、销毁 |
+| SimulationSessionHistory | 唯一持有检查点、历史分支、裁剪、恢复事务；Host 提供同一 runtime/roster/完成 Tick，在真实释放边界解除借用 |
+| CharacterPipelineHost | 只做 Actor registration、binding、表现、诊断，不另建 Source、Solver、Pipeline 或 Preview runtime |
 
 ```text
-输入 / Session Source
--> SimulationSessionHost
--> Ingress
--> Schedule
--> Evaluate
--> World ResolveBatch
--> Finalize
--> Egress
--> atomic Commit
--> Presentation
+输入/Session Source → SimulationSessionHost → Ingress → Schedule
+→ Evaluate → World ResolveBatch → Finalize → Egress → atomic Commit → Presentation
 ```
 
-- `SimulationSessionHost` 是唯一运行装配根，显式组合 Control、Ability、Timeline、Effect、Equipment、Presentation、Pipeline、Session Source 与 WorldSolver，并拥有准备、roster 锁定、tick 生命周期和销毁顺序。
-- Session 的检查点集合、历史分支、裁剪和恢复事务由 `SimulationSessionHistory` 唯一持有；Host 提供同一 runtime、roster 与已完成 Tick，并在真实释放边界解除借用。
-- `CharacterPipelineHost` 只负责 Actor registration、领域 binding、Presentation 和 diagnostics 接口；它不创建第二套 Source、Solver、Pipeline 或 Preview runtime。
-- 每个领域只保存自己的正式状态。角色和世界状态只在同一 Step 的事务中从 Evaluate 延续到 Finalize，再执行一次 Commit；表现、网络和诊断只消费已提交事实。
-- Float32 与 Fixed 分别拥有必要的数值状态、codec 和运行数据。Local、DeterministicRollback 和 ServerAuthoritative 的差异由各自 Variant、Session Source、Pipeline 与 Network Model 装配，不能由节点、作者 UI 或隐式 fallback 推断。
+领域持有自己的状态，同一 Step 延续到 Finalize 后一次 Commit，表现、网络、诊断只消费提交事实。Float32/Fixed 各有状态、codec、运行数据；Local/Rollback/ServerAuthoritative 由 Variant、Source、Pipeline、Network Model 显式装配，不由节点、UI 或 fallback 推断。
 
-### Timeline TreeClip Node Boundary
+窗口与 C# 作者 API 共用业务定义，不把序列化字段/运行对象暴露为另一条作者链。配置、schema、枚举、值域由内容准备形成 binding/payload/resource；FBBIK、Pose、Blend 构造链不重复校验。
 
-- Timeline 不拥有 `ActionCueTrack`、`ActionCueClip` 或 `ActionCueCommitted` 事件链。一次性 Gameplay、Camera、VFX 和 Audio 行为都在对应 TreeClip 内由正式节点表达，并经节点所属的正式 domain emitter 输出。
-- Corin 的攻击碰撞和攻击属性由 TreeClip 内的 Gameplay 节点提交给 GameplayEffect / Ability 执行域；Timeline 只拥有 TreeClip 的内容身份、时间和求值边界，不解析命中效果、碰撞形状或属性数值。
-- TreeClip 节点输出必须携带正式 Action Context、播放身份、图／节点身份和提交事务身份。Timeline 不把节点输出重新包装成另一套 Cue 事件，也不在 PresentationFrame 重发 Logic 输出。
-- 旧 TreeDesigner 作者包及其旧节点、反射发现和创建菜单已退役；正式 Skill 仍由 FlowCanvas 作者图进入语义编译与正式执行器，不要求恢复 TreeDesigner port。
-- Timeline 的旧 TreeDesigner 自制 UI 已删除；唯一 Timeline 编辑面是嵌入 Slate，FlowCanvas 只负责 TreeClip / Marker 触发图等正式图的可视化与作者入口。
+TreeClip 节点经所属 domain emitter 输出一次性 Gameplay/Camera/VFX/Audio；攻击碰撞与属性交 GameplayEffect/Ability，Timeline 不解释业务数值。输出带 Action Context、播放、图/节点、提交事务身份，不另包 Cue 或在表现帧重发 Logic。ActionCueTrack、ActionCueClip、ActionCueCommitted 链退役。Timeline 只用 Slate；FlowCanvas 编辑技能及 TreeClip/Marker 图，旧 TreeDesigner 作者包、节点、发现/菜单与自制 UI 整体退役。
 
-### Presentation
+```text
+提交事实 → 原生 Pose 状态/源/Slot/姿态阶段
+→ typed Goal Contributions → Goal Assembly → FBBIK → 最终姿态
+```
 
-- 表现只从 committed Body、Action、Timeline、Effect 与领域事实开始。角色外壳调用 Pose 完整帧入口；Pose 内部唯一协调点完成准备、Animancer Evaluate Barrier、Pending 验证与提交。Barrier 前失败只丢弃 Pending；Barrier 内及之后的失败，包括 Pose 已成功后 Timeline、桥、时钟和 Camera 的业务收尾失败，均使同一 Actor 表现进入 Faulted，阻止后续帧且不宣称物理回滚。纯诊断观察失败走诊断通道。
-- Pose 的正式链是 `Presentation Fact -> PoseStateMachine -> state-local source -> AnimationSlot -> Pose stages -> typed Goal Contributions -> Goal Assembly -> FullBodyIK -> FinalAnimationPoseFrame`。每帧最多一次 Foot Placement 事务、一次 Goal Assembly、一次 FBBIK 与一次 final writer。
-- FBBIK、Pose Graph、Blend Stack 的资源 schema、枚举和值域在 authoring/content preparation 通过后才进入正式运行；运行期只保留帧输入、事务血缘、缓冲形状、目标唯一性和求解结果等运行事实校验。
-- Foot Placement、Goal Assembly、FullBodyIK 和 final writer 各有唯一 owner；不得增加第二个 Grounding、Goal Set、FBBIK、骨骼写入或图外修正路径。
-- Motion Matching 的通用能力可以存在，但 Corin 尚未拥有完整的正式 MM 内容 binding；类型或工具存在不等于角色已经接入。第三方 MxM 仅作内容与实现参考，不能进入正式 runtime。
-- AI 已从 BTSMTL 自研链路退役，Opsive Behavior Designer 是唯一 AI 作者与执行插件。它只通过 Character Input、TargetData、Action Request 和只读结果合同接入玩法。
+外壳只调用 Pose 完整帧入口，内部单点准备、Animancer Evaluate Barrier、Pending 验证、提交；Foot、Assembler、FBBIK、final writer 每帧各至多一次，不另建 Grounding、Goal Set 或图外骨骼修正。运行只校验帧输入、血缘、缓冲形状、目标唯一性和求解事实。
 
-### Product And Build Boundary
+Barrier 前失败丢弃 Pending；内/后及后续业务收尾失败使同一 Actor Faulted 并停止后续帧，不宣称物理回滚；纯诊断失败走诊断通道。见[原生 Pose](specs/character-pose-graph-runtime-architecture/spec.md)。
 
-- `GameplayLab` 是 Editor/Development 技术展示，不是商业客户端启动、认证或资源交付链。
-- 商业启动代码尚未完成唯一资源端点、认证端点和共享资源打包规则，因此不能描述为可发布产品闭环。
-- Network Test Product、Performance Capture 与普通产品构建各自通过唯一正式 workflow 发布精确产物；运行、构建、采样和分析不能复制成另一套控制面。
-
-## Document Ownership
-
-- `openspec/specs/` 与本文件共同表达当前能力合同；细节以对应 spec 为准。
-- 未归档 change 只记录尚未收口的增量，不能因目录存在或任务勾选而宣称能力已交付。
-- `openspec/changes/archive/`、协调记录、实验、Replay、构建日志和 Git 历史只保留当时事实，不是当前实现入口。
-- 现行目录和入口见 [maintenance-audit.md](maintenance-audit.md)。已删除的 change 目录不能再作为链接目标或等待依赖。
+MM 通用能力不代表 Corin 已有完整正式 binding；MxM 仅供参考，不进 runtime。AI 唯一使用 Opsive Behavior Designer，经 Character Input、TargetData、Action Request 与只读结果接入。
 
 ## Conventions
 
-- 不做 fallback 配置、兼容镜像、临时桥接或双主线。
-- Build、资源重建、编译和发布都是显式重操作；不得由选中资产、运行时或窗口打开自动触发。
-- 运行时不读取 AssetDatabase 或作者编译实现；Preview 不创建第二个 Session、播放器、时钟、世界查询或状态真相。
-- Authoring Runtime Workbench 只组织 Authoring、Preview 和 RuntimeDebug 三种工作形态；Preview 使用 CMC 式隔离隐藏 Scene，在 Edit Mode 中运行正式 ScenePlay Session，不启动 Unity Play。独立可停靠 Preview 承载视口、当前实例黑板与执行时间线，原 FlowCanvas 和 Timeline 保留作者编辑面；所有窗口共享唯一宿主与 Renderer。打开预览自动装配，正常操作不要求作者感知准备步骤。编辑器宿主接入已有 GameplayTickSystem，RuntimeDebug 只观察同一 Session 的提交事实。
-- RuntimeDebug 的 FlowCanvas、Slate 和导航只改变编辑器观察表面，不得推进 Timeline、修改正式运行状态、抢占 GameView 输入或把编辑器焦点操作传入角色输入链。
-- 文档读取使用 UTF-8；默认不新增测试。用户负责 Unity 端到端验收，不把手动验证写入 OpenSpec task。
+Workbench 保留 Authoring、Preview、RuntimeDebug；Preview 在 CMC 式隔离隐藏 Scene 的 Edit Mode 自动准备正式 ScenePlay Session，不进 Unity Play。窗口共享唯一宿主/Renderer，复用 GameplayTickSystem，不另建 Session、播放器、时钟、世界查询或状态。可停靠 Preview 显示视口、实例黑板、执行时间线，FlowCanvas/Slate 保留作者面。详见[预览](specs/btsmtl-timeline-editor-preview/spec.md)。
+
+RuntimeDebug 只观察，不推进 Timeline、改状态、抢占 GameView 或把焦点送入输入链。构建、重建、编译、发布须显式触发，不能因选中、开窗或运行自动执行；runtime 不读 AssetDatabase/作者编译实现。执行规则归根 AGENTS。
+
+GameplayLab 只作 Editor/Development 展示；商业资源/认证端点、共享打包未闭环，不宣称可发布。网络测试、性能采集、普通构建各用唯一正式 workflow 发布精确产物。
+
+## Document Ownership
+
+本页与现行 specs 拥有当前合同；change 只拥有未收口增量，目录/勾选不代表交付。archive、实验、Replay、日志、Git 只记历史，已删 change 不作当前依赖。见[现行索引](maintenance-audit.md)。
 
 ## Cleanup Rules
 
-- 不恢复旧 Workbench、旧 Document/同步协议、整角色 Program/Projection、Pose Image、Timeline IR、runtime Graph/Timeline clone 或旧 Foot 多数据源。
-- 旧数据、路径、命名、编译器、缓存和 wrapper 确认没有消费者后直接删除，不保留兼容层。
-- `Ref` 中的代码只能迁入正式模块后改名归属，不能成为运行时依赖。
+不加 fallback、兼容镜像、桥接或双主线。BTSMTL 是 authoring 基座与参考，不要求照搬 runtime。旧 Workbench/Document 同步协议、整角色 CharacterSimulationProgram/ProgramCatalog/Projection、Pose Image、Timeline IR、runtime Graph/Timeline clone、分裂 locomotion/action/footphase/bodyclaim/Foot 源退役，迁入正式节点/模块/Timeline 或删。确认无消费者的旧数据、路径、命名、配置、编译器、缓存、wrapper 直接清理；Ref 迁入正式模块并改名，不作运行依赖。

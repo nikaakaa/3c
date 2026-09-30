@@ -293,6 +293,7 @@ namespace ThirdPersonSimulation
         CharacterControlStateSchema m_Schema;
         SimulationTick m_Tick;
         CharacterControlStateValue[] m_Values;
+        CharacterControlStateValue[] m_MutableValues = Array.Empty<CharacterControlStateValue>();
         byte[] m_HashBuffer = Array.Empty<byte>();
         CharacterControlRuntimeStateTransactionStatus m_Status;
         bool m_ValuesChanged;
@@ -321,6 +322,8 @@ namespace ThirdPersonSimulation
             m_Tick = tick;
             BaseState = state;
             m_Values = state.ValueArray;
+            if (m_MutableValues.Length != schema.FieldCount)
+                m_MutableValues = new CharacterControlStateValue[schema.FieldCount];
             m_ValuesChanged = false;
             m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
             return this;
@@ -384,9 +387,8 @@ namespace ThirdPersonSimulation
                 m_ValuesChanged = false;
                 return;
             }
-            var values = new CharacterControlStateValue[state.Values.Count];
-            Array.Copy(state.ValueArray, values, values.Length);
-            m_Values = values;
+            Array.Copy(state.ValueArray, m_MutableValues, m_MutableValues.Length);
+            m_Values = m_MutableValues;
             m_ValuesChanged = true;
         }
 
@@ -418,11 +420,10 @@ namespace ThirdPersonSimulation
 
         void MakeValuesMutable()
         {
-            if (m_ValuesChanged && !ReferenceEquals(m_Values, BaseState.ValueArray))
+            if (m_ValuesChanged)
                 return;
-            var values = new CharacterControlStateValue[BaseState.ValueArray.Length];
-            Array.Copy(BaseState.ValueArray, values, values.Length);
-            m_Values = values;
+            Array.Copy(BaseState.ValueArray, m_MutableValues, m_MutableValues.Length);
+            m_Values = m_MutableValues;
         }
 
         StableHash ComputeHash()
@@ -430,7 +431,7 @@ namespace ThirdPersonSimulation
             int length = 0;
             AppendString(ref length, "character-control-runtime-state/2");
             AppendSeparator(ref length);
-            AppendString(ref length, m_Schema.SchemaHash.Value);
+            AppendHash(ref length, m_Schema.SchemaHash);
             AppendSeparator(ref length);
             AppendUInt64(ref length, m_Tick.Value);
             for (int i = 0; i < m_Values.Length; i++)
@@ -451,6 +452,15 @@ namespace ThirdPersonSimulation
         }
 
         void AppendSeparator(ref int length) => AppendAscii(ref length, '\u001f');
+
+        void AppendHash(ref int length, StableHash value)
+        {
+            Span<char> characters = stackalloc char[64];
+            value.Format(characters);
+            EnsureHashCapacity(length + characters.Length);
+            for (int i = 0; i < characters.Length; i++)
+                m_HashBuffer[length++] = (byte)characters[i];
+        }
 
         void AppendAscii(ref int length, char value)
         {

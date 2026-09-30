@@ -2093,3 +2093,9 @@ Center 改动：`动画链固定绑定与重复工作优化`，change_id=`f2e964
 - Swing Motion 得到 envelope sample 后，minimum correction 和 formal target height 分别对同一 sample 沿同一 up 做 Dot；每脚 swing 求解重复计算同一投影。
 - envelope 沿 up 高度先绑定局部，minimum correction、formal target height、finite 判定和 vertical correction 继续使用原加减顺序。sample 失败分支、endpoint 校验、progress 和输出字段不变。
 - 该改动只合并重复 Dot，不改变输入、公式或浮点结果。静态核对 up 和 sample 生命周期覆盖消费点；未编译、未采样，不能声称实测耗时收益或行为已运行验证。
+
+### AP296 PoseGraph parameter availability 预传（2026-09-30，已实施，本轮未编译）
+
+- Parameter Resolve 循环先读取并校验 base/source availability；Weighted 与 Extremum helper 又从同一 NativeSlice 读取同一索引。每个加权或极值参数每次求值重复访问 availability。
+- 外层 availability 直接传入两个 helper，循环的 BoundParameterPolicy 改为只读引用绑定。校验、Weighted 权重、极值分支和输出参数/availability 写入顺序不变。
+- 该改动删除正式参数求值中的重复 NativeSlice 读取和 policy 结构拷贝。静态核对 helper 全部调用点、binding 生命周期和索引一致；未编译、未采样，不能声称实测耗时收益或行为已运行验证。

@@ -252,7 +252,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  policyIndex < m_ParameterPolicies.Length;
                  policyIndex++)
             {
-                BoundParameterPolicy policy = m_ParameterPolicies[policyIndex];
+                ref readonly BoundParameterPolicy policy =
+                    ref m_ParameterPolicies[policyIndex];
                 int parameterIndex = policy.ParameterIndex;
                 byte baseAvailable = basePose.PoseParameterAvailability[parameterIndex];
                 byte sourceAvailable = sourcePose.PoseParameterAvailability[parameterIndex];
@@ -272,6 +273,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     case PoseParameterResolvePolicy.Weighted:
                         ResolveWeighted(
                             parameterIndex,
+                            baseAvailable,
+                            sourceAvailable,
                             in basePose,
                             in sourcePose,
                             outputParameters,
@@ -280,6 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     case PoseParameterResolvePolicy.Max:
                         ResolveExtremum(
                             parameterIndex,
+                            baseAvailable,
+                            sourceAvailable,
                             in basePose,
                             in sourcePose,
                             outputParameters,
@@ -289,6 +294,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     case PoseParameterResolvePolicy.Min:
                         ResolveExtremum(
                             parameterIndex,
+                            baseAvailable,
+                            sourceAvailable,
                             in basePose,
                             in sourcePose,
                             outputParameters,
@@ -304,13 +311,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ResolveWeighted(
             int index,
+            byte baseAvailable,
+            byte sourceAvailable,
             in CharacterPoseNativePoseReadBinding basePose,
             in CharacterPoseNativePoseReadBinding sourcePose,
             NativeSlice<float> outputParameters,
             NativeSlice<byte> outputAvailability)
         {
-            byte baseAvailable = basePose.PoseParameterAvailability[index];
-            byte sourceAvailable = sourcePose.PoseParameterAvailability[index];
             float baseWeight = baseAvailable != 0 ? basePose.OutputWeight[0] : 0f;
             float sourceWeight = sourceAvailable != 0 ? sourcePose.OutputWeight[0] : 0f;
             float total = baseWeight + sourceWeight;
@@ -329,14 +336,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ResolveExtremum(
             int index,
+            byte baseAvailable,
+            byte sourceAvailable,
             in CharacterPoseNativePoseReadBinding basePose,
             in CharacterPoseNativePoseReadBinding sourcePose,
             NativeSlice<float> outputParameters,
             NativeSlice<byte> outputAvailability,
             bool maximum)
         {
-            byte baseAvailable = basePose.PoseParameterAvailability[index];
-            byte sourceAvailable = sourcePose.PoseParameterAvailability[index];
             if (baseAvailable == 0 && sourceAvailable == 0)
             {
                 outputAvailability[index] = 0;

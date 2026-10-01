@@ -157,7 +157,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 if (Session.LifecycleState == SimulationSessionLifecycleState.Failed)
                     throw new InvalidOperationException(Session.Failure.ToString());
-                if (preparing && IsReady)
+                GameplayTickDriveStatusSnapshot current = m_Tick.DriveStatus;
+                if (preparing && IsReady || drive.Mode != current.Mode ||
+                    drive.RateMultiplier != current.RateMultiplier ||
+                    drive.PresentationClockMode != current.PresentationClockMode)
                     Changed?.Invoke();
             }
             catch (Exception exception)

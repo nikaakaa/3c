@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal ObjectField Profile;
             internal ToolbarToggle RuntimeDebug;
             internal ToolbarMenu Session;
+            internal ToolbarButton PreviewSession;
             internal ToolbarButton RebuildContent;
         }
 
@@ -77,11 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             TimelineWorkspaceMode Mode => BtsmtlScenePlayPreviewWindow.IsOpen
                 ? TimelineWorkspaceMode.Preview : TimelineWorkspaceMode.Authoring;
             BtsmtlScenePlayProfile m_Profile;
-            CharacterTimelineContentExport m_ExportedContent;
-            CharacterTimelineContentAdoptionPlan m_PendingPlan;
-            CharacterTimelineContentPublication m_PublishedContent;
             CharacterTimelineContentAdoptionState m_ContentState;
-            string m_Status = "Authoring";
+            string m_Status = "作者编辑";
             bool m_RuntimeInterest;
             bool m_ConnectionRefreshQueued;
             bool m_ContentRefreshQueued;
@@ -112,63 +110,85 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 var controls = new Controls
                 {
                     Window = window,
-                    Profile = new ObjectField
-                    {
-                        objectType = typeof(BtsmtlScenePlayProfile),
-                        allowSceneObjects = false,
-                        value = m_Profile
-                    },
-                    RuntimeDebug = new ToolbarToggle { text = "RuntimeDebug" },
-                    Session = new ToolbarMenu { text = "Session" },
-                    RebuildContent = new ToolbarButton(RebuildPreviewContent)
-                    {
-                        text = "重建并重新预览",
-                        tooltip = "采用新增资源和图绑定，重新开始预览；当前播放与画面历史将清空。"
-                    }
+                    RuntimeDebug = new ToolbarToggle { text = "运行观察" },
+                    Session = new ToolbarMenu { text = "观察选项" }
                 };
-                controls.Profile.style.width = 170f;
                 controls.Session.RegisterCallback<PointerDownEvent>(
                     _ => AddSessionActions(controls), TrickleDown.TrickleDown);
                 controls.Session.RegisterCallback<NavigationSubmitEvent>(
                     _ => AddSessionActions(controls), TrickleDown.TrickleDown);
-                controls.Profile.tooltip = "预览装配 Profile；场景与角色配置在 Profile Inspector 中编辑。";
-                controls.Profile.RegisterValueChangedCallback(evt =>
-                {
-                    BtsmtlScenePlayProfile profile = evt.newValue as BtsmtlScenePlayProfile;
-                    if (!ReferenceEquals(m_Profile, profile))
-                    {
-                        BtsmtlScenePlayPreviewHost.Shared.Close();
-                        TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
-                        ReleaseRuntimeInterest();
-                        ClearContentWorkflow();
-                        m_ContentRefreshQueued = false;
-                    }
-                    m_Profile = profile;
-                    string path = AssetDatabase.GetAssetPath(m_Profile);
-                    SessionState.SetString(
-                        ProfileGuidStateKey,
-                        string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
-                    if (BtsmtlScenePlayPreviewWindow.IsOpen)
-                        EnterPreview();
-                    else
-                        SetStatus(m_Profile == null ? "未选择预览 Profile。" : m_Profile.IsValid ? "Profile 已选择。" : "预览 Profile 配置无效。");
-                });
-                controls.RuntimeDebug.tooltip = "开启运行时诊断、自动跳转和 Timeline 覆盖显示。";
+                controls.RuntimeDebug.tooltip = "开启后原图与 Timeline 跟随当前执行并只读；关闭后恢复作者编辑。";
                 controls.RuntimeDebug.RegisterValueChangedCallback(evt => SetRuntimeDebug(evt.newValue));
                 AddSessionActions(controls);
                 var container = new VisualElement();
                 container.style.flexDirection = FlexDirection.Row;
-                container.Add(controls.Profile);
+                container.style.flexShrink = 0;
+                if (window is BtsmtlScenePlayPreviewWindow)
+                {
+                    controls.Profile = new ObjectField("装配")
+                    {
+                        objectType = typeof(BtsmtlScenePlayProfile),
+                        allowSceneObjects = false,
+                        value = m_Profile,
+                        tooltip = "选择角色预览装配；场景与角色配置在该资产的 Inspector 中编辑。"
+                    };
+                    controls.Profile.style.width = 220f;
+                    controls.Profile.labelElement.style.minWidth = 30f;
+                    controls.Profile.labelElement.style.width = 30f;
+                    controls.Profile.RegisterValueChangedCallback(OnProfileChanged);
+                    controls.PreviewSession = new ToolbarButton(TogglePreviewSession);
+                    controls.RebuildContent = new ToolbarButton(RebuildPreviewContent)
+                    {
+                        text = "更新资源并重开",
+                        tooltip = "重新编译新增资源和图绑定并开始预览；当前播放和画面历史将清空。"
+                    };
+                    container.Add(controls.Profile);
+                    container.Add(controls.PreviewSession);
+                    container.Add(controls.RebuildContent);
+                }
+                else
+                    container.Add(new ToolbarButton(BtsmtlScenePlayPreviewWindow.Open)
+                    {
+                        text = "角色预览",
+                        tooltip = "打开共享角色视口；准备完成后使用播放、暂停或单步。"
+                    });
                 container.Add(controls.RuntimeDebug);
-                if (window is TimelineEditorWindow)
-                    container.Add(new ToolbarButton(BtsmtlScenePlayPreviewWindow.Open) { text = "打开 Preview" });
                 container.Add(controls.Session);
-                container.Add(controls.RebuildContent);
                 m_Controls.Add(controls);
                 RefreshControls();
                 ApplyToWindow(window);
                 QueueConnectionRefresh();
                 return container;
+            }
+
+            void OnProfileChanged(ChangeEvent<UnityEngine.Object> evt)
+            {
+                BtsmtlScenePlayProfile profile = evt.newValue as BtsmtlScenePlayProfile;
+                if (!ReferenceEquals(m_Profile, profile))
+                {
+                    BtsmtlScenePlayPreviewHost.Shared.Close();
+                    TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
+                    ReleaseRuntimeInterest();
+                    ClearContentWorkflow();
+                    m_ContentRefreshQueued = false;
+                }
+                m_Profile = profile;
+                string path = AssetDatabase.GetAssetPath(m_Profile);
+                SessionState.SetString(
+                    ProfileGuidStateKey,
+                    string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
+                EnterPreview();
+            }
+
+            void TogglePreviewSession()
+            {
+                if (BtsmtlScenePlayPreviewHost.Shared.IsOpen)
+                {
+                    m_ContentRefreshQueued = false;
+                    BtsmtlScenePlayPreviewHost.Shared.Close();
+                }
+                else
+                    EnterPreview();
             }
 
             public void ApplyToWindow(TimelineEditorWindow window) => ApplyToWindow((EditorWindow)window);
@@ -179,7 +199,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 {
                     timeline.SetRuntimeObservationReadOnly(
                         TimelineWorkspaceModeBridge.RuntimeDebugEnabled && HasRuntime);
-                    timeline.SetRuntimeObservationStatus(m_Status);
+                    timeline.SetRuntimeObservationStatus(TimelineWorkspaceModeBridge.RuntimeDebugEnabled
+                        ? m_Status
+                        : "作者编辑 · 角色播放请打开“角色预览”。");
                 }
                 else if (window is BtsmtlScenePlayPreviewWindow preview)
                     preview.SetStatus(m_Status);
@@ -278,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
                     ClearContentWorkflow();
-                    SetStatus(Mode == TimelineWorkspaceMode.Authoring ? "Authoring" : "已退出 Play。");
+                    SetStatus(Mode == TimelineWorkspaceMode.Authoring ? "作者编辑" : "已退出 Play。");
                 }
                 Refresh();
             }
@@ -290,10 +312,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnTimelineAssetOpened(TimelineAsset asset)
             {
-                if (!HasRuntime || m_Profile == null || !m_Profile.IsValid)
+                if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled || !HasRuntime)
                     return;
-                if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
-                    SetRuntimeDebug(true);
                 TimelineEditorWindow window = TimelineEditorWindow.FindOpen(asset);
                 if (window == null)
                     return;
@@ -320,19 +340,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (string.Equals(export.AuthoringRevision, content.AuthoringContentRevision, StringComparison.Ordinal))
                     return;
                 ClearContentWorkflow();
-                m_ExportedContent = export;
                 if (!content.TryPrepareContentAdoption(export, out CharacterTimelineContentAdoptionPlan plan, out error))
                 {
                     SetContentStatus(CharacterTimelineContentAdoptionState.Rejected, error);
                     return;
                 }
-                m_PendingPlan = plan;
                 if (!content.TryPublishContentAdoption(plan, out CharacterTimelineContentPublication publication, out error))
                 {
                     SetContentStatus(CharacterTimelineContentAdoptionState.Rejected, error);
                     return;
                 }
-                m_PublishedContent = publication;
                 if (!content.TryAdoptContent(publication, out CharacterTimelineContentAdoptionReport report))
                 {
                     SetContentStatus(report.State, report.Message);
@@ -372,61 +389,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 ToolbarMenu menu = controls.Session;
                 menu.menu.MenuItems().Clear();
-                menu.menu.AppendAction(
-                    "打开预览",
-                    _ => BtsmtlScenePlayPreviewWindow.Open(),
-                    _ => m_Profile != null && m_Profile.IsValid && !EditorApplication.isPlaying
-                        ? DropdownMenuAction.Status.Normal
-                        : DropdownMenuAction.Status.Disabled);
-                menu.menu.AppendAction(
-                    "Pause",
-                    _ => SubmitSessionCommand(true),
-                    _ => HasSessionHost()
-                        ? DropdownMenuAction.Status.Normal
-                        : DropdownMenuAction.Status.Disabled);
-                menu.menu.AppendAction(
-                    "Resume",
-                    _ => SubmitSessionCommand(false),
-                    _ => HasSessionHost()
-                        ? DropdownMenuAction.Status.Normal
-                        : DropdownMenuAction.Status.Disabled);
-                menu.menu.AppendAction(
-                    "Stop",
-                    _ => StopSession(),
-                    _ => HasSessionHost() && EditorApplication.isPlaying
-                        ? DropdownMenuAction.Status.Normal
-                        : DropdownMenuAction.Status.Disabled);
-                menu.menu.AppendAction("关闭预览", _ => BtsmtlScenePlayPreviewHost.Shared.Close(),
-                    _ => BtsmtlScenePlayPreviewHost.Shared.IsOpen
-                        ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
-                menu.menu.AppendAction("单步", _ => BtsmtlScenePlayPreviewHost.Shared.Enqueue(GameplayTickDriveCommand.Step(1)),
-                    _ => BtsmtlScenePlayPreviewHost.Shared.IsReady
-                        ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
-                if (Mode == TimelineWorkspaceMode.Preview)
+                if (EditorApplication.isPlaying)
                 {
-                    menu.menu.AppendSeparator("Content/");
                     menu.menu.AppendAction(
-                        "Content/Export",
-                        _ => ExportContent(),
-                        _ => CanExportContent()
+                        "场景运行/暂停",
+                        _ => SubmitSessionCommand(true),
+                        _ => HasSessionHost()
                             ? DropdownMenuAction.Status.Normal
                             : DropdownMenuAction.Status.Disabled);
                     menu.menu.AppendAction(
-                        "Content/Prepare",
-                        _ => PrepareContent(),
-                        _ => CanPrepareContent()
+                        "场景运行/继续",
+                        _ => SubmitSessionCommand(false),
+                        _ => HasSessionHost()
                             ? DropdownMenuAction.Status.Normal
                             : DropdownMenuAction.Status.Disabled);
                     menu.menu.AppendAction(
-                        "Content/Publish",
-                        _ => PublishContent(),
-                        _ => m_PendingPlan != null && CanExportContent()
-                            ? DropdownMenuAction.Status.Normal
-                            : DropdownMenuAction.Status.Disabled);
-                    menu.menu.AppendAction(
-                        "Content/Adopt",
-                        _ => AdoptContent(),
-                        _ => m_PublishedContent != null && CanExportContent()
+                        "场景运行/停止",
+                        _ => StopSession(),
+                        _ => HasSessionHost()
                             ? DropdownMenuAction.Status.Normal
                             : DropdownMenuAction.Status.Disabled);
                 }
@@ -440,14 +420,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             void AddRuntimePlaybackActions(ToolbarMenu menu, TimelineEditorWindow window)
             {
-                IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = window == null
-                    ? Array.Empty<RuntimeTimelinePlaybackDebugSummary>()
-                    : window.GetRuntimeObservationSummaries();
-                menu.menu.AppendSeparator("Runtime/");
+                IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = window.GetRuntimeObservationSummaries();
+                menu.menu.AppendSeparator("Timeline 实例/");
                 if (summaries.Count == 0)
                 {
                     menu.menu.AppendAction(
-                        "Runtime/Playback/尚无当前调用路径的实例",
+                        "Timeline 实例/尚无当前调用路径的实例",
                         _ => { },
                         DropdownMenuAction.Status.Disabled);
                     return;
@@ -456,7 +434,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 {
                     RuntimeTimelinePlaybackDebugSummary summary = summaries[index];
                     RuntimeInstanceKey playback = summary.Playback;
-                    string label = $"Runtime/Playback/#{playback.TimelinePlaybackId} · 动作 {playback.ActionInstanceId} · {summary.Provenance.SourceInvocationPath} · 调用 {summary.Provenance.SourceActivationGeneration}";
+                    string label = $"Timeline 实例/#{playback.TimelinePlaybackId} · 动作 {playback.ActionInstanceId} · {summary.Provenance.SourceInvocationPath} · 调用 {summary.Provenance.SourceActivationGeneration}";
                     menu.menu.AppendAction(
                         label,
                         _ =>
@@ -474,9 +452,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void AddRuntimeDebugActions(ToolbarMenu menu)
             {
                 RuntimeDebugSession debug = RuntimeDebugSession.Shared;
-                menu.menu.AppendSeparator("RuntimeDebug/");
+                menu.menu.AppendSeparator();
                 menu.menu.AppendAction(
-                    "RuntimeDebug/Follow",
+                    "自动跟随",
                     _ =>
                     {
                         m_FollowRuntime = true;
@@ -492,7 +470,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         ? candidate.Event.Payload.TimelinePlayback.SourceInvocationPath
                         : instance.CallSiteId;
                     menu.menu.AppendAction(
-                        $"RuntimeDebug/Pin/{candidate.SourceName} · 动作 {instance.ActionInstanceId} · {path} · 调用 {instance.InvocationGeneration} · 播放 {instance.TimelinePlaybackId}",
+                        $"固定实例/{candidate.SourceName} · 动作 {instance.ActionInstanceId} · {path} · 调用 {instance.InvocationGeneration} · 播放 {instance.TimelinePlaybackId}",
                         _ =>
                         {
                             m_FollowRuntime = false;
@@ -502,7 +480,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (debug.IsCaptureRecording)
                 {
                     menu.menu.AppendAction(
-                        "RuntimeDebug/Capture/End",
+                        "记录/停止记录",
                         _ => EndRuntimeDebugCapture(),
                         _ => debug.CanStopCapture
                             ? DropdownMenuAction.Status.Normal
@@ -511,7 +489,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 else
                 {
                     menu.menu.AppendAction(
-                        "RuntimeDebug/Capture/Begin",
+                        "记录/开始记录",
                         _ => BeginRuntimeDebugCapture(),
                         _ => debug.CanStartCapture
                             ? DropdownMenuAction.Status.Normal
@@ -520,7 +498,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (!debug.HasCaptureHistory)
                     return;
                 menu.menu.AppendAction(
-                    "RuntimeDebug/History/Resume Live",
+                    "历史/返回实时",
                     _ => ResumeRuntimeDebugLive(),
                     _ => debug.CanResumeLiveTarget && !debug.IsCaptureRecording
                         ? DropdownMenuAction.Status.Normal
@@ -530,7 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 {
                     int historyOffset = index;
                     menu.menu.AppendAction(
-                        $"RuntimeDebug/History/Segment {historyOffset}",
+                        $"历史/记录段 {historyOffset}",
                         _ => SetRuntimeDebugHistoryOffset(historyOffset),
                         _ => debug.HistoryOffset == historyOffset &&
                              (debug.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory ||
@@ -575,7 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     ResetNavigationFocus();
                     PublishNavigationStatus(m_RuntimeFocus.Candidates.Count == 0
                         ? "当前角色没有可导航的技能或 Timeline 运行事实。"
-                        : "存在并行调用，请在 Session / RuntimeDebug / Pin 中选择具体实例。");
+                        : "存在并行调用，请在“观察选项 / 固定实例”中选择具体调用。");
                     return;
                 }
                 RuntimeDebugEventView candidate = m_RuntimeFocus.Candidates[0];
@@ -644,7 +622,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     ReleaseRuntimeInterest();
                     SetStatus(Mode == TimelineWorkspaceMode.Preview
                         ? FormatPreviewContentStatus(string.Empty)
-                        : "Authoring");
+                        : "作者编辑");
                 }
             }
 
@@ -701,6 +679,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal void OnPreviewHostChanged()
             {
                 m_ObservedSession = BtsmtlScenePlayPreviewHost.Shared.Session;
+                if (!BtsmtlScenePlayPreviewHost.Shared.IsOpen)
+                {
+                    TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
+                    ReleaseRuntimeInterest();
+                    ClearContentWorkflow();
+                }
                 if (!m_RebuildingContent)
                     SetStatus(FormatPreviewContentStatus(BtsmtlScenePlayPreviewHost.Shared.Error));
                 QueueConnectionRefresh();
@@ -852,120 +836,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 return false;
             }
 
-            FixedCharacterHost ResolveActorHost()
-            {
-                TryResolveActorHost(out FixedCharacterHost host, out _);
-                return host;
-            }
-
             bool HasSessionHost()
             {
                 return TryResolveSessionHost(out _, out _);
-            }
-
-            bool CanExportContent()
-            {
-                return Mode == TimelineWorkspaceMode.Preview && ResolveActorHost()?.TimelineHost != null;
-            }
-
-            bool CanPrepareContent()
-            {
-                return CanExportContent() && m_ExportedContent != null;
-            }
-
-            void ExportContent()
-            {
-                FixedCharacterHost host = ResolveActorHost();
-                CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (timelineHost == null)
-                {
-                    SetStatus("当前 Actor 没有可用 Timeline Host。");
-                    return;
-                }
-                ClearContentWorkflow();
-                if (!timelineHost.Content.TryExportContent(
-                        out CharacterTimelineContentExport export,
-                        out string error))
-                {
-                    SetContentStatus(CharacterTimelineContentAdoptionState.Failed, error);
-                    return;
-                }
-                m_ExportedContent = export;
-                SetContentStatus(CharacterTimelineContentAdoptionState.Exported, "Timeline 内容已冻结导出。");
-            }
-
-            void PrepareContent()
-            {
-                FixedCharacterHost host = ResolveActorHost();
-                CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (timelineHost == null || host.CharacterDefinition == null)
-                {
-                    SetStatus("当前 Actor 没有可用 Timeline Host。");
-                    return;
-                }
-                if (m_ExportedContent == null)
-                {
-                    SetContentStatus(CharacterTimelineContentAdoptionState.Failed, "请先导出 Timeline 内容。");
-                    return;
-                }
-                if (!timelineHost.Content.TryPrepareContentAdoption(
-                        m_ExportedContent,
-                        out CharacterTimelineContentAdoptionPlan plan,
-                        out string error))
-                {
-                    InvalidateContentWorkflow(error);
-                    return;
-                }
-                m_PendingPlan = plan;
-                m_PublishedContent = null;
-                SetContentStatus(
-                    CharacterTimelineContentAdoptionState.Prepared,
-                    plan.Message);
-            }
-
-            void PublishContent()
-            {
-                FixedCharacterHost host = ResolveActorHost();
-                CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (timelineHost == null)
-                {
-                    SetStatus("当前 Actor 没有可用 Timeline Host。");
-                    return;
-                }
-                if (!timelineHost.Content.TryPublishContentAdoption(
-                        m_PendingPlan,
-                        out CharacterTimelineContentPublication publication,
-                        out string error))
-                {
-                    InvalidateContentWorkflow(error);
-                    return;
-                }
-                m_PublishedContent = publication;
-                SetContentStatus(
-                    CharacterTimelineContentAdoptionState.Published,
-                    publication.Message);
-            }
-
-            void AdoptContent()
-            {
-                FixedCharacterHost host = ResolveActorHost();
-                CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (timelineHost == null)
-                {
-                    SetStatus("当前 Actor 没有可用 Timeline Host。");
-                    return;
-                }
-                if (!timelineHost.Content.TryAdoptContent(
-                        m_PublishedContent,
-                        out CharacterTimelineContentAdoptionReport report))
-                {
-                    InvalidateContentWorkflow(report.Message);
-                    return;
-                }
-                ClearContentWorkflow();
-                SetContentStatus(
-                    report.State,
-                    report.Message);
             }
 
             void SetContentStatus(
@@ -979,7 +852,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             string FormatPreviewContentStatus(string message)
             {
                 if (!EditorApplication.isPlaying && !BtsmtlScenePlayPreviewHost.Shared.IsOpen)
-                    return $"Preview | 未运行 | {message}";
+                    return m_Profile == null || !m_Profile.IsValid
+                        ? "请选择有效的角色预览装配。"
+                        : $"角色预览未运行 · 点击“开始预览” · {message}";
                 if (!TryResolveSessionHost(out SimulationSessionHost sessionHost, out string sessionError))
                     return $"Preview | 未连接 | {sessionError} | {message}";
                 string target = $"Session {m_Profile.ContextId} #{sessionHost.SessionGeneration} | Actor {m_Profile.DefaultActorId}";
@@ -995,28 +870,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 string adopted = timelineHost.Content.AuthoringContentRevision;
                 if (string.IsNullOrEmpty(adopted))
                     return $"Preview | {target} | 尚未收到实际采用版本 | {message}";
-                string staged = m_PublishedContent?.AuthoringRevision ??
-                                m_PendingPlan?.AuthoringRevision ??
-                                m_ExportedContent?.AuthoringRevision;
-                string stagedLabel = m_PublishedContent != null
-                    ? "已发布"
-                    : m_PendingPlan != null
-                        ? "已准备"
-                        : m_ExportedContent != null
-                            ? "已导出"
-                        : "待版本";
                 string state = m_ContentState switch
                 {
-                    CharacterTimelineContentAdoptionState.Exported => "已导出",
-                    CharacterTimelineContentAdoptionState.Prepared => "已准备",
-                    CharacterTimelineContentAdoptionState.Published => "待采用",
                     CharacterTimelineContentAdoptionState.Adopted when !string.Equals(authoring, adopted, StringComparison.Ordinal) => "作者已修改",
                     CharacterTimelineContentAdoptionState.Adopted => "已采用",
                     CharacterTimelineContentAdoptionState.Rejected => "已拒绝",
                     CharacterTimelineContentAdoptionState.Failed => "失败",
                     _ => string.Equals(authoring, adopted, StringComparison.Ordinal) ? "已采用" : "作者已修改"
                 };
-                return $"Preview | {target} | {state} | 作者 {ShortRevision(authoring)} | 已采用 {ShortRevision(adopted)} | {stagedLabel} {ShortRevision(staged)} | RuntimeDebug {RuntimeDebugSession.Shared.TargetRevision} | {message}";
+                return $"角色 {m_Profile.DefaultActorId} · 内容{state} · 作者 {ShortRevision(authoring)} / 已采用 {ShortRevision(adopted)} · {message}";
             }
 
             void BeginRuntimeDebugCapture()
@@ -1061,16 +923,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             void ClearContentWorkflow()
             {
-                m_ExportedContent = null;
-                m_PendingPlan = null;
-                m_PublishedContent = null;
                 m_ContentState = CharacterTimelineContentAdoptionState.None;
-            }
-
-            void InvalidateContentWorkflow(string message)
-            {
-                ClearContentWorkflow();
-                SetContentStatus(CharacterTimelineContentAdoptionState.Rejected, message);
             }
 
             static string ShortRevision(string revision) =>
@@ -1090,9 +943,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     }
                     controls.RuntimeDebug.SetValueWithoutNotify(TimelineWorkspaceModeBridge.RuntimeDebugEnabled);
                     controls.RuntimeDebug.SetEnabled(HasRuntime && m_Profile != null && m_Profile.IsValid);
-                    controls.Profile.SetValueWithoutNotify(m_Profile);
-                    controls.Profile.SetEnabled(!m_RebuildingContent);
-                    controls.RebuildContent.SetEnabled(CanRebuildPreviewContent());
+                    controls.Session.SetEnabled(TimelineWorkspaceModeBridge.RuntimeDebugEnabled || EditorApplication.isPlaying);
+                    if (controls.Window is BtsmtlScenePlayPreviewWindow)
+                    {
+                        controls.Profile.SetValueWithoutNotify(m_Profile);
+                        controls.Profile.SetEnabled(!m_RebuildingContent && !EditorApplication.isPlaying);
+                        controls.PreviewSession.text = BtsmtlScenePlayPreviewHost.Shared.IsOpen ? "停止预览" : "开始预览";
+                        controls.PreviewSession.SetEnabled(!m_RebuildingContent && !EditorApplication.isPlaying &&
+                            !EditorApplication.isCompiling && !EditorApplication.isUpdating &&
+                            (BtsmtlScenePlayPreviewHost.Shared.IsOpen || m_Profile != null && m_Profile.IsValid));
+                        controls.RebuildContent.SetEnabled(CanRebuildPreviewContent());
+                    }
                 }
                 if (Mode == TimelineWorkspaceMode.Authoring &&
                     m_Profile != null &&

@@ -47,32 +47,20 @@ namespace BTSMTL.Timeline.Editor
     internal sealed class TimelineEditorToolbarControls
     {
         public TimelineEditorToolbarControls(
-            VisualElement documentGroup,
-            VisualElement workspaceGroup,
-            VisualElement statusGroup,
             Toolbar toolbar,
             ToolbarButton backButton,
             ObjectField documentField,
-            Label sourceSummary,
             Label status)
         {
-            DocumentGroup = documentGroup;
-            WorkspaceGroup = workspaceGroup;
-            StatusGroup = statusGroup;
             Toolbar = toolbar;
             BackButton = backButton;
             DocumentField = documentField;
-            SourceSummary = sourceSummary;
             Status = status;
         }
 
-        public VisualElement DocumentGroup { get; }
-        public VisualElement WorkspaceGroup { get; }
-        public VisualElement StatusGroup { get; }
         public Toolbar Toolbar { get; }
         public ToolbarButton BackButton { get; }
         public ObjectField DocumentField { get; }
-        public Label SourceSummary { get; }
         public Label Status { get; }
 
         public void SetBackVisible(bool visible)
@@ -87,7 +75,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void SetSourceSummary(string value)
         {
-            SourceSummary.text = value;
+            DocumentField.tooltip = value;
         }
 
         public void SetStatus(string value)
@@ -118,20 +106,21 @@ namespace BTSMTL.Timeline.Editor
             backButton.style.display = hasNavigation ? DisplayStyle.Flex : DisplayStyle.None;
             documentGroup.Add(backButton);
 
-            var documentField = new ObjectField("Document")
+            var documentField = new ObjectField("Timeline")
             {
-                objectType = typeof(UnityEngine.Object),
+                objectType = typeof(TimelineAsset),
                 allowSceneObjects = false
             };
-            documentField.style.width = 280f;
+            documentField.style.width = 220f;
+            documentField.style.flexShrink = 1f;
+            documentField.labelElement.style.minWidth = 52f;
+            documentField.labelElement.style.width = 52f;
+            documentGroup.style.flexShrink = 1f;
             documentField.SetValueWithoutNotify(binding.Document);
             documentField.RegisterValueChangedCallback(onDocumentChanged);
             documentGroup.Add(documentField);
 
-            var sourceSummary = new Label(binding.CreateSourceSummary());
-            sourceSummary.style.minWidth = 180f;
-            sourceSummary.style.marginLeft = 6f;
-            documentGroup.Add(sourceSummary);
+            documentField.tooltip = binding.CreateSourceSummary();
 
             var workspaceGroup = new VisualElement();
             workspaceGroup.AddToClassList("timeline-editor-toolbar-group");
@@ -140,28 +129,18 @@ namespace BTSMTL.Timeline.Editor
             if (workspaceControls != null)
                 workspaceGroup.Add(workspaceControls);
 
-            var statusGroup = new VisualElement();
-            statusGroup.AddToClassList("timeline-editor-toolbar-group");
-            statusGroup.style.flexDirection = FlexDirection.Row;
-            statusGroup.style.flexGrow = 1f;
-            statusGroup.style.alignItems = Align.Center;
-            var status = new Label("运行控制：Skill Graph / Graph Shell");
-            status.style.marginLeft = 6f;
-            status.style.flexGrow = 1f;
-            status.tooltip = "Timeline 只负责作者编辑；Scene Play、Build、Skill 和运行观察由 Graph Shell 管理。";
-            statusGroup.Add(status);
+            var status = new Label("作者编辑");
+            status.style.whiteSpace = WhiteSpace.Normal;
+            status.style.paddingLeft = 8f;
+            status.style.paddingTop = 2f;
+            status.style.paddingBottom = 2f;
 
             toolbar.Add(documentGroup);
             toolbar.Add(workspaceGroup);
-            toolbar.Add(statusGroup);
             return new TimelineEditorToolbarControls(
-                documentGroup,
-                workspaceGroup,
-                statusGroup,
                 toolbar,
                 backButton,
                 documentField,
-                sourceSummary,
                 status);
         }
     }

@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         readonly ToolbarMenu m_Abilities = new ToolbarMenu { text = "技能图" };
         readonly PopupField<string> m_InputRequest = new PopupField<string>();
         readonly ToolbarButton m_SubmitInput;
+        FixedCharacterHost m_BoundActor;
         ulong m_DisplayedHistorySequence = ulong.MaxValue;
 
         internal BtsmtlScenePlayPreviewView()
@@ -56,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             toolbar.Add(m_Rate);
             toolbar.Add(m_Clock);
             toolbar.Add(m_Status);
+            m_Status.style.marginLeft = 6f;
             Add(toolbar);
             var inputToolbar = new Toolbar();
             m_InputRequest.tooltip = "当前角色输入配置中的正式动作请求；下一个逻辑 Tick 接收";
@@ -103,26 +105,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             bool ready = m_Host.IsReady;
             m_Abilities.SetEnabled(ready);
-            m_Abilities.menu.MenuItems().Clear();
-            m_InputRequest.choices.Clear();
             if (ready)
-            {
                 m_Clock.SetValueWithoutNotify(m_Host.DriveStatus.PresentationClockMode);
-                var definition = m_Host.Actor.CharacterDefinition;
-                foreach (var graph in definition.AbilityGraphs)
-                    m_Abilities.menu.AppendAction(graph.name.Replace('/', '→'), _ =>
-                    {
-                        BtsmtlScenePlayTimelineController.EnableRuntimeDebug();
-                        RuntimeDebugSourceNavigator.Open(definition, RuntimeSourceElementKey.Graph(graph.AuthoringId));
-                    });
-                if (m_Host.Actor.ControlSource is FixedPlayerCharacterControlSource playerInput)
-                    foreach (var request in playerInput.InputProfile.ActionRequests)
-                        m_InputRequest.choices.Add(request.RequestId);
+            FixedCharacterHost actor = ready ? m_Host.Actor : null;
+            if (m_BoundActor != actor)
+            {
+                m_BoundActor = actor;
+                m_Abilities.menu.MenuItems().Clear();
+                m_InputRequest.choices.Clear();
+                if (ready)
+                {
+                    var definition = actor.CharacterDefinition;
+                    foreach (var graph in definition.AbilityGraphs)
+                        m_Abilities.menu.AppendAction(graph.name.Replace('/', '→'), _ =>
+                        {
+                            BtsmtlScenePlayTimelineController.EnableRuntimeDebug();
+                            RuntimeDebugSourceNavigator.Open(definition, RuntimeSourceElementKey.Graph(graph.AuthoringId));
+                        });
+                    if (actor.ControlSource is FixedPlayerCharacterControlSource playerInput)
+                        foreach (var request in playerInput.InputProfile.ActionRequests)
+                            m_InputRequest.choices.Add(request.RequestId);
+                }
+                m_InputRequest.SetValueWithoutNotify(
+                    m_InputRequest.choices.Count != 0 ? m_InputRequest.choices[0] : string.Empty);
             }
-            bool hasRequests = m_InputRequest.choices.Count != 0;
-            m_InputRequest.SetValueWithoutNotify(hasRequests ? m_InputRequest.choices[0] : string.Empty);
             RefreshPlaybackControls();
-            m_Status.text = m_Host.Error.Length != 0 ? m_Host.Error : ready ? "" : "预览未运行";
             if (ready)
                 UpdateViewport();
             else
@@ -137,14 +144,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             bool ready = m_Host.IsReady;
             bool history = m_Debug.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
             bool canDrive = ready && !history;
-            m_Play.SetEnabled(canDrive);
-            m_Pause.SetEnabled(ready);
+            bool paused = ready && m_Host.DriveStatus.Mode == GameplayTickDriveMode.Paused;
+            m_Play.SetEnabled(canDrive && paused);
+            m_Pause.SetEnabled(ready && !paused);
             m_Step.SetEnabled(canDrive);
             m_Rate.SetEnabled(canDrive);
             m_Clock.SetEnabled(canDrive);
             bool hasRequests = canDrive && m_InputRequest.choices.Count != 0;
             m_InputRequest.SetEnabled(hasRequests);
             m_SubmitInput.SetEnabled(hasRequests);
+            m_Status.text = m_Host.Error.Length != 0
+                ? m_Host.Error
+                : !ready
+                    ? m_Host.IsOpen ? "正在准备角色…" : "点击“开始预览”"
+                    : history ? "正在查看历史"
+                    : paused ? "已暂停 · 可播放或单步" : "正在播放";
         }
 
         void OnDiagnosticsChanged()

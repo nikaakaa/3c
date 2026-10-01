@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             bool alreadyOpen = IsOpen;
             var window = GetWindow<BtsmtlScenePlayPreviewWindow>();
-            window.titleContent = new GUIContent("Ability Preview");
+            window.titleContent = new GUIContent("角色预览");
             window.minSize = new Vector2(780, 560);
             window.Show();
             window.Focus();
@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         void OnEnable()
         {
             s_Window = this;
-            titleContent = new GUIContent("Ability Preview");
+            titleContent = new GUIContent("角色预览");
             minSize = new Vector2(780, 560);
         }
 
@@ -38,6 +38,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             m_Execution?.Dispose();
             rootVisualElement.Clear();
             m_Status = new Label { style = { whiteSpace = WhiteSpace.Normal } };
+            m_Status.style.paddingLeft = 8f;
+            m_Status.style.paddingTop = 4f;
+            m_Status.style.paddingBottom = 4f;
             rootVisualElement.Add(BtsmtlScenePlayTimelineController.CreatePreviewControls(this));
             rootVisualElement.Add(m_Status);
             var split = new TwoPaneSplitView(0, 290, TwoPaneSplitViewOrientation.Vertical)

@@ -1177,7 +1177,7 @@ MonoBehaviour:
   m_MuteCameraShake: 0
   m_MuteCameraShakeAdvancedProcess: 0
   m_Collision:
-    m_Enabled: 0
+    m_Enabled: 1
     m_LayerMask:
       serializedVersion: 2
       m_Bits: 4294967291

@@ -91,3 +91,17 @@ LiveRead 和 LiveApply 是 LiveSync 的子项，不能与父项重复相加。�
 读取同项目“手感”聊天确认，该任务向同一实例提交了 `character.foot_motion_bake` 的 replace_source，目标为 Corin_Pipeline_Attack3_Inplace.anim，随后 BuildPlanFromReadyArtifact 读取和状态请求均未得到结果。当前证据指向这轮动画替换／脚部分析请求的占用；未取得线程调用栈，具体耗时函数仍未证实，没有修改该任务的代码、取消它的操作或向其它聊天发送消息。
 
 文件核对显示 Library/ScriptAssemblies/ParadoxNotion.dll 的修改时间仍为 2026-09-29 12:43:41，用户字符串中没有 GraphAuthoring.Serialize 与 GraphEditor.Canvas；不能把 Temp/bin 的静态编译成功当成 Editor 已加载本轮修改。已停止发送新的 Unity 请求并保留现场。步骤绘制中原有的连线 LINQ 与临时 GUIContent 清理尚未写入，等待确认 Editor 非编译后继续；没有据未知状态追加源码修改或构建。
+
+用户确认长任务已结束后，同一 PID 5200 与同一实例恢复响应，项目路径正确，playing=false、compiling=false、updating=false、scriptCompilationFailed=false。只读反射确认上述五个 CPU 标记已加载。当前打开的“Timeline达到终止边界”只有 3 个节点；用户明确说明其它 TreeClip Graph 更卡，因此不能把这张图的空闲状态当作卡顿复现。
+
+按正式 MonoScript GUID 检查 Corin/Pipeline 已保存资产，共有 229 张 Skill Graph，其中 TimelineBody／TimelineTrigger 共 76 张。最大 Timeline 图是 CorinAttackRushExplodeTimeline.asset 内的“Open RushAttackHandoff @14”，有 9 个节点、7 条连线；完整清单见 [已保存图规模](../../.performance-build/reports/20261001-treeclip-graph-static-size.json)。该统计只覆盖已保存的 Corin 资产，不能代表未保存图或其它角色。现有规模不能证明编号复杂度就是严重卡顿的主要来源。
+
+继续清理 `GraphEditor.ShowNodesGUI → Node.DrawNodeWindow`：原先每个可见节点、每次 GUI 事件创建捕获节点的闭包与窗口委托，并重新创建两个固定 GUILayoutOption 及其参数数组。现在节点首次显示时绑定自身窗口回调，后续复用；固定最小尺寸选项由静态数组持有。窗口仍使用当前 node.ID 与原有 NodeWindowGUI，回调不捕获编号或 Editor。FullSerializer 的正式字段规则排除委托和 NonSerialized 字段，显示缓存不进入图数据。
+
+`BtsmtlSkillStepInspector.Draw` 的连线检查改为索引遍历原有 outConnections，删除按钮复用两份固定 GUIContent。模式、步骤编辑、增加与删除的捕获闭包移入实际命令方法，只有输入确认后才创建；绘制入口不再因包含条件分支中的 lambda 而提前创建捕获对象。步骤修改仍通过 `Change → BtsmtlSkillFlowEditorMutation.Apply → SetSteps` 提交，并行方式仍提交给 SetMode；步骤身份、优先级、连线删除限制与原 Undo／校验规则保持原行为。
+
+本轮 `ParadoxNotion.csproj` 与 `ThirdPersonClient.Runtime.csproj` 均编译通过，各 0 警告、0 错误；分别见 [节点画布编译](../../.performance-build/reports/20261001-treeclip-node-draw-build.log)、[步骤绘制编译](../../.performance-build/reports/20261001-treeclip-step-draw-build.log)。两次构建使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false /p:BuildProjectReferences=false`，结束立即 shutdown；两个源文件 diff 检查通过。编译后 [IL 核对](../../.performance-build/reports/20261001-treeclip-draw-il.json)确认 DrawNodeWindow 没有捕获闭包构造，步骤 Draw 没有捕获闭包或 Action 构造；窗口委托仍在首次绑定分支创建。这不表示整个 IMGUI 或 Inspector 为 0 GC，布局作用域、枚举控件及编号文字仍有绘制开销。
+
+检查期间 HTTP 服务重启，原 MCP 会话返回无效 Session ID；正式 CLI 在同一服务器和显式实例下恢复读取。读取发现 Unity 尚未加载本轮绘制修改，于非 Play、非编译、非导入状态仅请求一次脚本编译。未启动 Play、回放或新的 Profiler 录制；严重卡顿的主要 CPU 来源与实际拖动收益仍未取得问题图的帧证据。
+
+域重载结束后，通过同一实例核对项目路径正确、playing=false、compiling=false、updating=false、scriptCompilationFailed=false。只读反射确认节点窗口回调、静态布局参数、步骤按钮内容和 ChangeStep 命令均已加载；FullSerializer 实际返回窗口回调不可序列化。Console 查询返回 0 条错误，两个 Profiler 录制开关均为 false。这些结果证明修改已加载并可编译，未执行节点拖动或参数编辑的端到端验收。

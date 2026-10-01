@@ -50,6 +50,7 @@ namespace NodeCanvas.Framework
         ///----------------------------------------------------------------------------------------------
 
         readonly private static Vector2 MIN_SIZE = new Vector2(80, 20);
+        private static readonly GUILayoutOption[] windowLayout = { GUILayout.MaxHeight(MIN_SIZE.y), GUILayout.MaxWidth(MIN_SIZE.x) };
         private const string DEFAULT_HEX_COLOR_LIGHT = "eed9a7";
         private const string DEFAULT_HEX_COLOR_DARK = "333333";
         private static GUIPort clickedPort { get; set; }
@@ -57,6 +58,7 @@ namespace NodeCanvas.Framework
         private static List<CanvasGroup> adjustingBoundCanvasGroups { get; set; }
 
         private Vector2 size = MIN_SIZE;
+        [System.NonSerialized] private GUI.WindowFunction _nodeWindowGUI;
         private object _icon { get; set; }
         private GUIContent _cachedHeaderContent { get; set; }
         private bool colorLoaded { get; set; }
@@ -291,7 +293,8 @@ namespace NodeCanvas.Framework
             GUI.color = node.isActive ? Color.white : new Color(0.9f, 0.9f, 0.9f, 0.8f);
             GUI.color = GraphEditorUtility.activeElement == node ? new Color(0.9f, 0.9f, 1) : GUI.color;
             //Remark: using MaxWidth and MaxHeight makes GUILayout window contract width and height \o/
-            node.rect = GUILayout.Window(node.ID, node.rect, (ID) => { NodeWindowGUI(node, ID); }, string.Empty, StyleSheet.window, GUILayout.MaxHeight(MIN_SIZE.y), GUILayout.MaxWidth(MIN_SIZE.x));
+            node._nodeWindowGUI ??= node.DrawWindowGUI;
+            node.rect = GUILayout.Window(node.ID, node.rect, node._nodeWindowGUI, string.Empty, StyleSheet.window, windowLayout);
 
             GUI.color = Color.white;
             Styles.Draw(node.rect, StyleSheet.windowShadow);
@@ -316,6 +319,8 @@ namespace NodeCanvas.Framework
             }
         }
 
+
+        void DrawWindowGUI(int ID) => NodeWindowGUI(this, ID);
 
         //This is the callback function of the GUILayout.window. Everything here is called INSIDE the node Window callback.
         //The Window ID is the same as the node.ID.

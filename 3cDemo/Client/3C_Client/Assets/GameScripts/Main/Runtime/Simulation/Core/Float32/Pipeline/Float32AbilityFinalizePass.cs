@@ -54,8 +54,6 @@ namespace ThirdPersonSimulation
                 evaluations.Evaluations.Count != world.Results.Count ||
                 evaluations.Evaluations.Count != readPorts.CharacterRuntime.Runtime.Roster.Count)
                 throw new InvalidOperationException("Ability Finalize Pass inputs do not match the current Step roster.");
-            m_StateHashWriter.Reset();
-
             for (int i = 0; i < evaluations.Evaluations.Count; i++)
             {
                 Float32CharacterEvaluationResult evaluation = evaluations.Evaluations[i];

@@ -30,7 +30,10 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 ## Editor Profiler
 
 - Editor Play、运行桥接和窗口绘制卡顿直接采目标 Editor 的 CPU 调用树。Player 构建与采样不包含这些 Editor 调用，不能代替 Editor 诊断。
+- 直接读取 Play 中的 Profiler 不要求退出 Play、保存场景或构建。先读取当前 Play 和录制状态；用户进入或退出 Play 后重新确认，不替用户切换运行状态。
 - 在 Unity 2022.3.62f2c1 已确认：开启 CPU area、`ProfilerDriver.profileEditor` 和 `Profiler.enabled` 后，`EditorLoop` 会包含编辑器子调用。`ProfilerDriver.GetRawFrameDataView(frame, thread)` 返回 `UnityEditor.Profiling.RawFrameDataView`。优先保持 Deep Profile 关闭；域重载或新采样覆盖旧帧前，使用 `ProfilerDriver.SaveProfile` 将原始帧保存到 Assets 外。
+- 同时核对 `ProfilerDriver.enabled` 和 `Profiler.enabled`，并以帧索引实际前进确认新录制。已确认仅切换 `Profiler.enabled` 不能完整控制 Editor 记录；读取固定帧集前停止这两个录制开关。分配调用栈只在需要归因时短时开启，结束后恢复原采样配置，不将其额外开销混入 CPU 基线。
+- `ProfilerDriver.LoadProfile(path, false)` 加载的 300 帧已确认会重新编号为 0–299。加载后重新读取 first/lastFrameIndex，按保存帧集内的偏移定位原帧，不沿用加载前的绝对索引。区分 MCP 请求自身、JIT 恢复、窗口关闭等操作帧与常规运行帧，保留完整原始记录及筛选依据。
 - 记录同一帧对应的 Play、RuntimeDebug attachment、具体 Graph/Timeline 和执行状态。Detached 或无活跃技能、无具体 Graph 的帧不能证明桥接开启后或绘制中的性能；输入与窗口状态不同的数据不能作为性能 A/B。
 
 ## 连接验证记录的范围

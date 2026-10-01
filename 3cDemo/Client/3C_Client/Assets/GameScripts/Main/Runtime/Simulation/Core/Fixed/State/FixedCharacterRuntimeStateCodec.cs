@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(state));
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
+            writer.Reset();
             writer.WriteString(HashIdentity);
             WriteCanonical(writer, state);
             return new CharacterStateHash(writer.ComputeHash());

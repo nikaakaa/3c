@@ -29,8 +29,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static JObject RunStoredGoalComparison(string inputPath, string sourceResultPath, string resultPath, string footVariant)
         {
             Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
-            bool sourceComparison = footVariant == "sources";
-            bool bilateral = footVariant.StartsWith("pelvis-", StringComparison.Ordinal);
+            bool releasing = footVariant == "releasing";
+            bool sourceComparison = footVariant == "sources" || releasing;
+            bool bilateral = footVariant.StartsWith("pelvis-", StringComparison.Ordinal) || releasing;
             const string scenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
             Scene previous = SceneManager.GetActiveScene();
             Scene scene = SceneManager.GetSceneByPath(scenePath);
@@ -99,6 +100,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var targetProbes = new CharacterFootSoleProbeBuffer();
                 var outputProbes = new CharacterFootSoleProbeBuffer();
                 root = new GameObject("Stored foot Goal comparison") { hideFlags = HideFlags.HideAndDontSave };
+#if RELEASING_FIXTURE
+                var predictionWorkspace = new ReleasingPredictionWorkspace(fixture, profile, world);
+                report["scope"] = "已校准Native来源输出；真实前帧spring/primary/观测缓存种子 → 正式BodyTrajectory/PredictFootPair/实际查询/PrepareGroundPath → 双脚Lifecycle/Pelvis/Complete/Goal；KCC未来预测端口为录制边界，未执行FBBIK";
+#endif
                 foreach (bool candidate in sourceComparison ? new[] { false, true } : new[] { footVariant.EndsWith("current", StringComparison.Ordinal) })
                 {
                     bool correctedSource = !sourceComparison || candidate;
@@ -110,11 +115,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     var pairedTargetProbes = new CharacterFootSoleProbeBuffer();
                     var pairedOutputProbes = new CharacterFootSoleProbeBuffer();
                     if (bilateral) RunBilateralGoals(inputs, pairedInputs, in seed, in pairedSeed, results, pairedResults, pelvisResults, pelvisGoals,
-                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes);
+                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes, correctedSource
+#if RELEASING_FIXTURE
+                        , predictionWorkspace
+#endif
+                        );
                     else RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long start = GC.GetAllocatedBytesForCurrentThread();
                     if (bilateral) RunBilateralGoals(inputs, pairedInputs, in seed, in pairedSeed, results, pairedResults, pelvisResults, pelvisGoals,
-                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes);
+                        root.transform, in query, world.WorldRevision, targetProbes, outputProbes, pairedTargetProbes, pairedOutputProbes, correctedSource
+#if RELEASING_FIXTURE
+                        , predictionWorkspace
+#endif
+                        );
                     else RunStoredGoals(inputs, in seed, results, correctedSource, root.transform, in query, world.WorldRevision, targetProbes, outputProbes);
                     long allocated = GC.GetAllocatedBytesForCurrentThread() - start;
                     var rows = new JArray();
@@ -228,6 +241,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             rows[rows.Count - 1]["pairedSoleStepMeters"] = i > 0 ? new JValue(Vector3.Distance(pairedResults[i - 1].Output.Pose.EffectiveSole, pairedResults[i].Output.Pose.EffectiveSole)) : JValue.CreateNull();
                             rows[rows.Count - 1]["pairedReachRatio"] = Vector3.Distance(pairedInputs[i].Animated.HipPosition + pelvis.PelvisDelta * pelvis.PositionWeight,
                                 pairedResults[i].Output.Pose.EffectiveAnkle) / pairedInputs[i].LegLength;
+#if RELEASING_FIXTURE
+                            rows[rows.Count - 1]["rightGoal"] = ReleasingGoalJson(CapturedFootModuleFunctions.EncodeFootGoal(in value.Output));
+                            rows[rows.Count - 1]["leftGoal"] = ReleasingGoalJson(CapturedFootModuleFunctions.EncodeFootGoal(in pairedResults[i].Output));
+                            rows[rows.Count - 1]["pelvisGoal"] = ReleasingGoalJson(pelvisGoals[i]);
+                            rows[rows.Count - 1]["bodyTrajectoryUsed"] = value.BodyTrajectoryUsed;
+                            rows[rows.Count - 1]["predictionMotionRevision"] = value.PredictionMotionRevision.ToString();
+                            rows[rows.Count - 1]["predictionState"] = value.Prediction.State.ToString();
+                            rows[rows.Count - 1]["predictionEventIdentity"] = value.Prediction.LandingEventIdentity.ToString();
+                            rows[rows.Count - 1]["pairedPredictionState"] = pairedResults[i].Prediction.State.ToString();
+                            rows[rows.Count - 1]["pairedPredictionEventIdentity"] = pairedResults[i].Prediction.LandingEventIdentity.ToString();
+                            rows[rows.Count - 1]["groundPathAccepted"] = value.PathState == CharacterFootGroundPathState.Accepted;
+                            rows[rows.Count - 1]["pairedGroundPathAccepted"] = pairedResults[i].PathState == CharacterFootGroundPathState.Accepted;
+                            rows[rows.Count - 1]["rightFrameDiagnostics"] = ReleasingFrameJson(in value);
+                            rows[rows.Count - 1]["leftFrameDiagnostics"] = ReleasingFrameJson(in pairedResults[i]);
+                            Vector3 correction = value.Output.Pose.EffectiveSole - CharacterFootConstraintMath.ResolveOriginalSole(input.Animated);
+                            Vector3 leftCorrection = pairedResults[i].Output.Pose.EffectiveSole - CharacterFootConstraintMath.ResolveOriginalSole(pairedInputs[i].Animated);
+                            Vector3 previousCorrection = i > 0 ? results[i-1].Output.Pose.EffectiveSole - CharacterFootConstraintMath.ResolveOriginalSole(inputs[i-1].Animated) : correction;
+                            Vector3 previousLeftCorrection = i > 0 ? pairedResults[i-1].Output.Pose.EffectiveSole - CharacterFootConstraintMath.ResolveOriginalSole(pairedInputs[i-1].Animated) : leftCorrection;
+                            rows[rows.Count - 1]["rightCorrection"] = Vec(correction);
+                            rows[rows.Count - 1]["leftCorrection"] = Vec(leftCorrection);
+                            rows[rows.Count - 1]["rightCorrectionDelta"] = Vec(correction - previousCorrection);
+                            rows[rows.Count - 1]["leftCorrectionDelta"] = Vec(leftCorrection - previousLeftCorrection);
+                            rows[rows.Count - 1]["rightCorrectionSpeed"] = i > 0 ? new JValue((correction-previousCorrection).magnitude/input.Delta) : JValue.CreateNull();
+                            rows[rows.Count - 1]["leftCorrectionSpeed"] = i > 0 ? new JValue((leftCorrection-previousLeftCorrection).magnitude/input.Delta) : JValue.CreateNull();
+#endif
                             Assert.That(pairedResults[i].GoalError, Is.LessThan(.0001f));
                             Assert.That(pairedResults[i].GoalRotationError, Is.LessThan(.1f));
                             if (candidate && pairedResults[i].Output.GoalTarget.PositionWeight > 0f)
@@ -289,7 +327,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 var historical = (JObject)report["historical"];
                 var current = (JObject)report["current"];
-                if (sourceComparison && side == CharacterFootSide.Left)
+                if (sourceComparison && !releasing && side == CharacterFootSide.Left)
                 {
                     foreach (JObject row in current["rows"])
                         if ((ulong)row["frame"] >= 1178 && (ulong)row["frame"] <= 1180)
@@ -301,7 +339,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Assert.That((float)current["maximumRotationStepDegrees"], Is.LessThan((float)historical["maximumRotationStepDegrees"]), "候选完整窗口必须减少错误旋转，不能只移动异常帧");
                     Assert.That((float)current["maximumExtraRotationStepDegrees"], Is.LessThan((float)historical["maximumExtraRotationStepDegrees"]), "候选必须减少超出原动画的额外有效旋转");
                 }
-                else if (sourceComparison)
+                else if (sourceComparison && !releasing)
                 {
                     JObject beforeStored = (JObject)((JArray)current["rows"]).Single(x => (ulong)x["frame"] == 893);
                     var anchor = beforeStored["contactAnchor"];
@@ -370,6 +408,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 #endif
             internal bool HasAnchor;
             internal Vector3 Anchor;
+#if RELEASING_FIXTURE
+            internal bool BodyTrajectoryUsed;
+            internal ulong PredictionMotionRevision;
+            internal CharacterFootLandingPredictionResult Prediction;
+            internal CharacterFootGroundPathState PathState;
+            internal CharacterFootGroundPathRejectReason PathRejectReason;
+            internal ulong PathInputIdentity;
+            internal bool PathQueryExecuted;
+            internal int PathContactCount, PathEnvelopeVertexCount, PathSegmentCount;
+            internal Vector3 PathLastLanding, PathNextLanding;
+#endif
         }
 
         static void RunStoredGoals(StoredGoalInput[] inputs, in CharacterFootLifecycleContext seed,
@@ -428,6 +477,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var final = query.Query(input.Sequence, input.Completion, revision, input.Side, Vector3.up,
                     input.Grounded, in finalContacts, input.FinalProbes);
                 return new StoredGoalOutput { Output = output, Motion = motion, FinalSupport = final,
+#if RELEASING_FIXTURE
+                    BodyTrajectoryUsed = input.BodyTrajectoryUsed, PredictionMotionRevision = input.PredictionMotionRevision,
+                    Prediction = input.Prediction, PathState = input.Path.State, PathRejectReason = input.Path.RejectReason,
+                    PathInputIdentity = input.Path.InputIdentity, PathQueryExecuted = input.Path.QueryExecutedThisFrame,
+                    PathContactCount = input.Path.ContactCount, PathEnvelopeVertexCount = input.Path.EnvelopeVertexCount,
+                    PathSegmentCount = input.Path.SegmentCount, PathLastLanding = input.Path.LastLanding, PathNextLanding = input.Path.NextSwingLanding,
+#endif
                     GoalError = Vector3.Distance(goal, output.Pose.EffectiveAnkle),
                     GoalRotationError = Quaternion.Angle(effectiveRotation, output.Pose.EffectiveRotation),
 #if ROTATION_CANDIDATE
@@ -442,18 +498,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             StoredGoalOutput[] rightResults, StoredGoalOutput[] leftResults, CharacterFootStrideHipsResult[] pelvisResults,
             CharacterFullBodyIkGoal[] pelvisGoals, Transform root, in CharacterFootSoleSupportQuery query, ulong revision,
             CharacterFootSoleProbeBuffer rightTargetProbes, CharacterFootSoleProbeBuffer rightOutputProbes,
-            CharacterFootSoleProbeBuffer leftTargetProbes, CharacterFootSoleProbeBuffer leftOutputProbes)
+            CharacterFootSoleProbeBuffer leftTargetProbes, CharacterFootSoleProbeBuffer leftOutputProbes, bool correctedSource
+#if RELEASING_FIXTURE
+            , ReleasingPredictionWorkspace predictionWorkspace
+#endif
+            )
         {
             CharacterFootLifecycleContext left = leftSeed, right = rightSeed;
             CharacterFootPrimarySupportState primary = default;
             CharacterFootPelvisSpringState spring = default;
+#if RELEASING_FIXTURE
+            predictionWorkspace.Reset();
+            primary = predictionWorkspace.PrimarySeed;
+            spring = predictionWorkspace.SpringSeed;
+#endif
             for (int i = 0; i < rightInputs.Length; i++)
             {
                 StoredGoalInput l = leftInputs[i], r = rightInputs[i];
                 root.SetPositionAndRotation(r.RootPosition, r.RootRotation);
-                var leftRequest = EvaluateCapturedFoot(ref left, l, true, root, in query, revision, leftTargetProbes, leftOutputProbes,
+#if RELEASING_FIXTURE
+                predictionWorkspace.Prepare(l, r, ref left, ref right, correctedSource);
+#endif
+                var leftRequest = EvaluateCapturedFoot(ref left, l, correctedSource, root, in query, revision, leftTargetProbes, leftOutputProbes,
                     out var leftCompletion, out var leftStep, out var leftSwing);
-                var rightRequest = EvaluateCapturedFoot(ref right, r, true, root, in query, revision, rightTargetProbes, rightOutputProbes,
+                var rightRequest = EvaluateCapturedFoot(ref right, r, correctedSource, root, in query, revision, rightTargetProbes, rightOutputProbes,
                     out var rightCompletion, out var rightStep, out var rightSwing);
                 bool selected = CharacterFootStrideHipsBuilder.TrySelectSwing(in leftStep, in rightStep, in leftSwing, in rightSwing, out var selectedSide);
                 var requests = new CharacterFootPlacementRequestPair(in leftRequest, in rightRequest);
@@ -518,14 +586,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 HistoricalLineage = new FixedString128Bytes(r.S("input/pose-plan-hash"));
                 CurrentLineage = HistoricalLineage;
                 RecordedLandingReach = r.B("foot/foot-motion/core/landing-reach-available");
+#if RELEASING_FIXTURE
+                PredictionInput = new ReleasingPredictionInput(captured, columns);
+#endif
             }
             internal readonly Row Recorded;
             internal readonly Row[] ExpectedProbes;
             internal readonly CharacterFootSide Side;
             internal readonly CharacterFootPlacementAnimatedFootPose Animated;
             internal readonly AnimationFootMotionRuntimeSample HistoricalStep, CurrentStep;
-            internal readonly CharacterFootGroundPathResult Path;
-            internal readonly CharacterFootLandingPredictionResult Prediction;
+            internal CharacterFootGroundPathResult Path;
+            internal CharacterFootLandingPredictionResult Prediction;
+#if RELEASING_FIXTURE
+            internal readonly ReleasingPredictionInput PredictionInput;
+            internal bool BodyTrajectoryUsed;
+            internal ulong PredictionMotionRevision;
+#endif
             internal readonly CharacterFootMotionSettings Settings;
             internal readonly Vector3 RootPosition;
             internal readonly Vector3 AnimatedPelvis, AnimatedPelvisComponentPosition;

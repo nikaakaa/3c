@@ -84,5 +84,7 @@
     "AnimationSlotBlendJob.cs": true,
     "AnimationSlotBlendPoseWorkspace.cs": true,
     "AnimationBlendStackRuntime.cs": true
-  }
+  },
+  "fixturePath": "docs/diagnostics/foot-placement/ik-tests/releasing-action-native-input.json",
+  "footFixtureFrameInputsMatchFrozenNativeInput": true
 }

@@ -8,12 +8,12 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT = ROOT / '3cDemo/Client/3C_Client'
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=['sources', 'rotation'], default='sources')
+parser.add_argument('--mode', choices=['sources', 'rotation', 'releasing'], default='sources')
 parser.add_argument('--variant', choices=['historical', 'current'], default='historical')
 parser.add_argument('--commit')
 args = parser.parse_args()
 HELPER_COMMIT = '409b40b8a'
-RUNTIME_COMMIT = '18e1f2a4f' if args.mode == 'sources' else {'historical': '552f13083', 'current': '15894ee7b'}[args.variant]
+RUNTIME_COMMIT = '69a36d339' if args.mode == 'releasing' else '18e1f2a4f' if args.mode == 'sources' else {'historical': '552f13083', 'current': '15894ee7b'}[args.variant]
 if args.commit is not None: RUNTIME_COMMIT = args.commit
 TEMP = CLIENT / 'Temp/FootStoredPoseFunctions' if args.mode == 'sources' else CLIENT / 'Temp/FootRotationComparison'
 OUT = TEMP if args.mode == 'sources' else TEMP / (args.variant + '-' + RUNTIME_COMMIT)
@@ -23,7 +23,9 @@ sources = {}
 module_relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootPlacementModule.cs'
 module_source = subprocess.check_output(['git', '-C', str(ROOT), 'show', RUNTIME_COMMIT + ':' + module_relative]).decode('utf-8')
 methods = []
-for name in ['ResolveFootGoalOwnershipLoss', 'CreatePelvisGoal']:
+module_names = ['ResolveFootGoalOwnershipLoss', 'CreatePelvisGoal']
+if args.mode == 'releasing': module_names.append('EncodeFootGoal')
+for name in module_names:
     match = re.search(r'        static \w+ ' + name + r'\(', module_source)
     begin = match.start()
     opening = module_source.index('{', begin)
@@ -36,6 +38,29 @@ for name in ['ResolveFootGoalOwnershipLoss', 'CreatePelvisGoal']:
 module_fragment = OUT / 'CapturedFootModuleFunctions.cs'
 module_fragment.write_text('using UnityEngine;\nusing ThirdPersonCharacter.Pipeline.Animation;\nusing ThirdPersonCharacter.Pipeline.Presentation;\nnamespace ThirdPersonCharacter.Pipeline.Editor { internal static class CapturedFootModuleFunctions {\n' + '\n'.join(methods) + '\n}}', encoding='utf-8')
 files.append(module_fragment)
+if args.mode == 'releasing':
+    files.append(Path(__file__).with_name('CapturedReleasingFootPrediction.cs'))
+    files.append(Path(__file__).with_name('CapturedReleasingFullIkTests.cs'))
+    for name in ['CharacterFinalIkFullBodySolver.cs', 'CharacterFinalIkPoseBufferBackend.cs', 'CharacterFullBodyIkDiagnostics.cs']:
+        relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseConstraints/' + name
+        path = OUT / name
+        path.write_bytes(subprocess.check_output(['git', '-C', str(ROOT), 'show', RUNTIME_COMMIT + ':' + relative]))
+        files.append(path)
+    begin = module_source.index('        CharacterFootGroundPathResult PrepareGroundPath(')
+    end = module_source.index('        static float ResolveCurrentSegmentRemainingSeconds(', begin)
+    body = module_source[begin:end].replace('CharacterFootPlacementFrameInput', 'CapturedPredictionFrame').replace('CommittedLocomotionPlanarMotionTimeline', 'CapturedPredictionTimeline').replace('CharacterBodyPresentationFrame', 'CapturedPredictionBody')
+    for result, name in [('CharacterFootGroundPathResult','PrepareGroundPath'),('CharacterFootLandingPredictionPair','PredictFootPair'),('CharacterFutureBodyTranslation','ResolveBodyTrajectory')]:
+        body = body.replace('        ' + result + ' ' + name + '(', '        internal ' + result + ' ' + name + '(')
+    prefix = '''using System;\nusing UnityEngine;\nusing ThirdPersonCharacter.Pipeline.Animation;\nusing ThirdPersonCharacter.Pipeline.Presentation;\nusing ThirdPersonSimulation;\nnamespace ThirdPersonCharacter.Pipeline.Editor { internal sealed class CapturedFootPredictionFunctions {\n
+        readonly CharacterFootPlacementModuleSettings m_Settings;
+        readonly ICharacterFootPlacementWorldQuery m_WorldQuery;
+        readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
+        readonly ActorId m_ActorId;
+        internal CapturedFootPredictionFunctions(CharacterFootPlacementModuleSettings settings, ICharacterFootPlacementWorldQuery world, ICharacterFutureBodyTranslationSource future, ActorId actor) { m_Settings=settings; m_WorldQuery=world; m_FutureBodyTranslationSource=future; m_ActorId=actor; }
+'''
+    prediction_path = OUT / 'CapturedFootPredictionFunctions.cs'
+    prediction_path.write_text(prefix + body + '\n}}', encoding='utf-8')
+    files.append(prediction_path)
 for name in ['CharacterFootCapturedContactTests.cs', 'CharacterFootCapturedReleaseTests.cs']:
     relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Analysis/FootPlacement/' + name
     path = OUT / 'native-helpers' / name
@@ -43,7 +68,7 @@ for name in ['CharacterFootCapturedContactTests.cs', 'CharacterFootCapturedRelea
     path.write_bytes(subprocess.check_output(['git', '-C', str(ROOT), 'show', HELPER_COMMIT + ':' + relative]))
     files.append(path)
 runtime_names = ['CharacterFootLifecycle.cs', 'CharacterFootInterpolationRuntime.cs', 'CharacterFootHardConstraintResolver.cs', 'CharacterFootLandingRuntime.cs']
-if args.mode == 'rotation':
+if args.mode in ['rotation', 'releasing']:
     runtime_names += ['CharacterFootLifecycleContracts.cs', 'CharacterFootTransitionRuntime.cs', 'CharacterFootTransitionResolver.cs', 'CharacterFootStateTargetResolver.cs', 'CharacterFootSwingMotionContracts.cs', 'CharacterFootSwingMotionBuilder.cs', 'CharacterFootConstraintMath.cs', 'CharacterFootStrideHipsBuilder.cs']
 for name in runtime_names:
     relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/' + name
@@ -53,12 +78,14 @@ for name in runtime_names:
     files.append(path)
 response = ['-nostdlib+', '-langversion:latest', '-target:library', '-utf8output', '-nowarn:0436', '-out:"' + str(OUT / 'ThirdPersonClient.Editor.dll') + '"']
 if args.mode == 'rotation' and args.variant == 'current': response.append('-define:ROTATION_CANDIDATE')
+if args.mode == 'releasing': response.append('-define:RELEASING_FIXTURE')
 response.extend('"' + str(path) + '"' for path in files)
 editor = json.loads(CLIENT.joinpath('Temp/FootStoredPoseFunctions/editor-assemblies.json').read_text(encoding='utf-8-sig'))
 references = editor['result']['data']['result']
 needed = ['mscorlib.dll', 'System.Core.dll', 'System.dll', 'netstandard.dll', 'UnityEngine.CoreModule.dll', 'UnityEngine.PhysicsModule.dll', 'UnityEngine.AnimationModule.dll', 'UnityEditor.CoreModule.dll', 'ThirdPersonClient.Runtime.dll', 'ThirdPersonCharacter.Animation.dll', 'ThirdPersonSimulation.Core.dll', 'Unity.Collections.dll', 'Newtonsoft.Json.dll', 'nunit.framework.dll']
-if args.mode == 'rotation':
+if args.mode in ['rotation', 'releasing']:
     needed += ['KK.GeneratedDiagnosticSampling.Host.dll', 'ThirdPersonCharacter.PresentationReplicationDiagnosticSampling.dll', 'KK.GeneratedDiagnosticSampling.Annotations.dll', 'KK.GeneratedDiagnosticSampling.dll', 'ThirdPersonCharacter.FootIkDiagnosticSampling.dll', 'BTSMTL.Diagnostics.dll']
+if args.mode == 'releasing': needed += ['RootMotion.dll']
 by_name = {Path(path).name: path for path in references}
 assert all(name in by_name for name in needed), [name for name in needed if name not in by_name]
 response.extend('-r:"' + by_name[name] + '"' for name in needed)

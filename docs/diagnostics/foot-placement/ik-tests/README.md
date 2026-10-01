@@ -1,5 +1,25 @@
 # 脚部局部复算工具证据
 
+## 完整全身 Action 释放窗口（2026-10-01，FBBIK校准未通过）
+
+同一业务扩为2023真实种子、2024～2056连续33帧，保留进入Landing、Releasing和退出Swing。完整结果在[原场景页](releasing-action-native.html)：[Native](releasing-business-native.json)、[双脚预测/骨盆/Goal](releasing-business-goal.json)、[实际FBBIK](releasing-business-ik.json)、[向量汇总](releasing-business-summary.json)、[源码与执行程序集快照](releasing-business-source-snapshot.zip)。原2035～2046的12帧结果及输入单独冻结，没有改写为33帧执行证据。
+
+正式发布ACL提供201物理骨，Native Job提交实际状态，完整Action Slot混合后将真实FootMotion交给正式BodyTrajectory/PredictFootPair和PhysicsScene查询，再连续执行双脚Lifecycle、骨盆Spring、Complete、三个Goal以及实际FBBIK。Native固定`d6d6ab9f9`、Foot和IK固定`69a36d339`，KCC未来端口仍消费原采样。真实2023种子恢复Spring、primary、观测和地面路径；仅预滚实际姿势和Goal初始化IK方向，没有伪造四个历史方向。历史previous-dot/Revision元数据未还原，完整GoalAssembler及Unity/Burst调度未执行。正式Runner未执行。
+
+| 全33帧实际指标 | 历史来源 | 来源修正 |
+| --- | --- | --- |
+| 右脚最大额外修正向量步长 | 0.434414m（2041） | 0.301888m（2041） |
+| 右脚额外修正总变化 | 1.708409m | 1.459506m |
+| 右脚最大额外修正速度 | 26.06484m/s | 18.11330m/s |
+| 右脚目标超伸帧 | 10 | 8 |
+| 左脚目标超伸帧 | 0 | 0 |
+| 双脚已观测最终Goal查询 / 最大正穿透 | 各33/33帧 / 0m | 各33/33帧 / 0m |
+| Native / Foot / IK暖机计算分配 | 0B / 0B / 0B | 0B / 0B / 0B |
+
+额外修正按`Δ(Goal脚底−原动画脚底)`向量计算。历史右脚2031～2037已有连续7帧近直腿；完整实际求解右脚小于1°为10→8帧，但历史2033六关节点最大误差0.240472mm超过既定0.2mm，**IK比较未校准，整体未通过**。保留[初次失败](releasing-business-ik-attempt-native-pose-calibration.json)、[录制六位置诊断](releasing-business-ik-diagnostic-recorded-leg.json)和[录制三个Goal诊断](releasing-business-ik-diagnostic-recorded-goals.json)；后两种仍失败，不能据此回退到录制输入冒充正式结果。现在先保存两版实际求解，再统一判校准失败，避免首次断言丢掉候选数值。
+
+首次路径JSON在序列结束后读取复用池页，使33帧Accepted全部误写false。实际计算使用当帧路径；已改为当帧复制状态、拒绝原因、身份、接触/包络计数、预测与观测必要标量，格式化仍在计算段外。重跑Goal值不变，历史2030～2041正确为Accepted；2041候选`NewEventContactAcquired`，2042`ContactOutOfSlideRange`，响应域分别切入ContactWorldResidual、AnimationRelativeScalar；历史同样变化晚一帧。HTML播放33帧、双腿投影、转换/响应表和失败标签已通过Node DOM检查；浏览器视觉验收未完成。
+
 本目录按完整场景保存验证。接触交接包含独立函数实验与尚未完成的 Unity 下游验证；Releasing 跨阶已有正式 EditMode 历史对照。每个场景维护自己的 HTML，避免局部通过被误读为整条链路通过。输入和结果统一从[脚部入口](../README.md)查找。
 
 | 文件 | 用途 |

@@ -34,7 +34,7 @@ $nativeManifest = Get-Content -Encoding UTF8 -Raw -LiteralPath (Join-Path $nativ
 $nativeManifest | Add-Member -NotePropertyName compiledEntrySha256 -NotePropertyValue (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $nativeTemp 'ThirdPersonClient.Editor.dll')).Hash.ToLowerInvariant()
 $nativeManifest | ConvertTo-Json -Depth 20 | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $ResultDirectory 'releasing-action-native-provenance.json')
 $nativeSourceLabel = if ($WorkingNative) { 'working-native-sha; remaining=' + $NativeCommit } else { $NativeCommit }
-$nativeArgs = @((Join-Path $nativeRepo 'docs/diagnostics/foot-placement/ik-tests/releasing-right-input.json'),[IO.Path]::GetFullPath((Join-Path $ResultDirectory 'releasing-action-native.json')),$nativeSourceLabel) | ConvertTo-Json -Compress
+$nativeArgs = @((Join-Path $nativeRepo 'docs/diagnostics/foot-placement/ik-tests/releasing-action-native-input.json'),[IO.Path]::GetFullPath((Join-Path $ResultDirectory 'releasing-action-native.json')),$nativeSourceLabel) | ConvertTo-Json -Compress
 $nativeDll = (Join-Path $nativeTemp 'ThirdPersonClient.Editor.dll') | ConvertTo-Json -Compress
 $nativeCode = @'
 var a=System.Reflection.Assembly.Load(System.IO.File.ReadAllBytes(@@DLL@@));

@@ -29,6 +29,65 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string AssetsRoot = "Assets/Configs/Character/Corin/Pipeline/Presentation/";
         const string ResourcePath = "Assets/AssetRaw/Product/Gameplay/ACL/c7a7c1e3f7e64d81b5a04a90cbeb8d4e/acl-4ce133684f97a8812d744f6ee151d91c9eb234ee67e7b9d26b4f03fc4065565f.asset";
 
+        public static JObject ExportComponentPoses(string inputPath, string outputPath)
+        {
+            JObject fixture = JObject.Parse(File.ReadAllText(inputPath, Encoding.UTF8));
+            var rig = new CharacterAnimationRigPayload(AssetDatabase.LoadAssetAtPath<CharacterAnimationRigDefinition>(AssetsRoot + "Rig/CorinAnimationRigDefinition.asset"));
+            var set = AssetDatabase.LoadAssetAtPath<CharacterPoseNativeDomainResourceSet>(AssetsRoot + "Profiles/CorinPoseNativeDomainResourceSet.asset");
+            var resource = AssetDatabase.LoadAssetAtPath<CharacterAclAnimationResource>(ResourcePath);
+            var runPlan = set.SourcePlans.Single(x => x.GroupClipIndex == 10);
+            var actionPlan = set.ActionSourcePlans.Single(x => x.GroupClipIndex == 1);
+            var captured = new[] { fixture["seed"] }.Concat((JArray)fixture["frames"]).ToArray();
+            var frames = captured.Select(x => new Frame(x, (JObject)fixture["columns"], (JObject)fixture["sourceIds"], set, runPlan, actionPlan)).ToArray();
+            var rows = new JArray();
+            using (var geometry = new Geometry(rig))
+            using (var runDecode = Decoder(resource, 10))
+            using (var actionDecode = Decoder(resource, 1))
+            using (var decoded = new NativeArray<CharacterAclNativeTransformSample>(rig.PhysicalBoneCount, Allocator.Persistent))
+            using (var fullComponents = new NativeArray<CharacterComponentBonePose>(rig.PoseBoneCount, Allocator.Persistent))
+            using (var run = new NativeSlot(rig))
+            using (var action = new NativeSlot(rig))
+            using (var output = new CharacterPoseNativeNodePoseBuffer(0, rig.PoseBoneCount, 1, 3))
+            {
+                var slot = new CurrentActionSlot();
+                var components = fullComponents;
+                ulong actionPrevious = 0;
+                for (int i = 0; i < frames.Length; i++)
+                {
+                    Frame f = frames[i];
+                    ulong completion = (ulong)i + 1;
+                    using (var runPose = geometry.Decode(runDecode, resource.GetGroupManifest(10), f.RunTime, decoded))
+                    {
+                        var source = run.Evaluate(runPose, in f.RunSample, 1f, f.RunContinuity, f.Delta, completion, i == 0 ? 0 : completion - 1);
+                        var actionWrite = action.Output.RequireWriteBinding(completion);
+                        if (f.HasAction)
+                        {
+                            using (var actionPose = geometry.Decode(actionDecode, resource.GetGroupManifest(1), f.ActionTime, decoded))
+                                actionWrite = action.Evaluate(actionPose, in f.ActionSample, f.ActionWeight, f.ActionContinuity, f.Delta, completion, actionPrevious);
+                            actionPrevious = completion;
+                        }
+                        var sourceRead = new CharacterPoseNativePoseReadBinding(in source);
+                        var actionRead = new CharacterPoseNativePoseReadBinding(in actionWrite);
+                        var write = output.RequireWriteBinding(completion);
+                        slot.Evaluate(in sourceRead, in actionRead, in write, f.HasAction);
+                        Assert.That(write.Availability[0], Is.EqualTo(AnimationPoseAvailability.Pose));
+                        var poses = new JArray();
+                        for (int bone = 0; bone < rig.PoseBoneCount; bone++)
+                        {
+                            Assert.That(CharacterPoseConstraintMath.TryCreateComponent(write.DenseLocalPoses[bone], rig.GetPoseParentIndex(bone), fullComponents, out var component), Is.True);
+                            components[bone] = component;
+                            poses.Add(new JArray(component.Position.x, component.Position.y, component.Position.z, component.Rotation.x, component.Rotation.y, component.Rotation.z, component.Rotation.w,
+                                component.Scale.x, component.Scale.y, component.Scale.z));
+                        }
+                        rows.Add(new JObject { ["frame"] = f.Number, ["componentPoses"] = poses });
+                    }
+                }
+            }
+            var report = new JObject { ["status"] = "passed", ["scope"] = "正式ACL/Native/Action Slot得到2034预滚与12帧完整组件姿势；未执行IK；两版骨骼混合已经校准一致", ["rigRevision"] = rig.RigRevision, ["rows"] = rows };
+            File.WriteAllText(outputPath, report.ToString(Formatting.None), new UTF8Encoding(false));
+            return new JObject { ["status"] = "passed", ["frames"] = frames.Length };
+        }
+
         public static JObject Run(string inputPath, string outputPath, string nativeCommit)
         {
             var report = new JObject { ["status"] = "running", ["rows"] = new JArray(),

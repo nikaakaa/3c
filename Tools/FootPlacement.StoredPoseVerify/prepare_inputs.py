@@ -42,14 +42,16 @@ for row in main:
     previous[side] = row
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--scene', choices=['stored', 'stored-rotation', 'live-switch', 'live-continued', 'releasing', 'step-edge'], default='stored')
+parser.add_argument('--scene', choices=['stored', 'stored-rotation', 'live-switch', 'live-continued', 'releasing', 'releasing-continued', 'step-edge'], default='stored')
 scene = parser.parse_args().scene
+paired_scene = scene in ['live-continued', 'releasing', 'releasing-continued']
 scenarios = {
     'stored': {'stored-no-contact-left': ('left', 1174, 1186), 'stored-contact-right': ('right', 889, 958)},
     'stored-rotation': {'stored-contact-rotation-right': ('right', 874, 958)},
     'live-switch': {'live-switch-right': ('right', 2192, 2214)},
     'live-continued': {'live-switch-continued-right': ('right', 2192, 2249)},
     'releasing': {'releasing-right': ('right', 2035, 2046)},
+    'releasing-continued': {'releasing-business-right': ('right', 2024, 2056)},
     'step-edge': {'step-edge-left': ('left', 2537, 2550)}
 }[scene]
 columns = {'main': [k.removeprefix(PREFIX) for k in main[0] if k.startswith(PREFIX)], 'sources': source_names}
@@ -66,22 +68,33 @@ for row in main:
         key = '|'.join(selected_source[source_names.index(k)] for k in ['node-id', 'selection-generation', 'action-instance-id'])
         source_ids[key] = row[PREFIX + 'input/foot-step-observation/source-id']
 selected = {}
+seeds = {}
 for name, (side, first, last) in scenarios.items():
     values = []
     for row in main:
         if row['sample.dimension'].endswith('/' + side) and first <= int(row[frame_key]) <= last:
             other = by_frame_side[(int(row[frame_key]), 'right' if side == 'left' else 'left')]
             values.append({'frame': int(row[frame_key]), 'sampleSequence': row['sample.sequence'], 'sampleDimension': row['sample.dimension'], 'lineageHigh': row['sample.lineage.high'], 'lineageLow': row['sample.lineage.low'], 'main': [row[k] for k in main_keys], 'pairedMain': [other[k] for k in main_keys], 'sources': sources[(row['sample.lineage.high'], row['sample.lineage.low'])]})
-            if scene == 'live-continued':
+            if paired_scene:
                 values[-1]['paired'] = {'frame': int(other[frame_key]), 'sampleSequence': other['sample.sequence'], 'sampleDimension': other['sample.dimension'], 'lineageHigh': other['sample.lineage.high'], 'lineageLow': other['sample.lineage.low'], 'main': [other[k] for k in main_keys], 'sources': sources[(other['sample.lineage.high'], other['sample.lineage.low'])]}
     assert len(values) == last - first + 1, name
     selected[name] = values
+    if scene in ['releasing', 'releasing-continued']:
+        row = by_frame_side[(first - 1, side)]
+        other = by_frame_side[(first - 1, 'left')]
+        def seed_frame(value):
+            return {'frame': int(value[frame_key]), 'sampleSequence': value['sample.sequence'], 'sampleDimension': value['sample.dimension'],
+                'lineageHigh': value['sample.lineage.high'], 'lineageLow': value['sample.lineage.low'], 'main': [value[k] for k in main_keys],
+                'sources': sources[(value['sample.lineage.high'], value['sample.lineage.low'])]}
+        seeds[name] = seed_frame(row)
+        seeds[name]['paired'] = seed_frame(other)
 
 lookup = {}
-for values in selected.values():
+for name, selected_values in selected.items():
+    values = selected_values + ([seeds[name]] if name in seeds else [])
     for frame in values:
         lookup.setdefault((frame['sampleSequence'], frame['sampleDimension']), []).append(frame)
-        if scene == 'live-continued':
+        if paired_scene:
             paired = frame['paired']
             lookup.setdefault((paired['sampleSequence'], paired['sampleDimension']), []).append(paired)
 
@@ -104,6 +117,7 @@ for table, (suffix, group) in tables.items():
 
 for name, (side, first, last) in scenarios.items():
     fixture = {'capture': FOOT.name, 'presentationCapture': PRESENTATION.name, 'side': side, 'firstFrame': first, 'lastFrame': last, 'baselineCommit': '2c757a422', 'columns': columns, 'sourceIds': source_ids, 'sourceSha256': hashes, 'frames': selected[name], 'executionScope': 'Recorded mixed animated foot and formal inputs to real foot functions; no whole pre-solver pose or FBBIK bend history in this capture'}
+    if name in seeds: fixture['seed'] = seeds[name]
     for frame in fixture['frames']:
         assert len(frame['probes']) == 23, (name, frame['frame'])
     OUT.joinpath(name + '-input.json').write_text(json.dumps(fixture, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
@@ -116,5 +130,5 @@ for file in ['CharacterFootLifecycle.cs', 'CharacterFootInterpolationRuntime.cs'
     content = subprocess.check_output(['git', '-C', str(ROOT), 'show', '2c757a422:' + relative])
     baseline.joinpath(file).write_bytes(content)
 
-print(json.dumps({'fixtures': {name: {'frames': len(values), 'first': values[0]['frame'], 'last': values[-1]['frame'], 'sourceWeight': values[0]['main'][columns['main'].index('input/foot-step-observation/source-weight')]} for name, values in selected.items()}, 'contactCaptureCandidates': contact_captures}, ensure_ascii=True))
+print(json.dumps({'fixtures': {name: {'frames': len(values), 'first': values[0]['frame'], 'last': values[-1]['frame'], 'sourceWeight': values[0]['main'][columns['main'].index('input/foot-step-observation/source-weight')]} for name, values in selected.items()}, 'contactCaptureCandidateCount': len(contact_captures)}, ensure_ascii=True))
 baseline.joinpath('contact-capture-candidates.json').write_text(json.dumps(contact_captures, ensure_ascii=False, indent=2), encoding='utf-8')

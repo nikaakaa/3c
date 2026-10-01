@@ -1,0 +1,628 @@
+{
+  "status": "failed-ik-calibration",
+  "firstFrame": 2024,
+  "lastFrame": 2056,
+  "seedFrame": 2023,
+  "executionLayer": "Unity内真实函数实验；未执行正式Runner、Replay或自动输入",
+  "footCommit": "69a36d339",
+  "nativeCommit": "d6d6ab9f9",
+  "variants": {
+    "historical": {
+      "nativeAllocatedBytes": 0,
+      "footAllocatedBytes": 0,
+      "ikAllocatedBytes": 0,
+      "historicalJointMaximumError": 0.000240472364,
+      "right": {
+        "maximumCorrectionDelta": 0.4344139915418097,
+        "maximumCorrectionDeltaFrame": 2041,
+        "totalCorrectionVariation": 1.7084094167525856,
+        "maximumCorrectionSpeed": 26.0648384,
+        "activeGoalFrames": 33,
+        "observedFrames": 33,
+        "maximumPositivePenetration": 0,
+        "targetOverreachFrames": 10,
+        "maximumTargetReach": 1.17964232,
+        "states": [
+          {
+            "frame": 2024,
+            "state": "Swing"
+          },
+          {
+            "frame": 2025,
+            "state": "Landing"
+          },
+          {
+            "frame": 2026,
+            "state": "Landing"
+          },
+          {
+            "frame": 2027,
+            "state": "Landing"
+          },
+          {
+            "frame": 2028,
+            "state": "Landing"
+          },
+          {
+            "frame": 2029,
+            "state": "Landing"
+          },
+          {
+            "frame": 2030,
+            "state": "Landing"
+          },
+          {
+            "frame": 2031,
+            "state": "Landing"
+          },
+          {
+            "frame": 2032,
+            "state": "Landing"
+          },
+          {
+            "frame": 2033,
+            "state": "Landing"
+          },
+          {
+            "frame": 2034,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2035,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2036,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2037,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2038,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2039,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2040,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2041,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2042,
+            "state": "Landing"
+          },
+          {
+            "frame": 2043,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2044,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2045,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2046,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2047,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2048,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2049,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2050,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2051,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2052,
+            "state": "Swing"
+          },
+          {
+            "frame": 2053,
+            "state": "Swing"
+          },
+          {
+            "frame": 2054,
+            "state": "Swing"
+          },
+          {
+            "frame": 2055,
+            "state": "Swing"
+          },
+          {
+            "frame": 2056,
+            "state": "Swing"
+          }
+        ],
+        "nearStraightSolvedFrames": 10,
+        "nearStraightSolvedDuration": 0.166666675,
+        "kneeComparisonCalibrated": false
+      },
+      "left": {
+        "maximumCorrectionDelta": 0.07239212320524983,
+        "maximumCorrectionDeltaFrame": 2040,
+        "totalCorrectionVariation": 0.31083825471474286,
+        "maximumCorrectionSpeed": 4.343527,
+        "activeGoalFrames": 33,
+        "observedFrames": 33,
+        "maximumPositivePenetration": 0,
+        "targetOverreachFrames": 0,
+        "maximumTargetReach": 0.982304454,
+        "states": [
+          {
+            "frame": 2024,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2025,
+            "state": "Swing"
+          },
+          {
+            "frame": 2026,
+            "state": "Swing"
+          },
+          {
+            "frame": 2027,
+            "state": "Swing"
+          },
+          {
+            "frame": 2028,
+            "state": "Swing"
+          },
+          {
+            "frame": 2029,
+            "state": "Swing"
+          },
+          {
+            "frame": 2030,
+            "state": "Swing"
+          },
+          {
+            "frame": 2031,
+            "state": "Swing"
+          },
+          {
+            "frame": 2032,
+            "state": "Swing"
+          },
+          {
+            "frame": 2033,
+            "state": "Swing"
+          },
+          {
+            "frame": 2034,
+            "state": "Swing"
+          },
+          {
+            "frame": 2035,
+            "state": "Swing"
+          },
+          {
+            "frame": 2036,
+            "state": "Swing"
+          },
+          {
+            "frame": 2037,
+            "state": "Swing"
+          },
+          {
+            "frame": 2038,
+            "state": "Swing"
+          },
+          {
+            "frame": 2039,
+            "state": "Swing"
+          },
+          {
+            "frame": 2040,
+            "state": "Swing"
+          },
+          {
+            "frame": 2041,
+            "state": "Swing"
+          },
+          {
+            "frame": 2042,
+            "state": "Swing"
+          },
+          {
+            "frame": 2043,
+            "state": "Swing"
+          },
+          {
+            "frame": 2044,
+            "state": "Swing"
+          },
+          {
+            "frame": 2045,
+            "state": "Swing"
+          },
+          {
+            "frame": 2046,
+            "state": "Swing"
+          },
+          {
+            "frame": 2047,
+            "state": "Swing"
+          },
+          {
+            "frame": 2048,
+            "state": "Swing"
+          },
+          {
+            "frame": 2049,
+            "state": "Swing"
+          },
+          {
+            "frame": 2050,
+            "state": "Swing"
+          },
+          {
+            "frame": 2051,
+            "state": "Swing"
+          },
+          {
+            "frame": 2052,
+            "state": "Swing"
+          },
+          {
+            "frame": 2053,
+            "state": "Swing"
+          },
+          {
+            "frame": 2054,
+            "state": "Swing"
+          },
+          {
+            "frame": 2055,
+            "state": "Swing"
+          },
+          {
+            "frame": 2056,
+            "state": "Swing"
+          }
+        ],
+        "nearStraightSolvedFrames": 0,
+        "nearStraightSolvedDuration": 0,
+        "kneeComparisonCalibrated": false
+      }
+    },
+    "current": {
+      "nativeAllocatedBytes": 0,
+      "footAllocatedBytes": 0,
+      "ikAllocatedBytes": 0,
+      "historicalJointMaximumError": 0.000240472364,
+      "right": {
+        "maximumCorrectionDelta": 0.301888393096922,
+        "maximumCorrectionDeltaFrame": 2041,
+        "totalCorrectionVariation": 1.4595055578544391,
+        "maximumCorrectionSpeed": 18.1133041,
+        "activeGoalFrames": 33,
+        "observedFrames": 33,
+        "maximumPositivePenetration": 0,
+        "targetOverreachFrames": 8,
+        "maximumTargetReach": 1.17964232,
+        "states": [
+          {
+            "frame": 2024,
+            "state": "Swing"
+          },
+          {
+            "frame": 2025,
+            "state": "Landing"
+          },
+          {
+            "frame": 2026,
+            "state": "Landing"
+          },
+          {
+            "frame": 2027,
+            "state": "Landing"
+          },
+          {
+            "frame": 2028,
+            "state": "Landing"
+          },
+          {
+            "frame": 2029,
+            "state": "Landing"
+          },
+          {
+            "frame": 2030,
+            "state": "Landing"
+          },
+          {
+            "frame": 2031,
+            "state": "Landing"
+          },
+          {
+            "frame": 2032,
+            "state": "Landing"
+          },
+          {
+            "frame": 2033,
+            "state": "Landing"
+          },
+          {
+            "frame": 2034,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2035,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2036,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2037,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2038,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2039,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2040,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2041,
+            "state": "Landing"
+          },
+          {
+            "frame": 2042,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2043,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2044,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2045,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2046,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2047,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2048,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2049,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2050,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2051,
+            "state": "Swing"
+          },
+          {
+            "frame": 2052,
+            "state": "Swing"
+          },
+          {
+            "frame": 2053,
+            "state": "Swing"
+          },
+          {
+            "frame": 2054,
+            "state": "Swing"
+          },
+          {
+            "frame": 2055,
+            "state": "Swing"
+          },
+          {
+            "frame": 2056,
+            "state": "Swing"
+          }
+        ],
+        "nearStraightSolvedFrames": 8,
+        "nearStraightSolvedDuration": 0.13333334,
+        "kneeComparisonCalibrated": false
+      },
+      "left": {
+        "maximumCorrectionDelta": 0.07239212320524983,
+        "maximumCorrectionDeltaFrame": 2040,
+        "totalCorrectionVariation": 0.31083825471474286,
+        "maximumCorrectionSpeed": 4.343527,
+        "activeGoalFrames": 33,
+        "observedFrames": 33,
+        "maximumPositivePenetration": 0,
+        "targetOverreachFrames": 0,
+        "maximumTargetReach": 0.982304454,
+        "states": [
+          {
+            "frame": 2024,
+            "state": "Releasing"
+          },
+          {
+            "frame": 2025,
+            "state": "Swing"
+          },
+          {
+            "frame": 2026,
+            "state": "Swing"
+          },
+          {
+            "frame": 2027,
+            "state": "Swing"
+          },
+          {
+            "frame": 2028,
+            "state": "Swing"
+          },
+          {
+            "frame": 2029,
+            "state": "Swing"
+          },
+          {
+            "frame": 2030,
+            "state": "Swing"
+          },
+          {
+            "frame": 2031,
+            "state": "Swing"
+          },
+          {
+            "frame": 2032,
+            "state": "Swing"
+          },
+          {
+            "frame": 2033,
+            "state": "Swing"
+          },
+          {
+            "frame": 2034,
+            "state": "Swing"
+          },
+          {
+            "frame": 2035,
+            "state": "Swing"
+          },
+          {
+            "frame": 2036,
+            "state": "Swing"
+          },
+          {
+            "frame": 2037,
+            "state": "Swing"
+          },
+          {
+            "frame": 2038,
+            "state": "Swing"
+          },
+          {
+            "frame": 2039,
+            "state": "Swing"
+          },
+          {
+            "frame": 2040,
+            "state": "Swing"
+          },
+          {
+            "frame": 2041,
+            "state": "Swing"
+          },
+          {
+            "frame": 2042,
+            "state": "Swing"
+          },
+          {
+            "frame": 2043,
+            "state": "Swing"
+          },
+          {
+            "frame": 2044,
+            "state": "Swing"
+          },
+          {
+            "frame": 2045,
+            "state": "Swing"
+          },
+          {
+            "frame": 2046,
+            "state": "Swing"
+          },
+          {
+            "frame": 2047,
+            "state": "Swing"
+          },
+          {
+            "frame": 2048,
+            "state": "Swing"
+          },
+          {
+            "frame": 2049,
+            "state": "Swing"
+          },
+          {
+            "frame": 2050,
+            "state": "Swing"
+          },
+          {
+            "frame": 2051,
+            "state": "Swing"
+          },
+          {
+            "frame": 2052,
+            "state": "Swing"
+          },
+          {
+            "frame": 2053,
+            "state": "Swing"
+          },
+          {
+            "frame": 2054,
+            "state": "Swing"
+          },
+          {
+            "frame": 2055,
+            "state": "Swing"
+          },
+          {
+            "frame": 2056,
+            "state": "Swing"
+          }
+        ],
+        "nearStraightSolvedFrames": 0,
+        "nearStraightSolvedDuration": 0,
+        "kneeComparisonCalibrated": false
+      }
+    }
+  },
+  "reportCorrection": "旧报告序列结束后读取复用路径池页，使全33帧Accepted误写false。执行当帧路径正确；结果已改为当帧复制标量，重跑Goal不变。Prediction.State/Event与Observation是值类型标量，GroundPath引用未再延后消费。",
+  "limitation": "完整Native/Foot计算通过；FBBIK实际两版求解完成但2033历史六关节点误差0.240472mm超过0.2mm，不能判业务通过；KCC未来端口为录制边界；未复现历史previous-dot/Revision等元数据",
+  "evidenceSha256": {
+    "releasing-business-native.json": "cdad184762be83e0f45753b0b234f803e77ac33d0cc993bbbea1f9f4583094c7",
+    "releasing-business-component-poses.json": "6a03be224bbcf271d3a208b27730c243cf3a6d20f22deec28e2202950c2b38f9",
+    "releasing-business-goal.json": "0a5afa846f62aea3a5b68c5fd9e4dd8c16f14deb149160cf2be83f645efcd705",
+    "releasing-business-ik.json": "b62c2f0cd68e85c3db5058b173c12f9a506d06ffe19c3cda59e987413fb168f1",
+    "releasing-business-ik-attempt-native-pose-calibration.json": "f310068830b1192809fc377b1cb815c1acc332d5f889591d91ace6d8724612db",
+    "releasing-business-ik-diagnostic-recorded-leg.json": "d00148502bf1b27f27ce59a4c3dce676912955ed39979daa08bdf959cb0545dd",
+    "releasing-business-ik-diagnostic-recorded-goals.json": "d95e512274f946c4d3060b34b17dfe891ef4096444ae7d5182978cdd16edb551",
+    "releasing-business-right-input.json": "6c945f811e1928e1a3039e4d5f73b18cacc13acf4d6f869eee5aab40d0a024eb"
+  },
+  "sourceSnapshotSha256": "fc3be529fb6284338dcd2ba33e11799ffada359ff0082b82534d809b9486d4e2"
+}

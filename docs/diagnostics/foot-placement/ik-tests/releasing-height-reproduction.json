@@ -1,0 +1,41 @@
+{
+  "status": "reproduced-rejection-and-ik-calibration-failure",
+  "candidateProductionRestored": false,
+  "scope": "从归档源码在Temp编译执行33帧Native、预测/Goal和实际FBBIK；生产已撤回，未恢复候选",
+  "sourceSnapshotSha256": "ae1b1ec9a0ada07d3f338b1a2861057607f2c5d47607d7e30e7d5138a5860b6b",
+  "preservedQuaternionSourceSnapshotSha256": "9b5a5f4d80c5faa1a244642faa1580b56618b9234bdf76b3667ebcc0949dc250",
+  "componentQuaternionRoundTrip": "使用正式已归一化构造并逐项确认位值；历史2033仍0.240472364mm，重复归一化未解释偏差",
+  "stages": {
+    "native": {
+      "status": "passed",
+      "failure": null,
+      "mvid": "4274cf58-189c-42a4-9836-2d45a788e873"
+    },
+    "poses": {
+      "status": "passed",
+      "failure": null,
+      "mvid": "4274cf58-189c-42a4-9836-2d45a788e873"
+    },
+    "goal": {
+      "status": "passed",
+      "failure": null,
+      "mvid": "080e1171-6cfe-4229-a58d-a47d7aa84dcf"
+    },
+    "ik": {
+      "status": "failed",
+      "failure": "NUnit.Framework.AssertionException:   历史六关节点必须先校准，候选数值仅保留为未校准诊断\r\n  Expected: less than 0.000199999995f\r\n  But was:  0.000240472364f\r\n\r\n  at NUnit.Framework.Assert.That[TActual] (TActual actual, NUnit.Framework.Constraints.IResolveConstraint expression, System.String message, System.Object[] args) [0x00039] in <956b82cfdef641c6bc6a0e5b19798f05>:0 \r\n  at ThirdPersonCharacter.Pipeline.Editor.CapturedReleasingFullIkTests.Run (System.String fixturePath, System.String posePath, System.String goalPath, System.String outputPath, System.Boolean recordedLegPositions, System.Boolean recordedHistoricalGoals) [0x007ba] in <080e11716cfe4229a58da47d7aa84dcf>:0 ",
+      "mvid": "080e1171-6cfe-4229-a58d-a47d7aa84dcf"
+    }
+  },
+  "resultSha256": {
+    "native": "0ad5762535ecf022771acf9e8cf47eaf2a4dc736cfc6aa0f62445f25268963a7",
+    "component-poses": "6a03be224bbcf271d3a208b27730c243cf3a6d20f22deec28e2202950c2b38f9",
+    "goal": "4462f77bbe2e0a0b8b80d2fb8c1a9b4df17a9b2da04807ec7e6da933cb3fcc1b",
+    "ik": "54f10e91504f8d9a249e3155da738ef5d2f63577ac79e7360ea2c1f99e45c169"
+  },
+  "compilerSha256": {
+    "compile.rsp.log": "ef145f787db6cf9f44ba19e2939d4d7ec7cc9b39250ceeb62763ffd243830637",
+    "native-goal-compile.rsp.log": "ef145f787db6cf9f44ba19e2939d4d7ec7cc9b39250ceeb62763ffd243830637"
+  },
+  "solverAllocatedBytes": 0
+}

@@ -20,6 +20,22 @@
 
 首次路径JSON在序列结束后读取复用池页，使33帧Accepted全部误写false。实际计算使用当帧路径；已改为当帧复制状态、拒绝原因、身份、接触/包络计数、预测与观测必要标量，格式化仍在计算段外。重跑Goal值不变，历史2030～2041正确为Accepted；2041候选`NewEventContactAcquired`，2042`ContactOutOfSlideRange`，响应域分别切入ContactWorldResidual、AnimationRelativeScalar；历史同样变化晚一帧。HTML播放33帧、双腿投影、转换/响应表和失败标签已通过Node DOM检查；浏览器视觉验收未完成。
 
+### 第三版连续FootHeight混合被拒绝
+
+第三版在实际来源选择后调用正式`AnimationFootMotionSourceSample.BlendFootHeights`，Native历史捕获也消费正式脚高混合；Foot与IK仍冻结`69a36d339`。来源由[Native结果](releasing-height-native.json)交给[预测/双脚Goal](releasing-height-goal.json)，再进[实际FBBIK](releasing-height-ik.json)。2031～2036原本Landing超伸完全不变，2037～2044右脚目标伸展比增大；2038从0.9778428增至0.989226162、2040从0.835339增至0.8508378。完整超伸仍8帧，最大伸展1.17964232不变；右脚最大额外修正步长0.301888393→0.302998703m，累计变化1.459505558→1.447711612m。依据已校准Goal可达余量劣化裁决`rejected-height-blend`，不依赖未校准膝角；Foot阶段Passed仅证明比较执行与既有断言成立。三段暖机均0B、双脚最终已观测正穿透仍0，但这些不能覆盖业务劣化。完整骨骼组件页和接触/事件等非高度字段逐值与来源修正版相同，见[拒绝汇总](releasing-height-summary.json)。原窗口已撤回三份生产候选并独立编译，不由测试窗口恢复。
+
+候选[源码及实际Native程序集快照](releasing-height-source-snapshot.zip)现在SHA为`ae1b1ec9a0ada07d3f338b1a2861057607f2c5d47607d7e30e7d5138a5860b6b`。二次生成归档与生产撤回并行，脚本错误截断原ZIP；保留编译输入及程序集，从冻结Git文本和已执行声明恢复三个production成员，逐项匹配原manifest SHA后完整生成并原子替换。原ZIP的`53c43e...`仅是撤回前原窗口已复核的历史身份，不冒充现文件。后续指标生成只读归档，不再读取已撤回生产源码；整包写入改为临时完整文件完成后替换。
+
+已用正式“已归一化”`AnimationLocalBonePose`构造还原组件页四元数，并确认还原位值；同业务重跑历史2033仍0.240472mm，重复归一化未解释误差，见[保持四元数失败](releasing-business-ik-attempt-preserved-quaternion.json)及[第三版同样失败](releasing-height-ik-attempt-preserved-quaternion.json)。新[Foot/IK源码及实际程序集](releasing-preserved-quaternion-source-snapshot.zip)与旧失败程序集分开保存。
+
+生产撤回后已从归档源码完整重现第三版：Native/Goal通过、实际IK输出保留并以校准失败退出1，所有暖机段0B。实际命令、MVID和SHA见[归档重现](releasing-height-reproduction.json)。复现入口不写生产文件：
+
+```powershell
+pwsh -File Tools/FootPlacement.StoredPoseVerify/run_releasing_business.ps1 -UnityInstance e852139597e42532 -ResultDirectory 3cDemo/Client/3C_Client/Temp/FootReleasingBusiness/check -HeightCandidate
+```
+
+不传`-HeightCandidate`使用冻结来源修正版。此入口是Unity内函数实验，末尾IK校准失败返回非零；没有正式Runner、Replay或自动输入。HTML同一33帧新增三版高度、Goal伸展、向量修正与实际膝角曲线，播放/选帧联动已检查，浏览器视觉验收未完成。
+
 本目录按完整场景保存验证。接触交接包含独立函数实验与尚未完成的 Unity 下游验证；Releasing 跨阶已有正式 EditMode 历史对照。每个场景维护自己的 HTML，避免局部通过被误读为整条链路通过。输入和结果统一从[脚部入口](../README.md)查找。
 
 | 文件 | 用途 |

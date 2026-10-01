@@ -219,7 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 oldSlot.Evaluate(in sourceRead, in actionRead, in a, f.HasAction);
                 newSlot.Evaluate(in sourceRead, in actionRead, in b, f.HasAction);
                 old[i] = Collect(f, in a, rig, geometry);
-                current[i] = Collect(f, in b, rig, geometry);
+                current[i] = Collect(f, in b, rig, geometry, true);
                 for (int bone = 0; bone < rig.PoseBoneCount; bone++)
                 {
                     current[i].MaxPoseError = Mathf.Max(current[i].MaxPoseError, Vector3.Distance(a.DenseLocalPoses[bone].Position, b.DenseLocalPoses[bone].Position));
@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static Result Collect(Frame frame, in AnimationPlayerPoseNativeWriteBinding write, CharacterAnimationRigPayload rig, Geometry geometry)
+        static Result Collect(Frame frame, in AnimationPlayerPoseNativeWriteBinding write, CharacterAnimationRigPayload rig, Geometry geometry, bool blendHeight = false)
         {
             var result = new Result { Valid = write.CompletedAt[0] == write.CompletionIdentity && write.Availability[0] == AnimationPoseAvailability.Pose };
             int count = write.ContributionCount[0];
@@ -244,6 +244,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             result.SelectedAction = selected == 1;
             result.SelectedWeight = write.Contributions[selected].Weight;
             result.Sample = write.Contributions[selected].FootMotion;
+#if FOOT_HEIGHT_CANDIDATE
+            if (blendHeight) result.Sample = result.Sample.BlendFootHeights(write.Contributions, count);
+#endif
             if (count == 2) { result.ActionWeight = write.Contributions[1].Weight; result.ActionDenseWeight = write.DenseContributionWeights[rig.PoseBoneCount + rig.RightLeg.AnklePhysicalBoneIndex]; }
             var derive = CharacterVirtualBonePoseDerivation.Derive(rig.BoneCounts,
                 new NativeSlice<AnimationLocalBonePose>(write.DenseLocalPoses, 0, rig.PhysicalBoneCount), geometry.Parents, geometry.Virtual,

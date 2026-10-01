@@ -4,21 +4,33 @@ import json
 import re
 import subprocess
 import argparse
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT = ROOT / '3cDemo/Client/3C_Client'
-OUT = CLIENT / 'Temp/FootReleasingNative'
-OUT.mkdir(parents=True, exist_ok=True)
 parser = argparse.ArgumentParser()
 parser.add_argument('--commit', default='d6d6ab9f9')
 parser.add_argument('--working-native', action='store_true')
+parser.add_argument('--foot-height-candidate', action='store_true')
+parser.add_argument('--out', type=Path)
+parser.add_argument('--candidate-snapshot', type=Path)
 ARGS = parser.parse_args()
+OUT = ARGS.out.resolve() if ARGS.out else CLIENT / 'Temp/FootReleasingNative'
+OUT.mkdir(parents=True, exist_ok=True)
 COMMIT = ARGS.commit
 BASELINE = '2c757a422'
 PREFIX = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/'
 
 
 def source(commit, relative):
+    if ARGS.foot_height_candidate and relative in [PREFIX+'BlendStack/AnimationSlotBlendJob.cs', PREFIX+'Contracts/Rig/AnimationFootStepObservationCurves.cs', PREFIX+'PoseGraph/CharacterPoseWorldContextAdapter.cs']:
+        if ARGS.candidate_snapshot:
+            with zipfile.ZipFile(ARGS.candidate_snapshot) as archive:
+                captured = archive.read('production/'+relative)
+                expected = json.loads(archive.read('source-manifest.json'))['candidateSourceSha256'][relative]
+                assert hashlib.sha256(captured).hexdigest() == expected
+                return captured.decode('utf-8')
+        return ROOT.joinpath(relative).read_text(encoding='utf-8')
     if ARGS.working_native and relative in [PREFIX + 'BlendStack/' + name for name in ['AnimationSlotBlendJob.cs', 'AnimationSlotBlendPoseWorkspace.cs', 'AnimationBlendStackRuntime.cs']]:
         return ROOT.joinpath(relative).read_text(encoding='utf-8')
     return subprocess.check_output(['git', '-C', str(ROOT), 'show', commit + ':' + relative]).decode('utf-8')
@@ -113,6 +125,7 @@ needed += ['KK.GeneratedDiagnosticSampling.Annotations.dll', 'KK.GeneratedDiagno
 assert all(name in by_name for name in needed), [name for name in needed if name not in by_name]
 response = ['-nostdlib+', '-langversion:latest', '-target:library', '-unsafe+', '-utf8output', '-nowarn:0436',
     '-out:"' + str(OUT / 'ThirdPersonClient.Editor.dll') + '"']
+if ARGS.foot_height_candidate: response.append('-define:FOOT_HEIGHT_CANDIDATE')
 response += ['"' + str(path) + '"' for path in files]
 response += ['-r:"' + by_name[name] + '"' for name in needed]
 response += ['-r:EditorAnimation="' + by_name['ThirdPersonCharacter.Animation.dll'] + '"']
@@ -121,6 +134,11 @@ manifest = {'nativeJobCommit': COMMIT, 'baselineActionSlotCommit': BASELINE, 'ac
     'sources': {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
     'bindings': {name: hashlib.sha256(Path(by_name[name]).read_bytes()).hexdigest() for name in needed}}
 manifest['workingNative'] = ARGS.working_native
+manifest['footHeightCandidate'] = ARGS.foot_height_candidate
+if ARGS.foot_height_candidate:
+    manifest['candidateSourceSha256'] = {relative: hashlib.sha256(source(COMMIT, relative).encode('utf-8')).hexdigest() for relative in
+        [PREFIX+'BlendStack/AnimationSlotBlendJob.cs', PREFIX+'Contracts/Rig/AnimationFootStepObservationCurves.cs', PREFIX+'PoseGraph/CharacterPoseWorldContextAdapter.cs']}
+    manifest['candidateScope'] = 'Native Job和实际BlendFootHeights参与计算；adapter选择器及同序正式BlendFootHeights调用由fixture装配，未运行adapter其它host装配。'
 if ARGS.working_native:
     manifest['workingNativeSources'] = {PREFIX + 'BlendStack/' + name: hashlib.sha256(ROOT.joinpath(PREFIX + 'BlendStack/' + name).read_bytes()).hexdigest()
         for name in ['AnimationSlotBlendJob.cs', 'AnimationSlotBlendPoseWorkspace.cs', 'AnimationBlendStackRuntime.cs']}

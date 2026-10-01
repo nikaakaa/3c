@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var report = new JObject { ["status"] = "running", ["scope"] = "真实Native全组件姿势和正式Foot Goal进入实际FBBIK；种子Pose+Goal预滚方向；未复现历史previous-dot等元数据" };
             report["recordedLegPositionDiagnostic"] = recordedLegPositions;
             report["recordedHistoricalGoalDiagnostic"] = recordedHistoricalGoals;
+            report["componentPoseRotationRestoration"] = "正式已归一化构造保持JSON四元数位值，不重复normalized";
             try
             {
                 Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
@@ -130,7 +131,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Assert.That((ulong)pose["frame"], Is.EqualTo(Sequence));
                 Root=V("physical-body/pose-root-world-position");Rotation=new Quaternion(F("physical-body/pose-root-world-rotation.x"),F("physical-body/pose-root-world-rotation.y"),F("physical-body/pose-root-world-rotation.z"),F("physical-body/pose-root-world-rotation.w"));
                 Pose=new NativeArray<AnimationLocalBonePose>(rig.PoseBoneCount,Allocator.Persistent);
-                for(int i=0;i<rig.PoseBoneCount;i++){var p=pose["componentPoses"][i];Pose[i]=new AnimationLocalBonePose(new Vector3((float)p[0],(float)p[1],(float)p[2]),new Quaternion((float)p[3],(float)p[4],(float)p[5],(float)p[6]),new Vector3((float)p[7],(float)p[8],(float)p[9]));}
+                for(int i=0;i<rig.PoseBoneCount;i++)
+                {
+                    var p=pose["componentPoses"][i];
+                    var rotation=new Quaternion((float)p[3],(float)p[4],(float)p[5],(float)p[6]);
+                    Pose[i]=new AnimationLocalBonePose(rotation,new Vector3((float)p[0],(float)p[1],(float)p[2]),new Vector3((float)p[7],(float)p[8],(float)p[9]));
+                    Assert.That(Pose[i].Rotation,Is.EqualTo(rotation),"组件姿势还原必须保持正式生成边界已建立的四元数位值");
+                }
                 Header=new CharacterFullBodyIkGoalSetHeader(Sequence,Completion,rig.RigId,rig.RigRevision,0,0,0,3,CharacterFullBodyIkGoalSetAvailability.Ready);
                 SeedGoals=new[]{RecordedGoal(left,"foot/goal/"),RecordedGoal(values,"foot/goal/"),RecordedGoal(values,"pelvis-goal/")};
                 if(recordedLegPositions)

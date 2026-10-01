@@ -58,17 +58,20 @@ for variant in ['historical', 'current']:
 
 archive = OUT/'releasing-business-source-snapshot.zip'
 manifests = [TEMP/'source-manifest.json', GOAL/'native-goal-source-manifest.json']
-with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
+replacement = TEMP/'releasing-business-source-snapshot-pending.zip'
+with zipfile.ZipFile(replacement, 'w', compression=zipfile.ZIP_DEFLATED) as zipped:
     added = set()
     for manifest in manifests:
         zipped.write(manifest, 'manifests/'+manifest.parent.name+'-'+manifest.name)
-        for relative in read(manifest)['sources']:
+        for relative, expected in read(manifest)['sources'].items():
             path = ROOT/relative
+            assert sha(path) == expected, relative
             if relative not in added:
                 zipped.write(path, relative)
                 added.add(relative)
     for path in [TEMP/'ThirdPersonClient.Editor.dll', GOAL/'ThirdPersonClient.Editor.dll']:
         zipped.write(path, 'executed-assemblies/'+path.parent.name+'/'+path.name)
+replacement.replace(archive)
 summary['evidenceSha256'] = {name: sha(OUT/name) for name in names + ['releasing-business-right-input.json']}
 summary['sourceSnapshotSha256'] = sha(archive)
 (OUT/'releasing-business-summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')

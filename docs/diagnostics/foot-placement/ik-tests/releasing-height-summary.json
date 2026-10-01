@@ -1,0 +1,220 @@
+{
+  "status": "rejected-height-blend",
+  "firstFrame": 2024,
+  "lastFrame": 2056,
+  "seedFrame": 2023,
+  "scope": "同一33帧第三版；实际Native Job与正式BlendFootHeights，Foot和FBBIK仍冻结69a36d339；整体历史校准失败",
+  "nativeNonHeightFieldsIdenticalToBaseline": true,
+  "fullNativeComponentPosesIdenticalToBaseline": true,
+  "historicalFootRowsIdenticalToBaseline": true,
+  "footPassed": true,
+  "ikPassed": false,
+  "nativeAllocatedBytes": 0,
+  "footAllocatedBytes": 0,
+  "ikAllocatedBytes": 0,
+  "sides": {
+    "left": {
+      "maximumCorrectionDelta": 0.07239212325746645,
+      "maximumCorrectionDeltaFrame": 2040,
+      "totalCorrectionVariation": 0.31083823247901604,
+      "maximumCorrectionSpeed": 4.343527,
+      "targetOverreachFrames": 0,
+      "maximumTargetReach": 0.982304454,
+      "maximumPositivePenetration": 0,
+      "nearStraightSolvedFrames": 0,
+      "kneeComparisonCalibrated": false
+    },
+    "right": {
+      "maximumCorrectionDelta": 0.3029987032060093,
+      "maximumCorrectionDeltaFrame": 2041,
+      "totalCorrectionVariation": 1.4477116124974023,
+      "maximumCorrectionSpeed": 18.17992,
+      "targetOverreachFrames": 8,
+      "maximumTargetReach": 1.17964232,
+      "maximumPositivePenetration": 0,
+      "nearStraightSolvedFrames": 8,
+      "kneeComparisonCalibrated": false
+    }
+  },
+  "rejection": "2031至2036早期Landing超伸不变，2037至2044右脚Goal伸展比增大，完整超伸仍8帧；最大额外修正步长0.301888增至0.302999m。业务劣化由已校准Goal几何直接证明，不依赖未校准膝角。",
+  "reachComparison": [
+    {
+      "frame": 2024,
+      "baseline": 0.9939355,
+      "candidate": 0.9939355
+    },
+    {
+      "frame": 2025,
+      "baseline": 0.92651546,
+      "candidate": 0.92651546
+    },
+    {
+      "frame": 2026,
+      "baseline": 0.9100935,
+      "candidate": 0.9100935
+    },
+    {
+      "frame": 2027,
+      "baseline": 0.876582444,
+      "candidate": 0.876582444
+    },
+    {
+      "frame": 2028,
+      "baseline": 0.8687769,
+      "candidate": 0.8687769
+    },
+    {
+      "frame": 2029,
+      "baseline": 0.8869256,
+      "candidate": 0.8869256
+    },
+    {
+      "frame": 2030,
+      "baseline": 0.9107028,
+      "candidate": 0.9107028
+    },
+    {
+      "frame": 2031,
+      "baseline": 1.006192,
+      "candidate": 1.006192
+    },
+    {
+      "frame": 2032,
+      "baseline": 1.05127513,
+      "candidate": 1.05127513
+    },
+    {
+      "frame": 2033,
+      "baseline": 1.14629745,
+      "candidate": 1.14629745
+    },
+    {
+      "frame": 2034,
+      "baseline": 1.17964232,
+      "candidate": 1.17964232
+    },
+    {
+      "frame": 2035,
+      "baseline": 1.12010074,
+      "candidate": 1.12010074
+    },
+    {
+      "frame": 2036,
+      "baseline": 1.07561433,
+      "candidate": 1.07561433
+    },
+    {
+      "frame": 2037,
+      "baseline": 1.037041,
+      "candidate": 1.03812456
+    },
+    {
+      "frame": 2038,
+      "baseline": 0.9778428,
+      "candidate": 0.989226162
+    },
+    {
+      "frame": 2039,
+      "baseline": 0.907538,
+      "candidate": 0.9209535
+    },
+    {
+      "frame": 2040,
+      "baseline": 0.835339,
+      "candidate": 0.8508378
+    },
+    {
+      "frame": 2041,
+      "baseline": 0.8861378,
+      "candidate": 0.895521
+    },
+    {
+      "frame": 2042,
+      "baseline": 0.889892,
+      "candidate": 0.896073759
+    },
+    {
+      "frame": 2043,
+      "baseline": 0.682037,
+      "candidate": 0.688733757
+    },
+    {
+      "frame": 2044,
+      "baseline": 0.662519634,
+      "candidate": 0.6694494
+    },
+    {
+      "frame": 2045,
+      "baseline": 0.6812186,
+      "candidate": 0.6881831
+    },
+    {
+      "frame": 2046,
+      "baseline": 0.725197434,
+      "candidate": 0.726817966
+    },
+    {
+      "frame": 2047,
+      "baseline": 0.776496,
+      "candidate": 0.777533233
+    },
+    {
+      "frame": 2048,
+      "baseline": 0.866209865,
+      "candidate": 0.866868258
+    },
+    {
+      "frame": 2049,
+      "baseline": 0.9456397,
+      "candidate": 0.9460644
+    },
+    {
+      "frame": 2050,
+      "baseline": 1.00879657,
+      "candidate": 1.00906527
+    },
+    {
+      "frame": 2051,
+      "baseline": 0.983819962,
+      "candidate": 0.9839952
+    },
+    {
+      "frame": 2052,
+      "baseline": 0.8843313,
+      "candidate": 0.8843313
+    },
+    {
+      "frame": 2053,
+      "baseline": 0.7772775,
+      "candidate": 0.7772775
+    },
+    {
+      "frame": 2054,
+      "baseline": 0.635131657,
+      "candidate": 0.635131657
+    },
+    {
+      "frame": 2055,
+      "baseline": 0.529308438,
+      "candidate": 0.529308438
+    },
+    {
+      "frame": 2056,
+      "baseline": 0.5116847,
+      "candidate": 0.5116847
+    }
+  ],
+  "candidateSourceSha256": {
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/BlendStack/AnimationSlotBlendJob.cs": "0144156a31b2cfdb4ac4a52ffe32ef242885ed1a2f928393e310a0e230b9ce51",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Rig/AnimationFootStepObservationCurves.cs": "a07a5985cc71a0e9da9480c7418bc79aa04b19dc2e2c9c675d5a5109ea3be599",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseWorldContextAdapter.cs": "451ee0dddd2142342e8080d3dbdcccbda29830f823ae32324f6d70fc5897a00b"
+  },
+  "archiveRecovery": "二次生成与生产撤回并行，误截断原ZIP；从保留编译输入和冻结Git内容恢复三个生产成员，逐项匹配原manifest SHA后完整生成并原子替换。ZIP新SHA不冒充原53c43e874295fa4092939f1069781ea3ea3647aa81167443fc0b234d24bae1bd。",
+  "sourceSnapshotSha256": "ae1b1ec9a0ada07d3f338b1a2861057607f2c5d47607d7e30e7d5138a5860b6b",
+  "resultSha256": {
+    "native": "3a92212ce99fbfbdb1e24f90ad0032351e3afd285f22b2682020b5c6afed914a",
+    "component-poses": "6a03be224bbcf271d3a208b27730c243cf3a6d20f22deec28e2202950c2b38f9",
+    "goal": "36d0ec52341f5401fe62214c0c8d878999f47686a97e9aec6a2eb0ca8a9e74bf",
+    "ik": "aa02666313913aef96295c6c3c1703fea5271a39d6a18201a089c9da972f5643"
+  }
+}

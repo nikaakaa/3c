@@ -26,6 +26,9 @@ data = {'recorded': frames, 'report': report}
 if complete:
     for key, name in [('goal','releasing-business-goal.json'),('ik','releasing-business-ik.json'),('summary','releasing-business-summary.json')]:
         data[key] = json.loads((OUT/name).read_text(encoding='utf-8-sig'))
+if (OUT/'releasing-height-summary.json').exists():
+    for key, kind in [('heightNative','native'),('heightGoal','goal'),('heightIk','ik'),('heightSummary','summary')]:
+        data[key] = json.loads((OUT/('releasing-height-'+kind+'.json')).read_text(encoding='utf-8-sig'))
 payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
 template = Path(__file__).with_name('releasing-native-template.html').read_text(encoding='utf-8')
 (OUT / 'releasing-action-native.html').write_text(template.replace('@@DATA@@', payload), encoding='utf-8')

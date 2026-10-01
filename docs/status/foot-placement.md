@@ -2,6 +2,8 @@
 
 整理日期：2026-10-01。脚部质量尚未闭环；阶段报告归档不改变其中记录的失败事实，也不把编译、缓存 Apply 或单段修复当作整体行为验收。
 
+本轮按用户要求先完成已有录制的离线筛选。“动画相对响应进入接触时改用当帧动画脚＋已有修正”的单点候选已标记 `rejected-offline-screening`：固定前态比较出现约束前腿长需求增加，原录制还确认净空水平冻结持续积累并由新接触承接。完整证据、方法和未验证边界见[离线结果](../diagnostics/foot-placement/contact-handoff-offline-20261001.json)，可在[原 HTML 的本轮结果](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#offline-comparison)拖动查看释放过程。本候选完整业务实际执行仍为 0 帧，未应用到生产 Assets；真正 Replay 留在离线筛选之后，当前 Play 未被操作。
+
 当前 Goal 已按用户要求启动：继续动画混合、Landing/Releasing 弯直突变和台阶跳脚，使用已有采样还原正式函数，由已有配套窗口维护多个完整业务测试与各自 HTML；本轮不启动 Replay。
 
 P1 接触期剩余腿长限制已写成独立源码候选，基线为 `fbed4b192`，见[候选补丁](../diagnostics/foot-placement/p1-contact-reach-candidate-20261001.patch)与[源码身份及接入状态](../diagnostics/foot-placement/p1-contact-reach-candidate-20261001.json)。候选由 Module 将本次实际加权骨盆位移交给 Completion，仅在正权重 Landing/Locked/Releasing 缩减有效踝修正的水平、向下分量，再按同一旋转与位置权重换回脚底修正、重查输出脚掌、防穿及写回既有历史。Completion 同步更新查询观察的标量与复用探针页，未扩充状态字段。补丁应用检查已通过，尚未编译或执行，正式 Assets 未改；测试窗口继续维护原 2023 种子及 2024～2056 的双脚完整业务，必须单列接触期新增悬脚，不能把文档的几何估算 8→0 写成实测收益。测试调用方签名仍待配套窗口迁移，不能直接将补丁当作已交付运行修复。

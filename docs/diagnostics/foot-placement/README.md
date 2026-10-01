@@ -5,6 +5,7 @@
 | 证据 | 内容与边界 |
 | --- | --- |
 | [台阶连续性解释器](ik-stair-continuity-explainer-20260930.html) | 采样、源码与失败实验的交互解释；候选回放启动失败不算 A/B 通过 |
+| [接触起点候选离线筛选](contact-handoff-offline-20261001.json) | 两包 9,414 条脚记录中的 173 次交接代数比较，以及原录制释放／水平冻结的逐帧核对；候选已拒绝进入 Replay，完整业务运行仍为 0 帧 |
 | [下坡响应](corin-downhill-response-20260927.json) | 下坡高度与响应采样 |
 | [E 行走接触修正](corin-e-walk-contact-fix-20260927.json) | 当次接触修正证据 |
 | [E 行走手动采样](corin-e-walk-manual-sampling-20260927.json) | 手动运行观察数据 |

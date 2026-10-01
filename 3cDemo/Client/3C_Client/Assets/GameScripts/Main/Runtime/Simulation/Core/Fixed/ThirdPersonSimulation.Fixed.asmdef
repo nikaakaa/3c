@@ -3,7 +3,8 @@
     "rootNamespace": "ThirdPersonSimulation.Fixed",
     "references": [
         "ThirdPerson.Performance.Instrumentation.Contracts",
-        "ThirdPersonSimulation.Core"
+        "ThirdPersonSimulation.Core",
+        "ThirdPerson.BepuQueries"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

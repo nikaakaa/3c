@@ -11,5 +11,6 @@
   <ItemGroup>
     <Compile Include="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Fixed\**\*.cs" />
     <ProjectReference Include="..\Core\ThirdPersonSimulation.Core.Portable.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Tools\ThirdPersonSimulation.Portable\ThirdPerson.BepuQueries\ThirdPerson.BepuQueries.csproj" />
   </ItemGroup>
 </Project>

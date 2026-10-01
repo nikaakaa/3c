@@ -114,7 +114,7 @@
 - [GJKToolbox.ConvexCast](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionTests/CollisionAlgorithms/GJK/GJKToolbox.cs#L269)。
 - [MPRToolbox.Sweep](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionTests/CollisionAlgorithms/MPRToolbox.cs#L1314)。两者是同一需求的不同算法入口，正式实现应选定路径，不把另一套作为 fallback。
 - [ConvexShape](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/BEPUphysics/CollisionShapes/ConvexShapes/ConvexShape.cs) 提供方向极值点方法，但继承 EntityShape；ConvexHullShape 还依赖其几何构建、资源管理等代码。不能说复制单个方法就可独立运行。
-- [Fix64](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/FixedMath.Net/src/Fix64.cs) 和项目同为 Q32.32，但同格式不证明乘除舍入、溢出及容差行为相同。拟移植时使用项目现有数学类型，不长期保留第二套定点数路径。
+- [Fix64](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/FixedMath.Net/src/Fix64.cs) 和项目同为 Q32.32，但同格式不证明乘除舍入、溢出及容差行为相同。2026-10-01 实施采用后端私有原生表示和 Raw 映射，保留原生数学，不修改项目正式数值目标或状态。
 - [LICENSE.md](https://github.com/sam-vdp/bepuphysics1int/blob/9237daa68c3014fd7c2e93c6a99326ba5248d60b/LICENSE.md) 分别列出 fork、FixedMath.Net 与原 BEPU 的许可；移植保留对应来源和许可。
 - README 报告其历史整库性能约为浮点版的四倍耗时，并列出数值范围和多线程确定性限制。这是作者对旧版本的报告，不是本项目扫掠性能实测，不能直接套用。
 
@@ -131,6 +131,18 @@
 - 泛用凸体可通过方向极值点表达，Box、胶囊、凸包共用凸体算法。凹 Mesh 不能直接按其全部顶点取极值：那得到的是整体凸包，会填掉凹处。凹形状须明确采用凸分解或三角表面语义。
 - 旋转运动不能默默降级为起始朝向的平移扫掠。BEPU1int 的现有接口只覆盖平移部分；如果交付范围包含旋转，需要实现相应运动算法或有误差界的细分方案后再声称支持。
 - 结论：有可复用核心实现，没有在本轮核查中找到同时满足“本项目定点数、Unity 2022.3、旋转、任意 Mesh、直接安装”的完整包。优先评估 BEPU1int 的定点凸体算法依赖，旋转能力另按明确算法补齐；此结论不是已批准引入整套物理世界。
+
+## 2026-10-01 实施增量
+
+命中判定已采用原生查询薄适配，调用链见[扫掠查询路径](../../路径/命中判定扫掠查询.md)，实际数值与分配证据见[查询核对](../../测试/命中判定查询核对20261001.md)。Fixed 使用原生 MPR Overlap / Sweep，Unity 使用绑定 Physics Scene 的 NonAlloc Overlap / Cast，首批只支持球、胶囊和 Box 的声明平移。原生 Fixed 迭代耗尽有独立失败状态，默认见证位置不标记有效；没有引入库 Space、刚体世界或 GJK 备用查询。
+
+两种查询在当前 Editor 的正常循环均测得 `0 B` 托管分配，跨平台与 Player 尚未验证。攻击触发、原正式内容引用、武器逻辑采样、命中接受、伤害和表现由业务调用方负责，不能把模块查询结果视作完整战斗链完成。
+
+## 2026-10-01 后续旋转与凸部件实现
+
+用户要求轻量补齐旋转与凸体能力后，Fixed 正式后端扩展为 `mpr-gjk-angular-query-v2`。GJK 最近点和 PairSimplex 来自锁定的 BEPU1int 源码；刚性角运动使用最短恒角速度弧与保守推进，算法路线核对 [Bullet continuous convex collision](https://github.com/bulletphysics/bullet3/blob/master/src/BulletCollision/NarrowPhaseCollision/btContinuousConvexCollision.cpp) 中的角速度乘外接半径速度界。没有引入 Bullet、整套 BEPU 世界或自动 Mesh 凸分解。
+
+凸包按准备后的极值顶点查询；凹 Mesh 由已有凸部件及局部姿态组成，逐部件查询并合并目标，保留空隙。当前不等同任意三角面网格或 ZZZ 原始攻击运行时的完整复刻。代码编译与旋转中途接触、空隙、偏移和 0 GC 的局部证据见[查询核对](../../测试/命中判定查询核对20261001.md)；正式攻击与全部技能消费者接线仍待完成。
 
 ## ZZZ 证据边界
 

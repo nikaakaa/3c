@@ -8,7 +8,8 @@ namespace ThirdPersonCamera
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly ICameraEnvironmentQuery m_Query;
         Vector3 m_CurrentLocation;
-        Vector3 m_PositionVelocity;
+        float m_CorrectionRatio;
+        float m_CorrectionVelocity;
         bool m_HasLocation;
 
         public CameraEnvironmentConstraintSolver(
@@ -24,7 +25,8 @@ namespace ThirdPersonCamera
         public void Reset()
         {
             m_CurrentLocation = default;
-            m_PositionVelocity = Vector3.zero;
+            m_CorrectionRatio = 0f;
+            m_CorrectionVelocity = 0f;
             m_HasLocation = false;
         }
 
@@ -64,19 +66,19 @@ namespace ThirdPersonCamera
             }
 
             Vector3 constrained = queryResult.SafeLocation;
+            Vector3 pivotToCamera = desired - plan.PivotLocation;
+            float distance = pivotToCamera.magnitude;
             CameraCollisionStatus status = queryResult.Status;
             Vector3 normal = queryResult.HitNormal;
             int colliderInstanceId = queryResult.ColliderInstanceId;
             if (queryResult.Status == CameraCollisionStatus.Clear &&
-                m_HasLocation && !input.ResetHistory && settings.SmoothTime > 0f && delta > 0f)
+                m_HasLocation && !input.ResetHistory && m_CorrectionRatio > 0f && settings.SmoothTime > 0f)
             {
-                constrained = Vector3.SmoothDamp(
-                    m_CurrentLocation,
-                    desired,
-                    ref m_PositionVelocity,
-                    settings.SmoothTime,
-                    Mathf.Infinity,
-                    delta);
+                float correctionRatio = delta > 0f
+                    ? Mathf.SmoothDamp(m_CorrectionRatio, 0f, ref m_CorrectionVelocity,
+                        settings.SmoothTime, Mathf.Infinity, delta)
+                    : m_CorrectionRatio;
+                constrained = plan.PivotLocation + pivotToCamera * (1f - correctionRatio);
                 var recoveryRequest = new CameraEnvironmentQueryRequest(
                     m_CurrentLocation,
                     constrained,
@@ -105,12 +107,13 @@ namespace ThirdPersonCamera
                 normal = recoveryResult.HitNormal;
                 colliderInstanceId = recoveryResult.ColliderInstanceId;
             }
-            else if (input.ResetHistory)
+            else
             {
-                m_PositionVelocity = Vector3.zero;
+                m_CorrectionVelocity = 0f;
             }
 
             m_CurrentLocation = constrained;
+            m_CorrectionRatio = 1f - Vector3.Distance(plan.PivotLocation, constrained) / distance;
             m_HasLocation = true;
             CameraWorldBasicData constrainedData = plan.WorldBasicData.WithLocation(constrained);
             return plan

@@ -94,6 +94,7 @@ namespace ThirdPersonCamera
                 m_FramePlanner.ElevationWithOverrun, m_FramePlanner.HasRotationControl, in input));
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
             target = effects.ApplyFraming(target, in input);
+            target = target.WithAimResolved();
             CameraDelayOrbitSettings delay = m_Delay.Evaluate(in input, m_FramePlanner.HasRotationControl, m_FramePlanner.ElevationRatio);
             return m_WorldBasicHistory.Apply(target, in input, delay,
                 m_Delay.MinimumDistanceRatio, m_Projection.Delay.Muted);

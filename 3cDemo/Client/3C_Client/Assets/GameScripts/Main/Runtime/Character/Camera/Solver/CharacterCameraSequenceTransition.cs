@@ -264,6 +264,7 @@ namespace ThirdPersonCamera
             float t = Mathf.Clamp01(progress);
             CameraFramePlan result = new CameraFramePlan(
                 CameraWorldBasicData.Lerp(from.WorldBasicData, to.WorldBasicData, t),
+                Vector3.LerpUnclamped(from.AimOffset, to.AimOffset, t),
                 new CameraLensPlan(
                     Mathf.LerpUnclamped(from.NearClipPlane, to.NearClipPlane, t),
                     Mathf.LerpUnclamped(from.FarClipPlane, to.FarClipPlane, t)),

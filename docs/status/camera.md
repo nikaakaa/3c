@@ -1,6 +1,6 @@
 # 相机进展与证据入口
 
-整理日期：2026-10-01。完整可琳相机复刻仍未完成。当前已修正构图历史逐帧往返与 Pitch 限位符号翻转，Zoom／Stretch 的当帧参数已进入 Delay。生产函数检查和 Unity 编译通过，实机画面尚未验收。
+整理日期：2026-10-01。完整可琳相机复刻仍未完成。当前已修正构图历史逐帧往返与 Pitch 限位符号翻转，Zoom／Stretch 的当帧参数已进入 Delay；默认轨道已分别消费 Follow／Aim 偏移，Stretch 之后统一求瞄准方向。生产函数检查和 Unity 编译通过，20,000 帧求值链分配检查为 0 字节；实机画面与完整帧 GC 尚未验收。
 
 ## 当前读取顺序
 
@@ -12,7 +12,7 @@
 
 ## 未闭环范围与职责
 
-默认轨道 Follow/Aim 偏移的运行消费、Delay 原生模式资格与完整构图时序、震动静默/保持/取消的业务来源，以及 Zoom/Stretch 完整生命周期仍以最新实施和审计为准。A 类命中震动需要正式攻击查询、命中结果及相机请求生产者，不能由相机自行推断命中。支援、反击、切人和演出镜头还依赖相应上层业务入口。
+Follow/Aim 的实际绑定点与原作 AvatarHeight/CameraBaseRoot 身份、Delay 原生模式资格和旋转通道、震动静默/保持/取消的业务来源，以及 Zoom/Stretch 完整生命周期仍以最新实施和审计为准。A 类命中震动需要正式攻击查询、命中结果及相机请求生产者，不能由相机自行推断命中。支援、反击、切人和演出镜头还依赖相应上层业务入口。
 
 相机实施由 [ZZZ Camera 重建](../../openspec/changes/rebuild-character-camera-from-zzz/proposal.md)拥有；正式合同见[相机管线](../../openspec/specs/character-camera-pipeline/spec.md)、[作者入口](../../openspec/specs/character-camera-authoring/spec.md)和[源数据对齐](../../openspec/specs/character-camera-source-parity/spec.md)。
 

@@ -18,6 +18,7 @@ namespace ThirdPersonCamera
     public struct CameraFramePlan
     {
         CameraWorldBasicData m_WorldBasicData;
+        Vector3 m_AimOffset;
         CameraLensPlan m_Lens;
         Vector2 m_LookDelta;
         string m_SequenceId;
@@ -33,6 +34,7 @@ namespace ThirdPersonCamera
 
         public CameraFramePlan(
             CameraWorldBasicData worldBasicData,
+            Vector3 aimOffset,
             CameraLensPlan lens,
             Vector2 lookDelta,
             string sequenceId,
@@ -44,6 +46,7 @@ namespace ThirdPersonCamera
             float cameraLocateRatio)
         {
             m_WorldBasicData = worldBasicData;
+            m_AimOffset = aimOffset;
             m_Lens = lens;
             m_LookDelta = lookDelta;
             m_SequenceId = sequenceId ?? string.Empty;
@@ -64,7 +67,8 @@ namespace ThirdPersonCamera
         public Quaternion Rotation => m_WorldBasicData.Rotation;
         public float Yaw => ResolveYaw(Rotation);
         public float Pitch => ResolvePitch(Rotation);
-        public Vector3 AimPoint => m_WorldBasicData.PivotLocation;
+        public Vector3 AimPoint => m_WorldBasicData.PivotLocation + m_AimOffset;
+        public Vector3 AimOffset => m_AimOffset;
         public float FieldOfView => m_WorldBasicData.FieldOfView;
         public float NearClipPlane => m_Lens.NearClipPlane;
         public float FarClipPlane => m_Lens.FarClipPlane;
@@ -88,6 +92,21 @@ namespace ThirdPersonCamera
         {
             CameraFramePlan result = this;
             result.m_WorldBasicData = worldBasicData;
+            return result;
+        }
+
+        public CameraFramePlan WithAimResolved()
+        {
+            if (m_AimOffset == Vector3.zero)
+                return this;
+            Vector3 forward = Rotation * Vector3.forward;
+            Vector3 cameraToAim = forward * Radius + m_AimOffset;
+            CameraFramePlan result = WithWorldBasicData(m_WorldBasicData
+                .WithPivotLocation(AimPoint)
+                .WithFraming(cameraToAim.magnitude, FieldOfView)
+                .WithRotation(Quaternion.LookRotation(cameraToAim, Vector3.up) *
+                    Quaternion.AngleAxis(Rotation.eulerAngles.z, Vector3.forward)));
+            result.m_AimOffset = Vector3.zero;
             return result;
         }
 

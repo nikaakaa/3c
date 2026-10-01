@@ -167,12 +167,14 @@ namespace ThirdPersonCamera
             float evaluatedYaw = m_YawOffset;
             float evaluatedPitch = m_PitchOffset;
             float evaluatedRoll = 0f;
+            Vector3 aimOffset = Vector3.zero;
             for (int stageIndex = 0; stageIndex < sequence.Stages.Count; stageIndex++)
             {
                 CameraSequenceStagePayload stage = sequence.Stages[stageIndex];
                 switch (stage)
                 {
                     case CameraFrameOnePointByHeightPayload byHeight:
+                        aimOffset = Vector3.zero;
                         if (!pivotIsExplicit)
                             pivot = anchor + input.BodyRotation *
                                 (Vector3.up * (byHeight.EntityHeight * byHeight.HeightRatio));
@@ -180,12 +182,15 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byHeight.ScreenOffset, ReferenceAspectRatio);
                         break;
                     case CameraFrameOnePointByScreenOffsetPayload byScreen:
+                        aimOffset = Vector3.zero;
                         cameraLocateRatio = 1f;
                         radius = byScreen.Radius;
                         fieldOfView = byScreen.FieldOfView;
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
+                        pivot = anchor + byTrack.FollowOffset;
+                        aimOffset = selected.AimPoint + byTrack.AimOffset - pivot;
                         Vector4 track = SampleTrack(byTrack,
                             byTrack.ElevationRatio + m_ElevationAxis.Value - m_InputTrack.ElevationRatio,
                             m_ElevationOverrun);
@@ -204,6 +209,7 @@ namespace ThirdPersonCamera
                         fieldOfView = byTrack.FieldOfView;
                         break;
                     case CameraFrameTwoPointsPayload twoPoints:
+                        aimOffset = Vector3.zero;
                         cameraLocateRatio = 1f;
                         ResolveTwoPointTargets(
                             input.Targets,
@@ -221,6 +227,7 @@ namespace ThirdPersonCamera
                         pivotIsExplicit = true;
                         break;
                     case CameraFrameMultiplePointsPayload multiplePoints:
+                        aimOffset = Vector3.zero;
                         cameraLocateRatio = 1f;
                         BuildMultiplePointTargets(input.Targets, selected);
                         if (m_FramingTargets.Count < 2)
@@ -252,6 +259,7 @@ namespace ThirdPersonCamera
                         pivotIsExplicit = true;
                         break;
                     case CameraEntityFramePayload entity:
+                        aimOffset = Vector3.zero;
                         ApplyEntityFrame(
                             input.Targets,
                             entity,
@@ -295,6 +303,7 @@ namespace ThirdPersonCamera
             Quaternion finalRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, evaluatedRoll);
             return new CameraFramePlan(
                 new CameraWorldBasicData(pivot, finalRotation, radius, offset, fieldOfView),
+                aimOffset,
                 new CameraLensPlan(m_Projection.NearClipPlane, m_Projection.FarClipPlane),
                 look,
                 sequence.SequenceId,

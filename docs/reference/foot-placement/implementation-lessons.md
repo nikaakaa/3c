@@ -92,6 +92,8 @@
 
 75. 预分配 Native 存储不能消除索引器的按值调用。`d5dc26509` 的完整 Native Slot 函数在 Mono 进入 `CommitPersistentState` 时报告 `Passing an argument of size '10200'`；Stored/History 已包含双脚 Feature 与新增 FootMotion，整份状态经 `NativeArray<T>` 索引器读写。仅给外层参数添加 `in`、只跑局部混合或改用 Burst 都不能证明 Mono 链路可执行。修正范围应覆盖 Job 的读取/清零/提交、Workspace 重置与 Runtime 消费，直接访问原有 Native 元素并保留完整状态；仍须由同一业务输入实际执行，和原踝校准、Stored 语义及 IK 质量分别判定。
 
+76. 再处理接触连续性前，必须区分已失败、已保留和未获得有效运行的历史。`8fbf1d32a` 撤回整体动画相对接触修正时，穿透记录从 12/60 增至 31/71、Landing 未闭合从 12/60 增至 19/60，并新增 6/11 Locked 漂移；不能原样恢复。`5501fa5f7` 的“新接触重置水平、保留竖直残差”由 `a349360f6` 撤回，是因为当时未取得有效候选采样，不是已证明有效。`1c979c9dd` 已让 Landing 消费正式 Sliding 响应，当前源码仍保留；不能再次把“Landing 没处理 Sliding”当作新根因。新释放窗口的来源修正虽减少局部拉直，但 2041 新接触、2042 超滑动范围释放、2043 残差追赶仍须完整比较，不能删除整段世界残差来只改善一个交接帧。
+
 ## 当前证据与下一owner
 
 - 首轮换代修复后的run `ea0e2e2...`共2021行、1221列且逐行等宽；左右Swing无Executable Path从`547/549`降到`85/8`，同一Executing Plan的单帧`rewritten=false`降为0。

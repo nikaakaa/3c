@@ -4,6 +4,14 @@
 
 当前 Goal 已按用户要求启动：继续动画混合、Landing/Releasing 弯直突变和台阶跳脚，使用已有采样还原正式函数，由已有配套窗口维护多个完整业务测试与各自 HTML；本轮不启动 Replay。
 
+最新完整释放窗口已扩至 2024～2056（33 帧），使用 2023 真实种子。实际 ACL、Native Slot、Action Slot、预测、场景查询、双脚生命周期及骨盆连续计算通过；历史 Goal 脚位和旋转误差均为 0，原踝还原最大误差约 0.001 mm，两版 203 根骨局部位置、旋转和缩放一致，各计算段预热后为 0 B。来源修正将右脚目标超长从 10 帧减为 8 帧，相对原动画的最大修正向量单步从 43.4414 cm 减为 30.1888 cm；最大目标伸展比仍为 117.9642%，2031～2037 的连续拉直仍在，不能继续用后半段 12 帧的 5→3 代替完整窗口。左右脚各 33 帧最终脚掌目标查询均有证据，无新增正穿透；这不等于最终鞋网格验证。完整数据与失败校准见[同一业务报告](../diagnostics/foot-placement/ik-tests/releasing-business-summary.json)和[可播放说明](../diagnostics/foot-placement/ik-tests/releasing-action-native.html)。
+
+完整 FBBIK 已实际执行两版，计算段为 0 B，但历史 2033 的六关节点最大误差为 0.240472 mm，超过测试原定 0.2 mm，整体仍为 `failed-ik-calibration`。直接替换为录制的六关节点输入或三个 Goal 都未消除偏差；没有放宽容差或将实际执行等同于通过。来源修正后的 2041／2042 右膝实际输出约 55.2747°／54.3377°，仅保留为校准未通过的求解结果，不作为已验收收益。原录制同两帧均约 0.51°；2040→2041 原动画自身只从 48.288° 到 46.254°，录制 IK 却从 66.771° 到 0.509°。2030→2031 原动画为 60.643°→38.376°，录制 IK 为 48.845°→0.512°，不能把这些额外变化归因于动画本来伸直。
+
+2041 当前正式状态原因是 `NewEventContactAcquired`：新的 Action 接触创建 Landing，承接上一完成世界输出；2042 原动画脚已经超出锚点滑动范围，以 `ContactOutOfSlideRange` 进入 Releasing，2043 原有水平残差继续衰减，仍有额外追赶。当前 Action 没有下一落点，2041 起正式路径为 `NextLandingUnavailable`；这不是把旧 Run 的未来路径硬留给 Action。报告曾在整段计算后读取复用路径页，错误地把全部 33 帧 Accepted 写成 false；改为当帧保存必要标量后重跑，历史右脚 2030～2041 为 Accepted，实际 Goal 数值未变。该错误只属于报告保存，不能用旧 false 列判断运行链路没有消费路径。
+
+另一个待裁决候选只按实际左右脚贡献混合连续 `FootHeight`，并让 Native 历史保存该混合值；接触事件、模式、锁权重、Support 和作者总权重均不改。三个生产文件目前未提交，Animation 定向编译 0 警告、0 错误（6.57 秒），已交同一配套窗口做完整业务第三版比较。`FootHeight` 是高于作者步间基线的高度；旧 Feature 的 `SoleHeight` 是脚跟、脚尖较低点的绝对高度，两者不能直接替换，也不能由根相对高度差直接断定哪一帧目标错误。未取得第三版结果前不把该候选当作修复通过。
+
 原生混合的帧计算已从 Unity 时钟读取中分离：`AnimationSlotBlendJob.ProcessAnimation` 读取 `AnimationStream.deltaTime`，交给同一个 `EvaluateFrame(float)`；完整校验、混合、Stored 捕获、历史提交及输出发布均由该函数执行。固定采样实验可直接提供记录的帧时间，不需要伪造 AnimationStream 或另写混合算法。函数体除移出时钟读取外逐字一致，Animation 定向编译 0 警告、0 错误（6.97 秒）。这是正式计算入口的整理，Native Slot 业务与 2041 释放效果仍待配套窗口实际验证。
 
 该完整入口的首次 Mono 执行在 `CommitPersistentState` 抛出 `InvalidProgramException: Passing an argument of size '10200'`，未生成有效结果帧。实际 Stored 状态从 9816 增至 10200 字节，History 从 9808 增至 10192 字节；新增 FootMotion 后继续用 `NativeArray<T>` 索引器提交整份状态触及大参数边界。修正改为直接引用已有 Native 元素，逐字段提交 Stored/History/Scratch，原地清零并读取；Workspace 重置同样改为原内存清零，Runtime 的 Stored 身份消费者只返回所需的 `ulong`，不再返回完整状态。未增加每帧容器，也未修改混合公式；Animation 定向编译 0 警告、0 错误（6.64 秒）。

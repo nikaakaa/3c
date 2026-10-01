@@ -17,6 +17,7 @@ namespace BTSMTL.Timeline.Editor
         readonly IMGUIContainer m_Surface;
         readonly Label m_Status = new Label();
         readonly Label m_SelectionInfo = new Label();
+        readonly Label m_SelectionStatus = new Label { style = { whiteSpace = WhiteSpace.Normal } };
         readonly Action m_BeginWindows;
         readonly Action m_EndWindows;
         readonly Action<RuntimeExecutionSpan> m_OpenSource;
@@ -76,6 +77,7 @@ namespace BTSMTL.Timeline.Editor
             Add(toolbar);
             m_SelectionInfo.style.whiteSpace = WhiteSpace.Normal;
             Add(m_SelectionInfo);
+            Add(m_SelectionStatus);
             m_Surface = new IMGUIContainer(Draw) { name = "slate-execution-surface" };
             m_Surface.style.flexGrow = 1;
             Add(m_Surface);
@@ -138,6 +140,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_SeekSelection = selected;
                 m_SeekEnd.SetEnabled(selected.Value.Completed);
+                m_SelectionStatus.text = m_Binding.SelectedInfo;
+                m_SelectionStatus.tooltip = selected.Value.End.Payload.Detail;
             }
             m_Version = m_Session.CaptureVersion;
             m_TargetRevision = m_Session.TargetRevision;
@@ -152,6 +156,8 @@ namespace BTSMTL.Timeline.Editor
 
         void ShowSelection(RuntimeExecutionSpan? selection)
         {
+            m_SelectionStatus.text = m_Binding.SelectedInfo;
+            m_SelectionStatus.tooltip = selection.HasValue ? selection.Value.End.Payload.Detail : string.Empty;
             if (selection.HasValue)
                 m_SeekSelection = selection;
             RuntimeExecutionSpan? selected = selection ?? m_SeekSelection;
@@ -222,6 +228,8 @@ namespace BTSMTL.Timeline.Editor
             m_Slate = null;
             m_Binding = null;
             m_SelectionInfo.text = string.Empty;
+            m_SelectionStatus.text = string.Empty;
+            m_SelectionStatus.tooltip = string.Empty;
             m_SeekSelection = null;
             m_SeekStart.SetEnabled(false);
             m_SeekEnd.SetEnabled(false);
@@ -278,6 +286,7 @@ namespace BTSMTL.Timeline.Editor
 
             internal Guid CaptureId => m_Timeline?.CaptureId ?? Guid.Empty;
             internal RuntimeExecutionSpan? SelectedSpan => Selected is Clip clip ? clip.Span : null;
+            internal string SelectedInfo => Selected is Clip clip ? clip.Info : string.Empty;
             internal float LatestPosition { get; private set; }
             internal bool Apply(RuntimeExecutionTimeline timeline, bool live)
             {
@@ -422,8 +431,13 @@ namespace BTSMTL.Timeline.Editor
                     m_First = m_Last = m_Cached = null;
                     m_CachedIndex = 0;
                     Count = 0;
-                    DisplayName = string.IsNullOrEmpty(span.Start.Payload.Name) ? span.Source.ElementAuthoringId : span.Start.Payload.Name;
-                    if (string.IsNullOrEmpty(DisplayName))
+                    if (span.HasSource)
+                    {
+                        RuntimeDebugSession.Shared.TryResolveHistoricalSource(span.ContentRevision, span.SourceHandle,
+                            out _, out DebugSourceMapEntry source);
+                        DisplayName = source.DisplayName;
+                    }
+                    else
                         DisplayName = KindNames[(int)span.Kind];
                 }
                 internal void Append(Clip clip)
@@ -458,7 +472,13 @@ namespace BTSMTL.Timeline.Editor
                 public bool IsActive { get => true; set => throw ReadOnly(); }
                 public bool ShowCurves { get; set; }
                 public float CustomHeight { get; set; }
-                public Color Color => new Color(0.3f, 0.65f, 0.85f);
+                public Color Color => m_First.Span.Kind switch
+                {
+                    RuntimeExecutionSpanKind.Wait => new Color(0.8f, 0.65f, 0.25f),
+                    RuntimeExecutionSpanKind.Loop => new Color(0.8f, 0.45f, 0.65f),
+                    RuntimeExecutionSpanKind.Branch => new Color(0.45f, 0.75f, 0.4f),
+                    _ => new Color(0.3f, 0.65f, 0.85f)
+                };
                 public float StartTime => m_First.StartTime;
                 public float EndTime => m_Owner.Length;
                 public float DefaultHeight => 24;
@@ -482,7 +502,9 @@ namespace BTSMTL.Timeline.Editor
                 public bool IsLocked { get => false; set => throw ReadOnly(); }
                 public IEmbeddedTimelineTrackBinding Track => OwnerTrack;
                 public string Info => Span.Kind == RuntimeExecutionSpanKind.Branch ? Span.Start.Payload.Detail :
-                    Span.IsOpen ? "open" : !Span.Completed ? "缺少进入记录" :
+                    Span.State == RuntimeExecutionSpanState.MissingStart ? "缺少进入记录" :
+                    Span.IsOpen ? Span.Kind == RuntimeExecutionSpanKind.Wait || Span.End.Kind == RuntimeTraceEventKind.NodeWaiting
+                        ? "等待中" : "执行中" :
                     string.IsNullOrEmpty(Span.End.Payload.Status) ? Span.End.Payload.Detail : Span.End.Payload.Status;
                 public bool IsActive => true;
                 public bool IsTimeQuantized => true;

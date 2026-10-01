@@ -10,4 +10,16 @@ TreeDecision 片段的显示终点来自同一播放、同一 Cycle 的进入、
 
 本批涉及六个 Workbench 源文件。Roslyn 静态检查覆盖 16 个程序集、785 个源码，语义错误为 0；没有新增或修改测试代码，没有执行 Workbench 端到端运行验收，也没有编辑器 FPS 数据。
 
-纯 Timeline 接入正式 Session／角色播放、结构资源刷新、History 角色状态恢复仍是后续工作。当前观察修正不代表这些能力已完成。
+当时提出的纯 Timeline 接入正式 Session／角色播放尚未实施。用户随后澄清，本次需要的是把主图实际执行的节点等显示为轻量只读 Clip；不要求扩展独立 Timeline 的角色播放入口。结构资源刷新、History 角色状态恢复仍未在此批验证，不能据当前观察修正称整个 Workbench 已完成。
+
+## 主图执行 Clip
+
+正式角色提交后的 `FixedCharacterRuntimeDiagnosticsAdapter.PublishCommitted` 发布主图与子调用中的节点进入、持续、等待、完成、停止、Loop 迭代和分支决策事实。`RuntimeDebugTargetProvider.ReadExecutionTimeline` 把新增事实送入 `SpanAccumulator`，`BtsmtlExecutionTimelineView` 直接消费这些区间，通过现有 Slate 嵌入面板显示只读 Track／Clip；它不生成作者 Timeline 资产，也不参与执行节点或角色状态。
+
+节点与等待区间按 RuntimeInstance、分支、Epoch、内容版本、来源及 ActivationGeneration 配对。RuntimeInstance 已携带技能释放与图调用代数，Loop 区间额外使用 LoopIteration，重复发生不会覆盖另一调用的片段。持续片段的显示终点读取同分支、同 Epoch 的已提交时钟，完成或停止后使用真实退出位置。瞬时决策保留同 Tick 的起点与终点，Slate 使用最小 6 像素绘制和命中范围，不伪造执行时长。
+
+入口是 `Window/BTSMTL/Preview` 下方的执行时间线。轨道名直接读取对应内容版本的 SourceMap 显示名称；节点、等待、Loop 与分支使用现有区间类型区分颜色。选中片段的执行、等待或退出状态直接读取最新区间，详细事实显示在状态提示中；投影重建或取消片段选择时清空状态显示，保留已选事件的历史定位身份。双击 Clip 沿 `BtsmtlScenePlayTimelineController.OpenExecutionSource` 定位原图来源，进入／退出按钮沿正式诊断 Session 定位历史事件。
+
+实时投影复用既有增量累积器与预分配 Track／Clip，本次没有增加运行时状态、采样字段或新的角色播放路径。新增状态显示复用事实中的字符串或固定状态文本，不在每次刷新拼接文本。暂停且没有新的诊断事实时，Session 版本检查保留当前投影。
+
+本次显示改动的 Roslyn 静态检查覆盖 16 个程序集、790 个源码，语义错误为 0。没有新增或修改测试代码，没有启动 Play 或 Unity batchmode；未执行主图 Clip 的界面、端到端与 GC／FPS 运行验收。

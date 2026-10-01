@@ -27,6 +27,10 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 - 构建、回放或采集请求结果不确定时，先查询原 `job_id`/RunId，不重复提交。若当前操作由 3C Development Center 的独立 RunHost 管理，使用它的正式 `status` 命令查询，不依赖 Editor 重连，不改写状态文件。
 - [3C 并行开发验证](../3c-fast-development-validation/SKILL.md) 仅用于已明确的并行开发；普通 Unity 操作不自动引入 Center 改动记录、新 worktree 或其他 Agent。
 
+## Edit 模式物理检查
+
+- Edit 模式的独立物理函数检查使用 `EditorSceneManager.NewPreviewScene()`，通过 `Scene.GetPhysicsScene()` 取得预览场景的物理场景；创建或移动检查碰撞体后调用 `Physics.SyncTransforms()`，完成后关闭本次创建的 PreviewScene，不保存正式场景。Unity 2022.3.62f2c1 已确认该场景有效且与默认物理场景不同；`SceneManager.CreateScene(..., LocalPhysicsMode.Physics3D)` 的运行场景入口在 Edit 模式会拒绝执行。
+
 ## Editor Profiler
 
 - Editor Play、运行桥接和窗口绘制卡顿直接采目标 Editor 的 CPU 调用树。Player 构建与采样不包含这些 Editor 调用，不能代替 Editor 诊断。

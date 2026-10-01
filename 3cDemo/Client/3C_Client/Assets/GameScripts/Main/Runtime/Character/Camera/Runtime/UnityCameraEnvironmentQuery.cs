@@ -5,6 +5,8 @@ namespace ThirdPersonCamera
 {
     public sealed class UnityCameraEnvironmentQuery : ICameraEnvironmentQuery
     {
+        const float ContactOffset = 0.0001f;
+
         readonly PhysicsScene m_PhysicsScene;
         readonly Transform m_SelfRoot;
         readonly Collider[] m_OverlapResults;
@@ -48,10 +50,10 @@ namespace ThirdPersonCamera
                 out int pivotColliderInstanceId);
             if (!hasDesiredSegment)
             {
-                if (startOverlapped)
+                if (HasOverlap(request.DesiredLocation, request.Radius, request.LayerMask, trigger))
                     return new CameraEnvironmentQueryResult(
                         CameraCollisionStatus.NoLegalSpace,
-                        request.PreviousLocation,
+                        request.DesiredLocation,
                         Vector3.zero,
                         0f,
                         0);
@@ -62,10 +64,11 @@ namespace ThirdPersonCamera
             Vector3 normal = pivotNormal;
             float distance = pivotDistance;
             int colliderInstanceId = pivotColliderInstanceId;
-            if (TryResolveMovementSweep(
+            if (!request.Reset && !startOverlapped && TryResolveSegment(
                     request.PreviousLocation,
                     request.DesiredLocation,
                     request.Radius,
+                    0f,
                     request.LayerMask,
                     trigger,
                     out Vector3 movementSafe,
@@ -81,9 +84,12 @@ namespace ThirdPersonCamera
                 colliderInstanceId = movementColliderInstanceId;
             }
 
-            CameraCollisionStatus status = startOverlapped
-                ? CameraCollisionStatus.StartOverlapped
-                : CameraCollisionStatus.Corrected;
+            CameraCollisionStatus status = HasOverlap(
+                safeLocation, request.Radius, request.LayerMask, trigger)
+                ? CameraCollisionStatus.NoLegalSpace
+                : startOverlapped
+                    ? CameraCollisionStatus.StartOverlapped
+                    : CameraCollisionStatus.Corrected;
             return new CameraEnvironmentQueryResult(
                 status,
                 safeLocation,
@@ -107,7 +113,7 @@ namespace ThirdPersonCamera
             for (int i = 0; i < count; i++)
             {
                 Collider collider = m_OverlapResults[i];
-                if (collider && !IsSelf(collider))
+                if (!IsSelf(collider))
                     return true;
             }
             return false;
@@ -117,7 +123,7 @@ namespace ThirdPersonCamera
             Vector3 origin,
             Vector3 destination,
             float radius,
-            float nearClipPlane,
+            float minimumDistance,
             int layerMask,
             QueryTriggerInteraction trigger,
             out Vector3 safeLocation,
@@ -144,57 +150,11 @@ namespace ThirdPersonCamera
                 colliderInstanceId = 0;
                 return false;
             }
-            float centerDistance = hit.distance - radius;
-            if (centerDistance <= nearClipPlane)
-            {
-                safeLocation = origin + direction * nearClipPlane;
-                hitNormal = hit.normal;
-                hitDistance = Mathf.Max(0f, hit.distance);
-                colliderInstanceId = InstanceId(hit.collider);
-                return true;
-            }
+            float centerDistance = Mathf.Max(minimumDistance, hit.distance - ContactOffset);
             safeLocation = origin + direction * centerDistance;
             hitNormal = hit.normal;
-            hitDistance = Mathf.Max(0f, hit.distance);
-            colliderInstanceId = InstanceId(hit.collider);
-            return true;
-        }
-
-        bool TryResolveMovementSweep(
-            Vector3 origin,
-            Vector3 destination,
-            float radius,
-            int layerMask,
-            QueryTriggerInteraction trigger,
-            out Vector3 safeLocation,
-            out Vector3 hitNormal,
-            out float hitDistance,
-            out int colliderInstanceId)
-        {
-            Vector3 delta = destination - origin;
-            float length = delta.magnitude;
-            if (length <= 0.000001f)
-            {
-                safeLocation = destination;
-                hitNormal = Vector3.zero;
-                hitDistance = 0f;
-                colliderInstanceId = 0;
-                return false;
-            }
-            Vector3 direction = delta / length;
-            if (!TryGetNearestHit(origin, direction, length, radius, layerMask, trigger, out RaycastHit hit))
-            {
-                safeLocation = destination;
-                hitNormal = Vector3.zero;
-                hitDistance = 0f;
-                colliderInstanceId = 0;
-                return false;
-            }
-            float centerDistance = Mathf.Max(0f, hit.distance - radius);
-            safeLocation = origin + direction * centerDistance;
-            hitNormal = hit.normal;
-            hitDistance = Mathf.Max(0f, hit.distance);
-            colliderInstanceId = InstanceId(hit.collider);
+            hitDistance = hit.distance;
+            colliderInstanceId = hit.collider.GetInstanceID();
             return true;
         }
 
@@ -220,7 +180,7 @@ namespace ThirdPersonCamera
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = m_HitResults[i];
-                if (!hit.collider || IsSelf(hit.collider) || found && hit.distance >= nearest.distance)
+                if (IsSelf(hit.collider) || found && hit.distance >= nearest.distance)
                     continue;
                 nearest = hit;
                 found = true;
@@ -229,7 +189,7 @@ namespace ThirdPersonCamera
         }
 
         bool IsSelf(Collider collider) =>
-            collider && (collider.transform == m_SelfRoot || collider.transform.IsChildOf(m_SelfRoot));
+            collider.transform == m_SelfRoot || collider.transform.IsChildOf(m_SelfRoot);
 
         static QueryTriggerInteraction ToQueryTrigger(CameraCollisionTriggerMode mode)
         {
@@ -243,10 +203,5 @@ namespace ThirdPersonCamera
                     return QueryTriggerInteraction.UseGlobal;
             }
         }
-
-        static int InstanceId(Collider collider) =>
-            collider
-                ? collider.GetInstanceID()
-                : 0;
     }
 }

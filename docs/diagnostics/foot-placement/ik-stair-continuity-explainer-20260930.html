@@ -13,16 +13,116 @@
 @media(max-width:650px){.probe-grid{grid-template-columns:1fr}.probe-grid svg{height:225px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 .audit-scroll{overflow-x:auto;margin:14px 0 20px}.audit-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}.audit-table th,.audit-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}.audit-table th{background:#e7ece4;font-weight:700}.audit-table td:first-child{min-width:100px}.audit-plot{width:100%;height:auto;background:white;border:1px solid var(--line);border-radius:12px;margin:12px 0}.audit-heading{font-size:18px;margin:4px 0 14px}.audit-note{padding:14px 17px;border-left:3px solid var(--blue);background:#eef4fa;margin:15px 0}
+.cause{scroll-margin-top:20px;margin:0 0 30px;padding:28px;border:1px solid #c4d3c9;border-radius:17px;background:#f9fbf7}.cause h2{font-size:27px;max-width:800px}.cause-lead{font-size:16px;max-width:930px;margin:16px 0 20px}.cause-map{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.cause-map article{padding:17px;background:white;border:1px solid var(--line);border-radius:12px}.cause-map h3{font-size:16px;margin:5px 0 9px}.cause-map p{font-size:13px;margin:0}.cause-map .cause-number{font-size:12px;color:var(--new);font-weight:750}.cause-nav{display:flex;flex-wrap:wrap;gap:7px;margin:15px 0}.cause-nav button{font-size:13px;text-align:left;padding:9px 12px}.cause-nav button small{display:block;font-size:11px}.cause-nav button[aria-pressed="true"]{background:var(--ink);color:white;border-color:var(--ink)}.cause-player{padding:22px;border:1px solid var(--line);background:white;border-radius:13px}.cause-player h3{font-size:19px}.cause-player-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px}.cause-player-head span{font-size:12px;color:var(--muted)}.cause-player-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:start}.cause-bars{padding-top:19px}.cause-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin:0 0 9px}.cause-scale b{color:var(--old)}.cause-row{width:100%;display:block;text-align:left;border:1px solid transparent;background:#f6f8f3;padding:12px;margin-bottom:8px}.cause-row[aria-pressed="true"]{border-color:var(--blue);box-shadow:inset 3px 0 var(--blue);background:#f0f6fa}.cause-row-head{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:8px}.cause-row-head strong{font-variant-numeric:tabular-nums}.cause-track{height:13px;position:relative;background:#e8ece6;border-radius:3px}.cause-track::before{content:"";position:absolute;left:80%;right:0;top:0;bottom:0;background:#f1d9d1}.cause-track::after{content:"";position:absolute;left:80%;top:-4px;bottom:-4px;border-left:2px dashed var(--old)}.cause-bar{height:100%;background:var(--new);position:relative;border-radius:3px}.cause-row[data-over="true"] .cause-bar{background:var(--old)}.cause-explanation{background:#f4f5ef;border-radius:11px;padding:20px;min-height:275px}.cause-explanation .cause-stage{font-size:12px;color:var(--blue);font-weight:700}.cause-explanation h4{font-size:19px;line-height:1.4;margin:10px 0 12px}.cause-explanation p{font-size:14px}.cause-explanation .cause-metric{font-size:33px;font-weight:750;line-height:1.2;color:var(--old);font-variant-numeric:tabular-nums;margin-bottom:10px}.cause-explanation .cause-metric small{font-size:12px;font-weight:400;color:var(--muted);display:block;margin-top:5px}.cause-controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:16px}.cause-controls button{font-size:13px}.cause-controls .cause-scrub{display:flex;align-items:center;gap:10px;flex:1;min-width:230px}.cause-scrub label,.cause-controls output{white-space:nowrap;font-size:12px;color:var(--muted)}.cause-status{margin:14px 0 0;font-size:13px;font-weight:650}.cause-boundary{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0}.cause-boundary>div{border:1px solid var(--line);padding:20px;border-radius:12px;background:white}.cause-boundary h3{font-size:17px;margin-bottom:12px}.cause-boundary p{font-size:14px}.cause-time{font:12px Consolas,monospace;overflow-wrap:anywhere;background:#eef1eb;border-radius:6px;padding:11px;margin-bottom:12px}.cause-verdict{border-left:3px solid var(--old);padding-left:13px}.cause-plan{margin-top:22px;padding-top:22px;border-top:1px solid var(--line)}.cause-plan h3{font-size:19px;margin-bottom:13px}.cause-plan li{font-size:14px;margin:0 0 12px;padding-left:3px}.cause-evidence{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.8}.cause-evidence code{overflow-wrap:anywhere}.cause-source-list{padding-left:20px}.cause-source-list li{margin:8px 0}.cause .audit-table td:first-child{min-width:100px}.cause .audit-note{font-size:13px}.cause strong,.cause b{font-weight:750}@media(max-width:800px){.cause-player-grid,.cause-boundary{grid-template-columns:1fr}.cause-explanation{min-height:0}.cause-map{grid-template-columns:1fr}.cause-map article{padding:14px}.cause-map h3{margin-top:0}.cause-player-head{align-items:flex-start;flex-direction:column}}@media(max-width:650px){.cause{padding:18px 14px}.cause h2{font-size:23px}.cause-lead{font-size:14px}.cause-player{padding:14px}.cause-player h3{font-size:17px}.cause-boundary>div{padding:16px}.cause-nav{display:grid;grid-template-columns:1fr 1fr}.cause-nav button{padding:9px}.cause-controls .cause-scrub{flex-basis:100%;min-width:0}.cause-explanation{padding:16px}.cause-plan ol{padding-left:21px}}
 </style>
 </head>
 <body>
 <main>
-  <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.09.30 · 交互解释</span></div>
+  <div class="mast"><span class="brand">3C / FOOT PLACEMENT</span><span>2026.10.01 · 接触释放原因调查</span></div>
   <header class="hero">
-    <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">本页包含采样事实、原因判断和候选行为。三者证据强度不同，不能把右侧示意当成已经证明正确的修复方案。先看本轮核对结论，再查看各项数据。</p></div>
+    <div><div class="eyebrow">地形 → 脚的运动 → 腿的求解</div><h1>脚掌查到了，为什么还会跳？</h1><p class="intro">先看下面的释放原因：哪一步还在留住脚，哪一步把目标推到腿长之外。数字来自已有固定输入结果；可播放的是计算过程说明，尚未实施的新方案不会画成“修复后效果”。</p></div>
     <div class="status-note"><b>已有局部修正，六项尚未全部实现。</b><span>接触目标交接及动画来源已有修正。两版旋转候选在双脚复算中增加了左腿超长时间，已从运行代码撤回，失败证据保留。释放冻结、额外弯直和台阶末端补高仍未解决。</span></div>
   </header>
+  <section class="cause" id="release-cause-audit" aria-labelledby="release-cause-title">
+    <div class="eyebrow">先看这一段 · 2026-10-01 新调查</div>
+    <h2 id="release-cause-title">脚锁说“松开了”，为什么腿还会被拉直？</h2>
+    <p class="cause-lead"><b>身体继续前进，脚的旧约束却还在。</b>“是否继续接触”只是一道指令；实际脚位还会经过旧修正的交接，以及防止穿台阶的净空处理。指令、旧修正或水平冻结中的任何一层留住脚，髋到脚的距离都可能继续增长。</p>
+    <div class="cause-map">
+      <article><span class="cause-number">01 / 接触信号</span><h3>该不该松开？</h3><p>动画曲线提供接触和锁定模式，生命周期据此决定继续 Landing 还是进入 Releasing。2033 的离散曲线仍读到上一段 Sliding。</p></article>
+      <article><span class="cause-number">02 / 位置交接</span><h3>松开后，脚从哪里走？</h3><p>为避免脚一下跳到动画位置，系统会保留上一帧脚位与新目标的差，再逐渐消掉。这个差就是“残差”。2034 已释放，但残差仍把脚拖在后面。</p></article>
+      <article><span class="cause-number">03 / 地面净空</span><h3>这一帧能不能前移？</h3><p>高度响应不足时，现有规则会沿用上一帧的水平脚位。身体没有因此停住，距离继续拉大；2033 的冻结进一步放大超长。</p></article>
+    </div>
+    <p class="cause-verdict"><b>需要先改的上游：</b>动画脚步数据的采样边界，以及 FootPlacement 的脚目标与交接约束。最终腿 IK 收到不可达目标后，已经无法同时满足原髋位置、固定腿长和该脚点。现有证据尚不足以要求重写整个动画状态机或 KCC。</p>
+
+    <div class="cause-player">
+      <div class="cause-player-head"><h3>同一帧，沿计算链看脚在哪里被留下</h3><span>右脚 · 真实结果的分段几何复算 · 非角色录像</span></div>
+      <div class="cause-nav" role="group" aria-label="选择释放调查帧">
+        <button type="button" data-cause-frame="0" aria-pressed="false">2031<small>旧修正开始造成超长</small></button>
+        <button type="button" data-cause-frame="1" aria-pressed="false">2032<small>新目标本身也已超长</small></button>
+        <button type="button" data-cause-frame="2" aria-pressed="true">2033<small>冻结继续放大冲突</small></button>
+        <button type="button" data-cause-frame="3" aria-pressed="false">2034<small>已释放，仍被残差拖住</small></button>
+      </div>
+      <div class="cause-player-grid">
+        <div class="cause-bars" role="group" aria-label="选择同帧计算阶段">
+          <div class="cause-scale"><span>髋到踝目标 / 腿长</span><b>虚线：100% 腿伸直的上限</b><span>125%</span></div>
+          <button type="button" class="cause-row" data-cause-stage="0" aria-pressed="false" data-over="false"><span class="cause-row-head"><span>① 未加脚端修正的输入</span><strong>99.77%</strong></span><span class="cause-track" style="display:block"><span class="cause-bar" style="display:block;width:79.8177%"></span></span></button>
+          <button type="button" class="cause-row" data-cause-stage="1" aria-pressed="false" data-over="true"><span class="cause-row-head"><span>② 本次选择的新目标</span><strong>107.50%</strong></span><span class="cause-track" style="display:block"><span class="cause-bar" style="display:block;width:85.9981%"></span></span></button>
+          <button type="button" class="cause-row" data-cause-stage="2" aria-pressed="false" data-over="true"><span class="cause-row-head"><span>③ 接上历史位置修正</span><strong>107.75%</strong></span><span class="cause-track" style="display:block"><span class="cause-bar" style="display:block;width:86.1978%"></span></span></button>
+          <button type="button" class="cause-row" data-cause-stage="3" aria-pressed="true" data-over="true"><span class="cause-row-head"><span>④ 净空处理后的输出</span><strong>114.63%</strong></span><span class="cause-track" style="display:block"><span class="cause-bar" style="display:block;width:91.7038%"></span></span></button>
+        </div>
+        <div class="cause-explanation" aria-live="polite" aria-atomic="true">
+          <div class="cause-stage" id="cause-stage-label">2033 · 第 4 / 4 步</div>
+          <h4 id="cause-stage-title">脚等高度，身体却继续走</h4>
+          <div class="cause-metric" id="cause-metric">114.63%<small>髋到目标距离已超过腿长</small></div>
+          <p id="cause-stage-detail">净空规则继续沿用上一帧的水平脚位。107.75% 被放大到 114.63%；这一步增加了冲突，但之前的目标已经不可达，所以删掉冻结也不能关闭整个问题。</p>
+          <p id="cause-frame-context">生命周期 Landing · 接触模式 Sliding · 作者总权重 1 · 此时尚无 Action 混合</p>
+          <figure style="margin:16px 0 0"><svg id="cause-geometry" viewBox="0 0 440 330" role="img" aria-label="2033 帧原动画腿和当前目标的世界 XY 投影" style="display:block;width:100%;background:white;border-radius:8px"><text x="22" y="30" font-size="14">启用 JavaScript 可逐步查看几何图。</text></svg><figcaption class="cause-evidence">灰线是原动画髋、膝、踝；橙点是当前计算阶段的踝目标。虚线只表示髋到目标的距离，不是求解后的腿。位置按世界 X/Y 等比例投影；上方比例使用完整 3D 距离。</figcaption></figure>
+        </div>
+      </div>
+      <div class="cause-controls">
+        <button type="button" class="play" id="cause-play" aria-pressed="false">▶ 从头讲一遍</button>
+        <button type="button" id="cause-prev">上一步</button><button type="button" id="cause-next">下一步</button>
+        <button type="button" id="cause-reset">回到开头</button>
+        <div class="cause-scrub"><label for="cause-progress">讲解进度</label><input id="cause-progress" type="range" min="0" max="15" step="1" value="11"><output id="cause-progress-value" for="cause-progress">12 / 16</output></div>
+      </div>
+      <p class="cause-status" id="cause-status">停在 2033 帧最终输出；点击任一阶段查看它的作用。</p>
+      <p class="cause-evidence">固定同帧髋位置，将报告里的输入踝位置分别加上新目标、插值、净空修正，除以当帧腿长；四帧旋转权重均为 0，未混入旋转候选。条形图是距离比例，不是脚的空间轨迹，也不是修改后的多帧模拟。</p>
+    </div>
+
+    <div class="cause-boundary">
+      <div><h3>① 为什么 2033 还没有解除接触？</h3>
+        <p>同一个采样时刻，两条判定对边界的处理不一致：事件阶段允许很小的时间误差，已判断为 <b>Swing</b>；阶梯式 LockMode 曲线严格取键前的值，仍是 <b>Sliding</b>。</p>
+        <div class="cause-time">实际 normalizedTime = 0.2258063703775406<br>Unlocked 键的 float 值 = 0.2258064448833466<br>相差约 38.5 ns；这一显示帧持续约 16.67 ms</div>
+        <p>38 纳秒不是脚需要继续锁定的业务时长，却使当前帧读取整段旧模式。Contact 仍为 0.06807411，现有 <code>RequestsLock</code> 只要求 Contact &gt; 0 且模式不是 Unlocked，于是继续 Landing。</p>
+        <p><b>准确结论：</b>采样确实还在键前，不能说它在数学上已跨过解锁键。需要统一离散模式和事件的边界规则；修好这一处能否改善完整动作，尚未跑候选验证。</p>
+        <p class="cause-evidence">2030 也读到旧 Locked，而连续 LockWeight 已约为 0.0000018。LockWeight 为 0 不等于位置约束自动解除；它与作者 FootPlacementWeight 也不是同一权重。</p>
+      </div>
+      <div><h3>② 为什么 2034 已释放，反而更超长？</h3>
+        <p>这一帧模式已经是 <b>Unlocked</b>，状态正式进入 <b>Releasing</b>，新目标回到未加脚端修正的位置，距离为腿长的 <b>99.75%</b>。</p>
+        <p>但释放入口要避免瞬间跳脚，会取“<b>上一完成脚位 − 当前动画脚位</b>”作为交接残差，再逐渐衰减。上一完成脚位已经落后于身体，这份位置差也被继承了。</p>
+        <p class="cause-verdict">加上残差后成为 <b>117.96%</b>。这不是“状态还没切”的问题，而是“状态切了，旧约束还没有退出”。这一帧后续净空没有再改变该修正。</p>
+        <p><b>残差原本有必要：</b>直接删除会让脚突然追上动画。要改变的是接触目标与残差如何共同、提前地减小水平约束，并同时保留地面支撑和跨边净空。</p>
+      </div>
+    </div>
+
+    <details><summary>展开全部数字：不能把原动画自身伸直，也算成 IK 新制造的问题</summary><div class="detail-body">
+      <div class="audit-scroll"><table class="audit-table"><thead><tr><th>帧 / 状态</th><th>输入距离</th><th>新目标</th><th>接上旧修正</th><th>净空后</th><th>原动画膝角</th></tr></thead><tbody>
+        <tr><td>2031 / Landing</td><td>94.44%</td><td>99.67%</td><td>100.56%</td><td>100.62%</td><td>38.38°</td></tr>
+        <tr><td>2032 / Landing</td><td>99.60%</td><td>106.24%</td><td>109.08%</td><td>105.13%</td><td>7.86°</td></tr>
+        <tr><td>2033 / Landing</td><td>99.77%</td><td>107.50%</td><td>107.75%</td><td>114.63%</td><td>4.72°</td></tr>
+        <tr><td>2034 / Releasing</td><td>99.75%</td><td>99.75%</td><td>117.96%</td><td>117.96%</td><td>5.88°</td></tr>
+      </tbody></table></div>
+      <p>2032～2034 的原动画本来就接近伸直，不能要求修复后凭空变成深弯膝。要消除的是额外不可达目标和异常变化。2031 仍有 38.38° 原动画弯曲，足以说明这段问题不能全归因于动画本身。</p>
+      <p>2032 的净空处理让距离从 109.08% 降到 105.13%；因此不能把所有净空处理都说成只会恶化。2031～2033 的最终脚底 XZ 相同，髋的 X 从 11.792511 移到 11.551405。身体前进、脚水平停住，是这段记录中实际发生的冲突。</p>
+    </div></details>
+
+    <div class="cause-plan"><h3>准备怎么改，怎样避开历史已经失败的做法？</h3>
+      <ol>
+        <li><b>第一笔：统一正式采样的时间边界。</b>让 LockMode 与事件阶段一致地解释作者已有键。保留作者曲线和总权重，不新加“脚一抬高就提前释放”的阈值。目标是消除数值边界引起的整帧旧状态；它解决不了 2031～2032 已存在的目标冲突。</li>
+        <li><b>第二笔：让接触卸载、旧修正与净空一起推进。</b>在目标生成和交接处使用当前姿势的腿长余量与地形约束，提前减小已经无法持续的水平约束；稳定支撑仍保留世界锚点。具体连续响应仍是待验证方案，不能靠删残差、突然放开 XZ 或求解后压膝角来代替。</li>
+        <li><b>动画混合另行处理几何一致性。</b>这些帧的 Action 权重都是 0，不能用动作混合解释全部问题。混合发生后，层级骨骼产生的实际脚位也不等于各动画 FootHeight 的平均；已撤回的平均脚高方案不能重用。需要对齐混合后的脚底与统一地面基准，组件 Y 本身不代表离地高度。</li>
+      </ol>
+      <div class="audit-scroll"><table class="audit-table"><thead><tr><th>历史做法</th><th>已经发生的代价</th><th>本次必须遵守的边界</th></tr></thead><tbody>
+        <tr><td>根据原动画抬脚，提前进入 Release</td><td>40 个提前帧中，整脚间隙超过 1 cm：0 → 13；部分帧离地 8～10 cm。</td><td>修采样边界与新增卸载策略分开验证；不能只看伸直减少。</td></tr>
+        <tr><td>当前脚底已有净空就直接解除冻结</td><td>恢复移动的水平步长由 20.162 cm 增至 26.435 cm。</td><td>必须连续处理恢复前移，不只提前按下“放行”。</td></tr>
+        <tr><td>整段接触改成相对动画的残差</td><td>出现更多脚跟穿透、着地未闭合和 Locked 漂移，已撤回。</td><td>保留稳定接触的世界锚，不把所有阶段统一改成跟随动画。</td></tr>
+        <tr><td>直接平均各来源 FootHeight</td><td>2038 目标距离由 97.78% 增至 98.92%，完整窗口未减少超长帧。</td><td>用实际混合几何核对接触与路径；不能拿标量更平滑当通过。</td></tr>
+      </tbody></table></div>
+      <div class="audit-note"><b>当前完成的是原因定位，不是新修复验收。</b>本节未运行修改后候选，也未新增 Unity 测试。下一步业务验证仍由已有配套测试窗口维护：连续输入、双脚、原动画膝角及额外变化、跳脚、离地、穿透、支撑漂移一起比较；不启动 Replay。</div>
+    </div>
+    <details><summary>数据和源码依据 · 几何复算的适用范围</summary><div class="detail-body cause-evidence">
+      <ul class="cause-source-list">
+        <li>固定输入：<a href="ik-tests/releasing-business-right-input.json">2024～2056 输入及 2023 种子</a>；实际曲线采样：<a href="ik-tests/releasing-business-native.json">Native / Action 输出</a>；脚目标与逐段修正：<a href="ik-tests/releasing-business-goal.json">完整 Goal 结果</a>。这些是配套窗口已有结果，本节仅从中读取与复算。</li>
+        <li>距离公式：<code>|sourceAnkle + correction − fixedHip| / legLength</code>；<code>correction</code> 分别为零、stateTargetCorrection、interpolationOutputCorrection、safetyFloorOutputCorrection。腿长由同帧最终踝距 / fixedHipReachRatio 还原，与原骨段长度相差不足 0.001 mm。膝角单独使用报告的 originalHip / originalKnee / originalAnkle 计算，0° 为伸直。</li>
+        <li>离散采样：<a href="../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Rig/AnimationFootStepObservationCurves.cs">AnimationFootStepObservationCurves.Sample</a>；事件边界：<a href="../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/Contracts/Rig/AnimationFootStepLandingEvents.cs">AnimationFootStepLandingEventTable.Resolve</a>。Run 的发布资源 groupClipIndex=10，duration=0.5166667，解锁键 normalizedTime=0.22580644，LockMode 键使用恒定切线。</li>
+        <li>旧脚位交接：<a href="../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootInterpolationRuntime.cs">CharacterFootInterpolationRuntime 的释放入口</a>；水平冻结：<a href="../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootLifecycle.cs">CharacterFootLifecycle.ResolveContactClearance</a>。</li>
+        <li>历史反证：<a href="../../../openspec/changes/stabilize-character-foot-path-and-landing/experiments/20260830-source-lift-unloading.md">提前卸载实验 f8170e487</a>、<a href="ik-tests/release-clearance.html">冻结与提前放行对照</a>、<a href="../../reference/foot-placement/implementation-lessons.md">既有实现经验</a>。参考设计：<a href="https://media.gdcvault.com/gdc2016/Presentations/Roche_Clifford_Fitting%20the%20World.pdf">GDC 2016 原始演讲</a>分开处理贴地滑动、锁定、解锁与地形路径；<a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Plugins/AnimationWarpingRuntime/FFootPlacementPlantSettings">Epic 参数文档</a>包括剩余腿长和解锁距离。这些外部设计不构成项目候选通过的证据。</li>
+        <li>最终骨骼求解仍有历史校准差异：最大 0.240472 mm，超过原定 0.2 mm。此处不用未通过校准的候选膝角证明改善；保留<a href="ik-tests/releasing-business-summary.json">完整实验范围与失败状态</a>。</li>
+      </ul>
+    </div></details>
+  </section>
   <details id="audit-verdict" open><summary>严格核对结论：哪些已证实，哪些还不能照着改</summary><div class="detail-body">
+    <p class="audit-note"><b>最新原因讲解在页面上方：</b><a href="#release-cause-audit">脚锁说“松开了”，为什么腿还会被拉直？</a> 可逐步播放 2031～2034 的新目标、残差和净空输出，并查看采样边界与历史失败对照。下方继续保留各版本原始审计。</p>
     <h3 class="audit-heading" id="knee-audit">2026-10-01 · 原动画、弯曲速率与六项实施状态</h3>
     <p><b>结论：</b>不能把所有伸直都算作 IK 缺陷，也不能只凭动作看起来缓和就认定修改有效。本节膝角统计来自已保存采样的只读审计；下方动画来源与旋转段另列实际 C# 函数实验、收益和回归，不把几何目标需求写成完整骨骼结果。</p>
     <p><b>最近是否改善：</b>9 月 30 日的 <code>93327479…</code> 与 10 月 1 日的 <code>3cb49fba…</code> 使用同一条 2716 帧录制，起始 Body、输入序列、Body 轨迹及 logic-locked 表现时钟一致，程序内容身份不同。按 Body Tick 与左右脚对齐后，5432 条记录的原动画膝角、求解膝角、脚位、权重、目标伸展比及末端补高均无差异。因此这组输入没有显示最近采样相关修改带来了新的 IK 改善；也不能据此否认其它动作中已经保留的局部修正。</p>
@@ -305,6 +405,98 @@ document.querySelectorAll('[data-frame]').forEach(b=>b.addEventListener('click',
 $('next').addEventListener('click',()=>{selectCase((active+1)%6);document.querySelector('.tabs').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'})});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop()});
 selectCase(0);renderCharts();
+</script>
+<script id="release-cause-player">
+(()=>{
+ const frames=[
+  {frame:2031,state:'Landing',mode:'Sliding',knee:38.3762577447,ratios:[.944411208773112,.9967267172501071,1.0055623755565082,1.0061919688750522],steps:[
+   ['动画本身仍有弯曲余量','原动画膝角为 38.38°。还没加入脚端修正时，目标距离为腿长的 94.44%。这一帧不能解释为“动画本来就已伸直”。'],
+   ['新目标几乎用完了腿长余量','接触规则选出新的脚目标，距离增加到 99.67%，仍在腿长内，但余量已经很小。'],
+   ['历史位置修正把目标推到腿长外','为了接续前一帧脚位，插值层把保留的旧修正叠加到新目标上，距离变成 100.56%。这一帧最早越过上限的是这一步。'],
+   ['最终处理略微加大冲突','净空处理后为 100.62%。它不是这一帧超长的最早起点；只改最后一步，前面的 100.56% 仍然存在。']]},
+  {frame:2032,state:'Landing',mode:'Sliding',knee:7.856498987,ratios:[.9960490823366032,1.0623724568893453,1.0908402122607421,1.0512751690634146],steps:[
+   ['这一帧原动画已经接近伸直','原动画膝角只有 7.86°，未加脚端修正的目标距离为 99.60%。身体姿势留给额外修正的余量很少。'],
+   ['新目标本身已经不可达','还没有承接历史修正，所选接触目标就达到 106.24%。问题已经出现在目标生成；单独删掉残差也不能解决这一帧。'],
+   ['旧修正继续放大超长','接上历史位置修正后，距离增加到 109.08%。当前目标和旧修正都在消耗同一条腿的有限长度。'],
+   ['净空处理减小距离，但仍然超长','这一帧最终处理反而把 109.08% 降到 105.13%。不能说净空每次都会恶化；应逐帧找最早的不可达目标。']]},
+  {frame:2033,state:'Landing',mode:'Sliding',knee:4.718171019,ratios:[.9977212683685285,1.0749757121982324,1.0774730575659957,1.1462974750983679],steps:[
+   ['原动画接近伸直，额外余量更少','原动画膝角为 4.72°，输入距离为 99.77%。原动画自身的伸直和后续 IK 目标超长，要分开评价。'],
+   ['事件已 Swing，接触请求却仍继续','采样只比解锁键早约 38 纳秒，LockMode 仍读到旧 Sliding；Contact 大于 0，生命周期继续 Landing。选中的接触目标达到 107.50%。'],
+   ['历史位置修正尚未退出','接上残差后为 107.75%。这一阶段已经不可达，后续冻结又进一步放大；不能将全部问题都归给最后的开关。'],
+   ['脚等高度，身体却继续走','净空规则继续沿用上一帧的水平脚位。107.75% 被放大到 114.63%；这一步增加了冲突，但之前的目标已经不可达，所以删掉冻结也不能关闭整个问题。']]},
+  {frame:2034,state:'Releasing',mode:'Unlocked',knee:5.8760881555,ratios:[.997496386997068,.997496386997068,1.1796423156800238,1.1796423156800238],steps:[
+   ['动画脚已经向前，旧脚还留在后面','输入目标距离为 99.75%，原动画膝角为 5.88°。这仍是原动画接近伸直的一帧，但输入目标没有超过腿长。'],
+   ['这一帧确实已经解除接触','模式为 Unlocked，生命周期以 ContactReleased 进入 Releasing。新目标修正为零，距离保持 99.75%。状态转换已经发生。'],
+   ['状态松开了，位置交接还在拖住脚','释放入口继承“上一完成脚位 − 当前动画脚位”，再衰减。上一脚位已落后于身体，残差将可达的新目标拉到 117.96%。不能只改释放时机。'],
+   ['本帧最终处理没有再改变它','净空处理前后都是 117.96%。此处的超长来自交接残差；它需要与接触卸载、地形和腿长余量共同处理，直接删掉会重新造成跳脚。']]}
+ ];
+ const geometry=[
+  {hip:[11.792511,.695908],knee:[11.8319569,.36680755],ankle:[12.0889482,.1128413],source:[12.0889482,.112954907],corrections:[[0,0],[.05532042,-.008700183],[.06139183,-.0107155954],[.06424427,-.008700184]]},
+  {hip:[11.6712456,.711369634],knee:[11.83682,.423941851],ankle:[12.0585375,.137880653],source:[12.0585375,.139233157],corrections:[[0,0],[.06317283,-.00807118],[.06924534,-.0270063579],[.04814434,-.008071184]]},
+  {hip:[11.551405,.7212652],knee:[11.752039,.4569124],ankle:[11.9939833,.187255472],source:[11.9939833,.188553721],corrections:[[0,0],[.0225730184,-.0503585339],[.0123472214,-.0598455],[.09402752,-.0503585264]]},
+  {hip:[11.4328079,.727467656],knee:[11.6546087,.480649561],ankle:[11.9229736,.237371072],source:[11.9229736,.238546],corrections:[[0,0],[0,0],[.1002121,-.07633981],[.1002121,-.07633981]]}
+ ];
+ const get=id=>document.getElementById(id);
+ const rows=Array.from(document.querySelectorAll('[data-cause-stage]'));
+ const frameButtons=Array.from(document.querySelectorAll('[data-cause-frame]'));
+ let cursor=11,timer=null,started=false;
+ function render(){
+  const index=Math.floor(cursor/4),stage=cursor%4,f=frames[index],ratio=f.ratios[stage];
+  frameButtons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));
+  rows.forEach((row,i)=>{
+   const value=f.ratios[i];
+   row.setAttribute('aria-pressed',String(i===stage));
+   row.dataset.over=String(value>1);
+   row.querySelector('strong').textContent=(value*100).toFixed(2)+'%';
+   row.querySelector('.cause-bar').style.width=(value/1.25*100)+'%';
+  });
+  get('cause-stage-label').textContent=f.frame+' · 第 '+(stage+1)+' / 4 步';
+  get('cause-stage-title').textContent=f.steps[stage][0];
+  get('cause-stage-detail').textContent=f.steps[stage][1];
+  get('cause-metric').innerHTML=(ratio*100).toFixed(2)+'%<small>'+(ratio>1?'髋到目标距离已超过腿长':'距离尚未超过腿长；这不单独证明姿态自然')+'</small>';
+  get('cause-frame-context').textContent='生命周期 '+f.state+' · 接触模式 '+f.mode+' · 原动画膝角 '+f.knee.toFixed(2)+'° · 作者总权重 1 · Action 混合权重 0';
+  get('cause-progress').value=String(cursor);
+  get('cause-progress').setAttribute('aria-valuetext',f.frame+' 帧，第 '+(stage+1)+' 个计算阶段');
+  get('cause-progress-value').textContent=(cursor+1)+' / 16';
+  get('cause-prev').disabled=cursor===0;
+  get('cause-next').disabled=cursor===15;
+  const g=geometry[index],project=p=>[48+(p[0]-11.35)*350,298-p[1]*350];
+  const h=project(g.hip),k=project(g.knee),a=project(g.ankle),t=project(g.source.map((v,i)=>v+g.corrections[stage][i]));
+  const point=(p,color,r)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${color}"/>`;
+  get('cause-geometry').innerHTML=`<path d="M95 18 H35 L43 12 M35 18 L43 24" fill="none" stroke="#526e64" stroke-width="2"/><text x="105" y="22" font-size="12" fill="#526e64">这四帧身体沿 X 向左移动</text><line x1="25" y1="298" x2="410" y2="298" stroke="#d6ddd1"/><text x="410" y="317" text-anchor="end" font-size="11" fill="#66776f">同一比例的世界 X / Y 投影</text><polyline points="${h.join(',')} ${k.join(',')} ${a.join(',')}" fill="none" stroke="#85938d" stroke-width="7" stroke-linejoin="round"/><line x1="${h[0]}" y1="${h[1]}" x2="${t[0]}" y2="${t[1]}" stroke="#ad5134" stroke-width="2" stroke-dasharray="5 4"/>${point(h,'#283e35',6)}${point(k,'#85938d',5)}${point(a,'#85938d',5)}${point(t,'#ad5134',7)}<text x="${h[0]-12}" y="${h[1]-9}" text-anchor="end" font-size="13" fill="#283e35">髋</text><text x="${k[0]-12}" y="${k[1]-8}" text-anchor="end" font-size="12" fill="#65776d">原动画膝</text><text x="${a[0]-9}" y="${a[1]+24}" text-anchor="end" font-size="12" fill="#65776d">原动画踝</text><text x="${t[0]+12}" y="${t[1]-8}" font-size="12" fill="#ad5134">当前目标</text>`;
+  get('cause-geometry').setAttribute('aria-label',f.frame+' 帧第 '+(stage+1)+' 阶段，原动画腿与踝目标的世界 XY 等比例投影；3D 目标距离为腿长的 '+(ratio*100).toFixed(2)+'%');
+ }
+ function stop(message){
+  clearInterval(timer);timer=null;
+  get('cause-play').textContent=cursor===15?'▶ 从头讲一遍':'▶ 从这里播放';
+  get('cause-play').setAttribute('aria-pressed','false');
+  get('cause-status').textContent=message;
+ }
+ function seek(value){
+  cursor=value;started=true;
+  stop('已暂停；可逐步查看，也可从这里继续播放。');render();
+ }
+ get('cause-play').addEventListener('click',()=>{
+  if(timer!==null){stop('已暂停；点击播放继续当前计算过程。');return;}
+  if(!started||cursor===15)cursor=0;
+  started=true;render();
+  get('cause-play').textContent='Ⅱ 暂停讲解';
+  get('cause-play').setAttribute('aria-pressed','true');
+  get('cause-status').textContent='正在逐步讲解四帧的计算过程；每步停留 2.4 秒，可随时暂停或拖动。';
+  timer=setInterval(()=>{
+   cursor++;render();
+   if(cursor===15)stop('播放结束：2034 已进入 Releasing，旧位置残差仍使目标超长。');
+  },2400);
+ });
+ frameButtons.forEach((button,index)=>button.addEventListener('click',()=>seek(index*4+3)));
+ rows.forEach((button,stage)=>button.addEventListener('click',()=>seek(Math.floor(cursor/4)*4+stage)));
+ get('cause-prev').addEventListener('click',()=>seek(cursor-1));
+ get('cause-next').addEventListener('click',()=>seek(cursor+1));
+ get('cause-reset').addEventListener('click',()=>seek(0));
+ get('cause-progress').addEventListener('input',event=>seek(Number(event.target.value)));
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&timer!==null)stop('页面离开前台，讲解已暂停。');});
+ render();
+})();
 </script>
 </body>
 </html>

@@ -1,11 +1,16 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootLifecycle
     {
+        static readonly ProfilerMarker s_Evaluate = new("CharacterPose.FootPlacement.Lifecycle");
+        static readonly ProfilerMarker s_Complete = new("CharacterPose.FootPlacement.Completion");
+        static readonly ProfilerMarker s_SoleSupport = new("CharacterPose.FootPlacement.SoleSupport");
+
         internal readonly struct Completion
         {
 
@@ -52,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bool landingReachAvailable,
                 out CharacterFootSwingMotionResult result)
             {
+                using var profilerScope = s_Complete.Auto();
                 if (!LandingCompletionPending)
                 {
                     result = PreliminaryMotion;
@@ -129,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateEvaluation evaluation,
             out Completion receipt)
         {
+            using var profilerScope = s_Evaluate.Auto();
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             ref readonly AnimationFootMotionRuntimeSample formalFootMotion =
                 ref evaluation.FormalFootMotion;
@@ -389,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootSupportTarget support,
             CharacterFootSoleProbeBuffer probes)
         {
+            using var profilerScope = s_SoleSupport.Auto();
             ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
             float rotationWeight = context.Contact.HasContact

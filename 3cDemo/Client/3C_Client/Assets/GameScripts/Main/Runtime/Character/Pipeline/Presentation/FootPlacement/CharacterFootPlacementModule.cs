@@ -2,6 +2,7 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -229,6 +230,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterFootPlacementModule : IDisposable
     {
+        static readonly ProfilerMarker s_CurrentSupport = new("CharacterPose.FootPlacement.CurrentSupport");
+        static readonly ProfilerMarker s_LandingPrediction = new("CharacterPose.FootPlacement.LandingPrediction");
+        static readonly ProfilerMarker s_GroundPath = new("CharacterPose.FootPlacement.GroundPath");
+        static readonly ProfilerMarker s_BodyTrajectory = new("CharacterPose.FootPlacement.BodyTrajectory");
+
         readonly ActorId m_ActorId;
         readonly CharacterFootPlacementModuleSettings m_Settings;
         readonly CharacterFootPlacementPoseRig m_Rig;
@@ -855,6 +861,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootCurrentSupportObservationPagePool pool,
             CharacterFootCurrentSupportObservationPage committed)
         {
+            using var profilerScope = s_CurrentSupport.Auto();
             CharacterFootCurrentSupportObservationPage pending =
                 pool.AcquireWritable(committed);
             ref readonly CharacterFootCurrentSupportQuerySettings settings =
@@ -880,6 +887,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGroundPathPage committedPage,
             out CharacterFootGroundPathPage pendingPage)
         {
+            using var profilerScope = s_GroundPath.Auto();
             if (!hasLastLanding)
             {
                 pendingPage = pool.AcquireWritable(committedPage);
@@ -1083,6 +1091,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
         {
+            using var profilerScope = s_LandingPrediction.Auto();
             Vector3 currentSole = CharacterFootConstraintMath.ResolveOriginalSole(animatedFoot);
             ref readonly CharacterBodyPresentationFrame body = ref frame.Body;
             pendingObservation = committedObservation;
@@ -1294,6 +1303,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame body)
         {
+            using var profilerScope = s_BodyTrajectory.Auto();
             ref readonly CharacterFootLandingPredictionSettings settings =
                 ref m_Settings.LandingPrediction;
             Vector2 rawCurrentVelocity = new Vector2(

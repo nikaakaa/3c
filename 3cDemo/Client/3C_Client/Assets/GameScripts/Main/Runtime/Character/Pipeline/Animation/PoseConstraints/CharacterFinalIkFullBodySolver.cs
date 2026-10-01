@@ -1,6 +1,7 @@
 using System;
 using RootMotion.FinalIK;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -171,6 +172,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public sealed class CharacterFinalIkFullBodySolver
     {
+        static readonly ProfilerMarker s_ApplyGoals = new("CharacterPose.FullBodyIK.ApplyGoals");
+        static readonly ProfilerMarker s_Solve = new("CharacterPose.FullBodyIK.Solve");
+        static readonly ProfilerMarker s_Diagnostics = new("CharacterPose.FullBodyIK.Diagnostics");
+
         const float FootEffectorSolverResidualTolerance = 0.001f;
         const float ReliableBendHeightRatio = 0.01f;
         const float BendStabilizationStartExtensionRatio = 0.94f;
@@ -383,7 +388,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         completionIdentity,
                         recordDiagnostics);
                 }
-                m_Solver.Update();
+                using (s_Solve.Auto())
+                    m_Solver.Update();
                 m_Backend.RebuildVirtualBones();
                 if (!IsValidPosePage(pendingOutputComponentPose))
                 {
@@ -479,6 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong frameSequence,
             ulong completionIdentity)
         {
+            using var profilerScope = s_ApplyGoals.Auto();
             if (!goalWorkspace.IsCreated)
                 return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidGoalWorkspace);
             if (!header.IsValid ||
@@ -1125,6 +1132,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!recordDiagnostics)
                 return result;
+            using var profilerScope = s_Diagnostics.Auto();
             if (result.Succeeded ||
                 result.Failure ==
                 CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded)

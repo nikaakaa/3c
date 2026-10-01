@@ -1,12 +1,15 @@
 using System;
 using RootMotion.FinalIK;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     public sealed class CharacterFinalIkPoseBufferBackend : IIndexedPoseBackend
     {
+        static readonly ProfilerMarker s_Bind = new("CharacterPose.FullBodyIK.BindPose");
+
         public const string SourceIdentity = "rootmotion.finalik.full-body-biped-ik/indexed-pose-backend";
         public const string AuditedVendorSourceRevision = "7cd67a8e9ca9e22b68e466f60bf27aa29ea653cf3edc619566b0ac6d41ee3cb1";
         const float ScaleEpsilon = 0.000001f;
@@ -84,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public bool TryBind(NativeSlice<AnimationLocalBonePose> componentPose)
         {
+            using var profilerScope = s_Bind.Auto();
             if (componentPose.Length != m_Counts.PoseBoneCount)
                 return false;
             for (int i = 0; i < componentPose.Length; i++)

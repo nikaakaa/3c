@@ -1,11 +1,15 @@
 using TEngine;
 using ThirdPersonPerformance.Instrumentation;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Tick
 {
     public static class GameplayTickBootstrap
     {
+        static readonly ProfilerMarker s_Update = new("GameplayTick.FrameUpdate");
+        static readonly ProfilerMarker s_Hotkeys = new("GameplayTick.Hotkeys");
+
         static bool s_Initialized;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -40,7 +44,9 @@ namespace ThirdPersonGameplay.Tick
 
         static void FrameUpdate()
         {
-            GameplayTickDebugHotkeys.Pump();
+            using var profilerScope = s_Update.Auto();
+            using (s_Hotkeys.Auto())
+                GameplayTickDebugHotkeys.Pump();
             GameplayTickSystem.Current?.FrameUpdate(Time.deltaTime, Time.unscaledDeltaTime);
         }
 

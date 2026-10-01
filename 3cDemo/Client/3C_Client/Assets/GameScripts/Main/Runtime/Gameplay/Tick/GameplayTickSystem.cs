@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonPerformance.Instrumentation;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Tick
@@ -34,6 +35,9 @@ namespace ThirdPersonGameplay.Tick
 
     public sealed class GameplayTickSystem : IDisposable
     {
+        static readonly ProfilerMarker s_Input = new("GameplayTick.Input");
+        static readonly ProfilerMarker s_Logic = new("GameplayTick.Logic");
+
         static GameplayTickSystem s_Current;
         readonly List<IGameplayRenderFrameInputTarget> m_InputTargets = new List<IGameplayRenderFrameInputTarget>();
         readonly List<IGameplayLogicTickTarget> m_LogicTargets = new List<IGameplayLogicTickTarget>();
@@ -821,6 +825,7 @@ namespace ThirdPersonGameplay.Tick
         [PerformanceProbe("gameplay.logic")]
         void TickTargets(float fixedDeltaSeconds)
         {
+            using var profilerScope = s_Logic.Auto();
             for (int i = 0; i < m_LogicTargets.Count; i++)
             {
                 IGameplayLogicTickTarget target = m_LogicTargets[i];
@@ -882,6 +887,7 @@ namespace ThirdPersonGameplay.Tick
         [PerformanceProbe("gameplay.input")]
         void BeginTargetRenderFrame(ulong renderFrame)
         {
+            using var profilerScope = s_Input.Auto();
             for (int i = 0; i < m_InputTargets.Count; i++)
                 m_InputTargets[i]?.BeginRenderFrame(renderFrame);
         }

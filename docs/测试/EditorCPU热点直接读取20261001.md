@@ -32,3 +32,7 @@ FootPlacement、FullBodyIK 和空间转换是 EvaluateNodes 的子项；SampleFo
 源码核对还发现角色哈希 writer 在整个 roster 开始时仅清空一次：第二个角色会连同第一个角色的完整编码一起求哈希，结果与独立状态快照的角色哈希不一致。对于编码长度相同的 N 个角色，哈希扫描量由 N 份编码变成 1+2+…+N 份。当前 Fixed / Float32 的 ComputeHash(state, writer) 在生成单个角色哈希的入口清空 writer，Finalize 删除批次级清空；复用同一缓冲区，不新建 writer。修改前确认目标 Editor 非 Play、非编译；修改后目标 Editor 已编译并加载两条 Reset → WriteString → WriteCanonical → ComputeHash 调用链，scriptCompilationFailed=false。没有新增测试代码，没有进行运行同输入 A/B，实际耗时收益未验证。
 
 FootPlacement、FullBodyIK 和来源准备的算法尚未修改，不能声称 FPS 已改善。下一步处理这些大的计算热点，并细分 MainBehaviour.Update 的真实运行调用及 Application.Message 的异常帧；这些改动应由对应 Editor CPU 阶段实测确认。完整 Player 0 GC 也未证明。
+
+后续在原调用边界加入 CPU 子标记。FootPlacement 拆为 CurrentSupport、LandingPrediction、GroundPath、BodyTrajectory、Lifecycle、Completion、SoleSupport，统一前缀为 `CharacterPose.FootPlacement.`。FullBodyIK 拆为 BindPose、ApplyGoals、Solve、Diagnostics，统一前缀为 `CharacterPose.FullBodyIK.`；其中 Diagnostics 只包围实际开启诊断后的数据生成。`MainBehaviour.Update → GameplayTickBootstrap.FrameUpdate` 拆为 `GameplayTick.FrameUpdate`、`GameplayTick.Hotkeys`、`GameplayTick.Input`、`GameplayTick.Logic`，Logic 按实际逻辑 Tick 调用计数，用于区分单 Tick 计算和一帧推进多个 Tick。标记直接读取 Editor Profiler，沿已有静态 ProfilerMarker 模式实现，没有新增逐帧日志、闭包、结果缓存或执行路径，没有改变支撑查询、状态推进、曲线采样与 IK 算法。
+
+本次核对同一目标实例，项目路径正确、非 Play、非编译、scriptCompilationFailed=false，保留帧仍是 3351–3650，两个录制开关均关闭。该帧集早于新增子标记，没有重读旧帧制造新结论，没有擅自进入 Play、构建 Player 或新增测试代码。本次持有和释放一次 AssetDatabase 自动刷新禁用，计数已配对；向目标 Editor 请求一次脚本编译后，确认编译完成、scriptCompilationFailed=false、Console 错误查询为空，六个类型的十五个静态 ProfilerMarker 字段均已加载。新增标记的实际运行帧、各子阶段排序和性能改善仍未验证；需要下一轮实际 Play 采样，尤其是具体 Graph/Timeline 活跃及自动来源切换时的帧。

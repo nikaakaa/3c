@@ -116,13 +116,24 @@
   <section class="first-work" id="first-work" aria-labelledby="first-work-title">
     <div class="eyebrow">第一轮具体做什么</div>
     <h2 id="first-work-title">先做完整接触交接：旧脚怎么松开，新脚怎么接上</h2>
-    <p class="first-work-lead">先核对输入，再做第一笔业务修改：让接触目标、支撑参考和残差一致更新。它是动画交接、腿长和跨边共同经过的一段；这一步完成后，三个问题仍需各自覆盖验证。</p>
+    <p class="first-work-lead"><b>固定修复顺序：动画输入对齐 → 接触目标与历史交接 → 跨边与可达性共同推进 → 最终骨骼输出。</b>输入核对是前置工作，第一笔目标层业务修改仍是旧接触退出、新接触接入与一致回写。每笔修改都做完整连续对照。</p>
+    <details open><summary>当前控制链：每层控制什么，输出交给谁</summary><div class="detail-body">
+      <div class="audit-scroll"><table class="audit-table"><thead><tr><th>正式阶段</th><th>控制权与输入</th><th>输出与下一层</th></tr></thead><tbody>
+        <tr><td>Simulation / KCC → Body Presentation</td><td>游戏输入与技能运动驱动正式模拟；KCC 处理身体碰撞，表现层读取已提交身体状态。</td><td>提供身体位置、速度、grounded 和身体轨迹。FootPlacement 不回写游戏身体，也不决定角色能否跨上台阶。</td></tr>
+        <tr><td>动画管线 → WorldContextAdapter</td><td>Locomotion 状态机、攻击／技能 Action、蒙版与 Stored 共同产生实际骨骼姿态及贡献；Adapter 将脚步样本交给 FootPlacement。</td><td>提供原动画脚姿态、FootHeight、接触事件、LockMode／LockWeight、Support 及作者总权重。它们含义不同，不能互相代替。</td></tr>
+        <tr><td>FootPlacementModule：预测与地形</td><td>原动画脚姿态、正式脚步事件、身体轨迹和世界查询产生当前支撑、预测落点与 Ground Path。</td><td>左右脚各自获得同帧输入，交给 Lifecycle。查询提供地形事实，不能用删除高障碍掩盖跨边问题。</td></tr>
+        <tr><td>Lifecycle：接触、目标、连续运动</td><td>Transition 决定状态并拥有锚点写入；StateTarget 选择目标；Interpolation 推进残差与响应；净空和输出脚掌约束影响最终修正，再由原入口回写历史。</td><td>产生左右脚请求交给骨盆链。当前“接触切了但脚仍滞后”和“末端突然补高”发生在这段目标生成过程中。</td></tr>
+        <tr><td>PrimarySupport → Pelvis → Completion</td><td>同帧双脚请求选择主支撑，PreparePelvis / ResolvePelvis 推进唯一骨盆响应；实际可达观察反馈 Landing 完成资格。</td><td>Completion 收口左右脚，再编码双脚与骨盆 Goal。当前这份反馈不是通用腿长限制，不能声称它已防止目标超长。</td></tr>
+        <tr><td>GoalAssembler → FBBIK → 最终姿态发布</td><td>唯一 GoalSet 交给 Solver；先应用骨盆平移、脚旋转和效应器目标，再处理膝向历史并执行求解。</td><td>输出最终骨骼姿态并沿原提交边界发布。诊断只读结果；Solver 不重新决定接触、移动锚点或回写 Foot 历史。</td></tr>
+      </tbody></table></div>
+      <p><b>三个问题在链上的位置：</b>第三项先检查动画输入与交接；第二项从接触目标和残差开始修；第一项与第二项共同约束脚掌怎样移动。不能先生成超长目标，再靠求解后压膝盖掩盖；也不能先限制腿长，再被末端防穿整笔推翻。</p>
+    </div></details>
     <div class="first-work-example"><b>用这段已知失败检查第一笔：</b>新包左脚 2775 已进入释放，2788 新接触又继承约 <strong>40 cm</strong> 水平偏差，2806 达到 <strong>70.72 cm</strong>，2807 追赶 <strong>13.82 cm</strong>。2788 的目标距离只有腿长的 81.94%，所以单独限制腿长不会消掉这次黏脚。</div>
     <div class="first-work-flow">
-      <article><span>01 · 先核对输入</span><h3>确定脚真正由谁驱动</h3><p>复用旧 2023 种子及 2024～2056 完整过渡窗口，核对骨骼贡献、左右脚信号、接触事件和动作时间。源码疑点须对应到实际异常；错配输入不能充当后续目标修改的正确基线。</p></article>
+      <article><span>01 · 第三项的输入前置</span><h3>对齐姿态与脚步输入</h3><p>复用旧 2023 种子及 2024～2056 完整过渡窗口，核对骨骼贡献、左右脚信号、接触事件和动作时间。确认错配的输入先纠正；已有来源修正保留，源码疑点不直接当作已证实根因。</p></article>
       <article><span>02 · 第一笔业务修改</span><h3>目标与历史一起接续</h3><p>定义 FullAnchor、Sliding、Releasing 的目标和参考更新规则。旧接触连续退出，新接触不反复接管已积累的滞后；最终约束后的修正由原历史入口一致保存。</p></article>
-      <article><span>03 · 完整连续对照</span><h3>同时看脚、腿和地形</h3><p>覆盖旧释放段、新起步到释放完成，以及历史冻结段。检查双脚额外步长、目标腿长、接触间隙、穿透和状态退出；改善某一帧不能代替完整过程。</p></article>
-      <article><span>04 · 再扩展三项覆盖</span><h3>补齐跨边与动作组合</h3><p>在已通过的交接规则上推进完整脚掌跨边，另行处理 Swing 超长和动画几何／旋转交接。覆盖攻击、技能进入退出与打断；每个独立完整改动通过后交付实测。</p></article>
+      <article><span>03 · 第一、二项共同收口</span><h3>跨边与腿长一起满足</h3><p>在同一次脚目标推进中处理整脚平移、旋转、真实碰撞及骨盆后的腿长余量。接触期和 Swing 都检查；不能让防穿与可达限制在末尾互相覆盖。具体联合推进规则尚待实现验证。</p></article>
+      <article><span>04 · 三项的完整输出</span><h3>检查动画串与最终骨骼</h3><p>覆盖 Locomotion 内部切换、攻击／技能进入退出、打断与 Stored。逐步对照双脚、骨盆、跳变、额外伸直和穿透，最后核对 FBBIK 输出。每笔完整改动通过后即可实测。</p></article>
     </div>
     <p class="first-work-next"><b>第一笔预期差异：</b>旧修正能够连续退出，新事件接入后不再次放大旧滞后，受约束后的目标不会在下一帧被旧历史拉回；同时保持地形约束和正常支撑。这里是待验证目标，没有修改后数值。</p>
     <details><summary>展开代码职责、尚未闭合的规则与验证边界</summary><div class="detail-body">

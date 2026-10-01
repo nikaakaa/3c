@@ -8,6 +8,7 @@ description: 在 3C 项目中使用已有固定输入进行代码改动的回放
 使用当前可用的 `replay-verified-change` 通用 skill 处理改动拆步、基线比较和证据保留；本 skill 只维护 3C 项目入口及诊断合同，不重复通用流程。
 
 - 执行或读取项目回放结果前，读取 [3C 正式入口与证据规则](references/3c-workflow.md)。已有报告可直接分析，不因调用本 skill 启动回放。
+- Foot IK 候选与离线实验开始前，先读[历史经验](../../../docs/reference/foot-placement/implementation-lessons.md)及[已有业务对照](../../../docs/diagnostics/foot-placement/ik-tests/README.md)，再核对相关候选、撤回提交和原结果。接触、净空、腿长与动画混合各自已有失败边界；不能把只改触发范围、参数或使用另一采样包自动视为新机制。
 - 需要操作 Unity 时，读取 [3C Unity 操作](../3c-unity-mcp/SKILL.md)。仅修改文档或读取文件时不连接 Editor。
 - 普通回放使用 `replay_start`；需要 Foot 与 Presentation 采样时使用 `diagnostic_replay_start`。依据任务目标选择，不把诊断采样变成所有回放的前置条件。
 - CPU 与托管分配测量使用 [3C 性能诊断](../3c-performance-diagnostics/SKILL.md)，不以动作回放匹配代替性能数据。

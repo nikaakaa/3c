@@ -124,6 +124,7 @@
       <tr><td>新包 · 2788 右脚</td><td>约束前腿长需求</td><td>108.56%</td><td><b>110.66%</b></td></tr>
     </tbody></table></div>
     <p class="source">腿长需求＝髋到目标踝的距离 ÷ 原大腿与小腿长度之和。超过 100% 表示固定该帧骨盆与骨段时，腿伸直仍够不到。这里比较末端约束前的几何需求；候选最终脚位、膝角和穿透尚未运行。</p>
+    <p class="source"><b>历史核对补正：</b>动画相对接触修正已有 <code>a43bdf041 → 8fbf1d32a</code> 的失败与撤回；本次仅收窄进入条件，没有先证明旧失败条件已解除。“净空够却仍冻结”的机制也已由 <code>840bbd6b9</code> 记录，提前放行候选则因恢复跳步增大被 <code>4cdfc02ef</code> 否决。本段补充另一采样窗口的证据，不能作为首次发现或新修复机制；详见<a href="../../reference/foot-placement/implementation-lessons.md">经验第 76、78、79 条</a>。</p>
     <h3 class="audit-heading">原录制：已经释放，为什么还越拖越远？</h3>
     <p>2775 开始释放 → 2777 起反复冻结水平位置 → 2787 积累到 44.00 cm → 2788 新接触接走约 40 cm → 2806 达到 70.72 cm → 2807 水平追赶 13.82 cm。这一段 Action 脚贡献始终为 0，Locomotion 自身也触发了这条积累链。</p>
     <div class="offline-grid">

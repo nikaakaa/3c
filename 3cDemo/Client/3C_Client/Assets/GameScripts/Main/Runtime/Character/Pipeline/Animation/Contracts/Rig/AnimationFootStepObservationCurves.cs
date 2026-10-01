@@ -387,10 +387,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PositionError.Evaluate(time),
                 m_RotationError.Evaluate(time),
                 m_Contact.Evaluate(time),
-                (AnimationFootStepObservationLockMode)Mathf.RoundToInt(m_LockMode.Evaluate(time)),
+                SampleLockMode(time),
                 m_LockWeight.Evaluate(time),
                 m_Support.Evaluate(time),
                 in events);
+        }
+
+        AnimationFootStepObservationLockMode SampleLockMode(float normalizedTime)
+        {
+            float boundaryTime = normalizedTime +
+                AnimationFootStepLandingEventTable.NormalizedBoundaryTolerance;
+            int lower = 0;
+            int upper = m_LockMode.length;
+            while (lower + 1 < upper)
+            {
+                int middle = lower + (upper - lower) / 2;
+                if (m_LockMode[middle].time <= boundaryTime)
+                    lower = middle;
+                else
+                    upper = middle;
+            }
+            return (AnimationFootStepObservationLockMode)Mathf.RoundToInt(
+                m_LockMode[lower].value);
         }
 
         public void RequireValid()

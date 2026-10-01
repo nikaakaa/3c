@@ -26,6 +26,7 @@
   <section class="cause" id="release-cause-audit" aria-labelledby="release-cause-title">
     <div class="eyebrow">先看这一段 · 2026-10-01 新调查</div>
     <h2 id="release-cause-title">脚锁说“松开了”，为什么腿还会被拉直？</h2>
+    <p class="audit-note"><b>实施状态：</b>采样边界候选已写入 <code>AnimationFootStepObservationCurves</code> 与 <code>AnimationFootStepLandingEvents</code>：离散模式和事件共享归一化时间容差，事件阶段按时长换算容差，循环时间先以 double 累加。连续曲线、作者总权重、残差、冻结及骨盆未作为本次变量。Unity 已自动生成包含新方法及共享常量的 Animation 程序集，本轮日志未见 C# 编译错误；这只确认代码编译产出。<b>完整业务对比尚未完成，起步粘脚、动画混合、攻击边缘跳脚和额外伸直仍未验收。</b>下面的图表继续展示已有基线，不是本候选的改善结果。</p>
     <p class="cause-lead"><b>身体继续前进，脚的旧约束却还在。</b>“是否继续接触”只是一道指令；实际脚位还会经过旧修正的交接，以及防止穿台阶的净空处理。指令、旧修正或水平冻结中的任何一层留住脚，髋到脚的距离都可能继续增长。</p>
     <div class="cause-map">
       <article><span class="cause-number">01 / 接触信号</span><h3>该不该松开？</h3><p>动画曲线提供接触和锁定模式，生命周期据此决定继续 Landing 还是进入 Releasing。2033 的离散曲线仍读到上一段 Sliding。</p></article>

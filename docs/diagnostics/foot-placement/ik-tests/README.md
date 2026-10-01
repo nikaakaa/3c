@@ -1,5 +1,21 @@
 # 脚部局部复算工具证据
 
+## P1腿长限制候选（2026-10-01，已编译，未运行）
+
+同一2023种子与2024～2056完整双脚业务，基线固定`fbed4b1923b90d7126a50bab512b3a5e9b2a824b`。候选只从封存ZIP读取`CharacterFootLifecycle.cs`和`CharacterFootPlacementModule.cs`，其余正式源码固定基线；本窗口不修改生产Assets。现有双脚入口沿`ResolvePelvis → Complete → 加权Goal实际查询`接入，候选左右`Complete`都接收本轮实际`PelvisDelta × PositionWeight`。冻结解析与几何助手仅抽取实际使用成员，不给旧签名补零或添加兼容重载，不执行其它旧用例。
+
+唯一初始Editor检查取得目标`e852139597e42532`且路径匹配、未播放、未编译、未导入；三份独立程序集通过Unity Roslyn编译。原执行入口随后在加载测试程序集前被项目/Play/编译/导入的联合检查拦截，错误没有单列具体状态，不能认定是哪一项变化。CLI返回外层`status=success`且进程退出码0，但`result.success=false`；脚本因此又发出了一次同样被拦截的候选调用。已经停止全部Unity调用，不恢复服务、不重试；修正后的脚本同时检查工具结果与业务状态，前一入口未完成即结束。
+
+[本轮结果](releasing-p1-result.json)明确记录`not-executed`，Native及两版Foot完成帧数均0；伸展比、0GC、净空和质量比较均未取得。结果包含原始错误、唯一初始状态与三份编译身份。候选与装配都可审阅，但不能判断候选有效或无回归。Landing/Locked接触期需要逐帧单列双脚heel/toe及整脚实际离面间隙，对比基线并保存新增超过1cm、5cm的帧；不能用混有Releasing抬脚的窗口最大净空或零正穿透代替。现有夹具已准备这些观测，JSON放在计量循环外，结果标量在当帧复制进预分配输出；完整33帧记录后才执行输出断言，异常保存首个失败帧。上述接触比较本轮仍未执行，不能填0冒充通过。
+
+原HTML新增P1未运行区，旧实测曲线全部保留并明确与本轮区分。33帧历史滑块、播放、转换表和P1阻塞标签的DOM检查通过；浏览器视觉验收未执行。旧FBBIK历史0.240472mm超出0.2mm的校准失败保留，没有重新校准、Replay或新增场景。两个动态入口已结束，未持有`DisallowAutoRefresh`，各次独立编译后build-server已关闭。
+
+| 本轮封存 | SHA256 |
+| --- | --- |
+| [两文件候选](releasing-p1-production-snapshot.zip) | `3060209b316a61f5656bb7e0053bdcb4dba5d5de3d58492a5f5acd8b596729c8` |
+| [实际构建输入](releasing-p1-build-inputs.zip) | 以[结果身份](releasing-p1-result.json)中的`sealedZipSha256`为准 |
+| [已编译程序集，未执行](releasing-p1-compiled-assemblies.zip) | 以[结果身份](releasing-p1-result.json)中的`sealedZipSha256`为准 |
+
 ## 统一离散采样边界A/B（2026-10-01，候选被拒绝）
 
 直接基线为`fbed4b1923b90d7126a50bab512b3a5e9b2a824b`已保留来源修正版，候选仅叠加`AnimationFootStepObservationCurves.cs`与`AnimationFootStepLandingEvents.cs`。原输入2023种子，Native实际预滚2023后连续2024～2056；Foot同时恢复2023真实Spring/primary/观测缓存。正式两采样文件完整编译，初始化时把发布曲线与事件数据复制到本地正式契约，暖机循环实际执行各自`Sample/Resolve`，没有借用Editor已加载的采样实现。Native Job、Workspace、Action Slot、预测、Lifecycle、骨盆与Goal均固定基线；其它工作区四个Animation修改不参与本轮源码。详见[完整结果](releasing-boundary-result.json)、[基线Native](releasing-boundary-baseline-native.json)/[Goal](releasing-boundary-baseline-goal.json)、[候选Native](releasing-boundary-candidate-native.json)/[Goal](releasing-boundary-candidate-goal.json)。

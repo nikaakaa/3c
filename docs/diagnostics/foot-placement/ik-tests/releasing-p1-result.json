@@ -1,0 +1,105 @@
+{
+  "status": "not-executed",
+  "utc": "2026-10-01T06:45:33.481987+00:00",
+  "reason": "初次Editor核对空闲；原执行入口在加载测试程序集前被项目/播放/编译/导入状态联合检查拦截。现有错误未单列具体状态，不能推断是哪项变化。停止Unity路径，不恢复服务或重试。",
+  "baselineCommit": "fbed4b1923b90d7126a50bab512b3a5e9b2a824b",
+  "seedFrame": 2023,
+  "firstFrame": 2024,
+  "lastFrame": 2056,
+  "expectedFrames": 33,
+  "scope": "同一既有完整双脚释放业务；只替换封存的Lifecycle/Module，Native与其它正式源码固定基线。未改生产Assets，未新增场景，未执行Replay或IK校准。",
+  "initialEditorState": {
+    "project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets",
+    "play": false,
+    "compiling": false,
+    "updating": false
+  },
+  "unityInstance": "e852139597e42532",
+  "availabilityChecks": 1,
+  "commands": {
+    "baseline": {
+      "status": "success",
+      "result": {
+        "success": false,
+        "code": "Runtime error: 目标项目不匹配或Editor已进入非空闲状态；停止执行",
+        "error": "Runtime error: 目标项目不匹配或Editor已进入非空闲状态；停止执行",
+        "data": {
+          "exceptionType": "InvalidOperationException",
+          "stackTrace": "  at MCPDynamicCode.Execute () [0x00032] in <cb3144defeb24bbf8966c242924e42b1>:0 \r\n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\r\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <1071a2cb0cb3433aae80a793c277a048>:0 ",
+          "compiler": "codedom"
+        }
+      }
+    },
+    "candidate": {
+      "status": "success",
+      "result": {
+        "success": false,
+        "code": "Runtime error: 目标项目不匹配或Editor已进入非空闲状态；停止执行",
+        "error": "Runtime error: 目标项目不匹配或Editor已进入非空闲状态；停止执行",
+        "data": {
+          "exceptionType": "InvalidOperationException",
+          "stackTrace": "  at MCPDynamicCode.Execute () [0x00032] in <f551df492ac7436c98cdfbdaa135f248>:0 \r\n  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)\r\n  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <1071a2cb0cb3433aae80a793c277a048>:0 ",
+          "compiler": "codedom"
+        }
+      }
+    }
+  },
+  "compilation": {
+    "native": {
+      "status": "passed",
+      "compiler": "Unity 2022.3.62f2c1 Roslyn 4.3.1",
+      "assemblySha256": "75deb4aedc0cb029f6305ba7ebee14fc75193ac0d94995c748c61c59fed152ae"
+    },
+    "baseline": {
+      "status": "passed",
+      "compiler": "Unity 2022.3.62f2c1 Roslyn 4.3.1",
+      "assemblySha256": "8c768cb93c9557e20d13e266e14f3f4cdec9d78f708d9c546db8201b1289387a"
+    },
+    "candidate": {
+      "status": "passed",
+      "compiler": "Unity 2022.3.62f2c1 Roslyn 4.3.1",
+      "assemblySha256": "8ecf115a43026d1da7932322101ff86d7ff357047a8fc673067d5cb9676a983f"
+    }
+  },
+  "completedNativeFrames": 0,
+  "completedFootFrames": {
+    "baseline": 0,
+    "candidate": 0
+  },
+  "metrics": null,
+  "contactClearanceComparison": null,
+  "firstNonFiniteFrame": null,
+  "qualityDecision": "未取得业务结果，不能判断P1有效、无回归、0GC或无接触悬脚。",
+  "pendingAcceptance": [
+    "相同2023种子和2024～2056完整33帧，左右Complete使用当帧ResolvePelvis的PelvisDelta×PositionWeight",
+    "双脚逐帧目标伸展比、超长帧和持续时间、额外修正向量步长、作者与Goal权重",
+    "最终加权Goal实际地形查询；Landing/Locked单列heel/toe和整脚净空，保留相对基线新增>1cm和>5cm帧",
+    "无实根或非有限结果保存首个失败帧，不补默认成功；无命中保存未观测",
+    "实际Native与Foot暖机分配；原FBBIK历史0.240472mm>0.2mm校准失败保留"
+  ],
+  "jobs": "两次动态入口均在加载测试程序集前返回失败，调用已经结束；未启动Native/Foot业务作业，未持有DisallowAutoRefresh，各次编译后build-server已关闭。CLI退出码0的错误判断已修正，后续入口必须同时检查result.success及业务状态。",
+  "sealedZipSha256": {
+    "releasing-p1-production-snapshot.zip": "3060209b316a61f5656bb7e0053bdcb4dba5d5de3d58492a5f5acd8b596729c8",
+    "releasing-p1-build-inputs.zip": "7eb63598aaa84473b158e4e765f003bfca850c8f1426b4ea53d3c69fa92b1d46",
+    "releasing-p1-compiled-assemblies.zip": "61ba31c9d15759f63f5767ac8637d7ccf8259664e999741e84769fda6ff31ec7"
+  },
+  "candidateManifest": {
+    "status": "candidate-not-executed",
+    "baselineCommit": "fbed4b1923b90d7126a50bab512b3a5e9b2a824b",
+    "scenario": "2023种子与2024至2056完整双脚释放业务",
+    "algorithm": "P1仅在骨盆后的Completion限制Landing/Locked/Releasing额外伸展，重新查询准备输出脚掌并回写原历史",
+    "effectiveAnkleCorrectionPolicy": "将有效踝修正的水平及向下分量同乘s，保留向上分量；通过有效踝差除正式位置权重转换回脚底修正",
+    "saturation": "d0=dAnim+0.25*max(0,L-dAnim); range=0.25*max(0,L-dAnim); dLimit=d0+range*(1-exp(-(dRequested-d0)/range))，range为0时dLimit=dAnim",
+    "formalWorkspaceModified": false,
+    "files": {
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootLifecycle.cs": {
+        "baselineSha256": "d5ba83fbac44a33c0c30e83b586dcead6e7b6b138ed75541a8ec9a046bc7063c",
+        "candidateSha256": "433894c4a71b3f9e8cccf356c5531dc4b64ef40eda6f062662c4e9cae0ac5292"
+      },
+      "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootPlacementModule.cs": {
+        "baselineSha256": "72f405add4a5ea93b260ab62c547c3ea5dd2ef46cf9e3d21774bdcf03f69d41e",
+        "candidateSha256": "8ca38bf20a6e814a86e29a9bd87675b5ff455e30912f3399dd20b10ca4f49036"
+      }
+    }
+  }
+}

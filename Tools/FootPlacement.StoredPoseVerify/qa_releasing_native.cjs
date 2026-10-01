@@ -7,13 +7,14 @@ const context={document:{getElementById:id=>elements[id]},setTimeout:fn=>{callba
 vm.createContext(context);vm.runInContext(code,context);
 for(let i=0;i<33;i++){
  elements.seek.listeners.input({target:{value:i}});assert(elements.frame.textContent.startsWith(String(2024+i)));
- for(const key of ['scene','curves','metrics','moment','legs','businessCurves','businessMetrics','heightCurves','heightMetrics','geometryCurves','geometryMetrics','boundaryCurves','boundaryMetrics'])assert(!/NaN|undefined/.test(elements[key].innerHTML+elements[key].textContent));
+ for(const key of ['scene','curves','metrics','moment','legs','businessCurves','businessMetrics','heightCurves','heightMetrics','geometryCurves','geometryMetrics','boundaryCurves','boundaryMetrics','p1Verdict','p1Metrics'])assert(!/NaN|undefined/.test(elements[key].innerHTML+elements[key].textContent));
  assert.equal((elements.scene.innerHTML.match(/<circle/g)||[]).length,3);
  assert.equal((elements.legs.innerHTML.match(/<circle/g)||[]).length,18);
 }
 elements.seek.listeners.input({target:{value:17}});assert(elements.metrics.innerHTML.includes('0.0233'));
 assert(elements.metrics.innerHTML.includes('122473249c778fb49aa583ed0d45bc65'));
-assert(elements.verdict.textContent.includes('候选因早段Landing'));
+assert(elements.verdict.textContent.includes('P1候选已编译但未运行'));
+assert(elements.p1Metrics.innerHTML.includes('加载测试程序集前'));
 assert(elements.businessMetrics.innerHTML.includes('NewEventContactAcquired'));
 assert(elements.businessMetrics.innerHTML.includes('Accepted'));
 assert(elements.heightVerdict.textContent.includes('业务劣化'));
@@ -23,4 +24,4 @@ elements.seek.listeners.input({target:{value:17}});
 elements.next.listeners.click();assert.equal(Number(elements.seek.value),18);
 elements.back.listeners.click();assert.equal(Number(elements.seek.value),17);
 elements.play.listeners.click();callback();assert.equal(Number(elements.seek.value),18);elements.play.listeners.click();
-console.log('Checked 33 actual frames, source handover, bilateral solved legs, per-frame path and transition snapshots, failure label and synchronized controls; no browser visual acceptance claimed');
+console.log('Checked 33 historical measured frames, source handover, bilateral legs, transition snapshots, synchronized controls and current P1 not-executed label; no P1 execution or browser visual acceptance claimed');

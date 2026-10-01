@@ -169,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     BtsmtlScenePlayPreviewHost.Shared.Close();
                     TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
-                    ClearContentWorkflow();
+                    m_ContentState = CharacterTimelineContentAdoptionState.None;
                     m_ContentRefreshQueued = false;
                 }
                 m_Profile = profile;
@@ -299,7 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     m_ObservedSession = null;
                     TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
-                    ClearContentWorkflow();
+                    m_ContentState = CharacterTimelineContentAdoptionState.None;
                     SetStatus(Mode == TimelineWorkspaceMode.Authoring ? "作者编辑" : "已退出 Play。");
                 }
                 Refresh();
@@ -333,13 +333,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 CharacterTimelineContentStore content = BtsmtlScenePlayPreviewHost.Shared.Actor.TimelineHost.Content;
                 if (!content.TryExportContent(out CharacterTimelineContentExport export, out string error))
                 {
-                    ClearContentWorkflow();
                     SetContentStatus(CharacterTimelineContentAdoptionState.Failed, error);
                     return;
                 }
                 if (string.Equals(export.AuthoringRevision, content.AuthoringContentRevision, StringComparison.Ordinal))
                     return;
-                ClearContentWorkflow();
                 if (!content.TryPrepareContentAdoption(export, out CharacterTimelineContentAdoptionPlan plan, out error))
                 {
                     SetContentStatus(CharacterTimelineContentAdoptionState.Rejected, error);
@@ -355,7 +353,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     SetContentStatus(report.State, report.Message);
                     return;
                 }
-                ClearContentWorkflow();
                 SetContentStatus(report.State, "Timeline 内容已应用；新的播放调用使用此版本，活动播放保持原内容。");
             }
 
@@ -628,7 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             async void StartPreview()
             {
-                ClearContentWorkflow();
+                m_ContentState = CharacterTimelineContentAdoptionState.None;
                 await BtsmtlScenePlayPreviewHost.Shared.OpenAsync(m_Profile);
                 OnPreviewHostChanged();
             }
@@ -654,7 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                 ReleaseRuntimeInterest();
                 BtsmtlScenePlayPreviewHost.Shared.Close();
-                ClearContentWorkflow();
+                m_ContentState = CharacterTimelineContentAdoptionState.None;
                 m_ContentRefreshQueued = false;
                 SetStatus("正在重建预览内容。");
                 try
@@ -683,7 +680,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 {
                     TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
                     ReleaseRuntimeInterest();
-                    ClearContentWorkflow();
+                    m_ContentState = CharacterTimelineContentAdoptionState.None;
                 }
                 if (!m_RebuildingContent)
                     SetStatus(FormatPreviewContentStatus(BtsmtlScenePlayPreviewHost.Shared.Error));
@@ -919,11 +916,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         ? $"历史 {debug.HistoryOffset}/{Math.Max(0, debug.CaptureSnapshot.SegmentCount - 1)}"
                         : "无";
                 return $"RuntimeDebug | Session {sessionGeneration} | TargetRevision {debug.TargetRevision} | {debug.AttachmentState} | Capture {capture} | {message}";
-            }
-
-            void ClearContentWorkflow()
-            {
-                m_ContentState = CharacterTimelineContentAdoptionState.None;
             }
 
             static string ShortRevision(string revision) =>
